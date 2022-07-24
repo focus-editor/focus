@@ -1,13 +1,9 @@
 main :: () {
-    assert(OS == .WINDOWS, "Currently only supporting Windows");
+    windows_setup();
 
-    SetProcessDPIAware();
-    timeBeginPeriod(1);
-    EnumDisplayMonitors(null, null, monitor_enum_proc_win32, 0);
-
-    window_x, window_y := get_biggest_monitor_pos();
-    window = create_window(window_width, window_height, "Focus", window_x, window_y, background_color_rgb = WINDOW_COLOR, hidden = true);
-    ShowWindow(window, SW_MAXIMIZE);
+    window_x, window_y := windows_get_biggest_monitor_pos();
+    window = create_window(window_width, window_height, "Focus", window_x, window_y, background_color_rgb = color_as_3_floats(Colors.BACKGROUND), hidden = true);
+    windows_maximize_window(window);
 
     window_width, window_height = Simp.get_render_dimensions(window);
     Simp.set_render_target(window);
@@ -43,15 +39,18 @@ main :: () {
 
         }
 
-        draw_one_frame();
+        draw_frame();
 
         reset_temporary_storage();
     }
 }
 
-draw_one_frame :: () {
-    Simp.clear_render_target(WINDOW_COLOR[0], WINDOW_COLOR[1], WINDOW_COLOR[2], 1);
-    Simp.set_shader_for_color();
+draw_frame :: () {
+    {
+        using Colors.BACKGROUND;
+        Simp.clear_render_target(r, g, b, a);
+    }
+    Simp.set_shader_for_text();
     time := get_time();
 
     Simp.draw_text(font, 0, window_height - 24, TEXT_TO_DISPLAY);
@@ -61,36 +60,7 @@ draw_one_frame :: () {
 
 init_fonts :: () {
     font = Simp.get_font_at_size("fonts", "FiraCode-Retina.ttf", 20);
-    assert(font != null);
-}
-
-#if OS == .WINDOWS {
-    monitor_enum_proc_win32 :: (hMonitor: HMONITOR, hdc: HDC, rect: *RECT, data: LPARAM) -> BOOL #c_call {
-        if monitor_count >= monitor_rects.count return xx false;
-
-        monitor := *monitor_rects[monitor_count];
-        monitor.left   = rect.left;
-        monitor.top    = rect.top;
-        monitor.right  = rect.right;
-        monitor.bottom = rect.bottom;
-
-        monitor_count += 1;
-
-        return xx true;
-    }
-}
-
-get_biggest_monitor_pos :: () -> s32, s32 {
-    assert(monitor_count > 0, "Unexpectedly no monitors found. This is a bug.");
-    biggest := monitor_rects[0];
-    max_area := 0;
-    for monitor_rects {
-        width := it.right - it.left;
-        height := it.bottom - it.top;
-        area := width * height;
-        if max_area < area then biggest = monitor_rects[it_index];
-    }
-    return cast(s32) biggest.left, cast(s32) biggest.top;
+    assert(font != null, "Couldn't init font");
 }
 
 // // NOTE: disabled now so that we see errors in the console
@@ -102,18 +72,23 @@ get_biggest_monitor_pos :: () -> s32, s32 {
 // }
 
 TEXT_TO_DISPLAY :: #string END
-draw_one_frame :: () {
-    Simp.clear_render_target(WINDOW_COLOR[0], WINDOW_COLOR[1], WINDOW_COLOR[2], 1);
-    Simp.set_shader_for_color();
-    time := get_time();
+draw_frame :: () {
+    // Simp.clear_render_target(WINDOW_COLOR[0], WINDOW_COLOR[1], WINDOW_COLOR[2], 1);
+    // Simp.set_shader_for_color();
+    // time := get_time();
 
-    Simp.draw_text(font, 0, window_height - 24, TEXT_TO_DISPLAY);
+    // Simp.draw_text(font, 0, window_height - 24, TEXT_TO_DISPLAY);
 
-    Simp.swap_buffers(window);
+    // Simp.swap_buffers(window);
 }
 END
 
-WINDOW_COLOR :: float.[0.086, 0.133, 0.165];
+panic :: (format_string: string, args: .. Any, exit_code : s32 = 1) {
+    log_error(format_string, ..args);
+    exit(exit_code);
+} @PrintLike
+
+
 
 window : Window_Type;
 window_width := 1920;
@@ -123,22 +98,14 @@ window_y := -1;
 
 font: *Simp.Dynamic_Font;
 
-Monitor_Rect :: struct {
-    left   : int;
-    top    : int;
-    right  : int;
-    bottom : int;
-};
-
-monitor_rects : [10] Monitor_Rect;
-monitor_count := 0;
+#load "style.jai";
+#load "windows.jai";
 
 #import "Basic";
+#import "Math";
 #import "Window_Creation";
 #import "System";  // For get_path_of_running_executable. @Cleanup.
 #import "String";  // For path_strip_filename. @Cleanup.
-
-#import "Windows";
 
 Simp :: #import "Simp";
 Input :: #import "Input";
