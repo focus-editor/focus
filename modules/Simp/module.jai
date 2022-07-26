@@ -1,36 +1,3 @@
-//
-// This is a simple framework for drawing graphics that you can use
-// for most programs that are not too demanding. Or, you could copy this module
-// and customize it to become what you want.
-//
-// Generally, doing graphics is super complicated and hairy and you have to
-// think about a lot of annoying things. This framework is an experiment in asking,
-// if you aren't trying to maximize performance, how simple can we make it?
-// The answer is going to be, probably still not as simple as we'd like,
-// because there is too much innate complication arbitrarily embedded in
-// the systems we need to use in order to draw things. But, in graphics a great deal
-// of complexity comes from trying to make things as fast as possible, so, we should
-// be able to shave most of that off.
-//
-// One of the biggest problems of modern software is that people think the software
-// should always be getting "better" in the sense that it tries to do every little
-// thing that everyone wants. But this leads to increasing complexity, step by step.
-// It's like playing Go, where, at first just putting a stone here or over there
-// seemed like small, uncostly moves that provided big benefits, but now they
-// have grown into a huge infrastructure that has to be maintained, and that
-// maintenance itself adds more structure, and so much effort needs to be put into
-// your understanding that structure that has been built up, and if your understanding
-// is too incomplete then the structure will collapse.
-//
-// So we draw a certain very close boundary over what we are attempting to do here.
-// For many simple applications, this module will be enough. Maybe someone can make
-// another module called Simp+ that does more, and does introduce more constraints
-// on the application, but they are not too bad, and upgrading from Simp to Simp+
-// doesn't take much more than an afternoon, or whatnot. But for now we just say,
-// there's a line, if your program is inside the line you can use this; once it grows
-// outside the line, you probably want to switch to a bigger framework or engine
-// that is much more complicated.
-//
 Render_API :: enum {
     NONE;
     SOFTWARE;
@@ -73,24 +40,6 @@ Render_API :: enum {
 #import "stb_image_resize";
 
 #scope_export
-
-// Document: New init API ... Window creation...
-
-// @Functionality: Create texture render targets. Switch between texture render targets.
-// Threadsafety and cross-threadness of Window_Info.
-simp_init :: (window: Window_Type, window_width: s32 = -1, window_height: s32 = -1, render_width: s32 = -1, render_height: s32 = -1, windowed := true, vsync := true) #deprecated "Use set_render_target instead. Explicit init is no longer required." {
-    info := find_or_add_window_info(window);
-
-    if (window_width < 0) || (window_height < 0) {
-        window_width, window_height = get_render_dimensions(window);
-    }
-
-    info.window        = window;
-    info.window_width  = window_width;
-    info.window_height = window_height;
-
-    backend_init(info);
-}
 
 set_render_target :: (window: Window_Type) {
     CheckInit();

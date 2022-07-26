@@ -1,7 +1,7 @@
 main :: () {
     windows_setup();
 
-    window_x, window_y := windows_get_biggest_monitor_pos();
+    // window_x, window_y := windows_get_biggest_monitor_pos();
     window = create_window(window_width, window_height, "Focus", window_x, window_y, background_color_rgb = color_as_3_floats(Colors.BACKGROUND), hidden = true);
     windows_maximize_window(window);
 
@@ -59,7 +59,7 @@ draw_frame :: () {
 }
 
 init_fonts :: () {
-    font = Simp.get_font_at_size("fonts", "FiraCode-Retina.ttf", 20);
+    font = Simp.get_font_at_size("fonts", "FiraCode-Retina.ttf", 16);
     assert(font != null, "Couldn't init font");
 }
 
