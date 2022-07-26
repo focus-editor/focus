@@ -7,33 +7,27 @@ build :: () {
     set_build_options_dc(.{do_output=false});
     set_working_directory(#filepath);
 
-    build_debug   := false;
-    build_release := false;
+    options.optimization_level = .DEBUG;
+    options.output_executable_name = "focus_debug";
 
     for arg: args {
         if arg == {
-          case "debug";
-            build_debug = true;
           case "release";
-            build_release = true;
+            options.optimization_level = .RELEASE;
+            options.output_executable_name = "focus";
           case;
             compiler_report(tprint("Command-line argument #%, '%', is invalid. Valid options are: 'debug', 'release'.\n", it_index+1, arg));
         }
     }
 
-    if build_debug && build_release   then build_debug = false;
-    if !build_debug && !build_release then build_debug = true;
-
-    if build_debug {
-        options.output_executable_name = "focus_debug";
-        options.optimization_level     = .DEBUG;
-    } else if build_release {
-        options.output_executable_name = "focus";
-        options.optimization_level     = .RELEASE;
-    }
-
     w := compiler_create_workspace(options.output_executable_name);
     set_build_options(options, w);
+    #if OS == .WINDOWS {
+        // Disable runtime console
+        if options.optimization_level == .RELEASE {
+            set_build_options_dc(.{append_linker_arguments=.["/SUBSYSTEM:windows", "/ENTRY:mainCRTStartup"]}, w);
+        }
+    }
 
     compiler_begin_intercept(w);
 
@@ -53,14 +47,14 @@ build :: () {
     #if OS == .WINDOWS {
         exe_name := tprint("%.exe", options.output_executable_name);
 
-        ico_data := Ico_File.create_ico_file_from_bitmap_filename("images/focus.png");
-        success := Windows_Resources.set_icon_by_data(exe_name, ico_data);
+        ico_data := create_ico_file_from_bitmap_filename("images/focus.png");
+        success := set_icon_by_data(exe_name, ico_data);
         if !success {
             log_error("ERROR: Couldn't set icon for '%'\n", exe_name);
         }
 
-        manifest_options: Windows_Resources.Manifest_Options;
-        success = Windows_Resources.add_manifest_to_executable(exe_name, manifest_options);
+        manifest_options: Manifest_Options;
+        success = add_manifest_to_executable(exe_name, manifest_options);
         if !success {
             log_error("ERROR: Couldn't add manifest to executable '%'\n", exe_name);
         }
@@ -70,5 +64,5 @@ build :: () {
 #import "Compiler";
 #import "Basic";
 
-Windows_Resources :: #import "Windows_Resources";
-Ico_File :: #import "Ico_File";
+#import "Ico_File";
+#import "Windows_Resources";
