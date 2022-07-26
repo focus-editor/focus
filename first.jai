@@ -32,17 +32,43 @@ build :: () {
         options.optimization_level     = .RELEASE;
     }
 
-    workspace_name := options.output_executable_name;
-    w := create_workspace(options, workspace_name);
+    w := compiler_create_workspace(options.output_executable_name);
+    set_build_options(options, w);
+
+    compiler_begin_intercept(w);
+
     add_build_file("src/main.jai", w);
 
-}
+    while true {
+        message := compiler_wait_for_message();
+        if message.workspace != w continue;
+        if message.kind == .COMPLETE break;
+    }
 
-create_workspace :: (opts: Build_Options, workspace_name := "") -> Workspace {
-    w := compiler_create_workspace(workspace_name);
-    set_build_options(opts, w);
-    return w;
+    compiler_end_intercept(w);
+
+    // NOTE: currently we're intercepting compiler messages only to know when the executable
+    // has been written so that we can set icon and manifest
+
+    #if OS == .WINDOWS {
+        exe_name := tprint("%.exe", options.output_executable_name);
+
+        ico_data := Ico_File.create_ico_file_from_bitmap_filename("images/focus.png");
+        success := Windows_Resources.set_icon_by_data(exe_name, ico_data);
+        if !success {
+            log_error("ERROR: Couldn't set icon for '%'\n", exe_name);
+        }
+
+        manifest_options: Windows_Resources.Manifest_Options;
+        success = Windows_Resources.add_manifest_to_executable(exe_name, manifest_options);
+        if !success {
+            log_error("ERROR: Couldn't add manifest to executable '%'\n", exe_name);
+        }
+    }
 }
 
 #import "Compiler";
 #import "Basic";
+
+Windows_Resources :: #import "Windows_Resources";
+Ico_File :: #import "Ico_File";
