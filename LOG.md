@@ -1,5 +1,4 @@
 # TODO
-- Detect that scale has changed and print a message
 - Display some text with newlines
 
 - Implement semantic highlighting
@@ -7,6 +6,8 @@
     - Highlight globals?
 
 # DONE
++ Change font size according to monitor DPI
++ Detect that scale has changed and print a message
 + Make the application DPI-aware per monitor in the manifest
 + Set an application icon
 + Read a how-to about the metaprogram

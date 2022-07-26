@@ -1,7 +1,4 @@
 windows_setup :: () {
-    #assert OS == .WINDOWS "Currently only supporting Windows";
-
-    if !SetProcessDPIAware()                                  then panic("Can't set process to be DPI aware");
     if timeBeginPeriod(1) != TIMERR_NOERROR                   then log_error("Couldn't set minimum timer resolution");
     if !EnumDisplayMonitors(null, null, monitor_enum_proc, 0) then panic("Couldn't enumerate monitors");
 }
@@ -21,6 +18,16 @@ windows_get_biggest_monitor_pos :: () -> s32, s32 {
 
 windows_maximize_window :: (window: Window_Type) {
     ShowWindow(window, SW_MAXIMIZE);
+}
+
+windows_get_dpi_scale :: (window: Window_Type) -> float {
+    #assert OS == .WINDOWS;
+    dpi := cast(float) GetDpiForWindow(window);
+    return dpi / 96.0;
+}
+
+windows_wait_message :: () {
+    WaitMessage();
 }
 
 #scope_file
@@ -48,5 +55,10 @@ Monitor :: struct {
 };
 
 monitors : [..] Monitor;
+
+user32 :: #foreign_system_library "user32";
+
+WaitMessage :: () -> s32 #foreign user32;
+GetDpiForWindow :: (hWnd: HWND) -> u32 #foreign user32;
 
 #import "Windows";

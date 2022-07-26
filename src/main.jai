@@ -1,4 +1,5 @@
 main :: () {
+    #assert OS == .WINDOWS "Currently only supporting Windows";
     windows_setup();
 
     // window_x, window_y := windows_get_biggest_monitor_pos();
@@ -11,11 +12,13 @@ main :: () {
     path := path_strip_filename(get_path_of_running_executable());
     set_working_directory(path);
 
+    dpi_scale = windows_get_dpi_scale(window);
     init_fonts();
 
     should_quit := false;
     while !should_quit {
-        Input.update_window_events(wait = true);
+        windows_wait_message();
+        Input.update_window_events();
 
         for Input.get_window_resizes() {
             Simp.update_window(it.window);
@@ -23,7 +26,10 @@ main :: () {
                 should_reinit := (it.width != window_width) || (it.height != window_height);
                 window_width = it.width;
                 window_height = it.height;
-                if should_reinit init_fonts();
+                if should_reinit {
+                    dpi_scale = windows_get_dpi_scale(window);
+                    init_fonts();
+                }
             }
         }
 
@@ -59,17 +65,10 @@ draw_frame :: () {
 }
 
 init_fonts :: () {
-    font = Simp.get_font_at_size("fonts", "FiraCode-Retina.ttf", 16);
+    font_size := cast(int) (14 * dpi_scale);
+    font = Simp.get_font_at_size("fonts", "FiraCode-Retina.ttf", font_size);
     assert(font != null, "Couldn't init font");
 }
-
-// // NOTE: disabled now so that we see errors in the console
-// #run {
-//     #if OS == .WINDOWS {
-//         WR :: #import "Windows_Resources";
-//         WR.disable_runtime_console();
-//     }
-// }
 
 TEXT_TO_DISPLAY :: #string END
 draw_frame :: () {
@@ -95,6 +94,7 @@ window_width := 1920;
 window_height := 1080;
 window_x := -1;
 window_y := -1;
+dpi_scale := 1.0;
 
 font: *Simp.Dynamic_Font;
 
