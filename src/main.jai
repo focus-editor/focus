@@ -2,7 +2,7 @@ main :: () {
     #assert OS == .WINDOWS "Currently only supporting Windows";
     windows_setup();
 
-    // window_x, window_y := windows_get_biggest_monitor_pos();
+    window_x, window_y := windows_get_biggest_monitor_pos();
     window = create_window(window_width, window_height, "Focus", window_x, window_y, background_color_rgb = color_as_3_floats(Colors.BACKGROUND), hidden = true);
     windows_maximize_window(window);
 
@@ -14,6 +14,8 @@ main :: () {
 
     dpi_scale = windows_get_dpi_scale(window);
     init_fonts();
+
+    editors_open_file("src/editors.jai");
 
     should_quit := false;
     while !should_quit {
@@ -35,23 +37,29 @@ main :: () {
 
         for Input.events_this_frame {
             if it.type == {
-              case .QUIT;
-                should_quit = true;
-              case .KEYBOARD;
-                if it.key_pressed && it.key_code == .ESCAPE {
+                case .QUIT;
                     should_quit = true;
-                }
-                if it.key_pressed && it.key_code == #char "+" && it.ctrl_pressed {
-                    base_font_size += 1;
-                    init_fonts();
-                }
-                if it.key_pressed && it.key_code == #char "-" && it.ctrl_pressed {
-                    base_font_size -= 1;
-                    if base_font_size < 5 base_font_size = 5;
-                    init_fonts();
-                }
-            };
+                case .KEYBOARD;
+                    if it.key_pressed {
+                        if it.key_code == {
+                            case .F4;
+                                if it.alt_pressed should_quit = true;
+                                continue;
+                            case #char "+";
+                                if it.ctrl_pressed {
+                                    font_text_size += 1;
+                                    init_fonts();
+                                }
+                            case #char "-";
+                                if it.ctrl_pressed {
+                                    font_text_size -= 1;
+                                    init_fonts();
+                                }
+                        }
 
+                        editors_handle_keypress(it.key_code, it.modifier_flags);
+                    }
+            }
         }
 
         draw_frame();
@@ -68,42 +76,38 @@ draw_frame :: () {
     Simp.set_shader_for_text();
     time := get_time();
 
-    line_height := cast(int) (cast(float)font.default_line_spacing * 1.2);
-    x := font.em_width;
-    y := window_height - line_height - font.em_width;
-    for line : split(TEXT_TO_DISPLAY, cast(u8) #char "\n") {
-        Simp.draw_text(font, x, y, line);
-        y -= line_height;
+    editor, buffer := get_active_editor_and_buffer();
+    if editor {
+        assert(buffer != null);
+
+        line_height := cast(int) (cast(float)font_text.default_line_spacing * 1.3);
+        x := font_text.em_width * 2;
+        y := window_height - font_text.character_height - font_text.em_width * 2;
+
+        for line : split(to_string(buffer.bytes), cast(u8) #char "\n") {
+            Simp.draw_text(font_text, x, y, line);
+            y -= line_height;
+        }
     }
-    // Simp.draw_text(font, 0, window_height - 24, TEXT_TO_DISPLAY);
 
     Simp.swap_buffers(window);
 }
 
 init_fonts :: () {
-    font_size := cast(int) (base_font_size * dpi_scale);
-    font = Simp.get_font_at_size("fonts", "FiraCode-Retina.ttf", font_size);
-    assert(font != null, "Couldn't init font");
+    font_text = Simp.get_font_at_size("fonts", "FiraCode-Retina.ttf", cast(int) (font_text_size * dpi_scale));
+    assert(font_text != null, "Couldn't init font");
 }
 
-TEXT_TO_DISPLAY :: #string END
-draw_frame :: () {
-    Simp.clear_render_target(WINDOW_COLOR[0], WINDOW_COLOR[1], WINDOW_COLOR[2], 1);
-    Simp.set_shader_for_color();
-    time := get_time();
-
-    Simp.draw_text(font, 0, window_height - 24, TEXT_TO_DISPLAY);
-
-    Simp.swap_buffers(window);
-}
-END
+TEXT_TO_DISPLAY :: #run read_entire_file("src/main.jai");
 
 panic :: (format_string: string, args: .. Any, exit_code : s32 = 1) {
     log_error(format_string, ..args);
     exit(exit_code);
 } @PrintLike
 
-
+unimplemented :: (loc := #caller_location) {
+    panic("Unimplemented at %", loc);
+}
 
 window : Window_Type;
 window_width := 1920;
@@ -112,17 +116,23 @@ window_x := -1;
 window_y := -1;
 dpi_scale := 1.0;
 
-font: *Simp.Dynamic_Font;
-base_font_size := 14;
+font_text      :  *Simp.Dynamic_Font;
+font_text_size := 14;
+
+font_ui      :  *Simp.Dynamic_Font;
+font_ui_size := 14;
 
 #load "style.jai";
+#load "layout.jai";
+#load "editors.jai";
 #load "windows.jai";
 
 #import "Basic";
 #import "Math";
+#import "File";
 #import "Window_Creation";
-#import "System";  // For get_path_of_running_executable. @Cleanup.
-#import "String";  // For path_strip_filename. @Cleanup.
+#import "System";  // For get_path_of_running_executable.
+#import "String";
 
 Simp :: #import "Simp";
 Input :: #import "Input";
