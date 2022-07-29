@@ -1,5 +1,4 @@
 # TODO
-- Load a buffer and populate auxiliary structures
 - Draw cursor
 - Move cursor around
 - Type something
@@ -12,6 +11,7 @@
     - Color cursor differently depending on what scope we're in
 
 # DONE
++ Load a buffer and populate auxiliary structures
 + Display some text with newlines
 + Change font size according to monitor DPI
 + Detect that scale has changed and print a message

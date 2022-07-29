@@ -35,6 +35,8 @@ main :: () {
             }
         }
 
+        refresh_open_buffers();
+
         for Input.events_this_frame {
             if it.type == {
                 case .QUIT;
@@ -109,11 +111,11 @@ unimplemented :: (loc := #caller_location) {
     panic("Unimplemented at %", loc);
 }
 
-window : Window_Type;
-window_width := 1920;
+window: Window_Type;
+window_width  := 1920;
 window_height := 1080;
-window_x := -1;
-window_y := -1;
+window_x  := -1;
+window_y  := -1;
 dpi_scale := 1.0;
 
 font_text      :  *Simp.Dynamic_Font;
@@ -133,6 +135,7 @@ font_ui_size := 14;
 #import "Window_Creation";
 #import "System";  // For get_path_of_running_executable.
 #import "String";
+#import "Unicode";
 
 Simp :: #import "Simp";
 Input :: #import "Input";

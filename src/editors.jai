@@ -29,6 +29,48 @@ editors_open_file :: (path: string, on_the_side := false) {
     }
 }
 
+refresh_open_buffers :: () {
+    for *buffer: open_buffers {
+        if !buffer.dirty continue;
+        sync_internal_data(buffer);
+    }
+}
+
+sync_internal_data :: (buffer: *Buffer) {
+    buffer.dirty = false;
+    assert(buffer.bytes.data != null);
+
+    // Recalculate lines
+    {
+        array_reset_keeping_memory(*buffer.lines);
+        byte_index: s32 = 0;
+        line: Line;
+        while byte_index < buffer.bytes.count {
+            byte := buffer.bytes[byte_index];
+            if line.text_start < 0 && byte != #char " " {
+                line.text_start = byte_index;
+            }
+            if byte == #char "\n" {
+                line.end = byte_index;
+                array_add(*buffer.lines, line);
+                line.start      = byte_index + 1;
+                line.text_start = -1;
+            }
+            byte_index += 1 + trailingBytesForUTF8[byte];
+        }
+        // Final line
+        if line.text_start < 0 then line.text_start = byte_index;
+        line.end = byte_index;
+        array_add(*buffer.lines, line);
+    }
+    print("Num lines: %\n", buffer.lines.count);
+
+    // Highlight code
+    {
+        // @TODO
+    }
+}
+
 #scope_file
 
 find_or_create_buffer :: (path: string) -> buffer_id: s64 {
@@ -92,7 +134,8 @@ Buffer :: struct {
 }
 
 Line :: struct {
-    start, text_start, end: s32;
+    start, end: s32;
+    text_start: s32 = -1;
 }
 
 Pos :: struct {
