@@ -42,6 +42,8 @@ refresh_open_buffers :: () {
     }
 }
 
+#scope_file
+
 sync_internal_data :: (buffer: *Buffer) {
     buffer.dirty = false;
 
@@ -49,6 +51,7 @@ sync_internal_data :: (buffer: *Buffer) {
     {
         array_reset_keeping_memory(*buffer.lines);
         byte_index: s32 = 0;
+        char_index: s32 = 0;
         line: Line;
         while byte_index < buffer.bytes.count {
             byte := buffer.bytes[byte_index];
@@ -57,11 +60,14 @@ sync_internal_data :: (buffer: *Buffer) {
             }
             if byte == #char "\n" {
                 line.end = byte_index;
+                line.num_chars = char_index;
+                char_index = -1;  // will turn to 0
                 array_add(*buffer.lines, line);
                 line.start      = byte_index + 1;
                 line.text_start = -1;
             }
             byte_index += 1 + trailingBytesForUTF8[byte];
+            char_index += 1;
         }
         // Final line
         if line.text_start < 0 then line.text_start = byte_index;
@@ -75,8 +81,6 @@ sync_internal_data :: (buffer: *Buffer) {
     }
 }
 
-#scope_file
-
 move_cursor :: (key_code: Input.Key_Code) {
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
@@ -88,9 +92,7 @@ move_cursor :: (key_code: Input.Key_Code) {
             pos.col -= 1;
             if pos.col < 0 pos.col = 0;
         case .ARROW_RIGHT;
-            num_chars := num_chars_on_line(buffer, pos.line);
-            print("num_chars on line %: %", pos.line, num_chars);
-            if pos.col > num_chars {
+            if pos.col >= buffer.lines[pos.line].num_chars {
                 if pos.line < buffer.lines.count {
                     pos.line += 1;
                     pos.col   = 0;
@@ -101,23 +103,23 @@ move_cursor :: (key_code: Input.Key_Code) {
     }
 }
 
-num_chars_on_line :: (buffer: Buffer, line_num: s64) -> s32 {
-    line := buffer.lines[line_num];
-    str: string = ---;
-    str.data  = buffer.bytes.data + line.start;
-    str.count = line.end - line.start;
-    return unicode_chars_in_string(str);
-}
+// num_chars_on_line :: (buffer: Buffer, line_num: s64) -> s32 {
+//     line := buffer.lines[line_num];
+//     str: string = ---;
+//     str.data  = buffer.bytes.data + line.start;
+//     str.count = line.end - line.start;
+//     return unicode_chars_in_string(str);
+// }
 
-unicode_chars_in_string :: (s: string) -> s32 {
-    chars: s32= 0;
-    byte_index := 0;
-    while byte_index < s.count {
-        chars += 1;
-        byte_index += 1 + trailingBytesForUTF8[s[byte_index]];
-    }
-    return chars;
-}
+// unicode_chars_in_string :: (s: string) -> s32 {
+//     chars: s32= 0;
+//     byte_index := 0;
+//     while byte_index < s.count {
+//         chars += 1;
+//         byte_index += 1 + trailingBytesForUTF8[s[byte_index]];
+//     }
+//     return chars;
+// }
 
 find_or_create_buffer :: (path: string) -> buffer_id: s64 {
     for open_buffers {
@@ -182,6 +184,7 @@ Buffer :: struct {
 Line :: struct {
     start, end: s32;
     text_start: s32 = -1;
+    num_chars: s32;
 }
 
 Pos :: struct {
