@@ -1,5 +1,11 @@
 editors_handle_keypress :: (key_code: Input.Key_Code, mods: Input.Event.Modifier_Flags) {
-
+    if key_code == {
+        case .ARROW_LEFT;  #through;
+        case .ARROW_RIGHT; #through;
+        case .ARROW_UP;    #through;
+        case .ARROW_DOWN;
+            move_cursor(key_code);
+    }
 }
 
 get_active_editor_and_buffer :: () -> *Editor, *Buffer {
@@ -38,7 +44,6 @@ refresh_open_buffers :: () {
 
 sync_internal_data :: (buffer: *Buffer) {
     buffer.dirty = false;
-    assert(buffer.bytes.data != null);
 
     // Recalculate lines
     {
@@ -63,7 +68,6 @@ sync_internal_data :: (buffer: *Buffer) {
         line.end = byte_index;
         array_add(*buffer.lines, line);
     }
-    print("Num lines: %\n", buffer.lines.count);
 
     // Highlight code
     {
@@ -72,6 +76,48 @@ sync_internal_data :: (buffer: *Buffer) {
 }
 
 #scope_file
+
+move_cursor :: (key_code: Input.Key_Code) {
+    editor, buffer := get_active_editor_and_buffer();
+    if !editor return;
+
+    pos := *editor.cursor.pos;
+
+    if key_code == {
+        case .ARROW_LEFT;
+            pos.col -= 1;
+            if pos.col < 0 pos.col = 0;
+        case .ARROW_RIGHT;
+            num_chars := num_chars_on_line(buffer, pos.line);
+            print("num_chars on line %: %", pos.line, num_chars);
+            if pos.col > num_chars {
+                if pos.line < buffer.lines.count {
+                    pos.line += 1;
+                    pos.col   = 0;
+                }
+            } else {
+                pos.col += 1;
+            }
+    }
+}
+
+num_chars_on_line :: (buffer: Buffer, line_num: s64) -> s32 {
+    line := buffer.lines[line_num];
+    str: string = ---;
+    str.data  = buffer.bytes.data + line.start;
+    str.count = line.end - line.start;
+    return unicode_chars_in_string(str);
+}
+
+unicode_chars_in_string :: (s: string) -> s32 {
+    chars: s32= 0;
+    byte_index := 0;
+    while byte_index < s.count {
+        chars += 1;
+        byte_index += 1 + trailingBytesForUTF8[s[byte_index]];
+    }
+    return chars;
+}
 
 find_or_create_buffer :: (path: string) -> buffer_id: s64 {
     for open_buffers {
@@ -148,7 +194,7 @@ Viewport :: struct {
 }
 
 Cursor :: struct {
-    pos, sel: s32;  // if pos != sel, then we have an active selection
+    pos, sel: Pos;  // if pos != sel, then we have an active selection
 }
 
 open_buffers: [..] Buffer;

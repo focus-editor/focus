@@ -1,5 +1,4 @@
 # TODO
-- Draw cursor
 - Move cursor around
 - Type something
 
@@ -11,6 +10,7 @@
     - Color cursor differently depending on what scope we're in
 
 # DONE
++ Draw cursor
 + Load a buffer and populate auxiliary structures
 + Display some text with newlines
 + Change font size according to monitor DPI

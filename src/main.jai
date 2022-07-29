@@ -75,7 +75,6 @@ draw_frame :: () {
         using Colors.BACKGROUND;
         Simp.clear_render_target(r, g, b, a);
     }
-    Simp.set_shader_for_text();
     time := get_time();
 
     editor, buffer := get_active_editor_and_buffer();
@@ -83,9 +82,24 @@ draw_frame :: () {
         assert(buffer != null);
 
         line_height := cast(int) (cast(float)font_text.default_line_spacing * 1.3);
-        x := font_text.em_width * 2;
-        y := window_height - font_text.character_height - font_text.em_width * 2;
+        left := font_text.em_width * 2;
+        top  := window_height - font_text.em_width * 2;
 
+        // Draw cursor
+        {
+            width  := font_text.em_width;
+            height := line_height;
+            x := left + editor.cursor.pos.col  * width;
+            y := top  - editor.cursor.pos.line * height;
+            p0 := make_vector2(xx x, xx y);
+            p1 := p0 + make_vector2(xx width, xx -height);
+
+            Simp.set_shader_for_color();
+            Simp.immediate_quad(p0.x, p0.y, p1.x, p1.y, Colors.CURSOR_ACTIVE);
+        }
+
+        x := left;
+        y := top - font_text.character_height;
         for line : split(to_string(buffer.bytes), cast(u8) #char "\n") {
             Simp.draw_text(font_text, x, y, line);
             y -= line_height;
@@ -99,8 +113,6 @@ init_fonts :: () {
     font_text = Simp.get_font_at_size("fonts", "FiraCode-Retina.ttf", cast(int) (font_text_size * dpi_scale));
     assert(font_text != null, "Couldn't init font");
 }
-
-TEXT_TO_DISPLAY :: #run read_entire_file("src/main.jai");
 
 panic :: (format_string: string, args: .. Any, exit_code : s32 = 1) {
     log_error(format_string, ..args);
