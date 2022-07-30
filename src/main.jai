@@ -61,6 +61,8 @@ main :: () {
 
                         editors_handle_keypress(it.key_code, it.modifier_flags);
                     }
+                case .TEXT_INPUT;
+                    editors_handle_text_input(it.utf32);
             }
         }
 
@@ -139,7 +141,9 @@ font_ui_size := 14;
 #load "style.jai";
 #load "layout.jai";
 #load "editors.jai";
+#load "buffer.jai";
 #load "windows.jai";
+#load "unicode.jai";
 
 #import "Basic";
 #import "Math";
