@@ -86,7 +86,8 @@ move_cursor :: (key_code: Input.Key_Code) {
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
 
-    pos := *editor.cursor.pos;
+    cursor := *editor.cursor;
+    pos    := *editor.cursor.pos;
 
     if key_code == {
         case .ARROW_LEFT;
@@ -95,13 +96,30 @@ move_cursor :: (key_code: Input.Key_Code) {
                 if pos.line > 0 { pos.line -= 1; pos.col = buffer.lines[pos.line].num_chars; }
                 else pos.col = 0;
             }
+            cursor.col_wanted = pos.col;
         case .ARROW_RIGHT;
-            current_line_len := buffer.lines[pos.line].num_chars;
-            if pos.col >= current_line_len && pos.line < buffer.lines.count - 1 {
+            line_len := buffer.lines[pos.line].num_chars;
+            if pos.col >= line_len && pos.line < buffer.lines.count - 1 {
                 pos.line += 1;
                 pos.col   = 0;
-            } else if pos.col < current_line_len {
+            } else if pos.col < line_len {
                 pos.col += 1;
+            }
+            cursor.col_wanted = pos.col;
+        case .ARROW_UP;
+            pos.line -= 1;
+            if pos.line < 0 then pos.line = 0;
+            pos.col = cursor.col_wanted;
+            line_len := buffer.lines[pos.line].num_chars;
+            if pos.col > line_len {
+                pos.col = line_len;
+            }
+        case .ARROW_DOWN;
+            if pos.line < buffer.lines.count - 1 then pos.line += 1;
+            pos.col = cursor.col_wanted;
+            line_len := buffer.lines[pos.line].num_chars;
+            if pos.col > line_len {
+                pos.col = line_len;
             }
     }
 }
@@ -195,6 +213,7 @@ Viewport :: struct {
 
 Cursor :: struct {
     pos, sel: Pos;  // if pos != sel, then we have an active selection
+    col_wanted: s32;
 }
 
 open_buffers: [..] Buffer;

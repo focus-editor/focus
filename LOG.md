@@ -1,5 +1,4 @@
 # TODO
-- Move cursor around
 - Type something
 
 - Don't redraw if nothing has changed
@@ -10,6 +9,7 @@
     - Color cursor differently depending on what scope we're in
 
 # DONE
++ Move cursor around
 + Don't load CRLF
 + Draw cursor
 + Load a buffer and populate auxiliary structures
