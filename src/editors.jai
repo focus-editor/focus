@@ -63,7 +63,7 @@ sync_internal_data :: (buffer: *Buffer) {
                 line.num_chars = char_index;
                 char_index = -1;  // will turn to 0
                 array_add(*buffer.lines, line);
-                line.start      = byte_index + 1;
+                line.start = byte_index + 1;
                 line.text_start = -1;
             }
             byte_index += 1 + trailingBytesForUTF8[byte];
@@ -72,6 +72,7 @@ sync_internal_data :: (buffer: *Buffer) {
         // Final line
         if line.text_start < 0 then line.text_start = byte_index;
         line.end = byte_index;
+        line.num_chars = char_index;
         array_add(*buffer.lines, line);
     }
 
@@ -100,17 +101,6 @@ move_cursor :: (key_code: Input.Key_Code) {
             } else {
                 pos.col += 1;
             }
-    }
-}
-
-buffer_remove_crlf :: (using buffer: Buffer) {
-    i := 0;
-    while i < bytes.count {
-        if bytes[i] == #char "\r" && i + 1 < bytes.count && bytes[i + 1] == #char "\n" {
-            array_ordered_remove_by_index(*bytes, i);
-            i -= 1;
-        }
-        i += 1;
     }
 }
 
@@ -150,6 +140,17 @@ find_or_create_editor :: (buffer_id: s64) -> editor_id: s64 {
     editor := array_add(*open_editors);
     editor.buffer_id = buffer_id;
     return editor_id;
+}
+
+buffer_remove_crlf :: (using buffer: Buffer) {
+    i := 0;
+    while i < bytes.count {
+        if bytes[i] == #char "\r" && i + 1 < bytes.count && bytes[i + 1] == #char "\n" {
+            array_ordered_remove_by_index(*bytes, i);
+            i -= 1;
+        }
+        i += 1;
+    }
 }
 
 Editor :: struct {
