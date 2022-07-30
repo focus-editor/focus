@@ -15,7 +15,7 @@ main :: () {
     dpi_scale = windows_get_dpi_scale(window);
     init_fonts();
 
-    editors_open_file("src/editors.jai");
+    editors_open_file("src/layout.jai");
 
     should_quit := false;
     while !should_quit {

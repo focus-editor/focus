@@ -103,23 +103,16 @@ move_cursor :: (key_code: Input.Key_Code) {
     }
 }
 
-// num_chars_on_line :: (buffer: Buffer, line_num: s64) -> s32 {
-//     line := buffer.lines[line_num];
-//     str: string = ---;
-//     str.data  = buffer.bytes.data + line.start;
-//     str.count = line.end - line.start;
-//     return unicode_chars_in_string(str);
-// }
-
-// unicode_chars_in_string :: (s: string) -> s32 {
-//     chars: s32= 0;
-//     byte_index := 0;
-//     while byte_index < s.count {
-//         chars += 1;
-//         byte_index += 1 + trailingBytesForUTF8[s[byte_index]];
-//     }
-//     return chars;
-// }
+buffer_remove_crlf :: (using buffer: Buffer) {
+    i := 0;
+    while i < bytes.count {
+        if bytes[i] == #char "\r" && i + 1 < bytes.count && bytes[i + 1] == #char "\n" {
+            array_ordered_remove_by_index(*bytes, i);
+            i -= 1;
+        }
+        i += 1;
+    }
+}
 
 find_or_create_buffer :: (path: string) -> buffer_id: s64 {
     for open_buffers {
@@ -135,6 +128,7 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64 {
     if !success file_data = sprint("Couldn't load file '%'", path);
     defer free(file_data);
     array_copy(*buffer.bytes, cast([]u8) file_data);
+    buffer_remove_crlf(buffer);
 
     if ends_with_nocase(path, ".jai") {
         buffer.lang = .Jai;

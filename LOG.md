@@ -10,6 +10,7 @@
     - Color cursor differently depending on what scope we're in
 
 # DONE
++ Don't load CRLF
 + Draw cursor
 + Load a buffer and populate auxiliary structures
 + Display some text with newlines
