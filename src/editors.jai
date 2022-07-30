@@ -91,14 +91,16 @@ move_cursor :: (key_code: Input.Key_Code) {
     if key_code == {
         case .ARROW_LEFT;
             pos.col -= 1;
-            if pos.col < 0 pos.col = 0;
+            if pos.col < 0 {
+                if pos.line > 0 { pos.line -= 1; pos.col = buffer.lines[pos.line].num_chars; }
+                else pos.col = 0;
+            }
         case .ARROW_RIGHT;
-            if pos.col >= buffer.lines[pos.line].num_chars {
-                if pos.line < buffer.lines.count {
-                    pos.line += 1;
-                    pos.col   = 0;
-                }
-            } else {
+            current_line_len := buffer.lines[pos.line].num_chars;
+            if pos.col >= current_line_len && pos.line < buffer.lines.count - 1 {
+                pos.line += 1;
+                pos.col   = 0;
+            } else if pos.col < current_line_len {
                 pos.col += 1;
             }
     }
@@ -118,7 +120,7 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64 {
     if !success file_data = sprint("Couldn't load file '%'", path);
     defer free(file_data);
     array_copy(*buffer.bytes, cast([]u8) file_data);
-    buffer_remove_crlf(buffer);
+    remove_crlf(buffer);
 
     if ends_with_nocase(path, ".jai") {
         buffer.lang = .Jai;
@@ -142,7 +144,7 @@ find_or_create_editor :: (buffer_id: s64) -> editor_id: s64 {
     return editor_id;
 }
 
-buffer_remove_crlf :: (using buffer: Buffer) {
+remove_crlf :: (using buffer: Buffer) {
     i := 0;
     while i < bytes.count {
         if bytes[i] == #char "\r" && i + 1 < bytes.count && bytes[i + 1] == #char "\n" {
