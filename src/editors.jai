@@ -3,7 +3,9 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Input.Event.Modifier
         case .ARROW_LEFT;  #through;
         case .ARROW_RIGHT; #through;
         case .ARROW_UP;    #through;
-        case .ARROW_DOWN;
+        case .ARROW_DOWN;  #through;
+        case .HOME;        #through;
+        case .END;
             move_cursor(key_code);
     }
 }
@@ -121,6 +123,22 @@ move_cursor :: (key_code: Input.Key_Code) {
             if pos.col > line_len {
                 pos.col = line_len;
             }
+        case .HOME;
+            text_start_col: s32= 0;
+            line := buffer.lines[pos.line];
+            i := line.start;
+            while i < line.end {
+                byte := buffer.bytes[i];
+                if byte != #char " " break;
+                text_start_col += 1;
+                i += 1 + trailingBytesForUTF8[byte];
+            }
+            if pos.col > text_start_col || pos.col == 0 then pos.col = text_start_col;
+            else pos.col = 0;
+            cursor.col_wanted = pos.col;
+        case .END;
+            pos.col = buffer.lines[pos.line].num_chars;
+            cursor.col_wanted = pos.col;
     }
 }
 
