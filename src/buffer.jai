@@ -5,8 +5,29 @@ refresh_open_buffers :: () {
     }
 }
 
-insert_string_at_cursor :: (buffer: *Buffer, cursor: Cursor, str: string) {
+insert_string_at_pos :: (using buffer: *Buffer, pos: Pos, str: string) {
+    new_size := bytes.count + str.count;
+    array_reserve(*bytes, new_size);
 
+    offset := get_offset(<< buffer, pos);
+
+    // Copy in chunks of str.count while possible
+    source := bytes.count - str.count;
+    dest   := bytes.count;
+    while source >= offset {
+        memcpy(bytes.data + dest, bytes.data + source, str.count);
+        source -= str.count;
+        dest   -= str.count;
+    }
+    // If there's a leftover, copy it as well
+    if source != offset {
+        memcpy(bytes.data + offset + str.count, bytes.data + offset, str.count - (offset - source));
+    }
+    // Insert the string
+    memcpy(bytes.data + offset, str.data, str.count);
+
+    bytes.count = new_size;
+    dirty = true;
 }
 
 remove_crlf :: (using buffer: Buffer) {
@@ -21,6 +42,19 @@ remove_crlf :: (using buffer: Buffer) {
 }
 
 #scope_file
+
+get_offset :: (using buffer: Buffer, pos: Pos) -> s64 {
+    line := lines[pos.line];
+    assert(0 <= pos.col && pos.col <= line.num_chars);
+    offset := line.start;
+    col := 0;
+    while offset < line.end && col < pos.col {
+        byte := bytes[offset];
+        col += 1;
+        offset += 1 + trailingBytesForUTF8[byte];
+    }
+    return offset;
+}
 
 sync_internal_data :: (buffer: *Buffer) {
     buffer.dirty = false;
@@ -81,5 +115,5 @@ Buffer :: struct {
 Line :: struct {
     start, end: s32;
     text_start: s32 = -1;
-    num_chars: s32;
+    num_chars:  s32;
 }

@@ -1,5 +1,6 @@
 # TODO
-- Type something
+- Handle backspace
+- Handle del
 
 - Don't redraw if nothing has changed
 - Maybe don't store font atlas in an rgba texture
@@ -9,6 +10,8 @@
     - Color cursor differently depending on what scope we're in
 
 # DONE
++ Handle enter
++ Type something
 + Move cursor around
 + Don't load CRLF
 + Draw cursor

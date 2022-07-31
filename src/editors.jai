@@ -1,4 +1,9 @@
-editors_handle_keypress :: (key_code: Input.Key_Code, mods: Input.Event.Modifier_Flags) {
+editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
+    editor, buffer := get_active_editor_and_buffer();
+    if !editor return;
+
+    cursor := *editor.cursor;
+
     if key_code == {
         case .ARROW_LEFT;  #through;
         case .ARROW_RIGHT; #through;
@@ -6,7 +11,16 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Input.Event.Modifier
         case .ARROW_DOWN;  #through;
         case .HOME;        #through;
         case .END;
-            move_cursor(key_code);
+            move_cursor(cursor, buffer, key_code);
+
+        case .ENTER;
+            handle_enter(cursor, buffer, mods);
+
+        case .BACKSPACE;
+            handle_backspace(cursor, buffer, mods);
+
+        case .DELETE;
+            handle_delete(cursor, buffer, mods);
     }
 }
 
@@ -15,7 +29,9 @@ editors_handle_text_input :: (char: u32) {
     if !editor return;
 
     utf8_char := convert_utf32_to_utf8(char);
-    insert_string_at_cursor(buffer, editor.cursor, to_string(*utf8_char));
+    insert_string_at_pos(buffer, editor.cursor.pos, to_string(*utf8_char));
+    editor.cursor.pos.col += 1;  // we know it's just one symbol
+    editor.cursor.col_wanted = editor.cursor.pos.col;
 }
 
 get_active_editor_and_buffer :: () -> *Editor, *Buffer {
@@ -47,64 +63,6 @@ editors_open_file :: (path: string, on_the_side := false) {
 }
 
 #scope_file
-
-move_cursor :: (key_code: Input.Key_Code) {
-    editor, buffer := get_active_editor_and_buffer();
-    if !editor return;
-
-    cursor := *editor.cursor;
-    pos    := *editor.cursor.pos;
-
-    if key_code == {
-        case .ARROW_LEFT;
-            pos.col -= 1;
-            if pos.col < 0 {
-                if pos.line > 0 { pos.line -= 1; pos.col = buffer.lines[pos.line].num_chars; }
-                else pos.col = 0;
-            }
-            cursor.col_wanted = pos.col;
-        case .ARROW_RIGHT;
-            line_len := buffer.lines[pos.line].num_chars;
-            if pos.col >= line_len && pos.line < buffer.lines.count - 1 {
-                pos.line += 1;
-                pos.col   = 0;
-            } else if pos.col < line_len {
-                pos.col += 1;
-            }
-            cursor.col_wanted = pos.col;
-        case .ARROW_UP;
-            pos.line -= 1;
-            if pos.line < 0 then pos.line = 0;
-            pos.col = cursor.col_wanted;
-            line_len := buffer.lines[pos.line].num_chars;
-            if pos.col > line_len {
-                pos.col = line_len;
-            }
-        case .ARROW_DOWN;
-            if pos.line < buffer.lines.count - 1 then pos.line += 1;
-            pos.col = cursor.col_wanted;
-            line_len := buffer.lines[pos.line].num_chars;
-            if pos.col > line_len {
-                pos.col = line_len;
-            }
-        case .HOME;
-            text_start_col: s32= 0;
-            line := buffer.lines[pos.line];
-            i := line.start;
-            while i < line.end {
-                byte := buffer.bytes[i];
-                if byte != #char " " break;
-                text_start_col += 1;
-                i += 1 + trailingBytesForUTF8[byte];
-            }
-            if pos.col > text_start_col || pos.col == 0 then pos.col = text_start_col;
-            else pos.col = 0;
-            cursor.col_wanted = pos.col;
-        case .END;
-            pos.col = buffer.lines[pos.line].num_chars;
-            cursor.col_wanted = pos.col;
-    }
-}
 
 find_or_create_editor :: (buffer_id: s64) -> editor_id: s64 {
     assert(buffer_id >= 0 && buffer_id < open_buffers.count, "Attempt to create editor for nonexistent buffer");

@@ -138,10 +138,13 @@ font_text_size := 14;
 font_ui      :  *Simp.Dynamic_Font;
 font_ui_size := 14;
 
+Mods :: Input.Event.Modifier_Flags;
+
 #load "style.jai";
 #load "layout.jai";
 #load "editors.jai";
 #load "buffer.jai";
+#load "edit_text.jai";
 #load "windows.jai";
 #load "unicode.jai";
 
