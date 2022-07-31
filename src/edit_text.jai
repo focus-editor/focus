@@ -82,7 +82,38 @@ handle_enter :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
 }
 
 handle_backspace :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
+    to_prev_tabstop := pos.col % TAB_SIZE;
+    if to_prev_tabstop == 0 && pos.col > 0 then to_prev_tabstop = TAB_SIZE;
+    all_spaces := false;
+    if to_prev_tabstop > 0 {
+        left_pos := pos;
+        left_pos.col -= to_prev_tabstop;
+        start := pos_to_offset(buffer, left_pos);
+        end   := pos_to_offset(buffer, pos);
+        all_spaces = true;
+        for i : start..end-1 {
+            if buffer.bytes[i] != #char " " {
+                all_spaces = false;
+                break;
+            }
+        }
+    }
+    spaces_to_remove := ifx all_spaces then to_prev_tabstop else 1;
+    range: Range = ---;
+    range.start = pos;
+    range.end = pos;
+    range.start.col -= spaces_to_remove;
+    if range.start.col < 0 {
+        range.start.col = 0;
+        if range.start.line > 0 {
+            range.start.line -= 1;
+            range.start.col   = buffer.lines[range.start.line].num_chars;
+        }
+    }
+    buffer_delete_range(buffer, range);
 
+    pos = range.start;
+    col_wanted = pos.col;
 }
 
 handle_delete :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
@@ -91,6 +122,8 @@ handle_delete :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
     range.end = pos;
     range.end.col += 1;
     buffer_delete_range(buffer, range);
+
+    col_wanted = pos.col;
 }
 
 // TODO: move this somewhere more appropriate
@@ -112,3 +145,5 @@ mods_ctrl_shift :: inline (mods: Mods) -> bool {
 MODS_NONE       :: #run Mods.{}.packed;
 MODS_CTRL       :: #run Mods.{ ctrl_pressed = true }.packed;
 MODS_CTRL_SHIFT :: #run Mods.{ ctrl_pressed = true, shift_pressed = true }.packed;
+
+TAB_SIZE :: 4;

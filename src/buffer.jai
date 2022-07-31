@@ -67,6 +67,8 @@ make_valid_range :: (buffer: Buffer, range: Range) -> Range {
 
 make_valid_pos :: (using buffer: Buffer, _pos: Pos) -> Pos {
     pos := _pos;
+    if pos.line < 0 then pos.line = 0;
+    if pos.col  < 0 then pos.col  = 0;
     if pos.line >= lines.count then pos.line = xx (lines.count - 1);
     line_len := lines[pos.line].num_chars;
     if pos.line < lines.count - 1 then line_len += 1; // we have a trailing \n
