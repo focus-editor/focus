@@ -86,7 +86,11 @@ handle_backspace :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
 }
 
 handle_delete :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
-
+    range: Range = ---;
+    range.start = pos;
+    range.end = pos;
+    range.end.col += 1;
+    buffer_delete_range(buffer, range);
 }
 
 // TODO: move this somewhere more appropriate

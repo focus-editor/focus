@@ -30,14 +30,74 @@ insert_string_at_pos :: (using buffer: *Buffer, pos: Pos, str: string) {
     dirty = true;
 }
 
+buffer_delete_range :: (using buffer: *Buffer, _range: Range) {
+    range := make_valid_range(<< buffer, _range);
+    start, end := range_to_byte_offsets(<< buffer, range);
+
+    len := end - start;
+    if len <= 0 return;
+    assert(len <= bytes.count);
+
+    // Copy in chunks of length len while possible
+    while end + len <= bytes.count {
+        memcpy(bytes.data + start, bytes.data + end, len);
+        start += len;
+        end   += len;
+    }
+    // If there's a leftover, copy it
+    if end != bytes.count {
+        memcpy(bytes.data + start, bytes.data + end, bytes.count - end);
+    }
+
+    bytes.count -= len;
+    dirty = true;
+}
+
+make_valid_range :: (buffer: Buffer, range: Range) -> Range {
+    start := make_valid_pos(buffer, range.start);
+    end   := make_valid_pos(buffer, range.end);
+    if start.line > end.line || (start.line == end.line && start.col > end.col) {
+        start, end = swap(start, end);
+    }
+    result: Range = ---;
+    result.start = start;
+    result.end   = end;
+    return result;
+}
+
+make_valid_pos :: (using buffer: Buffer, _pos: Pos) -> Pos {
+    pos := _pos;
+    if pos.line >= lines.count then pos.line = xx (lines.count - 1);
+    line_len := lines[pos.line].num_chars;
+    if pos.line < lines.count - 1 then line_len += 1; // we have a trailing \n
+    if pos.col > line_len then pos.col = line_len;
+    return pos;
+}
+
+range_to_byte_offsets :: (buffer: Buffer, range: Range) -> start: s32, end: s32 {
+    start := pos_to_offset(buffer, range.start);
+    end   := pos_to_offset(buffer, range.end);
+    return start, end;
+}
+
+pos_to_offset :: (buffer: Buffer, pos: Pos) -> s32 {
+    line := buffer.lines[pos.line];
+    offset := line.start;
+    for col : 0..pos.col-1 {
+        byte := buffer.bytes[offset];
+        offset += 1 + trailingBytesForUTF8[byte];
+    }
+    return offset;
+}
+
 remove_crlf :: (using buffer: Buffer) {
     i := 0;
     while i < bytes.count {
         if bytes[i] == #char "\r" && i + 1 < bytes.count && bytes[i + 1] == #char "\n" {
             array_ordered_remove_by_index(*bytes, i);
-            i -= 1;
+        } else {
+            i += 1;
         }
-        i += 1;
     }
 }
 
@@ -116,4 +176,17 @@ Line :: struct {
     start, end: s32;
     text_start: s32 = -1;
     num_chars:  s32;
+}
+
+Cursor :: struct {
+    pos, sel: Pos;  // if pos != sel, then we have an active selection
+    col_wanted: s32;
+}
+
+Pos :: struct {
+    line, col: s32;
+}
+
+Range :: struct {
+    start, end: Pos;
 }

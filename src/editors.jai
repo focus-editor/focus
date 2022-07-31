@@ -104,20 +104,11 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64 {
 
 #scope_export
 
-Cursor :: struct {
-    pos, sel: Pos;  // if pos != sel, then we have an active selection
-    col_wanted: s32;
-}
-
 Editor :: struct {
     buffer_id: s64;
 
     cursor:   Cursor;
     viewport: Viewport;
-}
-
-Pos :: struct {
-    line, col: s32;
 }
 
 Viewport :: struct {
