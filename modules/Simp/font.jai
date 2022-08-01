@@ -114,7 +114,7 @@ Dynamic_Font :: struct {
 
     glyph_lookup: Table(int, *Glyph_Data);
 
-    private1: FT_Face;
+    face: FT_Face;
 
     character_range_low:  int;
     character_range_high: int;
@@ -175,7 +175,6 @@ Font_Line :: struct {
 
 Loaded_Font :: struct {
     name: string;
-    face: FT_Face;
     data: [] u8;
 };
 
@@ -422,7 +421,7 @@ get_string_width_in_pixels :: (using font: *Dynamic_Font, s: string, effect_flag
 }
 
 set_unknown_character :: (using font: *Dynamic_Font, utf32: u32) -> bool {
-    index := FT_Get_Char_Index(font.private1, utf32);
+    index := FT_Get_Char_Index(font.face, utf32);
     if !index return false;
 
     glyph_index_for_unknown_character = index;
@@ -430,11 +429,11 @@ set_unknown_character :: (using font: *Dynamic_Font, utf32: u32) -> bool {
 }
 
 load_font_part_2 :: (result: *Dynamic_Font, loaded_font: Loaded_Font, pixel_height: int) {
-    face := loaded_font.face;
+    face := result.face;
 
     success := FT_Set_Pixel_Sizes(face, 0, xx pixel_height);
 
-    result.private1 = face;
+    result.face = face;
     result.character_height = pixel_height;
 
     y_scale_font_to_pixels := face.size.metrics.y_scale/(64.0*65536.0);
@@ -577,29 +576,30 @@ get_font_at_size :: (path: string, name: string, pixel_height: int) -> *Dynamic_
             print("Error: couldn't load font '%'\n", font_name);
             return null;
         }
-        font_data := cast([] u8) s;
-
-        face: FT_Face;
-        error := FT_New_Memory_Face(ft_library, font_data.data, cast(s32) font_data.count, 0, *face);
-        if error == xx FT_Err.Unknown_File_Format {
-            print("Error: font file format not supported: '%'\n", font_name);
-            return null;
-        }
-        if error {
-            print("Error while loading font '%': %", font_name, error);
-            return null;
-        }
-
         loaded = New(Loaded_Font);
         loaded.name = copy_string(name);
-        loaded.face = face;
-        loaded.data = font_data;
+        loaded.data = cast([] u8) s;
 
         array_add(*loaded_fonts, loaded);
     }
 
+    // Create a new font face for DynamicFont rather than sharing one between fonts.
+    // The reason is because we don't want to keep changing the size every time we want to
+    // do anything and worry whether another DynamicFont has changed the size
+    face: FT_Face;
+    error := FT_New_Memory_Face(ft_library, loaded.data.data, cast(s32) loaded.data.count, 0, *face);
+    if error == xx FT_Err.Unknown_File_Format {
+        print("Error: font file format not supported: '%'\n", font_name);
+        return null;
+    }
+    if error {
+        print("Error while loading font '%': %", font_name, error);
+        return null;
+    }
+
     result := New(Dynamic_Font);
     result.name = copy_string(name);
+    result.face = face;
     load_font_part_2(result, << loaded, pixel_height);
     return result;
     // TODO(ivan): finish this loading part, use float metrics if possible
@@ -711,11 +711,11 @@ fonts_initted := false;
 page_size_x := 2048;
 page_size_y := 1024;
 
-loaded_fonts : [..] *Loaded_Font;
-font_pages    : [..] *Font_Page;
-dynamic_fonts : [..] *Dynamic_Font;
+loaded_fonts:  [..] *Loaded_Font;
+font_pages:    [..] *Font_Page;
+dynamic_fonts: [..] *Dynamic_Font;
 
-glyph_and_line_pool : Pool;
+glyph_and_line_pool: Pool;
 
 DUMMY_SOURCE_LENGTH :: 1000;  // This is stupid.
 
@@ -851,16 +851,6 @@ find_or_create_glyph :: (using font: *Dynamic_Font,
     data, success := table_find(*font.glyph_lookup, hash_key);
     if success  return data;
 
-    face := font.private1;  // XXX Why not using?
-
-    // @Move: Make this happen at font construction time.  @Speed.
-    // However we can't right now, because we share this face among
-    // multiple Dynamic_Fonts...
-
-    error := FT_Set_Pixel_Sizes(face, 0, cast(u32) font.character_height);    // XXX WHy not using?
-    assert(!error);
-
-
     if utf32 {
         glyph_index = FT_Get_Char_Index(face, utf32);
         if !glyph_index {
@@ -904,19 +894,6 @@ find_or_create_glyph_utf8 :: (font: *Dynamic_Font, utf8: *u8) -> *Glyph_Data {  
     return find_or_create_glyph(font, utf32);
 }
 
-prepare_for_kerning :: (using font: *Dynamic_Font) {
-    face := font.private1;   // XXX Why not using?
-
-    // We have to set the size because a different-sized Dynamic_Font, using
-    // the same FT_Face, might have changed the size to kern or render glyphs.
-    // Instead of having a manually-called function like this, we could cache
-    // which Dynamic_Font last called FT_Set_Pixel_Sizes, storing this on the
-    // Loaded_Font, and then set it dynamically from places like get_kerning().
-
-    error := FT_Set_Pixel_Sizes(face, 0, cast(u32) font.character_height);   // XXX Why not using?
-    assert(!error);
-}
-
 get_kerning :: (using font: *Dynamic_Font, prior: *Glyph_Data, current: *Glyph_Data, kerning_offset: *Vector2) {  // XXX Out parameter should become a return value.
     if (!prior) {
         kerning_offset.x = 0;
@@ -924,19 +901,13 @@ get_kerning :: (using font: *Dynamic_Font, prior: *Glyph_Data, current: *Glyph_D
         return;
     }
 
-    face := font.private1;  // XXX Why not using?
+    face := font.face;  // XXX Why not using?
     has_kerning := FT_HAS_KERNING(face);
 
     index_left  := prior.glyph_index_within_font;
     index_right := current.glyph_index_within_font;
 
     kerning_mode := cast(u32) FT_Kerning_Mode.DEFAULT;
-
-    // @Speed: Is FT_Set_Pixel_Sizes slow?  Do we want to do something about this?
-//    int error;
-//    error = FT_Set_Pixel_Sizes(face, 0, character_height);
-//    assert(!error);
-
 
     kerning: FT_Vector;
     error := FT_Get_Kerning(face, index_left, index_right,
