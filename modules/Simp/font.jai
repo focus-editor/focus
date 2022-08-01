@@ -12,10 +12,6 @@ and provide harfbuzz as a library in modules/.
 
                  -jblow, 30 January 2018.
 
-
-
-Clean up load_font vs get_font_at_size.
-
 Is FT_Face_Internal by value? If so, how big is it?? (Do we care?)
 
 get_kerning is broken (it breaks font rendering for KarminaBold at least).
@@ -39,7 +35,7 @@ isdigit :: (utf32: u32) -> bool {
     return (utf32 >= #char "0") && (utf32 <= #char "9");
 }
 
-
+// NOTE: apparently this doesn't work
 isLegalUTF8 :: (source: *u8, length: s64) -> bool {
     if length == 0 return false;
     if length >  4  return false;
@@ -267,42 +263,6 @@ is_latin :: (utf32: u32) -> bool {
     return true;
 }
 
-find_loaded_font :: (filename: string) -> *Loaded_Font {
-    for loaded_file_fonts {
-        if it.name == filename return it;
-    }
-
-    return null;
-}
-
-make_loaded_font :: (name: string, data: [] u8) -> *Loaded_Font {
-    face: FT_Face;
-
-    error := FT_New_Memory_Face(ft_library, data.data, cast(s32) data.count,
-                                0, *face);
-    assert(error != xx FT_Err.Unknown_File_Format);
-    assert(!error);
-
-    if error return null;
-
-    loaded_font := New(Loaded_Font);
-    loaded_font.name = copy_string(name);
-    loaded_font.face = face;
-    loaded_font.data = data;
-
-    return loaded_font;
-}
-
-make_loaded_font :: (filename: string) -> (font: *Loaded_Font) {
-    s, success := read_entire_file(filename);
-    if !success return null;
-
-    loaded := make_loaded_font(filename, cast([] u8) s);
-    array_add(*loaded_file_fonts, loaded);
-
-    return loaded;
-}
-
 ensure_fonts_are_initted :: () {
     if !fonts_initted init_fonts();
 }
@@ -469,26 +429,6 @@ set_unknown_character :: (using font: *Dynamic_Font, utf32: u32) -> bool {
     return true;
 }
 
-load_font :: (path: string, basename: string, pixel_height: int) -> font: *Dynamic_Font {
-    inline ensure_fonts_are_initted();
-
-    result := New(Dynamic_Font);
-    result.name = copy_string(basename);  // A waste?
-
-    font_name := tprint("%/%", path, basename);
-
-    loaded_font := find_loaded_font(font_name);
-    bytes_loaded: s64 = 0;
-
-    if !loaded_font {
-        loaded_font = make_loaded_font(font_name);
-        if !loaded_font return null;
-    }
-
-    load_font_part_2(result, <<loaded_font, pixel_height);
-    return result;
-}
-
 load_font_part_2 :: (result: *Dynamic_Font, loaded_font: Loaded_Font, pixel_height: int) {
     face := loaded_font.face;
 
@@ -613,6 +553,7 @@ load_font_part_2 :: (result: *Dynamic_Font, loaded_font: Loaded_Font, pixel_heig
 get_font_at_size :: (path: string, name: string, pixel_height: int) -> *Dynamic_Font {
     inline ensure_fonts_are_initted();
 
+    // Try to find a previously loaded font
     for dynamic_fonts {
         if (it.character_height != pixel_height) continue;
         if (it.name != name) continue;
@@ -620,36 +561,83 @@ get_font_at_size :: (path: string, name: string, pixel_height: int) -> *Dynamic_
         return it;
     }
 
-    result := load_font(path, name, pixel_height);
-    if !result {
-        log_error("Unable to load font '%1' from '%2'. Returning null.\n", name, path);
-    }
-
-    return result;
-}
-
-get_font_at_size :: (memory: [] u8, pixel_height: int) -> *Dynamic_Font {
-    result := New(Dynamic_Font);
-
+    // Load new font
+    font_name := tprint("%/%", path, name);
     loaded: *Loaded_Font;
-    for loaded_memory_fonts {  // @Speed: Could use a hash table here!
-        if (it.data.count == memory.count) && (it.data.data == memory.data) {
+    for loaded_fonts {
+        if it.name == font_name {
             loaded = it;
             break;
         }
     }
-
     if !loaded {
-        loaded = make_loaded_font("", memory);
-        array_add(*loaded_memory_fonts, loaded);
+        // Load from file
+        s, success := read_entire_file(font_name);
+        if !success {
+            print("Error: couldn't load font '%'\n", font_name);
+            return null;
+        }
+        font_data := cast([] u8) s;
+
+        face: FT_Face;
+        error := FT_New_Memory_Face(ft_library, font_data.data, cast(s32) font_data.count, 0, *face);
+        if error == xx FT_Err.Unknown_File_Format {
+            print("Error: font file format not supported: '%'\n", font_name);
+            return null;
+        }
+        if error {
+            print("Error while loading font '%': %", font_name, error);
+            return null;
+        }
+
+        loaded = New(Loaded_Font);
+        loaded.name = copy_string(name);
+        loaded.face = face;
+        loaded.data = font_data;
+
+        array_add(*loaded_fonts, loaded);
     }
 
+    result := New(Dynamic_Font);
+    result.name = copy_string(name);
     load_font_part_2(result, << loaded, pixel_height);
     return result;
-}
+    // TODO(ivan): finish this loading part, use float metrics if possible
 
-release_font :: (font: *Dynamic_Font) {
-    // Currently we do nothing. Probably we will want to do something here.
+    // face := loaded.face;
+
+    // // Finish loading dynamic font for the requested size
+    // font := New(Dynamic_Font);
+    // font.name = copy_string(name);
+    // font.face = face;
+    // font.character_height = pixel_height;
+
+    // y_scale_font_to_pixels := face.size.metrics.y_scale / (64.0 * 65536.0);
+    // font.default_line_spacing = y_scale_font_to_pixels * face.height;
+    // font.max_ascender         = y_scale_font_to_pixels * face.bbox.yMax;
+    // font.max_descender        = y_scale_font_to_pixels * face.bbox.yMin;
+
+    // // NOTE(Ivan): not sure how this offset was supposed to be used so don't fill it for now
+    // // // We intentionally don't use the max ascender, because
+    // // // it doesn't tend to look right. So we use 'm'... but for
+    // // // Chinese, for example, this is going to be wrong, so maybe
+    // // // this is @Incomplete and we need to have multiple options.
+
+    // // glyph_index := FT_Get_Char_Index(face, #char "m");
+    // // if glyph_index {
+    // //     FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT);
+    // //     result.y_offset_for_centering = xx (0.5 * FT_ROUND(face.glyph.metrics.horiBearingY) + 0.5);
+    // // }
+
+    // glyph_index := FT_Get_Char_Index(face, #char "M");
+    // if glyph_index {
+    //     FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT);
+    //     result.em_width = FT_ROUND(face.glyph.metrics.width);
+    // }
+
+    // success := FT_Set_Pixel_Sizes(face, 0, xx pixel_height);
+
+    // return font;
 }
 
 get_baseline_height :: (font: *Dynamic_Font) -> s64 {
@@ -661,9 +649,7 @@ prepare_text :: (font: *Dynamic_Font, text: string, effect_flags: Font_Effects =
     return font.temporary_glyphs_width_in_pixels;
 }
 
-generate_quads_for_prepared_text :: (font: *Dynamic_Font,
-                                     x: s64, y: s64,
-                                     effect_flags: Font_Effects) {
+generate_quads_for_prepared_text :: (font: *Dynamic_Font, x: s64, y: s64, effect_flags: Font_Effects) {
     assert(font != null);
 
     array_reset_keeping_memory(*font.current_quads);
@@ -725,10 +711,7 @@ fonts_initted := false;
 page_size_x := 2048;
 page_size_y := 1024;
 
-// Wacky structures used in the font file format.
-
-loaded_file_fonts   : [..] *Loaded_Font;
-loaded_memory_fonts : [..] *Loaded_Font;
+loaded_fonts : [..] *Loaded_Font;
 font_pages    : [..] *Font_Page;
 dynamic_fonts : [..] *Dynamic_Font;
 

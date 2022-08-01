@@ -7,6 +7,7 @@ main :: () {
     windows_maximize_window(window);
 
     window_width, window_height = Simp.get_render_dimensions(window);
+    screen = make_rect(0, 0, window_width, window_height);
     Simp.set_render_target(window);
 
     path := path_strip_filename(get_path_of_running_executable());
@@ -29,6 +30,7 @@ main :: () {
                 window_width = it.width;
                 window_height = it.height;
                 if should_reinit {
+                    screen    = make_rect(0, 0, window_width, window_height);
                     dpi_scale = windows_get_dpi_scale(window);
                     init_fonts();
                 }
@@ -49,12 +51,12 @@ main :: () {
                                 continue;
                             case #char "+";
                                 if it.ctrl_pressed {
-                                    font_text_size += 1;
+                                    font_size += 1;
                                     init_fonts();
                                 }
                             case #char "-";
                                 if it.ctrl_pressed {
-                                    font_text_size -= 1;
+                                    font_size -= 1;
                                     init_fonts();
                                 }
                         }
@@ -72,48 +74,12 @@ main :: () {
     }
 }
 
-draw_frame :: () {
-    {
-        using Colors.BACKGROUND;
-        Simp.clear_render_target(r, g, b, a);
-    }
-    time := get_time();
-
-    editor, buffer := get_active_editor_and_buffer();
-    if editor {
-        assert(buffer != null);
-
-        line_height := cast(int) (cast(float)font_text.default_line_spacing * 1.3);
-        left := font_text.em_width * 2;
-        top  := window_height - font_text.em_width * 2;
-
-        // Draw cursor
-        {
-            width  := font_text.em_width;
-            height := line_height;
-            x := left + editor.cursor.pos.col  * width;
-            y := top  - editor.cursor.pos.line * height;
-            p0 := make_vector2(xx x, xx y);
-            p1 := p0 + make_vector2(xx width, xx -height);
-
-            Simp.set_shader_for_color();
-            Simp.immediate_quad(p0.x, p0.y, p1.x, p1.y, Colors.CURSOR_ACTIVE);
-        }
-
-        x := left;
-        y := top - font_text.character_height;
-        for line : split(to_string(buffer.bytes), cast(u8) #char "\n") {
-            Simp.draw_text(font_text, x, y, line);
-            y -= line_height;
-        }
-    }
-
-    Simp.swap_buffers(window);
-}
-
 init_fonts :: () {
-    font_text = Simp.get_font_at_size("fonts", "FiraCode-Retina.ttf", cast(int) (font_text_size * dpi_scale));
-    assert(font_text != null, "Couldn't init font");
+    // font = Simp.get_font_at_size("fonts", "consola.ttf", cast(int) (font_size * dpi_scale));
+    font = Simp.get_font_at_size("fonts", "FiraCode-Retina.ttf", cast(int) (font_size * dpi_scale));
+    assert(font != null, "Couldn't init font");
+    char_size   = cast(float) font.em_width;
+    line_height = cast(float) font.default_line_spacing * LINE_HEIGHT_SCALE;
 }
 
 panic :: (format_string: string, args: .. Any, exit_code : s32 = 1) {
@@ -132,8 +98,16 @@ window_x  := -1;
 window_y  := -1;
 dpi_scale := 1.0;
 
-font_text      :  *Simp.Dynamic_Font;
-font_text_size := 14;
+screen: Rect;
+
+// Depend on font
+char_size:   float;
+line_height: float;
+
+LINE_HEIGHT_SCALE :: 1.2;
+
+font      :  *Simp.Dynamic_Font;
+font_size := 14;
 
 font_ui      :  *Simp.Dynamic_Font;
 font_ui_size := 14;
@@ -147,6 +121,7 @@ Mods :: Input.Event.Modifier_Flags;
 #load "edit_text.jai";
 #load "windows.jai";
 #load "unicode.jai";
+#load "draw.jai";
 
 #import "Basic";
 #import "Math";

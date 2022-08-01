@@ -1,11 +1,18 @@
 # TODO
+- Don't draw characters that are invisible
+- Load 2 files side by side
+- Draw selection
+- Select text
+- Remove/replace selection on edits
 
 - Don't redraw if nothing has changed
 - Maybe don't store font atlas in an rgba texture
+- Investigate subpixel rendering with FT
 - Implement semantic highlighting
     - Polymorphic structs and possibly other types
     - Highlight globals?
     - Color cursor differently depending on what scope we're in
+- Make sure cursor positioning is correct for all fonts and sizes
 
 # DONE
 + Handle backspace
