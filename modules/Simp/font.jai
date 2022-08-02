@@ -470,25 +470,19 @@ copy_glyph_to_bitmap :: (face: FT_Face, data: *Glyph_Data) {
     font_line.page.dirty = true;
 }
 
-find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32, glyph_index: u32, hash_key: int) -> *Glyph_Data {
+find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32) -> *Glyph_Data {
+    hash_key := utf32;
+
     data, success := table_find(*font.glyph_lookup, hash_key);
     if success  return data;
 
-    if utf32 {
-        glyph_index = FT_Get_Char_Index(face, utf32);
-        if !glyph_index {
-            log_error("Unable to find a glyph in font '%' for utf32 character %.\n", font.name, utf32);
-            glyph_index = glyph_index_for_unknown_character;
-        }
-
-        if glyph_index {
-            error := FT_Load_Glyph(face, glyph_index, FT_LOAD_RENDER);
-            assert(!error);
-        }
+    glyph_index := FT_Get_Char_Index(face, utf32);
+    if glyph_index {
+        error := FT_Load_Glyph(face, glyph_index, FT_LOAD_RENDER);
+        assert(!error);
     } else {
-        assert(glyph_index >= 0);
-        FT_Load_Glyph(face, glyph_index, FT_LOAD_RENDER);
-        return null;
+        log_error("Unable to find a glyph in font '%' for utf32 character %.\n", name, utf32);
+        glyph_index = glyph_index_for_unknown_character;
     }
 
     data = cast(*Glyph_Data) get(*glyph_and_line_pool, size_of(Glyph_Data));
@@ -497,13 +491,9 @@ find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32, glyph_index: u32
 
     copy_glyph_to_bitmap(face, data);
 
-    table_add(*font.glyph_lookup, hash_key, data);
+    table_add(*glyph_lookup, hash_key, data);
 
     return data;
-}
-
-find_or_create_glyph :: (font: *Dynamic_Font, utf32: u32) -> *Glyph_Data {
-    return find_or_create_glyph(font, utf32, 0, utf32);
 }
 
 FT_ROUND :: inline (x: int) -> int {

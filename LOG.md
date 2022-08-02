@@ -1,4 +1,6 @@
 # TODO
+- Investigate subpixel rendering with FT
+    - Understand how glyphs are rendered in Simp
 - Don't draw characters that are invisible
 - Load 2 files side by side
 - Draw selection
@@ -7,7 +9,6 @@
 
 - Don't redraw if nothing has changed
 - Maybe don't store font atlas in an rgba texture
-- Investigate subpixel rendering with FT
 - Implement semantic highlighting
     - Polymorphic structs and possibly other types
     - Highlight globals?
