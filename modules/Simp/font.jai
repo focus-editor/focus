@@ -42,10 +42,7 @@ Dynamic_Font :: struct {
     glyph_index_for_unknown_character: u32;
 
     temporary_glyphs: [..] *Glyph_Data;
-    temporary_glyphs_byte_offsets: [..] int;
-    temporary_glyphs_width_in_pixels: s64;
-    temporary_glyphs.allocator              = temp;
-    temporary_glyphs_byte_offsets.allocator = temp;
+    temporary_glyphs.allocator = temp;
 
     current_quads: [..] Font_Quad;
 }
@@ -109,38 +106,33 @@ ensure_fonts_are_initted :: () {
     if !fonts_initted init_fonts();
 }
 
-accumulate_glyphs_from_font :: (source: *Dynamic_Font, dest: *Dynamic_Font) {
-    for source.temporary_glyphs {
-        array_add(*dest.temporary_glyphs, it);
-        array_add(*dest.temporary_glyphs_byte_offsets, -1);
-    }
-}
-
-convert_to_temporary_glyphs :: (using font: *Dynamic_Font, s: string) {
-    glyph_conversion_failed = false;
-
+convert_to_temporary_glyphs :: (font: *Dynamic_Font, s: string) -> width_in_pixels: s64 {
+    font.glyph_conversion_failed = false;
     temporary_array_reset(*font.temporary_glyphs);
-    temporary_array_reset(*font.temporary_glyphs_byte_offsets);
 
-    temporary_glyphs_width_in_pixels = 0;
+    if !s return 0;
 
-    if !s return;
-
-    original_string := s;
-    sum := 0;
+    width_in_pixels := 0;
 
     t := s.data;
     while t < s.data + s.count {
-        t_str: string;
-        t_str.data = t;
-        t_str.count = 1;
-        utf32 := one_utf32_char(t);
-        glyph := find_or_create_glyph_utf8(font, t);
+        utf32 := character_utf8_to_utf32(t, s.data + s.count - t);
+        glyph := find_or_create_glyph(font, utf32);
 
-        if glyph add_glyph_to_temporaries(font, glyph, t - s.data);
+        if glyph {
+            array_add(*font.temporary_glyphs, glyph);
+
+            width_in_pixels += glyph.advance;
+
+            // FreeType returns glyph index 0 for undefined glyphs... just signal
+            // the condition that this happened.
+            if glyph.glyph_index_within_font == 0 font.glyph_conversion_failed = true;
+        }
 
         t = unicode_next_character(t);
     }
+
+    return width_in_pixels;
 }
 
 set_unknown_character :: (font: *Dynamic_Font, utf32: u32) -> bool {
@@ -300,8 +292,8 @@ get_font_at_size :: (path: string, name: string, pixel_height: int) -> *Dynamic_
 }
 
 prepare_text :: (font: *Dynamic_Font, text: string) -> (width: s64) {
-    convert_to_temporary_glyphs(font, text);
-    return font.temporary_glyphs_width_in_pixels;
+    width := convert_to_temporary_glyphs(font, text);
+    return width;
 }
 
 generate_quads_for_prepared_text :: (font: *Dynamic_Font, x: s64, y: s64) {
@@ -361,8 +353,6 @@ font_pages:    [..] *Font_Page;
 dynamic_fonts: [..] *Dynamic_Font;
 
 glyph_and_line_pool: Pool;
-
-DUMMY_SOURCE_LENGTH :: 1000;  // This is stupid.
 
 find_line_within_page :: (page: *Font_Page, width: int, height: int) -> *Font_Line {
     bitmap := page.bitmap_data;
@@ -516,36 +506,6 @@ find_or_create_glyph :: (font: *Dynamic_Font, utf32: u32) -> *Glyph_Data {
     return find_or_create_glyph(font, utf32, 0, utf32);
 }
 
-one_utf32_char :: inline (s: *u8) -> u32 {
-    utf32 := character_utf8_to_utf32(s, DUMMY_SOURCE_LENGTH);  // @BufferLength @Robustness
-    return utf32;
-} @NoProfile
-
-find_or_create_glyph_utf8 :: (font: *Dynamic_Font, utf8: *u8) -> *Glyph_Data {  // XXX Overloading
-    utf32 := one_utf32_char(utf8);
-    return find_or_create_glyph(font, utf32);
-}
-
-// WRONG: It's not byte_offset, it's an index? Fix me!
-// ACTUALLY, temporary_glyphs_byte_offsets seems to be completely unused. Delete it?
-add_glyph_to_temporaries :: inline (font: *Dynamic_Font, glyph: *Glyph_Data, byte_offset: int) {
-    assert(glyph != null);
-
-    assert(font.temporary_glyphs.count == font.temporary_glyphs_byte_offsets.count);
-    array_add(*font.temporary_glyphs, glyph);
-    array_add(*font.temporary_glyphs_byte_offsets, byte_offset);
-    assert(font.temporary_glyphs.count == font.temporary_glyphs_byte_offsets.count);
-
-    font.temporary_glyphs_width_in_pixels += glyph.advance;
-
-    //
-    // FreeType returns glyph index 0 for undefined glyphs... just signal
-    // the condition that this happened.
-    //
-
-    if glyph.glyph_index_within_font == 0 font.glyph_conversion_failed = true;
-}
-
 FT_ROUND :: inline (x: int) -> int {
     if x >= 0 return (x + 0x1f) >> 6;
     return -(((-x) + 0x1f) >> 6);
@@ -557,13 +517,10 @@ temporary_array_reset :: (array: *[..] $T) {
     array.data      = null;
 }
 
-#scope_file
-
 #import "freetype-2.12.1";
 #import "Hash_Table";
 #import "Hash";
 #import "Unicode";
 #import "Pool";
 #import "File";
-#import "Basic";  // For free.
-#import "Math";  // For Vector2, Vector3, Vector4.
+#import "Math";   // For Vector2, Vector3, Vector4.
