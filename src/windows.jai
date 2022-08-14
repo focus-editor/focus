@@ -1,32 +1,33 @@
-windows_setup :: () {
-    if timeBeginPeriod(1) != TIMERR_NOERROR                   then log_error("Couldn't set minimum timer resolution");
-    if !EnumDisplayMonitors(null, null, monitor_enum_proc, 0) then panic("Couldn't enumerate monitors");
+platform_setup :: () {
+    if timeBeginPeriod(1) != TIMERR_NOERROR then log_error("Couldn't set minimum timer resolution");
 }
 
-windows_get_biggest_monitor_pos :: () -> s32, s32 {
+platform_get_biggest_monitor_pos :: () -> s32, s32 {
+    if !EnumDisplayMonitors(null, null, monitor_enum_proc, 0) then panic("Couldn't enumerate monitors");
     assert(monitors.count > 0, "Unexpectedly no monitors found. This is a bug.");
+
     biggest := monitors[0];
     max_area := 0;
     for monitors {
-        width := it.right - it.left;
+        width  := it.right  - it.left;
         height := it.bottom - it.top;
-        area := width * height;
+        area   := width * height;
         if max_area < area then biggest = it;
     }
     return cast(s32) biggest.left, cast(s32) biggest.top;
 }
 
-windows_maximize_window :: (window: Window_Type) {
+platform_maximize_window :: (window: Window_Type) {
     ShowWindow(window, SW_MAXIMIZE);
 }
 
-windows_get_dpi_scale :: (window: Window_Type) -> float {
+platform_get_dpi_scale :: (window: Window_Type) -> float {
     #assert OS == .WINDOWS;
     dpi := cast(float) GetDpiForWindow(window);
     return dpi / 96.0;
 }
 
-windows_wait_message :: () {
+platform_wait_message :: () {
     WaitMessage();
 }
 

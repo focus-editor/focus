@@ -8,7 +8,7 @@ backend_init :: (info: *Window_Info) {
     CheckInit();  // Set up context.simp.
 
     do_first_time_init := false;
-    
+
     // @Threadsafety
     if the_gl_context {
         #if OS == .WINDOWS {
@@ -18,7 +18,7 @@ backend_init :: (info: *Window_Info) {
         }
     } else {
         do_first_time_init = true;
-        
+
         #if OS == .WINDOWS {
             hglrc, hdc := wgl_create_context(info.window, null, MINIMUM_GL_MAJOR_VERSION, MINIMUM_GL_MINOR_VERSION);
             the_gl_context = hglrc;
@@ -27,7 +27,7 @@ backend_init :: (info: *Window_Info) {
         }
         #if OS == .LINUX {
             the_gl_context, the_gl_fbc = glx_create_context(MINIMUM_GL_MAJOR_VERSION, MINIMUM_GL_MINOR_VERSION);
-        } 
+        }
         #if OS == .MACOS {
             the_gl_context = nsgl_create_context(MINIMUM_GL_MAJOR_VERSION, MINIMUM_GL_MINOR_VERSION);
             autorelease(the_gl_context);
@@ -43,7 +43,7 @@ backend_init :: (info: *Window_Info) {
         NSOpenGLContext.setView(the_gl_context, view);
         NSOpenGLContext.update(the_gl_context);
     }
-    
+
     #if OS == .LINUX {
         // Make dumb wrapper window.
         // Mst happen before glGen*, because we make current.
@@ -56,7 +56,7 @@ backend_init :: (info: *Window_Info) {
         #if OS == .MACOS {
             NSOpenGLContext.makeCurrentContext(the_gl_context);
         }
-        
+
         gl_load(*gl);
         gl_enable_debug_output(break_on_error = true);
 
@@ -67,7 +67,7 @@ backend_init :: (info: *Window_Info) {
 
         DumpGLErrors("context");
     }
-    
+
     state.current_window_info = << info;
 }
 
@@ -105,7 +105,7 @@ MINIMUM_GL_MINOR_VERSION :: 3;
 
 Shader_Platform :: struct {
     gl_handle: GLuint;
-    
+
     position_loc:      GLint = -1;
     color_scale_loc:   GLint = -1;
     normal_loc:        GLint = -1;
@@ -142,7 +142,7 @@ swap_buffers :: (window: Window_Type, vsync := true) {  // @Incomplete: Have som
             log_error("Simp: Attempt to swap_buffers on a previously unseen window!\n");
             return;
         }
-        
+
         glXSwapBuffers(x_global_display, info.specific.glx_window);
     } else #if OS == .MACOS {
         // On macOS, OpenGL buffer swapping is done on the context, not on the view.
@@ -275,7 +275,7 @@ END
 
 get_shader_program :: (shader_text: string) -> GLuint {
     LOG_BUFFER_SIZE :: 512;
-    
+
     make_shader_object :: (shader: string, prefix: string, shader_type : GLenum) -> GLuint {
         shader_object := glCreateShader(shader_type);
 
@@ -316,7 +316,7 @@ get_shader_program :: (shader_text: string) -> GLuint {
     #define FRAGMENT_SHADER
     #define OUT_IN in
     END
-    
+
     shader_v := make_shader_object(shader_text, PREFIX_V, GL_VERTEX_SHADER);
     shader_f := make_shader_object(shader_text, PREFIX_F, GL_FRAGMENT_SHADER);
     shader_p := glCreateProgram();
@@ -333,7 +333,7 @@ get_shader_program :: (shader_text: string) -> GLuint {
         glGetProgramInfoLog(shader_p, log_data.count, null, log_data.data);
         log("%", to_string(log_data.data), flags=.ERROR);
         return 0;
-    } 
+    }
 
     glDeleteShader(shader_v);
     glDeleteShader(shader_f);
@@ -346,7 +346,7 @@ get_shader_program :: (shader_text: string) -> GLuint {
 draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
     CheckInit();
     quads := font.current_quads;
-    
+
     if state.current_shader immediate_flush();
 
     set_shader_for_text();
@@ -366,7 +366,7 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
         if quad.y0 > cast(float) render_target_height return;
 */
         page := quad.glyph.page;
-        
+
         if page.bitmap_data.width  <= 1 return;
         if page.bitmap_data.height <= 1 return;
 
@@ -376,15 +376,15 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
         uv1 := make_vector2(u1, v0);
         uv2 := make_vector2(u1, v1);
         uv3 := make_vector2(u0, v1);
-        
+
         immediate_quad(p0, p1, p2, p3, color, uv0, uv1, uv2, uv3);
     }
 
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 0);
-    
+
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    
+
     last_texture: s64 = -1;
 
     glBegin(GL_TRIANGLES);
@@ -392,12 +392,12 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
     for quad, i: quads {
         page := quad.glyph.page;
         map  := *page.texture;
-        
+
         if page.dirty {
             page.dirty = false;
             texture_load_from_bitmap(map, page.bitmap_data);
         }
- 
+
         if map.gl_handle != last_texture {
             immediate_flush();
             handle := map.gl_handle;
@@ -410,7 +410,7 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, handle);  // Bind handle to slot 0.
             glUniform1i(loc, 0);
-                
+
             glBegin(GL_TRIANGLES);  // @Speed!
         }
 
@@ -418,7 +418,7 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
     }
 
     immediate_flush();
-    
+
     glEnd();
     glDisable(GL_BLEND);
     glDisable(GL_TEXTURE_2D);
@@ -453,7 +453,7 @@ get_ogl_format :: (tf: Texture_Format, srgb:=false) -> (format:GLenum, src_forma
     using Texture_Format;
 
     format : GLenum;
-    
+
     if tf == {
         case R8;
             assert(srgb == false);
@@ -566,10 +566,10 @@ get_ogl_format :: (tf: Texture_Format, srgb:=false) -> (format:GLenum, src_forma
             return GL_DEPTH32F_STENCIL8, src_format=GL_DEPTH_STENCIL, src_type=GL_FLOAT_32_UNSIGNED_INT_24_8_REV;
 
         case;
-            assert(false, "Unsupported texture format %d.", tf);            
+            assert(false, "Unsupported texture format %d.", tf);
     }
 
-    
+
     return GL_INVALID_ENUM;
 }
 
@@ -661,7 +661,7 @@ backend_use_shader :: (s: *Shader) {
     } else {
         glDisable(GL_BLEND);
     }
-    
+
     glUseProgram(s.gl_handle);
 }
 
@@ -704,7 +704,7 @@ backend_tweak_projection_matrix :: (m: *Matrix4) {
 
 #if OS == .WINDOWS {
     Backend_Platform_Specific :: struct { }
-    
+
     Window_Info_Platform_Specific :: struct {
         hdc:   HDC;
     }
@@ -716,7 +716,7 @@ backend_tweak_projection_matrix :: (m: *Matrix4) {
         format := GetPixelFormat(the_hdc_for_pixel_format_cloning);
         result := DescribePixelFormat(the_hdc_for_pixel_format_cloning, format, size_of(type_of(pfd)), *pfd);
         assert(result != 0);
-        
+
         SetPixelFormat(hdc, format, *pfd);
     }
 }

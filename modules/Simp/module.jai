@@ -128,6 +128,7 @@ Window_Info :: struct {
 window_infos: [..] Window_Info;
 
 #scope_export
+
 set_scissor :: (x0: s32, y0: s32, x1: s32, y1: s32) {
     immediate_flush();
     glEnable(GL_SCISSOR_TEST);

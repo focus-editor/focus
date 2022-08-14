@@ -1,10 +1,10 @@
 main :: () {
     #assert OS == .WINDOWS "Currently only supporting Windows";
-    windows_setup();
+    platform_setup();
 
-    window_x, window_y := windows_get_biggest_monitor_pos();
-    window = create_window(window_width, window_height, "Focus", window_x, window_y, background_color_rgb = color_as_3_floats(Colors.BACKGROUND), hidden = true);
-    windows_maximize_window(window);
+    window_x, window_y := platform_get_biggest_monitor_pos();
+    window = create_window(window_width, window_height, "Focus", window_x, window_y, background_color_rgb = color_as_3_floats(Colors.BACKGROUND));
+    platform_maximize_window(window);
 
     window_width, window_height = Simp.get_render_dimensions(window);
     screen = make_rect(0, 0, window_width, window_height);
@@ -13,14 +13,14 @@ main :: () {
     path := path_strip_filename(get_path_of_running_executable());
     set_working_directory(path);
 
-    dpi_scale = windows_get_dpi_scale(window);
+    dpi_scale = platform_get_dpi_scale(window);
     init_fonts();
 
     editors_open_file("src/layout.jai");
 
     should_quit := false;
     while !should_quit {
-        windows_wait_message();
+        platform_wait_message();
         Input.update_window_events();
 
         for Input.get_window_resizes() {
@@ -31,7 +31,7 @@ main :: () {
                 window_height = it.height;
                 if should_reinit {
                     screen    = make_rect(0, 0, window_width, window_height);
-                    dpi_scale = windows_get_dpi_scale(window);
+                    dpi_scale = platform_get_dpi_scale(window);
                     init_fonts();
                 }
             }
