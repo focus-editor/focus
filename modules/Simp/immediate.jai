@@ -13,7 +13,6 @@ Immediate_State :: struct {
     vertices: [MAX_VERTICES] Immediate_Vertex;
 
     specific: Backend_Platform_Specific;
-//    diffuse_texture: *Texture;
     // We may wish to add a user-data pointer here.
 }
 
@@ -187,9 +186,6 @@ set_vertex_format_to_XCNUU :: (shader: *Shader) {
 //
 // These are just different utility functions that we use to fill out the vertex array.
 //
-immediate_vertex_pointer :: inline (index: s32) -> *Immediate_Vertex {
-    return context.simp.vertices.data + index;
-}
 
 put_vertex :: inline (using vertex: *Immediate_Vertex, p: Vector2, color: Vector4, u: float, v: float) {
     position.xy  = p;
@@ -439,7 +435,7 @@ CheckSpace :: (n: s32) #expand {
     if !context.simp  per_thread_init();
     `state := context.simp;
     if state.num_vertices >= state.vertices.count-(n-1)  immediate_flush();
-    `v := immediate_vertex_pointer(state.num_vertices);
+    `v := state.vertices.data + state.num_vertices;  // vertex pointer
     state.num_vertices += n;
 }
 

@@ -387,8 +387,6 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
 
     last_texture: s64 = -1;
 
-    glBegin(GL_TRIANGLES);
-
     for quad, i: quads {
         page := quad.glyph.page;
         map  := *page.texture;
@@ -402,7 +400,6 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
             immediate_flush();
             handle := map.gl_handle;
             last_texture = handle;
-            glEnd();
 
             shader := state.current_shader;
             loc := glGetUniformLocation(shader.gl_handle, "text_sampler");
@@ -410,8 +407,6 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, handle);  // Bind handle to slot 0.
             glUniform1i(loc, 0);
-
-            glBegin(GL_TRIANGLES);  // @Speed!
         }
 
         draw_letter_quad(font, quad, color);
@@ -419,7 +414,6 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
 
     immediate_flush();
 
-    glEnd();
     glDisable(GL_BLEND);
     glDisable(GL_TEXTURE_2D);
 }
@@ -684,12 +678,6 @@ backend_resize_render_target :: (info: Window_Info) {
         #if OS == .MACOS {
             NSOpenGLContext.update(the_gl_context);
         }
-    }
-}
-
-backend_flush :: () {
-    if the_gl_context {
-        glFlush();
     }
 }
 

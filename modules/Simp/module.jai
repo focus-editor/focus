@@ -45,7 +45,6 @@ set_render_target :: (window: Window_Type) {
     CheckInit();
 
     immediate_flush();
-    backend_flush();
 
     state.current_shader        = null;
     state.texture_render_target = null;
@@ -71,7 +70,6 @@ set_render_target :: (texture: *Texture) {
     }
 
     immediate_flush();
-    backend_flush();
     state.current_shader = null;
 
     state.texture_render_target = texture;
@@ -81,7 +79,7 @@ set_render_target :: (texture: *Texture) {
 update_window :: (window: Window_Type) {
     CheckInit();
 
-    info := find_or_add_window_info(window);
+    info := find_window_info(window);
     if !info return;  // Ignore windows we don't understand.
 
     window_width, window_height := get_render_dimensions(window);
@@ -97,7 +95,7 @@ update_window :: (window: Window_Type) {
             // the projection will be out-of-date, so, update it here.
             // We check state.current_shader because immediate_set_2d_projection will error
             // if it is not set.
-            if !context.simp.texture_render_target {
+            if !state.texture_render_target {
                 if state.current_shader  immediate_set_2d_projection(window_width, window_height);
             }
         }
