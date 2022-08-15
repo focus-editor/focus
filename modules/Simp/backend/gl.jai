@@ -351,24 +351,13 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
     CheckInit();
     quads := font.current_quads;
 
-    if state.current_shader immediate_flush();
-
     set_shader_for_text();
 
     glBlendFunc(GL_SRC1_COLOR, GL_ONE_MINUS_SRC1_COLOR);
-    // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
     glEnable(GL_TEXTURE_2D);
 
     draw_letter_quad :: (font: *Dynamic_Font, quad: Font_Quad, color: Vector4) {
-
-/*
-        // @Robustness: These assume our coordinates are in screenspace...
-        if quad.x1 < 0 return;
-        if quad.x0 > cast(float) render_target_width return;
-        if quad.y1 < 0 return;
-        if quad.y0 > cast(float) render_target_height return;
-*/
         page := quad.glyph.page;
 
         if page.bitmap_data.width  <= 1 return;
@@ -390,8 +379,6 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    last_texture: s64 = -1;
 
     for quad, i: quads {
         page := quad.glyph.page;
@@ -418,11 +405,14 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
         draw_letter_quad(font, quad, color);
     }
 
-    immediate_flush();
-
     glDisable(GL_BLEND);
     glDisable(GL_TEXTURE_2D);
 }
+
+#scope_file
+
+// Used for drawing text quads above
+last_texture: s64 = -1;
 
 #scope_module
 

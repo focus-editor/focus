@@ -6,7 +6,6 @@
 - Remove/replace selection on edits
 
 - Don't redraw if nothing has changed
-- Don't do a draw call per line
 - Maybe don't store font atlas in an rgba texture
 - Implement semantic highlighting
     - Polymorphic structs and possibly other types
@@ -17,6 +16,7 @@
   (https://freetype.org/freetype2/docs/reference/ft2-lcd_rendering.html)
 
 # DONE
++ Don't do a draw call per line
 + Investigate subpixel rendering with FT
 + Understand how glyphs are rendered in Simp
 + Handle backspace

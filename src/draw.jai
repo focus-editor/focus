@@ -23,6 +23,7 @@ draw_frame :: () {
             Simp.draw_text(font, xx x, xx y, line);
             y -= line_height;
         }
+        Simp.immediate_flush();
     }
 
     Simp.swap_buffers(window);
