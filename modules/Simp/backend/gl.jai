@@ -207,11 +207,11 @@ void main () {
     vec4 sample_left   = textureOffset(text_sampler, TextureCoords, ivec2(-1, 0));
     vec4 sample_center = texture(text_sampler, TextureCoords);
     vec4 sample_right  = textureOffset(text_sampler, TextureCoords, ivec2(1, 0));
-    float sample = (sample_left.a + sample_center.a + sample_right.a) / 3.0;
-
-    color = vec4(iterated_color.xyz, sample * iterated_color.a); // text_color * sample;
-
-    // if (sample < .3)  discard;
+    // float sample = (sample_left.a + sample_center.a + sample_right.a) / 3.0;
+    // color = vec4(iterated_color.xyz, sample * iterated_color.a);
+    vec3 alpha = vec3(sample_left.a, sample_center.a, sample_right.a);
+    color = vec4(iterated_color.xyz * alpha, iterated_color.a);
+    if (alpha.r < 0.1 && alpha.g < 0.1 && alpha.b < 0.1) discard;
 }
 #endif // FRAGMENT_SHADER
 END
@@ -382,6 +382,7 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
         uv3 := make_vector2(u0, v1);
 
         // Shrinking the quad to a third of its size (for subpixel rendering)
+        // Note that we're keeping uv's the same
         immediate_quad(p0, p0 + (p1 - p0) / 3, p3 + (p2 - p3) / 3, p3, color, uv0, uv1, uv2, uv3);
     }
 

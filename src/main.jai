@@ -75,8 +75,9 @@ main :: () {
 }
 
 init_fonts :: () {
-    // font = Simp.get_font_at_size("fonts", "consola.ttf", cast(int) (font_size * dpi_scale));
-    font = Simp.get_font_at_size("fonts", "FiraCode-Retina.ttf", cast(int) (font_size * dpi_scale));
+    size := cast(int) (font_size * dpi_scale);
+    font = Simp.get_font_at_size("fonts", "consola.ttf", size);
+    // font = Simp.get_font_at_size("fonts", "FiraCode-Retina.ttf", size);
     assert(font != null, "Couldn't init font");
     char_size   = cast(float) font.em_width;
     line_height = cast(float) font.default_line_spacing * LINE_HEIGHT_SCALE;
@@ -107,10 +108,10 @@ line_height: float;
 LINE_HEIGHT_SCALE :: 1.2;
 
 font      :  *Simp.Dynamic_Font;
-font_size := 14;
+font_size := 17;
 
 font_ui      :  *Simp.Dynamic_Font;
-font_ui_size := 14;
+font_ui_size := 17;
 
 Mods :: Input.Event.Modifier_Flags;
 
