@@ -206,11 +206,11 @@ uniform sampler2D text_sampler;
 uniform vec4 text_color;
 
 void main () {
-    vec4 sample_left   = textureOffset(text_sampler, TextureCoords, ivec2(-1, 0));
-    vec4 sample_center = texture(text_sampler, TextureCoords);
-    vec4 sample_right  = textureOffset(text_sampler, TextureCoords, ivec2(1, 0));
-    color = vec4(iterated_color.xyz, iterated_color.a);
-    colorMask = vec4(sample_left.a, sample_center.a, sample_right.a, 1.0);
+    float sample_left   = textureOffset(text_sampler, TextureCoords, ivec2(-1, 0)).r;
+    float sample_center = texture(text_sampler, TextureCoords).r;
+    float sample_right  = textureOffset(text_sampler, TextureCoords, ivec2( 1, 0)).r;
+    color = iterated_color;
+    colorMask = vec4(sample_left, sample_center, sample_right, 1.0);
 }
 #endif // FRAGMENT_SHADER
 END

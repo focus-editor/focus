@@ -1,6 +1,4 @@
 # TODO
-- Use the rgb channels in the font subpixel texture
-
 - Don't draw characters that are invisible
 - Load 2 files side by side
 - Draw selection
@@ -8,12 +6,15 @@
 - Remove/replace selection on edits
 
 - Don't redraw if nothing has changed
+- Don't do a draw call per line
 - Maybe don't store font atlas in an rgba texture
 - Implement semantic highlighting
     - Polymorphic structs and possibly other types
     - Highlight globals?
     - Color cursor differently depending on what scope we're in
 - Make sure cursor positioning is correct for all fonts and sizes
+- Subpixel rendering: support other types of panels
+  (https://freetype.org/freetype2/docs/reference/ft2-lcd_rendering.html)
 
 # DONE
 + Investigate subpixel rendering with FT

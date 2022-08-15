@@ -398,8 +398,7 @@ make_font_page :: () -> *Font_Page {
     page := array_add(*font_pages);
 
     bitmap := New(Bitmap);
-    // @Speed: Make the bitmap R8!
-    bitmap_alloc(bitmap, xx page_size_x, xx page_size_y, .RGBA8);
+    bitmap_alloc(bitmap, xx page_size_x, xx page_size_y, .R8);
     page.bitmap_data = bitmap;
 
     return page;
@@ -412,16 +411,18 @@ get_font_line :: (width: int, height: int) -> *Font_Line {
     }
 
     page := make_font_page();
+    line := find_line_within_page(page, width, height);  // If we didn't find it somehow, we lose!
+    assert(line != null, "Couldn't find a line for a character in a fresh font page. This is a bug.");
 
-    return find_line_within_page(page, width, height);  // If we didn't find it somehow, we lose!
+    return line;
 }
 
 copy_glyph_to_bitmap :: (face: FT_Face, data: *Glyph_Data) {
     b := *face.glyph.bitmap;
 
-    data.width  = b.width;
-    data.height = b.rows;
-    data.advance = cast,trunc(s16) (face.glyph.advance.x >> 6);   // @Cleanup: reduce the number of casts?
+    data.width    = b.width;
+    data.height   = b.rows;
+    data.advance  = cast,trunc(s16) (face.glyph.advance.x >> 6);   // @Cleanup: reduce the number of casts?
     data.offset_x = cast,trunc(s16) face.glyph.bitmap_left;
     data.offset_y = cast,trunc(s16) face.glyph.bitmap_top;
 
@@ -429,15 +430,6 @@ copy_glyph_to_bitmap :: (face: FT_Face, data: *Glyph_Data) {
     data.ascent = cast,trunc(s16) (metrics.horiBearingY >> 6);  // This trunc seemed necessary because at least one font gave us weird data here. Maybe it's a buggy font, or maybe we are doing something weird / dumb.
 
     font_line := get_font_line(b.width, b.rows);
-    if !font_line {
-        // Fail! ... They get kind-of garbage.
-        data.x0 = 0;
-        data.y0 = 0;
-        log_error("font_line is null!\n");
-        assert(false);
-        data.page = null;
-        return;
-    }
 
     dest_x := font_line.bitmap_cursor_x;
     dest_y := font_line.bitmap_cursor_y;
@@ -452,13 +444,8 @@ copy_glyph_to_bitmap :: (face: FT_Face, data: *Glyph_Data) {
     width := cast(s32) b.width;
     for j : 0..rows-1 {
         for i : 0..width-1 {
-            source_pixel := b.buffer[(rows - 1 - j) * b.pitch + i];
-
-            dest_pixel := bitmap.data.data + ((dest_y + j) * bitmap.width + (dest_x + i)) * 4;
-            dest_pixel[0] = 255;
-            dest_pixel[1] = 255;
-            dest_pixel[2] = 255;
-            dest_pixel[3] = source_pixel;
+            dest_pixel := bitmap.data.data + ((dest_y + j) * bitmap.width + (dest_x + i));
+            << dest_pixel = b.buffer[(rows - 1 - j) * b.pitch + i];
         }
     }
 
