@@ -204,13 +204,10 @@ uniform sampler2D text_sampler;
 uniform vec4 text_color;
 
 void main () {
-    float sample = texture(text_sampler, TextureCoords).a;
-
-    // vec2 tc = TextureCoords * vec2(3, 1);
-    // vec4 sample_left   = texture(text_sampler, tc);
-    // vec4 sample_center = textureOffset(text_sampler, tc, ivec2(1, 0));
-    // vec4 sample_right  = textureOffset(text_sampler, tc, ivec2(2, 0));
-    // float sample = max(sample_left.a, max(sample_center.a, sample_right.a));
+    vec4 sample_left   = textureOffset(text_sampler, TextureCoords, ivec2(-1, 0));
+    vec4 sample_center = texture(text_sampler, TextureCoords);
+    vec4 sample_right  = textureOffset(text_sampler, TextureCoords, ivec2(1, 0));
+    float sample = (sample_left.a + sample_center.a + sample_right.a) / 3.0;
 
     color = vec4(iterated_color.xyz, sample * iterated_color.a); // text_color * sample;
 
