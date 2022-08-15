@@ -78,10 +78,6 @@ immediate_set_shader :: (s: *Shader) {
     backend_use_shader(s);
 }
 
-immediate_begin :: () {
-    CheckInit();
-}
-
 immediate_flush :: () {
     CheckInit();
     if !state.num_vertices return;

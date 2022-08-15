@@ -478,10 +478,10 @@ find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32) -> *Glyph_Data {
 
     glyph_index := FT_Get_Char_Index(face, utf32);
     if glyph_index {
-        error := FT_Load_Glyph(face, glyph_index, FT_LOAD_RENDER);
-        // error := FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT);
+        // error := FT_Load_Glyph(face, glyph_index, FT_LOAD_RENDER);
+        error := FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT);
         assert(!error);
-        // FT_Render_Glyph(face.glyph, .FT_RENDER_MODE_LCD);
+        FT_Render_Glyph(face.glyph, .FT_RENDER_MODE_LCD);
     } else {
         log_error("Unable to find a glyph in font '%' for utf32 character %.\n", name, utf32);
         glyph_index = glyph_index_for_unknown_character;

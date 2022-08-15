@@ -204,9 +204,17 @@ uniform sampler2D text_sampler;
 uniform vec4 text_color;
 
 void main () {
-    vec4 sample = texture(text_sampler, TextureCoords);
-    color = vec4(iterated_color.xyz, sample.a * iterated_color.a); // text_color * sample;
-    if (sample.a < .3)  discard;
+    float sample = texture(text_sampler, TextureCoords).a;
+
+    // vec2 tc = TextureCoords * vec2(3, 1);
+    // vec4 sample_left   = texture(text_sampler, tc);
+    // vec4 sample_center = textureOffset(text_sampler, tc, ivec2(1, 0));
+    // vec4 sample_right  = textureOffset(text_sampler, tc, ivec2(2, 0));
+    // float sample = max(sample_left.a, max(sample_center.a, sample_right.a));
+
+    color = vec4(iterated_color.xyz, sample * iterated_color.a); // text_color * sample;
+
+    // if (sample < .3)  discard;
 }
 #endif // FRAGMENT_SHADER
 END
@@ -350,7 +358,6 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
     if state.current_shader immediate_flush();
 
     set_shader_for_text();
-    immediate_begin();
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
@@ -377,7 +384,8 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
         uv2 := make_vector2(u1, v1);
         uv3 := make_vector2(u0, v1);
 
-        immediate_quad(p0, p1, p2, p3, color, uv0, uv1, uv2, uv3);
+        // Shrinking the quad to a third of its size (for subpixel rendering)
+        immediate_quad(p0, p0 + (p1 - p0) / 3, p3 + (p2 - p3) / 3, p3, color, uv0, uv1, uv2, uv3);
     }
 
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 0);

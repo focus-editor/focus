@@ -1,6 +1,5 @@
 # TODO
 - Investigate subpixel rendering with FT
-    - Understand how glyphs are rendered in Simp
 - Don't draw characters that are invisible
 - Load 2 files side by side
 - Draw selection
@@ -16,6 +15,7 @@
 - Make sure cursor positioning is correct for all fonts and sizes
 
 # DONE
++ Understand how glyphs are rendered in Simp
 + Handle backspace
 + Handle delete
 + Handle enter
