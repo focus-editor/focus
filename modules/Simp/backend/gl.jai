@@ -198,7 +198,9 @@ void main() {
 #endif // VERTEX_SHADER
 
 #ifdef FRAGMENT_SHADER
-out vec4 color;
+
+layout(location = 0, index = 0) out vec4 color;
+layout(location = 0, index = 1) out vec4 colorMask;
 
 uniform sampler2D text_sampler;
 uniform vec4 text_color;
@@ -207,11 +209,8 @@ void main () {
     vec4 sample_left   = textureOffset(text_sampler, TextureCoords, ivec2(-1, 0));
     vec4 sample_center = texture(text_sampler, TextureCoords);
     vec4 sample_right  = textureOffset(text_sampler, TextureCoords, ivec2(1, 0));
-    // float sample = (sample_left.a + sample_center.a + sample_right.a) / 3.0;
-    // color = vec4(iterated_color.xyz, sample * iterated_color.a);
-    vec3 alpha = vec3(sample_left.a, sample_center.a, sample_right.a);
-    color = vec4(iterated_color.xyz * alpha, iterated_color.a);
-    if (alpha.r < 0.1 && alpha.g < 0.1 && alpha.b < 0.1) discard;
+    color = vec4(iterated_color.xyz, iterated_color.a);
+    colorMask = vec4(sample_left.a, sample_center.a, sample_right.a, 1.0);
 }
 #endif // FRAGMENT_SHADER
 END
@@ -356,7 +355,8 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
 
     set_shader_for_text();
 
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFunc(GL_SRC1_COLOR, GL_ONE_MINUS_SRC1_COLOR);
+    // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
     glEnable(GL_TEXTURE_2D);
 

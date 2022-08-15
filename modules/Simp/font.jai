@@ -349,8 +349,8 @@ page_size_x := 2048;
 page_size_y := 1024;
 
 loaded_fonts:  [..] *Loaded_Font;
-font_pages:    [..] *Font_Page;
 dynamic_fonts: [..] *Dynamic_Font;
+font_pages:    [..] Font_Page;
 
 glyph_and_line_pool: Pool;
 
@@ -394,9 +394,8 @@ find_line_within_page :: (page: *Font_Page, width: int, height: int) -> *Font_Li
     return line;
 }
 
-// @Speed: Font Pages should probably be tightly packed, not a bunch of pointers.
 make_font_page :: () -> *Font_Page {
-    page := New(Font_Page);
+    page := array_add(*font_pages);
 
     bitmap := New(Bitmap);
     // @Speed: Make the bitmap R8!
@@ -407,15 +406,12 @@ make_font_page :: () -> *Font_Page {
 }
 
 get_font_line :: (width: int, height: int) -> *Font_Line {
-    for page : font_pages {
+    for *page : font_pages {
         line := find_line_within_page(page, width, height);
         if line return line;
     }
 
     page := make_font_page();
-    if !page return null;
-
-    array_add(*font_pages, page);
 
     return find_line_within_page(page, width, height);  // If we didn't find it somehow, we lose!
 }
