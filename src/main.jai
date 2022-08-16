@@ -3,7 +3,7 @@ main :: () {
     platform_setup();
 
     window_x, window_y := platform_get_biggest_monitor_pos();
-    window = create_window(window_width, window_height, "Focus", window_x, window_y, background_color_rgb = color_as_3_floats(Colors.BACKGROUND));
+    window = create_window(window_width, window_height, "Focus", window_x, window_y, background_color_rgb = as_3_floats(Colors.BACKGROUND));
     platform_maximize_window(window);
 
     window_width, window_height = Simp.get_render_dimensions(window);
