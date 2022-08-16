@@ -1,4 +1,5 @@
 # TODO
+- Scroll text in all directions
 - Don't draw characters that are invisible
 - Load 2 files side by side
 - Draw selection
@@ -14,6 +15,9 @@
 - Make sure cursor positioning is correct for all fonts and sizes
 - Subpixel rendering: support other types of panels
   (https://freetype.org/freetype2/docs/reference/ft2-lcd_rendering.html)
+- Look into subpixel font positioning
+    - Revisit the font loading code as it has some rounding to pixels there
+      and consider using floats or other units for font metrics
 
 # DONE
 + Don't do a draw call per line

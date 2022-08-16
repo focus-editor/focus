@@ -1,53 +1,60 @@
-move_cursor :: (using cursor: *Cursor, buffer: *Buffer, key_code: Input.Key_Code) {
-    if key_code == {
-        case .ARROW_LEFT;
-            pos.col -= 1;
-            if pos.col < 0 {
-                if pos.line > 0 { pos.line -= 1; pos.col = buffer.lines[pos.line].num_chars; }
-                else pos.col = 0;
-            }
-            col_wanted = pos.col;
-        case .ARROW_RIGHT;
-            line_len := buffer.lines[pos.line].num_chars;
-            if pos.col >= line_len && pos.line < buffer.lines.count - 1 {
-                pos.line += 1;
-                pos.col   = 0;
-            } else if pos.col < line_len {
-                pos.col += 1;
-            }
-            col_wanted = pos.col;
-        case .ARROW_UP;
-            pos.line -= 1;
-            if pos.line < 0 then pos.line = 0;
-            pos.col = col_wanted;
-            line_len := buffer.lines[pos.line].num_chars;
-            if pos.col > line_len {
-                pos.col = line_len;
-            }
-        case .ARROW_DOWN;
-            if pos.line < buffer.lines.count - 1 then pos.line += 1;
-            pos.col = col_wanted;
-            line_len := buffer.lines[pos.line].num_chars;
-            if pos.col > line_len {
-                pos.col = line_len;
-            }
-        case .HOME;
-            text_start_col: s32= 0;
-            line := buffer.lines[pos.line];
-            i := line.start;
-            while i < line.end {
-                byte := buffer.bytes[i];
-                if byte != #char " " break;
-                text_start_col += 1;
-                i += 1 + trailingBytesForUTF8[byte];
-            }
-            if pos.col > text_start_col || pos.col == 0 then pos.col = text_start_col;
-            else pos.col = 0;
-            col_wanted = pos.col;
-        case .END;
-            pos.col = buffer.lines[pos.line].num_chars;
-            col_wanted = pos.col;
+move_cursor_left :: (using cursor: *Cursor, buffer: *Buffer) {
+    pos.col -= 1;
+    if pos.col < 0 {
+        if pos.line > 0 { pos.line -= 1; pos.col = buffer.lines[pos.line].num_chars; }
+        else pos.col = 0;
     }
+    col_wanted = pos.col;
+}
+
+move_cursor_right :: (using cursor: *Cursor, buffer: *Buffer) {
+    line_len := buffer.lines[pos.line].num_chars;
+    if pos.col >= line_len && pos.line < buffer.lines.count - 1 {
+        pos.line += 1;
+        pos.col   = 0;
+    } else if pos.col < line_len {
+        pos.col += 1;
+    }
+    col_wanted = pos.col;
+}
+
+move_cursor_up :: (using cursor: *Cursor, buffer: *Buffer) {
+    pos.line -= 1;
+    if pos.line < 0 then pos.line = 0;
+    pos.col = col_wanted;
+    line_len := buffer.lines[pos.line].num_chars;
+    if pos.col > line_len {
+        pos.col = line_len;
+    }
+}
+
+move_cursor_down :: (using cursor: *Cursor, buffer: *Buffer) {
+    if pos.line < buffer.lines.count - 1 then pos.line += 1;
+    pos.col = col_wanted;
+    line_len := buffer.lines[pos.line].num_chars;
+    if pos.col > line_len {
+        pos.col = line_len;
+    }
+}
+
+move_cursor_home :: (using cursor: *Cursor, buffer: *Buffer) {
+    text_start_col: s32= 0;
+    line := buffer.lines[pos.line];
+    i := line.start;
+    while i < line.end {
+        byte := buffer.bytes[i];
+        if byte != #char " " break;
+        text_start_col += 1;
+        i += 1 + trailingBytesForUTF8[byte];
+    }
+    if pos.col > text_start_col || pos.col == 0 then pos.col = text_start_col;
+    else pos.col = 0;
+    col_wanted = pos.col;
+}
+
+move_cursor_end :: (using cursor: *Cursor, buffer: *Buffer) {
+    pos.col = buffer.lines[pos.line].num_chars;
+    col_wanted = pos.col;
 }
 
 handle_enter :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {

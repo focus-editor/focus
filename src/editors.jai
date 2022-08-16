@@ -5,22 +5,16 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     cursor := *editor.cursor;
 
     if key_code == {
-        case .ARROW_LEFT;  #through;
-        case .ARROW_RIGHT; #through;
-        case .ARROW_UP;    #through;
-        case .ARROW_DOWN;  #through;
-        case .HOME;        #through;
-        case .END;
-            move_cursor(cursor, buffer, key_code);
+        case .ARROW_LEFT;   move_cursor_left (cursor, buffer);
+        case .ARROW_RIGHT;  move_cursor_right(cursor, buffer);
+        case .ARROW_UP;     move_cursor_up   (cursor, buffer);
+        case .ARROW_DOWN;   move_cursor_down (cursor, buffer);
+        case .HOME;         move_cursor_home (cursor, buffer);
+        case .END;          move_cursor_end  (cursor, buffer);
 
-        case .ENTER;
-            handle_enter(cursor, buffer, mods);
-
-        case .BACKSPACE;
-            handle_backspace(cursor, buffer, mods);
-
-        case .DELETE;
-            handle_delete(cursor, buffer, mods);
+        case .ENTER;        handle_enter(cursor, buffer, mods);
+        case .BACKSPACE;    handle_backspace(cursor, buffer, mods);
+        case .DELETE;       handle_delete(cursor, buffer, mods);
     }
 }
 

@@ -17,8 +17,9 @@ draw_frame :: () {
         draw_cursor(editor, rect);
 
         x := rect.x;
-        // @Hack: cursor would not look right without the extra adjustment. Need to do something about it
-        y := rect.y + rect.h - line_height + (line_height - char_size) / 2 - ifx dpi_scale > 1.0 then 1 else 0;
+        y := rect.y + rect.h - line_height + (line_height - char_size) / 2;
+        x -= editor.viewport.left;
+        y -= editor.viewport.top;
         for line : split(to_string(buffer.bytes), cast(u8) #char "\n") {
             Simp.draw_text(font, xx x, xx y, line);
             y -= line_height;
@@ -33,7 +34,9 @@ draw_cursor :: (using editor: Editor, editor_rect: Rect) {
     width  := char_size;
     height := line_height;
     x := editor_rect.x + cursor.pos.col  * width;
-    y := editor_rect.y + editor_rect.h - cursor.pos.line * height - height;
+    y := editor_rect.y + editor_rect.h - cursor.pos.line * height - height + ifx dpi_scale > 1.0 then 1 else 0;  // @Hack: cursor would not look right without the extra adjustment. Need to do something about it;
+    x -= viewport.left;
+    y -= viewport.top;
 
     rect := make_rect(x, y, width, height);
     draw_rect(rect, Colors.CURSOR_ACTIVE);
