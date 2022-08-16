@@ -357,7 +357,7 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
     glEnable(GL_BLEND);
     glEnable(GL_TEXTURE_2D);
 
-    draw_letter_quad :: (font: *Dynamic_Font, quad: Font_Quad, color: Vector4) {
+    draw_letter_quad :: (quad: Font_Quad, color: Vector4) {
         page := quad.glyph.page;
 
         if page.bitmap_data.width  <= 1 return;
@@ -380,6 +380,8 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
+    last_texture: GLuint = 0xFFFFFFFF;
+
     for quad, i: quads {
         page := quad.glyph.page;
         map  := *page.texture;
@@ -390,29 +392,30 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
         }
 
         if map.gl_handle != last_texture {
+            // @Speed
+            // NOTE(ivan): this will cause a flush for every call to draw_text.
+            // But if we don't do this then we won't set the texture.
+            // Need to refactor the text rendering code so that we don't have to deal with this BS
             immediate_flush();
-            handle := map.gl_handle;
-            last_texture = handle;
+            last_texture = map.gl_handle;
 
             shader := state.current_shader;
             loc := glGetUniformLocation(shader.gl_handle, "text_sampler");
             if loc < 0  log_error("Unable to find text_sampler in shader_text!");
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, handle);  // Bind handle to slot 0.
+            glBindTexture(GL_TEXTURE_2D, map.gl_handle);  // Bind handle to slot 0.
             glUniform1i(loc, 0);
         }
 
-        draw_letter_quad(font, quad, color);
+        draw_letter_quad(quad, color);
     }
+
+    // Same as above. This is BS
+    immediate_flush();
 
     glDisable(GL_BLEND);
     glDisable(GL_TEXTURE_2D);
 }
-
-#scope_file
-
-// Used for drawing text quads above
-last_texture: s64 = -1;
 
 #scope_module
 

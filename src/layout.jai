@@ -71,7 +71,7 @@ cut_bottom :: (rect: Rect, amount: float) -> (bottom: Rect, remainder: Rect) {
     return bottom, remainder;
 }
 
-cut_top    :: (rect: Rect, amount: float) -> (top: Rect, remainder: Rect) {
+cut_top :: (rect: Rect, amount: float) -> (top: Rect, remainder: Rect) {
     remainder := rect;
 
     remainder.h -= amount;

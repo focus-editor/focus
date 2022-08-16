@@ -16,7 +16,7 @@ main :: () {
     dpi_scale = platform_get_dpi_scale(window);
     init_fonts();
 
-    editors_open_file("src/layout.jai");
+    editors_open_file("src/windows.jai");
 
     should_quit := false;
     while !should_quit {
@@ -67,6 +67,8 @@ main :: () {
                     editors_handle_text_input(it.utf32);
             }
         }
+
+        if Input.mouse_delta_z != 0 then editors_handle_scroll(Input.mouse_delta_z);
 
         draw_frame();
 

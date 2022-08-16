@@ -56,6 +56,14 @@ editors_open_file :: (path: string, on_the_side := false) {
     }
 }
 
+editors_handle_scroll :: (delta_z: int) {
+    if delta_z == 0 return;
+    WHEEL_SENSITIVITY :: 0.5;
+    editor := get_active_editor_and_buffer();
+    if !editor return;
+    editor.viewport.top += xx (cast(float) delta_z * WHEEL_SENSITIVITY);
+}
+
 #scope_file
 
 find_or_create_editor :: (buffer_id: s64) -> editor_id: s64 {
