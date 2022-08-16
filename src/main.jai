@@ -20,7 +20,9 @@ main :: () {
 
     should_quit := false;
     while !should_quit {
-        platform_wait_message();
+        if !redraw_requested platform_wait_message();
+        redraw_requested = false;
+
         Input.update_window_events();
 
         for Input.get_window_resizes() {
@@ -100,6 +102,8 @@ window_height := 1080;
 window_x  := -1;
 window_y  := -1;
 dpi_scale := 1.0;
+
+redraw_requested := true;  // set to true to render the first frame
 
 screen: Rect;
 
