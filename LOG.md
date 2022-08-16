@@ -1,6 +1,9 @@
 # TODO
 - Scroll text in all directions
-- Don't draw characters that are invisible
+    + Use scissor and try it on horizontal scroll
+    + Draw text at an offset from borders
+    - Don't draw characters that are invisible
+
 - Load 2 files side by side
 - Draw selection
 - Select text
