@@ -3,7 +3,7 @@
     + Use scissor and try it on horizontal scroll
     + Draw text at an offset from borders
     + Implement some version of smooth scrolling
-    - Scroll horizontally
+    + Scroll horizontally
     - Don't draw characters that are invisible
 
 - Load 2 files side by side

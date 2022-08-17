@@ -63,17 +63,19 @@ editors_handle_scroll :: (delta_z: int) {
     if !editor return;
 
     using editor.viewport;
-
+    using scroll_y;
+    // Vertical scroll
     // Y-up, so a positive value of viewport.top means we've scrolled down
-    scroll_y.start = top;
-    scroll_y.target -= xx (cast(float) delta_z * WHEEL_SENSITIVITY);
-    if scroll_y.target < 0 then scroll_y.target = 0;
-    scroll_y.started_at = frame_time;
+    start = top;
+    target -= xx (cast(float) delta_z * WHEEL_SENSITIVITY);
+    if target < 0 then target = 0;
+    started_at = frame_time;
 }
 
 animate_scrolling :: (editor: *Editor) -> finished: bool {
     using editor.viewport;
 
+    // Vertical scroll
     if top != scroll_y.target {
         using scroll_y;
         t := (frame_time - started_at) / Scroll_Animation.SPEED;
@@ -83,8 +85,19 @@ animate_scrolling :: (editor: *Editor) -> finished: bool {
             top = start + xx (cast(float)(target - start) * t);
         }
     }
-    // TODO: scroll_x
-    return top == scroll_y.target;
+
+    // Horizontal scroll
+    if left != scroll_x.target {
+        using scroll_x;
+        t := (frame_time - started_at) / Scroll_Animation.SPEED;
+        if t >= 1 || t < 0 {
+            left = target;
+        } else {
+            left = start + xx (cast(float)(target - start) * t);
+        }
+    }
+
+    return top == scroll_y.target && left == scroll_x.target;
 }
 
 #scope_file
