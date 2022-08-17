@@ -19,11 +19,14 @@ main :: () {
     editors_open_file("src/windows.jai");
 
     should_quit := false;
+
     while !should_quit {
         if !redraw_requested platform_wait_message();
         redraw_requested = false;
 
         Input.update_window_events();
+
+        frame_time = get_time();
 
         for Input.get_window_resizes() {
             Simp.update_window(it.window);
@@ -72,6 +75,13 @@ main :: () {
 
         if Input.mouse_delta_z != 0 then editors_handle_scroll(Input.mouse_delta_z);
 
+        // TODO: do it for all visible editors?
+        {
+            editor := get_active_editor_and_buffer();
+            finished := animate_scrolling(editor);
+            if !finished then redraw_requested = true;
+        }
+
         draw_frame();
 
         reset_temporary_storage();
@@ -80,7 +90,7 @@ main :: () {
 
 init_fonts :: () {
     size := cast(int) (font_size * dpi_scale);
-    // font = Simp.get_font_at_size("fonts", "consola.ttf", size);
+    // font = Simp.get_font_at_size("fonts", "consola.ttf", 25);
     font = Simp.get_font_at_size("fonts", "FiraCode-Retina.ttf", size);
     assert(font != null, "Couldn't init font");
     char_size   = cast(float) font.em_width;
@@ -104,6 +114,8 @@ window_y  := -1;
 dpi_scale := 1.0;
 
 redraw_requested := true;  // set to true to render the first frame
+
+frame_time: float64;
 
 screen: Rect;
 

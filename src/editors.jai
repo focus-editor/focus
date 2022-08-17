@@ -58,10 +58,33 @@ editors_open_file :: (path: string, on_the_side := false) {
 
 editors_handle_scroll :: (delta_z: int) {
     if delta_z == 0 return;
-    WHEEL_SENSITIVITY :: 0.5;
+    WHEEL_SENSITIVITY :: 1.0;
     editor := get_active_editor_and_buffer();
     if !editor return;
-    editor.viewport.top += xx (cast(float) delta_z * WHEEL_SENSITIVITY);
+
+    using editor.viewport;
+
+    // Y-up, so a positive value of viewport.top means we've scrolled down
+    scroll_y.start = top;
+    scroll_y.target -= xx (cast(float) delta_z * WHEEL_SENSITIVITY);
+    if scroll_y.target < 0 then scroll_y.target = 0;
+    scroll_y.started_at = frame_time;
+}
+
+animate_scrolling :: (editor: *Editor) -> finished: bool {
+    using editor.viewport;
+
+    if top != scroll_y.target {
+        using scroll_y;
+        t := (frame_time - started_at) / Scroll_Animation.SPEED;
+        if t >= 1 || t < 0 {
+            top = target;
+        } else {
+            top = start + xx (cast(float)(target - start) * t);
+        }
+    }
+    // TODO: scroll_x
+    return top == scroll_y.target;
 }
 
 #scope_file
@@ -114,8 +137,18 @@ Editor :: struct {
 }
 
 Viewport :: struct {
-    left, top:   s32;
-    lines, cols: s32;
+    top:  s32;
+    left: s32;
+    scroll_y: Scroll_Animation;
+    scroll_x: Scroll_Animation;
+
+    // lines, cols: s32;
+}
+
+Scroll_Animation :: struct {
+    start, target: s32;
+    started_at: float64;
+    SPEED :: 0.1;  // how many seconds to finish any scroll animation
 }
 
 open_buffers: [..] Buffer;

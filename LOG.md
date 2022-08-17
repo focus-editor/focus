@@ -2,6 +2,8 @@
 - Scroll text in all directions
     + Use scissor and try it on horizontal scroll
     + Draw text at an offset from borders
+    + Implement some version of smooth scrolling
+    - Scroll horizontally
     - Don't draw characters that are invisible
 
 - Load 2 files side by side
@@ -21,6 +23,7 @@
 - Look into subpixel font positioning
     - Revisit the font loading code as it has some rounding to pixels there
       and consider using floats or other units for font metrics
+    - Simp.draw_text only allows integer positioning
 
 # DONE
 + Don't do a draw call per line
