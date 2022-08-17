@@ -29,28 +29,34 @@ editors_handle_text_input :: (char: u32) {
 }
 
 get_active_editor_and_buffer :: () -> *Editor, *Buffer {
-    editor: *Editor;
-    buffer: *Buffer;
-    if editors_layout == {
-        case .Single;
-            editor = *open_editors[editor_single];
-            buffer = *open_buffers[editor.buffer_id];
-        case .Double;
-            unimplemented();
-    }
-
-    if editor != null assert(buffer != null);
+    if editors_layout == .None return null, null;
+    editor := *open_editors[editor_active];
+    buffer := *open_buffers[editor.buffer_id];
     return editor, buffer;
 }
 
-editors_open_file :: (path: string, on_the_side := false) {
+editors_open_file :: (path: string, where: enum { InPlace; Left; Right; } = .InPlace) {
     buffer_id := find_or_create_buffer(path);
     if #complete editors_layout == {
         case .None;
-            editor_single = find_or_create_editor(buffer_id);
+            editor_active = find_or_create_editor(buffer_id);
             editors_layout = .Single;
         case .Single;
-            unimplemented();
+            if #complete where == {
+                case .InPlace;
+                    editor_active  = find_or_create_editor(buffer_id);
+                    editors_layout = .Single;
+                case .Left;
+                    editor_left    = find_or_create_editor(buffer_id, editor_active);
+                    editor_right   = editor_active;
+                    editor_active  = editor_left;
+                    editors_layout = .Double;
+                case .Right;
+                    editor_right   = find_or_create_editor(buffer_id, editor_active);
+                    editor_left    = editor_active;
+                    editor_active  = editor_right;
+                    editors_layout = .Double;
+            }
         case .Double;
             unimplemented();
     }
@@ -102,13 +108,11 @@ animate_scrolling :: (editor: *Editor) -> finished: bool {
 
 #scope_file
 
-find_or_create_editor :: (buffer_id: s64) -> editor_id: s64 {
+find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_id: s64 {
     assert(buffer_id >= 0 && buffer_id < open_buffers.count, "Attempt to create editor for nonexistent buffer");
-
     for open_editors {
-        if it.buffer_id == buffer_id return it_index;
+        if it.buffer_id == buffer_id && it_index != existing_editor return it_index;
     }
-
     editor_id := open_editors.count;
     editor := array_add(*open_editors);
     editor.buffer_id = buffer_id;
@@ -173,6 +177,6 @@ editors_layout: enum {
     Double;
 } = .None;
 
-editor_single: s64 = -1;
+editor_active: s64 = -1;
 editor_left:   s64 = -1;
 editor_right:  s64 = -1;

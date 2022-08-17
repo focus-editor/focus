@@ -16,7 +16,8 @@ main :: () {
     dpi_scale = platform_get_dpi_scale(window);
     init_fonts();
 
-    editors_open_file("src/main.jai");
+    editors_open_file("src/editors.jai");
+    editors_open_file("src/main.jai", .Left);
 
     should_quit := false;
 

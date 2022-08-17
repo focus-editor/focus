@@ -5,43 +5,52 @@ draw_frame :: () {
     }
 
     footer_rect, main_area := cut_bottom(screen, char_size * 2);
-    editor1_rect, editor2_rect := cut_left(main_area, main_area.w / 2);
-    text_offset := make_vector2(char_size * 2);
-    // editor1_rect = shrink(editor1_rect, char_size * 2);
-    // editor2_rect = shrink(editor2_rect, char_size * 2);
 
-    editor, buffer := get_active_editor_and_buffer();
-    if editor {
-        rect := editor1_rect;
-
-        set_scissor(rect);
-        defer Simp.clear_scissor();
-
-        draw_cursor(editor, rect, text_offset);
-
-        x := rect.x + text_offset.x;
-        y := rect.y + rect.h - line_height + (line_height - char_size) / 2 - text_offset.y;
-        x -= editor.viewport.left;
-        y += editor.viewport.top;
-
-        visible_lines_start := cast(s64) (editor.viewport.top / line_height) - 1;
-        visible_lines_end   := visible_lines_start + cast(s64) (rect.h / line_height) + 1;
-        visible_lines_start = clamp(visible_lines_start, 0, buffer.lines.count);
-        visible_lines_end   = clamp(visible_lines_end,   0, buffer.lines.count);
-
-        y -= visible_lines_start * line_height;
-        for line : array_view(buffer.lines, visible_lines_start, visible_lines_end) {
-            line_len := clamp(line.end - line.start, 0, 1000);  // so that we don't bother checking for visible chars
-            line_text := to_string(array_view(buffer.bytes, line.start, line_len));
-            Simp.draw_text(font, xx x, xx y, line_text, color = Colors.CODE_PUNCTUATION);
-            y -= line_height;
-        }
+    if #complete editors_layout == {
+        case .None;
+            // TODO: draw shortcut cheat-sheet?
+        case .Single;
+            draw_editor(editor_active, main_area);
+        case .Double;
+            left_rect, right_rect := cut_left(main_area, main_area.w / 2);
+            draw_editor(editor_left,  left_rect);
+            draw_editor(editor_right, right_rect);
     }
 
     Simp.swap_buffers(window);
 }
 
-draw_cursor :: (using editor: Editor, editor_rect: Rect, text_offset: Vector2) {
+draw_editor :: (editor_id: s64, rect: Rect) {
+    set_scissor(rect);
+    defer Simp.clear_scissor();
+
+    editor := open_editors[editor_id];
+    buffer := open_buffers[editor.buffer_id];
+
+    text_offset := make_vector2(char_size * 2);
+
+    draw_cursor(editor, rect, text_offset, editor_id == editor_active);
+
+    x := rect.x + text_offset.x;
+    y := rect.y + rect.h - line_height + (line_height - char_size) / 2 - text_offset.y;
+    x -= editor.viewport.left;
+    y += editor.viewport.top;
+
+    visible_lines_start := cast(s64) (editor.viewport.top / line_height) - 1;
+    visible_lines_end   := visible_lines_start + cast(s64) (rect.h / line_height) + 1;
+    visible_lines_start = clamp(visible_lines_start, 0, buffer.lines.count);
+    visible_lines_end   = clamp(visible_lines_end,   0, buffer.lines.count);
+
+    y -= visible_lines_start * line_height;
+    for line : array_view(buffer.lines, visible_lines_start, visible_lines_end) {
+        line_len := clamp(line.end - line.start, 0, 1000);  // so that we don't bother checking for visible chars
+        line_text := to_string(array_view(buffer.bytes, line.start, line_len));
+        Simp.draw_text(font, xx x, xx y, line_text, color = Colors.CODE_PUNCTUATION);
+        y -= line_height;
+    }
+}
+
+draw_cursor :: (using editor: Editor, editor_rect: Rect, text_offset: Vector2, is_active: bool) {
     width  := char_size;
     height := line_height;
     x := editor_rect.x + cursor.pos.col * width + text_offset.x;

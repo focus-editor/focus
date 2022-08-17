@@ -1,5 +1,9 @@
 # TODO
-- Load 2 files side by side
+- Draw footer and splitter rects
+- Scroll the editor we're hovering over
+- Support tab
+- Move cursor quicker with ctrl+arrows
+- Move viewport with alt+arrows
 - Draw selection
 - Select text
 - Remove/replace selection on edits
@@ -11,14 +15,16 @@
     - Highlight globals?
     - Color cursor differently depending on what scope we're in
 - Make sure cursor positioning is correct for all fonts and sizes
-- Subpixel rendering: support other types of panels
-  (https://freetype.org/freetype2/docs/reference/ft2-lcd_rendering.html)
 - Look into subpixel font positioning
     - Revisit the font loading code as it has some rounding to pixels there
       and consider using floats or other units for font metrics
     - Simp.draw_text only allows integer positioning
+    - Should we keep using GL_NEAREST for sampling?
+- Subpixel rendering: support other types of panels (lookup ft2-lcd_rendering)
+  (not useful for the editor, but may be useful for games)
 
 # DONE
++ Load 2 files side by side
 + Don't draw characters that are invisible
     + Figure out which lines are visible and only draw them
     + Figure out which characters are visible and only draw them
