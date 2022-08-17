@@ -320,6 +320,20 @@ immediate_quad :: (p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2,
     put_vertex(*v[5], p3, c3,  uv3.x, uv3.y);
 }
 
+// A rectangular quad (x0, y0) - (x1, y1), but with colors at each vertex
+immediate_quad :: (x0: float, y0: float, x1: float, y1: float,
+                   c00: Vector4, c01: Vector4, c10: Vector4, c11: Vector4) {
+    CheckSpace(6);
+
+    put_vertex(*v[0], make_vector2(x1, y0), c10,  1, 0);
+    put_vertex(*v[1], make_vector2(x0, y0), c00,  0, 0);
+    put_vertex(*v[2], make_vector2(x1, y1), c11,  1, 1);
+
+    put_vertex(*v[3], make_vector2(x1, y1), c11,  1, 1);
+    put_vertex(*v[4], make_vector2(x0, y0), c00,  0, 0);
+    put_vertex(*v[5], make_vector2(x0, y1), c01,  0, 1);
+}
+
 
 // Four 3D points plus a color, and optional uv coordinates and a normal:
 immediate_quad :: (p0: Vector3, p1: Vector3, p2: Vector3, p3: Vector3, color: Vector4,

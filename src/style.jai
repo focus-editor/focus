@@ -32,6 +32,9 @@ Colors :: struct {
     CODE_HIGHLIGHT      :: Color.{ r = 0.85, g = 0.61, b = 0.46, a = 1.0 };
     CODE_ERROR          :: Color.{ r = 1.00, g = 0.00, b = 0.00, a = 1.0 };
     CODE_KEYWORD        :: Color.{ r = 0.902, g = 0.493, b = 0.457, a = 1.0 };
+
+    SHADOW_DARK         :: Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0.2 };
+    SHADOW_TRANSPARENT  :: Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0 };
 };
 
 as_3_floats :: (color: Color) -> [3] float {

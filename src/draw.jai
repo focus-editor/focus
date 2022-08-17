@@ -5,11 +5,10 @@ draw_frame :: () {
     }
 
     footer_rect, main_area := cut_bottom(screen, line_height * 1.4);
-    draw_rect(footer_rect, Colors.BACKGROUND_BRIGHT);
 
     if #complete editors_layout == {
         case .None;
-            // TODO: draw shortcut cheat-sheet?
+            // TODO: draw a shortcut cheat-sheet?
         case .Single;
             draw_editor(editor_active, main_area);
         case .Double;
@@ -22,6 +21,10 @@ draw_frame :: () {
             splitter_rect.w = 2;
             draw_rect(splitter_rect, Colors.BACKGROUND_BRIGHT);
     }
+
+    // Draw footer rect
+    draw_rect(footer_rect, Colors.BACKGROUND_BRIGHT);
+    draw_top_shadow(footer_rect);
 
     Simp.swap_buffers(window);
 }
@@ -71,6 +74,13 @@ draw_cursor :: (using editor: Editor, editor_rect: Rect, text_offset: Vector2, i
 draw_rect :: (using rect: Rect, color: Color) {
     Simp.set_shader_for_color();
     Simp.immediate_quad(x, y, x + w, y + h, color);
+}
+
+draw_top_shadow :: (using rect: Rect, size: float = 10.0) {
+    Simp.set_shader_for_color(enable_blend = true);
+    s := Colors.SHADOW_DARK;
+    t := Colors.SHADOW_TRANSPARENT;
+    Simp.immediate_quad(x, y + h, x + w, y + h + size * dpi_scale, c00 = s, c01 = t, c10 = s, c11 = t);
 }
 
 set_scissor :: (rect: Rect) {

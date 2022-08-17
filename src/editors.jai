@@ -35,7 +35,7 @@ get_active_editor_and_buffer :: () -> *Editor, *Buffer {
     return editor, buffer;
 }
 
-editors_open_file :: (path: string, where: enum { InPlace; Left; Right; } = .InPlace) {
+editors_open_file :: (path: string, where: enum { in_place; left; right; } = .in_place) {
     buffer_id := find_or_create_buffer(path);
     if #complete editors_layout == {
         case .None;
@@ -43,15 +43,15 @@ editors_open_file :: (path: string, where: enum { InPlace; Left; Right; } = .InP
             editors_layout = .Single;
         case .Single;
             if #complete where == {
-                case .InPlace;
+                case .in_place;
                     editor_active  = find_or_create_editor(buffer_id);
                     editors_layout = .Single;
-                case .Left;
+                case .left;
                     editor_left    = find_or_create_editor(buffer_id, editor_active);
                     editor_right   = editor_active;
                     editor_active  = editor_left;
                     editors_layout = .Double;
-                case .Right;
+                case .right;
                     editor_right   = find_or_create_editor(buffer_id, editor_active);
                     editor_left    = editor_active;
                     editor_active  = editor_right;

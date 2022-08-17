@@ -17,7 +17,7 @@ main :: () {
     init_fonts();
 
     editors_open_file("src/editors.jai");
-    editors_open_file("src/main.jai", .Left);
+    editors_open_file("src/main.jai", .right);
 
     should_quit := false;
 

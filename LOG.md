@@ -1,5 +1,4 @@
 # TODO
-- Draw footer shadow
 - Scroll the editor we're hovering over
 - Support tab
 - Move cursor quicker with ctrl+arrows
@@ -24,6 +23,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Draw footer shadow
 + Draw footer and splitter rects
 + Load 2 files side by side
 + Don't draw characters that are invisible
