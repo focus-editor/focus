@@ -12,7 +12,7 @@ draw_frame :: () {
 
     editor, buffer := get_active_editor_and_buffer();
     if editor {
-        rect := editor2_rect;
+        rect := editor1_rect;
 
         set_scissor(rect);
         defer Simp.clear_scissor();
@@ -23,8 +23,17 @@ draw_frame :: () {
         y := rect.y + rect.h - line_height + (line_height - char_size) / 2 - text_offset.y;
         x -= editor.viewport.left;
         y += editor.viewport.top;
-        for line : split(to_string(buffer.bytes), cast(u8) #char "\n") {
-            Simp.draw_text(font, xx x, xx y, line, color = Colors.CODE_PUNCTUATION);
+
+        visible_lines_start := cast(s64) (editor.viewport.top / line_height) - 1;
+        visible_lines_end   := visible_lines_start + cast(s64) (rect.h / line_height) + 1;
+        visible_lines_start = clamp(visible_lines_start, 0, buffer.lines.count);
+        visible_lines_end   = clamp(visible_lines_end,   0, buffer.lines.count);
+
+        y -= visible_lines_start * line_height;
+        for line : array_view(buffer.lines, visible_lines_start, visible_lines_end) {
+            line_len := clamp(line.end - line.start, 0, 1000);  // so that we don't bother checking for visible chars
+            line_text := to_string(array_view(buffer.bytes, line.start, line_len));
+            Simp.draw_text(font, xx x, xx y, line_text, color = Colors.CODE_PUNCTUATION);
             y -= line_height;
         }
     }

@@ -62,10 +62,10 @@ editors_handle_scroll :: (delta_z: int) {
     editor := get_active_editor_and_buffer();
     if !editor return;
 
-    using editor.viewport;
-    using scroll_y;
     // Vertical scroll
     // Y-up, so a positive value of viewport.top means we've scrolled down
+    using editor.viewport;
+    using scroll_y;
     start = top;
     target -= xx (cast(float) delta_z * WHEEL_SENSITIVITY);
     if target < 0 then target = 0;

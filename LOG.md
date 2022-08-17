@@ -1,11 +1,4 @@
 # TODO
-- Scroll text in all directions
-    + Use scissor and try it on horizontal scroll
-    + Draw text at an offset from borders
-    + Implement some version of smooth scrolling
-    + Scroll horizontally
-    - Don't draw characters that are invisible
-
 - Load 2 files side by side
 - Draw selection
 - Select text
@@ -26,6 +19,14 @@
     - Simp.draw_text only allows integer positioning
 
 # DONE
++ Don't draw characters that are invisible
+    + Figure out which lines are visible and only draw them
+    + Figure out which characters are visible and only draw them
++ Scroll text in all directions
+    + Use scissor and try it on horizontal scroll
+    + Draw text at an offset from borders
+    + Implement some version of smooth scrolling
+    + Scroll horizontally
 + Don't do a draw call per line
 + Investigate subpixel rendering with FT
 + Understand how glyphs are rendered in Simp
