@@ -4,7 +4,8 @@ draw_frame :: () {
         Simp.clear_render_target(r, g, b, a);
     }
 
-    footer_rect, main_area := cut_bottom(screen, char_size * 2);
+    footer_rect, main_area := cut_bottom(screen, line_height * 1.4);
+    draw_rect(footer_rect, Colors.BACKGROUND_BRIGHT);
 
     if #complete editors_layout == {
         case .None;
@@ -15,6 +16,11 @@ draw_frame :: () {
             left_rect, right_rect := cut_left(main_area, main_area.w / 2);
             draw_editor(editor_left,  left_rect);
             draw_editor(editor_right, right_rect);
+
+            splitter_rect := right_rect;
+            splitter_rect.x -= 1;
+            splitter_rect.w = 2;
+            draw_rect(splitter_rect, Colors.BACKGROUND_BRIGHT);
     }
 
     Simp.swap_buffers(window);
@@ -64,7 +70,7 @@ draw_cursor :: (using editor: Editor, editor_rect: Rect, text_offset: Vector2, i
 
 draw_rect :: (using rect: Rect, color: Color) {
     Simp.set_shader_for_color();
-    Simp.immediate_quad(x, y, x + w, y + h, Colors.CURSOR_ACTIVE);
+    Simp.immediate_quad(x, y, x + w, y + h, color);
 }
 
 set_scissor :: (rect: Rect) {
