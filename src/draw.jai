@@ -38,7 +38,8 @@ draw_editor :: (editor_id: s64, rect: Rect) {
 
     // Handle mouse scroll here because we only know the layout at this point.
     // Some people would say this is not "clean", but hey, we'll see if we have any issues.
-    if mouse_pointer_is_within(rect) then editor_scroll(editor, Input.mouse_delta_z);
+    max_scroll := cast(s32) ((buffer.lines.count - 2)  * line_height);
+    if mouse_pointer_is_within(rect) then editor_scroll(editor, Input.mouse_delta_z, max_scroll);
 
     // Animation will stop if we switch to another editor, but it should be fast enough that we don't care
     animation_active := animate_scrolling(editor);

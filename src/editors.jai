@@ -62,7 +62,7 @@ editors_open_file :: (path: string, where: enum { in_place; left; right; } = .in
     }
 }
 
-editor_scroll :: (editor: *Editor, delta_z: int) {
+editor_scroll :: (editor: *Editor, delta_z: int, max_scroll: s32) {
     if delta_z == 0 return;
 
     WHEEL_SENSITIVITY :: 1.0;
@@ -72,7 +72,7 @@ editor_scroll :: (editor: *Editor, delta_z: int) {
     using scroll_y;
     start = top;
     target -= xx (cast(float) delta_z * WHEEL_SENSITIVITY);
-    if target < 0 then target = 0;
+    target = clamp(target, 0, max(max_scroll, 0));
     started_at = frame_time;
 }
 

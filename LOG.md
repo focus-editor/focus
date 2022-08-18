@@ -1,4 +1,6 @@
 # TODO
+- Change cursor when over editor
+- Change cursor position by clicking
 - Support tab
 - Move cursor quicker with ctrl+arrows
 - Move viewport with alt+arrows
@@ -22,6 +24,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Limit vertical scroll
 + Scroll the editor we're hovering over
 + Draw footer shadow
 + Draw footer and splitter rects
