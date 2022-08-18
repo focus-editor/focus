@@ -7,13 +7,21 @@ draw_frame :: () {
     splitter_rect: Rect;
     footer_rect, main_area := cut_bottom(screen, line_height * 1.4);
 
+    // Not sure if this is the best place for it
+    if dragging_splitter {
+        splitter_pos = (mouse_pointer.x - main_area.x) / main_area.w;
+        if mouse_left_up_this_frame then dragging_splitter = false;
+    }
+    if splitter_pos != 0 then splitter_pos = clamp(splitter_pos, 0.1, 0.9);
+
     if #complete editors_layout == {
         case .None;
             // TODO: draw a shortcut cheat-sheet?
         case .Single;
             draw_editor(editor_active, main_area);
         case .Double;
-            left_rect, right_rect := cut_left(main_area, main_area.w / 2);
+            split := ifx splitter_pos > 0 then main_area.w * splitter_pos else main_area.w / 2;
+            left_rect, right_rect := cut_left(main_area, split);
             draw_editor(editor_left,  left_rect);
             draw_editor(editor_right, right_rect);
 
@@ -22,12 +30,12 @@ draw_frame :: () {
             splitter_rect.w = 2;
             draw_rect(splitter_rect, Colors.BACKGROUND_BRIGHT);
             splitter_rect = expand(splitter_rect, 5);
-
     }
 
     if mouse_pointer_is_within(main_area) {
         if mouse_pointer_is_within(splitter_rect) {
             set_pointer_image(.DRAGGING_HORIZONTAL);
+            if mouse_left_down_this_frame then dragging_splitter = true;
         } else {
             set_pointer_image(.TEXT_SELECT);
         }

@@ -7,6 +7,8 @@
 - Select text
 - Remove/replace selection on edits
 
+- Set some minimum window size (which should be enough when split in half)
+
 - Don't redraw if nothing has changed
 - Maybe don't store font atlas in an rgba texture
 - Implement semantic highlighting
@@ -23,6 +25,8 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Set some limits for splitter
++ Drag splitter
 + Change pointer when over editor
 + Draw inactive cursor differently
 + Limit vertical scroll

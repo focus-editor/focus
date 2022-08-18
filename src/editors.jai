@@ -178,3 +178,6 @@ editors_layout: enum {
 editor_active: s64 = -1;
 editor_left:   s64 = -1;
 editor_right:  s64 = -1;
+
+dragging_splitter := false;
+splitter_pos: float = 0;  // zero means it's in the middle

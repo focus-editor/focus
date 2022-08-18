@@ -45,32 +45,45 @@ main :: () {
         update_mouse_pointer();
         pointer_end_frame();
 
-        for Input.events_this_frame {
-            if it.type == {
+        mouse_left_down_this_frame  = false;
+        mouse_left_up_this_frame    = false;
+        mouse_right_down_this_frame = false;
+        mouse_right_up_this_frame   = false;
+
+        for event : Input.events_this_frame {
+            if event.type == {
                 case .QUIT;
                     should_quit = true;
                 case .KEYBOARD;
-                    if it.key_pressed {
-                        if it.key_code == {
+                    if event.key_pressed {
+                        if event.key_code == {
                             case .F4;
-                                if it.alt_pressed should_quit = true;
+                                if event.alt_pressed should_quit = true;
                                 continue;
                             case #char "+";
-                                if it.ctrl_pressed {
+                                if event.ctrl_pressed {
                                     font_size += 1;
                                     init_fonts();
                                 }
                             case #char "-";
-                                if it.ctrl_pressed {
+                                if event.ctrl_pressed {
                                     font_size -= 1;
                                     init_fonts();
                                 }
                         }
-
-                        editors_handle_keypress(it.key_code, it.modifier_flags);
+                        editors_handle_keypress(event.key_code, event.modifier_flags);
                     }
+                    if event.key_code == .MOUSE_BUTTON_LEFT {
+                        mouse_left_down_this_frame = event.key_pressed != 0;
+                        mouse_left_up_this_frame   = event.key_pressed == 0;
+                    }
+                    if event.key_code == .MOUSE_BUTTON_RIGHT {
+                        mouse_right_down_this_frame = event.key_pressed != 0;
+                        mouse_right_up_this_frame   = event.key_pressed == 0;
+                    }
+
                 case .TEXT_INPUT;
-                    editors_handle_text_input(it.utf32);
+                    editors_handle_text_input(event.utf32);
             }
         }
 
@@ -118,7 +131,12 @@ redraw_requested := true;  // set to true to render the first frame
 frame_time: float64;
 
 screen: Rect;
+
 mouse_pointer: Vector2;
+mouse_left_down_this_frame  := false;
+mouse_left_up_this_frame    := false;
+mouse_right_down_this_frame := false;
+mouse_right_up_this_frame   := false;
 
 // Depend on font
 char_size:   float;
