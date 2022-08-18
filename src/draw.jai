@@ -32,16 +32,16 @@ draw_frame :: () {
             splitter_rect.x -= 1;
             splitter_rect.w = 2;
             splitter_rect_fat := expand(splitter_rect, 5 * dpi_scale);
-            splitter_color := Colors.BACKGROUND_BRIGHT;
+            splitter_color := Colors.SPLITTER;
 
             if mouse_pointer_is_within(main_area) then set_pointer_image(.TEXT_SELECT);
             if mouse_pointer_is_within(splitter_rect_fat) {
                 if mouse_left_down_this_frame then dragging_splitter = true;
                 set_pointer_image(.DRAGGING_HORIZONTAL);
-                splitter_color = Colors.SELECTION_ACTIVE;
+                splitter_color = Colors.SPLITTER_HOVER;
                 splitter_rect = expand(splitter_rect, 1);
             } else if dragging_splitter {
-                splitter_color = Colors.SELECTION_ACTIVE;
+                splitter_color = Colors.SPLITTER_HOVER;
                 splitter_rect = expand(splitter_rect, 1);
             }
 

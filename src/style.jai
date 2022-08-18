@@ -15,11 +15,13 @@ Colors :: struct {
     BACKGROUND_LIGHT        :: Color.{ r = 0.102, g = 0.158, b = 0.195 };
     BACKGROUND_BRIGHT       :: Color.{ r = 0.131, g = 0.202, b = 0.25 };
     SELECTION_ACTIVE        :: Color.{ r = 0.11, g = 0.267, b = 0.29 };
-    SELECTION_INACTIVE      :: Color.{ r = 0.11, g = 0.267, b = 0.29 };
+    SELECTION_INACTIVE      :: Color.{ r = 0.11, g = 0.267, b = 0.29 };  // TODO
     SEARCH_RESULT_ACTIVE    :: Color.{ r = 0.559, g = 0.469, b = 0.184 };
     SEARCH_RESULT_INACTIVE  :: Color.{ r = 0.322, g = 0.302, b = 0.173 };
     SCROLLBAR               :: Color.{ r = 0.131, g = 0.202, b = 0.25 };
     CURSOR                  :: Color.{ r = 0.2, g = 0.8, b = 0.8 };
+    SPLITTER                :: Color.{ r = 0.131, g = 0.202, b = 0.25 };
+    SPLITTER_HOVER          :: Color.{ r = 0.110, g = 0.267, b = 0.29 };
 
     CODE_DEFAULT        :: Color.{ r = 0.81, g = 0.77, b = 0.66, a = 1.0 };
     CODE_COMMENT        :: Color.{ r = 0.52, g = 0.56, b = 0.54, a = 1.0 };
