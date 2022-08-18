@@ -10,6 +10,7 @@ draw_frame :: () {
     // Not sure if this is the best place for it
     if dragging_splitter {
         splitter_pos = (mouse_pointer.x - main_area.x) / main_area.w;
+        if splitter_pos == 0 then splitter_pos = 0.1;  // avoid jitter
         if mouse_left_up_this_frame then dragging_splitter = false;
     }
     if splitter_pos != 0 then splitter_pos = clamp(splitter_pos, 0.1, 0.9);

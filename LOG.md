@@ -7,7 +7,7 @@
 - Select text
 - Remove/replace selection on edits
 
-- Set some minimum window size (which should be enough when split in half)
+- Don't crash if window is resized to 0
 
 - Don't redraw if nothing has changed
 - Maybe don't store font atlas in an rgba texture
@@ -25,6 +25,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ When dragging splitter ignore 0 to avoid blinking
 + Set some limits for splitter
 + Drag splitter
 + Change pointer when over editor
