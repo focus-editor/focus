@@ -1,5 +1,4 @@
 # TODO
-- Scroll the editor we're hovering over
 - Support tab
 - Move cursor quicker with ctrl+arrows
 - Move viewport with alt+arrows
@@ -23,6 +22,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Scroll the editor we're hovering over
 + Draw footer shadow
 + Draw footer and splitter rects
 + Load 2 files side by side

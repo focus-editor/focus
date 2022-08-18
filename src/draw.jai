@@ -33,8 +33,16 @@ draw_editor :: (editor_id: s64, rect: Rect) {
     set_scissor(rect);
     defer Simp.clear_scissor();
 
-    editor := open_editors[editor_id];
-    buffer := open_buffers[editor.buffer_id];
+    editor := *open_editors[editor_id];
+    buffer :=  open_buffers[editor.buffer_id];
+
+    // Handle mouse scroll here because we only know the layout at this point.
+    // Some people would say this is not "clean", but hey, we'll see if we have any issues.
+    if mouse_pointer_is_within(rect) then editor_scroll(editor, Input.mouse_delta_z);
+
+    // Animation will stop if we switch to another editor, but it should be fast enough that we don't care
+    animation_active := animate_scrolling(editor);
+    if animation_active then redraw_requested = true;
 
     text_offset := make_vector2(char_size * 2);
 

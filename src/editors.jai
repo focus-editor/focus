@@ -62,12 +62,10 @@ editors_open_file :: (path: string, where: enum { in_place; left; right; } = .in
     }
 }
 
-editors_handle_scroll :: (delta_z: int) {
+editor_scroll :: (editor: *Editor, delta_z: int) {
     if delta_z == 0 return;
-    WHEEL_SENSITIVITY :: 1.0;
-    editor := get_active_editor_and_buffer();
-    if !editor return;
 
+    WHEEL_SENSITIVITY :: 1.0;
     // Vertical scroll
     // Y-up, so a positive value of viewport.top means we've scrolled down
     using editor.viewport;
@@ -78,7 +76,7 @@ editors_handle_scroll :: (delta_z: int) {
     started_at = frame_time;
 }
 
-animate_scrolling :: (editor: *Editor) -> finished: bool {
+animate_scrolling :: (editor: *Editor) -> scrolling: bool {
     using editor.viewport;
 
     // Vertical scroll
@@ -103,7 +101,7 @@ animate_scrolling :: (editor: *Editor) -> finished: bool {
         }
     }
 
-    return top == scroll_y.target && left == scroll_x.target;
+    return top != scroll_y.target || left != scroll_x.target;
 }
 
 #scope_file

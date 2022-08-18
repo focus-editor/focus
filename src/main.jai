@@ -42,6 +42,7 @@ main :: () {
                 }
             }
         }
+        update_mouse_pointer();
 
         for Input.events_this_frame {
             if it.type == {
@@ -74,15 +75,6 @@ main :: () {
 
         refresh_open_buffers();
 
-        if Input.mouse_delta_z != 0 then editors_handle_scroll(Input.mouse_delta_z);
-
-        // TODO: do it for all visible editors?
-        {
-            editor := get_active_editor_and_buffer();
-            finished := animate_scrolling(editor);
-            if !finished then redraw_requested = true;
-        }
-
         draw_frame();
 
         reset_temporary_storage();
@@ -96,6 +88,12 @@ init_fonts :: () {
     assert(font != null, "Couldn't init font");
     char_size   = cast(float) font.em_width;
     line_height = cast(float) font.default_line_spacing * LINE_HEIGHT_SCALE;
+}
+
+update_mouse_pointer :: () {
+    x, y := get_mouse_pointer_position(window, false);
+    mouse_pointer.x = xx x;
+    mouse_pointer.y = xx (window_height - y);
 }
 
 panic :: (format_string: string, args: .. Any, exit_code : s32 = 1) {
@@ -119,6 +117,7 @@ redraw_requested := true;  // set to true to render the first frame
 frame_time: float64;
 
 screen: Rect;
+mouse_pointer: Vector2;
 
 // Depend on font
 char_size:   float;

@@ -83,6 +83,15 @@ cut_top :: (rect: Rect, amount: float) -> (top: Rect, remainder: Rect) {
     return top, remainder;
 }
 
+point_within :: (p: Vector2, using rect: Rect) -> bool {
+    assert(w >= 0 && h >= 0);
+    return x <= p.x && p.x <= x + w && y <= p.y && p.y <= y + h;
+}
+
+mouse_pointer_is_within :: (rect: Rect) -> bool {
+    return point_within(mouse_pointer, rect);
+}
+
 Rect :: struct {
     x, y : float;
     w, h : float;
