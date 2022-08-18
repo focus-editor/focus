@@ -83,6 +83,11 @@ cut_top :: (rect: Rect, amount: float) -> (top: Rect, remainder: Rect) {
     return top, remainder;
 }
 
+bottom_left :: (using rect: Rect) -> Vector2 {
+    assert(w >= 0 && h >= 0);
+    return make_vector2(x, y);
+}
+
 point_within :: (p: Vector2, using rect: Rect) -> bool {
     assert(w >= 0 && h >= 0);
     return x <= p.x && p.x <= x + w && y <= p.y && p.y <= y + h;

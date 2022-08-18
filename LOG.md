@@ -1,5 +1,4 @@
 # TODO
-- Change cursor position by clicking
 - Support tab
 - Move cursor quicker with ctrl+arrows
 - Move viewport with alt+arrows
@@ -25,6 +24,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Change cursor position by clicking
 + When dragging splitter ignore 0 to avoid blinking
 + Set some limits for splitter
 + Drag splitter

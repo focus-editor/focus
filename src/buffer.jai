@@ -54,8 +54,8 @@ buffer_delete_range :: (using buffer: *Buffer, _range: Range) {
 }
 
 make_valid_range :: (buffer: Buffer, range: Range) -> Range {
-    start := make_valid_pos(buffer, range.start);
-    end   := make_valid_pos(buffer, range.end);
+    start := make_valid_pos(buffer, range.start, for_cursor = false);
+    end   := make_valid_pos(buffer, range.end, for_cursor = false);
     if start.line > end.line || (start.line == end.line && start.col > end.col) {
         start, end = swap(start, end);
     }
@@ -65,14 +65,19 @@ make_valid_range :: (buffer: Buffer, range: Range) -> Range {
     return result;
 }
 
-make_valid_pos :: (using buffer: Buffer, _pos: Pos) -> Pos {
+make_valid_pos :: (using buffer: Buffer, _pos: Pos, for_cursor := true) -> Pos {
     pos := _pos;
     if pos.line < 0 then pos.line = 0;
     if pos.col  < 0 then pos.col  = 0;
     if pos.line >= lines.count then pos.line = xx (lines.count - 1);
     line_len := lines[pos.line].num_chars;
     if pos.line < lines.count - 1 then line_len += 1; // we have a trailing \n
-    if pos.col > line_len then pos.col = line_len;
+    if for_cursor {
+        // Cursor can't stand after the newline
+        if pos.col >= line_len then pos.col = line_len - 1;
+    } else {
+        if pos.col > line_len then pos.col = line_len;
+    }
     return pos;
 }
 

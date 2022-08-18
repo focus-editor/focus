@@ -60,24 +60,38 @@ draw_editor :: (editor_id: s64, rect: Rect) {
     // Some people would say this is not "clean", but hey, we'll see if we have any issues.
     max_scroll := cast(s32) ((buffer.lines.count - 2)  * line_height);
     if mouse_pointer_is_within(rect) then editor_scroll(editor, Input.mouse_delta_z, max_scroll);
+    if animate_scrolling(editor) then redraw_requested = true;
 
-    // Animation will stop if we switch to another editor, but it should be fast enough that we don't care
-    animation_active := animate_scrolling(editor);
-    if animation_active then redraw_requested = true;
+    text_offset := make_vector2(char_size * 2, -char_size * 2);
 
-    text_offset := make_vector2(char_size * 2);
+    if mouse_left_down_this_frame && mouse_pointer_is_within(rect) {
+        // Handle left click inside editor
+        using editor;
+
+        // Maybe change cursor position
+        mouse_pos := mouse_pointer - bottom_left(rect) - text_offset;
+        mouse_pos.x -= viewport.left;
+        mouse_pos.y = rect.h - mouse_pos.y + viewport.top;
+        cursor.pos.line = xx (mouse_pos.y / line_height);
+        cursor.pos.col  = xx (mouse_pos.x / char_size);
+        cursor.pos = make_valid_pos(buffer, cursor.pos);
+
+        // Activate editor
+        editor_active = editor_id;
+        redraw_requested = true;
+    }
 
     draw_cursor(editor, rect, text_offset, editor_id == editor_active);
 
     x := rect.x + text_offset.x;
-    y := rect.y + rect.h - line_height + (line_height - char_size) / 2 - text_offset.y;
+    y := rect.y + rect.h - line_height + (line_height - char_size) / 2 + text_offset.y;
     x -= editor.viewport.left;
     y += editor.viewport.top;
 
     visible_lines_start := cast(s64) (editor.viewport.top / line_height) - 1;
-    visible_lines_end   := visible_lines_start + cast(s64) (rect.h / line_height) + 1;
-    visible_lines_start = clamp(visible_lines_start, 0, buffer.lines.count);
-    visible_lines_end   = clamp(visible_lines_end,   0, buffer.lines.count);
+    visible_lines_start  = clamp(visible_lines_start, 0, buffer.lines.count);
+    visible_lines_end := visible_lines_start + cast(s64) (rect.h / line_height) + 1;
+    visible_lines_end  = clamp(visible_lines_end,   0, buffer.lines.count);
 
     y -= visible_lines_start * line_height;
     for line : array_view(buffer.lines, visible_lines_start, visible_lines_end) {
@@ -88,11 +102,23 @@ draw_editor :: (editor_id: s64, rect: Rect) {
     }
 }
 
+tmp_draw_cursor :: (using editor: Editor, pos: Pos, editor_rect: Rect, text_offset: Vector2) {
+    width  := char_size;
+    height := line_height;
+    x := editor_rect.x + pos.col * width + text_offset.x;
+    y := editor_rect.y + editor_rect.h - pos.line * height - height + text_offset.y + ifx dpi_scale > 1.0 then 1 else 0;  // @Hack: cursor would not look right without the extra adjustment. Need to do something about it;
+    x -= viewport.left;
+    y += viewport.top;
+
+    rect := make_rect(x, y, width, height);
+    draw_rect(rect, Colors.CURSOR);
+}
+
 draw_cursor :: (using editor: Editor, editor_rect: Rect, text_offset: Vector2, is_active: bool) {
     width  := char_size;
     height := line_height;
     x := editor_rect.x + cursor.pos.col * width + text_offset.x;
-    y := editor_rect.y + editor_rect.h - cursor.pos.line * height - height - text_offset.y + ifx dpi_scale > 1.0 then 1 else 0;  // @Hack: cursor would not look right without the extra adjustment. Need to do something about it;
+    y := editor_rect.y + editor_rect.h - cursor.pos.line * height - height + text_offset.y + ifx dpi_scale > 1.0 then 1 else 0;  // @Hack: cursor would not look right without the extra adjustment. Need to do something about it;
     x -= viewport.left;
     y += viewport.top;
 
