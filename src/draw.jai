@@ -4,42 +4,51 @@ draw_frame :: () {
         Simp.clear_render_target(r, g, b, a);
     }
 
-    splitter_rect: Rect;
     footer_rect, main_area := cut_bottom(screen, line_height * 1.4);
-
-    // Not sure if this is the best place for it
-    if dragging_splitter {
-        splitter_pos = (mouse_pointer.x - main_area.x) / main_area.w;
-        if splitter_pos == 0 then splitter_pos = 0.1;  // avoid jitter
-        if mouse_left_up_this_frame then dragging_splitter = false;
-    }
-    if splitter_pos != 0 then splitter_pos = clamp(splitter_pos, 0.1, 0.9);
 
     if #complete editors_layout == {
         case .None;
+            dragging_splitter = false;
+            splitter_pos = 0;
             // TODO: draw a shortcut cheat-sheet?
         case .Single;
+            dragging_splitter = false;
+            splitter_pos = 0;
             draw_editor(editor_active, main_area);
+            if mouse_pointer_is_within(main_area) then set_pointer_image(.TEXT_SELECT);
         case .Double;
+            // Drag splitter
+            if dragging_splitter {
+                splitter_pos = (mouse_pointer.x - main_area.x) / main_area.w;
+                if splitter_pos == 0 then splitter_pos = 0.1;  // avoid jitter
+                if mouse_left_up_this_frame then dragging_splitter = false;
+            }
+            if splitter_pos != 0 then splitter_pos = clamp(splitter_pos, 0.1, 0.9);
+
+            // Lay out editors and splitters
             split := ifx splitter_pos > 0 then main_area.w * splitter_pos else main_area.w / 2;
             left_rect, right_rect := cut_left(main_area, split);
-            draw_editor(editor_left,  left_rect);
-            draw_editor(editor_right, right_rect);
-
-            splitter_rect = right_rect;
+            splitter_rect := right_rect;
             splitter_rect.x -= 1;
             splitter_rect.w = 2;
-            draw_rect(splitter_rect, Colors.BACKGROUND_BRIGHT);
-            splitter_rect = expand(splitter_rect, 5);
-    }
+            splitter_rect_fat := expand(splitter_rect, 5 * dpi_scale);
+            splitter_color := Colors.BACKGROUND_BRIGHT;
 
-    if mouse_pointer_is_within(main_area) {
-        if mouse_pointer_is_within(splitter_rect) {
-            set_pointer_image(.DRAGGING_HORIZONTAL);
-            if mouse_left_down_this_frame then dragging_splitter = true;
-        } else {
-            set_pointer_image(.TEXT_SELECT);
-        }
+            if mouse_pointer_is_within(main_area) then set_pointer_image(.TEXT_SELECT);
+            if mouse_pointer_is_within(splitter_rect_fat) {
+                if mouse_left_down_this_frame then dragging_splitter = true;
+                set_pointer_image(.DRAGGING_HORIZONTAL);
+                splitter_color = Colors.SELECTION_ACTIVE;
+                splitter_rect = expand(splitter_rect, 1);
+            } else if dragging_splitter {
+                splitter_color = Colors.SELECTION_ACTIVE;
+                splitter_rect = expand(splitter_rect, 1);
+            }
+
+            // Draw
+            draw_editor(editor_left,  left_rect);
+            draw_editor(editor_right, right_rect);
+            draw_rect(splitter_rect, splitter_color);
     }
 
     // Draw footer rect
@@ -64,16 +73,16 @@ draw_editor :: (editor_id: s64, rect: Rect) {
 
     text_offset := make_vector2(char_size * 2, -char_size * 2);
 
-    if mouse_left_down_this_frame && mouse_pointer_is_within(rect) {
+    if mouse_left_down_this_frame && mouse_pointer_is_within(rect) && !dragging_splitter {
         // Handle left click inside editor
         using editor;
 
         // Maybe change cursor position
         mouse_pos := mouse_pointer - bottom_left(rect) - text_offset;
         mouse_pos.x -= viewport.left;
-        mouse_pos.y = rect.h - mouse_pos.y + viewport.top;
+        mouse_pos.y = rect.h - mouse_pos.y + viewport.top - ifx dpi_scale > 1.0 then 1 else 0;
         cursor.pos.line = xx (mouse_pos.y / line_height);
-        cursor.pos.col  = xx (mouse_pos.x / char_size);
+        cursor.pos.col  = xx ((mouse_pos.x / char_size) + 0.5);
         cursor.pos = make_valid_pos(buffer, cursor.pos);
 
         // Activate editor
@@ -100,18 +109,6 @@ draw_editor :: (editor_id: s64, rect: Rect) {
         Simp.draw_text(font, xx x, xx y, line_text, color = Colors.CODE_PUNCTUATION);
         y -= line_height;
     }
-}
-
-tmp_draw_cursor :: (using editor: Editor, pos: Pos, editor_rect: Rect, text_offset: Vector2) {
-    width  := char_size;
-    height := line_height;
-    x := editor_rect.x + pos.col * width + text_offset.x;
-    y := editor_rect.y + editor_rect.h - pos.line * height - height + text_offset.y + ifx dpi_scale > 1.0 then 1 else 0;  // @Hack: cursor would not look right without the extra adjustment. Need to do something about it;
-    x -= viewport.left;
-    y += viewport.top;
-
-    rect := make_rect(x, y, width, height);
-    draw_rect(rect, Colors.CURSOR);
 }
 
 draw_cursor :: (using editor: Editor, editor_rect: Rect, text_offset: Vector2, is_active: bool) {

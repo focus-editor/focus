@@ -7,6 +7,7 @@
 - Remove/replace selection on edits
 
 - Don't crash if window is resized to 0
+- When dpi changes, adjust viewport position
 
 - Don't redraw if nothing has changed
 - Maybe don't store font atlas in an rgba texture
@@ -14,6 +15,7 @@
     - Polymorphic structs and possibly other types
     - Highlight globals?
     - Color cursor differently depending on what scope we're in
+- Investigate stuttering when dragging the splitter
 - Make sure cursor positioning is correct for all fonts and sizes
 - Look into subpixel font positioning
     - Revisit the font loading code as it has some rounding to pixels there
@@ -24,6 +26,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Improve splitter dragging
 + Change cursor position by clicking
 + When dragging splitter ignore 0 to avoid blinking
 + Set some limits for splitter
