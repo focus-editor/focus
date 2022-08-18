@@ -1,5 +1,4 @@
 # TODO
-- Change cursor when over editor
 - Change cursor position by clicking
 - Support tab
 - Move cursor quicker with ctrl+arrows
@@ -24,6 +23,8 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Change pointer when over editor
++ Draw inactive cursor differently
 + Limit vertical scroll
 + Scroll the editor we're hovering over
 + Draw footer shadow

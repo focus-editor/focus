@@ -43,6 +43,7 @@ main :: () {
             }
         }
         update_mouse_pointer();
+        pointer_end_frame();
 
         for Input.events_this_frame {
             if it.type == {
@@ -141,14 +142,15 @@ Mods :: Input.Event.Modifier_Flags;
 #load "windows.jai";
 #load "unicode.jai";
 #load "draw.jai";
+#load "pointer_image.jai";
 
 #import "Basic";
 #import "Math";
 #import "File";
-#import "Window_Creation";
 #import "System";  // For get_path_of_running_executable.
 #import "String";
 #import "Unicode";
+#import "Window_Creation";
 
 Simp :: #import "Simp";
 Input :: #import "Input";

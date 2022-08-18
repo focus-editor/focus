@@ -4,6 +4,7 @@ draw_frame :: () {
         Simp.clear_render_target(r, g, b, a);
     }
 
+    splitter_rect: Rect;
     footer_rect, main_area := cut_bottom(screen, line_height * 1.4);
 
     if #complete editors_layout == {
@@ -16,10 +17,20 @@ draw_frame :: () {
             draw_editor(editor_left,  left_rect);
             draw_editor(editor_right, right_rect);
 
-            splitter_rect := right_rect;
+            splitter_rect = right_rect;
             splitter_rect.x -= 1;
             splitter_rect.w = 2;
             draw_rect(splitter_rect, Colors.BACKGROUND_BRIGHT);
+            splitter_rect = expand(splitter_rect, 5);
+
+    }
+
+    if mouse_pointer_is_within(main_area) {
+        if mouse_pointer_is_within(splitter_rect) {
+            set_pointer_image(.DRAGGING_HORIZONTAL);
+        } else {
+            set_pointer_image(.TEXT_SELECT);
+        }
     }
 
     // Draw footer rect
@@ -61,7 +72,7 @@ draw_editor :: (editor_id: s64, rect: Rect) {
 
     y -= visible_lines_start * line_height;
     for line : array_view(buffer.lines, visible_lines_start, visible_lines_end) {
-        line_len := clamp(line.end - line.start, 0, 1000);  // so that we don't bother checking for visible chars
+        line_len := clamp(line.end - line.start, 0, 1000);  // TODO: count max line length in chars
         line_text := to_string(array_view(buffer.bytes, line.start, line_len));
         Simp.draw_text(font, xx x, xx y, line_text, color = Colors.CODE_PUNCTUATION);
         y -= line_height;
@@ -77,7 +88,10 @@ draw_cursor :: (using editor: Editor, editor_rect: Rect, text_offset: Vector2, i
     y += viewport.top;
 
     rect := make_rect(x, y, width, height);
-    draw_rect(rect, Colors.CURSOR_ACTIVE);
+    draw_rect(rect, Colors.CURSOR);
+    if !is_active || !Input.input_application_has_focus {
+        draw_rect(shrink(rect, 1), Colors.BACKGROUND);
+    }
 }
 
 draw_rect :: (using rect: Rect, color: Color) {
