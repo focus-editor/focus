@@ -155,6 +155,7 @@ Editor :: struct {
 
     cursor:   Cursor;
     viewport: Viewport;
+    dragging_left := false;
 }
 
 Viewport :: struct {
@@ -162,8 +163,6 @@ Viewport :: struct {
     left: s32;
     scroll_y: Scroll_Animation;
     scroll_x: Scroll_Animation;
-
-    // lines, cols: s32;
 }
 
 Scroll_Animation :: struct {

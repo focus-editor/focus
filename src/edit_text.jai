@@ -133,24 +133,6 @@ handle_delete :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
     col_wanted = pos.col;
 }
 
-// TODO: move this somewhere more appropriate
-
-mods_none :: inline (mods: Mods) -> bool {
-    return mods.packed == MODS_NONE;
-}
-
-mods_ctrl :: inline (mods: Mods) -> bool {
-    return mods.packed == MODS_CTRL;
-}
-
-mods_ctrl_shift :: inline (mods: Mods) -> bool {
-    return mods.packed == MODS_CTRL_SHIFT;
-}
-
 #scope_file
-
-MODS_NONE       :: #run Mods.{}.packed;
-MODS_CTRL       :: #run Mods.{ ctrl_pressed = true }.packed;
-MODS_CTRL_SHIFT :: #run Mods.{ ctrl_pressed = true, shift_pressed = true }.packed;
 
 TAB_SIZE :: 4;

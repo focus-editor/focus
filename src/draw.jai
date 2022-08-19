@@ -21,7 +21,7 @@ draw_frame :: () {
             if dragging_splitter {
                 splitter_pos = (mouse_pointer.x - main_area.x) / main_area.w;
                 if splitter_pos == 0 then splitter_pos = 0.1;  // avoid jitter
-                if mouse_left_just_released then dragging_splitter = false;
+                if mouse_left_just_released() then dragging_splitter = false;
             }
             if splitter_pos != 0 then splitter_pos = clamp(splitter_pos, 0.1, 0.9);
 
@@ -36,7 +36,7 @@ draw_frame :: () {
 
             if mouse_pointer_is_within(main_area) then set_pointer_image(.TEXT_SELECT);
             if mouse_pointer_is_within(splitter_rect_fat) {
-                if mouse_left_just_pressed then dragging_splitter = true;
+                if mouse_left_just_pressed() then dragging_splitter = true;
                 set_pointer_image(.DRAGGING_HORIZONTAL);
                 splitter_color = Colors.SPLITTER_HOVER;
                 splitter_rect = expand(splitter_rect, 1);
@@ -73,7 +73,9 @@ draw_editor :: (editor_id: s64, rect: Rect) {
 
     text_offset := make_vector2(char_size * 2, -char_size * 2);
 
-    if mouse_left_just_pressed && mouse_pointer_is_within(rect) && !dragging_splitter {
+    if mouse_left_just_released() editor.dragging_left = false;
+
+    if (mouse_left_just_pressed() || editor.dragging_left) && mouse_pointer_is_within(rect) && !dragging_splitter {
         // Handle left click inside editor
         using editor;
 
@@ -85,10 +87,13 @@ draw_editor :: (editor_id: s64, rect: Rect) {
         cursor.pos.col  = xx ((mouse_pos.x / char_size) + 0.5);
         cursor.pos = make_valid_pos(buffer, cursor.pos);
         cursor.col_wanted = cursor.pos.col;
+        if !shift_pressed() && !dragging_left then cursor.sel = cursor.pos;
 
         // Activate editor
         editor_active = editor_id;
         redraw_requested = true;  // so that we don't draw 2 active editors
+
+        if mouse_left_just_pressed() then dragging_left = true;
     }
 
     is_active := editor_id == editor_active && Input.input_application_has_focus;

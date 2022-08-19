@@ -42,13 +42,9 @@ main :: () {
                 }
             }
         }
+
         update_mouse_pointer();
         pointer_end_frame();
-
-        mouse_left_just_pressed   = false;
-        mouse_left_just_released  = false;
-        mouse_right_just_pressed  = false;
-        mouse_right_just_released = false;
 
         for event : Input.events_this_frame {
             if event.type == {
@@ -72,14 +68,6 @@ main :: () {
                                 }
                         }
                         editors_handle_keypress(event.key_code, event.modifier_flags);
-                    }
-                    if event.key_code == .MOUSE_BUTTON_LEFT {
-                        mouse_left_just_pressed  = event.key_pressed != 0;
-                        mouse_left_just_released = event.key_pressed == 0;
-                    }
-                    if event.key_code == .MOUSE_BUTTON_RIGHT {
-                        mouse_right_just_pressed  = event.key_pressed != 0;
-                        mouse_right_just_released = event.key_pressed == 0;
                     }
 
                 case .TEXT_INPUT;
@@ -119,6 +107,38 @@ unimplemented :: (loc := #caller_location) {
     panic("Unimplemented at %", loc);
 }
 
+mods_none :: inline (mods: Mods) -> bool {
+    return mods.packed == MODS_NONE;
+}
+
+mods_ctrl :: inline (mods: Mods) -> bool {
+    return mods.packed == MODS_CTRL;
+}
+
+mods_ctrl_shift :: inline (mods: Mods) -> bool {
+    return mods.packed == MODS_CTRL_SHIFT;
+}
+
+key_state :: inline (key: Input.Key_Code) -> Input.Key_Current_State {
+    return Input.input_button_states[key];
+}
+
+mouse_left_just_pressed :: inline () -> bool {
+    return key_state(.MOUSE_BUTTON_LEFT) & .START != 0;
+}
+
+mouse_left_just_released :: inline () -> bool {
+    return key_state(.MOUSE_BUTTON_LEFT) & .END != 0;
+}
+
+mouse_left_is_down :: inline () -> bool {
+    return key_state(.MOUSE_BUTTON_LEFT) & .DOWN != 0;
+}
+
+shift_pressed :: inline () -> bool {
+    return key_state(.SHIFT) & .DOWN != 0;
+}
+
 window: Window_Type;
 window_width  := 1920;
 window_height := 1080;
@@ -130,13 +150,9 @@ redraw_requested := true;  // set to true to render the first frame
 
 frame_time: float64;  // ever-increasing time since start in seconds
 
-screen: Rect;
+screen: Rect;  // contains the current working area rect for convenience
 
 mouse_pointer: Vector2;
-mouse_left_just_pressed   := false;
-mouse_left_just_released  := false;
-mouse_right_just_pressed  := false;
-mouse_right_just_released := false;
 
 // Depend on font
 char_size:   float;
@@ -172,3 +188,10 @@ Mods :: Input.Event.Modifier_Flags;
 
 Simp :: #import "Simp";
 Input :: #import "Input";
+
+
+#scope_file
+
+MODS_NONE       :: #run Mods.{}.packed;
+MODS_CTRL       :: #run Mods.{ ctrl_pressed = true }.packed;
+MODS_CTRL_SHIFT :: #run Mods.{ ctrl_pressed = true, shift_pressed = true }.packed;

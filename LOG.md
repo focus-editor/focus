@@ -1,5 +1,6 @@
 # TODO
-- Select text properly when clicking and dragging
+- Scroll when cursor is near border
+- Draw selection with rounded corners
 - Move cursor quicker with ctrl+arrows
 - Move viewport with alt+arrows
 - Support tab
@@ -25,6 +26,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Select text properly when clicking and dragging
 + Draw selection
 + Improve splitter dragging
 + Change cursor position by clicking
