@@ -65,13 +65,33 @@ draw_editor :: (editor_id: s64, rect: Rect) {
     editor := *open_editors[editor_id];
     buffer :=  open_buffers[editor.buffer_id];
 
-    // Handle mouse scroll here because we only know the layout at this point.
-    // Some people would say this is not "clean", but hey, we'll see if we have any issues.
-    max_scroll := cast(s32) ((buffer.lines.count - 2)  * line_height);
-    if mouse_pointer_is_within(rect) then editor_scroll(editor, Input.mouse_delta_z, max_scroll);
-    if animate_scrolling(editor) then redraw_requested = true;
-
+    // Calculate text origin in screen coordinates
     text_offset := make_vector2(char_size * 2, -char_size * 2);
+    text_origin := make_vector2(
+        rect.x + text_offset.x - editor.viewport.left,
+        rect.y + rect.h - line_height + text_offset.y + editor.viewport.top,
+    );
+
+    // Handle editor scrolling here because we only know the layout at this point.
+    // Some people would say this is not "clean", but hey, we'll see if we have any issues.
+    if mouse_pointer_is_within(rect) && Input.mouse_delta_z {
+        max_scroll := cast(s32) ((buffer.lines.count - 2)  * line_height);
+        editor_mouse_scroll(editor, Input.mouse_delta_z, max_scroll);
+    } else {
+        rect_for_cursor := shrink_x(rect, text_offset.x + char_size * 3);
+        rect_for_cursor  = shrink_y(rect_for_cursor, -text_offset.y + line_height * 3);
+        rect_for_cursor.h += 2;
+        rect_for_cursor.y -= line_height + 2;
+        draw_rect(rect_for_cursor, Colors.BACKGROUND_DARK);
+        cursor_pos := get_cursor_screen_pos(text_origin, editor.cursor.pos);
+        if !point_within(cursor_pos, rect_for_cursor) {
+            cr := make_rect(cursor_pos.x, cursor_pos.y, 20, 20);
+            cr = expand(cr, 10);
+            draw_rect(cr, Colors.CODE_ERROR);
+        }
+        // scroll_to_main_cursor(editor);
+    }
+    if animate_scrolling(editor) then redraw_requested = true;
 
     if mouse_left_just_released() editor.dragging_left = false;
 
@@ -98,31 +118,31 @@ draw_editor :: (editor_id: s64, rect: Rect) {
 
     is_active := editor_id == editor_active && Input.input_application_has_focus;
 
-    x := rect.x + text_offset.x;
-    y := rect.y + rect.h - line_height + (line_height - char_size) / 2 + text_offset.y;
-    x -= editor.viewport.left;
-    y += editor.viewport.top;
-
     visible_lines_start := cast(s64) (editor.viewport.top / line_height) - 1;
     visible_lines_start  = clamp(visible_lines_start, 0, buffer.lines.count);
     visible_lines_end := visible_lines_start + cast(s64) (rect.h / line_height) + 1;
     visible_lines_end  = clamp(visible_lines_end,   0, buffer.lines.count);
 
-    draw_cursor(editor, buffer, rect, text_offset, visible_lines_start, visible_lines_end, is_active);
+    draw_cursor(editor, buffer, rect, text_origin, visible_lines_start, visible_lines_end, is_active);
 
-    y -= visible_lines_start * line_height;
+    pen := text_origin;
+    pen.y += (line_height - char_size) / 2 - visible_lines_start * line_height;
     for line : array_view(buffer.lines, visible_lines_start, visible_lines_end) {
-        line_len := clamp(line.end - line.start, 0, 1000);  // TODO: count max line length in chars
+        line_len  := clamp(line.end - line.start, 0, 1000);  // TODO: count max line length in chars
         line_text := to_string(array_view(buffer.bytes, line.start, line_len));
-        Simp.draw_text(font, xx x, xx y, line_text, color = Colors.CODE_PUNCTUATION);
-        y -= line_height;
+        Simp.draw_text(font, xx pen.x, xx pen.y, line_text, color = Colors.CODE_PUNCTUATION);
+        pen.y -= line_height;
     }
 }
 
-draw_cursor :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_offset: Vector2, visible_start: s64, visible_end: s64, is_active: bool) {
-    left := editor_rect.x + text_offset.x - viewport.left;
-    top  := editor_rect.y + editor_rect.h + text_offset.y - line_height + viewport.top + ifx dpi_scale > 1.0 then 1 else 0;  // @Hack: cursor would not look right without the extra adjustment. Need to do something about it;
+get_cursor_screen_pos :: (text_origin: Vector2, pos: Pos) -> Vector2 {
+    return make_vector2(
+        text_origin.x + pos.col * char_size,
+        text_origin.y - pos.line * line_height,
+    );
+}
 
+draw_cursor :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_origin: Vector2, visible_start: s64, visible_end: s64, is_active: bool) {
     if cursor.pos != cursor.sel {
         // Draw selection
         using cursor;
@@ -137,8 +157,8 @@ draw_cursor :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_of
             if i == 0 then first = start.col;
             if i == selected_lines.count - 1 then last = end.col;
             rect := make_rect(
-                left + first * char_size,
-                top - line_num * line_height,
+                text_origin.x + first * char_size,
+                text_origin.y - line_num * line_height,
                 (last - first) * char_size,
                 line_height,
             );
@@ -146,7 +166,8 @@ draw_cursor :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_of
         }
     }
 
-    rect := make_rect(left + cursor.pos.col * char_size, top - cursor.pos.line * line_height, char_size, line_height);
+    cursor_pos := get_cursor_screen_pos(text_origin, cursor.pos);
+    rect := make_rect(cursor_pos.x, cursor_pos.y, char_size, line_height);
     draw_rect(rect, Colors.CURSOR);
     if !is_active then draw_rect(shrink(rect, 1), Colors.BACKGROUND);
 }

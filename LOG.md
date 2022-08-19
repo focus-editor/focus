@@ -1,11 +1,13 @@
 # TODO
 - Scroll when cursor is near border
+- Don't select text when typing
 - Draw selection with rounded corners
 - Move cursor quicker with ctrl+arrows
 - Move viewport with alt+arrows
 - Support tab
 - Remove/replace selection on edits
 
+- When selecting by mouse continue to track cursor even when left the editor rect
 - Don't crash if window is resized to 0
 - When dpi changes, adjust viewport position
 

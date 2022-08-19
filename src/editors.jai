@@ -68,7 +68,7 @@ editors_open_file :: (path: string, where: enum { in_place; left; right; } = .in
     }
 }
 
-editor_scroll :: (editor: *Editor, delta_z: int, max_scroll: s32) {
+editor_mouse_scroll :: (editor: *Editor, delta_z: int, max_scroll: s32) {
     if delta_z == 0 return;
 
     WHEEL_SENSITIVITY :: 1.0;

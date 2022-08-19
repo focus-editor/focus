@@ -31,8 +31,34 @@ expand :: (rect: Rect, amount: float) -> Rect {
     return r;
 }
 
+expand_x :: (rect: Rect, amount: float) -> Rect {
+    r := rect;
+
+    r.x -= amount;
+    r.w += 2 * amount;
+
+    return r;
+}
+
+expand_y :: (rect: Rect, amount: float) -> Rect {
+    r := rect;
+
+    r.y -= amount;
+    r.h += 2 * amount;
+
+    return r;
+}
+
 shrink :: (rect: Rect, amount: float) -> Rect {
     return expand(rect, -amount);
+}
+
+shrink_x :: (rect: Rect, amount: float) -> Rect {
+    return expand_x(rect, -amount);
+}
+
+shrink_y :: (rect: Rect, amount: float) -> Rect {
+    return expand_y(rect, -amount);
 }
 
 cut_left :: (rect: Rect, amount: float) -> (left: Rect,  remainder: Rect) {
