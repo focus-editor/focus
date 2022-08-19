@@ -1,9 +1,8 @@
 # TODO
-- Support tab
+- Select text properly when clicking and dragging
 - Move cursor quicker with ctrl+arrows
 - Move viewport with alt+arrows
-- Draw selection
-- Select text
+- Support tab
 - Remove/replace selection on edits
 
 - Don't crash if window is resized to 0
@@ -26,6 +25,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Draw selection
 + Improve splitter dragging
 + Change cursor position by clicking
 + When dragging splitter ignore 0 to avoid blinking

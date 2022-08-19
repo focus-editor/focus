@@ -21,7 +21,7 @@ draw_frame :: () {
             if dragging_splitter {
                 splitter_pos = (mouse_pointer.x - main_area.x) / main_area.w;
                 if splitter_pos == 0 then splitter_pos = 0.1;  // avoid jitter
-                if mouse_left_up_this_frame then dragging_splitter = false;
+                if mouse_left_just_released then dragging_splitter = false;
             }
             if splitter_pos != 0 then splitter_pos = clamp(splitter_pos, 0.1, 0.9);
 
@@ -36,7 +36,7 @@ draw_frame :: () {
 
             if mouse_pointer_is_within(main_area) then set_pointer_image(.TEXT_SELECT);
             if mouse_pointer_is_within(splitter_rect_fat) {
-                if mouse_left_down_this_frame then dragging_splitter = true;
+                if mouse_left_just_pressed then dragging_splitter = true;
                 set_pointer_image(.DRAGGING_HORIZONTAL);
                 splitter_color = Colors.SPLITTER_HOVER;
                 splitter_rect = expand(splitter_rect, 1);
@@ -73,7 +73,7 @@ draw_editor :: (editor_id: s64, rect: Rect) {
 
     text_offset := make_vector2(char_size * 2, -char_size * 2);
 
-    if mouse_left_down_this_frame && mouse_pointer_is_within(rect) && !dragging_splitter {
+    if mouse_left_just_pressed && mouse_pointer_is_within(rect) && !dragging_splitter {
         // Handle left click inside editor
         using editor;
 
@@ -84,13 +84,14 @@ draw_editor :: (editor_id: s64, rect: Rect) {
         cursor.pos.line = xx (mouse_pos.y / line_height);
         cursor.pos.col  = xx ((mouse_pos.x / char_size) + 0.5);
         cursor.pos = make_valid_pos(buffer, cursor.pos);
+        cursor.col_wanted = cursor.pos.col;
 
         // Activate editor
         editor_active = editor_id;
-        redraw_requested = true;
+        redraw_requested = true;  // so that we don't draw 2 active editors
     }
 
-    draw_cursor(editor, rect, text_offset, editor_id == editor_active);
+    is_active := editor_id == editor_active && Input.input_application_has_focus;
 
     x := rect.x + text_offset.x;
     y := rect.y + rect.h - line_height + (line_height - char_size) / 2 + text_offset.y;
@@ -102,6 +103,8 @@ draw_editor :: (editor_id: s64, rect: Rect) {
     visible_lines_end := visible_lines_start + cast(s64) (rect.h / line_height) + 1;
     visible_lines_end  = clamp(visible_lines_end,   0, buffer.lines.count);
 
+    draw_cursor(editor, buffer, rect, text_offset, visible_lines_start, visible_lines_end, is_active);
+
     y -= visible_lines_start * line_height;
     for line : array_view(buffer.lines, visible_lines_start, visible_lines_end) {
         line_len := clamp(line.end - line.start, 0, 1000);  // TODO: count max line length in chars
@@ -111,23 +114,40 @@ draw_editor :: (editor_id: s64, rect: Rect) {
     }
 }
 
-draw_cursor :: (using editor: Editor, editor_rect: Rect, text_offset: Vector2, is_active: bool) {
-    width  := char_size;
-    height := line_height;
-    x := editor_rect.x + cursor.pos.col * width + text_offset.x;
-    y := editor_rect.y + editor_rect.h - cursor.pos.line * height - height + text_offset.y + ifx dpi_scale > 1.0 then 1 else 0;  // @Hack: cursor would not look right without the extra adjustment. Need to do something about it;
-    x -= viewport.left;
-    y += viewport.top;
+draw_cursor :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_offset: Vector2, visible_start: s64, visible_end: s64, is_active: bool) {
+    left := editor_rect.x + text_offset.x - viewport.left;
+    top  := editor_rect.y + editor_rect.h + text_offset.y - line_height + viewport.top + ifx dpi_scale > 1.0 then 1 else 0;  // @Hack: cursor would not look right without the extra adjustment. Need to do something about it;
 
-    rect := make_rect(x, y, width, height);
-    draw_rect(rect, Colors.CURSOR);
-    if !is_active || !Input.input_application_has_focus {
-        draw_rect(shrink(rect, 1), Colors.BACKGROUND);
+    if cursor.pos != cursor.sel {
+        // Draw selection
+        using cursor;
+        start, end: Pos;
+        if pos < sel { start = pos; end = sel; } else { start = sel; end = pos; }
+        selected_lines := array_view(buffer.lines, start.line, end.line - start.line + 1);
+        for line, i : selected_lines {
+            line_num := start.line + i;
+            if line_num < visible_start || visible_end < line_num then continue;
+            first := 0;
+            last  := line.num_chars + 1;
+            if i == 0 then first = start.col;
+            if i == selected_lines.count - 1 then last = end.col;
+            rect := make_rect(
+                left + first * char_size,
+                top - line_num * line_height,
+                (last - first) * char_size,
+                line_height,
+            );
+            draw_rect(rect, ifx is_active then Colors.SELECTION_ACTIVE else Colors.SELECTION_INACTIVE);
+        }
     }
+
+    rect := make_rect(left + cursor.pos.col * char_size, top - cursor.pos.line * line_height, char_size, line_height);
+    draw_rect(rect, Colors.CURSOR);
+    if !is_active then draw_rect(shrink(rect, 1), Colors.BACKGROUND);
 }
 
 draw_rect :: (using rect: Rect, color: Color) {
-    Simp.set_shader_for_color();
+    Simp.set_shader_for_color(enable_blend = true);
     Simp.immediate_quad(x, y, x + w, y + h, color);
 }
 

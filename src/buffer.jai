@@ -108,6 +108,14 @@ remove_crlf :: (using buffer: Buffer) {
     }
 }
 
+operator == :: (a: Pos, b: Pos) -> bool {
+    return a.line == b.line && a.col == b.col;
+}
+
+operator < :: (a: Pos, b: Pos) -> bool {
+    return a.line < b.line || (a.line == b.line && a.col < b.col);
+}
+
 #scope_file
 
 get_offset :: (using buffer: Buffer, pos: Pos) -> s64 {

@@ -3,18 +3,24 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     if !editor return;
 
     cursor := *editor.cursor;
+    cursor_moved := false;
 
     if key_code == {
-        case .ARROW_LEFT;   move_cursor_left (cursor, buffer);
-        case .ARROW_RIGHT;  move_cursor_right(cursor, buffer);
-        case .ARROW_UP;     move_cursor_up   (cursor, buffer);
-        case .ARROW_DOWN;   move_cursor_down (cursor, buffer);
-        case .HOME;         move_cursor_home (cursor, buffer);
-        case .END;          move_cursor_end  (cursor, buffer);
+        case .ARROW_LEFT;   move_cursor_left (cursor, buffer); cursor_moved = true;
+        case .ARROW_RIGHT;  move_cursor_right(cursor, buffer); cursor_moved = true;
+        case .ARROW_UP;     move_cursor_up   (cursor, buffer); cursor_moved = true;
+        case .ARROW_DOWN;   move_cursor_down (cursor, buffer); cursor_moved = true;
+        case .HOME;         move_cursor_home (cursor, buffer); cursor_moved = true;
+        case .END;          move_cursor_end  (cursor, buffer); cursor_moved = true;
 
         case .ENTER;        handle_enter(cursor, buffer, mods);
         case .BACKSPACE;    handle_backspace(cursor, buffer, mods);
         case .DELETE;       handle_delete(cursor, buffer, mods);
+    }
+
+    if !mods.shift_pressed && cursor_moved {
+        // Remove selection
+        cursor.sel = cursor.pos;
     }
 }
 

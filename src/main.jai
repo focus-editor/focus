@@ -45,10 +45,10 @@ main :: () {
         update_mouse_pointer();
         pointer_end_frame();
 
-        mouse_left_down_this_frame  = false;
-        mouse_left_up_this_frame    = false;
-        mouse_right_down_this_frame = false;
-        mouse_right_up_this_frame   = false;
+        mouse_left_just_pressed   = false;
+        mouse_left_just_released  = false;
+        mouse_right_just_pressed  = false;
+        mouse_right_just_released = false;
 
         for event : Input.events_this_frame {
             if event.type == {
@@ -74,12 +74,12 @@ main :: () {
                         editors_handle_keypress(event.key_code, event.modifier_flags);
                     }
                     if event.key_code == .MOUSE_BUTTON_LEFT {
-                        mouse_left_down_this_frame = event.key_pressed != 0;
-                        mouse_left_up_this_frame   = event.key_pressed == 0;
+                        mouse_left_just_pressed  = event.key_pressed != 0;
+                        mouse_left_just_released = event.key_pressed == 0;
                     }
                     if event.key_code == .MOUSE_BUTTON_RIGHT {
-                        mouse_right_down_this_frame = event.key_pressed != 0;
-                        mouse_right_up_this_frame   = event.key_pressed == 0;
+                        mouse_right_just_pressed  = event.key_pressed != 0;
+                        mouse_right_just_released = event.key_pressed == 0;
                     }
 
                 case .TEXT_INPUT;
@@ -128,15 +128,15 @@ dpi_scale := 1.0;
 
 redraw_requested := true;  // set to true to render the first frame
 
-frame_time: float64;
+frame_time: float64;  // ever-increasing time since start in seconds
 
 screen: Rect;
 
 mouse_pointer: Vector2;
-mouse_left_down_this_frame  := false;
-mouse_left_up_this_frame    := false;
-mouse_right_down_this_frame := false;
-mouse_right_up_this_frame   := false;
+mouse_left_just_pressed   := false;
+mouse_left_just_released  := false;
+mouse_right_just_pressed  := false;
+mouse_right_just_released := false;
 
 // Depend on font
 char_size:   float;
