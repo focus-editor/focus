@@ -1,5 +1,4 @@
 # TODO
-- Scroll all the way without waiting for message near the end
 - Don't select text when typing
 - Draw selection with rounded corners
 - Move cursor quicker with ctrl+arrows
@@ -29,6 +28,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Scroll all the way without waiting for message near the end
 + Only scroll to cursor when cursor moved
 + Don't select when clicking next to border
 + Scroll when cursor is near border

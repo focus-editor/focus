@@ -86,9 +86,11 @@ editor_mouse_scroll :: (editor: *Editor, delta_z: int, max_scroll: s32) {
 
 animate_scrolling :: (editor: *Editor) -> scrolling: bool {
     using editor.viewport;
+    scrolling := false;
 
     // Vertical scroll
     if top != scroll_y.target {
+        scrolling = true;
         using scroll_y;
         t := (frame_time - started_at) / Scroll_Animation.SPEED;
         if t >= 1 || t < 0 {
@@ -100,6 +102,7 @@ animate_scrolling :: (editor: *Editor) -> scrolling: bool {
 
     // Horizontal scroll
     if left != scroll_x.target {
+        scrolling = true;
         using scroll_x;
         t := (frame_time - started_at) / Scroll_Animation.SPEED;
         if t >= 1 || t < 0 {
@@ -109,7 +112,7 @@ animate_scrolling :: (editor: *Editor) -> scrolling: bool {
         }
     }
 
-    return top != scroll_y.target || left != scroll_x.target;
+    return scrolling;
 }
 
 #scope_file

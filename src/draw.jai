@@ -108,7 +108,10 @@ draw_editor :: (editor_id: s64, rect: Rect) {
             }
         }
     }
-    if animate_scrolling(editor) then redraw_requested = true;
+    if animate_scrolling(editor) {
+        text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);  // need to update after scrolling to reduce latency
+        redraw_requested = true;
+    }
 
     if mouse_left_just_released() dragging_left = false;
     if (mouse_left_just_pressed() || dragging_left) && mouse_pointer_is_within(rect) && !dragging_splitter {
