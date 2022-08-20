@@ -74,7 +74,7 @@ draw_editor :: (editor_id: s64, rect: Rect) {
     max_y_scroll := cast(s32) ((buffer.lines.count - 2)  * line_height);
     if mouse_pointer_is_within(rect) && Input.mouse_delta_z {
         editor_mouse_scroll(editor, Input.mouse_delta_z, max_y_scroll);
-    } else {
+    } else if cursor_moved {
         // Detect if cursor is off screen and start scrolling to it
         rect_for_cursor := shrink_x(rect, text_offset.x + char_size * 3);
         rect_for_cursor  = shrink_y(rect_for_cursor, -text_offset.y + line_height * 3);

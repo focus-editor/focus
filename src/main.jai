@@ -17,7 +17,7 @@ main :: () {
     init_fonts();
 
     editors_open_file("src/editors.jai");
-    // editors_open_file("src/main.jai", .right);
+    editors_open_file("src/main.jai", .right);
 
     should_quit := false;
 
@@ -45,6 +45,10 @@ main :: () {
 
         update_mouse_pointer();
         pointer_end_frame();
+
+        for * editor: open_editors {
+            editor.cursor_moved = false;
+        }
 
         for event : Input.events_this_frame {
             if event.type == {

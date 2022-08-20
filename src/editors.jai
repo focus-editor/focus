@@ -13,15 +13,16 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
         case .HOME;         move_cursor_home (cursor, buffer); cursor_moved = true;
         case .END;          move_cursor_end  (cursor, buffer); cursor_moved = true;
 
-        case .ENTER;        handle_enter(cursor, buffer, mods);
-        case .BACKSPACE;    handle_backspace(cursor, buffer, mods);
-        case .DELETE;       handle_delete(cursor, buffer, mods);
+        case .ENTER;        handle_enter(cursor, buffer, mods);     cursor_moved = true;
+        case .BACKSPACE;    handle_backspace(cursor, buffer, mods); cursor_moved = true;
+        case .DELETE;       handle_delete(cursor, buffer, mods);    cursor_moved = true;
     }
 
     if !mods.shift_pressed && cursor_moved {
         // Remove selection
         cursor.sel = cursor.pos;
     }
+    editor.cursor_moved = cursor_moved;
 }
 
 editors_handle_text_input :: (char: u32) {
@@ -32,6 +33,7 @@ editors_handle_text_input :: (char: u32) {
     insert_string_at_pos(buffer, editor.cursor.pos, to_string(*utf8_char));
     editor.cursor.pos.col += 1;  // we know it's just one symbol
     editor.cursor.col_wanted = editor.cursor.pos.col;
+    editor.cursor_moved = true;
 }
 
 get_active_editor_and_buffer :: () -> *Editor, *Buffer {
@@ -156,6 +158,7 @@ Editor :: struct {
     cursor:   Cursor;
     viewport: Viewport;
     dragging_left := false;
+    cursor_moved  := false;
 }
 
 Viewport :: struct {

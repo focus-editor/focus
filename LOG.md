@@ -1,7 +1,6 @@
 # TODO
-- Only scroll to cursor when cursor moved
+- Scroll all the way without waiting for message near the end
 - Don't select text when typing
-- Don't select when clicking next to border
 - Draw selection with rounded corners
 - Move cursor quicker with ctrl+arrows
 - Move viewport with alt+arrows
@@ -30,6 +29,8 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Only scroll to cursor when cursor moved
++ Don't select when clicking next to border
 + Scroll when cursor is near border
 + Select text properly when clicking and dragging
 + Draw selection
