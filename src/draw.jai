@@ -62,43 +62,56 @@ draw_editor :: (editor_id: s64, rect: Rect) {
     set_scissor(rect);
     defer Simp.clear_scissor();
 
-    editor := *open_editors[editor_id];
-    buffer :=  open_buffers[editor.buffer_id];
+    using editor := *open_editors[editor_id];
+    buffer :=  open_buffers[buffer_id];
 
     // Calculate text origin in screen coordinates
     text_offset := make_vector2(char_size * 2, -char_size * 2);
-    text_origin := make_vector2(
-        rect.x + text_offset.x - editor.viewport.left,
-        rect.y + rect.h - line_height + text_offset.y + editor.viewport.top,
-    );
+    text_origin := top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
 
     // Handle editor scrolling here because we only know the layout at this point.
     // Some people would say this is not "clean", but hey, we'll see if we have any issues.
+    max_y_scroll := cast(s32) ((buffer.lines.count - 2)  * line_height);
     if mouse_pointer_is_within(rect) && Input.mouse_delta_z {
-        max_scroll := cast(s32) ((buffer.lines.count - 2)  * line_height);
-        editor_mouse_scroll(editor, Input.mouse_delta_z, max_scroll);
+        editor_mouse_scroll(editor, Input.mouse_delta_z, max_y_scroll);
     } else {
+        // Detect if cursor is off screen and start scrolling to it
         rect_for_cursor := shrink_x(rect, text_offset.x + char_size * 3);
         rect_for_cursor  = shrink_y(rect_for_cursor, -text_offset.y + line_height * 3);
         rect_for_cursor.h += 2;
         rect_for_cursor.y -= line_height + 2;
-        draw_rect(rect_for_cursor, Colors.BACKGROUND_DARK);
-        cursor_pos := get_cursor_screen_pos(text_origin, editor.cursor.pos);
+        // draw_rect(rect_for_cursor, Colors.BACKGROUND_DARK);
+
+        cursor_pos := get_cursor_screen_pos(text_origin, cursor.pos);
         if !point_within(cursor_pos, rect_for_cursor) {
-            cr := make_rect(cursor_pos.x, cursor_pos.y, 20, 20);
-            cr = expand(cr, 10);
-            draw_rect(cr, Colors.CODE_ERROR);
+            left, top, right, bottom := get_rect_bounds(rect_for_cursor);
+            offset: Vector2;
+            if cursor_pos.x < left   then offset.x = cursor_pos.x - left;
+            if cursor_pos.y < bottom then offset.y = cursor_pos.y - bottom;
+            if right < cursor_pos.x  then offset.x = cursor_pos.x - right;
+            if top   < cursor_pos.y  then offset.y = cursor_pos.y - top;
+
+            left_target := clamp(viewport.left + cast(s32) offset.x, 0, xx (1000 * char_size));  // TODO: set a proper limit
+            top_target  := clamp(viewport.top  - cast(s32) offset.y, 0, max_y_scroll);
+
+            if left_target != viewport.scroll_x.target {
+                using viewport.scroll_x;
+                start  = viewport.left;
+                target = left_target;
+                started_at = frame_time;
+            }
+            if top_target != viewport.scroll_y.target {
+                using viewport.scroll_y;
+                start  = viewport.top;
+                target = top_target;
+                started_at = frame_time;
+            }
         }
-        // scroll_to_main_cursor(editor);
     }
     if animate_scrolling(editor) then redraw_requested = true;
 
-    if mouse_left_just_released() editor.dragging_left = false;
-
-    if (mouse_left_just_pressed() || editor.dragging_left) && mouse_pointer_is_within(rect) && !dragging_splitter {
-        // Handle left click inside editor
-        using editor;
-
+    if mouse_left_just_released() dragging_left = false;
+    if (mouse_left_just_pressed() || dragging_left) && mouse_pointer_is_within(rect) && !dragging_splitter {
         // Maybe change cursor position
         mouse_pos := mouse_pointer - bottom_left(rect) - text_offset;
         mouse_pos.x -= viewport.left;
@@ -118,7 +131,7 @@ draw_editor :: (editor_id: s64, rect: Rect) {
 
     is_active := editor_id == editor_active && Input.input_application_has_focus;
 
-    visible_lines_start := cast(s64) (editor.viewport.top / line_height) - 1;
+    visible_lines_start := cast(s64) (viewport.top / line_height) - 1;
     visible_lines_start  = clamp(visible_lines_start, 0, buffer.lines.count);
     visible_lines_end := visible_lines_start + cast(s64) (rect.h / line_height) + 1;
     visible_lines_end  = clamp(visible_lines_end,   0, buffer.lines.count);

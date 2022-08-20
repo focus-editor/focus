@@ -114,6 +114,19 @@ bottom_left :: (using rect: Rect) -> Vector2 {
     return make_vector2(x, y);
 }
 
+top_left :: (using rect: Rect) -> Vector2 {
+    assert(w >= 0 && h >= 0);
+    return make_vector2(x, y + h);
+}
+
+get_rect_bounds :: (using rect: Rect) -> (left: float, top: float, right: float, bottom: float) {
+    left   := x;
+    top    := y + h;
+    right  := x + w;
+    bottom := y;
+    return left, top, right, bottom;
+}
+
 point_within :: (p: Vector2, using rect: Rect) -> bool {
     assert(w >= 0 && h >= 0);
     return x <= p.x && p.x <= x + w && y <= p.y && p.y <= y + h;

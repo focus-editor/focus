@@ -1,6 +1,7 @@
 # TODO
-- Scroll when cursor is near border
+- Only scroll to cursor when cursor moved
 - Don't select text when typing
+- Don't select when clicking next to border
 - Draw selection with rounded corners
 - Move cursor quicker with ctrl+arrows
 - Move viewport with alt+arrows
@@ -10,9 +11,10 @@
 - When selecting by mouse continue to track cursor even when left the editor rect
 - Don't crash if window is resized to 0
 - When dpi changes, adjust viewport position
+- Set a proper horizontal scroll limit
+- Maybe don't draw too many horizontal characters
 
 - Don't redraw if nothing has changed
-- Maybe don't store font atlas in an rgba texture
 - Implement semantic highlighting
     - Polymorphic structs and possibly other types
     - Highlight globals?
@@ -28,6 +30,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Scroll when cursor is near border
 + Select text properly when clicking and dragging
 + Draw selection
 + Improve splitter dragging
