@@ -109,14 +109,24 @@ cut_top :: (rect: Rect, amount: float) -> (top: Rect, remainder: Rect) {
     return top, remainder;
 }
 
-bottom_left :: (using rect: Rect) -> Vector2 {
+bottom_left :: inline (using rect: Rect) -> Vector2 {
     assert(w >= 0 && h >= 0);
     return make_vector2(x, y);
 }
 
-top_left :: (using rect: Rect) -> Vector2 {
+bottom_right :: inline (using rect: Rect) -> Vector2 {
+    assert(w >= 0 && h >= 0);
+    return make_vector2(x + w, y);
+}
+
+top_left :: inline (using rect: Rect) -> Vector2 {
     assert(w >= 0 && h >= 0);
     return make_vector2(x, y + h);
+}
+
+top_right :: inline (using rect: Rect) -> Vector2 {
+    assert(w >= 0 && h >= 0);
+    return make_vector2(x + w, y + h);
 }
 
 get_rect_sides :: (using rect: Rect) -> (left: float, top: float, right: float, bottom: float) {

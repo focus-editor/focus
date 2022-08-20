@@ -168,17 +168,48 @@ draw_cursor :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_or
         for line, i : selected_lines {
             line_num := start.line + i;
             if line_num < visible_start || visible_end < line_num then continue;
-            first := 0;
-            last  := line.num_chars + 1;
-            if i == 0 then first = start.col;
-            if i == selected_lines.count - 1 then last = end.col;
+
+            is_first := i == 0;
+            is_last  := i == selected_lines.count - 1;
+
+            first_char := 0;
+            last_char  := line.num_chars + 1;
+            if is_first then first_char = start.col;
+            if is_last  then last_char = end.col;
+
+            if first_char == last_char continue;  // nothing is selected on this line
+
+            color := ifx is_active then Colors.SELECTION_ACTIVE else Colors.SELECTION_INACTIVE;
             rect := make_rect(
-                text_origin.x + first * char_size,
+                text_origin.x + first_char * char_size,
                 text_origin.y - line_num * line_height,
-                (last - first) * char_size,
+                (last_char - first_char) * char_size,
                 line_height,
             );
-            draw_rect(rect, ifx is_active then Colors.SELECTION_ACTIVE else Colors.SELECTION_INACTIVE);
+
+            // @Speed: probably can be optimised?
+            tl, tr, bl, br: Corner_Rounding = .none;
+            if is_first {
+                tl = .in; tr = .in;
+            } else {
+                prev_start := ifx i == 1 then start.col else 0;
+                prev_end   := selected_lines[i - 1].num_chars + 1;
+                if prev_start < first_char then tl = .out;
+                if prev_start > first_char then tl = .in;
+                if prev_end > last_char then tr = .out;
+                if prev_end < last_char || prev_start > last_char then tr = .in;
+            }
+            if is_last {
+                bl = .in; br = .in;
+            } else {
+                next_start := 0;
+                next_end   := ifx i == selected_lines.count - 2 then end.col else selected_lines[i + 1].num_chars + 1;
+                if next_start < first_char then bl = .out;
+                if next_start > first_char || next_end < first_char then bl = .in;
+                if next_end < last_char then br = .in;
+                if next_end > last_char then br = .out;
+            }
+            draw_rounded_rect(rect, color, tl, tr, br, bl);
         }
     }
 
@@ -188,8 +219,78 @@ draw_cursor :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_or
     if !is_active then draw_rect(shrink(rect, 1), Colors.BACKGROUND);
 }
 
-draw_rect :: (using rect: Rect, color: Color) {
+Corner_Rounding :: enum { none; in; out; }
+
+draw_rounded_rect :: (rect: Rect, color: Color,
+                      tl: Corner_Rounding, tr: Corner_Rounding,
+                      br: Corner_Rounding, bl: Corner_Rounding) {
     Simp.set_shader_for_color(enable_blend = true);
+    r := char_size / 2.0;  // rounding radius
+    top, bottom, base, corner: Rect = ---;
+    top,    base = cut_top(rect, r);
+    bottom, base = cut_bottom(base, r);
+    draw_rect_raw(base, color);
+
+    // Draw top
+    if tl == {
+        case .in;
+            corner, top = cut_left(top, r);
+            draw_corner(color, bottom_right(corner), bottom_right(corner), PI/2, PI, r);
+        case .out;
+            corner = top; corner.w = r; corner.x -= r;
+            draw_corner(color, top_right(corner), bottom_left(corner), 0, PI/2, r);
+    }
+    if tr == {
+        case .in;
+            corner, top = cut_right(top, r);
+            draw_corner(color, bottom_left(corner), bottom_left(corner), 0, PI/2, r);
+        case .out;
+            corner = top; corner.w = r; corner.x += top.w;
+            draw_corner(color, top_left(corner), bottom_right(corner), PI/2, PI, r);
+    }
+    draw_rect_raw(top, color);
+
+    // Draw bottom
+    if bl == {
+        case .in;
+            corner, bottom = cut_left(bottom, r);
+            draw_corner(color, top_right(corner), top_right(corner), PI, 3*PI/2, r);
+        case .out;
+            corner = bottom; corner.w = r; corner.x -= r;
+            draw_corner(color, top_right(corner), bottom_left(corner), 0, PI/2, r);
+    }
+    if br == {
+        case .in;
+            corner, bottom = cut_right(bottom, r);
+            draw_corner(color, top_left(corner), top_left(corner), 3*PI/2, 2*PI, r);
+        case .out;
+            corner = bottom; corner.w = r; corner.x += bottom.w;
+            draw_corner(color, bottom_left(corner), top_right(corner), PI, 3*PI/2, r);
+    }
+    draw_rect_raw(bottom, color);
+}
+
+draw_corner :: (color: Color, base: Vector2, pivot: Vector2, angle_start: float, angle_end: float, radius: float) {
+    // base -  the base of triangle fan
+    // pivot - the center of the circle
+    NUM_TRIANGLES :: 7;
+    step := (angle_end - angle_start) / NUM_TRIANGLES;
+    points: [NUM_TRIANGLES + 1] Vector2 = ---;
+    angle := angle_start;
+    for * p : points {
+        p.x = pivot.x + cos(angle) * radius;
+        p.y = pivot.y + sin(angle) * radius;
+        angle += step;
+    }
+    Simp.immediate_triangle_fan(base, points, color);
+}
+
+draw_rect :: (rect: Rect, color: Color) {
+    Simp.set_shader_for_color(enable_blend = true);
+    draw_rect_raw(rect, color);
+}
+
+draw_rect_raw :: inline (using rect: Rect, color: Color) {
     Simp.immediate_quad(x, y, x + w, y + h, color);
 }
 

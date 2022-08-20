@@ -1,10 +1,12 @@
 # TODO
-- Draw selection with rounded corners
 - Move cursor quicker with ctrl+arrows
 - Move viewport with alt+arrows
 - Support tab
 - Remove/replace selection on edits
 
+- Be able to scroll while holding LMB
+- Figure out how to anti-alias rounded corners
+- When dragging splitter, don't change selection on mouse up
 - When selecting by mouse continue to track cursor even when left the editor rect
 - Don't put cursor in the weird spot when clicking at the end of file
 - Don't crash if window is resized to 0
@@ -28,6 +30,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Draw selection with rounded corners
 + Don't accidentally select when clicking near the border
 + Don't select text when typing
 + Scroll all the way without waiting for message near the end
