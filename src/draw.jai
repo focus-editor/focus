@@ -114,7 +114,7 @@ draw_editor :: (editor_id: s64, rect: Rect) {
     if (mouse_left_just_pressed() || dragging_left) && mouse_pointer_is_within(rect) && !dragging_splitter {
         // Maybe change cursor position
         mouse_pos := mouse_pointer - bottom_left(rect) - text_offset;
-        mouse_pos.x -= viewport.left;
+        mouse_pos.x += viewport.left;
         mouse_pos.y = rect.h - mouse_pos.y + viewport.top - ifx dpi_scale > 1.0 then 1 else 0;
         cursor.pos.line = xx (mouse_pos.y / line_height);
         cursor.pos.col  = xx ((mouse_pos.x / char_size) + 0.5);
