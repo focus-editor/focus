@@ -119,7 +119,7 @@ top_left :: (using rect: Rect) -> Vector2 {
     return make_vector2(x, y + h);
 }
 
-get_rect_bounds :: (using rect: Rect) -> (left: float, top: float, right: float, bottom: float) {
+get_rect_sides :: (using rect: Rect) -> (left: float, top: float, right: float, bottom: float) {
     left   := x;
     top    := y + h;
     right  := x + w;

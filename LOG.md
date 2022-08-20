@@ -6,6 +6,7 @@
 - Remove/replace selection on edits
 
 - When selecting by mouse continue to track cursor even when left the editor rect
+- Don't put cursor in the weird spot when clicking at the end of file
 - Don't crash if window is resized to 0
 - When dpi changes, adjust viewport position
 - Set a proper horizontal scroll limit
@@ -27,6 +28,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Don't accidentally select when clicking near the border
 + Don't select text when typing
 + Scroll all the way without waiting for message near the end
 + Only scroll to cursor when cursor moved

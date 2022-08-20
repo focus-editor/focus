@@ -79,6 +79,8 @@ main :: () {
             }
         }
 
+        if mouse_left_just_pressed() then mouse_left_last_down_pos = mouse_pointer;
+
         refresh_open_buffers();
 
         draw_frame();
@@ -139,6 +141,13 @@ mouse_left_is_down :: inline () -> bool {
     return key_state(.MOUSE_BUTTON_LEFT) & .DOWN != 0;
 }
 
+mouse_left_is_dragging :: () -> dragging: bool, drag_started: Vector2 {
+    if mouse_left_is_down() && mouse_pointer != mouse_left_last_down_pos {
+        return true, mouse_left_last_down_pos;
+    }
+    return false, mouse_left_last_down_pos;
+}
+
 shift_pressed :: inline () -> bool {
     return key_state(.SHIFT) & .DOWN != 0;
 }
@@ -157,6 +166,7 @@ frame_time: float64;  // ever-increasing time since start in seconds
 screen: Rect;  // contains the current working area rect for convenience
 
 mouse_pointer: Vector2;
+mouse_left_last_down_pos: Vector2;
 
 // Depend on font
 char_size:   float;

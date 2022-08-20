@@ -69,6 +69,25 @@ draw_editor :: (editor_id: s64, rect: Rect) {
     text_offset := make_vector2(char_size * 2, -char_size * 2);
     text_origin := top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
 
+    drag, drag_started := mouse_left_is_dragging();
+    dragging_left = drag && point_within(drag_started, rect);
+    if (mouse_left_just_pressed() || dragging_left) && mouse_pointer_is_within(rect) && !dragging_splitter {
+        // Maybe change cursor position
+        mouse_pos := mouse_pointer - bottom_left(rect) - text_offset;
+        mouse_pos.x += viewport.left;
+        mouse_pos.y = rect.h - mouse_pos.y + viewport.top - ifx dpi_scale > 1.0 then 1 else 0;
+        cursor.pos.line = xx (mouse_pos.y / line_height);
+        cursor.pos.col  = xx ((mouse_pos.x / char_size) + 0.5);
+        cursor.pos = make_valid_pos(buffer, cursor.pos);
+        cursor.col_wanted = cursor.pos.col;
+        cursor_moved = true;
+        if !shift_pressed() && !dragging_left then cursor.sel = cursor.pos;
+
+        // Activate editor
+        editor_active = editor_id;
+        redraw_requested = true;  // so that we don't draw 2 active editors
+    }
+
     // Handle editor scrolling here because we only know the layout at this point.
     // Some people would say this is not "clean", but hey, we'll see if we have any issues.
     max_y_scroll := cast(s32) ((buffer.lines.count - 2)  * line_height);
@@ -76,15 +95,15 @@ draw_editor :: (editor_id: s64, rect: Rect) {
         editor_mouse_scroll(editor, Input.mouse_delta_z, max_y_scroll);
     } else if cursor_moved {
         // Detect if cursor is off screen and start scrolling to it
-        rect_for_cursor := shrink_x(rect, text_offset.x + char_size * 3);
-        rect_for_cursor  = shrink_y(rect_for_cursor, -text_offset.y + line_height * 3);
-        rect_for_cursor.h += 2;
-        rect_for_cursor.y -= line_height + 2;
-        // draw_rect(rect_for_cursor, Colors.BACKGROUND_DARK);
+        bounds := shrink_x(rect, text_offset.x + char_size * 3);
+        bounds  = shrink_y(bounds, -text_offset.y + line_height * 3);
+        bounds.h += 2;
+        bounds.y -= line_height + 2;
+        // draw_rect(bounds, Colors.BACKGROUND_DARK);
 
         cursor_pos := get_cursor_screen_pos(text_origin, cursor.pos);
-        if !point_within(cursor_pos, rect_for_cursor) {
-            left, top, right, bottom := get_rect_bounds(rect_for_cursor);
+        if !point_within(cursor_pos, bounds) {
+            left, top, right, bottom := get_rect_sides(bounds);
             offset: Vector2;
             if cursor_pos.x < left   then offset.x = cursor_pos.x - left;
             if cursor_pos.y < bottom then offset.y = cursor_pos.y - bottom;
@@ -111,25 +130,6 @@ draw_editor :: (editor_id: s64, rect: Rect) {
     if animate_scrolling(editor) {
         text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);  // need to update after scrolling to reduce latency
         redraw_requested = true;
-    }
-
-    if mouse_left_just_released() dragging_left = false;
-    if (mouse_left_just_pressed() || dragging_left) && mouse_pointer_is_within(rect) && !dragging_splitter {
-        // Maybe change cursor position
-        mouse_pos := mouse_pointer - bottom_left(rect) - text_offset;
-        mouse_pos.x += viewport.left;
-        mouse_pos.y = rect.h - mouse_pos.y + viewport.top - ifx dpi_scale > 1.0 then 1 else 0;
-        cursor.pos.line = xx (mouse_pos.y / line_height);
-        cursor.pos.col  = xx ((mouse_pos.x / char_size) + 0.5);
-        cursor.pos = make_valid_pos(buffer, cursor.pos);
-        cursor.col_wanted = cursor.pos.col;
-        if !shift_pressed() && !dragging_left then cursor.sel = cursor.pos;
-
-        // Activate editor
-        editor_active = editor_id;
-        redraw_requested = true;  // so that we don't draw 2 active editors
-
-        if mouse_left_just_pressed() then dragging_left = true;
     }
 
     is_active := editor_id == editor_active && Input.input_application_has_focus;
