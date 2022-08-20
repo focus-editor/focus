@@ -1,5 +1,4 @@
 # TODO
-- Don't select text when typing
 - Draw selection with rounded corners
 - Move cursor quicker with ctrl+arrows
 - Move viewport with alt+arrows
@@ -28,6 +27,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Don't select text when typing
 + Scroll all the way without waiting for message near the end
 + Only scroll to cursor when cursor moved
 + Don't select when clicking next to border

@@ -28,12 +28,14 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
 editors_handle_text_input :: (char: u32) {
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
+    using editor;
 
     utf8_char := convert_utf32_to_utf8(char);
-    insert_string_at_pos(buffer, editor.cursor.pos, to_string(*utf8_char));
-    editor.cursor.pos.col += 1;  // we know it's just one symbol
-    editor.cursor.col_wanted = editor.cursor.pos.col;
-    editor.cursor_moved = true;
+    insert_string_at_pos(buffer, cursor.pos, to_string(*utf8_char));
+    cursor.pos.col += 1;  // we know it's just one symbol
+    cursor.sel = cursor.pos;
+    cursor.col_wanted = cursor.pos.col;
+    cursor_moved = true;
 }
 
 get_active_editor_and_buffer :: () -> *Editor, *Buffer {
