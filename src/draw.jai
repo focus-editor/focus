@@ -225,7 +225,7 @@ draw_rounded_rect :: (rect: Rect, color: Color,
                       tl: Corner_Rounding, tr: Corner_Rounding,
                       br: Corner_Rounding, bl: Corner_Rounding) {
     Simp.set_shader_for_color(enable_blend = true);
-    r := char_size / 2.0;  // rounding radius
+    r := char_size / 3.0;  // rounding radius
     top, bottom, base, corner: Rect = ---;
     top,    base = cut_top(rect, r);
     bottom, base = cut_bottom(base, r);
@@ -257,7 +257,7 @@ draw_rounded_rect :: (rect: Rect, color: Color,
             draw_corner(color, top_right(corner), top_right(corner), PI, 3*PI/2, r);
         case .out;
             corner = bottom; corner.w = r; corner.x -= r;
-            draw_corner(color, top_right(corner), bottom_left(corner), 0, PI/2, r);
+            draw_corner(color, bottom_right(corner), top_left(corner), 3*PI/2, 2*PI, r);
     }
     if br == {
         case .in;
