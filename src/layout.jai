@@ -142,8 +142,19 @@ point_within :: (p: Vector2, using rect: Rect) -> bool {
     return x <= p.x && p.x <= x + w && y <= p.y && p.y <= y + h;
 }
 
-mouse_pointer_is_within :: (rect: Rect) -> bool {
+mouse_pointer_is_within :: inline (rect: Rect) -> bool {
     return point_within(mouse_pointer, rect);
+}
+
+snap_to_rect :: (point: Vector2, using rect: Rect) -> Vector2 {
+    p := point;
+
+    if p.x < x     then p.x = x;
+    if p.x > x + w then p.x = x + w;
+    if p.y < y     then p.y = y;
+    if p.y > y + h then p.y = y + h;
+
+    return p;
 }
 
 Rect :: struct {

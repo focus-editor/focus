@@ -63,17 +63,19 @@ draw_editor :: (editor_id: s64, rect: Rect) {
     defer Simp.clear_scissor();
 
     using editor := *open_editors[editor_id];
-    buffer :=  open_buffers[buffer_id];
+    buffer := open_buffers[buffer_id];
 
     // Calculate text origin in screen coordinates
     text_offset := make_vector2(char_size * 2, -char_size * 2);
     text_origin := top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
 
-    drag, drag_started := mouse_left_is_dragging();
-    dragging_left = drag && point_within(drag_started, rect);
-    if (mouse_left_just_pressed() || dragging_left) && mouse_pointer_is_within(rect) && !dragging_splitter {
+    active_drag, drag_started_at_point := mouse_left_is_dragging();
+    dragging_left = active_drag && point_within(drag_started_at_point, rect);
+    if ((mouse_left_just_pressed() && mouse_pointer_is_within(rect)) || dragging_left) && !dragging_splitter {
+        pointer := snap_to_rect(mouse_pointer, rect);  // when we drag outside the editor we still want to interact
+
         // Maybe change cursor position
-        mouse_pos := mouse_pointer - bottom_left(rect) - text_offset;
+        mouse_pos := pointer - bottom_left(rect) - text_offset;
         mouse_pos.x += viewport.left;
         mouse_pos.y = rect.h - mouse_pos.y + viewport.top - ifx dpi_scale > 1.0 then 1 else 0;
         cursor.pos.line = xx (mouse_pos.y / line_height);
