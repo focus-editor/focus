@@ -9,12 +9,12 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     cursor_moved := false;
 
     if key_code == {
-        case .ARROW_LEFT;   move_cursor_left (cursor, buffer); cursor_moved = true;
-        case .ARROW_RIGHT;  move_cursor_right(cursor, buffer); cursor_moved = true;
-        case .ARROW_UP;     move_cursor_up   (cursor, buffer); cursor_moved = true;
-        case .ARROW_DOWN;   move_cursor_down (cursor, buffer); cursor_moved = true;
-        case .HOME;         move_cursor_home (cursor, buffer); cursor_moved = true;
-        case .END;          move_cursor_end  (cursor, buffer); cursor_moved = true;
+        case .ARROW_LEFT;   move_cursor_left (cursor, buffer, mods); cursor_moved = true;
+        case .ARROW_RIGHT;  move_cursor_right(cursor, buffer, mods); cursor_moved = true;
+        case .ARROW_UP;     move_cursor_up   (cursor, buffer, mods); cursor_moved = true;
+        case .ARROW_DOWN;   move_cursor_down (cursor, buffer, mods); cursor_moved = true;
+        case .HOME;         move_cursor_home (cursor, buffer, mods); cursor_moved = true;
+        case .END;          move_cursor_end  (cursor, buffer, mods); cursor_moved = true;
 
         case .ENTER;        handle_enter(cursor, buffer, mods);     cursor_moved = true;
         case .BACKSPACE;    handle_backspace(cursor, buffer, mods); cursor_moved = true;

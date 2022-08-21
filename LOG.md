@@ -1,11 +1,9 @@
 # TODO
-- Move cursor quicker with ctrl+arrows
 - Move viewport with alt+arrows
 - Support tab
 - Remove/replace selection on edits
 
 - Be able to scroll while holding LMB
-- Figure out how to anti-alias rounded corners
 - Don't put cursor in the weird spot when clicking at the end of file
 - Don't crash if window is resized to 0
 - When dpi changes, adjust viewport position
@@ -17,8 +15,9 @@
     - Polymorphic structs and possibly other types
     - Highlight globals?
     - Color cursor differently depending on what scope we're in
-- Investigate stuttering when dragging the splitter
 - Make sure cursor positioning is correct for all fonts and sizes
+- Investigate stuttering when dragging the splitter
+- Figure out how to anti-alias rounded corners
 - Look into subpixel font positioning
     - Revisit the font loading code as it has some rounding to pixels there
       and consider using floats or other units for font metrics
@@ -28,6 +27,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Move cursor quicker with ctrl+arrows
 + Fix the crash when typing text
 + When dragging splitter, don't change selection on mouse up
 + When selecting by mouse continue to track cursor even when left the editor rect
