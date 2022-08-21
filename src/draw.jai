@@ -93,7 +93,7 @@ draw_editor :: (editor_id: s64, rect: Rect) {
 
     // Handle editor scrolling here because we only know the layout at this point.
     // Some people would say this is not "clean", but hey, we'll see if we have any issues.
-    max_y_scroll := cast(s32) ((buffer.lines.count - 2)  * line_height);
+    max_y_scroll := get_max_y_scroll(buffer);
     if mouse_pointer_is_within(rect) && Input.mouse_delta_z {
         editor_mouse_scroll(editor, Input.mouse_delta_z, max_y_scroll);
     } else if cursor_moved {

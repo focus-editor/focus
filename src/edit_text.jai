@@ -65,16 +65,16 @@ handle_enter :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
     memset(insert.data, #char " ", indent + 1);
 
     insert_pos := pos;
-    if mods_ctrl(mods) {
+    if only_ctrl_pressed(mods) {
         // Insert line below without breaking
         insert[0] = #char "\n";
         insert_pos.col = line.num_chars;
         pos.line += 1;
-    } else if mods_ctrl_shift(mods) {
+    } else if only_ctrl_shift_pressed(mods) {
         // Insert line above
         insert[indent] = #char "\n";
         insert_pos.col = 0;
-    } else if mods_none(mods) {
+    } else if nothing_pressed(mods) {
         // Break line
         insert[0] = #char "\n";
         indent = min(indent, pos.col);  // don't indent too much

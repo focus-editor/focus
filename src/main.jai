@@ -113,15 +113,19 @@ unimplemented :: (loc := #caller_location) {
     panic("Unimplemented at %", loc);
 }
 
-mods_none :: inline (mods: Mods) -> bool {
+nothing_pressed :: inline (mods: Mods) -> bool {
     return mods.packed == MODS_NONE;
 }
 
-mods_ctrl :: inline (mods: Mods) -> bool {
+only_ctrl_pressed :: inline (mods: Mods) -> bool {
     return mods.packed == MODS_CTRL;
 }
 
-mods_ctrl_shift :: inline (mods: Mods) -> bool {
+only_alt_pressed :: inline (mods: Mods) -> bool {
+    return mods.packed == MODS_ALT;
+}
+
+only_ctrl_shift_pressed :: inline (mods: Mods) -> bool {
     return mods.packed == MODS_CTRL_SHIFT;
 }
 
@@ -208,4 +212,5 @@ Input :: #import "Input";
 
 MODS_NONE       :: #run Mods.{}.packed;
 MODS_CTRL       :: #run Mods.{ ctrl_pressed = true }.packed;
+MODS_ALT        :: #run Mods.{ alt_pressed  = true }.packed;
 MODS_CTRL_SHIFT :: #run Mods.{ ctrl_pressed = true, shift_pressed = true }.packed;

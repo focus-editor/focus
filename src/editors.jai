@@ -6,19 +6,45 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     if buffer.dirty then recalculate_lines(buffer);
 
     cursor := *editor.cursor;
-    cursor_moved := false;
+    cursor_moved := true;
 
     if key_code == {
-        case .ARROW_LEFT;   move_cursor_left (cursor, buffer, mods); cursor_moved = true;
-        case .ARROW_RIGHT;  move_cursor_right(cursor, buffer, mods); cursor_moved = true;
-        case .ARROW_UP;     move_cursor_up   (cursor, buffer, mods); cursor_moved = true;
-        case .ARROW_DOWN;   move_cursor_down (cursor, buffer, mods); cursor_moved = true;
-        case .HOME;         move_cursor_home (cursor, buffer, mods); cursor_moved = true;
-        case .END;          move_cursor_end  (cursor, buffer, mods); cursor_moved = true;
+        case .ARROW_LEFT;
+            if only_alt_pressed(mods) {
+                move_viewport(editor, .left);
+                cursor_moved = false;
+            } else {
+                move_cursor_left (cursor, buffer, mods);
+            }
+        case .ARROW_RIGHT;
+            if only_alt_pressed(mods) {
+                move_viewport(editor, .right);
+                cursor_moved = false;
+            } else {
+                move_cursor_right(cursor, buffer, mods);
+            }
+        case .ARROW_UP;
+            if only_alt_pressed(mods) {
+                move_viewport(editor, .up);
+                cursor_moved = false;
+            } else {
+                move_cursor_up(cursor, buffer, mods);
+            }
+        case .ARROW_DOWN;
+            if only_alt_pressed(mods) {
+                move_viewport(editor, .down);
+                cursor_moved = false;
+            } else {
+                move_cursor_down(cursor, buffer, mods);
+            }
+        case .HOME;      move_cursor_home (cursor, buffer, mods);
+        case .END;       move_cursor_end  (cursor, buffer, mods);
 
-        case .ENTER;        handle_enter(cursor, buffer, mods);     cursor_moved = true;
-        case .BACKSPACE;    handle_backspace(cursor, buffer, mods); cursor_moved = true;
-        case .DELETE;       handle_delete(cursor, buffer, mods);    cursor_moved = true;
+        case .ENTER;     handle_enter(cursor, buffer, mods);
+        case .BACKSPACE; handle_backspace(cursor, buffer, mods);
+        case .DELETE;    handle_delete(cursor, buffer, mods);
+
+        case; cursor_moved = false;
     }
 
     if !mods.shift_pressed && cursor_moved {
@@ -75,18 +101,34 @@ editors_open_file :: (path: string, where: enum { in_place; left; right; } = .in
     }
 }
 
-editor_mouse_scroll :: (editor: *Editor, delta_z: int, max_scroll: s32) {
+move_viewport :: (editor: *Editor, dir: enum { left; up; right; down; }) {
+    using editor.viewport;
+    if dir == {
+        case .left; #through;
+        case .right;
+            horiz_delta := cast(s32) (10 * char_size);
+            new_target := ifx dir == .left then scroll_x.target - horiz_delta else scroll_x.target + horiz_delta;
+            set_scroll_target(*scroll_x, left, new_target, xx (1000 * char_size)); // TODO
+
+        case .up; #through;
+        case .down;
+            vert_delta := cast(s32) (10 * line_height);
+            new_target := ifx dir == .up then scroll_y.target - vert_delta else scroll_y.target + vert_delta;
+            buffer := open_buffers[editor.buffer_id];
+            max_y_scroll := get_max_y_scroll(buffer);
+            set_scroll_target(*scroll_y, top, new_target, max_y_scroll);
+    }
+}
+
+editor_mouse_scroll :: (editor: *Editor, delta_z: int, max_y_scroll: s32) {
     if delta_z == 0 return;
 
-    WHEEL_SENSITIVITY :: 1.0;
     // Vertical scroll
     // Y-up, so a positive value of viewport.top means we've scrolled down
+    WHEEL_SENSITIVITY :: 1.0;
+    scroll_delta := cast(s32) (cast(float) delta_z * WHEEL_SENSITIVITY);
     using editor.viewport;
-    using scroll_y;
-    start = top;
-    target -= xx (cast(float) delta_z * WHEEL_SENSITIVITY);
-    target = clamp(target, 0, max(max_scroll, 0));
-    started_at = frame_time;
+    set_scroll_target(*scroll_y, top, scroll_y.target - scroll_delta, max_y_scroll);
 }
 
 animate_scrolling :: (editor: *Editor) -> scrolling: bool {
@@ -118,6 +160,11 @@ animate_scrolling :: (editor: *Editor) -> scrolling: bool {
     }
 
     return scrolling;
+}
+
+get_max_y_scroll :: (buffer: Buffer) -> s32 {
+    assert(!buffer.dirty);
+    return max(cast(s32) ((buffer.lines.count - 2)  * line_height), 0);
 }
 
 #scope_file
@@ -156,6 +203,12 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64 {
     }
 
     return buffer_id;
+}
+
+set_scroll_target :: (using scroll: *Scroll_Animation, current: s32, target_: s32, max_scroll: s32) {
+    start = current;
+    target = clamp(target_, 0, max_scroll);
+    started_at = frame_time;
 }
 
 #scope_export
