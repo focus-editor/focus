@@ -1,6 +1,4 @@
 # TODO
-- Fix the crash when typing text
-    - Apparently 2 events come within one frame
 - Move cursor quicker with ctrl+arrows
 - Move viewport with alt+arrows
 - Support tab
@@ -30,6 +28,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Fix the crash when typing text
 + When dragging splitter, don't change selection on mouse up
 + When selecting by mouse continue to track cursor even when left the editor rect
 + Draw selection with rounded corners

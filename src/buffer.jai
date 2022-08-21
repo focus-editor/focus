@@ -66,6 +66,7 @@ make_valid_range :: (buffer: Buffer, range: Range) -> Range {
 }
 
 make_valid_pos :: (using buffer: Buffer, _pos: Pos, for_cursor := true) -> Pos {
+    assert(!dirty);
     pos := _pos;
     if pos.line < 0 then pos.line = 0;
     if pos.col  < 0 then pos.col  = 0;
@@ -88,6 +89,7 @@ range_to_byte_offsets :: (buffer: Buffer, range: Range) -> start: s32, end: s32 
 }
 
 pos_to_offset :: (buffer: Buffer, pos: Pos) -> s32 {
+    assert(!buffer.dirty);
     line := buffer.lines[pos.line];
     offset := line.start;
     for col : 0..pos.col-1 {
@@ -106,6 +108,39 @@ remove_crlf :: (using buffer: Buffer) {
             i += 1;
         }
     }
+}
+
+recalculate_lines :: (buffer: *Buffer) {
+    // We mainly use dirty for lines. We may want to recalculate lines
+    // a few times within one frame, but we don't want to e.g. rehighlight code
+    // more than once (before display)
+    buffer.dirty = false;
+
+    array_reset_keeping_memory(*buffer.lines);
+    byte_index: s32 = 0;
+    char_index: s32 = 0;
+    line: Line;
+    while byte_index < buffer.bytes.count {
+        byte := buffer.bytes[byte_index];
+        if line.text_start < 0 && byte != #char " " {
+            line.text_start = byte_index;
+        }
+        if byte == #char "\n" {
+            line.end = byte_index;
+            line.num_chars = char_index;
+            char_index = -1;  // will turn to 0
+            array_add(*buffer.lines, line);
+            line.start = byte_index + 1;
+            line.text_start = -1;
+        }
+        byte_index += 1 + trailingBytesForUTF8[byte];
+        char_index += 1;
+    }
+    // Final line
+    if line.text_start < 0 then line.text_start = byte_index;
+    line.end = byte_index;
+    line.num_chars = char_index;
+    array_add(*buffer.lines, line);
 }
 
 operator == :: (a: Pos, b: Pos) -> bool {
@@ -133,36 +168,7 @@ get_offset :: (using buffer: Buffer, pos: Pos) -> s64 {
 }
 
 sync_internal_data :: (buffer: *Buffer) {
-    buffer.dirty = false;
-
-    // Recalculate lines
-    {
-        array_reset_keeping_memory(*buffer.lines);
-        byte_index: s32 = 0;
-        char_index: s32 = 0;
-        line: Line;
-        while byte_index < buffer.bytes.count {
-            byte := buffer.bytes[byte_index];
-            if line.text_start < 0 && byte != #char " " {
-                line.text_start = byte_index;
-            }
-            if byte == #char "\n" {
-                line.end = byte_index;
-                line.num_chars = char_index;
-                char_index = -1;  // will turn to 0
-                array_add(*buffer.lines, line);
-                line.start = byte_index + 1;
-                line.text_start = -1;
-            }
-            byte_index += 1 + trailingBytesForUTF8[byte];
-            char_index += 1;
-        }
-        // Final line
-        if line.text_start < 0 then line.text_start = byte_index;
-        line.end = byte_index;
-        line.num_chars = char_index;
-        array_add(*buffer.lines, line);
-    }
+    recalculate_lines(buffer);
 
     // Highlight code
     {

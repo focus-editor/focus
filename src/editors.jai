@@ -2,6 +2,9 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
 
+    // We have to make sure any subsequent events can rely on buffer.lines being correct
+    if buffer.dirty then recalculate_lines(buffer);
+
     cursor := *editor.cursor;
     cursor_moved := false;
 
