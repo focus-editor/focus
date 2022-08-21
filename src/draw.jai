@@ -21,7 +21,6 @@ draw_frame :: () {
             if dragging_splitter {
                 splitter_pos = (mouse_pointer.x - main_area.x) / main_area.w;
                 if splitter_pos == 0 then splitter_pos = 0.1;  // avoid jitter
-                if mouse_left_just_released() then dragging_splitter = false;
             }
             if splitter_pos != 0 then splitter_pos = clamp(splitter_pos, 0.1, 0.9);
 
@@ -49,6 +48,8 @@ draw_frame :: () {
             draw_editor(editor_left,  left_rect);
             draw_editor(editor_right, right_rect);
             draw_rect(splitter_rect, splitter_color);
+
+            if mouse_left_just_released() then dragging_splitter = false;
     }
 
     // Draw footer rect

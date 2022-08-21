@@ -119,6 +119,7 @@ operator < :: (a: Pos, b: Pos) -> bool {
 #scope_file
 
 get_offset :: (using buffer: Buffer, pos: Pos) -> s64 {
+    assert(!dirty);
     line := lines[pos.line];
     assert(0 <= pos.col && pos.col <= line.num_chars);
     offset := line.start;
