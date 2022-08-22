@@ -167,6 +167,12 @@ get_max_y_scroll :: (buffer: Buffer) -> s32 {
     return max(cast(s32) ((buffer.lines.count - 2)  * line_height), 0);
 }
 
+set_scroll_target :: (using scroll: *Scroll_Animation, current: s32, target_: s32, max_scroll: s32) {
+    start = current;
+    target = clamp(target_, 0, max_scroll);
+    started_at = frame_time;
+}
+
 #scope_file
 
 find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_id: s64 {
@@ -191,7 +197,7 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64 {
     buffer.file = copy_string(path);
 
     file_data, success := read_entire_file(path);
-    if !success file_data = sprint("Couldn't load file '%'", path);
+    if !success then file_data = sprint("Couldn't load file '%'", path);
     defer free(file_data);
     array_copy(*buffer.bytes, cast([]u8) file_data);
     remove_crlf(buffer);
@@ -203,12 +209,6 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64 {
     }
 
     return buffer_id;
-}
-
-set_scroll_target :: (using scroll: *Scroll_Animation, current: s32, target_: s32, max_scroll: s32) {
-    start = current;
-    target = clamp(target_, 0, max_scroll);
-    started_at = frame_time;
 }
 
 #scope_export

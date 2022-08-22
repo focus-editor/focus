@@ -3,7 +3,6 @@
 - Remove/replace selection on edits
 
 - Put cursor at the center of viewport on alt+C (or some other shortcut)
-- Be able to scroll while holding LMB
 - Don't put cursor in the weird spot when clicking at the end of file
 - Don't crash if window is resized to 0
 - When dpi changes, adjust viewport position
@@ -27,6 +26,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Be able to scroll while holding LMB
 + Move viewport with alt+arrows
 + Move cursor quicker with ctrl+arrows
 + Fix the crash when typing text

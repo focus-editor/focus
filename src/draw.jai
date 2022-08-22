@@ -83,7 +83,10 @@ draw_editor :: (editor_id: s64, rect: Rect) {
         cursor.pos.col  = xx ((mouse_pos.x / char_size) + 0.5);
         cursor.pos = make_valid_pos(buffer, cursor.pos);
         cursor.col_wanted = cursor.pos.col;
-        cursor_moved = true;
+
+        // We mark cursor as moved to trigger auto-scroll if we drag outside the editor
+        if dragging_left && !mouse_pointer_is_within(rect) then cursor_moved = true;
+
         if !shift_pressed() && !dragging_left then cursor.sel = cursor.pos;
 
         // Activate editor
@@ -113,21 +116,12 @@ draw_editor :: (editor_id: s64, rect: Rect) {
             if right < cursor_pos.x  then offset.x = cursor_pos.x - right;
             if top   < cursor_pos.y  then offset.y = cursor_pos.y - top;
 
-            left_target := clamp(viewport.left + cast(s32) offset.x, 0, xx (1000 * char_size));  // TODO: set a proper limit
+            max_x_scroll := cast(s32) (1000 * char_size);  // TODO: set a proper limit
+            left_target := clamp(viewport.left + cast(s32) offset.x, 0, max_x_scroll);
             top_target  := clamp(viewport.top  - cast(s32) offset.y, 0, max_y_scroll);
 
-            if left_target != viewport.scroll_x.target {
-                using viewport.scroll_x;
-                start  = viewport.left;
-                target = left_target;
-                started_at = frame_time;
-            }
-            if top_target != viewport.scroll_y.target {
-                using viewport.scroll_y;
-                start  = viewport.top;
-                target = top_target;
-                started_at = frame_time;
-            }
+            if left_target != viewport.scroll_x.target then set_scroll_target(*viewport.scroll_x, viewport.left, left_target, max_x_scroll);
+            if top_target  != viewport.scroll_y.target then set_scroll_target(*viewport.scroll_y, viewport.top,  top_target,  max_y_scroll);
         }
     }
     if animate_scrolling(editor) {
