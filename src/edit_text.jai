@@ -90,6 +90,15 @@ handle_enter :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
 }
 
 handle_backspace :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
+    // Either remove the selection
+    if has_selection(cursor) {
+        range := get_selection(cursor);
+        buffer_delete_range(buffer, range);
+        pos = range.start;
+        return;
+    }
+
+    // Or handle the more complex case with tabs etc
     to_prev_tabstop := pos.col % TAB_SIZE;
     if to_prev_tabstop == 0 && pos.col > 0 then to_prev_tabstop = TAB_SIZE;
     all_spaces := false;
@@ -125,12 +134,17 @@ handle_backspace :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
 }
 
 handle_delete :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
-    range: Range = ---;
-    range.start = pos;
-    range.end = pos;
-    range.end.col += 1;
-    buffer_delete_range(buffer, range);
-
+    if has_selection(cursor) {
+        range := get_selection(cursor);
+        buffer_delete_range(buffer, range);
+        pos = range.start;
+    } else {
+        range: Range = ---;
+        range.start = pos;
+        range.end = pos;
+        range.end.col += 1;
+        buffer_delete_range(buffer, range);
+    }
     col_wanted = pos.col;
 }
 

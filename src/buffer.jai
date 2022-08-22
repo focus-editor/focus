@@ -99,6 +99,24 @@ pos_to_offset :: (buffer: Buffer, pos: Pos) -> s32 {
     return offset;
 }
 
+has_selection :: inline (using cursor: Cursor) -> bool {
+    return pos != sel;
+}
+
+has_selection :: inline (cursor: *Cursor) -> bool {
+    return has_selection(<<cursor);
+}
+
+get_selection :: (using cursor: Cursor) -> Range {
+    using range: Range = ---;
+    if pos < sel { start = pos; end = sel; } else { start = sel; end = pos; }
+    return range;
+}
+
+get_selection :: inline (cursor: *Cursor) -> Range {
+    return get_selection(<<cursor);
+}
+
 remove_crlf :: (using buffer: Buffer) {
     i := 0;
     while i < bytes.count {

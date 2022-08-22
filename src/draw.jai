@@ -156,14 +156,12 @@ get_cursor_screen_pos :: (text_origin: Vector2, pos: Pos) -> Vector2 {
 }
 
 draw_cursor :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_origin: Vector2, visible_start: s64, visible_end: s64, is_active: bool) {
-    if cursor.pos != cursor.sel {
+    if has_selection(cursor) {
         // Draw selection
-        using cursor;
-        start, end: Pos;
-        if pos < sel { start = pos; end = sel; } else { start = sel; end = pos; }
-        selected_lines := array_view(buffer.lines, start.line, end.line - start.line + 1);
+        selection := get_selection(cursor);
+        selected_lines := array_view(buffer.lines, selection.start.line, selection.end.line - selection.start.line + 1);
         for line, i : selected_lines {
-            line_num := start.line + i;
+            line_num := selection.start.line + i;
             if line_num < visible_start || visible_end < line_num then continue;
 
             is_first := i == 0;
@@ -171,8 +169,8 @@ draw_cursor :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_or
 
             first_char := 0;
             last_char  := line.num_chars + 1;
-            if is_first then first_char = start.col;
-            if is_last  then last_char = end.col;
+            if is_first then first_char = selection.start.col;
+            if is_last  then last_char  = selection.end.col;
 
             if first_char == last_char continue;  // nothing is selected on this line
 
@@ -189,7 +187,7 @@ draw_cursor :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_or
             if is_first {
                 tl = .in; tr = .in;
             } else {
-                prev_start := ifx i == 1 then start.col else 0;
+                prev_start := ifx i == 1 then selection.start.col else 0;
                 prev_end   := selected_lines[i - 1].num_chars + 1;
                 if prev_start < first_char then tl = .out;
                 if prev_start > first_char then tl = .in;
@@ -200,7 +198,7 @@ draw_cursor :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_or
                 bl = .in; br = .in;
             } else {
                 next_start := 0;
-                next_end   := ifx i == selected_lines.count - 2 then end.col else selected_lines[i + 1].num_chars + 1;
+                next_end   := ifx i == selected_lines.count - 2 then selection.end.col else selected_lines[i + 1].num_chars + 1;
                 if next_start < first_char then bl = .out;
                 if next_start > first_char || next_end < first_char then bl = .in;
                 if next_end < last_char then br = .in;

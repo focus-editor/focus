@@ -14,7 +14,7 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
                 move_viewport(editor, .left);
                 cursor_moved = false;
             } else {
-                move_cursor_left (cursor, buffer, mods);
+                move_cursor_left(cursor, buffer, mods);
             }
         case .ARROW_RIGHT;
             if only_alt_pressed(mods) {
@@ -37,8 +37,8 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
             } else {
                 move_cursor_down(cursor, buffer, mods);
             }
-        case .HOME;      move_cursor_home (cursor, buffer, mods);
-        case .END;       move_cursor_end  (cursor, buffer, mods);
+        case .HOME;      move_cursor_home(cursor, buffer, mods);
+        case .END;       move_cursor_end (cursor, buffer, mods);
 
         case .ENTER;     handle_enter(cursor, buffer, mods);
         case .BACKSPACE; handle_backspace(cursor, buffer, mods);

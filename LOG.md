@@ -1,6 +1,7 @@
 # TODO
-- Support tab
 - Remove/replace selection on edits
+- Handle arrow keys differently when there's a selection
+- Support tab
 
 - Put cursor at the center of viewport on alt+C (or some other shortcut)
 - Don't put cursor in the weird spot when clicking at the end of file
