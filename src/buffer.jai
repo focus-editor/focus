@@ -89,6 +89,10 @@ get_selection :: inline (cursor: *Cursor) -> Range {
     return get_selection(<<cursor);
 }
 
+remove_selection :: inline (using cursor: *Cursor) {
+    sel = pos;
+}
+
 remove_crlf :: (using buffer: Buffer) {
     i := 0;
     while i < bytes.count {

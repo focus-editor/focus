@@ -1,24 +1,39 @@
 move_cursor_left :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
-    pos.col -= xx ifx mods.ctrl_pressed then 5 else 1;
-    if pos.col < 0 {
-        if pos.line > 0 { pos.line -= 1; pos.col = buffer.lines[pos.line].num_chars; }
-        else pos.col = 0;
+    if has_selection(cursor) && !mods.shift_pressed {
+        pos = get_selection(cursor).start;
+        remove_selection(cursor);
+    } else {
+        pos.col -= xx ifx mods.ctrl_pressed then 5 else 1;
+        if pos.col < 0 {
+            if pos.line > 0 { pos.line -= 1; pos.col = buffer.lines[pos.line].num_chars; }
+            else pos.col = 0;
+        }
     }
     col_wanted = pos.col;
 }
 
 move_cursor_right :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
-    line_len := buffer.lines[pos.line].num_chars;
-    if pos.col >= line_len && pos.line < buffer.lines.count - 1 {
-        pos.line += 1;
-        pos.col   = 0;
-    } else if pos.col < line_len {
-        pos.col += xx ifx mods.ctrl_pressed then 5 else 1;
+    if has_selection(cursor) && !mods.shift_pressed {
+        pos = get_selection(cursor).end;
+        remove_selection(cursor);
+    } else {
+        line_len := buffer.lines[pos.line].num_chars;
+        if pos.col >= line_len && pos.line < buffer.lines.count - 1 {
+            pos.line += 1;
+            pos.col   = 0;
+        } else if pos.col < line_len {
+            pos.col += xx ifx mods.ctrl_pressed then 5 else 1;
+        }
     }
     col_wanted = pos.col;
 }
 
 move_cursor_up :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
+    if has_selection(cursor) && !mods.shift_pressed {
+        pos = get_selection(cursor).start;
+        remove_selection(cursor);
+        col_wanted = pos.col;
+    }
     pos.line -= xx ifx mods.ctrl_pressed then 5 else 1;
     if pos.line < 0 then pos.line = 0;
     pos.col = col_wanted;
@@ -29,6 +44,11 @@ move_cursor_up :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
 }
 
 move_cursor_down :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
+    if has_selection(cursor) && !mods.shift_pressed {
+        pos = get_selection(cursor).end;
+        remove_selection(cursor);
+        col_wanted = pos.col;
+    }
     pos.line += xx ifx mods.ctrl_pressed then 5 else 1;
     if pos.line > buffer.lines.count - 1 then pos.line = cast(s32) buffer.lines.count - 1;
     pos.col = col_wanted;

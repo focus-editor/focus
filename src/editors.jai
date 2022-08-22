@@ -48,8 +48,7 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     }
 
     if !mods.shift_pressed && cursor_moved {
-        // Remove selection
-        cursor.sel = cursor.pos;
+        remove_selection(cursor);
     }
     editor.cursor_moved = cursor_moved;
 }
@@ -69,8 +68,8 @@ editors_handle_text_input :: (char: u32) {
         insert_string_at_pos(buffer, cursor.pos, str);
     }
     cursor.pos.col += 1;  // we know it's just one symbol
-    cursor.sel = cursor.pos;
     cursor.col_wanted = cursor.pos.col;
+    remove_selection(*cursor);
     cursor_moved = true;
 }
 

@@ -1,5 +1,4 @@
 # TODO
-- Handle arrow keys differently when there's a selection
 - Support tab
 
 - Put cursor at the center of viewport on alt+C (or some other shortcut)
@@ -26,6 +25,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Handle arrow keys differently when there's a selection
 + Remove/replace selection on edits
 + Be able to scroll while holding LMB
 + Move viewport with alt+arrows
