@@ -60,7 +60,14 @@ editors_handle_text_input :: (char: u32) {
     using editor;
 
     utf8_char := convert_utf32_to_utf8(char);
-    insert_string_at_pos(buffer, cursor.pos, to_string(*utf8_char));
+    str := to_string(*utf8_char);
+    if has_selection(cursor) {
+        selection := get_selection(cursor);
+        buffer_replace_range(buffer, selection, str);
+        cursor.pos = selection.start;
+    } else {
+        insert_string_at_pos(buffer, cursor.pos, str);
+    }
     cursor.pos.col += 1;  // we know it's just one symbol
     cursor.sel = cursor.pos;
     cursor.col_wanted = cursor.pos.col;

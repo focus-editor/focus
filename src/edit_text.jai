@@ -70,20 +70,28 @@ handle_enter :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
         insert[0] = #char "\n";
         insert_pos.col = line.num_chars;
         pos.line += 1;
+        insert_string_at_pos(buffer, insert_pos, insert);
     } else if only_ctrl_shift_pressed(mods) {
         // Insert line above
         insert[indent] = #char "\n";
         insert_pos.col = 0;
+        insert_string_at_pos(buffer, insert_pos, insert);
     } else if nothing_pressed(mods) {
-        // Break line
+        // Break line normally
         insert[0] = #char "\n";
         indent = min(indent, pos.col);  // don't indent too much
         insert.count = indent + 1;
+        if has_selection(cursor) {
+            selection := get_selection(cursor);
+            buffer_replace_range(buffer, selection, insert);
+            pos = selection.start;
+        } else {
+            insert_string_at_pos(buffer, insert_pos, insert);
+        }
         pos.line += 1;
     } else {
         return; // Not a supported operation
     }
-    insert_string_at_pos(buffer, insert_pos, insert);
 
     pos.col = indent;
     col_wanted = pos.col;

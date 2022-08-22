@@ -5,52 +5,24 @@ refresh_open_buffers :: () {
     }
 }
 
-insert_string_at_pos :: (using buffer: *Buffer, pos: Pos, str: string) {
-    new_size := bytes.count + str.count;
-    array_reserve(*bytes, new_size);
-
+insert_string_at_pos :: (buffer: *Buffer, pos: Pos, str: string) {
     offset := get_offset(<< buffer, pos);
-
-    // Copy in chunks of str.count while possible
-    source := bytes.count - str.count;
-    dest   := bytes.count;
-    while source >= offset {
-        memcpy(bytes.data + dest, bytes.data + source, str.count);
-        source -= str.count;
-        dest   -= str.count;
-    }
-    // If there's a leftover, copy it as well
-    if source != offset {
-        memcpy(bytes.data + offset + str.count, bytes.data + offset, str.count - (offset - source));
-    }
-    // Insert the string
-    memcpy(bytes.data + offset, str.data, str.count);
-
-    bytes.count = new_size;
-    dirty = true;
+    buffer_insert_string_raw(buffer, offset, str);
+    buffer.dirty = true;
 }
 
-buffer_delete_range :: (using buffer: *Buffer, _range: Range) {
-    range := make_valid_range(<< buffer, _range);
-    start, end := range_to_byte_offsets(<< buffer, range);
+buffer_delete_range :: (buffer: *Buffer, range: Range) {
+    start, end := range_to_byte_offsets(<< buffer, make_valid_range(<< buffer, range));
+    buffer_delete_range_raw(buffer, start, end);
+    buffer.dirty = true;
+}
 
-    len := end - start;
-    if len <= 0 return;
-    assert(len <= bytes.count);
-
-    // Copy in chunks of length len while possible
-    while end + len <= bytes.count {
-        memcpy(bytes.data + start, bytes.data + end, len);
-        start += len;
-        end   += len;
-    }
-    // If there's a leftover, copy it
-    if end != bytes.count {
-        memcpy(bytes.data + start, bytes.data + end, bytes.count - end);
-    }
-
-    bytes.count -= len;
-    dirty = true;
+// A dedicated function to avoid having to recalculate lines between deleting range and inserting string
+buffer_replace_range :: (buffer: *Buffer, range: Range, str: string) {
+    start, end := range_to_byte_offsets(<< buffer, make_valid_range(<< buffer, range));
+    buffer_delete_range_raw(buffer, start, end);
+    buffer_insert_string_raw(buffer, start, str);
+    buffer.dirty = true;
 }
 
 make_valid_range :: (buffer: Buffer, range: Range) -> Range {
@@ -170,6 +142,47 @@ operator < :: (a: Pos, b: Pos) -> bool {
 }
 
 #scope_file
+
+buffer_delete_range_raw :: (using buffer: *Buffer, start: s64, end: s64) {
+    len := end - start;
+    if len <= 0 return;
+    assert(len <= bytes.count);
+
+    // Copy in chunks of length len while possible
+    while end + len <= bytes.count {
+        memcpy(bytes.data + start, bytes.data + end, len);
+        start += len;
+        end   += len;
+    }
+    // If there's a leftover, copy it
+    if end != bytes.count {
+        memcpy(bytes.data + start, bytes.data + end, bytes.count - end);
+    }
+
+    bytes.count -= len;
+}
+
+buffer_insert_string_raw :: (using buffer: *Buffer, offset: s64, str: string) {
+    new_size := bytes.count + str.count;
+    array_reserve(*bytes, new_size);
+
+    // Copy in chunks of str.count while possible
+    source := bytes.count - str.count;
+    dest   := bytes.count;
+    while source >= offset {
+        memcpy(bytes.data + dest, bytes.data + source, str.count);
+        source -= str.count;
+        dest   -= str.count;
+    }
+    // If there's a leftover, copy it as well
+    if source != offset {
+        memcpy(bytes.data + offset + str.count, bytes.data + offset, str.count - (offset - source));
+    }
+    // Insert the string
+    memcpy(bytes.data + offset, str.data, str.count);
+
+    bytes.count = new_size;
+}
 
 get_offset :: (using buffer: Buffer, pos: Pos) -> s64 {
     assert(!dirty);

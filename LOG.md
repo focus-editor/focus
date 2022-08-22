@@ -1,5 +1,4 @@
 # TODO
-- Remove/replace selection on edits
 - Handle arrow keys differently when there's a selection
 - Support tab
 
@@ -27,6 +26,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Remove/replace selection on edits
 + Be able to scroll while holding LMB
 + Move viewport with alt+arrows
 + Move cursor quicker with ctrl+arrows
