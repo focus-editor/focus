@@ -60,6 +60,12 @@ range_to_byte_offsets :: (buffer: Buffer, range: Range) -> start: s32, end: s32 
     return start, end;
 }
 
+bytes_in_range :: (buffer: Buffer, range: Range) -> s64 {
+    start, end := range_to_byte_offsets(buffer, range);
+    assert(start <= end);
+    return end - start;
+}
+
 pos_to_offset :: (buffer: Buffer, pos: Pos) -> s32 {
     assert(!buffer.dirty);
     line := buffer.lines[pos.line];
@@ -76,7 +82,7 @@ has_selection :: inline (using cursor: Cursor) -> bool {
 }
 
 has_selection :: inline (cursor: *Cursor) -> bool {
-    return has_selection(<<cursor);
+    return has_selection(<< cursor);
 }
 
 get_selection :: (using cursor: Cursor) -> Range {
@@ -86,7 +92,22 @@ get_selection :: (using cursor: Cursor) -> Range {
 }
 
 get_selection :: inline (cursor: *Cursor) -> Range {
-    return get_selection(<<cursor);
+    return get_selection(<< cursor);
+}
+
+select_whole_lines :: (cursor: Cursor, buffer: Buffer) -> Range {
+    assert(!buffer.dirty);
+    selection := get_selection(cursor);
+    using range: Range = ---;
+    start = selection.start;
+    start.col = 0;
+    end = selection.end;
+    end.col = buffer.lines[end.line].num_chars;
+    return range;
+}
+
+select_whole_lines :: inline (cursor: *Cursor, buffer: *Buffer) -> Range {
+    return select_whole_lines(<< cursor, << buffer);
 }
 
 remove_selection :: inline (using cursor: *Cursor) {
@@ -166,26 +187,11 @@ buffer_delete_range_raw :: (using buffer: *Buffer, start: s64, end: s64) {
     bytes.count -= len;
 }
 
-buffer_insert_string_raw :: (using buffer: *Buffer, offset: s64, str: string) {
-    new_size := bytes.count + str.count;
-    array_reserve(*bytes, new_size);
-
-    // Copy in chunks of str.count while possible
-    source := bytes.count - str.count;
-    dest   := bytes.count;
-    while source >= offset {
-        memcpy(bytes.data + dest, bytes.data + source, str.count);
-        source -= str.count;
-        dest   -= str.count;
-    }
-    // If there's a leftover, copy it as well
-    if source != offset {
-        memcpy(bytes.data + offset + str.count, bytes.data + offset, str.count - (offset - source));
-    }
-    // Insert the string
-    memcpy(bytes.data + offset, str.data, str.count);
-
-    bytes.count = new_size;
+buffer_insert_string_raw :: (buffer: *Buffer, offset: s64, str: string) {
+    bytes: [] u8;
+    bytes.data  = str.data;
+    bytes.count = str.count;
+    array_insert_bytes_at(*buffer.bytes, offset, bytes);
 }
 
 get_offset :: (using buffer: Buffer, pos: Pos) -> s64 {

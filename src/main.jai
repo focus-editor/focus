@@ -195,6 +195,7 @@ Mods :: Input.Event.Modifier_Flags;
 #load "unicode.jai";
 #load "draw.jai";
 #load "pointer_image.jai";
+#load "utils.jai";
 
 #import "Basic";
 #import "Math";

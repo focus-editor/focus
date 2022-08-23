@@ -1,5 +1,8 @@
 # TODO
 - Support tab
+    + Insert tab when no selection
+    + Indent selection
+    - Unindent selection
 
 - Put cursor at the center of viewport on alt+C (or some other shortcut)
 - Don't put cursor in the weird spot when clicking at the end of file

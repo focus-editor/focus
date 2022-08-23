@@ -6,7 +6,8 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     if buffer.dirty then recalculate_lines(buffer);
 
     cursor := *editor.cursor;
-    cursor_moved := true;
+    cursor_moved   := true;
+    keep_selection := false;
 
     if key_code == {
         case .ARROW_LEFT;
@@ -43,11 +44,12 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
         case .ENTER;     handle_enter(cursor, buffer, mods);
         case .BACKSPACE; handle_backspace(cursor, buffer, mods);
         case .DELETE;    handle_delete(cursor, buffer, mods);
+        case .TAB;       keep_selection = handle_tab(cursor, buffer, mods);
 
         case; cursor_moved = false;
     }
 
-    if !mods.shift_pressed && cursor_moved {
+    if !mods.shift_pressed && cursor_moved && !keep_selection {
         remove_selection(cursor);
     }
     editor.cursor_moved = cursor_moved;
