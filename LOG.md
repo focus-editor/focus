@@ -1,6 +1,14 @@
 # TODO
-- Set a proper horizontal scroll limit
-- Maybe don't draw too many horizontal characters
+- Select all
+- Page up/page down
+- Duplicate lines
+- Remove selection on escape
+- Copy/cut
+- Paste
+- Comment/uncomment block
+- Move lines up/down
+
+- Multiple cursors
 
 - Don't redraw if nothing has changed
 - Implement semantic highlighting
@@ -10,6 +18,8 @@
 - Make sure cursor positioning is correct for all fonts and sizes
 - Investigate stuttering when dragging the splitter
 - Figure out how to anti-alias rounded corners
+- Set a proper horizontal scroll limit
+- Maybe don't draw too many horizontal characters
 - Look into subpixel font positioning
     - Revisit the font loading code as it has some rounding to pixels there
       and consider using floats or other units for font metrics
@@ -19,6 +29,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Select lines
 + When dpi changes, adjust viewport position
 + Don't crash if window is resized to 0
 + Don't put cursor in the weird spot when clicking at the end of file

@@ -53,7 +53,13 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
 
         case #char "C";
             if only_alt_pressed(mods) {
-                center_cursor_on_viewport(editor, <<buffer);
+                center_cursor_on_viewport(editor, << buffer);
+            }
+
+        case #char "L";
+            if only_ctrl_pressed(mods) {
+                expand_selection_to_whole_lines(cursor, << buffer);
+                keep_selection = true;
             }
 
         case; cursor_moved = false;
@@ -146,6 +152,15 @@ center_cursor_on_viewport :: (using editor: *Editor, buffer: Buffer) {
     cursor.pos.col = 0;
     cursor.pos = make_valid_pos(buffer, cursor.pos);
     remove_selection(*cursor);
+}
+
+expand_selection_to_whole_lines :: (using cursor: *Cursor, buffer: Buffer) {
+    range := select_whole_lines(cursor, buffer);
+    sel = range.start;
+    pos = range.end;
+    pos.col = 0;
+    pos.line += 1;
+    pos = make_valid_pos(buffer, pos);
 }
 
 editor_mouse_scroll :: (editor: *Editor, delta_z: int, max_y_scroll: s32) {
