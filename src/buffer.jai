@@ -43,11 +43,19 @@ make_valid_pos :: (using buffer: Buffer, _pos: Pos, for_cursor := true) -> Pos {
     if pos.line < 0 then pos.line = 0;
     if pos.col  < 0 then pos.col  = 0;
     if pos.line >= lines.count then pos.line = xx (lines.count - 1);
+
+    on_last_line := pos.line == lines.count - 1;
+
     line_len := lines[pos.line].num_chars;
-    if pos.line < lines.count - 1 then line_len += 1; // we have a trailing \n
+    if !on_last_line then line_len += 1;  // we have a trailing \n
     if for_cursor {
-        // Cursor can't stand after the newline
-        if pos.col >= line_len then pos.col = line_len - 1;
+        if pos.col >= line_len {
+            if !on_last_line {
+                pos.col = max(line_len - 1, 0);  // cursor can't stand after the newline
+            } else {
+                pos.col = line_len;  // there's no newline anyway
+            }
+        }
     } else {
         if pos.col > line_len then pos.col = line_len;
     }
