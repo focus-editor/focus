@@ -38,12 +38,14 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
             } else {
                 move_cursor_down(cursor, buffer, mods);
             }
+        case .TAB;       keep_selection = handle_tab(cursor, buffer, mods);
         case .HOME;      move_cursor_home(cursor, buffer, mods);
         case .END;       move_cursor_end (cursor, buffer, mods);
         case .ENTER;     handle_enter(cursor, buffer, mods);
         case .BACKSPACE; handle_backspace(cursor, buffer, mods);
         case .DELETE;    handle_delete(cursor, buffer, mods);
-        case .TAB;       keep_selection = handle_tab(cursor, buffer, mods);
+        case .PAGE_UP;   move_cursor_page(cursor, buffer, mods, .up);
+        case .PAGE_DOWN; move_cursor_page(cursor, buffer, mods, .down);
 
         case #char "D";
             if only_ctrl_pressed(mods) {

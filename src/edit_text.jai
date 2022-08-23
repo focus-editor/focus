@@ -58,6 +58,16 @@ move_cursor_down :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
     }
 }
 
+move_cursor_page :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods, dir: enum { up; down; }) {
+    page_size := cast(s32) (window_height / line_height);
+    if dir == .up {
+        pos.line -= page_size;
+    } else {
+        pos.line += page_size;
+    }
+    pos = make_valid_pos(<< buffer, pos);
+}
+
 move_cursor_home :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
     text_start_col: s32= 0;
     line := buffer.lines[pos.line];

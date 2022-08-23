@@ -1,5 +1,4 @@
 # TODO
-- Page up/page down
 - Duplicate lines
 - Remove selection on escape
 - Copy/cut
@@ -28,6 +27,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Page up/page down
 + Select all
 + Select lines
 + When dpi changes, adjust viewport position
