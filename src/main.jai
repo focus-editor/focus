@@ -15,6 +15,7 @@ main :: () {
 
     dpi_scale = platform_get_dpi_scale(window);
     init_fonts();
+    old_line_height = line_height;
 
     editors_open_file("src/editors.jai");
     editors_open_file("src/main.jai", .right);
@@ -24,6 +25,7 @@ main :: () {
     while !should_quit {
         if !redraw_requested platform_wait_message();
         redraw_requested = false;
+        old_line_height = line_height;
 
         Input.update_window_events();
 
@@ -49,8 +51,15 @@ main :: () {
         update_mouse_pointer();
         pointer_end_frame();
 
-        for * editor: open_editors {
-            editor.cursor_moved = false;
+        for * editor : open_editors {
+            using editor;
+            cursor_moved = false;
+            if old_line_height != line_height {
+                // Adjust viewport position
+                lines_scrolled := viewport.top / old_line_height;
+                viewport.scroll_y.target = xx (lines_scrolled * line_height);
+                viewport.top = viewport.scroll_y.target;
+            }
         }
 
         for event : Input.events_this_frame {
@@ -98,6 +107,7 @@ init_fonts :: () {
     font = Simp.get_font_at_size("fonts", "FiraCode-Retina.ttf", size);
     assert(font != null, "Couldn't init font");
     char_size   = cast(float) font.em_width;
+    old_line_height = line_height;
     line_height = cast(float) font.default_line_spacing * LINE_HEIGHT_SCALE;
 }
 
@@ -178,6 +188,7 @@ mouse_left_last_down_pos: Vector2;
 // Depend on font
 char_size:   float;
 line_height: float;
+old_line_height: float;  // to track font changes
 
 LINE_HEIGHT_SCALE :: 1.2;
 
