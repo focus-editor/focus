@@ -51,6 +51,11 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
                 keep_selection = true;
             }
 
+        case #char "C";
+            if only_alt_pressed(mods) {
+                center_cursor_on_viewport(editor, <<buffer);
+            }
+
         case; cursor_moved = false;
     }
 
@@ -131,6 +136,16 @@ move_viewport :: (editor: *Editor, dir: enum { left; up; right; down; }) {
             max_y_scroll := get_max_y_scroll(buffer);
             set_scroll_target(*scroll_y, top, new_target, max_y_scroll);
     }
+}
+
+center_cursor_on_viewport :: (using editor: *Editor, buffer: Buffer) {
+    // We assume that editors always take up most of the screen vertically.
+    // If that ever changes we'll need to change this code (and do it when we know the layout)
+    cursor_px_pos := viewport.top +  window_height / 2;
+    cursor.pos.line = xx (cursor_px_pos / line_height);
+    cursor.pos.col = 0;
+    cursor.pos = make_valid_pos(buffer, cursor.pos);
+    remove_selection(*cursor);
 }
 
 editor_mouse_scroll :: (editor: *Editor, delta_z: int, max_y_scroll: s32) {
