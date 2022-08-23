@@ -1,5 +1,4 @@
 # TODO
-- Don't crash if window is resized to 0
 - When dpi changes, adjust viewport position
 - Set a proper horizontal scroll limit
 - Maybe don't draw too many horizontal characters
@@ -21,6 +20,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Don't crash if window is resized to 0
 + Don't put cursor in the weird spot when clicking at the end of file
 + Put cursor at the center of viewport on alt+C
 + Select word with ctrl+D

@@ -43,6 +43,9 @@ main :: () {
             }
         }
 
+        // Don't do anything when window is resized to a size that's too small
+        if window_width < MIN_WINDOW_WIDTH || window_height < MIN_WINDOW_HEIGHT continue;
+
         update_mouse_pointer();
         pointer_end_frame();
 
@@ -215,3 +218,6 @@ MODS_NONE       :: #run Mods.{}.packed;
 MODS_CTRL       :: #run Mods.{ ctrl_pressed = true }.packed;
 MODS_ALT        :: #run Mods.{ alt_pressed  = true }.packed;
 MODS_CTRL_SHIFT :: #run Mods.{ ctrl_pressed = true, shift_pressed = true }.packed;
+
+MIN_WINDOW_WIDTH  :: 50;
+MIN_WINDOW_HEIGHT :: 50;
