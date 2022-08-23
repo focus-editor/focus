@@ -46,6 +46,7 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
         case .DELETE;    handle_delete(cursor, buffer, mods);
         case .PAGE_UP;   move_cursor_page(cursor, buffer, mods, .up);
         case .PAGE_DOWN; move_cursor_page(cursor, buffer, mods, .down);
+        case .ESCAPE;    remove_selection(cursor); cursor_moved = false;
 
         case #char "D";
             if only_ctrl_pressed(mods) {

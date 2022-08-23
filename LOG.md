@@ -1,6 +1,5 @@
 # TODO
 - Duplicate lines
-- Remove selection on escape
 - Copy/cut
 - Paste
 - Comment/uncomment block
@@ -27,6 +26,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Remove selection on escape
 + Page up/page down
 + Select all
 + Select lines
