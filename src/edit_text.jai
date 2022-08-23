@@ -192,7 +192,7 @@ handle_tab :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) -> keep_selec
     }
 
     // We have a selection
-    range := select_whole_lines(cursor, buffer);
+    range := get_selection_whole_lines(cursor, buffer);
     lines := array_view(buffer.lines, range.start.line, range.end.line - range.start.line + 1);
     new_bytes: [..] u8;
     new_bytes.allocator = temp;
@@ -275,6 +275,22 @@ select_word :: (using cursor: *Cursor, buffer: Buffer) {
     assert(start <= end);
     sel.col = xx start;
     pos.col = xx end;
+}
+
+select_all :: (using cursor: *Cursor, buffer: Buffer) {
+    sel.line = 0;
+    sel.col  = 0;
+    pos.line = cast(s32) buffer.lines.count - 1;
+    pos.col  = buffer.lines[buffer.lines.count - 1].num_chars;
+}
+
+select_lines :: (using cursor: *Cursor, buffer: Buffer) {
+    range := get_selection_whole_lines(cursor, buffer);
+    sel = range.start;
+    pos = range.end;
+    pos.col = 0;
+    pos.line += 1;
+    pos = make_valid_pos(buffer, pos);
 }
 
 #scope_file

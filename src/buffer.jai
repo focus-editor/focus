@@ -103,7 +103,7 @@ get_selection :: inline (cursor: *Cursor) -> Range {
     return get_selection(<< cursor);
 }
 
-select_whole_lines :: (cursor: Cursor, buffer: Buffer) -> Range {
+get_selection_whole_lines :: (cursor: Cursor, buffer: Buffer) -> Range {
     assert(!buffer.dirty);
     selection := get_selection(cursor);
     using range: Range = ---;
@@ -114,8 +114,8 @@ select_whole_lines :: (cursor: Cursor, buffer: Buffer) -> Range {
     return range;
 }
 
-select_whole_lines :: inline (cursor: *Cursor, buffer: *Buffer) -> Range {
-    return select_whole_lines(<< cursor, << buffer);
+get_selection_whole_lines :: inline (cursor: *Cursor, buffer: *Buffer) -> Range {
+    return get_selection_whole_lines(<< cursor, << buffer);
 }
 
 remove_selection :: inline (using cursor: *Cursor) {
