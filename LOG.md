@@ -1,9 +1,5 @@
 # TODO
-- Support tab
-    + Insert tab when no selection
-    + Indent selection
-    - Unindent selection
-
+- Select word with ctrl+D
 - Put cursor at the center of viewport on alt+C (or some other shortcut)
 - Don't put cursor in the weird spot when clicking at the end of file
 - Don't crash if window is resized to 0
@@ -28,6 +24,10 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Support tab
+    + Insert tab when no selection
+    + Indent selection
+    + Unindent selection
 + Handle arrow keys differently when there's a selection
 + Remove/replace selection on edits
 + Be able to scroll while holding LMB

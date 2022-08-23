@@ -180,37 +180,51 @@ handle_tab :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) -> keep_selec
     spaces := "    ";
     assert(spaces.count == TAB_SIZE);
 
-    keep_selection := true;
-
     if !has_selection(cursor) {
         // Insert tab
         to_next_tabstop := TAB_SIZE - pos.col % TAB_SIZE;
         spaces.count = to_next_tabstop;
         insert_string_at_pos(buffer, pos, spaces);
         pos.col += to_next_tabstop;
-        keep_selection = false;
-    } else if mods.shift_pressed {
-        // Unindent selection
+        col_wanted = pos.col;
 
+        return false;
+    }
+
+    // We have a selection
+    range := select_whole_lines(cursor, buffer);
+    lines := array_view(buffer.lines, range.start.line, range.end.line - range.start.line + 1);
+    new_bytes: [..] u8;
+    new_bytes.allocator = temp;
+
+    if mods.shift_pressed {
+        // Unindent selection
+        array_reserve(*new_bytes, bytes_in_range(buffer, range));
+        for line, i : lines {
+            line_len := line.end - line.start;
+            if i < lines.count - 1 then line_len += 1;  // include newline
+            spaces_to_remove := min(TAB_SIZE, line.text_start - line.start);
+            src := array_view(buffer.bytes, line.start + spaces_to_remove, line_len - spaces_to_remove);
+            array_add_bytes(*new_bytes, src);
+
+            // Adjust selection
+            line_num := range.start.line + i;
+            if line_num == pos.line then pos.col -= xx spaces_to_remove;
+            if line_num == sel.line then sel.col -= xx spaces_to_remove;
+        }
+        buffer_replace_range(buffer, range, to_string(new_bytes));
     } else {
         // Indent selection
-        range := select_whole_lines(cursor, buffer);
-        lines := array_view(buffer.lines, range.start.line, range.end.line - range.start.line + 1);
-        new_bytes: [..] u8;
-        new_bytes.allocator = temp;
         array_reserve(*new_bytes, bytes_in_range(buffer, range) + TAB_SIZE * lines.count);
-
         tab := to_bytes(spaces);
-
-        for line, line_index : lines {
+        for line, i : lines {
             array_add_bytes(*new_bytes, tab);
 
             line_len := line.end - line.start;
-            if line_index < lines.count - 1 then line_len += 1;  // include newline
+            if i < lines.count - 1 then line_len += 1;  // include newline
             src := array_view(buffer.bytes, line.start, line_len);
             array_add_bytes(*new_bytes, src);
         }
-
         buffer_replace_range(buffer, range, to_string(new_bytes));
 
         // Adjust selection
@@ -220,7 +234,7 @@ handle_tab :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) -> keep_selec
 
     col_wanted = pos.col;
 
-    return keep_selection;
+    return true;
 }
 
 #scope_file
