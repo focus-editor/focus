@@ -237,6 +237,56 @@ handle_tab :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) -> keep_selec
     return true;
 }
 
+select_word :: (using cursor: *Cursor, buffer: Buffer) {
+    assert(!buffer.dirty);
+
+    line := buffer.lines[pos.line];
+    str: string = ---;
+    str.data = buffer.bytes.data + line.start;
+    str.count = line.end - line.start;
+    if str.count <= 0 return;  // empty line
+
+    // @Speed: we don't need to decode the whole string (especially if it's long).
+    // Instead we could scan left and right to find a space or something, and decode that
+    chars := decode_utf8_string_to_temp_chars(str);
+    assert(chars.count == line.num_chars + 1);
+
+    col := -1;
+    if is_word_char(chars[pos.col]) {
+        col = pos.col;
+    } else if pos.col > 0 && is_word_char(chars[pos.col - 1]) {
+        col = pos.col - 1;
+    } else {
+        return;  // cursor not on a word
+    }
+
+    // Go left
+    start := col;
+    while start >= 0 {
+        if !is_word_char(chars[start]) then { start += 1; break; }
+        start -= 1;
+    }
+    if start < 0 then start = 0;
+
+    // Go right
+    end := col + 1;
+    while end < chars.count - 1 && is_word_char(chars[end]) { end += 1; }
+
+    assert(start <= end);
+    sel.col = xx start;
+    pos.col = xx end;
+}
+
 #scope_file
+
+is_word_char :: (ch: u32) -> bool {
+    return
+        (#char "0" <= ch && ch <= #char "9") ||
+        (#char "A" <= ch && ch <= #char "Z") ||
+        (#char "a" <= ch && ch <= #char "z") ||
+        (#char "А" <= ch && ch <= #char "Я") ||
+        (#char "а" <= ch && ch <= #char "я") ||
+        ch == #char "_";
+}
 
 TAB_SIZE :: 4;

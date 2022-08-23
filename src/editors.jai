@@ -40,11 +40,16 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
             }
         case .HOME;      move_cursor_home(cursor, buffer, mods);
         case .END;       move_cursor_end (cursor, buffer, mods);
-
         case .ENTER;     handle_enter(cursor, buffer, mods);
         case .BACKSPACE; handle_backspace(cursor, buffer, mods);
         case .DELETE;    handle_delete(cursor, buffer, mods);
         case .TAB;       keep_selection = handle_tab(cursor, buffer, mods);
+
+        case #char "D";
+            if only_ctrl_pressed(mods) {
+                if !has_selection(cursor) then select_word(cursor, buffer);
+                keep_selection = true;
+            }
 
         case; cursor_moved = false;
     }

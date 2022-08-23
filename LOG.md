@@ -1,5 +1,4 @@
 # TODO
-- Select word with ctrl+D
 - Put cursor at the center of viewport on alt+C (or some other shortcut)
 - Don't put cursor in the weird spot when clicking at the end of file
 - Don't crash if window is resized to 0
@@ -24,6 +23,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Select word with ctrl+D
 + Support tab
     + Insert tab when no selection
     + Indent selection

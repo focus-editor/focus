@@ -39,3 +39,19 @@ to_bytes :: (src: string) -> [] u8 {
     result.count = src.count;
     return result;
 }
+
+decode_utf8_string_to_temp_chars :: (str: string) -> [] u32 {
+    chars: [..] u32;
+    chars.allocator = temp;
+    array_reserve(*chars, str.count * 4);  // enough to store 4-byte chars without reallocation
+
+    s := str;
+    while true {
+        char, result := utf8_next_character(*s);
+        assert(result != .SOURCE_ILLEGAL);
+        array_add(*chars, char);
+        if result == .SOURCE_EXHAUSTED break;
+    }
+
+    return chars;
+}
