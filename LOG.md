@@ -1,4 +1,5 @@
 # TODO
+- Fix selecting last line
 - Duplicate lines
 - Copy/cut
 - Paste

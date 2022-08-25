@@ -52,6 +52,9 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
             if only_ctrl_pressed(mods) {
                 if !has_selection(cursor) then select_word(cursor, buffer);
                 keep_selection = true;
+            } else if only_ctrl_shift_pressed(mods) {
+                duplicate_lines(cursor, buffer);
+                keep_selection = true;
             }
 
         case #char "C";
@@ -93,7 +96,7 @@ editors_handle_text_input :: (char: u32) {
         buffer_replace_range(buffer, selection, str);
         cursor.pos = selection.start;
     } else {
-        insert_string_at_pos(buffer, cursor.pos, str);
+        buffer_insert_string_at_pos(buffer, cursor.pos, str);
     }
     cursor.pos.col += 1;  // we know it's just one symbol
     cursor.col_wanted = cursor.pos.col;

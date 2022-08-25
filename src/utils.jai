@@ -43,7 +43,7 @@ to_bytes :: (src: string) -> [] u8 {
 decode_utf8_string_to_temp_chars :: (str: string) -> [] u32 {
     chars: [..] u32;
     chars.allocator = temp;
-    array_reserve(*chars, str.count * 4);  // enough to store 4-byte chars without reallocation
+    array_reserve(*chars, str.count);  // should be enough to store chars with some buffer
 
     s := str;
     while true {

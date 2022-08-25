@@ -100,12 +100,12 @@ handle_enter :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
         insert[0] = #char "\n";
         insert_pos.col = line.num_chars;
         pos.line += 1;
-        insert_string_at_pos(buffer, insert_pos, insert);
+        buffer_insert_string_at_pos(buffer, insert_pos, insert);
     } else if only_ctrl_shift_pressed(mods) {
         // Insert line above
         insert[indent] = #char "\n";
         insert_pos.col = 0;
-        insert_string_at_pos(buffer, insert_pos, insert);
+        buffer_insert_string_at_pos(buffer, insert_pos, insert);
     } else if nothing_pressed(mods) {
         // Break line normally
         insert[0] = #char "\n";
@@ -116,7 +116,7 @@ handle_enter :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
             buffer_replace_range(buffer, selection, insert);
             pos = selection.start;
         } else {
-            insert_string_at_pos(buffer, insert_pos, insert);
+            buffer_insert_string_at_pos(buffer, insert_pos, insert);
         }
         pos.line += 1;
     } else {
@@ -194,7 +194,7 @@ handle_tab :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) -> keep_selec
         // Insert tab
         to_next_tabstop := TAB_SIZE - pos.col % TAB_SIZE;
         spaces.count = to_next_tabstop;
-        insert_string_at_pos(buffer, pos, spaces);
+        buffer_insert_string_at_pos(buffer, pos, spaces);
         pos.col += to_next_tabstop;
         col_wanted = pos.col;
 
@@ -202,7 +202,7 @@ handle_tab :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) -> keep_selec
     }
 
     // We have a selection
-    range := get_selection_whole_lines(cursor, buffer);
+    range := get_selection_whole_lines(<< cursor, << buffer);
     lines := array_view(buffer.lines, range.start.line, range.end.line - range.start.line + 1);
     new_bytes: [..] u8;
     new_bytes.allocator = temp;
@@ -295,12 +295,29 @@ select_all :: (using cursor: *Cursor, buffer: Buffer) {
 }
 
 select_lines :: (using cursor: *Cursor, buffer: Buffer) {
-    range := get_selection_whole_lines(cursor, buffer);
+    range := get_selection_whole_lines(<< cursor, buffer);
     sel = range.start;
     pos = range.end;
-    pos.col = 0;
-    pos.line += 1;
+    if !last_line(buffer, pos.line) {
+        pos.col = 0;
+        pos.line += 1;
+    }
     pos = make_valid_pos(buffer, pos);
+}
+
+// @Incomplete: not working
+duplicate_lines :: (using cursor: *Cursor, buffer: *Buffer) {
+    // TODO: just construct offsets by hand
+    range := get_selection_whole_lines(<< cursor, << buffer);
+    start, end := range_to_byte_offsets(<< buffer, range);
+    str := to_string(array_view(buffer.bytes, start, end - start));
+
+    // buffer_insert_string_at_pos(buffer, range.end, "\n");
+    buffer_insert_string_at_pos(buffer, range.end, str);
+
+    num_lines := range.end.line - range.start.line + 1;
+    pos.line += num_lines;
+    sel.line += num_lines;
 }
 
 #scope_file

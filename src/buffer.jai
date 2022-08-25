@@ -5,7 +5,7 @@ refresh_open_buffers :: () {
     }
 }
 
-insert_string_at_pos :: (buffer: *Buffer, pos: Pos, str: string) {
+buffer_insert_string_at_pos :: (buffer: *Buffer, pos: Pos, str: string) {
     offset := get_offset(<< buffer, pos);
     buffer_insert_string_raw(buffer, offset, str);
     buffer.dirty = true;
@@ -44,13 +44,11 @@ make_valid_pos :: (using buffer: Buffer, _pos: Pos, for_cursor := true) -> Pos {
     if pos.col  < 0 then pos.col  = 0;
     if pos.line >= lines.count then pos.line = xx (lines.count - 1);
 
-    on_last_line := pos.line == lines.count - 1;
-
     line_len := lines[pos.line].num_chars;
-    if !on_last_line then line_len += 1;  // we have a trailing \n
+    if !last_line(buffer, pos.line) then line_len += 1;  // we have a trailing \n
     if for_cursor {
         if pos.col >= line_len {
-            if !on_last_line {
+            if !last_line(buffer, pos.line) {
                 pos.col = max(line_len - 1, 0);  // cursor can't stand after the newline
             } else {
                 pos.col = line_len;  // there's no newline anyway
@@ -114,10 +112,6 @@ get_selection_whole_lines :: (cursor: Cursor, buffer: Buffer) -> Range {
     return range;
 }
 
-get_selection_whole_lines :: inline (cursor: *Cursor, buffer: *Buffer) -> Range {
-    return get_selection_whole_lines(<< cursor, << buffer);
-}
-
 remove_selection :: inline (using cursor: *Cursor) {
     sel = pos;
 }
@@ -131,6 +125,10 @@ remove_crlf :: (using buffer: Buffer) {
             i += 1;
         }
     }
+}
+
+last_line :: inline (using buffer: Buffer, line: s32) -> bool {
+    return line == lines.count - 1;
 }
 
 recalculate_lines :: (buffer: *Buffer) {
