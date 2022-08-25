@@ -1,8 +1,6 @@
 editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
-
-    // We have to make sure any subsequent events can rely on buffer.lines being correct
     if buffer.dirty then recalculate_lines(buffer);
 
     cursor := *editor.cursor;
@@ -60,6 +58,19 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
         case #char "C";
             if only_alt_pressed(mods) {
                 center_cursor_on_viewport(editor, << buffer);
+            } else if only_ctrl_pressed(mods) {
+                copy_selection_to_clipboard(cursor, buffer);
+                cursor_moved = false;
+            }
+
+        case #char "X";
+            if only_ctrl_pressed(mods) {
+                copy_selection_to_clipboard(cursor, buffer, cut = true);
+            }
+
+        case #char "V";
+            if only_ctrl_pressed(mods) {
+                paste_from_clipboard(cursor, buffer);
             }
 
         case #char "A";
@@ -85,8 +96,13 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
 }
 
 editors_handle_text_input :: (char: u32) {
+    if char == 127 return;  // there seems to be a bug in the Input module
+                            // which generates a TEXT_INPUT event for DEL
+                            // when Ctrl+Backspace is pressed
+
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
+    if buffer.dirty then recalculate_lines(buffer);
     using editor;
 
     utf8_char := convert_utf32_to_utf8(char);

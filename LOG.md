@@ -1,10 +1,10 @@
 # TODO
-- Copy/cut
-- Paste
+- Copy/paste animation
 - Comment/uncomment block
 - Move lines up/down
 
 - Multiple cursors
+- Handle weird selection remaining when shift is held
 
 - Don't redraw if nothing has changed
 - Implement semantic highlighting
@@ -25,6 +25,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Copy/cut/paste
 + Duplicate lines
 + Fix selecting last line
 + Remove selection on escape

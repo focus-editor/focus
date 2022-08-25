@@ -29,6 +29,54 @@ buffer_replace_range :: (buffer: *Buffer, range: Range, str: string) {
     buffer.dirty = true;
 }
 
+get_offset :: (using buffer: Buffer, pos: Pos) -> s64 {
+    assert(!dirty);
+    line := lines[pos.line];
+    assert(0 <= pos.col && pos.col <= line.num_chars);
+    offset := line.start;
+    col := 0;
+    while offset < line.end && col < pos.col {
+        byte := bytes[offset];
+        col += 1;
+        offset += 1 + trailingBytesForUTF8[byte];
+    }
+    return offset;
+}
+
+offset_to_pos :: (using buffer: Buffer, offset: s64) -> Pos {
+    assert(!dirty);
+    assert(offset <= lines[lines.count - 1].end);
+
+    pos: Pos = ---;
+
+    left  := 0;
+    right := lines.count - 1;
+
+    if offset >= lines[right].start {
+        pos.line = xx right;
+    } else {
+        while (right - left) > 1 {
+            middle := left + (right - left) / 2;
+            if offset < lines[middle].start {
+                right = middle;
+            } else {
+                left = middle;
+            }
+        }
+        pos.line = xx left;
+    }
+
+    // Find col by scanning the line
+    pos.col = 0;
+    i := lines[pos.line].start;
+    while i < offset {
+        pos.col += 1;
+        i += 1 + trailingBytesForUTF8[bytes[i]];
+    }
+
+    return pos;
+}
+
 make_valid_range :: (buffer: Buffer, range: Range) -> Range {
     start := make_valid_pos(buffer, range.start, for_cursor = false);
     end   := make_valid_pos(buffer, range.end, for_cursor = false);
@@ -202,20 +250,6 @@ buffer_insert_string_raw :: (buffer: *Buffer, offset: s64, str: string) {
     bytes.data  = str.data;
     bytes.count = str.count;
     array_insert_bytes_at(*buffer.bytes, offset, bytes);
-}
-
-get_offset :: (using buffer: Buffer, pos: Pos) -> s64 {
-    assert(!dirty);
-    line := lines[pos.line];
-    assert(0 <= pos.col && pos.col <= line.num_chars);
-    offset := line.start;
-    col := 0;
-    while offset < line.end && col < pos.col {
-        byte := bytes[offset];
-        col += 1;
-        offset += 1 + trailingBytesForUTF8[byte];
-    }
-    return offset;
 }
 
 sync_internal_data :: (buffer: *Buffer) {

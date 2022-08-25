@@ -320,6 +320,37 @@ duplicate_lines :: (using cursor: *Cursor, buffer: *Buffer) {
     sel.line += num_lines;
 }
 
+copy_selection_to_clipboard :: (cursor: *Cursor, buffer: *Buffer, cut := false) {
+    if !has_selection(cursor) return;
+
+    selection  := get_selection(cursor);
+    start, end := range_to_byte_offsets(buffer, selection);
+    str := to_string(array_view(buffer.bytes, start, end - start));
+    os_clipboard_set_text(str);
+
+    if cut {
+        buffer_delete_range(buffer, selection);
+        cursor.pos = selection.start;
+        cursor.col_wanted = cursor.pos.col;
+    }
+}
+
+paste_from_clipboard :: (cursor: *Cursor, buffer: *Buffer) {
+    str := os_clipboard_get_text();
+    defer free(str);
+    if str.count <= 0 return;
+
+    selection := get_selection(cursor);
+    buffer_replace_range(buffer, selection, str);
+
+    recalculate_lines(buffer);
+    offset := get_offset(buffer, selection.start);
+    new_cursor_pos := offset_to_pos(buffer, offset + str.count);
+
+    cursor.pos = new_cursor_pos;
+    cursor.col_wanted = new_cursor_pos.col;
+}
+
 #scope_file
 
 is_word_char :: (ch: u32) -> bool {
@@ -333,3 +364,5 @@ is_word_char :: (ch: u32) -> bool {
 }
 
 TAB_SIZE :: 4;
+
+#import "Clipboard";
