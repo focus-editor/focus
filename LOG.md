@@ -1,6 +1,4 @@
 # TODO
-- Fix selecting last line
-- Duplicate lines
 - Copy/cut
 - Paste
 - Comment/uncomment block
@@ -27,6 +25,8 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Duplicate lines
++ Fix selecting last line
 + Remove selection on escape
 + Page up/page down
 + Select all

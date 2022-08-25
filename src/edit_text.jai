@@ -305,15 +305,15 @@ select_lines :: (using cursor: *Cursor, buffer: Buffer) {
     pos = make_valid_pos(buffer, pos);
 }
 
-// @Incomplete: not working
 duplicate_lines :: (using cursor: *Cursor, buffer: *Buffer) {
-    // TODO: just construct offsets by hand
-    range := get_selection_whole_lines(<< cursor, << buffer);
-    start, end := range_to_byte_offsets(<< buffer, range);
-    str := to_string(array_view(buffer.bytes, start, end - start));
+    // Get byte offsets of the affected lines
+    assert(!buffer.dirty);
+    range := get_selection(cursor);
+    start := buffer.lines[range.start.line].start;
+    end   := buffer.lines[range.end.line  ].end;
 
-    // buffer_insert_string_at_pos(buffer, range.end, "\n");
-    buffer_insert_string_at_pos(buffer, range.end, str);
+    str := tprint("\n%", to_string(array_view(buffer.bytes, start, end - start)));
+    buffer_insert_string_at_offset(buffer, end, str);
 
     num_lines := range.end.line - range.start.line + 1;
     pos.line += num_lines;

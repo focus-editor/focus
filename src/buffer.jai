@@ -7,6 +7,10 @@ refresh_open_buffers :: () {
 
 buffer_insert_string_at_pos :: (buffer: *Buffer, pos: Pos, str: string) {
     offset := get_offset(<< buffer, pos);
+    buffer_insert_string_at_offset(buffer, offset, str);
+}
+
+buffer_insert_string_at_offset :: (buffer: *Buffer, offset: s64, str: string) {
     buffer_insert_string_raw(buffer, offset, str);
     buffer.dirty = true;
 }
