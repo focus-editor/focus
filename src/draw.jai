@@ -138,6 +138,18 @@ draw_editor :: (editor_id: s64, rect: Rect) {
 
     draw_cursor(editor, buffer, rect, text_origin, visible_lines_start, visible_lines_end, is_active);
 
+    for anim : editor.paste_animations {
+        t := (frame_time - anim.started_at) / Paste_Animation.SPEED;
+        if t < 1 {
+            color := Colors.PASTE_ANIMATION;
+            color.a = xx (1 - t);
+            draw_range(anim.range, buffer, visible_lines_start, visible_lines_end, text_origin, color);
+        } else {
+            remove anim;
+        }
+    }
+    if editor.paste_animations.count > 0 then redraw_requested = true;
+
     pen := text_origin;
     pen.y += (line_height - char_size) / 2 - visible_lines_start * line_height;
     for line : array_view(buffer.lines, visible_lines_start, visible_lines_end) {
@@ -159,59 +171,63 @@ draw_cursor :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_or
     if has_selection(cursor) {
         // Draw selection
         selection := get_selection(cursor);
-        selected_lines := array_view(buffer.lines, selection.start.line, selection.end.line - selection.start.line + 1);
-        for line, i : selected_lines {
-            line_num := selection.start.line + i;
-            if line_num < visible_start || visible_end < line_num then continue;
-
-            is_first := i == 0;
-            is_last  := i == selected_lines.count - 1;
-
-            first_char := 0;
-            last_char  := line.num_chars + 1;
-            if is_first then first_char = selection.start.col;
-            if is_last  then last_char  = selection.end.col;
-
-            if first_char == last_char continue;  // nothing is selected on this line
-
-            color := ifx is_active then Colors.SELECTION_ACTIVE else Colors.SELECTION_INACTIVE;
-            rect := make_rect(
-                text_origin.x + first_char * char_size,
-                text_origin.y - line_num * line_height,
-                (last_char - first_char) * char_size,
-                line_height,
-            );
-
-            // @Speed: probably can be optimised?
-            tl, tr, bl, br: Corner_Rounding = .none;
-            if is_first {
-                tl = .in; tr = .in;
-            } else {
-                prev_start := ifx i == 1 then selection.start.col else 0;
-                prev_end   := selected_lines[i - 1].num_chars + 1;
-                if prev_start < first_char then tl = .out;
-                if prev_start > first_char then tl = .in;
-                if prev_end > last_char then tr = .out;
-                if prev_end < last_char || prev_start > last_char then tr = .in;
-            }
-            if is_last {
-                bl = .in; br = .in;
-            } else {
-                next_start := 0;
-                next_end   := ifx i == selected_lines.count - 2 then selection.end.col else selected_lines[i + 1].num_chars + 1;
-                if next_start < first_char then bl = .out;
-                if next_start > first_char || next_end < first_char then bl = .in;
-                if next_end < last_char then br = .in;
-                if next_end > last_char then br = .out;
-            }
-            draw_rounded_rect(rect, color, tl, tr, br, bl);
-        }
+        color := ifx is_active then Colors.SELECTION_ACTIVE else Colors.SELECTION_INACTIVE;
+        draw_range(selection, buffer, visible_start, visible_end, text_origin, color);
     }
 
     cursor_pos := get_cursor_screen_pos(text_origin, cursor.pos);
     rect := make_rect(cursor_pos.x, cursor_pos.y, char_size, line_height);
     draw_rect(rect, Colors.CURSOR);
     if !is_active then draw_rect(shrink(rect, 1), Colors.BACKGROUND);
+}
+
+draw_range :: (using range: Range, buffer: Buffer, visible_start: s64, visible_end: s64, text_origin: Vector2, color: Color) {
+    selected_lines := array_view(buffer.lines, start.line, end.line - start.line + 1);
+    for line, i : selected_lines {
+        line_num := start.line + i;
+        if line_num < visible_start || visible_end < line_num then continue;
+
+        is_first := i == 0;
+        is_last  := i == selected_lines.count - 1;
+
+        first_char := 0;
+        last_char  := line.num_chars + 1;
+        if is_first then first_char = start.col;
+        if is_last  then last_char  = end.col;
+
+        if first_char == last_char continue;  // nothing is selected on this line
+
+        rect := make_rect(
+            text_origin.x + first_char * char_size,
+            text_origin.y - line_num * line_height,
+            (last_char - first_char) * char_size,
+            line_height,
+        );
+
+        // @Speed: probably can be optimised?
+        tl, tr, bl, br: Corner_Rounding = .none;
+        if is_first {
+            tl = .in; tr = .in;
+        } else {
+            prev_start := ifx i == 1 then start.col else 0;
+            prev_end   := selected_lines[i - 1].num_chars + 1;
+            if prev_start < first_char then tl = .out;
+            if prev_start > first_char then tl = .in;
+            if prev_end > last_char then tr = .out;
+            if prev_end < last_char || prev_start > last_char then tr = .in;
+        }
+        if is_last {
+            bl = .in; br = .in;
+        } else {
+            next_start := 0;
+            next_end   := ifx i == selected_lines.count - 2 then end.col else selected_lines[i + 1].num_chars + 1;
+            if next_start < first_char then bl = .out;
+            if next_start > first_char || next_end < first_char then bl = .in;
+            if next_end < last_char then br = .in;
+            if next_end > last_char then br = .out;
+        }
+        draw_rounded_rect(rect, color, tl, tr, br, bl);
+    }
 }
 
 Corner_Rounding :: enum { none; in; out; }

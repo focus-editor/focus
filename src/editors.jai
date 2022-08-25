@@ -58,7 +58,7 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
         case #char "C";
             if only_alt_pressed(mods) {
                 center_cursor_on_viewport(editor, << buffer);
-            } else if only_ctrl_pressed(mods) {
+            } else if only_ctrl_pressed(mods) && has_selection(cursor) {
                 copy_selection_to_clipboard(cursor, buffer);
                 cursor_moved = false;
             }
@@ -70,7 +70,8 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
 
         case #char "V";
             if only_ctrl_pressed(mods) {
-                paste_from_clipboard(cursor, buffer);
+                range := paste_from_clipboard(cursor, buffer);
+                add_paste_animation(editor, range);
             }
 
         case #char "A";
@@ -236,6 +237,12 @@ set_scroll_target :: (using scroll: *Scroll_Animation, current: s32, target_: s3
     started_at = frame_time;
 }
 
+add_paste_animation :: (using editor: *Editor, range: Range) {
+    anim := array_add(*paste_animations);
+    anim.range = range;
+    anim.started_at = frame_time;
+}
+
 #scope_file
 
 find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_id: s64 {
@@ -283,6 +290,8 @@ Editor :: struct {
     viewport: Viewport;
     dragging_left := false;
     cursor_moved  := false;
+
+    paste_animations: [..] Paste_Animation;
 }
 
 Viewport :: struct {
@@ -296,6 +305,12 @@ Scroll_Animation :: struct {
     start, target: s32;
     started_at: float64;
     SPEED :: 0.1;  // how many seconds to finish any scroll animation
+}
+
+Paste_Animation :: struct {
+    range: Range;
+    started_at: float64;
+    SPEED :: 0.5;
 }
 
 open_buffers: [..] Buffer;

@@ -321,8 +321,6 @@ duplicate_lines :: (using cursor: *Cursor, buffer: *Buffer) {
 }
 
 copy_selection_to_clipboard :: (cursor: *Cursor, buffer: *Buffer, cut := false) {
-    if !has_selection(cursor) return;
-
     selection  := get_selection(cursor);
     start, end := range_to_byte_offsets(buffer, selection);
     str := to_string(array_view(buffer.bytes, start, end - start));
@@ -335,12 +333,14 @@ copy_selection_to_clipboard :: (cursor: *Cursor, buffer: *Buffer, cut := false) 
     }
 }
 
-paste_from_clipboard :: (cursor: *Cursor, buffer: *Buffer) {
+paste_from_clipboard :: (cursor: *Cursor, buffer: *Buffer) -> Range {
+    selection := get_selection(cursor);
+    range := selection;
+
     str := os_clipboard_get_text();
     defer free(str);
-    if str.count <= 0 return;
+    if str.count <= 0 return range;
 
-    selection := get_selection(cursor);
     buffer_replace_range(buffer, selection, str);
 
     recalculate_lines(buffer);
@@ -349,6 +349,10 @@ paste_from_clipboard :: (cursor: *Cursor, buffer: *Buffer) {
 
     cursor.pos = new_cursor_pos;
     cursor.col_wanted = new_cursor_pos.col;
+
+    range.end = new_cursor_pos;
+
+    return range;
 }
 
 #scope_file
