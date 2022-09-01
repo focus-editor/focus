@@ -1,8 +1,15 @@
 refresh_open_buffers :: () {
-    for *buffer: open_buffers {
+    for *editor : open_editors {
+        buffer := *open_buffers[editor.buffer_id];
         if !buffer.dirty continue;
         sync_internal_data(buffer);
+        put_cursor_in_valid_spot(*editor.cursor, << buffer);
     }
+}
+
+put_cursor_in_valid_spot :: (using cursor: *Cursor, buffer: Buffer) {
+    pos = make_valid_pos(buffer, pos);
+    sel = make_valid_pos(buffer, sel);
 }
 
 buffer_insert_string_at_pos :: (buffer: *Buffer, pos: Pos, str: string) {
@@ -118,6 +125,11 @@ range_to_byte_offsets :: (buffer: Buffer, range: Range) -> start: s32, end: s32 
     return start, end;
 }
 
+range_length_in_bytes :: (buffer: Buffer, range: Range) -> s64 {
+    start, end := range_to_byte_offsets(buffer, range);
+    return end - start;
+}
+
 bytes_in_range :: (buffer: Buffer, range: Range) -> s64 {
     start, end := range_to_byte_offsets(buffer, range);
     assert(start <= end);
@@ -214,6 +226,10 @@ recalculate_lines :: (buffer: *Buffer) {
     line.end = byte_index;
     line.num_chars = char_index;
     array_add(*buffer.lines, line);
+}
+
+is_empty :: inline (line: Line) -> bool {
+    return line.num_chars == 0;
 }
 
 operator == :: (a: Pos, b: Pos) -> bool {

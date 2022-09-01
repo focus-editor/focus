@@ -1,5 +1,4 @@
 # TODO
-- Comment/uncomment block
 - Move lines up/down
 
 - Multiple cursors
@@ -24,6 +23,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Comment/uncomment block
 + Paste animation
 + Copy/cut/paste
 + Duplicate lines

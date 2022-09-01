@@ -1,11 +1,15 @@
 editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
-    if buffer.dirty then recalculate_lines(buffer);
 
     cursor := *editor.cursor;
     cursor_moved   := true;
     keep_selection := false;
+
+    if buffer.dirty {
+        recalculate_lines(buffer);
+        put_cursor_in_valid_spot(cursor, << buffer);
+    }
 
     if key_code == {
         case .ARROW_LEFT;
@@ -84,6 +88,12 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
         case #char "L";
             if only_ctrl_pressed(mods) {
                 select_lines(cursor, << buffer);
+                keep_selection = true;
+            }
+
+        case #char "/";
+            if only_ctrl_pressed(mods) {
+                if buffer.lang == .Jai then comment_block(cursor, buffer);
                 keep_selection = true;
             }
 

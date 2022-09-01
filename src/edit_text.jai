@@ -355,16 +355,85 @@ paste_from_clipboard :: (cursor: *Cursor, buffer: *Buffer) -> Range {
     return range;
 }
 
+comment_block :: (cursor: *Cursor, buffer: *Buffer) {
+    assert(!buffer.dirty);
+    range := get_selection_whole_lines(<< cursor, << buffer);
+    lines := array_view(buffer.lines, range.start.line, range.end.line - range.start.line + 1);
+
+    min_text_start := -1;
+    comment_out := false;
+    for line: lines {
+        if is_empty(line) {
+            if min_text_start < 0 then min_text_start = 0;
+            continue;
+        }
+        start := buffer.bytes.data + line.text_start;  // a pointer to where text starts in the line
+        if !comment_out && (line.num_chars < 2 || start[0] != #char "/" || start[1] != #char "/") then comment_out = true;
+        len_whitespace := line.text_start - line.start;
+        if min_text_start < 0 || len_whitespace < min_text_start then min_text_start = len_whitespace;
+    }
+    assert(min_text_start >= 0);
+
+    comment := "// ";
+    comment_without_space := "//";
+    new_bytes: [..] u8;
+    new_bytes.allocator = temp;
+    array_reserve(*new_bytes, range_length_in_bytes(<< buffer, range) + lines.count * comment.count);
+
+    if comment_out {
+        // Comment out block
+        for line, i : lines {
+            if !is_empty(line) {
+                array_add_bytes(*new_bytes, array_view(buffer.bytes, line.start, min_text_start));
+                array_add_bytes(*new_bytes, to_bytes(comment));
+                array_add_bytes(*new_bytes, array_view(buffer.bytes, line.start + min_text_start, line.end - line.start - min_text_start));
+            }
+            if i != lines.count - 1 then array_add(*new_bytes, #char "\n");
+        }
+
+        // Only adjust cursor if after comment
+        if cursor.pos.col >= min_text_start then cursor.pos.col += xx comment.count;
+        if cursor.sel.col >= min_text_start then cursor.sel.col += xx comment.count;
+    } else {
+        // Uncomment block
+        for line, i : lines {
+            if !is_empty(line) {
+                len_whitespace := line.text_start - line.start;
+                array_add_bytes(*new_bytes, array_view(buffer.bytes, line.start, len_whitespace));
+                line_text := to_string(array_view(buffer.bytes, line.text_start, line.end - line.text_start));
+                chars_to_remove := 0;
+                if starts_with(line_text, comment) {
+                    chars_to_remove = comment.count;
+                } else if starts_with(line_text, comment_without_space) {
+                    chars_to_remove = comment_without_space.count;
+                }
+                array_add_bytes(*new_bytes, array_view(buffer.bytes, line.text_start + chars_to_remove, line.end - line.text_start - chars_to_remove));
+
+                // Adjust cursor
+                if cursor.pos.line == range.start.line + i && cursor.pos.col > len_whitespace {
+                    cursor.pos.col -= min(cursor.pos.col - len_whitespace, cast(s32) chars_to_remove);
+                }
+                if cursor.sel.line == range.start.line + i && cursor.sel.col > len_whitespace {
+                    cursor.sel.col -= min(cursor.sel.col - len_whitespace, cast(s32) chars_to_remove);
+                }
+            }
+            if i != lines.count - 1 then array_add(*new_bytes, #char "\n");
+        }
+    }
+
+    if new_bytes.count > 0 then buffer_replace_range(buffer, range, to_string(new_bytes));
+}
+
 #scope_file
 
 is_word_char :: (ch: u32) -> bool {
     return
-        (#char "0" <= ch && ch <= #char "9") ||
-        (#char "A" <= ch && ch <= #char "Z") ||
         (#char "a" <= ch && ch <= #char "z") ||
-        (#char "А" <= ch && ch <= #char "Я") ||
+        (#char "A" <= ch && ch <= #char "Z") ||
+        (#char "0" <= ch && ch <= #char "9") ||
         (#char "а" <= ch && ch <= #char "я") ||
-        ch == #char "_";
+        (#char "А" <= ch && ch <= #char "Я") ||
+        (ch == #char "_");
 }
 
 TAB_SIZE :: 4;
