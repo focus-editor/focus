@@ -1,5 +1,4 @@
 # TODO
-- Move lines up/down
 
 - Multiple cursors
 - Handle weird selection remaining when shift is held
@@ -23,6 +22,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Move lines up/down
 + Comment/uncomment block
 + Paste animation
 + Copy/cut/paste

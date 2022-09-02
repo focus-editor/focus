@@ -306,18 +306,59 @@ select_lines :: (using cursor: *Cursor, buffer: Buffer) {
 }
 
 duplicate_lines :: (using cursor: *Cursor, buffer: *Buffer) {
-    // Get byte offsets of the affected lines
-    assert(!buffer.dirty);
     range := get_selection(cursor);
-    start := buffer.lines[range.start.line].start;
-    end   := buffer.lines[range.end.line  ].end;
+    str   := copy_lines_to_temp_string(<< buffer, range);
 
-    str := tprint("\n%", to_string(array_view(buffer.bytes, start, end - start)));
-    buffer_insert_string_at_offset(buffer, end, str);
+    offset := buffer.lines[range.end.line].end;
+    buffer_insert_string_at_offset(buffer, offset, tprint("\n%", str));
 
     num_lines := range.end.line - range.start.line + 1;
     pos.line += num_lines;
     sel.line += num_lines;
+}
+
+move_lines_up :: (cursor: *Cursor, buffer: *Buffer) {
+    range := get_selection_whole_lines(<< cursor, buffer);
+    if range.start.line == 0 return;
+
+    // Include the last newline in the selection
+    range.end.col += 1;
+    range.end = make_valid_pos(<< buffer, range.end, for_cursor = false);
+
+    str := copy_lines_to_temp_string(<< buffer, range);
+
+    insert_pos := range.start;
+    insert_pos.line -= 1;
+    insert_pos.col   = 0;
+    offset := pos_to_offset(buffer, insert_pos);
+
+    buffer_delete_range(buffer, range);
+    buffer_insert_string_at_offset(buffer, offset, tprint("%\n", str));
+
+    cursor.pos.line -= 1;
+    cursor.sel.line -= 1;
+}
+
+move_lines_down :: (cursor: *Cursor, buffer: *Buffer) {
+    range := get_selection_whole_lines(<< cursor, buffer);
+    if range.end.line >= buffer.lines.count - 2 return;
+
+    // Include the last newline in the selection
+    range.end.col += 1;
+    range.end = make_valid_pos(<< buffer, range.end, for_cursor = false);
+
+    str := copy_lines_to_temp_string(<< buffer, range);
+
+    insert_pos := range.start;
+    insert_pos.line += 1;
+    insert_pos.col   = 0;
+
+    buffer_delete_range(buffer, range);
+    recalculate_lines(buffer);
+    buffer_insert_string_at_pos(buffer, insert_pos, tprint("%\n", str));
+
+    cursor.pos.line += 1;
+    cursor.sel.line += 1;
 }
 
 copy_selection_to_clipboard :: (cursor: *Cursor, buffer: *Buffer, cut := false) {

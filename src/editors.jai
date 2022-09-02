@@ -30,6 +30,10 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
             if only_alt_pressed(mods) {
                 move_viewport(editor, .up);
                 cursor_moved = false;
+            } else if only_alt_shift_pressed(mods) {
+                // TODO: only for single cursor
+                move_lines_up(cursor, buffer);
+                keep_selection = true;
             } else {
                 move_cursor_up(cursor, buffer, mods);
             }
@@ -37,6 +41,10 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
             if only_alt_pressed(mods) {
                 move_viewport(editor, .down);
                 cursor_moved = false;
+            } else if only_alt_shift_pressed(mods) {
+                // TODO: only for single cursor
+                move_lines_down(cursor, buffer);
+                keep_selection = true;
             } else {
                 move_cursor_down(cursor, buffer, mods);
             }

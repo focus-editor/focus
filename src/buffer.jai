@@ -172,8 +172,20 @@ get_selection_whole_lines :: (cursor: Cursor, buffer: Buffer) -> Range {
     start = selection.start;
     start.col = 0;
     end = selection.end;
+    if start != end && end.col == 0 && cursor.pos != end {
+        // Nothing is selected on the last line - don't include it
+        end.line -= 1;
+    }
     end.col = buffer.lines[end.line].num_chars;
     return range;
+}
+
+copy_lines_to_temp_string :: (buffer: Buffer, range: Range) -> string {
+    assert(!buffer.dirty);
+    start := buffer.lines[range.start.line].start;
+    end   := buffer.lines[range.end.line  ].end;
+    str   := to_string(array_view(buffer.bytes, start, end - start));
+    return copy_temporary_string(str);
 }
 
 remove_selection :: inline (using cursor: *Cursor) {
