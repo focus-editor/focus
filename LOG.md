@@ -1,6 +1,7 @@
 # TODO
-
 - Multiple cursors
+- Undo/redo
+
 - Handle weird selection remaining when shift is held
 
 - Don't redraw if nothing has changed
@@ -22,6 +23,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Change active pane by ctrl+alt+arrow
 + Move lines up/down
 + Comment/uncomment block
 + Paste animation

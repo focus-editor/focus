@@ -16,12 +16,18 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
             if only_alt_pressed(mods) {
                 move_viewport(editor, .left);
                 cursor_moved = false;
+            } else if only_ctrl_alt_pressed(mods) {
+                switch_to_pane(.left);
+                cursor_moved = false;
             } else {
                 move_cursor_left(cursor, buffer, mods);
             }
         case .ARROW_RIGHT;
             if only_alt_pressed(mods) {
                 move_viewport(editor, .right);
+                cursor_moved = false;
+            } else if only_ctrl_alt_pressed(mods) {
+                switch_to_pane(.right);
                 cursor_moved = false;
             } else {
                 move_cursor_right(cursor, buffer, mods);
@@ -262,6 +268,15 @@ add_paste_animation :: (using editor: *Editor, range: Range) {
 }
 
 #scope_file
+
+switch_to_pane :: (side: enum { left; right; }) {
+    if editors_layout != .Double return;
+    if side == .left {
+        editor_active = editor_left;
+    } else {
+        editor_active = editor_right;
+    }
+}
 
 find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_id: s64 {
     assert(buffer_id >= 0 && buffer_id < open_buffers.count, "Attempt to create editor for nonexistent buffer");
