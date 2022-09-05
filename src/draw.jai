@@ -87,7 +87,8 @@ draw_editor :: (editor_id: s64, rect: Rect) {
         // We mark cursor as moved to trigger auto-scroll if we drag outside the editor
         if dragging_left && !mouse_pointer_is_within(rect) then cursor_moved = true;
 
-        if !shift_pressed() && !dragging_left then cursor.sel = cursor.pos;
+        if !shift_pressed() && !dragging_left then remove_selection(*cursor);
+        if mouse_left_just_double_clicked then select_word(*cursor, buffer);
 
         // Activate editor
         editor_active = editor_id;

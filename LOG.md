@@ -23,6 +23,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Select word by double-click
 + Change active pane by ctrl+alt+arrow
 + Move lines up/down
 + Comment/uncomment block

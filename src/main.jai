@@ -91,7 +91,16 @@ main :: () {
             }
         }
 
-        if mouse_left_just_pressed() then mouse_left_last_down_pos = mouse_pointer;
+        if mouse_left_just_pressed() {
+            time_from_last_click := frame_time - mouse_left_last_down_time;
+            distance_from_last_click := mouse_pointer - mouse_left_last_down_pos;
+            max_distance := max(abs(distance_from_last_click.x), abs(distance_from_last_click.y));
+            mouse_left_just_double_clicked = time_from_last_click < DOUBLE_CLICK_SPEED && max_distance < DOUBLE_CLICK_TOLERANCE;
+            mouse_left_last_down_pos  = mouse_pointer;
+            mouse_left_last_down_time = frame_time;
+        } else {
+            mouse_left_just_double_clicked = false;
+        }
 
         refresh_open_buffers();
 
@@ -191,7 +200,9 @@ frame_time: float64;  // ever-increasing time since start in seconds
 screen: Rect;  // contains the current working area rect for convenience
 
 mouse_pointer: Vector2;
-mouse_left_last_down_pos: Vector2;
+mouse_left_last_down_pos:  Vector2;
+mouse_left_last_down_time: float64;
+mouse_left_just_double_clicked: bool;
 
 // Depend on font
 char_size:   float;
@@ -242,3 +253,6 @@ MODS_CTRL_ALT   :: #run Mods.{ ctrl_pressed = true, alt_pressed   = true }.packe
 
 MIN_WINDOW_WIDTH  :: 50;
 MIN_WINDOW_HEIGHT :: 50;
+
+DOUBLE_CLICK_SPEED     :: 0.3;  // how many seconds between clicks to consider it a double click
+DOUBLE_CLICK_TOLERANCE :: 2;    // how many pixels between the click locations are allowed
