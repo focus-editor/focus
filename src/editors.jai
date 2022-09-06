@@ -49,13 +49,13 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
             } else {
                 for *cursor : cursors { move_cursor_down(cursor, buffer, mods); }
             }
-        case .HOME;      for *cursor : cursors { move_cursor_home(cursor, buffer, mods); }
-        case .END;       for *cursor : cursors { move_cursor_end (cursor, buffer, mods); }
-        case .ENTER;     for *cursor : cursors { handle_enter(cursor, buffer, mods); }
-        case .BACKSPACE; for *cursor : cursors { handle_backspace(cursor, buffer, mods); }
-        case .DELETE;    for *cursor : cursors { handle_delete(cursor, buffer, mods); }
-        case .PAGE_UP;   for *cursor : cursors { move_cursor_page(cursor, buffer, mods, .up); }
-        case .PAGE_DOWN; for *cursor : cursors { move_cursor_page(cursor, buffer, mods, .down); }
+        case .HOME;       for *cursor : cursors { move_cursor_home(cursor, buffer, mods); }
+        case .END;        for *cursor : cursors { move_cursor_end (cursor, buffer, mods); }
+        case .ENTER;      for *cursor : cursors { handle_enter(cursor, buffer, mods); }
+        case .BACKSPACE;  for *cursor : cursors { handle_backspace(cursor, buffer, mods); }
+        case .DELETE;     for *cursor : cursors { handle_delete(cursor, buffer, mods); }
+        case .PAGE_UP;    for *cursor : cursors { move_cursor_page(cursor, buffer, mods, .up); }
+        case .PAGE_DOWN;  for *cursor : cursors { move_cursor_page(cursor, buffer, mods, .down); }
         case .ESCAPE;
             cursor := leave_only_main_cursor(editor);
             remove_selection(cursor);
@@ -127,15 +127,16 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
         case; cursor_moved = false;
     }
 
+    if !mods.shift_pressed && cursor_moved && !keep_selection {
+        for *cursor : cursors { remove_selection(cursor); }
+    }
+
     if buffer.dirty {
         recalculate_lines(buffer);
         for *cursor : cursors { put_cursor_in_valid_spot(cursor, buffer); }
     }
     if !has_single_cursor(editor) then organise_cursors(editor);  // sort and maybe merge overlapping cursors
 
-    if !mods.shift_pressed && cursor_moved && !keep_selection {
-        for *cursor : cursors { remove_selection(cursor); }
-    }
     editor.cursor_moved = cursor_moved;
 }
 
