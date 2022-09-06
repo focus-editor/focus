@@ -235,6 +235,7 @@ Mods :: Input.Event.Modifier_Flags;
 #import "File";
 #import "System";  // For get_path_of_running_executable.
 #import "String";
+#import "Sort";
 #import "Unicode";
 #import "Window_Creation";
 

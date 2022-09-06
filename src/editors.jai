@@ -5,21 +5,6 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     cursors := editor.cursors;
     single_cursor := ifx has_single_cursor(editor) then *cursors[0] else null;
 
-    if buffer.dirty {
-        recalculate_lines(buffer);
-        for *cursor : cursors { put_cursor_in_valid_spot(cursor, buffer); }
-    }
-
-    if key_code == #char "D" && only_ctrl_pressed(mods) {
-        if single_cursor && !has_selection(single_cursor) {
-            select_word(single_cursor, buffer);
-        } else {
-            maybe_create_additional_cursor(editor, buffer);
-        }
-        editor.cursor_moved = true;
-        return;
-    }
-
     cursor_moved   := true;
     keep_selection := false;
 
@@ -84,6 +69,14 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
                 assert(single_cursor != null);
                 duplicate_lines(single_cursor, buffer);
                 keep_selection = true;
+            } else if only_ctrl_pressed(mods) {
+                if single_cursor && !has_selection(single_cursor) {
+                    select_word(single_cursor, buffer);
+                } else {
+                    maybe_create_additional_cursor(editor, buffer);
+                }
+                cursor_moved = true;
+                keep_selection = true;
             }
 
         case #char "C";
@@ -133,6 +126,12 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
 
         case; cursor_moved = false;
     }
+
+    if buffer.dirty {
+        recalculate_lines(buffer);
+        for *cursor : cursors { put_cursor_in_valid_spot(cursor, buffer); }
+    }
+    if !has_single_cursor(editor) then organise_cursors(editor);  // sort and maybe merge overlapping cursors
 
     if !mods.shift_pressed && cursor_moved && !keep_selection {
         for *cursor : cursors { remove_selection(cursor); }
@@ -244,6 +243,59 @@ has_single_cursor :: inline (editor: *Editor) -> bool {
     return editor.cursors.count == 1;
 }
 
+organise_cursors :: (using editor: *Editor) {
+    compare_cursors :: (c1: Cursor, c2: Cursor) -> s64 {
+        s1 := get_selection(c1);
+        s2 := get_selection(c2);
+        if s1.start < s2.start return -1;
+        if s2.start < s1.start return  1;
+        return 0;
+    }
+
+    maybe_subsume :: (c1: *Cursor, c2: Cursor) -> bool {
+        s1 := get_selection(c1);
+        s2 := get_selection(c2);
+        if s1.end < s2.start || s2.end < s1.start return false;  // cursors are disjoint
+
+        new_start := ifx s1.start < s2.start then s1.start else s2.start;  // for some reason min() didn't work
+        new_end   := ifx s1.end   < s2.end   then s2.end   else s1.end;    // max()
+
+        if c1.pos == s1.end || c2.pos == s2.end {
+            c1.sel = new_start;
+            c1.pos = new_end;
+        } else {
+            c1.pos = new_start;
+            c1.sel = new_end;
+        }
+
+        return true;
+    }
+
+    main_cursor_pos := cursors[main_cursor].pos;
+
+    quick_sort(cursors, compare_cursors);
+
+    // Adjust main cursor index because it could've moved
+    for cursor, i : cursors {
+        if cursor.pos == main_cursor_pos {
+            main_cursor = i;
+            break;
+        }
+    }
+
+    // Merge overlapping cursors
+    i := 0;
+    while (i < cursors.count - 1) {
+        cursor := *cursors[i];
+        if maybe_subsume(cursor, cursors[i+1]) {
+            array_ordered_remove_by_index(*cursors, i+1);
+            if main_cursor > i then main_cursor -= 1;
+        } else {
+            i += 1;
+        }
+    }
+}
+
 editor_mouse_scroll :: (editor: *Editor, delta_z: int, max_y_scroll: s32) {
     if delta_z == 0 return;
 
@@ -334,6 +386,7 @@ maybe_create_additional_cursor :: (using editor: *Editor, buffer: Buffer) {
     new_cursor := array_add(*cursors);
     new_cursor.sel = offset_to_pos(buffer, found_offset);
     new_cursor.pos = offset_to_pos(buffer, found_offset + selected_text.count);
+    main_cursor = cursors.count - 1;
 }
 
 get_selected_text_all_cursors :: (using editor: Editor, buffer: Buffer) -> string {
