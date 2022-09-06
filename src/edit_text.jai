@@ -65,7 +65,7 @@ move_cursor_page :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods, dir: en
     } else {
         pos.line += page_size;
     }
-    pos = make_valid_pos(<< buffer, pos);
+    pos = make_valid_pos(buffer, pos);
 }
 
 move_cursor_home :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
@@ -202,7 +202,7 @@ handle_tab :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) -> keep_selec
     }
 
     // We have a selection
-    range := get_selection_whole_lines(<< cursor, << buffer);
+    range := get_selection_whole_lines(cursor, buffer);
     lines := array_view(buffer.lines, range.start.line, range.end.line - range.start.line + 1);
     new_bytes: [..] u8;
     new_bytes.allocator = temp;
@@ -295,7 +295,7 @@ select_all :: (using cursor: *Cursor, buffer: Buffer) {
 }
 
 select_lines :: (using cursor: *Cursor, buffer: Buffer) {
-    range := get_selection_whole_lines(<< cursor, buffer);
+    range := get_selection_whole_lines(cursor, buffer);
     sel = range.start;
     pos = range.end;
     if !last_line(buffer, pos.line) {
@@ -307,7 +307,7 @@ select_lines :: (using cursor: *Cursor, buffer: Buffer) {
 
 duplicate_lines :: (using cursor: *Cursor, buffer: *Buffer) {
     range := get_selection(cursor);
-    str   := copy_lines_to_temp_string(<< buffer, range);
+    str   := copy_lines_to_temp_string(buffer, range);
 
     offset := buffer.lines[range.end.line].end;
     buffer_insert_string_at_offset(buffer, offset, tprint("\n%", str));
@@ -318,14 +318,14 @@ duplicate_lines :: (using cursor: *Cursor, buffer: *Buffer) {
 }
 
 move_lines_up :: (cursor: *Cursor, buffer: *Buffer) {
-    range := get_selection_whole_lines(<< cursor, buffer);
+    range := get_selection_whole_lines(cursor, buffer);
     if range.start.line == 0 return;
 
     // Include the last newline in the selection
     range.end.col += 1;
-    range.end = make_valid_pos(<< buffer, range.end, for_cursor = false);
+    range.end = make_valid_pos(buffer, range.end, for_cursor = false);
 
-    str := copy_lines_to_temp_string(<< buffer, range);
+    str := copy_lines_to_temp_string(buffer, range);
 
     insert_pos := range.start;
     insert_pos.line -= 1;
@@ -340,14 +340,14 @@ move_lines_up :: (cursor: *Cursor, buffer: *Buffer) {
 }
 
 move_lines_down :: (cursor: *Cursor, buffer: *Buffer) {
-    range := get_selection_whole_lines(<< cursor, buffer);
+    range := get_selection_whole_lines(cursor, buffer);
     if range.end.line >= buffer.lines.count - 2 return;
 
     // Include the last newline in the selection
     range.end.col += 1;
-    range.end = make_valid_pos(<< buffer, range.end, for_cursor = false);
+    range.end = make_valid_pos(buffer, range.end, for_cursor = false);
 
-    str := copy_lines_to_temp_string(<< buffer, range);
+    str := copy_lines_to_temp_string(buffer, range);
 
     insert_pos := range.start;
     insert_pos.line += 1;
@@ -398,7 +398,7 @@ paste_from_clipboard :: (cursor: *Cursor, buffer: *Buffer) -> Range {
 
 comment_block :: (cursor: *Cursor, buffer: *Buffer) {
     assert(!buffer.dirty);
-    range := get_selection_whole_lines(<< cursor, << buffer);
+    range := get_selection_whole_lines(cursor, buffer);
     lines := array_view(buffer.lines, range.start.line, range.end.line - range.start.line + 1);
 
     min_text_start := -1;
@@ -419,7 +419,7 @@ comment_block :: (cursor: *Cursor, buffer: *Buffer) {
     comment_without_space := "//";
     new_bytes: [..] u8;
     new_bytes.allocator = temp;
-    array_reserve(*new_bytes, range_length_in_bytes(<< buffer, range) + lines.count * comment.count);
+    array_reserve(*new_bytes, range_length_in_bytes(buffer, range) + lines.count * comment.count);
 
     if comment_out {
         // Comment out block

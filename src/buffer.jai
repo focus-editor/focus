@@ -3,7 +3,9 @@ refresh_open_buffers :: () {
         buffer := *open_buffers[editor.buffer_id];
         if !buffer.dirty continue;
         sync_internal_data(buffer);
-        put_cursor_in_valid_spot(*editor.cursor, << buffer);
+        for *cursor : editor.cursors {
+            put_cursor_in_valid_spot(cursor, buffer);
+        }
     }
 }
 
@@ -13,7 +15,7 @@ put_cursor_in_valid_spot :: (using cursor: *Cursor, buffer: Buffer) {
 }
 
 buffer_insert_string_at_pos :: (buffer: *Buffer, pos: Pos, str: string) {
-    offset := get_offset(<< buffer, pos);
+    offset := get_offset(buffer, pos);
     buffer_insert_string_at_offset(buffer, offset, str);
 }
 
@@ -23,14 +25,14 @@ buffer_insert_string_at_offset :: (buffer: *Buffer, offset: s64, str: string) {
 }
 
 buffer_delete_range :: (buffer: *Buffer, range: Range) {
-    start, end := range_to_byte_offsets(<< buffer, make_valid_range(<< buffer, range));
+    start, end := range_to_byte_offsets(buffer, make_valid_range(buffer, range));
     buffer_delete_range_raw(buffer, start, end);
     buffer.dirty = true;
 }
 
 // A dedicated function to avoid having to recalculate lines between deleting range and inserting string
 buffer_replace_range :: (buffer: *Buffer, range: Range, str: string) {
-    start, end := range_to_byte_offsets(<< buffer, make_valid_range(<< buffer, range));
+    start, end := range_to_byte_offsets(buffer, make_valid_range(buffer, range));
     buffer_delete_range_raw(buffer, start, end);
     buffer_insert_string_raw(buffer, start, str);
     buffer.dirty = true;
@@ -151,18 +153,10 @@ has_selection :: inline (using cursor: Cursor) -> bool {
     return pos != sel;
 }
 
-has_selection :: inline (cursor: *Cursor) -> bool {
-    return has_selection(<< cursor);
-}
-
 get_selection :: (using cursor: Cursor) -> Range {
     using range: Range = ---;
     if pos < sel { start = pos; end = sel; } else { start = sel; end = pos; }
     return range;
-}
-
-get_selection :: inline (cursor: *Cursor) -> Range {
-    return get_selection(<< cursor);
 }
 
 get_selection_whole_lines :: (cursor: Cursor, buffer: Buffer) -> Range {
@@ -178,6 +172,16 @@ get_selection_whole_lines :: (cursor: Cursor, buffer: Buffer) -> Range {
     }
     end.col = buffer.lines[end.line].num_chars;
     return range;
+}
+
+get_selected_string :: (cursor: Cursor, buffer: Buffer) -> string {
+    result: string;
+    if !has_selection(cursor) return result;
+    selection  := get_selection(cursor);
+    start, end := range_to_byte_offsets(buffer, selection);
+    result.data  = buffer.bytes.data + start;
+    result.count = end - start;
+    return result;
 }
 
 copy_lines_to_temp_string :: (buffer: Buffer, range: Range) -> string {

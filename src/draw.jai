@@ -71,11 +71,12 @@ draw_editor :: (editor_id: s64, rect: Rect) {
     text_origin := top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
 
     active_drag, drag_started_at_point := mouse_left_is_dragging();
-    dragging_left = active_drag && point_within(drag_started_at_point, rect);
-    if ((mouse_left_just_pressed() && mouse_pointer_is_within(rect)) || dragging_left) && !dragging_splitter {
+    dragging_lmb = active_drag && point_within(drag_started_at_point, rect);
+    if ((mouse_left_just_pressed() && mouse_pointer_is_within(rect)) || dragging_lmb) && !dragging_splitter {
         pointer := snap_to_rect(mouse_pointer, rect);  // when we drag outside the editor we still want to interact
 
         // Maybe change cursor position
+        cursor := leave_only_main_cursor(editor);
         mouse_pos := pointer - bottom_left(rect) - text_offset;
         mouse_pos.x += viewport.left;
         mouse_pos.y = rect.h - mouse_pos.y + viewport.top - ifx dpi_scale > 1.0 then 1 else 0;
@@ -85,10 +86,10 @@ draw_editor :: (editor_id: s64, rect: Rect) {
         cursor.col_wanted = cursor.pos.col;
 
         // We mark cursor as moved to trigger auto-scroll if we drag outside the editor
-        if dragging_left && !mouse_pointer_is_within(rect) then cursor_moved = true;
+        if dragging_lmb && !mouse_pointer_is_within(rect) then cursor_moved = true;
 
-        if !shift_pressed() && !dragging_left then remove_selection(*cursor);
-        if mouse_left_just_double_clicked then select_word(*cursor, buffer);
+        if !shift_pressed() && !dragging_lmb then remove_selection(cursor);
+        if mouse_left_just_double_clicked then select_word(cursor, buffer);
 
         // Activate editor
         editor_active = editor_id;
@@ -108,7 +109,7 @@ draw_editor :: (editor_id: s64, rect: Rect) {
         bounds.y -= line_height + 2;
         // draw_rect(bounds, Colors.BACKGROUND_DARK);
 
-        cursor_pos := get_cursor_screen_pos(text_origin, cursor.pos);
+        cursor_pos := get_cursor_screen_pos(text_origin, cursors[main_cursor].pos);
         if !point_within(cursor_pos, bounds) {
             left, top, right, bottom := get_rect_sides(bounds);
             offset: Vector2;
@@ -137,7 +138,7 @@ draw_editor :: (editor_id: s64, rect: Rect) {
     visible_lines_end := visible_lines_start + cast(s64) (rect.h / line_height) + 1;
     visible_lines_end  = clamp(visible_lines_end,   0, buffer.lines.count);
 
-    draw_cursor(editor, buffer, rect, text_origin, visible_lines_start, visible_lines_end, is_active);
+    draw_cursors(editor, buffer, rect, text_origin, visible_lines_start, visible_lines_end, is_active);
 
     for anim : editor.paste_animations {
         t := (frame_time - anim.started_at) / Paste_Animation.SPEED;
@@ -168,18 +169,20 @@ get_cursor_screen_pos :: (text_origin: Vector2, pos: Pos) -> Vector2 {
     );
 }
 
-draw_cursor :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_origin: Vector2, visible_start: s64, visible_end: s64, is_active: bool) {
-    if has_selection(cursor) {
-        // Draw selection
-        selection := get_selection(cursor);
-        color := ifx is_active then Colors.SELECTION_ACTIVE else Colors.SELECTION_INACTIVE;
-        draw_range(selection, buffer, visible_start, visible_end, text_origin, color);
-    }
+draw_cursors :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_origin: Vector2, visible_start: s64, visible_end: s64, is_active: bool) {
+    for cursor : cursors {
+        if has_selection(cursor) {
+            // Draw selection
+            selection := get_selection(cursor);
+            color := ifx is_active then Colors.SELECTION_ACTIVE else Colors.SELECTION_INACTIVE;
+            draw_range(selection, buffer, visible_start, visible_end, text_origin, color);
+        }
 
-    cursor_pos := get_cursor_screen_pos(text_origin, cursor.pos);
-    rect := make_rect(cursor_pos.x, cursor_pos.y, char_size, line_height);
-    draw_rect(rect, Colors.CURSOR);
-    if !is_active then draw_rect(shrink(rect, 1), Colors.BACKGROUND);
+        cursor_pos := get_cursor_screen_pos(text_origin, cursor.pos);
+        rect := make_rect(cursor_pos.x, cursor_pos.y, char_size, line_height);
+        draw_rect(rect, Colors.CURSOR);
+        if !is_active then draw_rect(shrink(rect, 1), Colors.BACKGROUND);
+    }
 }
 
 draw_range :: (using range: Range, buffer: Buffer, visible_start: s64, visible_end: s64, text_origin: Vector2, color: Color) {

@@ -1,5 +1,11 @@
 # TODO
 - Multiple cursors
+    - Sort cursors each frame
+    - Deduplicate cursors each frame
+    - Support text typing
+    - Support copy/paste
+    - Support all the remaining single cursor operations
+    - When changing buffer in another editor, adjust cursors
 - Undo/redo
 
 - Handle weird selection remaining when shift is held
