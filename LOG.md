@@ -2,9 +2,13 @@
 - Multiple cursors
     + Sort cursors each frame
     + Deduplicate cursors each frame
-    - Support text typing
-    - Support copy/paste
+    + Support text typing
     - Support all the remaining single cursor operations
+        - Copy/cut
+        - Paste
+        - Delete
+        - Backspace
+        - Tab
     - When changing buffer in another editor, adjust cursors
     - After wrapping around, make the next cursor main and then stop
     - After pressing escape return to the original cursor
@@ -17,6 +21,7 @@
     - Polymorphic structs and possibly other types
     - Highlight globals?
     - Color cursor differently depending on what scope we're in
+- Try font-awesome icons
 - Make sure cursor positioning is correct for all fonts and sizes
 - Investigate stuttering when dragging the splitter
 - Figure out how to anti-alias rounded corners

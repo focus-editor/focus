@@ -5,70 +5,85 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     cursors := editor.cursors;
     single_cursor := ifx has_single_cursor(editor) then *cursors[0] else null;
 
-    cursor_moved   := true;
+    cursor_moved   := false;
     keep_selection := false;
 
     if key_code == {
         case .ARROW_LEFT;
             if only_alt_pressed(mods) {
                 move_viewport(editor, .left);
-                cursor_moved = false;
             } else if only_ctrl_alt_pressed(mods) {
                 switch_to_pane(.left);
-                cursor_moved = false;
             } else {
                 for *cursor : cursors { move_cursor_left(cursor, buffer, mods); }
+                cursor_moved = true;
             }
         case .ARROW_RIGHT;
             if only_alt_pressed(mods) {
                 move_viewport(editor, .right);
-                cursor_moved = false;
             } else if only_ctrl_alt_pressed(mods) {
                 switch_to_pane(.right);
-                cursor_moved = false;
             } else {
                 for *cursor : cursors { move_cursor_right(cursor, buffer, mods); }
+                cursor_moved = true;
             }
         case .ARROW_UP;
             if only_alt_pressed(mods) {
                 move_viewport(editor, .up);
-                cursor_moved = false;
             } else if only_alt_shift_pressed(mods) {
                 if single_cursor then move_lines_up(single_cursor, buffer);
+                cursor_moved = true;
                 keep_selection = true;
             } else {
                 for *cursor : cursors { move_cursor_up(cursor, buffer, mods); }
+                cursor_moved = true;
             }
         case .ARROW_DOWN;
             if only_alt_pressed(mods) {
                 move_viewport(editor, .down);
-                cursor_moved = false;
             } else if only_alt_shift_pressed(mods) {
                 if single_cursor then move_lines_down(single_cursor, buffer);
                 keep_selection = true;
+                cursor_moved = true;
             } else {
                 for *cursor : cursors { move_cursor_down(cursor, buffer, mods); }
+                cursor_moved = true;
             }
-        case .HOME;       for *cursor : cursors { move_cursor_home(cursor, buffer, mods); }
-        case .END;        for *cursor : cursors { move_cursor_end (cursor, buffer, mods); }
-        case .ENTER;      for *cursor : cursors { handle_enter(cursor, buffer, mods); }
-        case .BACKSPACE;  for *cursor : cursors { handle_backspace(cursor, buffer, mods); }
-        case .DELETE;     for *cursor : cursors { handle_delete(cursor, buffer, mods); }
-        case .PAGE_UP;    for *cursor : cursors { move_cursor_page(cursor, buffer, mods, .up); }
-        case .PAGE_DOWN;  for *cursor : cursors { move_cursor_page(cursor, buffer, mods, .down); }
+        case .HOME;
+            for *cursor : cursors { move_cursor_home(cursor, buffer, mods); }
+            cursor_moved = true;
+        case .END;
+            for *cursor : cursors { move_cursor_end (cursor, buffer, mods); }
+            cursor_moved = true;
+        case .ENTER;
+            for *cursor : cursors { handle_enter(cursor, buffer, mods); }
+            cursor_moved = true;
+        case .BACKSPACE;
+            for *cursor : cursors { handle_backspace(cursor, buffer, mods); }
+            cursor_moved = true;
+        case .DELETE;
+            for *cursor : cursors { handle_delete(cursor, buffer, mods); }
+            cursor_moved = true;
+        case .PAGE_UP;
+            for *cursor : cursors { move_cursor_page(cursor, buffer, mods, .up); }
+            cursor_moved = true;
+        case .PAGE_DOWN;
+            for *cursor : cursors { move_cursor_page(cursor, buffer, mods, .down); }
+            cursor_moved = true;
         case .ESCAPE;
             cursor := leave_only_main_cursor(editor);
             remove_selection(cursor);
-            cursor_moved = false;
         case .TAB;
             assert(false, "tab not implemented for multiple cursors yet");
             // keep_selection = handle_tab(cursor, buffer, mods);
+            cursor_moved = true;
 
         case #char "D";
             if only_ctrl_shift_pressed(mods) {
                 assert(single_cursor != null);
                 duplicate_lines(single_cursor, buffer);
                 keep_selection = true;
+                cursor_moved = true;
             } else if only_ctrl_pressed(mods) {
                 if single_cursor && !has_selection(single_cursor) {
                     select_word(single_cursor, buffer);
@@ -82,24 +97,26 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
         case #char "C";
             if only_alt_pressed(mods) {
                 center_cursor_on_viewport(editor, buffer);
+                cursor_moved = true;
             } else if only_ctrl_pressed(mods) {
                 assert(single_cursor != null);
                 if has_selection(single_cursor) {
                     copy_selection_to_clipboard(single_cursor, buffer);
                 }
-                cursor_moved = false;
             }
 
         case #char "X";
             if only_ctrl_pressed(mods) {
                 assert(single_cursor != null);
                 copy_selection_to_clipboard(single_cursor, buffer, cut = true);
+                cursor_moved = true;
             }
 
         case #char "V";
             if only_ctrl_pressed(mods) && single_cursor {
                 range := paste_from_clipboard(single_cursor, buffer);
                 add_paste_animation(editor, range);
+                cursor_moved = true;
             }
 
         case #char "A";
@@ -107,13 +124,13 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
                 cursor := leave_only_main_cursor(editor);
                 select_all(cursor, buffer);
                 keep_selection = true;
-                cursor_moved   = false;  // we don't want to move viewport
             }
 
         case #char "L";
             if only_ctrl_pressed(mods) {
                 for *cursor : cursors { select_lines(cursor, buffer); }
                 keep_selection = true;
+                cursor_moved = true;
             }
 
         case #char "/";
@@ -122,9 +139,8 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
                     for *cursor : cursors { comment_block(cursor, buffer); }
                 }
                 keep_selection = true;
+                cursor_moved = true;
             }
-
-        case; cursor_moved = false;
     }
 
     if !mods.shift_pressed && cursor_moved && !keep_selection {
@@ -147,24 +163,26 @@ editors_handle_text_input :: (char: u32) {
 
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
-    if buffer.dirty then recalculate_lines(buffer);
-    using editor;
-    assert(cursors.count == 1, "Multiple cursors in editors_handle_text_input");
-    cursor := *cursors[0];
 
     utf8_char := convert_utf32_to_utf8(char);
     str := to_string(*utf8_char);
-    if has_selection(cursor) {
-        selection := get_selection(cursor);
-        buffer_replace_range(buffer, selection, str);
-        cursor.pos = selection.start;
-    } else {
-        buffer_insert_string_at_pos(buffer, cursor.pos, str);
+
+    // Do it in reverse order so we don't have to adjust cursor
+    for < *cursor : editor.cursors {
+        if buffer.dirty then recalculate_lines(buffer);
+        if has_selection(cursor) {
+            selection := get_selection(cursor);
+            buffer_replace_range(buffer, selection, str);
+            cursor.pos = selection.start;
+        } else {
+            buffer_insert_string_at_pos(buffer, cursor.pos, str);
+        }
+        cursor.pos.col += 1;  // we know it's just one symbol
+        cursor.col_wanted = cursor.pos.col;
+        remove_selection(cursor);
     }
-    cursor.pos.col += 1;  // we know it's just one symbol
-    cursor.col_wanted = cursor.pos.col;
-    remove_selection(cursor);
-    cursor_moved = true;
+
+    editor.cursor_moved = true;
 }
 
 get_active_editor_and_buffer :: () -> *Editor, *Buffer {
