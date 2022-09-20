@@ -341,6 +341,10 @@ Cursor :: struct {
     clipboard: string;
 }
 
+Cursor_Offset :: struct {
+    pos, sel: s32;
+}
+
 Pos :: struct {
     line, col: s32;
 }

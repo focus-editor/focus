@@ -4,7 +4,7 @@
     + Deduplicate cursors each frame
     + Support text typing
     + Adjust cursor positions (easier to do by looking at lines/cols)
-    - Adjust cursor positions like it's done in Zig focus - for all operations
+    + Adjust cursor positions like it's done in Zig focus - for all operations
     - Support all the remaining single cursor operations
         - Copy/cut
         - Paste

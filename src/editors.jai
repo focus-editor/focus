@@ -8,119 +8,35 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     cursor_moved   := false;
     keep_selection := false;
 
-    if key_code == {
-        case .ARROW_LEFT;
-            if only_alt_pressed(mods) {
-                move_viewport(editor, .left);
-            } else if only_ctrl_alt_pressed(mods) {
-                switch_to_pane(.left);
-            } else {
-                for *cursor : cursors { move_cursor_left(cursor, buffer, mods); }
-                cursor_moved = true;
-            }
-        case .ARROW_RIGHT;
-            if only_alt_pressed(mods) {
-                move_viewport(editor, .right);
-            } else if only_ctrl_alt_pressed(mods) {
-                switch_to_pane(.right);
-            } else {
-                for *cursor : cursors { move_cursor_right(cursor, buffer, mods); }
-                cursor_moved = true;
-            }
-        case .ARROW_UP;
-            if only_alt_pressed(mods) {
-                move_viewport(editor, .up);
-            } else if only_alt_shift_pressed(mods) {
-                if single_cursor then move_lines_up(single_cursor, buffer);
-                cursor_moved = true;
-                keep_selection = true;
-            } else {
-                for *cursor : cursors { move_cursor_up(cursor, buffer, mods); }
-                cursor_moved = true;
-            }
-        case .ARROW_DOWN;
-            if only_alt_pressed(mods) {
-                move_viewport(editor, .down);
-            } else if only_alt_shift_pressed(mods) {
-                if single_cursor then move_lines_down(single_cursor, buffer);
-                keep_selection = true;
-                cursor_moved = true;
-            } else {
-                for *cursor : cursors { move_cursor_down(cursor, buffer, mods); }
-                cursor_moved = true;
-            }
-        case .HOME;
-            for *cursor : cursors { move_cursor_home(cursor, buffer, mods); }
-            cursor_moved = true;
-        case .END;
-            for *cursor : cursors { move_cursor_end (cursor, buffer, mods); }
-            cursor_moved = true;
-        case .ENTER;
-            for *cursor : cursors { handle_enter(cursor, buffer, mods); }
-            cursor_moved = true;
-        case .BACKSPACE;
-            for *cursor : cursors { handle_backspace(cursor, buffer, mods); }
-            cursor_moved = true;
-        case .DELETE;
-            for *cursor : cursors { handle_delete(cursor, buffer, mods); }
-            cursor_moved = true;
-        case .PAGE_UP;
-            for *cursor : cursors { move_cursor_page(cursor, buffer, mods, .up); }
-            cursor_moved = true;
-        case .PAGE_DOWN;
-            for *cursor : cursors { move_cursor_page(cursor, buffer, mods, .down); }
-            cursor_moved = true;
-        case .ESCAPE;
-            cursor := leave_only_main_cursor(editor);
-            remove_selection(cursor);
-        case .TAB;
-            assert(false, "tab not implemented for multiple cursors yet");
-            // keep_selection = handle_tab(cursor, buffer, mods);
-            cursor_moved = true;
+    // Handle general actions (which are not associated with any cursor)
+    handled := false;
 
+    if key_code == {
         case #char "D";
-            if only_ctrl_shift_pressed(mods) {
-                assert(single_cursor != null);
-                duplicate_lines(single_cursor, buffer);
+            if only_ctrl_pressed(mods) {
+                created := maybe_create_additional_cursor(editor, buffer);
                 keep_selection = true;
-                cursor_moved = true;
-            } else if only_ctrl_pressed(mods) {
-                if single_cursor && !has_selection(single_cursor) {
-                    select_word(single_cursor, buffer);
-                } else {
-                    maybe_create_additional_cursor(editor, buffer);
+                if created {
+                    cursor_moved = true;
+                    handled = true;
                 }
-                cursor_moved = true;
-                keep_selection = true;
+            }
+
+        case #char "Z";
+            if only_ctrl_pressed(mods) {
+                // TODO: Undo
+                handled = true;
+            }
+            if only_ctrl_shift_pressed(mods) {
+                // TODO: Redo
+                handled = true;
             }
 
         case #char "C";
             if only_alt_pressed(mods) {
                 center_cursor_on_viewport(editor, buffer);
                 cursor_moved = true;
-            } else if only_ctrl_pressed(mods) {
-                if editor.cursors.count == 1 {
-                    copy_selection_to_system_clipboard(editor, buffer);
-                } else {
-                    copy_selections_to_cursor_clipboards(editor, buffer);
-                }
-            }
-
-        case #char "X";
-            if only_ctrl_pressed(mods) {
-                if editor.cursors.count == 1 {
-                    copy_selection_to_system_clipboard(editor, buffer, cut = true);
-                } else {
-                    cut_selections_to_cursor_clipboards(editor, buffer);
-                }
-                cursor_moved = true;
-            }
-
-        case #char "V";
-            if only_ctrl_pressed(mods) && single_cursor {
-                range := paste_from_clipboard(single_cursor, buffer);
-                add_paste_animation(editor, range);
-                cursor_moved = true;
+                handled = true;
             }
 
         case #char "A";
@@ -128,23 +44,170 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
                 cursor := leave_only_main_cursor(editor);
                 select_all(cursor, buffer);
                 keep_selection = true;
+                handled = true;
             }
 
-        case #char "L";
-            if only_ctrl_pressed(mods) {
-                for *cursor : cursors { select_lines(cursor, buffer); }
-                keep_selection = true;
-                cursor_moved = true;
+        case .ESCAPE;
+            cursor := leave_only_main_cursor(editor);
+            remove_selection(cursor);
+            handled = true;
+
+        case .ARROW_LEFT;
+            if only_alt_pressed(mods) {
+                move_viewport(editor, .left);
+                handled = true;
+            } else if only_ctrl_alt_pressed(mods) {
+                switch_to_pane(.left);
+                handled = true;
             }
 
-        case #char "/";
-            if only_ctrl_pressed(mods) {
-                if buffer.lang == .Jai {
-                    for *cursor : cursors { comment_block(cursor, buffer); }
-                }
-                keep_selection = true;
-                cursor_moved = true;
+        case .ARROW_RIGHT;
+            if only_alt_pressed(mods) {
+                move_viewport(editor, .right);
+                handled = true;
+            } else if only_ctrl_alt_pressed(mods) {
+                switch_to_pane(.right);
+                handled = true;
             }
+
+        case .ARROW_UP;
+            if only_alt_pressed(mods) {
+                move_viewport(editor, .up);
+                handled = true;
+            }
+
+        case .ARROW_DOWN;
+            if only_alt_pressed(mods) {
+                move_viewport(editor, .down);
+                handled = true;
+            }
+    }
+
+    // Process individual cursors
+    if !handled {
+        cursor_delta := 0;
+        buf_len := buffer.bytes.count;
+        offsets := remember_cursor_offsets(editor, buffer);
+
+        for *cursor, i : cursors {
+            // Adjust cursor if the previous cursor has changed the buffer
+            new_len := buffer.bytes.count;
+            if new_len != buf_len || buffer.dirty {
+                recalculate_lines(buffer);
+                cursor_delta += new_len - buf_len;
+                cursor.pos = offset_to_pos(buffer, offsets[i].pos + cursor_delta);
+                cursor.sel = offset_to_pos(buffer, offsets[i].sel + cursor_delta);
+                buf_len = new_len;
+            }
+
+            // Handle keypress for cursor
+            if key_code == {
+                case .ARROW_LEFT;
+                    move_cursor_left(cursor, buffer, mods);
+                    cursor_moved = true;
+                case .ARROW_RIGHT;
+                    move_cursor_right(cursor, buffer, mods);
+                    cursor_moved = true;
+
+                case .ARROW_UP;
+                    if only_alt_shift_pressed(mods) && single_cursor {
+                        // TODO: support multiple cursors here someday too
+                        move_lines_up(single_cursor, buffer);
+                        keep_selection = true;
+                    } else {
+                        move_cursor_up(cursor, buffer, mods);
+                    }
+                    cursor_moved = true;
+                case .ARROW_DOWN;
+                    if only_alt_shift_pressed(mods) && single_cursor {
+                        move_lines_down(single_cursor, buffer);
+                        keep_selection = true;
+                    } else {
+                        move_cursor_down(cursor, buffer, mods);
+                    }
+                    cursor_moved = true;
+                case .HOME;
+                    move_cursor_home(cursor, buffer, mods);
+                    cursor_moved = true;
+                case .END;
+                    move_cursor_end(cursor, buffer, mods);
+                    cursor_moved = true;
+                case .ENTER;
+                    handle_enter(cursor, buffer, mods);
+                    cursor_moved = true;
+                case .BACKSPACE;
+                    handle_backspace(cursor, buffer, mods);
+                    cursor_moved = true;
+                case .DELETE;
+                    handle_delete(cursor, buffer, mods);
+                    cursor_moved = true;
+                case .PAGE_UP;
+                    move_cursor_page(cursor, buffer, mods, .up);
+                    cursor_moved = true;
+                case .PAGE_DOWN;
+                    move_cursor_page(cursor, buffer, mods, .down);
+                    cursor_moved = true;
+                case .TAB;
+                    assert(false, "tab not implemented for multiple cursors yet");
+                    // keep_selection = handle_tab(cursor, buffer, mods);
+                    cursor_moved = true;
+
+                case #char "D";
+                    if only_ctrl_shift_pressed(mods) && cursors.count == 1 {
+                        duplicate_lines(cursor, buffer);
+                        keep_selection = true;
+                        cursor_moved = true;
+                    } else if only_ctrl_pressed(mods) {
+                        select_word(cursor, buffer);
+                        cursor_moved = true;
+                    }
+
+                case #char "C";
+                    if only_ctrl_pressed(mods) {
+                        // TODO: copy
+                        // if editor.cursors.count == 1 {
+                        //     copy_selection_to_system_clipboard(editor, buffer);
+                        // } else {
+                        //     copy_selections_to_cursor_clipboards(editor, buffer);
+                        // }
+                    }
+
+                case #char "X";
+                    if only_ctrl_pressed(mods) {
+                        // TODO: cut
+                        // if editor.cursors.count == 1 {
+                        //     copy_selection_to_system_clipboard(editor, buffer, cut = true);
+                        // } else {
+                        //     cut_selections_to_cursor_clipboards(editor, buffer);
+                        // }
+                        cursor_moved = true;
+                    }
+
+                case #char "V";
+                    // TODO: paste
+                    // if only_ctrl_pressed(mods) && single_cursor {
+                    //     range := paste_from_clipboard(single_cursor, buffer);
+                    //     add_paste_animation(editor, range);
+                    //     cursor_moved = true;
+                    // }
+
+                case #char "L";
+                    if only_ctrl_pressed(mods) {
+                        select_lines(cursor, buffer);
+                        keep_selection = true;
+                        cursor_moved = true;
+                    }
+
+                case #char "/";
+                    if only_ctrl_pressed(mods) {
+                        if buffer.lang == .Jai {
+                            comment_block(cursor, buffer);
+                        }
+                        keep_selection = true;
+                        cursor_moved = true;
+                    }
+            }
+        }
     }
 
     if !mods.shift_pressed && cursor_moved && !keep_selection {
@@ -171,9 +234,21 @@ editors_handle_text_input :: (char: u32) {
     utf8_char := convert_utf32_to_utf8(char);
     str := to_string(*utf8_char);
 
-    // Do it in reverse order so we don't have to adjust cursor
-    for < *cursor : editor.cursors {
-        if buffer.dirty then recalculate_lines(buffer);
+    cursor_delta := 0;
+    buf_len := buffer.bytes.count;
+    offsets := remember_cursor_offsets(editor, buffer);
+
+    for *cursor, i : editor.cursors {
+        // Adjust cursor if the previous cursor has changed the buffer
+        new_len := buffer.bytes.count;
+        if new_len != buf_len || buffer.dirty {
+            recalculate_lines(buffer);
+            cursor_delta += new_len - buf_len;
+            cursor.pos = offset_to_pos(buffer, offsets[i].pos + cursor_delta);
+            cursor.sel = offset_to_pos(buffer, offsets[i].sel + cursor_delta);
+            buf_len = new_len;
+        }
+
         if has_selection(cursor) {
             selection := get_selection(cursor);
             buffer_replace_range(buffer, selection, str);
@@ -264,6 +339,17 @@ leave_only_main_cursor :: (using editor: *Editor) -> *Cursor {
 
 has_single_cursor :: inline (editor: *Editor) -> bool {
     return editor.cursors.count == 1;
+}
+
+remember_cursor_offsets :: (using editor: *Editor, buffer: Buffer) -> []Cursor_Offset /* temporary storage */ {
+    // When editing with multiple cursors it's convenient to remember where cursors
+    // are in the buffer before we start so we can then easily adjust their positions later
+    offsets := NewArray(cursors.count, Cursor_Offset, initialized = false, allocator = temp);
+    for cursor, i : cursors {
+        offsets[i].pos = pos_to_offset(buffer, cursor.pos);
+        offsets[i].sel = pos_to_offset(buffer, cursor.sel);
+    }
+    return offsets;
 }
 
 organise_cursors :: (using editor: *Editor) {
@@ -380,9 +466,9 @@ add_paste_animation :: (using editor: *Editor, range: Range) {
 
 #scope_file
 
-maybe_create_additional_cursor :: (using editor: *Editor, buffer: Buffer) {
+maybe_create_additional_cursor :: (using editor: *Editor, buffer: Buffer) -> created: bool {
     selected_text := get_selected_text_all_cursors(editor, buffer);
-    if selected_text.count == 0 return;
+    if selected_text.count == 0 return false;
     buffer_str := to_string(buffer.bytes);
 
     // Search from the main cursor downwards, possibly with a wraparound
@@ -404,12 +490,14 @@ maybe_create_additional_cursor :: (using editor: *Editor, buffer: Buffer) {
         index := find_index_from_left(target_range, selected_text);
         if index >= 0 then found_offset = start_offset + index;
     }
-    if found_offset < 0 return;  // found no matches
+    if found_offset < 0 return false;  // found no matches
 
     new_cursor := array_add(*cursors);
     new_cursor.sel = offset_to_pos(buffer, found_offset);
     new_cursor.pos = offset_to_pos(buffer, found_offset + selected_text.count);
     main_cursor = cursors.count - 1;
+
+    return true;
 }
 
 get_selected_text_all_cursors :: (using editor: Editor, buffer: Buffer) -> string {
