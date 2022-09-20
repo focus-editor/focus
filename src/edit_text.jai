@@ -361,16 +361,56 @@ move_lines_down :: (cursor: *Cursor, buffer: *Buffer) {
     cursor.sel.line += 1;
 }
 
-copy_selection_to_clipboard :: (cursor: *Cursor, buffer: *Buffer, cut := false) {
-    selection  := get_selection(cursor);
-    start, end := range_to_byte_offsets(buffer, selection);
-    str := to_string(array_view(buffer.bytes, start, end - start));
-    os_clipboard_set_text(str);
-
+copy_selection_to_system_clipboard :: (using editor: *Editor, buffer: *Buffer, cut := false) {
+    assert(cursors.count == 1);
+    cursor := *cursors[0];
+    selection := get_selection(cursor);
+    str := get_string_from_range(selection, buffer);
+    if str then os_clipboard_set_text(str);
     if cut {
         buffer_delete_range(buffer, selection);
         cursor.pos = selection.start;
         cursor.col_wanted = cursor.pos.col;
+    }
+}
+
+copy_selections_to_cursor_clipboards :: (using editor: *Editor, buffer: *Buffer) {
+    assert(cursors.count > 1);
+    for *cursor : cursors {
+        maybe_free_and_clear(*cursor.clipboard);
+        str := get_selected_string(cursor, buffer);
+        if str then cursor.clipboard = copy_string(str);
+    }
+}
+
+cut_selections_to_cursor_clipboards :: (using editor: *Editor, buffer: *Buffer) {
+    assert(cursors.count > 1);
+
+    adjust: Pos;
+    last_cursor_line: s32 = -1;
+
+    for *cursor : cursors {
+        if buffer.dirty then recalculate_lines(buffer);
+
+        // Adjust cursor selection as the previous cursors may have moved it
+        selection := get_selection(cursor);
+        selection.start.line -= adjust.line;
+        selection.end.line   -= adjust.line;
+        if selection.start.line == last_cursor_line then selection.start.col -= adjust.col;
+        if selection.end.line   == last_cursor_line then selection.end.col   -= adjust.col;
+
+        maybe_free_and_clear(*cursor.clipboard);
+        str := get_string_from_range(selection, buffer);
+        if str then cursor.clipboard = copy_string(str);
+
+        buffer_delete_range(buffer, selection);
+        cursor.pos = selection.start;
+        cursor.col_wanted = cursor.pos.col;
+
+        if cursor.pos.line != last_cursor_line then adjust.col = 0;
+        last_cursor_line = cursor.pos.line;
+        adjust.line +- selection.end.line - selection.start.line;
+        adjust.col  += selection.end.col  - selection.start.col;
     }
 }
 

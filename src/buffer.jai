@@ -184,7 +184,18 @@ get_selected_string :: (cursor: Cursor, buffer: Buffer) -> string {
     return result;
 }
 
+get_string_from_range :: (range: Range, buffer: Buffer) -> string {
+    result: string;
+    start, end := range_to_byte_offsets(buffer, range);
+    if start == end return result;
+
+    result.data  = buffer.bytes.data + start;
+    result.count = end - start;
+    return result;
+}
+
 copy_lines_to_temp_string :: (buffer: Buffer, range: Range) -> string {
+    // NOTE: copies whole lines, not just the range
     assert(!buffer.dirty);
     start := buffer.lines[range.start.line].start;
     end   := buffer.lines[range.end.line  ].end;
@@ -256,6 +267,13 @@ operator < :: (a: Pos, b: Pos) -> bool {
     return a.line < b.line || (a.line == b.line && a.col < b.col);
 }
 
+operator - :: (a: Pos, b: Pos) -> Pos {
+    r: Pos = ---;
+    r.line = a.line - b.line;
+    r.col  = a.col  - b.col;
+    return r;
+}
+
 #scope_file
 
 buffer_delete_range_raw :: (using buffer: *Buffer, start: s64, end: s64) {
@@ -320,6 +338,7 @@ Line :: struct {
 Cursor :: struct {
     pos, sel: Pos;  // if pos != sel, then we have an active selection
     col_wanted: s32;
+    clipboard: string;
 }
 
 Pos :: struct {

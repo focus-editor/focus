@@ -99,16 +99,20 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
                 center_cursor_on_viewport(editor, buffer);
                 cursor_moved = true;
             } else if only_ctrl_pressed(mods) {
-                assert(single_cursor != null);
-                if has_selection(single_cursor) {
-                    copy_selection_to_clipboard(single_cursor, buffer);
+                if editor.cursors.count == 1 {
+                    copy_selection_to_system_clipboard(editor, buffer);
+                } else {
+                    copy_selections_to_cursor_clipboards(editor, buffer);
                 }
             }
 
         case #char "X";
             if only_ctrl_pressed(mods) {
-                assert(single_cursor != null);
-                copy_selection_to_clipboard(single_cursor, buffer, cut = true);
+                if editor.cursors.count == 1 {
+                    copy_selection_to_system_clipboard(editor, buffer, cut = true);
+                } else {
+                    cut_selections_to_cursor_clipboards(editor, buffer);
+                }
                 cursor_moved = true;
             }
 

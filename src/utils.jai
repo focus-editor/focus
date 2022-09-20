@@ -55,3 +55,10 @@ decode_utf8_string_to_temp_chars :: (str: string) -> [] u32 {
 
     return chars;
 }
+
+maybe_free_and_clear :: (str: *string) {
+    if !str.data || str.count == 0 return;
+    free(<< str);
+    str.data  = null;
+    str.count = 0;
+}
