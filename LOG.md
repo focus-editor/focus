@@ -1,21 +1,26 @@
 # TODO
-- When changing buffer in another editor, adjust cursors
-    - Test in vscode, especially when pasting something with \n's
 - Undo/redo
+- Search text
+    - Case-sensitive
+    - Case-insensitive
+- Select whole words when creating new cursors (unless selected manually)
+- Highlight occurrences of selection (same rules as above)
+- Open file dialog
+    - Try font-awesome icons
 
-- Handle weird selection remaining when shift is held
-
-- Don't redraw if nothing has changed
 - Implement semantic highlighting
     - Polymorphic structs and possibly other types
     - Highlight globals?
     - Color cursor differently depending on what scope we're in
-- Try font-awesome icons
 - Make sure cursor positioning is correct for all fonts and sizes
 - Investigate stuttering when dragging the splitter
 - Figure out how to anti-alias rounded corners
 - Set a proper horizontal scroll limit
 - Maybe don't draw too many horizontal characters
+- When changing buffer in another editor, adjust cursors
+    - It seems that in vscode cursors are tied to their position in buffer,
+      so if that position moved then so do the cursors
+      (just like the individual letters would)
 - Look into subpixel font positioning
     - Revisit the font loading code as it has some rounding to pixels there
       and consider using floats or other units for font metrics
@@ -23,6 +28,7 @@
     - Should we keep using GL_NEAREST for sampling?
 - Subpixel rendering: support other types of panels (lookup ft2-lcd_rendering)
   (not useful for the editor, but may be useful for games)
+- Don't redraw if nothing has changed
 
 # DONE
 + Multiple cursors

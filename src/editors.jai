@@ -206,7 +206,13 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
 
     if buffer.dirty {
         recalculate_lines(buffer);
-        for *cursor : cursors { put_cursor_in_valid_spot(cursor, buffer); }
+
+        // Make sure the cursors in all editors for this buffer are in valid places
+        for *e : open_editors {
+            if e.buffer_id != editor.buffer_id continue;
+            for *cursor : e.cursors { put_cursor_in_valid_spot(cursor, buffer); }
+            if e != editor && e.cursors.count > 1 then organise_cursors(e);
+        }
     }
     if cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
 
@@ -250,6 +256,8 @@ editors_handle_text_input :: (char: u32) {
         cursor.col_wanted = cursor.pos.col;
         remove_selection(cursor);
     }
+
+    if buffer.dirty then recalculate_lines(buffer);
 
     editor.cursor_moved = true;
 }

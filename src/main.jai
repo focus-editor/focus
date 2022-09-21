@@ -18,7 +18,7 @@ main :: () {
     old_line_height = line_height;
 
     editors_open_file("src/editors.jai");
-    editors_open_file("src/main.jai", .right);
+    editors_open_file("src/main.jai", .left);
 
     should_quit := false;
 
