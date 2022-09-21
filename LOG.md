@@ -1,15 +1,6 @@
 # TODO
-- Multiple cursors
-    + Sort cursors each frame
-    + Deduplicate cursors each frame
-    + Support text typing
-    + Adjust cursor positions (easier to do by looking at lines/cols)
-    + Adjust cursor positions like it's done in Zig focus - for all operations
-    + Support all the remaining single cursor operations
-    + Free and clear cursor clipboards when removing extra cursors
-    + After pressing escape return to the original cursor
-    - After wrapping around, make the next cursor main and then stop
-    - When changing buffer in another editor, adjust cursors
+- When changing buffer in another editor, adjust cursors
+    - Test in vscode, especially when pasting something with \n's
 - Undo/redo
 
 - Handle weird selection remaining when shift is held
@@ -34,6 +25,16 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Multiple cursors
+    + Sort cursors each frame
+    + Deduplicate cursors each frame
+    + Support text typing
+    + Adjust cursor positions (easier to do by looking at lines/cols)
+    + Adjust cursor positions like it's done in Zig focus - for all operations
+    + Support all the remaining single cursor operations
+    + Free and clear cursor clipboards when removing extra cursors
+    + After pressing escape return to the original cursor
+    + After wrapping around, make the next cursor main and then stop
 + Select word by double-click
 + Change active pane by ctrl+alt+arrow
 + Move lines up/down

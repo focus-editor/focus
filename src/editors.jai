@@ -480,7 +480,10 @@ maybe_create_additional_cursor :: (using editor: *Editor, buffer: Buffer) -> cre
         index := find_index_from_left(target_range, selected_text);
         if index >= 0 then found_offset = start_offset + index;
     }
-    if found_offset < 0 return false;  // found no matches
+    if found_offset < 0 {
+        if main_cursor != original_cursor then main_cursor = original_cursor;  // go back to original and stop
+        return false;  // found no matches
+    }
 
     new_cursor := array_add(*cursors);
     new_cursor.sel = offset_to_pos(buffer, found_offset);
