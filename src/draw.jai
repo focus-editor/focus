@@ -76,7 +76,7 @@ draw_editor :: (editor_id: s64, rect: Rect) {
         pointer := snap_to_rect(mouse_pointer, rect);  // when we drag outside the editor we still want to interact
 
         // Maybe change cursor position
-        cursor := leave_only_main_cursor(editor);
+        cursor := leave_only_original_cursor(editor);
         mouse_pos := pointer - bottom_left(rect) - text_offset;
         mouse_pos.x += viewport.left;
         mouse_pos.y = rect.h - mouse_pos.y + viewport.top - ifx dpi_scale > 1.0 then 1 else 0;

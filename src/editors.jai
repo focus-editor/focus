@@ -33,22 +33,23 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
 
         case #char "C";
             if only_alt_pressed(mods) {
-                center_cursor_on_viewport(editor, buffer);
+                move_cursor_to_viewport_center(editor, buffer);
                 cursor_moved = true;
                 handled = true;
             }
 
         case #char "A";
             if only_ctrl_pressed(mods) {
-                cursor := leave_only_main_cursor(editor);
+                cursor := leave_only_original_cursor(editor);
                 select_all(cursor, buffer);
                 keep_selection = true;
                 handled = true;
             }
 
         case .ESCAPE;
-            cursor := leave_only_main_cursor(editor);
+            cursor := leave_only_original_cursor(editor);
             remove_selection(cursor);
+            cursor_moved = true;
             handled = true;
 
         case .ARROW_LEFT;
@@ -306,8 +307,8 @@ move_viewport :: (editor: *Editor, dir: enum { left; up; right; down; }) {
     }
 }
 
-center_cursor_on_viewport :: (editor: *Editor, buffer: Buffer) {
-    cursor := leave_only_main_cursor(editor);
+move_cursor_to_viewport_center :: (editor: *Editor, buffer: Buffer) {
+    cursor := leave_only_original_cursor(editor);
     // We assume that editors always take up most of the screen vertically.
     // If that ever changes we'll need to change this code (and do it when we know the layout)
     cursor_px_pos := editor.viewport.top +  window_height / 2;
@@ -317,16 +318,17 @@ center_cursor_on_viewport :: (editor: *Editor, buffer: Buffer) {
     remove_selection(cursor);
 }
 
-leave_only_main_cursor :: (using editor: *Editor) -> *Cursor {
-    // Remove all cursors except the main one
+leave_only_original_cursor :: (using editor: *Editor) -> *Cursor {
+    // Remove all cursors except the original one
     for *cursor : cursors {
         maybe_free_and_clear(*cursor.clipboard);
     }
-    cursor := cursors[main_cursor];
+    cursor := cursors[original_cursor];
     cursors.count = 1;
+    original_cursor = 0;
     main_cursor = 0;
-    cursors[main_cursor] = cursor;
-    return *cursors[main_cursor];
+    cursors[original_cursor] = cursor;
+    return *cursors[original_cursor];
 }
 
 remember_cursor_offsets :: (using editor: *Editor, buffer: Buffer) -> []Cursor_Offset /* temporary storage */ {
@@ -368,16 +370,15 @@ organise_cursors :: (using editor: *Editor) {
         return true;
     }
 
-    main_cursor_pos := cursors[main_cursor].pos;
+    main_cursor_pos     := cursors[main_cursor].pos;
+    original_cursor_pos := cursors[original_cursor].pos;
 
     quick_sort(cursors, compare_cursors);
 
-    // Adjust main cursor index because it could've moved
+    // Adjust main and original cursor indices because they could've moved
     for cursor, i : cursors {
-        if cursor.pos == main_cursor_pos {
-            main_cursor = i;
-            break;
-        }
+        if cursor.pos == main_cursor_pos     then main_cursor = i;
+        if cursor.pos == original_cursor_pos then original_cursor = i;
     }
 
     // Merge overlapping cursors
@@ -386,7 +387,8 @@ organise_cursors :: (using editor: *Editor) {
         cursor := *cursors[i];
         if maybe_subsume(cursor, cursors[i+1]) {
             array_ordered_remove_by_index(*cursors, i+1);
-            if main_cursor > i then main_cursor -= 1;
+            if main_cursor     > i then main_cursor -= 1;
+            if original_cursor > i then original_cursor -= 1;
         } else {
             i += 1;
         }
@@ -551,7 +553,8 @@ Editor :: struct {
     buffer_id: s64;
 
     cursors: [..] Cursor;
-    main_cursor: s64;
+    main_cursor: s64;      // newly added cursors become main so that we jump to them
+    original_cursor: s64;  // we remember the original cursor when first creating multiple cursors (and go back to it on escape)
     viewport: Viewport;
     dragging_lmb := false;
     cursor_moved  := false;

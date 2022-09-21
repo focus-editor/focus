@@ -7,8 +7,8 @@
     + Adjust cursor positions like it's done in Zig focus - for all operations
     + Support all the remaining single cursor operations
     + Free and clear cursor clipboards when removing extra cursors
+    + After pressing escape return to the original cursor
     - After wrapping around, make the next cursor main and then stop
-    - After pressing escape return to the original cursor
     - When changing buffer in another editor, adjust cursors
 - Undo/redo
 
