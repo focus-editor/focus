@@ -3,7 +3,6 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     if !editor return;
 
     cursors := editor.cursors;
-    single_cursor := ifx has_single_cursor(editor) then *cursors[0] else null;
 
     cursor_moved   := false;
     keep_selection := false;
@@ -110,17 +109,17 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
                     cursor_moved = true;
 
                 case .ARROW_UP;
-                    if only_alt_shift_pressed(mods) && single_cursor {
+                    if only_alt_shift_pressed(mods) && cursors.count == 1 {
                         // TODO: support multiple cursors here someday too
-                        move_lines_up(single_cursor, buffer);
+                        move_lines_up(cursor, buffer);
                         keep_selection = true;
                     } else {
                         move_cursor_up(cursor, buffer, mods);
                     }
                     cursor_moved = true;
                 case .ARROW_DOWN;
-                    if only_alt_shift_pressed(mods) && single_cursor {
-                        move_lines_down(single_cursor, buffer);
+                    if only_alt_shift_pressed(mods) && cursors.count == 1 {
+                        move_lines_down(cursor, buffer);
                         keep_selection = true;
                     } else {
                         move_cursor_down(cursor, buffer, mods);
@@ -148,8 +147,7 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
                     move_cursor_page(cursor, buffer, mods, .down);
                     cursor_moved = true;
                 case .TAB;
-                    assert(false, "tab not implemented for multiple cursors yet");
-                    // keep_selection = handle_tab(cursor, buffer, mods);
+                    keep_selection = handle_tab(cursor, buffer, mods);
                     cursor_moved = true;
 
                 case #char "D";
@@ -218,7 +216,7 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
         recalculate_lines(buffer);
         for *cursor : cursors { put_cursor_in_valid_spot(cursor, buffer); }
     }
-    if !has_single_cursor(editor) then organise_cursors(editor);  // sort and maybe merge overlapping cursors
+    if cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
 
     editor.cursor_moved = cursor_moved;
 }
@@ -335,10 +333,6 @@ leave_only_main_cursor :: (using editor: *Editor) -> *Cursor {
     main_cursor = 0;
     cursors[main_cursor] = cursor;
     return *cursors[main_cursor];
-}
-
-has_single_cursor :: inline (editor: *Editor) -> bool {
-    return editor.cursors.count == 1;
 }
 
 remember_cursor_offsets :: (using editor: *Editor, buffer: Buffer) -> []Cursor_Offset /* temporary storage */ {
