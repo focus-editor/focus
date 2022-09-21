@@ -361,12 +361,19 @@ move_lines_down :: (cursor: *Cursor, buffer: *Buffer) {
     cursor.sel.line += 1;
 }
 
-copy_selection_to_system_clipboard :: (using editor: *Editor, buffer: *Buffer, cut := false) {
-    assert(cursors.count == 1);
-    cursor := *cursors[0];
+copy_selection_to_clipboard :: (cursor: *Cursor, buffer: *Buffer, single_cursor: bool, cut := false) {
     selection := get_selection(cursor);
     str := get_string_from_range(selection, buffer);
-    if str then os_clipboard_set_text(str);
+
+    if single_cursor && str {
+        // Copy to the system clipboard
+        os_clipboard_set_text(str);
+    } else {
+        // Copy to individual cursor's clipboard
+        maybe_free_and_clear(*cursor.clipboard);
+        if str then cursor.clipboard = copy_string(str);
+    }
+
     if cut {
         buffer_delete_range(buffer, selection);
         cursor.pos = selection.start;
@@ -374,52 +381,16 @@ copy_selection_to_system_clipboard :: (using editor: *Editor, buffer: *Buffer, c
     }
 }
 
-copy_selections_to_cursor_clipboards :: (using editor: *Editor, buffer: *Buffer) {
-    assert(cursors.count > 1);
-    for *cursor : cursors {
-        maybe_free_and_clear(*cursor.clipboard);
-        str := get_selected_string(cursor, buffer);
-        if str then cursor.clipboard = copy_string(str);
-    }
-}
-
-cut_selections_to_cursor_clipboards :: (using editor: *Editor, buffer: *Buffer) {
-    assert(cursors.count > 1);
-
-    adjust: Pos;
-    last_cursor_line: s32 = -1;
-
-    for *cursor : cursors {
-        if buffer.dirty then recalculate_lines(buffer);
-
-        // Adjust cursor selection as the previous cursors may have moved it
-        selection := get_selection(cursor);
-        selection.start.line -= adjust.line;
-        selection.end.line   -= adjust.line;
-        if selection.start.line == last_cursor_line then selection.start.col -= adjust.col;
-        if selection.end.line   == last_cursor_line then selection.end.col   -= adjust.col;
-
-        maybe_free_and_clear(*cursor.clipboard);
-        str := get_string_from_range(selection, buffer);
-        if str then cursor.clipboard = copy_string(str);
-
-        buffer_delete_range(buffer, selection);
-        cursor.pos = selection.start;
-        cursor.col_wanted = cursor.pos.col;
-
-        if cursor.pos.line != last_cursor_line then adjust.col = 0;
-        last_cursor_line = cursor.pos.line;
-        adjust.line +- selection.end.line - selection.start.line;
-        adjust.col  += selection.end.col  - selection.start.col;
-    }
-}
-
-paste_from_clipboard :: (cursor: *Cursor, buffer: *Buffer) -> Range {
+paste_from_clipboard :: (cursor: *Cursor, buffer: *Buffer, use_system_clipboard: bool) -> Range {
     selection := get_selection(cursor);
     range := selection;
 
-    str := os_clipboard_get_text();
-    defer free(str);
+    str: string = ---;
+    if use_system_clipboard {
+        str = os_clipboard_get_text();  // don't forget to free it!
+    } else {
+        str = cursor.clipboard;
+    }
     if str.count <= 0 return range;
 
     buffer_replace_range(buffer, selection, str);
@@ -432,6 +403,8 @@ paste_from_clipboard :: (cursor: *Cursor, buffer: *Buffer) -> Range {
     cursor.col_wanted = new_cursor_pos.col;
 
     range.end = new_cursor_pos;
+
+    if use_system_clipboard then free(str);  // maybe there's a better way to do this. Macros, maybe?
 
     return range;
 }

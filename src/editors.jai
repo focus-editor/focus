@@ -162,32 +162,23 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
 
                 case #char "C";
                     if only_ctrl_pressed(mods) {
-                        // TODO: copy
-                        // if editor.cursors.count == 1 {
-                        //     copy_selection_to_system_clipboard(editor, buffer);
-                        // } else {
-                        //     copy_selections_to_cursor_clipboards(editor, buffer);
-                        // }
+                        copy_selection_to_clipboard(cursor, buffer, cursors.count == 1);
                     }
 
                 case #char "X";
                     if only_ctrl_pressed(mods) {
-                        // TODO: cut
-                        // if editor.cursors.count == 1 {
-                        //     copy_selection_to_system_clipboard(editor, buffer, cut = true);
-                        // } else {
-                        //     cut_selections_to_cursor_clipboards(editor, buffer);
-                        // }
+                        copy_selection_to_clipboard(cursor, buffer, cursors.count == 1, cut = true);
                         cursor_moved = true;
                     }
 
                 case #char "V";
-                    // TODO: paste
-                    // if only_ctrl_pressed(mods) && single_cursor {
-                    //     range := paste_from_clipboard(single_cursor, buffer);
-                    //     add_paste_animation(editor, range);
-                    //     cursor_moved = true;
-                    // }
+                    if only_ctrl_pressed(mods) {
+                        all_clipboards_empty := true;
+                        for c : cursors { if c.clipboard { all_clipboards_empty = false; break; } }
+                        range := paste_from_clipboard(cursor, buffer, cursors.count == 1 || all_clipboards_empty);
+                        add_paste_animation(editor, range);
+                        cursor_moved = true;
+                    }
 
                 case #char "L";
                     if only_ctrl_pressed(mods) {
@@ -328,6 +319,9 @@ center_cursor_on_viewport :: (editor: *Editor, buffer: Buffer) {
 
 leave_only_main_cursor :: (using editor: *Editor) -> *Cursor {
     // Remove all cursors except the main one
+    for *cursor : cursors {
+        maybe_free_and_clear(*cursor.clipboard);
+    }
     cursor := cursors[main_cursor];
     cursors.count = 1;
     main_cursor = 0;

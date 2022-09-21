@@ -5,16 +5,11 @@
     + Support text typing
     + Adjust cursor positions (easier to do by looking at lines/cols)
     + Adjust cursor positions like it's done in Zig focus - for all operations
-    - Support all the remaining single cursor operations
-        - Copy/cut
-        - Paste
-        - Delete
-        - Backspace
-        - Tab
-    - Free cursor clipboards when removing extra cursors
-    - When changing buffer in another editor, adjust cursors
+    + Support all the remaining single cursor operations
+    + Free and clear cursor clipboards when removing extra cursors
     - After wrapping around, make the next cursor main and then stop
     - After pressing escape return to the original cursor
+    - When changing buffer in another editor, adjust cursors
 - Undo/redo
 
 - Handle weird selection remaining when shift is held
