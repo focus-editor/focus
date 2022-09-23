@@ -102,11 +102,9 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
         buf_len := buffer.bytes.count;
         offsets := remember_cursor_offsets(editor, buffer);
 
-        // TODO: create a new edit group for these actions:
-        // .delete_range, .indent_lines, .unindent_lines, .replace_range_with_newline, .duplicate_lines, .paste, .move_lines_up, .move_lines_down, .cut
+        // We always want to put some actions in a separate edit group (e.g. block indent)
         new_group := false;
-        if cursors.count > 1 then new_group = true;
-
+        for cursor : cursors { if new_edit_group_required_for_action(key_code, mods, cursor) { new_group = true; break; } }
         if new_group then new_edit_group(buffer, editor);  // do it before action
 
         for *cursor, i : cursors {
@@ -622,7 +620,7 @@ maybe_undo :: (buffer: *Buffer, editor: *Editor) {
             case .replace; using e.replace; replace_range_raw(buffer, offset_range.start, offset_range.start + xx new_bytes.count, old_bytes);
         }
     }
-    // Add it to redos
+    // Add a new redo group
     redo := array_add(*buffer.redos);
     redo.edits = edit_group.edits;
     redo.cursors = to_owned_array(*buffer.cursors);
@@ -633,7 +631,24 @@ maybe_undo :: (buffer: *Buffer, editor: *Editor) {
 }
 
 maybe_redo :: (buffer: *Buffer, editor: *Editor) {
+    if buffer.redos.count == 0 return;
+    edit_group := pop(*buffer.redos);
+    // Replay edits in the normal order
+    for e : edit_group.edits {
+        if #complete e.type == {
+            case .insert;  using e.insert;  insert_string_raw(buffer, offset, new_bytes);
+            case .delete;  using e.delete;  delete_range_raw (buffer, offset_range.start, offset_range.end);
+            case .replace; using e.replace; replace_range_raw(buffer, offset_range.start, offset_range.end, new_bytes);
+        }
+    }
+    // Add a new undo group
+    undo := array_add(*buffer.undos);
+    undo.edits = edit_group.edits;
+    undo.cursors = to_owned_array(*buffer.cursors);
 
+    array_extend(*buffer.cursors, edit_group.cursors);
+    restore_cursor_state(editor, edit_group.cursors);
+    array_free(edit_group.cursors);
 }
 
 restore_cursor_state :: (using editor: *Editor, cursor_state: []Cursor.State) {
@@ -648,6 +663,36 @@ restore_cursor_state :: (using editor: *Editor, cursor_state: []Cursor.State) {
         cursor.clipboard.data = null;
     }
     if main_cursor >= cursors.count then main_cursor = cursors.count - 1;  // maybe we should remember it too
+}
+
+new_edit_group_required_for_action :: (key_code: Input.Key_Code, mods: Mods, cursor: Cursor) -> bool {
+    // NOTE: we could abstract away actions instead of checking keys here directly, but
+    // I won't do it for now because I want to avoid needless refactoring
+
+    if key_code == {
+        case .BACKSPACE; #through;
+        case .DELETE;  // delete range
+        case .ENTER;   // replace range with newline
+            if has_selection(cursor) return true;
+
+        case .ARROW_UP; #through;
+        case .ARROW_DOWN;
+            if only_ctrl_alt_pressed(mods) return true;  // move lines up or down
+
+        case .TAB;  // any indentation
+            return true;
+
+        case #char "D";
+            if only_ctrl_shift_pressed(mods) return true;  // duplicate lines
+
+        case #char "V";
+            if only_ctrl_pressed(mods) return true;  // paste
+
+        case #char "X";
+            if only_ctrl_pressed(mods) return true;  // cut
+    }
+
+    return false;
 }
 
 #scope_export
