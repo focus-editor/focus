@@ -14,28 +14,69 @@ put_cursor_in_valid_spot :: (using cursor: *Cursor, buffer: Buffer) {
     sel = make_valid_pos(buffer, sel);
 }
 
-buffer_insert_string_at_pos :: (buffer: *Buffer, pos: Pos, str: string) {
+insert_string_at_pos :: (buffer: *Buffer, pos: Pos, str: string) {
     offset := get_offset(buffer, pos);
-    buffer_insert_string_at_offset(buffer, offset, str);
+    insert_string_at_offset(buffer, offset, str);
 }
 
-buffer_insert_string_at_offset :: (buffer: *Buffer, offset: s64, str: string) {
-    buffer_insert_string_raw(buffer, offset, str);
-    buffer.dirty = true;
+insert_string_at_offset :: (buffer: *Buffer, offset: s64, str: string) {
+    new_insert_edit(buffer, offset, str);
+    insert_string_raw(buffer, offset, str);
 }
 
-buffer_delete_range :: (buffer: *Buffer, range: Range) {
+delete_range :: (buffer: *Buffer, range: Range) {
     start, end := range_to_byte_offsets(buffer, make_valid_range(buffer, range));
-    buffer_delete_range_raw(buffer, start, end);
-    buffer.dirty = true;
+    if start == end return;
+    old_str := to_string(array_view(buffer.bytes, start, end - start));
+    new_delete_edit(buffer, start, end, old_str);
+    delete_range_raw(buffer, start, end);
 }
 
 // A dedicated function to avoid having to recalculate lines between deleting range and inserting string
-buffer_replace_range :: (buffer: *Buffer, range: Range, str: string) {
+replace_range :: (buffer: *Buffer, range: Range, str: string) {
     start, end := range_to_byte_offsets(buffer, make_valid_range(buffer, range));
-    buffer_delete_range_raw(buffer, start, end);
-    buffer_insert_string_raw(buffer, start, str);
+
+    old_str := to_string(array_view(buffer.bytes, start, end - start));
+    if str == old_str return;
+
+    new_replace_edit(buffer, start, end, old_str, str);
+
+    replace_range_raw(buffer, start, end, str);
+}
+
+delete_range_raw :: (using buffer: *Buffer, start: s64, end: s64) {
+    len := end - start;
+    if len <= 0 return;
+    assert(len <= bytes.count);
+
+    // Copy in chunks of length len while possible
+    while end + len <= bytes.count {
+        memcpy(bytes.data + start, bytes.data + end, len);
+        start += len;
+        end   += len;
+    }
+    // If there's a leftover, copy it
+    if end != bytes.count {
+        memcpy(bytes.data + start, bytes.data + end, bytes.count - end);
+    }
+
+    bytes.count -= len;
+
     buffer.dirty = true;
+}
+
+insert_string_raw :: (buffer: *Buffer, offset: s64, str: string) {
+    bytes: [] u8;
+    bytes.data  = str.data;
+    bytes.count = str.count;
+    array_insert_bytes_at(*buffer.bytes, offset, bytes);
+
+    buffer.dirty = true;
+}
+
+replace_range_raw :: (buffer: *Buffer, start: s32, end: s32, str: string) {
+    delete_range_raw(buffer, start, end);
+    insert_string_raw(buffer, start, str);
 }
 
 get_offset :: (using buffer: Buffer, pos: Pos) -> s64 {
@@ -276,30 +317,55 @@ operator - :: (a: Pos, b: Pos) -> Pos {
 
 #scope_file
 
-buffer_delete_range_raw :: (using buffer: *Buffer, start: s64, end: s64) {
-    len := end - start;
-    if len <= 0 return;
-    assert(len <= bytes.count);
+new_replace_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string, new_str: string) {
+    edit := array_add(*buffer.edits);
+    edit.type = .replace;
+    using edit.replace;
+    offset_range.start = start;
+    offset_range.end   = end;
+    new_bytes = copy_string(new_str);
+    old_bytes = copy_string(old_str);
 
-    // Copy in chunks of length len while possible
-    while end + len <= bytes.count {
-        memcpy(bytes.data + start, bytes.data + end, len);
-        start += len;
-        end   += len;
-    }
-    // If there's a leftover, copy it
-    if end != bytes.count {
-        memcpy(bytes.data + start, bytes.data + end, bytes.count - end);
-    }
-
-    bytes.count -= len;
+    clear_redos(buffer);
 }
 
-buffer_insert_string_raw :: (buffer: *Buffer, offset: s64, str: string) {
-    bytes: [] u8;
-    bytes.data  = str.data;
-    bytes.count = str.count;
-    array_insert_bytes_at(*buffer.bytes, offset, bytes);
+new_insert_edit :: (buffer: *Buffer, offset: s64, str: string) {
+    edit := array_add(*buffer.edits);
+    edit.type = .insert;
+    edit.insert.offset = offset;
+    edit.insert.new_bytes = copy_string(str);
+
+    clear_redos(buffer);
+}
+
+new_delete_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string) {
+    edit := array_add(*buffer.edits);
+    edit.type = .delete;
+    using edit.delete;
+    offset_range.start = start;
+    offset_range.end   = end;
+    old_bytes = copy_string(old_str);
+
+    clear_redos(buffer);
+}
+
+clear_redos :: (using buffer: *Buffer) {
+    for * redos  deinit(it);
+    array_reset_keeping_memory(*redos);
+}
+
+deinit :: (using edit_group: *Edit_Group) {
+    for edit : edits {
+        using edit;
+        if #complete type == {
+            case .insert;  free(insert.new_bytes);
+            case .delete;  free(delete.old_bytes);
+            case .replace; free(replace.new_bytes);
+                           free(replace.old_bytes);
+        }
+    }
+    array_free(edits);
+    array_free(cursors);
 }
 
 sync_internal_data :: (buffer: *Buffer) {
@@ -318,15 +384,22 @@ Buffer :: struct {
     bytes: [..] u8;
     lines: [..] Line;
 
-    lang: enum u8 {
-        Unknown :: 0;
-        Jai;
-        Worklog;
-    } = .Unknown;
+    undos: [..] Edit_Group;
+    redos: [..] Edit_Group;
+    edits: [..] Edit;  // current edits, not in a group yet
+    cursors: [..] Cursor.State;  // cursor state before any current edits were made
 
     dirty            := true;
     modified         := false;
     modified_on_disk := false;
+
+    last_edit_time: Time;
+
+    lang: enum u8 {
+        Plain_Text :: 0;
+        Jai;
+        Worklog;
+    } = .Plain_Text;
 }
 
 Line :: struct {
@@ -336,12 +409,16 @@ Line :: struct {
 }
 
 Cursor :: struct {
-    pos, sel: Pos;  // if pos != sel, then we have an active selection
+    using state: State;
     col_wanted: s32;
     clipboard: string;
+
+    State :: struct {
+        pos, sel: Pos;  // if pos != sel, then we have an active selection
+    }
 }
 
-Cursor_Offset :: struct {
+Cursor_Offsets :: struct {
     pos, sel: s32;
 }
 
@@ -351,4 +428,36 @@ Pos :: struct {
 
 Range :: struct {
     start, end: Pos;
+}
+
+Offset_Range :: struct {
+    start, end: s32;  // we won't open large files anyway
+}
+
+Edit_Group :: struct {
+    edits: [] Edit;
+    cursors: [] Cursor.State;
+}
+
+// All strings in this struct are owned
+Edit :: struct {
+    type: enum { insert; replace; delete; };
+    union {
+        insert: struct {
+            offset: s64;
+            new_bytes: string;
+        };
+        replace: struct {
+            offset_range: Offset_Range;
+            new_bytes: string;
+            old_bytes: string;
+        };
+        delete: struct {
+            offset_range: Offset_Range;
+            old_bytes: string;
+        };
+        // @Speed @Memory
+        // We could probably create a new edit type for typing chars
+        // because it's most common and we don't need to allocate it on the heap
+    }
 }

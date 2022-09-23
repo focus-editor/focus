@@ -10,6 +10,14 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     // Handle general actions (which are not associated with any cursor)
     handled := false;
 
+    // We want to remember where cursors were before we do any edits
+    if buffer.edits.count == 0 {
+        array_resize(*buffer.cursors, editor.cursors.count);
+        for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
+    }
+
+    if frame_time - buffer.last_edit_time >= EDIT_GROUP_TIMEOUT then new_edit_group(buffer, editor);
+
     if key_code == {
         case #char "D";
             if only_ctrl_pressed(mods) {
@@ -23,11 +31,16 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
 
         case #char "Z";
             if only_ctrl_pressed(mods) {
-                // TODO: Undo
+                new_edit_group(buffer, editor);
+                maybe_undo(buffer, editor);
+                keep_selection = true;
+                cursor_moved = true;
                 handled = true;
             }
             if only_ctrl_shift_pressed(mods) {
-                // TODO: Redo
+                maybe_redo(buffer, editor);
+                keep_selection = true;
+                cursor_moved = true;
                 handled = true;
             }
 
@@ -88,6 +101,13 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
         cursor_delta := 0;
         buf_len := buffer.bytes.count;
         offsets := remember_cursor_offsets(editor, buffer);
+
+        // TODO: create a new edit group for these actions:
+        // .delete_range, .indent_lines, .unindent_lines, .replace_range_with_newline, .duplicate_lines, .paste, .move_lines_up, .move_lines_down, .cut
+        new_group := false;
+        if cursors.count > 1 then new_group = true;
+
+        if new_group then new_edit_group(buffer, editor);  // do it before action
 
         for *cursor, i : cursors {
             // Adjust cursor if the previous cursor has changed the buffer
@@ -198,6 +218,8 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
                     }
             }
         }
+
+        if new_group then new_edit_group(buffer, editor);  // do it after action
     }
 
     if !mods.shift_pressed && cursor_moved && !keep_selection {
@@ -205,6 +227,8 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     }
 
     if buffer.dirty {
+        buffer.modified = true;
+        buffer.last_edit_time = frame_time;
         recalculate_lines(buffer);
 
         // Make sure the cursors in all editors for this buffer are in valid places
@@ -230,6 +254,19 @@ editors_handle_text_input :: (char: u32) {
     utf8_char := convert_utf32_to_utf8(char);
     str := to_string(*utf8_char);
 
+    if buffer.edits.count == 0 {
+        // We want to remember where cursors were before we do any edits
+        array_resize(*buffer.cursors, editor.cursors.count);
+        for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
+    } else {
+        // We always want to remember cursor state when a selection is replaced with anything
+        new_group := false;
+        for editor.cursors { if has_selection(it) { new_group = true; break; } }
+        if new_group || frame_time - buffer.last_edit_time >= EDIT_GROUP_TIMEOUT {
+            new_edit_group(buffer, editor);
+        }
+    }
+
     cursor_delta := 0;
     buf_len := buffer.bytes.count;
     offsets := remember_cursor_offsets(editor, buffer);
@@ -247,10 +284,10 @@ editors_handle_text_input :: (char: u32) {
 
         if has_selection(cursor) {
             selection := get_selection(cursor);
-            buffer_replace_range(buffer, selection, str);
+            replace_range(buffer, selection, str);
             cursor.pos = selection.start;
         } else {
-            buffer_insert_string_at_pos(buffer, cursor.pos, str);
+            insert_string_at_pos(buffer, cursor.pos, str);
         }
         cursor.pos.col += 1;  // we know it's just one symbol
         cursor.col_wanted = cursor.pos.col;
@@ -260,6 +297,8 @@ editors_handle_text_input :: (char: u32) {
     if buffer.dirty then recalculate_lines(buffer);
 
     editor.cursor_moved = true;
+    buffer.modified = true;
+    buffer.last_edit_time = frame_time;
 }
 
 get_active_editor_and_buffer :: () -> *Editor, *Buffer {
@@ -339,10 +378,10 @@ leave_only_original_cursor :: (using editor: *Editor) -> *Cursor {
     return *cursors[original_cursor];
 }
 
-remember_cursor_offsets :: (using editor: *Editor, buffer: Buffer) -> []Cursor_Offset /* temporary storage */ {
+remember_cursor_offsets :: (using editor: *Editor, buffer: Buffer) -> []Cursor_Offsets /* temporary storage */ {
     // When editing with multiple cursors it's convenient to remember where cursors
     // are in the buffer before we start so we can then easily adjust their positions later
-    offsets := NewArray(cursors.count, Cursor_Offset, initialized = false, allocator = temp);
+    offsets := NewArray(cursors.count, Cursor_Offsets, initialized = false, allocator = temp);
     for cursor, i : cursors {
         offsets[i].pos = pos_to_offset(buffer, cursor.pos);
         offsets[i].sel = pos_to_offset(buffer, cursor.sel);
@@ -558,6 +597,59 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64 {
     return buffer_id;
 }
 
+new_edit_group :: (buffer: *Buffer, editor: *Editor) {
+    if buffer.edits.count == 0 return;
+
+    new_group := array_add(*buffer.undos);
+    new_group.edits = to_owned_array(*buffer.edits);
+    new_group.cursors = to_owned_array(*buffer.cursors);
+
+    // Remember cursor state
+    array_resize(*buffer.cursors, editor.cursors.count);
+    for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
+
+    // print("New edit group: %\n", <<new_group);
+}
+
+maybe_undo :: (buffer: *Buffer, editor: *Editor) {
+    if buffer.undos.count == 0 return;
+    edit_group := pop(*buffer.undos);
+    // Revert edits in the backwards order
+    for < e : edit_group.edits {
+        if #complete e.type == {
+            case .insert;  using e.insert;  delete_range_raw (buffer, offset, offset + new_bytes.count);
+            case .delete;  using e.delete;  insert_string_raw(buffer, offset_range.start, old_bytes);
+            case .replace; using e.replace; replace_range_raw(buffer, offset_range.start, offset_range.start + xx new_bytes.count, old_bytes);
+        }
+    }
+    // Add it to redos
+    redo := array_add(*buffer.redos);
+    redo.edits = edit_group.edits;
+    redo.cursors = to_owned_array(*buffer.cursors);
+
+    array_extend(*buffer.cursors, edit_group.cursors);
+    restore_cursor_state(editor, edit_group.cursors);
+    array_free(edit_group.cursors);
+}
+
+maybe_redo :: (buffer: *Buffer, editor: *Editor) {
+
+}
+
+restore_cursor_state :: (using editor: *Editor, cursor_state: []Cursor.State) {
+    if cursor_state.count == 0 return;  // the first undo doesn't have any remembered cursors
+
+    for * cursors maybe_free_and_clear(*it.clipboard);
+    array_resize(*cursors, cursor_state.count);
+    for * cursor, i : cursors {
+        cursor.state = cursor_state[i];
+        cursor.col_wanted = cursor.pos.col;
+        cursor.clipboard.count = 0;
+        cursor.clipboard.data = null;
+    }
+    if main_cursor >= cursors.count then main_cursor = cursors.count - 1;  // maybe we should remember it too
+}
+
 #scope_export
 
 Editor :: struct {
@@ -607,3 +699,8 @@ editor_right:  s64 = -1;
 
 dragging_splitter := false;
 splitter_pos: float = 0;  // zero means it's in the middle
+
+
+#scope_file
+
+EDIT_GROUP_TIMEOUT :: 0.3;

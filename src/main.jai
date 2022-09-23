@@ -29,7 +29,7 @@ main :: () {
 
         Input.update_window_events();
 
-        frame_time = get_time();
+        frame_time = xx get_time();
 
         for Input.get_window_resizes() {
             Simp.update_window(it.window);
@@ -195,13 +195,13 @@ dpi_scale := 1.0;
 
 redraw_requested := true;  // set to true to render the first frame
 
-frame_time: float64;  // ever-increasing time since start in seconds
+frame_time: Time;  // ever-increasing time since start in seconds
 
 screen: Rect;  // contains the current working area rect for convenience
 
 mouse_pointer: Vector2;
 mouse_left_last_down_pos:  Vector2;
-mouse_left_last_down_time: float64;
+mouse_left_last_down_time: Time;
 mouse_left_just_double_clicked: bool;
 
 // Depend on font
@@ -218,6 +218,8 @@ font_ui      :  *Simp.Dynamic_Font;
 font_ui_size := 17;
 
 Mods :: Input.Event.Modifier_Flags;
+
+Time :: #type,isa float64;
 
 #load "style.jai";
 #load "layout.jai";

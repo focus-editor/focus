@@ -1,5 +1,6 @@
 array_insert_bytes_at :: (array: *[..] u8, offset: s64, bytes: [] u8) {
     assert(offset >= 0 && offset <= array.count);
+    if !bytes return;
 
     new_size := array.count + bytes.count;
     array_reserve(array, new_size);
@@ -61,4 +62,25 @@ maybe_free_and_clear :: (str: *string) {
     free(<< str);
     str.data  = null;
     str.count = 0;
+}
+
+to_owned_array :: (array: *[..]$T, free_memory := false) -> []T {
+    new_array := array_copy(<<array);
+    if free_memory {
+        array_reset(array);
+    } else {
+        array_reset_keeping_memory(array);
+    }
+    return new_array;
+}
+
+array_extend :: (array: *[..] $T, slice: [] T) {
+    if slice.count <= 0 return;
+
+    new_size := array.count + slice.count;
+    array_reserve(array, new_size);
+
+    memcpy(array.data + array.count, slice.data, slice.count * size_of(T));
+
+    array.count = new_size;
 }

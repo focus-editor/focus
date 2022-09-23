@@ -1,12 +1,21 @@
 # TODO
 - Undo/redo
+    + Type char (and remember edits)
+    + Clear redos
+    - Keypress
+    - Undo
+    - Redo
+- Move between panes by ctrl+arrow, move cursor horizontally by alt+arrows
+- Swap panes by ctrl+alt+arrow
 - Search text
     - Case-sensitive
     - Case-insensitive
 - Select whole words when creating new cursors (unless selected manually)
 - Highlight occurrences of selection (same rules as above)
+- Save file
 - Open file dialog
     - Try font-awesome icons
+- Reload from disk
 
 - Implement semantic highlighting
     - Polymorphic structs and possibly other types
@@ -29,6 +38,7 @@
 - Subpixel rendering: support other types of panels (lookup ft2-lcd_rendering)
   (not useful for the editor, but may be useful for games)
 - Don't redraw if nothing has changed
+- See if we can add a new edit type just for typing chars to avoid allocating them on the heap
 
 # DONE
 + Multiple cursors

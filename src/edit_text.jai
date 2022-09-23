@@ -100,12 +100,12 @@ handle_enter :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
         insert[0] = #char "\n";
         insert_pos.col = line.num_chars;
         pos.line += 1;
-        buffer_insert_string_at_pos(buffer, insert_pos, insert);
+        insert_string_at_pos(buffer, insert_pos, insert);
     } else if only_ctrl_shift_pressed(mods) {
         // Insert line above
         insert[indent] = #char "\n";
         insert_pos.col = 0;
-        buffer_insert_string_at_pos(buffer, insert_pos, insert);
+        insert_string_at_pos(buffer, insert_pos, insert);
     } else if nothing_pressed(mods) {
         // Break line normally
         insert[0] = #char "\n";
@@ -113,10 +113,10 @@ handle_enter :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
         insert.count = indent + 1;
         if has_selection(cursor) {
             selection := get_selection(cursor);
-            buffer_replace_range(buffer, selection, insert);
+            replace_range(buffer, selection, insert);
             pos = selection.start;
         } else {
-            buffer_insert_string_at_pos(buffer, insert_pos, insert);
+            insert_string_at_pos(buffer, insert_pos, insert);
         }
         pos.line += 1;
     } else {
@@ -131,7 +131,7 @@ handle_backspace :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
     // Either remove the selection
     if has_selection(cursor) {
         range := get_selection(cursor);
-        buffer_delete_range(buffer, range);
+        delete_range(buffer, range);
         pos = range.start;
         return;
     }
@@ -165,7 +165,7 @@ handle_backspace :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
             range.start.col   = buffer.lines[range.start.line].num_chars;
         }
     }
-    buffer_delete_range(buffer, range);
+    delete_range(buffer, range);
 
     pos = range.start;
     col_wanted = pos.col;
@@ -174,14 +174,14 @@ handle_backspace :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
 handle_delete :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
     if has_selection(cursor) {
         range := get_selection(cursor);
-        buffer_delete_range(buffer, range);
+        delete_range(buffer, range);
         pos = range.start;
     } else {
         range: Range = ---;
         range.start = pos;
         range.end = pos;
         range.end.col += 1;
-        buffer_delete_range(buffer, range);
+        delete_range(buffer, range);
     }
     col_wanted = pos.col;
 }
@@ -194,7 +194,7 @@ handle_tab :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) -> keep_selec
         // Insert tab
         to_next_tabstop := TAB_SIZE - pos.col % TAB_SIZE;
         spaces.count = to_next_tabstop;
-        buffer_insert_string_at_pos(buffer, pos, spaces);
+        insert_string_at_pos(buffer, pos, spaces);
         pos.col += to_next_tabstop;
         col_wanted = pos.col;
 
@@ -222,7 +222,7 @@ handle_tab :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) -> keep_selec
             if line_num == pos.line then pos.col -= xx spaces_to_remove;
             if line_num == sel.line then sel.col -= xx spaces_to_remove;
         }
-        buffer_replace_range(buffer, range, to_string(new_bytes));
+        replace_range(buffer, range, to_string(new_bytes));
     } else {
         // Indent selection
         array_reserve(*new_bytes, bytes_in_range(buffer, range) + TAB_SIZE * lines.count);
@@ -235,7 +235,7 @@ handle_tab :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) -> keep_selec
             src := array_view(buffer.bytes, line.start, line_len);
             array_add_bytes(*new_bytes, src);
         }
-        buffer_replace_range(buffer, range, to_string(new_bytes));
+        replace_range(buffer, range, to_string(new_bytes));
 
         // Adjust selection
         pos.col += TAB_SIZE;
@@ -310,7 +310,7 @@ duplicate_lines :: (using cursor: *Cursor, buffer: *Buffer) {
     str   := copy_lines_to_temp_string(buffer, range);
 
     offset := buffer.lines[range.end.line].end;
-    buffer_insert_string_at_offset(buffer, offset, tprint("\n%", str));
+    insert_string_at_offset(buffer, offset, tprint("\n%", str));
 
     num_lines := range.end.line - range.start.line + 1;
     pos.line += num_lines;
@@ -332,8 +332,8 @@ move_lines_up :: (cursor: *Cursor, buffer: *Buffer) {
     insert_pos.col   = 0;
     offset := pos_to_offset(buffer, insert_pos);
 
-    buffer_delete_range(buffer, range);
-    buffer_insert_string_at_offset(buffer, offset, tprint("%\n", str));
+    delete_range(buffer, range);
+    insert_string_at_offset(buffer, offset, tprint("%\n", str));
 
     cursor.pos.line -= 1;
     cursor.sel.line -= 1;
@@ -353,9 +353,9 @@ move_lines_down :: (cursor: *Cursor, buffer: *Buffer) {
     insert_pos.line += 1;
     insert_pos.col   = 0;
 
-    buffer_delete_range(buffer, range);
+    delete_range(buffer, range);
     recalculate_lines(buffer);
-    buffer_insert_string_at_pos(buffer, insert_pos, tprint("%\n", str));
+    insert_string_at_pos(buffer, insert_pos, tprint("%\n", str));
 
     cursor.pos.line += 1;
     cursor.sel.line += 1;
@@ -375,7 +375,7 @@ copy_selection_to_clipboard :: (cursor: *Cursor, buffer: *Buffer, single_cursor:
     }
 
     if cut {
-        buffer_delete_range(buffer, selection);
+        delete_range(buffer, selection);
         cursor.pos = selection.start;
         cursor.col_wanted = cursor.pos.col;
     }
@@ -393,7 +393,7 @@ paste_from_clipboard :: (cursor: *Cursor, buffer: *Buffer, use_system_clipboard:
     }
     if str.count <= 0 return range;
 
-    buffer_replace_range(buffer, selection, str);
+    replace_range(buffer, selection, str);
 
     recalculate_lines(buffer);
     offset := get_offset(buffer, selection.start);
@@ -475,7 +475,7 @@ comment_block :: (cursor: *Cursor, buffer: *Buffer) {
         }
     }
 
-    if new_bytes.count > 0 then buffer_replace_range(buffer, range, to_string(new_bytes));
+    if new_bytes.count > 0 then replace_range(buffer, range, to_string(new_bytes));
 }
 
 #scope_file
