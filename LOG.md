@@ -1,6 +1,5 @@
 # TODO
-- Move between panes by ctrl+arrow, move cursor horizontally by alt+arrows
-- Swap panes by ctrl+alt+arrow
+- Don't change selection on ctrl+D if cursor already has selection
 - Search text
     - Case-sensitive
     - Case-insensitive
@@ -34,6 +33,8 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Move between panes by ctrl+arrow, move cursor horizontally by alt+arrows
++ Swap panes by ctrl+alt+arrow
 + Undo/redo
     + See if we can add a new edit type just for typing chars to avoid allocating them on the heap
 + Multiple cursors

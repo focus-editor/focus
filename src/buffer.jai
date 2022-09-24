@@ -303,6 +303,15 @@ recalculate_lines :: (buffer: *Buffer) {
     array_add(*buffer.lines, line);
 }
 
+sync_internal_data :: (buffer: *Buffer) {
+    recalculate_lines(buffer);
+
+    // Highlight code
+    {
+        // @TODO
+    }
+}
+
 is_empty :: inline (line: Line) -> bool {
     return line.num_chars == 0;
 }
@@ -383,15 +392,6 @@ deinit :: (using edit_group: *Edit_Group) {
     }
     array_free(edits);
     array_free(cursors);
-}
-
-sync_internal_data :: (buffer: *Buffer) {
-    recalculate_lines(buffer);
-
-    // Highlight code
-    {
-        // @TODO
-    }
 }
 
 #scope_export

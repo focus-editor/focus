@@ -66,20 +66,20 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
             handled = true;
 
         case .ARROW_LEFT;
-            if only_alt_pressed(mods) {
-                move_viewport(editor, .left);
+            if only_ctrl_pressed(mods) {
+                switch_to_pane(.left);
                 handled = true;
             } else if only_ctrl_alt_pressed(mods) {
-                switch_to_pane(.left);
+                if editor_active == editor_right then swap_panes();
                 handled = true;
             }
 
         case .ARROW_RIGHT;
-            if only_alt_pressed(mods) {
-                move_viewport(editor, .right);
-                handled = true;
-            } else if only_ctrl_alt_pressed(mods) {
+            if only_ctrl_pressed(mods) {
                 switch_to_pane(.right);
+                handled = true;
+            }else if only_ctrl_alt_pressed(mods) {
+                if editor_active == editor_left then swap_panes();
                 handled = true;
             }
 
@@ -558,6 +558,11 @@ switch_to_pane :: (side: enum { left; right; }) {
     editor_active = ifx side == .left then editor_left else editor_right;
 }
 
+swap_panes :: () {
+    if editors_layout != .Double return;
+    editor_left, editor_right = swap(editor_left, editor_right);
+}
+
 find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_id: s64 {
     assert(buffer_id >= 0 && buffer_id < open_buffers.count, "Attempt to create editor for nonexistent buffer");
     for open_editors {
@@ -592,6 +597,8 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64 {
         buffer.lang = .Worklog;
     }
 
+    sync_internal_data(buffer);
+
     return buffer_id;
 }
 
@@ -599,7 +606,7 @@ new_edit_group :: (buffer: *Buffer, editor: *Editor) {
     if buffer.edits.count == 0 return;
 
     new_group := array_add(*buffer.undos);
-    new_group.edits = to_owned_array(*buffer.edits);
+    new_group.edits = to_owned_array(*buffer.edits);  // @Speed: could group all char inserts into one if needed
     new_group.cursors = to_owned_array(*buffer.cursors);
 
     // Remember cursor state

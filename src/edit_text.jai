@@ -3,7 +3,7 @@ move_cursor_left :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
         pos = get_selection(cursor).start;
         remove_selection(cursor);
     } else {
-        pos.col -= xx ifx mods.ctrl_pressed then 5 else 1;
+        pos.col -= xx ifx mods.alt_pressed then 5 else 1;
         if pos.col < 0 {
             if pos.line > 0 { pos.line -= 1; pos.col = buffer.lines[pos.line].num_chars; }
             else pos.col = 0;
@@ -22,7 +22,7 @@ move_cursor_right :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
             pos.line += 1;
             pos.col   = 0;
         } else if pos.col < line_len {
-            pos.col += xx ifx mods.ctrl_pressed then 5 else 1;
+            pos.col += xx ifx mods.alt_pressed then 5 else 1;
         }
     }
     col_wanted = pos.col;
