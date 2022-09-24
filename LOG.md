@@ -1,5 +1,4 @@
 # TODO
-- Don't change selection on ctrl+D if cursor already has selection
 - Search text
     - Case-sensitive
     - Case-insensitive
@@ -33,6 +32,7 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Don't change selection on ctrl+D if cursor already has selection
 + Move between panes by ctrl+arrow, move cursor horizontally by alt+arrows
 + Swap panes by ctrl+alt+arrow
 + Undo/redo

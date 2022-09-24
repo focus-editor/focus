@@ -174,7 +174,7 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
                         duplicate_lines(cursor, buffer);
                         keep_selection = true;
                         cursor_moved = true;
-                    } else if only_ctrl_pressed(mods) {
+                    } else if only_ctrl_pressed(mods) && !has_selection(cursor) {
                         select_word(cursor, buffer);
                         cursor_moved = true;
                     }
