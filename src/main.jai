@@ -72,22 +72,41 @@ main :: () {
                             case .F4;
                                 if event.alt_pressed should_quit = true;
                                 continue;
-                            case #char "+";
-                                if event.ctrl_pressed {
-                                    font_size += 1;
-                                    init_fonts();
+
+                            case #char "P";
+                                if only_ctrl_pressed(event.modifier_flags) then show_open_file_dialog = true;
+                                continue;
+
+                            case .ESCAPE;
+                                if show_open_file_dialog {
+                                    show_open_file_dialog = false;
+                                    continue;
                                 }
-                            case #char "-";
-                                if event.ctrl_pressed {
-                                    font_size -= 1;
-                                    init_fonts();
-                                }
+
+                            // case #char "+";
+                            //     if event.ctrl_pressed {
+                            //         font_size += 1;
+                            //         init_fonts();
+                            //     }
+                            // case #char "-";
+                            //     if event.ctrl_pressed {
+                            //         font_size -= 1;
+                            //         init_fonts();
+                            //     }
                         }
-                        editors_handle_keypress(event.key_code, event.modifier_flags);
+                        if show_open_file_dialog {
+                            open_file_dialog_handle_keypress(event.key_code, event.modifier_flags);
+                        } else {
+                            editors_handle_keypress(event.key_code, event.modifier_flags);
+                        }
                     }
 
                 case .TEXT_INPUT;
-                    editors_handle_text_input(event.utf32);
+                    if show_open_file_dialog {
+                        open_file_dialog_handle_text_input(event.utf32);
+                    } else {
+                        editors_handle_text_input(event.utf32);
+                    }
             }
         }
 
@@ -195,6 +214,8 @@ dpi_scale := 1.0;
 
 redraw_requested := true;  // set to true to render the first frame
 
+show_open_file_dialog := false;
+
 frame_time: Time;  // ever-increasing time since start in seconds
 
 screen: Rect;  // contains the current working area rect for convenience
@@ -224,6 +245,7 @@ Time :: #type,isa float64;
 #load "style.jai";
 #load "layout.jai";
 #load "editors.jai";
+#load "open_file_dialog.jai";
 #load "buffer.jai";
 #load "edit_text.jai";
 #load "windows.jai";

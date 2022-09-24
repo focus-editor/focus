@@ -56,6 +56,8 @@ draw_frame :: () {
     draw_rect(footer_rect, Colors.BACKGROUND_BRIGHT);
     draw_top_shadow(footer_rect);
 
+    if show_open_file_dialog then draw_open_file_dialog();
+
     Simp.swap_buffers(window);
 }
 
@@ -107,6 +109,7 @@ draw_editor :: (editor_id: s64, rect: Rect) {
         bounds  = shrink_y(bounds, -text_offset.y + line_height * 3);
         bounds.h += 2;
         bounds.y -= line_height + 2;
+        if bounds.w < 0 || bounds.h < 0 then bounds = rect;  // fall back
         // draw_rect(bounds, Colors.BACKGROUND_DARK);
 
         cursor_pos := get_cursor_screen_pos(text_origin, cursors[main_cursor].pos);
@@ -160,6 +163,19 @@ draw_editor :: (editor_id: s64, rect: Rect) {
         Simp.draw_text(font, xx pen.x, xx pen.y, line_text, color = Colors.CODE_PUNCTUATION);
         pen.y -= line_height;
     }
+}
+
+draw_open_file_dialog :: () {
+    // Figure out the dialog box size
+    box_rect: Rect = ---;
+    {
+        width  := clamp(screen.w / 3,   400 * dpi_scale, 1500 * dpi_scale);
+        height := clamp(screen.h / 1.5, 200 * dpi_scale, 800  * dpi_scale);
+        x := (screen.w - width) / 2;
+        y := clamp(100 * dpi_scale, 0, (screen.h - height) / 2);
+        box_rect = make_rect(x, screen.h - height - y, width, height);
+    }
+    draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = char_size / 1.5, shadow_size = char_size);
 }
 
 get_cursor_screen_pos :: (text_origin: Vector2, pos: Pos) -> Vector2 {
@@ -237,10 +253,11 @@ draw_range :: (using range: Range, buffer: Buffer, visible_start: s64, visible_e
 Corner_Rounding :: enum { none; in; out; }
 
 draw_rounded_rect :: (rect: Rect, color: Color,
-                      tl: Corner_Rounding, tr: Corner_Rounding,
-                      br: Corner_Rounding, bl: Corner_Rounding) {
+                      tl: Corner_Rounding = .in, tr: Corner_Rounding = .in,
+                      br: Corner_Rounding = .in, bl: Corner_Rounding = .in,
+                      radius := 0.0) {
     Simp.set_shader_for_color(enable_blend = true);
-    r := char_size / 3.0;  // rounding radius
+    r := ifx radius > 0 then radius else char_size / 3.0;  // rounding radius
     top, bottom, base, corner: Rect = ---;
     top,    base = cut_top(rect, r);
     bottom, base = cut_bottom(base, r);
@@ -285,7 +302,47 @@ draw_rounded_rect :: (rect: Rect, color: Color,
     draw_rect_raw(bottom, color);
 }
 
-draw_corner :: (color: Color, base: Vector2, pivot: Vector2, angle_start: float, angle_end: float, radius: float) {
+draw_rounded_rect_with_shadow :: (rect: Rect, color: Color, radius := 0.0, shadow_size := 10.0) {
+    r := ifx radius > 0 then radius else char_size / 3.0;  // rounding radius
+    shadow_rect := expand(rect, shadow_size);
+    shadow_radius := r + shadow_size;
+
+    top, bottom, left, right, base, corner: Rect = ---;
+    top,    base = cut_top(shadow_rect, shadow_radius);
+    bottom, base = cut_bottom(base, shadow_radius);
+    left,   base = cut_left(base, shadow_radius);
+    right,  base = cut_right(base, shadow_radius);
+
+    s  := Colors.SHADOW_DARK;
+    t := Colors.SHADOW_TRANSPARENT;
+
+    Simp.set_shader_for_color(enable_blend = true);
+
+    // Draw corners
+    {
+        corner, top = cut_left(top, shadow_radius);  // top left
+        draw_corner(t, bottom_right(corner), bottom_right(corner), PI/2, PI, shadow_radius, base_color = s);
+
+        corner, top = cut_right(top, shadow_radius); // top right
+        draw_corner(t, bottom_left(corner), bottom_left(corner), 0, PI/2, shadow_radius, base_color = s);
+
+        corner, bottom = cut_left(bottom, shadow_radius);  // bottom left
+        draw_corner(t, top_right(corner), top_right(corner), PI, 3*PI/2, shadow_radius, base_color = s);
+
+        corner, bottom = cut_right(bottom, shadow_radius); // bottom right
+        draw_corner(t, top_left(corner), top_left(corner), 3*PI/2, 2*PI, shadow_radius, base_color = s);
+    }
+
+    // Draw side shadows
+    draw_rect_raw(left,   t, t, s, s);
+    draw_rect_raw(right,  s, s, t, t);
+    draw_rect_raw(top,    s, t, s, t);
+    draw_rect_raw(bottom, t, s, t, s);
+
+    draw_rounded_rect(rect, color, radius = r);
+}
+
+draw_corner :: (color: Color, base: Vector2, pivot: Vector2, angle_start: float, angle_end: float, radius: float, base_color := Colors.NONE) {
     // base -  the base of triangle fan
     // pivot - the center of the circle
     NUM_TRIANGLES :: 7;
@@ -297,7 +354,7 @@ draw_corner :: (color: Color, base: Vector2, pivot: Vector2, angle_start: float,
         p.y = pivot.y + sin(angle) * radius;
         angle += step;
     }
-    Simp.immediate_triangle_fan(base, points, color);
+    Simp.immediate_triangle_fan(base, points, color, base_color = ifx is_none(base_color) then color else base_color);
 }
 
 draw_rect :: (rect: Rect, color: Color) {
@@ -307,6 +364,10 @@ draw_rect :: (rect: Rect, color: Color) {
 
 draw_rect_raw :: inline (using rect: Rect, color: Color) {
     Simp.immediate_quad(x, y, x + w, y + h, color);
+}
+
+draw_rect_raw :: inline (using rect: Rect, c00: Color, c01: Color, c10: Color, c11: Color) {
+    Simp.immediate_quad(x, y, x + w, y + h, c00, c01, c10, c11);
 }
 
 draw_top_shadow :: (using rect: Rect, size: float = 10.0) {

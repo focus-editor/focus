@@ -9,6 +9,8 @@ Color :: struct {
 }
 
 Colors :: struct {
+    NONE :: Color.{ r = -1, g = -1, b = -1, a = -1 };  // an invalid color to denote no color
+
     BACKGROUND              :: Color.{ r = 0.086, g = 0.133, b = 0.165 };
     BACKGROUND_DARK         :: Color.{ r = 0.065, g = 0.101, b = 0.125 };
     BACKGROUND_HIGHLIGHT    :: Color.{ r = 0.097, g = 0.15, b = 0.185 };
@@ -45,4 +47,8 @@ as_3_floats :: (color: Color) -> [3] float {
     result[1] = color.g;
     result[2] = color.b;
     return result;
+}
+
+is_none :: (using color: Color) -> bool {
+    return r < 0 || g < 0 || b < 0 || a < 0;
 }
