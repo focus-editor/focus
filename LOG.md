@@ -1,11 +1,4 @@
 # TODO
-- Undo/redo
-    + Type char (and remember edits)
-    + Clear redos
-    + Keypress
-    + Undo
-    + Redo
-    - See if we can add a new edit type just for typing chars to avoid allocating them on the heap
 - Move between panes by ctrl+arrow, move cursor horizontally by alt+arrows
 - Swap panes by ctrl+alt+arrow
 - Search text
@@ -41,6 +34,8 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Undo/redo
+    + See if we can add a new edit type just for typing chars to avoid allocating them on the heap
 + Multiple cursors
     + Sort cursors each frame
     + Deduplicate cursors each frame

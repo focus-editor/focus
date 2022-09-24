@@ -250,7 +250,6 @@ editors_handle_text_input :: (char: u32) {
     if !editor return;
 
     utf8_char := convert_utf32_to_utf8(char);
-    str := to_string(*utf8_char);
 
     if buffer.edits.count == 0 {
         // We want to remember where cursors were before we do any edits
@@ -281,11 +280,12 @@ editors_handle_text_input :: (char: u32) {
         }
 
         if has_selection(cursor) {
+            str := to_string(*utf8_char);
             selection := get_selection(cursor);
             replace_range(buffer, selection, str);
             cursor.pos = selection.start;
         } else {
-            insert_string_at_pos(buffer, cursor.pos, str);
+            insert_char_at_pos(buffer, cursor.pos, utf8_char);
         }
         cursor.pos.col += 1;  // we know it's just one symbol
         cursor.col_wanted = cursor.pos.col;
@@ -615,9 +615,10 @@ maybe_undo :: (buffer: *Buffer, editor: *Editor) {
     // Revert edits in the backwards order
     for < e : edit_group.edits {
         if #complete e.type == {
-            case .insert;  using e.insert;  delete_range_raw (buffer, offset, offset + new_bytes.count);
             case .delete;  using e.delete;  insert_string_raw(buffer, offset_range.start, old_bytes);
             case .replace; using e.replace; replace_range_raw(buffer, offset_range.start, offset_range.start + xx new_bytes.count, old_bytes);
+            case .insert;  using e.insert;  delete_range_raw (buffer, offset, offset + new_bytes.count);
+            case .insert_char; using e.insert_char;  delete_range_raw (buffer, offset, offset + char.count);
         }
     }
     // Add a new redo group
@@ -636,9 +637,10 @@ maybe_redo :: (buffer: *Buffer, editor: *Editor) {
     // Replay edits in the normal order
     for e : edit_group.edits {
         if #complete e.type == {
-            case .insert;  using e.insert;  insert_string_raw(buffer, offset, new_bytes);
             case .delete;  using e.delete;  delete_range_raw (buffer, offset_range.start, offset_range.end);
             case .replace; using e.replace; replace_range_raw(buffer, offset_range.start, offset_range.end, new_bytes);
+            case .insert;  using e.insert;  insert_string_raw(buffer, offset, new_bytes);
+            case .insert_char; using e.insert_char; insert_string_raw(buffer, offset, to_string(*char));
         }
     }
     // Add a new undo group

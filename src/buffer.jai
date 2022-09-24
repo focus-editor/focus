@@ -24,6 +24,13 @@ insert_string_at_offset :: (buffer: *Buffer, offset: s64, str: string) {
     insert_string_raw(buffer, offset, str);
 }
 
+insert_char_at_pos :: (buffer: *Buffer, pos: Pos, char: Utf8_Char) {
+    offset := get_offset(buffer, pos);
+    new_insert_char_edit(buffer, offset, char);
+    str := to_string(*char);
+    insert_string_raw(buffer, offset, str);
+}
+
 delete_range :: (buffer: *Buffer, range: Range) {
     start, end := range_to_byte_offsets(buffer, make_valid_range(buffer, range));
     if start == end return;
@@ -338,6 +345,15 @@ new_insert_edit :: (buffer: *Buffer, offset: s64, str: string) {
     clear_redos(buffer);
 }
 
+new_insert_char_edit :: (buffer: *Buffer, offset: s64, char: Utf8_Char) {
+    edit := array_add(*buffer.edits);
+    edit.type = .insert_char;
+    edit.insert_char.offset = offset;
+    edit.insert_char.char = char;
+
+    clear_redos(buffer);
+}
+
 new_delete_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string) {
     edit := array_add(*buffer.edits);
     edit.type = .delete;
@@ -362,6 +378,7 @@ deinit :: (using edit_group: *Edit_Group) {
             case .delete;  free(delete.old_bytes);
             case .replace; free(replace.new_bytes);
                            free(replace.old_bytes);
+            case .insert_char;  // nothing to free
         }
     }
     array_free(edits);
@@ -441,11 +458,16 @@ Edit_Group :: struct {
 
 // All strings in this struct are owned
 Edit :: struct {
-    type: enum { insert; replace; delete; };
+    type: enum { insert; insert_char; replace; delete; };
     union {
         insert: struct {
             offset: s64;
             new_bytes: string;
+        };
+        insert_char: struct {
+            offset: s64;
+            char: Utf8_Char;  // same as `insert`, but no need to allocate strings on the heap
+                              // it's probably the most common edit so it's worth it
         };
         replace: struct {
             offset_range: Offset_Range;
@@ -456,8 +478,5 @@ Edit :: struct {
             offset_range: Offset_Range;
             old_bytes: string;
         };
-        // @Speed @Memory
-        // We could probably create a new edit type for typing chars
-        // because it's most common and we don't need to allocate it on the heap
     }
 }
