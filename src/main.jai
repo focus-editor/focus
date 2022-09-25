@@ -130,13 +130,15 @@ main :: () {
 }
 
 init_fonts :: () {
-    size := cast(int) (font_size * dpi_scale);
     // font = Simp.get_font_at_size("fonts", "consola.ttf", 25);
-    font = Simp.get_font_at_size("fonts", "FiraCode-Retina.ttf", size);
+    font = Simp.get_font_at_size("fonts", "FiraCode-Retina.ttf", cast(int) (font_size * dpi_scale));
     assert(font != null, "Couldn't init font");
     char_size   = cast(float) font.em_width;
     old_line_height = line_height;
     line_height = cast(float) font.default_line_spacing * LINE_HEIGHT_SCALE;
+
+    font_ui = Simp.get_font_at_size("fonts", "SEGOEUI.TTF", cast(int) (font_ui_size * dpi_scale));
+    font_ui_line_height = cast(float) font_ui.default_line_spacing * LINE_HEIGHT_SCALE;
 }
 
 update_mouse_pointer :: () {
@@ -236,7 +238,8 @@ font      :  *Simp.Dynamic_Font;
 font_size := 14;
 
 font_ui      :  *Simp.Dynamic_Font;
-font_ui_size := 17;
+font_ui_size := 16;
+font_ui_line_height: float;
 
 Mods :: Input.Event.Modifier_Flags;
 

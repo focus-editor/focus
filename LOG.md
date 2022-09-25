@@ -1,12 +1,21 @@
 # TODO
+WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
+- Open file dialog
+    + Draw a box and make it behave nicely when resizing
+    + Draw an input box
+    - Check kerning
+    - Type text into input, move cursor etc
+    - Draw an example file list
+    - On start, build a file list in the project
+- Show file names with breadcrumbs
+- Click on breadcrumbs to view files?
 - Search text
+    - Use the naive functions first, optimise later if needed (also measure first)
     - Case-sensitive
     - Case-insensitive
 - Select whole words when creating new cursors (unless selected manually)
 - Highlight occurrences of selection (same rules as above)
 - Save file
-- Open file dialog
-    - Try font-awesome icons
 - Reload from disk
 
 - Implement semantic highlighting
@@ -27,6 +36,7 @@
       and consider using floats or other units for font metrics
     - Simp.draw_text only allows integer positioning
     - Should we keep using GL_NEAREST for sampling?
+- Try font-awesome icons
 - Subpixel rendering: support other types of panels (lookup ft2-lcd_rendering)
   (not useful for the editor, but may be useful for games)
 - Don't redraw if nothing has changed

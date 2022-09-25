@@ -176,6 +176,19 @@ draw_open_file_dialog :: () {
         box_rect = make_rect(x, screen.h - height - y, width, height);
     }
     draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = char_size / 1.5, shadow_size = char_size);
+
+    margin  := 10 * dpi_scale;
+    padding :=  5 * dpi_scale;
+    input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
+    input_rect, results_rect := cut_top(box_rect, input_rect_height);
+    input_rect = shrink(input_rect, margin);
+    draw_rounded_rect(input_rect, Colors.BACKGROUND_DARK);
+    input_rect = shrink(input_rect, 1);
+    draw_rounded_rect(input_rect, Colors.BACKGROUND);
+    str := "vasia poupkine";
+    x := input_rect.x + padding;
+    y := input_rect.y + (input_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale;  // I don't know why we need this extra + 2, but without it the text doesn't look in the right place
+    Simp.draw_text(font_ui, xx x, xx y, str, color = Colors.CODE_PUNCTUATION);
 }
 
 get_cursor_screen_pos :: (text_origin: Vector2, pos: Pos) -> Vector2 {
