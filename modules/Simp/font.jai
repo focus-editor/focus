@@ -112,6 +112,9 @@ convert_to_temporary_glyphs :: (font: *Dynamic_Font, s: string) -> width_in_pixe
 
     if !s return 0;
 
+    use_kerning := FT_HAS_KERNING(font.face);
+    prev_glyph: u32 = 0;
+
     width_in_pixels := 0;
 
     t := s.data;
@@ -123,6 +126,12 @@ convert_to_temporary_glyphs :: (font: *Dynamic_Font, s: string) -> width_in_pixe
             array_add(*font.temporary_glyphs, glyph);
 
             width_in_pixels += glyph.advance;
+
+            if use_kerning && prev_glyph {
+                delta: FT_Vector = ---;
+                error := FT_Get_Kerning(font.face, prev_glyph, glyph.glyph_index_within_font, xx FT_Kerning_Mode.DEFAULT, *delta);
+                if !error then width_in_pixels += (delta.x >> 6);
+            }
 
             // FreeType returns glyph index 0 for undefined glyphs... just signal
             // the condition that this happened.
@@ -302,13 +311,28 @@ generate_quads_for_prepared_text :: (font: *Dynamic_Font, x: s64, y: s64) {
     array_reset_keeping_memory(*font.current_quads);
     array_reserve(*font.current_quads, font.temporary_glyphs.count);
 
+    // @Speed: we don't need kerning for most of the text
+    use_kerning := FT_HAS_KERNING(font.face);
+
     sx := cast(float) x;
     sy := cast(float) y;
+
+    prev_glyph: u32 = 0;
 
     // @Speed!
     for info: font.temporary_glyphs {
         if !info.page continue;
         map := *info.page.texture;
+
+        if use_kerning && prev_glyph {
+            delta: FT_Vector = ---;
+            error := FT_Get_Kerning(font.face, prev_glyph, info.glyph_index_within_font, xx FT_Kerning_Mode.DEFAULT, *delta);
+            if !error {
+                sx += cast(float) (delta.x >> 6);
+            } else {
+                log_error("Couldn't get kerning for glyphs %, %\n", prev_glyph, info.glyph_index_within_font);
+            }
+        }
 
         sx1 := sx  + cast(float) info.offset_x;
         sx2 := sx1 + cast(float) info.width;
@@ -335,6 +359,7 @@ generate_quads_for_prepared_text :: (font: *Dynamic_Font, x: s64, y: s64) {
         array_add(*font.current_quads, quad);
         sx += cast(float) info.advance;
 
+        prev_glyph = info.glyph_index_within_font;
     }
 }
 

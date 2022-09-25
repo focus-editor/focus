@@ -185,7 +185,7 @@ draw_open_file_dialog :: () {
     draw_rounded_rect(input_rect, Colors.BACKGROUND_DARK);
     input_rect = shrink(input_rect, 1);
     draw_rounded_rect(input_rect, Colors.BACKGROUND);
-    str := "vasia poupkine";
+    str := "AV";
     x := input_rect.x + padding;
     y := input_rect.y + (input_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale;  // I don't know why we need this extra + 2, but without it the text doesn't look in the right place
     Simp.draw_text(font_ui, xx x, xx y, str, color = Colors.CODE_PUNCTUATION);

@@ -3,7 +3,7 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
 - Open file dialog
     + Draw a box and make it behave nicely when resizing
     + Draw an input box
-    - Check kerning
+    + Support basic kerning
     - Type text into input, move cursor etc
     - Draw an example file list
     - On start, build a file list in the project
