@@ -36,6 +36,21 @@ open_file_dialog_handle_text_input :: (char: u32) {
     cursor.sel = cursor.pos;
 }
 
+animate_scrolling :: (using animation: *Scroll_Animation, current: s32) -> (new_value: s32, scrolling: bool) {
+    if current == target return current, false;
+
+    new_value: s32;
+
+    t := (frame_time - started_at) / SPEED;
+    if t >= 1 || t < 0 {
+        new_value = target;
+    } else {
+        new_value = start + xx (cast(float)(target - start) * t);
+    }
+
+    return new_value, true;
+}
+
 
 #scope_file
 
@@ -65,7 +80,8 @@ get_char_offset :: (bytes: [] u8, pos: s32) -> s32 {
 Open_File_Dialog :: struct {
     text: [..] u8;
     cursor: struct { pos, sel: s32; }  // cursor position (in chars, not bytes)
-    scroll_px: s32;
+    scroll_x: s32;
+    scroll_anim: Scroll_Animation;
     show := false;
 }
 
