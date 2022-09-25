@@ -65,6 +65,7 @@ get_char_offset :: (bytes: [] u8, pos: s32) -> s32 {
 Open_File_Dialog :: struct {
     text: [..] u8;
     cursor: struct { pos, sel: s32; }  // cursor position (in chars, not bytes)
+    scroll_px: s32;
     show := false;
 }
 

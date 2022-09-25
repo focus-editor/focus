@@ -166,6 +166,8 @@ draw_editor :: (editor_id: s64, rect: Rect) {
 }
 
 draw_open_file_dialog :: () {
+    using open_file_dialog;
+
     // Figure out the dialog box size
     box_rect: Rect = ---;
     {
@@ -179,22 +181,47 @@ draw_open_file_dialog :: () {
 
     margin  := 10 * dpi_scale;
     padding :=  5 * dpi_scale;
-    input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
-    input_rect, results_rect := cut_top(box_rect, input_rect_height);
-    input_rect = shrink(input_rect, margin);
-    draw_rounded_rect(input_rect, Colors.BACKGROUND_DARK);
-    input_rect = shrink(input_rect, 1);
-    draw_rounded_rect(input_rect, Colors.BACKGROUND);
-    input_rect = shrink(input_rect, padding);
 
-    input_text := to_string(open_file_dialog.text);
-    cursor := cut_left(input_rect, 2 * dpi_scale);
-    cursor.y -= 1;
-    cursor.x += Simp.get_text_width(font_ui, slice(input_text, 0, open_file_dialog.cursor.pos));
-    draw_rect(cursor, Colors.CURSOR);
+    // Draw the filter input
+    input_rect, results_rect := cut_top(box_rect, font_ui_line_height + 2 * padding + 2 * margin + 2);
+    {
+        input_rect = shrink(input_rect, margin);
+        draw_rounded_rect(input_rect, Colors.BACKGROUND_DARK);
+        input_rect = shrink(input_rect, 1);
 
-    y := input_rect.y + (input_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale;  // I don't know why we need this extra + 2, but without it the text doesn't look in the right place
-    Simp.draw_text(font_ui, xx input_rect.x, xx y, input_text, color = Colors.CODE_PUNCTUATION);
+        set_scissor(shrink_x(input_rect, 1));
+        defer Simp.clear_scissor();
+
+        draw_rounded_rect(input_rect, Colors.BACKGROUND);
+        input_rect = shrink(input_rect, padding);
+
+        input_text := to_string(text);
+        cursor_width := 2 * dpi_scale;
+        cursor_pos_x := Simp.get_text_width(font_ui, slice(input_text, 0, cursor.pos));
+        if cursor_pos_x - scroll_px >= cast(s32) input_rect.w then scroll_px = cast(s32) cursor_pos_x - cast(s32) input_rect.w;
+        if cursor_pos_x < scroll_px then scroll_px = xx cursor_pos_x;
+
+        x := input_rect.x - scroll_px;
+        cursor_rect := cut_left(input_rect, cursor_width);
+        cursor_rect.y -= 1;  // manual alignment
+        cursor_rect.x = x + cursor_pos_x;
+
+        if cursor.pos != cursor.sel {
+            cursor_sel_x := Simp.get_text_width(font_ui, slice(input_text, 0, cursor.sel));
+            left  := min(cursor_pos_x, cursor_sel_x);
+            right := max(cursor_pos_x, cursor_sel_x);
+            selection_rect := cursor_rect;
+            selection_rect.x = x + left;
+            selection_rect.w = xx (right - left);
+            draw_rect(selection_rect, Colors.SELECTION_ACTIVE);
+        }
+
+        draw_rect(cursor_rect, Colors.CURSOR);
+
+        y := input_rect.y + (input_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale;  // I don't know why we need this extra + 2, but without it the text doesn't look in the right place
+        Simp.draw_text(font_ui, xx x, xx y, input_text, color = Colors.CODE_PUNCTUATION);
+    }
+
 
     // icon_char := convert_utf32_to_utf8(0xf03e);
     // Simp.draw_text(font_icons, xx (input_rect.x + 100), xx y, to_string(*icon_char), color = Colors.CODE_PUNCTUATION);
