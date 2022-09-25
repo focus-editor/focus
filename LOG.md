@@ -5,6 +5,7 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
     + Draw an input box
     + Support basic kerning
     - Type text into input, move cursor etc
+        - Draw cursor
     - Draw an example file list
     - On start, build a file list in the project
 - Show file names with breadcrumbs
@@ -36,12 +37,12 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
       and consider using floats or other units for font metrics
     - Simp.draw_text only allows integer positioning
     - Should we keep using GL_NEAREST for sampling?
-- Try font-awesome icons
 - Subpixel rendering: support other types of panels (lookup ft2-lcd_rendering)
   (not useful for the editor, but may be useful for games)
 - Don't redraw if nothing has changed
 
 # DONE
++ Try font-awesome icons
 + Don't change selection on ctrl+D if cursor already has selection
 + Move between panes by ctrl+arrow, move cursor horizontally by alt+arrows
 + Swap panes by ctrl+alt+arrow

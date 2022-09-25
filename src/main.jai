@@ -74,12 +74,12 @@ main :: () {
                                 continue;
 
                             case #char "P";
-                                if only_ctrl_pressed(event.modifier_flags) then show_open_file_dialog = true;
+                                if only_ctrl_pressed(event.modifier_flags) then open_file_dialog.show = true;
                                 continue;
 
                             case .ESCAPE;
-                                if show_open_file_dialog {
-                                    show_open_file_dialog = false;
+                                if open_file_dialog.show {
+                                    open_file_dialog.show = false;
                                     continue;
                                 }
 
@@ -94,7 +94,7 @@ main :: () {
                             //         init_fonts();
                             //     }
                         }
-                        if show_open_file_dialog {
+                        if open_file_dialog.show {
                             open_file_dialog_handle_keypress(event.key_code, event.modifier_flags);
                         } else {
                             editors_handle_keypress(event.key_code, event.modifier_flags);
@@ -102,7 +102,7 @@ main :: () {
                     }
 
                 case .TEXT_INPUT;
-                    if show_open_file_dialog {
+                    if open_file_dialog.show {
                         open_file_dialog_handle_text_input(event.utf32);
                     } else {
                         editors_handle_text_input(event.utf32);
@@ -130,15 +130,18 @@ main :: () {
 }
 
 init_fonts :: () {
-    // font = Simp.get_font_at_size("fonts", "consola.ttf", 25);
     font = Simp.get_font_at_size("fonts", "FiraCode-Retina.ttf", cast(int) (font_size * dpi_scale));
-    assert(font != null, "Couldn't init font");
+    assert(font != null, "Couldn't init main text font\n");
     char_size   = cast(float) font.em_width;
     old_line_height = line_height;
     line_height = cast(float) font.default_line_spacing * LINE_HEIGHT_SCALE;
 
     font_ui = Simp.get_font_at_size("fonts", "SEGOEUI.TTF", cast(int) (font_ui_size * dpi_scale));
-    font_ui_line_height = cast(float) font_ui.default_line_spacing * LINE_HEIGHT_SCALE;
+    assert(font_ui != null, "Couldn't init main ui font\n");
+    font_ui_line_height = cast(float) font_ui.default_line_spacing;
+
+    font_icons = Simp.get_font_at_size("fonts/font-awesome", "Font Awesome 6 Free-Regular-400.otf", cast(int) (font_icons_size * dpi_scale));
+    assert(font_icons != null, "Couldn't init main icon font\n");
 }
 
 update_mouse_pointer :: () {
@@ -216,7 +219,7 @@ dpi_scale := 1.0;
 
 redraw_requested := true;  // set to true to render the first frame
 
-show_open_file_dialog := false;
+open_file_dialog: Open_File_Dialog;
 
 frame_time: Time;  // ever-increasing time since start in seconds
 
@@ -241,6 +244,9 @@ font_ui      :  *Simp.Dynamic_Font;
 font_ui_size := 16;
 font_ui_line_height: float;
 
+font_icons      : *Simp.Dynamic_Font;
+font_icons_size := 16;
+
 Mods :: Input.Event.Modifier_Flags;
 
 Time :: #type,isa float64;
@@ -250,7 +256,6 @@ Time :: #type,isa float64;
 #load "editors.jai";
 #load "open_file_dialog.jai";
 #load "buffer.jai";
-#load "edit_text.jai";
 #load "windows.jai";
 #load "unicode.jai";
 #load "draw.jai";

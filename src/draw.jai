@@ -56,7 +56,7 @@ draw_frame :: () {
     draw_rect(footer_rect, Colors.BACKGROUND_BRIGHT);
     draw_top_shadow(footer_rect);
 
-    if show_open_file_dialog then draw_open_file_dialog();
+    if open_file_dialog.show then draw_open_file_dialog();
 
     Simp.swap_buffers(window);
 }
@@ -185,10 +185,19 @@ draw_open_file_dialog :: () {
     draw_rounded_rect(input_rect, Colors.BACKGROUND_DARK);
     input_rect = shrink(input_rect, 1);
     draw_rounded_rect(input_rect, Colors.BACKGROUND);
-    str := "AV";
-    x := input_rect.x + padding;
+    input_rect = shrink(input_rect, padding);
+
+    input_text := to_string(open_file_dialog.text);
+    cursor := cut_left(input_rect, 2 * dpi_scale);
+    cursor.y -= 1;
+    cursor.x += Simp.get_text_width(font_ui, slice(input_text, 0, open_file_dialog.cursor.pos));
+    draw_rect(cursor, Colors.CURSOR);
+
     y := input_rect.y + (input_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale;  // I don't know why we need this extra + 2, but without it the text doesn't look in the right place
-    Simp.draw_text(font_ui, xx x, xx y, str, color = Colors.CODE_PUNCTUATION);
+    Simp.draw_text(font_ui, xx input_rect.x, xx y, input_text, color = Colors.CODE_PUNCTUATION);
+
+    // icon_char := convert_utf32_to_utf8(0xf03e);
+    // Simp.draw_text(font_icons, xx (input_rect.x + 100), xx y, to_string(*icon_char), color = Colors.CODE_PUNCTUATION);
 }
 
 get_cursor_screen_pos :: (text_origin: Vector2, pos: Pos) -> Vector2 {
