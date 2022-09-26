@@ -17,8 +17,27 @@ open_file_dialog_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
             cursor.pos = get_num_chars(text);
             if !mods.shift_pressed then cursor.sel = cursor.pos;
 
-        // case .BACKSPACE;
-        //     new_pos := clamp(cursor.pos - 1, 0, get_num_chars(text));
+        case .BACKSPACE; #through;
+        case .DELETE;
+            if cursor.pos == cursor.sel {
+                cursor.sel = ifx key_code == .DELETE then cursor.pos + 1 else cursor.pos - 1;
+                cursor.sel = clamp(cursor.sel, 0, get_num_chars(text));
+            }
+
+            str := to_string(text);
+            left  := pos_to_offset(str, min(cursor.sel, cursor.pos));
+            right := pos_to_offset(str, max(cursor.sel, cursor.pos));
+
+            if left != right then array_delete_bytes(*text, left, right - left);
+
+            cursor.pos = min(cursor.sel, cursor.pos);
+            cursor.sel = cursor.pos;
+
+        case #char "A";
+            if only_ctrl_pressed(mods) {
+                cursor.sel = 0;
+                cursor.pos = get_num_chars(text);
+            }
     }
 }
 
@@ -29,13 +48,25 @@ open_file_dialog_handle_text_input :: (char: u32) {
 
     using open_file_dialog;
 
-    cursor.pos = clamp(cursor.pos, 0, get_num_chars(text));  // make sure cursor is in the correct position
-    offset := get_char_offset(text, cursor.pos);
-    // TODO: replace selection
-
     utf8_char := convert_utf32_to_utf8(char);
-    array_insert_bytes_at(*text, offset, array_view(utf8_char.bytes, 0, utf8_char.count));
-    cursor.pos += 1;
+    bytes := array_view(utf8_char.bytes, 0, utf8_char.count);
+
+    num_chars := get_num_chars(text);
+    cursor.pos = clamp(cursor.pos, 0, num_chars);  // make sure cursor is in the correct position
+    cursor.sel = clamp(cursor.sel, 0, num_chars);
+
+    if cursor.pos == cursor.sel {
+        // No selection
+        offset := get_char_offset(text, cursor.pos);
+        array_insert_bytes_at(*text, offset, bytes);
+    } else {
+        // Selection
+        left  := get_char_offset(text, min(cursor.pos, cursor.sel));
+        right := get_char_offset(text, max(cursor.pos, cursor.sel));
+        array_delete_bytes(*text, left, right - left);
+        array_insert_bytes_at(*text, left, bytes);
+    }
+    cursor.pos = min(cursor.pos, cursor.sel) + 1;
     cursor.sel = cursor.pos;
 }
 

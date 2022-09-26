@@ -6,7 +6,9 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
     + Support basic kerning
     + Type text into input, move cursor etc
     + Support non-ascii
-    - Support deleting
+    + Support deleting
+    - Support copy/cut/paste
+    - When no text left, clear scroll
     - Draw an example file list
     - On start, build a file list in the project
 - Show file names with breadcrumbs

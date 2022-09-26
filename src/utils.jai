@@ -91,28 +91,34 @@ array_extend :: (array: *[..] $T, slice: [] T) {
     array.count = new_size;
 }
 
+pos_to_offset :: (str: string, pos: s64) -> s64 {
+    assert(pos >= 0, "Negative char position\n");
+    result := -1;
+    char_index  := 0;
+    offset := 0;
+
+    while offset < str.count {
+        if pos == char_index {
+            result = offset;
+            break;
+        }
+        byte := str.data[offset];
+        offset += 1 + trailingBytesForUTF8[byte];
+        char_index += 1;
+    }
+    if pos == char_index then result = offset;
+    assert(pos >= 0, "Char position outside string\n");
+
+    return result;
+}
+
 // Slices the string using char indices, not byte indices
 slice_chars :: (str: string, pos1: s32, pos2: s32) -> string {
-    assert(pos1 >= 0 && pos2 >= 0, "Incorrect indices for string slicing");
     if pos2 <= pos1 || !str return "";
 
-    offset1 := -1;
-    offset2 := -1;
-    byte_offset := 0;
-    char_index  := 0;
-
-    while byte_offset < str.count {
-        byte := str.data[byte_offset];
-        // @speed: could be done with one `if` per iteration
-        if pos1 == char_index then offset1 = byte_offset;
-        byte_offset += 1 + trailingBytesForUTF8[byte];
-        char_index += 1;
-        if pos2 == char_index {
-            offset2 = byte_offset;
-            break;  // found everything
-        }
-    }
-    assert(offset1 >= 0 && offset2 >= 0, "Char indices are outside the string, can't slice");
+    offset1 := pos_to_offset(str, pos1);
+    remaining_str := slice(str, offset1, str.count - offset1);
+    offset2 := offset1 + pos_to_offset(remaining_str, pos2 - pos1);
 
     return slice(str, offset1, offset2 - offset1);
 }
