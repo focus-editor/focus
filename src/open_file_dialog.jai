@@ -16,6 +16,9 @@ open_file_dialog_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
         case .END;
             cursor.pos = get_num_chars(text);
             if !mods.shift_pressed then cursor.sel = cursor.pos;
+
+        // case .BACKSPACE;
+        //     new_pos := clamp(cursor.pos - 1, 0, get_num_chars(text));
     }
 }
 
@@ -36,6 +39,7 @@ open_file_dialog_handle_text_input :: (char: u32) {
     cursor.sel = cursor.pos;
 }
 
+// TODO: make this a general function as a version of it is used in editor scrolling?
 animate_scrolling :: (using animation: *Scroll_Animation, current: s32) -> (new_value: s32, scrolling: bool) {
     if current == target return current, false;
 

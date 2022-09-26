@@ -4,8 +4,9 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
     + Draw a box and make it behave nicely when resizing
     + Draw an input box
     + Support basic kerning
-    - Type text into input, move cursor etc
-        - Draw cursor
+    + Type text into input, move cursor etc
+    + Support non-ascii
+    - Support deleting
     - Draw an example file list
     - On start, build a file list in the project
 - Show file names with breadcrumbs

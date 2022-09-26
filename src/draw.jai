@@ -197,7 +197,7 @@ draw_open_file_dialog :: () {
 
         input_text := to_string(text);
         cursor_width := 2 * dpi_scale;
-        cursor_pos_x := Simp.get_text_width(font_ui, slice(input_text, 0, cursor.pos));
+        cursor_pos_x := Simp.get_text_width(font_ui, slice_chars(input_text, 0, cursor.pos));
 
         scrolling := false;
         scroll_x, scrolling = animate_scrolling(*scroll_anim, scroll_x);
@@ -214,7 +214,7 @@ draw_open_file_dialog :: () {
         cursor_rect.x = x + cursor_pos_x;
 
         if cursor.pos != cursor.sel {
-            cursor_sel_x := Simp.get_text_width(font_ui, slice(input_text, 0, cursor.sel));
+            cursor_sel_x := Simp.get_text_width(font_ui, slice_chars(input_text, 0, cursor.sel));
             left  := min(cursor_pos_x, cursor_sel_x);
             right := max(cursor_pos_x, cursor_sel_x);
             selection_rect := cursor_rect;
