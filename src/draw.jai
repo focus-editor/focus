@@ -199,14 +199,14 @@ draw_open_file_dialog :: () {
         cursor_width := 2 * dpi_scale;
         cursor_pos_x := Simp.get_text_width(font_ui, slice_chars(input_text, 0, cursor.pos));
 
-        scrolling := false;
-        scroll_x, scrolling = animate_scrolling(*scroll_anim, scroll_x);
-        if scrolling then redraw_requested = true;
-
         scroll_x_target := scroll_anim.target;
         if cursor_pos_x - scroll_x_target >= cast(s32) input_rect.w then scroll_x_target = cast(s32) cursor_pos_x - cast(s32) input_rect.w;
         if cursor_pos_x < scroll_x_target then scroll_x_target = xx cursor_pos_x;
         if scroll_x_target != scroll_anim.target then set_scroll_target(*scroll_anim, scroll_x, scroll_x_target, 999999);  // silly
+
+        scrolling := false;
+        scroll_x, scrolling = animate_scrolling(*scroll_anim, scroll_x);
+        if scrolling then redraw_requested = true;
 
         x := input_rect.x - scroll_x;
         cursor_rect := cut_left(input_rect, cursor_width);
