@@ -154,6 +154,28 @@ Open_File_Dialog :: struct {
     scroll_anim: Scroll_Animation;
     show := false;
 
-    Cursor :: struct { pos, sel: s32; }  // cursor position (in chars, not bytes)
+    Cursor :: struct {
+        pos, sel: s32;  // cursor position (in chars, not bytes)
+    }
+
+    Entry :: struct {
+        proj: string;
+        path: string;
+        name: string;
+        icon: File_Icon;
+    }
 }
 
+File_Icon :: enum u32 {
+    binary  :: 0xf15b;
+    text    :: 0xf15c;
+    jai     :: 0xf15c;
+    cpp     :: 0xf1c9;
+    worklog :: 0xf022;
+    windows :: 0xf17a;
+    git     :: 0xf03e;
+    image   :: 0xf1c5;
+    audio   :: 0xf1c7;
+    font    :: 0xf031;
+    key     :: 0xf084;
+}

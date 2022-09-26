@@ -183,7 +183,7 @@ draw_open_file_dialog :: () {
     padding :=  5 * dpi_scale;
 
     // Draw the filter input
-    input_rect, results_rect := cut_top(box_rect, font_ui_line_height + 2 * padding + 2 * margin + 2);
+    input_rect, files_rect := cut_top(box_rect, font_ui_line_height + 2 * padding + 2 * margin + 2);
     {
         input_rect = shrink(input_rect, margin);
         draw_rounded_rect(input_rect, Colors.BACKGROUND_DARK);
@@ -202,7 +202,7 @@ draw_open_file_dialog :: () {
         scroll_x_target := scroll_anim.target;
         if cursor_pos_x - scroll_x_target >= cast(s32) input_rect.w then scroll_x_target = cast(s32) cursor_pos_x - cast(s32) input_rect.w;
         if cursor_pos_x < scroll_x_target then scroll_x_target = xx cursor_pos_x;
-        if scroll_x_target != scroll_anim.target then set_scroll_target(*scroll_anim, scroll_x, scroll_x_target, 999999);  // silly
+        if scroll_x_target != scroll_anim.target then set_scroll_target(*scroll_anim, scroll_x, scroll_x_target, 2147483647);
 
         scrolling := false;
         scroll_x, scrolling = animate_scrolling(*scroll_anim, scroll_x);
@@ -227,6 +227,28 @@ draw_open_file_dialog :: () {
 
         y := input_rect.y + (input_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale;  // I don't know why we need this extra + 2, but without it the text doesn't look in the right place
         Simp.draw_text(font_ui, xx x, xx y, input_text, color = Colors.CODE_PUNCTUATION);
+    }
+
+    // Draw files
+    {
+        entries := Open_File_Dialog.Entry.[
+            .{ name = "draw.jai",   proj = "focus", path = "src", icon = .jai },
+            .{ name = "LOG.md",     proj = "focus", path = "",    icon = .worklog },
+            .{ name = ".gitignore", proj = "focus", path = "",    icon = .git },
+            .{ name = "Simple_String.jai", proj = "jai-beta", path = "modules/Basic", icon = .jai },
+        ];
+
+        entry_height := font_ui_line_height + padding * 2;
+        rect := cut_top(files_rect, entry_height);
+
+        for entry, i : entries {
+            rect.y = files_rect.y + files_rect.h - (i + 1) * entry_height;
+            entry_rect := shrink_x(rect, 2 * margin);
+            icon_rect, name_rect := cut_left(entry_rect, char_size * 2);
+            icon_char := convert_utf32_to_utf8(xx entry.icon);
+            Simp.draw_text(font_icons, xx icon_rect.x, xx icon_rect.y, to_string(*icon_char), color = Colors.CODE_PUNCTUATION);
+            Simp.draw_text(font_ui, xx name_rect.x, xx name_rect.y, entry.name, color = Colors.CODE_PUNCTUATION);
+        }
     }
 
 

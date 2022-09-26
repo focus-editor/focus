@@ -20,7 +20,11 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
 - Highlight occurrences of selection (same rules as above)
 - Save file
 - Reload from disk
-- Input - make sure the cursor doesn't drift as string grows (try disabling kerning first)
+- Input:
+    - Make sure the cursor doesn't drift as string grows (try disabling kerning first). Understand whether there are any rounding errors
+    - Select by mouse
+    - Select words by ctrl+D
+    - Fix the weird doubling of characters when pasted a newline
 
 - Implement semantic highlighting
     - Polymorphic structs and possibly other types
