@@ -34,6 +34,12 @@ array_add_bytes :: (array: *[..] u8, bytes: [] u8) {
     array.count = new_size;
 }
 
+array_delete_bytes :: (array: *[..] u8, offset: s64, count: s64) {
+    assert(offset >= 0 && count >= 0 && offset + count <= array.count);
+    memcpy(array.data + offset, array.data + offset + count, array.count - offset - count);
+    array.count -= count;
+}
+
 to_bytes :: (src: string) -> [] u8 {
     result: [] u8;
     result.data = src.data;

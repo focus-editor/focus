@@ -54,20 +54,8 @@ replace_range :: (buffer: *Buffer, range: Range, str: string) {
 delete_range_raw :: (using buffer: *Buffer, start: s64, end: s64) {
     len := end - start;
     if len <= 0 return;
-    assert(len <= bytes.count);
 
-    // Copy in chunks of length len while possible
-    while end + len <= bytes.count {
-        memcpy(bytes.data + start, bytes.data + end, len);
-        start += len;
-        end   += len;
-    }
-    // If there's a leftover, copy it
-    if end != bytes.count {
-        memcpy(bytes.data + start, bytes.data + end, bytes.count - end);
-    }
-
-    bytes.count -= len;
+    array_delete_bytes(*bytes, start, len);
 
     buffer.dirty = true;
 }
