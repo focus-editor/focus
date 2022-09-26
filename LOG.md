@@ -7,8 +7,7 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
     + Type text into input, move cursor etc
     + Support non-ascii
     + Support deleting
-    - Support copy/cut/paste
-    - When no text left, clear scroll
+    + Support copy/cut/paste
     - Draw an example file list
     - On start, build a file list in the project
 - Show file names with breadcrumbs
@@ -21,6 +20,7 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
 - Highlight occurrences of selection (same rules as above)
 - Save file
 - Reload from disk
+- Input - make sure the cursor doesn't drift as string grows (try disabling kerning first)
 
 - Implement semantic highlighting
     - Polymorphic structs and possibly other types

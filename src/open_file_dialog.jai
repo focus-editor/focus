@@ -24,9 +24,7 @@ open_file_dialog_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
                 cursor.sel = clamp(cursor.sel, 0, get_num_chars(text));
             }
 
-            str := to_string(text);
-            left  := pos_to_offset(str, min(cursor.sel, cursor.pos));
-            right := pos_to_offset(str, max(cursor.sel, cursor.pos));
+            left, right := get_selected_offsets(text, cursor);
 
             if left != right then array_delete_bytes(*text, left, right - left);
 
@@ -35,8 +33,38 @@ open_file_dialog_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
 
         case #char "A";
             if only_ctrl_pressed(mods) {
-                cursor.sel = 0;
-                cursor.pos = get_num_chars(text);
+                cursor.pos = 0;
+                cursor.sel = get_num_chars(text);
+            }
+
+        case #char "C"; #through;
+        case #char "X";
+            if only_ctrl_pressed(mods) && cursor.pos != cursor.sel {
+                left, right := get_selected_offsets(text, cursor);
+
+                os_clipboard_set_text(slice(to_string(text), left, right - left));
+
+                if key_code == #char "X" {
+                    if left != right then array_delete_bytes(*text, left, right - left);
+                    cursor.pos = min(cursor.sel, cursor.pos);
+                    cursor.sel = cursor.pos;
+                }
+            }
+
+        case #char "V";
+            if only_ctrl_pressed(mods) {
+                str := os_clipboard_get_text();
+                defer free(str);
+
+                left, right := get_selected_offsets(text, cursor);
+
+                if cursor.pos != cursor.sel {
+                    array_delete_bytes(*text, left, right - left);
+                }
+                array_insert_bytes_at(*text, left, to_bytes(str));
+
+                cursor.pos = get_num_chars(array_view(text, 0, left + str.count));
+                cursor.sel = cursor.pos;
             }
     }
 }
@@ -109,14 +137,23 @@ get_char_offset :: (bytes: [] u8, pos: s32) -> s32 {
     return offset;
 }
 
+get_selected_offsets :: (text: [..] u8, cursor: Open_File_Dialog.Cursor) -> left: s64, right: s64 {
+    str := to_string(text);
+    left  := pos_to_offset(str, min(cursor.sel, cursor.pos));
+    right := pos_to_offset(str, max(cursor.sel, cursor.pos));
+    return left, right;
+}
+
 
 #scope_export
 
 Open_File_Dialog :: struct {
     text: [..] u8;
-    cursor: struct { pos, sel: s32; }  // cursor position (in chars, not bytes)
+    cursor: Cursor;
     scroll_x: s32;
     scroll_anim: Scroll_Animation;
     show := false;
+
+    Cursor :: struct { pos, sel: s32; }  // cursor position (in chars, not bytes)
 }
 
