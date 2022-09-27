@@ -184,6 +184,8 @@ draw_open_file_dialog :: () {
     }
     draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = char_size / 1.5, shadow_size = char_size * 1.5);
 
+    if mouse_pointer_is_within(box_rect) then set_pointer_image(.NORMAL);
+
     // Draw the filter input
     input_rect, files_rect := cut_top(box_rect, input_rect_height);
     {
@@ -192,6 +194,8 @@ draw_open_file_dialog :: () {
         input_rect = shrink(input_rect, margin);
         draw_rounded_rect(input_rect, Colors.BACKGROUND_DARK);
         input_rect = shrink(input_rect, 1);
+
+        if mouse_pointer_is_within(input_rect) then set_pointer_image(.TEXT_SELECT);
 
         set_scissor(shrink_x(input_rect, 1));
         defer Simp.clear_scissor();
@@ -266,8 +270,14 @@ draw_open_file_dialog :: () {
 
         entry_rect := cut_top(files_rect, entry_height);
 
+        if mouse_pointer_is_within(files_rect) then set_pointer_image(.PRESSABLE);
+        highlight_color_lite := Colors.BACKGROUND_BRIGHT;
+        highlight_color_lite.a = 0.5;
+
         for entry, i : filtered {
             entry_rect.y = files_rect.y + files_rect.h - (i + 1) * entry_height + scroll_y;
+
+            if mouse_pointer_is_within(entry_rect) then draw_rect(entry_rect, highlight_color_lite);
             if i == selected then draw_rect(entry_rect, Colors.BACKGROUND_BRIGHT);
 
             pen := make_vector2(
@@ -313,9 +323,6 @@ draw_open_file_dialog :: () {
         }
     }
 
-
-    // icon_char := convert_utf32_to_utf8(0xf03e);
-    // Simp.draw_text(font_icons, xx (input_rect.x + 100), xx y, to_string(*icon_char), color = Colors.CODE_PUNCTUATION);
 }
 
 get_cursor_screen_pos :: (text_origin: Vector2, pos: Pos) -> Vector2 {

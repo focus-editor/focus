@@ -20,7 +20,8 @@ Pointer_Image :: enum u16 {
         if !initted_pointers  init_pointers();
 
         if (image >= 0) && (image <= cast(Pointer_Image) NUM_POINTERS) {
-            Windows.SetCursor(pointers[image]);
+            // Windows.SetCursor(pointers[image]);
+            current_pointer_image = image;
             pointer_image_was_set_this_frame = true;
             already_reset_pointer_image = (image == .NORMAL);  // No need to reset the image if it was set to NORMAL.
         } else {
@@ -53,7 +54,8 @@ Pointer_Image :: enum u16 {
         if !initted_pointers  init_pointers();
 
         if (image >= 0) && (image <= cast(Pointer_Image) NUM_POINTERS) {
-            NSCursor.set(pointers[image]);
+            // NSCursor.set(pointers[image]);
+            current_pointer_image = image;
             pointer_image_was_set_this_frame = true;
             already_reset_pointer_image = (image == .NORMAL);  // No need to reset the image if it was set to NORMAL.
         } else {
@@ -101,6 +103,14 @@ pointer_end_frame :: () {
             set_pointer_image(.NORMAL); // This itself sets pointer_image* and already_reset*, so don't assume anything!
             already_reset_pointer_image = true;
         }
+    } else {
+        #if OS == .WINDOWS {
+            Windows.SetCursor(pointers[current_pointer_image]);
+        } else if OS == .MACOS {
+            NSCursor.set(pointers[current_pointer_image]);
+        } else {
+            unimplemented();
+        }
     }
 
     // Pointer-handling contribution by Rafał "Veeq7" Jurkiewicz.
@@ -113,6 +123,8 @@ pointer_end_frame :: () {
 }
 
 #scope_file
+
+current_pointer_image: Pointer_Image;
 
 initted_pointers                 := false;
 pointer_image_was_set_this_frame := false;

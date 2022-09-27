@@ -51,7 +51,6 @@ main :: () {
         if window_width < MIN_WINDOW_WIDTH || window_height < MIN_WINDOW_HEIGHT continue;
 
         update_mouse_pointer();
-        pointer_end_frame();
 
         for * editor : open_editors {
             using editor;
@@ -126,6 +125,8 @@ main :: () {
         refresh_open_buffers();
 
         draw_frame();
+
+        pointer_end_frame();
 
         reset_temporary_storage();
     }

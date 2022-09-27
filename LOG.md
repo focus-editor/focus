@@ -14,9 +14,11 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
         + Change current entry and scroll
         + Draw scrollbar
         + Draw shadow when scrolled
-        - Change pointer when hovering
+        + Change pointer when hovering (and hover over entries)
         - Scroll using mouse
+        - (after resize) If because of scroll there's empty space, adjust scroll
     - On start, build a file list in the project
+    - Don't draw too many files, only draw visible ones
 - Show file names with breadcrumbs
 - Click on breadcrumbs to view files?
 - Search text
