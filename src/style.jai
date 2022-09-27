@@ -39,7 +39,7 @@ Colors :: struct {
     CODE_ERROR          :: Color.{ r = 1.00, g = 0.00, b = 0.00, a = 1.0 };
     CODE_KEYWORD        :: Color.{ r = 0.902, g = 0.493, b = 0.457, a = 1.0 };
 
-    SHADOW_DARK         :: Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0.2 };
+    SHADOW_DARK         :: Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0.3 };
     SHADOW_TRANSPARENT  :: Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0 };
 };
 

@@ -182,7 +182,7 @@ draw_open_file_dialog :: () {
         y := clamp(100 * dpi_scale, 0, (screen.h - height) / 2);
         box_rect = make_rect(x, screen.h - height - y, width, height);
     }
-    draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = char_size / 1.5, shadow_size = char_size * 2);
+    draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = char_size / 1.5, shadow_size = char_size * 1.5);
 
     // Draw the filter input
     input_rect, files_rect := cut_top(box_rect, input_rect_height);
@@ -301,6 +301,15 @@ draw_open_file_dialog :: () {
                 width = xx Simp.prepare_text(font_ui_small, entry.path);
                 Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
             }
+        }
+
+        // Shadow
+        if scroll_y != 0 {
+            shadow_rect := cut_top(files_rect, char_size);
+            t := Colors.SHADOW_TRANSPARENT;
+            s := Colors.SHADOW_DARK;
+            Simp.set_shader_for_color(enable_blend = true);
+            draw_rect_raw(shadow_rect, c00 = t, c10 = t, c01 = s, c11 = s);
         }
     }
 

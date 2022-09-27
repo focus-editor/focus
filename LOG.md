@@ -13,7 +13,7 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
         + Draw project and folder info
         + Change current entry and scroll
         + Draw scrollbar
-        - Draw shadow when scrolled
+        + Draw shadow when scrolled
         - Change pointer when hovering
         - Scroll using mouse
     - On start, build a file list in the project
