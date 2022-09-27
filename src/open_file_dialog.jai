@@ -1,5 +1,66 @@
+init_open_file_dialog :: () {
+    using open_file_dialog;
+
+    dialog_entries := Open_File_Dialog.Entry.[
+        .{ name = "main.exe",   proj = "focus", path = "", icon = .unknown },
+        .{ name = "LOG.md",     proj = "focus", path = "src",    icon = .worklog },
+        .{ name = ".gitignore", proj = "focus", path = "",    icon = .git },
+        .{ name = "run.bat", proj = "focus", path = "",    icon = .text },
+        .{ name = "Simple_String.jai", proj = "jai-beta", path = "modules/Basic", icon = .jai },
+        .{ name = "README.md", proj = "focus", path = "", icon = .text },
+        .{ name = "vasia.txt", proj = "focus", path = "", icon = .text },
+        .{ name = "glfw.cpp", proj = "glfw", path = "src/main", icon = .cpp },
+        .{ name = "image.jpg", proj = "glfw", path = "src", icon = .image },
+        .{ name = "sound.ogg", proj = "focus", path = "src/audio", icon = .audio },
+        .{ name = "Font Awesome Free-Regular 400.ttf", proj = "focus", path = "fonts", icon = .font },
+        .{ name = "LICENSE.txt", proj = "focus", path = "fonts/font-awesome", icon = .key },
+        .{ name = "main.exe",   proj = "focus", path = "", icon = .unknown },
+        .{ name = "LOG.md",     proj = "focus", path = "src",    icon = .worklog },
+        .{ name = ".gitignore", proj = "focus", path = "",    icon = .git },
+        .{ name = "run.bat", proj = "focus", path = "",    icon = .text },
+        .{ name = "Simple_String.jai", proj = "jai-beta", path = "modules/Basic", icon = .jai },
+        .{ name = "README.md", proj = "focus", path = "", icon = .text },
+        .{ name = "vasia.txt", proj = "focus", path = "", icon = .text },
+        .{ name = "glfw.cpp", proj = "glfw", path = "src/main", icon = .cpp },
+        .{ name = "image.jpg", proj = "glfw", path = "src", icon = .image },
+        .{ name = "sound.ogg", proj = "focus", path = "src/audio", icon = .audio },
+        .{ name = "Font Awesome Free-Regular 400.ttf", proj = "focus", path = "fonts", icon = .font },
+        .{ name = "LICENSE.txt", proj = "focus", path = "fonts/font-awesome", icon = .key },
+        .{ name = "main.exe",   proj = "focus", path = "", icon = .unknown },
+        .{ name = "LOG.md",     proj = "focus", path = "src",    icon = .worklog },
+        .{ name = ".gitignore", proj = "focus", path = "",    icon = .git },
+        .{ name = "run.bat", proj = "focus", path = "",    icon = .text },
+        .{ name = "Simple_String.jai", proj = "jai-beta", path = "modules/Basic", icon = .jai },
+        .{ name = "README.md", proj = "focus", path = "", icon = .text },
+        .{ name = "vasia.txt", proj = "focus", path = "", icon = .text },
+        .{ name = "glfw.cpp", proj = "glfw", path = "src/main", icon = .cpp },
+        .{ name = "image.jpg", proj = "glfw", path = "src", icon = .image },
+        .{ name = "sound.ogg", proj = "focus", path = "src/audio", icon = .audio },
+        .{ name = "Font Awesome Free-Regular 400.ttf", proj = "focus", path = "fonts", icon = .font },
+        .{ name = "LICENSE.txt", proj = "focus", path = "fonts/font-awesome", icon = .key },
+        .{ name = "main.exe",   proj = "focus", path = "", icon = .unknown },
+        .{ name = "LOG.md",     proj = "focus", path = "src",    icon = .worklog },
+        .{ name = ".gitignore", proj = "focus", path = "",    icon = .git },
+        .{ name = "run.bat", proj = "focus", path = "",    icon = .text },
+        .{ name = "Simple_String.jai", proj = "jai-beta", path = "modules/Basic", icon = .jai },
+        .{ name = "README.md", proj = "focus", path = "", icon = .text },
+        .{ name = "vasia.txt", proj = "focus", path = "", icon = .text },
+        .{ name = "glfw.cpp", proj = "glfw", path = "src/main", icon = .cpp },
+        .{ name = "image.jpg", proj = "glfw", path = "src", icon = .image },
+        .{ name = "sound.ogg", proj = "focus", path = "src/audio", icon = .audio },
+        .{ name = "Font Awesome Free-Regular 400.ttf", proj = "focus", path = "fonts", icon = .font },
+        .{ name = "LICENSE.txt", proj = "focus", path = "fonts/font-awesome", icon = .key },
+    ];
+
+    for entry : dialog_entries {
+        array_add(*entries.all, entry);
+        array_add(*entries.filtered, entry);
+    }
+}
+
 open_file_dialog_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     using open_file_dialog;
+    using open_file_dialog.input;
 
     if key_code == {
         case .ARROW_LEFT; #through;
@@ -8,6 +69,13 @@ open_file_dialog_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
             cursor.pos += ifx key_code == .ARROW_LEFT then -step else step;
             cursor.pos = clamp(cursor.pos, 0, get_num_chars(text));
             if !mods.shift_pressed then cursor.sel = cursor.pos;
+
+        case .ARROW_DOWN; #through;
+        case .ARROW_UP;
+            using entries;
+            selected += ifx key_code == .ARROW_UP then -1 else 1;
+            if selected < 0 then selected = max(0, filtered.count - 1);
+            if selected >= filtered.count then selected = 0;
 
         case .HOME;
             cursor.pos = 0;
@@ -74,7 +142,7 @@ open_file_dialog_handle_text_input :: (char: u32) {
                             // which generates a TEXT_INPUT event for DEL
                             // when Ctrl+Backspace is pressed
 
-    using open_file_dialog;
+    using open_file_dialog.input;
 
     utf8_char := convert_utf32_to_utf8(char);
     bytes := array_view(utf8_char.bytes, 0, utf8_char.count);
@@ -147,30 +215,27 @@ get_selected_offsets :: (text: [..] u8, cursor: Open_File_Dialog.Cursor) -> left
 
 #scope_export
 
-dialog_entries :: #run Open_File_Dialog.Entry.[
-    .{ name = "main.exe",   proj = "focus", path = "", icon = .unknown },
-    .{ name = "LOG.md",     proj = "focus", path = "src",    icon = .worklog },
-    .{ name = ".gitignore", proj = "focus", path = "",    icon = .git },
-    .{ name = "run.bat", proj = "focus", path = "",    icon = .text },
-    .{ name = "Simple_String.jai", proj = "jai-beta", path = "modules/Basic", icon = .jai },
-    .{ name = "README.md", proj = "focus", path = "", icon = .text },
-    .{ name = "vasia.txt", proj = "focus", path = "", icon = .text },
-    .{ name = "glfw.cpp", proj = "glfw", path = "src/main", icon = .cpp },
-    .{ name = "image.jpg", proj = "glfw", path = "src", icon = .image },
-    .{ name = "sound.ogg", proj = "focus", path = "src/audio", icon = .audio },
-    .{ name = "Font Awesome Free-Regular 400.ttf", proj = "focus", path = "fonts", icon = .font },
-    .{ name = "LICENSE.txt", proj = "focus", path = "fonts/font-awesome", icon = .key },
-];
-
 Open_File_Dialog :: struct {
-    text: [..] u8;           // filter text
-    entries: [..] Entry;     // filtered entries
-    all_entries: [..] Entry; // all file entries in the project (not updated too often)
-
-    cursor: Cursor;
-    scroll_x: s32;
-    scroll_anim: Scroll_Animation;
     show := false;
+    input: Input;
+    entries: Entries;
+
+    Input :: struct {
+        text: [..] u8;
+        cursor: Cursor;
+        scroll_x: s32;
+        scroll_anim: Scroll_Animation;
+    }
+
+    Entries :: struct {
+        all: [..] Entry;  // all files in the project
+
+        filtered: [..] Entry;
+        selected: s64;
+
+        scroll_y: s32;
+        scroll_anim: Scroll_Animation;
+    }
 
     Cursor :: struct {
         pos, sel: s32;  // cursor position (in chars, not bytes)

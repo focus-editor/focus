@@ -21,6 +21,7 @@ Colors :: struct {
     SEARCH_RESULT_ACTIVE    :: Color.{ r = 0.559, g = 0.469, b = 0.184 };
     SEARCH_RESULT_INACTIVE  :: Color.{ r = 0.322, g = 0.302, b = 0.173 };
     SCROLLBAR               :: Color.{ r = 0.131, g = 0.202, b = 0.25 };
+    SCROLLBAR_SOFT          :: Color.{ r = 0.12, g = 0.177, b = 0.218 };
     CURSOR                  :: Color.{ r = 0.2, g = 0.8, b = 0.8 };
     PASTE_ANIMATION         :: Color.{ r = 0.11, g = 0.267, b = 0.29 };
     SPLITTER                :: Color.{ r = 0.131, g = 0.202, b = 0.25 };

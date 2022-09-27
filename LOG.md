@@ -11,10 +11,11 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
     - Draw an example file list
         + Change box height depending on entries
         + Draw project and folder info
-        - Change current entry and scroll
+        + Change current entry and scroll
+        + Draw scrollbar
+        - Draw shadow when scrolled
         - Change pointer when hovering
         - Scroll using mouse
-    - Fix the font unknown character glyph
     - On start, build a file list in the project
 - Show file names with breadcrumbs
 - Click on breadcrumbs to view files?
@@ -22,6 +23,7 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
     - Use the naive functions first, optimise later if needed (also measure first)
     - Case-sensitive
     - Case-insensitive
+- Fix the font unknown character glyph (try copying something from font-awesome)
 - Select whole words when creating new cursors (unless selected manually)
 - Highlight occurrences of selection (same rules as above)
 - Save file

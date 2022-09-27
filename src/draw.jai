@@ -177,16 +177,18 @@ draw_open_file_dialog :: () {
     box_rect: Rect = ---;
     {
         width  := clamp(screen.w / 3,   400 * dpi_scale, 1500 * dpi_scale);
-        height := clamp(input_rect_height + entry_height * dialog_entries.count, 0, screen.h / 1.5);
+        height := clamp(input_rect_height + entry_height * entries.filtered.count, 0, screen.h / 1.5);
         x := (screen.w - width) / 2;
         y := clamp(100 * dpi_scale, 0, (screen.h - height) / 2);
         box_rect = make_rect(x, screen.h - height - y, width, height);
     }
-    draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = char_size / 1.5, shadow_size = char_size);
+    draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = char_size / 1.5, shadow_size = char_size * 2);
 
     // Draw the filter input
     input_rect, files_rect := cut_top(box_rect, input_rect_height);
     {
+        using open_file_dialog.input;
+
         input_rect = shrink(input_rect, margin);
         draw_rounded_rect(input_rect, Colors.BACKGROUND_DARK);
         input_rect = shrink(input_rect, 1);
@@ -204,7 +206,7 @@ draw_open_file_dialog :: () {
         scroll_x_target := scroll_anim.target;
         if cursor_pos_x - scroll_x_target >= cast(s32) input_rect.w then scroll_x_target = cast(s32) cursor_pos_x - cast(s32) input_rect.w;
         if cursor_pos_x < scroll_x_target then scroll_x_target = xx cursor_pos_x;
-        if scroll_x_target != scroll_anim.target then set_scroll_target(*scroll_anim, scroll_x, scroll_x_target, 2147483647);
+        if scroll_x_target != scroll_anim.target then set_scroll_target(*scroll_anim, scroll_x, scroll_x_target, S32_MAX);
 
         scrolling := false;
         scroll_x, scrolling = animate_scrolling(*scroll_anim, scroll_x);
@@ -233,14 +235,40 @@ draw_open_file_dialog :: () {
 
     // Draw files
     {
+        using entries;
+
         set_scissor(files_rect);
         defer Simp.clear_scissor();
 
+        {
+            // Scrollbar
+            total_height := filtered.count * entry_height;
+            scroll_area := total_height - files_rect.h;
+            if scroll_area > 0 {
+                scrollbar := cut_right(files_rect, char_size);
+                scrollbar.y += files_rect.h * (scroll_area - scroll_y) / total_height;
+                scrollbar.h = files_rect.h * (files_rect.h / total_height);
+                draw_rect(scrollbar, Colors.SCROLLBAR_SOFT);
+            }
+
+            // Scrolling
+            target := scroll_anim.target;
+            selected_top    := selected * entry_height - target;
+            selected_bottom := selected_top + entry_height;
+            if selected_top < 0 then target = cast(s32) (selected * entry_height);
+            if selected_bottom > files_rect.h then target = cast(s32) ((selected + 1) * entry_height - files_rect.h);
+            if target != scroll_anim.target then set_scroll_target(*scroll_anim, scroll_y, target, xx total_height);
+
+            scrolling := false;
+            scroll_y, scrolling = animate_scrolling(*scroll_anim, scroll_y);
+            if scrolling then redraw_requested = true;
+        }
+
         entry_rect := cut_top(files_rect, entry_height);
 
-        for entry, i : dialog_entries {
-            entry_rect.y = files_rect.y + files_rect.h - (i + 1) * entry_height;
-            if i == 0 then draw_rect(entry_rect, Colors.BACKGROUND_BRIGHT);
+        for entry, i : filtered {
+            entry_rect.y = files_rect.y + files_rect.h - (i + 1) * entry_height + scroll_y;
+            if i == selected then draw_rect(entry_rect, Colors.BACKGROUND_BRIGHT);
 
             pen := make_vector2(
                 entry_rect.x + 2 * margin,

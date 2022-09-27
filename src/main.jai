@@ -17,6 +17,8 @@ main :: () {
     init_fonts();
     old_line_height = line_height;
 
+    init_open_file_dialog();
+
     editors_open_file("src/editors.jai");
     editors_open_file("src/main.jai", .left);
 
