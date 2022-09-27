@@ -147,8 +147,26 @@ get_selected_offsets :: (text: [..] u8, cursor: Open_File_Dialog.Cursor) -> left
 
 #scope_export
 
+dialog_entries :: #run Open_File_Dialog.Entry.[
+    .{ name = "main.exe",   proj = "focus", path = "", icon = .unknown },
+    .{ name = "LOG.md",     proj = "focus", path = "src",    icon = .worklog },
+    .{ name = ".gitignore", proj = "focus", path = "",    icon = .git },
+    .{ name = "run.bat", proj = "focus", path = "",    icon = .text },
+    .{ name = "Simple_String.jai", proj = "jai-beta", path = "modules/Basic", icon = .jai },
+    .{ name = "README.md", proj = "focus", path = "", icon = .text },
+    .{ name = "vasia.txt", proj = "focus", path = "", icon = .text },
+    .{ name = "glfw.cpp", proj = "glfw", path = "src/main", icon = .cpp },
+    .{ name = "image.jpg", proj = "glfw", path = "src", icon = .image },
+    .{ name = "sound.ogg", proj = "focus", path = "src/audio", icon = .audio },
+    .{ name = "Font Awesome Free-Regular 400.ttf", proj = "focus", path = "fonts", icon = .font },
+    .{ name = "LICENSE.txt", proj = "focus", path = "fonts/font-awesome", icon = .key },
+];
+
 Open_File_Dialog :: struct {
-    text: [..] u8;
+    text: [..] u8;           // filter text
+    entries: [..] Entry;     // filtered entries
+    all_entries: [..] Entry; // all file entries in the project (not updated too often)
+
     cursor: Cursor;
     scroll_x: s32;
     scroll_anim: Scroll_Animation;
@@ -167,15 +185,16 @@ Open_File_Dialog :: struct {
 }
 
 File_Icon :: enum u32 {
-    binary  :: 0xf15b;
+    unknown :: 0xf15b;
     text    :: 0xf15c;
-    jai     :: 0xf15c;
+    jai     :: 0xf574;
     cpp     :: 0xf1c9;
-    worklog :: 0xf022;
-    windows :: 0xf17a;
-    git     :: 0xf03e;
+    worklog :: 0xf46d;
+    git     :: 0xf387;
     image   :: 0xf1c5;
     audio   :: 0xf1c7;
     font    :: 0xf031;
     key     :: 0xf084;
 }
+
+BULLET_CHAR :: #run to_string(*convert_utf32_to_utf8(0x2022));

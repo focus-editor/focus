@@ -168,22 +168,24 @@ draw_editor :: (editor_id: s64, rect: Rect) {
 draw_open_file_dialog :: () {
     using open_file_dialog;
 
+    margin  := 10 * dpi_scale;
+    padding :=  5 * dpi_scale;
+    input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
+    entry_height := font_ui_line_height + padding * 2;
+
     // Figure out the dialog box size
     box_rect: Rect = ---;
     {
         width  := clamp(screen.w / 3,   400 * dpi_scale, 1500 * dpi_scale);
-        height := clamp(screen.h / 1.5, 200 * dpi_scale, 800  * dpi_scale);
+        height := clamp(input_rect_height + entry_height * dialog_entries.count, 0, screen.h / 1.5);
         x := (screen.w - width) / 2;
         y := clamp(100 * dpi_scale, 0, (screen.h - height) / 2);
         box_rect = make_rect(x, screen.h - height - y, width, height);
     }
     draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = char_size / 1.5, shadow_size = char_size);
 
-    margin  := 10 * dpi_scale;
-    padding :=  5 * dpi_scale;
-
     // Draw the filter input
-    input_rect, files_rect := cut_top(box_rect, font_ui_line_height + 2 * padding + 2 * margin + 2);
+    input_rect, files_rect := cut_top(box_rect, input_rect_height);
     {
         input_rect = shrink(input_rect, margin);
         draw_rounded_rect(input_rect, Colors.BACKGROUND_DARK);
@@ -231,23 +233,46 @@ draw_open_file_dialog :: () {
 
     // Draw files
     {
-        entries := Open_File_Dialog.Entry.[
-            .{ name = "draw.jai",   proj = "focus", path = "src", icon = .jai },
-            .{ name = "LOG.md",     proj = "focus", path = "",    icon = .worklog },
-            .{ name = ".gitignore", proj = "focus", path = "",    icon = .git },
-            .{ name = "Simple_String.jai", proj = "jai-beta", path = "modules/Basic", icon = .jai },
-        ];
+        set_scissor(files_rect);
+        defer Simp.clear_scissor();
 
-        entry_height := font_ui_line_height + padding * 2;
-        rect := cut_top(files_rect, entry_height);
+        entry_rect := cut_top(files_rect, entry_height);
 
-        for entry, i : entries {
-            rect.y = files_rect.y + files_rect.h - (i + 1) * entry_height;
-            entry_rect := shrink_x(rect, 2 * margin);
-            icon_rect, name_rect := cut_left(entry_rect, char_size * 2);
+        for entry, i : dialog_entries {
+            entry_rect.y = files_rect.y + files_rect.h - (i + 1) * entry_height;
+            if i == 0 then draw_rect(entry_rect, Colors.BACKGROUND_BRIGHT);
+
+            pen := make_vector2(
+                entry_rect.x + 2 * margin,
+                entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+            );
+            width: float;
+
+            // Draw file icon
             icon_char := convert_utf32_to_utf8(xx entry.icon);
-            Simp.draw_text(font_icons, xx icon_rect.x, xx icon_rect.y, to_string(*icon_char), color = Colors.CODE_PUNCTUATION);
-            Simp.draw_text(font_ui, xx name_rect.x, xx name_rect.y, entry.name, color = Colors.CODE_PUNCTUATION);
+            Simp.draw_text(font_icons, xx pen.x, xx pen.y, to_string(*icon_char), color = Colors.CODE_PUNCTUATION);
+
+            // Draw name
+            pen.x += xx font_icons.em_width + padding;
+            width += xx Simp.prepare_text(font_ui, entry.name);
+            Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = Colors.CODE_PUNCTUATION);
+
+            // Draw project name
+            pen.x += width + margin;
+            width = xx Simp.prepare_text(font_ui_small, entry.proj);
+            Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+
+            if entry.path {
+                // Draw separator
+                pen.x += width + padding;
+                width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
+                Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+
+                // Draw file path
+                pen.x += width + padding;
+                width = xx Simp.prepare_text(font_ui_small, entry.path);
+                Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+            }
         }
     }
 

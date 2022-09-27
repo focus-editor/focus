@@ -27,7 +27,8 @@ Colors :: struct {
     SPLITTER_HOVER          :: Color.{ r = 0.110, g = 0.267, b = 0.29 };
 
     CODE_DEFAULT        :: Color.{ r = 0.81, g = 0.77, b = 0.66, a = 1.0 };
-    CODE_COMMENT        :: Color.{ r = 0.52, g = 0.56, b = 0.54, a = 1.0 };
+    // CODE_COMMENT        :: Color.{ r = 0.52, g = 0.56, b = 0.54, a = 1.0 };
+    CODE_COMMENT        :: Color.{ r = 0.533, g = 0.569, b = 0.616, a = 1.0 };
     CODE_TYPE           :: Color.{ r = 0.51, g = 0.67, b = 0.64, a = 1.0 };
     CODE_FUNCTION       :: Color.{ r = 0.67, g = 0.74, b = 0.49, a = 1.0 };
     CODE_PUNCTUATION    :: Color.{ r = 0.75, g = 0.79, b = 0.86, a = 1.0 };

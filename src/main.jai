@@ -140,7 +140,12 @@ init_fonts :: () {
     assert(font_ui != null, "Couldn't init main ui font\n");
     font_ui_line_height = cast(float) font_ui.default_line_spacing;
 
-    font_icons = Simp.get_font_at_size("fonts/font-awesome", "Font Awesome 6 Free-Regular-400.otf", cast(int) (font_icons_size * dpi_scale));
+    font_ui_small = Simp.get_font_at_size("fonts", "SEGOEUI.TTF", cast(int) (font_ui_small_size * dpi_scale));
+    // font_ui_small = Simp.get_font_at_size("fonts", "SEGUISB.TTF", cast(int) (font_ui_small_size * dpi_scale));
+    assert(font_ui_small != null, "Couldn't init main ui font\n");
+    font_ui_small_line_height = cast(float) font_ui.default_line_spacing;
+
+    font_icons = Simp.get_font_at_size("fonts/font-awesome", "Font Awesome 6 Free-Solid-900.otf", cast(int) (font_icons_size * dpi_scale));
     assert(font_icons != null, "Couldn't init main icon font\n");
 }
 
@@ -243,6 +248,10 @@ font_size := 14;
 font_ui      :  *Simp.Dynamic_Font;
 font_ui_size := 16;
 font_ui_line_height: float;
+
+font_ui_small      :  *Simp.Dynamic_Font;
+font_ui_small_size := 15;
+font_ui_small_line_height: float;
 
 font_icons      : *Simp.Dynamic_Font;
 font_icons_size := 16;

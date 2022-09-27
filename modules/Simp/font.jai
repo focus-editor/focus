@@ -202,7 +202,7 @@ load_font_part_2 :: (result: *Dynamic_Font, pixel_height: int) {
         if !success  success = set_unknown_character(result, 0x2022);  // BULLET
         if !success  success = set_unknown_character(result, #char "?");
         if !success {
-            log_error("Unable to set unknown character for font '%1'.\n", basename);
+            log_error("Unable to set unknown character for font '%'.\n", basename);
         }
     }
 

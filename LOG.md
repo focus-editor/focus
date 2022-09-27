@@ -9,6 +9,12 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
     + Support deleting
     + Support copy/cut/paste
     - Draw an example file list
+        + Change box height depending on entries
+        + Draw project and folder info
+        - Change current entry and scroll
+        - Change pointer when hovering
+        - Scroll using mouse
+    - Fix the font unknown character glyph
     - On start, build a file list in the project
 - Show file names with breadcrumbs
 - Click on breadcrumbs to view files?
