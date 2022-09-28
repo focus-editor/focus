@@ -310,13 +310,18 @@ draw_open_file_dialog :: () {
         highlight_color_lite := Colors.BACKGROUND_BRIGHT;
         highlight_color_lite.a = 0.5;
 
+        visible_start := clamp(cast(s64) (scroll_y / entry_height), 0, filtered.count);
+        visible_count := cast(s64) (files_rect.h / entry_height) + 2;
+        visible_entries := array_view(filtered, visible_start, visible_count);
+
         entry_rect := cut_top(files_rect, entry_height);
 
-        for entry, i : filtered {
-            entry_rect.y = files_rect.y + files_rect.h - (i + 1) * entry_height + scroll_y;
+        for entry, i : visible_entries {
+            entry_index := visible_start + i;
+            entry_rect.y = files_rect.y + files_rect.h - (entry_index + 1) * entry_height + scroll_y;
 
             if mouse_pointer_is_within(entry_rect) then draw_rect(entry_rect, highlight_color_lite);
-            if i == selected then draw_rect(entry_rect, Colors.BACKGROUND_BRIGHT);
+            if entry_index == selected then draw_rect(entry_rect, Colors.BACKGROUND_BRIGHT);
 
             pen := make_vector2(
                 entry_rect.x + 2 * margin,

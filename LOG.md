@@ -1,26 +1,7 @@
 # TODO
 WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
 - Open file dialog
-    + Input:
-        + Draw a box and make it behave nicely when resizing
-        + Draw an input box
-        + Support basic kerning
-        + Type text into input, move cursor etc
-        + Support non-ascii
-        + Support deleting
-        + Support copy/cut/paste
-    - Draw an example file list
-        + Change box height depending on entries
-        + Draw project and folder info
-        + Change current entry and scroll
-        + Draw scrollbar
-        + Draw shadow when scrolled
-        + Change pointer when hovering (and hover over entries)
-        + Don't react to mouse in other places when it's over the dialog box
-        + Close the dialog when clicked outside it
-        + Scroll using mouse
     - On start, build a file list in the project
-    - Don't draw too many files, only draw visible ones
 - Input: select using mouse
 - Show file names with breadcrumbs
 - Click on breadcrumbs to view files?
@@ -62,6 +43,25 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
 - Don't redraw if nothing has changed
 
 # DONE
++ Input:
+    + Draw a box and make it behave nicely when resizing
+    + Draw an input box
+    + Support basic kerning
+    + Type text into input, move cursor etc
+    + Support non-ascii
+    + Support deleting
+    + Support copy/cut/paste
++ Draw an example file list
+    + Change box height depending on entries
+    + Draw project and folder info
+    + Change current entry and scroll
+    + Draw scrollbar
+    + Draw shadow when scrolled
+    + Change pointer when hovering (and hover over entries)
+    + Don't react to mouse in other places when it's over the dialog box
+    + Close the dialog when clicked outside it
+    + Scroll using mouse
+    + Don't draw too many files, only draw visible ones
 + Try font-awesome icons
 + Don't change selection on ctrl+D if cursor already has selection
 + Move between panes by ctrl+arrow, move cursor horizontally by alt+arrows
