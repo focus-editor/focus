@@ -1204,7 +1204,6 @@ Editor :: struct {
     main_cursor: s64;      // newly added cursors become main so that we jump to them
     original_cursor: s64;  // we remember the original cursor when first creating multiple cursors (and go back to it on escape)
     viewport: Viewport;
-    dragging_lmb := false;
     cursor_moved  := false;
 
     paste_animations: [..] Paste_Animation;

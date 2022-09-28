@@ -50,7 +50,7 @@ main :: () {
         // Don't do anything when window is resized to a size that's too small
         if window_width < MIN_WINDOW_WIDTH || window_height < MIN_WINDOW_HEIGHT continue;
 
-        update_mouse_pointer();
+        update_mouse_state();
 
         for * editor : open_editors {
             using editor;
@@ -111,17 +111,6 @@ main :: () {
             }
         }
 
-        if mouse_left_just_pressed() {
-            time_from_last_click := frame_time - mouse_left_last_down_time;
-            distance_from_last_click := mouse_pointer - mouse_left_last_down_pos;
-            max_distance := max(abs(distance_from_last_click.x), abs(distance_from_last_click.y));
-            mouse_left_just_double_clicked = time_from_last_click < DOUBLE_CLICK_SPEED && max_distance < DOUBLE_CLICK_TOLERANCE;
-            mouse_left_last_down_pos  = mouse_pointer;
-            mouse_left_last_down_time = frame_time;
-        } else {
-            mouse_left_just_double_clicked = false;
-        }
-
         refresh_open_buffers();
 
         draw_frame();
@@ -152,10 +141,33 @@ init_fonts :: () {
     assert(font_icons != null, "Couldn't init main icon font\n");
 }
 
-update_mouse_pointer :: () {
+update_mouse_state :: () {
     x, y := get_mouse_pointer_position(window, false);
-    mouse_pointer.x = xx x;
-    mouse_pointer.y = xx (window_height - y);
+    mouse.pointer.x = xx x;
+    mouse.pointer.y = xx (window_height - y);
+
+    update_button(*mouse.left,   .MOUSE_BUTTON_LEFT);
+    update_button(*mouse.right,  .MOUSE_BUTTON_RIGHT);
+    update_button(*mouse.middle, .MOUSE_BUTTON_MIDDLE);
+
+    update_button :: (button: *Mouse_Button_State, key: Input.Key_Code) {
+        button.is_down       = key_state(key) & .DOWN  != 0;  // NOTE: this doesn't include just_pressed!
+        button.just_pressed  = key_state(key) & .START != 0;
+        button.just_released = key_state(key) & .END   != 0;
+
+        if button.just_pressed {
+            time_from_last_click := frame_time - button.last_down_time;
+            distance_from_last_click := mouse.pointer - button.last_down_pos;
+            max_distance := max(abs(distance_from_last_click.x), abs(distance_from_last_click.y));
+            button.just_double_clicked = time_from_last_click < DOUBLE_CLICK_SPEED && max_distance < DOUBLE_CLICK_TOLERANCE;
+            button.last_down_pos  = mouse.pointer;
+            button.last_down_time = frame_time;
+        } else {
+            button.just_double_clicked = false;
+        }
+
+        button.is_dragging   = button.is_down && mouse.pointer != button.last_down_pos;
+    }
 }
 
 panic :: (format_string: string, args: .. Any, exit_code : s32 = 1) {
@@ -195,25 +207,6 @@ key_state :: inline (key: Input.Key_Code) -> Input.Key_Current_State {
     return Input.input_button_states[key];
 }
 
-mouse_left_just_pressed :: inline () -> bool {
-    return key_state(.MOUSE_BUTTON_LEFT) & .START != 0;
-}
-
-mouse_left_just_released :: inline () -> bool {
-    return key_state(.MOUSE_BUTTON_LEFT) & .END != 0;
-}
-
-mouse_left_is_down :: inline () -> bool {
-    return key_state(.MOUSE_BUTTON_LEFT) & .DOWN != 0;
-}
-
-mouse_left_is_dragging :: () -> dragging: bool, drag_started: Vector2 {
-    if mouse_left_is_down() && mouse_pointer != mouse_left_last_down_pos {
-        return true, mouse_left_last_down_pos;
-    }
-    return false, mouse_left_last_down_pos;
-}
-
 shift_pressed :: inline () -> bool {
     return key_state(.SHIFT) & .DOWN != 0;
 }
@@ -233,10 +226,26 @@ frame_time: Time;  // ever-increasing time since start in seconds
 
 screen: Rect;  // contains the current working area rect for convenience
 
-mouse_pointer: Vector2;
-mouse_left_last_down_pos:  Vector2;
-mouse_left_last_down_time: Time;
-mouse_left_just_double_clicked: bool;
+mouse: Mouse_State;
+
+Mouse_State :: struct {
+    pointer: Vector2;
+
+    left:   Mouse_Button_State;
+    right:  Mouse_Button_State;
+    middle: Mouse_Button_State;
+}
+
+Mouse_Button_State :: struct {
+    is_down:             bool;
+    is_dragging:         bool;
+    just_pressed:        bool;
+    just_released:       bool;
+    just_double_clicked: bool;
+
+    last_down_pos:  Vector2;
+    last_down_time: Time;
+}
 
 // Depend on font
 char_size:   float;

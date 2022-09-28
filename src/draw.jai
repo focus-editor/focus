@@ -4,6 +4,9 @@ draw_frame :: () {
         Simp.clear_render_target(r, g, b, a);
     }
 
+    // Check whether we need to deactivate elements before drawing
+    if !mouse.left.is_down || mouse.left.just_released then ui_set_active(.none);
+
     footer_rect, main_area := cut_bottom(screen, line_height * 1.4);
 
     if #complete editors_layout == {
@@ -14,12 +17,12 @@ draw_frame :: () {
         case .Single;
             dragging_splitter = false;
             splitter_pos = 0;
-            draw_editor(editor_active, main_area);
+            draw_editor(editor_active, main_area, .editor_single);
             if mouse_pointer_is_within(main_area) then set_pointer_image(.TEXT_SELECT);
         case .Double;
             // Drag splitter
             if dragging_splitter {
-                splitter_pos = (mouse_pointer.x - main_area.x) / main_area.w;
+                splitter_pos = (mouse.pointer.x - main_area.x) / main_area.w;
                 if splitter_pos == 0 then splitter_pos = 0.1;  // avoid jitter
             }
             if splitter_pos != 0 then splitter_pos = clamp(splitter_pos, 0.1, 0.9);
@@ -35,7 +38,7 @@ draw_frame :: () {
 
             if mouse_pointer_is_within(main_area) then set_pointer_image(.TEXT_SELECT);
             if mouse_pointer_is_within(splitter_rect_fat) {
-                if mouse_left_just_pressed() then dragging_splitter = true;
+                if mouse.left.just_pressed then dragging_splitter = true;
                 set_pointer_image(.DRAGGING_HORIZONTAL);
                 splitter_color = Colors.SPLITTER_HOVER;
                 splitter_rect = expand(splitter_rect, 1);
@@ -45,11 +48,11 @@ draw_frame :: () {
             }
 
             // Draw
-            draw_editor(editor_left,  left_rect);
-            draw_editor(editor_right, right_rect);
+            draw_editor(editor_left,  left_rect,  .editor_left);
+            draw_editor(editor_right, right_rect, .editor_right);
             draw_rect(splitter_rect, splitter_color);
 
-            if mouse_left_just_released() then dragging_splitter = false;
+            if mouse.left.just_released then dragging_splitter = false;
     }
 
     // Draw footer rect
@@ -58,12 +61,24 @@ draw_frame :: () {
 
     if open_file_dialog.show then draw_open_file_dialog();
 
+    // Reset UI state after drawing
+    if !mouse.left.is_down || mouse.left.just_released {
+        ui_set_active(.none);
+    } else if no_active_ui_item() {
+        ui_set_active(.unavailable);  // so that we don't activate anything by dragging on it
+    }
+
     Simp.swap_buffers(window);
 }
 
-draw_editor :: (editor_id: s64, rect: Rect) {
+draw_editor :: (editor_id: s64, rect: Rect, ui_id: Ui_Id) {
     set_scissor(rect);
     defer Simp.clear_scissor();
+
+    if mouse_pointer_is_within(rect) {
+        if ui_is_hot(ui_id) && no_active_ui_item() && mouse.left.just_pressed then ui_set_active(ui_id);
+        ui_set_hot(ui_id);
+    }
 
     using editor := *open_editors[editor_id];
     buffer := open_buffers[buffer_id];
@@ -72,10 +87,8 @@ draw_editor :: (editor_id: s64, rect: Rect) {
     text_offset := make_vector2(char_size * 2, -char_size * 2);
     text_origin := top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
 
-    active_drag, drag_started_at_point := mouse_left_is_dragging();
-    dragging_lmb = active_drag && point_within(drag_started_at_point, rect);
-    if ((mouse_left_just_pressed() && mouse_pointer_is_within(rect)) || dragging_lmb) && !dragging_splitter {
-        pointer := snap_to_rect(mouse_pointer, rect);  // when we drag outside the editor we still want to interact
+    if ui_is_active(ui_id) && (mouse.left.just_pressed || mouse.left.is_dragging) {
+        pointer := snap_to_rect(mouse.pointer, rect);  // when we drag outside the editor we still want to interact
 
         // Maybe change cursor position
         cursor := leave_only_original_cursor(editor);
@@ -88,10 +101,10 @@ draw_editor :: (editor_id: s64, rect: Rect) {
         cursor.col_wanted = cursor.pos.col;
 
         // We mark cursor as moved to trigger auto-scroll if we drag outside the editor
-        if dragging_lmb && !mouse_pointer_is_within(rect) then cursor_moved = true;
+        if !mouse_pointer_is_within(rect) then cursor_moved = true;
 
-        if !shift_pressed() && !dragging_lmb then remove_selection(cursor);
-        if mouse_left_just_double_clicked then select_word(cursor, buffer);
+        if !shift_pressed() && mouse.left.just_pressed then remove_selection(cursor);
+        if mouse.left.just_double_clicked then select_word(cursor, buffer);
 
         // Activate editor
         editor_active = editor_id;
@@ -184,7 +197,12 @@ draw_open_file_dialog :: () {
     }
     draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = char_size / 1.5, shadow_size = char_size * 1.5);
 
-    if mouse_pointer_is_within(box_rect) then set_pointer_image(.NORMAL);
+    ui_id := Ui_Id.open_file_dialog;
+    if mouse_pointer_is_within(box_rect) {
+        set_pointer_image(.NORMAL);
+        if ui_is_hot(ui_id) && no_active_ui_item() && mouse.left.just_pressed then ui_set_active(ui_id);
+        ui_set_hot(ui_id);
+    }
 
     // Draw the filter input
     input_rect, files_rect := cut_top(box_rect, input_rect_height);
@@ -530,4 +548,40 @@ set_scissor :: (rect: Rect) {
     x1 := cast(s32) (rect.x + rect.w);
     y1 := cast(s32) (rect.y + rect.h);
     Simp.set_scissor(x0, y0, x1, y1);
+}
+
+
+#scope_file
+
+ui_is_hot :: inline (ui_id: Ui_Id) -> bool {
+    return ui_hot_item == ui_id;
+}
+
+ui_is_active :: inline (ui_id: Ui_Id) -> bool {
+    return ui_active_item == ui_id;
+}
+
+ui_set_hot :: inline (ui_id: Ui_Id) {
+    ui_hot_item = ui_id;
+}
+
+ui_set_active :: inline (ui_id: Ui_Id) {
+    ui_active_item = ui_id;
+}
+
+no_active_ui_item :: inline () -> bool {
+    return ui_active_item == .none;
+}
+
+ui_hot_item     := Ui_Id.none;
+ui_active_item  := Ui_Id.none;
+
+Ui_Id :: enum s64 {
+    unavailable :: -1;
+    none :: 0;
+    editor_single;
+    editor_left;
+    editor_right;
+    editor_splitter;
+    open_file_dialog;
 }

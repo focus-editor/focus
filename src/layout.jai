@@ -143,7 +143,7 @@ point_within :: (p: Vector2, using rect: Rect) -> bool {
 }
 
 mouse_pointer_is_within :: inline (rect: Rect) -> bool {
-    return point_within(mouse_pointer, rect);
+    return point_within(mouse.pointer, rect);
 }
 
 snap_to_rect :: (point: Vector2, using rect: Rect) -> Vector2 {
