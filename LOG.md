@@ -15,7 +15,7 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
         + Draw scrollbar
         + Draw shadow when scrolled
         + Change pointer when hovering (and hover over entries)
-        - Don't react to mouse in other places when it's over the dialog box
+        + Don't react to mouse in other places when it's over the dialog box
         - Scroll using mouse
         - (after resize) If because of scroll there's empty space, adjust scroll
     - On start, build a file list in the project

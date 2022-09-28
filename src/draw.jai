@@ -5,54 +5,31 @@ draw_frame :: () {
     }
 
     // Check whether we need to deactivate elements before drawing
-    if !mouse.left.is_down || mouse.left.just_released then ui_set_active(.none);
+    if !mouse.left.is_down || mouse.left.just_released then ui.active = .none;
 
     footer_rect, main_area := cut_bottom(screen, line_height * 1.4);
 
     if #complete editors_layout == {
         case .None;
-            dragging_splitter = false;
             splitter_pos = 0;
             // TODO: draw a shortcut cheat-sheet?
         case .Single;
-            dragging_splitter = false;
             splitter_pos = 0;
             draw_editor(editor_active, main_area, .editor_single);
-            if mouse_pointer_is_within(main_area) then set_pointer_image(.TEXT_SELECT);
         case .Double;
             // Drag splitter
-            if dragging_splitter {
+            if ui.active == .editor_splitter {
                 splitter_pos = (mouse.pointer.x - main_area.x) / main_area.w;
                 if splitter_pos == 0 then splitter_pos = 0.1;  // avoid jitter
             }
             if splitter_pos != 0 then splitter_pos = clamp(splitter_pos, 0.1, 0.9);
 
-            // Lay out editors and splitters
-            split := ifx splitter_pos > 0 then main_area.w * splitter_pos else main_area.w / 2;
-            left_rect, right_rect := cut_left(main_area, split);
-            splitter_rect := right_rect;
-            splitter_rect.x -= 1;
-            splitter_rect.w = 2;
-            splitter_rect_fat := expand(splitter_rect, 5 * dpi_scale);
-            splitter_color := Colors.SPLITTER;
+            split_x := ifx splitter_pos > 0 then main_area.w * splitter_pos else main_area.w / 2;
+            left_rect, right_rect := cut_left(main_area, split_x);
 
-            if mouse_pointer_is_within(main_area) then set_pointer_image(.TEXT_SELECT);
-            if mouse_pointer_is_within(splitter_rect_fat) {
-                if mouse.left.just_pressed then dragging_splitter = true;
-                set_pointer_image(.DRAGGING_HORIZONTAL);
-                splitter_color = Colors.SPLITTER_HOVER;
-                splitter_rect = expand(splitter_rect, 1);
-            } else if dragging_splitter {
-                splitter_color = Colors.SPLITTER_HOVER;
-                splitter_rect = expand(splitter_rect, 1);
-            }
-
-            // Draw
             draw_editor(editor_left,  left_rect,  .editor_left);
             draw_editor(editor_right, right_rect, .editor_right);
-            draw_rect(splitter_rect, splitter_color);
-
-            if mouse.left.just_released then dragging_splitter = false;
+            draw_splitter(main_area, split_x);
     }
 
     // Draw footer rect
@@ -63,12 +40,34 @@ draw_frame :: () {
 
     // Reset UI state after drawing
     if !mouse.left.is_down || mouse.left.just_released {
-        ui_set_active(.none);
+        ui.active = .none;
     } else if no_active_ui_item() {
-        ui_set_active(.unavailable);  // so that we don't activate anything by dragging on it
+        ui.active = .unavailable;  // so that we don't activate anything by dragging on it
     }
+    ui.hot_last_frame = ui.hot;
 
     Simp.swap_buffers(window);
+}
+
+draw_splitter :: (main_area: Rect, split_x: float) {
+    ui_id := Ui_Id.editor_splitter;
+    color := Colors.SPLITTER;
+
+    rect     := make_rect(split_x - 1, main_area.y, 2, main_area.h);
+    rect_fat := expand(rect, 5 * dpi_scale);
+
+    if mouse_pointer_is_within(rect_fat) {
+        ui.hot = ui_id;
+        if ui.hot_last_frame == ui_id && mouse.left.just_pressed then ui.active = ui_id; // TODO: highlight animation?
+    }
+
+    if ui.active == .none && ui.hot_last_frame == ui_id || ui.active == ui_id {
+        set_pointer_image(.DRAGGING_HORIZONTAL);
+        color = Colors.SPLITTER_HOVER;
+        rect = expand(rect, 1);
+    }
+
+    draw_rect(rect, color);
 }
 
 draw_editor :: (editor_id: s64, rect: Rect, ui_id: Ui_Id) {
@@ -76,8 +75,9 @@ draw_editor :: (editor_id: s64, rect: Rect, ui_id: Ui_Id) {
     defer Simp.clear_scissor();
 
     if mouse_pointer_is_within(rect) {
-        if ui_is_hot(ui_id) && no_active_ui_item() && mouse.left.just_pressed then ui_set_active(ui_id);
-        ui_set_hot(ui_id);
+        if ui.hot_last_frame == ui_id && no_active_ui_item() && mouse.left.just_pressed then ui.active = ui_id;
+        ui.hot = ui_id;
+        set_pointer_image(.TEXT_SELECT);
     }
 
     using editor := *open_editors[editor_id];
@@ -87,7 +87,7 @@ draw_editor :: (editor_id: s64, rect: Rect, ui_id: Ui_Id) {
     text_offset := make_vector2(char_size * 2, -char_size * 2);
     text_origin := top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
 
-    if ui_is_active(ui_id) && (mouse.left.just_pressed || mouse.left.is_dragging) {
+    if ui.active == ui_id && (mouse.left.just_pressed || mouse.left.is_dragging) {
         pointer := snap_to_rect(mouse.pointer, rect);  // when we drag outside the editor we still want to interact
 
         // Maybe change cursor position
@@ -114,7 +114,7 @@ draw_editor :: (editor_id: s64, rect: Rect, ui_id: Ui_Id) {
     // Handle editor scrolling here because we only know the layout at this point.
     // Some people would say this is not "clean", but hey, we'll see if we have any issues.
     max_y_scroll := get_max_y_scroll(buffer);
-    if mouse_pointer_is_within(rect) && Input.mouse_delta_z {
+    if ui.hot_last_frame == ui_id && mouse_pointer_is_within(rect) && Input.mouse_delta_z {
         editor_mouse_scroll(editor, Input.mouse_delta_z, max_y_scroll);
     } else if cursor_moved {
         // Detect if cursor is off screen and start scrolling to it
@@ -200,8 +200,8 @@ draw_open_file_dialog :: () {
     ui_id := Ui_Id.open_file_dialog;
     if mouse_pointer_is_within(box_rect) {
         set_pointer_image(.NORMAL);
-        if ui_is_hot(ui_id) && no_active_ui_item() && mouse.left.just_pressed then ui_set_active(ui_id);
-        ui_set_hot(ui_id);
+        ui.hot = ui_id;
+        if ui.hot_last_frame == ui_id && no_active_ui_item() && mouse.left.just_pressed then ui.active = ui_id;
     }
 
     // Draw the filter input
@@ -553,28 +553,15 @@ set_scissor :: (rect: Rect) {
 
 #scope_file
 
-ui_is_hot :: inline (ui_id: Ui_Id) -> bool {
-    return ui_hot_item == ui_id;
-}
-
-ui_is_active :: inline (ui_id: Ui_Id) -> bool {
-    return ui_active_item == ui_id;
-}
-
-ui_set_hot :: inline (ui_id: Ui_Id) {
-    ui_hot_item = ui_id;
-}
-
-ui_set_active :: inline (ui_id: Ui_Id) {
-    ui_active_item = ui_id;
-}
-
 no_active_ui_item :: inline () -> bool {
-    return ui_active_item == .none;
+    return ui.active == .none;
 }
 
-ui_hot_item     := Ui_Id.none;
-ui_active_item  := Ui_Id.none;
+ui: struct {
+    active: Ui_Id = .none;
+    hot:    Ui_Id = .none;
+    hot_last_frame: Ui_Id = .none;
+}
 
 Ui_Id :: enum s64 {
     unavailable :: -1;
