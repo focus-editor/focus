@@ -198,7 +198,7 @@ draw_open_file_dialog :: () {
     box_rect: Rect = ---;
     {
         width  := clamp(screen.w / 3,   400 * dpi_scale, 1500 * dpi_scale);
-        height := clamp(input_rect_height + entry_height * entries.filtered.count, 0, screen.h / 1.5);
+        height := clamp(input_rect_height + entry_height * entries.filtered.count + padding, 0, screen.h / 1.5);
         x := (screen.w - width) / 2;
         y := clamp(100 * dpi_scale, 0, (screen.h - height) / 2);
         box_rect = make_rect(x, screen.h - height - y, width, height);
@@ -213,6 +213,8 @@ draw_open_file_dialog :: () {
 
     // Draw the filter input
     input_rect, files_rect := cut_top(box_rect, input_rect_height);
+    _pad: Rect = ---;  // allow some space at the bottom so that we don't cover up the rounded corners with the cursor
+    _pad, files_rect = cut_bottom(files_rect, padding);
     {
         using open_file_dialog.input;
 
@@ -277,7 +279,7 @@ draw_open_file_dialog :: () {
                 scrollbar := cut_right(files_rect, char_size);
                 scrollbar.y += files_rect.h * (scroll_area - scroll_y) / total_height;
                 scrollbar.h = files_rect.h * (files_rect.h / total_height);
-                draw_rect(scrollbar, Colors.SCROLLBAR_SOFT);
+                draw_rounded_rect(scrollbar, Colors.SCROLLBAR_SOFT, radius = 4 * dpi_scale);
             }
 
             // Scrolling
