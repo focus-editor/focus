@@ -181,6 +181,13 @@ draw_editor :: (editor_id: s64, rect: Rect, ui_id: Ui_Id) {
 draw_open_file_dialog :: () {
     using open_file_dialog;
 
+    ui_id := Ui_Id.open_file_dialog;
+    if ui.active != .none && ui.active != ui_id {
+        // Close the dialog on clicks elsewhere
+        show = false;
+        return;
+    }
+
     margin  := 10 * dpi_scale;
     padding :=  5 * dpi_scale;
     input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
@@ -197,7 +204,6 @@ draw_open_file_dialog :: () {
     }
     draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = char_size / 1.5, shadow_size = char_size * 1.5);
 
-    ui_id := Ui_Id.open_file_dialog;
     if mouse_pointer_is_within(box_rect) {
         set_pointer_image(.NORMAL);
         ui.hot = ui_id;
