@@ -440,17 +440,6 @@ organise_cursors :: (using editor: *Editor) {
     }
 }
 
-editor_mouse_scroll :: (editor: *Editor, delta_z: int, max_y_scroll: s32) {
-    if delta_z == 0 return;
-
-    // Vertical scroll
-    // Y-up, so a positive value of viewport.top means we've scrolled down
-    WHEEL_SENSITIVITY :: 1.0;
-    scroll_delta := cast(s32) (cast(float) delta_z * WHEEL_SENSITIVITY);
-    using editor.viewport;
-    set_scroll_target(*scroll_y, top, scroll_y.target - scroll_delta, max_y_scroll);
-}
-
 animate_scrolling :: (editor: *Editor) -> scrolling: bool {
     using editor.viewport;
     scrolling := false;

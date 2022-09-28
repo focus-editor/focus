@@ -114,8 +114,9 @@ draw_editor :: (editor_id: s64, rect: Rect, ui_id: Ui_Id) {
     // Handle editor scrolling here because we only know the layout at this point.
     // Some people would say this is not "clean", but hey, we'll see if we have any issues.
     max_y_scroll := get_max_y_scroll(buffer);
-    if ui.hot_last_frame == ui_id && mouse_pointer_is_within(rect) && Input.mouse_delta_z {
-        editor_mouse_scroll(editor, Input.mouse_delta_z, max_y_scroll);
+    if ui.hot_last_frame == ui_id && mouse_pointer_is_within(rect) && mouse.scroll_y_delta != 0 {
+        using editor.viewport;
+        set_scroll_target(*scroll_y, top, scroll_y.target - mouse.scroll_y_delta, max_y_scroll);
     } else if cursor_moved {
         // Detect if cursor is off screen and start scrolling to it
         bounds := shrink_x(rect, text_offset.x + char_size * 3);
@@ -280,23 +281,34 @@ draw_open_file_dialog :: () {
             }
 
             // Scrolling
-            target := scroll_anim.target;
-            selected_top    := selected * entry_height - target;
-            selected_bottom := selected_top + entry_height;
-            if selected_top < 0 then target = cast(s32) (selected * entry_height);
-            if selected_bottom > files_rect.h then target = cast(s32) ((selected + 1) * entry_height - files_rect.h);
-            if target != scroll_anim.target then set_scroll_target(*scroll_anim, scroll_y, target, xx total_height);
+            if scroll_to_cursor {
+                // We only want to scroll to cursor when cursor is moved by arrow keys
+                target := scroll_anim.target;
+                selected_top    := selected * entry_height - target;
+                selected_bottom := selected_top + entry_height;
+                if selected_top < 0 then target = cast(s32) (selected * entry_height);
+                if selected_bottom > files_rect.h then target = cast(s32) ((selected + 1) * entry_height - files_rect.h);
+                if target != scroll_anim.target then set_scroll_target(*scroll_anim, scroll_y, target, xx scroll_area);
+                scroll_to_cursor = false;
+            }
+
+            // Mouse scrolling
+            if ui.hot_last_frame == ui_id && mouse_pointer_is_within(files_rect) {
+                set_pointer_image(.PRESSABLE);
+                if mouse.scroll_y_delta != 0 {
+                    set_scroll_target(*scroll_anim, scroll_y, scroll_anim.target - mouse.scroll_y_delta, xx scroll_area);
+                }
+            }
 
             scrolling := false;
             scroll_y, scrolling = animate_scrolling(*scroll_anim, scroll_y);
             if scrolling then redraw_requested = true;
         }
 
-        entry_rect := cut_top(files_rect, entry_height);
-
-        if mouse_pointer_is_within(files_rect) then set_pointer_image(.PRESSABLE);
         highlight_color_lite := Colors.BACKGROUND_BRIGHT;
         highlight_color_lite.a = 0.5;
+
+        entry_rect := cut_top(files_rect, entry_height);
 
         for entry, i : filtered {
             entry_rect.y = files_rect.y + files_rect.h - (i + 1) * entry_height + scroll_y;

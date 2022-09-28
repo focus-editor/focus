@@ -146,6 +146,8 @@ update_mouse_state :: () {
     mouse.pointer.x = xx x;
     mouse.pointer.y = xx (window_height - y);
 
+    mouse.scroll_y_delta = cast(s32) (cast(float) Input.mouse_delta_z * WHEEL_SENSITIVITY);
+
     update_button(*mouse.left,   .MOUSE_BUTTON_LEFT);
     update_button(*mouse.right,  .MOUSE_BUTTON_RIGHT);
     update_button(*mouse.middle, .MOUSE_BUTTON_MIDDLE);
@@ -230,6 +232,7 @@ mouse: Mouse_State;
 
 Mouse_State :: struct {
     pointer: Vector2;
+    scroll_y_delta: s32;
 
     left:   Mouse_Button_State;
     right:  Mouse_Button_State;
@@ -253,6 +256,8 @@ line_height: float;
 old_line_height: float;  // to track font changes
 
 LINE_HEIGHT_SCALE :: 1.2;
+
+WHEEL_SENSITIVITY :: 1.0;
 
 font      :  *Simp.Dynamic_Font;
 font_size := 14;

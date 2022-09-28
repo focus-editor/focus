@@ -18,7 +18,7 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
         + Change pointer when hovering (and hover over entries)
         + Don't react to mouse in other places when it's over the dialog box
         + Close the dialog when clicked outside it
-        - Scroll using mouse
+        + Scroll using mouse
         - (after resize) If because of scroll there's empty space, adjust scroll
     - On start, build a file list in the project
     - Don't draw too many files, only draw visible ones

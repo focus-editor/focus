@@ -76,6 +76,7 @@ open_file_dialog_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
             selected += ifx key_code == .ARROW_UP then -1 else 1;
             if selected < 0 then selected = max(0, filtered.count - 1);
             if selected >= filtered.count then selected = 0;
+            scroll_to_cursor = true;
 
         case .HOME;
             cursor.pos = 0;
@@ -217,6 +218,8 @@ get_selected_offsets :: (text: [..] u8, cursor: Open_File_Dialog.Cursor) -> left
 
 Open_File_Dialog :: struct {
     show := false;
+    scroll_to_cursor := false;
+
     input: Input;
     entries: Entries;
 
