@@ -1,7 +1,10 @@
 # TODO
 WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
 - Open file dialog
-    - On start, build a file list in the project
+    + On start, build a file list in the project
+    + Filter the list
+    - Don't leave empty space at the bottom because of scroll_y
+    - Setup a file watcher and just rescan
 - Input: select using mouse
 - Show file names with breadcrumbs
 - Click on breadcrumbs to view files?
@@ -38,6 +41,9 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
       and consider using floats or other units for font metrics
     - Simp.draw_text only allows integer positioning
     - Should we keep using GL_NEAREST for sampling?
+- Open file dialog
+    - Review and cleanup code
+    - Implement fuzzy searching with letter highlighting etc
 - Subpixel rendering: support other types of panels (lookup ft2-lcd_rendering)
   (not useful for the editor, but may be useful for games)
 - Don't redraw if nothing has changed

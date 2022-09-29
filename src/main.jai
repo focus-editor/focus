@@ -291,6 +291,8 @@ Time :: #type,isa float64;
 #import "Basic";
 #import "Math";
 #import "File";
+#import "File_Utilities";
+#import "File_Watcher";
 #import "System";  // For get_path_of_running_executable.
 #import "String";
 #import "Sort";
