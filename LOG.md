@@ -5,8 +5,9 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
     + Filter the list
     + Don't leave empty space at the bottom because of scroll_y
     + Support PAGE UP/DOWN
-    - Setup a file watcher and just rescan
-- Input: select using mouse
+    + Setup a file watcher and just rescan
+    - Actually open files
+
 - Show file names with breadcrumbs
 - Click on breadcrumbs to view files?
 - Search text

@@ -24,6 +24,21 @@ main :: () {
 
     init_open_file_dialog(project_dirs);
 
+    // Init file watcher
+    project_file_watcher: File_Watcher;
+    if !init(*project_file_watcher, file_change_callback, .ALL_EVENTS) {
+        log_error("Could not initialize project_file_watcher");
+        // TODO: would be nice to display a clear error message in the dialog
+        return;
+    }
+    defer deinit(project_file_watcher);
+    add_directories(*project_file_watcher, ..project_dirs);
+
+    file_change_callback :: (watcher: *File_Watcher, change: *File_Change) {
+        // Do nothing - we'll rescan every time
+        // log("Change for path %: %", change.full_path, change.events);
+    }
+
     editors_open_file("src/editors.jai");
     editors_open_file("src/main.jai", .left);
 
@@ -33,6 +48,9 @@ main :: () {
         if !redraw_requested platform_wait_message();
         redraw_requested = false;
         old_line_height = line_height;
+
+        files_changed := process_changes(*project_file_watcher);
+        if files_changed then init_open_file_dialog(project_dirs);
 
         Input.update_window_events();
 
@@ -92,11 +110,15 @@ main :: () {
                             // case #char "+";
                             //     if event.ctrl_pressed {
                             //         font_size += 1;
+                            //         font_ui_size += 1;
+                            //         font_icons_size += 1;
                             //         init_fonts();
                             //     }
                             // case #char "-";
                             //     if event.ctrl_pressed {
                             //         font_size -= 1;
+                            //         font_ui_size -= 1;
+                            //         font_icons_size -= 1;
                             //         init_fonts();
                             //     }
                         }
