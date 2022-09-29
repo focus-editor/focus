@@ -3,7 +3,7 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
 - Open file dialog
     + On start, build a file list in the project
     + Filter the list
-    - Don't leave empty space at the bottom because of scroll_y
+    + Don't leave empty space at the bottom because of scroll_y
     - Setup a file watcher and just rescan
 - Input: select using mouse
 - Show file names with breadcrumbs

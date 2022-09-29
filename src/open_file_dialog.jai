@@ -249,6 +249,8 @@ get_selected_offsets :: (text: [..] u8, cursor: Open_File_Dialog.Cursor) -> left
 recalculate_filtered_entries :: () {
     using open_file_dialog;
 
+    scroll_to_cursor = true;
+    entries.scroll_y = 0;
     entries.selected = 0;
     array_reset_keeping_memory(*entries.filtered);
 
