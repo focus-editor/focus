@@ -1,4 +1,4 @@
-init_open_file_dialog :: () {
+init_open_file_dialog :: (project_dirs: [] string) {
     using open_file_dialog;
 
     // @Cleanup: this logic needs some careful reviewing
@@ -55,11 +55,6 @@ init_open_file_dialog :: () {
         array_add(config.entries_dst, entry);
     }
 
-    project_dirs := string.[
-        "W:/focus",
-        "C:/jai-beta",
-    ];
-
     Visitor_Data :: struct {
         ignore_folders: [] string;
         ignore_files:   [] string;
@@ -101,6 +96,14 @@ open_file_dialog_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
             selected += ifx key_code == .ARROW_UP then -1 else 1;
             if selected < 0 then selected = max(0, filtered.count - 1);
             if selected >= filtered.count then selected = 0;
+            scroll_to_cursor = true;
+
+        case .PAGE_UP; #through;
+        case .PAGE_DOWN;
+            using entries;
+            selected += ifx key_code == .PAGE_UP then -entries.per_page else entries.per_page;
+            if selected < 0 then selected = 0;
+            if selected >= filtered.count then selected = filtered.count - 1;
             scroll_to_cursor = true;
 
         case .HOME;
@@ -298,6 +301,7 @@ Open_File_Dialog :: struct {
 
         scroll_y: s32;
         scroll_anim: Scroll_Animation;
+        per_page: s64 = 10;
     }
 
     Cursor :: struct {

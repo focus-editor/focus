@@ -17,7 +17,12 @@ main :: () {
     init_fonts();
     old_line_height = line_height;
 
-    init_open_file_dialog();
+    project_dirs := string.[
+        "W:/focus",
+        "C:/jai-beta",
+    ];
+
+    init_open_file_dialog(project_dirs);
 
     editors_open_file("src/editors.jai");
     editors_open_file("src/main.jai", .left);

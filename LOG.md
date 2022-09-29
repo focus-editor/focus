@@ -4,6 +4,7 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
     + On start, build a file list in the project
     + Filter the list
     + Don't leave empty space at the bottom because of scroll_y
+    + Support PAGE UP/DOWN
     - Setup a file watcher and just rescan
 - Input: select using mouse
 - Show file names with breadcrumbs

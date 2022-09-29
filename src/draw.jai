@@ -268,6 +268,10 @@ draw_open_file_dialog :: () {
     {
         using entries;
 
+        // Remember how many fits per page
+        per_page = cast(s64) (files_rect.h / entry_height);
+        if per_page <= 0 then per_page = 2;
+
         set_scissor(files_rect);
         defer Simp.clear_scissor();
 
