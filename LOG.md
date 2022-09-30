@@ -1,5 +1,4 @@
 # TODO
-WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
 - Open file dialog
     + On start, build a file list in the project
     + Filter the list
@@ -29,6 +28,7 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
     - Polymorphic structs and possibly other types
     - Highlight globals?
     - Color cursor differently depending on what scope we're in
+- Highlight matching braces
 - Make sure cursor positioning is correct for all fonts and sizes
 - Investigate stuttering when dragging the splitter
 - Figure out how to anti-alias rounded corners
@@ -46,6 +46,8 @@ WORK REALLY FAST AND FOCUSED OR I WILL NEVER HAVE TIME FOR ANYTHING
 - Open file dialog
     - Review and cleanup code
     - Implement fuzzy searching with letter highlighting etc
+    - Don't rescan project dirs on every file change
+- Reduce the number of draw calls
 - Subpixel rendering: support other types of panels (lookup ft2-lcd_rendering)
   (not useful for the editor, but may be useful for games)
 - Don't redraw if nothing has changed

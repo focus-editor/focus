@@ -122,3 +122,14 @@ slice_chars :: (str: string, pos1: s32, pos2: s32) -> string {
 
     return slice(str, offset1, offset2 - offset1);
 }
+
+get_absolute_path :: (path: string) -> string {  // returns a temporary string
+    full_path: string = ---;
+    if is_absolute_path(path) {
+        full_path = copy_temporary_string(path);
+    } else {
+        full_path = join(get_working_directory(), path, separator = "/");
+    }
+    path_overwrite_separators(full_path, #char "/");
+    return full_path;
+}

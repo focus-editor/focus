@@ -306,30 +306,40 @@ get_active_editor_and_buffer :: () -> *Editor, *Buffer {
     return editor, buffer;
 }
 
-editors_open_file :: (path: string, where: enum { in_place; left; right; } = .in_place) {
-    buffer_id := find_or_create_buffer(path);
+editors_open_file :: (path: string, on_the_side := false) {
+    full_path := get_absolute_path(path);
+    buffer_id := find_or_create_buffer(full_path);
+
     if #complete editors_layout == {
         case .None;
             editor_active = find_or_create_editor(buffer_id);
             editors_layout = .Single;
+
         case .Single;
-            if #complete where == {
-                case .in_place;
-                    editor_active  = find_or_create_editor(buffer_id);
-                    editors_layout = .Single;
-                case .left;
-                    editor_left    = find_or_create_editor(buffer_id, editor_active);
-                    editor_right   = editor_active;
-                    editor_active  = editor_left;
-                    editors_layout = .Double;
-                case .right;
-                    editor_right   = find_or_create_editor(buffer_id, editor_active);
-                    editor_left    = editor_active;
-                    editor_active  = editor_right;
-                    editors_layout = .Double;
+            if !on_the_side {
+                // Open in place
+                editor_active  = find_or_create_editor(buffer_id);
+            } else {
+                // Open on the right
+                editor_right   = find_or_create_editor(buffer_id, editor_active);
+                editor_left    = editor_active;
+                editor_active  = editor_right;
+                editors_layout = .Double;
             }
+
         case .Double;
-            unimplemented();
+            on_the_right := on_the_side;
+            if editor_active == editor_right then on_the_right = !on_the_right;
+
+            if on_the_right {
+                // Open on the right (obviously)
+                editor_right = find_or_create_editor(buffer_id, editor_left);
+                editor_active = editor_right;
+            } else {
+                // Open on the left
+                editor_left = find_or_create_editor(buffer_id, editor_right);
+                editor_active = editor_left;
+            }
     }
 }
 

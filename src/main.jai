@@ -35,12 +35,12 @@ main :: () {
     add_directories(*project_file_watcher, ..project_dirs);
 
     file_change_callback :: (watcher: *File_Watcher, change: *File_Change) {
-        // Do nothing - we'll rescan every time
+        // TODO: set a flag to trigger a rescan only if a file is moved/removed/added
         // log("Change for path %: %", change.full_path, change.events);
     }
 
     editors_open_file("src/editors.jai");
-    editors_open_file("src/main.jai", .left);
+    editors_open_file("src/main.jai", true);
 
     should_quit := false;
 
@@ -320,6 +320,7 @@ Time :: #type,isa float64;
 #import "File";
 #import "File_Utilities";
 #import "File_Watcher";
+#import "Flat_Pool";
 #import "System";  // For get_path_of_running_executable.
 #import "String";
 #import "Sort";
