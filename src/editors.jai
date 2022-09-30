@@ -616,13 +616,13 @@ find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_i
 
 find_or_create_buffer :: (path: string) -> buffer_id: s64 {
     for open_buffers {
-        if it.file == path return it_index;
+        if it.file_exists && it.file.full_path == path return it_index;
     }
 
     // Create and load file
     buffer_id := open_buffers.count;
     buffer := array_add(*open_buffers);
-    buffer.file = copy_string(path);
+    buffer.file = get_file_info_from_full_path(path);
 
     file_data, success := read_entire_file(path);
     if !success then file_data = sprint("Couldn't load file '%'", path);

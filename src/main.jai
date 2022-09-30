@@ -98,7 +98,7 @@ main :: () {
                                 continue;
 
                             case #char "P";
-                                if only_ctrl_pressed(event.modifier_flags) then open_file_dialog.show = true;
+                                if only_ctrl_pressed(event.modifier_flags) then open_file_dialog_show();
                                 continue;
 
                             case .ESCAPE;
@@ -238,6 +238,10 @@ key_state :: inline (key: Input.Key_Code) -> Input.Key_Current_State {
 
 shift_pressed :: inline () -> bool {
     return key_state(.SHIFT) & .DOWN != 0;
+}
+
+ctrl_pressed :: inline () -> bool {
+    return key_state(.CTRL) & .DOWN != 0;
 }
 
 window: Window_Type;

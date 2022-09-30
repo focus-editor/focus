@@ -1,14 +1,5 @@
 # TODO
-- Open file dialog
-    + On start, build a file list in the project
-    + Filter the list
-    + Don't leave empty space at the bottom because of scroll_y
-    + Support PAGE UP/DOWN
-    + Setup a file watcher and just rescan
-    - Actually open files
-
 - Show file names with breadcrumbs
-- Click on breadcrumbs to view files?
 - Search text
     - Use the naive functions first, optimise later if needed (also measure first)
     - Case-sensitive
@@ -18,11 +9,24 @@
 - Highlight occurrences of selection (same rules as above)
 - Save file
 - Reload from disk
-- Input:
-    - Make sure the cursor doesn't drift as string grows (try disabling kerning first). Understand whether there are any rounding errors
-    - Select by mouse
-    - Select words by ctrl+D
-    - Fix the weird doubling of characters when pasted a newline
+
+- Jump by words on ctrl+left/right
+- Jump to next empty line on ctrl+up/down
+- Revert to ctrl+alt+left/right for pane change
+
+- Navigating project dirs in a dialog
+
+- Open file dialog:
+    - Review and cleanup code
+    - Drag the scrollbar
+    - Don't rescan project dirs on every file change
+    - Put the open editors at the top
+    - Implement fuzzy searching with letter highlighting etc
+    - Input:
+        - Make sure the cursor doesn't drift as string grows (try disabling kerning first). Understand whether there are any precision/rounding errors
+        - Select by mouse
+        - Select words by ctrl+D
+        - Fix the weird doubling of characters when pasted a newline
 
 - Implement semantic highlighting
     - Polymorphic structs and possibly other types
@@ -30,7 +34,6 @@
     - Color cursor differently depending on what scope we're in
 - Highlight matching braces
 - Make sure cursor positioning is correct for all fonts and sizes
-- Investigate stuttering when dragging the splitter
 - Figure out how to anti-alias rounded corners
 - Set a proper horizontal scroll limit
 - Maybe don't draw too many horizontal characters
@@ -43,16 +46,21 @@
       and consider using floats or other units for font metrics
     - Simp.draw_text only allows integer positioning
     - Should we keep using GL_NEAREST for sampling?
-- Open file dialog
-    - Review and cleanup code
-    - Implement fuzzy searching with letter highlighting etc
-    - Don't rescan project dirs on every file change
+- Get rid of the window top bar
 - Reduce the number of draw calls
 - Subpixel rendering: support other types of panels (lookup ft2-lcd_rendering)
   (not useful for the editor, but may be useful for games)
 - Don't redraw if nothing has changed
 
 # DONE
++ Open file dialog
+    + On start, build a file list in the project
+    + Filter the list
+    + Don't leave empty space at the bottom because of scroll_y
+    + Support PAGE UP/DOWN
+    + Setup a file watcher and just rescan
+    + Actually open files
+    + Open files on click (release)
 + Input:
     + Draw a box and make it behave nicely when resizing
     + Draw an input box

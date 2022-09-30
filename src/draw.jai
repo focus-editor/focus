@@ -7,34 +7,29 @@ draw_frame :: () {
     // Check whether we need to deactivate elements before drawing
     if !mouse.left.is_down || mouse.left.just_released then ui.active = .none;
 
-    footer_rect, main_area := cut_bottom(screen, line_height * 1.4);
-
+    // Draw editors
     if #complete editors_layout == {
         case .None;
             splitter_pos = 0;
             // TODO: draw a shortcut cheat-sheet?
         case .Single;
             splitter_pos = 0;
-            draw_editor(editor_active, main_area, .editor_single);
+            draw_editor(editor_active, screen, .editor_single);
         case .Double;
             // Drag splitter
             if ui.active == .editor_splitter {
-                splitter_pos = (mouse.pointer.x - main_area.x) / main_area.w;
+                splitter_pos = (mouse.pointer.x - screen.x) / screen.w;
                 if splitter_pos == 0 then splitter_pos = 0.1;  // avoid jitter
             }
             if splitter_pos != 0 then splitter_pos = clamp(splitter_pos, 0.1, 0.9);
 
-            split_x := ifx splitter_pos > 0 then main_area.w * splitter_pos else main_area.w / 2;
-            left_rect, right_rect := cut_left(main_area, split_x);
+            split_x := ifx splitter_pos > 0 then screen.w * splitter_pos else screen.w / 2;
+            left_rect, right_rect := cut_left(screen, split_x);
 
             draw_editor(editor_left,  left_rect,  .editor_left);
             draw_editor(editor_right, right_rect, .editor_right);
-            draw_splitter(main_area, split_x);
+            draw_splitter(screen, split_x);
     }
-
-    // Draw footer rect
-    draw_rect(footer_rect, Colors.BACKGROUND_BRIGHT);
-    draw_top_shadow(footer_rect);
 
     if open_file_dialog.show then draw_open_file_dialog();
 
@@ -70,8 +65,10 @@ draw_splitter :: (main_area: Rect, split_x: float) {
     draw_rect(rect, color);
 }
 
-draw_editor :: (editor_id: s64, rect: Rect, ui_id: Ui_Id) {
-    set_scissor(rect);
+draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id) {
+    footer_rect, rect := cut_bottom(main_area, line_height * 1.4);
+
+    set_scissor(main_area);
     defer Simp.clear_scissor();
 
     if mouse_pointer_is_within(rect) {
@@ -157,6 +154,7 @@ draw_editor :: (editor_id: s64, rect: Rect, ui_id: Ui_Id) {
 
     draw_cursors(editor, buffer, rect, text_origin, visible_lines_start, visible_lines_end, is_active);
 
+    // Draw paste animations
     for anim : editor.paste_animations {
         t := (frame_time - anim.started_at) / Paste_Animation.SPEED;
         if t < 1 {
@@ -169,6 +167,7 @@ draw_editor :: (editor_id: s64, rect: Rect, ui_id: Ui_Id) {
     }
     if editor.paste_animations.count > 0 then redraw_requested = true;
 
+    // Draw text
     pen := text_origin;
     pen.y += (line_height - char_size) / 2 - visible_lines_start * line_height;
     for line : array_view(buffer.lines, visible_lines_start, visible_lines_end) {
@@ -177,6 +176,10 @@ draw_editor :: (editor_id: s64, rect: Rect, ui_id: Ui_Id) {
         Simp.draw_text(font, xx pen.x, xx pen.y, line_text, color = Colors.CODE_PUNCTUATION);
         pen.y -= line_height;
     }
+
+    // Draw footer
+    draw_rect(footer_rect, Colors.BACKGROUND_BRIGHT);
+    draw_top_shadow(footer_rect);
 }
 
 draw_open_file_dialog :: () {
@@ -286,7 +289,7 @@ draw_open_file_dialog :: () {
                 draw_rounded_rect(scrollbar, Colors.SCROLLBAR_SOFT, radius = 4 * dpi_scale);
             }
 
-            // Scrolling
+            // Scrolling update
             if scroll_to_cursor {
                 // We only want to scroll to cursor when cursor is moved by arrow keys
                 target := scroll_anim.target;
@@ -312,7 +315,7 @@ draw_open_file_dialog :: () {
         }
 
         highlight_color_lite := Colors.BACKGROUND_BRIGHT;
-        highlight_color_lite.a = 0.5;
+        highlight_color_lite.a = 0.4;
 
         visible_start := clamp(cast(s64) (scroll_y / entry_height), 0, filtered.count);
         visible_count := cast(s64) (files_rect.h / entry_height) + 2;
@@ -320,11 +323,21 @@ draw_open_file_dialog :: () {
 
         entry_rect := cut_top(files_rect, entry_height);
 
+        path_align_x := files_rect.x + files_rect.w / 2.5;
+
         for entry, i : visible_entries {
             entry_index := visible_start + i;
             entry_rect.y = files_rect.y + files_rect.h - (entry_index + 1) * entry_height + scroll_y;
 
-            if mouse_pointer_is_within(entry_rect) then draw_rect(entry_rect, highlight_color_lite);
+            if mouse_pointer_is_within(entry_rect) {
+                if mouse.left.just_pressed then entries.selected_by_mouse = entry_index;
+                if entries.selected_by_mouse == -1 then draw_rect(entry_rect, highlight_color_lite);
+                if entries.selected_by_mouse == entry_index && mouse.left.just_released then open_file_dialog_open_entry(entry_index, on_the_side = ctrl_pressed());
+            }
+            if entries.selected_by_mouse == entry_index {
+                highlight_color_lite.a = 0.8;
+                draw_rect(entry_rect, highlight_color_lite);
+            }
             if entry_index == selected then draw_rect(entry_rect, Colors.BACKGROUND_BRIGHT);
 
             pen := make_vector2(
@@ -342,23 +355,20 @@ draw_open_file_dialog :: () {
             width += xx Simp.prepare_text(font_ui, entry.name);
             Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = Colors.CODE_PUNCTUATION);
 
-            // Draw project name
-            pen.x += width + margin;
-            width = xx Simp.prepare_text(font_ui_small, entry.proj);
+            // // Draw separator
+            // pen.x += width + padding;
+            // width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
+            // Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+
+            // Draw file path
+            pen.x += width + padding;
+            if pen.x < path_align_x then pen.x = path_align_x;
+            width = xx Simp.prepare_text(font_ui_small, entry.path);
             Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
-
-            if entry.path {
-                // Draw separator
-                pen.x += width + padding;
-                width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
-                Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
-
-                // Draw file path
-                pen.x += width + padding;
-                width = xx Simp.prepare_text(font_ui_small, entry.path);
-                Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
-            }
         }
+
+        // Deselect any previously clicked entry
+        if mouse.left.just_released || !mouse.left.is_down then entries.selected_by_mouse = -1;
 
         // Shadow
         if scroll_y != 0 {

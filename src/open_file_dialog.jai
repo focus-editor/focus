@@ -24,6 +24,13 @@ init_open_file_dialog :: (project_dirs: [] string) {
     recalculate_filtered_entries();
 }
 
+open_file_dialog_show :: () {
+    using open_file_dialog;
+    show = true;
+    array_reset_keeping_memory(*input.text);
+    recalculate_filtered_entries();
+}
+
 open_file_dialog_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     using open_file_dialog;
     using open_file_dialog.input;
@@ -250,10 +257,11 @@ Open_File_Dialog :: struct {
     }
 
     Entries :: struct {
-        all: [..] Entry;  // all files in the project
+        all: [..] File_Info;  // all files in the project
 
-        filtered: [..] Entry;
+        filtered: [..] File_Info;
         selected: s64;
+        selected_by_mouse: s64 = -1;  // to remember which entry the left mouse button went down on
 
         scroll_y: s32;
         scroll_anim: Scroll_Animation;
@@ -263,27 +271,6 @@ Open_File_Dialog :: struct {
     Cursor :: struct {
         pos, sel: s32;  // cursor position (in chars, not bytes)
     }
-
-    Entry :: struct {
-        full_path: string;
-        path: string;
-        name: string;
-        proj: string;
-        icon: File_Icon;
-    }
-}
-
-File_Icon :: enum u32 {
-    unknown :: 0xf15b;
-    text    :: 0xf15c;
-    jai     :: 0xf574;
-    cpp     :: 0xf1c9;
-    worklog :: 0xf46d;
-    git     :: 0xf387;
-    image   :: 0xf1c5;
-    audio   :: 0xf1c7;
-    font    :: 0xf031;
-    key     :: 0xf084;
 }
 
 BULLET_CHAR :: #run to_string(*convert_utf32_to_utf8(0x2022));
@@ -308,58 +295,7 @@ file_visitor_func :: (file: *File_Visit_Info, config: Visitor_Data) {
     // TODO: do a wildcard match
     for config.ignore_files { if contains_nocase(file.short_name, it) return; }  // maybe ignore
 
-    // Determine icon
-    icon := File_Icon.unknown;
-    name := file.short_name;
-
-    extension, found_extension := path_extension(name);
-    if found_extension {
-        if extension == {
-            case "jai";
-                icon = .jai;
-            case "cpp";  #through;
-            case "hpp";  #through;
-            case "h";    #through;
-            case "c";
-                icon = .cpp;
-            case "jpg";  #through;
-            case "jpeg"; #through;
-            case "png";  #through;
-            case "tif";  #through;
-            case "tiff"; #through;
-            case "gif";
-                icon = .image;
-            case "ogg";  #through;
-            case "wav";  #through;
-            case "mp3";
-                icon = .audio;
-            case "txt";  #through;
-            case "md";
-                icon = .text;
-            case "ttf";  #through;
-            case "otf";
-                icon = .font;
-        }
-    }
-
-    // Special cases
-    if icon == .text && equal_nocase(name, "log.md") then icon = .worklog;
-    if icon == .text || icon == .unknown {
-        if contains_nocase(name, "license") || contains_nocase(name, "licence")  || contains_nocase(name, "key") {
-            icon = .key;
-        } else if contains_nocase(name, ".git") {
-            icon = .git;
-        }
-    }
-
-    entry: Open_File_Dialog.Entry = ---;
-    entry.full_path = copy_string(file.full_name);
-    entry.name = copy_string(file.short_name);
-    entry.proj = copy_string(config.proj);
-    stripped_path := slice(file.full_name, config.proj_full.count + 1, file.full_name.count - file.short_name.count - config.proj_full.count - 1);
-    if ends_with(stripped_path, "/") then stripped_path = slice(stripped_path, 0, stripped_path.count - 1);
-    entry.path = copy_string(stripped_path);
-    entry.icon = icon;
+    entry := get_file_info_from_full_path(file.full_name);
     array_add(config.entries_dst, entry);
 }
 
@@ -378,7 +314,7 @@ Visitor_Data :: struct {
     ignore_files:   [] string;
     proj: string;
     proj_full: string;
-    entries_dst: *[..] Open_File_Dialog.Entry;
+    entries_dst: *[..] File_Info;
 }
 
 MAX_ENTRIES_TO_SHOW :: 200;
