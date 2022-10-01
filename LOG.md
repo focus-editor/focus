@@ -1,5 +1,7 @@
 # TODO
 - Draw scrollbars
+    + Just draw for now
+    - Drag and go to click
 
 - Select whole words when creating new cursors (unless selected manually)
 - Highlight occurrences of selection (same rules as above)
@@ -9,6 +11,8 @@
 - Jump by words on ctrl+left/right
 - Jump to next empty line on ctrl+up/down
 - Revert to ctrl+alt+left/right for pane change
+
+- Detect tab symbols and draw them differently
 
 - Navigating project dirs in a dialog
 

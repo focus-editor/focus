@@ -49,7 +49,7 @@ draw_splitter :: (main_area: Rect, split_x: float) {
     color := Colors.SPLITTER;
 
     rect     := make_rect(split_x - 1, main_area.y, 2, main_area.h);
-    rect_fat := expand(rect, 5 * dpi_scale);
+    rect_fat := expand(rect, 2 * dpi_scale);
 
     if mouse_pointer_is_within(rect_fat) {
         ui.hot = ui_id;
@@ -146,6 +146,17 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id) {
         if animate_scrolling(editor) {
             text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);  // need to update after scrolling to reduce latency
             redraw_requested = true;
+        }
+
+        // Scrollbar
+        {
+            scrollbar := cut_right(rect, char_size);
+            scrollbar.h = rect.h * (rect.h / max_y_scroll);
+            scroll_zone := rect.h - scrollbar.h;  // the room for y to move
+            if scroll_zone > 0 {
+                scrollbar.y += (cast(float) (max_y_scroll - viewport.top) / max_y_scroll) * scroll_zone;
+                draw_rounded_rect(scrollbar, Colors.SCROLLBAR_SOFT, radius = 4 * dpi_scale);
+            }
         }
 
         is_active := editor_id == editor_active && Input.input_application_has_focus;
