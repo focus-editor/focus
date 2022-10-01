@@ -1,4 +1,4 @@
-init_open_file_dialog :: (project_dirs: [] string) {
+init_open_file_dialog :: () {
     using open_file_dialog;
 
     print("Initting open file dialog\n");  // TODO: remove when not doing this for every file save
@@ -15,10 +15,8 @@ init_open_file_dialog :: (project_dirs: [] string) {
     visitor_data.entries_dst = *entries.all;
 
     for dir : project_dirs {
-        proj_dir_split := split(dir, "/");
-        visitor_data.proj = proj_dir_split[proj_dir_split.count-1];
-        visitor_data.proj_full = dir;
-        visit_files(dir, recursive = true, visitor_data, file_visitor_func, visit_directories = true);
+        visitor_data.proj_path_prefix_len = dir.path_prefix_len;
+        visit_files(dir.path, recursive = true, visitor_data, file_visitor_func, visit_directories = true);
     }
 
     recalculate_filtered_entries();
@@ -295,7 +293,7 @@ file_visitor_func :: (file: *File_Visit_Info, config: Visitor_Data) {
     // TODO: do a wildcard match
     for config.ignore_files { if contains_nocase(file.short_name, it) return; }  // maybe ignore
 
-    entry := get_file_info_from_full_path(file.full_name);
+    entry := get_file_info_from_full_path(file.full_name, config.proj_path_prefix_len);
     array_add(config.entries_dst, entry);
 }
 
@@ -312,8 +310,7 @@ memory_pool: Flat_Pool;
 Visitor_Data :: struct {
     ignore_folders: [] string;
     ignore_files:   [] string;
-    proj: string;
-    proj_full: string;
+    proj_path_prefix_len: s64;
     entries_dst: *[..] File_Info;
 }
 

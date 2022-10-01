@@ -27,7 +27,7 @@ platform_get_dpi_scale :: (window: Window_Type) -> float {
     return dpi / 96.0;
 }
 
-platform_wait_message :: () {
+platform_wait_message :: inline () {
     WaitMessage();
 }
 

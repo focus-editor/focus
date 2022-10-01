@@ -17,12 +17,16 @@ main :: () {
     init_fonts();
     old_line_height = line_height;
 
-    project_dirs := string.[
-        "W:/focus",
-        "C:/jai-beta",
-    ];
+    // @Cleanup: remove and do properly
+    initial_project_dirs := string.[ "W:/focus", "C:/jai-beta" ];
+    for path, i : initial_project_dirs {
+        dir: Project_Dir = ---;
+        dir.path = path;
+        dir.path_prefix_len = find_index_of_any_from_right(path, ".\\/") + 1;
+        array_add(*project_dirs, dir);
+    }
 
-    init_open_file_dialog(project_dirs);
+    init_open_file_dialog();
 
     // Init file watcher
     project_file_watcher: File_Watcher;
@@ -32,7 +36,7 @@ main :: () {
         return;
     }
     defer deinit(project_file_watcher);
-    add_directories(*project_file_watcher, ..project_dirs);
+    for dir : project_dirs add_directories(*project_file_watcher, dir.path);
 
     file_change_callback :: (watcher: *File_Watcher, change: *File_Change) {
         // TODO: set a flag to trigger a rescan only if a file is moved/removed/added
@@ -50,7 +54,7 @@ main :: () {
         old_line_height = line_height;
 
         files_changed := process_changes(*project_file_watcher);
-        if files_changed then init_open_file_dialog(project_dirs);
+        if files_changed then init_open_file_dialog();
 
         Input.update_window_events();
 
@@ -311,6 +315,14 @@ font_icons_size := 16;
 Mods :: Input.Event.Modifier_Flags;
 
 Time :: #type,isa float64;
+
+// TODO: load them from a config file or something
+project_dirs: [..] Project_Dir;
+
+Project_Dir :: struct {
+    path: string;          // e.g. "C:/projects/focus"
+    path_prefix_len: s64;  // in this case the length of "C:/projects/"
+}
 
 #load "style.jai";
 #load "layout.jai";

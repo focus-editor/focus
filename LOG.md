@@ -1,5 +1,4 @@
 # TODO
-- Strip away project path when scanning
 - Draw scrollbars
 
 - Select whole words when creating new cursors (unless selected manually)
@@ -56,6 +55,7 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Strip away project path when scanning
 + Show line/col in the footer
 + Handle path overflow nicely
 + Show file name in footer
