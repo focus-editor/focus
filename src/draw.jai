@@ -360,12 +360,13 @@ draw_open_file_dialog :: () {
 
         {
             // Scrollbar
-            total_height := filtered.count * entry_height;
-            scroll_area := total_height - files_rect.h;
-            if scroll_area > 0 {
-                scrollbar := cut_right(files_rect, char_size);
-                scrollbar.y += files_rect.h * (scroll_area - scroll_y) / total_height;
-                scrollbar.h = files_rect.h * (files_rect.h / total_height);
+            // TODO: if we need another scrollbar elsewhere, we're now in a good position to extract this into a generic function
+            scrollbar := cut_right(files_rect, char_size);
+            max_y_scroll := filtered.count * entry_height - files_rect.h;
+            scrollbar.h = files_rect.h * (files_rect.h / max_y_scroll);
+            scroll_zone := files_rect.h - scrollbar.h;  // the room for y to move
+            if scroll_zone > 0 {
+                scrollbar.y += (cast(float) (max_y_scroll - scroll_y) / max_y_scroll) * scroll_zone;
                 draw_rounded_rect(scrollbar, Colors.SCROLLBAR_SOFT, radius = 4 * dpi_scale);
             }
 
@@ -377,7 +378,7 @@ draw_open_file_dialog :: () {
                 selected_bottom := selected_top + entry_height;
                 if selected_top < 0 then target = cast(s32) (selected * entry_height);
                 if selected_bottom > files_rect.h then target = cast(s32) ((selected + 1) * entry_height - files_rect.h);
-                if target != scroll_anim.target then set_scroll_target(*scroll_anim, scroll_y, target, xx scroll_area);
+                if target != scroll_anim.target then set_scroll_target(*scroll_anim, scroll_y, target, xx max_y_scroll);
                 scroll_to_cursor = false;
             }
 
@@ -385,7 +386,7 @@ draw_open_file_dialog :: () {
             if ui.hot_last_frame == ui_id && mouse_pointer_is_within(files_rect) {
                 set_pointer_image(.PRESSABLE);
                 if mouse.scroll_y_delta != 0 {
-                    set_scroll_target(*scroll_anim, scroll_y, scroll_anim.target - mouse.scroll_y_delta, xx scroll_area);
+                    set_scroll_target(*scroll_anim, scroll_y, scroll_anim.target - mouse.scroll_y_delta, xx max_y_scroll);
                 }
             }
 
