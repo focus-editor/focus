@@ -69,15 +69,6 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id) {
     footer_height := font_ui_line_height * 1.6;
     footer_rect, rect := cut_bottom(main_area, footer_height);
 
-    set_scissor(main_area);
-    defer Simp.clear_scissor();
-
-    if mouse_pointer_is_within(rect) {
-        if ui.hot_last_frame == ui_id && no_active_ui_item() && mouse.left.just_pressed then ui.active = ui_id;
-        ui.hot = ui_id;
-        set_pointer_image(.TEXT_SELECT);
-    }
-
     using editor := *open_editors[editor_id];
     buffer := open_buffers[buffer_id];
 
@@ -85,120 +76,149 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id) {
     text_offset := make_vector2(char_size * 2, -char_size * 2);
     text_origin := top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
 
-    if ui.active == ui_id && (mouse.left.just_pressed || mouse.left.is_dragging) {
-        pointer := snap_to_rect(mouse.pointer, rect);  // when we drag outside the editor we still want to interact
+    // Draw editor
+    {
+        set_scissor(rect);
+        defer Simp.clear_scissor();
 
-        // Maybe change cursor position
-        cursor := leave_only_original_cursor(editor);
-        mouse_pos := pointer - bottom_left(rect) - text_offset;
-        mouse_pos.x += viewport.left;
-        mouse_pos.y = rect.h - mouse_pos.y + viewport.top - ifx dpi_scale > 1.0 then 1 else 0;
-        cursor.pos.line = xx (mouse_pos.y / line_height);
-        cursor.pos.col  = xx ((mouse_pos.x / char_size) + 0.5);
-        cursor.pos = make_valid_pos(buffer, cursor.pos);
-        cursor.col_wanted = cursor.pos.col;
-
-        // We mark cursor as moved to trigger auto-scroll if we drag outside the editor
-        if !mouse_pointer_is_within(rect) then cursor_moved = true;
-
-        if !shift_pressed() && mouse.left.just_pressed then remove_selection(cursor);
-        if mouse.left.just_double_clicked then select_word(cursor, buffer);
-
-        // Activate editor
-        editor_active = editor_id;
-        redraw_requested = true;  // so that we don't draw 2 active editors
-    }
-
-    // Handle editor scrolling here because we only know the layout at this point.
-    // Some people would say this is not "clean", but hey, we'll see if we have any issues.
-    max_y_scroll := get_max_y_scroll(buffer);
-    if ui.hot_last_frame == ui_id && mouse_pointer_is_within(rect) && mouse.scroll_y_delta != 0 {
-        using editor.viewport;
-        set_scroll_target(*scroll_y, top, scroll_y.target - mouse.scroll_y_delta, max_y_scroll);
-    } else if cursor_moved {
-        // Detect if cursor is off screen and start scrolling to it
-        bounds := shrink_x(rect, text_offset.x + char_size * 3);
-        bounds  = shrink_y(bounds, -text_offset.y + line_height * 3);
-        bounds.h += 2;
-        bounds.y -= line_height + 2;
-        if bounds.w < 0 || bounds.h < 0 then bounds = rect;  // fall back
-        // draw_rect(bounds, Colors.BACKGROUND_DARK);
-
-        cursor_pos := get_cursor_screen_pos(text_origin, cursors[main_cursor].pos);
-        if !point_within(cursor_pos, bounds) {
-            left, top, right, bottom := get_rect_sides(bounds);
-            offset: Vector2;
-            if cursor_pos.x < left   then offset.x = cursor_pos.x - left;
-            if cursor_pos.y < bottom then offset.y = cursor_pos.y - bottom;
-            if right < cursor_pos.x  then offset.x = cursor_pos.x - right;
-            if top   < cursor_pos.y  then offset.y = cursor_pos.y - top;
-
-            max_x_scroll := cast(s32) (1000 * char_size);  // TODO: set a proper limit
-            left_target := clamp(viewport.left + cast(s32) offset.x, 0, max_x_scroll);
-            top_target  := clamp(viewport.top  - cast(s32) offset.y, 0, max_y_scroll);
-
-            if left_target != viewport.scroll_x.target then set_scroll_target(*viewport.scroll_x, viewport.left, left_target, max_x_scroll);
-            if top_target  != viewport.scroll_y.target then set_scroll_target(*viewport.scroll_y, viewport.top,  top_target,  max_y_scroll);
+        if mouse_pointer_is_within(rect) {
+            if ui.hot_last_frame == ui_id && no_active_ui_item() && mouse.left.just_pressed then ui.active = ui_id;
+            ui.hot = ui_id;
+            set_pointer_image(.TEXT_SELECT);
         }
-    }
-    if animate_scrolling(editor) {
-        text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);  // need to update after scrolling to reduce latency
-        redraw_requested = true;
-    }
 
-    is_active := editor_id == editor_active && Input.input_application_has_focus;
+        if ui.active == ui_id && (mouse.left.just_pressed || mouse.left.is_dragging) {
+            pointer := snap_to_rect(mouse.pointer, rect);  // when we drag outside the editor we still want to interact
 
-    visible_lines_start := cast(s64) (viewport.top / line_height) - 1;
-    visible_lines_start  = clamp(visible_lines_start, 0, buffer.lines.count);
-    visible_lines_end := visible_lines_start + cast(s64) (rect.h / line_height) + 1;
-    visible_lines_end  = clamp(visible_lines_end,   0, buffer.lines.count);
+            // Maybe change cursor position
+            cursor := leave_only_original_cursor(editor);
+            mouse_pos := pointer - bottom_left(rect) - text_offset;
+            mouse_pos.x += viewport.left;
+            mouse_pos.y = rect.h - mouse_pos.y + viewport.top - ifx dpi_scale > 1.0 then 1 else 0;
+            cursor.pos.line = xx (mouse_pos.y / line_height);
+            cursor.pos.col  = xx ((mouse_pos.x / char_size) + 0.5);
+            cursor.pos = make_valid_pos(buffer, cursor.pos);
+            cursor.col_wanted = cursor.pos.col;
 
-    draw_cursors(editor, buffer, rect, text_origin, visible_lines_start, visible_lines_end, is_active);
+            // We mark cursor as moved to trigger auto-scroll if we drag outside the editor
+            if !mouse_pointer_is_within(rect) then cursor_moved = true;
 
-    // Draw paste animations
-    for anim : editor.paste_animations {
-        t := (frame_time - anim.started_at) / Paste_Animation.SPEED;
-        if t < 1 {
-            color := Colors.PASTE_ANIMATION;
-            color.a = xx (1 - t);
-            draw_range(anim.range, buffer, visible_lines_start, visible_lines_end, text_origin, color);
-        } else {
-            remove anim;
+            if !shift_pressed() && mouse.left.just_pressed then remove_selection(cursor);
+            if mouse.left.just_double_clicked then select_word(cursor, buffer);
+
+            // Activate editor
+            editor_active = editor_id;
+            redraw_requested = true;  // so that we don't draw 2 active editors
         }
-    }
-    if editor.paste_animations.count > 0 then redraw_requested = true;
 
-    // Draw text
-    pen := text_origin;
-    pen.y += (line_height - char_size) / 2 - visible_lines_start * line_height;
-    for line : array_view(buffer.lines, visible_lines_start, visible_lines_end) {
-        line_len  := clamp(line.end - line.start, 0, 1000);  // TODO: count max line length in chars
-        line_text := to_string(array_view(buffer.bytes, line.start, line_len));
-        Simp.draw_text(font, xx pen.x, xx pen.y, line_text, color = Colors.CODE_PUNCTUATION);
-        pen.y -= line_height;
+        // Handle editor scrolling here because we only know the layout at this point.
+        // Some people would say this is not "clean", but hey, we'll see if we have any issues.
+        max_y_scroll := get_max_y_scroll(buffer);
+        if ui.hot_last_frame == ui_id && mouse_pointer_is_within(rect) && mouse.scroll_y_delta != 0 {
+            using editor.viewport;
+            set_scroll_target(*scroll_y, top, scroll_y.target - mouse.scroll_y_delta, max_y_scroll);
+        } else if cursor_moved {
+            // Detect if cursor is off screen and start scrolling to it
+            bounds := shrink_x(rect, text_offset.x + char_size * 3);
+            bounds  = shrink_y(bounds, -text_offset.y + line_height * 3);
+            bounds.h += 2;
+            bounds.y -= line_height + 2;
+            if bounds.w < 0 || bounds.h < 0 then bounds = rect;  // fall back
+            // draw_rect(bounds, Colors.BACKGROUND_DARK);
+
+            cursor_pos := get_cursor_screen_pos(text_origin, cursors[main_cursor].pos);
+            if !point_within(cursor_pos, bounds) {
+                left, top, right, bottom := get_rect_sides(bounds);
+                offset: Vector2;
+                if cursor_pos.x < left   then offset.x = cursor_pos.x - left;
+                if cursor_pos.y < bottom then offset.y = cursor_pos.y - bottom;
+                if right < cursor_pos.x  then offset.x = cursor_pos.x - right;
+                if top   < cursor_pos.y  then offset.y = cursor_pos.y - top;
+
+                max_x_scroll := cast(s32) (1000 * char_size);  // TODO: set a proper limit
+                left_target := clamp(viewport.left + cast(s32) offset.x, 0, max_x_scroll);
+                top_target  := clamp(viewport.top  - cast(s32) offset.y, 0, max_y_scroll);
+
+                if left_target != viewport.scroll_x.target then set_scroll_target(*viewport.scroll_x, viewport.left, left_target, max_x_scroll);
+                if top_target  != viewport.scroll_y.target then set_scroll_target(*viewport.scroll_y, viewport.top,  top_target,  max_y_scroll);
+            }
+        }
+        if animate_scrolling(editor) {
+            text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);  // need to update after scrolling to reduce latency
+            redraw_requested = true;
+        }
+
+        is_active := editor_id == editor_active && Input.input_application_has_focus;
+
+        visible_lines_start := cast(s64) (viewport.top / line_height) - 1;
+        visible_lines_start  = clamp(visible_lines_start, 0, buffer.lines.count);
+        visible_lines_end := visible_lines_start + cast(s64) (rect.h / line_height) + 1;
+        visible_lines_end  = clamp(visible_lines_end,   0, buffer.lines.count);
+
+        draw_cursors(editor, buffer, rect, text_origin, visible_lines_start, visible_lines_end, is_active);
+
+        // Draw paste animations
+        for anim : editor.paste_animations {
+            t := (frame_time - anim.started_at) / Paste_Animation.SPEED;
+            if t < 1 {
+                color := Colors.PASTE_ANIMATION;
+                color.a = xx (1 - t);
+                draw_range(anim.range, buffer, visible_lines_start, visible_lines_end, text_origin, color);
+            } else {
+                remove anim;
+            }
+        }
+        if editor.paste_animations.count > 0 then redraw_requested = true;
+
+        // Draw text
+        pen := text_origin;
+        pen.y += (line_height - char_size) / 2 - visible_lines_start * line_height;
+        for line : array_view(buffer.lines, visible_lines_start, visible_lines_end) {
+            line_len  := clamp(line.end - line.start, 0, 1000);  // TODO: count max line length in chars
+            line_text := to_string(array_view(buffer.bytes, line.start, line_len));
+            Simp.draw_text(font, xx pen.x, xx pen.y, line_text, color = Colors.CODE_PUNCTUATION);
+            pen.y -= line_height;
+        }
+
     }
 
     // Draw footer
     {
-        draw_rect(footer_rect, Colors.BACKGROUND_BRIGHT);
+        footer_color := Colors.BACKGROUND_BRIGHT;
+        draw_rect(footer_rect, footer_color);
         draw_top_shadow(footer_rect);
 
         footer_rect = shrink_x(footer_rect, text_offset.x);
+
+        width   := 0.0;
+        padding := 5 * dpi_scale;
 
         pen := make_vector2(
             footer_rect.x,
             footer_rect.y + (footer_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
         );
-        width   := 0.0;
-        padding := 5 * dpi_scale;
+
+        // Draw line and column numbers
+        cursor := cursors[main_cursor];
+        width = xx Simp.prepare_text(font_ui_bold, tprint("%:%", cursor.pos.line, cursor.pos.col));
+        line_col_start_x := footer_rect.x + footer_rect.w - width;
+        Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = Colors.CODE_COMMENT);
+
+        // Draw file name and path
+        footer_rect.w -= width + padding;
+        set_scissor(footer_rect);
+        defer Simp.clear_scissor();
+
         if buffer.file_exists {
+            // Icon
             icon_char := convert_utf32_to_utf8(xx buffer.file.icon);
             width = xx Simp.prepare_text(font_icons, to_string(*icon_char));
             Simp.draw_prepared_text(font_icons, xx pen.x, xx pen.y, color = Colors.CODE_PUNCTUATION);
 
+            // File name
             pen.x += width + padding;
-            width = xx Simp.prepare_text(font_ui, buffer.file.name);
-            Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = Colors.CODE_PUNCTUATION);
+            width = xx Simp.prepare_text(font_ui_bold, buffer.file.name);
+            Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.CODE_PUNCTUATION);
 
             // Draw separator
             pen.x += width + padding;
@@ -209,7 +229,24 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id) {
             pen.x += width + padding;
             width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
             Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+        } else {
+            // No file
+            icon_char := convert_utf32_to_utf8(xx File_Icon.text);
+            width = xx Simp.prepare_text(font_icons, to_string(*icon_char));
+            Simp.draw_prepared_text(font_icons, xx pen.x, xx pen.y, color = Colors.CODE_PUNCTUATION);
+
+            // File name
+            pen.x += width + padding;
+            width = xx Simp.prepare_text(font_ui, "<new file>");
+            Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = Colors.CODE_PUNCTUATION);
         }
+
+        // Make sure the text is cut nicely
+        fadeout_rect := cut_right(footer_rect, 2 * padding);
+        trans := footer_color;
+        trans.a = 0;
+        Simp.set_shader_for_color(enable_blend = true);
+        draw_rect_raw(fadeout_rect, c00 = trans, c10 = footer_color, c01 = trans, c11 = footer_color);
     }
 
 }

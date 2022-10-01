@@ -159,6 +159,9 @@ init_fonts :: () {
     assert(font_ui != null, "Couldn't init main ui font\n");
     font_ui_line_height = cast(float) font_ui.default_line_spacing;
 
+    font_ui_bold = Simp.get_font_at_size("fonts", "SEGUISB.TTF", cast(int) (font_ui_size * dpi_scale));
+    assert(font_ui_bold != null, "Couldn't init bold ui font\n");
+
     font_ui_small = Simp.get_font_at_size("fonts", "SEGOEUI.TTF", cast(int) (font_ui_small_size * dpi_scale));
     // font_ui_small = Simp.get_font_at_size("fonts", "SEGUISB.TTF", cast(int) (font_ui_small_size * dpi_scale));
     assert(font_ui_small != null, "Couldn't init main ui font\n");
@@ -294,6 +297,7 @@ font      :  *Simp.Dynamic_Font;
 font_size := 14;
 
 font_ui      :  *Simp.Dynamic_Font;
+font_ui_bold :  *Simp.Dynamic_Font;
 font_ui_size := 16;
 font_ui_line_height: float;
 

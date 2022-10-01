@@ -1,6 +1,4 @@
 # TODO
-- Show line/col in the footer
-- Handle path overflow nicely
 - Strip away project path when scanning
 - Draw scrollbars
 
@@ -58,6 +56,8 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Show line/col in the footer
++ Handle path overflow nicely
 + Show file name in footer
 + Open file dialog
     + On start, build a file list in the project
