@@ -623,6 +623,7 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64 {
     buffer_id := open_buffers.count;
     buffer := array_add(*open_buffers);
     buffer.file = get_file_info_from_full_path(path);
+    buffer.file_exists = true;
 
     file_data, success := read_entire_file(path);
     if !success then file_data = sprint("Couldn't load file '%'", path);

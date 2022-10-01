@@ -66,7 +66,8 @@ draw_splitter :: (main_area: Rect, split_x: float) {
 }
 
 draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id) {
-    footer_rect, rect := cut_bottom(main_area, line_height * 1.4);
+    footer_height := font_ui_line_height * 1.6;
+    footer_rect, rect := cut_bottom(main_area, footer_height);
 
     set_scissor(main_area);
     defer Simp.clear_scissor();
@@ -178,8 +179,39 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id) {
     }
 
     // Draw footer
-    draw_rect(footer_rect, Colors.BACKGROUND_BRIGHT);
-    draw_top_shadow(footer_rect);
+    {
+        draw_rect(footer_rect, Colors.BACKGROUND_BRIGHT);
+        draw_top_shadow(footer_rect);
+
+        footer_rect = shrink_x(footer_rect, text_offset.x);
+
+        pen := make_vector2(
+            footer_rect.x,
+            footer_rect.y + (footer_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+        );
+        width   := 0.0;
+        padding := 5 * dpi_scale;
+        if buffer.file_exists {
+            icon_char := convert_utf32_to_utf8(xx buffer.file.icon);
+            width = xx Simp.prepare_text(font_icons, to_string(*icon_char));
+            Simp.draw_prepared_text(font_icons, xx pen.x, xx pen.y, color = Colors.CODE_PUNCTUATION);
+
+            pen.x += width + padding;
+            width = xx Simp.prepare_text(font_ui, buffer.file.name);
+            Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = Colors.CODE_PUNCTUATION);
+
+            // Draw separator
+            pen.x += width + padding;
+            width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
+            Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+
+            // Draw file path
+            pen.x += width + padding;
+            width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
+            Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+        }
+    }
+
 }
 
 draw_open_file_dialog :: () {

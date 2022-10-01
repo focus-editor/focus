@@ -1,10 +1,9 @@
 # TODO
-- Show file names with breadcrumbs
-- Search text
-    - Use the naive functions first, optimise later if needed (also measure first)
-    - Case-sensitive
-    - Case-insensitive
-- Fix the font unknown character glyph (try copying something from font-awesome)
+- Show line/col in the footer
+- Handle path overflow nicely
+- Strip away project path when scanning
+- Draw scrollbars
+
 - Select whole words when creating new cursors (unless selected manually)
 - Highlight occurrences of selection (same rules as above)
 - Save file
@@ -28,6 +27,11 @@
         - Select words by ctrl+D
         - Fix the weird doubling of characters when pasted a newline
 
+- Search text
+    - Use the naive functions first, optimise later if needed (also measure first)
+    - Case-sensitive
+    - Case-insensitive
+
 - Implement semantic highlighting
     - Polymorphic structs and possibly other types
     - Highlight globals?
@@ -50,9 +54,11 @@
 - Reduce the number of draw calls
 - Subpixel rendering: support other types of panels (lookup ft2-lcd_rendering)
   (not useful for the editor, but may be useful for games)
+- Fix the font unknown character glyph (try copying something from font-awesome)
 - Don't redraw if nothing has changed
 
 # DONE
++ Show file name in footer
 + Open file dialog
     + On start, build a file list in the project
     + Filter the list
