@@ -1,12 +1,4 @@
 # TODO
-- Draw scrollbars
-    + Just draw for now
-    + Try to migrate from hard-coded ui ids to automatic ones and use a separate one for scrollbars
-    + Drag and go to click
-    + Finish the slider for open file dialog (pointer image and misclicks)
-    + File open dialog - don't click on files when over scrollbar
-    - Editor - draw scrollbar correctly when not enough text
-
 - Investigate why CHANGELOG.txt is slowing everything down (probably drawing too much?)
     - Allocations when scrolling? What?
 
@@ -43,6 +35,8 @@
     - Case-sensitive
     - Case-insensitive
 
+- Enable vsync
+
 - Implement semantic highlighting
     - Polymorphic structs and possibly other types
     - Highlight globals?
@@ -69,6 +63,13 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Draw scrollbars
+    + Just draw for now
+    + Try to migrate from hard-coded ui ids to automatic ones and use a separate one for scrollbars
+    + Drag and go to click
+    + Finish the slider for open file dialog (pointer image and misclicks)
+    + File open dialog - don't click on files when over scrollbar
+    + Editor - draw scrollbar correctly when not enough text
 + Strip away project path when scanning
 + Show line/col in the footer
 + Handle path overflow nicely

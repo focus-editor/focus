@@ -153,15 +153,13 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
 
         // Scrollbar
-        new_scroll_target := draw_scrollbar(rect, 1.5 * char_size, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id, always_draw = true);
+        new_scroll_target := draw_scrollbar(rect, 1.5 * char_size, rect.h + xx max_y_scroll, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
         if new_scroll_target != viewport.scroll_y.target {
             // Jump immediately to the scroll point
             viewport.top = new_scroll_target;
             viewport.scroll_y.target = new_scroll_target;
             redraw_requested = true;
         }
-
-        // TODO: shrink editors by 1 pixel
 
         if animate_scrolling(editor) {
             // Need to update after scrolling to reduce latency
@@ -372,8 +370,9 @@ draw_open_file_dialog :: () {
 
         {
             // Scrollbar
-            max_y_scroll := filtered.count * entry_height - files_rect.h;
-            new_scroll_target := draw_scrollbar(files_rect, 1.5 * char_size, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
+            content_height := filtered.count * entry_height;
+            max_y_scroll := content_height - files_rect.h;
+            new_scroll_target := draw_scrollbar(files_rect, 1.5 * char_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
             if new_scroll_target != scroll_anim.target {
                 scroll_y = new_scroll_target;
                 scroll_anim.target = new_scroll_target;
@@ -695,10 +694,12 @@ get_ui_id_from_loc :: inline (loc := #caller_location, parent_id: Ui_Id = .none)
     return cast(Ui_Id) loc.line_number;
 }
 
-draw_scrollbar :: (main_rect: Rect, width: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id, always_draw := false) -> new_scroll_target: s32 {
+draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id) -> new_scroll_target: s32 {
+    if max_scroll <= 0 return scroll_target;
+
     area := cut_right(main_rect, width);  // the scrollbar area of the main rect
     scrollbar := area;  // handle
-    scrollbar.h = area.h * (area.h / max_scroll);
+    scrollbar.h = area.h * (area.h / content_height);
     scroll_zone_size := area.h - scrollbar.h;  // the room for y to move
 
     if scroll_zone_size <= 0 return scroll_target;  // don't draw
