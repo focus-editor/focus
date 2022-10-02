@@ -20,16 +20,15 @@ Colors :: struct {
     SELECTION_INACTIVE      :: Color.{ r = 0.11, g = 0.267, b = 0.29, a = 0.5 };
     SEARCH_RESULT_ACTIVE    :: Color.{ r = 0.559, g = 0.469, b = 0.184 };
     SEARCH_RESULT_INACTIVE  :: Color.{ r = 0.322, g = 0.302, b = 0.173 };
-    SCROLLBAR               :: Color.{ r = 0.131, g = 0.202, b = 0.25 };
-    SCROLLBAR_SOFT          :: Color.{ r = 0.131, g = 0.202, b = 0.25, a = 0.5 };
-    // SCROLLBAR_SOFT          :: Color.{ r = 0.12, g = 0.177, b = 0.218 };
+    SCROLLBAR               :: Color.{ r = 0.131, g = 0.202, b = 0.25, a = 0.3 };
+    SCROLLBAR_HOVER         :: Color.{ r = 0.131, g = 0.202, b = 0.25, a = 0.8 };
+    SCROLLBAR_BACKGROUND    :: Color.{ r = 0.065, g = 0.101, b = 0.125, a = 0.3 };
     CURSOR                  :: Color.{ r = 0.2, g = 0.8, b = 0.8 };
     PASTE_ANIMATION         :: Color.{ r = 0.11, g = 0.267, b = 0.29 };
     SPLITTER                :: Color.{ r = 0.131, g = 0.202, b = 0.25 };
     SPLITTER_HOVER          :: Color.{ r = 0.110, g = 0.267, b = 0.29 };
 
     CODE_DEFAULT        :: Color.{ r = 0.81, g = 0.77, b = 0.66, a = 1.0 };
-    // CODE_COMMENT        :: Color.{ r = 0.52, g = 0.56, b = 0.54, a = 1.0 };
     CODE_COMMENT        :: Color.{ r = 0.533, g = 0.569, b = 0.616, a = 1.0 };
     CODE_TYPE           :: Color.{ r = 0.51, g = 0.67, b = 0.64, a = 1.0 };
     CODE_FUNCTION       :: Color.{ r = 0.67, g = 0.74, b = 0.49, a = 1.0 };

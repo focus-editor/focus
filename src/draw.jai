@@ -7,6 +7,8 @@ draw_frame :: () {
     // Check whether we need to deactivate elements before drawing
     if !mouse.left.is_down || mouse.left.just_released then ui.active = .none;
 
+    footer_height := font_ui_line_height * 1.6;
+
     // Draw editors
     if #complete editors_layout == {
         case .None;
@@ -14,7 +16,7 @@ draw_frame :: () {
             // TODO: draw a shortcut cheat-sheet?
         case .Single;
             splitter_pos = 0;
-            draw_editor(editor_active, screen, .editor_single);
+            draw_editor(editor_active, screen, footer_height, .editor_single);
         case .Double;
             // Drag splitter
             if ui.active == .editor_splitter {
@@ -25,10 +27,15 @@ draw_frame :: () {
 
             split_x := ifx splitter_pos > 0 then screen.w * splitter_pos else screen.w / 2;
             left_rect, right_rect := cut_left(screen, split_x);
+            left_rect.w  -= 1;
+            right_rect.w -= 1;
+            right_rect.x += 1;
 
-            draw_editor(editor_left,  left_rect,  .editor_left);
-            draw_editor(editor_right, right_rect, .editor_right);
-            draw_splitter(screen, split_x);
+            draw_editor(editor_left,  left_rect,  footer_height, .editor_left);
+            draw_editor(editor_right, right_rect, footer_height, .editor_right);
+
+            splitter_rect := make_rect(left_rect.x + left_rect.w, left_rect.y + footer_height, 2, left_rect.h - footer_height);
+            draw_splitter(splitter_rect, split_x);
     }
 
     if open_file_dialog.show then draw_open_file_dialog();
@@ -44,12 +51,12 @@ draw_frame :: () {
     Simp.swap_buffers(window);
 }
 
-draw_splitter :: (main_area: Rect, split_x: float) {
+draw_splitter :: (splitter_rect: Rect, split_x: float) {
     ui_id := Ui_Id.editor_splitter;
     color := Colors.SPLITTER;
 
-    rect     := make_rect(split_x - 1, main_area.y, 2, main_area.h);
-    rect_fat := expand(rect, 2 * dpi_scale);
+    rect := splitter_rect;
+    rect_fat := expand(splitter_rect, 2 * dpi_scale);
 
     if mouse_pointer_is_within(rect_fat) {
         ui.hot = ui_id;
@@ -65,8 +72,9 @@ draw_splitter :: (main_area: Rect, split_x: float) {
     draw_rect(rect, color);
 }
 
-draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id) {
-    footer_height := font_ui_line_height * 1.6;
+draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui_Id) {
+    scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
+
     footer_rect, rect := cut_bottom(main_area, footer_height);
 
     using editor := *open_editors[editor_id];
@@ -114,7 +122,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id) {
         // Handle editor scrolling here because we only know the layout at this point.
         // Some people would say this is not "clean", but hey, we'll see if we have any issues.
         max_y_scroll := get_max_y_scroll(buffer);
-        if ui.hot_last_frame == ui_id && mouse_pointer_is_within(rect) && mouse.scroll_y_delta != 0 {
+        if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_y_delta != 0 {
             using editor.viewport;
             set_scroll_target(*scroll_y, top, scroll_y.target - mouse.scroll_y_delta, max_y_scroll);
         } else if cursor_moved {
@@ -143,20 +151,22 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id) {
                 if top_target  != viewport.scroll_y.target then set_scroll_target(*viewport.scroll_y, viewport.top,  top_target,  max_y_scroll);
             }
         }
-        if animate_scrolling(editor) {
-            text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);  // need to update after scrolling to reduce latency
+
+        // Scrollbar
+        new_scroll_target := draw_scrollbar(rect, 1.5 * char_size, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
+        if new_scroll_target != viewport.scroll_y.target {
+            // Jump immediately to the scroll point
+            viewport.top = new_scroll_target;
+            viewport.scroll_y.target = new_scroll_target;
             redraw_requested = true;
         }
 
-        // Scrollbar
-        {
-            scrollbar := cut_right(rect, char_size);
-            scrollbar.h = rect.h * (rect.h / max_y_scroll);
-            scroll_zone := rect.h - scrollbar.h;  // the room for y to move
-            if scroll_zone > 0 {
-                scrollbar.y += (cast(float) (max_y_scroll - viewport.top) / max_y_scroll) * scroll_zone;
-                draw_rounded_rect(scrollbar, Colors.SCROLLBAR_SOFT, radius = 4 * dpi_scale);
-            }
+        // TODO: shrink editors by 1 pixel
+
+        if animate_scrolling(editor) {
+            // Need to update after scrolling to reduce latency
+            text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
+            redraw_requested = true;
         }
 
         is_active := editor_id == editor_active && Input.input_application_has_focus;
@@ -211,7 +221,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id) {
 
         // Draw line and column numbers
         cursor := cursors[main_cursor];
-        width = xx Simp.prepare_text(font_ui_bold, tprint("%:%", cursor.pos.line, cursor.pos.col));
+        width = xx Simp.prepare_text(font_ui_bold, tprint("Line: %  Col: %", cursor.pos.line, cursor.pos.col));
         line_col_start_x := footer_rect.x + footer_rect.w - width;
         Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = Colors.CODE_COMMENT);
 
@@ -266,7 +276,9 @@ draw_open_file_dialog :: () {
     using open_file_dialog;
 
     ui_id := Ui_Id.open_file_dialog;
-    if ui.active != .none && ui.active != ui_id {
+    scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
+
+    if ui.active != .none && ui.active != ui_id && ui.active != scrollbar_id {
         // Close the dialog on clicks elsewhere
         show = false;
         return;
@@ -360,14 +372,12 @@ draw_open_file_dialog :: () {
 
         {
             // Scrollbar
-            // TODO: if we need another scrollbar elsewhere, we're now in a good position to extract this into a generic function
-            scrollbar := cut_right(files_rect, char_size);
             max_y_scroll := filtered.count * entry_height - files_rect.h;
-            scrollbar.h = files_rect.h * (files_rect.h / max_y_scroll);
-            scroll_zone := files_rect.h - scrollbar.h;  // the room for y to move
-            if scroll_zone > 0 {
-                scrollbar.y += (cast(float) (max_y_scroll - scroll_y) / max_y_scroll) * scroll_zone;
-                draw_rounded_rect(scrollbar, Colors.SCROLLBAR_SOFT, radius = 4 * dpi_scale);
+            new_scroll_target := draw_scrollbar(files_rect, 1.5 * char_size, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
+            if new_scroll_target != scroll_anim.target {
+                scroll_y = new_scroll_target;
+                scroll_anim.target = new_scroll_target;
+                redraw_requested = true;
             }
 
             // Scrolling update
@@ -677,6 +687,50 @@ no_active_ui_item :: inline () -> bool {
     return ui.active == .none;
 }
 
+get_ui_id_from_loc :: inline (loc := #caller_location, parent_id: Ui_Id = .none) -> Ui_Id {
+    REALLY_BIG_NUMBER :: 100_000;  // jk, just needs to be less than we have widgets
+    if parent_id != .none {
+        return cast(Ui_Id) (loc.line_number + REALLY_BIG_NUMBER * cast(s64) parent_id);
+    }
+    return cast(Ui_Id) loc.line_number;
+}
+
+draw_scrollbar :: (main_rect: Rect, width: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id, always_draw := false) -> new_scroll_target: s32 {
+    area := cut_right(main_rect, width);  // the scrollbar area of the main rect
+
+    color := Colors.SCROLLBAR;
+
+    if mouse_pointer_is_within(area) {
+        ui.hot = ui_id;
+        if ui.hot_last_frame == ui_id then if mouse.left.just_pressed then ui.active = ui_id;
+    }
+
+    if ui.active == ui_id || (ui.hot == ui_id && ui.active == .none) {
+        set_pointer_image(.NORMAL);
+        draw_rect(area, Colors.SCROLLBAR_BACKGROUND);
+        color = Colors.SCROLLBAR_HOVER;
+    }
+
+    scrollbar := area;  // handle
+    scrollbar.h = area.h * (area.h / max_scroll);
+    scroll_zone_size := area.h - scrollbar.h;  // the room for y to move
+    if scroll_zone_size > 0 || always_draw {
+        separator_rect := cut_left(area, 1);
+        draw_rect(separator_rect, Colors.SCROLLBAR_BACKGROUND);
+        scrollbar.y += (cast(float) (max_scroll - scroll) / max_scroll) * scroll_zone_size;
+        draw_rounded_rect(scrollbar, color, radius = 2 * dpi_scale);
+    }
+
+    if ui.active == ui_id {
+        new_scrollbar_pos_from_top := (area.h - (mouse.pointer.y - area.y)) - scrollbar.h / 2;
+        new_scroll_percentage := new_scrollbar_pos_from_top / (area.h - scrollbar.h);
+        new_scroll_target: = max_scroll * new_scroll_percentage;
+        return clamp(cast(s32) new_scroll_target, 0, max_scroll);
+    } else {
+        return scroll_target;
+    }
+}
+
 ui: struct {
     active: Ui_Id = .none;
     hot:    Ui_Id = .none;
@@ -684,11 +738,14 @@ ui: struct {
 }
 
 Ui_Id :: enum s64 {
-    unavailable :: -1;
-    none :: 0;
-    editor_single;
-    editor_left;
-    editor_right;
-    editor_splitter;
-    open_file_dialog;
+    unavailable :: -2;
+    none :: -1;
+
+    editor_single :: -3;
+    editor_left   :: -4;
+    editor_right  :: -5;
+    editor_splitter   :: -6;
+    open_file_dialog  :: -7;
+
+    // The rest will be derived from loc
 }

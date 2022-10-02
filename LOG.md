@@ -1,7 +1,15 @@
 # TODO
 - Draw scrollbars
     + Just draw for now
-    - Drag and go to click
+    + Try to migrate from hard-coded ui ids to automatic ones and use a separate one for scrollbars
+    + Drag and go to click
+    + Finish the slider for open file dialog (pointer image and misclicks)
+    - Always draw the slider
+
+- Investigate why CHANGELOG.txt is slowing everything down (probably drawing too much?)
+
+- Make sure all lines are visible when dragging slider
+- Remember the dragging position
 
 - Select whole words when creating new cursors (unless selected manually)
 - Highlight occurrences of selection (same rules as above)
