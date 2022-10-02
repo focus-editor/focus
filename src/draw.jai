@@ -153,7 +153,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
 
         // Scrollbar
-        new_scroll_target := draw_scrollbar(rect, 1.5 * char_size, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
+        new_scroll_target := draw_scrollbar(rect, 1.5 * char_size, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id, always_draw = true);
         if new_scroll_target != viewport.scroll_y.target {
             // Jump immediately to the scroll point
             viewport.top = new_scroll_target;
@@ -393,8 +393,8 @@ draw_open_file_dialog :: () {
             }
 
             // Mouse scrolling
-            if ui.hot_last_frame == ui_id && mouse_pointer_is_within(files_rect) {
-                set_pointer_image(.PRESSABLE);
+            if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(files_rect) {
+                if ui.hot_last_frame == ui_id then set_pointer_image(.PRESSABLE);
                 if mouse.scroll_y_delta != 0 {
                     set_scroll_target(*scroll_anim, scroll_y, scroll_anim.target - mouse.scroll_y_delta, xx max_y_scroll);
                 }
@@ -420,7 +420,7 @@ draw_open_file_dialog :: () {
             entry_index := visible_start + i;
             entry_rect.y = files_rect.y + files_rect.h - (entry_index + 1) * entry_height + scroll_y;
 
-            if mouse_pointer_is_within(entry_rect) {
+            if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == ui_id && ui.active == .none {
                 if mouse.left.just_pressed then entries.selected_by_mouse = entry_index;
                 if entries.selected_by_mouse == -1 then draw_rect(entry_rect, highlight_color_lite);
                 if entries.selected_by_mouse == entry_index && mouse.left.just_released then open_file_dialog_open_entry(entry_index, on_the_side = ctrl_pressed());
@@ -697,30 +697,33 @@ get_ui_id_from_loc :: inline (loc := #caller_location, parent_id: Ui_Id = .none)
 
 draw_scrollbar :: (main_rect: Rect, width: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id, always_draw := false) -> new_scroll_target: s32 {
     area := cut_right(main_rect, width);  // the scrollbar area of the main rect
+    scrollbar := area;  // handle
+    scrollbar.h = area.h * (area.h / max_scroll);
+    scroll_zone_size := area.h - scrollbar.h;  // the room for y to move
 
-    color := Colors.SCROLLBAR;
+    if scroll_zone_size <= 0 return scroll_target;  // don't draw
 
     if mouse_pointer_is_within(area) {
         ui.hot = ui_id;
         if ui.hot_last_frame == ui_id then if mouse.left.just_pressed then ui.active = ui_id;
     }
 
-    if ui.active == ui_id || (ui.hot == ui_id && ui.active == .none) {
+    // Draw
+    color := Colors.SCROLLBAR;
+    rounding_radius := 2 * dpi_scale;
+
+    if ui.active == ui_id || (ui.hot_last_frame == ui_id && ui.active == .none) {
         set_pointer_image(.NORMAL);
-        draw_rect(area, Colors.SCROLLBAR_BACKGROUND);
+        draw_rounded_rect(area, Colors.SCROLLBAR_BACKGROUND, radius = rounding_radius);
         color = Colors.SCROLLBAR_HOVER;
     }
+    separator_rect := shrink_y(cut_left(area, 1), rounding_radius);
+    draw_rect(separator_rect, Colors.SCROLLBAR_BACKGROUND);
+    scrollbar.y += (cast(float) (max_scroll - scroll) / max_scroll) * scroll_zone_size;
+    scrollbar = shrink(scrollbar, 1);
+    draw_rounded_rect(scrollbar, color, radius = rounding_radius);
 
-    scrollbar := area;  // handle
-    scrollbar.h = area.h * (area.h / max_scroll);
-    scroll_zone_size := area.h - scrollbar.h;  // the room for y to move
-    if scroll_zone_size > 0 || always_draw {
-        separator_rect := cut_left(area, 1);
-        draw_rect(separator_rect, Colors.SCROLLBAR_BACKGROUND);
-        scrollbar.y += (cast(float) (max_scroll - scroll) / max_scroll) * scroll_zone_size;
-        draw_rounded_rect(scrollbar, color, radius = 2 * dpi_scale);
-    }
-
+    // Maybe drag the slider
     if ui.active == ui_id {
         new_scrollbar_pos_from_top := (area.h - (mouse.pointer.y - area.y)) - scrollbar.h / 2;
         new_scroll_percentage := new_scrollbar_pos_from_top / (area.h - scrollbar.h);

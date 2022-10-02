@@ -244,6 +244,7 @@ remove_selection :: inline (using cursor: *Cursor) {
 }
 
 remove_crlf :: (using buffer: Buffer) {
+    // @Speed: SLOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOW!
     i := 0;
     while i < bytes.count {
         if bytes[i] == #char "\r" && i + 1 < bytes.count && bytes[i + 1] == #char "\n" {

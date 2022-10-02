@@ -4,9 +4,11 @@
     + Try to migrate from hard-coded ui ids to automatic ones and use a separate one for scrollbars
     + Drag and go to click
     + Finish the slider for open file dialog (pointer image and misclicks)
-    - Always draw the slider
+    + File open dialog - don't click on files when over scrollbar
+    - Editor - draw scrollbar correctly when not enough text
 
 - Investigate why CHANGELOG.txt is slowing everything down (probably drawing too much?)
+    - Allocations when scrolling? What?
 
 - Make sure all lines are visible when dragging slider
 - Remember the dragging position

@@ -483,7 +483,7 @@ animate_scrolling :: (editor: *Editor) -> scrolling: bool {
 
 get_max_y_scroll :: (buffer: Buffer) -> s32 {
     assert(!buffer.dirty);
-    return max(cast(s32) ((buffer.lines.count - 2)  * line_height), 0);
+    return max(cast(s32) ((buffer.lines.count - 1)  * line_height), 0);
 }
 
 set_scroll_target :: (using scroll: *Scroll_Animation, current: s32, target_: s32, max_scroll: s32) {
