@@ -192,7 +192,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // Draw text
         pen := text_origin;
         pen.y += (line_height - char_size) / 2 - visible_lines_start * line_height;
-        for line : array_view(buffer.lines, visible_lines_start, visible_lines_end) {
+        visible_lines := array_view(buffer.lines, visible_lines_start, visible_lines_end - visible_lines_start);
+        for line : visible_lines {
             line_len  := clamp(line.end - line.start, 0, 1000);  // TODO: count max line length in chars
             line_text := to_string(array_view(buffer.bytes, line.start, line_len));
             Simp.draw_text(font, xx pen.x, xx pen.y, line_text, color = Colors.CODE_PUNCTUATION);

@@ -1,8 +1,4 @@
 # TODO
-- Investigate why CHANGELOG.txt is slowing everything down (probably drawing too much?)
-    + Make the remove_crlf function fast
-    - Profile the scrolling
-    - Allocations when scrolling? What?
 
 - Make sure all lines are visible when dragging slider
 - Remember the dragging position
@@ -65,6 +61,11 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Investigate why CHANGELOG.txt is slowing everything down (probably drawing too much?)
+    + Make the remove_crlf function fast
+    + Profile the scrolling
+    + Try a newer version of render doc
+    + Allocations when scrolling? What?
 + Draw scrollbars
     + Just draw for now
     + Try to migrate from hard-coded ui ids to automatic ones and use a separate one for scrollbars
