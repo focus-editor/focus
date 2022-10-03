@@ -708,7 +708,7 @@ draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll:
 
     if mouse_pointer_is_within(area) {
         ui.hot = ui_id;
-        if ui.hot_last_frame == ui_id then if mouse.left.just_pressed then ui.active = ui_id;
+        if ui.hot_last_frame == ui_id && mouse.left.just_pressed then ui.active = ui_id;
     }
 
     // Draw
@@ -724,11 +724,21 @@ draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll:
     draw_rect(separator_rect, Colors.SCROLLBAR_BACKGROUND);
     scrollbar.y += (cast(float) (max_scroll - scroll) / max_scroll) * scroll_zone_size;
     scrollbar = shrink(scrollbar, 1);
+    if scrollbar.h < 5 then scrollbar.h = 5;  // don't make it too tiny
     draw_rounded_rect(scrollbar, color, radius = rounding_radius);
 
     // Maybe drag the slider
     if ui.active == ui_id {
-        new_scrollbar_pos_from_top := (area.h - (mouse.pointer.y - area.y)) - scrollbar.h / 2;
+        if mouse.left.just_pressed {
+            if mouse_pointer_is_within(scrollbar) {
+                // Grab the slider at this point
+                scrollbar_grab_point = mouse.pointer.y - (scrollbar.y + scrollbar.h / 2);
+            } else {
+                // Clicked outside scrollbar, jump to it
+                scrollbar_grab_point = 0;
+            }
+        }
+        new_scrollbar_pos_from_top := (area.h - (mouse.pointer.y - scrollbar_grab_point - area.y)) - scrollbar.h / 2;
         new_scroll_percentage := new_scrollbar_pos_from_top / (area.h - scrollbar.h);
         new_scroll_target: = max_scroll * new_scroll_percentage;
         return clamp(cast(s32) new_scroll_target, 0, max_scroll);
@@ -755,3 +765,10 @@ Ui_Id :: enum s64 {
 
     // The rest will be derived from loc
 }
+
+// NOTE: this is a silly global variable which represents the distance between
+// the center of slider and the point where we grabbed it.
+// Since we can only drag one slider at a time, this will work, but in a more
+// clean way this should probably be stored in widget storage?
+// Problem is, we don't have much else to store for scrollbars...
+scrollbar_grab_point: float;

@@ -1,16 +1,12 @@
 # TODO
-
-- Set a minimum slider height
-- Remember the dragging position
+- Jump by words on ctrl+left/right
+- Jump to next empty line on ctrl+up/down
+- Revert to ctrl+alt+left/right for pane change
 
 - Select whole words when creating new cursors (unless selected manually)
 - Highlight occurrences of selection (same rules as above)
 - Save file
 - Reload from disk
-
-- Jump by words on ctrl+left/right
-- Jump to next empty line on ctrl+up/down
-- Revert to ctrl+alt+left/right for pane change
 
 - Detect tab symbols and draw them differently
 
@@ -61,6 +57,8 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Remember the scrollbar grab position
++ Set a minimum slider height
 + Make sure all lines are visible when dragging slider
 + Investigate why CHANGELOG.txt is slowing everything down (probably drawing too much?)
     + Make the remove_crlf function fast
