@@ -243,16 +243,30 @@ remove_selection :: inline (using cursor: *Cursor) {
     sel = pos;
 }
 
-remove_crlf :: (using buffer: Buffer) {
-    // @Speed: SLOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOW!
-    i := 0;
-    while i < bytes.count {
-        if bytes[i] == #char "\r" && i + 1 < bytes.count && bytes[i + 1] == #char "\n" {
-            array_ordered_remove_by_index(*bytes, i);
-        } else {
-            i += 1;
+remove_crlf :: (using buffer: *Buffer) {
+    dst := bytes.data;
+    src := bytes.data;
+    end := bytes.data + bytes.count;
+    cursor := bytes.data;
+
+    // Remove all CR's in one pass
+    while cursor < end {
+        byte := <<cursor;
+        if byte == #char "\r" {
+            count := cursor - src;
+            memcpy(dst, src, count);
+            dst += count;
+            cursor += 1;
+            src = cursor;
+            continue;
         }
+        cursor += 1 + trailingBytesForUTF8[byte];
     }
+    // Copy the remaining bit
+    count := cursor - src;
+    memcpy(dst, src, count);
+
+    bytes.count = dst + count - bytes.data;
 }
 
 last_line :: inline (using buffer: Buffer, line: s32) -> bool {

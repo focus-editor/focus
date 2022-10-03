@@ -1,5 +1,7 @@
 # TODO
 - Investigate why CHANGELOG.txt is slowing everything down (probably drawing too much?)
+    + Make the remove_crlf function fast
+    - Profile the scrolling
     - Allocations when scrolling? What?
 
 - Make sure all lines are visible when dragging slider
