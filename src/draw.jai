@@ -158,6 +158,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             // Jump immediately to the scroll point
             viewport.top = new_scroll_target;
             viewport.scroll_y.target = new_scroll_target;
+            text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);  // duplicated as below. @cleanup?
             redraw_requested = true;
         }
 

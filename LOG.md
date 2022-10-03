@@ -1,6 +1,6 @@
 # TODO
 
-- Make sure all lines are visible when dragging slider
+- Set a minimum slider height
 - Remember the dragging position
 
 - Select whole words when creating new cursors (unless selected manually)
@@ -61,6 +61,7 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Make sure all lines are visible when dragging slider
 + Investigate why CHANGELOG.txt is slowing everything down (probably drawing too much?)
     + Make the remove_crlf function fast
     + Profile the scrolling
