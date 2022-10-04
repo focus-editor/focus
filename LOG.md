@@ -28,6 +28,7 @@
     - Case-insensitive
 
 - Enable vsync (hmm tried it but it was terrible)
+- Add a warning on large texts (maybe semi-transparent)
 
 - Implement semantic highlighting
     - Polymorphic structs and possibly other types
