@@ -1,6 +1,4 @@
 # TODO
-- Expand pane on ctrl+shift+L
-
 - Move viewport in a constant smooth fashion (on ctrl+up/down)
 
 - Select whole words when creating new cursors (unless selected manually)
@@ -57,6 +55,7 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Expand pane on ctrl+shift+L
 + Jump by words on ctrl/alt+left/right
 + Revert to ctrl+alt+left/right for pane change
 + Jump to next empty line on ctrl+up/down

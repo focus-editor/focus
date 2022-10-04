@@ -22,8 +22,13 @@ draw_frame :: () {
             if ui.active == .editor_splitter {
                 splitter_pos = (mouse.pointer.x - screen.x) / screen.w;
                 if splitter_pos == 0 then splitter_pos = 0.1;  // avoid jitter
+                editor_expanded = false;
             }
             if splitter_pos != 0 then splitter_pos = clamp(splitter_pos, 0.1, 0.9);
+            if editor_expanded {
+                if editor_active == editor_left  && !values_are_close(splitter_pos, 0.9) then splitter_pos = 0.9;
+                if editor_active == editor_right && !values_are_close(splitter_pos, 0.1) then splitter_pos = 0.1;
+            }
 
             split_x := ifx splitter_pos > 0 then screen.w * splitter_pos else screen.w / 2;
             left_rect, right_rect := cut_left(screen, split_x);

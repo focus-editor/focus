@@ -59,6 +59,16 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
                 handled = true;
             }
 
+        case #char "L";
+            if only_ctrl_shift_pressed(mods) && editors_layout == .Double {
+                editor_expanded = !editor_expanded;
+                if editor_expanded {
+                    splitter_pos = ifx editor_active == editor_left then 0.9 else 0.1;
+                } else {
+                    splitter_pos = 0;  // back to center
+                }
+            }
+
         case .ESCAPE;
             cursor := leave_only_original_cursor(editor);
             remove_selection(cursor);
@@ -1299,9 +1309,9 @@ editors_layout: enum {
 editor_active: s64 = -1;
 editor_left:   s64 = -1;
 editor_right:  s64 = -1;
+editor_expanded := false;  // whether the active editor should be larger
 
 splitter_pos: float = 0;  // zero means it's in the middle
-
 
 #scope_file
 
