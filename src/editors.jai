@@ -66,19 +66,19 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
             handled = true;
 
         case .ARROW_LEFT;
-            if only_ctrl_pressed(mods) {
+            if only_ctrl_alt_pressed(mods) {
                 switch_to_pane(.left);
                 handled = true;
-            } else if only_ctrl_alt_pressed(mods) {
+            } else if only_ctrl_alt_shift_pressed(mods) {
                 if editor_active == editor_right then swap_panes();
                 handled = true;
             }
 
         case .ARROW_RIGHT;
-            if only_ctrl_pressed(mods) {
+            if only_ctrl_alt_pressed(mods) {
                 switch_to_pane(.right);
                 handled = true;
-            }else if only_ctrl_alt_pressed(mods) {
+            } else if only_ctrl_alt_shift_pressed(mods) {
                 if editor_active == editor_left then swap_panes();
                 handled = true;
             }
@@ -132,16 +132,20 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
                         // TODO: support multiple cursors here someday too
                         move_lines_up(cursor, buffer);
                         keep_selection = true;
+                    } else if only_ctrl_pressed(mods) || only_ctrl_shift_pressed(mods) {
+                        move_cursor_to_empty_line(cursor, buffer, mods, .up);
                     } else {
-                        move_cursor_up(cursor, buffer, mods);
+                        move_cursor_vertically(cursor, buffer, mods, .up);
                     }
                     cursor_moved = true;
                 case .ARROW_DOWN;
                     if only_alt_shift_pressed(mods) && cursors.count == 1 {
                         move_lines_down(cursor, buffer);
                         keep_selection = true;
+                    } else if only_ctrl_pressed(mods) || only_ctrl_shift_pressed(mods) {
+                        move_cursor_to_empty_line(cursor, buffer, mods, .down);
                     } else {
-                        move_cursor_down(cursor, buffer, mods);
+                        move_cursor_vertically(cursor, buffer, mods, .down);
                     }
                     cursor_moved = true;
                 case .HOME;
@@ -499,18 +503,9 @@ add_paste_animation :: (using editor: *Editor, range: Range) {
 }
 
 select_word :: (using cursor: *Cursor, buffer: Buffer) {
-    assert(!buffer.dirty);
-
-    line := buffer.lines[pos.line];
-    str: string = ---;
-    str.data = buffer.bytes.data + line.start;
-    str.count = line.end - line.start;
-    if str.count <= 0 return;  // empty line
-
-    // @Speed: we don't need to decode the whole string (especially if it's long).
-    // Instead we could scan left and right to find a space or something, and decode that
-    chars := decode_utf8_string_to_temp_chars(str);
-    assert(chars.count == line.num_chars + 1);
+    // Decode the characters on the line for scanning
+    chars := get_temp_unicode_chars_for_line(buffer, pos.line, max_char = 5000);  // arbitrary limit
+    if !chars return;  // empty line
 
     col := -1;
     if is_word_char(chars[pos.col]) {
@@ -744,21 +739,55 @@ new_edit_group_required_for_action :: (key_code: Input.Key_Code, mods: Mods, cur
     return false;
 }
 
-move_cursor_left :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
+scan_until_word_char :: (condition: bool, chars: [] u32, start: s32, direction: enum { left; right; }) -> index: s32 {
+    i := start;
+    if direction == .left {
+        while i >= 0 {
+            if is_word_char(chars[i]) == condition break;
+            i -= 1;
+        }
+    } else {
+        while i < chars.count {
+            if is_word_char(chars[i]) == condition break;
+            i += 1;
+        }
+    }
+    return i;
+}
+
+move_cursor_left :: (using cursor: *Cursor, buffer: Buffer, mods: Mods) {
     if has_selection(cursor) && !mods.shift_pressed {
         pos = get_selection(cursor).start;
         remove_selection(cursor);
     } else {
-        pos.col -= xx ifx mods.alt_pressed then 5 else 1;
+        pos.col -= 1;
         if pos.col < 0 {
             if pos.line > 0 { pos.line -= 1; pos.col = buffer.lines[pos.line].num_chars; }
             else pos.col = 0;
+        }
+        if pos.col > 0 && (mods.ctrl_pressed || mods.alt_pressed) {
+            chars := get_temp_unicode_chars_for_line(buffer, pos.line, max_char = pos.col);
+
+            i := pos.col;
+            if mods.alt_pressed {
+                if is_word_char(chars[i]) {
+                    i = scan_until_word_char(false, chars, i, .left);
+                } else {
+                    i = scan_until_word_char(true, chars, i, .left);
+                }
+            } else if mods.ctrl_pressed {
+                // Scan until we see a word char, then a non-word char
+                i = scan_until_word_char(true,  chars, i, .left);
+                i = scan_until_word_char(false, chars, i, .left);
+            }
+            pos.col = i + 1;
+            pos = make_valid_pos(buffer, pos);
         }
     }
     col_wanted = pos.col;
 }
 
-move_cursor_right :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
+move_cursor_right :: (using cursor: *Cursor, buffer: Buffer, mods: Mods) {
     if has_selection(cursor) && !mods.shift_pressed {
         pos = get_selection(cursor).end;
         remove_selection(cursor);
@@ -768,20 +797,45 @@ move_cursor_right :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
             pos.line += 1;
             pos.col   = 0;
         } else if pos.col < line_len {
-            pos.col += xx ifx mods.alt_pressed then 5 else 1;
+            pos.col += 1;
+            if pos.col < buffer.lines[pos.line].num_chars && (mods.ctrl_pressed || mods.alt_pressed) {
+                chars := get_temp_unicode_chars_for_line(buffer, pos.line, max_char = 5000);  // arbitrary limit
+
+                i := pos.col - 1;
+                if mods.alt_pressed {
+                    if is_word_char(chars[i]) {
+                        i = scan_until_word_char(false, chars, i, .right);
+                    } else {
+                        i = scan_until_word_char(true, chars, i, .right);
+                    }
+                } else if mods.ctrl_pressed {
+                    // Scan until we see a word char, then a non-word char
+                    i = scan_until_word_char(true,  chars, i, .right);
+                    i = scan_until_word_char(false, chars, i, .right);
+                }
+                pos.col = i;
+                pos = make_valid_pos(buffer, pos);
+            }
         }
     }
     col_wanted = pos.col;
 }
 
-move_cursor_up :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
+move_cursor_vertically :: (using cursor: *Cursor, buffer: Buffer, mods: Mods, dir: enum { up; down; }) {
     if has_selection(cursor) && !mods.shift_pressed {
-        pos = get_selection(cursor).start;
+        selection := get_selection(cursor);
+        pos = ifx dir == .up then selection.start else selection.end;
         remove_selection(cursor);
         col_wanted = pos.col;
     }
-    pos.line -= xx ifx mods.ctrl_pressed then 5 else 1;
-    if pos.line < 0 then pos.line = 0;
+    if dir == .up {
+        pos.line -= 1;
+        if pos.line < 0 then pos.line = 0;
+    } else {
+        pos.line += 1;
+        if pos.line > buffer.lines.count - 1 then pos.line = cast(s32) buffer.lines.count - 1;
+    }
+
     pos.col = col_wanted;
     line_len := buffer.lines[pos.line].num_chars;
     if pos.col > line_len {
@@ -789,22 +843,27 @@ move_cursor_up :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
     }
 }
 
-move_cursor_down :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
-    if has_selection(cursor) && !mods.shift_pressed {
-        pos = get_selection(cursor).end;
-        remove_selection(cursor);
-        col_wanted = pos.col;
+move_cursor_to_empty_line :: (using cursor: *Cursor, buffer: Buffer, mods: Mods, dir: enum { up; down; }) {
+    if has_selection(cursor) && !mods.shift_pressed then remove_selection(cursor);
+
+    if dir == .up {
+        while pos.line > 0 {
+            pos.line -= 1;
+            line := buffer.lines[pos.line];
+            if line.text_start == line.end break;
+        }
+    } else {
+        while pos.line < buffer.lines.count - 1 {
+            pos.line += 1;
+            line := buffer.lines[pos.line];
+            if line.text_start == line.end break;
+        }
     }
-    pos.line += xx ifx mods.ctrl_pressed then 5 else 1;
-    if pos.line > buffer.lines.count - 1 then pos.line = cast(s32) buffer.lines.count - 1;
-    pos.col = col_wanted;
-    line_len := buffer.lines[pos.line].num_chars;
-    if pos.col > line_len {
-        pos.col = line_len;
-    }
+
+    pos = make_valid_pos(buffer, pos);
 }
 
-move_cursor_page :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods, dir: enum { up; down; }) {
+move_cursor_page :: (using cursor: *Cursor, buffer: Buffer, mods: Mods, dir: enum { up; down; }) {
     page_size := cast(s32) (window_height / line_height);
     if dir == .up {
         pos.line -= page_size;
@@ -814,7 +873,7 @@ move_cursor_page :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods, dir: en
     pos = make_valid_pos(buffer, pos);
 }
 
-move_cursor_home :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
+move_cursor_home :: (using cursor: *Cursor, buffer: Buffer, mods: Mods) {
     text_start_col: s32= 0;
     line := buffer.lines[pos.line];
     i := line.start;
@@ -829,7 +888,7 @@ move_cursor_home :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
     col_wanted = pos.col;
 }
 
-move_cursor_end :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
+move_cursor_end :: (using cursor: *Cursor, buffer: Buffer, mods: Mods) {
     pos.col = buffer.lines[pos.line].num_chars;
     col_wanted = pos.col;
 }

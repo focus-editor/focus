@@ -239,6 +239,21 @@ copy_lines_to_temp_string :: (buffer: Buffer, range: Range) -> string {
     return copy_temporary_string(str);
 }
 
+get_temp_unicode_chars_for_line :: (buffer: Buffer, line_num: s32, max_char: s32) -> [] u32 {
+    assert(!buffer.dirty);
+
+    if line_num < 0 || line_num >= buffer.lines.count return .[];
+
+    line := buffer.lines[line_num];
+    str: string = ---;
+    str.data = buffer.bytes.data + line.start;
+    str.count = line.end - line.start;
+    if str.count <= 0 return .[];
+
+    chars := decode_utf8_string_to_temp_chars(str, max_char);
+    return chars;
+}
+
 remove_selection :: inline (using cursor: *Cursor) {
     sel = pos;
 }

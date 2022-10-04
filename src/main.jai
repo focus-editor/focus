@@ -238,6 +238,9 @@ only_ctrl_shift_pressed :: inline (mods: Mods) -> bool {
 only_ctrl_alt_pressed :: inline (mods: Mods) -> bool {
     return mods.packed == MODS_CTRL_ALT;
 }
+only_ctrl_alt_shift_pressed :: inline (mods: Mods) -> bool {
+    return mods.packed == MODS_CTRL_ALT_SHIFT;
+}
 
 key_state :: inline (key: Input.Key_Code) -> Input.Key_Current_State {
     return Input.input_button_states[key];
@@ -353,12 +356,13 @@ Input :: #import "Input";
 
 #scope_file
 
-MODS_NONE       :: #run Mods.{}.packed;
-MODS_CTRL       :: #run Mods.{ ctrl_pressed = true }.packed;
-MODS_ALT        :: #run Mods.{ alt_pressed  = true }.packed;
-MODS_ALT_SHIFT  :: #run Mods.{ alt_pressed  = true, shift_pressed = true }.packed;
-MODS_CTRL_SHIFT :: #run Mods.{ ctrl_pressed = true, shift_pressed = true }.packed;
-MODS_CTRL_ALT   :: #run Mods.{ ctrl_pressed = true, alt_pressed   = true }.packed;
+MODS_NONE       :   : #run Mods.{}.packed;
+MODS_CTRL           :: #run Mods.{ ctrl_pressed = true }.packed;
+MODS_ALT            :: #run Mods.{ alt_pressed  = true }.packed;
+MODS_ALT_SHIFT      :: #run Mods.{ alt_pressed  = true, shift_pressed = true }.packed;
+MODS_CTRL_SHIFT     :: #run Mods.{ ctrl_pressed = true, shift_pressed = true }.packed;
+MODS_CTRL_ALT       :: #run Mods.{ ctrl_pressed = true, alt_pressed   = true }.packed;
+MODS_CTRL_ALT_SHIFT :: #run Mods.{ ctrl_pressed = true, alt_pressed   = true, shift_pressed = true }.packed;
 
 MIN_WINDOW_WIDTH  :: 50;
 MIN_WINDOW_HEIGHT :: 50;

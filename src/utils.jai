@@ -47,13 +47,13 @@ to_bytes :: (src: string) -> [] u8 {
     return result;
 }
 
-decode_utf8_string_to_temp_chars :: (str: string) -> [] u32 {
+decode_utf8_string_to_temp_chars :: (str: string, max_char: s64) -> [] u32 {
     chars: [..] u32;
     chars.allocator = temp;
     array_reserve(*chars, str.count);  // should be enough to store chars with some buffer
 
     s := str;
-    while true {
+    for 0 .. max_char {
         char, result := utf8_next_character(*s);
         assert(result != .SOURCE_ILLEGAL);
         array_add(*chars, char);

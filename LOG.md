@@ -1,7 +1,7 @@
 # TODO
-- Jump by words on ctrl+left/right
-- Jump to next empty line on ctrl+up/down
-- Revert to ctrl+alt+left/right for pane change
+- Expand pane on ctrl+shift+L
+
+- Move viewport in a constant smooth fashion (on ctrl+up/down)
 
 - Select whole words when creating new cursors (unless selected manually)
 - Highlight occurrences of selection (same rules as above)
@@ -57,6 +57,9 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Jump by words on ctrl/alt+left/right
++ Revert to ctrl+alt+left/right for pane change
++ Jump to next empty line on ctrl+up/down
 + Remember the scrollbar grab position
 + Set a minimum slider height
 + Make sure all lines are visible when dragging slider
