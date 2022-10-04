@@ -93,15 +93,16 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
                 handled = true;
             }
 
-        case .ARROW_UP;
-            if only_alt_pressed(mods) {
-                move_viewport(editor, .up);
-                handled = true;
-            }
-
+        case .ARROW_UP; #through;
         case .ARROW_DOWN;
             if only_alt_pressed(mods) {
-                move_viewport(editor, .down);
+                if !editor_smooth_scroll.active {
+                    // Start smooth scrolling
+                    editor_smooth_scroll.active     = true;
+                    editor_smooth_scroll.started_at = frame_time;
+                    editor_smooth_scroll.start_y    = editor.viewport.top;
+                    editor_smooth_scroll.up         = key_code == .ARROW_UP;
+                }
                 handled = true;
             }
     }
@@ -253,6 +254,14 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     if cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
 
     editor.cursor_moved = cursor_moved;
+}
+
+editors_handle_key_release :: (key_code: Input.Key_Code, mods: Mods) {
+    if key_code == {
+        case .ARROW_UP; #through;
+        case .ARROW_DOWN;
+            editor_smooth_scroll.active = false;
+    }
 }
 
 editors_handle_text_input :: (char: u32) {
@@ -476,7 +485,7 @@ animate_scrolling :: (editor: *Editor) -> scrolling: bool {
         if t >= 1 || t < 0 {
             top = target;
         } else {
-            top = start + xx (cast(float)(target - start) * t);
+            top = start + xx (cast(float)(target - start) * cast(float)t);
         }
     }
 
@@ -488,7 +497,7 @@ animate_scrolling :: (editor: *Editor) -> scrolling: bool {
         if t >= 1 || t < 0 {
             left = target;
         } else {
-            left = start + xx (cast(float)(target - start) * t);
+            left = start + xx (cast(float)(target - start) * cast(float)t);
         }
     }
 
@@ -1287,7 +1296,7 @@ Viewport :: struct {
 
 Scroll_Animation :: struct {
     start, target: s32;
-    started_at: float64;
+    started_at: Time;
     SPEED :: 0.1;  // how many seconds to finish any scroll animation
 }
 
@@ -1310,6 +1319,14 @@ editor_active: s64 = -1;
 editor_left:   s64 = -1;
 editor_right:  s64 = -1;
 editor_expanded := false;  // whether the active editor should be larger
+
+// Triggered by alt + up/down
+editor_smooth_scroll: struct {
+    active: bool;
+    up:     bool;  // if not up, then down
+    started_at: Time;
+    start_y: s32;
+};
 
 splitter_pos: float = 0;  // zero means it's in the middle
 

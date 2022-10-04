@@ -174,7 +174,7 @@ animate_scrolling :: (using animation: *Scroll_Animation, current: s32) -> (new_
     if t >= 1 || t < 0 {
         new_value = target;
     } else {
-        new_value = start + xx (cast(float)(target - start) * t);
+        new_value = start + xx (cast(float)(target - start) * cast(float)t);
     }
 
     return new_value, true;

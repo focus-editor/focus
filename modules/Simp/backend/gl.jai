@@ -24,6 +24,12 @@ backend_init :: (info: *Window_Info) {
             the_gl_context = hglrc;
             the_hdc_for_pixel_format_cloning = hdc;
             info.specific.hdc = hdc;
+
+            // NOTE: when I enabled vsync this way, the program started feeling terrible
+            // _wglSwapIntervalEXT : (interval: s32) -> BOOL #foreign;
+            // _wglSwapIntervalEXT = xx wglGetProcAddress("wglSwapIntervalEXT");
+            // vsync := _wglSwapIntervalEXT(1); // enable vsync
+            // if !vsync then log_error("Couldn't enable vsync\n");
         }
         #if OS == .LINUX {
             the_gl_context, the_gl_fbc = glx_create_context(MINIMUM_GL_MAJOR_VERSION, MINIMUM_GL_MINOR_VERSION);

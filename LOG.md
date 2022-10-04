@@ -1,8 +1,8 @@
 # TODO
-- Move viewport in a constant smooth fashion (on ctrl+up/down)
-
 - Select whole words when creating new cursors (unless selected manually)
 - Highlight occurrences of selection (same rules as above)
+
+- Fix the crash when a file is saved with open dialog hidden
 - Save file
 - Reload from disk
 
@@ -27,7 +27,7 @@
     - Case-sensitive
     - Case-insensitive
 
-- Enable vsync
+- Enable vsync (hmm tried it but it was terrible)
 
 - Implement semantic highlighting
     - Polymorphic structs and possibly other types
@@ -55,6 +55,7 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Move viewport in a constant smooth fashion (on ctrl+up/down)
 + Expand pane on ctrl+shift+L
 + Jump by words on ctrl/alt+left/right
 + Revert to ctrl+alt+left/right for pane change

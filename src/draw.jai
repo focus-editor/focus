@@ -160,18 +160,27 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // Scrollbar
         new_scroll_target := draw_scrollbar(rect, 1.5 * char_size, rect.h + xx max_y_scroll, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
         if new_scroll_target != viewport.scroll_y.target {
-            // Jump immediately to the scroll point
+            // Jump immediately to the scroll point when dragging or clicking scrollbar
             viewport.top = new_scroll_target;
             viewport.scroll_y.target = new_scroll_target;
-            text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);  // duplicated as below. @cleanup?
             redraw_requested = true;
         }
 
-        if animate_scrolling(editor) {
-            // Need to update after scrolling to reduce latency
-            text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
+        // Smooth keyboard scrolling
+        if editor_smooth_scroll.active {
+            speed := 60 * line_height;  // pixels per second
+            time_elapsed := cast(float) (frame_time - editor_smooth_scroll.started_at);
+            new_scroll_pos := editor_smooth_scroll.start_y + time_elapsed * speed * (ifx editor_smooth_scroll.up then -1 else 1);
+            viewport.top = clamp(cast(s32) new_scroll_pos, 0, max_y_scroll);
+            viewport.scroll_y.target = viewport.top;
             redraw_requested = true;
         }
+
+        // This will handle any "normal" scrolling with a target
+        if animate_scrolling(editor) then redraw_requested = true;
+
+        // Need to update after updating scrolling to reduce latency
+        text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
 
         is_active := editor_id == editor_active && Input.input_application_has_focus;
 

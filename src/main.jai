@@ -131,6 +131,12 @@ main :: () {
                         } else {
                             editors_handle_keypress(event.key_code, event.modifier_flags);
                         }
+                    } else {
+                        if open_file_dialog.show {
+                            // NOTE: this feels awkward, but maybe it's ok to repeat it here
+                        } else {
+                            editors_handle_key_release(event.key_code, event.modifier_flags);
+                        }
                     }
 
                 case .TEXT_INPUT;
