@@ -133,3 +133,44 @@ get_absolute_path :: (path: string) -> string {  // returns a temporary string
     path_overwrite_separators(full_path, #char "/");
     return full_path;
 }
+
+// @Speed: this is even slower than the standard find_index_from_left
+// NOTE: this function assumes that the substring contains only word chars,
+// otherwise it doesn't make sense to call it
+find_index_from_left_whole_word :: (s: string, substring: string, start_index := 0) -> s64 {
+    if !substring return -1;
+
+    for i : start_index .. s.count - substring.count {
+        t := slice(s, i, substring.count);
+        if t == substring {
+            // Check the char on the right
+            right := slice(s, i + substring.count, 4);
+            next_char, success := utf8_next_character(*right);
+            if success == .CONVERSION_OK && is_word_char(next_char) continue;  // not a whole word
+
+            // Check the char on the left
+            for j : max(i-2, start_index) .. i-1  {
+                // We check the last 2 bytes and try to get a valid utf8 character in 2 attempts.
+                // @limitation: this will not match utf8 sequences longer than 2 bytes, but our current
+                // word chars are maximum 2 bytes long.
+                left := slice(s, j, i - j);
+                char, byte_len, result := character_utf8_to_utf32(left.data, left.count);
+                if result == .CONVERSION_OK && byte_len == left.count && is_word_char(char) continue i;  // not a whole word
+            }
+
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+is_word_char :: (ch: u32) -> bool {
+    return
+        (#char "a" <= ch && ch <= #char "z") ||
+        (#char "A" <= ch && ch <= #char "Z") ||
+        (#char "0" <= ch && ch <= #char "9") ||
+        (#char "а" <= ch && ch <= #char "я") ||
+        (#char "А" <= ch && ch <= #char "Я") ||
+        (ch == #char "_");
+}

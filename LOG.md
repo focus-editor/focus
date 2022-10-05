@@ -1,5 +1,4 @@
 # TODO
-- Select whole words when creating new cursors (unless selected manually)
 - Highlight occurrences of selection (same rules as above)
 
 - Fix the crash when a file is saved with open dialog hidden
@@ -7,6 +6,12 @@
 - Reload from disk
 
 - Detect tab symbols and draw them differently
+
+- Optimisation:
+    - Measure how long it takes to insert a char/string into a buffer of various length
+    - If it's long enough then consider how this could be optimised
+    - Figure out a way to do edits with multiple cursors more efficiently
+      (also this may be a good occasion to make sure other editors' cursors are adjusted when edits are done elsewhere)
 
 - Navigating project dirs in a dialog
 
@@ -17,15 +22,10 @@
     - Put the open editors at the top
     - Implement fuzzy searching with letter highlighting etc
     - Input:
-        - Make sure the cursor doesn't drift as string grows (try disabling kerning first). Understand whether there are any precision/rounding errors
+        - Make sure the cursor doesn't drift as string grows (try disabling kerning first).
         - Select by mouse
         - Select words by ctrl+D
         - Fix the weird doubling of characters when pasted a newline
-
-- Search text
-    - Use the naive functions first, optimise later if needed (also measure first)
-    - Case-sensitive
-    - Case-insensitive
 
 - Enable vsync (hmm tried it but it was terrible)
 - Add a warning on large texts (maybe semi-transparent)
@@ -56,6 +56,7 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Select whole words when creating new cursors (unless selected manually)
 + Move viewport in a constant smooth fashion (on ctrl+up/down)
 + Expand pane on ctrl+shift+L
 + Jump by words on ctrl/alt+left/right

@@ -6,6 +6,7 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
 
     cursor_moved   := false;
     keep_selection := false;
+    enabled_whole_words := false;
 
     // Handle general actions (which are not associated with any cursor)
     handled := false;
@@ -191,6 +192,8 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
                         cursor_moved = true;
                     } else if only_ctrl_pressed(mods) && !has_selection(cursor) {
                         select_word(cursor, buffer);
+                        editor.search_whole_words = true;
+                        enabled_whole_words = true;
                         cursor_moved = true;
                     }
 
@@ -238,6 +241,7 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     if !mods.shift_pressed && cursor_moved && !keep_selection {
         for *cursor : cursors { remove_selection(cursor); }
     }
+    if cursor_moved && !enabled_whole_words then editor.search_whole_words = false;
 
     if buffer.dirty {
         buffer.modified = true;
@@ -559,6 +563,9 @@ maybe_create_additional_cursor :: (using editor: *Editor, buffer: Buffer) -> cre
     if selected_text.count == 0 return false;
     buffer_str := to_string(buffer.bytes);
 
+    search_func: (s: string, substring: string, start_index := 0) -> s64;
+    search_func = ifx search_whole_words then find_index_from_left_whole_word else find_index_from_left;
+
     // Search from the main cursor downwards, possibly with a wraparound
     start_offset := pos_to_offset(buffer, get_selection(cursors[main_cursor]).end);
     found_offset := -1;
@@ -568,14 +575,14 @@ maybe_create_additional_cursor :: (using editor: *Editor, buffer: Buffer) -> cre
         before_wrap := slice(buffer_str, start_offset, buffer_str.count - start_offset);
         after_wrap  := slice(buffer_str, 0, end_offset);
 
-        index := find_index_from_left(before_wrap, selected_text);
+        index := search_func(before_wrap, selected_text);
         if index >= 0 then found_offset = start_offset + index;
-        if found_offset < 0 then found_offset = find_index_from_left(after_wrap, selected_text);
+        if found_offset < 0 then found_offset = search_func(after_wrap, selected_text);
     } else {
         // Main cursor is not last - search until the next cursor only
         end_offset := pos_to_offset(buffer, get_selection(cursors[main_cursor+1]).start);
         target_range := slice(buffer_str, start_offset, end_offset - start_offset);
-        index := find_index_from_left(target_range, selected_text);
+        index := search_func(target_range, selected_text);
         if index >= 0 then found_offset = start_offset + index;
     }
     if found_offset < 0 {
@@ -1262,17 +1269,6 @@ comment_block :: (cursor: *Cursor, buffer: *Buffer) {
     if new_bytes.count > 0 then replace_range(buffer, range, to_string(new_bytes));
 }
 
-is_word_char :: (ch: u32) -> bool {
-    return
-        (#char "a" <= ch && ch <= #char "z") ||
-        (#char "A" <= ch && ch <= #char "Z") ||
-        (#char "0" <= ch && ch <= #char "9") ||
-        (#char "а" <= ch && ch <= #char "я") ||
-        (#char "А" <= ch && ch <= #char "Я") ||
-        (ch == #char "_");
-}
-
-
 #scope_export
 
 Editor :: struct {
@@ -1281,8 +1277,10 @@ Editor :: struct {
     cursors: [..] Cursor;
     main_cursor: s64;      // newly added cursors become main so that we jump to them
     original_cursor: s64;  // we remember the original cursor when first creating multiple cursors (and go back to it on escape)
-    viewport: Viewport;
+    search_whole_words := false;  // used when creating new cursors
     cursor_moved  := false;
+
+    viewport: Viewport;
 
     paste_animations: [..] Paste_Animation;
 }
