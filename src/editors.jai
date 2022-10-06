@@ -247,6 +247,7 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
         buffer.modified = true;
         buffer.last_edit_time = frame_time;
         recalculate_lines(buffer);
+        array_reset_keeping_memory(*editor.highlights);
 
         // Make sure the cursors in all editors for this buffer are in valid places
         for *e : open_editors {
@@ -256,6 +257,29 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
         }
     }
     if cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
+    if cursor_moved then array_reset_keeping_memory(*editor.highlights);
+
+    if editor.highlights.count == 0 {
+        // Maybe update selection highlights
+        selected_text := get_selected_text_all_cursors(editor, buffer);
+        if selected_text.count > 2 && selected_text.count < 1000 && !is_all_whitespace(selected_text) {
+            search_func: (s: string, substring: string, start_index := 0) -> s64;
+            search_func = ifx editor.search_whole_words then find_index_from_left_whole_word else find_index_from_left;
+            buffer_str := to_string(buffer.bytes);
+            offset := 0;
+            while true {
+                offset = search_func(buffer_str, selected_text, start_index = offset);
+                if offset < 0 break;
+
+                highlight := array_add(*editor.highlights);
+                highlight.offset = offset;
+                highlight.start_pos = offset_to_pos(buffer, offset);
+
+                offset += selected_text.count;
+            }
+        }
+        editor.selected_text_length = selected_text.count;
+    }
 
     editor.cursor_moved = cursor_moved;
 }
@@ -556,6 +580,21 @@ select_word :: (using cursor: *Cursor, buffer: Buffer) {
     pos.col = xx end;
 }
 
+get_selected_text_all_cursors :: (using editor: Editor, buffer: Buffer) -> string {  // returns view into buffer
+    // Returns a selected string only if all cursors have the same text selected.
+    // Otherwise returns an empty string.
+    empty: string;
+
+    text := get_selected_string(cursors[main_cursor], buffer);
+    if text.count == 0 return empty;
+
+    for cursor : cursors {
+        if text != get_selected_string(cursor, buffer) return empty;
+    }
+
+    return text;
+}
+
 #scope_file
 
 maybe_create_additional_cursor :: (using editor: *Editor, buffer: Buffer) -> created: bool {
@@ -596,21 +635,6 @@ maybe_create_additional_cursor :: (using editor: *Editor, buffer: Buffer) -> cre
     main_cursor = cursors.count - 1;
 
     return true;
-}
-
-get_selected_text_all_cursors :: (using editor: Editor, buffer: Buffer) -> string {
-    // Returns a selected string only if all cursors have the same text selected.
-    // Otherwise returns an empty string.
-    empty: string;
-
-    text := get_selected_string(cursors[main_cursor], buffer);
-    if text.count == 0 return empty;
-
-    for cursor : cursors {
-        if text != get_selected_string(cursor, buffer) return empty;
-    }
-
-    return text;
 }
 
 switch_to_pane :: (side: enum { left; right; }) {
@@ -1280,6 +1304,9 @@ Editor :: struct {
     search_whole_words := false;  // used when creating new cursors
     cursor_moved  := false;
 
+    highlights: [..] Selection_Highlight;
+    selected_text_length: s64;
+
     viewport: Viewport;
 
     paste_animations: [..] Paste_Animation;
@@ -1290,6 +1317,11 @@ Viewport :: struct {
     left: s32;
     scroll_y: Scroll_Animation;
     scroll_x: Scroll_Animation;
+}
+
+Selection_Highlight :: struct {
+    offset: s64;     // we'll convert this to position range, but only for the visible highlights
+    start_pos: Pos;  // useful to know pos immediately to display in the scrollbar area
 }
 
 Scroll_Animation :: struct {

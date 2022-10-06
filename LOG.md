@@ -1,8 +1,9 @@
 # TODO
 - Highlight occurrences of selection
-    - When there's some selected text and no current highlights, update highlights
-    - Draw highlights
+    + When there's some selected text and no current highlights, update highlights
+    + Draw highlights
     - Display highlights in the scrollbar area
+- Display the number of cursors in the footer if more than 1
 
 - Save file
 - Reload from disk

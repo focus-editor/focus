@@ -189,6 +189,16 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         visible_lines_end := visible_lines_start + cast(s64) (rect.h / line_height) + 1;
         visible_lines_end  = clamp(visible_lines_end,   0, buffer.lines.count);
 
+        // Draw highlights
+        for highlights {
+            if it.start_pos.line < visible_lines_start continue;
+            if it.start_pos.line > visible_lines_end   break;
+            range: Range = ---;
+            range.start = it.start_pos;
+            range.end   = offset_to_pos(buffer, it.offset + selected_text_length);
+            draw_range(range, buffer, visible_lines_start, visible_lines_end, text_origin, Colors.SELECTION_HIGHLIGHT);
+        }
+
         draw_cursors(editor, buffer, rect, text_origin, visible_lines_start, visible_lines_end, is_active);
 
         // Draw paste animations
