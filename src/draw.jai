@@ -85,6 +85,28 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     using editor := *open_editors[editor_id];
     buffer := open_buffers[buffer_id];
 
+    if editor.highlights.count == 0 {
+        // Maybe update selection highlights
+        selected_text := get_selected_text_all_cursors(editor, buffer);
+        if selected_text.count > 2 && selected_text.count < 1000 && !is_all_whitespace(selected_text) {
+            search_func: (s: string, substring: string, start_index := 0) -> s64;
+            search_func = ifx editor.search_whole_words then find_index_from_left_whole_word else find_index_from_left;
+            buffer_str := to_string(buffer.bytes);
+            offset := 0;
+            while true {
+                offset = search_func(buffer_str, selected_text, start_index = offset);
+                if offset < 0 break;
+
+                highlight := array_add(*editor.highlights);
+                highlight.offset = offset;
+                highlight.start_pos = offset_to_pos(buffer, offset);
+
+                offset += selected_text.count;
+            }
+        }
+        editor.selected_text_length = selected_text.count;
+    }
+
     // Calculate text origin in screen coordinates
     text_offset := make_vector2(char_size * 2, -char_size * 2);
     text_origin := top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
@@ -118,6 +140,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
             if !shift_pressed() && mouse.left.just_pressed then remove_selection(cursor);
             if mouse.left.just_double_clicked then select_word(cursor, buffer);
+
+            array_reset_keeping_memory(*editor.highlights);
 
             // Activate editor
             editor_active = editor_id;

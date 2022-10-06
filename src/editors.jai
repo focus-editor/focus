@@ -259,28 +259,6 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     if cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
     if cursor_moved then array_reset_keeping_memory(*editor.highlights);
 
-    if editor.highlights.count == 0 {
-        // Maybe update selection highlights
-        selected_text := get_selected_text_all_cursors(editor, buffer);
-        if selected_text.count > 2 && selected_text.count < 1000 && !is_all_whitespace(selected_text) {
-            search_func: (s: string, substring: string, start_index := 0) -> s64;
-            search_func = ifx editor.search_whole_words then find_index_from_left_whole_word else find_index_from_left;
-            buffer_str := to_string(buffer.bytes);
-            offset := 0;
-            while true {
-                offset = search_func(buffer_str, selected_text, start_index = offset);
-                if offset < 0 break;
-
-                highlight := array_add(*editor.highlights);
-                highlight.offset = offset;
-                highlight.start_pos = offset_to_pos(buffer, offset);
-
-                offset += selected_text.count;
-            }
-        }
-        editor.selected_text_length = selected_text.count;
-    }
-
     editor.cursor_moved = cursor_moved;
 }
 
@@ -344,6 +322,8 @@ editors_handle_text_input :: (char: u32) {
     }
 
     if buffer.dirty then recalculate_lines(buffer);
+
+    array_reset_keeping_memory(*editor.highlights);
 
     editor.cursor_moved = true;
     buffer.modified = true;
@@ -625,7 +605,10 @@ maybe_create_additional_cursor :: (using editor: *Editor, buffer: Buffer) -> cre
         if index >= 0 then found_offset = start_offset + index;
     }
     if found_offset < 0 {
-        if main_cursor != original_cursor then main_cursor = original_cursor;  // go back to original and stop
+        if main_cursor != original_cursor {
+            main_cursor = original_cursor;  // go back to original and stop
+            return true;  // make sure we jump to it
+        }
         return false;  // found no matches
     }
 

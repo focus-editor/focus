@@ -30,6 +30,10 @@
         - Select words by ctrl+D
         - Fix the weird doubling of characters when pasted a newline
 
+- When there are several cursors where some of them are above the viewport, hitting enter will shift everything down
+  and will jerk briefly, which is annoying
+    - Ideally we need a way to glue viewport to a line, so that if it shifts then we shift the viewport too
+
 - Enable vsync (hmm tried it but it was terrible)
 - Add a warning on large texts (maybe semi-transparent)
 
