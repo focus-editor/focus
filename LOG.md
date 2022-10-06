@@ -1,7 +1,9 @@
 # TODO
-- Highlight occurrences of selection (same rules as above)
+- Highlight occurrences of selection
+    - When there's some selected text and no current highlights, update highlights
+    - Draw highlights
+    - Display highlights in the scrollbar area
 
-- Fix the crash when a file is saved with open dialog hidden
 - Save file
 - Reload from disk
 
@@ -17,12 +19,12 @@
 
 - Open file dialog:
     - Review and cleanup code
-    - Drag the scrollbar
-    - Don't rescan project dirs on every file change
+    + Drag the scrollbar
+    - Don't rescan project dirs on every file change (only on additions/deletions)
     - Put the open editors at the top
     - Implement fuzzy searching with letter highlighting etc
     - Input:
-        - Make sure the cursor doesn't drift as string grows (try disabling kerning first).
+        - Make sure the cursor doesn't drift as string grows (it's kerning).
         - Select by mouse
         - Select words by ctrl+D
         - Fix the weird doubling of characters when pasted a newline
@@ -56,6 +58,7 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Fix the crash when a file is saved with open dialog hidden
 + Select whole words when creating new cursors (unless selected manually)
 + Move viewport in a constant smooth fashion (on ctrl+up/down)
 + Expand pane on ctrl+shift+L

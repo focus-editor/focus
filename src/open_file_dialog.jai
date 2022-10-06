@@ -6,7 +6,7 @@ init_open_file_dialog :: () {
     pool_allocator := get_pool_allocator();
     push_allocator(pool_allocator);
 
-    array_reset_keeping_memory(*entries.all);
+    array_reset(*entries.all);
     reset(*memory_pool);  // to avoid having to free each string
 
     visitor_data: Visitor_Data = ---;
@@ -25,7 +25,7 @@ init_open_file_dialog :: () {
 open_file_dialog_show :: () {
     using open_file_dialog;
     show = true;
-    array_reset_keeping_memory(*input.text);
+    array_reset(*input.text);
     recalculate_filtered_entries();
 }
 
@@ -216,7 +216,7 @@ recalculate_filtered_entries :: () {
     scroll_to_cursor = true;
     entries.scroll_y = 0;
     entries.selected = 0;
-    array_reset_keeping_memory(*entries.filtered);
+    array_reset(*entries.filtered);
 
     if input.text.count == 0 {
         // TODO: still give them scores and sort
