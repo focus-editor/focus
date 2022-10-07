@@ -1,6 +1,5 @@
 # TODO
 - Display the number of cursors in the footer if more than 1
-- Display cursors in the scrollbar area
 
 - Save file
 - Reload from disk
@@ -59,6 +58,7 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Display cursors in the scrollbar area
 + Highlight occurrences of selection
     + When there's some selected text and no current highlights, update highlights
     + Draw highlights

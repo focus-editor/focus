@@ -215,17 +215,38 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         visible_lines_end := visible_lines_start + cast(s64) (rect.h / line_height) + 1;
         visible_lines_end  = clamp(visible_lines_end,   0, buffer.lines.count);
 
-        // Draw highlight scrollbar marks
-        marks_rect := cut_right(rect, scrollbar_width);
-        marks_rect =  cut_top(marks_rect, rect.h * max_y_scroll / (rect.h + xx max_y_scroll));  // account for the non-text area at the bottom
-        assert(buffer.lines.count > 0);
-        mark_line_height := marks_rect.h / cast(float)buffer.lines.count;  // the height of the rect which corresponds to one line
+        // Draw scrollbar marks
+        {
+            marks_rect := cut_right(rect, scrollbar_width);
+            marks_rect =  cut_top(marks_rect, rect.h * max_y_scroll / (rect.h + xx max_y_scroll));  // account for the non-text area at the bottom
+            marks_rect_top := marks_rect.y + marks_rect.h;
+            assert(buffer.lines.count > 0);
+            mark_line_height := marks_rect.h / cast(float)buffer.lines.count;  // the height of the rect which corresponds to one line
 
-        highlight_mark_rect := shrink_x(marks_rect, marks_rect.w / 3);
-        highlight_mark_rect.h = 5 * dpi_scale;
-        for highlights {
-            highlight_mark_rect.y = marks_rect.y + marks_rect.h - it.start_pos.line * mark_line_height;
-            draw_rect_raw(highlight_mark_rect, Colors.SELECTION_HIGHLIGHT);
+            // Selection highlights
+            highlight_mark_rect := shrink_x(marks_rect, marks_rect.w / 3);
+            highlight_mark_rect.h = 5 * dpi_scale;
+            for highlights {
+                highlight_mark_rect.y = marks_rect_top - it.start_pos.line * mark_line_height - highlight_mark_rect.h;
+                draw_rect_raw(highlight_mark_rect, Colors.SELECTION_HIGHLIGHT);
+            }
+
+            // TODO: search results (probably if available then don't draw selection highlights?)
+
+            // Cursors
+            cursor_mark_rect := marks_rect;
+            cursor_mark_rect.h = 2 * dpi_scale;
+            selection_mark_rect := cut_left(marks_rect, marks_rect.w / 3);
+            for cursors {
+                cursor_mark_rect.y = marks_rect_top - it.pos.line * mark_line_height - cursor_mark_rect.h;
+                if has_selection(it) {
+                    selection := get_selection(it);
+                    selection_mark_rect.y = cursor_mark_rect.y;
+                    selection_mark_rect.h = (selection.end.line - selection.start.line + 1) * mark_line_height;
+                    draw_rect_raw(selection_mark_rect, Colors.SELECTION_INACTIVE);
+                }
+                draw_rect_raw(cursor_mark_rect, Colors.CURSOR);
+            }
         }
 
         // Visible highlights
