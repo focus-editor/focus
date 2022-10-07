@@ -1,8 +1,10 @@
 # TODO
-- Display the number of cursors in the footer if more than 1
-
-- Save file
+- Fix the drawing of selection when cursor pos is up
+- When pressing Ctrl+S, write the buffer to disk and mark as not modified (ignore standalone buffers for now)
 - Reload from disk
+    - When a file is changed elsewhere, if the buffer is not modified, update it with the opportunity to undo
+      (remove all cursors because they may end up in weird places)
+    - Don't rescan project dirs on every file change (only on additions/deletions)
 
 - Optimisation:
     - Measure how long it takes to insert a char/string into a buffer of various length
@@ -14,8 +16,6 @@
 
 - Open file dialog:
     - Review and cleanup code
-    + Drag the scrollbar
-    - Don't rescan project dirs on every file change (only on additions/deletions)
     - Put the open editors at the top
     - Implement fuzzy searching with letter highlighting etc
     - Input:
@@ -51,7 +51,7 @@
     - Simp.draw_text only allows integer positioning
     - Should we keep using GL_NEAREST for sampling?
 - Get rid of the window top bar
-- Reduce the number of draw calls
+- Reduce the number of draw calls (currently there's one per line, ridiculous)
 - Subpixel rendering: support other types of panels (lookup ft2-lcd_rendering)
   (not useful for the editor, but may be useful for games)
 - Fix the font unknown character glyph (try copying something from font-awesome)

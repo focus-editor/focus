@@ -13,7 +13,7 @@ build :: () {
     for arg: args {
         if arg == {
           case "release";
-            options.optimization_level = .RELEASE;
+            set_optimization_level(*options, 2, 0);
             options.output_executable_name = "focus";
           case;
             compiler_report(tprint("Command-line argument #%, '%', is invalid. Valid options are: 'debug', 'release'.\n", it_index+1, arg));
