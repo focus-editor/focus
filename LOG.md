@@ -5,8 +5,6 @@
 - Save file
 - Reload from disk
 
-- Detect tab symbols and draw them differently
-
 - Optimisation:
     - Measure how long it takes to insert a char/string into a buffer of various length
     - If it's long enough then consider how this could be optimised
@@ -31,6 +29,7 @@
   and will jerk briefly, which is annoying
     - Ideally we need a way to glue viewport to a line, so that if it shifts then we shift the viewport too
 
+- Detect tab symbols and draw them differently
 - Enable vsync (hmm tried it but it was terrible)
 - Add a warning on large texts (maybe semi-transparent)
 
