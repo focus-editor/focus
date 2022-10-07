@@ -241,7 +241,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 cursor_mark_rect.y = marks_rect_top - it.pos.line * mark_line_height - cursor_mark_rect.h;
                 if has_selection(it) {
                     selection := get_selection(it);
-                    selection_mark_rect.y = cursor_mark_rect.y;
+                    selection_mark_rect.y = marks_rect_top - selection.end.line * mark_line_height - cursor_mark_rect.h;
                     selection_mark_rect.h = (selection.end.line - selection.start.line + 1) * mark_line_height;
                     draw_rect_raw(selection_mark_rect, Colors.SELECTION_INACTIVE);
                 }

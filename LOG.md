@@ -1,5 +1,4 @@
 # TODO
-- Fix the drawing of selection when cursor pos is up
 - When pressing Ctrl+S, write the buffer to disk and mark as not modified (ignore standalone buffers for now)
 - Reload from disk
     - When a file is changed elsewhere, if the buffer is not modified, update it with the opportunity to undo
@@ -58,6 +57,7 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Fix the drawing of selection when cursor pos is up
 + Display cursors in the scrollbar area
 + Highlight occurrences of selection
     + When there's some selected text and no current highlights, update highlights
