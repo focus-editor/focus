@@ -182,7 +182,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
 
         // Scrollbar
-        new_scroll_target := draw_scrollbar(rect, 1.5 * char_size, rect.h + xx max_y_scroll, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
+        scrollbar_width := 1.5 * char_size;
+        new_scroll_target := draw_scrollbar(rect, scrollbar_width, rect.h + xx max_y_scroll, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
         if new_scroll_target != viewport.scroll_y.target {
             // Jump immediately to the scroll point when dragging or clicking scrollbar
             viewport.top = new_scroll_target;
@@ -213,10 +214,24 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         visible_lines_end := visible_lines_start + cast(s64) (rect.h / line_height) + 1;
         visible_lines_end  = clamp(visible_lines_end,   0, buffer.lines.count);
 
-        // Draw highlights
+        // Draw highlight scrollbar marks
+        marks_rect := cut_right(rect, scrollbar_width);
+        marks_rect =  cut_top(marks_rect, rect.h * max_y_scroll / (rect.h + xx max_y_scroll));  // account for the non-text area at the bottom
+        assert(buffer.lines.count > 0);
+        mark_line_height := marks_rect.h / cast(float)buffer.lines.count;  // the height of the rect which corresponds to one line
+
+        highlight_mark_rect := shrink_x(marks_rect, marks_rect.w / 3);
+        highlight_mark_rect.h = 5 * dpi_scale;
+        for highlights {
+            highlight_mark_rect.y = marks_rect.y + marks_rect.h - it.start_pos.line * mark_line_height;
+            draw_rect_raw(highlight_mark_rect, Colors.SELECTION_HIGHLIGHT);
+        }
+
+        // Visible highlights
         for highlights {
             if it.start_pos.line < visible_lines_start continue;
             if it.start_pos.line > visible_lines_end   break;
+
             range: Range = ---;
             range.start = it.start_pos;
             range.end   = offset_to_pos(buffer, it.offset + selected_text_length);

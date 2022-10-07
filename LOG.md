@@ -1,9 +1,6 @@
 # TODO
-- Highlight occurrences of selection
-    + When there's some selected text and no current highlights, update highlights
-    + Draw highlights
-    - Display highlights in the scrollbar area
 - Display the number of cursors in the footer if more than 1
+- Display cursors in the scrollbar area
 
 - Save file
 - Reload from disk
@@ -63,6 +60,10 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Highlight occurrences of selection
+    + When there's some selected text and no current highlights, update highlights
+    + Draw highlights
+    + Display highlights in the scrollbar area
 + Fix the crash when a file is saved with open dialog hidden
 + Select whole words when creating new cursors (unless selected manually)
 + Move viewport in a constant smooth fashion (on ctrl+up/down)
