@@ -315,36 +315,41 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         set_scissor(footer_rect);
         defer Simp.clear_scissor();
 
+        file_name_color := Colors.UI_DEFAULT;
+        if buffer.modified         then file_name_color = Colors.UI_WARNING;
+        if buffer.modified_on_disk then file_name_color = Colors.UI_ERROR;
+        // if buffer.deleted          then file_name_color = Colors.UI_ERROR;
+
         if buffer.file_exists {
             // Icon
             icon_char := convert_utf32_to_utf8(xx buffer.file.icon);
             width = xx Simp.prepare_text(font_icons, to_string(*icon_char));
-            Simp.draw_prepared_text(font_icons, xx pen.x, xx pen.y, color = Colors.CODE_PUNCTUATION);
+            Simp.draw_prepared_text(font_icons, xx pen.x, xx pen.y, color = file_name_color);
 
             // File name
             pen.x += width + padding;
             width = xx Simp.prepare_text(font_ui_bold, buffer.file.name);
-            Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.CODE_PUNCTUATION);
+            Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = file_name_color);
 
             // Draw separator
             pen.x += width + padding;
             width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
-            Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+            Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
 
             // Draw file path
             pen.x += width + padding;
             width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
-            Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+            Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
         } else {
             // No file
             icon_char := convert_utf32_to_utf8(xx File_Icon.text);
             width = xx Simp.prepare_text(font_icons, to_string(*icon_char));
-            Simp.draw_prepared_text(font_icons, xx pen.x, xx pen.y, color = Colors.CODE_PUNCTUATION);
+            Simp.draw_prepared_text(font_icons, xx pen.x, xx pen.y, color = file_name_color);
 
             // File name
             pen.x += width + padding;
             width = xx Simp.prepare_text(font_ui, "<new file>");
-            Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = Colors.CODE_PUNCTUATION);
+            Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = file_name_color);
         }
 
         // Make sure the text is cut nicely

@@ -3,7 +3,11 @@
 - Reload from disk
     - When a file is changed elsewhere, if the buffer is not modified, update it with the opportunity to undo
       (remove all cursors because they may end up in weird places)
+    - If a buffer is unsaved and is modified elsewhere, mark it as modified on disk
+    - If a buffer is deleted, mark it as deleted
     - Don't rescan project dirs on every file change (only on additions/deletions)
+
+- If a buffer is modified on disk, ask for confirmation before saving
 
 - Optimisation:
     - Measure how long it takes to insert a char/string into a buffer of various length
@@ -57,6 +61,7 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Draw modified file name differently
 + Fix the drawing of selection when cursor pos is up
 + Display cursors in the scrollbar area
 + Highlight occurrences of selection
