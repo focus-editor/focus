@@ -330,6 +330,15 @@ sync_internal_data :: (buffer: *Buffer) {
     }
 }
 
+save_buffer_to_disk :: (using buffer: *Buffer) {
+    success := write_entire_file(file.full_path, to_string(bytes));
+    if success {
+        modified = false;
+        modified_on_disk = false;
+        deleted = false;
+    }
+}
+
 is_empty :: inline (line: Line) -> bool {
     return line.num_chars == 0;
 }
@@ -497,6 +506,7 @@ Buffer :: struct {
     dirty            := true;
     modified         := false;
     modified_on_disk := false;
+    deleted          := false;
 
     last_edit_time: Time;
 

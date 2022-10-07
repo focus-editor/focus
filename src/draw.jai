@@ -318,7 +318,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         file_name_color := Colors.UI_DEFAULT;
         if buffer.modified         then file_name_color = Colors.UI_WARNING;
         if buffer.modified_on_disk then file_name_color = Colors.UI_ERROR;
-        // if buffer.deleted          then file_name_color = Colors.UI_ERROR;
+        if buffer.deleted          then file_name_color = Colors.UI_ERROR;
 
         if buffer.file_exists {
             // Icon

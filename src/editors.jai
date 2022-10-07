@@ -7,6 +7,7 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     cursor_moved   := false;
     keep_selection := false;
     enabled_whole_words := false;
+    save_buffer := false;
 
     // Handle general actions (which are not associated with any cursor)
     handled := false;
@@ -68,6 +69,13 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
                 } else {
                     splitter_pos = 0;  // back to center
                 }
+            }
+
+        case #char "S";
+            if only_ctrl_pressed(mods) {
+                // Buffer will be saved at the end of the function
+                save_buffer = true;
+                handled = true;
             }
 
         case .ESCAPE;
@@ -258,6 +266,16 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     }
     if cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
     if cursor_moved then array_reset_keeping_memory(*editor.highlights);
+
+    if save_buffer && buffer.file_exists {
+        // Handle save last so that the buffer is not marked as modified
+        new_edit_group(buffer, editor);
+        // TODO:
+        // - strip trailing whitespace
+        // - recalculate lines
+        // - adjust cursors
+        save_buffer_to_disk(buffer);
+    }
 
     editor.cursor_moved = cursor_moved;
 }
