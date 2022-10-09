@@ -425,6 +425,61 @@ get_file_info_from_full_path :: (abs_path: string, _proj_path_prefix_len := -1) 
     return info;
 }
 
+find_open_buffer_by_path :: (full_path: string) -> *Buffer, buffer_id: s64 {
+    for * open_buffers {
+        if !it.file_exists continue;
+        if equal_nocase(it.file.full_path, full_path) return it, it_index;
+    }
+    return null, -1;
+}
+
+buffer_maybe_changed_on_disk :: (full_path: string) {
+    buffer, buffer_id := find_open_buffer_by_path(full_path);
+    if buffer_id < 0 return;
+
+    file_contents, success := read_entire_file(full_path);
+    if !success {
+        log_error("Couldn't read file '%'\n", full_path);
+        return;
+    }
+    defer free(file_contents);  // @memory: could probably use temporary storage and reset mark after?
+
+    if !buffer.modified {
+        // Remember cursor state - if we have 2 editors then the last editor's state will be remembered
+        for * editor : open_editors {
+            if editor.buffer_id != buffer_id continue;
+
+            new_edit_group(buffer, editor);
+            array_resize(*buffer.cursors, editor.cursors.count);
+            for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
+        }
+
+        // Reload its contents
+        new_replace_edit(buffer, 0, xx buffer.bytes.count, to_string(buffer.bytes), file_contents);
+        replace_range_raw(buffer, 0, xx buffer.bytes.count, file_contents);
+        recalculate_lines(buffer);
+
+        // Save edits and put cursors in correct places
+        for * editor : open_editors {
+            if editor.buffer_id != buffer_id continue;
+            new_edit_group(buffer, editor);
+            for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
+        }
+    } else {
+        buffer.modified_on_disk = true;
+    }
+}
+
+buffer_maybe_deleted_on_disk :: (full_path: string) {
+    buffer, buffer_id := find_open_buffer_by_path(full_path);
+    if buffer_id < 0 return;
+
+    buffer.deleted = true;
+}
+
+refresh_buffers_in_directory :: (dir_path: string) {
+
+}
 
 #scope_file
 

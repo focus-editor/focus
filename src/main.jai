@@ -24,24 +24,29 @@ main :: () {
         dir: Project_Dir = ---;
         dir.path = path;
         dir.path_prefix_len = find_index_of_any_from_right(path, ".\\/") + 1;
+        // TODO: check whether project path exists
         array_add(*project_dirs, dir);
     }
 
     init_open_file_dialog();
 
     // Init file watcher
-    project_file_watcher: File_Watcher;
     if !init(*project_file_watcher, file_change_callback, .ALL_EVENTS) {
         log_error("Could not initialize project_file_watcher");
-        // TODO: would be nice to display a clear error message in the dialog
+        // TODO: add the error to the error log when we have it
         return;
     }
     defer deinit(project_file_watcher);
     for dir : project_dirs add_directories(*project_file_watcher, dir.path);
 
     file_change_callback :: (watcher: *File_Watcher, change: *File_Change) {
-        // TODO: set a flag to trigger a rescan only if a file is moved/removed/added
-        // log("Change for path %: %", change.full_path, change.events);
+        if change.events & (File_Change_Event.ADDED | .MOVED | .REMOVED | .SCAN_CHILDREN) {
+            should_rescan_project_dirs = true;
+        }
+        if change.events & .MODIFIED      then buffer_maybe_changed_on_disk(change.full_path);
+        if change.events & .REMOVED       then buffer_maybe_deleted_on_disk(change.full_path);
+        if change.events & .SCAN_CHILDREN then refresh_buffers_in_directory(change.full_path);
+        print("%\n", <<change);
     }
 
     editors_open_file("W:/focus-zig/src/Editors.zig");
@@ -56,7 +61,10 @@ main :: () {
         old_line_height = line_height;
 
         files_changed := process_changes(*project_file_watcher);
-        if files_changed then init_open_file_dialog();
+        if files_changed && should_rescan_project_dirs {
+            init_open_file_dialog();
+            should_rescan_project_dirs = false;
+        }
 
         Input.update_window_events();
 
@@ -328,7 +336,9 @@ Mods :: Input.Event.Modifier_Flags;
 Time :: #type,isa float64;
 
 // TODO: load them from a config file or something
+project_file_watcher: File_Watcher;
 project_dirs: [..] Project_Dir;
+should_rescan_project_dirs: bool;
 
 Project_Dir :: struct {
     path: string;          // e.g. "C:/projects/focus"

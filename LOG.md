@@ -1,10 +1,7 @@
 # TODO
-- Reload from disk
-    - When a file is changed elsewhere, if the buffer is not modified, update it with the opportunity to undo
-      (remove all cursors because they may end up in weird places)
-    - If a buffer is unsaved and is modified elsewhere, mark it as modified on disk
-    - If a buffer is deleted, mark it as deleted
-    - Don't rescan project dirs on every file change (only on additions/deletions)
+- Rescan buffers in a changed directory
+    - Check modification time on the file and compare it with the modification time in the buffer
+
 - Strip trailing whitespace on save
 
 - If a buffer is modified on disk, ask for confirmation before saving
@@ -34,6 +31,7 @@
 - Detect tab symbols and draw them differently
 - Enable vsync (hmm tried it but it was terrible)
 - Add a warning on large texts (maybe semi-transparent)
+- When unable to save file, show a warning (have an error log?)
 
 - Implement semantic highlighting
     - Polymorphic structs and possibly other types
@@ -61,6 +59,12 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Reload from disk
+    + Don't rescan project dirs on every file change (only on additions/deletions)
+    + When a file is changed elsewhere, if the buffer is not modified, update it with the opportunity to undo
+      (remove all cursors because they may end up in weird places)
+    + If a buffer is unsaved and is modified elsewhere, mark it as modified on disk
+    + If a buffer is deleted, mark it as deleted
 + When pressing Ctrl+S, write the buffer to disk and mark as not modified (ignore standalone buffers for now)
 + Draw modified file name differently
 + Fix the drawing of selection when cursor pos is up

@@ -593,6 +593,20 @@ get_selected_text_all_cursors :: (using editor: Editor, buffer: Buffer) -> strin
     return text;
 }
 
+new_edit_group :: (buffer: *Buffer, editor: *Editor) {
+    if buffer.edits.count == 0 return;
+
+    new_group := array_add(*buffer.undos);
+    new_group.edits = to_owned_array(*buffer.edits);  // @Speed: could group all char inserts into one if needed
+    new_group.cursors = to_owned_array(*buffer.cursors);
+
+    // Remember cursor state
+    array_resize(*buffer.cursors, editor.cursors.count);
+    for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
+
+    // print("New edit group: %\n", <<new_group);
+}
+
 #scope_file
 
 maybe_create_additional_cursor :: (using editor: *Editor, buffer: Buffer) -> created: bool {
@@ -686,20 +700,6 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64 {
     sync_internal_data(buffer);
 
     return buffer_id;
-}
-
-new_edit_group :: (buffer: *Buffer, editor: *Editor) {
-    if buffer.edits.count == 0 return;
-
-    new_group := array_add(*buffer.undos);
-    new_group.edits = to_owned_array(*buffer.edits);  // @Speed: could group all char inserts into one if needed
-    new_group.cursors = to_owned_array(*buffer.cursors);
-
-    // Remember cursor state
-    array_resize(*buffer.cursors, editor.cursors.count);
-    for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
-
-    // print("New edit group: %\n", <<new_group);
 }
 
 maybe_undo :: (buffer: *Buffer, editor: *Editor) {
