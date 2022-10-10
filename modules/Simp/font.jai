@@ -139,6 +139,7 @@ convert_to_temporary_glyphs :: (font: *Dynamic_Font, s: string) -> width_in_pixe
         }
 
         t = unicode_next_character(t);
+        prev_glyph = glyph.glyph_index_within_font;
     }
 
     return width_in_pixels;
@@ -331,6 +332,7 @@ get_text_width :: (font: *Dynamic_Font, s: string) -> width: s64 {
         }
 
         t = unicode_next_character(t);
+        prev_glyph = glyph.glyph_index_within_font;
     }
 
     return width_in_pixels;

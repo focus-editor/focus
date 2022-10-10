@@ -19,7 +19,6 @@
     - Put the open editors at the top
     - Implement fuzzy searching with letter highlighting etc
     - Input:
-        - Make sure the cursor doesn't drift as string grows (it's kerning).
         - Select by mouse
         - Select words by ctrl+D
         - Fix the weird doubling of characters when pasted a newline
@@ -59,6 +58,7 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Make sure the cursor doesn't drift as string grows
 + Reload from disk
     + Don't rescan project dirs on every file change (only on additions/deletions)
     + When a file is changed elsewhere, if the buffer is not modified, update it with the opportunity to undo
