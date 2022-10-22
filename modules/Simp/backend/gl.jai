@@ -648,6 +648,8 @@ backend_update_texture :: (texture: *Texture, bitmap: *Bitmap) {
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexImage2D(texture_target, 0, xx internal_format, xx bitmap.width, xx bitmap.height, 0, gl_format, gl_type, bitmap.data.data);
+    // print("Updating texture %. Size: % x %, format: % \n", texture.gl_handle, bitmap.width, bitmap.height, gl_format);
+    // glFlush();
 
     //    resource_size := update_texture_2d(map, compressed, gl_format, gl_type, bittexture.data);
     //    assert (texture.resource_size == xx resource_size);

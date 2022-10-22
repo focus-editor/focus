@@ -45,6 +45,11 @@
     - It seems that in vscode cursors are tied to their position in buffer,
       so if that position moved then so do the cursors
       (just like the individual letters would)
+
+- SIMP is bad:
+    - Fix the memory usage: backend/gl.jai - update texture is called too often
+    - Don't do a draw call per draw_text
+
 - Look into subpixel font positioning
     - Revisit the font loading code as it has some rounding to pixels there
       and consider using floats or other units for font metrics
