@@ -18,8 +18,7 @@ main :: () {
     old_line_height = line_height;
 
     // @Cleanup: remove and do properly
-    initial_project_dirs := string.[ "W:/focus-zig", "C:/jai-beta" ];
-    // initial_project_dirs := string.[ "W:/focus", "C:/jai-beta" ];
+    initial_project_dirs := string.[ "W:/focus", "C:/jai-beta" ];
     for path, i : initial_project_dirs {
         dir: Project_Dir = ---;
         dir.path = path;
@@ -50,7 +49,7 @@ main :: () {
     }
 
     // editors_open_file("W:/focus-zig/src/Editors.zig");
-    // editors_open_file("src/editors.jai");
+    editors_open_file("src/editors.jai");
     // editors_open_file("src/main.jai", true);
 
     should_quit := false;

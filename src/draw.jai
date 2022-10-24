@@ -520,7 +520,7 @@ draw_open_file_dialog :: () {
             entry_index := visible_start + i;
             entry_rect.y = files_rect.y + files_rect.h - (entry_index + 1) * entry_height + scroll_y;
 
-            if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == ui_id && ui.active == .none {
+            if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
                 if mouse.left.just_pressed then entries.selected_by_mouse = entry_index;
                 if entries.selected_by_mouse == -1 then draw_rect(entry_rect, highlight_color_lite);
                 if entries.selected_by_mouse == entry_index && mouse.left.just_released then open_file_dialog_open_entry(entry_index, on_the_side = ctrl_pressed());

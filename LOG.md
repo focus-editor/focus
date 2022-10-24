@@ -63,6 +63,7 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Fix opening files by click
 + Make sure the cursor doesn't drift as string grows
 + Reload from disk
     + Don't rescan project dirs on every file change (only on additions/deletions)
