@@ -18,7 +18,8 @@ main :: () {
     old_line_height = line_height;
 
     // @Cleanup: remove and do properly
-    initial_project_dirs := string.[ "W:/focus", "C:/jai-beta" ];
+    initial_project_dirs := string.[ "W:/focus-zig", "C:/jai-beta" ];
+    // initial_project_dirs := string.[ "W:/focus", "C:/jai-beta" ];
     for path, i : initial_project_dirs {
         dir: Project_Dir = ---;
         dir.path = path;
@@ -37,19 +38,52 @@ main :: () {
     }
     defer deinit(project_file_watcher);
     for dir : project_dirs add_directories(*project_file_watcher, dir.path);
+    dirs_to_rescan.allocator = temp;
 
     file_change_callback :: (watcher: *File_Watcher, change: *File_Change) {
         if change.events & (File_Change_Event.ADDED | .MOVED | .REMOVED | .SCAN_CHILDREN) {
-            should_rescan_project_dirs = true;
+            should_reinit_file_dialog = true;
         }
-        if change.events & .MODIFIED      then buffer_maybe_changed_on_disk(change.full_path);
-        if change.events & .REMOVED       then buffer_maybe_deleted_on_disk(change.full_path);
-        if change.events & .SCAN_CHILDREN then refresh_buffers_in_directory(change.full_path);
-        print("%\n", <<change);
+
+        dir: string = ---;
+        if change.events & .SCAN_CHILDREN {
+            dir = copy_temporary_string(change.full_path);
+        } else {
+            path := path_strip_filename(change.full_path);
+            if path.count > 1 && path[path.count-1] == #char "/" then path.count -= 1;  // don't include trailing path separator
+            dir = copy_temporary_string(path);
+        }
+        add_to_queue := true;
+        for dirs_to_rescan {
+            if begins_with_nocase(dir, it) {
+                add_to_queue = false;  // parent already in the queue
+                break;
+            }
+            if begins_with_nocase(it, dir) remove it;  // we're adding a parent of this dir
+        }
+
+        if add_to_queue array_add(*dirs_to_rescan, dir);
+
+        // NOTE: Instead of processing individual events and using the flags we're simply
+        // adding folders to the queue for scanning, because the original events seem to be
+        // not very reliable. E.g. when a file W:/focus-zig/src/Editors.zig was changed using Sublime Text,
+        // here's the list of events we've got:
+        // {"W:/focus-zig/src/Editors.zig", MODIFIED, 51.72142}
+        // {"W:/focus-zig/src/nPTuLLfc1yEADcLL", ADDED | MODIFIED | MOVED | MOVED_FROM, 52.296619}
+        // {"W:/focus-zig/src/Editors.zig", MOVED | MOVED_TO | REMOVED, 52.296619}
+        // {"W:/focus-zig/src", MODIFIED | SCAN_CHILDREN, 52.29665}
+        // Not very useful, is it?
+        // So instead of processing each event the easiest option here would be to add W:/focus-zig/src
+        // to the scanning queue
+
+        // if change.events & .MODIFIED      then buffer_maybe_changed_on_disk(change.full_path);
+        // if change.events & .REMOVED       then buffer_maybe_deleted_on_disk(change.full_path);
+        // if change.events & .SCAN_CHILDREN then refresh_buffers_in_directory(change.full_path);
+        // print("%\n", <<change);
     }
 
-    // editors_open_file("W:/focus-zig/src/Editors.zig");
-    editors_open_file("src/editors.jai");
+    editors_open_file("W:/focus-zig/src/Editors.zig");
+    // editors_open_file("src/editors.jai");
     // editors_open_file("src/main.jai", true);
 
     should_quit := false;
@@ -60,10 +94,12 @@ main :: () {
         old_line_height = line_height;
 
         files_changed := process_changes(*project_file_watcher);
-        if files_changed && should_rescan_project_dirs {
+        if files_changed && should_reinit_file_dialog {
             init_open_file_dialog();
-            should_rescan_project_dirs = false;
+            should_reinit_file_dialog = false;
         }
+        for dirs_to_rescan maybe_refresh_open_buffers_in_dir(it);
+        array_reset(*dirs_to_rescan);
 
         Input.update_window_events();
 
@@ -334,10 +370,10 @@ Mods :: Input.Event.Modifier_Flags;
 
 Time :: #type,isa float64;
 
-// TODO: load them from a config file or something
 project_file_watcher: File_Watcher;
-project_dirs: [..] Project_Dir;
-should_rescan_project_dirs: bool;
+project_dirs: [..] Project_Dir;  // TODO: load them from a config file or something
+dirs_to_rescan: [..] string;  // will use temporary storage
+should_reinit_file_dialog: bool;
 
 Project_Dir :: struct {
     path: string;          // e.g. "C:/projects/focus"

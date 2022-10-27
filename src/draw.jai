@@ -318,7 +318,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         file_name_color := Colors.UI_DEFAULT;
         if buffer.modified then file_name_color = Colors.UI_WARNING;
 
-        if buffer.file_exists {
+        if buffer.has_file {
             // Icon
             icon_char := convert_utf32_to_utf8(xx buffer.file.icon);
             width = xx Simp.prepare_text(font_icons, to_string(*icon_char));

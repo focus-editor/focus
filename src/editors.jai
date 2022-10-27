@@ -267,7 +267,7 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     if cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
     if cursor_moved then array_reset_keeping_memory(*editor.highlights);
 
-    if save_buffer && buffer.file_exists {
+    if save_buffer && buffer.has_file {
         // Handle save last so that the buffer is not marked as modified
         new_edit_group(buffer, editor);
         // TODO:
@@ -676,14 +676,15 @@ find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_i
 
 find_or_create_buffer :: (path: string) -> buffer_id: s64 {
     for open_buffers {
-        if it.file_exists && it.file.full_path == path return it_index;
+        if it.has_file && it.file.full_path == path return it_index;
     }
 
     // Create and load file
     buffer_id := open_buffers.count;
     buffer := array_add(*open_buffers);
     buffer.file = get_file_info_from_full_path(path);
-    buffer.file_exists = true;
+    buffer.has_file = true;
+    remember_last_modtime_and_size(buffer);
 
     file_data, success := read_entire_file(path);
     if !success then file_data = sprint("Couldn't load file '%'", path);

@@ -1,18 +1,19 @@
 # TODO
-- Rescan buffers in a changed directory
-    - Check modification time on the file and compare it with the modification time in the buffer
 
+- Most important stuff (so I can start using the editor):
+    - Search within buffer (case insensitive by default)
+    - Basic token highlighting
+    - Grep in the project
+
+- Navigating project dirs in a dialog
 - Strip trailing whitespace on save
-
-- If a buffer is modified on disk, ask for confirmation before saving
+- If a buffer is modified on disk, ask for confirmation before saving (use the function and not the flag)
 
 - Optimisation:
     - Measure how long it takes to insert a char/string into a buffer of various length
     - If it's long enough then consider how this could be optimised
     - Figure out a way to do edits with multiple cursors more efficiently
       (also this may be a good occasion to make sure other editors' cursors are adjusted when edits are done elsewhere)
-
-- Navigating project dirs in a dialog
 
 - Open file dialog:
     - Review and cleanup code
@@ -63,6 +64,7 @@
 - Don't redraw if nothing has changed
 
 # DONE
++ Rescan buffers in a changed directory
 + Fix opening files by click
 + Make sure the cursor doesn't drift as string grows
 + Reload from disk

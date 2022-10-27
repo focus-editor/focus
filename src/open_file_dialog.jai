@@ -1,8 +1,6 @@
 init_open_file_dialog :: () {
     using open_file_dialog;
 
-    print("Initting open file dialog\n");  // TODO: remove when not doing this for every file save
-
     pool_allocator := get_pool_allocator();
     push_allocator(pool_allocator);
 

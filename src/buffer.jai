@@ -337,6 +337,29 @@ save_buffer_to_disk :: (using buffer: *Buffer) {
         modified_on_disk = false;
         deleted = false;
     }
+    remember_last_modtime_and_size(buffer);
+}
+
+remember_last_modtime_and_size :: (using buffer: *Buffer) {
+    assert(has_file, "Trying to remember last modtime and size of a buffer with no file. This is a bug");
+
+    modtime, size, success := file_modtime_and_size(file.full_path);
+    if success {
+        last_modtime = modtime;
+        last_size    = size;
+    } else {
+        log_error("Couldn't get modtime and size of file %\n", file.full_path);
+    }
+}
+
+buffer_file_has_changed_on_disk :: (using buffer: *Buffer) -> changed: bool {
+    assert(has_file);
+    modtime, size, success := file_modtime_and_size(file.full_path);
+    if !success {
+        log_error("Couldn't get modtime and size of %\n", file.full_path);
+        return true;  // consider changed
+    }
+    return modtime != last_modtime || size != last_size;
 }
 
 is_empty :: inline (line: Line) -> bool {
@@ -427,58 +450,61 @@ get_file_info_from_full_path :: (abs_path: string, _proj_path_prefix_len := -1) 
 
 find_open_buffer_by_path :: (full_path: string) -> *Buffer, buffer_id: s64 {
     for * open_buffers {
-        if !it.file_exists continue;
+        if !it.has_file continue;
         if equal_nocase(it.file.full_path, full_path) return it, it_index;
     }
     return null, -1;
 }
 
-buffer_maybe_changed_on_disk :: (full_path: string) {
-    buffer, buffer_id := find_open_buffer_by_path(full_path);
-    if buffer_id < 0 return;
+maybe_refresh_open_buffers_in_dir :: (dir_path: string) {
+    // log("Refreshing buffers in %\n", dir_path);
 
-    file_contents, success := read_entire_file(full_path);
-    if !success {
-        log_error("Couldn't read file '%'\n", full_path);
-        return;
-    }
-    defer free(file_contents);  // @memory: could probably use temporary storage and reset mark after?
-
-    if !buffer.modified {
-        // Remember cursor state - if we have 2 editors then the last editor's state will be remembered
-        for * editor : open_editors {
-            if editor.buffer_id != buffer_id continue;
-
-            new_edit_group(buffer, editor);
-            array_resize(*buffer.cursors, editor.cursors.count);
-            for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
+    for * buffer, buffer_id : open_buffers {
+        if !buffer.has_file || !begins_with_nocase(buffer.file.full_path, dir_path) continue;
+        if !file_exists(buffer.file.full_path) {
+            buffer.deleted = true;
+            continue;
         }
+        if !buffer_file_has_changed_on_disk(buffer) continue;
 
-        // Reload its contents
-        new_replace_edit(buffer, 0, xx buffer.bytes.count, to_string(buffer.bytes), file_contents);
-        replace_range_raw(buffer, 0, xx buffer.bytes.count, file_contents);
-        recalculate_lines(buffer);
+        // Buffer has changed on disk
+        if buffer.modified {
+            // Mark conflict
+            // TODO: display a dialog prompting to reload
+            buffer.modified_on_disk = true;
+        } else {
+            // Reload buffer from disk
+            file_contents, success := read_entire_file(buffer.file.full_path);
+            if !success {
+                log_error("Couldn't read file '%'\n", buffer.file.full_path);
+                return;
+            }
+            defer free(file_contents);  // @memory: could probably use temporary storage and reset mark after?
 
-        // Save edits and put cursors in correct places
-        for * editor : open_editors {
-            if editor.buffer_id != buffer_id continue;
-            new_edit_group(buffer, editor);
-            for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
+            remember_last_modtime_and_size(buffer);
+
+            // Remember cursor state - if we have 2 editors then the last editor's state will be remembered
+            for * editor : open_editors {
+                if editor.buffer_id != buffer_id continue;
+
+                new_edit_group(buffer, editor);
+                array_resize(*buffer.cursors, editor.cursors.count);
+                for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
+            }
+
+            // Reload its contents
+            new_replace_edit(buffer, 0, xx buffer.bytes.count, to_string(buffer.bytes), file_contents);
+            replace_range_raw(buffer, 0, xx buffer.bytes.count, file_contents);
+            recalculate_lines(buffer);
+
+            // Save edits and put cursors in correct places
+            for * editor : open_editors {
+                if editor.buffer_id != buffer_id continue;
+                new_edit_group(buffer, editor);
+                for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
+            }
         }
-    } else {
-        buffer.modified_on_disk = true;
     }
-}
-
-buffer_maybe_deleted_on_disk :: (full_path: string) {
-    buffer, buffer_id := find_open_buffer_by_path(full_path);
-    if buffer_id < 0 return;
-
-    buffer.deleted = true;
-}
-
-refresh_buffers_in_directory :: (dir_path: string) {
-
 }
 
 #scope_file
@@ -548,7 +574,10 @@ deinit :: (using edit_group: *Edit_Group) {
 
 Buffer :: struct {
     file: File_Info;
-    file_exists := false;  // false for freestanding buffers
+    has_file := false;  // false for freestanding buffers
+
+    last_modtime: Apollo_Time;  // for detecting whether a file has changed
+    last_size: s64;             // --
 
     bytes: [..] u8;
     lines: [..] Line;
@@ -563,7 +592,7 @@ Buffer :: struct {
     modified_on_disk := false;
     deleted          := false;
 
-    last_edit_time: Time;
+    last_edit_time: Time;  // for creating new edit groups
 
     lang: enum u8 {
         Plain_Text :: 0;
