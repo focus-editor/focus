@@ -6,8 +6,9 @@
     - Grep in the project
 
 - Search within buffer:
-    - Display the search bar
-    - Enter text
+    + Display the search bar
+    + Enter text
+    + Cleanup the code for input
     - Search and highlight results
 
 - Navigating project dirs in a dialog

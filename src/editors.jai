@@ -2,6 +2,11 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
 
+    if editor.search_bar.active {
+        handled := text_input_handle_keypress(*editor.search_bar.input, key_code, mods);
+        if handled return;
+    }
+
     cursors := editor.cursors;
 
     cursor_moved   := false;
@@ -304,6 +309,11 @@ editors_handle_text_input :: (char: u32) {
 
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
+
+    if editor.search_bar.active {
+        text_input_type_char(*editor.search_bar.input, char);
+        return;
+    }
 
     utf8_char := convert_utf32_to_utf8(char);
 
@@ -1354,6 +1364,8 @@ Search_Bar :: struct {
 
     openness_target := 0.0;  // for animations
     anim_should_finish: Time;
+
+    input: Text_Input;
 
     OPEN_SPEED :: 0.1;  // how many seconds to open fully
 }

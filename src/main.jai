@@ -386,13 +386,14 @@ Project_Dir :: struct {
 #load "style.jai";
 #load "layout.jai";
 #load "editors.jai";
-#load "open_file_dialog.jai";
 #load "buffer.jai";
 #load "windows.jai";
 #load "unicode.jai";
 #load "draw.jai";
 #load "pointer_image.jai";
 #load "utils.jai";
+#load "widgets/text_input.jai";
+#load "widgets/open_file_dialog.jai";
 
 // #import "Basic"()(MEMORY_DEBUGGER=true);
 #import "Basic";

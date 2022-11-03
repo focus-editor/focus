@@ -107,7 +107,7 @@ pos_to_offset :: (str: string, pos: s64) -> s64 {
         char_index += 1;
     }
     if pos == char_index then result = offset;
-    assert(pos >= 0, "Char position outside string\n");
+    assert(result >= 0, "Char position outside string\n");
 
     return result;
 }

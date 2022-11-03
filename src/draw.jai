@@ -303,11 +303,18 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             redraw_requested = true;
         }
 
-        height := 100.0 * openness;
-        bar_rect := cut_top(main_area, height);
+        margin  :=  5 * dpi_scale;
+        padding :=  5 * dpi_scale;
+        bar_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
+
+        bar_rect := cut_top(main_area, bar_rect_height);
         bar_rect.w /= 2;
         bar_rect.x += bar_rect.w;
+        bar_rect.y += bar_rect_height * (1.0 - openness);
         draw_rounded_rect_with_shadow(bar_rect, Colors.BACKGROUND_LIGHT);
+
+        input_rect := shrink(bar_rect, margin);
+        draw_text_input(*search_bar.input, input_rect);
     }
 
     // Draw footer
@@ -431,56 +438,10 @@ draw_open_file_dialog :: () {
 
     // Draw the filter input
     input_rect, files_rect := cut_top(box_rect, input_rect_height);
+    input_rect = shrink(input_rect, margin);
+    draw_text_input(*open_file_dialog.input, input_rect);
     _pad: Rect = ---;  // allow some space at the bottom so that we don't cover up the rounded corners with the cursor
     _pad, files_rect = cut_bottom(files_rect, padding);
-    {
-        using open_file_dialog.input;
-
-        input_rect = shrink(input_rect, margin);
-        draw_rounded_rect(input_rect, Colors.BACKGROUND_DARK);
-        input_rect = shrink(input_rect, 1);
-
-        if mouse_pointer_is_within(input_rect) then set_pointer_image(.TEXT_SELECT);
-
-        push_scissor(shrink_x(input_rect, 1));
-        defer pop_scissor();
-
-        draw_rounded_rect(input_rect, Colors.BACKGROUND);
-        input_rect = shrink(input_rect, padding);
-
-        input_text := to_string(text);
-        cursor_width := 2 * dpi_scale;
-        cursor_pos_x := Simp.get_text_width(font_ui, slice_chars(input_text, 0, cursor.pos));
-
-        scroll_x_target := scroll_anim.target;
-        if cursor_pos_x - scroll_x_target >= cast(s32) input_rect.w then scroll_x_target = cast(s32) cursor_pos_x - cast(s32) input_rect.w;
-        if cursor_pos_x < scroll_x_target then scroll_x_target = xx cursor_pos_x;
-        if scroll_x_target != scroll_anim.target then set_scroll_target(*scroll_anim, scroll_x, scroll_x_target, S32_MAX);
-
-        scrolling := false;
-        scroll_x, scrolling = animate_scrolling(*scroll_anim, scroll_x);
-        if scrolling then redraw_requested = true;
-
-        x := input_rect.x - scroll_x;
-        cursor_rect := cut_left(input_rect, cursor_width);
-        cursor_rect.y -= 1;  // manual alignment
-        cursor_rect.x = x + cursor_pos_x;
-
-        if cursor.pos != cursor.sel {
-            cursor_sel_x := Simp.get_text_width(font_ui, slice_chars(input_text, 0, cursor.sel));
-            left  := min(cursor_pos_x, cursor_sel_x);
-            right := max(cursor_pos_x, cursor_sel_x);
-            selection_rect := cursor_rect;
-            selection_rect.x = x + left;
-            selection_rect.w = xx (right - left);
-            draw_rect(selection_rect, Colors.SELECTION_ACTIVE);
-        }
-
-        draw_rect(cursor_rect, Colors.CURSOR);
-
-        y := input_rect.y + (input_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale;  // I don't know why we need this extra + 2, but without it the text doesn't look in the right place
-        Simp.draw_text(font_ui, xx x, xx y, input_text, color = Colors.CODE_PUNCTUATION);
-    }
 
     // Draw files
     {
@@ -667,6 +628,55 @@ draw_range :: (using range: Range, buffer: Buffer, visible_start: s64, visible_e
         }
         draw_rounded_rect(rect, color, tl, tr, br, bl);
     }
+}
+
+draw_text_input :: (using input: *Text_Input, rect: Rect, font: *Simp.Dynamic_Font = null, color := Colors.UI_DEFAULT) {
+    if font == null then font = font_ui;
+    padding := (rect.h - cast(float) font.default_line_spacing) / 2;
+
+    draw_rounded_rect(rect, Colors.BACKGROUND_DARK);
+    input_rect := shrink(rect, 1);
+
+    if mouse_pointer_is_within(input_rect) then set_pointer_image(.TEXT_SELECT);
+
+    push_scissor(shrink_x(input_rect, 1));
+    defer pop_scissor();
+
+    draw_rounded_rect(input_rect, Colors.BACKGROUND);
+    input_rect = shrink(input_rect, padding);
+
+    input_text := to_string(text);
+    cursor_width := 2 * dpi_scale;
+    cursor_pos_x := Simp.get_text_width(font, slice_chars(input_text, 0, cursor.pos));
+
+    scroll_x_target := scroll_anim.target;
+    if cursor_pos_x - scroll_x_target >= cast(s32) input_rect.w then scroll_x_target = cast(s32) cursor_pos_x - cast(s32) input_rect.w;
+    if cursor_pos_x < scroll_x_target then scroll_x_target = xx cursor_pos_x;
+    if scroll_x_target != scroll_anim.target then set_scroll_target(*scroll_anim, scroll_x, scroll_x_target, S32_MAX);
+
+    scrolling := false;
+    scroll_x, scrolling = animate_scrolling(*scroll_anim, scroll_x);
+    if scrolling then redraw_requested = true;
+
+    x := input_rect.x - scroll_x;
+    cursor_rect := cut_left(input_rect, cursor_width);
+    cursor_rect.y -= 1;  // manual alignment
+    cursor_rect.x = x + cursor_pos_x;
+
+    if cursor.pos != cursor.sel {
+        cursor_sel_x := Simp.get_text_width(font, slice_chars(input_text, 0, cursor.sel));
+        left  := min(cursor_pos_x, cursor_sel_x);
+        right := max(cursor_pos_x, cursor_sel_x);
+        selection_rect := cursor_rect;
+        selection_rect.x = x + left;
+        selection_rect.w = xx (right - left);
+        draw_rect(selection_rect, Colors.SELECTION_ACTIVE);
+    }
+
+    draw_rect(cursor_rect, Colors.CURSOR);
+
+    y := input_rect.y + (input_rect.h - font.character_height) / 2 + 2 * dpi_scale;  // I don't know why we need this extra + 2, but without it the text doesn't look in the right place
+    Simp.draw_text(font, xx x, xx y, input_text, color = color);
 }
 
 Corner_Rounding :: enum { none; in; out; }
