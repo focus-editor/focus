@@ -9,6 +9,7 @@
     + Display the search bar
     + Enter text
     + Cleanup the code for input
+    + Make sure the bar is displayed in the right place and is resized correctly
     - Search and highlight results
 
 - Navigating project dirs in a dialog

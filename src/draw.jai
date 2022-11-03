@@ -309,7 +309,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         bar_rect := cut_top(main_area, bar_rect_height);
         bar_rect.w /= 2;
-        bar_rect.x += bar_rect.w;
+        bar_rect.x += bar_rect.w - 2 * char_size;
         bar_rect.y += bar_rect_height * (1.0 - openness);
         draw_rounded_rect_with_shadow(bar_rect, Colors.BACKGROUND_LIGHT);
 
