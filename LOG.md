@@ -5,6 +5,11 @@
     - Basic token highlighting
     - Grep in the project
 
+- Search within buffer:
+    - Display the search bar
+    - Enter text
+    - Search and highlight results
+
 - Navigating project dirs in a dialog
 - Strip trailing whitespace on save
 - If a buffer is modified on disk, ask for confirmation before saving (use the function and not the flag)
@@ -29,7 +34,7 @@
     - Ideally we need a way to glue viewport to a line, so that if it shifts then we shift the viewport too
 
 - Detect tab symbols and draw them differently
-- Enable vsync (hmm tried it but it was terrible)
+- Don't redraw if mouse move is outside the window
 - Add a warning on large texts (maybe semi-transparent)
 - When unable to save file, show a warning (have an error log?)
 
@@ -61,7 +66,6 @@
 - Subpixel rendering: support other types of panels (lookup ft2-lcd_rendering)
   (not useful for the editor, but may be useful for games)
 - Fix the font unknown character glyph (try copying something from font-awesome)
-- Don't redraw if nothing has changed
 
 # DONE
 + Rescan buffers in a changed directory

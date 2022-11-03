@@ -201,6 +201,9 @@ main :: () {
 
         reset_temporary_storage();
     }
+
+    // report := make_leak_report();
+    // log_leak_report(report);
 }
 
 init_fonts :: () {
@@ -391,6 +394,7 @@ Project_Dir :: struct {
 #load "pointer_image.jai";
 #load "utils.jai";
 
+// #import "Basic"()(MEMORY_DEBUGGER=true);
 #import "Basic";
 #import "Math";
 #import "Sloppy_Math";

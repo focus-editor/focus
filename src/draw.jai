@@ -288,6 +288,28 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
     }
 
+    // Draw search bar
+    if search_bar_is_open(editor) {
+        using search_bar;
+
+        // Update openness
+        if openness > openness_target {
+            t := cast(float)(anim_should_finish - frame_time) / Search_Bar.OPEN_SPEED;
+            openness = clamp(t, 0.0, 1.0);
+            redraw_requested = true;
+        } else if openness < openness_target {
+            t := cast(float)(anim_should_finish - frame_time) / Search_Bar.OPEN_SPEED;
+            openness = clamp(1.0 - t, 0.0, 1.0);
+            redraw_requested = true;
+        }
+
+        height := 100.0 * openness;
+        bar_rect := cut_top(main_area, height);
+        bar_rect.w /= 2;
+        bar_rect.x += bar_rect.w;
+        draw_rect(bar_rect, Colors.BACKGROUND_BRIGHT);
+    }
+
     // Draw footer
     {
         footer_color := Colors.BACKGROUND_BRIGHT;

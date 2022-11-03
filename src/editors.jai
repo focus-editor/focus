@@ -31,6 +31,11 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
                 }
             }
 
+        case #char "F";
+            if only_ctrl_pressed(mods) {
+                open_search_bar(editor);
+            }
+
         case #char "Z";
             if only_ctrl_pressed(mods) {
                 new_edit_group(buffer, editor);
@@ -79,10 +84,14 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
             }
 
         case .ESCAPE;
-            cursor := leave_only_original_cursor(editor);
-            remove_selection(cursor);
-            cursor_moved = true;
-            handled = true;
+            if search_bar_is_open(editor) {
+                close_search_bar(editor);
+            } else {
+                cursor := leave_only_original_cursor(editor);
+                remove_selection(cursor);
+                cursor_moved = true;
+                handled = true;
+            }
 
         case .ARROW_LEFT;
             if only_ctrl_alt_pressed(mods) {
@@ -603,8 +612,24 @@ new_edit_group :: (buffer: *Buffer, editor: *Editor) {
     // Remember cursor state
     array_resize(*buffer.cursors, editor.cursors.count);
     for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
+}
 
-    // print("New edit group: %\n", <<new_group);
+search_bar_is_open :: inline (using editor: *Editor) -> bool {
+    return search_bar.openness > 0.0 || search_bar.active;
+}
+
+open_search_bar :: inline (editor: *Editor) {
+    using editor.search_bar;
+    active = true;
+    openness_target = 1.0;
+    anim_should_finish = frame_time + cast(Time) (openness_target - openness) * Search_Bar.OPEN_SPEED;
+}
+
+close_search_bar :: inline (editor: *Editor) {
+    using editor.search_bar;
+    active = false;  // stop receiving input immediately
+    openness_target = 0.0;
+    anim_should_finish = frame_time + cast(Time) openness * Search_Bar.OPEN_SPEED;
 }
 
 #scope_file
@@ -1309,6 +1334,8 @@ Editor :: struct {
     highlights: [..] Selection_Highlight;
     selected_text_length: s64;
 
+    search_bar: Search_Bar;
+
     viewport: Viewport;
 
     paste_animations: [..] Paste_Animation;
@@ -1319,6 +1346,16 @@ Viewport :: struct {
     left: s32;
     scroll_y: Scroll_Animation;
     scroll_x: Scroll_Animation;
+}
+
+Search_Bar :: struct {
+    active   := false;       // it receives keyboard input when active. TODO: should we employ a more general imgui approach here?
+    openness := 0.0;         // 1 is fully open, 0 is fully closed
+
+    openness_target := 0.0;  // for animations
+    anim_should_finish: Time;
+
+    OPEN_SPEED :: 0.1;  // how many seconds to open fully
 }
 
 Selection_Highlight :: struct {
