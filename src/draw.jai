@@ -91,8 +91,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
     // Draw editor
     {
-        set_scissor(rect);
-        defer Simp.clear_scissor();
+        push_scissor(rect);
+        defer pop_scissor();
 
         if mouse_pointer_is_within(rect) {
             if ui.hot_last_frame == ui_id && no_active_ui_item() && mouse.left.just_pressed then ui.active = ui_id;
@@ -307,7 +307,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         bar_rect := cut_top(main_area, height);
         bar_rect.w /= 2;
         bar_rect.x += bar_rect.w;
-        draw_rect(bar_rect, Colors.BACKGROUND_BRIGHT);
+        draw_rounded_rect_with_shadow(bar_rect, Colors.BACKGROUND_LIGHT);
     }
 
     // Draw footer
@@ -334,61 +334,63 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         // Draw file name and path
         footer_rect.w -= width + padding;
-        set_scissor(footer_rect);
-        defer Simp.clear_scissor();
+        if footer_rect.w > 0 {
+            push_scissor(footer_rect);
+            defer pop_scissor();
 
-        file_name_color := Colors.UI_DEFAULT;
-        if buffer.modified then file_name_color = Colors.UI_WARNING;
+            file_name_color := Colors.UI_DEFAULT;
+            if buffer.modified then file_name_color = Colors.UI_WARNING;
 
-        if buffer.has_file {
-            // Icon
-            icon_char := convert_utf32_to_utf8(xx buffer.file.icon);
-            width = xx Simp.prepare_text(font_icons, to_string(*icon_char));
-            Simp.draw_prepared_text(font_icons, xx pen.x, xx pen.y, color = file_name_color);
+            if buffer.has_file {
+                // Icon
+                icon_char := convert_utf32_to_utf8(xx buffer.file.icon);
+                width = xx Simp.prepare_text(font_icons, to_string(*icon_char));
+                Simp.draw_prepared_text(font_icons, xx pen.x, xx pen.y, color = file_name_color);
 
-            // File name
-            pen.x += width + padding;
-            width = xx Simp.prepare_text(font_ui_bold, buffer.file.name);
-            Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = file_name_color);
-
-            // Maybe warnings
-            if buffer.deleted {
+                // File name
                 pen.x += width + padding;
-                width = xx Simp.prepare_text(font_ui_bold, "[deleted on disk]");
-                Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
-            } else if buffer.modified_on_disk {
+                width = xx Simp.prepare_text(font_ui_bold, buffer.file.name);
+                Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = file_name_color);
+
+                // Maybe warnings
+                if buffer.deleted {
+                    pen.x += width + padding;
+                    width = xx Simp.prepare_text(font_ui_bold, "[deleted on disk]");
+                    Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
+                } else if buffer.modified_on_disk {
+                    pen.x += width + padding;
+                    width = xx Simp.prepare_text(font_ui_bold, "[modified on disk]");
+                    Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
+                }
+
+                // Draw separator
                 pen.x += width + padding;
-                width = xx Simp.prepare_text(font_ui_bold, "[modified on disk]");
-                Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
+                width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
+                Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
+
+                // Draw file path
+                pen.x += width + padding;
+                width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
+                Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
+            } else {
+                // No file
+                icon_char := convert_utf32_to_utf8(xx File_Icon.text);
+                width = xx Simp.prepare_text(font_icons, to_string(*icon_char));
+                Simp.draw_prepared_text(font_icons, xx pen.x, xx pen.y, color = file_name_color);
+
+                // File name
+                pen.x += width + padding;
+                width = xx Simp.prepare_text(font_ui, "<new file>");
+                Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = file_name_color);
             }
 
-            // Draw separator
-            pen.x += width + padding;
-            width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
-            Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
-
-            // Draw file path
-            pen.x += width + padding;
-            width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
-            Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
-        } else {
-            // No file
-            icon_char := convert_utf32_to_utf8(xx File_Icon.text);
-            width = xx Simp.prepare_text(font_icons, to_string(*icon_char));
-            Simp.draw_prepared_text(font_icons, xx pen.x, xx pen.y, color = file_name_color);
-
-            // File name
-            pen.x += width + padding;
-            width = xx Simp.prepare_text(font_ui, "<new file>");
-            Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = file_name_color);
+            // Make sure the text is cut nicely
+            fadeout_rect := cut_right(footer_rect, 2 * padding);
+            trans := footer_color;
+            trans.a = 0;
+            Simp.set_shader_for_color(enable_blend = true);
+            draw_rect_raw(fadeout_rect, c00 = trans, c10 = footer_color, c01 = trans, c11 = footer_color);
         }
-
-        // Make sure the text is cut nicely
-        fadeout_rect := cut_right(footer_rect, 2 * padding);
-        trans := footer_color;
-        trans.a = 0;
-        Simp.set_shader_for_color(enable_blend = true);
-        draw_rect_raw(fadeout_rect, c00 = trans, c10 = footer_color, c01 = trans, c11 = footer_color);
     }
 
 }
@@ -440,8 +442,8 @@ draw_open_file_dialog :: () {
 
         if mouse_pointer_is_within(input_rect) then set_pointer_image(.TEXT_SELECT);
 
-        set_scissor(shrink_x(input_rect, 1));
-        defer Simp.clear_scissor();
+        push_scissor(shrink_x(input_rect, 1));
+        defer pop_scissor();
 
         draw_rounded_rect(input_rect, Colors.BACKGROUND);
         input_rect = shrink(input_rect, padding);
@@ -488,8 +490,8 @@ draw_open_file_dialog :: () {
         per_page = cast(s64) (files_rect.h / entry_height);
         if per_page <= 0 then per_page = 2;
 
-        set_scissor(files_rect);
-        defer Simp.clear_scissor();
+        push_scissor(files_rect);
+        defer pop_scissor();
 
         {
             // Scrollbar
@@ -794,16 +796,32 @@ draw_top_shadow :: (using rect: Rect, size: float = 10.0) {
     Simp.immediate_quad(x, y + h, x + w, y + h + size * dpi_scale, c00 = s, c01 = t, c10 = s, c11 = t);
 }
 
-set_scissor :: (rect: Rect) {
+
+#scope_file
+
+push_scissor :: (rect: Rect) {
+    set_scissor_rect(rect);
+    array_add(*scissor_stack, rect);
+}
+
+pop_scissor :: () {
+    assert(scissor_stack.count > 0);
+    pop(*scissor_stack);
+    if scissor_stack.count > 0 {
+        rect := peek(scissor_stack);
+        set_scissor_rect(rect);
+    } else {
+        Simp.clear_scissor();
+    }
+}
+
+set_scissor_rect :: (rect: Rect) {
     x0 := cast(s32) rect.x;
     y0 := cast(s32) rect.y;
     x1 := cast(s32) (rect.x + rect.w);
     y1 := cast(s32) (rect.y + rect.h);
     Simp.set_scissor(x0, y0, x1, y1);
 }
-
-
-#scope_file
 
 no_active_ui_item :: inline () -> bool {
     return ui.active == .none;
@@ -893,3 +911,5 @@ Ui_Id :: enum s64 {
 // clean way this should probably be stored in widget storage?
 // Problem is, we don't have much else to store for scrollbars...
 scrollbar_grab_point: float;
+
+scissor_stack: [..] Rect;

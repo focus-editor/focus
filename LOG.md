@@ -68,6 +68,7 @@
 - Fix the font unknown character glyph (try copying something from font-awesome)
 
 # DONE
++ Fix a crash when dragging slider
 + Rescan buffers in a changed directory
 + Fix opening files by click
 + Make sure the cursor doesn't drift as string grows
