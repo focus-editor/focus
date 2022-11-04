@@ -292,7 +292,10 @@ recalculate_lines :: (buffer: *Buffer) {
     // We mainly use dirty for lines. We may want to recalculate lines
     // a few times within one frame, but we don't want to e.g. rehighlight code
     // more than once (before display)
-    buffer.dirty = false;
+    if buffer.dirty {
+        buffer.was_dirty_during_frame = true;
+        buffer.dirty = false;
+    }
 
     array_reset_keeping_memory(*buffer.lines);
     byte_index: s32 = 0;
@@ -587,10 +590,11 @@ Buffer :: struct {
     edits: [..] Edit;  // current edits, not in a group yet
     cursors: [..] Cursor.State;  // cursor state before any current edits were made
 
-    dirty            := true;
-    modified         := false;
-    modified_on_disk := false;
-    deleted          := false;
+    dirty                  := true;
+    was_dirty_during_frame := false;
+    modified               := false;
+    modified_on_disk       := false;
+    deleted                := false;
 
     last_edit_time: Time;  // for creating new edit groups
 

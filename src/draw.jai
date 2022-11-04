@@ -249,18 +249,35 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             }
         }
 
-        // Visible highlights
-        for highlights {
-            if it.start_pos.line < visible_lines_start continue;
-            if it.start_pos.line > visible_lines_end   break;
+        // Visible highlights and search results
+        if search_bar_is_open(editor) {
+            // Draw search results
+            for search_bar.results {
+                if it.start_pos.line < visible_lines_start continue;
+                if it.start_pos.line > visible_lines_end   break;
 
-            range: Range = ---;
-            range.start = it.start_pos;
-            range.end   = offset_to_pos(buffer, it.offset + selected_text_length);
-            draw_range(range, buffer, visible_lines_start, visible_lines_end, text_origin, Colors.SELECTION_HIGHLIGHT);
+                range: Range = ---;
+                range.start = it.start_pos;
+                range.end   = offset_to_pos(buffer, it.offset + search_bar.input.text.count);
+                color := ifx search_bar.selected_result == it_index then Colors.SEARCH_RESULT_ACTIVE else Colors.SEARCH_RESULT_INACTIVE;
+                draw_range(range, buffer, visible_lines_start, visible_lines_end, text_origin, color);
+            }
+        } else {
+            // Draw selection highlights
+            for highlights {
+                if it.start_pos.line < visible_lines_start continue;
+                if it.start_pos.line > visible_lines_end   break;
+
+                range: Range = ---;
+                range.start = it.start_pos;
+                range.end   = offset_to_pos(buffer, it.offset + selected_text_length);
+                draw_range(range, buffer, visible_lines_start, visible_lines_end, text_origin, Colors.SELECTION_HIGHLIGHT);
+            }
         }
 
-        draw_cursors(editor, buffer, rect, text_origin, visible_lines_start, visible_lines_end, editor_is_active && !editor.search_bar.active);
+        if !editor.search_bar.active {
+            draw_cursors(editor, buffer, rect, text_origin, visible_lines_start, visible_lines_end, editor_is_active);
+        }
 
         // Draw paste animations
         for anim : editor.paste_animations {
@@ -609,11 +626,11 @@ draw_cursors :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_o
             color := ifx is_active then Colors.SELECTION_ACTIVE else Colors.SELECTION_INACTIVE;
             draw_range(selection, buffer, visible_start, visible_end, text_origin, color);
         }
-
-        cursor_pos := get_cursor_screen_pos(text_origin, cursor.pos);
-        rect := make_rect(cursor_pos.x, cursor_pos.y, char_size, line_height);
-        draw_rect(rect, Colors.CURSOR);
-        if !is_active then draw_rect(shrink(rect, 1), Colors.BACKGROUND);
+        if is_active {
+            cursor_pos := get_cursor_screen_pos(text_origin, cursor.pos);
+            rect := make_rect(cursor_pos.x, cursor_pos.y, char_size, line_height);
+            draw_rect(rect, Colors.CURSOR);
+        }
     }
 }
 

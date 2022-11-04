@@ -3,14 +3,22 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     if !editor return;
 
     if editor.search_bar.active {
-        using editor;
-        old_search_str := copy_temporary_string(to_string(search_bar.input.text));
-        handled := text_input_handle_keypress(*search_bar.input, key_code, mods);
-        if handled && old_search_str != to_string(search_bar.input.text) then search_and_update_results(editor, buffer);
+        using editor.search_bar;
+        old_search_str := copy_temporary_string(to_string(input.text));
+        handled := text_input_handle_keypress(*input, key_code, mods);
+        if handled && old_search_str != to_string(input.text) then search_and_update_results(editor, buffer, jump = true);
 
-        if key_code == .ESCAPE close_search_bar(editor);
-        // TODO: handle jumping to next etc
-        // Also consider deactivating if not handled
+        if key_code == {
+            case .ESCAPE;
+                close_search_bar(editor);
+            case .ENTER; #through;
+            case .ARROW_DOWN;
+                jump_to_next_search_result(editor, buffer);
+            case .ARROW_UP;
+                jump_to_prev_search_result(editor, buffer);
+
+            // TODO: consider falling through (and closing) for some other combinations such as ctrl+z, ctrl+alt+arrows etc
+        }
         return;
     }
 
@@ -45,7 +53,7 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
 
         case #char "F";
             if only_ctrl_pressed(mods) {
-                open_search_bar(editor);
+                open_search_bar(editor, buffer);
             }
 
         case #char "Z";
@@ -272,11 +280,19 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     }
     if cursor_moved && !enabled_whole_words then editor.search_whole_words = false;
 
-    if buffer.dirty {
+    if buffer.dirty recalculate_lines(buffer);
+    if buffer.was_dirty_during_frame {
+        // We have to check if buffer was dirty during frame, because we have to unmark it
+        // as dirty before calculating offsets/positions sometimes, in which case
+        // it will reach this code not dirty but this code still needs to execute
+        buffer.was_dirty_during_frame = false;
+
         buffer.modified = true;
         buffer.last_edit_time = frame_time;
-        recalculate_lines(buffer);
+
         array_reset_keeping_memory(*editor.highlights);
+
+        if search_bar_is_open(editor) search_and_update_results(editor, buffer);
 
         // Make sure the cursors in all editors for this buffer are in valid places
         for *e : open_editors {
@@ -319,7 +335,7 @@ editors_handle_text_input :: (char: u32) {
 
     if editor.search_bar.active {
         text_input_type_char(*editor.search_bar.input, char);
-        search_and_update_results(editor, buffer);
+        search_and_update_results(editor, buffer, jump = true);
         return;
     }
 
@@ -369,6 +385,7 @@ editors_handle_text_input :: (char: u32) {
     if buffer.dirty then recalculate_lines(buffer);
 
     array_reset_keeping_memory(*editor.highlights);
+    if search_bar_is_open(editor) search_and_update_results(editor, buffer);
 
     editor.cursor_moved = true;
     buffer.modified = true;
@@ -636,13 +653,17 @@ search_bar_is_open :: inline (using editor: *Editor) -> bool {
     return search_bar.openness > 0.0 || search_bar.active;
 }
 
-open_search_bar :: inline (editor: *Editor) {
+open_search_bar :: inline (editor: *Editor, buffer: Buffer) {
     using editor.search_bar;
     active = true;
 
     // Select text when opening
     input.cursor.pos = 0;
     input.cursor.sel = get_num_chars(input.text);
+
+    search_point_offset = pos_to_offset(buffer, editor.cursors[editor.main_cursor].pos);
+
+    search_and_update_results(editor, buffer);
 
     openness_target = 1.0;
     anim_should_finish = frame_time + cast(Time) (openness_target - openness) * Search_Bar.OPEN_SPEED;
@@ -651,8 +672,72 @@ open_search_bar :: inline (editor: *Editor) {
 close_search_bar :: inline (editor: *Editor) {
     using editor.search_bar;
     active = false;  // stop receiving input immediately
+
+    reset_search_results(*editor.search_bar);
+    array_reset_keeping_memory(*editor.highlights);
+
     openness_target = 0.0;
     anim_should_finish = frame_time + cast(Time) openness * Search_Bar.OPEN_SPEED;
+}
+
+search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := false) {
+    reset_search_results(*search_bar);
+
+    using search_bar;
+    search_str := to_string(input.text);
+    if !search_str return;
+
+    buffer_str := to_string(buffer.bytes);
+    offset := 0;
+    i := 0;
+    while true {
+        offset = find_index_from_left(buffer_str, search_str, start_index = offset);
+        if offset < 0 break;
+
+        result := array_add(*results);
+        result.offset = offset;
+        result.start_pos = offset_to_pos(buffer, offset);
+        if selected_result < 0 && result.offset >= search_point_offset then selected_result = i;
+
+        offset += search_str.count;
+        i += 1;
+    }
+
+    if selected_result < 0 && i > 0 then selected_result = i - 1;  // all results are before cursor, select the closes one
+    if selected_result >= 0 && jump then jump_to_search_result(editor, buffer);
+}
+
+jump_to_search_result :: (using editor: *Editor, buffer: Buffer, move_search_point := false) {
+    using search_bar;
+    if !results || selected_result < 0 return;
+
+    result := results[selected_result];
+    cursor := leave_only_original_cursor(editor);
+    cursor.sel = result.start_pos;
+    cursor.pos = offset_to_pos(buffer, result.offset + input.text.count);
+    cursor_moved = true;
+
+    if move_search_point then search_point_offset = xx result.offset;
+}
+
+jump_to_prev_search_result :: (using editor: *Editor, buffer: Buffer) {
+    using search_bar;
+    if !results return;
+    selected_result -= 1;
+    if selected_result < 0 then selected_result = results.count - 1;
+    jump_to_search_result(editor, buffer, move_search_point = true);
+}
+
+jump_to_next_search_result :: (using editor: *Editor, buffer: Buffer) {
+    using search_bar;
+    if !results return;
+    selected_result = (selected_result + 1) % results.count;
+    jump_to_search_result(editor, buffer, move_search_point = true);
+}
+
+reset_search_results :: (using search_bar: *Search_Bar) {
+    array_reset(*results);
+    selected_result = -1;
 }
 
 #scope_file
@@ -1343,34 +1428,6 @@ comment_block :: (cursor: *Cursor, buffer: *Buffer) {
     if new_bytes.count > 0 then replace_range(buffer, range, to_string(new_bytes));
 }
 
-search_and_update_results :: (using editor: *Editor, buffer: Buffer) {
-    using search_bar;
-    array_reset(*results);
-    selected_result = -1;
-
-    search_str := to_string(input.text);
-    if !search_str return;
-
-    main_cursor_offset := pos_to_offset(buffer, cursors[main_cursor].pos);
-    buffer_str := to_string(buffer.bytes);
-    offset := 0;
-    i := 0;
-    while true {
-        offset = find_index_from_left(buffer_str, search_str, start_index = offset);
-        if offset < 0 break;
-
-        result := array_add(*results);
-        result.offset = offset;
-        result.start_pos = offset_to_pos(buffer, offset);
-        if selected_result < 0 && result.offset >= main_cursor_offset then selected_result = i;
-
-        offset += search_str.count;
-        i += 1;
-    }
-
-    if selected_result < 0 && i > 0 then selected_result = i - 1;  // all results are before cursor, select the closes one
-}
-
 #scope_export
 
 Editor :: struct {
@@ -1409,6 +1466,7 @@ Search_Bar :: struct {
 
     results: [..] Text_Highlight;
     selected_result: s64 = -1;
+    search_point_offset: s32;  // the point used to determine the next search result. Fixed so that we can set cursor without jumping around
 
     OPEN_SPEED :: 0.2;  // how many seconds to open fully
 }

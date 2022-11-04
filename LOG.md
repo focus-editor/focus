@@ -11,9 +11,12 @@
     + Display the number of results in the bar
     + Select the first result after cursor
     + Select the text in the search bar when shown, it's really needed
-    - Jump to it if it's outside viewport, otherwise don't jump
-    - Highlight results
+    + Highlight results
+    + Jump to it if it's outside viewport, otherwise don't jump
+    - Don't highlight selections in the scrollbar when search bar is open
     - Highlight results in the scrollbar
+    - When opening search bar set selected text as search text if on single line
+    - Bug: Don't mark buffer as modified on cursor movements
 
 - Bug: resize pointer is not shown when trying to resize window
 
