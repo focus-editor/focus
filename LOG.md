@@ -13,7 +13,7 @@
     + Draw differently in active/inactive state
     + Activate by click, deactivate by click elsewhere
     + Deactivate the editor cursor when the search bar is active
-    - Display the number of search results
+    + Display the number of search results
     - Search and highlight results
 
 - Bug: resize pointer is not shown when trying to resize window

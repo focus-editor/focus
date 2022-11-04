@@ -85,6 +85,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     using editor := *open_editors[editor_id];
     buffer := open_buffers[buffer_id];
 
+    editor_is_active := editor_id == editor_active && Input.input_application_has_focus;
+
     // Calculate text origin in screen coordinates
     text_offset := make_vector2(char_size * 2, -char_size * 2);
     text_origin := top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
@@ -208,8 +210,6 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // Need to update after updating scrolling to reduce latency
         text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
 
-        is_active := editor_id == editor_active && !editor.search_bar.active && Input.input_application_has_focus;
-
         visible_lines_start := cast(s64) (viewport.top / line_height) - 1;
         visible_lines_start  = clamp(visible_lines_start, 0, buffer.lines.count);
         visible_lines_end := visible_lines_start + cast(s64) (rect.h / line_height) + 1;
@@ -260,7 +260,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             draw_range(range, buffer, visible_lines_start, visible_lines_end, text_origin, Colors.SELECTION_HIGHLIGHT);
         }
 
-        draw_cursors(editor, buffer, rect, text_origin, visible_lines_start, visible_lines_end, is_active);
+        draw_cursors(editor, buffer, rect, text_origin, visible_lines_start, visible_lines_end, editor_is_active && !editor.search_bar.active);
 
         // Draw paste animations
         for anim : editor.paste_animations {
@@ -304,24 +304,35 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             redraw_requested = true;
         }
 
-        margin  :=  5 * dpi_scale;
-        padding :=  5 * dpi_scale;
-        bar_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
+        margin_x  := 10 * dpi_scale;
+        margin_y  := 7 * dpi_scale;
+        padding := 5 * dpi_scale;
+        bar_rect_height := font_ui_line_height + 2 * padding + 2 * margin_y + 2;
 
         bar_rect := cut_top(main_area, bar_rect_height);
         bar_rect.w /= 2;
         bar_rect.x += bar_rect.w - 2 * char_size;
         bar_rect.y += bar_rect_height * (1.0 - openness);
-        max_width := 500 * dpi_scale;
+        max_width := 600 * dpi_scale;
         if bar_rect.w > max_width {
             bar_rect.x += bar_rect.w - max_width;
             bar_rect.w = max_width;
         }
-        if bar_rect.w > 0 {
-            draw_rounded_rect_with_shadow(bar_rect, Colors.BACKGROUND_LIGHT);
+        draw_rounded_rect_with_shadow(bar_rect, Colors.BACKGROUND_LIGHT);
 
-            input_rect := shrink(bar_rect, margin);
-            draw_text_input(*search_bar.input, input_rect, active = search_bar.active && !open_file_dialog.show, ui_id = input_id);
+        results_width := cast(float) Simp.prepare_text(font_ui_small, tprint("% of %", 1, 12));
+        bar_rect = shrink_x(bar_rect, margin_x);
+        bar_rect = shrink_y(bar_rect, margin_y);
+        results_rect, input_rect := cut_right(bar_rect, results_width + padding);
+
+        if bar_rect.w > 0 {
+            if results_rect.w > 0 {
+                Simp.draw_prepared_text(font_ui_small, xx (results_rect.x + padding), xx (results_rect.y + (results_rect.h - font_ui_small.character_height) / 2.0), color = Colors.UI_DEFAULT);
+            }
+            if input_rect.w > 0 {
+                input_active := editor_is_active && search_bar.active && !open_file_dialog.show;
+                draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id);
+            }
         }
 
         if ui.active != .none && ui.active != input_id {
