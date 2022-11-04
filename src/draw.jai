@@ -208,7 +208,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // Need to update after updating scrolling to reduce latency
         text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
 
-        is_active := editor_id == editor_active && Input.input_application_has_focus;
+        is_active := editor_id == editor_active && !editor.search_bar.active && Input.input_application_has_focus;
 
         visible_lines_start := cast(s64) (viewport.top / line_height) - 1;
         visible_lines_start  = clamp(visible_lines_start, 0, buffer.lines.count);
@@ -291,6 +291,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     // Draw search bar
     if search_bar_is_open(editor) {
         using search_bar;
+        input_id := get_ui_id_from_loc(parent_id = ui_id);
 
         // Update openness
         if openness > openness_target {
@@ -311,10 +312,27 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         bar_rect.w /= 2;
         bar_rect.x += bar_rect.w - 2 * char_size;
         bar_rect.y += bar_rect_height * (1.0 - openness);
-        draw_rounded_rect_with_shadow(bar_rect, Colors.BACKGROUND_LIGHT);
+        max_width := 500 * dpi_scale;
+        if bar_rect.w > max_width {
+            bar_rect.x += bar_rect.w - max_width;
+            bar_rect.w = max_width;
+        }
+        if bar_rect.w > 0 {
+            draw_rounded_rect_with_shadow(bar_rect, Colors.BACKGROUND_LIGHT);
 
-        input_rect := shrink(bar_rect, margin);
-        draw_text_input(*search_bar.input, input_rect);
+            input_rect := shrink(bar_rect, margin);
+            draw_text_input(*search_bar.input, input_rect, active = search_bar.active && !open_file_dialog.show, ui_id = input_id);
+        }
+
+        if ui.active != .none && ui.active != input_id {
+            active = false;  // deactivate on clicks elsewhere
+            redraw_requested = true;
+        }
+        if ui.active == input_id {
+            active = true;  // activate on click
+            editor_active = editor_id;  // make sure the editor is also activated
+            redraw_requested = true;
+        }
     }
 
     // Draw footer
@@ -439,7 +457,8 @@ draw_open_file_dialog :: () {
     // Draw the filter input
     input_rect, files_rect := cut_top(box_rect, input_rect_height);
     input_rect = shrink(input_rect, margin);
-    draw_text_input(*open_file_dialog.input, input_rect);
+    input_id := get_ui_id_from_loc(parent_id = ui_id);
+    draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true);
     _pad: Rect = ---;  // allow some space at the bottom so that we don't cover up the rounded corners with the cursor
     _pad, files_rect = cut_bottom(files_rect, padding);
 
@@ -630,19 +649,23 @@ draw_range :: (using range: Range, buffer: Buffer, visible_start: s64, visible_e
     }
 }
 
-draw_text_input :: (using input: *Text_Input, rect: Rect, font: *Simp.Dynamic_Font = null, color := Colors.UI_DEFAULT) {
+draw_text_input :: (using input: *Text_Input, rect: Rect, ui_id: Ui_Id, active := false, font: *Simp.Dynamic_Font = null, color := Colors.UI_DEFAULT) {
     if font == null then font = font_ui;
     padding := (rect.h - cast(float) font.default_line_spacing) / 2;
 
-    draw_rounded_rect(rect, Colors.BACKGROUND_DARK);
+    draw_rect(rect, ifx active then Colors.CURSOR_INACTIVE else Colors.BACKGROUND_DARK);
     input_rect := shrink(rect, 1);
 
+    if mouse_pointer_is_within(rect) {
+        ui.hot = ui_id;
+        if ui.hot_last_frame == ui_id && mouse.left.just_pressed then ui.active = ui_id;
+    }
     if mouse_pointer_is_within(input_rect) then set_pointer_image(.TEXT_SELECT);
 
     push_scissor(shrink_x(input_rect, 1));
     defer pop_scissor();
 
-    draw_rounded_rect(input_rect, Colors.BACKGROUND);
+    draw_rect(input_rect, Colors.BACKGROUND);
     input_rect = shrink(input_rect, padding);
 
     input_text := to_string(text);
@@ -673,7 +696,7 @@ draw_text_input :: (using input: *Text_Input, rect: Rect, font: *Simp.Dynamic_Fo
         draw_rect(selection_rect, Colors.SELECTION_ACTIVE);
     }
 
-    draw_rect(cursor_rect, Colors.CURSOR);
+    draw_rect(cursor_rect, ifx active then Colors.CURSOR else Colors.CURSOR_INACTIVE);
 
     y := input_rect.y + (input_rect.h - font.character_height) / 2 + 2 * dpi_scale;  // I don't know why we need this extra + 2, but without it the text doesn't look in the right place
     Simp.draw_text(font, xx x, xx y, input_text, color = color);
@@ -862,7 +885,7 @@ draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll:
 
     // Draw
     color := Colors.SCROLLBAR;
-    rounding_radius := 2 * dpi_scale;
+    rounding_radius := 2.0;
 
     if ui.active == ui_id || (ui.hot_last_frame == ui_id && ui.active == .none) {
         set_pointer_image(.NORMAL);

@@ -3,8 +3,9 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     if !editor return;
 
     if editor.search_bar.active {
-        handled := text_input_handle_keypress(*editor.search_bar.input, key_code, mods);
-        if handled return;
+        text_input_handle_keypress(*editor.search_bar.input, key_code, mods);
+        if key_code == .ESCAPE close_search_bar(editor);
+        return;
     }
 
     cursors := editor.cursors;
@@ -1367,7 +1368,7 @@ Search_Bar :: struct {
 
     input: Text_Input;
 
-    OPEN_SPEED :: 0.1;  // how many seconds to open fully
+    OPEN_SPEED :: 0.2;  // how many seconds to open fully
 }
 
 Selection_Highlight :: struct {

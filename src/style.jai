@@ -25,6 +25,7 @@ Colors :: struct {
     SCROLLBAR_HOVER         :: Color.{ r = 0.131, g = 0.202, b = 0.25, a = 0.8 };
     SCROLLBAR_BACKGROUND    :: Color.{ r = 0.065, g = 0.101, b = 0.125, a = 0.3 };
     CURSOR                  :: Color.{ r = 0.2, g = 0.8, b = 0.8 };
+    CURSOR_INACTIVE         :: Color.{ r = 0.1, g = 0.4, b = 0.4 };
     PASTE_ANIMATION         :: Color.{ r = 0.11, g = 0.267, b = 0.29 };
     SPLITTER                :: Color.{ r = 0.131, g = 0.202, b = 0.25 };
     SPLITTER_HOVER          :: Color.{ r = 0.110, g = 0.267, b = 0.29 };
