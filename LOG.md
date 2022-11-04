@@ -5,16 +5,15 @@
     - Basic token highlighting
     - Grep in the project
 
-- Search within buffer:
-    + Display the search bar
-    + Enter text
-    + Cleanup the code for input
-    + Make sure the bar is displayed in the right place and is resized correctly
-    + Draw differently in active/inactive state
-    + Activate by click, deactivate by click elsewhere
-    + Deactivate the editor cursor when the search bar is active
-    + Display the number of search results
-    - Search and highlight results
+- Search and highlight results
+    + Case-sensitive version, like the Ctrl+D one
+    + Show the label if no text
+    + Display the number of results in the bar
+    + Select the first result after cursor
+    + Select the text in the search bar when shown, it's really needed
+    - Jump to it if it's outside viewport, otherwise don't jump
+    - Highlight results
+    - Highlight results in the scrollbar
 
 - Bug: resize pointer is not shown when trying to resize window
 
@@ -40,6 +39,8 @@
 - When there are several cursors where some of them are above the viewport, hitting enter will shift everything down
   and will jerk briefly, which is annoying
     - Ideally we need a way to glue viewport to a line, so that if it shifts then we shift the viewport too
+
+- Remember open editors and show prev/next editor configuration with Ctrl+U / Ctrl+Shift_
 
 - Detect tab symbols and draw them differently
 - Don't redraw if mouse move is outside the window
@@ -76,6 +77,15 @@
 - Fix the font unknown character glyph (try copying something from font-awesome)
 
 # DONE
++ Search within buffer - visual part:
+    + Display the search bar
+    + Enter text
+    + Cleanup the code for input
+    + Make sure the bar is displayed in the right place and is resized correctly
+    + Draw differently in active/inactive state
+    + Activate by click, deactivate by click elsewhere
+    + Deactivate the editor cursor when the search bar is active
+    + Display the number of search results
 + Fix a crash when dragging slider
 + Rescan buffers in a changed directory
 + Fix opening files by click

@@ -3,8 +3,14 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     if !editor return;
 
     if editor.search_bar.active {
-        text_input_handle_keypress(*editor.search_bar.input, key_code, mods);
+        using editor;
+        old_search_str := copy_temporary_string(to_string(search_bar.input.text));
+        handled := text_input_handle_keypress(*search_bar.input, key_code, mods);
+        if handled && old_search_str != to_string(search_bar.input.text) then search_and_update_results(editor, buffer);
+
         if key_code == .ESCAPE close_search_bar(editor);
+        // TODO: handle jumping to next etc
+        // Also consider deactivating if not handled
         return;
     }
 
@@ -313,6 +319,7 @@ editors_handle_text_input :: (char: u32) {
 
     if editor.search_bar.active {
         text_input_type_char(*editor.search_bar.input, char);
+        search_and_update_results(editor, buffer);
         return;
     }
 
@@ -632,6 +639,11 @@ search_bar_is_open :: inline (using editor: *Editor) -> bool {
 open_search_bar :: inline (editor: *Editor) {
     using editor.search_bar;
     active = true;
+
+    // Select text when opening
+    input.cursor.pos = 0;
+    input.cursor.sel = get_num_chars(input.text);
+
     openness_target = 1.0;
     anim_should_finish = frame_time + cast(Time) (openness_target - openness) * Search_Bar.OPEN_SPEED;
 }
@@ -1331,6 +1343,34 @@ comment_block :: (cursor: *Cursor, buffer: *Buffer) {
     if new_bytes.count > 0 then replace_range(buffer, range, to_string(new_bytes));
 }
 
+search_and_update_results :: (using editor: *Editor, buffer: Buffer) {
+    using search_bar;
+    array_reset(*results);
+    selected_result = -1;
+
+    search_str := to_string(input.text);
+    if !search_str return;
+
+    main_cursor_offset := pos_to_offset(buffer, cursors[main_cursor].pos);
+    buffer_str := to_string(buffer.bytes);
+    offset := 0;
+    i := 0;
+    while true {
+        offset = find_index_from_left(buffer_str, search_str, start_index = offset);
+        if offset < 0 break;
+
+        result := array_add(*results);
+        result.offset = offset;
+        result.start_pos = offset_to_pos(buffer, offset);
+        if selected_result < 0 && result.offset >= main_cursor_offset then selected_result = i;
+
+        offset += search_str.count;
+        i += 1;
+    }
+
+    if selected_result < 0 && i > 0 then selected_result = i - 1;  // all results are before cursor, select the closes one
+}
+
 #scope_export
 
 Editor :: struct {
@@ -1342,7 +1382,7 @@ Editor :: struct {
     search_whole_words := false;  // used when creating new cursors
     cursor_moved  := false;
 
-    highlights: [..] Selection_Highlight;
+    highlights: [..] Text_Highlight;
     selected_text_length: s64;
 
     search_bar: Search_Bar;
@@ -1362,16 +1402,18 @@ Viewport :: struct {
 Search_Bar :: struct {
     active   := false;       // it receives keyboard input when active. TODO: should we employ a more general imgui approach here?
     openness := 0.0;         // 1 is fully open, 0 is fully closed
-
     openness_target := 0.0;  // for animations
     anim_should_finish: Time;
 
     input: Text_Input;
 
+    results: [..] Text_Highlight;
+    selected_result: s64 = -1;
+
     OPEN_SPEED :: 0.2;  // how many seconds to open fully
 }
 
-Selection_Highlight :: struct {
+Text_Highlight :: struct {
     offset: s64;     // we'll convert this to position range, but only for the visible highlights
     start_pos: Pos;  // useful to know pos immediately to display in the scrollbar area
 }

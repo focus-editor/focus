@@ -304,9 +304,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             redraw_requested = true;
         }
 
-        margin_x  := 10 * dpi_scale;
-        margin_y  := 7 * dpi_scale;
-        padding := 5 * dpi_scale;
+        margin_x := 10 * dpi_scale;
+        margin_y :=  7 * dpi_scale;
+        padding  :=  5 * dpi_scale;
         bar_rect_height := font_ui_line_height + 2 * padding + 2 * margin_y + 2;
 
         bar_rect := cut_top(main_area, bar_rect_height);
@@ -320,7 +320,13 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
         draw_rounded_rect_with_shadow(bar_rect, Colors.BACKGROUND_LIGHT);
 
-        results_width := cast(float) Simp.prepare_text(font_ui_small, tprint("% of %", 1, 12));
+        result_label: string;
+        if results {
+            result_label = tprint("% of %", selected_result + 1, results.count);
+        } else {
+            result_label = "No results";
+        }
+        results_width := cast(float) Simp.prepare_text(font_ui_small, result_label);
         bar_rect = shrink_x(bar_rect, margin_x);
         bar_rect = shrink_y(bar_rect, margin_y);
         results_rect, input_rect := cut_right(bar_rect, results_width + padding);
@@ -331,7 +337,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             }
             if input_rect.w > 0 {
                 input_active := editor_is_active && search_bar.active && !open_file_dialog.show;
-                draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id);
+                draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id, label = "Find in buffer");
             }
         }
 
@@ -469,7 +475,7 @@ draw_open_file_dialog :: () {
     input_rect, files_rect := cut_top(box_rect, input_rect_height);
     input_rect = shrink(input_rect, margin);
     input_id := get_ui_id_from_loc(parent_id = ui_id);
-    draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true);
+    draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = "Type to filter");
     _pad: Rect = ---;  // allow some space at the bottom so that we don't cover up the rounded corners with the cursor
     _pad, files_rect = cut_bottom(files_rect, padding);
 
@@ -660,7 +666,7 @@ draw_range :: (using range: Range, buffer: Buffer, visible_start: s64, visible_e
     }
 }
 
-draw_text_input :: (using input: *Text_Input, rect: Rect, ui_id: Ui_Id, active := false, font: *Simp.Dynamic_Font = null, color := Colors.UI_DEFAULT) {
+draw_text_input :: (using input: *Text_Input, rect: Rect, ui_id: Ui_Id, active := false, label: string = "", font: *Simp.Dynamic_Font = null, color := Colors.UI_DEFAULT) {
     if font == null then font = font_ui;
     padding := (rect.h - cast(float) font.default_line_spacing) / 2;
 
@@ -707,9 +713,10 @@ draw_text_input :: (using input: *Text_Input, rect: Rect, ui_id: Ui_Id, active :
         draw_rect(selection_rect, Colors.SELECTION_ACTIVE);
     }
 
-    draw_rect(cursor_rect, ifx active then Colors.CURSOR else Colors.CURSOR_INACTIVE);
-
     y := input_rect.y + (input_rect.h - font.character_height) / 2 + 2 * dpi_scale;  // I don't know why we need this extra + 2, but without it the text doesn't look in the right place
+
+    if !input_text then Simp.draw_text(font, xx x, xx y, label, color = Colors.UI_TEXT_INPUT_LABEL);
+    draw_rect(cursor_rect, ifx active then Colors.CURSOR else Colors.CURSOR_INACTIVE);
     Simp.draw_text(font, xx x, xx y, input_text, color = color);
 }
 
