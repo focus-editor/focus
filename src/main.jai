@@ -227,6 +227,15 @@ init_fonts :: () {
 
     font_icons = Simp.get_font_at_size("fonts/font-awesome", "Font Awesome 6 Free-Solid-900.otf", cast(int) (font_icons_size * dpi_scale));
     assert(font_icons != null, "Couldn't init main icon font\n");
+
+    // WORKAROUND:
+    // Make a dummy call with most common chars for each font so that
+    // we have all the font atlases loaded in the GPU memory once
+    COMMON_CHARS :: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789~!@#$%^&*()-|\"':;_+={}[]\\/`,.<>?АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчщъыьэюя";
+    Simp.prepare_text(font,          COMMON_CHARS);
+    Simp.prepare_text(font_ui,       COMMON_CHARS);
+    Simp.prepare_text(font_ui_bold,  COMMON_CHARS);
+    Simp.prepare_text(font_ui_small, COMMON_CHARS);
 }
 
 update_mouse_state :: () {

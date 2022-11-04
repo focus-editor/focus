@@ -61,7 +61,7 @@
       (just like the individual letters would)
 
 - SIMP is bad:
-    - Fix the memory usage: backend/gl.jai - update texture is called too often
+    + Fix the memory usage: backend/gl.jai - update texture is called too often (fixed using a workaround, but memory usage is still high, even though not as high)
     - Don't do a draw call per draw_text
 
 - Look into subpixel font positioning
