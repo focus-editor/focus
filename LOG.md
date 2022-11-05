@@ -1,15 +1,20 @@
 # TODO
 
 - Most important stuff (so I can start using the editor):
-    - Search within buffer (case insensitive by default)
+    + Search within buffer
     - Basic token highlighting
     - Grep in the project
 
+- Syntax highlighting
+    - Read the code of Amber
+
 - Implement case-insensitive search in buffer
+- Bug: crash when drawing search bar with in small window
 
 - Bug: resize pointer is not shown when trying to resize window
 
 - Navigating project dirs in a dialog
+- Create new files (with a mini-dialog?)
 - Strip trailing whitespace on save
 - If a buffer is modified on disk, ask for confirmation before saving (use the function and not the flag)
 

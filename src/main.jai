@@ -4,7 +4,7 @@ main :: () {
 
     window_x, window_y := platform_get_biggest_monitor_pos();
     window = create_window(window_width, window_height, "Focus", window_x, window_y, background_color_rgb = as_3_floats(Colors.BACKGROUND));
-    platform_maximize_window(window);
+    // platform_maximize_window(window);
 
     window_width, window_height = Simp.get_render_dimensions(window);
     screen = make_rect(0, 0, window_width, window_height);
@@ -18,8 +18,8 @@ main :: () {
     old_line_height = line_height;
 
     // @Cleanup: remove and do properly
-    initial_project_dirs := string.[ "W:/focus-zig", "C:/jai-beta" ];
-    // initial_project_dirs := string.[ "W:/focus", "C:/jai-beta" ];
+    // initial_project_dirs := string.[ "W:/focus-zig", "C:/jai-beta" ];
+    initial_project_dirs := string.[ "W:/focus", "C:/jai-beta" ];
     for path, i : initial_project_dirs {
         dir: Project_Dir = ---;
         dir.path = path;
@@ -236,6 +236,7 @@ init_fonts :: () {
     Simp.prepare_text(font_ui,       COMMON_CHARS);
     Simp.prepare_text(font_ui_bold,  COMMON_CHARS);
     Simp.prepare_text(font_ui_small, COMMON_CHARS);
+    // TODO: prepare icons as well
 }
 
 update_mouse_state :: () {
@@ -418,7 +419,7 @@ Project_Dir :: struct {
 #import "Unicode";
 #import "Window_Creation";
 
-Simp :: #import "Simp";
+Simp :: #import "Simp_Ext";
 Input :: #import "Input";
 
 
