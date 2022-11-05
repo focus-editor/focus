@@ -590,7 +590,7 @@ Buffer :: struct {
     edits: [..] Edit;  // current edits, not in a group yet
     cursors: [..] Cursor.State;  // cursor state before any current edits were made
 
-    dirty                  := true;
+    dirty                  := false;
     was_dirty_during_frame := false;
     modified               := false;
     modified_on_disk       := false;

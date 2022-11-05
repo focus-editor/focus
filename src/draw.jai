@@ -223,15 +223,24 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             assert(buffer.lines.count > 0);
             mark_line_height := marks_rect.h / cast(float)buffer.lines.count;  // the height of the rect which corresponds to one line
 
-            // Selection highlights
             highlight_mark_rect := shrink_x(marks_rect, marks_rect.w / 3);
             highlight_mark_rect.h = 5 * dpi_scale;
-            for highlights {
-                highlight_mark_rect.y = marks_rect_top - it.start_pos.line * mark_line_height - highlight_mark_rect.h;
-                draw_rect_raw(highlight_mark_rect, Colors.SELECTION_HIGHLIGHT);
+
+            if search_bar_is_open(editor) && search_bar.results {
+                // Search results
+                for search_bar.results {
+                    highlight_mark_rect.y = marks_rect_top - it.start_pos.line * mark_line_height - highlight_mark_rect.h;
+                    draw_rect_raw(highlight_mark_rect, ifx it_index == search_bar.selected_result then Colors.SEARCH_RESULT_ACTIVE else Colors.SEARCH_RESULT_INACTIVE);
+                }
             }
 
-            // TODO: search results (probably if available then don't draw selection highlights?)
+            if !search_bar_is_open(editor) {
+                // Selection highlights
+                for highlights {
+                    highlight_mark_rect.y = marks_rect_top - it.start_pos.line * mark_line_height - highlight_mark_rect.h;
+                    draw_rect_raw(highlight_mark_rect, Colors.SELECTION_HIGHLIGHT);
+                }
+            }
 
             // Cursors
             cursor_mark_rect := marks_rect;

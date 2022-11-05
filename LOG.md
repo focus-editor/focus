@@ -5,18 +5,8 @@
     - Basic token highlighting
     - Grep in the project
 
-- Search and highlight results
-    + Case-sensitive version, like the Ctrl+D one
-    + Show the label if no text
-    + Display the number of results in the bar
-    + Select the first result after cursor
-    + Select the text in the search bar when shown, it's really needed
-    + Highlight results
-    + Jump to it if it's outside viewport, otherwise don't jump
-    + When opening search bar set selected text as search text if on single line
-    - Don't highlight selections in the scrollbar when search bar is open
-    - Highlight results in the scrollbar
-    - Bug: Don't mark buffer as modified on cursor movements
+- Text input - jump to selection boundary on arrow-left/right
+- Implement case-insensitive search in buffer
 
 - Bug: resize pointer is not shown when trying to resize window
 
@@ -80,6 +70,18 @@
 - Fix the font unknown character glyph (try copying something from font-awesome)
 
 # DONE
++ Search and highlight results
+    + Case-sensitive version, like the Ctrl+D one
+    + Show the label if no text
+    + Display the number of results in the bar
+    + Select the first result after cursor
+    + Select the text in the search bar when shown, it's really needed
+    + Highlight results
+    + Jump to it if it's outside viewport, otherwise don't jump
+    + When opening search bar set selected text as search text if on single line
+    + Don't highlight selections in the scrollbar when search bar is open
+    + Highlight results in the scrollbar
+    + Bug: Don't mark buffer as modified on cursor movements
 + Search within buffer - visual part:
     + Display the search bar
     + Enter text
