@@ -653,15 +653,25 @@ search_bar_is_open :: inline (using editor: *Editor) -> bool {
     return search_bar.openness > 0.0 || search_bar.active;
 }
 
-open_search_bar :: inline (editor: *Editor, buffer: Buffer) {
+open_search_bar :: (using editor: *Editor, buffer: Buffer) {
     using editor.search_bar;
     active = true;
 
-    // Select text when opening
-    input.cursor.pos = 0;
-    input.cursor.sel = get_num_chars(input.text);
+    // If there was some text selected that doesn't span more than one line, use it for search
+    if cursors.count == 1 {
+        cursor := cursors[0];
+        selected_text := get_selected_string(cursor, buffer);
+        if selected_text && cursor.sel.line == cursor.pos.line {
+            array_resize(*input.text, selected_text.count);
+            memcpy(input.text.data, selected_text.data, selected_text.count);
+        }
+    }
 
-    search_point_offset = pos_to_offset(buffer, editor.cursors[editor.main_cursor].pos);
+    // Select text when opening
+    input.cursor.sel = 0;
+    input.cursor.pos = get_num_chars(input.text);
+
+    search_point_offset = pos_to_offset(buffer, get_selection(cursors[main_cursor]).start);
 
     search_and_update_results(editor, buffer);
 

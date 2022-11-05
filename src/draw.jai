@@ -249,21 +249,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             }
         }
 
-        // Visible highlights and search results
-        if search_bar_is_open(editor) {
-            // Draw search results
-            for search_bar.results {
-                if it.start_pos.line < visible_lines_start continue;
-                if it.start_pos.line > visible_lines_end   break;
-
-                range: Range = ---;
-                range.start = it.start_pos;
-                range.end   = offset_to_pos(buffer, it.offset + search_bar.input.text.count);
-                color := ifx search_bar.selected_result == it_index then Colors.SEARCH_RESULT_ACTIVE else Colors.SEARCH_RESULT_INACTIVE;
-                draw_range(range, buffer, visible_lines_start, visible_lines_end, text_origin, color);
-            }
-        } else {
-            // Draw selection highlights
+        // Draw selection highlights
+        if !search_bar_is_open(editor) {
             for highlights {
                 if it.start_pos.line < visible_lines_start continue;
                 if it.start_pos.line > visible_lines_end   break;
@@ -275,9 +262,23 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             }
         }
 
-        if !editor.search_bar.active {
-            draw_cursors(editor, buffer, rect, text_origin, visible_lines_start, visible_lines_end, editor_is_active);
+        // Draw cursors after selection highlights, but before search results
+        draw_cursors(editor, buffer, rect, text_origin, visible_lines_start, visible_lines_end, editor_is_active && !editor.search_bar.active);
+
+        // Draw search results
+        if search_bar_is_open(editor) {
+            for search_bar.results {
+                if it.start_pos.line < visible_lines_start continue;
+                if it.start_pos.line > visible_lines_end   break;
+
+                range: Range = ---;
+                range.start = it.start_pos;
+                range.end   = offset_to_pos(buffer, it.offset + search_bar.input.text.count);
+                color := ifx search_bar.selected_result == it_index then Colors.SEARCH_RESULT_ACTIVE else Colors.SEARCH_RESULT_INACTIVE;
+                draw_range(range, buffer, visible_lines_start, visible_lines_end, text_origin, color);
+            }
         }
+
 
         // Draw paste animations
         for anim : editor.paste_animations {
