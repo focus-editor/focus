@@ -13,10 +13,19 @@ text_input_handle_keypress :: (using input: *Text_Input, key_code: Input.Key_Cod
     if key_code == {
         case .ARROW_LEFT; #through;
         case .ARROW_RIGHT;
-            step := cast(s32) ifx mods.ctrl_pressed || mods.alt_pressed then 5 else 1;
-            cursor.pos += ifx key_code == .ARROW_LEFT then -step else step;
-            cursor.pos = clamp(cursor.pos, 0, get_num_chars(text));
-            if !mods.shift_pressed then cursor.sel = cursor.pos;
+            if cursor.pos != cursor.sel {
+                if key_code == .ARROW_LEFT {
+                    cursor.pos = min(cursor.pos, cursor.sel);
+                } else {
+                    cursor.pos = max(cursor.pos, cursor.sel);
+                }
+                cursor.sel = cursor.pos;
+            } else {
+                step := cast(s32) ifx mods.ctrl_pressed || mods.alt_pressed then 5 else 1;
+                cursor.pos += ifx key_code == .ARROW_LEFT then -step else step;
+                cursor.pos = clamp(cursor.pos, 0, get_num_chars(text));
+                if !mods.shift_pressed then cursor.sel = cursor.pos;
+            }
 
         case .HOME;
             cursor.pos = 0;

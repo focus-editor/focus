@@ -5,7 +5,6 @@
     - Basic token highlighting
     - Grep in the project
 
-- Text input - jump to selection boundary on arrow-left/right
 - Implement case-insensitive search in buffer
 
 - Bug: resize pointer is not shown when trying to resize window
@@ -70,6 +69,7 @@
 - Fix the font unknown character glyph (try copying something from font-awesome)
 
 # DONE
++ Text input - jump to selection boundary on arrow-left/right
 + Search and highlight results
     + Case-sensitive version, like the Ctrl+D one
     + Show the label if no text
