@@ -306,19 +306,19 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         pen := text_origin;
         pen.y += (line_height - char_size) / 2 - visible_lines_start * line_height;
         visible_lines := array_view(buffer.lines, visible_lines_start, visible_lines_end - visible_lines_start);
-
-        visible_code_lines: [..] Simp.Code_Line;
-        visible_code_lines.allocator = temp;
+        hidden_chars_on_left := cast(s32) (viewport.left / char_size) - 2;
+        if hidden_chars_on_left < 0 then hidden_chars_on_left = 0;
+        max_chars_per_page   := cast(s32) (main_area.w   / char_size) + 2;
+        pen.x += hidden_chars_on_left * char_size;
+        code_ranges: [..] Simp.Code_Range;  // visible code ranges
+        code_ranges.allocator = temp;
         for line : visible_lines {
-            code_line := array_add(*visible_code_lines);
-            code_line.start = line.start;
-            code_line.end   = line.end;
+            range := array_add(*code_ranges);
+            range.start = move_offset_by_chars(line.start,  hidden_chars_on_left, buffer.bytes, line.end);
+            range.end   = move_offset_by_chars(range.start, max_chars_per_page,   buffer.bytes, line.end);
         }
-
-        // TODO: draw visible lines of text in a single draw call, with color information.
-        // Also, don't submit anything that's outside viewport to the GPU
-        if buffer.needs_coloring then recalculate_colors(buffer);
-        Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, visible_code_lines, buffer.bytes, buffer.colors, CODE_COLOR_MAP);
+        if buffer.needs_coloring then recalculate_colors(buffer);  // right before drawing
+        Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, code_ranges, buffer.bytes, buffer.colors, CODE_COLOR_MAP);
     }
 
     // Draw search bar

@@ -69,6 +69,26 @@ Loaded_Font :: struct {
     data: [] u8;
 };
 
+// For code rendering
+Code_Range :: struct {
+    start, end: s32;  // in bytes
+}
+
+Code_Color :: enum u8 {
+    DEFAULT;
+    COMMENT;
+    TYPE;
+    KEYWORD;
+    VALUE_KEYWORD;
+    VALUE;
+    FUNCTION;
+    PUNCTUATION;
+    STRING;
+    ERROR;
+
+    NUM_COLORS;
+}
+
 init_fonts :: (_page_size_x: s32 = -1, _page_size_y: s32 = -1) {
     assert(!fonts_initted);
 
@@ -142,7 +162,7 @@ convert_to_temporary_glyphs :: (font: *Dynamic_Font, s: string) -> width_in_pixe
     return width_in_pixels;
 }
 
-draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height: float, visible_lines: [] Code_Line, whole_code: [] u8, colors: [] Code_Color, color_map: [] Vector4) {
+draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height: float, visible_lines: [] Code_Range, whole_code: [] u8, colors: [] Code_Color, color_map: [] Vector4) {
     assert(whole_code.count == colors.count);
 
     // Setup OpenGL stuff. We do it all in one place because it's easier and there will be only one backend - GL.
@@ -235,25 +255,6 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height
     immediate_flush();
 
     glDisable(GL_BLEND);
-}
-
-Code_Line :: struct {
-    start, end: s32;  // in bytes
-}
-
-Code_Color :: enum u8 {
-    DEFAULT;
-    COMMENT;
-    TYPE;
-    KEYWORD;
-    VALUE_KEYWORD;
-    VALUE;
-    FUNCTION;
-    PUNCTUATION;
-    STRING;
-    ERROR;
-
-    NUM_COLORS;
 }
 
 set_unknown_character :: (font: *Dynamic_Font, utf32: u32) -> bool {

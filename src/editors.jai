@@ -390,6 +390,7 @@ editors_handle_text_input :: (char: u32) {
 
     editor.cursor_moved = true;
     buffer.modified = true;
+    buffer.needs_coloring = true;
     buffer.last_edit_time = frame_time;
 }
 

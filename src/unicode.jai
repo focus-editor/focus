@@ -41,3 +41,13 @@ Utf8_Char :: struct {
     bytes: [4] u8;
     count: s32;
 }
+
+move_offset_by_chars :: (offset: s32, num_chars: s32, bytes: [] u8, max_offset: s32) -> new_offset: s32 {
+    max_t := bytes.data + min(max_offset, cast(s32)bytes.count);
+    t := bytes.data + offset;
+    for i : 0..num_chars-1 {
+        if t >= max_t break;
+        t = unicode_next_character(t);
+    }
+    return cast(s32) (t - bytes.data);
+}

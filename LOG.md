@@ -4,11 +4,10 @@
     + Search within buffer
     - Basic token highlighting
     - Grep in the project
+    - Save modified buffers to temporary files and recover after crashes
 
 - Syntax highlighting
-    + Decide how to draw colored text
-    + Draw each word in its own color
-    - Don't draw the chars off the screen
+    - Write a tokeniser
 
 - Implement case-insensitive search in buffer
 - Bug: crash when drawing search bar with in small window
@@ -76,6 +75,10 @@
 - Fix the font unknown character glyph (try copying something from font-awesome)
 
 # DONE
++ Text colorising
+    + Decide how to draw colored text
+    + Draw each word in its own color
+    + Don't draw the chars off the screen
 + Text input - jump to selection boundary on arrow-left/right
 + Search and highlight results
     + Case-sensitive version, like the Ctrl+D one
