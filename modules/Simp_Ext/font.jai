@@ -25,9 +25,6 @@ Dynamic_Font :: struct {
     face: FT_Face;
     glyph_lookup: Table(int, *Glyph_Data);
 
-    character_range_low:  int;
-    character_range_high: int;
-
     character_height:       int;
     default_line_spacing:   int;
     max_ascender:           int;
@@ -143,6 +140,131 @@ convert_to_temporary_glyphs :: (font: *Dynamic_Font, s: string) -> width_in_pixe
     }
 
     return width_in_pixels;
+}
+
+draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height: float, visible_lines: [] Code_Line, whole_code: string, colors: [] Code_Color) {
+    assert(whole_code.count == colors.count);
+
+    // Setup OpenGL stuff. We do it all in one place because it's easier and there will be only one backend - GL.
+    // Otherwise we would have to create temporary glyphs and pass them on to the backend draw function.
+    // Hope I'm not trashing my i-cache by not doing this
+    CheckInit();
+    set_shader_for_text();
+    glBlendFunc(GL_SRC1_COLOR, GL_ONE_MINUS_SRC1_COLOR);
+    glEnable(GL_BLEND);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    last_texture: GLuint = 0xFFFFFFFF;
+
+    sy := cast(float) y;
+
+    // Draw all lines
+    for visible_lines {
+        line: string = ---;
+        line.data  = whole_code.data + it.start;
+        line.count = it.end - it.start;
+
+        sx := cast(float) x;
+
+        // Draw one line
+        t := line.data;
+        while t < line.data + line.count {
+            // Convert current char to glyph
+            utf32 := character_utf8_to_utf32(t, line.data + line.count - t);
+            glyph := find_or_create_glyph(font, utf32);
+            assert(glyph != null, "find_or_create_glyph returned null");
+            assert(glyph.page != null, "glyph has no font page");
+
+            texture := *glyph.page.texture;
+            if glyph.page.dirty {
+                glyph.page.dirty = false;
+                texture_load_from_bitmap(texture, glyph.page.bitmap_data);
+            }
+
+            if texture.gl_handle != last_texture {
+                immediate_flush();
+                last_texture = texture.gl_handle;
+
+                shader := state.current_shader;
+                loc := glGetUniformLocation(shader.gl_handle, "text_sampler");
+                if loc < 0  log_error("Unable to find text_sampler in shader_text!");
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, texture.gl_handle);  // Bind handle to slot 0.
+                glUniform1i(loc, 0);
+            }
+
+            // Draw glyph
+            {
+                x1 := sx + cast(float) glyph.offset_x;
+                x2 := x1 + cast(float) glyph.width;
+
+                y2 := sy + cast(float) glyph.ascent;
+                y1 := y2 - cast(float) glyph.height;
+
+                sx += char_size;
+
+                // Create quad
+                quad: Font_Quad = ---;
+                quad.glyph = glyph;
+                quad.p0.x  = x1;
+                quad.p1.x  = x2;
+                quad.p2.x  = x2;
+                quad.p3.x  = x1;
+                quad.p0.y  = y1;
+                quad.p1.y  = y1;
+                quad.p2.y  = y2;
+                quad.p3.y  = y2;
+
+                quad.u0 = glyph.x0 / cast(float) texture.width;
+                quad.u1 = (cast(float) glyph.x0 + glyph.width) / texture.width;
+                quad.v0 = glyph.y0 / cast(float) texture.height;
+                quad.v1 = (cast(float) glyph.y0 + glyph.height) / texture.height;
+
+                // TODO: rewrite this nonsense
+                color := Vector4.{1, 1, 1, 1};
+                color_num := colors[it.start + t - line.data];
+                if color_num == {
+                    case .DEFAULT;     color = Vector4.{ 0.75, 0.79, 0.86, 1.0 };
+                    case .COMMENT;     color = Vector4.{ 0.533, 0.569, 0.616, 1.0 };
+                    case .TYPE;        color = Vector4.{ 0.51, 0.67, 0.64, 1.0 };
+                    case .FUNCTION;    color = Vector4.{ 0.67, 0.74, 0.49, 1.0 };
+                    case .PUNCTUATION; color = Vector4.{ 0.75, 0.79, 0.86, 1.0 };
+                    case .STRING;      color = Vector4.{ 0.85, 0.68, 0.33, 1.0 };
+                    case .VALUE;       color = Vector4.{ 0.84, 0.60, 0.71, 1.0 };
+                    case .ERROR;       color = Vector4.{ 1.00, 0.00, 0.00, 1.0 };
+                    case .KEYWORD;     color = Vector4.{ 0.902, 0.493, 0.457, 1.0 };
+                }
+                immediate_letter_quad(quad, color);
+            }
+
+            t = unicode_next_character(t);
+        }
+
+        sy -= line_height;
+    }
+
+    immediate_flush();
+
+    glDisable(GL_BLEND);
+}
+
+Code_Line :: struct {
+    start, end: s32;  // in bytes
+}
+
+Code_Color :: enum u8 {
+    DEFAULT;
+    COMMENT;
+    TYPE;
+    KEYWORD;
+    VALUE_KEYWORD;
+    VALUE;
+    FUNCTION;
+    PUNCTUATION;
+    STRING;
+    ERROR;
 }
 
 set_unknown_character :: (font: *Dynamic_Font, utf32: u32) -> bool {

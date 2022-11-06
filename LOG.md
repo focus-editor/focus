@@ -6,7 +6,7 @@
     - Grep in the project
 
 - Syntax highlighting
-    - Read the code of Amber
+    - Decide how to draw colored text
 
 - Implement case-insensitive search in buffer
 - Bug: crash when drawing search bar with in small window
