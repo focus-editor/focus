@@ -142,7 +142,7 @@ convert_to_temporary_glyphs :: (font: *Dynamic_Font, s: string) -> width_in_pixe
     return width_in_pixels;
 }
 
-draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height: float, visible_lines: [] Code_Line, whole_code: string, colors: [] Code_Color) {
+draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height: float, visible_lines: [] Code_Line, whole_code: [] u8, colors: [] Code_Color, color_map: [] Vector4) {
     assert(whole_code.count == colors.count);
 
     // Setup OpenGL stuff. We do it all in one place because it's easier and there will be only one backend - GL.
@@ -222,21 +222,8 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height
                 quad.v0 = glyph.y0 / cast(float) texture.height;
                 quad.v1 = (cast(float) glyph.y0 + glyph.height) / texture.height;
 
-                // TODO: rewrite this nonsense
-                color := Vector4.{1, 1, 1, 1};
-                color_num := colors[it.start + t - line.data];
-                if color_num == {
-                    case .DEFAULT;     color = Vector4.{ 0.75, 0.79, 0.86, 1.0 };
-                    case .COMMENT;     color = Vector4.{ 0.533, 0.569, 0.616, 1.0 };
-                    case .TYPE;        color = Vector4.{ 0.51, 0.67, 0.64, 1.0 };
-                    case .FUNCTION;    color = Vector4.{ 0.67, 0.74, 0.49, 1.0 };
-                    case .PUNCTUATION; color = Vector4.{ 0.75, 0.79, 0.86, 1.0 };
-                    case .STRING;      color = Vector4.{ 0.85, 0.68, 0.33, 1.0 };
-                    case .VALUE;       color = Vector4.{ 0.84, 0.60, 0.71, 1.0 };
-                    case .ERROR;       color = Vector4.{ 1.00, 0.00, 0.00, 1.0 };
-                    case .KEYWORD;     color = Vector4.{ 0.902, 0.493, 0.457, 1.0 };
-                }
-                immediate_letter_quad(quad, color);
+                color := colors[it.start + t - line.data];
+                immediate_letter_quad(quad, color_map[color]);
             }
 
             t = unicode_next_character(t);
@@ -265,6 +252,8 @@ Code_Color :: enum u8 {
     PUNCTUATION;
     STRING;
     ERROR;
+
+    NUM_COLORS;
 }
 
 set_unknown_character :: (font: *Dynamic_Font, utf32: u32) -> bool {

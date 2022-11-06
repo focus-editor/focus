@@ -287,6 +287,7 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
         // it will reach this code not dirty but this code still needs to execute
         buffer.was_dirty_during_frame = false;
 
+        buffer.needs_coloring = true;
         buffer.modified = true;
         buffer.last_edit_time = frame_time;
 
@@ -843,7 +844,8 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64 {
         buffer.lang = .Worklog;
     }
 
-    sync_internal_data(buffer);
+    recalculate_lines(buffer);
+    recalculate_colors(buffer);
 
     return buffer_id;
 }

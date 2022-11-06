@@ -83,7 +83,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     footer_rect, rect := cut_bottom(main_area, footer_height);
 
     using editor := *open_editors[editor_id];
-    buffer := open_buffers[buffer_id];
+    buffer := *open_buffers[buffer_id];
 
     editor_is_active := editor_id == editor_active && Input.input_application_has_focus;
 
@@ -306,12 +306,6 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         pen := text_origin;
         pen.y += (line_height - char_size) / 2 - visible_lines_start * line_height;
         visible_lines := array_view(buffer.lines, visible_lines_start, visible_lines_end - visible_lines_start);
-        // for line : visible_lines {
-        //     line_len  := clamp(line.end - line.start, 0, 1000);  // TODO: count max line length in chars
-        //     line_text := to_string(array_view(buffer.bytes, line.start, line_len));  // bug with multi-byte chars
-        //     Simp.draw_text(font, xx pen.x, xx pen.y, line_text, color = Colors.CODE_PUNCTUATION);
-        //     pen.y -= line_height;
-        // }
 
         visible_code_lines: [..] Simp.Code_Line;
         visible_code_lines.allocator = temp;
@@ -323,12 +317,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         // TODO: draw visible lines of text in a single draw call, with color information.
         // Also, don't submit anything that's outside viewport to the GPU
-        colors := NewArray(buffer.bytes.count, Simp.Code_Color);
-        defer free(colors.data);
-        memset(colors.data, xx Simp.Code_Color.COMMENT, 50);
-        memset(colors.data + 50, xx Simp.Code_Color.FUNCTION, 50);
-        memset(colors.data + 100, xx Simp.Code_Color.STRING, 50);
-        Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, visible_code_lines, whole_code = to_string(buffer.bytes), colors);
+        if buffer.needs_coloring then recalculate_colors(buffer);
+        Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, visible_code_lines, buffer.bytes, buffer.colors, CODE_COLOR_MAP);
     }
 
     // Draw search bar

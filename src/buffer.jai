@@ -2,7 +2,7 @@ refresh_open_buffers :: () {
     for *editor : open_editors {
         buffer := *open_buffers[editor.buffer_id];
         if !buffer.dirty continue;
-        sync_internal_data(buffer);
+        recalculate_lines(buffer);
         for *cursor : editor.cursors {
             put_cursor_in_valid_spot(cursor, buffer);
         }
@@ -324,12 +324,22 @@ recalculate_lines :: (buffer: *Buffer) {
     array_add(*buffer.lines, line);
 }
 
-sync_internal_data :: (buffer: *Buffer) {
-    recalculate_lines(buffer);
+recalculate_colors :: (buffer: *Buffer) {
+    assert(!buffer.dirty);
+    array_resize(*buffer.colors, buffer.bytes.count, false);
 
-    // Highlight code
-    {
-        // @TODO
+    using Simp.Code_Color;
+    color := DEFAULT;
+    left  := 0;
+    right := left;
+    while right < buffer.bytes.count {
+        byte := buffer.bytes[right];
+        if byte == #char "\n" || byte == #char " " {
+            memset(buffer.colors.data + left, xx color, right - left);
+            color = cast(Simp.Code_Color)((cast(u8) color + 1) % cast(u8) ERROR);
+            left = right;
+        }
+        right += 1;
     }
 }
 
@@ -582,8 +592,9 @@ Buffer :: struct {
     last_modtime: Apollo_Time;  // for detecting whether a file has changed
     last_size: s64;             // --
 
-    bytes: [..] u8;
-    lines: [..] Line;
+    bytes:  [..] u8;
+    lines:  [..] Line;
+    colors: [..] Simp.Code_Color;  // u8 - we color each byte (even for multi-byte chars)
 
     undos: [..] Edit_Group;
     redos: [..] Edit_Group;
@@ -595,6 +606,7 @@ Buffer :: struct {
     modified               := false;
     modified_on_disk       := false;
     deleted                := false;
+    needs_coloring         := false;
 
     last_edit_time: Time;  // for creating new edit groups
 

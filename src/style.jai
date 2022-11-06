@@ -30,6 +30,15 @@ Colors :: struct {
     SPLITTER                :: Color.{ r = 0.131, g = 0.202, b = 0.25 };
     SPLITTER_HOVER          :: Color.{ r = 0.110, g = 0.267, b = 0.29 };
 
+    SHADOW_DARK         :: Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0.5 };
+    SHADOW_TRANSPARENT  :: Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0 };  // for interpolation
+
+    UI_DEFAULT          :: Color.{ r = 0.75, g = 0.79, b = 0.86, a = 1.0 };
+    UI_DIM              :: Color.{ r = 0.533, g = 0.569, b = 0.616, a = 1.0 };
+    UI_WARNING          :: Color.{ r = 0.85, g = 0.68, b = 0.33, a = 1.0 };
+    UI_ERROR            :: Color.{ r = 1.00, g = 0.00, b = 0.00, a = 1.0 };
+    UI_TEXT_INPUT_LABEL :: Color.{ r = 0.233, g = 0.269, b = 0.316, a = 1.0 };
+
     CODE_DEFAULT        :: Color.{ r = 0.81, g = 0.77, b = 0.66, a = 1.0 };
     CODE_COMMENT        :: Color.{ r = 0.533, g = 0.569, b = 0.616, a = 1.0 };
     CODE_TYPE           :: Color.{ r = 0.51, g = 0.67, b = 0.64, a = 1.0 };
@@ -40,16 +49,9 @@ Colors :: struct {
     CODE_HIGHLIGHT      :: Color.{ r = 0.85, g = 0.61, b = 0.46, a = 1.0 };
     CODE_ERROR          :: Color.{ r = 1.00, g = 0.00, b = 0.00, a = 1.0 };
     CODE_KEYWORD        :: Color.{ r = 0.902, g = 0.493, b = 0.457, a = 1.0 };
-
-    SHADOW_DARK         :: Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0.5 };
-    SHADOW_TRANSPARENT  :: Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0 };  // for interpolation
-
-    UI_DEFAULT          :: Color.{ r = 0.75, g = 0.79, b = 0.86, a = 1.0 };
-    UI_DIM              :: Color.{ r = 0.533, g = 0.569, b = 0.616, a = 1.0 };
-    UI_WARNING          :: Color.{ r = 0.85, g = 0.68, b = 0.33, a = 1.0 };
-    UI_ERROR            :: Color.{ r = 1.00, g = 0.00, b = 0.00, a = 1.0 };
-    UI_TEXT_INPUT_LABEL :: Color.{ r = 0.233, g = 0.269, b = 0.316, a = 1.0 };
 };
+
+CODE_COLOR_MAP :: #run build_color_map();
 
 as_3_floats :: (color: Color) -> [3] float {
     result : [3] float = ---;
@@ -61,4 +63,25 @@ as_3_floats :: (color: Color) -> [3] float {
 
 is_none :: (using color: Color) -> bool {
     return r < 0 || g < 0 || b < 0 || a < 0;
+}
+
+#scope_file
+
+build_color_map :: () -> [] Vector4 {
+    using Simp.Code_Color;
+
+    result: [NUM_COLORS] Vector4;
+
+    result[DEFAULT]         = Colors.CODE_DEFAULT;
+    result[COMMENT]         = Colors.CODE_COMMENT;
+    result[TYPE]            = Colors.CODE_TYPE;
+    result[FUNCTION]        = Colors.CODE_FUNCTION;
+    result[PUNCTUATION]     = Colors.CODE_PUNCTUATION;
+    result[STRING]          = Colors.CODE_STRING;
+    result[VALUE]           = Colors.CODE_VALUE;
+    result[VALUE_KEYWORD]   = Colors.CODE_VALUE;
+    result[ERROR]           = Colors.CODE_ERROR;
+    result[KEYWORD]         = Colors.CODE_KEYWORD;
+
+    return result;
 }

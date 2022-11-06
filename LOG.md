@@ -6,7 +6,9 @@
     - Grep in the project
 
 - Syntax highlighting
-    - Decide how to draw colored text
+    + Decide how to draw colored text
+    + Draw each word in its own color
+    - Don't draw the chars off the screen
 
 - Implement case-insensitive search in buffer
 - Bug: crash when drawing search bar with in small window
