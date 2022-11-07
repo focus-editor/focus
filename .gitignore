@@ -2,3 +2,5 @@
 *.pdb
 *.exe
 *.rdbg
+
+focus-trace.json

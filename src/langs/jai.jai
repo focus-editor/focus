@@ -1,4 +1,6 @@
 highlight_jai_syntax :: (bytes: [] u8, colors: [] Simp.Code_Color) {
+    PROFILE_FUNCTION();
+
     tokenizer: Tokenizer = ---;
     tokenizer.source = to_string(bytes);
     tokenizer.buf = to_string(bytes);
@@ -27,11 +29,11 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     result.start = cast(s32) (str.data - source.data);
     result.len = xx str.count;
 
+    // TODO: put these into a compile time hashmap
     for KEYWORDS            if str == it { result.type = .keyword; return result; }
-    for MODIFIER_KEYWORDS   if str == it { result.type = .keyword; return result; }
-    for COMPILER_DIRECTIVES if tprint("#%", str) == it { result.type = .keyword; return result; }
     for TYPE_KEYWORDS       if str == it { result.type = .type_keyword; return result; }
-    for VALUE_KEYWORDS      if str == it { result.type = .value_keyword; return result; }
+    // for VALUE_KEYWORDS      if str == it { result.type = .value_keyword; return result; }
+    // for COMPILER_DIRECTIVES if tprint("#%", str) == it { result.type = .keyword; return result; }
 
     result.type = .punctuation;
     return result;
@@ -55,11 +57,8 @@ Token :: struct {
     // Additional info to distinguish between keywords/punctuation
     union {
         keyword:            Keyword;
-        type_keyword:       Type_Keyword;
-        value_keyword:      Value_Keyword;
-        modifier_keyword:   Modifier_Keyword;
-        compiler_directive: Compiler_Directive;
         punctuation:        Punctuation;
+        compiler_directive: Compiler_Directive;
     }
 
     Type :: enum u16 {
@@ -110,15 +109,6 @@ KEYWORDS :: string.[
     "using", "while", "xx", "operator",
 ];
 
-MODIFIER_KEYWORDS :: string.[
-    "isa", "distinct",  // type
-    "only", "except", "map",  // using
-    "no_check", "truncate",  // cast
-    "no_dll",  // foreign_library
-    "file", "dir", "string",  // import
-    "scope",  // insert
-];
-
 COMPILER_DIRECTIVES :: string.[
     "add_context", "align", "as", "asm", "assert", "bake_arguments", "bake_constants", "bytes", "c_call", "caller_code",
     "caller_location", "char", "code", "compiler", "complete", "cpp_method", "cpp_return_type_is_non_pod", "deprecated",
@@ -139,35 +129,37 @@ VALUE_KEYWORDS :: string.[
     "context", "it", "it_index", "null", "true", "false",
 ];
 
-#insert #run generate_keyword_definitions();
+// TODO: implement
+MODIFIERS :: string.[
+    "isa", "distinct",  // type
+    "only", "except", "map",  // using
+    "no_check", "truncate",  // cast
+    "no_dll",  // foreign_library
+    "file", "dir", "string",  // import
+    "scope",  // insert
+];
 
-generate_keyword_definitions :: () -> string {
+#insert -> string {
     b: String_Builder;
     init_string_builder(*b);
 
-    print_to_builder(*b, "Punctuation :: enum u16 {\n");
-    for PUNCTUATION print_to_builder(*b, "    %;\n", it);
-    print_to_builder(*b, "}\n");
+    define_enum :: (b: *String_Builder, enum_name: string, prefix: string, value_lists: [][] string) {
+        print_to_builder(b, "% :: enum u16 {\n", enum_name);
+        for values : value_lists {
+            for v : values print_to_builder(b, "    %0%;\n", prefix, v);
+        }
+        print_to_builder(b, "}\n");
+    }
 
-    print_to_builder(*b, "Keyword :: enum u16 {\n");
-    for KEYWORDS print_to_builder(*b, "    kw_%;\n", it);
-    print_to_builder(*b, "}\n");
-
-    print_to_builder(*b, "Modifier_Keyword :: enum u16 {\n");
-    for MODIFIER_KEYWORDS print_to_builder(*b, "    mod_%;\n", it);
-    print_to_builder(*b, "}\n");
-
-    print_to_builder(*b, "Compiler_Directive :: enum u16 {\n");
-    for COMPILER_DIRECTIVES print_to_builder(*b, "    compiler_%;\n", it);
-    print_to_builder(*b, "}\n");
-
-    print_to_builder(*b, "Type_Keyword :: enum u16 {\n");
-    for TYPE_KEYWORDS print_to_builder(*b, "    kw_%;\n", it);
-    print_to_builder(*b, "}\n");
-
-    print_to_builder(*b, "Value_Keyword :: enum u16 {\n");
-    for VALUE_KEYWORDS print_to_builder(*b, "    kw_%;\n", it);
-    print_to_builder(*b, "}\n");
+    define_enum(*b, "Punctuation",        "",          .[PUNCTUATION]);
+    define_enum(*b, "Keyword",            "kw_",       .[KEYWORDS, TYPE_KEYWORDS, VALUE_KEYWORDS]);
+    define_enum(*b, "Compiler_Directive", "compiler_", .[COMPILER_DIRECTIVES]);
 
     return builder_to_string(*b);
 }
+
+#run {
+
+}
+
+#import "Hash_Table";

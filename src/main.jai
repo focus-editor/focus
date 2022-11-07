@@ -2,6 +2,9 @@ main :: () {
     #assert OS == .WINDOWS "Currently only supporting Windows";
     platform_setup();
 
+    profiler_begin_session("focus", "focus-trace.json");
+    defer profiler_end_session();
+
     window_x, window_y := platform_get_biggest_monitor_pos();
     window = create_window(window_width, window_height, "Focus", window_x, window_y, background_color_rgb = as_3_floats(Colors.BACKGROUND));
     // platform_maximize_window(window);
@@ -406,7 +409,7 @@ Project_Dir :: struct {
 #load "widgets/open_file_dialog.jai";
 #load "langs/jai.jai";
 
-// #import "Basic"()(MEMORY_DEBUGGER=true);
+// #import "Basic"()(MEMORY_DEBUGGER = true);
 #import "Basic";
 #import "Math";
 #import "Sloppy_Math";
@@ -419,6 +422,7 @@ Project_Dir :: struct {
 #import "Sort";
 #import "Unicode";
 #import "Window_Creation";
+#import "Profiler"(ENABLE_PROFILER = true);
 
 Simp :: #import "Simp_Ext";
 Input :: #import "Input";

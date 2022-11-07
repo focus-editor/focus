@@ -326,6 +326,7 @@ recalculate_lines :: (buffer: *Buffer) {
 
 recalculate_colors :: (buffer: *Buffer) {
     assert(!buffer.dirty);
+    buffer.needs_coloring = false;
     array_resize(*buffer.colors, buffer.bytes.count);  // this will reset colors to 0
 
     if buffer.lang == {
