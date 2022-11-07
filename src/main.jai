@@ -404,6 +404,7 @@ Project_Dir :: struct {
 #load "utils.jai";
 #load "widgets/text_input.jai";
 #load "widgets/open_file_dialog.jai";
+#load "langs/jai.jai";
 
 // #import "Basic"()(MEMORY_DEBUGGER=true);
 #import "Basic";

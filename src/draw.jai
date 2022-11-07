@@ -593,12 +593,12 @@ draw_open_file_dialog :: () {
 
             // Draw file icon
             icon_char := convert_utf32_to_utf8(xx entry.icon);
-            Simp.draw_text(font_icons, xx pen.x, xx pen.y, to_string(*icon_char), color = Colors.CODE_PUNCTUATION);
+            Simp.draw_text(font_icons, xx pen.x, xx pen.y, to_string(*icon_char), color = Colors.UI_DEFAULT);
 
             // Draw name
             pen.x += xx font_icons.em_width + padding;
             width += xx Simp.prepare_text(font_ui, entry.name);
-            Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = Colors.CODE_PUNCTUATION);
+            Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = Colors.UI_DEFAULT);
 
             // // Draw separator
             // pen.x += width + padding;

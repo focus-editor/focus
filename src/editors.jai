@@ -695,7 +695,7 @@ close_search_bar :: inline (editor: *Editor) {
 search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := false) {
     reset_search_results(*search_bar);
 
-    print("Searching | ");
+    // print("Searching | ");
 
     using search_bar;
     search_str := to_string(input.text);

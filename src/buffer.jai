@@ -326,21 +326,27 @@ recalculate_lines :: (buffer: *Buffer) {
 
 recalculate_colors :: (buffer: *Buffer) {
     assert(!buffer.dirty);
-    array_resize(*buffer.colors, buffer.bytes.count, false);
+    array_resize(*buffer.colors, buffer.bytes.count);  // this will reset colors to 0
 
-    using Simp.Code_Color;
-    color := DEFAULT;
-    left  := 0;
-    right := left;
-    while right < buffer.bytes.count {
-        byte := buffer.bytes[right];
-        if byte == #char "\n" || byte == #char " " {
-            memset(buffer.colors.data + left, xx color, right - left);
-            color = cast(Simp.Code_Color)((cast(u8) color + 1) % cast(u8) ERROR);
-            left = right;
-        }
-        right += 1;
+    if buffer.lang == {
+        case .Jai;      highlight_jai_syntax(buffer.bytes, buffer.colors);
+        case .Worklog;  // TODO
     }
+
+    // // Test colorisation - each word in different color
+    // using Simp.Code_Color;
+    // color := DEFAULT;
+    // left  := 0;
+    // right := left;
+    // while right < buffer.bytes.count {
+    //     byte := buffer.bytes[right];
+    //     if byte == #char "\n" || byte == #char " " {
+    //         memset(buffer.colors.data + left, xx color, right - left);
+    //         color = cast(Simp.Code_Color)((cast(u8) color + 1) % cast(u8) ERROR);
+    //         left = right;
+    //     }
+    //     right += 1;
+    // }
 }
 
 save_buffer_to_disk :: (using buffer: *Buffer) {
