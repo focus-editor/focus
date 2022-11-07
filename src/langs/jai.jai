@@ -29,11 +29,11 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     result.start = cast(s32) (str.data - source.data);
     result.len = xx str.count;
 
-    // TODO: put these into a compile time hashmap
-    for KEYWORDS            if str == it { result.type = .keyword; return result; }
-    for TYPE_KEYWORDS       if str == it { result.type = .type_keyword; return result; }
-    // for VALUE_KEYWORDS      if str == it { result.type = .value_keyword; return result; }
-    // for COMPILER_DIRECTIVES if tprint("#%", str) == it { result.type = .keyword; return result; }
+    type, ok := table_find(*KEYWORD_MAP, str);
+    if ok {
+        result.type = type;
+        return result;
+    }
 
     result.type = .punctuation;
     return result;
@@ -109,6 +109,15 @@ KEYWORDS :: string.[
     "using", "while", "xx", "operator",
 ];
 
+TYPE_KEYWORDS :: string.[
+    "__reg", "bool", "float", "float32", "float64", "int", "reg", "s16", "s32", "s64", "s8", "string",
+    "u16", "u32", "u64", "u8", "void",
+];
+
+VALUE_KEYWORDS :: string.[
+    "context", "it", "it_index", "null", "true", "false",
+];
+
 COMPILER_DIRECTIVES :: string.[
     "add_context", "align", "as", "asm", "assert", "bake_arguments", "bake_constants", "bytes", "c_call", "caller_code",
     "caller_location", "char", "code", "compiler", "complete", "cpp_method", "cpp_return_type_is_non_pod", "deprecated",
@@ -118,15 +127,6 @@ COMPILER_DIRECTIVES :: string.[
     "place", "placeholder", "poke_name", "procedure_of_call", "program_export", "run", "runtime_support",
     "scope_export", "scope_file", "scope_module", "specified", "string", "symmetric", "this", "through", "type",
     "type_info_no_size_complaint", "type_info_none", "type_info_procedures_are_void_pointers",
-];
-
-TYPE_KEYWORDS :: string.[
-    "__reg", "bool", "float", "float32", "float64", "int", "reg", "s16", "s32", "s64", "s8", "string",
-    "u16", "u32", "u64", "u8", "void",
-];
-
-VALUE_KEYWORDS :: string.[
-    "context", "it", "it_index", "null", "true", "false",
 ];
 
 // TODO: implement
@@ -158,8 +158,19 @@ MODIFIERS :: string.[
     return builder_to_string(*b);
 }
 
-#run {
+KEYWORD_MAP :: #run build_keyword_map();
 
+build_keyword_map :: () -> Table(string, Token.Type) {
+    table: Table(string, Token.Type);
+    init(*table, KEYWORDS.count + TYPE_KEYWORDS.count + VALUE_KEYWORDS.count + COMPILER_DIRECTIVES.count);
+
+    for KEYWORDS        table_add(*table, it, .keyword);
+    for TYPE_KEYWORDS   table_add(*table, it, .type_keyword);
+    for VALUE_KEYWORDS  table_add(*table, it, .value_keyword);
+    for COMPILER_DIRECTIVES table_add(*table, it, .compiler_directive);
+
+    return table;
 }
+
 
 #import "Hash_Table";
