@@ -323,6 +323,24 @@ parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
             token.type = .comment;
             t += 1;
             while t < max_t && << t != #char "\n" t += 1;
+        case #char "*";
+            token.type = .multiline_comment;
+            t += 1;
+            num_open_comments := 0;
+            while t + 1 < max_t {
+                if << t == #char "*" && << (t + 1) == #char "/" {
+                    if num_open_comments == 0 {
+                        t += 2;
+                        break;
+                    } else {
+                        num_open_comments -= 1;
+                    }
+                } else if << t == #char "/" && << (t + 1) == #char "*" {
+                    num_open_comments += 1;
+                    t += 1;
+                }
+                t += 1;
+            }
     }
 }
 
