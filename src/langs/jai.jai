@@ -99,7 +99,15 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     identifier_str := to_string(buf.data + token.start, t - start_t);
     if identifier_str.count > MAX_KEYWORD_LENGTH return;
     type, ok := table_find(*KEYWORD_MAP, identifier_str);
-    if ok then token.type = type;
+    if ok { token.type = type; return; }
+
+    // Check for here-string
+    if last_tokens[1].type == .compiler_directive && last_tokens[1].compiler_directive == .directive_string {
+        token.type = .here_string;
+        end := find_index_from_left(buf, identifier_str, start_index = t - buf.data);
+        if end < 0 { t = max_t; return; }
+        t = buf.data + end + identifier_str.count;
+    }
 }
 
 parse_number :: (using tokenizer: *Tokenizer, token: *Token) {

@@ -2,14 +2,10 @@
 
 - Most important stuff (so I can start using the editor):
     + Search within buffer
-    - Basic token highlighting
+    + Basic token highlighting
     - Grep in the project
     - Save modified buffers to temporary files and recover after crashes
 
-- Syntax highlighting
-    + Write a tokeniser
-    + Analyse tokens and highlight functions
-    - Parse here-strings
 
 - Implement case-insensitive search in buffer
 - Bug: crash when drawing search bar with in small window
@@ -77,6 +73,10 @@
 - Fix the font unknown character glyph (try copying something from font-awesome)
 
 # DONE
++ Syntax highlighting
+    + Write a tokeniser
+    + Analyse tokens and highlight functions
+    + Parse here-strings
 + Text colorising
     + Decide how to draw colored text
     + Draw each word in its own color
