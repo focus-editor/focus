@@ -86,8 +86,8 @@ main :: () {
     }
 
     // editors_open_file("W:/focus-zig/src/Editors.zig");
-    editors_open_file("src/editors.jai");
-    editors_open_file("src/main.jai", true);
+    editors_open_file("src/style.jai");
+    // editors_open_file("src/editors.jai", true);
 
     should_quit := false;
 

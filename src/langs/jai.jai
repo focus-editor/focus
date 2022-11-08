@@ -2,9 +2,9 @@ highlight_jai_syntax :: (bytes: [] u8, colors: [] Simp.Code_Color) {
     PROFILE_FUNCTION();
 
     tokenizer: Tokenizer = ---;
-    tokenizer.source = to_string(bytes);
-    tokenizer.buf = to_string(bytes);
-    tokenizer.state = .default;
+    tokenizer.buf   = to_string(bytes);
+    tokenizer.max_t = bytes.data + bytes.count;
+    tokenizer.t     = bytes.data;
 
     color: Simp.Code_Color;
 
@@ -20,34 +20,88 @@ highlight_jai_syntax :: (bytes: [] u8, colors: [] Simp.Code_Color) {
 #scope_file
 
 get_next_token :: (using tokenizer: *Tokenizer) -> Token {
-    EOF :: Token.{ start = 0, len = 0, type = .eof };
+    t = eat_white_space(t, max_t);
+    start_t = t;
 
-    str, success := parse_token(*buf, delimiters = ";=()-+*/");
-    if !success return EOF;
+    token: Token;
+    token.start = cast(s32) (start_t - buf.data);
+    token.type  = .eof;
+    if t >= max_t return token;
 
-    result: Token;
-    result.start = cast(s32) (str.data - source.data);
-    result.len = xx str.count;
+    // Assume ASCII, unless we're in the middle of a string.
+    // UTF-8 characters elsewhere are a syntax error.
+    char := << t;
 
-    type, ok := table_find(*KEYWORD_MAP, str);
-    if ok {
-        result.type = type;
-        return result;
+    if is_alpha(char) {
+        parse_identifier(tokenizer, *token);
+    } else if char == {
+        case #char ":";  parse_colon             (tokenizer, *token);
+        case #char "#";  parse_compiler_directive(tokenizer, *token);
+        case #char "\""; parse_string_literal    (tokenizer, *token);
+        case;
+            token.type = .invalid; t += 1;
     }
 
-    result.type = .punctuation;
-    return result;
+    token.len = cast(s32) (t - start_t);
+    return token;
+}
+
+parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .identifier;
+
+    t += 1;
+    while t < max_t && is_alnum(<< t) t += 1;
+    if t >= max_t return;
+
+
+    // Maybe it's a keyword
+    identifier_str := to_string(buf.data + token.start, t - start_t);
+    if identifier_str.count > MAX_KEYWORD_LENGTH return;
+    type, ok := table_find(*KEYWORD_MAP, identifier_str);
+    if ok then token.type = type;
+}
+
+parse_compiler_directive :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .identifier;
+
+    t += 1;
+    while t < max_t && is_alnum(<< t) t += 1;
+    if t >= max_t return;
+
+    // Check if it's one of the existing directives
+    identifier_str := to_string(buf.data + token.start + 1, t - start_t - 1);
+    if identifier_str.count > MAX_DIRECTIVE_LENGTH return;
+    directive, ok := table_find(*COMPILER_DIRECTIVES_MAP, identifier_str);
+    if ok {
+        token.type = .compiler_directive;
+        token.compiler_directive = directive;
+    }
+}
+
+parse_colon :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .punctuation;
+    token.punctuation = .colon;
+
+    t += 1;
+    if t >= max_t return;
+
+    if << t == {
+        case #char ":";  token.punctuation = .double_colon;  t += 1;
+        case #char "=";  token.punctuation = .colon_equal;   t += 1;
+    }
+}
+
+parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
+    t += 1;
+    token.type = .string_literal;
+    // !!!!!!!!!!!!!!!!
 }
 
 Tokenizer :: struct {
-    source: string;  // original string
-    buf: string;     // for cursor
-    state: State;
-
-    State :: enum {
-        default;
-
-    }
+    buf: string;
+    max_t:   *u8;
+    start_t: *u8;  // cursor when starting parsing new token
+    t:       *u8;  // cursor
 }
 
 Token :: struct {
@@ -76,11 +130,13 @@ Token :: struct {
         type_keyword;
         value_keyword;
         compiler_directive;
+        invalid;
     }
 }
 
+// Must match the order of the types in the enum
 COLOR_MAP :: Simp.Code_Color.[
-    .DEFAULT,       // eof - obviously not used
+    .COMMENT,       // eof - obviously not used
     .DEFAULT,       // identifier
     .STRING,        // string_literal
     .STRING,        // here_string
@@ -93,14 +149,15 @@ COLOR_MAP :: Simp.Code_Color.[
     .TYPE,          // type_keyword
     .VALUE_KEYWORD, // value_keyword
     .KEYWORD,       // compiler_directive
+    .ERROR,         // invalid
 ];
 
 PUNCTUATION :: string.[
     "arrow", "bang", "pipe", "pipe_pipe", "pipe_equal", "equal", "equal_equal", "bang_equal", "semicolon", "percent",
     "percent_equal", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", "period", "ellipsis2",
     "less_than", "double_less_than", "less_than_equals", "greater_than", "greater_than_equals", "plus", "plus_equal",
-    "minus", "minus_equal", "asterisk", "asterisk_equal", "colon", "slash", "slash_equal", "comma", "ampersand",
-    "ampersand_equal", "tilde",
+    "minus", "minus_equal", "asterisk", "asterisk_equal", "colon", "colon_equal", "double_colon", "slash",
+    "slash_equal", "comma", "ampersand", "ampersand_equal", "tilde",
 ];
 
 KEYWORDS :: string.[
@@ -151,25 +208,70 @@ MODIFIERS :: string.[
         print_to_builder(b, "}\n");
     }
 
-    define_enum(*b, "Punctuation",        "",          .[PUNCTUATION]);
-    define_enum(*b, "Keyword",            "kw_",       .[KEYWORDS, TYPE_KEYWORDS, VALUE_KEYWORDS]);
-    define_enum(*b, "Compiler_Directive", "compiler_", .[COMPILER_DIRECTIVES]);
+    define_enum(*b, "Punctuation",        "",           .[PUNCTUATION]);
+    define_enum(*b, "Keyword",            "kw_",        .[KEYWORDS, TYPE_KEYWORDS, VALUE_KEYWORDS]);
+    define_enum(*b, "Compiler_Directive", "directive_", .[COMPILER_DIRECTIVES]);
 
     return builder_to_string(*b);
 }
 
-KEYWORD_MAP :: #run build_keyword_map();
+KEYWORD_MAP             :: #run build_keyword_map();
+COMPILER_DIRECTIVES_MAP :: #run build_directives_map();
+
+MAX_KEYWORD_LENGTH      :: #run get_max_keyword_length();
+MAX_DIRECTIVE_LENGTH    :: #run get_max_directive_length();
 
 build_keyword_map :: () -> Table(string, Token.Type) {
     table: Table(string, Token.Type);
-    init(*table, KEYWORDS.count + TYPE_KEYWORDS.count + VALUE_KEYWORDS.count + COMPILER_DIRECTIVES.count);
+    size := 2 * (KEYWORDS.count + TYPE_KEYWORDS.count + VALUE_KEYWORDS.count);
+    init(*table, size);
 
     for KEYWORDS        table_add(*table, it, .keyword);
     for TYPE_KEYWORDS   table_add(*table, it, .type_keyword);
     for VALUE_KEYWORDS  table_add(*table, it, .value_keyword);
-    for COMPILER_DIRECTIVES table_add(*table, it, .compiler_directive);
 
     return table;
+}
+
+build_directives_map :: () -> Table(string, Compiler_Directive) {
+    table: Table(string, Compiler_Directive);
+    size := 2 * COMPILER_DIRECTIVES.count;
+    init(*table, size);
+
+    #insert -> string {
+        b: String_Builder;
+        init_string_builder(*b);
+        for COMPILER_DIRECTIVES {
+            print_to_builder(*b, "table_add(*table, \"%1\", .directive_%1);\n", it);
+        }
+        return builder_to_string(*b);
+    }
+
+    return table;
+}
+
+get_max_keyword_length :: () -> s32 {
+    result: s64;
+    for KEYWORDS       { if it.count > result then result = it.count; }
+    for TYPE_KEYWORDS  { if it.count > result then result = it.count; }
+    for VALUE_KEYWORDS { if it.count > result then result = it.count; }
+    return xx result;
+}
+
+get_max_directive_length :: () -> s32 {
+    result: s64;
+    for COMPILER_DIRECTIVES { if it.count > result then result = it.count; }
+    return xx result;
+}
+
+eat_white_space :: inline (start: *u8, max_t: *u8) -> *u8 {
+    t := start;
+    while t < max_t {
+        c := << t;
+        if c != #char " " && c != #char "\t" && c != #char "\n" break;
+        t += 1;
+    }
+    return t;
 }
 
 
