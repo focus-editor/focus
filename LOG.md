@@ -7,7 +7,9 @@
     - Save modified buffers to temporary files and recover after crashes
 
 - Syntax highlighting
-    - Write a tokeniser
+    + Write a tokeniser
+    + Analyse tokens and highlight functions
+    - Parse here-strings
 
 - Implement case-insensitive search in buffer
 - Bug: crash when drawing search bar with in small window

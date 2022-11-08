@@ -330,7 +330,7 @@ recalculate_colors :: (buffer: *Buffer) {
     array_resize(*buffer.colors, buffer.bytes.count);  // this will reset colors to 0
 
     if buffer.lang == {
-        case .Jai;      highlight_jai_syntax(buffer.bytes, buffer.colors);
+        case .Jai;      highlight_jai_syntax(buffer);
         case .Worklog;  // TODO
     }
 

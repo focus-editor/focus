@@ -1,4 +1,4 @@
-highlight_jai_syntax :: (bytes: [] u8, colors: [] Simp.Code_Color) {
+highlight_jai_syntax :: (using buffer: *Buffer) {
     PROFILE_FUNCTION();
 
     tokenizer: Tokenizer = ---;
@@ -11,6 +11,22 @@ highlight_jai_syntax :: (bytes: [] u8, colors: [] Simp.Code_Color) {
     while true {
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
+
+        using tokenizer;
+        if token.type == .punctuation && token.punctuation == .l_paren {
+            // Maybe retroactively highlight a function
+            prev        := last_tokens[1];
+            before_prev := last_tokens[0];
+            if prev.type == .identifier {
+                memset(colors.data + prev.start, xx Simp.Code_Color.FUNCTION, prev.len);
+            } else if prev.type == .punctuation && prev.punctuation == .double_colon && before_prev.type == .identifier {
+                memset(colors.data + before_prev.start, xx Simp.Code_Color.FUNCTION, before_prev.len);
+            }
+        }
+
+        // Remember last 2 tokens
+        last_tokens[0] = last_tokens[1];
+        last_tokens[1] = token;
 
         color := COLOR_MAP[token.type];
         memset(colors.data + token.start, xx color, token.len);
@@ -359,6 +375,8 @@ Tokenizer :: struct {
     max_t:   *u8;
     start_t: *u8;  // cursor when starting parsing new token
     t:       *u8;  // cursor
+
+    last_tokens: [2] Token;  // to retroactively highlight functions
 }
 
 Token :: struct {
