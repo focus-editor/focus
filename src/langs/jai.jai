@@ -35,6 +35,8 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
 
     if is_alpha(char) {
         parse_identifier(tokenizer, *token);
+    } else if is_digit(char) {
+        parse_number(tokenizer, *token);
     } else if char == {
         case #char ":";  parse_colon             (tokenizer, *token);
         case #char "=";  parse_equal             (tokenizer, *token);
@@ -73,6 +75,38 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     if identifier_str.count > MAX_KEYWORD_LENGTH return;
     type, ok := table_find(*KEYWORD_MAP, identifier_str);
     if ok then token.type = type;
+}
+
+parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .number;
+
+    t += 1;
+    if t >= max_t return;
+
+    if is_digit(<< t) || << t == #char "_" {
+        // Decimal
+        t += 1;
+        seen_decimal_point := false;
+        while t < max_t && (is_digit(<< t) || << t == #char "_" || << t == #char ".") {
+            if << t == #char "." {
+                if seen_decimal_point break;
+                seen_decimal_point = true;
+            }
+            t += 1;
+        }
+    } else if << t == #char "x" || << t == #char "h" {
+        // Hex
+        t += 1;
+        while t < max_t && (is_hex(<< t) || << t == #char "_") t += 1;
+
+        is_hex :: inline (c: u8) -> bool {
+            return is_digit(c) || (c >= #char "a" && c <= #char "f") || (c >= #char "A" && c <= #char "F");
+        }
+    } else if << t == #char "b" {
+        // Binary
+        t += 1;
+        while t < max_t && (<< t == #char "1" || << t == #char "0" || << t == #char "_") t += 1;
+    }
 }
 
 parse_compiler_directive :: (using tokenizer: *Tokenizer, token: *Token) {
@@ -139,6 +173,8 @@ parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
             } else {
                 token.punctuation = .unknown;  // -- is not a valid token
             }
+        case;
+            if is_digit(<< t) parse_number(tokenizer, token);
     }
 }
 
@@ -335,8 +371,8 @@ MAX_DIRECTIVE_LENGTH :: #run -> s32 {
 eat_white_space :: inline (start: *u8, max_t: *u8) -> *u8 {
     t := start;
     while t < max_t {
-        c := << t;
-        if c != #char " " && c != #char "\t" && c != #char "\n" break;
+        is_whitespace := inline is_space(<< t);
+        if !is_whitespace break;
         t += 1;
     }
     return t;

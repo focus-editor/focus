@@ -51,23 +51,7 @@ Colors :: struct {
     CODE_KEYWORD        :: Color.{ r = 0.902, g = 0.493, b = 0.457, a = 1.0 };
 };
 
-CODE_COLOR_MAP :: #run build_color_map();
-
-as_3_floats :: (color: Color) -> [3] float {
-    result : [3] float = ---;
-    result[0] = color.r;
-    result[1] = color.g;
-    result[2] = color.b;
-    return result;
-}
-
-is_none :: (using color: Color) -> bool {
-    return r < 0 || g < 0 || b < 0 || a < 0;
-}
-
-#scope_file
-
-build_color_map :: () -> [] Vector4 {
+CODE_COLOR_MAP :: #run -> [] Vector4 {
     using Simp.Code_Color;
 
     result: [NUM_COLORS] Vector4;
@@ -84,4 +68,16 @@ build_color_map :: () -> [] Vector4 {
     result[KEYWORD]         = Colors.CODE_KEYWORD;
 
     return result;
+}
+
+as_3_floats :: (color: Color) -> [3] float {
+    result : [3] float = ---;
+    result[0] = color.r;
+    result[1] = color.g;
+    result[2] = color.b;
+    return result;
+}
+
+is_none :: (using color: Color) -> bool {
+    return r < 0 || g < 0 || b < 0 || a < 0;
 }
