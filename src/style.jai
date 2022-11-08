@@ -44,7 +44,7 @@ Colors :: struct {
     CODE_TYPE           :: Color.{ r = 0.51, g = 0.67, b = 0.64, a = 1.0 };
     CODE_FUNCTION       :: Color.{ r = 0.67, g = 0.74, b = 0.49, a = 1.0 };
     CODE_PUNCTUATION    :: Color.{ r = 0.81, g = 0.77, b = 0.66, a = 1.0 };
-    CODE_STRING         :: Color.{ r = 0.85, g = 0.68, b = 0.33, a = 1.0 };
+    CODE_STRING         :: Color.{ r = 0.85, g = 0.77, b = 0.55, a = 1.0 };
     CODE_VALUE          :: Color.{ r = 0.84, g = 0.60, b = 0.71, a = 1.0 };
     CODE_HIGHLIGHT      :: Color.{ r = 0.85, g = 0.61, b = 0.46, a = 1.0 };
     CODE_ERROR          :: Color.{ r = 1.00, g = 0.00, b = 0.00, a = 1.0 };

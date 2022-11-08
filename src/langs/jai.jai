@@ -41,9 +41,17 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char ":";  parse_colon             (tokenizer, *token);
         case #char "=";  parse_equal             (tokenizer, *token);
         case #char "-";  parse_minus             (tokenizer, *token);
+        case #char "+";  parse_plus              (tokenizer, *token);
+        case #char "*";  parse_asterisk          (tokenizer, *token);
+        case #char "<";  parse_less_than         (tokenizer, *token);
+        case #char ">";  parse_greater_than      (tokenizer, *token);
+        case #char "!";  parse_bang              (tokenizer, *token);
         case #char "#";  parse_compiler_directive(tokenizer, *token);
         case #char "\""; parse_string_literal    (tokenizer, *token);
         case #char "/";  parse_slash_or_comment  (tokenizer, *token);
+        case #char "&";  parse_ampersand         (tokenizer, *token);
+        case #char "|";  parse_pipe              (tokenizer, *token);
+        case #char "%";  parse_percent           (tokenizer, *token);
 
         case #char ";";  token.type = .punctuation; token.punctuation = .semicolon; t += 1;
         case #char ",";  token.type = .punctuation; token.punctuation = .colon;     t += 1;
@@ -54,6 +62,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char ")";  token.type = .punctuation; token.punctuation = .r_paren;   t += 1;
         case #char "[";  token.type = .punctuation; token.punctuation = .l_bracket; t += 1;
         case #char "]";  token.type = .punctuation; token.punctuation = .r_bracket; t += 1;
+        case #char "~";  token.type = .punctuation; token.punctuation = .tilde;     t += 1;
 
         case;            token.type = .invalid; t += 1;
     }
@@ -178,6 +187,127 @@ parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
+parse_plus :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .punctuation;
+    token.punctuation = .plus;
+
+    t += 1;
+    if t >= max_t return;
+
+    if << t == {
+        case #char "=";
+            token.punctuation = .plus_equal;
+            t += 1;
+    }
+}
+
+parse_asterisk :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .punctuation;
+    token.punctuation = .asterisk;
+
+    t += 1;
+    if t >= max_t return;
+
+    if << t == {
+        case #char "=";
+            token.punctuation = .asterisk_equal;
+            t += 1;
+    }
+}
+
+parse_bang :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .punctuation;
+    token.punctuation = .bang;
+
+    t += 1;
+    if t >= max_t return;
+
+    if << t == {
+        case #char "=";
+            token.punctuation = .bang_equal;
+            t += 1;
+    }
+}
+
+parse_percent :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .punctuation;
+    token.punctuation = .percent;
+
+    t += 1;
+    if t >= max_t return;
+
+    if << t == {
+        case #char "=";
+            token.punctuation = .percent_equal;
+            t += 1;
+    }
+}
+
+parse_ampersand :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .punctuation;
+    token.punctuation = .ampersand;
+
+    t += 1;
+    if t >= max_t return;
+
+    if << t == {
+        case #char "=";
+            token.punctuation = .ampersand_equal;
+            t += 1;
+        case #char "&";
+            token.punctuation = .double_ampersand;
+            t += 1;
+    }
+}
+
+parse_pipe :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .punctuation;
+    token.punctuation = .pipe;
+
+    t += 1;
+    if t >= max_t return;
+
+    if << t == {
+        case #char "=";
+            token.punctuation = .pipe_equal;
+            t += 1;
+        case #char "|";
+            token.punctuation = .double_pipe;
+            t += 1;
+    }
+}
+
+parse_less_than :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .punctuation;
+    token.punctuation = .less_than;
+
+    t += 1;
+    if t >= max_t return;
+
+    if << t == {
+        case #char "=";
+            token.punctuation = .less_than_equal;
+            t += 1;
+        case #char "<";
+            token.punctuation = .double_less_than;
+            t += 1;
+    }
+}
+
+parse_greater_than :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .punctuation;
+    token.punctuation = .greater_than;
+
+    t += 1;
+    if t >= max_t return;
+
+    if << t == {
+        case #char "=";
+            token.punctuation = .greater_than_equal;
+            t += 1;
+    }
+}
+
 parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .punctuation;
     token.punctuation = .slash;
@@ -262,11 +392,11 @@ COLOR_MAP :: Simp.Code_Color.[
 ];
 
 PUNCTUATION :: string.[
-    "arrow", "bang", "pipe", "pipe_pipe", "pipe_equal", "equal", "equal_equal", "bang_equal", "semicolon", "percent",
-    "percent_equal", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", "period", "ellipsis2",
-    "less_than", "double_less_than", "less_than_equals", "greater_than", "greater_than_equals", "plus", "plus_equal",
+    "arrow", "bang", "pipe", "double_pipe", "pipe_equal", "equal", "equal_equal", "bang_equal", "semicolon", "percent",
+    "percent_equal", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", "period", "less_than",
+    "double_less_than", "less_than_equal", "greater_than", "greater_than_equal", "plus", "plus_equal",
     "minus", "minus_equal", "triple_dash", "asterisk", "asterisk_equal", "colon", "colon_equal", "double_colon", "slash",
-    "slash_equal", "comma", "ampersand", "ampersand_equal", "tilde", "unknown",
+    "slash_equal", "comma", "ampersand", "double_ampersand", "ampersand_equal", "tilde", "unknown",
 ];
 
 KEYWORDS :: string.[
