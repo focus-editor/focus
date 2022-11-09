@@ -12,6 +12,7 @@
     + Compare with the previous version
     - Create a panel for the search
         + Refactor animation into something more general
+        + Use the new animation struct for the search bar
         - Slide in and out
 
 - Implement case-insensitive search in buffer

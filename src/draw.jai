@@ -154,8 +154,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 if right < cursor_pos.x  then offset.x = cursor_pos.x - right;
                 if top   < cursor_pos.y  then offset.y = cursor_pos.y - top;
 
-                left_target := max(cast(s32) 0, viewport.left + cast(s32) offset.x);
-                top_target  := clamp(viewport.top  - cast(s32) offset.y, 0, max_y_scroll);
+                left_target := max(viewport.left + cast(s32) offset.x, 0);
+                top_target  := clamp(viewport.top - cast(s32) offset.y, 0, max_y_scroll);
 
                 if left_target != viewport.scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target);
                 if top_target  != viewport.scroll_y.target then start_animation(*viewport.scroll_y, viewport.top,  top_target);
@@ -337,13 +337,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         input_id := get_ui_id_from_loc(parent_id = ui_id);
 
         // Update openness
-        if openness > openness_target {
-            t := cast(float)(anim_should_finish - frame_time) / Search_Bar.OPEN_SPEED;
-            openness = clamp(t, 0.0, 1.0);
-            redraw_requested = true;
-        } else if openness < openness_target {
-            t := cast(float)(anim_should_finish - frame_time) / Search_Bar.OPEN_SPEED;
-            openness = clamp(1.0 - t, 0.0, 1.0);
+        if openness != open_anim.target {
+            openness = clamp(get_animation_value(open_anim), 0.0, 1.0);
             redraw_requested = true;
         }
 

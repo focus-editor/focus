@@ -640,8 +640,7 @@ open_search_bar :: (using editor: *Editor, buffer: Buffer) {
 
     search_and_update_results(editor, buffer);
 
-    openness_target = 1.0;
-    anim_should_finish = frame_time + cast(Time) (openness_target - openness) * Search_Bar.OPEN_SPEED;
+    start_animation(*open_anim, openness, 1.0, speed = xx 0.2);
 }
 
 close_search_bar :: inline (editor: *Editor) {
@@ -651,8 +650,7 @@ close_search_bar :: inline (editor: *Editor) {
     reset_search_results(*editor.search_bar);
     array_reset_keeping_memory(*editor.highlights);
 
-    openness_target = 0.0;
-    anim_should_finish = frame_time + cast(Time) openness * Search_Bar.OPEN_SPEED;
+    start_animation(*open_anim, openness, 0.0, speed = xx 0.2);
 }
 
 search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := false) {
@@ -1453,13 +1451,9 @@ Viewport :: struct {
 }
 
 Search_Bar :: struct {
-    active   := false;       // it receives keyboard input when active. TODO: should we employ a more general imgui approach here?
-
-    // @Cleanup: should be able to express this in general animation terms
-    openness := 0.0;         // 1 is fully open, 0 is fully closed
-    openness_target := 0.0;  // for animations
-    anim_should_finish: Time;
-    OPEN_SPEED :: 0.2;  // how many seconds to open fully
+    active   := false;      // it receives keyboard input when active. TODO: should we employ a more general imgui approach here?
+    openness: float = 0.0;  // 1 is fully open, 0 is fully closed
+    open_anim: Tween_Animation(float);
 
     input: Text_Input;
 
