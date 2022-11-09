@@ -182,3 +182,29 @@ is_all_whitespace :: (s: string) -> bool {
     }
     return true;
 }
+
+start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: Time = xx 0.1) {
+    anim.start  = start;
+    anim.target = target;
+    anim.speed  = speed;
+    anim.started_at = frame_time;
+}
+
+get_animation_value :: (using anim: Tween_Animation($T)) -> T {
+    t := (frame_time - started_at) / speed;
+    if t >= 1 || t < 0 {
+        return target;
+    } else {
+        return start + cast(T) (cast(float)(target - start) * cast(float)t);
+    }
+}
+
+
+#scope_export
+
+Tween_Animation :: struct(T: Type) {
+    start, target: T;
+    started_at: Time;
+    speed: Time;  // how many seconds to finish
+    // NOTE: currently only uses lerp, but should be easy to add other functions later if needed
+}

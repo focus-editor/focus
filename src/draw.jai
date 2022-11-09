@@ -7,6 +7,11 @@ draw_frame :: () {
     // Check whether we need to deactivate elements before drawing
     if !mouse.left.is_down || mouse.left.just_released then ui.active = .none;
 
+    finder_split := screen.w * 0.3;
+    finder_area, editors_area := cut_left(screen, finder_split);
+    splitter_rect := make_rect(finder_area.x + finder_area.w - 1, finder_area.y, 2, finder_area.h);
+    draw_splitter(splitter_rect, screen.w * 0.2, .finder_splitter);
+
     footer_height := font_ui_line_height * 1.6;
 
     // Draw editors
@@ -16,11 +21,11 @@ draw_frame :: () {
             // TODO: draw a shortcut cheat-sheet?
         case .Single;
             splitter_pos = 0;
-            draw_editor(editor_active, screen, footer_height, .editor_single);
+            draw_editor(editor_active, editors_area, footer_height, .editor_single);
         case .Double;
             // Drag splitter
             if ui.active == .editor_splitter {
-                splitter_pos = (mouse.pointer.x - screen.x) / screen.w;
+                splitter_pos = (mouse.pointer.x - editors_area.x) / editors_area.w;
                 if splitter_pos == 0 then splitter_pos = 0.1;  // avoid jitter
                 editor_expanded = false;
             }
@@ -30,17 +35,14 @@ draw_frame :: () {
                 if editor_active == editor_right && !values_are_close(splitter_pos, 0.1) then splitter_pos = 0.1;
             }
 
-            split_x := ifx splitter_pos > 0 then screen.w * splitter_pos else screen.w / 2;
-            left_rect, right_rect := cut_left(screen, split_x);
-            left_rect.w  -= 1;
-            right_rect.w -= 1;
-            right_rect.x += 1;
+            split_x := ifx splitter_pos > 0 then editors_area.w * splitter_pos else editors_area.w / 2;
+            left_rect, right_rect := cut_left(editors_area, split_x, margin = 2);
 
             draw_editor(editor_left,  left_rect,  footer_height, .editor_left);
             draw_editor(editor_right, right_rect, footer_height, .editor_right);
 
             splitter_rect := make_rect(left_rect.x + left_rect.w, left_rect.y + footer_height, 2, left_rect.h - footer_height);
-            draw_splitter(splitter_rect, split_x);
+            draw_splitter(splitter_rect, split_x, .editor_splitter);
     }
 
     if open_file_dialog.show then draw_open_file_dialog();
@@ -56,8 +58,7 @@ draw_frame :: () {
     Simp.swap_buffers(window);
 }
 
-draw_splitter :: (splitter_rect: Rect, split_x: float) {
-    ui_id := Ui_Id.editor_splitter;
+draw_splitter :: (splitter_rect: Rect, split_x: float, ui_id: Ui_Id) {
     color := Colors.SPLITTER;
 
     rect := splitter_rect;
@@ -133,7 +134,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         max_y_scroll := get_max_y_scroll(buffer);
         if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_y_delta != 0 {
             using editor.viewport;
-            set_scroll_target(*scroll_y, top, scroll_y.target - mouse.scroll_y_delta, max_y_scroll);
+            new_target := clamp(scroll_y.target - mouse.scroll_y_delta, 0, max_y_scroll);
+            start_animation(*scroll_y, top, new_target);
         } else if cursor_moved {
             // Detect if cursor is off screen and start scrolling to it
             bounds := shrink_x(rect, text_offset.x + char_size * 3);
@@ -152,12 +154,11 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 if right < cursor_pos.x  then offset.x = cursor_pos.x - right;
                 if top   < cursor_pos.y  then offset.y = cursor_pos.y - top;
 
-                max_x_scroll := cast(s32) (1000 * char_size);  // TODO: set a proper limit
-                left_target := clamp(viewport.left + cast(s32) offset.x, 0, max_x_scroll);
+                left_target := max(cast(s32) 0, viewport.left + cast(s32) offset.x);
                 top_target  := clamp(viewport.top  - cast(s32) offset.y, 0, max_y_scroll);
 
-                if left_target != viewport.scroll_x.target then set_scroll_target(*viewport.scroll_x, viewport.left, left_target, max_x_scroll);
-                if top_target  != viewport.scroll_y.target then set_scroll_target(*viewport.scroll_y, viewport.top,  top_target,  max_y_scroll);
+                if left_target != viewport.scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target);
+                if top_target  != viewport.scroll_y.target then start_animation(*viewport.scroll_y, viewport.top,  top_target);
             }
         }
 
@@ -204,8 +205,17 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             redraw_requested = true;
         }
 
-        // This will handle any "normal" scrolling with a target
-        if animate_scrolling(editor) then redraw_requested = true;
+        // Vertical scrolling
+        if viewport.top != viewport.scroll_y.target {
+            redraw_requested = true;
+            viewport.top = get_animation_value(viewport.scroll_y);
+        }
+
+        // Horizontal scrolling
+        if viewport.left != viewport.scroll_x.target {
+            redraw_requested = true;
+            viewport.left = get_animation_value(viewport.scroll_x);
+        }
 
         // Need to update after updating scrolling to reduce latency
         text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
@@ -391,6 +401,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         draw_rect(footer_rect, footer_color);
         draw_top_shadow(footer_rect);
 
+        push_scissor(footer_rect);
+        defer pop_scissor();
+
         footer_rect = shrink_x(footer_rect, text_offset.x);
 
         width   := 0.0;
@@ -542,7 +555,7 @@ draw_open_file_dialog :: () {
                 selected_bottom := selected_top + entry_height;
                 if selected_top < 0 then target = cast(s32) (selected * entry_height);
                 if selected_bottom > files_rect.h then target = cast(s32) ((selected + 1) * entry_height - files_rect.h);
-                if target != scroll_anim.target then set_scroll_target(*scroll_anim, scroll_y, target, xx max_y_scroll);
+                if target != scroll_anim.target then start_animation(*scroll_anim, scroll_y, target);
                 scroll_to_cursor = false;
             }
 
@@ -550,13 +563,15 @@ draw_open_file_dialog :: () {
             if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(files_rect) {
                 if ui.hot_last_frame == ui_id then set_pointer_image(.PRESSABLE);
                 if mouse.scroll_y_delta != 0 {
-                    set_scroll_target(*scroll_anim, scroll_y, scroll_anim.target - mouse.scroll_y_delta, xx max_y_scroll);
+                    target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
+                    start_animation(*scroll_anim, scroll_y, target);
                 }
             }
 
-            scrolling := false;
-            scroll_y, scrolling = animate_scrolling(*scroll_anim, scroll_y);
-            if scrolling then redraw_requested = true;
+            if scroll_y != scroll_anim.target {
+                redraw_requested = true;
+                scroll_y = get_animation_value(scroll_anim);
+            }
         }
 
         highlight_color_lite := Colors.BACKGROUND_BRIGHT;
@@ -725,11 +740,12 @@ draw_text_input :: (using input: *Text_Input, rect: Rect, ui_id: Ui_Id, active :
     scroll_x_target := scroll_anim.target;
     if cursor_pos_x - scroll_x_target >= cast(s32) input_rect.w then scroll_x_target = cast(s32) cursor_pos_x - cast(s32) input_rect.w;
     if cursor_pos_x < scroll_x_target then scroll_x_target = xx cursor_pos_x;
-    if scroll_x_target != scroll_anim.target then set_scroll_target(*scroll_anim, scroll_x, scroll_x_target, S32_MAX);
+    if scroll_x_target != scroll_anim.target then start_animation(*scroll_anim, scroll_x, scroll_x_target);
 
-    scrolling := false;
-    scroll_x, scrolling = animate_scrolling(*scroll_anim, scroll_x);
-    if scrolling then redraw_requested = true;
+    if scroll_x != scroll_anim.target {
+        redraw_requested = true;
+        scroll_x = get_animation_value(scroll_anim);
+    }
 
     x := input_rect.x - scroll_x;
     cursor_rect := cut_left(input_rect, cursor_width);
@@ -912,7 +928,7 @@ no_active_ui_item :: inline () -> bool {
 }
 
 get_ui_id_from_loc :: inline (loc := #caller_location, parent_id: Ui_Id = .none) -> Ui_Id {
-    REALLY_BIG_NUMBER :: 100_000;  // jk, just needs to be less than we have widgets
+    REALLY_BIG_NUMBER :: 100_000;  // jk, just needs to be more than we have widgets
     if parent_id != .none {
         return cast(Ui_Id) (loc.line_number + REALLY_BIG_NUMBER * cast(s64) parent_id);
     }
@@ -985,6 +1001,7 @@ Ui_Id :: enum s64 {
     editor_right  :: -5;
     editor_splitter   :: -6;
     open_file_dialog  :: -7;
+    finder_splitter   :: -7;
 
     // The rest will be derived from loc
 }

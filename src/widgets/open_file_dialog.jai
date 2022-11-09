@@ -78,22 +78,6 @@ open_file_dialog_handle_text_input :: (char: u32) {
     recalculate_filtered_entries();
 }
 
-// TODO: make this a general function as a version of it is used in editor scrolling?
-animate_scrolling :: (using animation: *Scroll_Animation, current: s32) -> (new_value: s32, scrolling: bool) {
-    if current == target return current, false;
-
-    new_value: s32;
-
-    t := (frame_time - started_at) / SPEED;
-    if t >= 1 || t < 0 {
-        new_value = target;
-    } else {
-        new_value = start + xx (cast(float)(target - start) * cast(float)t);
-    }
-
-    return new_value, true;
-}
-
 Open_File_Dialog :: struct {
     show := false;
     scroll_to_cursor := false;
@@ -109,7 +93,7 @@ Open_File_Dialog :: struct {
         selected_by_mouse: s64 = -1;  // to remember which entry the left mouse button went down on
 
         scroll_y: s32;
-        scroll_anim: Scroll_Animation;
+        scroll_anim: Tween_Animation(s32);
         per_page: s64 = 10;
     }
 }

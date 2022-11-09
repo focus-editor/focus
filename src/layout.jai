@@ -61,7 +61,7 @@ shrink_y :: (rect: Rect, amount: float) -> Rect {
     return expand_y(rect, -amount);
 }
 
-cut_left :: (rect: Rect, amount: float) -> (left: Rect,  remainder: Rect) {
+cut_left :: (rect: Rect, amount: float, $margin := 0) -> (left: Rect,  remainder: Rect) {
     remainder := rect;
 
     remainder.w -= amount;
@@ -69,6 +69,14 @@ cut_left :: (rect: Rect, amount: float) -> (left: Rect,  remainder: Rect) {
 
     left := rect;
     left.w = amount;
+
+    #if margin > 0 {
+        #assert margin % 2 == 0;
+        half_margin := margin / 2;
+        remainder.x += margin;
+        remainder.w -= half_margin;
+        left.w      -= half_margin;
+    }
 
     return left, remainder;
 }

@@ -2,7 +2,7 @@ Text_Input :: struct {
     text: [..] u8;
     cursor: Cursor;
     scroll_x: s32;
-    scroll_anim: Scroll_Animation;
+    scroll_anim: Tween_Animation(s32);
 
     Cursor :: struct {
         pos, sel: s32;  // cursor position (in chars, not bytes)

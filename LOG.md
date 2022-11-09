@@ -10,7 +10,9 @@
     + Profile the use of the in-buffer search
     + Write a BMH implementation for search
     + Compare with the previous version
-    - ...
+    - Create a panel for the search
+        + Refactor animation into something more general
+        - Slide in and out
 
 - Implement case-insensitive search in buffer
 - Bug: crash when drawing search bar with in small window

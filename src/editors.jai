@@ -445,15 +445,15 @@ move_viewport :: (editor: *Editor, dir: enum { left; up; right; down; }) {
         case .right;
             horiz_delta := cast(s32) (10 * char_size);
             new_target := ifx dir == .left then scroll_x.target - horiz_delta else scroll_x.target + horiz_delta;
-            set_scroll_target(*scroll_x, left, new_target, xx (1000 * char_size)); // TODO
+            if new_target < 0 then new_target = 0;
+            start_animation(*scroll_x, left, new_target);
 
         case .up; #through;
         case .down;
             vert_delta := cast(s32) (10 * line_height);
             new_target := ifx dir == .up then scroll_y.target - vert_delta else scroll_y.target + vert_delta;
-            buffer := open_buffers[editor.buffer_id];
-            max_y_scroll := get_max_y_scroll(buffer);
-            set_scroll_target(*scroll_y, top, new_target, max_y_scroll);
+            new_target = clamp(new_target, 0, get_max_y_scroll(open_buffers[editor.buffer_id]));
+            start_animation(*scroll_y, top, new_target);
     }
 }
 
@@ -545,46 +545,9 @@ organise_cursors :: (using editor: *Editor) {
     }
 }
 
-animate_scrolling :: (editor: *Editor) -> scrolling: bool {
-    using editor.viewport;
-    scrolling := false;
-
-    // Vertical scroll
-    if top != scroll_y.target {
-        scrolling = true;
-        using scroll_y;
-        t := (frame_time - started_at) / Scroll_Animation.SPEED;
-        if t >= 1 || t < 0 {
-            top = target;
-        } else {
-            top = start + xx (cast(float)(target - start) * cast(float)t);
-        }
-    }
-
-    // Horizontal scroll
-    if left != scroll_x.target {
-        scrolling = true;
-        using scroll_x;
-        t := (frame_time - started_at) / Scroll_Animation.SPEED;
-        if t >= 1 || t < 0 {
-            left = target;
-        } else {
-            left = start + xx (cast(float)(target - start) * cast(float)t);
-        }
-    }
-
-    return scrolling;
-}
-
 get_max_y_scroll :: (buffer: Buffer) -> s32 {
     assert(!buffer.dirty);
     return max(cast(s32) ((buffer.lines.count - 1)  * line_height), 0);
-}
-
-set_scroll_target :: (using scroll: *Scroll_Animation, current: s32, target_: s32, max_scroll: s32) {
-    start = current;
-    target = clamp(target_, 0, max_scroll);
-    started_at = frame_time;
 }
 
 add_paste_animation :: (using editor: *Editor, range: Range) {
@@ -1484,15 +1447,19 @@ Editor :: struct {
 Viewport :: struct {
     top:  s32;
     left: s32;
-    scroll_y: Scroll_Animation;
-    scroll_x: Scroll_Animation;
+    scroll_y: Scroll;
+    scroll_x: Scroll;
+    Scroll :: Tween_Animation(s32);
 }
 
 Search_Bar :: struct {
     active   := false;       // it receives keyboard input when active. TODO: should we employ a more general imgui approach here?
+
+    // @Cleanup: should be able to express this in general animation terms
     openness := 0.0;         // 1 is fully open, 0 is fully closed
     openness_target := 0.0;  // for animations
     anim_should_finish: Time;
+    OPEN_SPEED :: 0.2;  // how many seconds to open fully
 
     input: Text_Input;
 
@@ -1500,7 +1467,6 @@ Search_Bar :: struct {
     selected_result: s64 = -1;
     search_point_offset: s32;  // the point used to determine the next search result. Fixed so that we can set cursor without jumping around
 
-    OPEN_SPEED :: 0.2;  // how many seconds to open fully
 }
 
 Text_Highlight :: struct {
@@ -1508,15 +1474,9 @@ Text_Highlight :: struct {
     start_pos: Pos;  // useful to know pos immediately to display in the scrollbar area
 }
 
-Scroll_Animation :: struct {
-    start, target: s32;
-    started_at: Time;
-    SPEED :: 0.1;  // how many seconds to finish any scroll animation
-}
-
 Paste_Animation :: struct {
     range: Range;
-    started_at: float64;
+    started_at: Time;
     SPEED :: 0.5;
 }
 
