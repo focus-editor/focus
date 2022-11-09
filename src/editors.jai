@@ -695,17 +695,34 @@ close_search_bar :: inline (editor: *Editor) {
 search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := false) {
     reset_search_results(*search_bar);
 
-    // print("Searching | ");
-
     using search_bar;
-    search_str := to_string(input.text);
-    if !search_str return;
+    needle := to_string(input.text);
+    if !needle return;
 
     buffer_str := to_string(buffer.bytes);
+
+    // Prepare a Boyer-Moore-Horspool skip table
+    assert(buffer_str.count < S32_MAX && needle.count < S32_MAX);
+    skip_table: [256] s32 = ---;
+    for * skip_table { << it = cast,no_check(s32) needle.count; }
+    for i : 0 .. needle.count - 2 { skip_table[needle[i]] = cast,no_check(s32) (needle.count - 1 - i); }
+
+    find_index_from_left_bmh :: (s: string, needle: string, start_index := 0, skip_table: [] s32) -> s64 {
+        i := start_index;
+        last_i := s.count - needle.count;
+        // @Speed: possibly can be optimised by replacing indices with pointers? Not sure if that's still a thing
+        while i <= last_i {
+            current := to_string(s.data + i, needle.count);
+            if current == needle return i;
+            i += skip_table[s[i + needle.count - 1]];
+        }
+        return -1;
+    }
+
     offset := 0;
     i := 0;
     while true {
-        offset = find_index_from_left(buffer_str, search_str, start_index = offset);
+        offset = inline find_index_from_left_bmh(buffer_str, needle, start_index = offset, skip_table);
         if offset < 0 break;
 
         result := array_add(*results);
@@ -713,7 +730,7 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
         result.start_pos = offset_to_pos(buffer, offset);
         if selected_result < 0 && result.offset >= search_point_offset then selected_result = i;
 
-        offset += search_str.count;
+        offset += needle.count;
         i += 1;
     }
 
@@ -915,8 +932,8 @@ new_edit_group_required_for_action :: (key_code: Input.Key_Code, mods: Mods, cur
 
     if key_code == {
         case .BACKSPACE; #through;
-        case .DELETE;  // delete range
-        case .ENTER;   // replace range with newline
+        case .DELETE;    #through; // delete range
+        case .ENTER;               // replace range with newline
             if has_selection(cursor) return true;
 
         case .ARROW_UP; #through;

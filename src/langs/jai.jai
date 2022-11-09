@@ -1,6 +1,4 @@
 highlight_jai_syntax :: (using buffer: *Buffer) {
-    PROFILE_FUNCTION();
-
     tokenizer: Tokenizer = ---;
     tokenizer.buf   = to_string(bytes);
     tokenizer.max_t = bytes.data + bytes.count;

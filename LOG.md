@@ -6,11 +6,16 @@
     - Grep in the project
     - Save modified buffers to temporary files and recover after crashes
 
+- Grep in the project
+    + Profile the use of the in-buffer search
+    + Write a BMH implementation for search
+    + Compare with the previous version
+    - ...
 
 - Implement case-insensitive search in buffer
 - Bug: crash when drawing search bar with in small window
-
 - Bug: resize pointer is not shown when trying to resize window
+- Task: Check the implementation of find_index_from_left_whole_word and make sure it uses the fact that bytes in the multi-byte utf-8 characters always start with 10 (can just check one byte on each side)
 
 - Navigating project dirs in a dialog
 - Create new files (with a mini-dialog?)
@@ -57,9 +62,7 @@
       so if that position moved then so do the cursors
       (just like the individual letters would)
 
-- SIMP is bad:
-    + Fix the memory usage: backend/gl.jai - update texture is called too often (fixed using a workaround, but memory usage is still high, even though not as high)
-    - Don't do a draw call per draw_text
+- Try to improve memory usage (where did 100Mb go?)
 
 - Look into subpixel font positioning
     - Revisit the font loading code as it has some rounding to pixels there
@@ -67,12 +70,12 @@
     - Simp.draw_text only allows integer positioning
     - Should we keep using GL_NEAREST for sampling?
 - Get rid of the window top bar
-- Reduce the number of draw calls (currently there's one per line, ridiculous)
 - Subpixel rendering: support other types of panels (lookup ft2-lcd_rendering)
   (not useful for the editor, but may be useful for games)
 - Fix the font unknown character glyph (try copying something from font-awesome)
 
 # DONE
++ Fix the memory usage: backend/gl.jai - update texture is called too often (fixed using a workaround, but memory usage is still high, even though not as high)
 + Syntax highlighting
     + Write a tokeniser
     + Analyse tokens and highlight functions
