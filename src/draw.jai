@@ -47,7 +47,8 @@ draw_frame :: () {
             draw_splitter(splitter_rect, split_x, .editor_splitter);
     }
 
-    if open_file_dialog.show then draw_open_file_dialog();
+    // Open file dialog is modal so if it's shown it means it receives input
+    if active_global_widget == .open_file_dialog then draw_open_file_dialog();
 
     // Reset UI state after drawing
     if !mouse.left.is_down || mouse.left.just_released {
@@ -376,7 +377,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 Simp.draw_prepared_text(font_ui_small, xx (results_rect.x + padding), xx (results_rect.y + (results_rect.h - font_ui_small.character_height) / 2.0), color = Colors.UI_DEFAULT);
             }
             if input_rect.w > 0 {
-                input_active := editor_is_active && search_bar.active && !open_file_dialog.show;
+                input_active := editor_is_active && search_bar.active && active_global_widget == .editors;
                 draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id, label = "Find in buffer");
             }
         }
@@ -488,7 +489,7 @@ draw_open_file_dialog :: () {
 
     if ui.active != .none && ui.active != ui_id && ui.active != scrollbar_id {
         // Close the dialog on clicks elsewhere
-        show = false;
+        hide_open_file_dialog();
         return;
     }
 
@@ -925,7 +926,8 @@ no_active_ui_item :: inline () -> bool {
 }
 
 get_ui_id_from_loc :: inline (loc := #caller_location, parent_id: Ui_Id = .none) -> Ui_Id {
-    REALLY_BIG_NUMBER :: 100_000;  // jk, just needs to be more than we have widgets
+    REALLY_BIG_NUMBER :: 100_000;  // jk, just needs to be more than lines of code in this file
+                                   // (could use a constant at the bottom for this someday)
     if parent_id != .none {
         return cast(Ui_Id) (loc.line_number + REALLY_BIG_NUMBER * cast(s64) parent_id);
     }

@@ -1,3 +1,34 @@
+open_file_dialog_handle_event :: (event: Input.Event) {
+    mods := event.modifier_flags;
+
+    if event.type == {
+        case .KEYBOARD;
+            if event.key_pressed {
+                if event.key_code == {
+                    case .ESCAPE;
+                        hide_open_file_dialog();
+                        return;
+
+                    case #char "B";
+                        if only_ctrl_pressed(mods) {
+                            toggle_finder();
+                            return;
+                        }
+
+                    case #char "F";
+                        if only_ctrl_shift_pressed(mods) {
+                            if !finder_is_open() then open_finder(); else activate_finder();
+                            return;
+                        }
+                }
+                open_file_dialog_handle_key_press(event.key_code, mods);
+            }
+
+        case .TEXT_INPUT;
+            open_file_dialog_handle_text_input(event.utf32);
+    }
+}
+
 init_open_file_dialog :: () {
     using open_file_dialog;
 
@@ -20,16 +51,20 @@ init_open_file_dialog :: () {
     recalculate_filtered_entries();
 }
 
-open_file_dialog_show :: () {
+show_open_file_dialog :: () {
     using open_file_dialog;
-    show = true;
+    active_global_widget = .open_file_dialog;
     array_reset(*input.text);
     input.cursor.pos = 0;
     input.cursor.sel = 0;
     recalculate_filtered_entries();
 }
 
-open_file_dialog_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
+hide_open_file_dialog :: () {
+    active_global_widget = .editors;
+}
+
+open_file_dialog_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
     using open_file_dialog;
 
     input_text := copy_temporary_string(to_string(open_file_dialog.input.text));
@@ -65,7 +100,7 @@ open_file_dialog_open_entry :: (selected: s64, on_the_side: bool) {
     using open_file_dialog;
     path := entries.filtered[selected].full_path;
     editors_open_file(path, on_the_side);
-    show = false;
+    hide_open_file_dialog();
 }
 
 open_file_dialog_handle_text_input :: (char: u32) {
@@ -79,7 +114,6 @@ open_file_dialog_handle_text_input :: (char: u32) {
 }
 
 Open_File_Dialog :: struct {
-    show := false;
     scroll_to_cursor := false;
 
     input: Text_Input;

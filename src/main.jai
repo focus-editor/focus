@@ -138,6 +138,7 @@ main :: () {
         }
 
         for event : Input.events_this_frame {
+            // General events
             if event.type == {
                 case .QUIT;
                     should_quit = true;
@@ -146,27 +147,6 @@ main :: () {
                         if event.key_code == {
                             case .F4;
                                 if event.alt_pressed should_quit = true;
-                                continue;
-
-                            case #char "P";
-                                if only_ctrl_pressed(event.modifier_flags) then open_file_dialog_show();
-                                continue;
-
-                            case #char "B";
-                                if only_ctrl_pressed(event.modifier_flags) then toggle_finder();
-                                continue;
-
-                            case #char "F";
-                                if only_ctrl_shift_pressed(event.modifier_flags) {
-                                    if !finder_is_open() then open_finder(); else activate_finder();
-                                    continue;
-                                }
-
-                            case .ESCAPE;
-                                if open_file_dialog.show {
-                                    open_file_dialog.show = false;
-                                    continue;
-                                }
 
                             // case #char "+";
                             //     if event.ctrl_pressed {
@@ -183,25 +163,16 @@ main :: () {
                             //         init_fonts();
                             //     }
                         }
-                        if open_file_dialog.show {
-                            open_file_dialog_handle_keypress(event.key_code, event.modifier_flags);
-                        } else {
-                            editors_handle_keypress(event.key_code, event.modifier_flags);
-                        }
-                    } else {
-                        if open_file_dialog.show {
-                            // NOTE: this feels awkward, but maybe it's ok to repeat it here
-                        } else {
-                            editors_handle_key_release(event.key_code, event.modifier_flags);
-                        }
                     }
+            }
 
-                case .TEXT_INPUT;
-                    if open_file_dialog.show {
-                        open_file_dialog_handle_text_input(event.utf32);
-                    } else {
-                        editors_handle_text_input(event.utf32);
-                    }
+            // Pass events to the active widget.
+            // Note that the active widget may change during the frame, so the following events
+            // will be sent to the new widget, that's why we check global widget for each event.
+            if active_global_widget == {
+                case .editors;           editors_handle_event(event);
+                case .open_file_dialog;  open_file_dialog_handle_event(event);
+                case .finder;            finder_handle_event(event);
             }
         }
 
@@ -399,6 +370,12 @@ project_file_watcher: File_Watcher;
 project_dirs: [..] Project_Dir;  // TODO: load them from a config file or something
 dirs_to_rescan: [..] string;  // will use temporary storage
 should_reinit_file_dialog: bool;
+
+active_global_widget: enum {
+    editors;
+    open_file_dialog;
+    finder;
+} = .editors;
 
 Project_Dir :: struct {
     path: string;          // e.g. "C:/projects/focus"

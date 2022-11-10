@@ -14,7 +14,8 @@
         + Refactor animation into something more general
         + Use the new animation struct for the search bar
         + Slide in and out
-        - Refactor the input system so that there can be only one active global widget
+        + Refactor the input system so that there can be only one active global widget
+        - Make sure active widget is changed when activated as ui (on click)
         - Drag the slider
         - Draw the input
 

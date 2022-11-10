@@ -1,4 +1,41 @@
-editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
+editors_handle_event :: (event: Input.Event) {
+    mods := event.modifier_flags;
+
+    if event.type == {
+        case .KEYBOARD;
+            // Maybe open/switch to other widgets
+            if event.key_pressed {
+                if event.key_code == {
+                    case #char "P";
+                        if only_ctrl_pressed(mods) {
+                            show_open_file_dialog();
+                            return;
+                        }
+
+                    case #char "B";
+                        if only_ctrl_pressed(mods) {
+                            toggle_finder();
+                            return;
+                        }
+
+                    case #char "F";
+                        if only_ctrl_shift_pressed(mods) {
+                            if !finder_is_open() then open_finder(); else activate_finder();
+                            return;
+                        }
+                }
+            }
+
+            // Let the active editor handle the event
+            if event.key_pressed then editors_handle_key_press  (event.key_code, mods);
+                                 else editors_handle_key_release(event.key_code, mods);
+
+        case .TEXT_INPUT;
+            editors_handle_text_input(event.utf32);
+    }
+}
+
+editors_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
 
@@ -41,6 +78,12 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
     if frame_time - buffer.last_edit_time >= EDIT_GROUP_TIMEOUT then new_edit_group(buffer, editor);
 
     if key_code == {
+        case #char "F";
+            if only_ctrl_pressed(mods) {
+                open_search_bar(editor, buffer);
+                handled = true;
+            }
+
         case #char "D";
             if only_ctrl_pressed(mods) {
                 created := maybe_create_additional_cursor(editor, buffer);
@@ -49,11 +92,6 @@ editors_handle_keypress :: (key_code: Input.Key_Code, mods: Mods) {
                     cursor_moved = true;
                     handled = true;
                 }
-            }
-
-        case #char "F";
-            if only_ctrl_pressed(mods) {
-                open_search_bar(editor, buffer);
             }
 
         case #char "Z";

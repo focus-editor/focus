@@ -1,5 +1,9 @@
+finder_handle_event :: (event: Input.Event) {
+
+}
+
 finder_is_open :: () -> bool {
-    return finder.width > 0 || finder.active;
+    return finder.width > 0;
 }
 
 toggle_finder :: () {
@@ -7,12 +11,13 @@ toggle_finder :: () {
 }
 
 activate_finder :: () {
-    finder.active = true;
+    active_global_widget = .finder;
 }
 
 open_finder :: () {
     using finder;
-    active = true;
+
+    activate_finder();
 
     // Select text when opening
     input.cursor.sel = 0;
@@ -22,10 +27,9 @@ open_finder :: () {
 }
 
 close_finder :: () {
-    using finder;
-    active = false;
+    active_global_widget = .editors;
 
-    start_animation(*open_anim, width, 0);
+    start_animation(*finder.open_anim, finder.width, 0);
 }
 
 maybe_animate_finder :: () {
@@ -36,8 +40,9 @@ maybe_animate_finder :: () {
     }
 }
 
+finder: Finder;
+
 Finder :: struct {
-    active := false;   // active means it's receiving input
     width: float = 0;  // percentage of window width. Zero means it's hidden
     input: Text_Input;
 
@@ -46,4 +51,3 @@ Finder :: struct {
     DEFAULT_WIDTH :: 0.2;
 }
 
-finder: Finder;
