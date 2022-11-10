@@ -1498,6 +1498,7 @@ editor_smooth_scroll: struct {
 
 splitter_pos: float = 0;  // zero means it's in the middle
 
+
 #scope_file
 
 EDIT_GROUP_TIMEOUT :: 0.3;

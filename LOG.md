@@ -13,7 +13,10 @@
     - Create a panel for the search
         + Refactor animation into something more general
         + Use the new animation struct for the search bar
-        - Slide in and out
+        + Slide in and out
+        - Refactor the input system so that there can be only one active global widget
+        - Drag the slider
+        - Draw the input
 
 - Implement case-insensitive search in buffer
 - Bug: crash when drawing search bar with in small window

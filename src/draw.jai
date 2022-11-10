@@ -7,9 +7,11 @@ draw_frame :: () {
     // Check whether we need to deactivate elements before drawing
     if !mouse.left.is_down || mouse.left.just_released then ui.active = .none;
 
-    finder_split := screen.w * 0.3;
+    maybe_animate_finder();
+
+    finder_split := screen.w * finder.width;
     finder_area, editors_area := cut_left(screen, finder_split);
-    splitter_rect := make_rect(finder_area.x + finder_area.w - 1, finder_area.y, 2, finder_area.h);
+    splitter_rect := make_rect(editors_area.x - 2, finder_area.y, 2, finder_area.h);
     draw_splitter(splitter_rect, screen.w * 0.2, .finder_splitter);
 
     footer_height := font_ui_line_height * 1.6;

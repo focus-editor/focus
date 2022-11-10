@@ -152,6 +152,16 @@ main :: () {
                                 if only_ctrl_pressed(event.modifier_flags) then open_file_dialog_show();
                                 continue;
 
+                            case #char "B";
+                                if only_ctrl_pressed(event.modifier_flags) then toggle_finder();
+                                continue;
+
+                            case #char "F";
+                                if only_ctrl_shift_pressed(event.modifier_flags) {
+                                    if !finder_is_open() then open_finder(); else activate_finder();
+                                    continue;
+                                }
+
                             case .ESCAPE;
                                 if open_file_dialog.show {
                                     open_file_dialog.show = false;
@@ -406,6 +416,7 @@ Project_Dir :: struct {
 #load "utils.jai";
 #load "widgets/text_input.jai";
 #load "widgets/open_file_dialog.jai";
+#load "widgets/finder.jai";
 #load "langs/jai.jai";
 
 // #import "Basic"()(MEMORY_DEBUGGER = true);
