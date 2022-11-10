@@ -42,6 +42,7 @@ close_finder :: () {
 finder_set_openness :: (value: float) {
     using finder;
     openness = clamp(value, 0, Finder.MAX_OPENNESS);;
+    if openness < Finder.MIN_OPENNESS then openness = 0;  // fully close if too small
     open_anim.target = openness;
     if openness == 0 then deactivate_finder();
 }
@@ -61,6 +62,8 @@ Finder :: struct {
     input: Text_Input;
 
     open_anim: Tween_Animation(float);
+
+    MIN_OPENNESS     :: 0.005;
     MAX_OPENNESS     :: 0.8;
     DEFAULT_OPENNESS :: 0.2;
 }

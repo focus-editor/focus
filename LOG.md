@@ -16,7 +16,7 @@
         + Slide in and out
         + Refactor the input system so that there can be only one active global widget
         + Make sure active widget is changed when activated as ui (on click)
-        - See if we can compress the common ui pieces of code
+        + See if we can compress the common ui pieces of code
         - Drag the slider
         - Draw the input
 
@@ -39,6 +39,7 @@
     - Measure how long it takes to insert a char/string into a buffer of various length
     - If it's long enough then consider how this could be optimised
     - Figure out a way to do edits with multiple cursors more efficiently
+        - One idea: always copy buffer into a temporary string and rebuild the buffer every time, making changes for every cursor as we go. It would be probably a bit slower for one cursor, but still acceptable and much more predictable for many cursors
       (also this may be a good occasion to make sure other editors' cursors are adjusted when edits are done elsewhere)
 
 - Open file dialog:

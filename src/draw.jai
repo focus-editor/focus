@@ -61,7 +61,7 @@ draw_frame :: () {
     // Reset UI state after drawing
     if !mouse.left.is_down || mouse.left.just_released {
         ui.active = .none;
-    } else if no_active_ui_item() {
+    } else if ui.active == .none {
         ui.active = .unavailable;  // so that we don't activate anything by dragging on it
     }
     ui.hot_last_frame = ui.hot;
@@ -73,17 +73,13 @@ draw_splitter :: (splitter_rect: Rect, split_x: float, ui_id: Ui_Id) {
     color := Colors.SPLITTER;
 
     rect := splitter_rect;
-    rect_fat := expand(splitter_rect, 2 * dpi_scale);
+    rect_fat := expand(splitter_rect, 3 * dpi_scale);
 
-    if mouse_pointer_is_within(rect_fat) {
-        ui.hot = ui_id;
-        if ui.hot_last_frame == ui_id && mouse.left.just_pressed then ui.active = ui_id; // TODO: highlight animation?
-    }
+    maybe_set_hot_or_active(ui_id, rect_fat, .DRAGGING_HORIZONTAL);
 
-    if ui.active == .none && ui.hot_last_frame == ui_id || ui.active == ui_id {
-        set_pointer_image(.DRAGGING_HORIZONTAL);
-        color = Colors.SPLITTER_HOVER;
-        rect = expand(rect, 1);
+    if (ui.hot_last_frame == ui_id && ui.active == .none) || ui.active == ui_id {
+        if ui.active == ui_id then color = Colors.SPLITTER_HOVER;
+        rect = expand(rect, 2);
     }
 
     draw_rect(rect, color);
@@ -109,11 +105,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         push_scissor(rect);
         defer pop_scissor();
 
-        if mouse_pointer_is_within(rect) {
-            if ui.hot_last_frame == ui_id && no_active_ui_item() && mouse.left.just_pressed then ui.active = ui_id;
-            ui.hot = ui_id;
-            set_pointer_image(.TEXT_SELECT);
-        }
+        became_active := maybe_set_hot_or_active(ui_id, rect, .TEXT_SELECT);
+        if became_active then active_global_widget = .editors;
 
         if ui.active == ui_id && (mouse.left.just_pressed || mouse.left.is_dragging) {
             pointer := snap_to_rect(mouse.pointer, rect);  // when we drag outside the editor we still want to interact
@@ -372,6 +365,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         defer pop_scissor();
         draw_rounded_rect_with_shadow(bar_rect, Colors.BACKGROUND_LIGHT);
 
+        // Clicking on the bar should activate input
+        maybe_set_hot_or_active(input_id, bar_rect, .NORMAL);
+
         result_label: string;
         if results {
             result_label = tprint("% of %", selected_result + 1, results.count);
@@ -383,15 +379,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         bar_rect = shrink_y(bar_rect, margin_y);
         results_rect, input_rect := cut_right(bar_rect, results_width + padding);
 
-        if bar_rect.w > 0 {
-            if results_rect.w > 0 {
-                Simp.draw_prepared_text(font_ui_small, xx (results_rect.x + padding), xx (results_rect.y + (results_rect.h - font_ui_small.character_height) / 2.0), color = Colors.UI_DEFAULT);
-            }
-            if input_rect.w > 0 {
-                input_active := editor_is_active && search_bar.active && active_global_widget == .editors;
-                draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id, label = "Find in buffer");
-            }
-        }
+        Simp.draw_prepared_text(font_ui_small, xx (results_rect.x + padding), xx (results_rect.y + (results_rect.h - font_ui_small.character_height) / 2.0), color = Colors.UI_DEFAULT);
+        input_active := editor_is_active && search_bar.active && active_global_widget == .editors;
+        draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id, label = "Find in buffer");
 
         if ui.active != .none && ui.active != input_id {
             active = false;  // deactivate on clicks elsewhere
@@ -494,11 +484,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
 draw_finder :: (rect: Rect, ui_id: Ui_Id) {
     if !is_valid(rect) return;
-    if mouse_pointer_is_within(rect) {
-        set_pointer_image(.NORMAL);
-        ui.hot = ui_id;
-        if ui.hot_last_frame == ui_id && no_active_ui_item() && mouse.left.just_pressed then ui.active = ui_id;
-    }
+
+    became_active := maybe_set_hot_or_active(ui_id, rect, .NORMAL);
+    if became_active then activate_finder();
 
     if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) deactivate_finder();
 }
@@ -532,11 +520,7 @@ draw_open_file_dialog :: () {
     }
     draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = char_size / 1.5, shadow_size = char_size * 1.5);
 
-    if mouse_pointer_is_within(box_rect) {
-        set_pointer_image(.NORMAL);
-        ui.hot = ui_id;
-        if ui.hot_last_frame == ui_id && no_active_ui_item() && mouse.left.just_pressed then ui.active = ui_id;
-    }
+    maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
 
     // Draw the filter input
     input_rect, files_rect := cut_top(box_rect, input_rect_height);
@@ -582,7 +566,7 @@ draw_open_file_dialog :: () {
 
             // Mouse scrolling
             if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(files_rect) {
-                if ui.hot_last_frame == ui_id then set_pointer_image(.PRESSABLE);
+                if ui.hot_last_frame == ui_id && ui.active == .none then set_pointer_image(.PRESSABLE);
                 if mouse.scroll_y_delta != 0 {
                     target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
                     start_animation(*scroll_anim, scroll_y, target);
@@ -744,11 +728,7 @@ draw_text_input :: (using input: *Text_Input, rect: Rect, ui_id: Ui_Id, active :
     input_rect := shrink(rect, 1);
     if !is_valid(input_rect) return;
 
-    if mouse_pointer_is_within(rect) {
-        ui.hot = ui_id;
-        if ui.hot_last_frame == ui_id && mouse.left.just_pressed then ui.active = ui_id;
-    }
-    if mouse_pointer_is_within(input_rect) then set_pointer_image(.TEXT_SELECT);
+    maybe_set_hot_or_active(ui_id, input_rect, .TEXT_SELECT);
 
     push_scissor(shrink_x(input_rect, 1));
     defer pop_scissor();
@@ -919,54 +899,6 @@ draw_top_shadow :: (using rect: Rect, size: float = 10.0) {
     Simp.immediate_quad(x, y + h, x + w, y + h + size * dpi_scale, c00 = s, c01 = t, c10 = s, c11 = t);
 }
 
-
-#scope_file
-
-push_scissor :: (rect: Rect) {
-    set_scissor_rect(rect);
-    array_add(*scissor_stack, rect);
-}
-
-pop_scissor :: () {
-    assert(scissor_stack.count > 0);
-    pop(*scissor_stack);
-    if scissor_stack.count > 0 {
-        rect := peek(scissor_stack);
-        set_scissor_rect(rect);
-    } else {
-        Simp.clear_scissor();
-    }
-}
-
-set_scissor_rect :: (rect: Rect) {
-    if !is_valid(rect) return;
-
-    x0 := cast(s32) rect.x;
-    y0 := cast(s32) rect.y;
-    x1 := cast(s32) (rect.x + rect.w);
-    y1 := cast(s32) (rect.y + rect.h);
-    Simp.set_scissor(x0, y0, x1, y1);
-}
-
-no_active_ui_item :: inline () -> bool {
-    return ui.active == .none;
-}
-
-get_ui_id_from_loc :: inline (loc := #caller_location, parent_id: Ui_Id = .none) -> Ui_Id {
-    if parent_id != .none {
-        return cast(Ui_Id) (loc.line_number + NUM_LINES_OF_CODE * cast(s64) parent_id);
-    }
-    return cast(Ui_Id) loc.line_number;
-}
-
-is_child :: (ui_id: Ui_Id, parent_id: Ui_Id) -> bool {
-    // A ui id is considered a child if it was obtained by the get_ui_id_from_loc function above
-    num := cast(s64) ui_id;
-    parent_min := cast(s64) parent_id * NUM_LINES_OF_CODE;
-    parent_max := parent_min + NUM_LINES_OF_CODE - 1;
-    return parent_min <= num && num <= parent_max;
-}
-
 draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id) -> new_scroll_target: s32 {
     if max_scroll <= 0 return scroll_target;
 
@@ -977,10 +909,7 @@ draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll:
 
     if scroll_zone_size <= 0 return scroll_target;  // don't draw
 
-    if mouse_pointer_is_within(area) {
-        ui.hot = ui_id;
-        if ui.hot_last_frame == ui_id && mouse.left.just_pressed then ui.active = ui_id;
-    }
+    maybe_set_hot_or_active(ui_id, area, .NORMAL);
 
     // Draw
     color := Colors.SCROLLBAR;
@@ -1016,6 +945,63 @@ draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll:
     } else {
         return scroll_target;
     }
+}
+
+
+#scope_file
+
+push_scissor :: (rect: Rect) {
+    set_scissor_rect(rect);
+    array_add(*scissor_stack, rect);
+}
+
+pop_scissor :: () {
+    assert(scissor_stack.count > 0);
+    pop(*scissor_stack);
+    if scissor_stack.count > 0 {
+        rect := peek(scissor_stack);
+        set_scissor_rect(rect);
+    } else {
+        Simp.clear_scissor();
+    }
+}
+
+set_scissor_rect :: (rect: Rect) {
+    if !is_valid(rect) return;
+
+    x0 := cast(s32) rect.x;
+    y0 := cast(s32) rect.y;
+    x1 := cast(s32) (rect.x + rect.w);
+    y1 := cast(s32) (rect.y + rect.h);
+    Simp.set_scissor(x0, y0, x1, y1);
+}
+
+get_ui_id_from_loc :: inline (loc := #caller_location, parent_id: Ui_Id = .none) -> Ui_Id {
+    if parent_id != .none {
+        return cast(Ui_Id) (loc.line_number + NUM_LINES_OF_CODE * cast(s64) parent_id);
+    }
+    return cast(Ui_Id) loc.line_number;
+}
+
+is_child :: (ui_id: Ui_Id, parent_id: Ui_Id) -> bool {
+    // A ui id is considered a child if it was obtained by the get_ui_id_from_loc function above
+    num := cast(s64) ui_id;
+    parent_min := cast(s64) parent_id * NUM_LINES_OF_CODE;
+    parent_max := parent_min + NUM_LINES_OF_CODE - 1;
+    return parent_min <= num && num <= parent_max;
+}
+
+maybe_set_hot_or_active :: (ui_id: Ui_Id, rect: Rect, pointer_image: Pointer_Image) -> became_active: bool {
+    if !mouse_pointer_is_within(rect) return false;
+
+    ui.hot = ui_id;
+    if ui.hot_last_frame == ui_id || ui.active == ui_id then set_pointer_image(pointer_image);
+    if ui.hot_last_frame == ui_id && ui.active == .none && mouse.left.just_pressed {
+        ui.active = ui_id;
+        return true;
+    }
+
+    return false;
 }
 
 ui: struct {
