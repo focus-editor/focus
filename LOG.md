@@ -15,14 +15,20 @@
         + Use the new animation struct for the search bar
         + Slide in and out
         + Refactor the input system so that there can be only one active global widget
-        - Make sure active widget is changed when activated as ui (on click)
+        + Make sure active widget is changed when activated as ui (on click)
+        - See if we can compress the common ui pieces of code
         - Drag the slider
         - Draw the input
 
 - Implement case-insensitive search in buffer
-- Bug: crash when drawing search bar with in small window
 - Bug: resize pointer is not shown when trying to resize window
 - Task: Check the implementation of find_index_from_left_whole_word and make sure it uses the fact that bytes in the multi-byte utf-8 characters always start with 10 (can just check one byte on each side)
+
+- Jump to function definition:
+    - Tokenizer: support broken down identifiers
+    - Scan all jai files in a project (possibly in a separate thread) and build a lookup table for functions and structs
+      (Do without scopes for now, later if we find we have to limit potential results we can do it)
+    - Update the lookup table on file/buffer changes (buffers always take precedence over what's in files)
 
 - Navigating project dirs in a dialog
 - Create new files (with a mini-dialog?)
@@ -82,6 +88,7 @@
 - Fix the font unknown character glyph (try copying something from font-awesome)
 
 # DONE
++ Bug: crash when drawing search bar with in small window
 + Fix the memory usage: backend/gl.jai - update texture is called too often (fixed using a workaround, but memory usage is still high, even though not as high)
 + Syntax highlighting
     + Write a tokeniser

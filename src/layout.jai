@@ -20,6 +20,10 @@ make_rect :: (x: float, y: float, w: float, h: float) -> Rect {
     return r;
 }
 
+is_valid :: inline (using rect: Rect) -> bool {
+    return w >= 0 && h >= 0;
+}
+
 expand :: (rect: Rect, amount: float) -> Rect {
     r := rect;
 
@@ -118,22 +122,22 @@ cut_top :: (rect: Rect, amount: float) -> (top: Rect, remainder: Rect) {
 }
 
 bottom_left :: inline (using rect: Rect) -> Vector2 {
-    assert(w >= 0 && h >= 0);
+    assert(is_valid(rect));
     return make_vector2(x, y);
 }
 
 bottom_right :: inline (using rect: Rect) -> Vector2 {
-    assert(w >= 0 && h >= 0);
+    assert(is_valid(rect));
     return make_vector2(x + w, y);
 }
 
 top_left :: inline (using rect: Rect) -> Vector2 {
-    assert(w >= 0 && h >= 0);
+    assert(is_valid(rect));
     return make_vector2(x, y + h);
 }
 
 top_right :: inline (using rect: Rect) -> Vector2 {
-    assert(w >= 0 && h >= 0);
+    assert(is_valid(rect));
     return make_vector2(x + w, y + h);
 }
 

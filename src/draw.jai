@@ -9,10 +9,18 @@ draw_frame :: () {
 
     maybe_animate_finder();
 
-    finder_split := screen.w * finder.width;
-    finder_area, editors_area := cut_left(screen, finder_split);
-    splitter_rect := make_rect(editors_area.x - 2, finder_area.y, 2, finder_area.h);
-    draw_splitter(splitter_rect, screen.w * 0.2, .finder_splitter);
+    editors_area := screen;
+    finder_area: Rect;
+    finder_splitter_id := get_ui_id_from_loc(parent_id = .finder);
+    // Maybe drag splitter
+    if ui.active == finder_splitter_id then finder_set_openness((mouse.pointer.x - screen.x) / screen.w);
+    if finder_is_open() {
+        finder_split := screen.w * finder.openness;
+        finder_area, editors_area = cut_left(screen, finder_split, margin = 2);
+        splitter_rect := make_rect(editors_area.x - 2, finder_area.y, 2, finder_area.h);
+        draw_finder(finder_area, .finder);
+        draw_splitter(splitter_rect, finder_split, finder_splitter_id);
+    }
 
     footer_height := font_ui_line_height * 1.6;
 
@@ -85,6 +93,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
 
     footer_rect, rect := cut_bottom(main_area, footer_height);
+    if !is_valid(rect) return;
 
     using editor := *open_editors[editor_id];
     buffer := *open_buffers[buffer_id];
@@ -359,6 +368,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             bar_rect.x += bar_rect.w - max_width;
             bar_rect.w = max_width;
         }
+        push_scissor(bar_rect);
+        defer pop_scissor();
         draw_rounded_rect_with_shadow(bar_rect, Colors.BACKGROUND_LIGHT);
 
         result_label: string;
@@ -481,13 +492,24 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
 }
 
+draw_finder :: (rect: Rect, ui_id: Ui_Id) {
+    if !is_valid(rect) return;
+    if mouse_pointer_is_within(rect) {
+        set_pointer_image(.NORMAL);
+        ui.hot = ui_id;
+        if ui.hot_last_frame == ui_id && no_active_ui_item() && mouse.left.just_pressed then ui.active = ui_id;
+    }
+
+    if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) deactivate_finder();
+}
+
 draw_open_file_dialog :: () {
     using open_file_dialog;
 
     ui_id := Ui_Id.open_file_dialog;
     scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
 
-    if ui.active != .none && ui.active != ui_id && ui.active != scrollbar_id {
+    if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
         // Close the dialog on clicks elsewhere
         hide_open_file_dialog();
         return;
@@ -506,6 +528,7 @@ draw_open_file_dialog :: () {
         x := (screen.w - width) / 2;
         y := clamp(100 * dpi_scale, 0, (screen.h - height) / 2);
         box_rect = make_rect(x, screen.h - height - y, width, height);
+        if !is_valid(box_rect) return;
     }
     draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = char_size / 1.5, shadow_size = char_size * 1.5);
 
@@ -713,11 +736,13 @@ draw_range :: (using range: Range, buffer: Buffer, visible_start: s64, visible_e
 }
 
 draw_text_input :: (using input: *Text_Input, rect: Rect, ui_id: Ui_Id, active := false, label: string = "", font: *Simp.Dynamic_Font = null, color := Colors.UI_DEFAULT) {
+    if !is_valid(rect) return;
     if font == null then font = font_ui;
     padding := (rect.h - cast(float) font.default_line_spacing) / 2;
 
     draw_rect(rect, ifx active then Colors.CURSOR_INACTIVE else Colors.BACKGROUND_DARK);
     input_rect := shrink(rect, 1);
+    if !is_valid(input_rect) return;
 
     if mouse_pointer_is_within(rect) {
         ui.hot = ui_id;
@@ -914,6 +939,8 @@ pop_scissor :: () {
 }
 
 set_scissor_rect :: (rect: Rect) {
+    if !is_valid(rect) return;
+
     x0 := cast(s32) rect.x;
     y0 := cast(s32) rect.y;
     x1 := cast(s32) (rect.x + rect.w);
@@ -926,12 +953,18 @@ no_active_ui_item :: inline () -> bool {
 }
 
 get_ui_id_from_loc :: inline (loc := #caller_location, parent_id: Ui_Id = .none) -> Ui_Id {
-    REALLY_BIG_NUMBER :: 100_000;  // jk, just needs to be more than lines of code in this file
-                                   // (could use a constant at the bottom for this someday)
     if parent_id != .none {
-        return cast(Ui_Id) (loc.line_number + REALLY_BIG_NUMBER * cast(s64) parent_id);
+        return cast(Ui_Id) (loc.line_number + NUM_LINES_OF_CODE * cast(s64) parent_id);
     }
     return cast(Ui_Id) loc.line_number;
+}
+
+is_child :: (ui_id: Ui_Id, parent_id: Ui_Id) -> bool {
+    // A ui id is considered a child if it was obtained by the get_ui_id_from_loc function above
+    num := cast(s64) ui_id;
+    parent_min := cast(s64) parent_id * NUM_LINES_OF_CODE;
+    parent_max := parent_min + NUM_LINES_OF_CODE - 1;
+    return parent_min <= num && num <= parent_max;
 }
 
 draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id) -> new_scroll_target: s32 {
@@ -1000,7 +1033,7 @@ Ui_Id :: enum s64 {
     editor_right  :: -5;
     editor_splitter   :: -6;
     open_file_dialog  :: -7;
-    finder_splitter   :: -7;
+    finder            :: -8;
 
     // The rest will be derived from loc
 }
@@ -1013,3 +1046,6 @@ Ui_Id :: enum s64 {
 scrollbar_grab_point: float;
 
 scissor_stack: [..] Rect;
+
+// Please keep at the bottom - needed for ui elements parent-child relationships
+NUM_LINES_OF_CODE :: #run #location().line_number;
