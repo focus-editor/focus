@@ -916,7 +916,6 @@ draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll:
     rounding_radius := 2.0;
 
     if ui.active == ui_id || (ui.hot_last_frame == ui_id && ui.active == .none) {
-        set_pointer_image(.NORMAL);
         draw_rounded_rect(area, Colors.SCROLLBAR_BACKGROUND, radius = rounding_radius);
         color = Colors.SCROLLBAR_HOVER;
     }

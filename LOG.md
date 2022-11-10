@@ -21,7 +21,6 @@
         - Draw the input
 
 - Implement case-insensitive search in buffer
-- Bug: resize pointer is not shown when trying to resize window
 - Task: Check the implementation of find_index_from_left_whole_word and make sure it uses the fact that bytes in the multi-byte utf-8 characters always start with 10 (can just check one byte on each side)
 
 - Jump to function definition:
@@ -89,6 +88,7 @@
 - Fix the font unknown character glyph (try copying something from font-awesome)
 
 # DONE
++ Bug: resize pointer is not shown when trying to resize window
 + Bug: crash when drawing search bar with in small window
 + Fix the memory usage: backend/gl.jai - update texture is called too often (fixed using a workaround, but memory usage is still high, even though not as high)
 + Syntax highlighting
