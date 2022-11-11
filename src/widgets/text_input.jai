@@ -13,7 +13,7 @@ text_input_handle_keypress :: (using input: *Text_Input, key_code: Input.Key_Cod
     if key_code == {
         case .ARROW_LEFT; #through;
         case .ARROW_RIGHT;
-            if cursor.pos != cursor.sel {
+            if cursor.pos != cursor.sel && !mods.shift_pressed {
                 if key_code == .ARROW_LEFT {
                     cursor.pos = min(cursor.pos, cursor.sel);
                 } else {

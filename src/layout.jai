@@ -169,6 +169,17 @@ snap_to_rect :: (point: Vector2, using rect: Rect) -> Vector2 {
     return p;
 }
 
+align_to_grid :: (rect: Rect) -> Rect {
+    r := rect;
+
+    r.x = floor(r.x);
+    r.y = floor(r.y);
+    r.w = floor(r.w);
+    r.h = floor(r.h);
+
+    return r;
+}
+
 Rect :: struct {
     x, y : float;
     w, h : float;

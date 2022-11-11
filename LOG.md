@@ -20,11 +20,17 @@
         + Drag the slider
         + Draw the input
         + Type into input
+        - Draw sample results
 
-- Text input: always show as much text as possible
+
+- [bug] Weird selection when inserting line above when the cursor is more to the left
+
+- Text Input:
+    - Select by mouse
+    - Select words by ctrl+D
+    - Fix the weird doubling of characters when pasted a newline
 
 - Implement case-insensitive search in buffer
-- Task: Check the implementation of find_index_from_left_whole_word and make sure it uses the fact that bytes in the multi-byte utf-8 characters always start with 10 (can just check one byte on each side)
 
 - Jump to function definition:
     - Tokenizer: support broken down identifiers
@@ -48,10 +54,7 @@
     - Review and cleanup code
     - Put the open editors at the top
     - Implement fuzzy searching with letter highlighting etc
-    - Input:
-        - Select by mouse
-        - Select words by ctrl+D
-        - Fix the weird doubling of characters when pasted a newline
+
 
 - When there are several cursors where some of them are above the viewport, hitting enter will shift everything down
   and will jerk briefly, which is annoying
@@ -91,6 +94,9 @@
 - Fix the font unknown character glyph (try copying something from font-awesome)
 
 # DONE
++ Text input: always show as much text as possible
++ Text input: can't select text by individual letters
++ Text input: draw a consistent outline of 1px
 + Bug: resize pointer is not shown when trying to resize window
 + Bug: crash when drawing search bar with in small window
 + Fix the memory usage: backend/gl.jai - update texture is called too often (fixed using a workaround, but memory usage is still high, even though not as high)

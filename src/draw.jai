@@ -740,8 +740,11 @@ draw_range :: (using range: Range, buffer: Buffer, visible_start: s64, visible_e
     }
 }
 
-draw_text_input :: (using input: *Text_Input, rect: Rect, ui_id: Ui_Id, active := false, label: string = "", font: *Simp.Dynamic_Font = null, color := Colors.UI_DEFAULT) {
-    if !is_valid(rect) return;
+draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active := false, label: string = "", font: *Simp.Dynamic_Font = null, color := Colors.UI_DEFAULT) {
+    if !is_valid(rect_) return;
+
+    rect := align_to_grid(rect_);  // to get a consistent outline
+
     if font == null then font = font_ui;
     padding := (rect.h - cast(float) font.default_line_spacing) / 2;
 
@@ -759,11 +762,17 @@ draw_text_input :: (using input: *Text_Input, rect: Rect, ui_id: Ui_Id, active :
 
     input_text := to_string(text);
     cursor_width := 2 * dpi_scale;
-    cursor_pos_x := Simp.get_text_width(font, slice_chars(input_text, 0, cursor.pos));
+
+    // @Speed: we currently don't limit the text size, so if it's too big we'll do a lot of work here every frame
+    cursor_pos_x     := Simp.get_text_width(font, slice_chars(input_text, 0, cursor.pos));
+    total_text_width := Simp.get_text_width(font, input_text);
 
     scroll_x_target := scroll_anim.target;
     if cursor_pos_x - scroll_x_target >= cast(s32) input_rect.w then scroll_x_target = cast(s32) cursor_pos_x - cast(s32) input_rect.w;
     if cursor_pos_x < scroll_x_target then scroll_x_target = xx cursor_pos_x;
+    if total_text_width - scroll_x_target < cast(s32) input_rect.w then {
+        scroll_x_target = max(cast(s32) total_text_width - cast(s32) input_rect.w, 0);  // always show as much text as possible
+    }
     if scroll_x_target != scroll_anim.target then start_animation(*scroll_anim, scroll_x, scroll_x_target);
 
     if scroll_x != scroll_anim.target {
