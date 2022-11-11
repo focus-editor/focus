@@ -30,6 +30,10 @@
     - Select words by ctrl+D
     - Fix the weird doubling of characters when pasted a newline
 
+- Tokenizer:
+    - Parse @notes
+    - Identifiers can start with _
+
 - Implement case-insensitive search in buffer
 
 - Jump to function definition:

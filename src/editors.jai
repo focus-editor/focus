@@ -1132,6 +1132,7 @@ handle_enter :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
 
     pos.col = indent;
     col_wanted = pos.col;
+    sel = pos;
 }
 
 handle_backspace :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
