@@ -1,5 +1,34 @@
 finder_handle_event :: (event: Input.Event) {
+    if event.type == {
+        case .KEYBOARD;
+            if event.key_pressed {
+                if event.key_code == {
+                    case .ESCAPE;   deactivate_finder(); return;
+                    case #char "B"; if only_ctrl_pressed(event.modifier_flags) { close_finder(); return; }
+                }
+                finder_handle_key_press(event.key_code, event.modifier_flags);
+            }
 
+        case .TEXT_INPUT;
+            finder_handle_text_input(event.utf32);
+    }
+}
+
+finder_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
+    using finder;
+
+    handled := text_input_handle_keypress(*input, key_code, mods);
+    if handled return;
+
+    // TODO: more handling later
+}
+
+finder_handle_text_input :: (char: u32) {
+    if char == 127 return;  // there seems to be a bug in the Input module
+                            // which generates a TEXT_INPUT event for DEL
+                            // when Ctrl+Backspace is pressed
+
+    text_input_type_char(*finder.input, char);
 }
 
 finder_is_open :: () -> bool {

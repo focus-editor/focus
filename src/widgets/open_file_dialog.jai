@@ -1,27 +1,13 @@
 open_file_dialog_handle_event :: (event: Input.Event) {
-    mods := event.modifier_flags;
-
     if event.type == {
         case .KEYBOARD;
             if event.key_pressed {
                 if event.key_code == {
-                    case .ESCAPE;
-                        hide_open_file_dialog();
-                        return;
-
-                    case #char "B";
-                        if only_ctrl_pressed(mods) {
-                            toggle_finder();
-                            return;
-                        }
-
-                    case #char "F";
-                        if only_ctrl_shift_pressed(mods) {
-                            if !finder_is_open() then open_finder(); else activate_finder();
-                            return;
-                        }
+                    case .ESCAPE;   hide_open_file_dialog(); return;
+                    case #char "B"; if only_ctrl_pressed      (event.modifier_flags) { toggle_finder(); return; }
+                    case #char "F"; if only_ctrl_shift_pressed(event.modifier_flags) { if !finder_is_open() then open_finder(); else activate_finder(); return; }
                 }
-                open_file_dialog_handle_key_press(event.key_code, mods);
+                open_file_dialog_handle_key_press(event.key_code, event.modifier_flags);
             }
 
         case .TEXT_INPUT;
@@ -67,10 +53,10 @@ hide_open_file_dialog :: () {
 open_file_dialog_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
     using open_file_dialog;
 
-    input_text := copy_temporary_string(to_string(open_file_dialog.input.text));
-    handled := text_input_handle_keypress(*open_file_dialog.input, key_code, mods);
+    input_text := copy_temporary_string(to_string(input.text));
+    handled := text_input_handle_keypress(*input, key_code, mods);
     if handled {
-        if input_text != to_string(open_file_dialog.input.text) then recalculate_filtered_entries();
+        if input_text != to_string(input.text) then recalculate_filtered_entries();
         return;
     }
 

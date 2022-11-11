@@ -17,8 +17,11 @@
         + Refactor the input system so that there can be only one active global widget
         + Make sure active widget is changed when activated as ui (on click)
         + See if we can compress the common ui pieces of code
-        - Drag the slider
-        - Draw the input
+        + Drag the slider
+        + Draw the input
+        + Type into input
+
+- Text input: always show as much text as possible
 
 - Implement case-insensitive search in buffer
 - Task: Check the implementation of find_index_from_left_whole_word and make sure it uses the fact that bytes in the multi-byte utf-8 characters always start with 10 (can just check one byte on each side)

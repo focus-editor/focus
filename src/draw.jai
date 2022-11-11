@@ -483,12 +483,33 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 }
 
 draw_finder :: (rect: Rect, ui_id: Ui_Id) {
+    using finder;
     if !is_valid(rect) return;
 
     became_active := maybe_set_hot_or_active(ui_id, rect, .NORMAL);
     if became_active then activate_finder();
 
-    if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) deactivate_finder();
+    // Deactivate on clicks elsewhere
+    if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) then deactivate_finder();
+
+    draw_rect(rect, Colors.BACKGROUND_LIGHT);
+
+    margin  := 10 * dpi_scale;
+    padding :=  5 * dpi_scale;
+
+    // Draw the main input
+    input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
+    input_rect, results_rect := cut_top(rect, input_rect_height);
+    input_rect = shrink(input_rect, margin);
+    input_id := get_ui_id_from_loc(parent_id = ui_id);
+
+    // NOTE: this function is called twice (once now and once in the input). Maybe there's a good way to avoid it?
+    input_clicked := maybe_set_hot_or_active(input_id, input_rect, .TEXT_SELECT);
+    if input_clicked {
+        activate_finder();
+    }
+    draw_text_input(*input, input_rect, ui_id = input_id, active = active_global_widget == .finder, label = "Search in project");
+
 }
 
 draw_open_file_dialog :: () {
@@ -966,13 +987,11 @@ pop_scissor :: () {
 }
 
 set_scissor_rect :: (rect: Rect) {
-    if !is_valid(rect) return;
-
     x0 := cast(s32) rect.x;
     y0 := cast(s32) rect.y;
     x1 := cast(s32) (rect.x + rect.w);
     y1 := cast(s32) (rect.y + rect.h);
-    Simp.set_scissor(x0, y0, x1, y1);
+    Simp.set_scissor(x0, y0, max(x0, x1), max(y0, y1));
 }
 
 get_ui_id_from_loc :: inline (loc := #caller_location, parent_id: Ui_Id = .none) -> Ui_Id {
@@ -991,7 +1010,7 @@ is_child :: (ui_id: Ui_Id, parent_id: Ui_Id) -> bool {
 }
 
 maybe_set_hot_or_active :: (ui_id: Ui_Id, rect: Rect, pointer_image: Pointer_Image) -> became_active: bool {
-    if !mouse_pointer_is_within(rect) return false;
+    if !is_valid(rect) || !mouse_pointer_is_within(rect) return false;
 
     ui.hot = ui_id;
     if ui.hot_last_frame == ui_id || ui.active == ui_id then set_pointer_image(pointer_image);

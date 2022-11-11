@@ -6,23 +6,9 @@ editors_handle_event :: (event: Input.Event) {
             // Maybe open/switch to other widgets
             if event.key_pressed {
                 if event.key_code == {
-                    case #char "P";
-                        if only_ctrl_pressed(mods) {
-                            show_open_file_dialog();
-                            return;
-                        }
-
-                    case #char "B";
-                        if only_ctrl_pressed(mods) {
-                            toggle_finder();
-                            return;
-                        }
-
-                    case #char "F";
-                        if only_ctrl_shift_pressed(mods) {
-                            if !finder_is_open() then open_finder(); else activate_finder();
-                            return;
-                        }
+                    case #char "P"; if only_ctrl_pressed(mods)       { show_open_file_dialog(); return; }
+                    case #char "B"; if only_ctrl_pressed(mods)       { toggle_finder();         return; }
+                    case #char "F"; if only_ctrl_shift_pressed(mods) { if !finder_is_open() then open_finder(); else activate_finder(); return; }
                 }
             }
 
