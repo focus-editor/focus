@@ -516,6 +516,7 @@ maybe_refresh_open_buffers_in_dir :: (dir_path: string) {
             new_replace_edit(buffer, 0, xx buffer.bytes.count, to_string(buffer.bytes), file_contents);
             replace_range_raw(buffer, 0, xx buffer.bytes.count, file_contents);
             recalculate_lines(buffer);
+            buffer.needs_coloring = true;
 
             // Save edits and put cursors in correct places
             for * editor : open_editors {

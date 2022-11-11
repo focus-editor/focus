@@ -183,11 +183,17 @@ is_all_whitespace :: (s: string) -> bool {
     return true;
 }
 
-start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: Time = xx 0.1) {
+start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: Time = xx 0.1, $snappy := false) {
     anim.start  = start;
     anim.target = target;
     anim.speed  = speed;
-    anim.started_at = frame_time;
+    #if snappy {
+        // Pretend the animation started last frame so we start moving right away
+        anim.started_at = frame_time - MAX_FRAME_DT;
+    } else {
+        // Things will start moving next frame - but usually in a more smooth way
+        anim.started_at = frame_time;
+    }
 }
 
 get_animation_value :: (using anim: Tween_Animation($T)) -> T {

@@ -22,9 +22,6 @@
         + Type into input
         - Draw sample results
 
-
-- [bug] Weird selection when inserting line above when the cursor is more to the left
-
 - Text Input:
     - Select by mouse
     - Select words by ctrl+D
@@ -74,6 +71,7 @@
 - Implement semantic highlighting
     - Polymorphic structs and possibly other types
     - Highlight globals?
+    - Highlight shadowed variables
     - Color cursor differently depending on what scope we're in
 - Highlight matching braces
 - Make sure cursor positioning is correct for all fonts and sizes
@@ -98,6 +96,7 @@
 - Fix the font unknown character glyph (try copying something from font-awesome)
 
 # DONE
++ [bug] Weird selection when inserting line above when the cursor is more to the left
 + Text input: always show as much text as possible
 + Text input: can't select text by individual letters
 + Text input: draw a consistent outline of 1px

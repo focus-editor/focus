@@ -105,7 +105,9 @@ main :: () {
 
         Input.update_window_events();
 
-        frame_time = xx get_time();
+        current_time := cast(Time) get_time();
+        frame_dt   = min(current_time - frame_time, MAX_FRAME_DT);
+        frame_time = current_time;
 
         for Input.get_window_resizes() {
             Simp.update_window(it.window);
@@ -313,7 +315,9 @@ redraw_requested := true;  // set to true to render the first frame
 
 open_file_dialog: Open_File_Dialog;
 
-frame_time: Time;  // ever-increasing time since start in seconds
+frame_time: Time;                 // ever-increasing time since start in seconds
+frame_dt:   Time = MAX_FRAME_DT;  // time delta since the last frame
+MAX_FRAME_DT: Time : xx (1.0 / 60);
 
 screen: Rect;  // contains the current working area rect for convenience
 
