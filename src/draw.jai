@@ -27,25 +27,27 @@ draw_frame :: () {
     // Draw editors
     if #complete editors_layout == {
         case .None;
-            splitter_pos = 0;
+            editors_snap_splitter(0.5);
             // TODO: draw a shortcut cheat-sheet?
         case .Single;
-            splitter_pos = 0;
+            editors_snap_splitter(0.5);
             draw_editor(editor_active, editors_area, footer_height, .editor_single);
         case .Double;
             // Drag splitter
             if ui.active == .editor_splitter {
-                splitter_pos = (mouse.pointer.x - editors_area.x) / editors_area.w;
-                if splitter_pos == 0 then splitter_pos = 0.1;  // avoid jitter
+                editors_snap_splitter((mouse.pointer.x - editors_area.x) / editors_area.w);
                 editor_expanded = false;
             }
-            if splitter_pos != 0 then splitter_pos = clamp(splitter_pos, 0.1, 0.9);
+            if !values_are_close(splitter_pos, splitter_anim.target) {
+                redraw_requested = true;
+                splitter_pos = clamp(get_animation_value(splitter_anim), 0.1, 0.9);
+            }
             if editor_expanded {
-                if editor_active == editor_left  && !values_are_close(splitter_pos, 0.9) then splitter_pos = 0.9;
-                if editor_active == editor_right && !values_are_close(splitter_pos, 0.1) then splitter_pos = 0.1;
+                if editor_active == editor_left  && !values_are_close(splitter_anim.target, 0.9) then editors_start_moving_splitter(0.9);
+                if editor_active == editor_right && !values_are_close(splitter_anim.target, 0.1) then editors_start_moving_splitter(0.1);
             }
 
-            split_x := ifx splitter_pos > 0 then editors_area.w * splitter_pos else editors_area.w / 2;
+            split_x := editors_area.w * splitter_pos;
             left_rect, right_rect := cut_left(editors_area, split_x, margin = 2);
 
             draw_editor(editor_left,  left_rect,  footer_height, .editor_left);

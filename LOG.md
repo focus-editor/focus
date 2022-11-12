@@ -30,6 +30,8 @@
         - Draw sample results
         - Ctrl+shift+L to temporarily enlarge (try with an animation?)
 
+- Footer: file name should occlude line numbers, not the other way around
+
 - Text Input:
     - Select by mouse
     - Select words by ctrl+D

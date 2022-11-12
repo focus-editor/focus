@@ -114,9 +114,9 @@ editors_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
             if only_ctrl_shift_pressed(mods) && editors_layout == .Double {
                 editor_expanded = !editor_expanded;
                 if editor_expanded {
-                    splitter_pos = ifx editor_active == editor_left then 0.9 else 0.1;
+                    editors_start_moving_splitter(ifx editor_active == editor_left then 0.9 else 0.1);
                 } else {
-                    splitter_pos = 0;  // back to center
+                    editors_start_moving_splitter(0.5);  // back to center
                 }
             }
 
@@ -754,6 +754,16 @@ jump_to_next_search_result :: (using editor: *Editor, buffer: Buffer) {
 reset_search_results :: (using search_bar: *Search_Bar) {
     array_reset(*results);
     selected_result = -1;
+}
+
+editors_snap_splitter :: (pos: float) {
+    splitter_pos = pos;
+    splitter_anim.target = pos;
+}
+
+editors_start_moving_splitter :: (target: float) {
+    start_animation(*splitter_anim, splitter_pos, target, snappy = true);
+    redraw_requested = true;
 }
 
 #scope_file
@@ -1521,7 +1531,8 @@ editor_smooth_scroll: struct {
     start_y: s32;
 };
 
-splitter_pos: float = 0;  // zero means it's in the middle
+splitter_pos:  float = 0.5;  // 0.5 means it's in the middle
+splitter_anim: Tween_Animation(float);
 
 
 #scope_file
