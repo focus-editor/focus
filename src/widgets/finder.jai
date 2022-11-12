@@ -5,6 +5,7 @@ finder_handle_event :: (event: Input.Event) {
                 if event.key_code == {
                     case .ESCAPE;   deactivate_finder(); return;
                     case #char "B"; if only_ctrl_pressed(event.modifier_flags) { close_finder(); return; }
+                    case #char "P"; if only_ctrl_pressed(event.modifier_flags) { show_open_file_dialog(); return; }
                 }
                 finder_handle_key_press(event.key_code, event.modifier_flags);
             }
@@ -31,8 +32,12 @@ finder_handle_text_input :: (char: u32) {
     text_input_type_char(*finder.input, char);
 }
 
-finder_is_open :: () -> bool {
+finder_is_open :: inline () -> bool {
     return finder.openness > 0;
+}
+
+finder_is_active :: inline () -> bool {
+    return active_global_widget == .finder;
 }
 
 toggle_finder :: () {

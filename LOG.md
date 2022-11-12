@@ -6,6 +6,13 @@
     - Grep in the project
     - Save modified buffers to temporary files and recover after crashes
 
+- Before I ship:
+    - Adjust cursors in joint editors properly
+    - Tokenizer parses everything correctly
+    - Finish text input fixes
+    - Support tabs (just draw them, not even necessarily wide, just draw in some way - but wide would be best)
+    - Ignore project folders which are children of another project folder?
+
 - Grep in the project
     + Profile the use of the in-buffer search
     + Write a BMH implementation for search
@@ -21,6 +28,7 @@
         + Draw the input
         + Type into input
         - Draw sample results
+        - Ctrl+shift+L to temporarily enlarge (try with an animation?)
 
 - Text Input:
     - Select by mouse
@@ -96,6 +104,7 @@
 - Fix the font unknown character glyph (try copying something from font-awesome)
 
 # DONE
++ [bug] When finder is open, clicks on files in the dialog don't do anything
 + [bug] Weird selection when inserting line above when the cursor is more to the left
 + Text input: always show as much text as possible
 + Text input: can't select text by individual letters

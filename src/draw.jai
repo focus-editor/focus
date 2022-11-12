@@ -239,7 +239,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             mark_line_height := marks_rect.h / cast(float)buffer.lines.count;  // the height of the rect which corresponds to one line
 
             highlight_mark_rect := shrink_x(marks_rect, marks_rect.w / 3);
-            highlight_mark_rect.h = 5 * dpi_scale;
+            highlight_mark_rect.h = 4 * dpi_scale;
 
             if search_bar_is_open(editor) && search_bar.results {
                 // Search results
@@ -347,9 +347,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             redraw_requested = true;
         }
 
-        margin_x := 10 * dpi_scale;
+        margin_x := 12 * dpi_scale;
         margin_y :=  7 * dpi_scale;
-        padding  :=  5 * dpi_scale;
+        padding  :=  4 * dpi_scale;
         bar_rect_height := font_ui_line_height + 2 * padding + 2 * margin_y + 2;
 
         bar_rect := cut_top(main_area, bar_rect_height);
@@ -406,7 +406,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         footer_rect = shrink_x(footer_rect, text_offset.x);
 
         width   := 0.0;
-        padding := 5 * dpi_scale;
+        padding := 4 * dpi_scale;
 
         pen := make_vector2(
             footer_rect.x,
@@ -486,16 +486,21 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
     using finder;
     if !is_valid(rect) return;
 
+    push_scissor(rect);
+    defer pop_scissor();
+
     became_active := maybe_set_hot_or_active(ui_id, rect, .NORMAL);
     if became_active then activate_finder();
 
     // Deactivate on clicks elsewhere
-    if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) then deactivate_finder();
+    if finder_is_active() && ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
+        deactivate_finder();
+    }
 
     draw_rect(rect, Colors.BACKGROUND_LIGHT);
 
-    margin  := 10 * dpi_scale;
-    padding :=  5 * dpi_scale;
+    margin  := 12 * dpi_scale;
+    padding :=  4 * dpi_scale;
 
     // Draw the main input
     input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
@@ -510,6 +515,16 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
     }
     draw_text_input(*input, input_rect, ui_id = input_id, active = active_global_widget == .finder, label = "Search in project");
 
+    // Draw results
+    result_rect := expand(cut_top(results_rect, font_ui_line_height + padding), 1);
+
+    // Project name
+    draw_rect(result_rect, Colors.BACKGROUND_HIGHLIGHT);
+    draw_rect(shrink(result_rect, 1), Colors.BACKGROUND_DARK);
+
+    pen_x := margin;
+    pen_y := result_rect.y + (result_rect.h - font_ui.character_height) / 2;
+    Simp.draw_text(font_ui_bold, xx pen_x, xx pen_y, "focus", color = Colors.UI_DEFAULT);
 }
 
 draw_open_file_dialog :: () {
@@ -524,8 +539,8 @@ draw_open_file_dialog :: () {
         return;
     }
 
-    margin  := 10 * dpi_scale;
-    padding :=  5 * dpi_scale;
+    margin  := 12 * dpi_scale;
+    padding :=  4 * dpi_scale;
     input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
     entry_height := font_ui_line_height + padding * 2;
 
