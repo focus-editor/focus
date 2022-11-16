@@ -40,6 +40,7 @@
 - Tokenizer:
     - Parse @notes
     - Identifiers can start with _
+    - Make $ a separate token
     - Allow \ in identifiers
 
 - Implement case-insensitive search in buffer

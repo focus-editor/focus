@@ -770,6 +770,7 @@ reset_search_results :: (using search_bar: *Search_Bar) {
 }
 
 editors_snap_splitter :: (pos: float) {
+    pos = clamp(pos, 0.1, 0.9);
     splitter_pos = pos;
     splitter_anim.target = pos;
 }
