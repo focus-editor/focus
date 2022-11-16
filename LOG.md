@@ -30,8 +30,6 @@
         - Draw sample results
         - Ctrl+shift+L to temporarily enlarge (try with an animation?)
 
-- Footer: file name should occlude line numbers, not the other way around
-
 - Text Input:
     - Select by mouse
     - Select words by ctrl+D
@@ -108,6 +106,7 @@
 - Fix the font unknown character glyph (try copying something from font-awesome)
 
 # DONE
++ Footer: file name should occlude line numbers, not the other way around
 + Use Ctrl+1 and Ctrl+2 for switching panes
 + [bug] When finder is open, clicks on files in the dialog don't do anything
 + [bug] Weird selection when inserting line above when the cursor is more to the left

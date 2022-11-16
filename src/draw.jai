@@ -415,70 +415,77 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             footer_rect.y + (footer_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
         );
 
-        // Draw line and column numbers
-        cursor := cursors[main_cursor];
-        width = xx Simp.prepare_text(font_ui_bold, tprint("Line: %  Col: %", cursor.pos.line, cursor.pos.col));
-        line_col_start_x := footer_rect.x + footer_rect.w - width;
-        Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = Colors.CODE_COMMENT);
-
         // Draw file name and path
-        footer_rect.w -= width + padding;
-        if footer_rect.w > 0 {
-            push_scissor(footer_rect);
-            defer pop_scissor();
+        file_name_color := Colors.UI_DEFAULT;
+        if buffer.modified then file_name_color = Colors.UI_WARNING;
 
-            file_name_color := Colors.UI_DEFAULT;
-            if buffer.modified then file_name_color = Colors.UI_WARNING;
+        if buffer.has_file {
+            // Icon
+            icon_char := convert_utf32_to_utf8(xx buffer.file.icon);
+            width = xx Simp.prepare_text(font_icons, to_string(*icon_char));
+            Simp.draw_prepared_text(font_icons, xx pen.x, xx pen.y, color = file_name_color);
 
-            if buffer.has_file {
-                // Icon
-                icon_char := convert_utf32_to_utf8(xx buffer.file.icon);
-                width = xx Simp.prepare_text(font_icons, to_string(*icon_char));
-                Simp.draw_prepared_text(font_icons, xx pen.x, xx pen.y, color = file_name_color);
+            // File name
+            pen.x += width + padding;
+            width = xx Simp.prepare_text(font_ui_bold, buffer.file.name);
+            Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = file_name_color);
 
-                // File name
+            // Maybe warnings
+            if buffer.deleted {
                 pen.x += width + padding;
-                width = xx Simp.prepare_text(font_ui_bold, buffer.file.name);
-                Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = file_name_color);
-
-                // Maybe warnings
-                if buffer.deleted {
-                    pen.x += width + padding;
-                    width = xx Simp.prepare_text(font_ui_bold, "[deleted on disk]");
-                    Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
-                } else if buffer.modified_on_disk {
-                    pen.x += width + padding;
-                    width = xx Simp.prepare_text(font_ui_bold, "[modified on disk]");
-                    Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
-                }
-
-                // Draw separator
+                width = xx Simp.prepare_text(font_ui_bold, "[deleted on disk]");
+                Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
+            } else if buffer.modified_on_disk {
                 pen.x += width + padding;
-                width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
-                Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
-
-                // Draw file path
-                pen.x += width + padding;
-                width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
-                Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
-            } else {
-                // No file
-                icon_char := convert_utf32_to_utf8(xx File_Icon.text);
-                width = xx Simp.prepare_text(font_icons, to_string(*icon_char));
-                Simp.draw_prepared_text(font_icons, xx pen.x, xx pen.y, color = file_name_color);
-
-                // File name
-                pen.x += width + padding;
-                width = xx Simp.prepare_text(font_ui, "<new file>");
-                Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = file_name_color);
+                width = xx Simp.prepare_text(font_ui_bold, "[modified on disk]");
+                Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
             }
 
+            // Draw separator
+            pen.x += width + padding;
+            width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
+            Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
+
+            // Draw file path
+            pen.x += width + padding;
+            width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
+            Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
+
+            pen.x += width;
+        } else {
+            // No file
+            icon_char := convert_utf32_to_utf8(xx File_Icon.text);
+            width = xx Simp.prepare_text(font_icons, to_string(*icon_char));
+            Simp.draw_prepared_text(font_icons, xx pen.x, xx pen.y, color = file_name_color);
+
+            // File name
+            pen.x += width + padding;
+            width = xx Simp.prepare_text(font_ui, "<new file>");
+            Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = file_name_color);
+
+            pen.x += width;
+        }
+
+        // Draw line and column numbers
+        {
+            cut_rect := footer_rect;
+            cut_rect.x = pen.x + padding;
+            cut_rect.w = footer_rect.x + footer_rect.w - cut_rect.x;
+            push_scissor(cut_rect);
+            defer pop_scissor();
+
+            cursor := cursors[main_cursor];
+            width = xx Simp.prepare_text(font_ui_bold, tprint("Line: %  Col: %", cursor.pos.line, cursor.pos.col));
+            line_col_start_x := footer_rect.x + footer_rect.w - width;
+            Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = Colors.CODE_COMMENT);
+
             // Make sure the text is cut nicely
-            fadeout_rect := cut_right(footer_rect, 2 * padding);
+            fadeout_rect := cut_rect;
+            fadeout_rect.w = 4 * padding;
             trans := footer_color;
             trans.a = 0;
             Simp.set_shader_for_color(enable_blend = true);
-            draw_rect_raw(fadeout_rect, c00 = trans, c10 = footer_color, c01 = trans, c11 = footer_color);
+            draw_rect_raw(fadeout_rect, c00 = footer_color, c10 = trans, c01 = footer_color, c11 = trans);
         }
     }
 
