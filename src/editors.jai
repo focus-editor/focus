@@ -170,13 +170,13 @@ editors_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
 
         case #char "1";
             if only_ctrl_pressed(mods) {
-                switch_to_pane(.left);
+                switch_to_pane(.left, dup_editor = true);
                 handled = true;
             }
 
         case #char "2";
             if only_ctrl_pressed(mods) {
-                switch_to_pane(.right);
+                switch_to_pane(.right, dup_editor = true);
                 handled = true;
             }
     }
@@ -456,6 +456,7 @@ editors_open_file :: (path: string, on_the_side := false) {
                 editor_left    = editor_active;
                 editor_active  = editor_right;
                 editors_layout = .Double;
+                editors_start_moving_splitter(0.5, start = 1.0);
             }
 
         case .Double;
@@ -773,7 +774,8 @@ editors_snap_splitter :: (pos: float) {
     splitter_anim.target = pos;
 }
 
-editors_start_moving_splitter :: (target: float) {
+editors_start_moving_splitter :: (target: float, start := -1.0) {
+    if start >= 0 then splitter_pos = start;
     start_animation(*splitter_anim, splitter_pos, target, snappy = true);
     redraw_requested = true;
 }
@@ -823,9 +825,30 @@ maybe_create_additional_cursor :: (using editor: *Editor, buffer: Buffer) -> cre
     return true;
 }
 
-switch_to_pane :: (side: enum { left; right; }) {
-    if editors_layout != .Double return;
-    editor_active = ifx side == .left then editor_left else editor_right;
+switch_to_pane :: (side: enum { left; right; }, dup_editor := false) {
+    if editors_layout == {
+        case .None; return;
+
+        case .Single;
+            if !dup_editor return;
+            current_editor := *open_editors[editor_active];
+            new_editor := find_or_create_editor(current_editor.buffer_id, editor_active);
+            if side == .left {
+                editor_left   = new_editor;
+                editor_right  = editor_active;
+                editor_active = editor_left;
+                editors_start_moving_splitter(0.5, start = 0.0);
+            } else {
+                editor_left   = editor_active;
+                editor_right  = new_editor;
+                editor_active = editor_right;
+                editors_start_moving_splitter(0.5, start = 1.0);
+            }
+            editors_layout = .Double;
+
+        case .Double;
+            editor_active = ifx side == .left then editor_left else editor_right;
+    }
 }
 
 swap_panes :: () {
