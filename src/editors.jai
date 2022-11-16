@@ -167,6 +167,18 @@ editors_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
                 }
                 handled = true;
             }
+
+        case #char "1";
+            if only_ctrl_pressed(mods) {
+                switch_to_pane(.left);
+                handled = true;
+            }
+
+        case #char "2";
+            if only_ctrl_pressed(mods) {
+                switch_to_pane(.right);
+                handled = true;
+            }
     }
 
     // Process individual cursors

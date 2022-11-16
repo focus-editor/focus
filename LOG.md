@@ -106,6 +106,7 @@
 - Fix the font unknown character glyph (try copying something from font-awesome)
 
 # DONE
++ Use Ctrl+1 and Ctrl+2 for switching panes
 + [bug] When finder is open, clicks on files in the dialog don't do anything
 + [bug] Weird selection when inserting line above when the cursor is more to the left
 + Text input: always show as much text as possible
