@@ -249,10 +249,10 @@ editors_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
                     handle_delete(cursor, buffer, mods);
                     cursor_moved = true;
                 case .PAGE_UP;
-                    move_cursor_page(cursor, buffer, mods, .up);
+                    move_cursor_by_page(cursor, buffer, mods, .up);
                     cursor_moved = true;
                 case .PAGE_DOWN;
-                    move_cursor_page(cursor, buffer, mods, .down);
+                    move_cursor_by_page(cursor, buffer, mods, .down);
                     cursor_moved = true;
                 case .TAB;
                     keep_selection = handle_tab(cursor, buffer, mods);
@@ -1111,7 +1111,7 @@ move_cursor_to_empty_line :: (using cursor: *Cursor, buffer: Buffer, mods: Mods,
     pos = make_valid_pos(buffer, pos);
 }
 
-move_cursor_page :: (using cursor: *Cursor, buffer: Buffer, mods: Mods, dir: enum { up; down; }) {
+move_cursor_by_page :: (using cursor: *Cursor, buffer: Buffer, mods: Mods, dir: enum { up; down; }) {
     page_size := cast(s32) (window_height / line_height);
     if dir == .up {
         pos.line -= page_size;

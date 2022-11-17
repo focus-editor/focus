@@ -27,8 +27,10 @@
         + Drag the slider
         + Draw the input
         + Type into input
-        - Draw sample results
+        + Draw sample results
         - Ctrl+shift+L to temporarily enlarge (try with an animation?)
+
+- Draw inactive cursors, but only if no search results are present
 
 - Text Input:
     - Select by mouse

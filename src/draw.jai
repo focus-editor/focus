@@ -526,14 +526,67 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
 
     // Draw results
     result_rect := expand(cut_top(results_rect, font_ui_line_height + padding), 1);
+    pen := make_vector2(result_rect.x + margin, result_rect.y + (result_rect.h - font_ui.character_height) / 2);
 
-    // Project name
-    draw_rect(result_rect, Colors.BACKGROUND_HIGHLIGHT);
-    draw_rect(shrink(result_rect, 1), Colors.BACKGROUND_DARK);
+    draw_filename :: (x: float, y: float, filename: string, path: string, icon: File_Icon) {
+        width := 0.0;
+        padding := 4 * dpi_scale;
 
-    pen_x := margin;
-    pen_y := result_rect.y + (result_rect.h - font_ui.character_height) / 2;
-    Simp.draw_text(font_ui_bold, xx pen_x, xx pen_y, "focus", color = Colors.UI_DEFAULT);
+        // Icon
+        icon_char := convert_utf32_to_utf8(xx icon);
+        width = xx Simp.prepare_text(font_icons, to_string(*icon_char));
+        Simp.draw_prepared_text(font_icons, xx x, xx y, color = Colors.UI_DEFAULT);
+
+        // File name
+        x += width + padding;
+        width = xx Simp.prepare_text(font_ui_bold, filename);
+        Simp.draw_prepared_text(font_ui_bold, xx x, xx y, color = Colors.UI_DEFAULT);
+
+        // Draw separator
+        x += width + padding;
+        width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
+        Simp.draw_prepared_text(font_ui_small, xx x, xx y, color = Colors.UI_DIM);
+
+        // Draw file path
+        x += width + padding;
+        width = xx Simp.prepare_text(font_ui_small, path);
+        Simp.draw_prepared_text(font_ui_small, xx x, xx y, color = Colors.UI_DIM);
+    }
+
+    draw_search_result :: (x: float, y: float, line: string) {
+        // @Speed: don't do it every time
+        icon_char := convert_utf32_to_utf8(xx File_Icon.jai);
+        indent_width := 4 * dpi_scale + cast(float) Simp.prepare_text(font_icons, to_string(*icon_char));
+
+        // TODO: limit the string length?
+        Simp.draw_text(font_ui, xx (x + indent_width), xx y, line, color = Colors.UI_DEFAULT);
+    }
+
+    draw_filename(pen.x, pen.y, "Fixed_Buffer_Allocator.jai", "focus/modules", .jai);
+    pen.y -= result_rect.h;
+    draw_search_result(pen.x, pen.y, "if proj_prefix_len > 0 then info.path = advance(info.path, proj_prefix_len);");
+    pen.y -= result_rect.h;
+    draw_search_result(pen.x, pen.y, "icon := File_Icon.unknown;");
+    pen.y -= result_rect.h;
+    draw_search_result(pen.x, pen.y, "if contains_nocase(name, \"license\") || contains_nocase(name, \"licence\")  || contains_nocase(name, \"key\") {");
+    pen.y -= result_rect.h;
+    draw_filename(pen.x, pen.y, "editors.jai", "focus/src", .jai);
+    pen.y -= result_rect.h;
+    draw_search_result(pen.x, pen.y, "if proj_prefix_len > 0 then info.path = advance(info.path, proj_prefix_len);");
+    pen.y -= result_rect.h;
+    draw_search_result(pen.x, pen.y, "icon := File_Icon.unknown;");
+    pen.y -= result_rect.h;
+    draw_search_result(pen.x, pen.y, "if contains_nocase(name, \"license\") || contains_nocase(name, \"licence\")  || contains_nocase(name, \"key\") {");
+    pen.y -= result_rect.h;
+    draw_filename(pen.x, pen.y, "buffer.jai", "focus/src", .jai);
+    pen.y -= result_rect.h;
+    draw_search_result(pen.x, pen.y, "if proj_prefix_len > 0 then info.path = advance(info.path, proj_prefix_len);");
+    pen.y -= result_rect.h;
+    draw_search_result(pen.x, pen.y, "icon := File_Icon.unknown;");
+    pen.y -= result_rect.h;
+    draw_search_result(pen.x, pen.y, "if contains_nocase(name, \"license\") || contains_nocase(name, \"licence\")  || contains_nocase(name, \"key\") {");
+    pen.y -= result_rect.h;
+
 }
 
 draw_open_file_dialog :: () {
