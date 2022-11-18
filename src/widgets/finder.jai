@@ -21,6 +21,10 @@ finder_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
     handled := text_input_handle_keypress(*input, key_code, mods);
     if handled return;
 
+    if key_code == {
+        case #char "L"; if only_ctrl_shift_pressed(mods) toggle_enlarged();
+    }
+
     // TODO: more handling later
 }
 
@@ -64,7 +68,7 @@ open_finder :: () {
     input.cursor.sel = 0;
     input.cursor.pos = get_num_chars(input.text);
 
-    start_animation(*open_anim, openness, Finder.DEFAULT_OPENNESS);
+    start_animation(*open_anim, openness, default_openness);
 }
 
 close_finder :: () {
@@ -79,6 +83,7 @@ finder_set_openness :: (value: float) {
     if openness < Finder.MIN_OPENNESS then openness = 0;  // fully close if too small
     open_anim.target = openness;
     if openness == 0 then deactivate_finder();
+    default_openness = ifx openness > Finder.MIN_OPENNESS then openness else Finder.DEFAULT_OPENNESS;
 }
 
 maybe_animate_finder :: () {
@@ -91,14 +96,31 @@ maybe_animate_finder :: () {
 
 finder: Finder;
 
+
+#scope_file
+
+toggle_enlarged :: () {
+    using finder;
+    if values_are_close(openness, Finder.ENLARGED_OPENNESS) || openness > Finder.ENLARGED_OPENNESS {
+        // Shrink
+        start_animation(*open_anim, openness, Finder.DEFAULT_OPENNESS);
+    } else {
+        // Enlarge
+        start_animation(*open_anim, openness, Finder.ENLARGED_OPENNESS);
+    }
+}
+
 Finder :: struct {
     openness: float = 0;  // percentage of window width. Zero means it's hidden
     input: Text_Input;
 
     open_anim: Tween_Animation(float);
 
-    MIN_OPENNESS     :: 0.005;
-    MAX_OPENNESS     :: 0.8;
-    DEFAULT_OPENNESS :: 0.2;
+    default_openness := 0.2;  // if the user drags it then we remember it
+
+    MIN_OPENNESS      :: 0.005;
+    MAX_OPENNESS      :: 0.8;
+    DEFAULT_OPENNESS  :: 0.2;
+    ENLARGED_OPENNESS :: 0.5;
 }
 

@@ -17,18 +17,8 @@
     + Profile the use of the in-buffer search
     + Write a BMH implementation for search
     + Compare with the previous version
-    - Create a panel for the search
-        + Refactor animation into something more general
-        + Use the new animation struct for the search bar
-        + Slide in and out
-        + Refactor the input system so that there can be only one active global widget
-        + Make sure active widget is changed when activated as ui (on click)
-        + See if we can compress the common ui pieces of code
-        + Drag the slider
-        + Draw the input
-        + Type into input
-        + Draw sample results
-        - Ctrl+shift+L to temporarily enlarge (try with an animation?)
+    + Create a panel for the search
+    - Search for stuff, maybe start in the focus folder only for now
 
 - Draw inactive cursors, but only if no search results are present
 
@@ -108,6 +98,18 @@
 - Fix the font unknown character glyph (try copying something from font-awesome)
 
 # DONE
++ Create a panel for the search
+    + Refactor animation into something more general
+    + Use the new animation struct for the search bar
+    + Slide in and out
+    + Refactor the input system so that there can be only one active global widget
+    + Make sure active widget is changed when activated as ui (on click)
+    + See if we can compress the common ui pieces of code
+    + Drag the slider
+    + Draw the input
+    + Type into input
+    + Draw sample results
+    + Ctrl+shift+L to temporarily enlarge (try with an animation?)
 + Footer: file name should occlude line numbers, not the other way around
 + Use Ctrl+1 and Ctrl+2 for switching panes
 + [bug] When finder is open, clicks on files in the dialog don't do anything
