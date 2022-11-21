@@ -24,16 +24,7 @@ init_open_file_dialog :: () {
     array_reset(*entries.all);
     reset(*memory_pool);  // to avoid having to free each string
 
-    visitor_data: File_Visit_Config = ---;
-    // TODO: make this configurable
-    visitor_data.ignore_folders = string.[".build", ".git", "bin"];
-    visitor_data.allowed_files  = string.[".jai", ".md", ".c", ".h", ".cpp", ".txt"];
-    visitor_data.files_dst = *entries.all;
-
-    for dir : project_dirs {
-        visitor_data.proj_path_prefix_len = dir.path_prefix_len;
-        visit_files(dir.path, recursive = true, visitor_data, file_collector_func, visit_directories = true);
-    }
+    collect_files(project_dirs, dst = *entries.all);
 
     recalculate_filtered_entries();
 }

@@ -1,3 +1,16 @@
+collect_files :: (dirs: [] Project_Dir, dst: *[..] File_Info, ignore_dirs: [] string = string.[], allow_file_types: [] string = string.[]) {
+    visitor_data: File_Visit_Config = ---;
+    visitor_data.ignore_dirs   = ifx ignore_dirs then ignore_dirs else IGNORE_DIRS;
+    visitor_data.allowed_files = ifx allow_file_types then allow_file_types else ALLOW_FILE_TYPES;
+    visitor_data.files_dst = dst;
+    assert(dst != null);
+
+    for dir : dirs {
+        visitor_data.proj_path_prefix_len = dir.path_prefix_len;
+        visit_files(dir.path, recursive = true, visitor_data, file_collector_func, visit_directories = true);
+    }
+}
+
 get_file_info_from_full_path :: (abs_path: string, _proj_path_prefix_len := -1) -> File_Info #must {
     assert(is_absolute_path(abs_path), "Trying to get file info from a non-absolute path. This is a bug.");
 
@@ -69,7 +82,7 @@ get_file_info_from_full_path :: (abs_path: string, _proj_path_prefix_len := -1) 
 // Also TODO: profile how long it takes to scan everything
 file_collector_func :: (file: *File_Visit_Info, config: File_Visit_Config) {
     if file.is_directory {
-        for config.ignore_folders {
+        for config.ignore_dirs {
             if equal_nocase(file.short_name, it) {  // TODO: do a wildcard match
                 file.descend_into_directory = false;  // ignore
                 return;
@@ -111,10 +124,13 @@ File_Icon :: enum u32 {
     key     :: 0xf084;
 }
 
-// @Cleanup: if we get rid of the generic file open dialog, then this will not
-// need to be global any more
+#scope_file
+
+IGNORE_DIRS      :: string.[".build", ".git", "bin"];
+ALLOW_FILE_TYPES :: string.[".jai", ".md", ".c", ".h", ".cpp", ".txt"];
+
 File_Visit_Config :: struct {
-    ignore_folders: [] string;
+    ignore_dirs: [] string;
     allowed_files:  [] string;
     proj_path_prefix_len: s64;
     files_dst: *[..] File_Info;

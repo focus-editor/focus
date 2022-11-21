@@ -102,10 +102,6 @@ finder: Finder;
 
 search_in_project :: (text: string) {
     if !text return;
-    // Single-threaded for now
-    // Visit all files in projects
-    // Read each file asynchronously and add its name to the results
-    // Draw results
 
     allocator := get_pool_allocator();
     push_allocator(allocator);
@@ -115,21 +111,9 @@ search_in_project :: (text: string) {
     all_files: [..] File_Info;
     defer array_reset(*all_files);
 
-    visitor_data: File_Visit_Config = ---;
-    // TODO: make this configurable
-    visitor_data.ignore_folders = string.[".build", ".git", "bin"];
-    visitor_data.allowed_files  = string.[".jai", ".md", ".c", ".h", ".cpp", ".txt"];
-    visitor_data.files_dst = *all_files;
-
-    for dir : project_dirs {
-        visitor_data.proj_path_prefix_len = dir.path_prefix_len;
-        visit_files(dir.path, recursive = true, visitor_data, file_collector_func, visit_directories = true);
-    }
-
-    for file : all_files {
-        print("%\n", file);
-    }
-
+    // @Speed: probably can be sped up by not collecting everything upfront
+    // and just scheduling search as we go (it takes 10ms on my machine to scan everything)
+    collect_files(project_dirs, dst = *all_files);
 }
 
 toggle_enlarged :: () {
