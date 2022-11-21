@@ -23,6 +23,7 @@ finder_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
 
     if key_code == {
         case #char "L"; if only_ctrl_shift_pressed(mods) toggle_enlarged();
+        case .ENTER;    search_in_project(to_string(input.text));
     }
 
     // TODO: more handling later
@@ -99,6 +100,38 @@ finder: Finder;
 
 #scope_file
 
+search_in_project :: (text: string) {
+    if !text return;
+    // Single-threaded for now
+    // Visit all files in projects
+    // Read each file asynchronously and add its name to the results
+    // Draw results
+
+    allocator := get_pool_allocator();
+    push_allocator(allocator);
+
+    reset(*memory_pool);  // to avoid having to free each string
+
+    all_files: [..] File_Info;
+    defer array_reset(*all_files);
+
+    visitor_data: File_Visit_Config = ---;
+    // TODO: make this configurable
+    visitor_data.ignore_folders = string.[".build", ".git", "bin"];
+    visitor_data.allowed_files  = string.[".jai", ".md", ".c", ".h", ".cpp", ".txt"];
+    visitor_data.files_dst = *all_files;
+
+    for dir : project_dirs {
+        visitor_data.proj_path_prefix_len = dir.path_prefix_len;
+        visit_files(dir.path, recursive = true, visitor_data, file_collector_func, visit_directories = true);
+    }
+
+    for file : all_files {
+        print("%\n", file);
+    }
+
+}
+
 toggle_enlarged :: () {
     using finder;
     if values_are_close(openness, Finder.ENLARGED_OPENNESS) || openness > Finder.ENLARGED_OPENNESS {
@@ -114,6 +147,8 @@ Finder :: struct {
     openness: float = 0;  // percentage of window width. Zero means it's hidden
     input: Text_Input;
 
+    search_results: [..] Search_Result;
+
     open_anim: Tween_Animation(float);
 
     default_openness := 0.2;  // if the user drags it then we remember it
@@ -124,3 +159,15 @@ Finder :: struct {
     ENLARGED_OPENNESS :: 0.5;
 }
 
+Search_Result :: struct {
+    file: File_Info;
+}
+
+get_pool_allocator :: () -> Allocator {
+    a: Allocator;
+    a.proc = flat_pool_allocator_proc;
+    a.data = *memory_pool;
+    return a;
+}
+
+memory_pool: Flat_Pool;

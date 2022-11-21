@@ -396,6 +396,8 @@ Project_Dir :: struct {
 #load "draw.jai";
 #load "pointer_image.jai";
 #load "utils.jai";
+#load "files.jai";
+#load "project_wide_search.jai";
 #load "widgets/text_input.jai";
 #load "widgets/open_file_dialog.jai";
 #load "widgets/finder.jai";

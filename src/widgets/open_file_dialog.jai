@@ -24,14 +24,15 @@ init_open_file_dialog :: () {
     array_reset(*entries.all);
     reset(*memory_pool);  // to avoid having to free each string
 
-    visitor_data: Visitor_Data = ---;
+    visitor_data: File_Visit_Config = ---;
+    // TODO: make this configurable
     visitor_data.ignore_folders = string.[".build", ".git", "bin"];
-    visitor_data.ignore_files   = string.[".exe", ".pdb", ".rdbg", ".lib", ".dll", ".ttf", ".otf"];
-    visitor_data.entries_dst = *entries.all;
+    visitor_data.allowed_files  = string.[".jai", ".md", ".c", ".h", ".cpp", ".txt"];
+    visitor_data.files_dst = *entries.all;
 
     for dir : project_dirs {
         visitor_data.proj_path_prefix_len = dir.path_prefix_len;
-        visit_files(dir.path, recursive = true, visitor_data, file_visitor_func, visit_directories = true);
+        visit_files(dir.path, recursive = true, visitor_data, file_collector_func, visit_directories = true);
     }
 
     recalculate_filtered_entries();
@@ -150,27 +151,6 @@ recalculate_filtered_entries :: () {
     }
 }
 
-// @Cleanup: this logic needs some careful reviewing
-// Also TODO: profile how long it takes to scan everything
-file_visitor_func :: (file: *File_Visit_Info, config: Visitor_Data) {
-    if file.is_directory {
-        for config.ignore_folders {
-            if equal_nocase(file.short_name, it) {  // TODO: do a wildcard match
-                file.descend_into_directory = false;  // ignore
-                return;
-            }
-        }
-        return;
-    }
-    if file.is_symlink return;
-
-    // TODO: do a wildcard match
-    for config.ignore_files { if contains_nocase(file.short_name, it) return; }  // maybe ignore
-
-    entry := get_file_info_from_full_path(file.full_name, config.proj_path_prefix_len);
-    array_add(config.entries_dst, entry);
-}
-
 get_pool_allocator :: () -> Allocator {
     a: Allocator;
     a.proc = flat_pool_allocator_proc;
@@ -179,13 +159,5 @@ get_pool_allocator :: () -> Allocator {
 }
 
 memory_pool: Flat_Pool;
-
-// NOTE: could probably make it global
-Visitor_Data :: struct {
-    ignore_folders: [] string;
-    ignore_files:   [] string;
-    proj_path_prefix_len: s64;
-    entries_dst: *[..] File_Info;
-}
 
 MAX_ENTRIES_TO_SHOW :: 200;

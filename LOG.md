@@ -12,6 +12,7 @@
     - Finish text input fixes
     - Support tabs (just draw them, not even necessarily wide, just draw in some way - but wide would be best)
     - Ignore project folders which are children of another project folder?
+    - Show help on F1
 
 - Grep in the project
     + Profile the use of the in-buffer search
@@ -19,6 +20,9 @@
     + Compare with the previous version
     + Create a panel for the search
     - Search for stuff, maybe start in the focus folder only for now
+        - Find all files (asynchronously?)
+            - Read the file async doc
+        - Open each file and search using BMH first - maybe it's fast enough
 
 - Draw inactive cursors, but only if no search results are present
 
