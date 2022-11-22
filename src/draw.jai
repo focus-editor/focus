@@ -519,16 +519,61 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
 
     // NOTE: this function is called twice (once now and once in the input). Maybe there's a good way to avoid it?
     input_clicked := maybe_set_hot_or_active(input_id, input_rect, .TEXT_SELECT);
-    if input_clicked {
-        activate_finder();
-    }
+    if input_clicked then activate_finder();
     draw_text_input(*input, input_rect, ui_id = input_id, active = active_global_widget == .finder, label = "Search in project");
 
     // Draw results
+    push_scissor(results_rect);
+    defer pop_scissor();
     result_rect := expand(cut_top(results_rect, font_ui_line_height + padding), 1);
-    pen := make_vector2(result_rect.x + margin, result_rect.y + (result_rect.h - font_ui.character_height) / 2);
 
-    for result : finder.search_results {
+    // Scrollbar
+    {
+        // @Cleanup: this seems to have some overlap with other scrollbars - anything to generalise?
+        scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
+
+        results_total_height: float;
+        for result : search_results {
+            results_total_height += result_rect.h * (1 + result.lines.count);
+        }
+
+        max_y_scroll := cast(s32)(results_total_height - results_rect.h + result_rect.h);
+        new_scroll_target := draw_scrollbar(results_rect, 1.5 * char_size, results_total_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
+        if new_scroll_target != scroll_anim.target {
+            scroll_y = new_scroll_target;
+            scroll_anim.target = new_scroll_target;
+            redraw_requested = true;
+        }
+
+        // // Scrolling update
+        // if scroll_to_cursor {
+        //     // We only want to scroll to cursor when cursor is moved by arrow keys
+        //     target := scroll_anim.target;
+        //     selected_top    := selected * entry_height - target;
+        //     selected_bottom := selected_top + entry_height;
+        //     if selected_top < 0 then target = cast(s32) (selected * entry_height);
+        //     if selected_bottom > files_rect.h then target = cast(s32) ((selected + 1) * entry_height - files_rect.h);
+        //     if target != scroll_anim.target then start_animation(*scroll_anim, scroll_y, target);
+        //     scroll_to_cursor = false;
+        // }
+
+        // Mouse scrolling
+        if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(results_rect) {
+            if ui.hot_last_frame == ui_id && ui.active == .none then set_pointer_image(.PRESSABLE);
+            if mouse.scroll_y_delta != 0 {
+                target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, max_y_scroll);
+                start_animation(*scroll_anim, scroll_y, target);
+            }
+        }
+
+        if scroll_y != scroll_anim.target {
+            redraw_requested = true;
+            scroll_y = get_animation_value(scroll_anim);
+        }
+    }
+
+    pen := make_vector2(result_rect.x + margin, result_rect.y + (result_rect.h - font_ui.character_height) / 2 + scroll_y);
+    for result : search_results {
         using result;
         draw_filename(pen.x, pen.y, file.name, file.path, file.icon);
         pen.y -= result_rect.h;
@@ -538,9 +583,11 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
             pen.y -= result_rect.h;
         }
     }
-    if !finder.search_results {
+    if !search_results {
         draw_search_result(pen.x, pen.y, "No results");
     }
+
+    if scroll_y != 0 then draw_top_down_shadow(cut_top(results_rect, char_size));
 
     draw_filename :: (x: float, y: float, filename: string, path: string, icon: File_Icon) {
         width := 0.0;
@@ -721,14 +768,7 @@ draw_open_file_dialog :: () {
         // Deselect any previously clicked entry
         if mouse.left.just_released || !mouse.left.is_down then entries.selected_by_mouse = -1;
 
-        // Shadow
-        if scroll_y != 0 {
-            shadow_rect := cut_top(files_rect, char_size);
-            t := Colors.SHADOW_TRANSPARENT;
-            s := Colors.SHADOW_DARK;
-            Simp.set_shader_for_color(enable_blend = true);
-            draw_rect_raw(shadow_rect, c00 = t, c10 = t, c01 = s, c11 = s);
-        }
+        if scroll_y != 0 then draw_top_down_shadow(cut_top(files_rect, char_size));
     }
 
 }
@@ -957,6 +997,13 @@ draw_rounded_rect_with_shadow :: (rect: Rect, color: Color, radius := 0.0, shado
     draw_rect_raw(bottom, t, s, t, s);
 
     draw_rounded_rect(rect, color, radius = r);
+}
+
+draw_top_down_shadow :: (rect: Rect) {
+    t := Colors.SHADOW_TRANSPARENT;
+    s := Colors.SHADOW_DARK;
+    Simp.set_shader_for_color(enable_blend = true);
+    draw_rect_raw(rect, c00 = t, c10 = t, c01 = s, c11 = s);
 }
 
 draw_corner :: (color: Color, base: Vector2, pivot: Vector2, angle_start: float, angle_end: float, radius: float, base_color := Colors.NONE) {

@@ -220,6 +220,8 @@ Finder :: struct {
     input: Text_Input;
 
     search_results: [..] Search_Result;
+    scroll_y: s32;
+    scroll_anim: Tween_Animation(s32);
 
     open_anim: Tween_Animation(float);
 

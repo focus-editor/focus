@@ -13,6 +13,8 @@
     - Support tabs (just draw them, not even necessarily wide, just draw in some way - but wide would be best)
     - Ignore project folders which are children of another project folder?
     - Show help on F1
+    - Bake fonts
+    - Test the exe on different machines
 
 - Grep in the project
     + Profile the use of the in-buffer search
@@ -21,7 +23,8 @@
     + Create a panel for the search
     + Search for stuff, maybe start in the focus folder only for now
     + Strip away whitespace
-    - Scrollbar
+    + Scrollbar
+    + Top shadow
     - Only draw visible stuff
     - Cursor:
         - Move by up/down
