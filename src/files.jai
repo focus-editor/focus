@@ -11,7 +11,7 @@ collect_files :: (dirs: [] Project_Dir, dst: *[..] File_Info, ignore_dirs: [] st
     }
 }
 
-get_file_info_from_full_path :: (abs_path: string, _proj_path_prefix_len := -1) -> File_Info #must {
+get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> File_Info #must {
     assert(is_absolute_path(abs_path), "Trying to get file info from a non-absolute path. This is a bug.");
 
     full_path := copy_string(abs_path);  // one allocation, the rest are views into it
@@ -23,7 +23,6 @@ get_file_info_from_full_path :: (abs_path: string, _proj_path_prefix_len := -1) 
     if ends_with(path, "/") then path.count -= 1;  // strip the separator
     info.path = path;
 
-    proj_prefix_len := _proj_path_prefix_len;
     if proj_prefix_len <= 0 {
         for project_dirs {
             if begins_with_nocase(path, it.path) {

@@ -100,20 +100,101 @@ finder: Finder;
 
 #scope_file
 
-search_in_project :: (text: string) {
-    if !text return;
+search_in_project :: (needle: string) {
+    if needle.count < 3 return;
 
     allocator := get_pool_allocator();
     push_allocator(allocator);
 
-    reset(*memory_pool);  // to avoid having to free each string
+    array_reset(*finder.search_results);
 
-    all_files: [..] File_Info;
-    defer array_reset(*all_files);
+    reset(*memory_pool);  // to avoid having to free each search result
+
+    all_files: [..] File_Info;  // will be allocated from pool, no need to free
 
     // @Speed: probably can be sped up by not collecting everything upfront
     // and just scheduling search as we go (it takes 10ms on my machine to scan everything)
+    // Also as an alternative could check out the code in count_lines_in_tree.jai,
+    // maybe the code it uses to read dir entries is faster
     collect_files(project_dirs, dst = *all_files);
+
+    queue := File_Async.initialize_queue(File_Info);
+    defer File_Async.destroy_queue(queue);
+
+    files_left_to_read := all_files.count;
+    skip_table := bmh_prepare_skip_table(needle);
+
+    for file : all_files {
+        result := File_Async.read_entire_file(queue, file.full_path, file);
+        if result.code == .FullQueue {
+            file_info, data, success := File_Async.wait_for_completion(queue);
+            if success.code == .Success {
+                files_left_to_read -= 1;
+                search_in_file(file_info, to_string(data), needle, skip_table);
+            } else {
+                log_error("Error while waiting for completion: %\n", success);
+                files_left_to_read = 0;
+                break;
+            }
+            result = File_Async.read_entire_file(queue, file.full_path, file);
+        }
+        if result.code != .Success {
+            log_error("Error while trying to read file % asynchronously: %\n", file.full_path, result);
+            files_left_to_read = 0;
+            break;
+        }
+    }
+
+    for 1 .. files_left_to_read {
+        file_info, data, success := File_Async.wait_for_completion(queue);
+        if success.code == .Success {
+            search_in_file(file_info, to_string(data), needle, skip_table);
+        } else {
+            log_error("Error while waiting for completion: %\n", success);
+            break;
+        }
+    }
+
+    // for result : finder.search_results {
+    //     print("% =======================\n", result.file.full_path);
+    //     for line : result.lines {
+    //         print("  %\n", line);
+    //     }
+    //     print("\n");
+    // }
+}
+
+search_in_file :: (file: File_Info, contents: string, needle: string, skip_table: [] s32) {
+    lines: [..] string;
+
+    file_end := contents.data + contents.count;
+    offset := 0;
+    while true {
+        offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table);
+        if offset < 0 break;
+
+        // Expand to newlines
+        line := slice(contents, offset, needle.count);
+        while line.data > contents.data && <<(line.data - 1) != #char "\n" {
+            line.data  -= 1;
+            line.count += 1;
+        }
+        end := line.data + line.count;
+        while end < file_end && <<end != #char "\n" {
+            end += 1;
+        }
+        line.count = end - line.data;
+
+        array_add(*lines, line);
+
+        offset += needle.count;
+    }
+
+    if lines.count > 0 {
+        result := array_add(*finder.search_results);
+        result.file = file;
+        result.lines = xx lines;
+    }
 }
 
 toggle_enlarged :: () {
@@ -145,6 +226,8 @@ Finder :: struct {
 
 Search_Result :: struct {
     file: File_Info;
+    lines: [] string;  // TODO: add highlight info
+    // TODO: add line number
 }
 
 get_pool_allocator :: () -> Allocator {
@@ -155,3 +238,7 @@ get_pool_allocator :: () -> Allocator {
 }
 
 memory_pool: Flat_Pool;
+
+#scope_file
+
+File_Async :: #import "File_Async";

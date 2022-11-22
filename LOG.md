@@ -20,8 +20,8 @@
     + Compare with the previous version
     + Create a panel for the search
     - Search for stuff, maybe start in the focus folder only for now
-        - Find all files (asynchronously?)
-            - Read the file async doc
+        + Find all files
+        - Open each file asynchronously, read the first N bytes from it and put into the results
         - Open each file and search using BMH first - maybe it's fast enough
 
 - Draw inactive cursors, but only if no search results are present

@@ -699,28 +699,13 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
 
     buffer_str := to_string(buffer.bytes);
 
-    // Prepare a Boyer-Moore-Horspool skip table
+    // Use Boyer-Moore-Horspool to search
     assert(buffer_str.count < S32_MAX && needle.count < S32_MAX);
-    skip_table: [256] s32 = ---;
-    for * skip_table { << it = cast,no_check(s32) needle.count; }
-    for i : 0 .. needle.count - 2 { skip_table[needle[i]] = cast,no_check(s32) (needle.count - 1 - i); }
-
-    find_index_from_left_bmh :: (s: string, needle: string, start_index := 0, skip_table: [] s32) -> s64 {
-        i := start_index;
-        last_i := s.count - needle.count;
-        // @Speed: possibly can be optimised by replacing indices with pointers? Not sure if that's still a thing
-        while i <= last_i {
-            current := to_string(s.data + i, needle.count);
-            if current == needle return i;
-            i += skip_table[s[i + needle.count - 1]];
-        }
-        return -1;
-    }
-
+    skip_table := bmh_prepare_skip_table(needle);
     offset := 0;
     i := 0;
     while true {
-        offset = inline find_index_from_left_bmh(buffer_str, needle, start_index = offset, skip_table);
+        offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table);
         if offset < 0 break;
 
         result := array_add(*results);
