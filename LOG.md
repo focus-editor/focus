@@ -15,6 +15,8 @@
     - Show help on F1
     - Bake fonts
     - Test the exe on different machines
+    - Improve cursor: change color based on scope + draw occluded letters on top
+    - Remove the edited status on a timeout after last edit/undo/whatever
 
 - Grep in the project
     + Profile the use of the in-buffer search

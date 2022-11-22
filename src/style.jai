@@ -30,6 +30,9 @@ Colors :: struct {
     SPLITTER                :: Color.{ r = 0.131, g = 0.202, b = 0.25 };
     SPLITTER_HOVER          :: Color.{ r = 0.110, g = 0.267, b = 0.29 };
 
+    LIST_CURSOR_LITE        :: Color.{ r = 0.131, g = 0.202, b = 0.25, a = 0.4 };  // @TODO: do without alpha?
+    LIST_CURSOR             :: Color.{ r = 0.131, g = 0.202, b = 0.25, a = 0.8 };
+
     SHADOW_DARK         :: Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0.5 };
     SHADOW_TRANSPARENT  :: Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0 };  // for interpolation
 

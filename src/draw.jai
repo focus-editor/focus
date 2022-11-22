@@ -540,7 +540,7 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
         // @Cleanup: this seems to have some overlap with other scrollbars - anything to generalise?
         scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
 
-        max_y_scroll := cast(s32)(results_total_height - results_rect.h + result_rect.h);
+        max_y_scroll := cast(s32)(results_total_height - results_rect.h + result_rect.h / 2);
         new_scroll_target := draw_scrollbar(results_rect, 1.5 * char_size, results_total_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
         if new_scroll_target != scroll_anim.target {
             scroll_y = new_scroll_target;
@@ -577,20 +577,29 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
 
     visible_rect  := expand_y(results_rect, result_rect.h);
     visible_top_y := visible_rect.y + visible_rect.h;
+
     icon_char := convert_utf32_to_utf8(xx File_Icon.jai);
-    result_indent := 4 * dpi_scale + cast(float) Simp.prepare_text(font_icons, to_string(*icon_char));
-    pen := make_vector2(result_rect.x + margin, result_rect.y + (result_rect.h - font_ui.character_height) / 2 + scroll_y);
+    result_indent_width := 4 * dpi_scale + cast(float) Simp.prepare_text(font_icons, to_string(*icon_char));
+    result_rect.y += scroll_y;
+    rect_origin_y := result_rect.y;
+
+    pen := make_vector2(result_rect.x + margin, result_rect.y + (result_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale);
     for result : search_results {
         using result;
         if pen.y <= visible_top_y then draw_filename(pen.x, pen.y, file.name, file.path, file.icon);
         pen.y -= result_rect.h;
+        result_rect.y -= result_rect.h;
 
         for line : lines {
             if pen.y <= visible_top_y {
+                if mouse_pointer_is_within(result_rect) {
+                    draw_rect(result_rect, Colors.LIST_CURSOR_LITE);
+                }
                 // TODO: highlight text
-                Simp.draw_text(font_ui, xx (pen.x + result_indent), xx pen.y, line, color = Colors.UI_DEFAULT);
+                Simp.draw_text(font_ui, xx (pen.x + result_indent_width), xx pen.y, line, color = Colors.UI_DEFAULT);
             }
             pen.y -= result_rect.h;
+            result_rect.y -= result_rect.h;
         }
         if pen.y < visible_rect.y break;  // nothing visible left
     }

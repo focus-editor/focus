@@ -158,6 +158,7 @@ search_in_project :: (needle: string) {
     // Reset scroll
     finder.scroll_y = 0;
     finder.scroll_anim.target = 0;
+    finder.cursor = .{ result = 0, line = 0};
 
     // for result : finder.search_results {
     //     print("% =======================\n", result.file.full_path);
@@ -224,6 +225,10 @@ Finder :: struct {
     input: Text_Input;
 
     search_results: [..] Search_Result;
+    cursor: struct {
+        result: s32;
+        line:   s32;
+    };
     scroll_y: s32;
     scroll_anim: Tween_Animation(s32);
 
@@ -235,6 +240,8 @@ Finder :: struct {
     MAX_OPENNESS      :: 0.8;
     DEFAULT_OPENNESS  :: 0.2;
     ENLARGED_OPENNESS :: 0.5;
+
+    MAX_RESULTS :: 5000;  // lines, not files
 }
 
 Search_Result :: struct {
