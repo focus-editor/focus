@@ -527,15 +527,18 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
     defer pop_scissor();
     result_rect := expand(cut_top(results_rect, font_ui_line_height + padding), 1);
 
+    results_total_height: float;
+    for result : search_results {
+        results_total_height += result_rect.h * (1 + result.lines.count);
+    }
+    if results_total_height < results_rect.h {
+        results_rect = cut_top(results_rect, results_total_height);  // to make sure we don't scroll
+    }
+
     // Scrollbar
     {
         // @Cleanup: this seems to have some overlap with other scrollbars - anything to generalise?
         scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
-
-        results_total_height: float;
-        for result : search_results {
-            results_total_height += result_rect.h * (1 + result.lines.count);
-        }
 
         max_y_scroll := cast(s32)(results_total_height - results_rect.h + result_rect.h);
         new_scroll_target := draw_scrollbar(results_rect, 1.5 * char_size, results_total_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
@@ -572,19 +575,27 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
         }
     }
 
+    visible_rect  := expand_y(results_rect, result_rect.h);
+    visible_top_y := visible_rect.y + visible_rect.h;
+    icon_char := convert_utf32_to_utf8(xx File_Icon.jai);
+    result_indent := 4 * dpi_scale + cast(float) Simp.prepare_text(font_icons, to_string(*icon_char));
     pen := make_vector2(result_rect.x + margin, result_rect.y + (result_rect.h - font_ui.character_height) / 2 + scroll_y);
     for result : search_results {
         using result;
-        draw_filename(pen.x, pen.y, file.name, file.path, file.icon);
+        if pen.y <= visible_top_y then draw_filename(pen.x, pen.y, file.name, file.path, file.icon);
         pen.y -= result_rect.h;
 
         for line : lines {
-            draw_search_result(pen.x, pen.y, line);
+            if pen.y <= visible_top_y {
+                // TODO: highlight text
+                Simp.draw_text(font_ui, xx (pen.x + result_indent), xx pen.y, line, color = Colors.UI_DEFAULT);
+            }
             pen.y -= result_rect.h;
         }
+        if pen.y < visible_rect.y break;  // nothing visible left
     }
     if !search_results {
-        draw_search_result(pen.x, pen.y, "No results");
+        Simp.draw_text(font_ui, xx (pen.x + padding), xx pen.y, "No results", color = Colors.UI_DEFAULT);
     }
 
     if scroll_y != 0 then draw_top_down_shadow(cut_top(results_rect, char_size));
@@ -612,15 +623,6 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
         x += width + padding;
         width = xx Simp.prepare_text(font_ui_small, path);
         Simp.draw_prepared_text(font_ui_small, xx x, xx y, color = Colors.UI_DIM);
-    }
-
-    draw_search_result :: (x: float, y: float, line: string) {
-        // @Speed: don't do it every time
-        icon_char := convert_utf32_to_utf8(xx File_Icon.jai);
-        indent_width := 4 * dpi_scale + cast(float) Simp.prepare_text(font_icons, to_string(*icon_char));
-
-        // TODO: limit the string length?
-        Simp.draw_text(font_ui, xx (x + indent_width), xx y, line, color = Colors.UI_DEFAULT);
     }
 }
 

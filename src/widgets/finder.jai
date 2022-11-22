@@ -155,6 +155,10 @@ search_in_project :: (needle: string) {
         }
     }
 
+    // Reset scroll
+    finder.scroll_y = 0;
+    finder.scroll_anim.target = 0;
+
     // for result : finder.search_results {
     //     print("% =======================\n", result.file.full_path);
     //     for line : result.lines {

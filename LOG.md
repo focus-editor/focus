@@ -25,7 +25,8 @@
     + Strip away whitespace
     + Scrollbar
     + Top shadow
-    - Only draw visible stuff
+    + Only draw visible stuff
+    + When searching reset scroll
     - Cursor:
         - Move by up/down
         - Jump to next file on ctrl+up/down
@@ -34,6 +35,12 @@
         - On enter
         - On click
         - Select the searched text
+    - Limit the number of results
+    - Limit results width:
+        - Don't go too much to the left
+        - Don't go too much to the right
+        - Mark cut lines with an ellipsis
+    - Highlight text
     - Do case-insensitive search by default
     - Do case-sensitive on ctrl+enter?
 
