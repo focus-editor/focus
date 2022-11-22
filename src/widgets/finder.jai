@@ -173,12 +173,19 @@ search_in_file :: (file: File_Info, contents: string, needle: string, skip_table
         offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table);
         if offset < 0 break;
 
-        // Expand to newlines
         line := slice(contents, offset, needle.count);
+
+        // Expand to left newline
+        last_nonwhitespace := line.data;
         while line.data > contents.data && <<(line.data - 1) != #char "\n" {
             line.data  -= 1;
             line.count += 1;
+            if !inline is_space(<<line.data) then last_nonwhitespace = line.data;
         }
+        line.count -= last_nonwhitespace - line.data;
+        line.data   = last_nonwhitespace;
+
+        // Expand to right newline
         end := line.data + line.count;
         while end < file_end && <<end != #char "\n" {
             end += 1;

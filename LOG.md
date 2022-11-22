@@ -19,10 +19,20 @@
     + Write a BMH implementation for search
     + Compare with the previous version
     + Create a panel for the search
-    - Search for stuff, maybe start in the focus folder only for now
-        + Find all files
-        - Open each file asynchronously, read the first N bytes from it and put into the results
-        - Open each file and search using BMH first - maybe it's fast enough
+    + Search for stuff, maybe start in the focus folder only for now
+    + Strip away whitespace
+    - Scrollbar
+    - Only draw visible stuff
+    - Cursor:
+        - Move by up/down
+        - Jump to next file on ctrl+up/down
+        - Move by page up/down
+    - Open files:
+        - On enter
+        - On click
+        - Select the searched text
+    - Do case-insensitive search by default
+    - Do case-sensitive on ctrl+enter?
 
 - Draw inactive cursors, but only if no search results are present
 
