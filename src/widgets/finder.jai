@@ -24,6 +24,47 @@ finder_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
     if key_code == {
         case #char "L"; if only_ctrl_shift_pressed(mods) toggle_enlarged();
         case .ENTER;    search_in_project(to_string(input.text));
+        case .ARROW_UP;
+            // Move cursor up
+            if only_ctrl_pressed(mods) {
+                cursor.result -= 1;
+                cursor.line = 0;
+            } else {
+                cursor.line -= 1;
+                if cursor.line < 0 {
+                    if cursor.result > 0 {
+                        cursor.result -= 1;
+                        cursor.line = cast(s32) search_results[cursor.result].lines.count - 1;
+                    } else {
+                        cursor.line = 0;
+                    }
+                }
+            }
+            if cursor.result < 0 then cursor.result = 0;
+            scroll_to_cursor = true;
+
+        case .ARROW_DOWN;
+            max_result := cast(s32) search_results.count - 1;
+            // Move cursor down
+            if only_ctrl_pressed(mods) {
+                cursor.result += 1;
+                cursor.line = 0;
+                if cursor.result >= search_results.count then cursor.result = max_result;
+            } else {
+                cursor.line += 1;
+                if cursor.result <= max_result {
+                    num_lines := cast(s32) search_results[cursor.result].lines.count;
+                    if cursor.line >= num_lines {
+                        if cursor.result < max_result {
+                            cursor.result += 1;
+                            cursor.line = 0;
+                        } else {
+                            cursor.line = num_lines - 1;
+                        }
+                    }
+                }
+            }
+            scroll_to_cursor = true;
     }
 
     // TODO: more handling later
@@ -231,6 +272,7 @@ Finder :: struct {
     };
     scroll_y: s32;
     scroll_anim: Tween_Animation(s32);
+    scroll_to_cursor: bool;
 
     open_anim: Tween_Animation(float);
 

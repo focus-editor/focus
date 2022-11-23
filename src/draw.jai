@@ -532,47 +532,56 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
         results_total_height += result_rect.h * (1 + result.lines.count);
     }
     if results_total_height < results_rect.h {
-        results_rect = cut_top(results_rect, results_total_height);  // to make sure we don't scroll
+        results_rect = cut_top(results_rect, results_total_height + result_rect.h);  // to make sure we don't scroll
     }
 
+    // @Cleanup: this seems to have some overlap with other scrollbars - anything to generalise?
     // Scrollbar
-    {
-        // @Cleanup: this seems to have some overlap with other scrollbars - anything to generalise?
-        scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
+    scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
 
-        max_y_scroll := cast(s32)(results_total_height - results_rect.h + result_rect.h / 2);
-        new_scroll_target := draw_scrollbar(results_rect, 1.5 * char_size, results_total_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
-        if new_scroll_target != scroll_anim.target {
-            scroll_y = new_scroll_target;
-            scroll_anim.target = new_scroll_target;
-            redraw_requested = true;
+    max_y_scroll := cast(s32)(results_total_height - results_rect.h + result_rect.h / 2);
+    new_scroll_target := draw_scrollbar(results_rect, 1.5 * char_size, results_total_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
+    if new_scroll_target != scroll_anim.target {
+        scroll_y = new_scroll_target;
+        scroll_anim.target = new_scroll_target;
+        redraw_requested = true;
+    }
+
+    // Mouse scrolling
+    if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(results_rect) {
+        if ui.hot_last_frame == ui_id && ui.active == .none then set_pointer_image(.PRESSABLE);
+        if mouse.scroll_y_delta != 0 {
+            target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, max_y_scroll);
+            start_animation(*scroll_anim, scroll_y, target);
         }
+    }
 
-        // // Scrolling update
-        // if scroll_to_cursor {
-        //     // We only want to scroll to cursor when cursor is moved by arrow keys
-        //     target := scroll_anim.target;
-        //     selected_top    := selected * entry_height - target;
-        //     selected_bottom := selected_top + entry_height;
-        //     if selected_top < 0 then target = cast(s32) (selected * entry_height);
-        //     if selected_bottom > files_rect.h then target = cast(s32) ((selected + 1) * entry_height - files_rect.h);
-        //     if target != scroll_anim.target then start_animation(*scroll_anim, scroll_y, target);
-        //     scroll_to_cursor = false;
-        // }
+    if scroll_to_cursor {
+        // We only want to scroll to cursor when cursor is moved by arrow keys
+        target := scroll_anim.target;
 
-        // Mouse scrolling
-        if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(results_rect) {
-            if ui.hot_last_frame == ui_id && ui.active == .none then set_pointer_image(.PRESSABLE);
-            if mouse.scroll_y_delta != 0 {
-                target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, max_y_scroll);
-                start_animation(*scroll_anim, scroll_y, target);
+        // Find the current selected position (based on the scroll target, not the current scroll value)
+        cursor_rect := result_rect;
+        cursor_rect.y += scroll_anim.target;
+        for result, result_num : search_results {
+            cursor_rect.y -= cursor_rect.h;
+            for line, line_num : result.lines {
+                if cursor.result == result_num && cursor.line == line_num break result;  // found cursor rect
+                cursor_rect.y -= cursor_rect.h;
             }
         }
+        visible_y_top := results_rect.y + results_rect.h - 2 * result_rect.h;
+        visible_y_bottom := results_rect.y + result_rect.h;
+        if cursor_rect.y > visible_y_top    then target -= cast(s32)(cursor_rect.y - visible_y_top);     // maybe need to scroll up
+        if cursor_rect.y < visible_y_bottom then target += cast(s32)(visible_y_bottom - cursor_rect.y);  // maybe need to scroll down
 
-        if scroll_y != scroll_anim.target {
-            redraw_requested = true;
-            scroll_y = get_animation_value(scroll_anim);
-        }
+        if target != scroll_anim.target then start_animation(*scroll_anim, scroll_y, target);
+        scroll_to_cursor = false;
+    }
+
+    if scroll_y != scroll_anim.target {
+        redraw_requested = true;
+        scroll_y = get_animation_value(scroll_anim);
     }
 
     visible_rect  := expand_y(results_rect, result_rect.h);
@@ -584,17 +593,22 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
     rect_origin_y := result_rect.y;
 
     pen := make_vector2(result_rect.x + margin, result_rect.y + (result_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale);
-    for result : search_results {
+    for result, result_num : search_results {
         using result;
         if pen.y <= visible_top_y then draw_filename(pen.x, pen.y, file.name, file.path, file.icon);
         pen.y -= result_rect.h;
         result_rect.y -= result_rect.h;
 
-        for line : lines {
+        for line, line_num : lines {
             if pen.y <= visible_top_y {
                 if mouse_pointer_is_within(result_rect) {
                     draw_rect(result_rect, Colors.LIST_CURSOR_LITE);
                 }
+                if cursor.result == result_num && cursor.line == line_num {
+                    // Draw selected line
+                    draw_rect(result_rect, Colors.LIST_CURSOR);
+                }
+
                 // TODO: highlight text
                 Simp.draw_text(font_ui, xx (pen.x + result_indent_width), xx pen.y, line, color = Colors.UI_DEFAULT);
             }
@@ -723,9 +737,6 @@ draw_open_file_dialog :: () {
             }
         }
 
-        highlight_color_lite := Colors.BACKGROUND_BRIGHT;
-        highlight_color_lite.a = 0.4;
-
         visible_start := clamp(cast(s64) (scroll_y / entry_height), 0, filtered.count);
         visible_count := cast(s64) (files_rect.h / entry_height) + 2;
         visible_entries := array_view(filtered, visible_start, visible_count);
@@ -740,14 +751,11 @@ draw_open_file_dialog :: () {
 
             if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
                 if mouse.left.just_pressed then entries.selected_by_mouse = entry_index;
-                if entries.selected_by_mouse == -1 then draw_rect(entry_rect, highlight_color_lite);
+                if entries.selected_by_mouse == -1 then draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
                 if entries.selected_by_mouse == entry_index && mouse.left.just_released then open_file_dialog_open_entry(entry_index, on_the_side = ctrl_pressed());
             }
-            if entries.selected_by_mouse == entry_index {
-                highlight_color_lite.a = 0.8;
-                draw_rect(entry_rect, highlight_color_lite);
-            }
-            if entry_index == selected then draw_rect(entry_rect, Colors.BACKGROUND_BRIGHT);
+            if entries.selected_by_mouse == entry_index then draw_rect(entry_rect, Colors.LIST_CURSOR);
+            if entry_index == selected then draw_rect(entry_rect, Colors.LIST_CURSOR);
 
             pen := make_vector2(
                 entry_rect.x + 2 * margin,

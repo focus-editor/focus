@@ -29,11 +29,13 @@
     + Top shadow
     + Only draw visible stuff
     + When searching reset scroll
-    - Cursor:
-        - Move by up/down
-        - Jump to next file on ctrl+up/down
-        - Move by page up/down
+    + Cursor:
+        + Move by up/down
+        + Jump to next file on ctrl+up/down
+        + Scroll to cursor when moved
     - Open files:
+        - Deactivate input when moving cursor
+        - Fix the way inactive cursors are displayed (both in finder and in editor)
         - On enter
         - On click
         - Select the searched text
@@ -42,7 +44,7 @@
         - Don't go too much to the left
         - Don't go too much to the right
         - Mark cut lines with an ellipsis
-    - Highlight text
+    - Highlight search string
     - Do case-insensitive search by default
     - Do case-sensitive on ctrl+enter?
 
