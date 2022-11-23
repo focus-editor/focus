@@ -520,7 +520,8 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
     // NOTE: this function is called twice (once now and once in the input). Maybe there's a good way to avoid it?
     input_clicked := maybe_set_hot_or_active(input_id, input_rect, .TEXT_SELECT);
     if input_clicked then activate_finder();
-    draw_text_input(*input, input_rect, ui_id = input_id, active = active_global_widget == .finder, label = "Search in project");
+    input_active := active_global_widget == .finder && active_part == .input;
+    draw_text_input(*input, input_rect, ui_id = input_id, active = input_active, label = "Search in project");
 
     // Draw results
     push_scissor(results_rect);
@@ -540,6 +541,7 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
     scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
 
     max_y_scroll := cast(s32)(results_total_height - results_rect.h + result_rect.h / 2);
+    if max_y_scroll < 0 then max_y_scroll = 0;
     new_scroll_target := draw_scrollbar(results_rect, 1.5 * char_size, results_total_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
     if new_scroll_target != scroll_anim.target {
         scroll_y = new_scroll_target;
@@ -575,6 +577,7 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
         if cursor_rect.y > visible_y_top    then target -= cast(s32)(cursor_rect.y - visible_y_top);     // maybe need to scroll up
         if cursor_rect.y < visible_y_bottom then target += cast(s32)(visible_y_bottom - cursor_rect.y);  // maybe need to scroll down
 
+        target = clamp(target, 0, max_y_scroll);
         if target != scroll_anim.target then start_animation(*scroll_anim, scroll_y, target);
         scroll_to_cursor = false;
     }
@@ -591,8 +594,9 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
     result_indent_width := 4 * dpi_scale + cast(float) Simp.prepare_text(font_icons, to_string(*icon_char));
     result_rect.y += scroll_y;
     rect_origin_y := result_rect.y;
+    cursor_color  := ifx active_global_widget == .finder then Colors.LIST_CURSOR else Colors.LIST_CURSOR_LITE;
 
-    pen := make_vector2(result_rect.x + margin, result_rect.y + (result_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale);
+    pen := make_vector2(result_rect.x + margin + 2 * dpi_scale, result_rect.y + (result_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale);
     for result, result_num : search_results {
         using result;
         if pen.y <= visible_top_y then draw_filename(pen.x, pen.y, file.name, file.path, file.icon);
@@ -606,7 +610,7 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
                 }
                 if cursor.result == result_num && cursor.line == line_num {
                     // Draw selected line
-                    draw_rect(result_rect, Colors.LIST_CURSOR);
+                    draw_rect(result_rect, cursor_color);
                 }
 
                 // TODO: highlight text

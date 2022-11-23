@@ -36,9 +36,9 @@
         + Move by up/down
         + Jump to next file on ctrl+up/down
         + Scroll to cursor when moved
+    + Deactivate input when moving cursor
+    + Fix the way inactive cursors are displayed (both in finder and in editor)
     - Open files:
-        - Deactivate input when moving cursor
-        - Fix the way inactive cursors are displayed (both in finder and in editor)
         - On enter
         - On click (don't conflict with the scrollbar)
         - Select the searched text

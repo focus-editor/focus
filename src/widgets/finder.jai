@@ -6,6 +6,7 @@ finder_handle_event :: (event: Input.Event) {
                     case .ESCAPE;   deactivate_finder(); return;
                     case #char "B"; if only_ctrl_pressed(event.modifier_flags) { close_finder(); return; }
                     case #char "P"; if only_ctrl_pressed(event.modifier_flags) { show_open_file_dialog(); return; }
+                    case #char "F"; if only_ctrl_shift_pressed(event.modifier_flags) { activate_finder(); return; }
                 }
                 finder_handle_key_press(event.key_code, event.modifier_flags);
             }
@@ -18,53 +19,66 @@ finder_handle_event :: (event: Input.Event) {
 finder_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
     using finder;
 
-    handled := text_input_handle_keypress(*input, key_code, mods);
-    if handled return;
+    if active_part == .input {
+        handled := text_input_handle_keypress(*input, key_code, mods);
+        if handled return;
+    }
 
     if key_code == {
         case #char "L"; if only_ctrl_shift_pressed(mods) toggle_enlarged();
         case .ENTER;    search_in_project(to_string(input.text));
         case .ARROW_UP;
-            // Move cursor up
-            if only_ctrl_pressed(mods) {
-                cursor.result -= 1;
-                cursor.line = 0;
-            } else {
-                cursor.line -= 1;
-                if cursor.line < 0 {
-                    if cursor.result > 0 {
-                        cursor.result -= 1;
-                        cursor.line = cast(s32) search_results[cursor.result].lines.count - 1;
-                    } else {
-                        cursor.line = 0;
+            if search_results.count {
+                active_part = .results;
+
+                // Move cursor up
+                if only_ctrl_pressed(mods) {
+                    cursor.result -= 1;
+                    cursor.line = 0;
+                } else {
+                    cursor.line -= 1;
+                    if cursor.line < 0 {
+                        if cursor.result > 0 {
+                            cursor.result -= 1;
+                            cursor.line = cast(s32) search_results[cursor.result].lines.count - 1;
+                        } else {
+                            cursor.line = 0;
+                        }
+
                     }
                 }
+                if cursor.result < 0 then cursor.result = 0;
+                scroll_to_cursor = true;
             }
-            if cursor.result < 0 then cursor.result = 0;
-            scroll_to_cursor = true;
 
         case .ARROW_DOWN;
-            max_result := cast(s32) search_results.count - 1;
-            // Move cursor down
-            if only_ctrl_pressed(mods) {
-                cursor.result += 1;
-                cursor.line = 0;
-                if cursor.result >= search_results.count then cursor.result = max_result;
-            } else {
-                cursor.line += 1;
-                if cursor.result <= max_result {
-                    num_lines := cast(s32) search_results[cursor.result].lines.count;
-                    if cursor.line >= num_lines {
-                        if cursor.result < max_result {
-                            cursor.result += 1;
-                            cursor.line = 0;
-                        } else {
-                            cursor.line = num_lines - 1;
+            if search_results.count {
+                active_part = .results;
+                max_result := cast(s32) search_results.count - 1;
+                // Move cursor down
+                if only_ctrl_pressed(mods) {
+                    cursor.result += 1;
+                    cursor.line = 0;
+                    if cursor.result >= search_results.count {
+                        cursor.result = max_result;
+                        cursor.line = cast(s32) search_results[cursor.result].lines.count - 1;
+                    }
+                } else {
+                    cursor.line += 1;
+                    if cursor.result <= max_result {
+                        num_lines := cast(s32) search_results[cursor.result].lines.count;
+                        if cursor.line >= num_lines {
+                            if cursor.result < max_result {
+                                cursor.result += 1;
+                                cursor.line = 0;
+                            } else {
+                                cursor.line = num_lines - 1;
+                            }
                         }
                     }
                 }
+                scroll_to_cursor = true;
             }
-            scroll_to_cursor = true;
     }
 
     // TODO: more handling later
@@ -75,7 +89,10 @@ finder_handle_text_input :: (char: u32) {
                             // which generates a TEXT_INPUT event for DEL
                             // when Ctrl+Backspace is pressed
 
-    text_input_type_char(*finder.input, char);
+    if finder.active_part == .input {
+        text_input_type_char(*finder.input, char);
+    }
+
 }
 
 finder_is_open :: inline () -> bool {
@@ -92,6 +109,7 @@ toggle_finder :: () {
 
 activate_finder :: inline () {
     active_global_widget = .finder;
+    finder.active_part = .input;
 }
 
 deactivate_finder :: inline () {
