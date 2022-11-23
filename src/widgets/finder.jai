@@ -25,63 +25,28 @@ finder_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
     }
 
     if key_code == {
-        case #char "L"; if only_ctrl_shift_pressed(mods) toggle_enlarged();
-        case .ENTER;    search_in_project(to_string(input.text));
+        case #char "L";
+            if only_ctrl_shift_pressed(mods) toggle_enlarged();
+
+        case .ENTER;
+            if active_part == .input || search_results.count == 0 {
+                search_in_project(to_string(input.text));
+            } else {
+                // !!!!!!!!!!
+            }
+
         case .ARROW_UP;
-            if search_results.count {
+            if search_results {
                 active_part = .results;
-
-                // Move cursor up
-                if only_ctrl_pressed(mods) {
-                    cursor.result -= 1;
-                    cursor.line = 0;
-                } else {
-                    cursor.line -= 1;
-                    if cursor.line < 0 {
-                        if cursor.result > 0 {
-                            cursor.result -= 1;
-                            cursor.line = cast(s32) search_results[cursor.result].lines.count - 1;
-                        } else {
-                            cursor.line = 0;
-                        }
-
-                    }
-                }
-                if cursor.result < 0 then cursor.result = 0;
-                scroll_to_cursor = true;
+                move_cursor_up(mods);
             }
 
         case .ARROW_DOWN;
-            if search_results.count {
+            if search_results {
                 active_part = .results;
-                max_result := cast(s32) search_results.count - 1;
-                // Move cursor down
-                if only_ctrl_pressed(mods) {
-                    cursor.result += 1;
-                    cursor.line = 0;
-                    if cursor.result >= search_results.count {
-                        cursor.result = max_result;
-                        cursor.line = cast(s32) search_results[cursor.result].lines.count - 1;
-                    }
-                } else {
-                    cursor.line += 1;
-                    if cursor.result <= max_result {
-                        num_lines := cast(s32) search_results[cursor.result].lines.count;
-                        if cursor.line >= num_lines {
-                            if cursor.result < max_result {
-                                cursor.result += 1;
-                                cursor.line = 0;
-                            } else {
-                                cursor.line = num_lines - 1;
-                            }
-                        }
-                    }
-                }
-                scroll_to_cursor = true;
+                move_cursor_down(mods);
             }
     }
-
-    // TODO: more handling later
 }
 
 finder_handle_text_input :: (char: u32) {
@@ -158,6 +123,46 @@ finder: Finder;
 
 
 #scope_file
+
+move_cursor_up :: (mods: Mods) {
+    using finder.cursor;
+
+    if only_ctrl_pressed(mods) {
+        if result > 0 then result -= 1;
+        line = 0;
+    } else {
+        if line == 0 && result > 0 {
+            result -= 1;
+            line = cast(s32) finder.search_results[result].lines.count - 1;
+        } else if line > 0 {
+            line -= 1;
+        }
+    }
+    finder.scroll_to_cursor = true;
+}
+
+move_cursor_down :: (mods: Mods) {
+    using finder.cursor;
+
+    max_result := cast(s32) finder.search_results.count - 1;
+
+    if only_ctrl_pressed(mods) {
+        if result < max_result {
+            result += 1;
+            line = 0;
+        } else {
+            line = cast(s32) finder.search_results[result].lines.count - 1;  // jump to last line
+        }
+    } else {
+        if line < finder.search_results[result].lines.count - 1 {
+            line += 1;
+        } else if result < max_result {
+            result += 1;
+            line = 0;
+        }
+    }
+    finder.scroll_to_cursor = true;
+}
 
 search_in_project :: (needle: string) {
     if needle.count < 3 return;

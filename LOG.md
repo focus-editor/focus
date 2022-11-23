@@ -51,7 +51,6 @@
     - Do case-insensitive search by default
     - Do case-sensitive on ctrl+enter?
 
-
 - Text Input:
     - Select by mouse
     - Select words by ctrl+D
