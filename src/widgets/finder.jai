@@ -274,6 +274,8 @@ Finder :: struct {
     scroll_anim: Tween_Animation(s32);
     scroll_to_cursor: bool;
 
+    active_part: enum { input; results; } = .input;
+
     open_anim: Tween_Animation(float);
 
     default_openness := 0.2;  // if the user drags it then we remember it

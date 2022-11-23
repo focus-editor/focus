@@ -22,7 +22,7 @@ Colors :: struct {
     SEARCH_RESULT_ACTIVE    :: Color.{ r = 0.559, g = 0.469, b = 0.184 };
     SEARCH_RESULT_INACTIVE  :: Color.{ r = 0.322, g = 0.302, b = 0.173 };
     SCROLLBAR               :: Color.{ r = 0.131, g = 0.202, b = 0.25, a = 0.3 };
-    SCROLLBAR_HOVER         :: Color.{ r = 0.131, g = 0.202, b = 0.25, a = 0.8 };
+    SCROLLBAR_HOVER         :: Color.{ r = 0.20, g = 0.80, b = 0.80, a = 0.3 };
     SCROLLBAR_BACKGROUND    :: Color.{ r = 0.065, g = 0.101, b = 0.125, a = 0.3 };
     CURSOR                  :: Color.{ r = 0.15, g = 0.7, b = 0.7 };
     CURSOR_INACTIVE         :: Color.{ r = 0.1, g = 0.4, b = 0.4 };

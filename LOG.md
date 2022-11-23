@@ -17,6 +17,9 @@
     - Test the exe on different machines
     - Improve cursor: change color based on scope + draw occluded letters on top
     - Remove the edited status on a timeout after last edit/undo/whatever
+    - See if memory usage can be improved
+    - New open file dialog
+    - Create new files
 
 - Grep in the project
     + Profile the use of the in-buffer search
@@ -37,7 +40,7 @@
         - Deactivate input when moving cursor
         - Fix the way inactive cursors are displayed (both in finder and in editor)
         - On enter
-        - On click
+        - On click (don't conflict with the scrollbar)
         - Select the searched text
     - Limit the number of results
     - Limit results width:
@@ -48,7 +51,6 @@
     - Do case-insensitive search by default
     - Do case-sensitive on ctrl+enter?
 
-- Draw inactive cursors, but only if no search results are present
 
 - Text Input:
     - Select by mouse
@@ -126,6 +128,8 @@
 - Fix the font unknown character glyph (try copying something from font-awesome)
 
 # DONE
++ Draw cursor line highlight (disabled)
++ Draw inactive cursors, but only if no search results are present
 + Create a panel for the search
     + Refactor animation into something more general
     + Use the new animation struct for the search bar
