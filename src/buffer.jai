@@ -89,8 +89,8 @@ get_offset :: (using buffer: Buffer, pos: Pos) -> s64 {
 }
 
 offset_to_pos :: (using buffer: Buffer, offset: s64) -> Pos {
-    assert(!dirty);
-    assert(offset <= lines[lines.count - 1].end);
+    assert(!dirty, "buffer is dirty, can't calculate pos from offset");
+    assert(offset <= lines[lines.count - 1].end, "offset exceeds buffer size, can't calculate pos");
 
     pos: Pos = ---;
 

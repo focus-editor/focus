@@ -3,7 +3,7 @@ finder_handle_event :: (event: Input.Event) {
         case .KEYBOARD;
             if event.key_pressed {
                 if event.key_code == {
-                    case .ESCAPE;   deactivate_finder(); return;
+                    case .ESCAPE;   shrink_if_enlarged(); deactivate_finder(); return;
                     case #char "B"; if only_ctrl_pressed(event.modifier_flags) { close_finder(); return; }
                     case #char "P"; if only_ctrl_pressed(event.modifier_flags) { show_open_file_dialog(); return; }
                     case #char "F"; if only_ctrl_shift_pressed(event.modifier_flags) { activate_finder(); return; }
@@ -32,7 +32,7 @@ finder_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
             if active_part == .input || search_results.count == 0 {
                 search_in_project(to_string(input.text));
             } else {
-                // !!!!!!!!!!
+                open_selected_result(mods);
             }
 
         case .ARROW_UP;
@@ -113,9 +113,9 @@ finder_set_openness :: (value: float) {
 
 maybe_animate_finder :: () {
     using finder;
-    if finder.openness != open_anim.target {
+    if openness != open_anim.target {
         redraw_requested = true;
-        finder.openness = get_animation_value(open_anim);
+        openness = get_animation_value(open_anim);
     }
 }
 
@@ -124,11 +124,45 @@ finder: Finder;
 
 #scope_file
 
+open_selected_result :: (mods: Mods) {
+    using finder;
+    result := search_results[cursor.result];
+    active_global_widget = .editors;
+    shrink_if_enlarged();
+    editors_open_file(result.file.full_path, on_the_side = only_ctrl_pressed(mods));
+
+    // Select the search result
+    editor, buffer := get_active_editor_and_buffer();
+
+    // We search in buffer again and try to select the result we want (provided it hasn't changed).
+    // This is because while we search the file may have CRLF line endings, buf we strip them
+    // when we load the buffer, so if we just remember offsets they may not match, unfortunately!
+    // The easiest thing for now is to just repeat the search.
+    buffer_str := to_string(buffer.bytes);
+    found := true;
+    offset := 0;
+    for 0 .. cursor.line {
+        offset = find_index_from_left(buffer_str, needle, start_index = offset);
+        if offset < 0 {
+            found = false;  // probably the buffer has changed
+            break;
+        }
+        offset += needle.count;
+    }
+    if found {
+        cursor := leave_only_original_cursor(editor);
+        cursor.sel = offset_to_pos(buffer, offset - needle.count);
+        cursor.pos = offset_to_pos(buffer, offset);
+    }
+
+    editor.cursor_moved = true;
+}
+
 move_cursor_up :: (mods: Mods) {
     using finder.cursor;
 
     if only_ctrl_pressed(mods) {
-        if result > 0 then result -= 1;
+        if line == 0 && result > 0 then result -= 1;
         line = 0;
     } else {
         if line == 0 && result > 0 {
@@ -138,6 +172,7 @@ move_cursor_up :: (mods: Mods) {
             line -= 1;
         }
     }
+    if result < 0 then result = 0;
     finder.scroll_to_cursor = true;
 }
 
@@ -153,14 +188,15 @@ move_cursor_down :: (mods: Mods) {
         } else {
             line = cast(s32) finder.search_results[result].lines.count - 1;  // jump to last line
         }
-    } else {
+    } else if result >= 0 && result < max_result {
         if line < finder.search_results[result].lines.count - 1 {
             line += 1;
-        } else if result < max_result {
+        } else {
             result += 1;
             line = 0;
         }
     }
+    if result < 0 then result = 0;
     finder.scroll_to_cursor = true;
 }
 
@@ -222,19 +258,20 @@ search_in_project :: (needle: string) {
     // Reset scroll
     finder.scroll_y = 0;
     finder.scroll_anim.target = 0;
-    finder.cursor = .{ result = 0, line = 0};
+
+    finder.cursor = .{ result = -1, line = 0};
+    finder.needle = copy_string(needle);
 
     // for result : finder.search_results {
-    //     print("% =======================\n", result.file.full_path);
+    //     print("% =======\n", result.file.name);
     //     for line : result.lines {
-    //         print("  %\n", line);
+    //         print("offset: %, line: '%'\n", line.global_offset, line.str);
     //     }
-    //     print("\n");
     // }
 }
 
 search_in_file :: (file: File_Info, contents: string, needle: string, skip_table: [] s32) {
-    lines: [..] string;
+    lines: [..] Search_Result.Line;
 
     file_end := contents.data + contents.count;
     offset := 0;
@@ -242,26 +279,29 @@ search_in_file :: (file: File_Info, contents: string, needle: string, skip_table
         offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table);
         if offset < 0 break;
 
-        line := slice(contents, offset, needle.count);
+        str := slice(contents, offset, needle.count);
 
         // Expand to left newline
-        last_nonwhitespace := line.data;
-        while line.data > contents.data && <<(line.data - 1) != #char "\n" {
-            line.data  -= 1;
-            line.count += 1;
-            if !inline is_space(<<line.data) then last_nonwhitespace = line.data;
+        last_nonwhitespace := str.data;
+        while str.data > contents.data && <<(str.data - 1) != #char "\r" && <<(str.data - 1) != #char "\n" {
+            str.data  -= 1;
+            str.count += 1;
+            if !inline is_space(<<str.data) then last_nonwhitespace = str.data;
         }
-        line.count -= last_nonwhitespace - line.data;
-        line.data   = last_nonwhitespace;
+        str.count -= last_nonwhitespace - str.data;
+        str.data   = last_nonwhitespace;
 
         // Expand to right newline
-        end := line.data + line.count;
+        end := str.data + str.count;
         while end < file_end && <<end != #char "\n" {
             end += 1;
         }
-        line.count = end - line.data;
+        str.count = end - str.data;
 
-        array_add(*lines, line);
+        line := array_add(*lines);
+        line.str = str;
+        // line.global_offset = cast(s32) offset;
+        line.offset_within = cast(s32) offset - cast(s32)(str.data - contents.data);
 
         offset += needle.count;
     }
@@ -284,15 +324,20 @@ toggle_enlarged :: () {
     }
 }
 
+shrink_if_enlarged :: () {
+    using finder;
+    if values_are_close(openness, Finder.ENLARGED_OPENNESS) || openness > Finder.ENLARGED_OPENNESS {
+        start_animation(*open_anim, openness, default_openness);
+    }
+}
+
 Finder :: struct {
     openness: float = 0;  // percentage of window width. Zero means it's hidden
     input: Text_Input;
 
     search_results: [..] Search_Result;
-    cursor: struct {
-        result: s32;
-        line:   s32;
-    };
+    needle: string;  // to remember what we searched with as the input text may change
+    cursor: struct { result: s32; line: s32; };
     scroll_y: s32;
     scroll_anim: Tween_Animation(s32);
     scroll_to_cursor: bool;
@@ -313,8 +358,13 @@ Finder :: struct {
 
 Search_Result :: struct {
     file: File_Info;
-    lines: [] string;  // TODO: add highlight info
-    // TODO: add line number
+    lines: [] Line;
+
+    Line :: struct {
+        str: string;
+        offset_within: s32;  // result offset from the beginning of the string (for highlighting)
+        // global_offset: s32;  // offset from the beginning of the file // NOTE: don't use for now because of CRLF
+    }
 }
 
 get_pool_allocator :: () -> Allocator {

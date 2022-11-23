@@ -614,7 +614,7 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
                 }
 
                 // TODO: highlight text
-                Simp.draw_text(font_ui, xx (pen.x + result_indent_width), xx pen.y, line, color = Colors.UI_DEFAULT);
+                Simp.draw_text(font_ui, xx (pen.x + result_indent_width), xx pen.y, line.str, color = Colors.UI_DEFAULT);
             }
             pen.y -= result_rect.h;
             result_rect.y -= result_rect.h;

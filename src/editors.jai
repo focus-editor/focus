@@ -64,6 +64,12 @@ editors_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
     if frame_time - buffer.last_edit_time >= EDIT_GROUP_TIMEOUT then new_edit_group(buffer, editor);
 
     if key_code == {
+        case #char "W";
+            if only_ctrl_pressed(mods) {
+                close_current_editor();
+                handled = true;
+            }
+
         case #char "F";
             if only_ctrl_pressed(mods) {
                 open_search_bar(editor, buffer);
@@ -649,6 +655,19 @@ new_edit_group :: (buffer: *Buffer, editor: *Editor) {
     // Remember cursor state
     array_resize(*buffer.cursors, editor.cursors.count);
     for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
+}
+
+close_current_editor :: () {
+    if editors_layout == {
+        case .None; return;
+
+        case .Single;
+            editors_layout = .None;
+
+        case .Double;
+            editors_layout = .Single;
+            editor_active = ifx editor_left == editor_active then editor_right else editor_left;
+    }
 }
 
 search_bar_is_open :: inline (using editor: *Editor) -> bool {

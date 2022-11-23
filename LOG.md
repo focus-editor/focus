@@ -21,7 +21,7 @@
     - New open file dialog
     - Create new files
 
-- Grep in the project
+- Search in the project
     + Profile the use of the in-buffer search
     + Write a BMH implementation for search
     + Compare with the previous version
@@ -39,17 +39,23 @@
     + Deactivate input when moving cursor
     + Fix the way inactive cursors are displayed (both in finder and in editor)
     - Open files:
-        - On enter
+        + On enter
+        + Select the searched text
+        + Close editor on ctrl+W
+        - When an editor slides in from the side, make it always take up the whole space right away
         - On click (don't conflict with the scrollbar)
-        - Select the searched text
     - Limit the number of results
     - Limit results width:
         - Don't go too much to the left
         - Don't go too much to the right
         - Mark cut lines with an ellipsis
+    - Use selected text from active editor if on one line on activation
     - Highlight search string
     - Do case-insensitive search by default
     - Do case-sensitive on ctrl+enter?
+    - Warning on < 3 chars? Maybe allow any number of chars and just let it hit the limit?
+    - Use threads to search and show a spinner after some time has passed
+    - Don't lock files after scanning
 
 - Text Input:
     - Select by mouse
