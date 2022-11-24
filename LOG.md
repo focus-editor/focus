@@ -40,6 +40,7 @@
     + Fix the way inactive cursors are displayed (both in finder and in editor)
     + Close editor on ctrl+W
     + Be able to center viewport on cursor
+    + Use selected text from active editor if on one line on activation
     - When jumping to cursor, align to the left
     - When starting search, if no results, show "Searching..." so that we know it's searching
     - Draw the number of results and files
@@ -53,7 +54,6 @@
         - Don't go too much to the left
         - Don't go too much to the right
         - Mark cut lines with an ellipsis
-    - Use selected text from active editor if on one line on activation
     - Highlight search string
     - Do case-insensitive search by default
     - Do case-sensitive on ctrl+enter?

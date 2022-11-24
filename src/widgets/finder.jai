@@ -73,8 +73,14 @@ toggle_finder :: () {
 }
 
 activate_finder :: inline () {
+    using finder;
+
     active_global_widget = .finder;
     finder.active_part = .input;
+
+    // Select text when opening
+    input.cursor.sel = 0;
+    input.cursor.pos = get_num_chars(input.text);
 }
 
 deactivate_finder :: inline () {
@@ -86,13 +92,7 @@ deactivate_finder :: inline () {
 
 open_finder :: () {
     using finder;
-
     activate_finder();
-
-    // Select text when opening
-    input.cursor.sel = 0;
-    input.cursor.pos = get_num_chars(input.text);
-
     start_animation(*open_anim, openness, default_openness);
 }
 
@@ -100,6 +100,22 @@ close_finder :: () {
     active_global_widget = .editors;
 
     start_animation(*finder.open_anim, finder.openness, 0);
+}
+
+open_finder_from_editor :: () {
+    editor, buffer := get_active_editor_and_buffer();
+
+    // If there was some text selected that doesn't span more than one line, use it for search
+    if editor && editor.cursors.count == 1 {
+        cursor := editor.cursors[0];
+        selected_text := get_selected_string(cursor, buffer);
+        if selected_text && cursor.sel.line == cursor.pos.line {
+            array_resize(*finder.input.text, selected_text.count);
+            memcpy(finder.input.text.data, selected_text.data, selected_text.count);
+        }
+    }
+
+    if !finder_is_open() then open_finder(); else activate_finder(); return;
 }
 
 finder_set_openness :: (value: float) {

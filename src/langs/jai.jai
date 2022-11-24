@@ -443,8 +443,8 @@ PUNCTUATION :: string.[
 
 KEYWORDS :: string.[
     "align_of", "break", "case", "cast", "code_of", "continue", "defer", "else", "enum", "enum_flags", "for",
-    "if", "ifx", "is_constant", "push_context", "return", "size_of", "struct", "then", "type_info", "type_of", "union",
-    "using", "while", "xx", "operator",
+    "if", "ifx", "is_constant", "inline", "push_context", "return", "size_of", "struct", "then", "type_info", "type_of",
+    "union", "using", "while", "xx", "operator",
 ];
 
 TYPE_KEYWORDS :: string.[
