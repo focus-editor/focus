@@ -68,6 +68,9 @@ editors_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
             if only_ctrl_pressed(mods) {
                 close_current_editor();
                 handled = true;
+            } else if only_ctrl_shift_pressed(mods) {
+                close_other_editor();
+                handled = true;
             }
 
         case #char "F";
@@ -659,15 +662,40 @@ new_edit_group :: (buffer: *Buffer, editor: *Editor) {
 
 close_current_editor :: () {
     if editors_layout == {
-        case .None; return;
-
-        case .Single;
-            editors_layout = .None;
-
+        case .None;     return;
+        case .Single;   editors_layout = .None;  // close immediately
         case .Double;
-            editors_layout = .Single;
-            editor_active = ifx editor_left == editor_active then editor_right else editor_left;
+            // Start the animation (the layout will change when the animation is finished)
+            if editor_active == editor_left {
+                editors_start_moving_splitter(0.0);  // close left
+                editor_active = editor_right;
+            } else {
+                editors_start_moving_splitter(1.0);  // close right
+                editor_active = editor_left;
+            }
+            editor_closing = true;
     }
+}
+
+
+close_other_editor :: () {
+    if editors_layout == {
+        case .None;     return;
+        case .Single;   return;  // don't do anything
+        case .Double;
+            // Start the animation (the layout will change when the animation is finished)
+            if editor_active == editor_left {
+                editors_start_moving_splitter(1.0);  // close right
+            } else {
+                editors_start_moving_splitter(0.0);  // close left
+            }
+            editor_closing = true;
+    }
+}
+
+finish_closing_editor :: () {
+    if editors_layout == .Double then editors_layout = .Single;
+    editor_closing = false;
 }
 
 search_bar_is_open :: inline (using editor: *Editor) -> bool {
@@ -1562,6 +1590,7 @@ editor_active: s64 = -1;
 editor_left:   s64 = -1;
 editor_right:  s64 = -1;
 editor_expanded := false;  // whether the active editor should be larger
+editor_closing  := false;  // whether the active editor is currently being closed (so that we can change the layout when it's done closing)
 
 // Triggered by alt + up/down
 editor_smooth_scroll: struct {

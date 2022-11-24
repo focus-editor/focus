@@ -40,7 +40,9 @@ draw_frame :: () {
             }
             if !values_are_close(splitter_pos, splitter_anim.target) {
                 redraw_requested = true;
-                splitter_pos = clamp(get_animation_value(splitter_anim), 0.1, 0.9);
+                splitter_pos = get_animation_value(splitter_anim);  // removed the clamp because we want to close smoothly. Will this cause problems? Not sure
+            } else if editor_closing {
+                finish_closing_editor();
             }
             if editor_expanded {
                 if editor_active == editor_left  && !values_are_close(splitter_anim.target, 0.9) then editors_start_moving_splitter(0.9);

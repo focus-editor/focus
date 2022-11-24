@@ -38,11 +38,11 @@
         + Scroll to cursor when moved
     + Deactivate input when moving cursor
     + Fix the way inactive cursors are displayed (both in finder and in editor)
+    + Close editor on ctrl+W
+    - Be able to center viewport on cursor, with the preference on left alignment (for jumping to search results)
     - Open files:
         + On enter
         + Select the searched text
-        + Close editor on ctrl+W
-        - When an editor slides in from the side, make it always take up the whole space right away
         - On click (don't conflict with the scrollbar)
     - Limit the number of results
     - Limit results width:
