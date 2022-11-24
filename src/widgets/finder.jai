@@ -35,17 +35,9 @@ finder_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
                 open_selected_result(mods);
             }
 
-        case .ARROW_UP;
-            if search_results {
-                active_part = .results;
-                move_cursor_up(mods);
-            }
-
-        case .ARROW_DOWN;
-            if search_results {
-                active_part = .results;
-                move_cursor_down(mods);
-            }
+        case .ARROW_UP;    move_cursor_up(mods);
+        case .ARROW_DOWN;  move_cursor_down(mods);
+        case .TAB;         if only_shift_pressed(mods) then move_cursor_up(mods); else move_cursor_down(mods);
     }
 }
 
@@ -176,6 +168,9 @@ open_selected_result :: (mods: Mods) {
 
 move_cursor_up :: (mods: Mods) {
     using finder.cursor;
+    
+    if !finder.search_results return;
+    finder.active_part = .results;
 
     if only_ctrl_pressed(mods) {
         if line == 0 && result > 0 then result -= 1;
@@ -194,6 +189,9 @@ move_cursor_up :: (mods: Mods) {
 
 move_cursor_down :: (mods: Mods) {
     using finder.cursor;
+    
+    if !finder.search_results return;
+    finder.active_part = .results;
 
     max_result := cast(s32) finder.search_results.count - 1;
 

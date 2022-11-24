@@ -331,7 +331,7 @@ recalculate_colors :: (buffer: *Buffer) {
 
     if buffer.lang == {
         case .Jai;      highlight_jai_syntax(buffer);
-        case .Worklog;  // TODO
+        case .Worklog;  highlight_worklog(buffer);
     }
 
     // // Test colorisation - each word in different color

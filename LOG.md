@@ -20,6 +20,7 @@
     - See if memory usage can be improved
     - New open file dialog
     - Create new files
+    - Notify about unsaved buffers on close
 
 - Search in the project
     + Profile the use of the in-buffer search
@@ -41,9 +42,8 @@
     + Close editor on ctrl+W
     + Be able to center viewport on cursor
     + Use selected text from active editor if on one line on activation
-    - When jumping to cursor, align to the left
-    - When starting search, if no results, show "Searching..." so that we know it's searching
     - Draw the number of results and files
+    - When jumping to cursor, align to the left
     - Open files:
         + On enter
         + Select the searched text
@@ -137,6 +137,7 @@
 - Fix the font unknown character glyph (try copying something from font-awesome)
 
 # DONE
++ [quick] Highlight work log
 + Draw cursor line highlight (disabled)
 + Draw inactive cursors, but only if no search results are present
 + Create a panel for the search

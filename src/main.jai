@@ -7,7 +7,7 @@ main :: () {
 
     window_x, window_y := platform_get_biggest_monitor_pos();
     window = create_window(window_width, window_height, "Focus", window_x, window_y, background_color_rgb = as_3_floats(Colors.BACKGROUND));
-    // platform_maximize_window(window);
+    platform_maximize_window(window);
 
     window_width, window_height = Simp.get_render_dimensions(window);
     screen = make_rect(0, 0, window_width, window_height);
@@ -277,6 +277,10 @@ only_alt_pressed :: inline (mods: Mods) -> bool {
     return mods.packed == MODS_ALT;
 }
 
+only_shift_pressed :: inline (mods: Mods) -> bool {
+    return mods.packed == MODS_SHIFT;
+}
+
 only_alt_shift_pressed :: inline (mods: Mods) -> bool {
     return mods.packed == MODS_ALT_SHIFT;
 }
@@ -401,6 +405,7 @@ Project_Dir :: struct {
 #load "widgets/open_file_dialog.jai";
 #load "widgets/finder.jai";
 #load "langs/jai.jai";
+#load "langs/worklog.jai";
 
 // #import "Basic"()(MEMORY_DEBUGGER = true);
 #import "Basic";
@@ -423,9 +428,10 @@ Input :: #import "Input";
 
 #scope_file
 
-MODS_NONE       :   : #run Mods.{}.packed;
-MODS_CTRL           :: #run Mods.{ ctrl_pressed = true }.packed;
-MODS_ALT            :: #run Mods.{ alt_pressed  = true }.packed;
+MODS_NONE           :: #run Mods.{}.packed;
+MODS_CTRL           :: #run Mods.{ ctrl_pressed  = true }.packed;
+MODS_ALT            :: #run Mods.{ alt_pressed   = true }.packed;
+MODS_SHIFT          :: #run Mods.{ shift_pressed = true }.packed;
 MODS_ALT_SHIFT      :: #run Mods.{ alt_pressed  = true, shift_pressed = true }.packed;
 MODS_CTRL_SHIFT     :: #run Mods.{ ctrl_pressed = true, shift_pressed = true }.packed;
 MODS_CTRL_ALT       :: #run Mods.{ ctrl_pressed = true, alt_pressed   = true }.packed;
