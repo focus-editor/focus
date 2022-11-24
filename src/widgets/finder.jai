@@ -137,6 +137,8 @@ open_selected_result :: (mods: Mods) {
     result := search_results[cursor.result];
     active_global_widget = .editors;
     shrink_if_enlarged();
+    
+    old_layout := editors_layout;    
     editors_open_file(result.file.full_path, on_the_side = only_ctrl_pressed(mods));
 
     // Select the search result
@@ -163,7 +165,13 @@ open_selected_result :: (mods: Mods) {
         cursor.pos = offset_to_pos(buffer, offset);
     }
 
-    editor.scroll_to_cursor = true;
+    editor.scroll_to_cursor = .yes;
+    if old_layout == .Single && editors_layout == .Double {
+        // We've just opened a new editor, so need to let it know it's being opened,
+        // so that it can use the target rect width for its scroll calculations
+        // (otherwise it'll be too small and the scroll animation will be unexpected)
+        editor.scroll_to_cursor = .yes_new_editor;
+    }
 }
 
 move_cursor_up :: (mods: Mods) {

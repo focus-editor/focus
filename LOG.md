@@ -73,8 +73,8 @@
     - Fix the weird doubling of characters when pasted a newline
 
 - Tokenizer:
+    + Identifiers can start with _
     - Parse @notes
-    - Identifiers can start with _
     - Make $ a separate token
     - Allow \ in identifiers
 

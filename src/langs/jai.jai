@@ -47,7 +47,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     // UTF-8 characters elsewhere are a syntax error.
     char := << t;
 
-    if is_alpha(char) {
+    if is_alpha(char) || char == #char "_" {
         parse_identifier(tokenizer, *token);
     } else if is_digit(char) {
         parse_number(tokenizer, *token);

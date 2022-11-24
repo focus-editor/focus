@@ -52,8 +52,8 @@ draw_frame :: () {
             split_x := editors_area.w * splitter_pos;
             left_rect, right_rect := cut_left(editors_area, split_x, margin = 2);
 
-            draw_editor(editor_left,  left_rect,  footer_height, .editor_left);
-            draw_editor(editor_right, right_rect, footer_height, .editor_right);
+            draw_editor(editor_left,  left_rect,  footer_height, .editor_left,  editors_area);
+            draw_editor(editor_right, right_rect, footer_height, .editor_right, editors_area);
 
             splitter_rect := make_rect(left_rect.x + left_rect.w, left_rect.y + footer_height, 2, left_rect.h - footer_height);
             draw_splitter(splitter_rect, split_x, .editor_splitter);
@@ -89,7 +89,7 @@ draw_splitter :: (splitter_rect: Rect, split_x: float, ui_id: Ui_Id) {
     draw_rect(rect, color);
 }
 
-draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui_Id) {
+draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui_Id, total_editor_area := Rect.{}) {
     scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
 
     footer_rect, rect := cut_bottom(main_area, footer_height);
@@ -169,20 +169,23 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 if left_target != viewport.scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target);
                 if top_target  != viewport.scroll_y.target then start_animation(*viewport.scroll_y, viewport.top,  top_target);
             }
-        } else if scroll_to_cursor {
+        } else if scroll_to_cursor != .no {
             using editor.viewport;
+            
+            // Use the target editor width (not current width) when a new editor is appearing
+            editor_width := ifx scroll_to_cursor == .yes_new_editor then total_editor_area.w / 2 else rect.w;
+            
+            cursor_pos_from_left := cursors[main_cursor].pos.col * char_size + text_offset.x;
+            left_target := cast(s32)(cursor_pos_from_left - editor_width + char_size * 3);
+            if left_target < 0 then left_target = 0;
+            if left_target != scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target);
 
             cursor_pos_from_top := cursors[main_cursor].pos.line * line_height;
             top_target := cast(s32)(cursor_pos_from_top - rect.h / 2);
             if top_target < 0 then top_target = 0;
-            if top_target != scroll_y.target then start_animation(*viewport.scroll_y, viewport.top, top_target);
-            
-            cursor_pos_from_left := cursors[main_cursor].pos.col * char_size + text_offset.x;
-            left_target := cast(s32)(cursor_pos_from_left - rect.w);
-            if left_target < 0 then left_target = 0;
-            if left_target != scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target);
+            if top_target != scroll_y.target then start_animation(*viewport.scroll_y, viewport.top, top_target);            
 
-            scroll_to_cursor = false;
+            scroll_to_cursor = .no;
         }
 
         // Maybe update selection highlights
