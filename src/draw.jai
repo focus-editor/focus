@@ -533,6 +533,20 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
     if input_clicked then activate_finder();
     input_active := active_global_widget == .finder && active_part == .input;
     draw_text_input(*input, input_rect, ui_id = input_id, active = input_active, label = "Search in project");
+    
+    // Draw label
+    label_rect := cut_top(results_rect, xx font_ui.default_line_spacing);
+    label_rect.y += margin / 2;
+    results_rect.h -= label_rect.h;
+    label_text := "Press Enter to search";
+    if needle {
+        if search_results {
+            label_text = tprint("Found % result% in % file%", total_results, ifx total_results > 1 then "s" else "", search_results.count, ifx search_results.count > 1 then "s" else "");
+        } else {
+            label_text = "No results";
+        }
+    }
+    Simp.draw_text(font_ui_small, xx (label_rect.x + margin + padding + 1), xx (label_rect.y + padding), label_text, color = Colors.UI_DIM);
 
     // Draw results
     push_scissor(results_rect);
@@ -631,9 +645,6 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
             result_rect.y -= result_rect.h;
         }
         if pen.y < visible_rect.y break;  // nothing visible left
-    }
-    if !search_results {
-        Simp.draw_text(font_ui, xx (pen.x + padding), xx pen.y, "No results", color = Colors.UI_DEFAULT);
     }
 
     if scroll_y != 0 then draw_top_down_shadow(cut_top(results_rect, char_size));

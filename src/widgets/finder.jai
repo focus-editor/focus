@@ -221,6 +221,7 @@ search_in_project :: (needle: string) {
     push_allocator(allocator);
 
     array_reset(*finder.search_results);
+    finder.total_results = 0;
 
     reset(*memory_pool);  // to avoid having to free each search result
 
@@ -286,6 +287,8 @@ search_in_project :: (needle: string) {
 
 search_in_file :: (file: File_Info, contents: string, needle: string, skip_table: [] s32) {
     lines: [..] Search_Result.Line;
+    
+    if finder.total_results >= Finder.MAX_RESULTS return;
 
     file_end := contents.data + contents.count;
     offset := 0;
@@ -316,6 +319,9 @@ search_in_file :: (file: File_Info, contents: string, needle: string, skip_table
         line.str = str;
         // line.global_offset = cast(s32) offset;
         line.offset_within = cast(s32) offset - cast(s32)(str.data - contents.data);
+        
+        finder.total_results += 1;
+        if finder.total_results >= Finder.MAX_RESULTS break;
 
         offset += needle.count;
     }
@@ -351,6 +357,8 @@ Finder :: struct {
 
     search_results: [..] Search_Result;
     needle: string;  // to remember what we searched with as the input text may change
+    total_results: int;
+    
     cursor: struct { result: s32; line: s32; };
     scroll_y: s32;
     scroll_anim: Tween_Animation(s32);

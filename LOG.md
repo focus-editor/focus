@@ -42,13 +42,13 @@
     + Close editor on ctrl+W
     + Be able to center viewport on cursor
     + Use selected text from active editor if on one line on activation
-    - Draw the number of results and files
+    + Draw the number of results and files
+    + Limit the number of results
     - When jumping to cursor, align to the left
     - Open files:
         + On enter
         + Select the searched text
         - On click (don't conflict with the scrollbar)
-    - Limit the number of results
     - Say when the maximum number of results is reached
     - Limit results width:
         - Don't go too much to the left
@@ -60,6 +60,10 @@
     - Warning on < 3 chars? Maybe allow any number of chars and just let it hit the limit?
     - Use threads to search and show a spinner after some time has passed
     - Don't lock files after scanning
+    
+- Save editor state on editor operations:
+    - Alt + minus to open previous state
+    - Alt + plus to open next state
 
 - Text Input:
     - Select by mouse
