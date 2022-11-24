@@ -176,6 +176,11 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             top_target := cast(s32)(cursor_pos_from_top - rect.h / 2);
             if top_target < 0 then top_target = 0;
             if top_target != scroll_y.target then start_animation(*viewport.scroll_y, viewport.top, top_target);
+            
+            cursor_pos_from_left := cursors[main_cursor].pos.col * char_size + text_offset.x;
+            left_target := cast(s32)(cursor_pos_from_left - rect.w);
+            if left_target < 0 then left_target = 0;
+            if left_target != scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target);
 
             scroll_to_cursor = false;
         }

@@ -45,12 +45,12 @@
     + Draw the number of results and files
     + Limit the number of results
     + Allow any number of chars for search
-    - When jumping to cursor, align to the left
+    + Say when the maximum number of results is reached
+    + When jumping to cursor, align to the left
     - Open files:
         + On enter
         + Select the searched text
         - On click (don't conflict with the scrollbar)
-    - Say when the maximum number of results is reached
     - Limit results width:
         - Don't go too much to the left
         - Don't go too much to the right
