@@ -541,7 +541,7 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
     label_text := "Press Enter to search";
     if needle {
         if search_results {
-            label_text = tprint("Found % result% in % file%", total_results, ifx total_results > 1 then "s" else "", search_results.count, ifx search_results.count > 1 then "s" else "");
+            label_text = tprint("Found% % result% in % file%", ifx limit_reached then " more than" else "", total_results, ifx total_results > 1 then "s" else "", search_results.count, ifx search_results.count > 1 then "s" else "");
         } else {
             label_text = "No results";
         }

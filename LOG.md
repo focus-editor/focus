@@ -44,6 +44,7 @@
     + Use selected text from active editor if on one line on activation
     + Draw the number of results and files
     + Limit the number of results
+    + Allow any number of chars for search
     - When jumping to cursor, align to the left
     - Open files:
         + On enter
@@ -57,9 +58,10 @@
     - Highlight search string
     - Do case-insensitive search by default
     - Do case-sensitive on ctrl+enter?
-    - Warning on < 3 chars? Maybe allow any number of chars and just let it hit the limit?
     - Use threads to search and show a spinner after some time has passed
     - Don't lock files after scanning
+    
+- Strip trailing whitespace on save    
     
 - Save editor state on editor operations:
     - Alt + minus to open previous state
@@ -86,7 +88,6 @@
 
 - Navigating project dirs in a dialog
 - Create new files (with a mini-dialog?)
-- Strip trailing whitespace on save
 - If a buffer is modified on disk, ask for confirmation before saving (use the function and not the flag)
 
 - Optimisation:
