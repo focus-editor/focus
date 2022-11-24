@@ -1177,7 +1177,7 @@ maybe_set_hot_or_active :: (ui_id: Ui_Id, rect: Rect, pointer_image: Pointer_Ima
     if !is_valid(rect) || !mouse_pointer_is_within(rect) return false;
 
     ui.hot = ui_id;
-    if ui.hot_last_frame == ui_id || ui.active == ui_id then set_pointer_image(pointer_image);
+    if ui.hot_last_frame == ui_id && ui.active == .none || ui.active == ui_id then set_pointer_image(pointer_image);
     if ui.hot_last_frame == ui_id && ui.active == .none && mouse.left.just_pressed {
         ui.active = ui_id;
         return true;
