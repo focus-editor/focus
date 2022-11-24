@@ -155,7 +155,7 @@ open_selected_result :: (mods: Mods) {
         cursor.pos = offset_to_pos(buffer, offset);
     }
 
-    editor.cursor_moved = true;
+    editor.scroll_to_cursor = true;
 }
 
 move_cursor_up :: (mods: Mods) {
@@ -188,10 +188,10 @@ move_cursor_down :: (mods: Mods) {
         } else {
             line = cast(s32) finder.search_results[result].lines.count - 1;  // jump to last line
         }
-    } else if result >= 0 && result < max_result {
+    } else if result >= 0 && result <= max_result {
         if line < finder.search_results[result].lines.count - 1 {
             line += 1;
-        } else {
+        } else if result < max_result {
             result += 1;
             line = 0;
         }

@@ -776,7 +776,7 @@ jump_to_search_result :: (using editor: *Editor, buffer: Buffer, move_search_poi
     cursor := leave_only_original_cursor(editor);
     cursor.sel = result.start_pos;
     cursor.pos = offset_to_pos(buffer, result.offset + input.text.count);
-    cursor_moved = true;
+    scroll_to_cursor = true;
 
     if move_search_point then search_point_offset = xx result.offset;
 }
@@ -1533,7 +1533,8 @@ Editor :: struct {
     main_cursor: s64;      // newly added cursors become main so that we jump to them
     original_cursor: s64;  // we remember the original cursor when first creating multiple cursors (and go back to it on escape)
     search_whole_words := false;  // used when creating new cursors
-    cursor_moved  := false;
+    scroll_to_cursor   := false;  // trigger a scroll so that the cursor is in the center vertically
+    cursor_moved       := false;  // this may trigger a scroll so that the cursor is within acceptable bounds
 
     highlights: [..] Text_Highlight;
     selected_text_length: s64;
