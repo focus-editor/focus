@@ -627,6 +627,7 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
     result_rect.y += scroll_y;
     rect_origin_y := result_rect.y;
     cursor_color  := ifx active_global_widget == .finder then Colors.LIST_CURSOR else Colors.LIST_CURSOR_LITE;
+    highlight_width := Simp.get_text_width(font_ui, needle);
 
     pen := make_vector2(result_rect.x + margin + 2 * dpi_scale, result_rect.y + (result_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale);
     for result, result_num : search_results {
@@ -649,10 +650,16 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
                         finder_open_selected_result(on_the_side = ctrl_pressed());
                     }
                 }
-                // Draw selected line
+                // Highlight selected line
                 if cursor.result == result_num && cursor.line == line_num then draw_rect(result_rect, cursor_color);
 
-                // TODO: highlight text
+                // Draw search string highlight
+                highlight_start_x := pen.x + result_indent_width + Simp.get_text_width(font_ui, slice(line.str, 0, line.offset_within));
+                highlight_rect := shrink_y(cut_left(result_rect, xx highlight_width), 2 * dpi_scale);
+                highlight_rect.x = highlight_start_x;
+                draw_rect(highlight_rect, Colors.SEARCH_RESULT_INACTIVE);
+                
+                // Draw the result line
                 Simp.draw_text(font_ui, xx (pen.x + result_indent_width), xx pen.y, line.str, color = Colors.UI_DEFAULT);
             }
             pen.y -= result_rect.h;

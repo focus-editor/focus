@@ -51,11 +51,12 @@
         + On enter
         + Select the searched text
         + On click (don't conflict with the scrollbar)
-    - Limit results width:
-        - Don't go too much to the left
-        - Don't go too much to the right
-        - Mark cut lines with an ellipsis
-    - Highlight search string
+    + Limit results width:
+        + Don't go too much to the left
+        + Don't go too much to the right
+        + Mark cut lines with an ellipsis
+    + Highlight search string
+    - Don't activate finder's input on click in the results area (only if there are no results then it's ok)
     - Do case-insensitive search by default
     - Do case-sensitive on ctrl+enter?
     - Use threads to search and show a spinner after some time has passed
@@ -71,6 +72,8 @@
     - Select by mouse
     - Select words by ctrl+D
     - Fix the weird doubling of characters when pasted a newline
+    
+- When cutting search results in finder, go by characters and not bytes
 
 - Tokenizer:
     + Identifiers can start with _

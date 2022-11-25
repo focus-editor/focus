@@ -305,27 +305,46 @@ search_in_file :: (file: File_Info, contents: string, needle: string, skip_table
 
         str := slice(contents, offset, needle.count);
 
-        // Expand to left newline
+        MAX_CHARS_TO_THE_SIDE :: 40;  // don't want to go all the way to the newlines if too long
+        // TODO: go by chars, not bytes!
+        
+        // Expand to the left newline
         last_nonwhitespace := str.data;
-        while str.data > contents.data && <<(str.data - 1) != #char "\r" && <<(str.data - 1) != #char "\n" {
+        i := 0;
+        while str.data > contents.data && <<(str.data - 1) != #char "\r" && <<(str.data - 1) != #char "\n" && i < MAX_CHARS_TO_THE_SIDE {
             str.data  -= 1;
             str.count += 1;
             if !inline is_space(<<str.data) then last_nonwhitespace = str.data;
+            i += 1;
         }
         str.count -= last_nonwhitespace - str.data;
         str.data   = last_nonwhitespace;
 
-        // Expand to right newline
+        cut_on_left := i >= MAX_CHARS_TO_THE_SIDE;
+
+        // Expand to the right newline
         end := str.data + str.count;
-        while end < file_end && <<end != #char "\n" {
+        i = 0;
+        while end < file_end && <<end != #char "\n" && i < MAX_CHARS_TO_THE_SIDE {
             end += 1;
+            i += 1;
         }
         str.count = end - str.data;
+        
+        cut_on_right := i >= MAX_CHARS_TO_THE_SIDE;
 
         line := array_add(*lines);
         line.str = str;
-        // line.global_offset = cast(s32) offset;
         line.offset_within = cast(s32) offset - cast(s32)(str.data - contents.data);
+        if cut_on_left then line.offset_within += 3;  // account for the ellipsis on the left
+        
+        if cut_on_left && cut_on_right {
+            line.str = sprint("…%…", line.str);
+        } else if cut_on_left {
+            line.str = sprint("…%",  line.str);
+        } else if cut_on_right {
+            line.str = sprint("%…",  line.str);
+        }
         
         finder.total_results += 1;
         if finder.total_results >= Finder.MAX_RESULTS {
