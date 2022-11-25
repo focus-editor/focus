@@ -223,6 +223,8 @@ move_cursor_down :: (mods: Mods) {
 }
 
 search_in_project :: (needle: string) {
+    if !needle return;
+
     allocator := get_pool_allocator();
     push_allocator(allocator);
 

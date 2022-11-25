@@ -60,6 +60,8 @@
     - Do case-insensitive search by default
     - Do case-sensitive on ctrl+enter?
     - Use threads to search and show a spinner after some time has passed
+    - [bug] When buffer changes and search results don't, it may find wrong results:
+        - Solution: always trigger search on buffer save (have to do the threading first)
     - Don't lock files after scanning
     
 - Strip trailing whitespace on save    
