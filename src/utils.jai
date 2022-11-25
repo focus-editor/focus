@@ -183,11 +183,23 @@ bmh_find_index_from_left :: (s: string, needle: string, start_index := 0, skip_t
         current := to_string(s.data + i, needle.count);
         #if case_sensitive {
             if current == needle return i;
+            i += skip_table[s[i + needle.count - 1]];
         } else {
             if equal_nocase(current, needle) return i;
+            i += skip_table[to_lower(s[i + needle.count - 1])];
         }
-        i += skip_table[s[i + needle.count - 1]];
     }
+    return -1;
+}
+
+find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) -> s64 {
+    if !substring return -1;
+
+    for i: start_index..s.count-substring.count {
+        t := slice(s, i, substring.count);
+        if equal_nocase(t, substring) return i;
+    }
+
     return -1;
 }
 

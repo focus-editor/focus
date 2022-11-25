@@ -748,11 +748,11 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
 
     // Use Boyer-Moore-Horspool to search
     assert(buffer_str.count < S32_MAX && needle.count < S32_MAX);
-    skip_table := bmh_prepare_skip_table(needle);
+    skip_table := bmh_prepare_skip_table(needle, case_sensitive = false);
     offset := 0;
     i := 0;
     while true {
-        offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table);
+        offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = false);
         if offset < 0 break;
 
         result := array_add(*results);

@@ -139,7 +139,11 @@ finder_open_selected_result :: (on_the_side := false) {
     found := true;
     offset := 0;
     for 0 .. cursor.line {
-        offset = find_index_from_left(buffer_str, needle, start_index = offset);
+        if case_sensitive {
+            offset = find_index_from_left(buffer_str, needle, start_index = offset);
+        } else {
+            offset = find_index_from_left_nocase(buffer_str, needle, start_index = offset);
+        }
         if offset < 0 {
             found = false;  // probably the buffer has changed
             break;
@@ -238,8 +242,9 @@ search_in_project :: (needle: string, $case_sensitive := false) {
     push_allocator(allocator);
 
     array_reset(*finder.search_results);
-    finder.total_results = 0;
-    finder.limit_reached = false;
+    finder.total_results  = 0;
+    finder.limit_reached  = false;
+    finder.case_sensitive = case_sensitive;
 
     reset(*memory_pool);  // to avoid having to free each search result
 
@@ -397,8 +402,9 @@ Finder :: struct {
 
     search_results: [..] Search_Result;
     needle: string;  // to remember what we searched with as the input text may change
-    total_results: int;
-    limit_reached: bool;
+    total_results:  int;
+    limit_reached:  bool;
+    case_sensitive: bool;
     
     cursor: Selected_Result;
     

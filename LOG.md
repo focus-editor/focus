@@ -59,6 +59,8 @@
     + Don't activate finder's input on click in the results area (only if there are no results then it's ok)
     + Do case-insensitive search by default
     + Do case-sensitive on ctrl+enter
+    + [bug] Finding underscores doesn't work with case-insensitive search
+    - If a buffer is open, always use the buffer's bytes, not file's bytes
     - Use threads to search and show a spinner after some time has passed
     - [bug] When buffer changes and search results don't, it may find wrong results:
         - Solution: always trigger search on buffer save (have to do the threading first)
