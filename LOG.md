@@ -56,7 +56,7 @@
         + Don't go too much to the right
         + Mark cut lines with an ellipsis
     + Highlight search string
-    - Don't activate finder's input on click in the results area (only if there are no results then it's ok)
+    + Don't activate finder's input on click in the results area (only if there are no results then it's ok)
     - Do case-insensitive search by default
     - Do case-sensitive on ctrl+enter?
     - Use threads to search and show a spinner after some time has passed

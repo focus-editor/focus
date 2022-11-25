@@ -64,15 +64,20 @@ toggle_finder :: () {
     if finder_is_open() then close_finder(); else open_finder();
 }
 
-activate_finder :: inline () {
+activate_finder :: (part: Finder.Active_Part = .input, select_text := true) {
     using finder;
 
     active_global_widget = .finder;
-    finder.active_part = .input;
+    if search_results {
+        active_part = part;
+    } else {
+        active_part = .input;  // we don't always have results, but we always have the input
+    }
 
-    // Select text when opening
-    input.cursor.sel = 0;
-    input.cursor.pos = get_num_chars(input.text);
+    if select_text {
+        input.cursor.sel = 0;
+        input.cursor.pos = get_num_chars(input.text);
+    }
 }
 
 deactivate_finder :: inline () {
@@ -397,13 +402,14 @@ Finder :: struct {
     scroll_anim: Tween_Animation(s32);
     scroll_to_cursor: bool;
 
-    active_part: enum { input; results; } = .input;
+    active_part: Active_Part = .input;
 
     open_anim: Tween_Animation(float);
 
     default_openness := 0.2;  // if the user drags it then we remember it
     
     Selected_Result :: struct { result: s32; line: s32; }
+    Active_Part :: enum { input; results; }
 
     MIN_OPENNESS      :: 0.005;
     MAX_OPENNESS      :: 0.8;

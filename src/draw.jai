@@ -518,7 +518,7 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
     defer pop_scissor();
 
     became_active := maybe_set_hot_or_active(ui_id, rect, .NORMAL);
-    if became_active then activate_finder();
+    if became_active then activate_finder(.results);
 
     // Deactivate on clicks elsewhere
     if finder_is_active() && ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
@@ -538,7 +538,7 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
 
     // NOTE: this function is called twice (once now and once in the input). Maybe there's a good way to avoid it?
     input_clicked := maybe_set_hot_or_active(input_id, input_rect, .TEXT_SELECT);
-    if input_clicked then activate_finder();
+    if input_clicked then activate_finder(select_text = false);
     input_active := active_global_widget == .finder && active_part == .input;
     draw_text_input(*input, input_rect, ui_id = input_id, active = input_active, label = "Search in project");
     
