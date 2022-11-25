@@ -47,10 +47,10 @@
     + Allow any number of chars for search
     + Say when the maximum number of results is reached
     + When jumping to cursor, align to the left
-    - Open files:
+    + Open files:
         + On enter
         + Select the searched text
-        - On click (don't conflict with the scrollbar)
+        + On click (don't conflict with the scrollbar)
     - Limit results width:
         - Don't go too much to the left
         - Don't go too much to the right

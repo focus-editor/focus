@@ -32,7 +32,7 @@ finder_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
             if active_part == .input || search_results.count == 0 {
                 search_in_project(to_string(input.text));
             } else {
-                open_selected_result(mods);
+                finder_open_selected_result(on_the_side = only_ctrl_pressed(mods));
             }
 
         case .ARROW_UP;    move_cursor_up(mods);
@@ -110,36 +110,14 @@ open_finder_from_editor :: () {
     if !finder_is_open() then open_finder(); else activate_finder(); return;
 }
 
-finder_set_openness :: (value: float) {
-    using finder;
-    openness = clamp(value, 0, Finder.MAX_OPENNESS);;
-    if openness < Finder.MIN_OPENNESS then openness = 0;  // fully close if too small
-    open_anim.target = openness;
-    if openness == 0 then deactivate_finder();
-    default_openness = ifx openness > Finder.MIN_OPENNESS then openness else Finder.DEFAULT_OPENNESS;
-}
-
-maybe_animate_finder :: () {
-    using finder;
-    if openness != open_anim.target {
-        redraw_requested = true;
-        openness = get_animation_value(open_anim);
-    }
-}
-
-finder: Finder;
-
-
-#scope_file
-
-open_selected_result :: (mods: Mods) {
+finder_open_selected_result :: (on_the_side := false) {
     using finder;
     result := search_results[cursor.result];
     active_global_widget = .editors;
     shrink_if_enlarged();
     
     old_layout := editors_layout;    
-    editors_open_file(result.file.full_path, on_the_side = only_ctrl_pressed(mods));
+    editors_open_file(result.file.full_path, on_the_side = on_the_side);
 
     // Select the search result
     editor, buffer := get_active_editor_and_buffer();
@@ -173,6 +151,28 @@ open_selected_result :: (mods: Mods) {
         editor.scroll_to_cursor = .yes_new_editor;
     }
 }
+
+finder_set_openness :: (value: float) {
+    using finder;
+    openness = clamp(value, 0, Finder.MAX_OPENNESS);;
+    if openness < Finder.MIN_OPENNESS then openness = 0;  // fully close if too small
+    open_anim.target = openness;
+    if openness == 0 then deactivate_finder();
+    default_openness = ifx openness > Finder.MIN_OPENNESS then openness else Finder.DEFAULT_OPENNESS;
+}
+
+maybe_animate_finder :: () {
+    using finder;
+    if openness != open_anim.target {
+        redraw_requested = true;
+        openness = get_animation_value(open_anim);
+    }
+}
+
+finder: Finder;
+
+
+#scope_file
 
 move_cursor_up :: (mods: Mods) {
     using finder.cursor;
@@ -370,7 +370,8 @@ Finder :: struct {
     total_results: int;
     limit_reached: bool;
     
-    cursor: struct { result: s32; line: s32; };
+    cursor: Selected_Result;
+    
     scroll_y: s32;
     scroll_anim: Tween_Animation(s32);
     scroll_to_cursor: bool;
@@ -380,6 +381,8 @@ Finder :: struct {
     open_anim: Tween_Animation(float);
 
     default_openness := 0.2;  // if the user drags it then we remember it
+    
+    Selected_Result :: struct { result: s32; line: s32; }
 
     MIN_OPENNESS      :: 0.005;
     MAX_OPENNESS      :: 0.8;

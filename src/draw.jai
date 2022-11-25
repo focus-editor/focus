@@ -637,14 +637,20 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
         result_rect.y -= result_rect.h;
 
         for line, line_num : lines {
-            if pen.y <= visible_top_y {
-                if mouse_pointer_is_within(result_rect) {
-                    draw_rect(result_rect, Colors.LIST_CURSOR_LITE);
+            if pen.y <= visible_top_y {                
+                if mouse_pointer_is_within(result_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
+                    if mouse.left.just_pressed {
+                        cursor.result = xx result_num;
+                        cursor.line   = xx line_num;
+                        redraw_requested = true;
+                    }
+                    if cursor.result < 0 then draw_rect(result_rect, Colors.LIST_CURSOR_LITE);
+                    if mouse.left.just_released && cursor.result == result_num && cursor.line == line_num {
+                        finder_open_selected_result(on_the_side = ctrl_pressed());
+                    }
                 }
-                if cursor.result == result_num && cursor.line == line_num {
-                    // Draw selected line
-                    draw_rect(result_rect, cursor_color);
-                }
+                // Draw selected line
+                if cursor.result == result_num && cursor.line == line_num then draw_rect(result_rect, cursor_color);
 
                 // TODO: highlight text
                 Simp.draw_text(font_ui, xx (pen.x + result_indent_width), xx pen.y, line.str, color = Colors.UI_DEFAULT);
