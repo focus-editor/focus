@@ -165,20 +165,27 @@ find_index_from_left_whole_word :: (s: string, substring: string, start_index :=
     return -1;
 }
 
-bmh_prepare_skip_table :: (needle: string) -> [256] s32 {
+bmh_prepare_skip_table :: (needle: string, $case_sensitive := false) -> [256] s32 {
     skip_table: [256] s32 = ---;
     for * skip_table { << it = cast,no_check(s32) needle.count; }
-    for i : 0 .. needle.count - 2 { skip_table[needle[i]] = cast,no_check(s32) (needle.count - 1 - i); }
+    #if case_sensitive {
+        for i : 0 .. needle.count - 2 { skip_table[needle[i]]           = cast,no_check(s32) (needle.count - 1 - i); }
+    } else {
+        for i : 0 .. needle.count - 2 { skip_table[to_lower(needle[i])] = cast,no_check(s32) (needle.count - 1 - i); }
+    }
     return skip_table;
 }
 
-bmh_find_index_from_left :: (s: string, needle: string, start_index := 0, skip_table: [] s32) -> s64 {
+bmh_find_index_from_left :: (s: string, needle: string, start_index := 0, skip_table: [] s32, $case_sensitive := false) -> s64 {
     i := start_index;
     last_i := s.count - needle.count;
-    // @Speed: possibly can be optimised by replacing indices with pointers? Not sure if that's still a thing
     while i <= last_i {
         current := to_string(s.data + i, needle.count);
-        if current == needle return i;
+        #if case_sensitive {
+            if current == needle return i;
+        } else {
+            if equal_nocase(current, needle) return i;
+        }
         i += skip_table[s[i + needle.count - 1]];
     }
     return -1;

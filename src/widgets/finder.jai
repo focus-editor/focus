@@ -30,7 +30,11 @@ finder_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
 
         case .ENTER;
             if active_part == .input || search_results.count == 0 {
-                search_in_project(to_string(input.text));
+                if only_shift_pressed(mods) {
+                    search_in_project(to_string(input.text), case_sensitive = true);
+                } else {
+                    search_in_project(to_string(input.text), case_sensitive = false);
+                }
             } else {
                 finder_open_selected_result(on_the_side = only_ctrl_pressed(mods));
             }
@@ -227,7 +231,7 @@ move_cursor_down :: (mods: Mods) {
     finder.scroll_to_cursor = true;
 }
 
-search_in_project :: (needle: string) {
+search_in_project :: (needle: string, $case_sensitive := false) {
     if !needle return;
 
     allocator := get_pool_allocator();
@@ -259,7 +263,7 @@ search_in_project :: (needle: string) {
             file_info, data, success := File_Async.wait_for_completion(queue);
             if success.code == .Success {
                 files_left_to_read -= 1;
-                search_in_file(file_info, to_string(data), needle, skip_table);
+                search_in_file(file_info, to_string(data), needle, skip_table, case_sensitive);
             } else {
                 log_error("Error while waiting for completion: %\n", success);
                 files_left_to_read = 0;
@@ -277,7 +281,7 @@ search_in_project :: (needle: string) {
     for 1 .. files_left_to_read {
         file_info, data, success := File_Async.wait_for_completion(queue);
         if success.code == .Success {
-            search_in_file(file_info, to_string(data), needle, skip_table);
+            search_in_file(file_info, to_string(data), needle, skip_table, case_sensitive);
         } else {
             log_error("Error while waiting for completion: %\n", success);
             break;
@@ -299,7 +303,7 @@ search_in_project :: (needle: string) {
     // }
 }
 
-search_in_file :: (file: File_Info, contents: string, needle: string, skip_table: [] s32) {
+search_in_file :: (file: File_Info, contents: string, needle: string, skip_table: [] s32, $case_sensitive := false) {
     lines: [..] Search_Result.Line;
     
     if finder.limit_reached return;
@@ -307,7 +311,7 @@ search_in_file :: (file: File_Info, contents: string, needle: string, skip_table
     file_end := contents.data + contents.count;
     offset := 0;
     while true {
-        offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table);
+        offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table, case_sensitive);
         if offset < 0 break;
 
         str := slice(contents, offset, needle.count);
@@ -406,7 +410,7 @@ Finder :: struct {
 
     open_anim: Tween_Animation(float);
 
-    default_openness := 0.2;  // if the user drags it then we remember it
+    default_openness := DEFAULT_OPENNESS;  // if the user drags it then we'll remember it
     
     Selected_Result :: struct { result: s32; line: s32; }
     Active_Part :: enum { input; results; }

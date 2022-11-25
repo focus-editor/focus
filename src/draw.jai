@@ -546,15 +546,19 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
     label_rect := cut_top(results_rect, xx font_ui.default_line_spacing);
     label_rect.y += margin / 2;
     results_rect.h -= label_rect.h;
-    label_text := "Press Enter to search";
     if needle {
+        label_text := "";
         if search_results {
             label_text = tprint("Found% % result% in % file%", ifx limit_reached then " more than" else "", total_results, ifx total_results > 1 then "s" else "", search_results.count, ifx search_results.count > 1 then "s" else "");
         } else {
             label_text = "No results";
         }
+        Simp.draw_text(font_ui_small, xx (label_rect.x + margin + padding + 1), xx (label_rect.y + padding), label_text, color = Colors.UI_DIM);
+    } else {
+        Simp.draw_text(font_ui_small, xx (label_rect.x + margin + padding + 1), xx (label_rect.y + padding), "Press Enter to search", color = Colors.UI_DIM);
+        label_rect.y -= font_ui_small.default_line_spacing;
+        Simp.draw_text(font_ui_small, xx (label_rect.x + margin + padding + 1), xx (label_rect.y + padding), "Press Shift + Enter to do case-sensitive search", color = Colors.UI_DIM);
     }
-    Simp.draw_text(font_ui_small, xx (label_rect.x + margin + padding + 1), xx (label_rect.y + padding), label_text, color = Colors.UI_DIM);
 
     // Draw results
     push_scissor(results_rect);
@@ -627,7 +631,6 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
     result_rect.y += scroll_y;
     rect_origin_y := result_rect.y;
     cursor_color  := ifx active_global_widget == .finder then Colors.LIST_CURSOR else Colors.LIST_CURSOR_LITE;
-    highlight_width := Simp.get_text_width(font_ui, needle);
 
     pen := make_vector2(result_rect.x + margin + 2 * dpi_scale, result_rect.y + (result_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale);
     for result, result_num : search_results {
@@ -655,6 +658,7 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
 
                 // Draw search string highlight
                 highlight_start_x := pen.x + result_indent_width + Simp.get_text_width(font_ui, slice(line.str, 0, line.offset_within));
+                highlight_width := Simp.get_text_width(font_ui, slice(line.str, line.offset_within, needle.count));
                 highlight_rect := shrink_y(cut_left(result_rect, xx highlight_width), 2 * dpi_scale);
                 highlight_rect.x = highlight_start_x;
                 draw_rect(highlight_rect, Colors.SEARCH_RESULT_INACTIVE);
