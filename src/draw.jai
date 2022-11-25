@@ -584,7 +584,6 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
 
     // Mouse scrolling
     if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(results_rect) {
-        if ui.hot_last_frame == ui_id && ui.active == .none then set_pointer_image(.PRESSABLE);
         if mouse.scroll_y_delta != 0 {
             target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, max_y_scroll);
             start_animation(*scroll_anim, scroll_y, target);
@@ -639,12 +638,13 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
         for line, line_num : lines {
             if pen.y <= visible_top_y {                
                 if mouse_pointer_is_within(result_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
+                    draw_rect(result_rect, Colors.LIST_CURSOR_LITE);
+                    set_pointer_image(.PRESSABLE);
                     if mouse.left.just_pressed {
                         cursor.result = xx result_num;
                         cursor.line   = xx line_num;
                         redraw_requested = true;
                     }
-                    if cursor.result < 0 then draw_rect(result_rect, Colors.LIST_CURSOR_LITE);
                     if mouse.left.just_released && cursor.result == result_num && cursor.line == line_num {
                         finder_open_selected_result(on_the_side = ctrl_pressed());
                     }
