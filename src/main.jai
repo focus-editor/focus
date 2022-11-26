@@ -21,8 +21,7 @@ main :: () {
     old_line_height = line_height;
 
     // @Cleanup: remove and do properly
-    // initial_project_dirs := string.[ "W:/focus-zig", "C:/jai-beta" ];
-    initial_project_dirs := string.[ "W:/focus", "C:/jai-beta" ];
+    initial_project_dirs := string.[ "W:/focus", "C:/jai" ];
     for path, i : initial_project_dirs {
         dir: Project_Dir = ---;
         dir.path = path;
@@ -36,7 +35,7 @@ main :: () {
     defer deinit_finder();
 
     // Init file watcher
-    if !init(*project_file_watcher, file_change_callback, .ALL_EVENTS) {
+    if !init(*project_file_watcher, file_change_callback) {
         log_error("Could not initialize project_file_watcher");
         // TODO: add the error to the error log when we have it
         return;
@@ -45,7 +44,7 @@ main :: () {
     for dir : project_dirs add_directories(*project_file_watcher, dir.path);
     dirs_to_rescan.allocator = temp;
 
-    file_change_callback :: (watcher: *File_Watcher, change: *File_Change) {
+    file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
         if change.events & (File_Change_Event.ADDED | .MOVED | .REMOVED | .SCAN_CHILDREN) {
             should_reinit_file_dialog = true;
         }
@@ -378,7 +377,7 @@ Mods :: Input.Event.Modifier_Flags;
 
 Time :: #type,isa float64;
 
-project_file_watcher: File_Watcher;
+project_file_watcher: File_Watcher(void);
 project_dirs: [..] Project_Dir;  // TODO: load them from a config file or something
 dirs_to_rescan: [..] string;  // will use temporary storage
 should_reinit_file_dialog: bool;

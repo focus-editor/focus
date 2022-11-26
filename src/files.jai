@@ -126,7 +126,7 @@ File_Icon :: enum u32 {
 #scope_file
 
 IGNORE_DIRS      :: string.[".build", ".git", "bin"];
-ALLOW_FILE_TYPES :: string.[".jai", ".md", ".c", ".h", ".cpp", ".txt"];
+ALLOW_FILE_TYPES :: string.[".jai", ".md", ".c", ".h", ".hpp", ".cpp", ".txt", ".bat"];
 
 File_Visit_Config :: struct {
     ignore_dirs: [] string;
