@@ -234,7 +234,11 @@ move_cursor_up :: (mods: Mods) {
     search_results := finder.last_search.results;
     
     if !search_results return;
-    finder.active_part = .results;
+    if result < 0 || (line == 0 && result == 0) {
+        finder.active_part = .input;  // "move" back to the input
+        result = -1;
+        return;
+    }
 
     if only_ctrl_pressed(mods) {
         if line == 0 && result > 0 then result -= 1;

@@ -16,15 +16,19 @@
     - Create new files
     - Notify about unsaved buffers on close
     - Try to implement "jump to symbol definition". Display a popup if more than one. Do a scan of jai files for that.
+    - Custom title bar
+    - Have a user error log - with an icon in the title bar to toggle it
 
 - Finder improvements
     + Use a thread to search to avoid blocking
     + Show a "searching..." label to indicate that searching is in progress
+    + When reached the top of search results, select input again
+    - On Ctrl+B don't switch the active part, just toggle
+    - Try using a normal pool instead of flat pool and check if memory behaviour is still bad
     - [bug] When buffer changes and search results don't, it may find wrong results:
         - Solution: always trigger search on buffer save (have to do the threading first)
     - If a buffer is open, always use the buffer's bytes, not file's bytes
     - Don't lock files after scanning
-    - When reached the top of search results, select input again
     
 - Strip trailing whitespace on save    
 - Ctrl + [ and Ctrl + ] to indent lines
@@ -77,6 +81,8 @@
     - Review and cleanup code
     - Put the open editors at the top
     - Implement fuzzy searching with letter highlighting etc
+    
+- Remove 3D-related stuff from Simp
 
 - When there are several cursors where some of them are above the viewport, hitting enter will shift everything down
   and will jerk briefly, which is annoying
