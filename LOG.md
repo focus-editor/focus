@@ -24,7 +24,7 @@
     + Show a "searching..." label to indicate that searching is in progress
     + When reached the top of search results, select input again
     + Support Page Down/Up as an alternative to Ctrl+arrows
-    - On Ctrl+B don't switch the active part, just toggle
+    + On Ctrl+B don't switch the active part, just toggle
     - Try using a normal pool instead of flat pool and check if memory behaviour is still bad
     - [bug] When buffer changes and search results don't, it may find wrong results:
         - Solution: always trigger search on buffer save (have to do the threading first)

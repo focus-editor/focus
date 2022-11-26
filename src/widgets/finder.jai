@@ -82,13 +82,13 @@ toggle_finder :: () {
     if finder_is_open() then close_finder(); else open_finder();
 }
 
-activate_finder :: (part: Finder.Active_Part = .input, select_text := true) {
+activate_finder :: (focus_results := false, select_text := true) {
     using finder;
 
     active_global_widget = .finder;
-    if last_search.results {
-        active_part = part;
-    } else {
+    if focus_results && last_search.results {
+        active_part = .results;
+    } else if !last_search.results {
         active_part = .input;  // we don't always have results, but we always have the input
     }
 
