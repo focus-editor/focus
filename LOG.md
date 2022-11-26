@@ -23,6 +23,7 @@
     + Use a thread to search to avoid blocking
     + Show a "searching..." label to indicate that searching is in progress
     + When reached the top of search results, select input again
+    + Support Page Down/Up as an alternative to Ctrl+arrows
     - On Ctrl+B don't switch the active part, just toggle
     - Try using a normal pool instead of flat pool and check if memory behaviour is still bad
     - [bug] When buffer changes and search results don't, it may find wrong results:
@@ -33,7 +34,6 @@
 - Strip trailing whitespace on save    
 - Ctrl + [ and Ctrl + ] to indent lines
 - Ctrl + Home/End to jump to beginning/end of the file
-- Finder: support Page Down/Up as an alternative to Ctrl+arrows
 - Maybe sleep at least a little bit, don't render too many frames
     
 - Save editor state on editor operations:

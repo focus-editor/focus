@@ -51,9 +51,11 @@ finder_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
                 finder_open_selected_result(on_the_side = only_ctrl_pressed(mods));
             }
 
-        case .ARROW_UP;    move_cursor_up(mods);
-        case .ARROW_DOWN;  move_cursor_down(mods);
-        case .TAB;         if only_shift_pressed(mods) then move_cursor_up(mods); else move_cursor_down(mods);
+        case .ARROW_UP;    move_cursor_up  (jump_by_file = only_ctrl_pressed(mods));
+        case .ARROW_DOWN;  move_cursor_down(jump_by_file = only_ctrl_pressed(mods));
+        case .PAGE_UP;     move_cursor_up  (jump_by_file = true);
+        case .PAGE_DOWN;   move_cursor_down(jump_by_file = true);
+        case .TAB;         if only_shift_pressed(mods) then move_cursor_up(); else move_cursor_down();
     }
 }
 
@@ -228,7 +230,7 @@ finder: Finder;
 
 #scope_file
 
-move_cursor_up :: (mods: Mods) {
+move_cursor_up :: (jump_by_file := false) {
     using finder.cursor;
     
     search_results := finder.last_search.results;
@@ -240,7 +242,7 @@ move_cursor_up :: (mods: Mods) {
         return;
     }
 
-    if only_ctrl_pressed(mods) {
+    if jump_by_file {
         if line == 0 && result > 0 then result -= 1;
         line = 0;
     } else {
@@ -255,7 +257,7 @@ move_cursor_up :: (mods: Mods) {
     finder.scroll_to_cursor = true;
 }
 
-move_cursor_down :: (mods: Mods) {
+move_cursor_down :: (jump_by_file := false) {
     using finder.cursor;
     
     search_results := finder.last_search.results;
@@ -265,7 +267,7 @@ move_cursor_down :: (mods: Mods) {
 
     max_result := cast(s32) search_results.count - 1;
 
-    if only_ctrl_pressed(mods) {
+    if jump_by_file {
         if result < max_result {
             result += 1;
             line = 0;
