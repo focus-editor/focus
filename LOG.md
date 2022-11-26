@@ -16,6 +16,7 @@
     - Create new files
     - Notify about unsaved buffers on close
     - Try to implement "jump to symbol definition". Display a popup if more than one. Do a scan of jai files for that.
+    - Horizontal scrolling
     - Custom title bar
     - Have a user error log - with an icon in the title bar to toggle it
 
@@ -121,6 +122,46 @@
 - Subpixel rendering: support other types of panels (lookup ft2-lcd_rendering)
   (not useful for the editor, but may be useful for games)
 - Fix the font unknown character glyph (try copying something from font-awesome)
+
+# FEEDBACK
+
+## GUI stuff that feels incomplete
+- Horizontal scrolling stuff:
+    - I expect a horizontal search bar when the text runs off the right edge.
+    - Alt + Up/Down is equivalent to scrolling up and down with the mouse wheel, but Alt + Left/Right does not work the same way horizontally.
+    - My mouse's horizontal scroll wheel (yes I have both) does nothing. I have to navigate long lines using Home/End to use the cursor to scroll.
+- If the sidebar is too skinny, the "Press Shift + Enter to do case-sensitive search" text should wrap. It currently cuts off. In fact, search
+results should possibly wrap too. If the sidebar is to skinny, currently searching "*File" within Focus's project folder has a few search results
+from Windows.jai where you can't even see the matching text because they cut off on the right edge before the highlighted parts.
+
+## Possible bugs
+- Sidebar's splitter swaps mouse cursor inconsistently. When actually clicking, it appears to behave correctly. The cursor may not change to the
+"arrows" as expected if you move it slowly over the splitter. The double-document splitter appears to not have this issue.
+- Sometimes if you backspace two spaces between words, it erases both space characters with one backspace rather than just one. I can reliably
+reproduce this issue by doing the following:
+    1. Type something like " hello" on a new line.
+    2. Navigate to column 0, the first character.
+    3. Press the spacebar once, adding one space.
+    4. Press the right arrow key so you are in column 2, after the two spaces.
+    5. Press backspace. This reliably erases both spaces for me.
+    And this is not just a start-of-line tabbing issue. It sometimes occurs within the middle of a line.
+
+## Keyboard/Mouse Shortcuts that I think are "missing"
+- Ctrl + Backspace/Delete to erase an entire word.
+- Triple-click to select an entire line. (Standard behavior on Windows, macOS, and possibly Linux.)
+- Ctrl & +/- to increase/decrease editor font size by 1 pt.
+- Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt. (use mouse wheel up/down "key press" events for this, not scroll delta. Print
+key code in debug mode to find out the if case values. This will cause it to behave as expected on every platform similar to all other programs.)
+- (Ctrl (VSCode) or Alt (N++) or Alt+Shift (macOS)) + Mouse Click to add an additional cursor wherever the mouse is.
+
+## User Preferences that if they were able to be changed, I would change
+- Color scheme, ideally the entire UI (like the window background color), but at the very least jai constructs/keywords like procedure names and
+symbols like :: and semicolons.
+- I-beam cursor instead of character-wide block. Boolean value.
+- Customize keyboard shortcuts. This is probably very low priority compared to pretty much anything else in this list or LOG.md. I got this
+working in my editor already with an XML file in under an hour. You'd basically just check the pressed key code (and modifiers) against the
+configured procedures during a press event, calling one if the modifiers/key match a configured procedure. If something is wrong with the config,
+you can use the default shortcuts and maybe report the error in a dialog box, presuming this was user-error after manually editing the config.
 
 # DONE
 + Search in the project
