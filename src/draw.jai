@@ -512,6 +512,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
 draw_finder :: (rect: Rect, ui_id: Ui_Id) {
     using finder;
+    using finder.last_search;
+    
     if !is_valid(rect) return;
 
     push_scissor(rect);
@@ -542,14 +544,25 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
     input_active := active_global_widget == .finder && active_part == .input;
     draw_text_input(*input, input_rect, ui_id = input_id, active = input_active, label = "Search in project");
     
+    // // NOTE(Ivan): decided not to draw spinner, at least for now, because rotating it would be tricky due to subpixel rendering
+    // {
+    //     spinner_icon_char := convert_utf32_to_utf8(0xf110);
+    //     width := Simp.prepare_text(font_icons, to_string(*spinner_icon_char));
+    //     spinner_rect := cut_right(shrink(input_rect, 1), width + 2 * padding);
+    //     draw_rect(spinner_rect, Colors.BACKGROUND);
+    //     Simp.draw_prepared_text(font_icons, xx (spinner_rect.x + padding), xx (spinner_rect.y + 2 * padding), color = Colors.UI_DEFAULT);
+    // }
+    
     // Draw label
     label_rect := cut_top(results_rect, xx font_ui.default_line_spacing);
     label_rect.y += margin / 2;
     results_rect.h -= label_rect.h;
     if needle {
         label_text := "";
-        if search_results {
-            label_text = tprint("Found% % result% in % file%", ifx limit_reached then " more than" else "", total_results, ifx total_results > 1 then "s" else "", search_results.count, ifx search_results.count > 1 then "s" else "");
+        if search_in_progress {
+            label_text = "Searching...";
+        } else if results {
+            label_text = tprint("Found% % result% in % file%", ifx limit_reached then " more than" else "", total_results, ifx total_results > 1 then "s" else "", results.count, ifx results.count > 1 then "s" else "");
         } else {
             label_text = "No results";
         }
@@ -566,7 +579,7 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
     result_rect := expand(cut_top(results_rect, font_ui_line_height + padding), 1);
 
     results_total_height: float;
-    for result : search_results {
+    for result : results {
         results_total_height += result_rect.h * (1 + result.lines.count);
     }
     if results_total_height < results_rect.h {
@@ -601,7 +614,7 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
         // Find the current selected position (based on the scroll target, not the current scroll value)
         cursor_rect := result_rect;
         cursor_rect.y += scroll_anim.target;
-        for result, result_num : search_results {
+        for result, result_num : results {
             cursor_rect.y -= cursor_rect.h;
             for line, line_num : result.lines {
                 if cursor.result == result_num && cursor.line == line_num break result;  // found cursor rect
@@ -633,7 +646,7 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
     cursor_color  := ifx active_global_widget == .finder then Colors.LIST_CURSOR else Colors.LIST_CURSOR_LITE;
 
     pen := make_vector2(result_rect.x + margin + 2 * dpi_scale, result_rect.y + (result_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale);
-    for result, result_num : search_results {
+    for result, result_num : results {
         using result;
         if pen.y <= visible_top_y then draw_filename(pen.x, pen.y, file.name, file.path, file.icon);
         pen.y -= result_rect.h;

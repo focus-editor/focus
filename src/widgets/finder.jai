@@ -1,3 +1,19 @@
+init_finder :: () {
+    // Create a thread group with one thread for searching (we don't need more).
+    // NOTE: it MUST be one thread, otherwise our pool allocation strategy won't work
+    init(*thread_group, num_threads = 1, group_proc = search_in_project_threadproc);
+    thread_group.name = "Finder";
+    thread_group.logging = false;
+    
+    start(*thread_group);
+}
+
+deinit_finder :: () {
+    shutdown(*thread_group);
+    reset(*memory_pools[0]);
+    reset(*memory_pools[1]);
+}
+
 finder_handle_event :: (event: Input.Event) {
     if event.type == {
         case .KEYBOARD;
@@ -29,12 +45,8 @@ finder_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
             if only_ctrl_shift_pressed(mods) toggle_enlarged();
 
         case .ENTER;
-            if active_part == .input || search_results.count == 0 {
-                if only_shift_pressed(mods) {
-                    search_in_project(to_string(input.text), case_sensitive = true);
-                } else {
-                    search_in_project(to_string(input.text), case_sensitive = false);
-                }
+            if active_part == .input || !last_search.results {
+                search_in_project(to_string(input.text), case_sensitive = only_shift_pressed(mods));
             } else {
                 finder_open_selected_result(on_the_side = only_ctrl_pressed(mods));
             }
@@ -72,7 +84,7 @@ activate_finder :: (part: Finder.Active_Part = .input, select_text := true) {
     using finder;
 
     active_global_widget = .finder;
-    if search_results {
+    if last_search.results {
         active_part = part;
     } else {
         active_part = .input;  // we don't always have results, but we always have the input
@@ -121,7 +133,11 @@ open_finder_from_editor :: () {
 
 finder_open_selected_result :: (on_the_side := false) {
     using finder;
-    result := search_results[cursor.result];
+    if search_in_progress return;
+    
+    result := last_search.results[cursor.result];
+    needle := last_search.needle;
+    
     active_global_widget = .editors;
     shrink_if_enlarged();
     
@@ -139,7 +155,7 @@ finder_open_selected_result :: (on_the_side := false) {
     found := true;
     offset := 0;
     for 0 .. cursor.line {
-        if case_sensitive {
+        if last_search.case_sensitive {
             offset = find_index_from_left(buffer_str, needle, start_index = offset);
         } else {
             offset = find_index_from_left_nocase(buffer_str, needle, start_index = offset);
@@ -160,7 +176,7 @@ finder_open_selected_result :: (on_the_side := false) {
     if old_layout == .Single && editors_layout == .Double {
         // We've just opened a new editor, so need to let it know it's being opened,
         // so that it can use the target rect width for its scroll calculations
-        // (otherwise it'll be too small and the scroll animation will be unexpected)
+        // (otherwise it'll be too small and the scroll will not animate where expected)
         editor.scroll_to_cursor = .yes_new_editor;
     }
 }
@@ -182,6 +198,31 @@ maybe_animate_finder :: () {
     }
 }
 
+finder_update :: () {
+    using finder;
+    if !search_in_progress return;
+    
+    redraw_requested = true;
+    
+    results := get_completed_work(*thread_group);
+    if results {
+        assert(results.count == 1);
+        
+        // Point finder to the new results
+        request := cast(*Search_Request) results[0];
+        last_search = << request;
+        
+        free_old_memory_pool();
+        
+        // Reset scroll and cursor
+        scroll_y = 0;
+        scroll_anim.target = 0;
+        cursor = .{ result = -1, line = 0};
+                
+        search_in_progress = false;
+    }
+}
+
 finder: Finder;
 
 
@@ -190,7 +231,9 @@ finder: Finder;
 move_cursor_up :: (mods: Mods) {
     using finder.cursor;
     
-    if !finder.search_results return;
+    search_results := finder.last_search.results;
+    
+    if !search_results return;
     finder.active_part = .results;
 
     if only_ctrl_pressed(mods) {
@@ -199,7 +242,7 @@ move_cursor_up :: (mods: Mods) {
     } else {
         if line == 0 && result > 0 {
             result -= 1;
-            line = cast(s32) finder.search_results[result].lines.count - 1;
+            line = cast(s32) search_results[result].lines.count - 1;
         } else if line > 0 {
             line -= 1;
         }
@@ -211,20 +254,22 @@ move_cursor_up :: (mods: Mods) {
 move_cursor_down :: (mods: Mods) {
     using finder.cursor;
     
-    if !finder.search_results return;
+    search_results := finder.last_search.results;
+    
+    if !search_results return;
     finder.active_part = .results;
 
-    max_result := cast(s32) finder.search_results.count - 1;
+    max_result := cast(s32) search_results.count - 1;
 
     if only_ctrl_pressed(mods) {
         if result < max_result {
             result += 1;
             line = 0;
         } else {
-            line = cast(s32) finder.search_results[result].lines.count - 1;  // jump to last line
+            line = cast(s32) search_results[result].lines.count - 1;  // jump to last line
         }
     } else if result >= 0 && result <= max_result {
-        if line < finder.search_results[result].lines.count - 1 {
+        if line < search_results[result].lines.count - 1 {
             line += 1;
         } else if result < max_result {
             result += 1;
@@ -235,32 +280,41 @@ move_cursor_down :: (mods: Mods) {
     finder.scroll_to_cursor = true;
 }
 
-search_in_project :: (needle: string, $case_sensitive := false) {
+search_in_project :: (needle: string, case_sensitive: bool) {
     if !needle return;
+    if finder.search_in_progress return;
+    
+    assert(thread_group.worker_info.count == 1, "Only ONE thread is allowed for project-wide search!");
+    
+    search_request := New(Search_Request, allocator = get_free_pool_allocator());
+    search_request.needle = copy_string(needle);
+    search_request.case_sensitive = case_sensitive;
+    
+    finder.search_in_progress = true;
+    
+    add_work(*thread_group, search_request, search_request.needle);
+}
 
-    allocator := get_pool_allocator();
+search_in_project_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
+    request := cast(*Search_Request) work;
+    needle  := request.needle; 
+    
+    allocator := get_free_pool_allocator();
     push_allocator(allocator);
-
-    array_reset(*finder.search_results);
-    finder.total_results  = 0;
-    finder.limit_reached  = false;
-    finder.case_sensitive = case_sensitive;
-
-    reset(*memory_pool);  // to avoid having to free each search result
-
+    
     all_files: [..] File_Info;  // will be allocated from pool, no need to free
 
     // @Speed: probably can be sped up by not collecting everything upfront
     // and just scheduling search as we go (it takes 10ms on my machine to scan everything)
     // Also as an alternative could check out the code in count_lines_in_tree.jai,
-    // maybe the code it uses to read dir entries is faster
+    // maybe the code it uses to read dir entries is faster?
     collect_files(project_dirs, dst = *all_files);
 
     queue := File_Async.initialize_queue(File_Info);
     defer File_Async.destroy_queue(queue);
 
     files_left_to_read := all_files.count;
-    skip_table := bmh_prepare_skip_table(needle);
+    skip_table := ifx request.case_sensitive then bmh_prepare_skip_table(needle, true) else bmh_prepare_skip_table(needle, false);
 
     for file : all_files {
         result := File_Async.read_entire_file(queue, file.full_path, file);
@@ -268,7 +322,11 @@ search_in_project :: (needle: string, $case_sensitive := false) {
             file_info, data, success := File_Async.wait_for_completion(queue);
             if success.code == .Success {
                 files_left_to_read -= 1;
-                search_in_file(file_info, to_string(data), needle, skip_table, case_sensitive);
+                if request.case_sensitive {
+                    search_in_file(request, file_info, to_string(data), needle, skip_table, true);
+                } else {
+                    search_in_file(request, file_info, to_string(data), needle, skip_table, false);
+                }
             } else {
                 log_error("Error while waiting for completion: %\n", success);
                 files_left_to_read = 0;
@@ -286,32 +344,24 @@ search_in_project :: (needle: string, $case_sensitive := false) {
     for 1 .. files_left_to_read {
         file_info, data, success := File_Async.wait_for_completion(queue);
         if success.code == .Success {
-            search_in_file(file_info, to_string(data), needle, skip_table, case_sensitive);
+            if request.case_sensitive {
+                search_in_file(request, file_info, to_string(data), needle, skip_table, true);
+            } else {
+                search_in_file(request, file_info, to_string(data), needle, skip_table, false);
+            }
         } else {
             log_error("Error while waiting for completion: %\n", success);
             break;
         }
     }
-
-    // Reset scroll
-    finder.scroll_y = 0;
-    finder.scroll_anim.target = 0;
-
-    finder.cursor = .{ result = -1, line = 0};
-    finder.needle = copy_string(needle);
-
-    // for result : finder.search_results {
-    //     print("% =======\n", result.file.name);
-    //     for line : result.lines {
-    //         print("offset: %, line: '%'\n", line.global_offset, line.str);
-    //     }
-    // }
+    
+    return .CONTINUE;
 }
 
-search_in_file :: (file: File_Info, contents: string, needle: string, skip_table: [] s32, $case_sensitive := false) {
+search_in_file :: (request: *Search_Request, file: File_Info, contents: string, needle: string, skip_table: [] s32, $case_sensitive := false) {
     lines: [..] Search_Result.Line;
     
-    if finder.limit_reached return;
+    if request.limit_reached return;
 
     file_end := contents.data + contents.count;
     offset := 0;
@@ -321,7 +371,7 @@ search_in_file :: (file: File_Info, contents: string, needle: string, skip_table
 
         str := slice(contents, offset, needle.count);
 
-        MAX_CHARS_TO_THE_SIDE :: 40;  // don't want to go all the way to the newlines if too long
+        MAX_CHARS_TO_THE_SIDE :: 50;  // don't want to go all the way to the newlines if the line is too long
         // TODO: go by chars, not bytes!
         
         // Expand to the left newline
@@ -362,9 +412,9 @@ search_in_file :: (file: File_Info, contents: string, needle: string, skip_table
             line.str = sprint("%…",  line.str);
         }
         
-        finder.total_results += 1;
-        if finder.total_results >= Finder.MAX_RESULTS {
-            finder.limit_reached = true;
+        request.total_results += 1;
+        if request.total_results >= Finder.MAX_RESULTS {
+            request.limit_reached = true;
             break;
         }
 
@@ -372,7 +422,7 @@ search_in_file :: (file: File_Info, contents: string, needle: string, skip_table
     }
 
     if lines.count > 0 {
-        result := array_add(*finder.search_results);
+        result := array_add(*request.results);
         result.file = file;
         result.lines = xx lines;
     }
@@ -400,11 +450,8 @@ Finder :: struct {
     openness: float = 0;  // percentage of window width. Zero means it's hidden
     input: Text_Input;
 
-    search_results: [..] Search_Result;
-    needle: string;  // to remember what we searched with as the input text may change
-    total_results:  int;
-    limit_reached:  bool;
-    case_sensitive: bool;
+    last_search: Search_Request;
+    search_in_progress: bool;  // it's ok to use a bool here as a flag because only the main thread will read and write it
     
     cursor: Selected_Result;
     
@@ -440,14 +487,39 @@ Search_Result :: struct {
     }
 }
 
-get_pool_allocator :: () -> Allocator {
+Search_Request :: struct {
+    results: [..] Search_Result;
+    needle: string;
+    total_results:  int;
+    limit_reached:  bool;
+    case_sensitive: bool;
+}
+
+get_free_pool_allocator :: () -> Allocator {
     a: Allocator;
     a.proc = flat_pool_allocator_proc;
-    a.data = *memory_pool;
+    a.data = *memory_pools[available_pool_index];
     return a;
 }
 
-memory_pool: Flat_Pool;
+free_old_memory_pool :: () {
+    old_pool_index := ifx available_pool_index == 0 then 1 else 0;
+    reset(*memory_pools[old_pool_index]);
+    available_pool_index = old_pool_index;
+}
+
+// We use 2 memory pools. When a new search starts, it will choose the next available pool
+// and will allocate all the results and all the auxiliary data from there.
+// When the search is finished, finder will display the results using data from this pool.
+// When another search starts, it will use the second pool, while finder is still displaying
+// the old results using the first pool.
+// When the second search finishes, it will replace the old results with the new results
+// and reset the old pool, making it available for the next search.
+// This way we avoid any copying of data, which we would have to do with just 1 pool.
+memory_pools: [2] Flat_Pool;
+available_pool_index := 0;
+
+thread_group: Thread_Group;
 
 #scope_file
 

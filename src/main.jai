@@ -32,6 +32,8 @@ main :: () {
     }
 
     init_open_file_dialog();
+    init_finder();
+    defer deinit_finder();
 
     // Init file watcher
     if !init(*project_file_watcher, file_change_callback, .ALL_EVENTS) {
@@ -127,6 +129,7 @@ main :: () {
         if window_width < MIN_WINDOW_WIDTH || window_height < MIN_WINDOW_HEIGHT continue;
 
         update_mouse_state();
+        finder_update();
 
         for * editor : open_editors {
             using editor;
@@ -420,7 +423,8 @@ Project_Dir :: struct {
 #import "Sort";
 #import "Unicode";
 #import "Window_Creation";
-#import "Profiler"(ENABLE_PROFILER = true);
+#import "Profiler"(ENABLE_PROFILER = false);
+#import "Thread";
 
 Simp :: #import "Simp_Ext";
 Input :: #import "Input";

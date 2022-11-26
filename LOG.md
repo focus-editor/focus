@@ -1,11 +1,5 @@
 # TODO
 
-- Most important stuff (so I can start using the editor):
-    + Search within buffer
-    + Basic token highlighting
-    - Grep in the project
-    - Save modified buffers to temporary files and recover after crashes
-
 - Before I ship:
     - Adjust cursors in joint editors properly
     - Tokenizer parses everything correctly
@@ -21,58 +15,28 @@
     - New open file dialog
     - Create new files
     - Notify about unsaved buffers on close
+    - Try to implement "jump to symbol definition". Display a popup if more than one. Do a scan of jai files for that.
 
-- Search in the project
-    + Profile the use of the in-buffer search
-    + Write a BMH implementation for search
-    + Compare with the previous version
-    + Create a panel for the search
-    + Search for stuff, maybe start in the focus folder only for now
-    + Strip away whitespace
-    + Scrollbar
-    + Top shadow
-    + Only draw visible stuff
-    + When searching reset scroll
-    + Cursor:
-        + Move by up/down
-        + Jump to next file on ctrl+up/down
-        + Scroll to cursor when moved
-    + Deactivate input when moving cursor
-    + Fix the way inactive cursors are displayed (both in finder and in editor)
-    + Close editor on ctrl+W
-    + Be able to center viewport on cursor
-    + Use selected text from active editor if on one line on activation
-    + Draw the number of results and files
-    + Limit the number of results
-    + Allow any number of chars for search
-    + Say when the maximum number of results is reached
-    + When jumping to cursor, align to the left
-    + Open files:
-        + On enter
-        + Select the searched text
-        + On click (don't conflict with the scrollbar)
-    + Limit results width:
-        + Don't go too much to the left
-        + Don't go too much to the right
-        + Mark cut lines with an ellipsis
-    + Highlight search string
-    + Don't activate finder's input on click in the results area (only if there are no results then it's ok)
-    + Do case-insensitive search by default
-    + Do case-sensitive on ctrl+enter
-    + [bug] Finding underscores doesn't work with case-insensitive search
-    - If a buffer is open, always use the buffer's bytes, not file's bytes
-    - Use threads to search and show a spinner after some time has passed
+- Finder improvements
+    + Use a thread to search to avoid blocking
+    + Show a "searching..." label to indicate that searching is in progress
     - [bug] When buffer changes and search results don't, it may find wrong results:
         - Solution: always trigger search on buffer save (have to do the threading first)
+    - If a buffer is open, always use the buffer's bytes, not file's bytes
     - Don't lock files after scanning
+    - When reached the top of search results, select input again
     
 - Strip trailing whitespace on save    
 - Ctrl + [ and Ctrl + ] to indent lines
+- Ctrl + Home/End to jump to beginning/end of the file
+- Finder: support Page Down/Up as an alternative to Ctrl+arrows
 - Maybe sleep at least a little bit, don't render too many frames
     
 - Save editor state on editor operations:
     - Alt + minus to open previous state
     - Alt + plus to open next state
+    
+- Save modified buffers to temporary files and recover after crashes
 
 - Text Input:
     - Select by mouse
@@ -85,6 +49,7 @@
     + Identifiers can start with _
     - Parse @notes
     - Make $ a separate token
+    - Backtick as a separate token
     - Allow \ in identifiers
 
 - Implement case-insensitive search in buffer
@@ -107,10 +72,11 @@
       (also this may be a good occasion to make sure other editors' cursors are adjusted when edits are done elsewhere)
 
 - Open file dialog:
+    - Ctrl+O to open dialog in the current file's folder
+    - Ctrl+Shift+O to open from root
     - Review and cleanup code
     - Put the open editors at the top
     - Implement fuzzy searching with letter highlighting etc
-
 
 - When there are several cursors where some of them are above the viewport, hitting enter will shift everything down
   and will jerk briefly, which is annoying
@@ -151,6 +117,44 @@
 - Fix the font unknown character glyph (try copying something from font-awesome)
 
 # DONE
++ Search in the project
+    + Profile the use of the in-buffer search
+    + Write a BMH implementation for search
+    + Compare with the previous version
+    + Create a panel for the search
+    + Search for stuff, maybe start in the focus folder only for now
+    + Strip away whitespace
+    + Scrollbar
+    + Top shadow
+    + Only draw visible stuff
+    + When searching reset scroll
+    + Cursor:
+        + Move by up/down
+        + Jump to next file on ctrl+up/down
+        + Scroll to cursor when moved
+    + Deactivate input when moving cursor
+    + Fix the way inactive cursors are displayed (both in finder and in editor)
+    + Close editor on ctrl+W
+    + Be able to center viewport on cursor
+    + Use selected text from active editor if on one line on activation
+    + Draw the number of results and files
+    + Limit the number of results
+    + Allow any number of chars for search
+    + Say when the maximum number of results is reached
+    + When jumping to cursor, align to the left
+    + Open files:
+        + On enter
+        + Select the searched text
+        + On click (don't conflict with the scrollbar)
+    + Limit results width:
+        + Don't go too much to the left
+        + Don't go too much to the right
+        + Mark cut lines with an ellipsis
+    + Highlight search string
+    + Don't activate finder's input on click in the results area (only if there are no results then it's ok)
+    + Do case-insensitive search by default
+    + Do case-sensitive on ctrl+enter
+    + [bug] Finding underscores doesn't work with case-insensitive search
 + [quick] Highlight work log
 + Draw cursor line highlight (disabled)
 + Draw inactive cursors, but only if no search results are present
