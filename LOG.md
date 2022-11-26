@@ -51,9 +51,9 @@
 
 - Tokenizer:
     + Identifiers can start with _
-    - Parse @notes
-    - Make $ a separate token
-    - Backtick as a separate token
+    + Make $ a separate token
+    + Backtick as a separate token
+    + Parse @notes
     - Allow \ in identifiers
 
 - Implement case-insensitive search in buffer

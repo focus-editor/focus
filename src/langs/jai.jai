@@ -66,6 +66,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "&";  parse_ampersand         (tokenizer, *token);
         case #char "|";  parse_pipe              (tokenizer, *token);
         case #char "%";  parse_percent           (tokenizer, *token);
+        case #char "@";  parse_note              (tokenizer, *token);
 
         case #char ";";  token.type = .punctuation; token.punctuation = .semicolon; t += 1;
         case #char ",";  token.type = .punctuation; token.punctuation = .colon;     t += 1;
@@ -77,6 +78,8 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "[";  token.type = .punctuation; token.punctuation = .l_bracket; t += 1;
         case #char "]";  token.type = .punctuation; token.punctuation = .r_bracket; t += 1;
         case #char "~";  token.type = .punctuation; token.punctuation = .tilde;     t += 1;
+        case #char "`";  token.type = .punctuation; token.punctuation = .backtick;  t += 1;
+        case #char "$";  token.type = .punctuation; token.punctuation = .dollar;    t += 1;
 
         case;            token.type = .invalid; t += 1;
     }
@@ -265,6 +268,15 @@ parse_percent :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
+parse_note :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .punctuation;
+    token.punctuation = .note;
+
+    t += 1;
+    while t < max_t && is_alnum(<< t) t += 1;
+    if t >= max_t return;
+}
+
 parse_ampersand :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .punctuation;
     token.punctuation = .ampersand;
@@ -434,11 +446,11 @@ COLOR_MAP :: Simp.Code_Color.[
 ];
 
 PUNCTUATION :: string.[
-    "arrow", "bang", "pipe", "double_pipe", "pipe_equal", "equal", "equal_equal", "bang_equal", "semicolon", "percent",
-    "percent_equal", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", "period", "less_than",
-    "double_less_than", "less_than_equal", "greater_than", "greater_than_equal", "plus", "plus_equal",
+    "arrow", "bang", "backtick", "pipe", "double_pipe", "dollar", "pipe_equal", "equal", "equal_equal", "bang_equal", 
+    "semicolon", "percent", "percent_equal", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", 
+    "period", "less_than", "double_less_than", "less_than_equal", "greater_than", "greater_than_equal", "plus", "plus_equal",
     "minus", "minus_equal", "triple_dash", "asterisk", "asterisk_equal", "colon", "colon_equal", "double_colon", "slash",
-    "slash_equal", "comma", "ampersand", "double_ampersand", "ampersand_equal", "tilde", "unknown",
+    "slash_equal", "comma", "ampersand", "double_ampersand", "ampersand_equal", "tilde", "unknown", "note",
 ];
 
 KEYWORDS :: string.[
