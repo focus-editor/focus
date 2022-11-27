@@ -19,18 +19,18 @@
     - Horizontal scrolling
     - Custom title bar
     - Have a user error log - with an icon in the title bar to toggle it
+    - Support CRLF (ugh)
+    - Have the option to not strip trailing whitespace (in the config?) Or can do ctrl+s as a main way to save, ctr+shift+s as an alternative way
 
-- Finder improvements
-    + Use a thread to search to avoid blocking
-    + Show a "searching..." label to indicate that searching is in progress
-    + When reached the top of search results, select input again
-    + Support Page Down/Up as an alternative to Ctrl+arrows
-    + On Ctrl+B don't switch the active part, just toggle
-    - Try using a normal pool instead of flat pool and check if memory behaviour is still bad
-    - [bug] When buffer changes and search results don't, it may find wrong results:
-        - Solution: always trigger search on buffer save (have to do the threading first)
-    - If a buffer is open, always use the buffer's bytes, not file's bytes
-    - Don't lock files after scanning
+- Rewrite finder to search in all in-memory project files:
+    - At the start of the program start a thread which will scan all files and open buffers for them 
+    - Before starting, open whatever editors there are from the previous session, so that it opens fast
+    - Start a file watcher which will keep looking for new or modified files and refresh or create buffers
+    - Release all file handles for the files we scanned (at least with no active editors)
+    - Create an example widget with search results
+    - Consider having a shortcut to add more context to each search result
+    - Make sure that when we save a file, the watcher knows about that (or maybe it's ok if it treats it as an external save?)
+    - The watcher should check the modtime as well as the file size to determine whether the buffer should be reloaded
     
 - Strip trailing whitespace on save    
 - Ctrl + [ and Ctrl + ] to indent lines
@@ -164,6 +164,18 @@ configured procedures during a press event, calling one if the modifiers/key mat
 you can use the default shortcuts and maybe report the error in a dialog box, presuming this was user-error after manually editing the config.
 
 # DONE
++ Finder improvements
+    + Use a thread to search to avoid blocking
+    + Show a "searching..." label to indicate that searching is in progress
+    + When reached the top of search results, select input again
+    + Support Page Down/Up as an alternative to Ctrl+arrows
+    + On Ctrl+B don't switch the active part, just toggle
+    + WONTDO (switching to a new finder):
+        - Try using a normal pool instead of flat pool and check if memory behaviour is still bad
+        - [bug] When buffer changes and search results don't, it may find wrong results:
+            - Solution: always trigger search on buffer save (have to do the threading first)
+        - If a buffer is open, always use the buffer's bytes, not file's bytes
+        - Don't lock files after scanning
 + Search in the project
     + Profile the use of the in-buffer search
     + Write a BMH implementation for search

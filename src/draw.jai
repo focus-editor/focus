@@ -520,7 +520,7 @@ draw_finder :: (rect: Rect, ui_id: Ui_Id) {
     defer pop_scissor();
 
     became_active := maybe_set_hot_or_active(ui_id, rect, .NORMAL);
-    if became_active then activate_finder(focus_results = true);
+    if became_active then activate_finder(part = .results);
 
     // Deactivate on clicks elsewhere
     if finder_is_active() && ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {

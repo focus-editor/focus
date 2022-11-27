@@ -86,8 +86,11 @@ main :: () {
         // print("%\n", <<change);
     }
 
-    // editors_open_file("W:/focus-zig/src/Editors.zig");
+    // TODO: load files from the previous session here
     editors_open_file("src/editors.jai", true);
+    
+    // NOTE: we're doing it after opening the buffers from the last session, so that there's no race
+    scan_buffers_and_init_file_watcher();
 
     should_quit := false;
 
@@ -187,6 +190,10 @@ main :: () {
         pointer_end_frame();
 
         reset_temporary_storage();
+        
+        // It should be ok to sleep a bit after a quick frame to avoid pegging the core.
+        // NOTE: I tried vsync but for some reason it felt super bad - didn't figure out exactly why
+        if cast(Time) get_time() - frame_time <= QUICK_FRAME_DT then sleep_milliseconds(1);
     }
 
     // report := make_leak_report();
@@ -323,7 +330,8 @@ open_file_dialog: Open_File_Dialog;
 
 frame_time: Time;                 // ever-increasing time since start in seconds
 frame_dt:   Time = MAX_FRAME_DT;  // time delta since the last frame
-MAX_FRAME_DT: Time : xx (1.0 / 60);
+MAX_FRAME_DT:   Time : xx (1.0 / 60);
+QUICK_FRAME_DT: Time : xx (1.0 / 300);  // sorry, 300Hz monitor users
 
 screen: Rect;  // contains the current working area rect for convenience
 
@@ -393,6 +401,8 @@ Project_Dir :: struct {
     path_prefix_len: s64;  // in this case the length of "C:/projects/"
 }
 
+
+
 #load "style.jai";
 #load "layout.jai";
 #load "editors.jai";
@@ -403,6 +413,7 @@ Project_Dir :: struct {
 #load "pointer_image.jai";
 #load "utils.jai";
 #load "files.jai";
+#load "workspace.jai";
 #load "widgets/text_input.jai";
 #load "widgets/open_file_dialog.jai";
 #load "widgets/finder.jai";
