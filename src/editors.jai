@@ -813,6 +813,30 @@ editors_start_moving_splitter :: (target: float, start := -1.0) {
     redraw_requested = true;
 }
 
+init_buffers :: () {
+    // 3000 * 70% = 2100 is a reasonable number of text files in a workspace, which 
+    // most codebases will hopefully not exceed (so that we don't have to grow the hash table)
+    init(*buffers_table, slots_to_allocate = 3000);
+}
+
+fill_in_buffer_from_file_data :: (buffer: *Buffer, path: string, file_data: string) {
+    buffer.file = get_file_info_from_full_path(path);
+    buffer.has_file = true;
+    remember_last_modtime_and_size(buffer);
+    
+    buffer.bytes = resizable(to_bytes(file_data));
+    remove_crlf(buffer);
+
+    if ends_with_nocase(path, ".jai") {
+        buffer.lang = .Jai;
+    } else if ends_with(path, "LOG.md") {
+        buffer.lang = .Worklog;
+    }
+
+    recalculate_lines(buffer);
+    recalculate_colors(buffer);
+}
+
 #scope_file
 
 maybe_create_additional_cursor :: (using editor: *Editor, buffer: Buffer) -> created: bool {
@@ -902,32 +926,21 @@ find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_i
 }
 
 find_or_create_buffer :: (path: string) -> buffer_id: s64 {
-    for open_buffers {
-        if it.has_file && it.file.full_path == path return it_index;
-    }
+    buffer_id, found_buffer := table_find(*buffers_table, path);
+    if found_buffer return buffer_id;
+    
+    print("Opening file\n");
 
     // Create and load file
-    buffer_id := open_buffers.count;
-    buffer := array_add(*open_buffers);
-    buffer.file = get_file_info_from_full_path(path);
-    buffer.has_file = true;
-    remember_last_modtime_and_size(buffer);
-
     file_data, success := read_entire_file(path);
     if !success then file_data = sprint("Couldn't load file '%'", path);
-    defer free(file_data);
-    array_copy(*buffer.bytes, cast([]u8) file_data);
-    remove_crlf(buffer);
-
-    if ends_with_nocase(path, ".jai") {
-        buffer.lang = .Jai;
-    } else if ends_with(path, "LOG.md") {
-        buffer.lang = .Worklog;
-    }
-
-    recalculate_lines(buffer);
-    recalculate_colors(buffer);
-
+    
+    buffer_id = open_buffers.count;
+    buffer := array_add(*open_buffers);
+    fill_in_buffer_from_file_data(buffer, path, file_data);
+    
+    table_add(*buffers_table, path, buffer_id);
+    
     return buffer_id;
 }
 
@@ -1579,6 +1592,7 @@ Paste_Animation :: struct {
 
 open_buffers: [..] Buffer;
 open_editors: [..] Editor;
+buffers_table: Table(string, s64);
 
 editors_layout: enum {
     None;

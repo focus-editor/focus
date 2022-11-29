@@ -23,14 +23,19 @@
     - Have the option to not strip trailing whitespace (in the config?) Or can do ctrl+s as a main way to save, ctr+shift+s as an alternative way
 
 - Rewrite finder to search in all in-memory project files:
-    - At the start of the program start a thread which will scan all files and open buffers for them 
-    - Before starting, open whatever editors there are from the previous session, so that it opens fast
+    + At the start of the program start a thread which will scan all files and open buffers for them 
+    + Before starting, open whatever editors there are from the previous session, so that it opens fast
+    + Make sure there are no synchronisation conflicts:
+        + The thread doing the initial scan should create all buffers in a separate array and have a separate hash table?
+        + When the work is finished, the main thread should merge the arrays in an efficient way
     - Start a file watcher which will keep looking for new or modified files and refresh or create buffers
     - Release all file handles for the files we scanned (at least with no active editors)
     - Create an example widget with search results
     - Consider having a shortcut to add more context to each search result
     - Make sure that when we save a file, the watcher knows about that (or maybe it's ok if it treats it as an external save?)
     - The watcher should check the modtime as well as the file size to determine whether the buffer should be reloaded
+    
+- Fix the whole word matching when creating new cursors (underscore seems to be considered not a word char, but inconsistently)
     
 - Strip trailing whitespace on save    
 - Ctrl + [ and Ctrl + ] to indent lines

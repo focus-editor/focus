@@ -30,10 +30,17 @@ main :: () {
         array_add(*project_dirs, dir);
     }
 
+    init_buffers();
+    
+    // TODO: get rid of this !!!!!!!!!!!!!!!!
     init_open_file_dialog();
     init_finder();
     defer deinit_finder();
+    
+    start_initial_scan_of_workspace_files();
 
+
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // Init file watcher
     if !init(*project_file_watcher, file_change_callback) {
         log_error("Could not initialize project_file_watcher");
@@ -88,9 +95,6 @@ main :: () {
 
     // TODO: load files from the previous session here
     editors_open_file("src/editors.jai", true);
-    
-    // NOTE: we're doing it after opening the buffers from the last session, so that there's no race
-    scan_buffers_and_init_file_watcher();
 
     should_quit := false;
 
@@ -98,14 +102,16 @@ main :: () {
         if !redraw_requested platform_wait_message();
         redraw_requested = false;
         old_line_height = line_height;
+        
+        maybe_update_workspace_buffers();
 
-        files_changed := process_changes(*project_file_watcher);
-        if files_changed && should_reinit_file_dialog {
-            init_open_file_dialog();
-            should_reinit_file_dialog = false;
-        }
-        for dirs_to_rescan maybe_refresh_open_buffers_in_dir(it);
-        array_reset(*dirs_to_rescan);
+        // files_changed := process_changes(*project_file_watcher);
+        // if files_changed && should_reinit_file_dialog {
+        //     init_open_file_dialog();
+        //     should_reinit_file_dialog = false;
+        // }
+        // for dirs_to_rescan maybe_refresh_open_buffers_in_dir(it);
+        // array_reset(*dirs_to_rescan);
 
         Input.update_window_events();
 

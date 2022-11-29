@@ -1,18 +1,71 @@
-scan_buffers_and_init_file_watcher :: () {
-    init(*scanner_thread, num_threads = 1, group_proc = do_initial_scan_threadproc);
+start_initial_scan_of_workspace_files :: () {
+    init(*scanner_thread, num_threads = xx project_dirs.count, group_proc = initial_scan_threadproc);
     scanner_thread.name = "Project Scanner";
     scanner_thread.logging = true;
     
+    init(*buffer_mutex);
+    
     start(*scanner_thread);
     
-    add_work(*scanner_thread, *project_dirs, "Initial scan");
+    for * project_dirs add_work(*scanner_thread, it, it.path);
+}
+
+maybe_update_workspace_buffers :: () {
+    if !initial_scan_complete {
+        // Check if the scan is already done
+        results := get_completed_work(*scanner_thread);
+        num_dirs_scanned += results.count;
+        if num_dirs_scanned >= project_dirs.count {
+            initial_scan_complete = true;
+            shutdown(*scanner_thread);
+                        
+            // Merge the scanned buffers with the buffers the user may have opened while we were scanning
+            // (this happens in the main thread so no synchronization is required)
+            // We're assuming the number of scanned buffers will be way higher than the open ones, so we don't copy them
+            open_buffers_copy := array_copy(open_buffers);
+            open_buffers = scanned_buffers;
+            
+            // Recreate the path to id hash table
+            table_reset(*buffers_table);
+            for buffer, buffer_id : open_buffers {
+                table_add(*buffers_table, buffer.file.full_path, buffer_id);
+            }
+            
+            // Overwrite the open buffers on top of the scanned ones - they may be more recent
+            for buffer, old_buffer_id : open_buffers_copy {
+                new_buffer_id := open_buffers.count;  // in case we append
+                if buffer.has_file {
+                    scanned_buffer_id, success := table_find(*buffers_table, buffer.file.full_path);
+                    if success {
+                        // Overwrite
+                        deinit(*open_buffers[scanned_buffer_id]);
+                        open_buffers[scanned_buffer_id] = buffer;
+                        new_buffer_id = scanned_buffer_id;
+                    } else {
+                        // This is a new buffer - append
+                        array_add(*open_buffers, buffer);
+                        table_set(*buffers_table, buffer.file.full_path, new_buffer_id);
+                    }
+                } else {
+                    // This is a buffer without a file, so append
+                    // NOTE: we're not adding it to the table because there's no path
+                    array_add(*open_buffers, buffer);
+                }
+                // Reroute the editors
+                for * editor : open_editors {
+                    if editor.buffer_id == old_buffer_id then editor.buffer_id = new_buffer_id;
+                }
+            }
+        }
+        return;
+    }
 }
 
 #scope_file
 
-do_initial_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
-    dirs := << cast(*[] Project_Dir) work;
-    
+initial_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
+    dir := << cast(*Project_Dir) work;
+        
     // Visit every file in the project and maybe open a buffer for it
     Visitor_Data :: struct {
         queue: *File_Async.Queue(string);
@@ -22,7 +75,7 @@ do_initial_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *voi
     queue = File_Async.initialize_queue(string);
     defer File_Async.destroy_queue(queue);
     
-    for dirs visit_files(it.path, recursive = true, *visitor_data, visitor_func, visit_directories = true);
+    visit_files(dir.path, recursive = true, *visitor_data, visitor_func, visit_directories = true);
     
     visitor_func :: (file: *File_Visit_Info, using visitor_data: *Visitor_Data) {
         if file.is_directory {
@@ -36,8 +89,14 @@ do_initial_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *voi
         }
         if file.is_symlink return;
         
-        for workspace.ignore_file_extensions {
-            if ends_with_nocase(file.short_name, it) return;  // TODO: do a wildcard match
+        for allowed_ext : workspace.allow_file_extensions {
+            // Allow known text file extensions since they are the most common
+            if ends_with_nocase(file.short_name, allowed_ext) break;
+            
+            // Then check for common known binary file extensions
+            for workspace.ignore_file_extensions {
+                if ends_with_nocase(file.short_name, it) return;  // TODO: do a wildcard match
+            }
         }
     
         // Start an asynchronous read
@@ -70,48 +129,39 @@ do_initial_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *voi
         }
     }
     
-    print("Total size: % Mb\n", cast(float) total_size / (1024 * 1024));
-    
     return .STOP;  // don't need this thread any more
 }
 
-create_buffer_for_file :: (path: string, data: string) {
-    if not_a_text_file(data) return;
-    if !ends_with_nocase(path, ".jai") && !ends_with_nocase(path, ".cpp") && !ends_with_nocase(path, ".h") print("%\n", path);
-    total_size += data.count;
-}
-
-total_size := 0;
-
-not_a_text_file :: (file_data: string) -> bool {
-    bytes := to_bytes(file_data);
-    for byte : bytes { 
-        if byte == 0 return true;
-    }
-    return false;
-}
-
-
-get_pool_allocator :: () -> Allocator {
-    a: Allocator;
-    a.proc = flat_pool_allocator_proc;
-    a.data = *memory_pool;
-    return a;
+create_buffer_for_file :: (path: string, file_data: string) {
+    if find_index_from_left(file_data, byte = 0) >= 0 return;  // if a file has zeroes it's definitely not a well-formed text file
+    
+    lock(*buffer_mutex);
+    buffer := array_add(*scanned_buffers);
+    unlock(*buffer_mutex);
+    
+    fill_in_buffer_from_file_data(buffer, path, file_data);
 }
 
 Workspace :: struct {
     ignore_dirs: [] string = string.[".build", ".git", "bin"];
+    allow_file_extensions: [] string = string.[".jai", ".c", ".cpp", ".h", ".txt", ".md"];
     ignore_file_extensions: [] string = string.[
         ".exe", ".pdb", ".ttf", ".otf", ".dll", ".lib", ".dylib", ".so", ".so.0", ".so.1", ".so.2", ".a", 
         ".jpg", ".png", ".gif", ".jpeg", ".ico", ".tif", ".tiff", ".tga", ".bmp",
         ".mp3", ".wav", ".ogg",
-        ".mpeg", ".psd", ".codex",
+        ".blend", ".obj", ".fbx", ".dae", ".3ds",
+        ".mpg", ".mpeg", ".psd", ".codex",
     ];
 }
 
 workspace: Workspace;  // TODO: load from a config file
 scanner_thread: Thread_Group;
-memory_pool: Flat_Pool;
+
+buffer_mutex: Mutex;
+
+scanned_buffers:  [..] Buffer;
+initial_scan_complete := false;
+num_dirs_scanned := 0;
 
 #scope_file
 

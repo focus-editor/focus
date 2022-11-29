@@ -401,14 +401,6 @@ operator - :: (a: Pos, b: Pos) -> Pos {
     return r;
 }
 
-find_open_buffer_by_path :: (full_path: string) -> *Buffer, buffer_id: s64 {
-    for * open_buffers {
-        if !it.has_file continue;
-        if equal_nocase(it.file.full_path, full_path) return it, it_index;
-    }
-    return null, -1;
-}
-
 maybe_refresh_open_buffers_in_dir :: (dir_path: string) {
     // log("Refreshing buffers in %\n", dir_path);
 
@@ -459,6 +451,21 @@ maybe_refresh_open_buffers_in_dir :: (dir_path: string) {
             }
         }
     }
+}
+
+deinit :: (using buffer: *Buffer) {
+    // We don't do it often so it's ok to be slow here
+    array_free(bytes);
+    array_free(lines);
+    array_free(colors);
+    
+    for * undos deinit(it);
+    for * redos deinit(it);
+    array_free(undos);
+    array_free(redos);
+    array_free(edits);
+    
+    array_free(cursors);
 }
 
 #scope_file
@@ -536,6 +543,7 @@ Buffer :: struct {
     bytes:  [..] u8;
     lines:  [..] Line;
     colors: [..] Simp.Code_Color;  // u8 - we color each byte (even for multi-byte chars)
+                                   // @Space: we could use a u4 instead
 
     undos: [..] Edit_Group;
     redos: [..] Edit_Group;

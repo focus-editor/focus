@@ -382,9 +382,11 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             bar_rect.x += bar_rect.w - max_width;
             bar_rect.w = max_width;
         }
+        
+        draw_rounded_rect_with_shadow(bar_rect, Colors.BACKGROUND_LIGHT);
+        
         push_scissor(bar_rect);
         defer pop_scissor();
-        draw_rounded_rect_with_shadow(bar_rect, Colors.BACKGROUND_LIGHT);
 
         // Clicking on the bar should activate input
         maybe_set_hot_or_active(input_id, bar_rect, .NORMAL);
