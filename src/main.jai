@@ -20,16 +20,6 @@ main :: () {
     init_fonts();
     old_line_height = line_height;
 
-    // @Cleanup: remove and do properly
-    initial_project_dirs := string.[ "W:/focus", "C:/jai" ];
-    for path, i : initial_project_dirs {
-        dir: Project_Dir = ---;
-        dir.path = path;
-        dir.path_prefix_len = find_index_of_any_from_right(path, ".\\/") + 1;
-        // TODO: check whether project path exists - add to error log
-        array_add(*project_dirs, dir);
-    }
-
     init_buffers();
     
     // TODO: get rid of this !!!!!!!!!!!!!!!!
@@ -37,61 +27,7 @@ main :: () {
     init_finder();
     defer deinit_finder();
     
-    start_initial_scan_of_workspace_files();
-
-
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    // Init file watcher
-    if !init(*project_file_watcher, file_change_callback) {
-        log_error("Could not initialize project_file_watcher");
-        // TODO: add the error to the error log when we have it
-        return;
-    }
-    defer deinit(project_file_watcher);
-    for dir : project_dirs add_directories(*project_file_watcher, dir.path);
-    dirs_to_rescan.allocator = temp;
-
-    file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
-        if change.events & (File_Change_Event.ADDED | .MOVED | .REMOVED | .SCAN_CHILDREN) {
-            should_reinit_file_dialog = true;
-        }
-
-        dir: string = ---;
-        if change.events & .SCAN_CHILDREN {
-            dir = copy_temporary_string(change.full_path);
-        } else {
-            path := path_strip_filename(change.full_path);
-            if path.count > 1 && path[path.count-1] == #char "/" then path.count -= 1;  // don't include trailing path separator
-            dir = copy_temporary_string(path);
-        }
-        add_to_queue := true;
-        for dirs_to_rescan {
-            if begins_with_nocase(dir, it) {
-                add_to_queue = false;  // parent already in the queue
-                break;
-            }
-            if begins_with_nocase(it, dir) remove it;  // we're adding a parent of this dir
-        }
-
-        if add_to_queue array_add(*dirs_to_rescan, dir);
-
-        // NOTE: Instead of processing individual events and using the flags we're simply
-        // adding folders to the queue for scanning, because the original events seem to be
-        // not very reliable. E.g. when a file W:/focus-zig/src/Editors.zig was changed using Sublime Text,
-        // here's the list of events we've got:
-        // {"W:/focus-zig/src/Editors.zig", MODIFIED, 51.72142}
-        // {"W:/focus-zig/src/nPTuLLfc1yEADcLL", ADDED | MODIFIED | MOVED | MOVED_FROM, 52.296619}
-        // {"W:/focus-zig/src/Editors.zig", MOVED | MOVED_TO | REMOVED, 52.296619}
-        // {"W:/focus-zig/src", MODIFIED | SCAN_CHILDREN, 52.29665}
-        // Not very useful, is it?
-        // So instead of processing each event the easiest option here would be to add W:/focus-zig/src
-        // to the scanning queue
-
-        // if change.events & .MODIFIED      then buffer_maybe_changed_on_disk(change.full_path);
-        // if change.events & .REMOVED       then buffer_maybe_deleted_on_disk(change.full_path);
-        // if change.events & .SCAN_CHILDREN then refresh_buffers_in_directory(change.full_path);
-        // print("%\n", <<change);
-    }
+    init_workspace();
 
     // TODO: load files from the previous session here
     editors_open_file("src/editors.jai", true);
@@ -104,14 +40,6 @@ main :: () {
         old_line_height = line_height;
         
         maybe_update_workspace_buffers();
-
-        // files_changed := process_changes(*project_file_watcher);
-        // if files_changed && should_reinit_file_dialog {
-        //     init_open_file_dialog();
-        //     should_reinit_file_dialog = false;
-        // }
-        // for dirs_to_rescan maybe_refresh_open_buffers_in_dir(it);
-        // array_reset(*dirs_to_rescan);
 
         Input.update_window_events();
 
@@ -391,10 +319,7 @@ Mods :: Input.Event.Modifier_Flags;
 
 Time :: #type,isa float64;
 
-project_file_watcher: File_Watcher(void);
 project_dirs: [..] Project_Dir;  // TODO: load them from a config file or something
-dirs_to_rescan: [..] string;  // will use temporary storage
-should_reinit_file_dialog: bool;
 
 active_global_widget: enum {
     editors;
@@ -406,7 +331,6 @@ Project_Dir :: struct {
     path: string;          // e.g. "C:/projects/focus"
     path_prefix_len: s64;  // in this case the length of "C:/projects/"
 }
-
 
 
 #load "style.jai";

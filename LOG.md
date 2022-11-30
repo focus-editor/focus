@@ -28,19 +28,22 @@
     + Make sure there are no synchronisation conflicts:
         + The thread doing the initial scan should create all buffers in a separate array and have a separate hash table?
         + When the work is finished, the main thread should merge the arrays in an efficient way
-    - Start a file watcher which will keep looking for new or modified files and refresh or create buffers
-    - Release all file handles for the files we scanned (at least with no active editors)
+    + Start a file watcher which will keep looking for new or modified files
+    + [reported a bug] Release all file handles for the files we scanned (at least with no active editors)
+    - Use the synchronous file api for now
+    - Refresh modified buffer if needed
+    - 
     - Create an example widget with search results
     - Consider having a shortcut to add more context to each search result
     - Make sure that when we save a file, the watcher knows about that (or maybe it's ok if it treats it as an external save?)
     - The watcher should check the modtime as well as the file size to determine whether the buffer should be reloaded
-    
+
+- When pressing shift+delete, the selection is not removed    
 - Fix the whole word matching when creating new cursors (underscore seems to be considered not a word char, but inconsistently)
     
 - Strip trailing whitespace on save    
 - Ctrl + [ and Ctrl + ] to indent lines
 - Ctrl + Home/End to jump to beginning/end of the file
-- Maybe sleep at least a little bit, don't render too many frames
     
 - Save editor state on editor operations:
     - Alt + minus to open previous state
@@ -169,6 +172,7 @@ configured procedures during a press event, calling one if the modifiers/key mat
 you can use the default shortcuts and maybe report the error in a dialog box, presuming this was user-error after manually editing the config.
 
 # DONE
++ Maybe sleep at least a little bit, don't render too many frames
 + Finder improvements
     + Use a thread to search to avoid blocking
     + Show a "searching..." label to indicate that searching is in progress

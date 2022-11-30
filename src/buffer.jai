@@ -401,57 +401,57 @@ operator - :: (a: Pos, b: Pos) -> Pos {
     return r;
 }
 
-maybe_refresh_open_buffers_in_dir :: (dir_path: string) {
-    // log("Refreshing buffers in %\n", dir_path);
+// maybe_refresh_open_buffers_in_dir :: (dir_path: string) {
+//     // log("Refreshing buffers in %\n", dir_path);
 
-    for * buffer, buffer_id : open_buffers {
-        if !buffer.has_file || !begins_with_nocase(buffer.file.full_path, dir_path) continue;
-        if !file_exists(buffer.file.full_path) {
-            buffer.deleted = true;
-            continue;
-        }
-        if !buffer_file_has_changed_on_disk(buffer) continue;
+//     for * buffer, buffer_id : open_buffers {
+//         if !buffer.has_file || !begins_with_nocase(buffer.file.full_path, dir_path) continue;
+//         if !file_exists(buffer.file.full_path) {
+//             buffer.deleted = true;
+//             continue;
+//         }
+//         if !buffer_file_has_changed_on_disk(buffer) continue;
 
-        // Buffer has changed on disk
-        if buffer.modified {
-            // Mark conflict
-            // TODO: display a dialog prompting to reload
-            buffer.modified_on_disk = true;
-        } else {
-            // Reload buffer from disk
-            file_contents, success := read_entire_file(buffer.file.full_path);
-            if !success {
-                log_error("Couldn't read file '%'\n", buffer.file.full_path);
-                return;
-            }
-            defer free(file_contents);  // @memory: could probably use temporary storage and reset mark after?
+//         // Buffer has changed on disk
+//         if buffer.modified {
+//             // Mark conflict
+//             // TODO: display a dialog prompting to reload
+//             buffer.modified_on_disk = true;
+//         } else {
+//             // Reload buffer from disk
+//             file_contents, success := read_entire_file(buffer.file.full_path);
+//             if !success {
+//                 log_error("Couldn't read file '%'\n", buffer.file.full_path);
+//                 return;
+//             }
+//             defer free(file_contents);  // @memory: could probably use temporary storage and reset mark after?
 
-            remember_last_modtime_and_size(buffer);
+//             remember_last_modtime_and_size(buffer);
 
-            // Remember cursor state - if we have 2 editors then the last editor's state will be remembered
-            for * editor : open_editors {
-                if editor.buffer_id != buffer_id continue;
+//             // Remember cursor state - if we have 2 editors then the last editor's state will be remembered
+//             for * editor : open_editors {
+//                 if editor.buffer_id != buffer_id continue;
 
-                new_edit_group(buffer, editor);
-                array_resize(*buffer.cursors, editor.cursors.count);
-                for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
-            }
+//                 new_edit_group(buffer, editor);
+//                 array_resize(*buffer.cursors, editor.cursors.count);
+//                 for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
+//             }
 
-            // Reload its contents
-            new_replace_edit(buffer, 0, xx buffer.bytes.count, to_string(buffer.bytes), file_contents);
-            replace_range_raw(buffer, 0, xx buffer.bytes.count, file_contents);
-            recalculate_lines(buffer);
-            buffer.needs_coloring = true;
+//             // Reload its contents
+//             new_replace_edit(buffer, 0, xx buffer.bytes.count, to_string(buffer.bytes), file_contents);
+//             replace_range_raw(buffer, 0, xx buffer.bytes.count, file_contents);
+//             recalculate_lines(buffer);
+//             buffer.needs_coloring = true;
 
-            // Save edits and put cursors in correct places
-            for * editor : open_editors {
-                if editor.buffer_id != buffer_id continue;
-                new_edit_group(buffer, editor);
-                for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
-            }
-        }
-    }
-}
+//             // Save edits and put cursors in correct places
+//             for * editor : open_editors {
+//                 if editor.buffer_id != buffer_id continue;
+//                 new_edit_group(buffer, editor);
+//                 for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
+//             }
+//         }
+//     }
+// }
 
 deinit :: (using buffer: *Buffer) {
     // We don't do it often so it's ok to be slow here
