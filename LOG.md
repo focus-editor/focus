@@ -30,15 +30,16 @@
         + When the work is finished, the main thread should merge the arrays in an efficient way
     + Start a file watcher which will keep looking for new or modified files
     + [reported a bug] Release all file handles for the files we scanned (at least with no active editors)
-    - Use the synchronous file api for now
-    - Refresh modified buffer if needed
-    - 
+    + Use the synchronous file api for now
+    + Refresh modified buffer if needed
+    - Rescan dir as required by the watcher
     - Create an example widget with search results
     - Consider having a shortcut to add more context to each search result
     - Make sure that when we save a file, the watcher knows about that (or maybe it's ok if it treats it as an external save?)
     - The watcher should check the modtime as well as the file size to determine whether the buffer should be reloaded
 
 - When pressing shift+delete, the selection is not removed    
+- When switching to a different pane which has a search bar open, don't focus the search bar
 - Fix the whole word matching when creating new cursors (underscore seems to be considered not a word char, but inconsistently)
     
 - Strip trailing whitespace on save    

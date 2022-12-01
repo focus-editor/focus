@@ -925,25 +925,6 @@ find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_i
     return editor_id;
 }
 
-find_or_create_buffer :: (path: string) -> buffer_id: s64 {
-    buffer_id, found_buffer := table_find(*buffers_table, path);
-    if found_buffer return buffer_id;
-    
-    print("Opening file\n");
-
-    // Create and load file
-    file_data, success := read_entire_file(path);
-    if !success then file_data = sprint("Couldn't load file '%'", path);
-    
-    buffer_id = open_buffers.count;
-    buffer := array_add(*open_buffers);
-    fill_in_buffer_from_file_data(buffer, path, file_data);
-    
-    table_add(*buffers_table, path, buffer_id);
-    
-    return buffer_id;
-}
-
 maybe_undo :: (buffer: *Buffer, editor: *Editor) {
     if buffer.undos.count == 0 return;
     edit_group := pop(*buffer.undos);

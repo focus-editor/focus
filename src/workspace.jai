@@ -36,8 +36,8 @@ maybe_update_workspace_buffers :: () {
     
     files_changed := process_changes(*file_watcher);
     if files_changed {
-        if watcher_file_modified {
-            print("MODIFIED: %\n", watcher_file_modified);
+        if watcher_file_modified.count > 0 {
+            refresh_buffer_from_disk(path = watcher_file_modified);
         }
         for dirs_to_rescan print("RESCAN: %\n", it);
         print("===================\n");

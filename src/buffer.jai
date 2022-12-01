@@ -333,21 +333,6 @@ recalculate_colors :: (buffer: *Buffer) {
         case .Jai;      highlight_jai_syntax(buffer);
         case .Worklog;  highlight_worklog(buffer);
     }
-
-    // // Test colorisation - each word in different color
-    // using Simp.Code_Color;
-    // color := DEFAULT;
-    // left  := 0;
-    // right := left;
-    // while right < buffer.bytes.count {
-    //     byte := buffer.bytes[right];
-    //     if byte == #char "\n" || byte == #char " " {
-    //         memset(buffer.colors.data + left, xx color, right - left);
-    //         color = cast(Simp.Code_Color)((cast(u8) color + 1) % cast(u8) ERROR);
-    //         left = right;
-    //     }
-    //     right += 1;
-    // }
 }
 
 save_buffer_to_disk :: (using buffer: *Buffer) {
@@ -401,57 +386,71 @@ operator - :: (a: Pos, b: Pos) -> Pos {
     return r;
 }
 
-// maybe_refresh_open_buffers_in_dir :: (dir_path: string) {
-//     // log("Refreshing buffers in %\n", dir_path);
+find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
+    buffer_id, found_buffer := table_find(*buffers_table, path);
+    if found_buffer return buffer_id, false;
+    
+    print("Opening file\n");
 
-//     for * buffer, buffer_id : open_buffers {
-//         if !buffer.has_file || !begins_with_nocase(buffer.file.full_path, dir_path) continue;
-//         if !file_exists(buffer.file.full_path) {
-//             buffer.deleted = true;
-//             continue;
-//         }
-//         if !buffer_file_has_changed_on_disk(buffer) continue;
+    // Create and load file
+    file_data, success := read_entire_file(path);
+    if !success then file_data = sprint("Couldn't load file '%'", path);
+    
+    buffer_id = open_buffers.count;
+    buffer := array_add(*open_buffers);
+    fill_in_buffer_from_file_data(buffer, path, file_data);
+    
+    table_add(*buffers_table, path, buffer_id);
+    
+    return buffer_id, true;
+}
 
-//         // Buffer has changed on disk
-//         if buffer.modified {
-//             // Mark conflict
-//             // TODO: display a dialog prompting to reload
-//             buffer.modified_on_disk = true;
-//         } else {
-//             // Reload buffer from disk
-//             file_contents, success := read_entire_file(buffer.file.full_path);
-//             if !success {
-//                 log_error("Couldn't read file '%'\n", buffer.file.full_path);
-//                 return;
-//             }
-//             defer free(file_contents);  // @memory: could probably use temporary storage and reset mark after?
+refresh_buffer_from_disk :: (path: string) {
+    buffer_id, created := find_or_create_buffer(path);
+    if created return;
+        
+    buffer := *open_buffers[buffer_id];
+    _a := buffer.has_file;  // workaround for the compiler bug
+    if !buffer_file_has_changed_on_disk(buffer) return;
+    
+    // Buffer has changed on disk
+    assert(path == buffer.file.full_path);
+    if buffer.modified {
+        // Mark conflict
+        // TODO: display a dialog prompting to reload
+        buffer.modified_on_disk = true;
+    } else {
+        // Reload buffer from disk
+        file_contents, success := read_entire_file(path);
+        if !success { log_error("Couldn't read file '%'\n", path); return; }
+        defer free(file_contents);  // @memory: could probably use temporary storage and reset mark after?
 
-//             remember_last_modtime_and_size(buffer);
+        remember_last_modtime_and_size(buffer);
 
-//             // Remember cursor state - if we have 2 editors then the last editor's state will be remembered
-//             for * editor : open_editors {
-//                 if editor.buffer_id != buffer_id continue;
+        // Remember cursor state - if we have 2 editors then the last editor's state will be remembered
+        for * editor : open_editors {
+            if editor.buffer_id != buffer_id continue;
 
-//                 new_edit_group(buffer, editor);
-//                 array_resize(*buffer.cursors, editor.cursors.count);
-//                 for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
-//             }
+            new_edit_group(buffer, editor);
+            array_resize(*buffer.cursors, editor.cursors.count);
+            for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
+        }
 
-//             // Reload its contents
-//             new_replace_edit(buffer, 0, xx buffer.bytes.count, to_string(buffer.bytes), file_contents);
-//             replace_range_raw(buffer, 0, xx buffer.bytes.count, file_contents);
-//             recalculate_lines(buffer);
-//             buffer.needs_coloring = true;
+        // Reload its contents
+        new_replace_edit(buffer, 0, xx buffer.bytes.count, to_string(buffer.bytes), file_contents);
+        replace_range_raw(buffer, 0, xx buffer.bytes.count, file_contents);
+        recalculate_lines(buffer);
+        buffer.needs_coloring = true;
+        buffer.was_dirty_during_frame = false;  // to avoid being marked as modified at the end of the frame
 
-//             // Save edits and put cursors in correct places
-//             for * editor : open_editors {
-//                 if editor.buffer_id != buffer_id continue;
-//                 new_edit_group(buffer, editor);
-//                 for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
-//             }
-//         }
-//     }
-// }
+        // Save edits and put cursors in correct places
+        for * editor : open_editors {
+            if editor.buffer_id != buffer_id continue;
+            new_edit_group(buffer, editor);
+            for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
+        }
+    }
+}
 
 deinit :: (using buffer: *Buffer) {
     // We don't do it often so it's ok to be slow here
