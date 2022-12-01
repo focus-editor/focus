@@ -406,8 +406,11 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
 }
 
 refresh_buffer_from_disk :: (path: string) {
+    print("refreshing '%'\n", path);
     buffer_id, created := find_or_create_buffer(path);
     if created return;
+    
+    print("--- buffer exists, refreshing...\n");
         
     buffer := *open_buffers[buffer_id];
     _a := buffer.has_file;  // workaround for the compiler bug

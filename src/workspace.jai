@@ -39,47 +39,54 @@ maybe_update_workspace_buffers :: () {
         if watcher_file_modified.count > 0 {
             refresh_buffer_from_disk(path = watcher_file_modified);
         }
-        for dirs_to_rescan print("RESCAN: %\n", it);
-        print("===================\n");
+        // @Speed: it should be ok to rescan everything recursively, because
+        // most of the files usually will already be loaded and they won't refresh if unchanged
+        for dirs_to_rescan visit_files(it, recursive = true, null, visitor_func, visit_directories = true);
     }
-    // if files_changed {
-    //     init_open_file_dialog();
-    //     should_reinit_file_dialog = false;
-    // }
-    // for dirs_to_rescan maybe_refresh_open_buffers_in_dir(it);
+    
+    visitor_func :: (file: *File_Visit_Info, userdata: *void) {
+        if should_ignore_file(file) return;
+        refresh_buffer_from_disk(path = file.full_name);
+    }
+    
     array_reset(*dirs_to_rescan);
     watcher_file_modified = "";
 }
 
 #scope_file
 
+should_ignore_file :: (file: *File_Visit_Info) -> bool {
+    if file.is_directory {
+        for workspace.ignore_dirs {
+            if equal_nocase(file.short_name, it) {  // TODO: do a wildcard match
+                file.descend_into_directory = false;
+                return true;
+            }
+        }
+        return true;
+    }
+    if file.is_symlink return true;
+    
+    for allowed_ext : workspace.allow_file_extensions {
+        // Allow known text file extensions since they are the most common
+        if ends_with_nocase(file.short_name, allowed_ext) break;
+        
+        // Then check for common known binary file extensions
+        for workspace.ignore_file_extensions {
+            if ends_with_nocase(file.short_name, it) return true;  // TODO: do a wildcard match
+        }
+    }
+    
+    return false;
+}
+
 initial_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
     dir := << cast(*Project_Dir) work;
     
-    visit_files(dir.path, recursive = true, thread, visitor_func, visit_directories = true);
+    visit_files(dir.path, recursive = true, null, visitor_func, visit_directories = true);
     
-    visitor_func :: (file: *File_Visit_Info, userdata: *Thread) {
-        if file.is_directory {
-            for workspace.ignore_dirs {
-                if equal_nocase(file.short_name, it) {  // TODO: do a wildcard match
-                    file.descend_into_directory = false;
-                    return;
-                }
-            }
-            return;
-        }
-        if file.is_symlink return;
-        
-        for allowed_ext : workspace.allow_file_extensions {
-            // Allow known text file extensions since they are the most common
-            if ends_with_nocase(file.short_name, allowed_ext) break;
-            
-            // Then check for common known binary file extensions
-            for workspace.ignore_file_extensions {
-                if ends_with_nocase(file.short_name, it) return;  // TODO: do a wildcard match
-            }
-        }
-    
+    visitor_func :: (file: *File_Visit_Info, userdata: *void) {
+        if should_ignore_file(file) return;    
         file_data, success := read_entire_file(file.full_name);
         if success create_buffer_for_file(file.full_name, file_data);
     }
