@@ -10,7 +10,7 @@ init_workspace :: () {
     }
 
     // Start initial scan of the workspace files
-    init(*scanner_thread, num_threads = xx project_dirs.count, group_proc = initial_scan_threadproc);
+    init(*scanner_thread, num_threads = 1, group_proc = initial_scan_threadproc);
     scanner_thread.name = "Project Scanner";
     scanner_thread.logging = true;
     
@@ -24,12 +24,14 @@ init_workspace :: () {
 maybe_update_workspace_buffers :: () {
     if !initial_scan_complete {
         results := get_completed_work(*scanner_thread);
+        
         num_dirs_scanned += results.count;
         if num_dirs_scanned >= project_dirs.count {
             initial_scan_complete = true;
-            shutdown(*scanner_thread);                        
+            shutdown(*scanner_thread);
             merge_scanned_buffers_into_open_buffers();
-            start_file_watcher();            
+            start_file_watcher();
+            init_open_file_dialog();
         }
         return;
     }
@@ -159,7 +161,7 @@ initial_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) 
     }
     */
     
-    return .STOP;  // don't need this thread any more
+    return .CONTINUE;
 }
 
 create_buffer_for_file :: (path: string, file_data: string) {

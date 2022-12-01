@@ -23,7 +23,6 @@ main :: () {
     init_buffers();
     
     // TODO: get rid of this !!!!!!!!!!!!!!!!
-    init_open_file_dialog();
     init_finder();
     defer deinit_finder();
     
@@ -259,8 +258,6 @@ window_y  := -1;
 dpi_scale := 1.0;
 
 redraw_requested := true;  // set to true to render the first frame
-
-open_file_dialog: Open_File_Dialog;
 
 frame_time: Time;                 // ever-increasing time since start in seconds
 frame_dt:   Time = MAX_FRAME_DT;  // time delta since the last frame

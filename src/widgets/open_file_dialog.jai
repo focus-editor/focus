@@ -21,10 +21,7 @@ init_open_file_dialog :: () {
     pool_allocator := get_pool_allocator();
     push_allocator(pool_allocator);
 
-    array_reset(*entries.all);
     reset(*memory_pool);  // to avoid having to free each string
-
-    collect_files(project_dirs, dst = *entries.all);
 
     recalculate_filtered_entries();
 }
@@ -91,27 +88,6 @@ open_file_dialog_handle_text_input :: (char: u32) {
     recalculate_filtered_entries();
 }
 
-Open_File_Dialog :: struct {
-    scroll_to_cursor := false;
-
-    input: Text_Input;
-    entries: Entries;
-
-    Entries :: struct {
-        all: [..] File_Info;  // all files in the project
-
-        filtered: [..] File_Info;
-        selected: s64;
-        selected_by_mouse: s64 = -1;  // to remember which entry the left mouse button went down on
-
-        scroll_y: s32;
-        scroll_anim: Tween_Animation(s32);
-        per_page: s64 = 10;
-    }
-}
-
-BULLET_CHAR :: #run to_string(*convert_utf32_to_utf8(0x2022));
-
 
 #scope_file
 
@@ -123,22 +99,29 @@ recalculate_filtered_entries :: () {
     entries.selected = 0;
     array_reset(*entries.filtered);
 
+    // @MEMORY SAFETY: if we ever delete buffers from open_buffers and free memory, this will have to copy everything!
     if input.text.count == 0 {
         // TODO: still give them scores and sort
-        for entry : array_view(entries.all, 0, MAX_ENTRIES_TO_SHOW) {
-            array_add(*entries.filtered, entry);
+        num := 0;
+        for buffer : open_buffers {
+            if !buffer.has_file continue;
+            
+            array_add(*entries.filtered, buffer.file);
+            num += 1;
+            if num >= MAX_ENTRIES_TO_SHOW break;
         }
         return;
     }
 
     str := to_string(input.text);
     num := 0;
-    for entry : entries.all {
-        if contains_nocase(entry.name, str) {
-            array_add(*entries.filtered, entry);
-            num += 1;
-            if num >= MAX_ENTRIES_TO_SHOW break;
-        }
+    for buffer : open_buffers {
+        if !buffer.has_file continue;
+        if !contains_nocase(buffer.file.full_path, str) continue; 
+        
+        array_add(*entries.filtered, buffer.file);
+        num += 1;
+        if num >= MAX_ENTRIES_TO_SHOW break;
     }
 }
 
@@ -151,4 +134,27 @@ get_pool_allocator :: () -> Allocator {
 
 memory_pool: Flat_Pool;
 
-MAX_ENTRIES_TO_SHOW :: 200;
+MAX_ENTRIES_TO_SHOW :: 300;
+
+#scope_export
+
+open_file_dialog: Open_File_Dialog;
+
+Open_File_Dialog :: struct {
+    scroll_to_cursor := false;
+
+    input: Text_Input;
+    entries: Entries;
+
+    Entries :: struct {
+        filtered: [..] File_Info;
+        selected: s64;
+        selected_by_mouse: s64 = -1;  // to remember which entry the left mouse button went down on
+
+        scroll_y: s32;
+        scroll_anim: Tween_Animation(s32);
+        per_page: s64 = 10;
+    }
+}
+
+BULLET_CHAR :: #run to_string(*convert_utf32_to_utf8(0x2022));

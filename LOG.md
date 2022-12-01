@@ -34,6 +34,7 @@
     + Refresh modified buffer if needed
     + Rescan dir as required by the watcher
     + Make sure that when we save a file, the watcher knows about that (or maybe it's ok if it treats it as an external save?)
+    + Make the open file dialog work from the open buffers
     - Create an example widget with search results
     - Consider having a shortcut to add more context to each search result
 
