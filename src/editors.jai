@@ -7,8 +7,7 @@ editors_handle_event :: (event: Input.Event) {
             if event.key_pressed {
                 if event.key_code == {
                     case #char "P"; if only_ctrl_pressed(mods)       { show_open_file_dialog();   return; }
-                    case #char "B"; if only_ctrl_pressed(mods)       { toggle_finder();           return; }
-                    case #char "F"; if only_ctrl_shift_pressed(mods) { open_finder_from_editor(); return; }
+                    case #char "F"; if only_ctrl_shift_pressed(mods) { finder_open_from_editor(); return; }
                 }
             }
 

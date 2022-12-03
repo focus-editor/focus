@@ -7,20 +7,21 @@ draw_frame :: () {
     // Check whether we need to deactivate elements before drawing
     if !mouse.left.is_down || mouse.left.just_released then ui.active = .none;
 
-    maybe_animate_finder();
+    // maybe_animate_finder();
 
     editors_area := screen;
-    finder_area: Rect;
-    finder_splitter_id := get_ui_id_from_loc(parent_id = .finder);
-    // Maybe drag splitter
-    if ui.active == finder_splitter_id then finder_set_openness((mouse.pointer.x - screen.x) / screen.w);
-    if finder_is_open() {
-        finder_split := screen.w * finder.openness;
-        finder_area, editors_area = cut_left(screen, finder_split, margin = 2);
-        splitter_rect := make_rect(editors_area.x - 2, finder_area.y, 2, finder_area.h);
-        draw_finder(finder_area, .finder);
-        draw_splitter(splitter_rect, finder_split, finder_splitter_id);
-    }
+    
+    // finder_area: Rect;
+    // finder_splitter_id := get_ui_id_from_loc(parent_id = .finder);
+    // // Maybe drag splitter
+    // if ui.active == finder_splitter_id then finder_set_openness((mouse.pointer.x - screen.x) / screen.w);
+    // if finder_is_open() {
+    //     finder_split := screen.w * finder.openness;
+    //     finder_area, editors_area = cut_left(screen, finder_split, margin = 2);
+    //     splitter_rect := make_rect(editors_area.x - 2, finder_area.y, 2, finder_area.h);
+    //     draw_finder(finder_area, .finder);
+    //     draw_splitter(splitter_rect, finder_split, finder_splitter_id);
+    // }
 
     footer_height := font_ui_line_height * 1.6;
 
@@ -61,6 +62,7 @@ draw_frame :: () {
 
     // Open file dialog is modal so if it's shown it means it receives input
     if active_global_widget == .open_file_dialog then draw_open_file_dialog();
+    if active_global_widget == .finder           then draw_new_finder();
 
     // Reset UI state after drawing
     if !mouse.left.is_down || mouse.left.just_released {
@@ -512,208 +514,208 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
 }
 
-draw_finder :: (rect: Rect, ui_id: Ui_Id) {
-    using finder;
-    using finder.last_search;
-    
-    if !is_valid(rect) return;
+// draw_finder :: (rect: Rect, ui_id: Ui_Id) {
+//     using finder;
+//     using finder.last_search;
+//     
+//     if !is_valid(rect) return;
 
-    push_scissor(rect);
-    defer pop_scissor();
+//     push_scissor(rect);
+//     defer pop_scissor();
 
-    became_active := maybe_set_hot_or_active(ui_id, rect, .NORMAL);
-    if became_active then activate_finder(part = .results);
+//     became_active := maybe_set_hot_or_active(ui_id, rect, .NORMAL);
+//     if became_active then activate_finder(part = .results);
 
-    // Deactivate on clicks elsewhere
-    if finder_is_active() && ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
-        deactivate_finder();
-    }
+//     // Deactivate on clicks elsewhere
+//     if finder_is_active() && ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
+//         deactivate_finder();
+//     }
 
-    draw_rect(rect, Colors.BACKGROUND_LIGHT);
+//     draw_rect(rect, Colors.BACKGROUND_LIGHT);
 
-    margin  := 12 * dpi_scale;
-    padding :=  4 * dpi_scale;
+//     margin  := 12 * dpi_scale;
+//     padding :=  4 * dpi_scale;
 
-    // Draw the main input
-    input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
-    input_rect, results_rect := cut_top(rect, input_rect_height);
-    input_rect = shrink(input_rect, margin);
-    input_id := get_ui_id_from_loc(parent_id = ui_id);
+//     // Draw the main input
+//     input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
+//     input_rect, results_rect := cut_top(rect, input_rect_height);
+//     input_rect = shrink(input_rect, margin);
+//     input_id := get_ui_id_from_loc(parent_id = ui_id);
 
-    // NOTE: this function is called twice (once now and once in the input). Maybe there's a good way to avoid it?
-    input_clicked := maybe_set_hot_or_active(input_id, input_rect, .TEXT_SELECT);
-    if input_clicked then activate_finder(select_text = false);
-    input_active := active_global_widget == .finder && active_part == .input;
-    draw_text_input(*input, input_rect, ui_id = input_id, active = input_active, label = "Search in project");
-    
-    // // NOTE(Ivan): decided not to draw spinner, at least for now, because rotating it would be tricky due to subpixel rendering
-    // {
-    //     spinner_icon_char := convert_utf32_to_utf8(0xf110);
-    //     width := Simp.prepare_text(font_icons, to_string(*spinner_icon_char));
-    //     spinner_rect := cut_right(shrink(input_rect, 1), width + 2 * padding);
-    //     draw_rect(spinner_rect, Colors.BACKGROUND);
-    //     Simp.draw_prepared_text(font_icons, xx (spinner_rect.x + padding), xx (spinner_rect.y + 2 * padding), color = Colors.UI_DEFAULT);
-    // }
-    
-    // Draw label
-    label_rect := cut_top(results_rect, xx font_ui.default_line_spacing);
-    label_rect.y += margin / 2;
-    results_rect.h -= label_rect.h;
-    if needle {
-        label_text := "";
-        if search_in_progress {
-            label_text = "Searching...";
-        } else if results {
-            label_text = tprint("Found% % result% in % file%", ifx limit_reached then " more than" else "", total_results, ifx total_results > 1 then "s" else "", results.count, ifx results.count > 1 then "s" else "");
-        } else {
-            label_text = "No results";
-        }
-        Simp.draw_text(font_ui_small, xx (label_rect.x + margin + padding + 1), xx (label_rect.y + padding), label_text, color = Colors.UI_DIM);
-    } else {
-        Simp.draw_text(font_ui_small, xx (label_rect.x + margin + padding + 1), xx (label_rect.y + padding), "Press Enter to search", color = Colors.UI_DIM);
-        label_rect.y -= font_ui_small.default_line_spacing;
-        Simp.draw_text(font_ui_small, xx (label_rect.x + margin + padding + 1), xx (label_rect.y + padding), "Press Shift + Enter to do case-sensitive search", color = Colors.UI_DIM);
-    }
+//     // NOTE: this function is called twice (once now and once in the input). Maybe there's a good way to avoid it?
+//     input_clicked := maybe_set_hot_or_active(input_id, input_rect, .TEXT_SELECT);
+//     if input_clicked then activate_finder(select_text = false);
+//     input_active := active_global_widget == .finder && active_part == .input;
+//     draw_text_input(*input, input_rect, ui_id = input_id, active = input_active, label = "Search in project");
+//     
+//     // // NOTE(Ivan): decided not to draw spinner, at least for now, because rotating it would be tricky due to subpixel rendering
+//     // {
+//     //     spinner_icon_char := convert_utf32_to_utf8(0xf110);
+//     //     width := Simp.prepare_text(font_icons, to_string(*spinner_icon_char));
+//     //     spinner_rect := cut_right(shrink(input_rect, 1), width + 2 * padding);
+//     //     draw_rect(spinner_rect, Colors.BACKGROUND);
+//     //     Simp.draw_prepared_text(font_icons, xx (spinner_rect.x + padding), xx (spinner_rect.y + 2 * padding), color = Colors.UI_DEFAULT);
+//     // }
+//     
+//     // Draw label
+//     label_rect := cut_top(results_rect, xx font_ui.default_line_spacing);
+//     label_rect.y += margin / 2;
+//     results_rect.h -= label_rect.h;
+//     if needle {
+//         label_text := "";
+//         if search_in_progress {
+//             label_text = "Searching...";
+//         } else if results {
+//             label_text = tprint("Found% % result% in % file%", ifx limit_reached then " more than" else "", total_results, ifx total_results > 1 then "s" else "", results.count, ifx results.count > 1 then "s" else "");
+//         } else {
+//             label_text = "No results";
+//         }
+//         Simp.draw_text(font_ui_small, xx (label_rect.x + margin + padding + 1), xx (label_rect.y + padding), label_text, color = Colors.UI_DIM);
+//     } else {
+//         Simp.draw_text(font_ui_small, xx (label_rect.x + margin + padding + 1), xx (label_rect.y + padding), "Press Enter to search", color = Colors.UI_DIM);
+//         label_rect.y -= font_ui_small.default_line_spacing;
+//         Simp.draw_text(font_ui_small, xx (label_rect.x + margin + padding + 1), xx (label_rect.y + padding), "Press Shift + Enter to do case-sensitive search", color = Colors.UI_DIM);
+//     }
 
-    // Draw results
-    push_scissor(results_rect);
-    defer pop_scissor();
-    result_rect := expand(cut_top(results_rect, font_ui_line_height + padding), 1);
+//     // Draw results
+//     push_scissor(results_rect);
+//     defer pop_scissor();
+//     result_rect := expand(cut_top(results_rect, font_ui_line_height + padding), 1);
 
-    results_total_height: float;
-    for result : results {
-        results_total_height += result_rect.h * (1 + result.lines.count);
-    }
-    if results_total_height < results_rect.h {
-        results_rect = cut_top(results_rect, results_total_height + result_rect.h);  // to make sure we don't scroll
-    }
+//     results_total_height: float;
+//     for result : results {
+//         results_total_height += result_rect.h * (1 + result.lines.count);
+//     }
+//     if results_total_height < results_rect.h {
+//         results_rect = cut_top(results_rect, results_total_height + result_rect.h);  // to make sure we don't scroll
+//     }
 
-    // @Cleanup: this seems to have some overlap with other scrollbars - anything to generalise?
-    // Scrollbar
-    scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
+//     // @Cleanup: this seems to have some overlap with other scrollbars - anything to generalise?
+//     // Scrollbar
+//     scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
 
-    max_y_scroll := cast(s32)(results_total_height - results_rect.h + result_rect.h / 2);
-    if max_y_scroll < 0 then max_y_scroll = 0;
-    new_scroll_target := draw_scrollbar(results_rect, 1.5 * char_size, results_total_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
-    if new_scroll_target != scroll_anim.target {
-        scroll_y = new_scroll_target;
-        scroll_anim.target = new_scroll_target;
-        redraw_requested = true;
-    }
+//     max_y_scroll := cast(s32)(results_total_height - results_rect.h + result_rect.h / 2);
+//     if max_y_scroll < 0 then max_y_scroll = 0;
+//     new_scroll_target := draw_scrollbar(results_rect, 1.5 * char_size, results_total_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
+//     if new_scroll_target != scroll_anim.target {
+//         scroll_y = new_scroll_target;
+//         scroll_anim.target = new_scroll_target;
+//         redraw_requested = true;
+//     }
 
-    // Mouse scrolling
-    if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(results_rect) {
-        if mouse.scroll_y_delta != 0 {
-            target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, max_y_scroll);
-            start_animation(*scroll_anim, scroll_y, target);
-        }
-    }
+//     // Mouse scrolling
+//     if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(results_rect) {
+//         if mouse.scroll_y_delta != 0 {
+//             target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, max_y_scroll);
+//             start_animation(*scroll_anim, scroll_y, target);
+//         }
+//     }
 
-    if scroll_to_cursor {
-        // We only want to scroll to cursor when cursor is moved by arrow keys
-        target := scroll_anim.target;
+//     if scroll_to_cursor {
+//         // We only want to scroll to cursor when cursor is moved by arrow keys
+//         target := scroll_anim.target;
 
-        // Find the current selected position (based on the scroll target, not the current scroll value)
-        cursor_rect := result_rect;
-        cursor_rect.y += scroll_anim.target;
-        for result, result_num : results {
-            cursor_rect.y -= cursor_rect.h;
-            for line, line_num : result.lines {
-                if cursor.result == result_num && cursor.line == line_num break result;  // found cursor rect
-                cursor_rect.y -= cursor_rect.h;
-            }
-        }
-        visible_y_top := results_rect.y + results_rect.h - 2 * result_rect.h;
-        visible_y_bottom := results_rect.y + result_rect.h;
-        if cursor_rect.y > visible_y_top    then target -= cast(s32)(cursor_rect.y - visible_y_top);     // maybe need to scroll up
-        if cursor_rect.y < visible_y_bottom then target += cast(s32)(visible_y_bottom - cursor_rect.y);  // maybe need to scroll down
+//         // Find the current selected position (based on the scroll target, not the current scroll value)
+//         cursor_rect := result_rect;
+//         cursor_rect.y += scroll_anim.target;
+//         for result, result_num : results {
+//             cursor_rect.y -= cursor_rect.h;
+//             for line, line_num : result.lines {
+//                 if cursor.result == result_num && cursor.line == line_num break result;  // found cursor rect
+//                 cursor_rect.y -= cursor_rect.h;
+//             }
+//         }
+//         visible_y_top := results_rect.y + results_rect.h - 2 * result_rect.h;
+//         visible_y_bottom := results_rect.y + result_rect.h;
+//         if cursor_rect.y > visible_y_top    then target -= cast(s32)(cursor_rect.y - visible_y_top);     // maybe need to scroll up
+//         if cursor_rect.y < visible_y_bottom then target += cast(s32)(visible_y_bottom - cursor_rect.y);  // maybe need to scroll down
 
-        target = clamp(target, 0, max_y_scroll);
-        if target != scroll_anim.target then start_animation(*scroll_anim, scroll_y, target);
-        scroll_to_cursor = false;
-    }
+//         target = clamp(target, 0, max_y_scroll);
+//         if target != scroll_anim.target then start_animation(*scroll_anim, scroll_y, target);
+//         scroll_to_cursor = false;
+//     }
 
-    if scroll_y != scroll_anim.target {
-        redraw_requested = true;
-        scroll_y = get_animation_value(scroll_anim);
-    }
+//     if scroll_y != scroll_anim.target {
+//         redraw_requested = true;
+//         scroll_y = get_animation_value(scroll_anim);
+//     }
 
-    visible_rect  := expand_y(results_rect, result_rect.h);
-    visible_top_y := visible_rect.y + visible_rect.h;
+//     visible_rect  := expand_y(results_rect, result_rect.h);
+//     visible_top_y := visible_rect.y + visible_rect.h;
 
-    icon_char := convert_utf32_to_utf8(xx File_Icon.jai);
-    result_indent_width := 4 * dpi_scale + cast(float) Simp.prepare_text(font_icons, to_string(*icon_char));
-    result_rect.y += scroll_y;
-    rect_origin_y := result_rect.y;
-    cursor_color  := ifx active_global_widget == .finder then Colors.LIST_CURSOR else Colors.LIST_CURSOR_LITE;
+//     icon_char := convert_utf32_to_utf8(xx File_Icon.jai);
+//     result_indent_width := 4 * dpi_scale + cast(float) Simp.prepare_text(font_icons, to_string(*icon_char));
+//     result_rect.y += scroll_y;
+//     rect_origin_y := result_rect.y;
+//     cursor_color  := ifx active_global_widget == .finder then Colors.LIST_CURSOR else Colors.LIST_CURSOR_LITE;
 
-    pen := make_vector2(result_rect.x + margin + 2 * dpi_scale, result_rect.y + (result_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale);
-    for result, result_num : results {
-        using result;
-        if pen.y <= visible_top_y then draw_filename(pen.x, pen.y, file.name, file.path, file.icon);
-        pen.y -= result_rect.h;
-        result_rect.y -= result_rect.h;
+//     pen := make_vector2(result_rect.x + margin + 2 * dpi_scale, result_rect.y + (result_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale);
+//     for result, result_num : results {
+//         using result;
+//         if pen.y <= visible_top_y then draw_filename(pen.x, pen.y, file.name, file.path, file.icon);
+//         pen.y -= result_rect.h;
+//         result_rect.y -= result_rect.h;
 
-        for line, line_num : lines {
-            if pen.y <= visible_top_y {                
-                if mouse_pointer_is_within(result_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
-                    draw_rect(result_rect, Colors.LIST_CURSOR_LITE);
-                    set_pointer_image(.PRESSABLE);
-                    if mouse.left.just_pressed {
-                        cursor.result = xx result_num;
-                        cursor.line   = xx line_num;
-                        redraw_requested = true;
-                    }
-                    if mouse.left.just_released && cursor.result == result_num && cursor.line == line_num {
-                        finder_open_selected_result(on_the_side = ctrl_pressed());
-                    }
-                }
-                // Highlight selected line
-                if cursor.result == result_num && cursor.line == line_num then draw_rect(result_rect, cursor_color);
+//         for line, line_num : lines {
+//             if pen.y <= visible_top_y {                
+//                 if mouse_pointer_is_within(result_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
+//                     draw_rect(result_rect, Colors.LIST_CURSOR_LITE);
+//                     set_pointer_image(.PRESSABLE);
+//                     if mouse.left.just_pressed {
+//                         cursor.result = xx result_num;
+//                         cursor.line   = xx line_num;
+//                         redraw_requested = true;
+//                     }
+//                     if mouse.left.just_released && cursor.result == result_num && cursor.line == line_num {
+//                         finder_open_selected_result(on_the_side = ctrl_pressed());
+//                     }
+//                 }
+//                 // Highlight selected line
+//                 if cursor.result == result_num && cursor.line == line_num then draw_rect(result_rect, cursor_color);
 
-                // Draw search string highlight
-                highlight_start_x := pen.x + result_indent_width + Simp.get_text_width(font_ui, slice(line.str, 0, line.offset_within));
-                highlight_width := Simp.get_text_width(font_ui, slice(line.str, line.offset_within, needle.count));
-                highlight_rect := shrink_y(cut_left(result_rect, xx highlight_width), 2 * dpi_scale);
-                highlight_rect.x = highlight_start_x;
-                draw_rect(highlight_rect, Colors.SEARCH_RESULT_INACTIVE);
-                
-                // Draw the result line
-                Simp.draw_text(font_ui, xx (pen.x + result_indent_width), xx pen.y, line.str, color = Colors.UI_DEFAULT);
-            }
-            pen.y -= result_rect.h;
-            result_rect.y -= result_rect.h;
-        }
-        if pen.y < visible_rect.y break;  // nothing visible left
-    }
+//                 // Draw search string highlight
+//                 highlight_start_x := pen.x + result_indent_width + Simp.get_text_width(font_ui, slice(line.str, 0, line.offset_within));
+//                 highlight_width := Simp.get_text_width(font_ui, slice(line.str, line.offset_within, needle.count));
+//                 highlight_rect := shrink_y(cut_left(result_rect, xx highlight_width), 2 * dpi_scale);
+//                 highlight_rect.x = highlight_start_x;
+//                 draw_rect(highlight_rect, Colors.SEARCH_RESULT_INACTIVE);
+//                 
+//                 // Draw the result line
+//                 Simp.draw_text(font_ui, xx (pen.x + result_indent_width), xx pen.y, line.str, color = Colors.UI_DEFAULT);
+//             }
+//             pen.y -= result_rect.h;
+//             result_rect.y -= result_rect.h;
+//         }
+//         if pen.y < visible_rect.y break;  // nothing visible left
+//     }
 
-    if scroll_y != 0 then draw_top_down_shadow(cut_top(results_rect, char_size));
+//     if scroll_y != 0 then draw_top_down_shadow(cut_top(results_rect, char_size));
 
-    draw_filename :: (x: float, y: float, filename: string, path: string, icon: File_Icon) {
-        width := 0.0;
-        padding := 4 * dpi_scale;
+//     draw_filename :: (x: float, y: float, filename: string, path: string, icon: File_Icon) {
+//         width := 0.0;
+//         padding := 4 * dpi_scale;
 
-        // Icon
-        icon_char := convert_utf32_to_utf8(xx icon);
-        width = xx Simp.prepare_text(font_icons, to_string(*icon_char));
-        Simp.draw_prepared_text(font_icons, xx x, xx y, color = Colors.UI_DEFAULT);
+//         // Icon
+//         icon_char := convert_utf32_to_utf8(xx icon);
+//         width = xx Simp.prepare_text(font_icons, to_string(*icon_char));
+//         Simp.draw_prepared_text(font_icons, xx x, xx y, color = Colors.UI_DEFAULT);
 
-        // File name
-        x += width + padding;
-        width = xx Simp.prepare_text(font_ui_bold, filename);
-        Simp.draw_prepared_text(font_ui_bold, xx x, xx y, color = Colors.UI_DEFAULT);
+//         // File name
+//         x += width + padding;
+//         width = xx Simp.prepare_text(font_ui_bold, filename);
+//         Simp.draw_prepared_text(font_ui_bold, xx x, xx y, color = Colors.UI_DEFAULT);
 
-        // Draw separator
-        x += width + padding;
-        width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
-        Simp.draw_prepared_text(font_ui_small, xx x, xx y, color = Colors.UI_DIM);
+//         // Draw separator
+//         x += width + padding;
+//         width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
+//         Simp.draw_prepared_text(font_ui_small, xx x, xx y, color = Colors.UI_DIM);
 
-        // Draw file path
-        x += width + padding;
-        width = xx Simp.prepare_text(font_ui_small, path);
-        Simp.draw_prepared_text(font_ui_small, xx x, xx y, color = Colors.UI_DIM);
-    }
-}
+//         // Draw file path
+//         x += width + padding;
+//         width = xx Simp.prepare_text(font_ui_small, path);
+//         Simp.draw_prepared_text(font_ui_small, xx x, xx y, color = Colors.UI_DIM);
+//     }
+// }
 
 draw_open_file_dialog :: () {
     using open_file_dialog;
@@ -848,6 +850,154 @@ draw_open_file_dialog :: () {
             if pen.x < path_align_x then pen.x = path_align_x;
             width = xx Simp.prepare_text(font_ui_small, entry.path);
             Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+        }
+
+        // Deselect any previously clicked entry
+        if mouse.left.just_released || !mouse.left.is_down then entries.selected_by_mouse = -1;
+
+        if scroll_y != 0 then draw_top_down_shadow(cut_top(files_rect, char_size));
+    }
+}
+
+draw_new_finder :: () {
+    using open_file_dialog;
+
+    ui_id := Ui_Id.finder;
+    scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
+
+    if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
+        // Close the dialog on clicks elsewhere
+        hide_open_file_dialog();
+        return;
+    }
+
+    margin  := 12 * dpi_scale;
+    padding :=  4 * dpi_scale;
+    input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
+    entry_height := font_ui_line_height + padding * 2;
+
+    // Figure out the dialog box size
+    box_rect: Rect = ---;
+    {
+        width  := clamp(screen.w / 1.5,   700 * dpi_scale, 2200 * dpi_scale);
+        height := clamp(input_rect_height + entry_height * entries.filtered.count + padding, 0, screen.h / 1.2);
+        x := (screen.w - width) / 2;
+        y := clamp(100 * dpi_scale, 0, (screen.h - height) / 2);
+        box_rect = make_rect(x, screen.h - height - y, width, height);
+        if !is_valid(box_rect) return;
+    }
+    draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = char_size / 1.5, shadow_size = char_size * 1.5);
+
+    maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
+
+    // Draw the filter input
+    input_rect, files_rect := cut_top(box_rect, input_rect_height);
+    input_rect = shrink(input_rect, margin);
+    input_id := get_ui_id_from_loc(parent_id = ui_id);
+    draw_text_input(*finder.input, input_rect, ui_id = input_id, active = true, label = "Type to search");
+    _pad: Rect = ---;  // allow some space at the bottom so that we don't cover up the rounded corners with the cursor
+    _pad, files_rect = cut_bottom(files_rect, padding);
+
+    // Draw files
+    {
+        using entries;
+
+        // Remember how many fits per page
+        per_page = cast(s64) (files_rect.h / entry_height);
+        if per_page <= 0 then per_page = 2;
+
+        push_scissor(files_rect);
+        defer pop_scissor();
+
+        {
+            // Scrollbar
+            content_height := filtered.count * entry_height;
+            max_y_scroll := content_height - files_rect.h;
+            new_scroll_target := draw_scrollbar(files_rect, 1.5 * char_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
+            if new_scroll_target != scroll_anim.target {
+                scroll_y = new_scroll_target;
+                scroll_anim.target = new_scroll_target;
+                redraw_requested = true;
+            }
+
+            // Scrolling update
+            if scroll_to_cursor {
+                // We only want to scroll to cursor when cursor is moved by arrow keys
+                target := scroll_anim.target;
+                selected_top    := selected * entry_height - target;
+                selected_bottom := selected_top + entry_height;
+                if selected_top < 0 then target = cast(s32) (selected * entry_height);
+                if selected_bottom > files_rect.h then target = cast(s32) ((selected + 1) * entry_height - files_rect.h);
+                if target != scroll_anim.target then start_animation(*scroll_anim, scroll_y, target);
+                scroll_to_cursor = false;
+            }
+
+            // Mouse scrolling
+            if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(files_rect) {
+                if ui.hot_last_frame == ui_id && ui.active == .none then set_pointer_image(.PRESSABLE);
+                if mouse.scroll_y_delta != 0 {
+                    target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
+                    start_animation(*scroll_anim, scroll_y, target);
+                }
+            }
+
+            if scroll_y != scroll_anim.target {
+                redraw_requested = true;
+                scroll_y = get_animation_value(scroll_anim);
+            }
+        }
+
+        visible_start := clamp(cast(s64) (scroll_y / entry_height), 0, filtered.count);
+        visible_count := cast(s64) (files_rect.h / entry_height) + 2;
+        visible_entries := array_view(filtered, visible_start, visible_count);
+
+        entry_rect := cut_top(files_rect, entry_height);
+
+        line_num_x := files_rect.x + files_rect.w / 4;
+        text_x     := line_num_x + char_size * 10;
+
+        for entry, i : visible_entries {
+            entry_index := visible_start + i;
+            entry_rect.y = files_rect.y + files_rect.h - (entry_index + 1) * entry_height + scroll_y;
+
+            if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
+                if mouse.left.just_pressed then entries.selected_by_mouse = entry_index;
+                if entries.selected_by_mouse == -1 then draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
+                if entries.selected_by_mouse == entry_index && mouse.left.just_released then open_file_dialog_open_entry(entry_index, on_the_side = ctrl_pressed());
+            }
+            if entries.selected_by_mouse == entry_index then draw_rect(entry_rect, Colors.LIST_CURSOR);
+            if entry_index == selected then draw_rect(entry_rect, Colors.LIST_CURSOR);
+
+            pen := make_vector2(
+                entry_rect.x + 2 * margin,
+                entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+            );
+            width: float;
+
+            // Draw file icon
+            icon_char := convert_utf32_to_utf8(xx entry.icon);
+            Simp.draw_text(font_icons, xx pen.x, xx pen.y, to_string(*icon_char), color = Colors.UI_DEFAULT);
+
+            // Draw name
+            pen.x += xx font_icons.em_width + padding;
+            width += xx Simp.prepare_text(font_ui, entry.name);
+            Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = Colors.UI_DEFAULT);
+
+            // Draw separator
+            pen.x += width + padding;
+            width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
+            Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+
+            // Draw file path
+            pen.x += width + padding;
+            width = xx Simp.prepare_text(font_ui_small, entry.path);
+            Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+            
+            // Line number
+            Simp.draw_text(font_ui_small, xx line_num_x, xx pen.y, "56142", color = Colors.CODE_COMMENT);
+            
+            // Draw text !!!!!!!!!!!!!
+            Simp.draw_text(font_ui, xx text_x, xx pen.y, "Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);", color = Colors.UI_DEFAULT);
         }
 
         // Deselect any previously clicked entry

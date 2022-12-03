@@ -20,12 +20,7 @@ main :: () {
     init_fonts();
     old_line_height = line_height;
 
-    init_buffers();
-    
-    // TODO: get rid of this !!!!!!!!!!!!!!!!
-    init_finder();
-    defer deinit_finder();
-    
+    init_buffers();    
     init_workspace();
 
     // TODO: load files from the previous session here
@@ -355,7 +350,7 @@ Project_Dir :: struct {
 #import "File_Utilities";
 #import "File_Watcher";
 #import "Flat_Pool";
-#import "System";  // For get_path_of_running_executable.
+#import "System";
 #import "String";
 #import "Sort";
 #import "Unicode";

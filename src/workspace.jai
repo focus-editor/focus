@@ -32,6 +32,7 @@ maybe_update_workspace_buffers :: () {
             merge_scanned_buffers_into_open_buffers();
             start_file_watcher();
             init_open_file_dialog();
+            init_finder();
         }
         return;
     }

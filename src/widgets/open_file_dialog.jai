@@ -4,8 +4,7 @@ open_file_dialog_handle_event :: (event: Input.Event) {
             if event.key_pressed {
                 if event.key_code == {
                     case .ESCAPE;   hide_open_file_dialog(); return;
-                    case #char "B"; if only_ctrl_pressed      (event.modifier_flags) { toggle_finder(); return; }
-                    case #char "F"; if only_ctrl_shift_pressed(event.modifier_flags) { if !finder_is_open() then open_finder(); else activate_finder(); return; }
+                    // case #char "F"; if only_ctrl_shift_pressed(event.modifier_flags) { if !finder_is_open() then open_finder(); else activate_finder(); return; }
                 }
                 open_file_dialog_handle_key_press(event.key_code, event.modifier_flags);
             }
@@ -21,7 +20,7 @@ init_open_file_dialog :: () {
     pool_allocator := get_pool_allocator();
     push_allocator(pool_allocator);
 
-    reset(*memory_pool);  // to avoid having to free each string
+    reset(*memory_pool);  // to avoid having to free each string. NOTE: now we don't even copy strings?
 
     recalculate_filtered_entries();
 }

@@ -1,7 +1,6 @@
 # TODO
 
 - Before I ship:
-    - Adjust cursors in joint editors properly
     - Tokenizer parses everything correctly
     - Finish text input fixes
     - Support tabs (just draw them, not even necessarily wide, just draw in some way - but wide would be best)
@@ -17,10 +16,15 @@
     - Notify about unsaved buffers on close
     - Try to implement "jump to symbol definition". Display a popup if more than one. Do a scan of jai files for that.
     - Horizontal scrolling
+    - Figure out how to anti-alias rounded corners
     - Custom title bar
     - Have a user error log - with an icon in the title bar to toggle it
     - Support CRLF (ugh)
     - Have the option to not strip trailing whitespace (in the config?) Or can do ctrl+s as a main way to save, ctr+shift+s as an alternative way
+    - Adjust cursors in joint editors properly
+    - "disable_that_annoying_paste_effect = true"
+    - Show in the program title when it's running in debug mode
+    - Jump to line on Ctrl+G
 
 - Rewrite finder to search in all in-memory project files:
     + At the start of the program start a thread which will scan all files and open buffers for them 
@@ -35,9 +39,19 @@
     + Rescan dir as required by the watcher
     + Make sure that when we save a file, the watcher knows about that (or maybe it's ok if it treats it as an external save?)
     + Make the open file dialog work from the open buffers
-    - Create an example widget with search results
+    + Create an example widget with search results
+    - Search and display results:
+        - Display something
+        - Make sure the results are sorted by folder
+        - Highlight matches
+        - Color the code
+    - Have an extra input for filtering by file path    
+    - Add a per-buffer mutex?
+    - Case insensitive search
     - Consider having a shortcut to add more context to each search result
+    - While the initial scan is still in progress, display something that says so when the widget opens
 
+- When the file dialog or finder are open, slightly highlight the pane where files would open should the user click or hit enter
 - When pressing shift+delete, the selection is not removed    
 - When switching to a different pane which has a search bar open, don't focus the search bar
 - Fix the whole word matching when creating new cursors (underscore seems to be considered not a word char, but inconsistently)
@@ -65,6 +79,7 @@
     + Backtick as a separate token
     + Parse @notes
     - Allow \ in identifiers
+    - Browse everything in the modules folder and try to find anything that sticks out
 
 - Implement case-insensitive search in buffer
 
@@ -112,7 +127,6 @@
     - Color cursor differently depending on what scope we're in
 - Highlight matching braces
 - Make sure cursor positioning is correct for all fonts and sizes
-- Figure out how to anti-alias rounded corners
 - Set a proper horizontal scroll limit
 - Maybe don't draw too many horizontal characters
 - When changing buffer in another editor, adjust cursors
@@ -131,6 +145,7 @@
 - Subpixel rendering: support other types of panels (lookup ft2-lcd_rendering)
   (not useful for the editor, but may be useful for games)
 - Fix the font unknown character glyph (try copying something from font-awesome)
+- Support "Open file in" in the context menu on Windows?
 
 # FEEDBACK
 
