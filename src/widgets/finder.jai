@@ -4,7 +4,8 @@ init_finder :: () {
         num_cpus /= 2; // this routine reports hyperthreads, so, divide by two, because of Intel marketing.
     }
     
-    init(*thread_group, num_threads = max(num_cpus - 1, 1), group_proc = search_threadproc);
+    num_threads := max(num_cpus - 1, 1);        
+    init(*thread_group, num_threads, group_proc = search_threadproc);
     thread_group.name = "Finder";
     thread_group.logging = false;
     
@@ -88,7 +89,40 @@ finder_open_from_editor :: () {
 }
 
 finder_update :: () {
-
+    using finder;
+    
+    tasks := get_completed_work(*thread_group);
+    for tasks {
+        task := cast(*Search_Task) it;
+        
+        if request.id != task.request_id {
+            // Old task, ignore
+            free_task(task);
+            continue;
+        }
+        
+        array_add(*request.completed_tasks, task);
+        request.num_tasks_left -= 1;
+        if request.num_tasks_left == 0 {
+            // Received all data, can display results now
+            array_reset_keeping_memory(*results);
+            for task : request.completed_tasks {
+                task_results := array_view(task.results, 0, task.num_results);
+                
+                // !!!!!!!!!! slow
+                for task_results array_add(*results, it);
+            }
+            
+            // Clean up task data
+            for request.completed_tasks free_task(it);
+            array_reset_keeping_memory(*request.completed_tasks);
+        }
+        // // !!!!!!!!!! Do a sorted merge
+        // // for task.results array_add(*results, it);
+        // num_old_results := results.count;
+        // array_resize(*results, num_old_results + task.results.count, initialize = false);
+        // memcpy(results.data + num_old_results, task.results.data, task.results.count * size_of(Search_Result));
+    }
 }
 
 finder_open_selected_result :: (on_the_side := false) {
@@ -147,75 +181,86 @@ start_new_search :: (force := false) {
     using finder;
     
     if !initted return;
-    
+        
     if !input.text {
-        last_request_id += 1;
-        array_reset_keeping_memory(*results);
+        if needle then free(needle);
+        needle = "";
+        reset_search_request(*request, new_needle = "");
         return;
     }
-    if needle == to_string(input.text) && !force return;  // needle hasn't changed, no need to repeat
+    if request.needle == to_string(input.text) && !force return;  // needle hasn't changed, no need to repeat
     
-    free(needle);
-    needle = copy_string(to_string(input.text));
-    skip_table := bmh_prepare_skip_table(needle, case_sensitive = false);
+    reset_search_request(*request, new_needle = to_string(input.text));
         
     num_threads := thread_group.worker_info.count;
     assert(num_threads > 0);
     
-    last_request_id += 1;
     buffers_per_thread := open_buffers.count / num_threads + 1;
     buffer_start_index := 0;
     
     while buffer_start_index < open_buffers.count {
         task := New(Search_Task);
-        task.request_id = last_request_id;
-        task.needle     = needle;
-        task.skip_table = array_copy(skip_table);
+        task.request_id = request.id;
+        task.needle = copy_string(request.needle);  // we have to copy because otherwise we'd have to sync with other threads
+        task.skip_table = array_copy(request.skip_table);
         task.buffer_start_index = cast(s32) buffer_start_index;
         task.buffer_end_index   = cast(s32) min(buffer_start_index + buffers_per_thread - 1, open_buffers.count - 1);
-        array_reserve(*task.results, 100);  // to avoid copying in some cases
         
-        add_work(*thread_group, task);
+        add_work(*thread_group, task, needle);
+        request.num_tasks_left += 1;  // only modified in the main thread so no atomics needed
         
         buffer_start_index += buffers_per_thread;
     }
 }
 
 search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
-    task := cast(*Search_Task) work;
-    // print("Thread % received new work: ================\n%\n==================================\n", thread.index, <<task);
+    using task := cast(*Search_Task) work;
     
-    for buffer_id : task.buffer_start_index .. task.buffer_end_index {
-        search_in_buffer(task, buffer_id);
+    for buffer_id : buffer_start_index .. buffer_end_index {
+        // TODO: !!!!!
+        // Need to prevent buffers from refreshing under us. 
+        // This can happen if:
+        // 1. People are too quick to close the finder dialog and modify a buffer (if search takes this long it needs to be fixed!)
+        // 2. File watcher causes a buffer to refresh (can probably just hold off refreshes in this case)
+        
+        // Search in buffer
+        buffer := *open_buffers[buffer_id];
+        contents := to_string(buffer.bytes);
+        
+        file_end := contents.data + contents.count;
+        offset := 0;
+        while true {
+            offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table, case_sensitive = false);
+            if offset < 0 break;
+    
+            result := *results[num_results];
+            result.buffer_id = buffer_id;
+            result.match_offset = xx offset;
+            // !!!!!! TODO: add project dir index - or maybe a sorting key right away?
+            num_results += 1;
+            if num_results >= MAX_RESULTS_PER_WORKER break buffer_id;
+            
+            offset += needle.count;
+        }    
     }
     
     return .CONTINUE;  // we want to reuse this thread for future searches
 }
 
-search_in_buffer :: (using task: *Search_Task, buffer_id: s32) {
-    if results.count >= MAX_RESULTS_PER_WORKER return;
-    
-    // NOTE: should we make a per-buffer mutex or something? Otherwise we risk crashing 
-    // or corrupting memory if people change buffers from under us
-    buffer := *open_buffers[buffer_id];
-    contents := to_string(buffer.bytes);
-    
-    file_end := contents.data + contents.count;
-    offset := 0;
-    while true {
-        offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table, case_sensitive = false);
-        if offset < 0 break;
+reset_search_request :: (using request: *Search_Request, new_needle: string) {
+    id += 1;
+    for completed_tasks free_task(it);
+    array_reset_keeping_memory(*completed_tasks);
+    if needle then free(needle);
+    needle = copy_string(new_needle);
+    skip_table = inline bmh_prepare_skip_table(needle, case_sensitive = false);
+    num_tasks_left = 0;
+}
 
-        result := array_add(*results);
-        result.buffer_id = buffer_id;
-        result.match_offset = xx offset;
-        // !!!!!! TODO: add project dir index
-        
-        if results.count >= MAX_RESULTS_PER_WORKER break;
-        
-        offset += needle.count;
-    }
-
+free_task :: (task: *Search_Task) {
+    free(task.needle);
+    array_free(task.skip_table);
+    free(task);
 }
 
 #scope_export
@@ -227,12 +272,13 @@ Finder :: struct {
     
     input: Text_Input;
     
-    last_request_id: s64;
+    request: Search_Request;
     needle: string;  // to remember what search string the results below correspond to
     results: [..] Search_Result;
     
     selected: s64;
-    // selected_by_mouse: s64 = -1;  // to remember which entry the left mouse button went down on. Do we need it?
+    selected_by_mouse: s64 = -1;  // to remember which entry the left mouse button went down on. Do we need it?
+    per_page := 10;
     
     scroll_y: s32;
     scroll_anim: Tween_Animation(s32);
@@ -249,15 +295,31 @@ Search_Result :: struct {
     project_dir:  s32;  // the index of the project dir (for sorting)
 }
 
-Search_Task :: struct {
-    request_id: s64;    // to distinguish between different search request generations
+// When we start a new search, a new request it created, and all the results from 
+// any unfinished tasks from a previous search will be discarded when they arrive
+Search_Request :: struct {
+    id: s64 = -1;
+    num_tasks_left: s32;
+    completed_tasks: [..] *Search_Task;
     needle: string;
+    skip_table: [256] s32;
+}
+
+// A task received by a worker thread
+Search_Task :: struct {
+    request_id:  s64;
+    needle: string;  
+    skip_table: [] s32;
+    
+    // Will search in these buffers
     buffer_start_index: s32;
     buffer_end_index:   s32;
-    skip_table: [] s32;
-    results: [..] Search_Result;
+    
+    // To be filled by the worker thread
+    num_results: s64;
+    results: [MAX_RESULTS_PER_WORKER] Search_Result;
 }
 
 thread_group: Thread_Group;
 
-MAX_RESULTS_PER_WORKER :: 2000;
+MAX_RESULTS_PER_WORKER :: 1000;

@@ -41,20 +41,25 @@
     + Make the open file dialog work from the open buffers
     + Create an example widget with search results
     - Search and display results:
-        - Display something
+        + Display something
+        + Create a search request and only replace results when collected data from all threads
         - Make sure the results are sorted by folder
         - Highlight matches
         - Color the code
+        - Move the cursor and open the results
     - Have an extra input for filtering by file path    
-    - Add a per-buffer mutex?
     - Case insensitive search
     - Consider having a shortcut to add more context to each search result
     - While the initial scan is still in progress, display something that says so when the widget opens
+    - Hold any buffer refreshes while there's an active search request?
+    - Don't search in deleted buffers
 
+- Start lines and columns from 1
 - When the file dialog or finder are open, slightly highlight the pane where files would open should the user click or hit enter
 - When pressing shift+delete, the selection is not removed    
 - When switching to a different pane which has a search bar open, don't focus the search bar
 - Fix the whole word matching when creating new cursors (underscore seems to be considered not a word char, but inconsistently)
+- Don't show deleted buffers in the open file dialog, unless there's an editor already open for them
     
 - Strip trailing whitespace on save    
 - Ctrl + [ and Ctrl + ] to indent lines

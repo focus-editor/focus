@@ -860,14 +860,13 @@ draw_open_file_dialog :: () {
 }
 
 draw_new_finder :: () {
-    using open_file_dialog;
+    using finder;
 
     ui_id := Ui_Id.finder;
     scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
 
     if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
-        // Close the dialog on clicks elsewhere
-        hide_open_file_dialog();
+        finder_close();
         return;
     }
 
@@ -880,7 +879,7 @@ draw_new_finder :: () {
     box_rect: Rect = ---;
     {
         width  := clamp(screen.w / 1.5,   700 * dpi_scale, 2200 * dpi_scale);
-        height := clamp(input_rect_height + entry_height * entries.filtered.count + padding, 0, screen.h / 1.2);
+        height := clamp(input_rect_height + entry_height * results.count + padding, 0, screen.h / 1.2);
         x := (screen.w - width) / 2;
         y := clamp(100 * dpi_scale, 0, (screen.h - height) / 2);
         box_rect = make_rect(x, screen.h - height - y, width, height);
@@ -900,8 +899,6 @@ draw_new_finder :: () {
 
     // Draw files
     {
-        using entries;
-
         // Remember how many fits per page
         per_page = cast(s64) (files_rect.h / entry_height);
         if per_page <= 0 then per_page = 2;
@@ -911,7 +908,7 @@ draw_new_finder :: () {
 
         {
             // Scrollbar
-            content_height := filtered.count * entry_height;
+            content_height := results.count * entry_height;
             max_y_scroll := content_height - files_rect.h;
             new_scroll_target := draw_scrollbar(files_rect, 1.5 * char_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
             if new_scroll_target != scroll_anim.target {
@@ -946,10 +943,12 @@ draw_new_finder :: () {
                 scroll_y = get_animation_value(scroll_anim);
             }
         }
+        
+        if !initted return;
 
-        visible_start := clamp(cast(s64) (scroll_y / entry_height), 0, filtered.count);
+        visible_start := clamp(cast(s64) (scroll_y / entry_height), 0, results.count);
         visible_count := cast(s64) (files_rect.h / entry_height) + 2;
-        visible_entries := array_view(filtered, visible_start, visible_count);
+        visible_entries := array_view(results, visible_start, visible_count);
 
         entry_rect := cut_top(files_rect, entry_height);
 
@@ -961,11 +960,11 @@ draw_new_finder :: () {
             entry_rect.y = files_rect.y + files_rect.h - (entry_index + 1) * entry_height + scroll_y;
 
             if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
-                if mouse.left.just_pressed then entries.selected_by_mouse = entry_index;
-                if entries.selected_by_mouse == -1 then draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
-                if entries.selected_by_mouse == entry_index && mouse.left.just_released then open_file_dialog_open_entry(entry_index, on_the_side = ctrl_pressed());
+                if mouse.left.just_pressed then selected_by_mouse = entry_index;
+                if selected_by_mouse == -1 then draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
+                if selected_by_mouse == entry_index && mouse.left.just_released then finder_open_selected_result(on_the_side = ctrl_pressed());
             }
-            if entries.selected_by_mouse == entry_index then draw_rect(entry_rect, Colors.LIST_CURSOR);
+            if selected_by_mouse == entry_index then draw_rect(entry_rect, Colors.LIST_CURSOR);
             if entry_index == selected then draw_rect(entry_rect, Colors.LIST_CURSOR);
 
             pen := make_vector2(
@@ -973,14 +972,16 @@ draw_new_finder :: () {
                 entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
             );
             width: float;
+            
+            buffer := *open_buffers[entry.buffer_id];
 
             // Draw file icon
-            icon_char := convert_utf32_to_utf8(xx entry.icon);
+            icon_char := convert_utf32_to_utf8(xx buffer.file.icon);
             Simp.draw_text(font_icons, xx pen.x, xx pen.y, to_string(*icon_char), color = Colors.UI_DEFAULT);
 
             // Draw name
             pen.x += xx font_icons.em_width + padding;
-            width += xx Simp.prepare_text(font_ui, entry.name);
+            width += xx Simp.prepare_text(font_ui, buffer.file.name);
             Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = Colors.UI_DEFAULT);
 
             // Draw separator
@@ -990,18 +991,19 @@ draw_new_finder :: () {
 
             // Draw file path
             pen.x += width + padding;
-            width = xx Simp.prepare_text(font_ui_small, entry.path);
+            width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
             Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
             
             // Line number
             Simp.draw_text(font_ui_small, xx line_num_x, xx pen.y, "56142", color = Colors.CODE_COMMENT);
             
             // Draw text !!!!!!!!!!!!!
-            Simp.draw_text(font_ui, xx text_x, xx pen.y, "Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);", color = Colors.UI_DEFAULT);
+            Simp.draw_text(font_ui, xx text_x, xx pen.y, tprint("buffer number %, offset %", entry.buffer_id, entry.match_offset), color = Colors.UI_DEFAULT);
+            // Simp.draw_text(font_ui, xx text_x, xx pen.y, "Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);", color = Colors.UI_DEFAULT);
         }
 
         // Deselect any previously clicked entry
-        if mouse.left.just_released || !mouse.left.is_down then entries.selected_by_mouse = -1;
+        if mouse.left.just_released || !mouse.left.is_down then selected_by_mouse = -1;
 
         if scroll_y != 0 then draw_top_down_shadow(cut_top(files_rect, char_size));
     }
