@@ -535,9 +535,11 @@ deinit :: (using edit_group: *Edit_Group) {
 
 #scope_export
 
+// TODO: reorganise to reduce size
 Buffer :: struct {
     file: File_Info;
-    has_file := false;  // false for freestanding buffers
+    has_file := false;  // false for freestanding buffers. TODO: make freestanding buffers separate
+    project_dir_index: u8;
 
     last_modtime: Apollo_Time;  // for detecting whether a file has changed
     last_size: s64;             // --
@@ -552,6 +554,7 @@ Buffer :: struct {
     edits: [..] Edit;  // current edits, not in a group yet
     cursors: [..] Cursor.State;  // cursor state before any current edits were made
 
+    // TODO: put into enum_flags
     dirty                  := false;
     was_dirty_during_frame := false;
     modified               := false;

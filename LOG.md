@@ -43,7 +43,8 @@
     - Search and display results:
         + Display something
         + Create a search request and only replace results when collected data from all threads
-        - Make sure the results are sorted by folder
+        + Make sure the results are sorted by project folder
+        - Display code lines
         - Highlight matches
         - Color the code
         - Move the cursor and open the results

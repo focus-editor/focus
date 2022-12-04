@@ -819,6 +819,11 @@ init_buffers :: () {
 }
 
 fill_in_buffer_from_file_data :: (buffer: *Buffer, path: string, file_data: string) {
+    for project_dirs {
+        if begins_with_nocase(path, it.path) {
+            buffer.project_dir_index = cast(u8)it_index;
+        }
+    }
     buffer.file = get_file_info_from_full_path(path);
     buffer.has_file = true;
     remember_last_modtime_and_size(buffer);

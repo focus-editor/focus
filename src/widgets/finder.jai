@@ -104,13 +104,22 @@ finder_update :: () {
         array_add(*request.completed_tasks, task);
         request.num_tasks_left -= 1;
         if request.num_tasks_left == 0 {
-            // Received all data, can display results now
-            array_reset_keeping_memory(*results);
-            for task : request.completed_tasks {
-                task_results := array_view(task.results, 0, task.num_results);
-                
-                // !!!!!!!!!! slow
-                for task_results array_add(*results, it);
+            // Received all data, collect all results for displaying
+            total_results := 0;
+            for request.completed_tasks total_results += it.num_results;
+            array_resize(*results, total_results, initialize = false);
+            i := 0;
+            for request.completed_tasks {
+                memcpy(results.data + i, it.results.data, it.num_results * size_of(Search_Result));
+                i += it.num_results;
+            }
+            
+            quick_sort(results, compare_search_results);
+            
+            compare_search_results :: (r1: Search_Result, r2: Search_Result) -> s64 {
+                if r1.sort_key < r2.sort_key return -1;
+                if r1.sort_key > r2.sort_key return  1;
+                return 0;
             }
             
             // Clean up task data
@@ -236,7 +245,7 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
             result := *results[num_results];
             result.buffer_id = buffer_id;
             result.match_offset = xx offset;
-            // !!!!!! TODO: add project dir index - or maybe a sorting key right away?
+            result.sort_key = (buffer.project_dir_index << 24) | cast(u32) buffer_id;
             num_results += 1;
             if num_results >= MAX_RESULTS_PER_WORKER break buffer_id;
             
@@ -292,7 +301,7 @@ Search_Result :: struct {
     // as they require doing an additional search in buffer.
     buffer_id:    s32;
     match_offset: s32;  
-    project_dir:  s32;  // the index of the project dir (for sorting)
+    sort_key:     u32;
 }
 
 // When we start a new search, a new request it created, and all the results from 

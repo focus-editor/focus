@@ -172,10 +172,10 @@ create_buffer_for_file :: (path: string, file_data: string) {
         return;
     }
     
-    lock(*buffer_mutex);
+    // lock(*buffer_mutex);
     buffer := array_add(*scanned_buffers);    
     fill_in_buffer_from_file_data(buffer, path, file_data);
-    unlock(*buffer_mutex);
+    // unlock(*buffer_mutex);
 }
 
 merge_scanned_buffers_into_open_buffers :: () {
