@@ -245,7 +245,7 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
             result := *results[num_results];
             result.buffer_id = buffer_id;
             result.match_offset = xx offset;
-            result.sort_key = (buffer.project_dir_index << 24) | cast(u32) buffer_id;
+            result.sort_key = (buffer.project_dir_index << 56) | (cast(u32) buffer_id << 32) | (cast(u32) offset);
             num_results += 1;
             if num_results >= MAX_RESULTS_PER_WORKER break buffer_id;
             
@@ -301,7 +301,7 @@ Search_Result :: struct {
     // as they require doing an additional search in buffer.
     buffer_id:    s32;
     match_offset: s32;  
-    sort_key:     u32;
+    sort_key:     u64;
 }
 
 // When we start a new search, a new request it created, and all the results from 
