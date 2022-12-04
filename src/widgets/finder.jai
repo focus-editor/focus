@@ -113,7 +113,6 @@ finder_update :: () {
                 memcpy(results.data + i, it.results.data, it.num_results * size_of(Search_Result));
                 i += it.num_results;
             }
-            
             quick_sort(results, compare_search_results);
             
             compare_search_results :: (r1: Search_Result, r2: Search_Result) -> s64 {
@@ -125,13 +124,11 @@ finder_update :: () {
             // Clean up task data
             for request.completed_tasks free_task(it);
             array_reset_keeping_memory(*request.completed_tasks);
+            request.in_progress = false;
         }
-        // // !!!!!!!!!! Do a sorted merge
-        // // for task.results array_add(*results, it);
-        // num_old_results := results.count;
-        // array_resize(*results, num_old_results + task.results.count, initialize = false);
-        // memcpy(results.data + num_old_results, task.results.data, task.results.count * size_of(Search_Result));
     }
+    
+    if request.in_progress then redraw_requested = true;
 }
 
 finder_open_selected_result :: (on_the_side := false) {
@@ -195,12 +192,14 @@ start_new_search :: (force := false) {
         if needle then free(needle);
         needle = "";
         reset_search_request(*request, new_needle = "");
+        array_reset_keeping_memory(*results);
         return;
     }
     if request.needle == to_string(input.text) && !force return;  // needle hasn't changed, no need to repeat
     
     reset_search_request(*request, new_needle = to_string(input.text));
-        
+    request.in_progress = true;
+    
     num_threads := thread_group.worker_info.count;
     assert(num_threads > 0);
     
@@ -264,6 +263,7 @@ reset_search_request :: (using request: *Search_Request, new_needle: string) {
     needle = copy_string(new_needle);
     skip_table = inline bmh_prepare_skip_table(needle, case_sensitive = false);
     num_tasks_left = 0;
+    in_progress = false;
 }
 
 free_task :: (task: *Search_Task) {
@@ -312,6 +312,7 @@ Search_Request :: struct {
     completed_tasks: [..] *Search_Task;
     needle: string;
     skip_table: [256] s32;
+    in_progress: bool;
 }
 
 // A task received by a worker thread

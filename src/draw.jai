@@ -7,22 +7,6 @@ draw_frame :: () {
     // Check whether we need to deactivate elements before drawing
     if !mouse.left.is_down || mouse.left.just_released then ui.active = .none;
 
-    // maybe_animate_finder();
-
-    editors_area := screen;
-    
-    // finder_area: Rect;
-    // finder_splitter_id := get_ui_id_from_loc(parent_id = .finder);
-    // // Maybe drag splitter
-    // if ui.active == finder_splitter_id then finder_set_openness((mouse.pointer.x - screen.x) / screen.w);
-    // if finder_is_open() {
-    //     finder_split := screen.w * finder.openness;
-    //     finder_area, editors_area = cut_left(screen, finder_split, margin = 2);
-    //     splitter_rect := make_rect(editors_area.x - 2, finder_area.y, 2, finder_area.h);
-    //     draw_finder(finder_area, .finder);
-    //     draw_splitter(splitter_rect, finder_split, finder_splitter_id);
-    // }
-
     footer_height := font_ui_line_height * 1.6;
 
     // Draw editors
@@ -32,11 +16,11 @@ draw_frame :: () {
             // TODO: draw a shortcut cheat-sheet?
         case .Single;
             editors_snap_splitter(0.5);
-            draw_editor(editor_active, editors_area, footer_height, .editor_single);
+            draw_editor(editor_active, screen, footer_height, .editor_single);
         case .Double;
             // Drag splitter
             if ui.active == .editor_splitter {
-                editors_snap_splitter((mouse.pointer.x - editors_area.x) / editors_area.w);
+                editors_snap_splitter((mouse.pointer.x - screen.x) / screen.w);
                 editor_expanded = false;
             }
             if !values_are_close(splitter_pos, splitter_anim.target) {
@@ -50,11 +34,11 @@ draw_frame :: () {
                 if editor_active == editor_right && !values_are_close(splitter_anim.target, 0.1) then editors_start_moving_splitter(0.1);
             }
 
-            split_x := editors_area.w * splitter_pos;
-            left_rect, right_rect := cut_left(editors_area, split_x, margin = 2);
+            split_x := screen.w * splitter_pos;
+            left_rect, right_rect := cut_left(screen, split_x, margin = 2);
 
-            draw_editor(editor_left,  left_rect,  footer_height, .editor_left,  editors_area);
-            draw_editor(editor_right, right_rect, footer_height, .editor_right, editors_area);
+            draw_editor(editor_left,  left_rect,  footer_height, .editor_left,  screen);
+            draw_editor(editor_right, right_rect, footer_height, .editor_right, screen);
 
             splitter_rect := make_rect(left_rect.x + left_rect.w, left_rect.y + footer_height, 2, left_rect.h - footer_height);
             draw_splitter(splitter_rect, split_x, .editor_splitter);

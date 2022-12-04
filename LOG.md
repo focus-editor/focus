@@ -44,7 +44,9 @@
         + Display something
         + Create a search request and only replace results when collected data from all threads
         + Make sure the results are sorted by project folder
+        + Request redraw when there's an active search request
         - Display code lines
+        - Don't overlap text
         - Highlight matches
         - Color the code
         - Move the cursor and open the results
