@@ -89,27 +89,8 @@ get_offset :: (using buffer: Buffer, pos: Pos) -> s64 {
 }
 
 offset_to_pos :: (using buffer: Buffer, offset: s64) -> Pos {
-    assert(!dirty, "buffer is dirty, can't calculate pos from offset");
-    assert(offset <= lines[lines.count - 1].end, "offset exceeds buffer size, can't calculate pos");
-
     pos: Pos = ---;
-
-    left  := 0;
-    right := lines.count - 1;
-
-    if offset >= lines[right].start {
-        pos.line = xx right;
-    } else {
-        while (right - left) > 1 {
-            middle := left + (right - left) / 2;
-            if offset < lines[middle].start {
-                right = middle;
-            } else {
-                left = middle;
-            }
-        }
-        pos.line = xx left;
-    }
+    pos.line = offset_to_line(buffer, offset);
 
     // Find col by scanning the line
     pos.col = 0;
@@ -120,6 +101,32 @@ offset_to_pos :: (using buffer: Buffer, offset: s64) -> Pos {
     }
 
     return pos;
+}
+
+offset_to_line :: (using buffer: Buffer, offset: s64) -> s32 {
+    assert(!dirty, "buffer is dirty, can't calculate pos from offset");
+    assert(offset <= lines[lines.count - 1].end, "offset exceeds buffer size, can't calculate pos");
+
+    line_num := 0;
+
+    left  := 0;
+    right := lines.count - 1;
+
+    if offset >= lines[right].start {
+        line_num = right;
+    } else {
+        while (right - left) > 1 {
+            middle := left + (right - left) / 2;
+            if offset < lines[middle].start {
+                right = middle;
+            } else {
+                left = middle;
+            }
+        }
+        line_num = left;
+    }
+    
+    return cast(s32) line_num;
 }
 
 make_valid_range :: (buffer: Buffer, range: Range) -> Range {

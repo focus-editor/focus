@@ -244,7 +244,7 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
             result := *results[num_results];
             result.buffer_id = buffer_id;
             result.match_offset = xx offset;
-            result.sort_key = (buffer.project_dir_index << 56) | (cast(u32) buffer_id << 32) | (cast(u32) offset);
+            result.sort_key = (cast(u64) buffer.project_dir_index) << 56 | (cast(u64) buffer_id) << 32 | cast(u64) offset;
             num_results += 1;
             if num_results >= MAX_RESULTS_PER_WORKER break buffer_id;
             

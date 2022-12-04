@@ -881,7 +881,7 @@ draw_new_finder :: () {
     _pad: Rect = ---;  // allow some space at the bottom so that we don't cover up the rounded corners with the cursor
     _pad, files_rect = cut_bottom(files_rect, padding);
 
-    // Draw files
+    // Draw search results
     {
         // Remember how many fits per page
         per_page = cast(s64) (files_rect.h / entry_height);
@@ -936,8 +936,12 @@ draw_new_finder :: () {
 
         entry_rect := cut_top(files_rect, entry_height);
 
+        line_num_col_width := char_size * 6;
         line_num_x := files_rect.x + files_rect.w / 4;
-        text_x     := line_num_x + char_size * 10;
+        text_x     := line_num_x + line_num_col_width + 2 * char_size;
+            
+        filename_scissor := cut_left(files_rect, line_num_x - entry_rect.x - char_size);
+        if !is_valid(filename_scissor) then filename_scissor = entry_rect;
 
         for entry, i : visible_entries {
             entry_index := visible_start + i;
@@ -958,6 +962,9 @@ draw_new_finder :: () {
             width: float;
             
             buffer := *open_buffers[entry.buffer_id];
+            line_num := offset_to_line(buffer, entry.match_offset);
+            
+            push_scissor(filename_scissor);
 
             // Draw file icon
             icon_char := convert_utf32_to_utf8(xx buffer.file.icon);
@@ -978,12 +985,17 @@ draw_new_finder :: () {
             width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
             Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
             
-            // Line number
-            Simp.draw_text(font_ui_small, xx line_num_x, xx pen.y, "56142", color = Colors.CODE_COMMENT);
+            pop_scissor();
             
-            // Draw text !!!!!!!!!!!!!
-            Simp.draw_text(font_ui, xx text_x, xx pen.y, tprint("buffer number %, offset %", entry.buffer_id, entry.match_offset), color = Colors.UI_DEFAULT);
-            // Simp.draw_text(font_ui, xx text_x, xx pen.y, "Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);", color = Colors.UI_DEFAULT);
+            // Line number
+            width = xx Simp.prepare_text(font_ui_small, tprint("%", line_num + 1));
+            Simp.draw_prepared_text(font_ui_small, xx (line_num_x + line_num_col_width - width), xx pen.y, color = Colors.CODE_COMMENT);
+            
+            // !!! draw sort key in hex
+            Simp.draw_text(font_ui, xx text_x, xx pen.y, tprint("buffer number %, offset %, sort_key %", entry.buffer_id, entry.match_offset, formatInt(entry.sort_key, base = 16, minimum_digits = 16)), color = Colors.UI_DEFAULT);
+            
+            // Draw code line
+            // Simp.draw_text(font_ui, xx text_x, xx pen.y, tprint("buffer number %, offset %", entry.buffer_id, entry.match_offset), color = Colors.UI_DEFAULT);
         }
 
         // Deselect any previously clicked entry
