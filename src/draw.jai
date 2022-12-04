@@ -993,7 +993,11 @@ draw_new_finder :: () {
             Simp.draw_prepared_text(font_ui_small, xx (line_num_x + line_num_col_width - width), xx pen.y, color = Colors.CODE_COMMENT);
             
             // Draw code line
-            Simp.draw_text(font, xx text_x, xx pen.y, to_string(array_view(buffer.bytes, buffer_line.text_start, buffer_line.end - buffer_line.text_start)), color = Colors.UI_DEFAULT);
+            code_line: [1] Simp.Code_Range;  // one line
+            code_line[0].start = buffer_line.text_start;
+            code_line[0].end   = buffer_line.end;
+            if buffer.needs_coloring then recalculate_colors(buffer);  // right before drawing
+            Simp.draw_code(font, xx text_x, xx pen.y, char_size, line_height, code_line, buffer.bytes, buffer.colors, CODE_COLOR_MAP);
         }
 
         // Deselect any previously clicked entry

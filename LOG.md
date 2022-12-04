@@ -47,8 +47,8 @@
         + Request redraw when there's an active search request
         + Don't overlap text
         + Display code lines
+        + Color the code
         - Highlight matches
-        - Color the code
         - Cut lines so that the match is on the screen
         - Move the cursor and open the results
     - Have an extra input for filtering by file path    
