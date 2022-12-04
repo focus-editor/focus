@@ -963,6 +963,7 @@ draw_new_finder :: () {
             
             buffer := *open_buffers[entry.buffer_id];
             line_num := offset_to_line(buffer, entry.match_offset);
+            buffer_line := buffer.lines[line_num];
             
             push_scissor(filename_scissor);
 
@@ -991,11 +992,8 @@ draw_new_finder :: () {
             width = xx Simp.prepare_text(font_ui_small, tprint("%", line_num + 1));
             Simp.draw_prepared_text(font_ui_small, xx (line_num_x + line_num_col_width - width), xx pen.y, color = Colors.CODE_COMMENT);
             
-            // !!! draw sort key in hex
-            Simp.draw_text(font_ui, xx text_x, xx pen.y, tprint("buffer number %, offset %, sort_key %", entry.buffer_id, entry.match_offset, formatInt(entry.sort_key, base = 16, minimum_digits = 16)), color = Colors.UI_DEFAULT);
-            
             // Draw code line
-            // Simp.draw_text(font_ui, xx text_x, xx pen.y, tprint("buffer number %, offset %", entry.buffer_id, entry.match_offset), color = Colors.UI_DEFAULT);
+            Simp.draw_text(font, xx text_x, xx pen.y, to_string(array_view(buffer.bytes, buffer_line.text_start, buffer_line.end - buffer_line.text_start)), color = Colors.UI_DEFAULT);
         }
 
         // Deselect any previously clicked entry

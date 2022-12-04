@@ -46,14 +46,16 @@
         + Make sure the results are sorted by project folder
         + Request redraw when there's an active search request
         + Don't overlap text
-        - Display code lines
+        + Display code lines
         - Highlight matches
         - Color the code
+        - Cut lines so that the match is on the screen
         - Move the cursor and open the results
     - Have an extra input for filtering by file path    
     - Case insensitive search
     - Consider having a shortcut to add more context to each search result
     - While the initial scan is still in progress, display something that says so when the widget opens
+    - Add a magnifying glass icon to the label
     - Hold any buffer refreshes while there's an active search request?
     - Don't search in deleted buffers
 
