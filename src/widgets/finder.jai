@@ -115,6 +115,8 @@ finder_update :: () {
             }
             quick_sort(results, compare_search_results);
             
+            needle = copy_string(request.needle);
+            
             compare_search_results :: (r1: Search_Result, r2: Search_Result) -> s64 {
                 if r1.sort_key < r2.sort_key return -1;
                 if r1.sort_key > r2.sort_key return  1;
@@ -124,6 +126,10 @@ finder_update :: () {
             // Clean up task data
             for request.completed_tasks free_task(it);
             array_reset_keeping_memory(*request.completed_tasks);
+            
+            scroll_y = 0;
+            scroll_anim.target = 0;
+            selected = 0;
             request.in_progress = false;
         }
     }
@@ -193,6 +199,9 @@ start_new_search :: (force := false) {
         needle = "";
         reset_search_request(*request, new_needle = "");
         array_reset_keeping_memory(*results);
+        scroll_y = 0;
+        scroll_anim.target = 0;
+        selected = 0;
         return;
     }
     if request.needle == to_string(input.text) && !force return;  // needle hasn't changed, no need to repeat

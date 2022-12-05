@@ -934,12 +934,13 @@ draw_new_finder :: () {
         visible_count := cast(s64) (files_rect.h / entry_height) + 2;
         visible_entries := array_view(results, visible_start, visible_count);
 
-        entry_rect := cut_top(files_rect, entry_height);
-
         line_num_col_width := char_size * 6;
         line_num_x := files_rect.x + files_rect.w / 4;
         text_x     := line_num_x + line_num_col_width + 2 * char_size;
+        
+        max_code_chars := cast(s32)((files_rect.x + files_rect.w - text_x) / char_size) - 1;  // NOTE: counts tab as one char
             
+        entry_rect := cut_top(files_rect, entry_height);
         filename_scissor := cut_left(files_rect, line_num_x - entry_rect.x - char_size);
         if !is_valid(filename_scissor) then filename_scissor = entry_rect;
 
@@ -961,43 +962,72 @@ draw_new_finder :: () {
             );
             width: float;
             
+            // Not sure if it's cheaper to do this for the visible results only, but every frame,
+            // or do it once when searching, but for every resuls (and bloat the search result size).
+            // Chose the first option at least for now.
             buffer := *open_buffers[entry.buffer_id];
             line_num := offset_to_line(buffer, entry.match_offset);
             buffer_line := buffer.lines[line_num];
             
-            push_scissor(filename_scissor);
-
-            // Draw file icon
-            icon_char := convert_utf32_to_utf8(xx buffer.file.icon);
-            Simp.draw_text(font_icons, xx pen.x, xx pen.y, to_string(*icon_char), color = Colors.UI_DEFAULT);
-
-            // Draw name
-            pen.x += xx font_icons.em_width + padding;
-            width += xx Simp.prepare_text(font_ui, buffer.file.name);
-            Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = Colors.UI_DEFAULT);
-
-            // Draw separator
-            pen.x += width + padding;
-            width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
-            Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
-
-            // Draw file path
-            pen.x += width + padding;
-            width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
-            Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
-            
-            pop_scissor();
+            // Draw file info
+            {
+                push_scissor(filename_scissor);
+                defer pop_scissor();
+    
+                // Draw file icon
+                icon_char := convert_utf32_to_utf8(xx buffer.file.icon);
+                Simp.draw_text(font_icons, xx pen.x, xx pen.y, to_string(*icon_char), color = Colors.UI_DEFAULT);
+    
+                // Draw name
+                pen.x += xx font_icons.em_width + padding;
+                width += xx Simp.prepare_text(font_ui, buffer.file.name);
+                Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = Colors.UI_DEFAULT);
+    
+                // Draw separator
+                pen.x += width + padding;
+                width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
+                Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+    
+                // Draw file path
+                pen.x += width + padding;
+                width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
+                Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+            }
             
             // Line number
             width = xx Simp.prepare_text(font_ui_small, tprint("%", line_num + 1));
             Simp.draw_prepared_text(font_ui_small, xx (line_num_x + line_num_col_width - width), xx pen.y, color = Colors.CODE_COMMENT);
             
             // Draw code line
-            code_line: [1] Simp.Code_Range;  // one line
-            code_line[0].start = buffer_line.text_start;
-            code_line[0].end   = buffer_line.end;
-            if buffer.needs_coloring then recalculate_colors(buffer);  // right before drawing
-            Simp.draw_code(font, xx text_x, xx pen.y, char_size, line_height, code_line, buffer.bytes, buffer.colors, CODE_COLOR_MAP);
+            {
+                // Figure out whether we need to cut the line so that the match is shown
+                start := buffer_line.text_start;
+                end   := buffer_line.end;
+                match_start := entry.match_offset;
+                match_end   := min(entry.match_offset + finder.needle.count, buffer_line.end);  // if we have a multi-line match, we will still show only the first line
+                chars_until_match_start := get_num_chars(array_view(buffer.bytes, start, match_start - start));
+                chars_until_match_end   := get_num_chars(array_view(buffer.bytes, start, match_end   - start));
+                
+                pen.x = text_x;
+                
+                // Draw highlight
+                highlight_rect := entry_rect;
+                highlight_rect.x = pen.x + char_size * chars_until_match_start;
+                highlight_rect.w = char_size * (chars_until_match_end - chars_until_match_start);
+                draw_rect(shrink_y(highlight_rect, padding), Colors.SEARCH_RESULT_INACTIVE);
+                
+                code_line: [1] Simp.Code_Range;  // one line
+                code_line[0].start = start;
+                code_line[0].end   = end;
+                if buffer.needs_coloring then recalculate_colors(buffer);  // right before drawing
+                
+                if start != buffer_line.text_start {
+                    // Line was cut on the left, draw an ellipsis
+                    Simp.draw_text(font, xx pen.x, xx pen.y, "…", color = Colors.CODE_COMMENT);
+                    pen.x += char_size;
+                }
+                Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, code_line, buffer.bytes, buffer.colors, CODE_COLOR_MAP);
+            }
         }
 
         // Deselect any previously clicked entry

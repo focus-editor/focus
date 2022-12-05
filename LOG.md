@@ -48,8 +48,12 @@
         + Don't overlap text
         + Display code lines
         + Color the code
-        - Highlight matches
+        + Highlight matches
         - Cut lines so that the match is on the screen
+            + Figure out how many characters can fit into the code section
+            + If cut on the left, add an ellipsis
+            - Count how many characters are until the match starts and ends (or a newline is encountered)
+            - If the match can fit, maybe cut on the left, but leave as many characters as possible on the left
         - Move the cursor and open the results
     - Have an extra input for filtering by file path    
     - Case insensitive search
@@ -57,7 +61,9 @@
     - While the initial scan is still in progress, display something that says so when the widget opens
     - Add a magnifying glass icon to the label
     - Hold any buffer refreshes while there's an active search request?
+    - If any buffer is modified, remember that so that finder can search again when it opens next time. Try to preserve scroll_y and selected (search request is a good place)
     - Don't search in deleted buffers
+    - Toggle enlarge
 
 - Start lines and columns from 1
 - When the file dialog or finder are open, slightly highlight the pane where files would open should the user click or hit enter
