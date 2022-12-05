@@ -17,7 +17,7 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
             before_prev := last_tokens[0];
             if prev.type == .identifier {
                 memset(colors.data + prev.start, xx Simp.Code_Color.FUNCTION, prev.len);
-            } else if prev.type == .punctuation && prev.punctuation == .double_colon && before_prev.type == .identifier {
+            } else if prev.type == .operation && prev.operation == .double_colon && before_prev.type == .identifier {
                 memset(colors.data + before_prev.start, xx Simp.Code_Color.FUNCTION, before_prev.len);
             }
         }
@@ -69,7 +69,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "@";  parse_note              (tokenizer, *token);
 
         case #char ";";  token.type = .punctuation; token.punctuation = .semicolon; t += 1;
-        case #char ",";  token.type = .punctuation; token.punctuation = .colon;     t += 1;
+        case #char ",";  token.type = .punctuation; token.punctuation = .comma;     t += 1;
         case #char ".";  token.type = .punctuation; token.punctuation = .period;    t += 1;
         case #char "{";  token.type = .punctuation; token.punctuation = .l_brace;   t += 1;
         case #char "}";  token.type = .punctuation; token.punctuation = .l_brace;   t += 1;
@@ -77,9 +77,10 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char ")";  token.type = .punctuation; token.punctuation = .r_paren;   t += 1;
         case #char "[";  token.type = .punctuation; token.punctuation = .l_bracket; t += 1;
         case #char "]";  token.type = .punctuation; token.punctuation = .r_bracket; t += 1;
-        case #char "~";  token.type = .punctuation; token.punctuation = .tilde;     t += 1;
-        case #char "`";  token.type = .punctuation; token.punctuation = .backtick;  t += 1;
         case #char "$";  token.type = .punctuation; token.punctuation = .dollar;    t += 1;
+        
+        case #char "~";  token.type = .operation;   token.operation   = .tilde;     t += 1;
+        case #char "`";  token.type = .operation;   token.operation   = .backtick;  t += 1;
 
         case;            token.type = .invalid; t += 1;
     }
@@ -161,51 +162,51 @@ parse_compiler_directive :: (using tokenizer: *Tokenizer, token: *Token) {
 }
 
 parse_colon :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .punctuation;
-    token.punctuation = .colon;
+    token.type = .operation;
+    token.operation = .colon;
 
     t += 1;
     if t >= max_t return;
 
     if << t == {
-        case #char ":";  token.punctuation = .double_colon;  t += 1;
-        case #char "=";  token.punctuation = .colon_equal;   t += 1;
+        case #char ":";  token.operation = .double_colon;  t += 1;
+        case #char "=";  token.operation = .colon_equal;   t += 1;
     }
 }
 
 parse_equal :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .punctuation;
-    token.punctuation = .equal;
+    token.type = .operation;
+    token.operation = .equal;
 
     t += 1;
     if t >= max_t return;
 
     if << t == {
-        case #char "=";  token.punctuation = .equal_equal; t += 1;
+        case #char "=";  token.operation = .equal_equal; t += 1;
     }
 }
 
 parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .punctuation;
-    token.punctuation = .minus;
+    token.type = .operation;
+    token.operation = .minus;
 
     t += 1;
     if t >= max_t return;
 
     if << t == {
         case #char "=";
-            token.punctuation = .minus_equal;
+            token.operation = .minus_equal;
             t += 1;
         case #char ">";
-            token.punctuation = .arrow;
+            token.operation = .arrow;
             t += 1;
         case #char "-";
             t += 1;
             if t < max_t && << t == #char "-" {
-                token.punctuation = .triple_dash;
+                token.operation = .triple_dash;
                 t += 1;
             } else {
-                token.punctuation = .unknown;  // -- is not a valid token
+                token.operation = .unknown;  // -- is not a valid token
             }
         case;
             if is_digit(<< t) parse_number(tokenizer, token);
@@ -213,57 +214,57 @@ parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
 }
 
 parse_plus :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .punctuation;
-    token.punctuation = .plus;
+    token.type = .operation;
+    token.operation = .plus;
 
     t += 1;
     if t >= max_t return;
 
     if << t == {
         case #char "=";
-            token.punctuation = .plus_equal;
+            token.operation = .plus_equal;
             t += 1;
     }
 }
 
 parse_asterisk :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .punctuation;
-    token.punctuation = .asterisk;
+    token.type = .operation;
+    token.operation = .asterisk;
 
     t += 1;
     if t >= max_t return;
 
     if << t == {
         case #char "=";
-            token.punctuation = .asterisk_equal;
+            token.operation = .asterisk_equal;
             t += 1;
     }
 }
 
 parse_bang :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .punctuation;
-    token.punctuation = .bang;
+    token.type = .operation;
+    token.operation = .bang;
 
     t += 1;
     if t >= max_t return;
 
     if << t == {
         case #char "=";
-            token.punctuation = .bang_equal;
+            token.operation = .bang_equal;
             t += 1;
     }
 }
 
 parse_percent :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .punctuation;
-    token.punctuation = .percent;
+    token.type = .operation;
+    token.operation = .percent;
 
     t += 1;
     if t >= max_t return;
 
     if << t == {
         case #char "=";
-            token.punctuation = .percent_equal;
+            token.operation = .percent_equal;
             t += 1;
     }
 }
@@ -278,80 +279,80 @@ parse_note :: (using tokenizer: *Tokenizer, token: *Token) {
 }
 
 parse_ampersand :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .punctuation;
-    token.punctuation = .ampersand;
+    token.type = .operation;
+    token.operation = .ampersand;
 
     t += 1;
     if t >= max_t return;
 
     if << t == {
         case #char "=";
-            token.punctuation = .ampersand_equal;
+            token.operation = .ampersand_equal;
             t += 1;
         case #char "&";
-            token.punctuation = .double_ampersand;
+            token.operation = .double_ampersand;
             t += 1;
     }
 }
 
 parse_pipe :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .punctuation;
-    token.punctuation = .pipe;
+    token.type = .operation;
+    token.operation = .pipe;
 
     t += 1;
     if t >= max_t return;
 
     if << t == {
         case #char "=";
-            token.punctuation = .pipe_equal;
+            token.operation = .pipe_equal;
             t += 1;
         case #char "|";
-            token.punctuation = .double_pipe;
+            token.operation = .double_pipe;
             t += 1;
     }
 }
 
 parse_less_than :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .punctuation;
-    token.punctuation = .less_than;
+    token.type = .operation;
+    token.operation = .less_than;
 
     t += 1;
     if t >= max_t return;
 
     if << t == {
         case #char "=";
-            token.punctuation = .less_than_equal;
+            token.operation = .less_than_equal;
             t += 1;
         case #char "<";
-            token.punctuation = .double_less_than;
+            token.operation = .double_less_than;
             t += 1;
     }
 }
 
 parse_greater_than :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .punctuation;
-    token.punctuation = .greater_than;
+    token.type = .operation;
+    token.operation = .greater_than;
 
     t += 1;
     if t >= max_t return;
 
     if << t == {
         case #char "=";
-            token.punctuation = .greater_than_equal;
+            token.operation = .greater_than_equal;
             t += 1;
     }
 }
 
 parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .punctuation;
-    token.punctuation = .slash;
+    token.type = .operation;
+    token.operation = .slash;
 
     t += 1;
     if t >= max_t return;
 
     if << t == {
         case #char "=";
-            token.punctuation = .slash_equal;
+            token.operation = .slash_equal;
             t += 1;
         case #char "/";
             token.type = .comment;
@@ -405,6 +406,7 @@ Token :: struct {
     union {
         keyword:            Keyword;
         punctuation:        Punctuation;
+        operation:          Operation;
         compiler_directive: Compiler_Directive;
     }
 
@@ -417,6 +419,7 @@ Token :: struct {
         number;
         comment;
         multiline_comment;
+        operation;
         punctuation;
         modifier_keyword;
         keyword;
@@ -436,6 +439,7 @@ COLOR_MAP :: Simp.Code_Color.[
     .VALUE,         // number
     .COMMENT,       // comment
     .COMMENT,       // multiline_comment
+    .KEYWORD,       // operation
     .PUNCTUATION,   // punctuation
     .KEYWORD,       // keyword
     .KEYWORD,       // modifier_keyword
@@ -446,11 +450,15 @@ COLOR_MAP :: Simp.Code_Color.[
 ];
 
 PUNCTUATION :: string.[
-    "arrow", "bang", "backtick", "pipe", "double_pipe", "dollar", "pipe_equal", "equal", "equal_equal", "bang_equal", 
-    "semicolon", "percent", "percent_equal", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", 
-    "period", "less_than", "double_less_than", "less_than_equal", "greater_than", "greater_than_equal", "plus", "plus_equal",
+    "dollar", "semicolon", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", 
+    "period", "comma", "note",
+];
+
+OPERATIONS :: string.[
+    "arrow", "bang", "backtick", "pipe", "double_pipe", "pipe_equal", "equal", "equal_equal", "bang_equal", 
+    "percent", "percent_equal", "less_than", "double_less_than", "less_than_equal", "greater_than", "greater_than_equal", 
     "minus", "minus_equal", "triple_dash", "asterisk", "asterisk_equal", "colon", "colon_equal", "double_colon", "slash",
-    "slash_equal", "comma", "ampersand", "double_ampersand", "ampersand_equal", "tilde", "unknown", "note",
+    "plus", "plus_equal", "slash_equal", "ampersand", "double_ampersand", "ampersand_equal", "tilde", "unknown",
 ];
 
 KEYWORDS :: string.[
@@ -502,6 +510,7 @@ MODIFIERS :: string.[
     }
 
     define_enum(*b, "Punctuation",        "",           .[PUNCTUATION]);
+    define_enum(*b, "Operation",          "",           .[OPERATIONS]);
     define_enum(*b, "Keyword",            "kw_",        .[KEYWORDS, TYPE_KEYWORDS, VALUE_KEYWORDS]);
     define_enum(*b, "Compiler_Directive", "directive_", .[COMPILER_DIRECTIVES]);
 

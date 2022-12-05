@@ -155,5 +155,3 @@ Open_File_Dialog :: struct {
         per_page: s64 = 10;
     }
 }
-
-BULLET_CHAR :: #run to_string(*convert_utf32_to_utf8(0x2022));
