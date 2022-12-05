@@ -83,20 +83,20 @@ main :: () {
                             case .F4;
                                 if event.alt_pressed should_quit = true;
 
-                            // case #char "+";
-                            //     if event.ctrl_pressed {
-                            //         font_size += 1;
-                            //         font_ui_size += 1;
-                            //         font_icons_size += 1;
-                            //         init_fonts();
-                            //     }
-                            // case #char "-";
-                            //     if event.ctrl_pressed {
-                            //         font_size -= 1;
-                            //         font_ui_size -= 1;
-                            //         font_icons_size -= 1;
-                            //         init_fonts();
-                            //     }
+                            case #char "+";
+                                if event.ctrl_pressed {
+                                    font_size += 1;
+                                    font_ui_size += 1;
+                                    font_icons_size += 1;
+                                    init_fonts();
+                                }
+                            case #char "-";
+                                if event.ctrl_pressed {
+                                    font_size -= 1;
+                                    font_ui_size -= 1;
+                                    font_icons_size -= 1;
+                                    init_fonts();
+                                }
                         }
                     }
             }
