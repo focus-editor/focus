@@ -18,7 +18,7 @@ Colors :: struct {
     BACKGROUND_BRIGHT       :: Color.{ r = 0.131, g = 0.202, b = 0.25 };
     SELECTION_ACTIVE        :: Color.{ r = 0.11, g = 0.267, b = 0.29 };
     SELECTION_INACTIVE      :: Color.{ r = 0.11, g = 0.267, b = 0.29, a = 0.5 };
-    SELECTION_HIGHLIGHT     :: Color.{ r = 0.11, g = 0.267, b = 0.29, a = 0.4 };
+    SELECTION_HIGHLIGHT     :: Color.{ r = 0.99, g = 0.93, b = 0.99, a = 0.15 };
     SEARCH_RESULT_ACTIVE    :: Color.{ r = 0.559, g = 0.469, b = 0.184 };
     SEARCH_RESULT_INACTIVE  :: Color.{ r = 0.99, g = 0.93, b = 0.99, a = 0.15 };
     SCROLLBAR               :: Color.{ r = 0.131, g = 0.202, b = 0.25, a = 0.3 };
@@ -45,9 +45,10 @@ Colors :: struct {
     CODE_DEFAULT        :: Color.{ r = 0.75, g = 0.79, b = 0.86, a = 1.0 };
     CODE_COMMENT        :: Color.{ r = 0.533, g = 0.569, b = 0.616, a = 1.0 };
     CODE_TYPE           :: Color.{ r = 0.51, g = 0.67, b = 0.64, a = 1.0 };
-    CODE_FUNCTION       :: Color.{ r = 0.67, g = 0.74, b = 0.49, a = 1.0 };
+    CODE_FUNCTION       :: Color.{ r = 0.816, g = 0.776, b = 0.663, a = 1.0 };
     CODE_PUNCTUATION    :: Color.{ r = 0.75, g = 0.79, b = 0.86, a = 1.0 };
-    CODE_STRING         :: Color.{ r = 0.85, g = 0.77, b = 0.55, a = 1.0 };
+    CODE_OPERATION      :: Color.{ r = 0.88, g = 0.68, b = 0.51, a = 1.0 };
+    CODE_STRING         :: Color.{ r = 0.835, g = 0.74, b = 0.494, a = 1.0 };
     CODE_VALUE          :: Color.{ r = 0.84, g = 0.60, b = 0.71, a = 1.0 };
     CODE_HIGHLIGHT      :: Color.{ r = 0.85, g = 0.61, b = 0.46, a = 1.0 };
     CODE_ERROR          :: Color.{ r = 1.00, g = 0.00, b = 0.00, a = 1.0 };
@@ -69,6 +70,7 @@ CODE_COLOR_MAP :: #run -> [] Vector4 {
     result[VALUE_KEYWORD]   = Colors.CODE_VALUE;
     result[ERROR]           = Colors.CODE_ERROR;
     result[KEYWORD]         = Colors.CODE_KEYWORD;
+    result[OPERATION]       = Colors.CODE_OPERATION;
 
     return result;
 }

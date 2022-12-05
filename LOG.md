@@ -107,8 +107,6 @@
   and will jerk briefly, which is annoying
     - Ideally we need a way to glue viewport to a line, so that if it shifts then we shift the viewport too
 
-- Remember open editors and show prev/next editor configuration with Ctrl+U / Ctrl+Shift_
-
 - Detect tab symbols and draw them differently
 - Don't redraw if mouse move is outside the window
 - Add a warning on large texts (maybe semi-transparent)

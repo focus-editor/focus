@@ -439,7 +439,7 @@ COLOR_MAP :: Simp.Code_Color.[
     .VALUE,         // number
     .COMMENT,       // comment
     .COMMENT,       // multiline_comment
-    .KEYWORD,       // operation
+    .OPERATION,     // operation
     .PUNCTUATION,   // punctuation
     .KEYWORD,       // keyword
     .KEYWORD,       // modifier_keyword

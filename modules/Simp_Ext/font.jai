@@ -85,6 +85,7 @@ Code_Color :: enum u8 {
     PUNCTUATION;
     STRING;
     ERROR;
+    OPERATION;
 
     NUM_COLORS;
 }
