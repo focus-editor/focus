@@ -801,15 +801,28 @@ draw_finder :: () {
             
             // Draw code line
             {
-                // Figure out whether we need to cut the line so that the match is shown
-                start := buffer_line.text_start;
-                end   := buffer_line.end;
                 match_start := entry.match_offset;
                 match_end   := min(entry.match_offset + finder.needle.count, buffer_line.end);  // if we have a multi-line match, we will still show only the first line
-                chars_until_match_start := get_num_chars(array_view(buffer.bytes, start, match_start - start));
-                chars_until_match_end   := get_num_chars(array_view(buffer.bytes, start, match_end   - start));
+                line_start  := ifx buffer_line.text_start <= match_start then buffer_line.text_start else buffer_line.start;
+                chars_until_match_start := get_num_chars(array_view(buffer.bytes, line_start, match_start - line_start));
+                chars_until_match_end   := get_num_chars(array_view(buffer.bytes, line_start, match_end   - line_start));
+                
+                // Figure out whether we need to cut the line so that the match is shown
+                start := line_start;
+                end   := buffer_line.end;
                 
                 pen.x = text_x;
+                
+                if start != line_start {
+                    // Line was cut on the left, draw an ellipsis
+                    Simp.draw_text(font, xx pen.x, xx pen.y, "…", color = Colors.CODE_COMMENT);
+                    pen.x += char_size;
+                }
+                
+                code_line: [1] Simp.Code_Range;  // one line
+                code_line[0].start = start;
+                code_line[0].end   = end;
+                if buffer.needs_coloring then recalculate_colors(buffer);  // right before drawing
                 
                 // Draw highlight
                 highlight_rect := entry_rect;
@@ -817,16 +830,6 @@ draw_finder :: () {
                 highlight_rect.w = char_size * (chars_until_match_end - chars_until_match_start);
                 draw_rect(shrink_y(highlight_rect, padding), Colors.SEARCH_RESULT_INACTIVE);
                 
-                code_line: [1] Simp.Code_Range;  // one line
-                code_line[0].start = start;
-                code_line[0].end   = end;
-                if buffer.needs_coloring then recalculate_colors(buffer);  // right before drawing
-                
-                if start != buffer_line.text_start {
-                    // Line was cut on the left, draw an ellipsis
-                    Simp.draw_text(font, xx pen.x, xx pen.y, "…", color = Colors.CODE_COMMENT);
-                    pen.x += char_size;
-                }
                 Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, code_line, buffer.bytes, buffer.colors, CODE_COLOR_MAP);
             }
         }

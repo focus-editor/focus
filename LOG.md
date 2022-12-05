@@ -28,7 +28,7 @@
 
 - Finder improvements:
     + While the initial scan is still in progress, display something that says so when the widget opens
-    - Fix the crash when searching by whitespace
+    + Fix the crash when searching by whitespace
     - Add a magnifying glass icon to the label
     - Cut lines so that the match is on the screen
         + Figure out how many characters can fit into the code section
