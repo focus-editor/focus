@@ -18,9 +18,9 @@ Colors :: struct {
     BACKGROUND_BRIGHT       :: Color.{ r = 0.131, g = 0.202, b = 0.25 };
     SELECTION_ACTIVE        :: Color.{ r = 0.11, g = 0.267, b = 0.29 };
     SELECTION_INACTIVE      :: Color.{ r = 0.11, g = 0.267, b = 0.29, a = 0.5 };
-    SELECTION_HIGHLIGHT     :: Color.{ r = 0.8, g = 0.6, b = 0.8, a = 0.1 };
+    SELECTION_HIGHLIGHT     :: Color.{ r = 0.11, g = 0.267, b = 0.29, a = 0.4 };
     SEARCH_RESULT_ACTIVE    :: Color.{ r = 0.559, g = 0.469, b = 0.184 };
-    SEARCH_RESULT_INACTIVE  :: Color.{ r = 0.322, g = 0.302, b = 0.173 };
+    SEARCH_RESULT_INACTIVE  :: Color.{ r = 0.99, g = 0.93, b = 0.99, a = 0.15 };
     SCROLLBAR               :: Color.{ r = 0.131, g = 0.202, b = 0.25, a = 0.3 };
     SCROLLBAR_HOVER         :: Color.{ r = 0.20, g = 0.80, b = 0.80, a = 0.3 };
     SCROLLBAR_BACKGROUND    :: Color.{ r = 0.065, g = 0.101, b = 0.125, a = 0.3 };

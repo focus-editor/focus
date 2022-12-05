@@ -26,40 +26,15 @@
     - Show in the program title when it's running in debug mode
     - Jump to line on Ctrl+G
 
-- Rewrite finder to search in all in-memory project files:
-    + At the start of the program start a thread which will scan all files and open buffers for them 
-    + Before starting, open whatever editors there are from the previous session, so that it opens fast
-    + Make sure there are no synchronisation conflicts:
-        + The thread doing the initial scan should create all buffers in a separate array and have a separate hash table?
-        + When the work is finished, the main thread should merge the arrays in an efficient way
-    + Start a file watcher which will keep looking for new or modified files
-    + [reported a bug] Release all file handles for the files we scanned (at least with no active editors)
-    + Use the synchronous file api for now
-    + Refresh modified buffer if needed
-    + Rescan dir as required by the watcher
-    + Make sure that when we save a file, the watcher knows about that (or maybe it's ok if it treats it as an external save?)
-    + Make the open file dialog work from the open buffers
-    + Create an example widget with search results
-    - Search and display results:
-        + Display something
-        + Create a search request and only replace results when collected data from all threads
-        + Make sure the results are sorted by project folder
-        + Request redraw when there's an active search request
-        + Don't overlap text
-        + Display code lines
-        + Color the code
-        + Highlight matches
-        - Cut lines so that the match is on the screen
-            + Figure out how many characters can fit into the code section
-            + If cut on the left, add an ellipsis
-            - Count how many characters are until the match starts and ends (or a newline is encountered)
-            - If the match can fit, maybe cut on the left, but leave as many characters as possible on the left
-        - Move the cursor and open the results
-    - Have an extra input for filtering by file path    
-    - Case insensitive search
-    - Consider having a shortcut to add more context to each search result
-    - While the initial scan is still in progress, display something that says so when the widget opens
+- Finder improvements:
+    + While the initial scan is still in progress, display something that says so when the widget opens
     - Add a magnifying glass icon to the label
+    - Cut lines so that the match is on the screen
+        + Figure out how many characters can fit into the code section
+        + If cut on the left, add an ellipsis
+        - If the match can fit, maybe cut on the left, but leave as many characters as possible on the left
+    - Have an extra input for filtering by file path
+    - Case insensitive search
     - Hold any buffer refreshes while there's an active search request?
     - If any buffer is modified, remember that so that finder can search again when it opens next time. Try to preserve scroll_y and selected (search request is a good place)
     - Don't search in deleted buffers
@@ -204,6 +179,31 @@ configured procedures during a press event, calling one if the modifiers/key mat
 you can use the default shortcuts and maybe report the error in a dialog box, presuming this was user-error after manually editing the config.
 
 # DONE
++ Rewrite finder to search in all in-memory project files:
+    + At the start of the program start a thread which will scan all files and open buffers for them 
+    + Before starting, open whatever editors there are from the previous session, so that it opens fast
+    + Make sure there are no synchronisation conflicts:
+        + The thread doing the initial scan should create all buffers in a separate array and have a separate hash table?
+        + When the work is finished, the main thread should merge the arrays in an efficient way
+    + Start a file watcher which will keep looking for new or modified files
+    + [reported a bug] Release all file handles for the files we scanned (at least with no active editors)
+    + Use the synchronous file api for now
+    + Refresh modified buffer if needed
+    + Rescan dir as required by the watcher
+    + Make sure that when we save a file, the watcher knows about that (or maybe it's ok if it treats it as an external save?)
+    + Make the open file dialog work from the open buffers
+    + Create an example widget with search results
+    + Search and display results:
+        + Display something
+        + Create a search request and only replace results when collected data from all threads
+        + Make sure the results are sorted by project folder
+        + Request redraw when there's an active search request
+        + Don't overlap text
+        + Display code lines
+        + Color the code
+        + Highlight matches
+        + Move the cursor 
+        + Open the results
 + Maybe sleep at least a little bit, don't render too many frames
 + Finder improvements
     + Use a thread to search to avoid blocking

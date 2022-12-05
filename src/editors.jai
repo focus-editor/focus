@@ -449,6 +449,10 @@ editors_open_file :: (path: string, on_the_side := false) {
     full_path := get_absolute_path(path);
     buffer_id := find_or_create_buffer(full_path);
 
+    editors_open_buffer(buffer_id, on_the_side);
+}
+
+editors_open_buffer :: (buffer_id: s64, on_the_side := false) {
     if #complete editors_layout == {
         case .None;
             editor_active = find_or_create_editor(buffer_id);

@@ -42,11 +42,21 @@ finder_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
     if key_code == {
         // case #char "L";    if only_ctrl_shift_pressed(mods) toggle_enlarged();
         case .ENTER;       finder_open_selected_result(on_the_side = only_ctrl_pressed(mods));
-        // case .ARROW_UP;    move_cursor_up  (jump_by_file = only_ctrl_pressed(mods));
-        // case .ARROW_DOWN;  move_cursor_down(jump_by_file = only_ctrl_pressed(mods));
-        // case .PAGE_UP;     move_cursor_up  (jump_by_file = true);
-        // case .PAGE_DOWN;   move_cursor_down(jump_by_file = true);
-        // case .TAB;         if only_shift_pressed(mods) then move_cursor_up(); else move_cursor_down();
+        
+        case .ARROW_DOWN; #through;
+        case .ARROW_UP;
+            move_by := ifx only_ctrl_pressed(mods) then 5 else 1;
+            selected += ifx key_code == .ARROW_UP then -move_by else move_by;
+            if selected < 0 then selected = max(0, results.count - 1);
+            if selected >= results.count then selected = 0;
+            scroll_to_cursor = true;
+
+        case .PAGE_UP; #through;
+        case .PAGE_DOWN;
+            selected += ifx key_code == .PAGE_UP then -per_page else per_page;
+            if selected < 0 then selected = 0;
+            if selected >= results.count then selected = results.count - 1;
+            scroll_to_cursor = true;
     }
     
     start_new_search();
@@ -82,6 +92,8 @@ finder_open_from_editor :: () {
         if selected_text && cursor.sel.line == cursor.pos.line {
             array_resize(*finder.input.text, selected_text.count);
             memcpy(finder.input.text.data, selected_text.data, selected_text.count);
+            reset_results();
+            start_new_search(force = true);
         }
     }
     
@@ -137,54 +149,32 @@ finder_update :: () {
     if request.in_progress then redraw_requested = true;
 }
 
-finder_open_selected_result :: (on_the_side := false) {
+finder_open_selected_result :: (selected_num := -1, on_the_side := false) {
     using finder;
-    // if search_in_progress return;
-    // 
-    // result := last_search.results[cursor.result];
-    // needle := last_search.needle;
-    // 
-    // active_global_widget = .editors;
-    // shrink_if_enlarged();
-    // 
-    // old_layout := editors_layout;    
-    // editors_open_file(result.file.full_path, on_the_side = on_the_side);
+    if request.in_progress return;
+    if selected_num >= 0 then selected = selected_num;
+    if selected >= results.count return;
+    
+    active_global_widget = .editors;
+    
+    result := results[selected];
+    
+    old_layout := editors_layout;    
+    editors_open_buffer(result.buffer_id, on_the_side = on_the_side);
+    
+    // Select the search result
+    editor, buffer := get_active_editor_and_buffer();
+    cursor := leave_only_original_cursor(editor);
+    cursor.sel = offset_to_pos(buffer, result.match_offset);
+    cursor.pos = offset_to_pos(buffer, result.match_offset + needle.count);    
 
-    // // Select the search result
-    // editor, buffer := get_active_editor_and_buffer();
-
-    // // We search in buffer again and try to select the result we want (provided it hasn't changed).
-    // // This is because while we search the file may have CRLF line endings, buf we strip them
-    // // when we load the buffer, so if we just remember offsets they may not match, unfortunately!
-    // // The easiest thing for now is to just repeat the search.
-    // buffer_str := to_string(buffer.bytes);
-    // found := true;
-    // offset := 0;
-    // for 0 .. cursor.line {
-    //     if last_search.case_sensitive {
-    //         offset = find_index_from_left(buffer_str, needle, start_index = offset);
-    //     } else {
-    //         offset = find_index_from_left_nocase(buffer_str, needle, start_index = offset);
-    //     }
-    //     if offset < 0 {
-    //         found = false;  // probably the buffer has changed
-    //         break;
-    //     }
-    //     offset += needle.count;
-    // }
-    // if found {
-    //     cursor := leave_only_original_cursor(editor);
-    //     cursor.sel = offset_to_pos(buffer, offset - needle.count);
-    //     cursor.pos = offset_to_pos(buffer, offset);
-    // }
-
-    // editor.scroll_to_cursor = .yes;
-    // if old_layout == .Single && editors_layout == .Double {
-    //     // We've just opened a new editor, so need to let it know it's being opened,
-    //     // so that it can use the target rect width for its scroll calculations
-    //     // (otherwise it'll be too small and the scroll will not animate where expected)
-    //     editor.scroll_to_cursor = .yes_new_editor;
-    // }
+    editor.scroll_to_cursor = .yes;
+    if old_layout == .Single && editors_layout == .Double {
+        // We've just opened a new editor, so need to let it know it's being opened,
+        // so that it can use the target rect width for its scroll calculations
+        // (otherwise it'll be too small and the scroll will not animate where expected)
+        editor.scroll_to_cursor = .yes_new_editor;
+    }
 }
 
 #scope_file
@@ -195,13 +185,8 @@ start_new_search :: (force := false) {
     if !initted return;
         
     if !input.text {
-        if needle then free(needle);
-        needle = "";
         reset_search_request(*request, new_needle = "");
-        array_reset_keeping_memory(*results);
-        scroll_y = 0;
-        scroll_anim.target = 0;
-        selected = 0;
+        reset_results();
         return;
     }
     if request.needle == to_string(input.text) && !force return;  // needle hasn't changed, no need to repeat
@@ -273,6 +258,16 @@ reset_search_request :: (using request: *Search_Request, new_needle: string) {
     skip_table = inline bmh_prepare_skip_table(needle, case_sensitive = false);
     num_tasks_left = 0;
     in_progress = false;
+}
+
+reset_results :: () {
+    using finder;
+    if needle then free(needle);
+    needle = "";
+    array_reset_keeping_memory(*results);
+    scroll_y = 0;
+    scroll_anim.target = 0;
+    selected = 0;
 }
 
 free_task :: (task: *Search_Task) {
