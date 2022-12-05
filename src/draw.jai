@@ -533,7 +533,8 @@ draw_open_file_dialog :: () {
     input_rect, files_rect := cut_top(box_rect, input_rect_height);
     input_rect = shrink(input_rect, margin);
     input_id := get_ui_id_from_loc(parent_id = ui_id);
-    draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = "Type to filter");
+    label := ifx finder.initted then "Type to filter" else "Still indexing project files. Please wait...";
+    draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = label);
     _pad: Rect = ---;  // allow some space at the bottom so that we don't cover up the rounded corners with the cursor
     _pad, files_rect = cut_bottom(files_rect, padding);
 

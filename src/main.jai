@@ -24,7 +24,7 @@ main :: () {
     init_workspace();
 
     // TODO: load files from the previous session here
-    editors_open_file("src/editors.jai", true);
+    editors_open_file("README.md", true);
 
     should_quit := false;
 
