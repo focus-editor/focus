@@ -42,6 +42,7 @@
     - Don't search in deleted buffers
     - Toggle enlarge
     - Highlight modified buffers
+    
 
 - Start lines and columns from 1
 - When the file dialog or finder are open, slightly highlight the pane where files would open should the user click or hit enter
@@ -180,6 +181,7 @@ configured procedures during a press event, calling one if the modifiers/key mat
 you can use the default shortcuts and maybe report the error in a dialog box, presuming this was user-error after manually editing the config.
 
 # DONE
++ File watcher: make sure a rescan doesn't include binary files
 + Rewrite finder to search in all in-memory project files:
     + At the start of the program start a thread which will scan all files and open buffers for them 
     + Before starting, open whatever editors there are from the previous session, so that it opens fast

@@ -70,16 +70,29 @@ should_ignore_file :: (file: *File_Visit_Info) -> bool {
     }
     if file.is_symlink return true;
     
+    // Allow known text file extensions since they are the most common
     for allowed_ext : workspace.allow_file_extensions {
-        // Allow known text file extensions since they are the most common
-        if ends_with_nocase(file.short_name, allowed_ext) break;
-        
-        // Then check for common known binary file extensions
-        for workspace.ignore_file_extensions {
-            if ends_with_nocase(file.short_name, it) return true;  // TODO: do a wildcard match
-        }
+        if ends_with_nocase(file.short_name, allowed_ext) return false;
     }
     
+    // Then check for common known binary file extensions
+    for workspace.ignore_file_extensions {
+        if ends_with_nocase(file.short_name, it) return true;  // TODO: do a wildcard match
+    }
+    
+    // Check for zeroes in the file - if there are any, it's not a well-formed text file.
+    // Sorry non-binary files, there are only 2 digits, please don't cancel me.
+    // There's a small chance that a binary file will have no zeroes, but it's the easiest
+    // thing to check, so that's what we're doing.
+    file_data, success := read_entire_file(file.full_name);
+    if !success return true;
+    has_zeroes := find_index_from_left(file_data, byte = 0) >= 0;
+    free(file_data);
+    if has_zeroes return true;  // ignore
+    
+    // In this case the file will be read again, but it's OK because:
+    // 1. It should happen rarely
+    // 2. The file will be in the filesystem cache
     return false;
 }
 
@@ -90,8 +103,12 @@ initial_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) 
     
     visitor_func :: (file: *File_Visit_Info, userdata: *void) {
         if should_ignore_file(file) return;    
+        
         file_data, success := read_entire_file(file.full_name);
-        if success create_buffer_for_file(file.full_name, file_data);
+        if !success return; 
+        
+        buffer := array_add(*scanned_buffers);    
+        fill_in_buffer_from_file_data(buffer, file.full_name, file_data);
     }
     
     /* -
@@ -163,19 +180,6 @@ initial_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) 
     */
     
     return .CONTINUE;
-}
-
-create_buffer_for_file :: (path: string, file_data: string) {
-    if find_index_from_left(file_data, byte = 0) >= 0 {
-        // if a file has zeroes it's definitely not a well-formed text file
-        free(file_data);
-        return;
-    }
-    
-    // lock(*buffer_mutex);
-    buffer := array_add(*scanned_buffers);    
-    fill_in_buffer_from_file_data(buffer, path, file_data);
-    // unlock(*buffer_mutex);
 }
 
 merge_scanned_buffers_into_open_buffers :: () {

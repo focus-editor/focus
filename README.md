@@ -4,7 +4,9 @@
 
 - Ctrl + P - open file (if you hold Ctrl when opening a file it will open on the side)
 - Ctrl + W - close current file
+- Ctrl + Shift + W - close other file (when 2 files are open side-by-side)
 - Ctrl + Alt + left(right) switch to the left/right editor
+- Ctrl + Shift + L - enlarge/shrink the current editor (in the side-by-side layout)
 - Ctrl + arrow keys - move cursor by word/paragraph
 - Ctrl + Enter - insert a new line belowwithout breaking
 - Ctrl + Shift + Enter - insert a new line abovewithout breaking
