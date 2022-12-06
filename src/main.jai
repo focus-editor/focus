@@ -6,7 +6,8 @@ main :: () {
     defer profiler_end_session();
 
     window_x, window_y := platform_get_biggest_monitor_pos();
-    window = create_window(window_width, window_height, "Focus", window_x, window_y, background_color_rgb = as_3_floats(Colors.BACKGROUND));
+    window_title := ifx DEBUG then "Focus (debug mode)" else "Focus";
+    window = create_window(window_width, window_height, window_title, window_x, window_y, background_color_rgb = as_3_floats(Colors.BACKGROUND));
     platform_maximize_window(window);
 
     window_width, window_height = Simp.get_render_dimensions(window);
@@ -360,10 +361,12 @@ Project_Dir :: struct {
 #import "Window_Creation";
 #import "Profiler"(ENABLE_PROFILER = false);
 #import "Thread";
+#import "Compiler";
 
 Simp :: #import "Simp_Ext";
 Input :: #import "Input";
 
+DEBUG :: #run get_build_options().optimization_level != .RELEASE;
 
 #scope_file
 

@@ -1,6 +1,7 @@
 # TODO
 
 - Before I ship:
+    + Show in the program title when it's running in debug mode
     - Tokenizer parses everything correctly
     - Finish text input fixes
     - Support tabs (just draw them, not even necessarily wide, just draw in some way - but wide would be best)
@@ -23,18 +24,17 @@
     - Have the option to not strip trailing whitespace (in the config?) Or can do ctrl+s as a main way to save, ctr+shift+s as an alternative way
     - Adjust cursors in joint editors properly
     - "disable_that_annoying_paste_effect = true"
-    - Show in the program title when it's running in debug mode
     - Jump to line on Ctrl+G
 
 - Finder improvements:
     + While the initial scan is still in progress, display something that says so when the widget opens
     + Fix the crash when searching by whitespace
-    - Add a magnifying glass icon to the label
     - Cut lines so that the match is on the screen
         + Figure out how many characters can fit into the code section
         + If cut on the left, add an ellipsis
         - If the match can fit, maybe cut on the left, but leave as many characters as possible on the left
         - Always cut the invisible part on the right off
+    - When jumping to file, make sure the positions are still valid
     - Have an extra input for filtering by file path
     - Case insensitive search
     - Hold any buffer refreshes while there's an active search request?
