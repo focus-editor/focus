@@ -164,9 +164,11 @@ finder_open_selected_result :: (selected_num := -1, on_the_side := false) {
     
     // Select the search result
     editor, buffer := get_active_editor_and_buffer();
+    match_start := min(result.match_offset,                xx buffer.bytes.count);  // buffer could've changed, so offset may not be valid any more
+    match_end   := min(result.match_offset + needle.count, xx buffer.bytes.count);
     cursor := leave_only_original_cursor(editor);
-    cursor.sel = offset_to_pos(buffer, result.match_offset);
-    cursor.pos = offset_to_pos(buffer, result.match_offset + needle.count);    
+    cursor.sel = offset_to_pos(buffer, match_start);
+    cursor.pos = offset_to_pos(buffer, match_end);
 
     editor.scroll_to_cursor = .yes;
     if old_layout == .Single && editors_layout == .Double {

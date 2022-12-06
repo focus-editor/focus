@@ -768,7 +768,7 @@ draw_finder :: () {
             // or do it once when searching, but for every resuls (and bloat the search result size).
             // Chose the first option at least for now.
             buffer := *open_buffers[entry.buffer_id];
-            line_num := offset_to_line(buffer, entry.match_offset);
+            line_num := offset_to_line(buffer, min(entry.match_offset, xx buffer.bytes.count));
             buffer_line := buffer.lines[line_num];
             
             // Draw file info

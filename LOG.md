@@ -29,12 +29,12 @@
 - Finder improvements:
     + While the initial scan is still in progress, display something that says so when the widget opens
     + Fix the crash when searching by whitespace
+    + When jumping to file, make sure the positions are still valid
     - Cut lines so that the match is on the screen
         + Figure out how many characters can fit into the code section
         + If cut on the left, add an ellipsis
         - If the match can fit, maybe cut on the left, but leave as many characters as possible on the left
         - Always cut the invisible part on the right off
-    - When jumping to file, make sure the positions are still valid
     - Have an extra input for filtering by file path
     - Case insensitive search
     - Hold any buffer refreshes while there's an active search request?
@@ -42,7 +42,7 @@
     - Don't search in deleted buffers
     - Toggle enlarge
     - Highlight modified buffers
-    
+    - Understand why memory usage sometimes jumps to 1Gb
 
 - Start lines and columns from 1
 - When the file dialog or finder are open, slightly highlight the pane where files would open should the user click or hit enter
