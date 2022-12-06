@@ -808,26 +808,39 @@ draw_finder :: () {
                 chars_until_match_start := get_num_chars(array_view(buffer.bytes, line_start, match_start - line_start));
                 chars_until_match_end   := get_num_chars(array_view(buffer.bytes, line_start, match_end   - line_start));
                 
-                // Figure out whether we need to cut the line so that the match is shown
-                start := line_start;
-                end   := buffer_line.end;
+                // Figure out whether we need to cut the line so that the match is visible
+                char_offset := 0;
+                byte_offset := 0;
+                pad_chars := 2;
+                if chars_until_match_end > max_code_chars {
+                    if (chars_until_match_end - chars_until_match_start) >= max_code_chars {
+                        // The match won't fit on the screen anyway - stick it to the left
+                        char_offset = xx max(0, chars_until_match_start - pad_chars);
+                    } else {
+                        // Stick the match to the right
+                        char_offset = chars_until_match_end - xx (max_code_chars - pad_chars);
+                    }
+                }
+                if char_offset > 0 {
+                    line_str := to_string(array_view(buffer.bytes, line_start, buffer_line.end));
+                    byte_offset = slice_chars(line_str, 0, xx char_offset).count;
+                }
                 
                 pen.x = text_x;
-                
-                if start != line_start {
+                if char_offset > 0 {
                     // Line was cut on the left, draw an ellipsis
                     Simp.draw_text(font, xx pen.x, xx pen.y, "…", color = Colors.CODE_COMMENT);
                     pen.x += char_size;
                 }
                 
                 code_line: [1] Simp.Code_Range;  // one line
-                code_line[0].start = start;
-                code_line[0].end   = end;
+                code_line[0].start = line_start + xx byte_offset;
+                code_line[0].end   = min(buffer_line.end, line_start + xx byte_offset + 4 * max_code_chars);  // max 4 bytes per char
                 if buffer.needs_coloring then recalculate_colors(buffer);  // right before drawing
                 
                 // Draw highlight
                 highlight_rect := entry_rect;
-                highlight_rect.x = pen.x + char_size * chars_until_match_start;
+                highlight_rect.x = pen.x + char_size * (chars_until_match_start - char_offset);
                 highlight_rect.w = char_size * (chars_until_match_end - chars_until_match_start);
                 draw_rect(shrink_y(highlight_rect, padding), Colors.SEARCH_RESULT_INACTIVE);
                 

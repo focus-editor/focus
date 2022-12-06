@@ -8,8 +8,8 @@
 - Ctrl + Alt + left(right) switch to the left/right editor
 - Ctrl + Shift + L - enlarge/shrink the current editor (in the side-by-side layout)
 - Ctrl + arrow keys - move cursor by word/paragraph
-- Ctrl + Enter - insert a new line belowwithout breaking
-- Ctrl + Shift + Enter - insert a new line abovewithout breaking
+- Ctrl + Enter - insert a new line below without breaking
+- Ctrl + Shift + Enter - insert a new line above without breaking
 - Ctrl + D - select word
 - Ctrl + D repeatedly - make a new cursor for the next occurrence
 - Ctrl + L - select line
