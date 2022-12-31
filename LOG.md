@@ -36,11 +36,11 @@
         + If cut on the left, add an ellipsis
         + If the match can fit, maybe cut on the left, but leave as many characters as possible on the left
         + Always cut the invisible part on the right off
+    - Don't search in deleted buffers
     - Have an extra input for filtering by file path
     - Case insensitive search
     - Hold any buffer refreshes while there's an active search request?
     - If any buffer is modified, remember that so that finder can search again when it opens next time. Try to preserve scroll_y and selected (search request is a good place)
-    - Don't search in deleted buffers
     - Toggle enlarge
     - Highlight modified buffers
     - Understand why memory usage sometimes jumps to 1Gb
@@ -50,7 +50,6 @@
     - Try moving a file around - it doesn't get marked as deleted
     - Buffers are added when you try to open a file which doesn't exist but we have a buffer for them
     
-- Start lines and columns from 1
 - When the file dialog or finder are open, slightly highlight the pane where files would open should the user click or hit enter
 - When pressing shift+delete, the selection is not removed    
 - When switching to a different pane which has a search bar open, don't focus the search bar
@@ -187,6 +186,7 @@ configured procedures during a press event, calling one if the modifiers/key mat
 you can use the default shortcuts and maybe report the error in a dialog box, presuming this was user-error after manually editing the config.
 
 # DONE
++ Start lines and columns from 1
 + File watcher: make sure a rescan doesn't include binary files
 + Rewrite finder to search in all in-memory project files:
     + At the start of the program start a thread which will scan all files and open buffers for them 

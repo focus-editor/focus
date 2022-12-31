@@ -482,7 +482,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             defer pop_scissor();
 
             cursor := cursors[main_cursor];
-            width = xx Simp.prepare_text(font_ui_bold, tprint("Line: %  Col: %", cursor.pos.line, cursor.pos.col));
+            width = xx Simp.prepare_text(font_ui_bold, tprint("Line: %  Col: %", cursor.pos.line + 1, cursor.pos.col + 1));
             line_col_start_x := footer_rect.x + footer_rect.w - width;
             Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = Colors.CODE_COMMENT);
 
