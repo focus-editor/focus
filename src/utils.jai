@@ -145,8 +145,10 @@ find_index_from_left_whole_word :: (s: string, substring: string, start_index :=
         if t == substring {
             // Check the char on the right
             right := slice(s, i + substring.count, 4);
-            next_char, success := utf8_next_character(*right);
-            if success == .CONVERSION_OK && is_word_char(next_char) continue;  // not a whole word
+            if right {
+                next_char, success := utf8_next_character(*right);
+                if success == .CONVERSION_OK && is_word_char(next_char) continue;  // not a whole word
+            }
 
             // Check the char on the left
             for j : max(i-2, start_index) .. i-1  {

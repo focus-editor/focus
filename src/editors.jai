@@ -334,6 +334,7 @@ editors_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
         buffer.needs_coloring = true;
         buffer.modified = true;
         buffer.last_edit_time = frame_time;
+        finder.need_to_refresh_results = true;
 
         array_reset_keeping_memory(*editor.highlights);
 
@@ -436,6 +437,8 @@ editors_handle_text_input :: (char: u32) {
     buffer.modified = true;
     buffer.needs_coloring = true;
     buffer.last_edit_time = frame_time;
+    
+    finder.need_to_refresh_results = true;
 }
 
 get_active_editor_and_buffer :: () -> *Editor, *Buffer {

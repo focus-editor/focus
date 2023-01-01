@@ -101,6 +101,16 @@ finder_open_from_editor :: () {
 finder_update :: () {
     using finder;
     
+    if need_to_refresh_results {
+        // A buffer has been modified
+        need_to_refresh_results = false;
+        
+        if results {
+            reset_results();
+            start_new_search(force = true);
+        }
+    }
+    
     tasks := get_completed_work(*thread_group);
     for tasks {
         task := cast(*Search_Task) it;
@@ -291,6 +301,9 @@ Finder :: struct {
     scroll_y: s32;
     scroll_anim: Tween_Animation(s32);
     scroll_to_cursor: bool;
+    
+    need_to_refresh_results: bool;  // when a buffer is modified and we have some search results, we have to search again,
+                                    // otherwise the search results may point to an offset which no longer exists or is invalid
 }
 
 #scope_file

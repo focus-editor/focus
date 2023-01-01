@@ -423,10 +423,13 @@ refresh_buffer_from_disk :: (path: string) {
     
     if !file_exists(path) {
         buffer.deleted = true;
+        finder.need_to_refresh_results = true;
         return;
     }
     
     if !buffer_file_has_changed_on_disk(buffer) return;
+    
+    finder.need_to_refresh_results = true;
     
     // Buffer has changed on disk
     assert(path == buffer.file.full_path);
@@ -474,6 +477,7 @@ maybe_mark_buffer_as_deleted :: (path: string) {
     
     buffer := *open_buffers[buffer_id];
     buffer.deleted = true;    
+    finder.need_to_refresh_results = true;
 }
 
 deinit :: (using buffer: *Buffer) {
