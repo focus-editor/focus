@@ -27,6 +27,8 @@
     - Jump to line on Ctrl+G
     - Log errors into focus-log.txt, focus-log1.txt, ... in release mode
 
+- Fix the font unknown character glyph (try copying something from font-awesome)
+
 - Finder improvements:
     + While the initial scan is still in progress, display something that says so when the widget opens
     + Fix the crash when searching by whitespace
@@ -36,6 +38,7 @@
         + If cut on the left, add an ellipsis
         + If the match can fit, maybe cut on the left, but leave as many characters as possible on the left
         + Always cut the invisible part on the right off
+    + Understand why memory usage sometimes jumps to 1Gb
     - Don't search in deleted buffers
     - Have an extra input for filtering by file path
     - Case insensitive search
@@ -43,7 +46,6 @@
     - If any buffer is modified, remember that so that finder can search again when it opens next time. Try to preserve scroll_y and selected (search request is a good place)
     - Toggle enlarge
     - Highlight modified buffers
-    - Understand why memory usage sometimes jumps to 1Gb
 
 - Improve buffer opening logic:
     - (To help with debugging should output buffer id in the open file dialog)
@@ -52,12 +54,12 @@
     
 - When the file dialog or finder are open, slightly highlight the pane where files would open should the user click or hit enter
 - When pressing shift+delete, the selection is not removed    
-- When switching to a different pane which has a search bar open, don't focus the search bar
 - Fix the whole word matching when creating new cursors (underscore seems to be considered not a word char, but inconsistently)
 - Don't show deleted buffers in the open file dialog, unless there's an editor already open for them
     
 - Strip trailing whitespace on save    
 - Ctrl + [ and Ctrl + ] to indent lines
+    - Need to refactor the input system first
 - Ctrl + Home/End to jump to beginning/end of the file
     
 - Save editor state on editor operations:
@@ -65,6 +67,7 @@
     - Alt + plus to open next state
     
 - Save modified buffers to temporary files and recover after crashes
+    - Save undo/redo history in temporary files
 
 - Text Input:
     - Select by mouse
@@ -142,7 +145,6 @@
 - Get rid of the window top bar
 - Subpixel rendering: support other types of panels (lookup ft2-lcd_rendering)
   (not useful for the editor, but may be useful for games)
-- Fix the font unknown character glyph (try copying something from font-awesome)
 - Support "Open file in" in the context menu on Windows?
 
 # FEEDBACK

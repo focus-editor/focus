@@ -39,16 +39,28 @@ maybe_update_workspace_buffers :: () {
     
     files_changed := process_changes(*file_watcher);
     if files_changed {
-        if watcher_file_modified.count > 0 {
+        if watcher_file_modified.count > 0 && !should_ignore_file(watcher_file_modified) {
             refresh_buffer_from_disk(path = watcher_file_modified);
         }
         // @Speed: it should be ok to rescan everything recursively, because
-        // most of the files usually will already be loaded and they won't refresh if unchanged
+        // most of the files will already be loaded and they won't refresh if unchanged
         for dirs_to_rescan visit_files(it, recursive = true, null, visitor_func, visit_directories = true);
     }
     
     visitor_func :: (file: *File_Visit_Info, userdata: *void) {
-        if should_ignore_file(file) return;
+        if file.is_directory {
+            for workspace.ignore_dirs {
+                if equal_nocase(file.short_name, it) {  // TODO: do a wildcard match
+                    file.descend_into_directory = false;
+                    return;
+                }
+            }
+            return;
+        }
+        if file.is_symlink return;
+        
+        if should_ignore_file(file.full_name) return;
+        
         refresh_buffer_from_disk(path = file.full_name);
     }
     
@@ -58,33 +70,22 @@ maybe_update_workspace_buffers :: () {
 
 #scope_file
 
-should_ignore_file :: (file: *File_Visit_Info) -> bool {
-    if file.is_directory {
-        for workspace.ignore_dirs {
-            if equal_nocase(file.short_name, it) {  // TODO: do a wildcard match
-                file.descend_into_directory = false;
-                return true;
-            }
-        }
-        return true;
-    }
-    if file.is_symlink return true;
-    
+should_ignore_file :: (path: string) -> bool {    
     // Allow known text file extensions since they are the most common
     for allowed_ext : workspace.allow_file_extensions {
-        if ends_with_nocase(file.short_name, allowed_ext) return false;
+        if ends_with_nocase(path, allowed_ext) return false;
     }
     
     // Then check for common known binary file extensions
     for workspace.ignore_file_extensions {
-        if ends_with_nocase(file.short_name, it) return true;  // TODO: do a wildcard match
+        if ends_with_nocase(path, it) return true;  // TODO: do a wildcard match
     }
     
     // Check for zeroes in the file - if there are any, it's not a well-formed text file.
     // Sorry non-binary files, there are only 2 digits, please don't cancel me.
     // There's a small chance that a binary file will have no zeroes, but it's the easiest
     // thing to check, so that's what we're doing.
-    file_data, success := read_entire_file(file.full_name);
+    file_data, success := read_entire_file(path);
     if !success return true;
     has_zeroes := find_index_from_left(file_data, byte = 0) >= 0;
     free(file_data);
@@ -102,7 +103,18 @@ initial_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) 
     visit_files(dir.path, recursive = true, null, visitor_func, visit_directories = true);
     
     visitor_func :: (file: *File_Visit_Info, userdata: *void) {
-        if should_ignore_file(file) return;    
+        if file.is_directory {
+            for workspace.ignore_dirs {
+                if equal_nocase(file.short_name, it) {  // TODO: do a wildcard match
+                    file.descend_into_directory = false;
+                    return;
+                }
+            }
+            return;
+        }
+        if file.is_symlink return;
+        
+        if should_ignore_file(file.full_name) return;
         
         file_data, success := read_entire_file(file.full_name);
         if !success return; 
@@ -114,6 +126,7 @@ initial_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) 
     /* -
        commented out the async file reader code for now, because there seems to be a bug with
        the io completion ports module - it doesn't close handles when using read_entire_file etc.
+       NOTE: this has been fixed, so could uncomment and adapt this code
 
     // Visit every file in the project and maybe open a buffer for it
     Visitor_Data :: struct {
