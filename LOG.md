@@ -11,7 +11,6 @@
     - Test the exe on different machines
     - Improve cursor: change color based on scope + draw occluded letters on top
     - Remove the edited status on a timeout after last edit/undo/whatever
-    - See if memory usage can be improved
     - New open file dialog
     - Create new files
     - Notify about unsaved buffers on close
@@ -26,6 +25,7 @@
     - "disable_that_annoying_paste_effect = true"
     - Jump to line on Ctrl+G
     - Log errors into focus-log.txt, focus-log1.txt, ... in release mode
+    - See if memory usage can be improved
 
 - Finder improvements:
     + While the initial scan is still in progress, display something that says so when the widget opens
@@ -38,7 +38,7 @@
         + Always cut the invisible part on the right off
     + Understand why memory usage sometimes jumps to 1Gb
     + Don't search in deleted buffers
-    - Hold any buffer refreshes while there's an active search request?
+    + Hold any buffer refreshes while there's an active search request
     - Have an extra input for filtering by file path
     - Case insensitive search
     - If any buffer is modified, remember that so that finder can search again when it opens next time. Try to preserve scroll_y and selected (search request is a good place)

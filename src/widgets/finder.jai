@@ -219,12 +219,6 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
     using task := cast(*Search_Task) work;
     
     for buffer_id : buffer_start_index .. buffer_end_index {
-        // TODO: !!!!!
-        // Need to prevent buffers from refreshing under us. 
-        // This can happen if:
-        // 1. People are too quick to close the finder dialog and modify a buffer (if search takes this long it needs to be fixed!)
-        // 2. File watcher causes a buffer to refresh (can probably just hold off refreshes in this case)
-        
         // Search in buffer
         buffer := *open_buffers[buffer_id];
         if buffer.deleted continue;  // do not search in deleted buffers

@@ -13,9 +13,7 @@ init_workspace :: () {
     init(*scanner_thread, num_threads = 1, group_proc = initial_scan_threadproc);
     scanner_thread.name = "Project Scanner";
     scanner_thread.logging = true;
-    
-    init(*buffer_mutex);
-    
+        
     start(*scanner_thread);
     
     for * project_dirs add_work(*scanner_thread, it, it.path);
@@ -36,6 +34,9 @@ maybe_update_workspace_buffers :: () {
         }
         return;
     }
+    
+    if finder.request.in_progress return;  // don't refresh any buffers while there's an active search request (to avoid a race).
+                                           // it should finish soon enough so we can update the buffers after that
     
     files_changed := process_changes(*file_watcher);
     if files_changed {
@@ -335,8 +336,6 @@ watcher_file_modified: string;  // will contain the path of a file if if was mod
                                 // otherwise it won't be used and a scan will be done instead
 
 scanner_thread: Thread_Group;
-
-buffer_mutex: Mutex;
 
 scanned_buffers: [..] Buffer;
 initial_scan_complete := false;
