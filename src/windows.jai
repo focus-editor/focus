@@ -57,7 +57,7 @@ Monitor :: struct {
 
 monitors : [..] Monitor;
 
-user32 :: #foreign_system_library "user32";
+user32 :: #system_library "user32";
 
 WaitMessage :: () -> s32 #foreign user32;
 GetDpiForWindow :: (hWnd: HWND) -> u32 #foreign user32;

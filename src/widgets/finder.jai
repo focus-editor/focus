@@ -58,8 +58,6 @@ finder_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
             if selected >= results.count then selected = results.count - 1;
             scroll_to_cursor = true;
     }
-    
-    start_new_search();
 }
 
 finder_handle_text_input :: (char: u32) {
