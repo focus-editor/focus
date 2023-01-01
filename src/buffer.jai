@@ -418,9 +418,14 @@ refresh_buffer_from_disk :: (path: string) {
     if created return;
     
     print("--- buffer exists, refreshing...\n");
-        
+            
     buffer := *open_buffers[buffer_id];
-    _a := buffer.has_file;  // workaround for the compiler bug
+    
+    if !file_exists(path) {
+        buffer.deleted = true;
+        return;
+    }
+    
     if !buffer_file_has_changed_on_disk(buffer) return;
     
     // Buffer has changed on disk
@@ -460,6 +465,15 @@ refresh_buffer_from_disk :: (path: string) {
             for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
         }
     }
+}
+
+maybe_mark_buffer_as_deleted :: (path: string) {
+    buffer_id, found_buffer := table_find(*buffers_table, path);
+    if !found_buffer return;  // no buffer for this path
+    if file_exists(path) return;  // no need to mark as deleted
+    
+    buffer := *open_buffers[buffer_id];
+    buffer.deleted = true;    
 }
 
 deinit :: (using buffer: *Buffer) {

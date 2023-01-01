@@ -37,10 +37,10 @@
         + If the match can fit, maybe cut on the left, but leave as many characters as possible on the left
         + Always cut the invisible part on the right off
     + Understand why memory usage sometimes jumps to 1Gb
-    - Don't search in deleted buffers
+    + Don't search in deleted buffers
+    - Hold any buffer refreshes while there's an active search request?
     - Have an extra input for filtering by file path
     - Case insensitive search
-    - Hold any buffer refreshes while there's an active search request?
     - If any buffer is modified, remember that so that finder can search again when it opens next time. Try to preserve scroll_y and selected (search request is a good place)
     - Toggle enlarge
     - Highlight modified buffers

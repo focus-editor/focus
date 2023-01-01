@@ -311,6 +311,8 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
     // if change.events & .REMOVED       then buffer_maybe_deleted_on_disk(change.full_path);
     // if change.events & .SCAN_CHILDREN then refresh_buffers_in_directory(change.full_path);
     print("%\n", <<change);
+    
+    if change.events & .REMOVED then maybe_mark_buffer_as_deleted(change.full_path);
 }
 
 Workspace :: struct {

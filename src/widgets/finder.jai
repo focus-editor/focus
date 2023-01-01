@@ -227,6 +227,7 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
         
         // Search in buffer
         buffer := *open_buffers[buffer_id];
+        if buffer.deleted continue;  // do not search in deleted buffers
         contents := to_string(buffer.bytes);
         
         file_end := contents.data + contents.count;
