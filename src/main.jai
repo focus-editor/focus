@@ -155,7 +155,7 @@ init_fonts :: () {
     // Make a dummy call with most common chars for each font so that
     // we have all the font atlases loaded in the GPU memory once
     // (TODO: maybe there's an easy way for Simp to only update textures on flush?)
-    COMMON_CHARS :: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789… ~!@#$%^&*()-|\"':;_+={}[]\\/`,.<>?АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчщъыьэюя";
+    COMMON_CHARS :: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789… ~!@#$%^&*()-|\"':;_+={}[]\\/`,.<>?АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчщъыьэюя¶";
     Simp.prepare_text(font,          COMMON_CHARS);
     Simp.prepare_text(font_ui,       COMMON_CHARS);
     Simp.prepare_text(font_ui_bold,  COMMON_CHARS);

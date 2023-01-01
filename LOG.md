@@ -27,8 +27,6 @@
     - Jump to line on Ctrl+G
     - Log errors into focus-log.txt, focus-log1.txt, ... in release mode
 
-- Fix the font unknown character glyph (try copying something from font-awesome)
-
 - Finder improvements:
     + While the initial scan is still in progress, display something that says so when the widget opens
     + Fix the crash when searching by whitespace
@@ -51,6 +49,9 @@
     - (To help with debugging should output buffer id in the open file dialog)
     - Try moving a file around - it doesn't get marked as deleted
     - Buffers are added when you try to open a file which doesn't exist but we have a buffer for them
+    
+- Hide scrollbars unless scrolling or hovering over editor
+- Add horizontal scrollbar
     
 - When the file dialog or finder are open, slightly highlight the pane where files would open should the user click or hit enter
 - When pressing shift+delete, the selection is not removed    
@@ -188,6 +189,7 @@ configured procedures during a press event, calling one if the modifiers/key mat
 you can use the default shortcuts and maybe report the error in a dialog box, presuming this was user-error after manually editing the config.
 
 # DONE
++ Fix the font unknown character glyph (try copying something from font-awesome)
 + Start lines and columns from 1
 + File watcher: make sure a rescan doesn't include binary files
 + Rewrite finder to search in all in-memory project files:
