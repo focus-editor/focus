@@ -336,16 +336,7 @@ editors_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
         buffer.last_edit_time = frame_time;
         finder.need_to_refresh_results = true;
 
-        array_reset_keeping_memory(*editor.highlights);
-
-        if search_bar_is_open(editor) search_and_update_results(editor, buffer);
-
-        // Make sure the cursors in all editors for this buffer are in valid places
-        for *e : open_editors {
-            if e.buffer_id != editor.buffer_id continue;
-            for *cursor : e.cursors { put_cursor_in_valid_spot(cursor, buffer); }
-            if e != editor && e.cursors.count > 1 then organise_cursors(e);
-        }
+        refresh_all_editors_for_buffer(editor.buffer_id);  // will sometimes sort cursors twice (see below), but that should be ok
     }
     if cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
     if cursor_moved then array_reset_keeping_memory(*editor.highlights);
@@ -446,6 +437,19 @@ get_active_editor_and_buffer :: () -> *Editor, *Buffer {
     editor := *open_editors[editor_active];
     buffer := *open_buffers[editor.buffer_id];
     return editor, buffer;
+}
+
+refresh_all_editors_for_buffer :: (buffer_id: s64) {
+    buffer := *open_buffers[buffer_id];
+    for *e : open_editors {
+        if e.buffer_id != buffer_id continue;
+        for *cursor : e.cursors { put_cursor_in_valid_spot(cursor, buffer); }
+        if e.cursors.count > 1 then organise_cursors(e);
+        
+        // Refresh highlights and search results
+        array_reset_keeping_memory(*e.highlights);
+        if search_bar_is_open(e) search_and_update_results(e, buffer);
+    }
 }
 
 editors_open_file :: (path: string, on_the_side := false) {

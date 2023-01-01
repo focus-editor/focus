@@ -4,6 +4,8 @@ refresh_open_buffers :: () {
         if !buffer.dirty continue;
         recalculate_lines(buffer);
         for *cursor : editor.cursors {
+            // NOTE: a potential bug. In case of 2 editors for one buffer only the first editor
+            // will update its cursors here
             put_cursor_in_valid_spot(cursor, buffer);
         }
     }
@@ -468,6 +470,8 @@ refresh_buffer_from_disk :: (path: string) {
             for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
         }
     }
+    
+    refresh_all_editors_for_buffer(buffer_id);
 }
 
 maybe_mark_buffer_as_deleted :: (path: string) {
