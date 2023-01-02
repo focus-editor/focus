@@ -40,7 +40,7 @@ finder_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
     }
 
     if key_code == {
-        // case #char "L";    if only_ctrl_shift_pressed(mods) toggle_enlarged();
+        case #char "L";    if only_ctrl_shift_pressed(mods) toggle_expand();
         case .ENTER;       finder_open_selected_result(on_the_side = only_ctrl_pressed(mods));
         
         case .ARROW_DOWN; #through;
@@ -153,7 +153,7 @@ finder_update :: () {
             request.in_progress = false;
         }
     }
-    
+        
     if request.in_progress then redraw_requested = true;
 }
 
@@ -281,6 +281,16 @@ free_task :: (task: *Search_Task) {
     free(task);
 }
 
+toggle_expand :: () {
+    using finder;
+    
+    if width_percentage != WIDTH_EXPANDED {
+        start_animation(*width_anim, width_percentage, WIDTH_EXPANDED, snappy = true);
+    } else {
+        start_animation(*width_anim, width_percentage, WIDTH_NORMAL, snappy = true);
+    }
+}
+
 #scope_export
 
 finder: Finder;
@@ -301,6 +311,11 @@ Finder :: struct {
     scroll_y: s32;
     scroll_anim: Tween_Animation(s32);
     scroll_to_cursor: bool;
+    
+    width_percentage := WIDTH_NORMAL;  // how much of the screen the popup occupies
+    width_anim: Tween_Animation(float) = #run Tween_Animation(float).{ start = WIDTH_NORMAL, target = WIDTH_NORMAL, speed = 0.1 };
+    WIDTH_NORMAL   :: 0.7;
+    WIDTH_EXPANDED :: 0.95;
     
     need_to_refresh_results: bool;  // when a buffer is modified and we have some search results, we have to search again,
                                     // otherwise the search results may point to an offset which no longer exists or is invalid

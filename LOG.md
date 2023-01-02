@@ -41,9 +41,11 @@
     + Hold any buffer refreshes while there's an active search request
     + If any buffer is modified, remember that so that finder can search again when it opens next time.
     + Highlight modified buffers
-    - Toggle enlarge
+    + Enlarge finder on Ctrl+Shift+L
     - Have an extra input for filtering by file path
     - Case insensitive search
+    
+- Enlarge open file dialog
 
 - Improve buffer opening logic:
     - (To help with debugging should output buffer id in the open file dialog)
