@@ -40,7 +40,8 @@
     + Don't search in deleted buffers
     + Hold any buffer refreshes while there's an active search request
     + If any buffer is modified, remember that so that finder can search again when it opens next time.
-    - Highlight modified buffers
+    + Highlight modified buffers
+    - Toggle enlarge
     - Have an extra input for filtering by file path
     - Case insensitive search
 

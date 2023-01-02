@@ -783,15 +783,23 @@ draw_finder :: () {
             {
                 push_scissor(filename_scissor);
                 defer pop_scissor();
+                
+                name_color := ifx buffer.modified then Colors.UI_WARNING else Colors.UI_DEFAULT;
     
                 // Draw file icon
                 icon_char := convert_utf32_to_utf8(xx buffer.file.icon);
-                Simp.draw_text(font_icons, xx pen.x, xx pen.y, to_string(*icon_char), color = Colors.UI_DEFAULT);
+                Simp.draw_text(font_icons, xx pen.x, xx pen.y, to_string(*icon_char), color = name_color);
     
                 // Draw name
                 pen.x += xx font_icons.em_width + padding;
                 width += xx Simp.prepare_text(font_ui, buffer.file.name);
-                Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = Colors.UI_DEFAULT);
+                Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = name_color);
+                
+                if buffer.modified_on_disk {
+                    pen.x += width + padding;
+                    width = xx Simp.prepare_text(font_ui_bold, "[modified on disk]");
+                    Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
+                }
     
                 // Draw separator
                 pen.x += width + padding;
