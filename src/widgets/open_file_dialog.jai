@@ -4,6 +4,7 @@ open_file_dialog_handle_event :: (event: Input.Event) {
             if event.key_pressed {
                 if event.key_code == {
                     case .ESCAPE;   hide_open_file_dialog(); return;
+                    case #char "L"; if only_ctrl_shift_pressed(event.modifier_flags) { toggle_expand(); return; }
                     // case #char "F"; if only_ctrl_shift_pressed(event.modifier_flags) { if !finder_is_open() then open_finder(); else activate_finder(); return; }
                 }
                 open_file_dialog_handle_key_press(event.key_code, event.modifier_flags);
@@ -102,7 +103,7 @@ recalculate_filtered_entries :: () {
     str := to_string(input.text);
     num := 0;
     for buffer : open_buffers {
-        if !buffer.has_file continue;
+        if !buffer.has_file || buffer.deleted continue;
         if str && !contains_nocase(buffer.file.full_path, str) continue; 
         
         entry := array_add(*entries.filtered);
@@ -112,6 +113,16 @@ recalculate_filtered_entries :: () {
         
         num += 1;
         if num >= MAX_ENTRIES_TO_SHOW break;
+    }
+}
+
+toggle_expand :: () {
+    using open_file_dialog;
+    
+    if width_percentage != WIDTH_EXPANDED {
+        start_animation(*width_anim, width_percentage, WIDTH_EXPANDED, snappy = true);
+    } else {
+        start_animation(*width_anim, width_percentage, WIDTH_NORMAL, snappy = true);
     }
 }
 
@@ -152,4 +163,9 @@ Open_File_Dialog :: struct {
             MODIFIED_ON_DISK;
         }
     }
+    
+    width_percentage := WIDTH_NORMAL;  // how much of the screen the popup occupies
+    width_anim: Tween_Animation(float) = #run Tween_Animation(float).{ start = WIDTH_NORMAL, target = WIDTH_NORMAL, speed = 0.1 };
+    WIDTH_NORMAL   :: 0.4;
+    WIDTH_EXPANDED :: 0.8;
 }

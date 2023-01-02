@@ -518,7 +518,13 @@ draw_open_file_dialog :: () {
     // Figure out the dialog box size
     box_rect: Rect = ---;
     {
-        width  := clamp(screen.w / 3,   400 * dpi_scale, 1500 * dpi_scale);
+        if width_percentage != width_anim.target {
+            width_percentage = get_animation_value(width_anim);
+            redraw_requested = true;
+        }    
+        width := screen.w * width_percentage;
+        width = clamp(width, 400 * dpi_scale, 2000 * dpi_scale);
+        
         height := clamp(input_rect_height + entry_height * entries.filtered.count + padding, 0, screen.h / 1.5);
         x := (screen.w - width) / 2;
         y := clamp(100 * dpi_scale, 0, (screen.h - height) / 2);

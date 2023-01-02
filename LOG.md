@@ -44,8 +44,6 @@
     + Enlarge finder on Ctrl+Shift+L
     - Have an extra input for filtering by file path
     - Case insensitive search
-    
-- Enlarge open file dialog
 
 - Improve buffer opening logic:
     - (To help with debugging should output buffer id in the open file dialog)
@@ -191,6 +189,7 @@ configured procedures during a press event, calling one if the modifiers/key mat
 you can use the default shortcuts and maybe report the error in a dialog box, presuming this was user-error after manually editing the config.
 
 # DONE
++ Enlarge open file dialog
 + Open with focus on Windows
 + Make sure the selection is correct when a buffer is refreshed
 + Refresh local search results when a buffer is refreshed
