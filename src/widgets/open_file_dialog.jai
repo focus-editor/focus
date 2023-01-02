@@ -99,26 +99,17 @@ recalculate_filtered_entries :: () {
     array_reset(*entries.filtered);
 
     // @MEMORY SAFETY: if we ever delete buffers from open_buffers and free memory, this will have to copy everything!
-    if input.text.count == 0 {
-        // TODO: still give them scores and sort
-        num := 0;
-        for buffer : open_buffers {
-            if !buffer.has_file continue;
-            
-            array_add(*entries.filtered, buffer.file);
-            num += 1;
-            if num >= MAX_ENTRIES_TO_SHOW break;
-        }
-        return;
-    }
-
     str := to_string(input.text);
     num := 0;
     for buffer : open_buffers {
         if !buffer.has_file continue;
-        if !contains_nocase(buffer.file.full_path, str) continue; 
+        if str && !contains_nocase(buffer.file.full_path, str) continue; 
         
-        array_add(*entries.filtered, buffer.file);
+        entry := array_add(*entries.filtered);
+        entry.file = buffer.file;
+        if buffer.modified         then entry.flags |= .MODIFIED;
+        if buffer.modified_on_disk then entry.flags |= .MODIFIED_ON_DISK;
+        
         num += 1;
         if num >= MAX_ENTRIES_TO_SHOW break;
     }
@@ -143,15 +134,22 @@ Open_File_Dialog :: struct {
     scroll_to_cursor := false;
 
     input: Text_Input;
-    entries: Entries;
 
-    Entries :: struct {
-        filtered: [..] File_Info;
+    entries: struct {
+        filtered: [..] Entry;
         selected: s64;
         selected_by_mouse: s64 = -1;  // to remember which entry the left mouse button went down on
 
         scroll_y: s32;
         scroll_anim: Tween_Animation(s32);
         per_page: s64 = 10;
+    }
+    
+    Entry :: struct {
+        using file: File_Info;
+        flags: enum_flags u8 {
+            MODIFIED;
+            MODIFIED_ON_DISK;
+        }
     }
 }

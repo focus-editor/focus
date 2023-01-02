@@ -612,15 +612,23 @@ draw_open_file_dialog :: () {
                 entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
             );
             width: float;
+            
+            name_color := ifx entry.flags & .MODIFIED then Colors.UI_WARNING else Colors.UI_DEFAULT;
 
             // Draw file icon
             icon_char := convert_utf32_to_utf8(xx entry.icon);
-            Simp.draw_text(font_icons, xx pen.x, xx pen.y, to_string(*icon_char), color = Colors.UI_DEFAULT);
+            Simp.draw_text(font_icons, xx pen.x, xx pen.y, to_string(*icon_char), color = name_color);
 
             // Draw name
             pen.x += xx font_icons.em_width + padding;
             width += xx Simp.prepare_text(font_ui, entry.name);
-            Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = Colors.UI_DEFAULT);
+            Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = name_color);
+            
+            if entry.flags & .MODIFIED_ON_DISK {
+                pen.x += width + padding;
+                width = xx Simp.prepare_text(font_ui_bold, "[modified on disk]");
+                Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
+            }
 
             // // Draw separator
             // pen.x += width + padding;

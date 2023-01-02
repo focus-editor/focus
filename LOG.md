@@ -43,7 +43,6 @@
     - Highlight modified buffers
     - Have an extra input for filtering by file path
     - Case insensitive search
-    - Toggle enlarge
 
 - Improve buffer opening logic:
     - (To help with debugging should output buffer id in the open file dialog)
