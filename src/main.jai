@@ -23,9 +23,15 @@ main :: () {
 
     init_buffers();    
     init_workspace();
-
-    // TODO: load files from the previous session here
-    editors_open_file("README.md", true);
+    
+    // Maybe open file passed in the command line
+    args := get_command_line_arguments();
+    if args.count == 2 && file_exists(args[1]) {
+        editors_open_file(args[1]);
+    } else {
+        // TODO: load files from the previous session here
+        editors_open_file("README.md", true);
+    }
 
     should_quit := false;
 

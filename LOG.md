@@ -191,6 +191,7 @@ configured procedures during a press event, calling one if the modifiers/key mat
 you can use the default shortcuts and maybe report the error in a dialog box, presuming this was user-error after manually editing the config.
 
 # DONE
++ Open with focus on Windows
 + Make sure the selection is correct when a buffer is refreshed
 + Refresh local search results when a buffer is refreshed
 + Fix the font unknown character glyph (try copying something from font-awesome)
