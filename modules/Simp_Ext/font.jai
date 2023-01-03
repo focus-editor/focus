@@ -625,11 +625,13 @@ copy_glyph_to_bitmap :: (face: FT_Face, data: *Glyph_Data) {
 }
 
 find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32) -> *Glyph_Data {
+    if utf32 == #char "\t" then utf32 = #char "→";  // draw tabs as arrows
+    
     hash_key := utf32;
 
     data, success := table_find(*font.glyph_lookup, hash_key);
     if success  return data;
-
+    
     glyph_index := FT_Get_Char_Index(face, utf32);
     if !glyph_index {
         log_error("Unable to find a glyph in font '%' for utf32 character %.\n", name, utf32);

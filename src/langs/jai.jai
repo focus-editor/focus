@@ -62,6 +62,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "!";  parse_bang              (tokenizer, *token);
         case #char "#";  parse_compiler_directive(tokenizer, *token);
         case #char "\""; parse_string_literal    (tokenizer, *token);
+        case #char "\t"; parse_tab               (tokenizer, *token);
         case #char "/";  parse_slash_or_comment  (tokenizer, *token);
         case #char "&";  parse_ampersand         (tokenizer, *token);
         case #char "|";  parse_pipe              (tokenizer, *token);
@@ -343,6 +344,12 @@ parse_greater_than :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
+parse_tab :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .comment;
+    t += 1;
+    while t < max_t && << t == #char "\t" t += 1;
+}
+
 parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .slash;
@@ -564,11 +571,15 @@ MAX_DIRECTIVE_LENGTH :: #run -> s32 {
 eat_white_space :: inline (start: *u8, max_t: *u8) -> *u8 {
     t := start;
     while t < max_t {
-        is_whitespace := inline is_space(<< t);
+        is_whitespace := inline is_white_space(<< t);
         if !is_whitespace break;
         t += 1;
     }
     return t;
+}
+
+is_white_space :: (c: u8) -> bool {
+    return c == #char " " || c == #char "\r" || c == #char "\n";
 }
 
 

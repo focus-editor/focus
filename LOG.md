@@ -2,9 +2,9 @@
 
 - Before I ship:
     + Show in the program title when it's running in debug mode
+    + Support tabs (just draw them, not even necessarily wide, just draw in some way - but wide would be best)
     - Tokenizer parses everything correctly
     - Finish text input fixes
-    - Support tabs (just draw them, not even necessarily wide, just draw in some way - but wide would be best)
     - Ignore project folders which are children of another project folder?
     - Show help on F1
     - Bake fonts
@@ -29,20 +29,6 @@
     - Custom title bar (currently too much work and not very robust)
 
 - Finder improvements:
-    + While the initial scan is still in progress, display something that says so when the widget opens
-    + Fix the crash when searching by whitespace
-    + When jumping to file, make sure the positions are still valid
-    + Cut lines so that the match is on the screen
-        + Figure out how many characters can fit into the code section
-        + If cut on the left, add an ellipsis
-        + If the match can fit, maybe cut on the left, but leave as many characters as possible on the left
-        + Always cut the invisible part on the right off
-    + Understand why memory usage sometimes jumps to 1Gb
-    + Don't search in deleted buffers
-    + Hold any buffer refreshes while there's an active search request
-    + If any buffer is modified, remember that so that finder can search again when it opens next time.
-    + Highlight modified buffers
-    + Enlarge finder on Ctrl+Shift+L
     - Have an extra input for filtering by file path
     - Case-sensitive search
 
@@ -50,7 +36,6 @@
 - Add horizontal scrollbar
 
 - Fix the whole word matching when creating new cursors (underscore seems to be considered not a word char, but inconsistently)
-- Don't show deleted buffers in the open file dialog, unless there's an editor already open for them
     
 - Strip trailing whitespace on save    
 - Ctrl + [ and Ctrl + ] to indent lines
@@ -183,6 +168,21 @@ configured procedures during a press event, calling one if the modifiers/key mat
 you can use the default shortcuts and maybe report the error in a dialog box, presuming this was user-error after manually editing the config.
 
 # DONE
++ Finder improvements:
+    + While the initial scan is still in progress, display something that says so when the widget opens
+    + Fix the crash when searching by whitespace
+    + When jumping to file, make sure the positions are still valid
+    + Cut lines so that the match is on the screen
+        + Figure out how many characters can fit into the code section
+        + If cut on the left, add an ellipsis
+        + If the match can fit, maybe cut on the left, but leave as many characters as possible on the left
+        + Always cut the invisible part on the right off
+    + Understand why memory usage sometimes jumps to 1Gb
+    + Don't search in deleted buffers
+    + Hold any buffer refreshes while there's an active search request
+    + If any buffer is modified, remember that so that finder can search again when it opens next time.
+    + Highlight modified buffers
+    + Enlarge finder on Ctrl+Shift+L
 + When pressing shift+delete, the selection is not removed
 + Improve buffer opening logic:
     + (To help with debugging should output buffer id in the open file dialog)
