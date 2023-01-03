@@ -1271,6 +1271,7 @@ handle_delete :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
         range := get_selection(cursor);
         delete_range(buffer, range);
         pos = range.start;
+        sel = range.start;
     } else {
         range: Range = ---;
         range.start = pos;

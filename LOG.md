@@ -48,9 +48,7 @@
 
 - Hide scrollbars unless scrolling or hovering over editor
 - Add horizontal scrollbar
-    
-- When the file dialog or finder are open, slightly highlight the pane where files would open should the user click or hit enter
-- When pressing shift+delete, the selection is not removed    
+
 - Fix the whole word matching when creating new cursors (underscore seems to be considered not a word char, but inconsistently)
 - Don't show deleted buffers in the open file dialog, unless there's an editor already open for them
     
@@ -185,6 +183,7 @@ configured procedures during a press event, calling one if the modifiers/key mat
 you can use the default shortcuts and maybe report the error in a dialog box, presuming this was user-error after manually editing the config.
 
 # DONE
++ When pressing shift+delete, the selection is not removed
 + Improve buffer opening logic:
     + (To help with debugging should output buffer id in the open file dialog)
     + Try moving a file around - it doesn't get marked as deleted
