@@ -453,7 +453,7 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
 }
 
 editors_open_file :: (path: string, on_the_side := false) {
-    full_path := get_absolute_path(path);
+    full_path := get_absolute_path(path);  // returns temporary storage
     buffer_id := find_or_create_buffer(full_path);
 
     editors_open_buffer(buffer_id, on_the_side);

@@ -17,15 +17,16 @@
     - Try to implement "jump to symbol definition". Display a popup if more than one. Do a scan of jai files for that.
     - Horizontal scrolling
     - Figure out how to anti-alias rounded corners
-    - Custom title bar
     - Have a user error log - with an icon in the title bar to toggle it
     - Support CRLF (ugh)
     - Have the option to not strip trailing whitespace (in the config?) Or can do ctrl+s as a main way to save, ctr+shift+s as an alternative way
     - Adjust cursors in joint editors properly
+    - Highlight C/C++
     - "disable_that_annoying_paste_effect = true"
     - Jump to line on Ctrl+G
     - Log errors into focus-log.txt, focus-log1.txt, ... in release mode
     - See if memory usage can be improved
+    - Custom title bar (currently too much work and not very robust)
 
 - Finder improvements:
     + While the initial scan is still in progress, display something that says so when the widget opens
@@ -43,13 +44,8 @@
     + Highlight modified buffers
     + Enlarge finder on Ctrl+Shift+L
     - Have an extra input for filtering by file path
-    - Case insensitive search
+    - Case-sensitive search
 
-- Improve buffer opening logic:
-    - (To help with debugging should output buffer id in the open file dialog)
-    - Try moving a file around - it doesn't get marked as deleted
-    - Buffers are added when you try to open a file which doesn't exist but we have a buffer for them
-    
 - Hide scrollbars unless scrolling or hovering over editor
 - Add horizontal scrollbar
     
@@ -189,6 +185,10 @@ configured procedures during a press event, calling one if the modifiers/key mat
 you can use the default shortcuts and maybe report the error in a dialog box, presuming this was user-error after manually editing the config.
 
 # DONE
++ Improve buffer opening logic:
+    + (To help with debugging should output buffer id in the open file dialog)
+    + Try moving a file around - it doesn't get marked as deleted
+    + Buffers are added when you try to open a file which doesn't exist but we have a buffer for them
 + Enlarge open file dialog
 + Open with focus on Windows
 + Make sure the selection is correct when a buffer is refreshed

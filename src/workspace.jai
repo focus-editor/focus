@@ -202,8 +202,12 @@ merge_scanned_buffers_into_open_buffers :: () {
     // We're assuming the number of scanned buffers will be way higher than the number of open buffers, so we don't copy them
     open_buffers_copy := array_copy(open_buffers);
     open_buffers = scanned_buffers;
-    
-    // Recreate the path to id hash table
+        
+    // NOTE: as we're adding some pointers from the buffers array to the hash table, we should
+    // be very careful if we're ever going to remove buffers from the array, because the memory
+    // may become invalid
+        
+    // Recreate the path-to-id hash table
     table_reset(*buffers_table);
     for buffer, buffer_id : open_buffers {
         table_add(*buffers_table, buffer.file.full_path, buffer_id);
@@ -313,7 +317,7 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
     // if change.events & .SCAN_CHILDREN then refresh_buffers_in_directory(change.full_path);
     print("%\n", <<change);
     
-    if change.events & .REMOVED then maybe_mark_buffer_as_deleted(change.full_path);
+    if (change.events & .REMOVED) || (change.events & .MOVED_FROM) then maybe_mark_buffer_as_deleted(change.full_path);
 }
 
 Workspace :: struct {

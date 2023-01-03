@@ -399,7 +399,7 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     buffer_id, found_buffer := table_find(*buffers_table, path);
     if found_buffer return buffer_id, false;
     
-    print("Opening file\n");
+    print("Buffer not found in the table, opening file %\n", path);
 
     // Create and load file
     file_data, success := read_entire_file(path);
@@ -409,7 +409,8 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     buffer := array_add(*open_buffers);
     fill_in_buffer_from_file_data(buffer, path, file_data);
     
-    table_add(*buffers_table, path, buffer_id);
+    // It should be ok to leak some memory here when we no longer need a buffer
+    table_add(*buffers_table, copy_string(path), buffer_id);
     
     return buffer_id, true;
 }
