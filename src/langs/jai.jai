@@ -389,8 +389,14 @@ parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
 parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .string_literal;
 
+    escape_seen := false;
+    
     t += 1;
-    while t < max_t && !(<< t == #char "\"" && << (t-1) != #char "\\") && << t != #char "\n" { t += 1; }
+    while t < max_t && << t != #char "\n" {
+        if <<t == #char "\"" && !escape_seen break;
+        escape_seen = !escape_seen && <<t == #char "\\";
+        t += 1;
+    }
     if t >= max_t return;
 
     t += 1;

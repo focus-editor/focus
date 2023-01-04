@@ -168,6 +168,7 @@ configured procedures during a press event, calling one if the modifiers/key mat
 you can use the default shortcuts and maybe report the error in a dialog box, presuming this was user-error after manually editing the config.
 
 # DONE
++ Fix the parsing of "\\" in jai
 + Finder improvements:
     + While the initial scan is still in progress, display something that says so when the widget opens
     + Fix the crash when searching by whitespace
