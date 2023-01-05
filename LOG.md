@@ -57,6 +57,7 @@
     + Select words by ctrl+D
     + Select words by double-click
     + Select the whole text by triple-click
+    + Expand on ctrl+shift+L
     - Limit the number of chars in an input
     - Undo/redo (limited by whole contents + cursor pos)
     

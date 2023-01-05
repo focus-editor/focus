@@ -354,6 +354,11 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             openness = clamp(get_animation_value(open_anim), 0.0, 1.0);
             redraw_requested = true;
         }
+        
+        if width_percentage != width_anim.target {
+            width_percentage = get_animation_value(width_anim);
+            redraw_requested = true;
+        }
 
         margin_x := 12 * dpi_scale;
         margin_y :=  7 * dpi_scale;
@@ -361,14 +366,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         bar_rect_height := font_ui_line_height + 2 * padding + 2 * margin_y + 2;
 
         bar_rect := cut_top(main_area, bar_rect_height);
-        bar_rect.w /= 2;
-        bar_rect.x += bar_rect.w - 2 * char_size;
+        bar_rect = cut_right(bar_rect, bar_rect.w * width_percentage);
+        bar_rect.x -= 2 * char_size;
         bar_rect.y += bar_rect_height * (1.0 - openness);
-        max_width := 600 * dpi_scale;
-        if bar_rect.w > max_width {
-            bar_rect.x += bar_rect.w - max_width;
-            bar_rect.w = max_width;
-        }
         
         draw_rounded_rect_with_shadow(bar_rect, Colors.BACKGROUND_LIGHT);
         
@@ -522,7 +522,7 @@ draw_open_file_dialog :: () {
         if width_percentage != width_anim.target {
             width_percentage = get_animation_value(width_anim);
             redraw_requested = true;
-        }    
+        }
         width := screen.w * width_percentage;
         width = clamp(width, 400 * dpi_scale, 2000 * dpi_scale);
         

@@ -38,6 +38,10 @@ editors_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
                 jump_to_next_search_result(editor, buffer);
             case .ARROW_UP;
                 jump_to_prev_search_result(editor, buffer);
+            case #char "L";
+                if only_ctrl_shift_pressed(mods) {
+                    search_bar_toggle_expand(editor);
+                }
 
             // TODO: consider falling through (and closing) for some other combinations such as ctrl+z, ctrl+alt+arrows etc
         }
@@ -745,6 +749,16 @@ close_search_bar :: inline (editor: *Editor) {
     array_reset_keeping_memory(*editor.highlights);
 
     start_animation(*open_anim, openness, 0.0, speed = xx 0.2);
+}
+
+search_bar_toggle_expand :: (using editor: *Editor) {
+    using search_bar;
+    
+    if width_percentage != WIDTH_EXPANDED {
+        start_animation(*width_anim, width_percentage, WIDTH_EXPANDED, snappy = true);
+    } else {
+        start_animation(*width_anim, width_percentage, WIDTH_NORMAL, snappy = true);
+    }
 }
 
 search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := false) {
@@ -1567,13 +1581,17 @@ Search_Bar :: struct {
     active   := false;      // it receives keyboard input when active. TODO: should we employ a more general imgui approach here?
     openness: float = 0.0;  // 1 is fully open, 0 is fully closed
     open_anim: Tween_Animation(float);
+    
+    width_percentage := WIDTH_NORMAL;  // how much of the screen the popup occupies
+    width_anim: Tween_Animation(float) = #run Tween_Animation(float).{ start = WIDTH_NORMAL, target = WIDTH_NORMAL, speed = 0.1 };
+    WIDTH_NORMAL   :: 0.5;
+    WIDTH_EXPANDED :: 0.9;
 
     input: Text_Input;
 
     results: [..] Text_Highlight;
     selected_result: s64 = -1;
     search_point_offset: s32;  // the point used to determine the next search result. Fixed so that we can set cursor without jumping around
-
 }
 
 Text_Highlight :: struct {
