@@ -1,14 +1,3 @@
-Text_Input :: struct {
-    text: [..] u8;
-    cursor: Cursor;
-    scroll_x: s32;
-    scroll_anim: Tween_Animation(s32);
-
-    Cursor :: struct {
-        pos, sel: s32;  // cursor position (in chars, not bytes)
-    }
-}
-
 text_input_handle_keypress :: (using input: *Text_Input, key_code: Input.Key_Code, mods: Mods) -> handled: bool {
     if key_code == {
         case .ARROW_LEFT; #through;
@@ -84,6 +73,11 @@ text_input_handle_keypress :: (using input: *Text_Input, key_code: Input.Key_Cod
                 cursor.pos = get_num_chars(array_view(text, 0, left + str.count));
                 cursor.sel = cursor.pos;
             }
+            
+        case #char "D";
+            if only_ctrl_pressed(mods) {
+                select_word(input);
+            }
 
         case;
             return false;
@@ -141,3 +135,55 @@ get_char_offset :: (bytes: [] u8, pos: s32) -> s32 {
     }
     return offset;
 }
+
+
+select_word :: (using input: *Text_Input) {
+    // Decode the characters on the line for scanning
+    chars := decode_utf8_string_to_temp_chars(to_string(text), max_char = MAX_TEXT_INPUT_LENGTH);
+    if !chars return;  // empty line
+    
+    using cursor;
+
+    col := -1;
+    if is_word_char(chars[pos]) {
+        col = pos;
+    } else if pos > 0 && is_word_char(chars[pos - 1]) {
+        col = pos - 1;
+    } else {
+        return;  // cursor not on a word
+    }
+
+    // Go left
+    start := col;
+    while start >= 0 {
+        if !is_word_char(chars[start]) then { start += 1; break; }
+        start -= 1;
+    }
+    if start < 0 then start = 0;
+
+    // Go right
+    end := col + 1;
+    while end < chars.count - 1 && is_word_char(chars[end]) { end += 1; }
+
+    assert(start <= end);
+    sel = xx start;
+    pos = xx end;
+}
+
+
+#scope_export
+
+Text_Input :: struct {
+    text: [..] u8;
+    cursor: Cursor;
+    scroll_x: s32;
+    scroll_anim: Tween_Animation(s32);
+    
+    mouse_selection_mode: bool;  // to indicate the mouse is being dragged to select text
+
+    Cursor :: struct {
+        pos, sel: s32;  // cursor position (in chars, not bytes)
+    }
+}
+
+MAX_TEXT_INPUT_LENGTH :: 5000;  // in chars

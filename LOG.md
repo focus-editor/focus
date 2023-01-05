@@ -52,9 +52,12 @@
 - Text Input:
     + Fix the weird doubling of characters when pasted a newline
     + Put cursor in the right place on click
-    - Select by mouse
-    - Select words by ctrl+D
+    + Select by mouse
+    + Select words by ctrl+D
+    + Select words by double-click
+    - Select the whole text by triple-click
     - Undo/redo (limited by whole contents + cursor pos)
+    - Limit the number of chars in an input
     
 - When cutting search results in finder, go by characters and not bytes
 

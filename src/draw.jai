@@ -989,11 +989,16 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
     cursor_width := 2 * dpi_scale;
     
     // Maybe set cursor on mouse click
-    if is_hovering_over(ui_id) && mouse.left.is_down {
-        rel_x := cast(s64) (mouse.pointer.x - input_rect.x) + scroll_x;
-        cursor.pos = Simp.get_cursor_pos_for_width(font, input_text, rel_x);
-        if !shift_pressed() then cursor.sel = cursor.pos;
+    if is_hovering_over(ui_id) {
+        if mouse.left.just_pressed || mouse.left.is_dragging {
+            rel_x := cast(s64) (mouse.pointer.x - input_rect.x) + scroll_x;
+            cursor.pos = Simp.get_cursor_pos_for_width(font, input_text, rel_x);
+            if !shift_pressed() && !mouse_selection_mode then cursor.sel = cursor.pos;
+        }
+        if mouse.left.just_pressed then mouse_selection_mode = true;
+        if mouse.left.just_double_clicked then select_word(input);
     }
+    if mouse.left.just_released || !mouse.left.is_down then mouse_selection_mode = false;
 
     // @Speed: we currently don't limit the text size, so if it's too big we'll do a lot of work here every frame
     cursor_pos_x     := Simp.get_text_width(font, slice_chars(input_text, 0, cursor.pos));
