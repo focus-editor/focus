@@ -150,8 +150,7 @@ init_fonts :: () {
     assert(font_ui_bold != null, "Couldn't init bold ui font\n");
 
     font_ui_small = Simp.get_font_at_size("fonts", "SEGOEUI.TTF", cast(int) (font_ui_small_size * dpi_scale));
-    // font_ui_small = Simp.get_font_at_size("fonts", "SEGUISB.TTF", cast(int) (font_ui_small_size * dpi_scale));
-    assert(font_ui_small != null, "Couldn't init main ui font\n");
+    assert(font_ui_small != null, "Couldn't init small ui font\n");
     font_ui_small_line_height = cast(float) font_ui.default_line_spacing;
 
     font_icons = Simp.get_font_at_size("fonts/font-awesome", "Font Awesome 6 Free-Solid-900.otf", cast(int) (font_icons_size * dpi_scale));

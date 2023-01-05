@@ -451,6 +451,48 @@ get_text_width :: (font: *Dynamic_Font, s: string) -> width: s64 {
     return width_in_pixels;
 }
 
+get_cursor_pos_for_width :: (font: *Dynamic_Font, s: string, requested_width: s64) -> pos: s32 {
+    if !s return 0;
+
+    use_kerning := FT_HAS_KERNING(font.face);
+    prev_glyph: u32 = 0;
+
+    current_pos: s32 = 0;
+    width_in_pixels := 0;
+
+    t := s.data;
+    while t < s.data + s.count {
+        utf32 := character_utf8_to_utf32(t, s.data + s.count - t);
+        glyph := find_or_create_glyph(font, utf32);
+        
+        glyph_width := 0;
+
+        if glyph {
+            glyph_width += glyph.advance;
+
+            if use_kerning && prev_glyph {
+                delta: FT_Vector = ---;
+                error := FT_Get_Kerning(font.face, prev_glyph, glyph.glyph_index_within_font, xx FT_Kerning_Mode.DEFAULT, *delta);
+                if !error then glyph_width += (delta.x >> 6);
+            }
+        }
+        
+        t = unicode_next_character(t);
+        prev_glyph = glyph.glyph_index_within_font;
+
+        width_in_pixels += glyph_width;
+        if width_in_pixels >= requested_width {
+            // If we're closer to the next glyph position, return the next position
+            if (width_in_pixels - requested_width) <= (glyph_width / 2) then current_pos += 1;
+            break;
+        }
+        
+        current_pos += 1;
+    }
+
+    return current_pos;
+}
+
 generate_quads_for_prepared_text :: (font: *Dynamic_Font, x: s64, y: s64) {
     assert(font != null);
 
@@ -625,12 +667,13 @@ copy_glyph_to_bitmap :: (face: FT_Face, data: *Glyph_Data) {
 }
 
 find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32) -> *Glyph_Data {
-    if utf32 == #char "\t" then utf32 = #char "→";  // draw tabs as arrows
-    
     hash_key := utf32;
 
     data, success := table_find(*font.glyph_lookup, hash_key);
     if success  return data;
+    
+    if utf32 == #char "\t" then utf32 = #char "→";  // draw tabs as arrows
+    if utf32 == #char "\n" then utf32 = #char "¶";  // draw newlines as paragraph symbols
     
     glyph_index := FT_Get_Char_Index(face, utf32);
     if !glyph_index {

@@ -50,9 +50,11 @@
     - Save undo/redo history in temporary files
 
 - Text Input:
+    + Fix the weird doubling of characters when pasted a newline
+    + Put cursor in the right place on click
     - Select by mouse
     - Select words by ctrl+D
-    - Fix the weird doubling of characters when pasted a newline
+    - Undo/redo (limited by whole contents + cursor pos)
     
 - When cutting search results in finder, go by characters and not bytes
 
