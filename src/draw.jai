@@ -116,6 +116,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
             if !shift_pressed() && mouse.left.just_pressed then remove_selection(cursor);
             if mouse.left.just_double_clicked then select_word(cursor, buffer);
+            if mouse.left.just_triple_clicked then select_lines(cursor, buffer);;
 
             array_reset_keeping_memory(*editor.highlights);
 

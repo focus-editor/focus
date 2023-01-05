@@ -852,6 +852,17 @@ fill_in_buffer_from_file_data :: (buffer: *Buffer, path: string, file_data: stri
     recalculate_colors(buffer);
 }
 
+select_lines :: (using cursor: *Cursor, buffer: Buffer) {
+    range := get_selection_whole_lines(cursor, buffer);
+    sel = range.start;
+    pos = range.end;
+    if !last_line(buffer, pos.line) {
+        pos.col = 0;
+        pos.line += 1;
+    }
+    pos = make_valid_pos(buffer, pos);
+}
+
 #scope_file
 
 maybe_create_additional_cursor :: (using editor: *Editor, buffer: Buffer) -> created: bool {
@@ -1348,17 +1359,6 @@ select_all :: (using cursor: *Cursor, buffer: Buffer) {
     sel.col  = 0;
     pos.line = cast(s32) buffer.lines.count - 1;
     pos.col  = buffer.lines[buffer.lines.count - 1].num_chars;
-}
-
-select_lines :: (using cursor: *Cursor, buffer: Buffer) {
-    range := get_selection_whole_lines(cursor, buffer);
-    sel = range.start;
-    pos = range.end;
-    if !last_line(buffer, pos.line) {
-        pos.col = 0;
-        pos.line += 1;
-    }
-    pos = make_valid_pos(buffer, pos);
 }
 
 duplicate_lines :: (using cursor: *Cursor, buffer: *Buffer) {

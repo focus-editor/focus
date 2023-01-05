@@ -186,13 +186,20 @@ update_mouse_state :: () {
 
         if button.just_pressed {
             time_from_last_click := frame_time - button.last_down_time;
+            time_from_last_double_click := frame_time - button.last_double_click_time;
             distance_from_last_click := mouse.pointer - button.last_down_pos;
             max_distance := max(abs(distance_from_last_click.x), abs(distance_from_last_click.y));
-            button.just_double_clicked = time_from_last_click < DOUBLE_CLICK_SPEED && max_distance < DOUBLE_CLICK_TOLERANCE;
             button.last_down_pos  = mouse.pointer;
             button.last_down_time = frame_time;
+            button.just_double_clicked = time_from_last_click < DOUBLE_CLICK_SPEED && max_distance < DOUBLE_CLICK_TOLERANCE;
+            button.just_triple_clicked = time_from_last_double_click < DOUBLE_CLICK_SPEED && max_distance < DOUBLE_CLICK_TOLERANCE;
+            if button.just_triple_clicked then button.just_double_clicked = false;  // exclusive
+            if button.just_double_clicked {
+                button.last_double_click_time = frame_time;
+            }
         } else {
             button.just_double_clicked = false;
+            button.just_triple_clicked = false;
         }
 
         button.is_dragging   = button.is_down && mouse.pointer != button.last_down_pos;
@@ -284,9 +291,11 @@ Mouse_Button_State :: struct {
     just_pressed:        bool;
     just_released:       bool;
     just_double_clicked: bool;
+    just_triple_clicked: bool;
 
     last_down_pos:  Vector2;
     last_down_time: Time;
+    last_double_click_time: Time;
 }
 
 // Depend on font

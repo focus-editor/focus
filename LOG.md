@@ -36,6 +36,7 @@
 - Add horizontal scrollbar
 
 - Fix the whole word matching when creating new cursors (underscore seems to be considered not a word char, but inconsistently)
+    - Make sure when selected a word by double clicking, the highlights only highlight whole words
     
 - Strip trailing whitespace on save    
 - Ctrl + [ and Ctrl + ] to indent lines
