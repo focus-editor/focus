@@ -998,6 +998,7 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
         }
         if mouse.left.just_pressed then mouse_selection_mode = true;
         if mouse.left.just_double_clicked then select_word(input);
+        if mouse.left.just_triple_clicked then select_all(input);
     }
     if mouse.left.just_released || !mouse.left.is_down then mouse_selection_mode = false;
 

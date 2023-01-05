@@ -40,8 +40,7 @@ text_input_handle_keypress :: (using input: *Text_Input, key_code: Input.Key_Cod
 
         case #char "A";
             if only_ctrl_pressed(mods) {
-                cursor.pos = 0;
-                cursor.sel = get_num_chars(text);
+                select_all(input);
             }
 
         case #char "C"; #through;
@@ -136,6 +135,10 @@ get_char_offset :: (bytes: [] u8, pos: s32) -> s32 {
     return offset;
 }
 
+select_all :: (using input: *Text_Input) {
+    cursor.pos = 0;
+    cursor.sel = get_num_chars(text);
+}
 
 select_word :: (using input: *Text_Input) {
     // Decode the characters on the line for scanning

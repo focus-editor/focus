@@ -56,9 +56,9 @@
     + Select by mouse
     + Select words by ctrl+D
     + Select words by double-click
-    - Select the whole text by triple-click
-    - Undo/redo (limited by whole contents + cursor pos)
+    + Select the whole text by triple-click
     - Limit the number of chars in an input
+    - Undo/redo (limited by whole contents + cursor pos)
     
 - When cutting search results in finder, go by characters and not bytes
 
