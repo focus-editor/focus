@@ -272,6 +272,8 @@ frame_dt:   Time = MAX_FRAME_DT;  // time delta since the last frame
 MAX_FRAME_DT:   Time : xx (1.0 / 60);
 QUICK_FRAME_DT: Time : xx (1.0 / 300);  // sorry, 300Hz monitor users
 
+EDIT_GROUP_TIMEOUT :: 0.3;  // for undo/redo
+
 screen: Rect;  // contains the current working area rect for convenience
 
 mouse: Mouse_State;

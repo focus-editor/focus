@@ -49,6 +49,8 @@
     
 - Save modified buffers to temporary files and recover after crashes
     - Save undo/redo history in temporary files
+    
+- Ignore .svn
 
 - Text Input:
     + Fix the weird doubling of characters when pasted a newline
@@ -58,8 +60,9 @@
     + Select words by double-click
     + Select the whole text by triple-click
     + Expand on ctrl+shift+L
-    - Limit the number of chars in an input
-    - Undo/redo (limited by whole contents + cursor pos)
+    - Undo/redo
+        - When undoing, sometimes extra text is appended in unexpected places
+        - Cursors are not always remembered (e.g. when using replace_text)
     
 - When cutting search results in finder, go by characters and not bytes
 

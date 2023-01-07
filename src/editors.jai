@@ -725,8 +725,7 @@ open_search_bar :: (using editor: *Editor, buffer: Buffer) {
         cursor := cursors[0];
         selected_text := get_selected_string(cursor, buffer);
         if selected_text && cursor.sel.line == cursor.pos.line {
-            array_resize(*input.text, selected_text.count);
-            memcpy(input.text.data, selected_text.data, selected_text.count);
+            replace_text(*input, selected_text);
         }
     }
 
@@ -1635,7 +1634,6 @@ splitter_anim: Tween_Animation(float);
 
 #scope_file
 
-EDIT_GROUP_TIMEOUT :: 0.3;
 TAB_SIZE :: 4;
 
 #import "Clipboard";

@@ -548,7 +548,7 @@ clear_redos :: (using buffer: *Buffer) {
     array_reset_keeping_memory(*redos);
 }
 
-deinit :: (using edit_group: *Edit_Group) {
+deinit :: (using edit_group: *Buffer.Edit_Group) {
     for edit : edits {
         using edit;
         if #complete type == {
@@ -599,6 +599,40 @@ Buffer :: struct {
         Jai;
         Worklog;
     } = .Plain_Text;
+    
+    Edit_Group :: struct {
+        edits: [] Edit;
+        cursors: [] Cursor.State;
+    }
+    
+    // All strings in this struct are owned
+    Edit :: struct {
+        type: enum { insert; insert_char; replace; delete; };
+        union {
+            insert: struct {
+                offset: s64;
+                new_bytes: string;
+            };
+            insert_char: struct {
+                offset: s64;
+                char: Utf8_Char;  // same as `insert`, but no need to allocate strings on the heap
+                                  // it's probably the most common edit so it's worth it
+            };
+            replace: struct {
+                offset_range: Offset_Range;
+                new_bytes: string;
+                old_bytes: string;
+            };
+            delete: struct {
+                offset_range: Offset_Range;
+                old_bytes: string;
+            };
+        }
+    }
+    
+    Offset_Range :: struct {
+        start, end: s32;  // we won't open large files anyway
+    }
 }
 
 Line :: struct {
@@ -627,38 +661,4 @@ Pos :: struct {
 
 Range :: struct {
     start, end: Pos;
-}
-
-Offset_Range :: struct {
-    start, end: s32;  // we won't open large files anyway
-}
-
-Edit_Group :: struct {
-    edits: [] Edit;
-    cursors: [] Cursor.State;
-}
-
-// All strings in this struct are owned
-Edit :: struct {
-    type: enum { insert; insert_char; replace; delete; };
-    union {
-        insert: struct {
-            offset: s64;
-            new_bytes: string;
-        };
-        insert_char: struct {
-            offset: s64;
-            char: Utf8_Char;  // same as `insert`, but no need to allocate strings on the heap
-                              // it's probably the most common edit so it's worth it
-        };
-        replace: struct {
-            offset_range: Offset_Range;
-            new_bytes: string;
-            old_bytes: string;
-        };
-        delete: struct {
-            offset_range: Offset_Range;
-            old_bytes: string;
-        };
-    }
 }

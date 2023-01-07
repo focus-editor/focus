@@ -88,8 +88,7 @@ finder_open_from_editor :: () {
         cursor := editor.cursors[0];
         selected_text := get_selected_string(cursor, buffer);
         if selected_text && cursor.sel.line == cursor.pos.line {
-            array_resize(*finder.input.text, selected_text.count);
-            memcpy(finder.input.text.data, selected_text.data, selected_text.count);
+            replace_text(*finder.input, selected_text);
             reset_results();
             start_new_search(force = true);
         }
