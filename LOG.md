@@ -50,8 +50,6 @@
 - Save modified buffers to temporary files and recover after crashes
     - Save undo/redo history in temporary files
     
-- Ignore .svn
-    
 - When cutting search results in finder, go by characters and not bytes
 
 - Tokenizer:
@@ -166,6 +164,7 @@ configured procedures during a press event, calling one if the modifiers/key mat
 you can use the default shortcuts and maybe report the error in a dialog box, presuming this was user-error after manually editing the config.
 
 # DONE
++ Ignore .svn
 + Text Input:
     + Fix the weird doubling of characters when pasted a newline
     + Put cursor in the right place on click
