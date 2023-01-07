@@ -223,7 +223,7 @@ maybe_undo :: (using input: *Text_Input) {
     redo.edits = edit_group.edits;
     redo.cursor = cursor;
     cursor = edit_group.cursor;
-    print("restoring cursor to %\n", cursor);
+    cursor_before_edits = edit_group.cursor;
 }
 
 maybe_redo :: (using input: *Text_Input) {
@@ -243,6 +243,7 @@ maybe_redo :: (using input: *Text_Input) {
     undo.edits = edit_group.edits;
     undo.cursor = cursor;
     cursor = edit_group.cursor;
+    cursor_before_edits = edit_group.cursor;
 }
 
 new_edit_group :: (using input: *Text_Input) {
@@ -251,6 +252,8 @@ new_edit_group :: (using input: *Text_Input) {
     new_group := array_add(*undos);
     new_group.edits = to_owned_array(*edits);
     new_group.cursor = cursor_before_edits;
+    
+    cursor_before_edits = cursor;
 }
 
 insert_string_at_offset :: (using input: *Text_Input, offset: s64, new_str: string) {
@@ -259,7 +262,7 @@ insert_string_at_offset :: (using input: *Text_Input, offset: s64, new_str: stri
 }
 
 replace_range :: (using input: *Text_Input, start: s64, end: s64, new_str: string) {
-    old_str := to_string(text);
+    old_str := to_string(array_view(text, start, end - start));
     if new_str == old_str return;
     
     new_replace_edit(input, xx start, xx end, old_str, new_str);
@@ -268,7 +271,6 @@ replace_range :: (using input: *Text_Input, start: s64, end: s64, new_str: strin
 
 delete_range :: (using input: *Text_Input, start: s64, end: s64) {
     old_str := to_string(array_view(text, start, end - start));
-    print("delete_range(start=%, end=%), old_str='%'\n", start, end, old_str);
     new_delete_edit(input, xx start, xx end, old_str);
     delete_range_raw(input, start, end);
 }
@@ -284,7 +286,6 @@ insert_string_raw :: (input: *Text_Input, offset: s64, str: string) {
     bytes: [] u8;
     bytes.data  = str.data;
     bytes.count = str.count;
-    print("insert_string_raw(offset=%, str='%')\n", offset, str);
     array_insert_bytes_at(*input.text, offset, bytes);
 }
 

@@ -3,8 +3,8 @@
 - Before I ship:
     + Show in the program title when it's running in debug mode
     + Support tabs (just draw them, not even necessarily wide, just draw in some way - but wide would be best)
+    + Finish text input improvements
     - Tokenizer parses everything correctly
-    - Finish text input fixes
     - Ignore project folders which are children of another project folder?
     - Show help on F1
     - Bake fonts
@@ -51,18 +51,6 @@
     - Save undo/redo history in temporary files
     
 - Ignore .svn
-
-- Text Input:
-    + Fix the weird doubling of characters when pasted a newline
-    + Put cursor in the right place on click
-    + Select by mouse
-    + Select words by ctrl+D
-    + Select words by double-click
-    + Select the whole text by triple-click
-    + Expand on ctrl+shift+L
-    - Undo/redo
-        - When undoing, sometimes extra text is appended in unexpected places
-        - Cursors are not always remembered (e.g. when using replace_text)
     
 - When cutting search results in finder, go by characters and not bytes
 
@@ -178,6 +166,17 @@ configured procedures during a press event, calling one if the modifiers/key mat
 you can use the default shortcuts and maybe report the error in a dialog box, presuming this was user-error after manually editing the config.
 
 # DONE
++ Text Input:
+    + Fix the weird doubling of characters when pasted a newline
+    + Put cursor in the right place on click
+    + Select by mouse
+    + Select words by ctrl+D
+    + Select words by double-click
+    + Select the whole text by triple-click
+    + Expand on ctrl+shift+L
+    + Undo/redo
+        + When undoing, sometimes extra text is appended in unexpected places
+        + Cursors are not always remembered (e.g. when using replace_text)
 + Fix the parsing of "\\" in jai
 + Finder improvements:
     + While the initial scan is still in progress, display something that says so when the widget opens
