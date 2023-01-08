@@ -27,10 +27,22 @@
     - Log errors into focus-log.txt, focus-log1.txt, ... in release mode
     - See if memory usage can be improved
     - Custom title bar (currently too much work and not very robust)
+    - Linux support
+    
+- Projects
+    + Assuming the dir containing the focus executable is writable, create a projects folder in it
+    + If the folder is not writable, let the user know
+    + Create a simple config format
+    - Load and parse the default config at the start
+    - Each file in the projects folder is considered to be a project (provided it's in the right format)
+    - Create a temporary folder alongside the exe
+    - Save font size in the current project
+    - Have a version in the config file
+    
+- Rewrite the input system using the keymap handler
 
-- Finder improvements:
-    - Have an extra input for filtering by file path
-    - Case-sensitive search
+- Be able to open the default config as a readonly buffer
+    - Create a command system first
 
 - Hide scrollbars unless scrolling or hovering over editor
 - Add horizontal scrollbar
@@ -60,7 +72,11 @@
     - Allow \ in identifiers
     - Browse everything in the modules folder and try to find anything that sticks out
 
-- Implement case-insensitive search in buffer
+- Search:
+    - Implement case-insensitive search in buffer
+    - Finder improvements:
+        - Have an extra input for filtering by file path
+        - Case-sensitive search
 
 - Jump to function definition:
     - Tokenizer: support broken down identifiers
@@ -130,13 +146,8 @@
     - I expect a horizontal search bar when the text runs off the right edge.
     - Alt + Up/Down is equivalent to scrolling up and down with the mouse wheel, but Alt + Left/Right does not work the same way horizontally.
     - My mouse's horizontal scroll wheel (yes I have both) does nothing. I have to navigate long lines using Home/End to use the cursor to scroll.
-- If the sidebar is too skinny, the "Press Shift + Enter to do case-sensitive search" text should wrap. It currently cuts off. In fact, search
-results should possibly wrap too. If the sidebar is to skinny, currently searching "*File" within Focus's project folder has a few search results
-from Windows.jai where you can't even see the matching text because they cut off on the right edge before the highlighted parts.
 
 ## Possible bugs
-- Sidebar's splitter swaps mouse cursor inconsistently. When actually clicking, it appears to behave correctly. The cursor may not change to the
-"arrows" as expected if you move it slowly over the splitter. The double-document splitter appears to not have this issue.
 - Sometimes if you backspace two spaces between words, it erases both space characters with one backspace rather than just one. I can reliably
 reproduce this issue by doing the following:
     1. Type something like " hello" on a new line.
@@ -148,8 +159,6 @@ reproduce this issue by doing the following:
 
 ## Keyboard/Mouse Shortcuts that I think are "missing"
 - Ctrl + Backspace/Delete to erase an entire word.
-- Triple-click to select an entire line. (Standard behavior on Windows, macOS, and possibly Linux.)
-- Ctrl & +/- to increase/decrease editor font size by 1 pt.
 - Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt. (use mouse wheel up/down "key press" events for this, not scroll delta. Print
 key code in debug mode to find out the if case values. This will cause it to behave as expected on every platform similar to all other programs.)
 - (Ctrl (VSCode) or Alt (N++) or Alt+Shift (macOS)) + Mouse Click to add an additional cursor wherever the mouse is.

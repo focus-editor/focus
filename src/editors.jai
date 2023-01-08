@@ -857,6 +857,8 @@ fill_in_buffer_from_file_data :: (buffer: *Buffer, path: string, file_data: stri
 
     if ends_with_nocase(path, ".jai") {
         buffer.lang = .Jai;
+    } else if ends_with(path, ".focus-config") {
+        buffer.lang = .Focus_Config;
     } else if ends_with(path, "LOG.md") {
         buffer.lang = .Worklog;
     }

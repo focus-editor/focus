@@ -1,0 +1,40 @@
+[1]  # Version number. Do not delete
+
+# This is a default config file which will be used as a fallback in case your own config file is missing or incomplete
+
+[[project]]
+
+[project dirs]
+# These directories will be scanned when a project is opened so that search etc. works.
+# Example:
+# C:/projects/my-project
+# C:/jai
+
+[ignore dirs]
+# The project scanner will not descend into the dirs that match these names
+.build
+.svn
+.git
+bin
+
+[allow file extensions]
+# These files are explicitly allowed so that the editor doesn't waste time figuring out
+# whether it should ignore these or not (if a file is not explicitly allowed or ignored, 
+# it will be read to determine if it's binary or not)
+.jai .c .cpp .h .txt .md .focus-config
+
+[ignore file extensions]
+# Files with the following extensions will not appear in the file open dialog etc. 
+# It makes sense to add all known binary types here.
+.exe .pdb .ttf .otf .dll .lib .dylib .so .so.0 .so.1 .so.2 .a
+.jpg .png .gif .jpeg .ico .tif .tiff .tga .bmp  # maybe someday we'll support opening images
+.mp3 .wav .ogg
+.blend .obj .fbx .dae .3ds
+.mpg .mpeg .psd .codex
+
+
+[[keymap]]
+# TODO
+
+[[colors]]
+# TODO

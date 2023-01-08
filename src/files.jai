@@ -1,16 +1,3 @@
-collect_files :: (dirs: [] Project_Dir, dst: *[..] File_Info, ignore_dirs: [] string = string.[], allow_file_types: [] string = string.[]) {
-    visitor_data: File_Visit_Config = ---;
-    visitor_data.ignore_dirs   = ifx ignore_dirs then ignore_dirs else IGNORE_DIRS;
-    visitor_data.allowed_files = ifx allow_file_types then allow_file_types else ALLOW_FILE_TYPES;
-    visitor_data.files_dst = dst;
-    assert(dst != null);
-
-    for dir : dirs {
-        visitor_data.proj_path_prefix_len = dir.path_prefix_len;
-        visit_files(dir.path, recursive = true, visitor_data, file_collector_func, visit_directories = true);
-    }
-}
-
 get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> File_Info #must {
     assert(is_absolute_path(abs_path), "Trying to get file info from a non-absolute path. This is a bug.");
 
@@ -43,6 +30,10 @@ get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> Fil
         case "h";    #through;
         case "c";
             icon = .cpp;
+        case "ini";  #through;
+        case "conf"; #through;
+        case "focus-config";
+            icon = .gear;
         case "jpg";  #through;
         case "jpeg"; #through;
         case "png";  #through;
@@ -77,31 +68,6 @@ get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> Fil
     return info;
 }
 
-// @Cleanup: this logic needs some careful reviewing
-// Also TODO: profile how long it takes to scan everything
-file_collector_func :: (file: *File_Visit_Info, config: File_Visit_Config) {
-    if file.is_directory {
-        for config.ignore_dirs {
-            if equal_nocase(file.short_name, it) {  // TODO: do a wildcard match
-                file.descend_into_directory = false;  // ignore
-                return;
-            }
-        }
-        return;
-    }
-    if file.is_symlink return;
-
-    skip := true;
-    for config.allowed_files {
-        // TODO: do a wildcard match
-        if ends_with_nocase(file.short_name, it) { skip = false; break; };
-    }
-    if skip return;  // unsupported type
-
-    file_info := get_file_info_from_full_path(file.full_name, config.proj_path_prefix_len);
-    array_add(config.files_dst, file_info);
-}
-
 File_Info :: struct {
     full_path: string;
     name: string;
@@ -121,16 +87,5 @@ File_Icon :: enum u32 {
     audio   :: 0xf1c7;
     font    :: 0xf031;
     key     :: 0xf084;
-}
-
-#scope_file
-
-IGNORE_DIRS      :: string.[".build", ".git", "bin", ".svn"];
-ALLOW_FILE_TYPES :: string.[".jai", ".md", ".c", ".h", ".hpp", ".cpp", ".txt", ".bat"];
-
-File_Visit_Config :: struct {
-    ignore_dirs: [] string;
-    allowed_files:  [] string;
-    proj_path_prefix_len: s64;
-    files_dst: *[..] File_Info;
+    gear    :: 0xf013;
 }

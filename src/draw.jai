@@ -624,7 +624,9 @@ draw_open_file_dialog :: () {
 
             // Draw file icon
             icon_char := convert_utf32_to_utf8(xx entry.icon);
-            Simp.draw_text(font_icons, xx pen.x, xx pen.y, to_string(*icon_char), color = name_color);
+            icon_width := Simp.prepare_text(font_icons, to_string(*icon_char));
+            icon_x := pen.x - (icon_width - font_icons.em_width) / 2.0;
+            Simp.draw_prepared_text(font_icons, xx icon_x, xx pen.y, color = name_color);
 
             // Draw name
             pen.x += xx font_icons.em_width + padding;

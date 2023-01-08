@@ -1,4 +1,4 @@
-highlight_worklog :: (using buffer: *Buffer) {
+highlight_focus_config_syntax :: (using buffer: *Buffer) {
     tokenizer: Tokenizer = ---;
     tokenizer.buf   = to_string(bytes);
     tokenizer.max_t = bytes.data + bytes.count;
@@ -29,35 +29,42 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     char := << t;
     
     if char == {
-        case #char "+";  parse_done_line(tokenizer, *token);
-        case #char "-";  parse_todo_line(tokenizer, *token);
-        case #char "#";  parse_header   (tokenizer, *token);
-        case;            parse_line     (tokenizer, *token);
+        case #char "["; parse_header (tokenizer, *token);
+        case #char "#"; parse_comment(tokenizer, *token);
+        case;           parse_line(tokenizer, *token);
     }
     
     if t >= max_t then t = max_t;
     token.len = cast(s32) (t - start_t);
+    
+    if token.type == .header {
+        // Detect top-level headers
+        token_str: string = ---;
+        token_str.data  = buf.data + token.start;
+        token_str.count = token.len;
+        if begins_with(token_str, "[[") && ends_with(token_str, "]]") {
+            token.type = .header_top_level;
+        }
+    }
+    
     return token;
-}
-
-parse_done_line :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .done;
-    
-    t += 1;
-    eat_until_newline(tokenizer);
-}
-
-parse_todo_line :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .todo;
-    
-    // TODO: parse marks such as [bug], [tech-debt] etc.
-    
-    t += 1;
-    eat_until_newline(tokenizer);
 }
 
 parse_header :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .header;
+    
+    seen_brackets := 1;
+    t += 1;
+    while t < max_t && <<t != #char "\n" && seen_brackets > 0 {
+        char := << t;
+        if char == #char "[" then seen_brackets += 1;
+        if char == #char "]" then seen_brackets -= 1;
+        t += 1;
+    }
+}
+
+parse_comment :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .comment;
     
     t += 1;
     eat_until_newline(tokenizer);
@@ -67,11 +74,17 @@ parse_line :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .line;
     
     t += 1;
-    eat_until_newline(tokenizer);
+    eat_until_newline_or_comment(tokenizer);
 }
 
 eat_until_newline :: (using tokenizer: *Tokenizer) {
     while t < max_t && <<t != #char "\n" {
+        t += 1;
+    }
+}
+
+eat_until_newline_or_comment :: (using tokenizer: *Tokenizer) {
+    while t < max_t && <<t != #char "#" && <<t != #char "\n" { 
         t += 1;
     }
 }
@@ -87,6 +100,12 @@ Tokenizer :: struct {
     max_t:   *u8;
     start_t: *u8;  // cursor when starting parsing new token
     t:       *u8;  // cursor
+    
+    section: enum {
+        Project;
+        Keymap;
+        Colors;
+    };
 }
 
 Token :: struct {
@@ -96,10 +115,10 @@ Token :: struct {
     Type :: enum u16 {
         eof;
 
+        comment;
         line;
-        done;
-        todo;
         header;
+        header_top_level;
     }
 }
 
@@ -107,8 +126,8 @@ Token :: struct {
 COLOR_MAP :: Simp.Code_Color.[
     .COMMENT,       // eof - obviously not used
     
+    .COMMENT,       // comment
     .DEFAULT,       // line
-    .FUNCTION,      // done
-    .DEFAULT,       // todo
-    .KEYWORD,       // header
+    .FUNCTION,      // header
+    .KEYWORD,       // header_top_level
 ];

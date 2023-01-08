@@ -14,15 +14,15 @@ main :: () {
     screen = make_rect(0, 0, window_width, window_height);
     Simp.set_render_target(window);
 
-    path := path_strip_filename(get_path_of_running_executable());
-    set_working_directory(path);
+    exe_dir_path := path_strip_filename(get_path_of_running_executable());
+    set_working_directory(exe_dir_path);
 
     dpi_scale = platform_get_dpi_scale(window);
     init_fonts();
     old_line_height = line_height;
 
     init_buffers();    
-    init_workspace();
+    init_workspace(exe_dir_path);
     
     // Maybe open file passed in the command line
     args := get_command_line_arguments();
@@ -211,6 +211,16 @@ panic :: (format_string: string, args: .. Any, exit_code : s32 = 1) {
     exit(exit_code);
 } @PrintLike
 
+panic_messagebox :: (format_string: string, args: .. Any) {
+    #if OS == .WINDOWS {
+        message := tprint(format_string, ..args);
+        MessageBoxW(null, utf8_to_wide(message), utf8_to_wide("Fatal Error"), MB_OK);
+        exit(1);
+    } else {
+        panic(format_string, ..args);
+    }
+} @PrintLike
+
 unimplemented :: (loc := #caller_location) {
     panic("Unimplemented at %", loc);
 }
@@ -360,6 +370,7 @@ Project_Dir :: struct {
 #load "widgets/open_file_dialog.jai";
 #load "widgets/finder.jai";
 #load "langs/jai.jai";
+#load "langs/focus_config.jai";
 #load "langs/worklog.jai";
 
 // #import "Basic"()(MEMORY_DEBUGGER = true);
@@ -378,6 +389,10 @@ Project_Dir :: struct {
 #import "Profiler"(ENABLE_PROFILER = false);
 #import "Thread";
 #import "Compiler";
+
+#if OS == .WINDOWS {
+    #import "Windows_Utf8";
+}
 
 Simp :: #import "Simp_Ext";
 Input :: #import "Input";

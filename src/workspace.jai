@@ -1,4 +1,7 @@
-init_workspace :: () {
+init_workspace :: (exe_dir_path: string) {
+    if !make_directory_if_it_does_not_exist("projects") then panic_messagebox("Couldn't create folder %/projects. Is the directory writable?", exe_dir_path);
+    if !make_directory_if_it_does_not_exist("temp")     then panic_messagebox("Couldn't create folder %/temp for temporary files. Is the directory writable?", exe_dir_path);
+    
     // @Cleanup: remove and do properly
     initial_project_dirs := string.[ "W:/focus", "C:/jai" ];
     for path, i : initial_project_dirs {
@@ -321,7 +324,7 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
 }
 
 Workspace :: struct {
-    ignore_dirs: [] string = string.[".build", ".git", "bin"];
+    ignore_dirs: [] string = string.[".build", ".git", "bin", ".svn"];
     allow_file_extensions:  [] string = string.[".jai", ".c", ".cpp", ".h", ".txt", ".md"];
     ignore_file_extensions: [] string = string.[
         ".exe", ".pdb", ".ttf", ".otf", ".dll", ".lib", ".dylib", ".so", ".so.0", ".so.1", ".so.2", ".a", 
@@ -332,7 +335,7 @@ Workspace :: struct {
     ];
 }
 
-workspace: Workspace;  // TODO: load from a config file
+workspace: Workspace;
 
 file_watcher: File_Watcher;
 dirs_to_rescan: [..] string;    // will use temporary storage
@@ -349,3 +352,5 @@ num_dirs_scanned := 0;
 #scope_file
 
 File_Async :: #import "File_Async";
+
+DEFAULT_CONFIG :: #run read_entire_file("default.focus-config");
