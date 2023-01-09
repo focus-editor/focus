@@ -1,17 +1,42 @@
-load_global_config :: () {
-    // TODO
+load_global_config :: (exe_dir: string) {
+    filename := tprint("%global.focus-config", exe_dir);
+    if !file_exists(filename) {
+        log("No global config file found: '%'", filename);
+        return;
+    }
+    file_data, success_read := read_entire_file(filename);
+    if !success_read {
+        log_error("Couldn't read file '%'", filename);
+        return;
+    }
+    global_config, success_parse := parse_config("Global Config", filename, file_data);
+    if !success_parse {
+        log_error("Couldn't parse global config file '%'", filename);
+        return;
+    }
+    merge_configs(*config, global_config);
 }
 
 #scope_file
 
-parse_config :: (name: string, filename: string) -> Config, bool {    
+merge_configs :: (dst: *Config, src: Config) {
+    // Workspace
+    if src.workspace.workspace_dirs         then dst.workspace.workspace_dirs         = src.workspace.workspace_dirs;
+    if src.workspace.ignore_dirs            then dst.workspace.ignore_dirs            = src.workspace.ignore_dirs;
+    if src.workspace.allow_file_extensions  then dst.workspace.allow_file_extensions  = src.workspace.allow_file_extensions;
+    if src.workspace.ignore_file_extensions then dst.workspace.ignore_file_extensions = src.workspace.ignore_file_extensions;
+    
+    // TODO: other sections;
+}
+
+parse_config :: (name: string, filename: string, file_data: string) -> Config, success: bool {
     handler: Text_File_Handler;
     // NOTE: we don't free on purpose, because some of the parsed data will point into the file data
     
-    start_file(*handler, name, filename, false);
+    start_from_memory(*handler, name, filename, file_data);
     if handler.failed return Config.{}, false;
     
-    parser: Config_Parser;    
+    parser: Config_Parser;
     result: Config;
     
     // Will be filled as the file parses
@@ -267,10 +292,15 @@ Config_Parser :: struct {
     };
 }
 
+DEFAULT_CONFIG_NAME :: "default.focus-config";  // in the focus project folder
+
+DEFAULT_CONFIG_FILE_DATA :: #run read_entire_file(DEFAULT_CONFIG_NAME);
+
 DEFAULT_CONFIG :: #run () -> Config {
-    config, success := parse_config("Default Config", "default.focus-config");
-    assert(success, "Couldn't load the default config file 'default.focus-config'");
+    config, success := parse_config("Default Config", DEFAULT_CONFIG_NAME, DEFAULT_CONFIG_FILE_DATA);
+    assert(success, "Couldn't parse the default config file '%'", DEFAULT_CONFIG_NAME);
     return config;
 }();
+
 
 #import "Text_File_Handler";

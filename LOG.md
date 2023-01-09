@@ -53,6 +53,7 @@
 - Add horizontal scrollbar
 
 - Fix the whole word matching when creating new cursors (underscore seems to be considered not a word char, but inconsistently)
+    - Easy to detect when using variables like success, success_read, log_error, error etc
     - Make sure when selected a word by double clicking, the highlights only highlight whole words
     
 - Strip trailing whitespace on save    

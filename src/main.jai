@@ -2,8 +2,6 @@ main :: () {
     #assert OS == .WINDOWS "Currently only supporting Windows";
     platform_setup();
     
-    load_global_config();
-
     profiler_begin_session("focus", "focus-trace.json");
     defer profiler_end_session();
 
@@ -16,15 +14,16 @@ main :: () {
     screen = make_rect(0, 0, window_width, window_height);
     Simp.set_render_target(window);
 
-    exe_dir_path := path_strip_filename(get_path_of_running_executable());
-    set_working_directory(exe_dir_path);
+    exe_dir := path_strip_filename(get_path_of_running_executable());
+    set_working_directory(exe_dir);
+    load_global_config(exe_dir);
 
     dpi_scale = platform_get_dpi_scale(window);
     init_fonts();
     old_line_height = line_height;
 
-    init_buffers();    
-    init_workspace(exe_dir_path);
+    init_buffers();
+    init_workspace(exe_dir);
     
     // Maybe open file passed in the command line
     args := get_command_line_arguments();
@@ -138,24 +137,24 @@ main :: () {
 }
 
 init_fonts :: () {
-    font = Simp.get_font_at_size("fonts", "FiraCode-Retina.ttf", cast(int) (font_size * dpi_scale));
+    font = Simp.get_font_at_size(FONT.name, FONT.data, cast(int) (font_size * dpi_scale));
     assert(font != null, "Couldn't init main text font\n");
     char_size   = cast(float) font.em_width;
     old_line_height = line_height;
     line_height = cast(float) font.default_line_spacing * LINE_HEIGHT_SCALE;
 
-    font_ui = Simp.get_font_at_size("fonts", "SEGOEUI.TTF", cast(int) (font_ui_size * dpi_scale));
+    font_ui = Simp.get_font_at_size(FONT_UI.name, FONT_UI.data, cast(int) (font_ui_size * dpi_scale));
     assert(font_ui != null, "Couldn't init main ui font\n");
     font_ui_line_height = cast(float) font_ui.default_line_spacing;
 
-    font_ui_bold = Simp.get_font_at_size("fonts", "SEGUISB.TTF", cast(int) (font_ui_size * dpi_scale));
+    font_ui_bold = Simp.get_font_at_size(FONT_UI_BOLD.name, FONT_UI_BOLD.data, cast(int) (font_ui_size * dpi_scale));
     assert(font_ui_bold != null, "Couldn't init bold ui font\n");
 
-    font_ui_small = Simp.get_font_at_size("fonts", "SEGOEUI.TTF", cast(int) (font_ui_small_size * dpi_scale));
+    font_ui_small = Simp.get_font_at_size(FONT_UI.name, FONT_UI.data, cast(int) (font_ui_small_size * dpi_scale));
     assert(font_ui_small != null, "Couldn't init small ui font\n");
     font_ui_small_line_height = cast(float) font_ui.default_line_spacing;
 
-    font_icons = Simp.get_font_at_size("fonts/font-awesome", "Font Awesome 6 Free-Solid-900.otf", cast(int) (font_icons_size * dpi_scale));
+    font_icons = Simp.get_font_at_size(FONT_ICONS.name, FONT_ICONS.data, cast(int) (font_icons_size * dpi_scale));
     assert(font_icons != null, "Couldn't init main icon font\n");
 
     // WORKAROUND:
@@ -417,3 +416,22 @@ MIN_WINDOW_HEIGHT :: 50;
 
 DOUBLE_CLICK_SPEED     :: 0.3;  // how many seconds between clicks to consider it a double click
 DOUBLE_CLICK_TOLERANCE :: 2;    // how many pixels between the click locations are allowed
+
+// Embed default fonts
+FONT         :: #run load_font("FiraCode-Retina.ttf");
+FONT_UI      :: #run load_font("SEGOEUI.TTF");
+FONT_UI_BOLD :: #run load_font("SEGUISB.TTF");
+FONT_ICONS   :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
+
+load_font :: (name: string) -> Embedded_Font {
+    path := tprint("fonts/%", name);
+    data, success := read_entire_file(path);
+    assert(success, "Couldn't load font '%'", path);
+    
+    return Embedded_Font.{ name = name, data = data};
+}
+
+Embedded_Font :: struct {
+    name: string;
+    data: string;
+}

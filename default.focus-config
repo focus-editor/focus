@@ -27,8 +27,8 @@ bin
 .jai .c .cpp .h .txt .md .focus-config
 
 [ignore file extensions]
-# Files with the following extensions will not appear in the file open dialog etc. 
-# It makes sense to add all known binary types here.
+# Files with the following extensions will not appear in the file open dialog and won't be indexed.
+# It makes sense to add all known binary file extensions here.
 .exe .pdb .ttf .otf .dll .lib .dylib .so .so.0 .so.1 .so.2 .a
 .jpg .png .gif .jpeg .ico .tif .tiff .tga .bmp  # maybe someday we'll support opening images
 .mp3 .wav .ogg

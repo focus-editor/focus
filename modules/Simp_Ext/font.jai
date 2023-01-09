@@ -64,11 +64,6 @@ Font_Line :: struct {
     height: int;
 };
 
-Loaded_Font :: struct {
-    name: string;
-    data: [] u8;
-};
-
 // For code rendering
 Code_Range :: struct {
     start, end: s32;  // in bytes
@@ -323,7 +318,7 @@ load_font_part_2 :: (result: *Dynamic_Font, pixel_height: int) {
     array_add(*dynamic_fonts, result);
 }
 
-get_font_at_size :: (path: string, name: string, pixel_height: int) -> *Dynamic_Font {
+get_font_at_size :: (name: string, font_data: string, pixel_height: int) -> *Dynamic_Font {
     inline ensure_fonts_are_initted();
 
     // Try to find a previously loaded font
@@ -333,41 +328,18 @@ get_font_at_size :: (path: string, name: string, pixel_height: int) -> *Dynamic_
 
         return it;
     }
-
-    // Load new font
-    font_name := tprint("%/%", path, name);
-    loaded: *Loaded_Font;
-    for loaded_fonts {
-        if it.name == font_name {
-            loaded = it;
-            break;
-        }
-    }
-    if !loaded {
-        // Load from file
-        s, success := read_entire_file(font_name);
-        if !success {
-            print("Error: couldn't load font '%'\n", font_name);
-            return null;
-        }
-        loaded = New(Loaded_Font);
-        loaded.name = copy_string(name);
-        loaded.data = cast([] u8) s;
-
-        array_add(*loaded_fonts, loaded);
-    }
-
+    
     // Create a new font face for Dynamic_Font rather than sharing one between fonts.
     // The reason is because we don't want to keep changing the size every time we want to
     // do anything and worry whether another Dynamic_Font has changed the size
     face: FT_Face;
-    error := FT_New_Memory_Face(ft_library, loaded.data.data, cast(s32) loaded.data.count, 0, *face);
+    error := FT_New_Memory_Face(ft_library, font_data.data, cast(s32) font_data.count, 0, *face);
     if error == xx FT_Err.Unknown_File_Format {
-        print("Error: font file format not supported: '%'\n", font_name);
+        print("Error: font file format not supported: '%'\n", name);
         return null;
     }
     if error {
-        print("Error while loading font '%': %", font_name, error);
+        print("Error while loading font '%': %", name, error);
         return null;
     }
 
@@ -376,6 +348,7 @@ get_font_at_size :: (path: string, name: string, pixel_height: int) -> *Dynamic_
     result.face = face;
     load_font_part_2(result, pixel_height);
     return result;
+    
     // TODO(ivan): finish this loading part, use float metrics if possible
 
     // face := loaded.face;
@@ -561,7 +534,6 @@ fonts_initted := false;
 page_size_x := 2048;
 page_size_y := 1024;
 
-loaded_fonts:  [..] *Loaded_Font;
 dynamic_fonts: [..] *Dynamic_Font;
 font_pages:    [..] Font_Page;
 

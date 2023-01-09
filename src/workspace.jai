@@ -1,6 +1,6 @@
-init_workspace :: (exe_dir_path: string) {
-    if !make_directory_if_it_does_not_exist("projects") then panic_messagebox("Couldn't create folder %/projects. Is the directory writable?", exe_dir_path);
-    if !make_directory_if_it_does_not_exist("temp")     then panic_messagebox("Couldn't create folder %/temp for temporary files. Is the directory writable?", exe_dir_path);
+init_workspace :: (exe_dir: string) {
+    if !make_directory_if_it_does_not_exist("projects") then panic_messagebox("Couldn't create folder %/projects. Is the directory writable?", exe_dir);
+    if !make_directory_if_it_does_not_exist("temp")     then panic_messagebox("Couldn't create folder %/temp for temporary files. Is the directory writable?", exe_dir);
     
     // @Cleanup: remove and do properly
     initial_project_dirs := string.[ "W:/focus", "C:/jai" ];
