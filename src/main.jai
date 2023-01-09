@@ -1,6 +1,8 @@
 main :: () {
     #assert OS == .WINDOWS "Currently only supporting Windows";
     platform_setup();
+    
+    load_global_config();
 
     profiler_begin_session("focus", "focus-trace.json");
     defer profiler_end_session();
@@ -355,7 +357,6 @@ Project_Dir :: struct {
 }
 
 
-#load "style.jai";
 #load "layout.jai";
 #load "editors.jai";
 #load "buffer.jai";
@@ -366,6 +367,7 @@ Project_Dir :: struct {
 #load "utils.jai";
 #load "files.jai";
 #load "workspace.jai";
+#load "config.jai";
 #load "widgets/text_input.jai";
 #load "widgets/open_file_dialog.jai";
 #load "widgets/finder.jai";

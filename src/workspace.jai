@@ -311,7 +311,7 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
     // {"W:/focus-zig/src/nPTuLLfc1yEADcLL", ADDED | MODIFIED | MOVED | MOVED_FROM, 52.296619}
     // {"W:/focus-zig/src/Editors.zig", MOVED | MOVED_TO | REMOVED, 52.296619}
     // {"W:/focus-zig/src", MODIFIED | SCAN_CHILDREN, 52.29665}
-    // Not very useful, is it. So we can't really rely on those 
+    // Not very useful, is it? So we can't really rely on those 
     // So instead of processing each event the easiest option here would be to add W:/focus-zig/src
     // to the scanning queue
 
@@ -321,18 +321,6 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
     print("%\n", <<change);
     
     if (change.events & .REMOVED) || (change.events & .MOVED_FROM) then maybe_mark_buffer_as_deleted(change.full_path);
-}
-
-Workspace :: struct {
-    ignore_dirs: [] string = string.[".build", ".git", "bin", ".svn"];
-    allow_file_extensions:  [] string = string.[".jai", ".c", ".cpp", ".h", ".txt", ".md"];
-    ignore_file_extensions: [] string = string.[
-        ".exe", ".pdb", ".ttf", ".otf", ".dll", ".lib", ".dylib", ".so", ".so.0", ".so.1", ".so.2", ".a", 
-        ".jpg", ".png", ".gif", ".jpeg", ".ico", ".tif", ".tiff", ".tga", ".bmp",
-        ".mp3", ".wav", ".ogg",
-        ".blend", ".obj", ".fbx", ".dae", ".3ds",
-        ".mpg", ".mpeg", ".psd", ".codex",
-    ];
 }
 
 workspace: Workspace;
@@ -352,5 +340,3 @@ num_dirs_scanned := 0;
 #scope_file
 
 File_Async :: #import "File_Async";
-
-DEFAULT_CONFIG :: #run read_entire_file("default.focus-config");

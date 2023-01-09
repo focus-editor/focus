@@ -1,17 +1,20 @@
-[1]  # Version number. Do not delete
+[1]  # Version number. Do not delete.
 
-# This is a default config file which will be used as a fallback in case your own config file is missing or incomplete
+# This is a default config file which will be used as a fallback in case your own config file is missing or incomplete.
+# WARNING. If you override any of the settings in the [[workspace]] section, they will completely replace the default ones,
+#          therefore you'll probably want to copy the default ones and extend them instead.
+#          The keymap and the colors will be merged instead, so you can override only a few of the keys/colors if you want.
 
-[[project]]
+[[workspace]]
 
-[project dirs]
-# These directories will be scanned when a project is opened so that search etc. works.
+[workspace dirs]
+# These directories will be scanned when a workspace is opened so that search etc. works.
 # Example:
 # C:/projects/my-project
 # C:/jai
 
 [ignore dirs]
-# The project scanner will not descend into the dirs that match these names
+# The workspace scanner will not descend into the dirs that match these names.
 .build
 .svn
 .git
@@ -20,7 +23,7 @@ bin
 [allow file extensions]
 # These files are explicitly allowed so that the editor doesn't waste time figuring out
 # whether it should ignore these or not (if a file is not explicitly allowed or ignored, 
-# it will be read to determine if it's binary or not)
+# it will be read to determine if it's binary or not).
 .jai .c .cpp .h .txt .md .focus-config
 
 [ignore file extensions]

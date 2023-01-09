@@ -34,10 +34,17 @@
     + If the folder is not writable, let the user know
     + Create a simple config format
     - Load and parse the default config at the start
+        - Write a function to parse only the default config and make sure it works
+        - Then think about loading the user config and merging it with the default one
     - Each file in the projects folder is considered to be a project (provided it's in the right format)
     - Create a temporary folder alongside the exe
     - Save font size in the current project
     - Have a version in the config file
+    - Hot-load user config file and apply the changes immediately (how do we handle the project dir change?)
+    - Make 3 levels of config files:
+        - The baked in default config (always present)
+        - The global user config (located next to the exe file)
+        - The project user config (per project)
     
 - Rewrite the input system using the keymap handler
 

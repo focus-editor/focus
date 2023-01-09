@@ -1,3 +1,116 @@
+load_global_config :: () {
+    // TODO
+}
+
+#scope_file
+
+parse_config :: (name: string, filename: string) -> Config, bool {    
+    handler: Text_File_Handler;
+    // NOTE: we don't free on purpose, because some of the parsed data will point into the file data
+    
+    start_file(*handler, name, filename, false);
+    if handler.failed return Config.{}, false;
+    
+    parser: Config_Parser;    
+    result: Config;
+    
+    while true {
+        line, found := consume_next_line(*handler);
+        if !found break;
+        
+        if #complete parser.top_section == {
+            case .none;
+                if begins_with(line, "[[") {
+                    error := switch_top_section(*parser, line);
+                    if error return result, false;
+                } else {
+                    log_error("Expected a top-level section definition, got '%'", line);
+                    return result, false;
+                }
+                
+            case .workspace;
+                if begins_with(line, "[[") {
+                    error := switch_top_section(*parser, line);
+                    if error return result, false;
+                    continue;
+                }
+                
+            case .keymap;
+                if begins_with(line, "[[") {
+                    error := switch_top_section(*parser, line);
+                    if error return result, false;
+                    continue;
+                }
+                
+            case .colors;
+                if begins_with(line, "[[") {
+                    error := switch_top_section(*parser, line);
+                    if error return result, false;
+                    continue;
+                }
+                                
+        }
+        
+        print("%\n", line);
+    }
+    
+    return result, true;
+}
+
+switch_top_section :: (using parser: *Config_Parser, line: string) -> error: bool {    
+    if line == {
+        case "[[workspace]]"; 
+            top_section = .workspace;
+            if seen_sections & .workspace { log_error("The section '[[workspace]]' is defined twice. This is an error."); return true; }
+            seen_sections |= .workspace;
+            
+        case "[[keymap]]";
+            top_section = .keymap;
+            if seen_sections & .keymap { log_error("The section '[[keymap]]' is defined twice. This is an error."); return true; }
+            seen_sections |= .keymap;
+            
+        case "[[colors]]";
+            top_section = .colors;
+            if seen_sections & .colors { log_error("The section '[[colors]]' is defined twice. This is an error."); return true; }
+            seen_sections |= .colors;
+            
+        case;
+            log_error("Expected one of the following top-level sections: '[[workspace]]', '[[keymap]]', '[[colors]]', but found '%'", line);
+            return true;
+    }
+    
+    return false;
+}
+
+#scope_export
+
+config: Config = DEFAULT_CONFIG;
+
+Config :: struct {
+    workspace: Workspace;
+    keymap: Keymap;
+    colors: Colors;
+}
+
+// ==================
+
+Workspace :: struct {
+    // ! project dirs!
+    ignore_dirs: [] string = string.[".build", ".git", "bin", ".svn"];
+    allow_file_extensions:  [] string = string.[".jai", ".c", ".cpp", ".h", ".txt", ".md"];
+    ignore_file_extensions: [] string = string.[
+        ".exe", ".pdb", ".ttf", ".otf", ".dll", ".lib", ".dylib", ".so", ".so.0", ".so.1", ".so.2", ".a", 
+        ".jpg", ".png", ".gif", ".jpeg", ".ico", ".tif", ".tiff", ".tga", ".bmp",
+        ".mp3", ".wav", ".ogg",
+        ".blend", ".obj", ".fbx", ".dae", ".3ds",
+        ".mpg", ".mpeg", ".psd", ".codex",
+    ];
+}
+
+Keymap :: struct {
+    // TODO
+}
+
 Color :: struct {
     #as vec4 : Vector4 = ---;
 
@@ -86,3 +199,28 @@ as_3_floats :: (color: Color) -> [3] float {
 is_none :: (using color: Color) -> bool {
     return r < 0 || g < 0 || b < 0 || a < 0;
 }
+
+#scope_file
+
+Config_Parser :: struct {
+    top_section: enum {
+        none;
+        workspace;
+        keymap;
+        colors;
+    } = .none;
+    
+    seen_sections: enum_flags {
+        workspace;
+        keymap;
+        colors;
+    };
+}
+
+DEFAULT_CONFIG :: #run () -> Config {
+    config, success := parse_config("Default Config", "default.focus-config");
+    assert(success, "Couldn't load the default config file 'default.focus-config'");
+    return config;
+}();
+
+#import "Text_File_Handler";
