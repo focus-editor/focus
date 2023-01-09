@@ -14,68 +14,116 @@ parse_config :: (name: string, filename: string) -> Config, bool {
     parser: Config_Parser;    
     result: Config;
     
+    // Will be filled as the file parses
+    workspace_dirs:         [..] string;
+    ignore_dirs:            [..] string;
+    allow_file_extensions:  [..] string;
+    ignore_file_extensions: [..] string;
+    
     while true {
         line, found := consume_next_line(*handler);
         if !found break;
         
-        if #complete parser.top_section == {
-            case .none;
-                if begins_with(line, "[[") {
-                    error := switch_top_section(*parser, line);
-                    if error return result, false;
-                } else {
-                    log_error("Expected a top-level section definition, got '%'", line);
-                    return result, false;
-                }
-                
-            case .workspace;
-                if begins_with(line, "[[") {
-                    error := switch_top_section(*parser, line);
-                    if error return result, false;
-                    continue;
-                }
-                
-            case .keymap;
-                if begins_with(line, "[[") {
-                    error := switch_top_section(*parser, line);
-                    if error return result, false;
-                    continue;
-                }
-                
-            case .colors;
-                if begins_with(line, "[[") {
-                    error := switch_top_section(*parser, line);
-                    if error return result, false;
-                    continue;
-                }
-                                
+        // Maybe switch to a different top section
+        if begins_with(line, "[[") {
+            error := switch_top_section(*parser, line);
+            if error return Config.{}, false;
+            continue;
         }
         
-        print("%\n", line);
+        if #complete parser.top_section == {
+            case .none;
+                log_error("Expected a top-level section definition, got '%'", line);
+                return result, false;
+                
+            case .workspace;
+                if begins_with(line, "[") {
+                    if line == {
+                        case "[workspace dirs]";         parser.workspace_subsection = .workspace_dirs;
+                        case "[ignore dirs]";            parser.workspace_subsection = .ignore_dirs;
+                        case "[allow file extensions]";  parser.workspace_subsection = .allow_file_extensions;
+                        case "[ignore file extensions]"; parser.workspace_subsection = .ignore_file_extensions;
+                        case; log_error("Unknown subsection '%'", line); return result, false;
+                    }
+                    continue;
+                }
+                if #complete parser.workspace_subsection == {
+                    case .none;
+                        log_error("Expected a subsection definition, got '%'", line);
+                        return result, false;
+                    case .workspace_dirs;
+                        dir_path := line;
+                        if file_exists(dir_path) {
+                            array_add(*workspace_dirs, dir_path);
+                        } else {
+                            log_error("Directory '%' doesn't exist, skipping...", dir_path);
+                        }
+                    case .ignore_dirs;
+                        dirs := split(line, cast(u8) #char " ");
+                        for dir : dirs {
+                            if !dir continue;
+                            array_add(*ignore_dirs, dir);
+                        }
+                    case .allow_file_extensions;
+                        extensions := split(line, cast(u8) #char " ");
+                        for extensions {
+                            if !it continue;
+                            array_add(*allow_file_extensions, it);
+                        }
+                    case .ignore_file_extensions;
+                        extensions := split(line, cast(u8) #char " ");
+                        for extensions {
+                            if !it continue;
+                            array_add(*ignore_file_extensions, it);
+                        }
+                }                
+                
+            case .settings;
+                // TODO
+                
+            case .keymap;
+                // TODO
+                
+            case .colors;
+                // TODO
+                                
+        }
     }
+    
+    // Cast away the extendable arrays into array views
+    result.workspace.workspace_dirs = workspace_dirs;
+    result.workspace.ignore_dirs = ignore_dirs;
+    result.workspace.allow_file_extensions = allow_file_extensions;
+    result.workspace.ignore_file_extensions = ignore_file_extensions;
     
     return result, true;
 }
 
-switch_top_section :: (using parser: *Config_Parser, line: string) -> error: bool {    
+
+switch_top_section :: (using parser: *Config_Parser, line: string) -> error: bool {
     if line == {
-        case "[[workspace]]"; 
+        case "[[workspace]]";
             top_section = .workspace;
-            if seen_sections & .workspace { log_error("The section '[[workspace]]' is defined twice. This is an error."); return true; }
-            seen_sections |= .workspace;
+            if seen_top_sections & .workspace { log_error("The section '[[workspace]]' is defined twice. This is an error."); return true; }
+            seen_top_sections |= .workspace;
             
         case "[[keymap]]";
             top_section = .keymap;
-            if seen_sections & .keymap { log_error("The section '[[keymap]]' is defined twice. This is an error."); return true; }
-            seen_sections |= .keymap;
+            if seen_top_sections & .keymap { log_error("The section '[[keymap]]' is defined twice. This is an error."); return true; }
+            seen_top_sections |= .keymap;
             
         case "[[colors]]";
             top_section = .colors;
-            if seen_sections & .colors { log_error("The section '[[colors]]' is defined twice. This is an error."); return true; }
-            seen_sections |= .colors;
+            if seen_top_sections & .colors { log_error("The section '[[colors]]' is defined twice. This is an error."); return true; }
+            seen_top_sections |= .colors;
+            
+        case "[[settings]]";
+            top_section = .settings;
+            if seen_top_sections & .settings { log_error("The section '[[settings]]' is defined twice. This is an error."); return true; }
+            seen_top_sections |= .settings;
             
         case;
-            log_error("Expected one of the following top-level sections: '[[workspace]]', '[[keymap]]', '[[colors]]', but found '%'", line);
+            log_error("Expected one of the following top-level sections: '[[workspace]]', '[[settings]]', '[[keymap]]', '[[colors]]', but found '%'", line);
             return true;
     }
     
@@ -92,19 +140,11 @@ Config :: struct {
     colors: Colors;
 }
 
-// ==================
-
 Workspace :: struct {
-    // ! project dirs!
-    ignore_dirs: [] string = string.[".build", ".git", "bin", ".svn"];
-    allow_file_extensions:  [] string = string.[".jai", ".c", ".cpp", ".h", ".txt", ".md"];
-    ignore_file_extensions: [] string = string.[
-        ".exe", ".pdb", ".ttf", ".otf", ".dll", ".lib", ".dylib", ".so", ".so.0", ".so.1", ".so.2", ".a", 
-        ".jpg", ".png", ".gif", ".jpeg", ".ico", ".tif", ".tiff", ".tga", ".bmp",
-        ".mp3", ".wav", ".ogg",
-        ".blend", ".obj", ".fbx", ".dae", ".3ds",
-        ".mpg", ".mpeg", ".psd", ".codex",
-    ];
+    workspace_dirs: [] string;
+    ignore_dirs: [] string;
+    allow_file_extensions:  [] string;
+    ignore_file_extensions: [] string;
 }
 
 Keymap :: struct {
@@ -208,12 +248,22 @@ Config_Parser :: struct {
         workspace;
         keymap;
         colors;
+        settings;
     } = .none;
     
-    seen_sections: enum_flags {
+    seen_top_sections: enum_flags {
         workspace;
         keymap;
         colors;
+        settings;
+    };
+    
+    workspace_subsection: enum {
+        none;
+        workspace_dirs;
+        ignore_dirs;
+        allow_file_extensions;
+        ignore_file_extensions;
     };
 }
 

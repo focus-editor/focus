@@ -33,10 +33,8 @@
     + Assuming the dir containing the focus executable is writable, create a projects folder in it
     + If the folder is not writable, let the user know
     + Create a simple config format
-    - Load and parse the default config at the start
-        - Write a function to parse only the default config and make sure it works
-        - Then think about loading the user config and merging it with the default one
-    - Each file in the projects folder is considered to be a project (provided it's in the right format)
+    + Load and parse the default config at the start
+    - Then think about loading the user config and merging it with the default one
     - Create a temporary folder alongside the exe
     - Save font size in the current project
     - Have a version in the config file

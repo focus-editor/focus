@@ -35,6 +35,8 @@ bin
 .blend .obj .fbx .dae .3ds
 .mpg .mpeg .psd .codex
 
+[[settings]]
+# TODO
 
 [[keymap]]
 # TODO

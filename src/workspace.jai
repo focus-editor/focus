@@ -53,7 +53,7 @@ maybe_update_workspace_buffers :: () {
     
     visitor_func :: (file: *File_Visit_Info, userdata: *void) {
         if file.is_directory {
-            for workspace.ignore_dirs {
+            for config.workspace.ignore_dirs {
                 if equal_nocase(file.short_name, it) {  // TODO: do a wildcard match
                     file.descend_into_directory = false;
                     return;
@@ -76,12 +76,12 @@ maybe_update_workspace_buffers :: () {
 
 should_ignore_file :: (path: string) -> bool {    
     // Allow known text file extensions since they are the most common
-    for allowed_ext : workspace.allow_file_extensions {
+    for allowed_ext : config.workspace.allow_file_extensions {
         if ends_with_nocase(path, allowed_ext) return false;
     }
     
     // Then check for common known binary file extensions
-    for workspace.ignore_file_extensions {
+    for config.workspace.ignore_file_extensions {
         if ends_with_nocase(path, it) return true;  // TODO: do a wildcard match
     }
     
@@ -108,7 +108,7 @@ initial_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) 
     
     visitor_func :: (file: *File_Visit_Info, userdata: *void) {
         if file.is_directory {
-            for workspace.ignore_dirs {
+            for config.workspace.ignore_dirs {
                 if equal_nocase(file.short_name, it) {  // TODO: do a wildcard match
                     file.descend_into_directory = false;
                     return;
@@ -145,7 +145,7 @@ initial_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) 
     
     visitor_func :: (file: *File_Visit_Info, using visitor_data: *Visitor_Data) {
         if file.is_directory {
-            for workspace.ignore_dirs {
+            for config.workspace.ignore_dirs {
                 if equal_nocase(file.short_name, it) {  // TODO: do a wildcard match
                     file.descend_into_directory = false;
                     return;
@@ -155,12 +155,12 @@ initial_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) 
         }
         if file.is_symlink return;
         
-        for allowed_ext : workspace.allow_file_extensions {
+        for allowed_ext : config.workspace.allow_file_extensions {
             // Allow known text file extensions since they are the most common
             if ends_with_nocase(file.short_name, allowed_ext) break;
             
             // Then check for common known binary file extensions
-            for workspace.ignore_file_extensions {
+            for config.workspace.ignore_file_extensions {
                 if ends_with_nocase(file.short_name, it) return;  // TODO: do a wildcard match
             }
         }
@@ -258,7 +258,7 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
     // If the change is in one of the ignored dirs, ignore it
     path_parts := split(change.full_path, cast(u8) #char "/");
     for part : path_parts {
-        for dir : workspace.ignore_dirs {
+        for dir : config.workspace.ignore_dirs {
             if part == dir return;
         }
     }
@@ -322,8 +322,6 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
     
     if (change.events & .REMOVED) || (change.events & .MOVED_FROM) then maybe_mark_buffer_as_deleted(change.full_path);
 }
-
-workspace: Workspace;
 
 file_watcher: File_Watcher;
 dirs_to_rescan: [..] string;    // will use temporary storage
