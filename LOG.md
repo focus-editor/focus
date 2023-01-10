@@ -38,7 +38,10 @@
     + Create a temporary folder alongside the exe
     + Then think about loading the user config and merging it with the default one
     + If no global config exists, attempt to create it on start
-    - Save font size in the current project
+    + Load project dirs from the global config
+    - Load the list of projects from the projects/ folder:
+        - Every .focus-config file is a project
+        - Temporary project files are stored in the global temp folder
     - Hot-load user config file and apply the changes immediately (how do we handle the project dir changes?)
     - Have a command to edit global config or project config (it will open the corresponding file)
     - Every time a config file changes, the configs need to be reloaded and re-merged (and the changes need to be applied)
@@ -60,6 +63,7 @@
     - Need to refactor the input system first
 - Ctrl + Home/End to jump to beginning/end of the file
 - Alt + PgUp/PgDown to scroll viewport by page
+- Save font size in the current project config when changed
     
 - Save editor state on editor operations:
     - Alt + minus to open previous state

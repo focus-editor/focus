@@ -1,6 +1,7 @@
 load_global_config :: (exe_dir: string) {
     filename := tprint("%global.focus-config", exe_dir);
     if !file_exists(filename) {
+        if DEBUG return;  // don't pollute the focus project
         success := write_entire_file(filename, DEFAULT_CONFIG_FILE_DATA);
         if !success {
             log_error("Couldn't create the default global config file '%'", filename);
@@ -299,11 +300,11 @@ DEFAULT_CONFIG_NAME :: "default.focus-config";  // in the focus project folder
 
 DEFAULT_CONFIG_FILE_DATA :: #run read_entire_file(DEFAULT_CONFIG_NAME);
 
-DEFAULT_CONFIG :: #run () -> Config {
+DEFAULT_CONFIG :: #run -> Config {
     config, success := parse_config("Default Config", DEFAULT_CONFIG_NAME, DEFAULT_CONFIG_FILE_DATA);
     assert(success, "Couldn't parse the default config file '%'", DEFAULT_CONFIG_NAME);
     return config;
-}();
+};
 
 
 #import "Text_File_Handler";

@@ -3,8 +3,9 @@ init_workspace :: (exe_dir: string) {
     if !make_directory_if_it_does_not_exist("temp")     then panic_messagebox("Couldn't create folder %/temp for temporary files. Is the directory writable?", exe_dir);
     
     // @Cleanup: remove and do properly
-    initial_project_dirs := string.[ "W:/focus", "C:/jai" ];
-    for path, i : initial_project_dirs {
+    print("DEBUG: %\n", DEBUG);
+    workspace_dirs := ifx !DEBUG then config.workspace.workspace_dirs else string.[ "W:/focus", "C:/jai" ];
+    for path, i : workspace_dirs {
         dir: Project_Dir = ---;
         dir.path = path;
         dir.path_prefix_len = find_index_of_any_from_right(path, ".\\/") + 1;
