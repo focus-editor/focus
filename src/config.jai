@@ -1,8 +1,11 @@
 load_global_config :: (exe_dir: string) {
     filename := tprint("%global.focus-config", exe_dir);
     if !file_exists(filename) {
-        log("No global config file found: '%'", filename);
-        return;
+        success := write_entire_file(filename, DEFAULT_CONFIG_FILE_DATA);
+        if !success {
+            log_error("Couldn't create the default global config file '%'", filename);
+            return;
+        }
     }
     file_data, success_read := read_entire_file(filename);
     if !success_read {

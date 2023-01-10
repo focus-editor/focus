@@ -4,10 +4,10 @@
     + Show in the program title when it's running in debug mode
     + Support tabs (just draw them, not even necessarily wide, just draw in some way - but wide would be best)
     + Finish text input improvements
+    + Bake fonts
     - Tokenizer parses everything correctly
     - Ignore project folders which are children of another project folder?
     - Show help on F1
-    - Bake fonts
     - Test the exe on different machines
     - Improve cursor: change color based on scope + draw occluded letters on top
     - Remove the edited status on a timeout after last edit/undo/whatever
@@ -28,29 +28,28 @@
     - See if memory usage can be improved
     - Custom title bar (currently too much work and not very robust)
     - Linux support
+    - Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
     
 - Projects
     + Assuming the dir containing the focus executable is writable, create a projects folder in it
     + If the folder is not writable, let the user know
     + Create a simple config format
     + Load and parse the default config at the start
-    - Then think about loading the user config and merging it with the default one
-    - Create a temporary folder alongside the exe
+    + Create a temporary folder alongside the exe
+    + Then think about loading the user config and merging it with the default one
+    + If no global config exists, attempt to create it on start
     - Save font size in the current project
-    - Have a version in the config file
-    - Hot-load user config file and apply the changes immediately (how do we handle the project dir change?)
-    - Make 3 levels of config files:
-        - The baked in default config (always present)
-        - The global user config (located next to the exe file)
-        - The project user config (per project)
+    - Hot-load user config file and apply the changes immediately (how do we handle the project dir changes?)
+    - Have a command to edit global config or project config (it will open the corresponding file)
+    - Every time a config file changes, the configs need to be reloaded and re-merged (and the changes need to be applied)
     
 - Rewrite the input system using the keymap handler
 
-- Be able to open the default config as a readonly buffer
-    - Create a command system first
-
 - Hide scrollbars unless scrolling or hovering over editor
 - Add horizontal scrollbar
+    - Scroll by alt+left/right
+- Search in buffer:
+    - When pressing up/down to switch to prev/next result, don't wrap (but do wrap when using Enter - what else to go back?)
 
 - Fix the whole word matching when creating new cursors (underscore seems to be considered not a word char, but inconsistently)
     - Easy to detect when using variables like success, success_read, log_error, error etc
@@ -60,6 +59,7 @@
 - Ctrl + [ and Ctrl + ] to indent lines
     - Need to refactor the input system first
 - Ctrl + Home/End to jump to beginning/end of the file
+- Alt + PgUp/PgDown to scroll viewport by page
     
 - Save editor state on editor operations:
     - Alt + minus to open previous state

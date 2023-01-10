@@ -1,6 +1,5 @@
 [1]  # Version number. Do not delete.
 
-# This is a default config file which will be used as a fallback in case your own config file is missing or incomplete.
 # WARNING. If you override any of the settings in the [[workspace]] section, they will completely replace the default ones,
 #          therefore you'll probably want to copy the default ones and extend them instead.
 #          The keymap and the colors will be merged instead, so you can override only a few of the keys/colors if you want.
