@@ -1,5 +1,9 @@
 # Focus
 
+A simple editor that tries to not stand in your way.
+
+Jai version required for compiling: 0.1.051
+
 ## Basic shortcuts
 
 - Ctrl + P - open file (if you hold Ctrl when opening a file it will open on the side)

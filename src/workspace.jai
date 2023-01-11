@@ -1,9 +1,16 @@
-init_workspace :: (exe_dir: string) {
+init_workspace :: () {
     if !make_directory_if_it_does_not_exist("projects") then panic_messagebox("Couldn't create folder %/projects. Is the directory writable?", exe_dir);
     if !make_directory_if_it_does_not_exist("temp")     then panic_messagebox("Couldn't create folder %/temp for temporary files. Is the directory writable?", exe_dir);
     
-    // @Cleanup: remove and do properly
-    print("DEBUG: %\n", DEBUG);
+    // Maybe open file passed in the command line
+    args := get_command_line_arguments();
+    if args.count == 2 && file_exists(args[1]) {
+        start_fresh_session();
+        editors_open_file(args[1]);
+    } else {
+        maybe_load_previous_session();
+    }
+    
     workspace_dirs := ifx !DEBUG then config.workspace.workspace_dirs else string.[ "W:/focus", "C:/jai" ];
     for path, i : workspace_dirs {
         dir: Project_Dir = ---;
@@ -324,6 +331,8 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
     if (change.events & .REMOVED) || (change.events & .MOVED_FROM) then maybe_mark_buffer_as_deleted(change.full_path);
 }
 
+#scope_file
+
 file_watcher: File_Watcher;
 dirs_to_rescan: [..] string;    // will use temporary storage
 watcher_file_modified: string;  // will contain the path of a file if if was modified and it was the only event in a group,
@@ -334,8 +343,5 @@ scanner_thread: Thread_Group;
 scanned_buffers: [..] Buffer;
 initial_scan_complete := false;
 num_dirs_scanned := 0;
-
-
-#scope_file
 
 File_Async :: #import "File_Async";

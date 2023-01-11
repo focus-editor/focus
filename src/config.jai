@@ -1,4 +1,4 @@
-load_global_config :: (exe_dir: string) {
+load_global_config :: () {
     filename := tprint("%global.focus-config", exe_dir);
     if !file_exists(filename) {
         if DEBUG return;  // don't pollute the focus project

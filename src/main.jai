@@ -14,25 +14,18 @@ main :: () {
     screen = make_rect(0, 0, window_width, window_height);
     Simp.set_render_target(window);
 
-    exe_dir := path_strip_filename(get_path_of_running_executable());
+    init_buffers();
+    
+    exe_dir = path_strip_filename(get_path_of_running_executable());
+    assert(exe_dir.count > 0);
+    
     set_working_directory(exe_dir);
-    load_global_config(exe_dir);
-
+    load_global_config();
+    init_workspace();
+    
     dpi_scale = platform_get_dpi_scale(window);
     init_fonts();
     old_line_height = line_height;
-
-    init_buffers();
-    init_workspace(exe_dir);
-    
-    // Maybe open file passed in the command line
-    args := get_command_line_arguments();
-    if args.count == 2 && file_exists(args[1]) {
-        editors_open_file(args[1]);
-    } else {
-        // TODO: load files from the previous session here
-        editors_open_file("README.md", true);
-    }
 
     should_quit := false;
 
@@ -269,6 +262,8 @@ ctrl_pressed :: inline () -> bool {
     return key_state(.CTRL) & .DOWN != 0;
 }
 
+exe_dir: string;
+
 window: Window_Type;
 window_width  := 1920;
 window_height := 1080;
@@ -367,6 +362,7 @@ Project_Dir :: struct {
 #load "files.jai";
 #load "workspace.jai";
 #load "config.jai";
+#load "session.jai";
 #load "widgets/text_input.jai";
 #load "widgets/open_file_dialog.jai";
 #load "widgets/finder.jai";

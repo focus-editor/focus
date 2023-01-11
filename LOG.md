@@ -39,6 +39,17 @@
     + Then think about loading the user config and merging it with the default one
     + If no global config exists, attempt to create it on start
     + Load project dirs from the global config
+    - When a new instance is started, start a new session:
+        - Create a folder in the temp folder `session_{timestamp}`
+        - Save project name
+        - Save modified buffers together with some limited undo/redo history
+        - Do it every quick frame
+        - When an old session is present, copy over stuff from there (gracefully fail if can't reopen stuff)
+        - Save up to 10 sessions (delete the rest when starting)
+    - On the splash screen list all previous sessions (one per project)
+        - Display last edit time
+        - Display project name
+        - Maybe display the number of unsaved buffers
     - Load the list of projects from the projects/ folder:
         - Every .focus-config file is a project
         - Temporary project files are stored in the global temp folder

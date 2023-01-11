@@ -486,7 +486,7 @@ TYPE_KEYWORDS :: string.[
 ];
 
 VALUE_KEYWORDS :: string.[
-    "context", "it", "it_index", "null", "true", "false",
+    "context", "it", "it_index", "null", "true", "false", "temp",
 ];
 
 COMPILER_DIRECTIVES :: string.[
