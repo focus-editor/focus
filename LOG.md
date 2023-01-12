@@ -14,10 +14,11 @@
     - New open file dialog
     - Create new files
     - Notify about unsaved buffers on close
+    - Ctrl + R to search by symbol within buffer (jump immediately when moving cursor between options)
+    - Ctrl + Shift + R to search by symbol within workspace
     - Try to implement "jump to symbol definition". Display a popup if more than one. Do a scan of jai files for that.
     - Horizontal scrolling
     - Figure out how to anti-alias rounded corners
-    - Have a user error log - with an icon in the title bar to toggle it
     - Support CRLF (ugh)
     - Have the option to not strip trailing whitespace (in the config?) Or can do ctrl+s as a main way to save, ctr+shift+s as an alternative way
     - Adjust cursors in joint editors properly
@@ -29,6 +30,7 @@
     - Custom title bar (currently too much work and not very robust)
     - Linux support
     - Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
+    - Have a user error log - with an icon in the title bar to toggle it
     
 - Projects
     + Assuming the dir containing the focus executable is writable, create a projects folder in it

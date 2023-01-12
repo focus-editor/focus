@@ -17,6 +17,7 @@ main :: () {
     init_buffers();
     
     exe_dir = path_strip_filename(get_path_of_running_executable());
+    if !ends_with(exe_dir, "/") exe_dir = sprint("%/", exe_dir);
     assert(exe_dir.count > 0);
     
     set_working_directory(exe_dir);

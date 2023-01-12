@@ -18,6 +18,7 @@
 .svn
 .git
 bin
+temp
 
 [allow file extensions]
 # These files are explicitly allowed so that the editor doesn't waste time figuring out
