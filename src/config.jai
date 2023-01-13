@@ -1,27 +1,44 @@
 load_global_config :: () {
-    filename := tprint("%global.focus-config", exe_dir);
-    if !file_exists(filename) {
-        if DEBUG return;  // don't pollute the focus project
-        success := write_entire_file(filename, DEFAULT_CONFIG_FILE_DATA);
-        if !success {
-            log_error("Couldn't create the default global config file '%'", filename);
-            return;
-        }
-    }
-    file_data, success_read := read_entire_file(filename);
-    if !success_read {
-        log_error("Couldn't read file '%'", filename);
-        return;
-    }
-    global_config, success_parse := parse_config("Global Config", filename, file_data);
-    if !success_parse {
-        log_error("Couldn't parse global config file '%'", filename);
+    global_config, success, error_msg := load_config(tprint("%global.focus-config", exe_dir), create_if_doesnt_exist = !DEBUG);
+    if !success {
+        if error_msg then log_error(error_msg);
         return;
     }
     merge_configs(*config, global_config);
 }
 
+load_project_config :: (project_name: string) -> success: bool {
+    config_path := tprint("%/projects/%.focus-config", exe_dir, project_name);
+    project_config, success, error_msg := load_config(config_path);
+    if !success {
+        if error_msg then log_error(error_msg);
+        return false;
+    }
+    merge_configs(*config, project_config);
+    return true;
+}
+
 #scope_file
+
+load_config :: (file_path: string, create_if_doesnt_exist := false) -> Config, success: bool, error_msg: string /* tmp */ {
+    empty: Config;
+    
+    if !file_exists(file_path) {
+        if !create_if_doesnt_exist return empty, false, "";  // no error message because it's not an error
+        
+        // Create one with default contents
+        success := write_entire_file(file_path, DEFAULT_CONFIG_FILE_DATA);
+        if !success return empty, false, tprint("Couldn't create a config file '%'", file_path);
+    }
+    
+    file_data, success_read := read_entire_file(file_path);
+    if !success_read return empty, false, tprint("Couldn't read file '%'", file_path);
+    
+    config, success_parse := parse_config("Global Config", file_path, file_data);
+    if !success_parse return empty, false, tprint("Couldn't parse config file '%'", file_path);
+    
+    return config, true, "";
+}
 
 merge_configs :: (dst: *Config, src: Config) {
     // Workspace

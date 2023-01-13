@@ -3,6 +3,7 @@ start_fresh_session :: () -> string {
     now := current_time_consensus();
     current_session_name := sprint("session_%_%", formatInt(now.high, base=16), formatInt(now.low, base=16));
     current_session_dir := tprint("%temp/%", exe_dir, current_session_name);
+    
     if !make_directory_if_it_does_not_exist(current_session_dir) {
         panic_messagebox("Couldn't create a new session '%' - please check directory permissions", current_session_dir);
     }
@@ -13,8 +14,8 @@ maybe_load_previous_session :: () {
     // + Find latest session:
         // + Get the list of all dirs starting with session_
         // + Find the most recent one
-    // Parse the contents of the folder
-    // Load the project config (may fail, that's ok)
+    // + Parse the contents of the folder
+    // + Load the project config (may fail, that's ok)
     // Open all previously opened editors
         // If they are not modified and last modtime matches, load as is, together with the undo history
         // If a buffer was modified:
@@ -31,6 +32,11 @@ maybe_load_previous_session :: () {
         copied := copy_session_data(last_session_name, current_session_name);
         if !copied log_error("Couldn't copy last session data '%' into the new session '%'", last_session_name, current_session_name);
     }
+    
+    // Check if we have a project
+    project_file_path := tprint("%temp/%/project", exe_dir, current_session_name);
+    project_name, success := read_entire_file(project_file_path);
+    if success then session.project = project_name;
 }
 
 #scope_file
@@ -64,13 +70,9 @@ get_last_session_name :: () -> string, found: bool {
     if num_old_sessions > 0 {
         for i : 1 .. num_old_sessions {
             session_dir := tprint("%/%", temp_dir, session_dirs[session_dirs.count - i].name);
-            log("Deleting old session '%'", session_dir);
             deleted := delete_directory(session_dir);
             if !deleted log_error("Couldn't delete old session '%'", session_dir);
         }
-    }
-    for session_dirs {
-        log("session_dirs[%].name = %", it_index, it.name);
     }
     
     return session_dirs[0].name, true;
