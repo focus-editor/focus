@@ -2,7 +2,7 @@ start_fresh_session :: () -> Session {
     // Create a new folder to store session data
     now := current_time_consensus();
     current_session_name := tprint("session_%_%", formatInt(now.high, base=16), formatInt(now.low, base=16));
-    current_session_dir := tprint("%/temp/%", exe_dir, current_session_name);
+    current_session_dir  := tprint("%/temp/%", exe_dir, current_session_name);
     
     if !make_directory_if_it_does_not_exist(current_session_dir) {
         panic_messagebox("Couldn't create a new session '%' - please check directory permissions", current_session_dir);
@@ -35,25 +35,8 @@ maybe_load_previous_session :: () {
 }
 
 session_notify_modified_buffer :: (buffer_id: s64) {
-    if !session.modified_buffers then session.modified_time = current_time_monotonic();
+    session.last_modified_time = current_time_monotonic();
     array_add_if_unique(*session.modified_buffers, buffer_id);
-}
-
-maybe_save_editor_state_into_session :: () -> saved: bool {
-    saved := false;
-    
-    for buffer_id : session.modified_buffers {
-        save_buffer_state(buffer_id);
-        saved = true;
-    }
-    
-    array_reset_keeping_memory(*session.modified_buffers);
-    
-    return saved;
-}
-
-overdue_for_editor_state_save :: () -> bool {
-    return session.modified_buffers && to_seconds(current_time_monotonic() - session.modified_time) > 10;
 }
 
 #scope_file
@@ -180,7 +163,7 @@ Session :: struct {
     last_edit: Apollo_Time;
     
     modified_buffers: [..] s64;
-    modified_time: Apollo_Time;  // to detect if we're taking too long to save buffers
+    last_modified_time: Apollo_Time;
 }
 
 Session_Dir :: struct {

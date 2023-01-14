@@ -11,8 +11,22 @@ refresh_open_buffers :: () {
     }
 }
 
-refresh_modified_buffers :: () -> refreshed: bool {
-    return false;
+maybe_process_modified_buffers :: () {
+    // After some time has passed since the last buffer edit we want to 
+    // 1. Compare them with the contents on disk (maybe they are not actually modified)
+    // 2. Save their contents into session as a backup
+    if !session.modified_buffers return;
+    if to_milliseconds(current_time_monotonic() - session.last_modified_time) < 500 return;
+    
+    for buffer_id : session.modified_buffers {
+        buffer := *open_buffers[buffer_id];
+        
+        compare_with_contents_on_disk_and_maybe_unmark_as_modified(buffer);        
+        
+        // session_queue_buffer_save(buffer_id, buffer);
+    }
+    
+    array_reset_keeping_memory(*session.modified_buffers);
 }
 
 put_cursor_in_valid_spot :: (using cursor: *Cursor, buffer: Buffer) {
@@ -506,6 +520,19 @@ deinit :: (using buffer: *Buffer) {
 }
 
 #scope_file
+
+compare_with_contents_on_disk_and_maybe_unmark_as_modified :: (using buffer: *Buffer) {
+    if !has_file || !modified return;
+    
+    mark := get_temporary_storage_mark();
+    defer   set_temporary_storage_mark(mark);
+    push_allocator(temp);
+    
+    contents, success := read_entire_file(file.full_path);
+    if !success { log_error("Couldn't read file '%'", file.full_path); return; }
+    
+    if contents == to_string(bytes) then buffer.modified = false;
+}
 
 new_replace_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string, new_str: string) {
     edit := array_add(*buffer.edits);

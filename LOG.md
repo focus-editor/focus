@@ -48,14 +48,15 @@
         + Save project name
         + When an old session is present, copy over stuff from there (gracefully fail if can't reopen stuff)
         + Save up to 10 sessions (delete the rest when starting)
+    + Save session state somehow:
+        + Have a file per buffer, with 2 editor slots, one optional (for the second editor)
+        + Do it every quick frame
+        + Measure how long it takes
+        - Do it no more than once per second
+        - Do it in a separate thread
+        - Save after saving the buffer
+        - Save layout state alongside project (change the project file to "state") - have a version at the top
     - Load previously opened editors from the last session:
-        - Save somehow:
-            + Have a file per buffer, with 2 editor slots, one optional (for the second editor)
-            + Do it every quick frame
-            + Measure how long it takes
-            - Save after saving the buffer
-            - Do it in a separate thread
-            - Save layout state alongside project (change the project file to "state") - have a version at the top
         - If they are not modified and last modtime matches, load as is, together with the undo history
         - If a buffer was modified:
             - If the modtime matches the file, load as modified
@@ -71,6 +72,8 @@
     - Hot-load user config file and apply the changes immediately (how do we handle the project dir changes?)
     - Have a command to edit global config or project config (it will open the corresponding file)
     - Every time a config file changes, the configs need to be reloaded and re-merged (and the changes need to be applied)
+    
+- BUG: When reloading file from disk (refresh_buffer_from_disk) make sure to remove crlf (until it's supported at least)
     
 - Proper tab support:
     - Draw them wide (only in the visible part of the text)
