@@ -27,6 +27,10 @@ platform_get_dpi_scale :: (window: Window_Type) -> float {
     return dpi / 96.0;
 }
 
+platform_set_window_title :: (title: string) {
+    SetWindowTextW(window, utf8_to_wide(title));
+}
+
 platform_wait_message :: inline () {
     WaitMessage();
 }

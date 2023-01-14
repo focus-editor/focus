@@ -7,6 +7,7 @@
     + Bake fonts
     - Tokenizer parses everything correctly
     - Ignore project folders which are children of another project folder?
+    - Try to support tabs properly
     - Show help on F1
     - Test the exe on different machines
     - Improve cursor: change color based on scope + draw occluded letters on top
@@ -23,7 +24,6 @@
     - Have the option to not strip trailing whitespace (in the config?) Or can do ctrl+s as a main way to save, ctr+shift+s as an alternative way
     - Adjust cursors in joint editors properly
     - Highlight C/C++
-    - "disable_that_annoying_paste_effect = true"
     - Jump to line on Ctrl+G
     - Log errors into focus-log.txt, focus-log1.txt, ... in release mode
     - See if memory usage can be improved
@@ -43,13 +43,24 @@
     + Load project dirs from the global config
     + Load last opened project
     + Investigate why a new session is not created when opening a file by double click
-    - When a new instance is started, start a new session:
+    + When a new instance is started, start a new session:
         + Create a folder in the temp folder `session_{timestamp}`
         + Save project name
         + When an old session is present, copy over stuff from there (gracefully fail if can't reopen stuff)
         + Save up to 10 sessions (delete the rest when starting)
-        - Save modified buffers together with some limited undo/redo history
-        - Do it every quick frame
+    - Load previously opened editors from the last session:
+        - Save somehow:
+            + Have a file per buffer, with 2 editor slots, one optional (for the second editor)
+            + Do it every quick frame
+            + Measure how long it takes
+            - Save after saving the buffer
+            - Do it in a separate thread
+            - Save layout state alongside project (change the project file to "state") - have a version at the top
+        - If they are not modified and last modtime matches, load as is, together with the undo history
+        - If a buffer was modified:
+            - If the modtime matches the file, load as modified
+            - If the modtime of the file is later, load as modified and modified_on_disk
+    - Save modified buffers together with some limited undo/redo history
     - On the splash screen list all previous sessions (one per project)
         - Display last edit time
         - Display project name
@@ -60,6 +71,18 @@
     - Hot-load user config file and apply the changes immediately (how do we handle the project dir changes?)
     - Have a command to edit global config or project config (it will open the corresponding file)
     - Every time a config file changes, the configs need to be reloaded and re-merged (and the changes need to be applied)
+    
+- Proper tab support:
+    - Draw them wide (only in the visible part of the text)
+    - Consider them a whitespace when calculating line start - they never need to show on the left in finder results
+    - If it turns out to be too hard or messy, could just convert them to spaces on load
+    
+- Config parameters:
+    - Convert to LF on load = true
+    - "disable_that_annoying_paste_effect = false"
+    - tab_size = 4
+    - Convert tabs to spaces on load = false    
+    - cursor_style = block/line
     
 - Rewrite the input system using the keymap handler
 
@@ -94,7 +117,9 @@
     + Make $ a separate token
     + Backtick as a separate token
     + Parse @notes
+    - ^ 
     - Allow \ in identifiers
+    - Report any invalid tokens and fix them
     - Browse everything in the modules folder and try to find anything that sticks out
 
 - Search:

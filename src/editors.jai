@@ -443,7 +443,7 @@ get_active_editor_and_buffer :: () -> *Editor, *Buffer {
     return editor, buffer;
 }
 
-refresh_all_editors_for_buffer :: (buffer_id: s64) {
+refresh_all_editors_for_buffer :: (buffer_id: s64) {    
     buffer := *open_buffers[buffer_id];
     for *e : open_editors {
         if e.buffer_id != buffer_id continue;
@@ -454,6 +454,8 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
         array_reset_keeping_memory(*e.highlights);
         if search_bar_is_open(e) search_and_update_results(e, buffer);
     }
+    
+    session_notify_modified_buffer(buffer_id);
 }
 
 editors_open_file :: (path: string, on_the_side := false) {
@@ -1558,9 +1560,11 @@ Editor :: struct {
     cursors: [..] Cursor;
     main_cursor: s64;      // newly added cursors become main so that we jump to them
     original_cursor: s64;  // we remember the original cursor when first creating multiple cursors (and go back to it on escape)
+    
     search_whole_words := false;  // used when creating new cursors
     cursor_moved       := false;  // this may trigger a scroll so that the cursor is within acceptable bounds
-    scroll_to_cursor: enum { no; yes; yes_new_editor; }  // trigger a scroll so that the cursor is in the center vertically
+    
+    scroll_to_cursor: enum u8 { no; yes; yes_new_editor; }  // trigger a scroll so that the cursor is in the center vertically
 
     highlights: [..] Text_Highlight;
     selected_text_length: s64;

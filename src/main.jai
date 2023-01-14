@@ -16,8 +16,8 @@ main :: () {
 
     init_buffers();
     
-    exe_dir = path_strip_filename(get_path_of_running_executable());
-    if !ends_with(exe_dir, "/") exe_dir = sprint("%/", exe_dir);
+    exe_dir = copy_string(path_strip_filename(get_path_of_running_executable()));
+    if ends_with(exe_dir, "/") exe_dir.count -= 1;
     assert(exe_dir.count > 0);
     
     set_working_directory(exe_dir);
@@ -121,9 +121,24 @@ main :: () {
 
         reset_temporary_storage();
         
-        // It should be ok to sleep a bit after a quick frame to avoid pegging the core.
-        // NOTE: I tried vsync but for some reason it felt super bad - didn't figure out exactly why
-        if cast(Time) get_time() - frame_time <= QUICK_FRAME_DT then sleep_milliseconds(1);
+        if cast(Time) get_time() - frame_time <= QUICK_FRAME_DT {
+            // After a quick frame is probably a good time to save 
+            saved := maybe_save_editor_state_into_session();
+            
+            // We don't want to sleep if we did save the editor state because it could be expensive
+            if !saved {
+                // Check if the modified buffers are actually not modified - which can happen after an undo, for example.
+                // In that case we want to mark them as not modified
+                refreshed := refresh_modified_buffers();
+            
+                // It should be ok to sleep a bit after a quick frame to avoid pegging the core.
+                // NOTE: I tried vsync but for some reason it felt super bad - didn't figure out exactly why
+                if !refreshed sleep_milliseconds(1);
+            }
+        } else if overdue_for_editor_state_save() {
+            // In case we don't have quick frames 1/300s on some machines, we'll trigger saves on a timeout
+            maybe_save_editor_state_into_session();
+        }
     }
 
     // report := make_leak_report();

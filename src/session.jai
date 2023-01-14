@@ -1,48 +1,65 @@
-start_fresh_session :: () -> string {
+start_fresh_session :: () -> Session {
     // Create a new folder to store session data
     now := current_time_consensus();
-    current_session_name := sprint("session_%_%", formatInt(now.high, base=16), formatInt(now.low, base=16));
-    current_session_dir := tprint("%temp/%", exe_dir, current_session_name);
+    current_session_name := tprint("session_%_%", formatInt(now.high, base=16), formatInt(now.low, base=16));
+    current_session_dir := tprint("%/temp/%", exe_dir, current_session_name);
     
     if !make_directory_if_it_does_not_exist(current_session_dir) {
         panic_messagebox("Couldn't create a new session '%' - please check directory permissions", current_session_dir);
     }
-    return current_session_name;
+    
+    new_session := Session.{};
+    new_session.name      = copy_string(current_session_name);
+    new_session.last_edit = current_time_consensus();
+    
+    return new_session;
 }
 
-maybe_load_previous_session :: () {
-    // + Find latest session:
-        // + Get the list of all dirs starting with session_
-        // + Find the most recent one
-    // + Parse the contents of the folder
-    // + Load the project config (may fail, that's ok)
-    // Open all previously opened editors
-        // If they are not modified and last modtime matches, load as is, together with the undo history
-        // If a buffer was modified:
-            // If the modtime matches the file, load as modified
-            // If the modtime of the file is later, load as modified and modified_on_disk
-            
+maybe_load_previous_session :: () {            
     last_session_name, found := get_last_session_name();
     
     // Create a new session dir after looking for the last one
-    current_session_name := start_fresh_session();
+    assert(!session.name, "If we need to recreate a session then the old one needs to be cleared");
+    session = start_fresh_session();
     
     if found {
         // Copy last session's data over to the new one
-        copied := copy_session_data(last_session_name, current_session_name);
-        if !copied log_error("Couldn't copy last session data '%' into the new session '%'", last_session_name, current_session_name);
+        copied := copy_session_data(last_session_name, session.name);
+        if !copied log_error("Couldn't copy last session data '%' into the new session '%'", last_session_name, session.name);
     }
     
     // Check if we have a project
-    project_file_path := tprint("%temp/%/project", exe_dir, current_session_name);
+    project_file_path := tprint("%/temp/%/project", exe_dir, session.name);
     project_name, success := read_entire_file(project_file_path);
-    if success then session.project = project_name;
+    if success then session_set_project(project_name);
+}
+
+session_notify_modified_buffer :: (buffer_id: s64) {
+    if !session.modified_buffers then session.modified_time = current_time_monotonic();
+    array_add_if_unique(*session.modified_buffers, buffer_id);
+}
+
+maybe_save_editor_state_into_session :: () -> saved: bool {
+    saved := false;
+    
+    for buffer_id : session.modified_buffers {
+        save_buffer_state(buffer_id);
+        saved = true;
+    }
+    
+    array_reset_keeping_memory(*session.modified_buffers);
+    
+    return saved;
+}
+
+overdue_for_editor_state_save :: () -> bool {
+    return session.modified_buffers && to_seconds(current_time_monotonic() - session.modified_time) > 10;
 }
 
 #scope_file
 
 get_last_session_name :: () -> string, found: bool {
-    temp_dir := tprint("%temp", exe_dir);
+    temp_dir := tprint("%/temp", exe_dir);
     
     session_dirs: [..] Session_Dir;
     session_dirs.allocator = temp;
@@ -79,8 +96,8 @@ get_last_session_name :: () -> string, found: bool {
 }
 
 copy_session_data :: (source: string, dest: string) -> success: bool {
-    src_session := tprint("%temp/%", exe_dir, source);
-    dst_session := tprint("%temp/%", exe_dir, dest);
+    src_session := tprint("%/temp/%", exe_dir, source);
+    dst_session := tprint("%/temp/%", exe_dir, dest);
     
     success := true;
     
@@ -92,6 +109,63 @@ copy_session_data :: (source: string, dest: string) -> success: bool {
     return success;
 }
 
+session_set_project :: (project: string) {
+    session.project = project;
+    platform_set_window_title(tprint("% - Focus", project));
+}
+
+save_buffer_state :: (buffer_id: s64) {
+    buffer := *open_buffers[buffer_id];
+    
+    // Build buffer state for saving into file
+    state: Buffer_State;
+    state.version   = Buffer_State.CURRENT_VERSION;
+    
+    state.buffer_id = buffer_id;
+    state.file      = buffer.file;
+    state.has_file  = buffer.has_file;
+    state.unsaved   = buffer.modified;
+    
+    state.last_modtime = buffer.last_modtime;
+    state.last_size    = buffer.last_size;
+    
+    // Find editors and remember their state
+    editor_states: [2] Editor_State = ---;
+    num_editors := 0;
+    for open_editors {
+       if it.buffer_id != buffer_id continue;
+       
+       editor_state := *editor_states[num_editors];
+       editor_state.editor_id     = it_index;
+       editor_state.main_cursor   = it.cursors[it.main_cursor].state;
+       editor_state.viewport_top  = it.viewport.top;
+       editor_state.viewport_left = it.viewport.left;
+       
+       num_editors += 1;
+       if num_editors >= 2 break;
+    }
+    
+    assert(num_editors >= 1, "Trying to save the state of a buffer without an open editor");
+    
+    state.editor1 = editor_states[0];
+    if num_editors > 1 then state.editor2 = editor_states[1];
+    state.editor2_exists = num_editors > 1;
+    
+    state.bytes_size = ifx buffer.modified then buffer.bytes.count else 0;  // no need to save an unmodified buffer
+    
+    // Write to file
+    file_path := tprint("%/temp/%/buffer%", exe_dir, session.name, buffer_id);
+    
+    builder: String_Builder;
+    init_string_builder(*builder);
+    
+    append(*builder, cast(*u8) *state, size_of(Buffer_State));
+    
+    if buffer.modified append(*builder, buffer.bytes.data, buffer.bytes.count);
+    
+    success := write_entire_file(file_path, *builder, do_reset = true);
+    if !success log_error("Couldn't save buffer state into file '%'", file_path);
+}
 
 #scope_export
 
@@ -100,9 +174,13 @@ session: Session;
 #scope_file
 
 Session :: struct {
-    path: string;
+    name: string;
     project: string;
-    // last_edit: Apollo_Time;  // ??
+    // layout
+    last_edit: Apollo_Time;
+    
+    modified_buffers: [..] s64;
+    modified_time: Apollo_Time;  // to detect if we're taking too long to save buffers
 }
 
 Session_Dir :: struct {
@@ -111,3 +189,34 @@ Session_Dir :: struct {
 }
 
 MAX_SESSIONS_TO_STORE :: 20;
+
+Buffer_State :: struct {
+    version: s64;
+    
+    buffer_id: s64;
+    
+    file: File_Info;
+    has_file: bool;
+    unsaved: bool;
+    
+    last_modtime: Apollo_Time;
+    last_size: s64;
+    
+    // Every buffer may have up to 2 editors
+    editor1: Editor_State;
+    editor2: Editor_State;
+    editor2_exists := false;
+    
+    bytes_size: s64;
+    // bytes will go here in the file (if the file is unsaved)
+    
+    CURRENT_VERSION :: 1;
+}
+
+Editor_State :: struct {
+    editor_id: s64;  // for identifying whether this buffer is shown in the saved layout. No use for it otherwise
+    main_cursor: Cursor.State;
+    
+    viewport_top:  s32;
+    viewport_left: s32;
+}

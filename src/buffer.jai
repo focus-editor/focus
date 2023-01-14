@@ -11,6 +11,10 @@ refresh_open_buffers :: () {
     }
 }
 
+refresh_modified_buffers :: () -> refreshed: bool {
+    return false;
+}
+
 put_cursor_in_valid_spot :: (using cursor: *Cursor, buffer: Buffer) {
     pos = make_valid_pos(buffer, pos);
     sel = make_valid_pos(buffer, sel);
