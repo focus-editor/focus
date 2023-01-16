@@ -1,32 +1,24 @@
 refresh_open_buffers :: () {
     for *editor : open_editors {
         buffer := *open_buffers[editor.buffer_id];
-        if !buffer.dirty continue;
-        recalculate_lines(buffer);
-        for *cursor : editor.cursors {
-            // NOTE: a potential bug. In case of 2 editors for one buffer only the first editor
-            // will update its cursors here
-            put_cursor_in_valid_spot(cursor, buffer);
-        }
-    }
-}
-
-maybe_process_modified_buffers :: () {
-    // After some time has passed since the last buffer edit we want to 
-    // 1. Compare them with the contents on disk (maybe they are not actually modified)
-    // 2. Save their contents into session as a backup
-    if !session.modified_buffers return;
-    if to_milliseconds(current_time_monotonic() - session.last_modified_time) < 500 return;
-    
-    for buffer_id : session.modified_buffers {
-        buffer := *open_buffers[buffer_id];
+        if !buffer.dirty && !buffer.was_dirty_during_frame continue;
         
-        compare_with_contents_on_disk_and_maybe_unmark_as_modified(buffer);        
+        if buffer.dirty recalculate_lines(buffer);  
         
-        // session_queue_buffer_save(buffer_id, buffer);
-    }
+        buffer.was_dirty_during_frame = false;
+        buffer.needs_coloring = true;
+        buffer.last_edit_time = frame_time;
+        
+        refresh_all_editors_for_buffer(editor.buffer_id);
+        
+        session_notify_modified_buffer(editor.buffer_id);
     
-    array_reset_keeping_memory(*session.modified_buffers);
+        // Maybe mark buffer as not modified if we've made it match the contents on disk
+        buffer.modified = buffer.meow_hash != calculate_meow_hash(buffer.bytes);
+        if !buffer.modified then buffer.modified_on_disk = false;  // we've verified that the contents matches that on disk
+        
+        finder.need_to_refresh_results = true;
+    }
 }
 
 put_cursor_in_valid_spot :: (using cursor: *Cursor, buffer: Buffer) {
@@ -369,6 +361,8 @@ save_buffer_to_disk :: (using buffer: *Buffer) {
         modified = false;
         modified_on_disk = false;
         deleted = false;
+        
+        meow_hash = calculate_meow_hash(bytes);
     }
     remember_last_modtime_and_size(buffer);
 }
@@ -439,7 +433,7 @@ refresh_buffer_from_disk :: (path: string) {
     buffer_id, created := find_or_create_buffer(path);
     if created return;
     
-    print("--- buffer exists, refreshing...\n");
+    print("--- buffer found, checking if it's changed on disk...\n");
             
     buffer := *open_buffers[buffer_id];
     
@@ -451,20 +445,25 @@ refresh_buffer_from_disk :: (path: string) {
     
     if !buffer_file_has_changed_on_disk(buffer) return;
     
+    print("--- reloading data from disk...\n");
+    
     finder.need_to_refresh_results = true;
     
     // Buffer has changed on disk
     assert(path == buffer.file.full_path);
+    
+    // Reload buffer from disk
+    file_contents, success := read_entire_file(path);
+    if !success { log_error("Couldn't read file '%'\n", path); return; }
+    defer free(file_contents);  // @memory: could probably use temporary storage and reset mark after?
+    
+    buffer.meow_hash = calculate_meow_hash(cast([] u8)file_contents);
+    
     if buffer.modified {
         // Mark conflict
         // TODO: display a dialog prompting to reload
         buffer.modified_on_disk = true;
     } else {
-        // Reload buffer from disk
-        file_contents, success := read_entire_file(path);
-        if !success { log_error("Couldn't read file '%'\n", path); return; }
-        defer free(file_contents);  // @memory: could probably use temporary storage and reset mark after?
-
         remember_last_modtime_and_size(buffer);
 
         // Remember cursor state - if we have 2 editors then the last editor's state will be remembered
@@ -480,8 +479,6 @@ refresh_buffer_from_disk :: (path: string) {
         new_replace_edit(buffer, 0, xx buffer.bytes.count, to_string(buffer.bytes), file_contents);
         replace_range_raw(buffer, 0, xx buffer.bytes.count, file_contents);
         recalculate_lines(buffer);
-        buffer.needs_coloring = true;
-        buffer.was_dirty_during_frame = false;  // to avoid being marked as modified at the end of the frame
 
         // Save edits and put cursors in correct places
         for * editor : open_editors {
@@ -603,6 +600,7 @@ Buffer :: struct {
     has_file := false;  // false for freestanding buffers. TODO: make freestanding buffers separate
     project_dir_index: u8;
 
+    meow_hash: u64;
     last_modtime: Apollo_Time;  // for detecting whether a file has changed
     last_size: s64;             // --
 
@@ -615,6 +613,7 @@ Buffer :: struct {
     redos: [..] Edit_Group;
     edits: [..] Edit;  // current edits, not in a group yet
     cursors: [..] Cursor.State;  // cursor state before any current edits were made
+    
 
     // TODO: put into enum_flags
     dirty                  := false;

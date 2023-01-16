@@ -52,8 +52,7 @@
         + Have a file per buffer, with 2 editor slots, one optional (for the second editor)
         + Do it every quick frame
         + Measure how long it takes
-        - Do it no more than once per second
-        - Do it in a separate thread
+        - Consider async file io
         - Save after saving the buffer
         - Save layout state alongside project (change the project file to "state") - have a version at the top
     - Load previously opened editors from the last session:
@@ -72,7 +71,7 @@
     - Hot-load user config file and apply the changes immediately (how do we handle the project dir changes?)
     - Have a command to edit global config or project config (it will open the corresponding file)
     - Every time a config file changes, the configs need to be reloaded and re-merged (and the changes need to be applied)
-    
+
 - BUG: When reloading file from disk (refresh_buffer_from_disk) make sure to remove crlf (until it's supported at least)
     
 - Proper tab support:
@@ -226,6 +225,11 @@ configured procedures during a press event, calling one if the modifiers/key mat
 you can use the default shortcuts and maybe report the error in a dialog box, presuming this was user-error after manually editing the config.
 
 # DONE
++ Use meow_hash to detect whether a file is unmodified
+    + If the hashes match, unmark as modified
+    + On any change to the buffer, calculate the hash again and compare against the stored one
+    + When a buffer is created, refreshed from disk, or saved, calculate and store a meow hash
+    + If the buffer is marked as modified on disk, load the file contents from disk and refresh the hash from there
 + Ignore .svn
 + Text Input:
     + Fix the weird doubling of characters when pasted a newline

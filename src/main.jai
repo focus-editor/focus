@@ -115,11 +115,34 @@ main :: () {
 
         refresh_open_buffers();
 
-        maybe_process_modified_buffers();
+        // maybe_process_modified_buffers();
+        // 
+        // maybe_process_modified_buffers :: () {
+        //     // After some time has passed since the last buffer edit we want to 
+        //     // 1. Compare them with the contents on disk (maybe they are not actually modified)
+        //     // 2. Save their contents into session as a backup
+        //     if !session.modified_buffers return;
+        //     if to_milliseconds(current_time_monotonic() - session.last_modified_time) < 500 return;
+        //     
+        //     for buffer_id : session.modified_buffers {
+        //         buffer := *open_buffers[buffer_id];
+        //         
+        //         // TODO: get rid of this!!!!!!!
+        //         compare_with_contents_on_disk_and_maybe_unmark_as_modified(buffer);
+        //         
+        //         // ????????????????????????
+        //         // session_queue_buffer_save(buffer_id, buffer);
+        //     }
+        //     
+        //     array_reset_keeping_memory(*session.modified_buffers);
+        // }
         
         draw_frame();
 
         pointer_end_frame();
+        
+        // TODO:
+        // maybe_save_buffers_into_session();
 
         reset_temporary_storage();
         
@@ -368,6 +391,7 @@ Project_Dir :: struct {
 #load "workspace.jai";
 #load "config.jai";
 #load "session.jai";
+#load "meow_hash.jai";
 #load "widgets/text_input.jai";
 #load "widgets/open_file_dialog.jai";
 #load "widgets/finder.jai";

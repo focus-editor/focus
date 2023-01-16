@@ -329,20 +329,13 @@ editors_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
     if cursor_moved && !enabled_whole_words then editor.search_whole_words = false;
 
     if buffer.dirty recalculate_lines(buffer);
-    if buffer.was_dirty_during_frame {
-        // We have to check if buffer was dirty during frame, because we have to unmark it
-        // as dirty before calculating offsets/positions sometimes, in which case
-        // it will reach this code not dirty but this code still needs to execute
-        buffer.was_dirty_during_frame = false;
-
-        buffer.needs_coloring = true;
-        buffer.modified = true;
-        buffer.last_edit_time = frame_time;
-        finder.need_to_refresh_results = true;
-
-        refresh_all_editors_for_buffer(editor.buffer_id);  // will sometimes sort cursors twice (see below), but that should be ok
-    }
+    
+    // NOTE: we're processing cursors here and then again later in refresh_open_buffers,
+    // but this is so that we can be sure if another event is processed in the same frame,
+    // the cursors will be sorted and in valid places
+    for *cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
     if cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
+    
     if cursor_moved then array_reset_keeping_memory(*editor.highlights);
 
     if save_buffer && buffer.has_file {
@@ -424,16 +417,6 @@ editors_handle_text_input :: (char: u32) {
     }
 
     if buffer.dirty then recalculate_lines(buffer);
-
-    array_reset_keeping_memory(*editor.highlights);
-    if search_bar_is_open(editor) search_and_update_results(editor, buffer);
-
-    editor.cursor_moved = true;
-    buffer.modified = true;
-    buffer.needs_coloring = true;
-    buffer.last_edit_time = frame_time;
-    
-    finder.need_to_refresh_results = true;
 }
 
 get_active_editor_and_buffer :: () -> *Editor, *Buffer {
@@ -454,8 +437,6 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
         array_reset_keeping_memory(*e.highlights);
         if search_bar_is_open(e) search_and_update_results(e, buffer);
     }
-    
-    session_notify_modified_buffer(buffer_id);
 }
 
 editors_open_file :: (path: string, on_the_side := false) {
@@ -849,6 +830,7 @@ fill_in_buffer_from_file_data :: (buffer: *Buffer, path: string, file_data: stri
     for project_dirs {
         if begins_with_nocase(path, it.path) {
             buffer.project_dir_index = cast(u8)it_index;
+            break;
         }
     }
     buffer.file = get_file_info_from_full_path(path);
@@ -857,6 +839,8 @@ fill_in_buffer_from_file_data :: (buffer: *Buffer, path: string, file_data: stri
     
     buffer.bytes = resizable(to_bytes(file_data));
     remove_crlf(buffer);
+    
+    buffer.meow_hash = calculate_meow_hash(buffer.bytes);
 
     if ends_with_nocase(path, ".jai") {
         buffer.lang = .Jai;
