@@ -348,5 +348,3 @@ scanner_thread: Thread_Group;
 scanned_buffers: [..] Buffer;
 initial_scan_complete := false;
 num_dirs_scanned := 0;
-
-File_Async :: #import "File_Async";

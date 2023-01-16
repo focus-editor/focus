@@ -345,6 +345,8 @@ editors_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
         // - strip trailing whitespace
         // - recalculate lines
         // - adjust cursors
+        
+        session_notify_modified_buffer(editor.buffer_id);
         save_buffer_to_disk(buffer);
     }
 

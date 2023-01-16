@@ -39,6 +39,59 @@ session_notify_modified_buffer :: (buffer_id: s64) {
     array_add_if_unique(*session.modified_buffers, buffer_id);
 }
 
+maybe_save_buffer_state_into_session :: () {
+    TIMEOUT_MS :: 500;  // how long to wait after last edit before saving the state
+    if !session.modified_buffers return;
+    if to_milliseconds(current_time_monotonic() - session.last_modified_time) < TIMEOUT_MS return;
+    
+    if !queue_initted {
+        queue = File_Async.initialize_queue(s64);
+        queue_initted = true;
+    }
+    
+    // Check for any completed saves and free the data
+    for saves_in_flight {
+        buffer_id, _, result := File_Async.wait_for_completion(*queue, check_only = true);
+        if result.code == {
+            case .Success;
+                array_free(it.data);
+                remove it;
+            case .DidNotWait;
+                // Do nothing, we just checked
+            case;
+                log_error("Error when trying to wait for completion of an async buffer backup: %", result);
+        }
+    }
+    
+    for buffer_id : session.modified_buffers {
+        // TODO: check if the buffer id is already in flight
+        
+        data := dump_buffer_state(buffer_id);
+        
+        // Start an async write to the file
+        file_path := tprint("%/temp/%/buffer%", exe_dir, session.name, buffer_id);
+        result := File_Async.write_entire_file(*queue, file_path, data, buffer_id);
+        if result.code == {
+            case .Success;
+                // Remember the data so we can free it when it's done
+                save_in_flight := array_add(*saves_in_flight);
+                save_in_flight.buffer_id = buffer_id;
+                save_in_flight.data      = data;
+                
+                remove buffer_id;
+                
+            case .FullQueue;
+                // Should never happen, but just in case.
+                // Retry again at a later time.
+                session.last_modified_time = current_time_monotonic();
+        
+            case;
+                log_error("Error when trying to queue an async buffer backup: %", result);
+                remove buffer_id;  // do not retry
+        }
+    }
+}
+
 #scope_file
 
 get_last_session_name :: () -> string, found: bool {
@@ -97,7 +150,7 @@ session_set_project :: (project: string) {
     platform_set_window_title(tprint("% - Focus", project));
 }
 
-save_buffer_state :: (buffer_id: s64) {
+dump_buffer_state :: (buffer_id: s64) -> [] u8 #must {
     buffer := *open_buffers[buffer_id];
     
     // Build buffer state for saving into file
@@ -136,9 +189,7 @@ save_buffer_state :: (buffer_id: s64) {
     
     state.bytes_size = ifx buffer.modified then buffer.bytes.count else 0;  // no need to save an unmodified buffer
     
-    // Write to file
-    file_path := tprint("%/temp/%/buffer%", exe_dir, session.name, buffer_id);
-    
+    // Prepare a string with everything
     builder: String_Builder;
     init_string_builder(*builder);
     
@@ -146,8 +197,9 @@ save_buffer_state :: (buffer_id: s64) {
     
     if buffer.modified append(*builder, buffer.bytes.data, buffer.bytes.count);
     
-    success := write_entire_file(file_path, *builder, do_reset = true);
-    if !success log_error("Couldn't save buffer state into file '%'", file_path);
+    str := builder_to_string(*builder);
+    
+    return cast([] u8) str;
 }
 
 #scope_export
@@ -203,3 +255,13 @@ Editor_State :: struct {
     viewport_top:  s32;
     viewport_left: s32;
 }
+
+Async_Buffer_Save :: struct {
+    buffer_id: s64;
+    data: [] u8;
+}
+
+queue: File_Async.Queue(s64);
+queue_initted := false;
+
+saves_in_flight: [..] Async_Buffer_Save;

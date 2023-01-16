@@ -52,8 +52,9 @@
         + Have a file per buffer, with 2 editor slots, one optional (for the second editor)
         + Do it every quick frame
         + Measure how long it takes
-        - Consider async file io
-        - Save after saving the buffer
+        + Implement buffer saves using async file io
+        + Measure how long it takes to save buffer
+        + Save after saving the buffer (should be quick)
         - Save layout state alongside project (change the project file to "state") - have a version at the top
     - Load previously opened editors from the last session:
         - If they are not modified and last modtime matches, load as is, together with the undo history
@@ -71,8 +72,12 @@
     - Hot-load user config file and apply the changes immediately (how do we handle the project dir changes?)
     - Have a command to edit global config or project config (it will open the corresponding file)
     - Every time a config file changes, the configs need to be reloaded and re-merged (and the changes need to be applied)
+    
+- Be able to ignore individual files
 
 - BUG: When reloading file from disk (refresh_buffer_from_disk) make sure to remove crlf (until it's supported at least)
+
+- Ctrl + 1/2 when opening files to specify the preferred side
     
 - Proper tab support:
     - Draw them wide (only in the visible part of the text)
@@ -85,6 +90,7 @@
     - tab_size = 4
     - Convert tabs to spaces on load = false    
     - cursor_style = block/line
+    - highlight selection occurrences
     
 - Rewrite the input system using the keymap handler
 
@@ -93,6 +99,8 @@
     - Scroll by alt+left/right
 - Search in buffer:
     - When pressing up/down to switch to prev/next result, don't wrap (but do wrap when using Enter - what else to go back?)
+    
+- Try using File_Async when scanning project folders and measure how long it takes (measure yourself without using the profiler)
 
 - Fix the whole word matching when creating new cursors (underscore seems to be considered not a word char, but inconsistently)
     - Easy to detect when using variables like success, success_read, log_error, error etc
