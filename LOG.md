@@ -31,31 +31,13 @@
     - Linux support
     - Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
     - Have a user error log - with an icon in the title bar to toggle it
+
+- Add logging calls to buffer backup code
+- Make sure the logger writes to logs in the session folder (buffered)
     
 - Projects
-    + Assuming the dir containing the focus executable is writable, create a projects folder in it
-    + If the folder is not writable, let the user know
-    + Create a simple config format
-    + Load and parse the default config at the start
-    + Create a temporary folder alongside the exe
-    + Then think about loading the user config and merging it with the default one
-    + If no global config exists, attempt to create it on start
-    + Load project dirs from the global config
-    + Load last opened project
-    + Investigate why a new session is not created when opening a file by double click
-    + When a new instance is started, start a new session:
-        + Create a folder in the temp folder `session_{timestamp}`
-        + Save project name
-        + When an old session is present, copy over stuff from there (gracefully fail if can't reopen stuff)
-        + Save up to 10 sessions (delete the rest when starting)
-    + Save session state somehow:
-        + Have a file per buffer, with 2 editor slots, one optional (for the second editor)
-        + Do it every quick frame
-        + Measure how long it takes
-        + Implement buffer saves using async file io
-        + Measure how long it takes to save buffer
-        + Save after saving the buffer (should be quick)
-        - Save layout state alongside project (change the project file to "state") - have a version at the top
+    - Save layout state alongside project (change the project file to "state") - have a version at the top
+    - Add a checksum to verify the integrity of a file
     - Load previously opened editors from the last session:
         - If they are not modified and last modtime matches, load as is, together with the undo history
         - If a buffer was modified:
@@ -72,8 +54,11 @@
     - Hot-load user config file and apply the changes immediately (how do we handle the project dir changes?)
     - Have a command to edit global config or project config (it will open the corresponding file)
     - Every time a config file changes, the configs need to be reloaded and re-merged (and the changes need to be applied)
+    - When an editor is closed using Ctrl+W, use session_notify_closed_editor to remove the buffer backup
+      (or maybe when it hasn't been edited or opened in this session?)
     
 - Be able to ignore individual files
+- Investigate a crash: try running a profiler in a separate editor. Then it might crash when trying to search.
 
 - BUG: When reloading file from disk (refresh_buffer_from_disk) make sure to remove crlf (until it's supported at least)
 
@@ -109,8 +94,11 @@
 - Strip trailing whitespace on save    
 - Ctrl + [ and Ctrl + ] to indent lines
     - Need to refactor the input system first
+- Ctrl + Backspace/Delete to erase an entire word.
 - Ctrl + Home/End to jump to beginning/end of the file
 - Alt + PgUp/PgDown to scroll viewport by page
+- (Ctrl (VSCode) or Alt (N++) or Alt+Shift (macOS)) + Mouse Click to add an additional cursor wherever the mouse is.
+- Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt
 - Save font size in the current project config when changed
     
 - Save editor state on editor operations:
@@ -199,40 +187,31 @@
   (not useful for the editor, but may be useful for games)
 - Support "Open file in" in the context menu on Windows?
 
-# FEEDBACK
-
-## GUI stuff that feels incomplete
-- Horizontal scrolling stuff:
-    - I expect a horizontal search bar when the text runs off the right edge.
-    - Alt + Up/Down is equivalent to scrolling up and down with the mouse wheel, but Alt + Left/Right does not work the same way horizontally.
-    - My mouse's horizontal scroll wheel (yes I have both) does nothing. I have to navigate long lines using Home/End to use the cursor to scroll.
-
-## Possible bugs
-- Sometimes if you backspace two spaces between words, it erases both space characters with one backspace rather than just one. I can reliably
-reproduce this issue by doing the following:
-    1. Type something like " hello" on a new line.
-    2. Navigate to column 0, the first character.
-    3. Press the spacebar once, adding one space.
-    4. Press the right arrow key so you are in column 2, after the two spaces.
-    5. Press backspace. This reliably erases both spaces for me.
-    And this is not just a start-of-line tabbing issue. It sometimes occurs within the middle of a line.
-
-## Keyboard/Mouse Shortcuts that I think are "missing"
-- Ctrl + Backspace/Delete to erase an entire word.
-- Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt. (use mouse wheel up/down "key press" events for this, not scroll delta. Print
-key code in debug mode to find out the if case values. This will cause it to behave as expected on every platform similar to all other programs.)
-- (Ctrl (VSCode) or Alt (N++) or Alt+Shift (macOS)) + Mouse Click to add an additional cursor wherever the mouse is.
-
-## User Preferences that if they were able to be changed, I would change
-- Color scheme, ideally the entire UI (like the window background color), but at the very least jai constructs/keywords like procedure names and
-symbols like :: and semicolons.
-- I-beam cursor instead of character-wide block. Boolean value.
-- Customize keyboard shortcuts. This is probably very low priority compared to pretty much anything else in this list or LOG.md. I got this
-working in my editor already with an XML file in under an hour. You'd basically just check the pressed key code (and modifiers) against the
-configured procedures during a press event, calling one if the modifiers/key match a configured procedure. If something is wrong with the config,
-you can use the default shortcuts and maybe report the error in a dialog box, presuming this was user-error after manually editing the config.
-
 # DONE
++ Fix the global config not being loaded
++ Basic project/session stuff
+    + Assuming the dir containing the focus executable is writable, create a projects folder in it
+    + If the folder is not writable, let the user know
+    + Create a simple config format
+    + Load and parse the default config at the start
+    + Create a temporary folder alongside the exe
+    + Then think about loading the user config and merging it with the default one
+    + If no global config exists, attempt to create it on start
+    + Load project dirs from the global config
+    + Load last opened project
+    + Investigate why a new session is not created when opening a file by double click
+    + When a new instance is started, start a new session:
+        + Create a folder in the temp folder `session_{timestamp}`
+        + Save project name
+        + When an old session is present, copy over stuff from there (gracefully fail if can't reopen stuff)
+        + Save up to 10 sessions (delete the rest when starting)
+    + Save session state somehow:
+        + Have a file per buffer, with 2 editor slots, one optional (for the second editor)
+        + Do it every quick frame
+        + Measure how long it takes
+        + Implement buffer saves using async file io
+        + Measure how long it takes to save buffer
+        + Save after saving the buffer (should be quick)
 + Use meow_hash to detect whether a file is unmodified
     + If the hashes match, unmark as modified
     + On any change to the buffer, calculate the hash again and compare against the stored one

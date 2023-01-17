@@ -1,5 +1,5 @@
 load_global_config :: () {
-    global_config, success, error_msg := load_config(tprint("%global.focus-config", exe_dir), create_if_doesnt_exist = !DEBUG);
+    global_config, success, error_msg := load_config(tprint("%/global.focus-config", exe_dir), create_if_doesnt_exist = !DEBUG);
     if !success {
         if error_msg then log_error(error_msg);
         return;

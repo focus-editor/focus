@@ -1597,15 +1597,17 @@ Paste_Animation :: struct {
     SPEED :: 0.5;
 }
 
+Editors_Layout :: enum {
+    None;
+    Single;
+    Double;
+}
+
 open_buffers: [..] Buffer;
 open_editors: [..] Editor;
 buffers_table: Table(string, s64);
 
-editors_layout: enum {
-    None;
-    Single;
-    Double;
-} = .None;
+editors_layout: Editors_Layout = .None;
 
 editor_active: s64 = -1;
 editor_left:   s64 = -1;

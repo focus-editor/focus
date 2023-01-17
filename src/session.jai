@@ -64,8 +64,12 @@ maybe_save_buffer_state_into_session :: () {
     }
     
     for buffer_id : session.modified_buffers {
-        // TODO: check if the buffer id is already in flight
+        // If the buffer is already in flight, skip it for now (next time it will hopefully not be in flight)
+        for saves_in_flight {
+            if buffer_id == it.buffer_id continue buffer_id;
+        }
         
+        // Buffer is modified, save its state
         data := dump_buffer_state(buffer_id);
         
         // Start an async write to the file
@@ -137,9 +141,10 @@ copy_session_data :: (source: string, dest: string) -> success: bool {
     
     success := true;
     
-    if file_exists(tprint("%/project", src_session)) {
-        success = copy_file(tprint("%/project", src_session), tprint("%/project", dst_session));
+    if file_exists(tprint("%/state.ini", src_session)) {
+        success = copy_file(tprint("%/state.ini", src_session), tprint("%/state.ini", dst_session));
     }
+    
     // TODO: copy other files when we have them
     
     return success;
@@ -211,7 +216,6 @@ session: Session;
 Session :: struct {
     name: string;
     project: string;
-    // layout
     last_edit: Apollo_Time;
     
     modified_buffers: [..] s64;
@@ -223,10 +227,9 @@ Session_Dir :: struct {
     modtime: Apollo_Time;
 }
 
-MAX_SESSIONS_TO_STORE :: 20;
-
 Buffer_State :: struct {
-    version: s64;
+    version: s64;   // TODO
+    checksum: s64;  // TODO
     
     buffer_id: s64;
     
@@ -265,3 +268,5 @@ queue: File_Async.Queue(s64);
 queue_initted := false;
 
 saves_in_flight: [..] Async_Buffer_Save;
+
+MAX_SESSIONS_TO_STORE :: 10;

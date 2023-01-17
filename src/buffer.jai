@@ -458,6 +458,7 @@ refresh_buffer_from_disk :: (path: string) {
     defer free(file_contents);  // @memory: could probably use temporary storage and reset mark after?
     
     buffer.meow_hash = calculate_meow_hash(cast([] u8)file_contents);
+    buffer.deleted = false;
     
     if buffer.modified {
         // Mark conflict
