@@ -29,9 +29,44 @@ maybe_load_previous_session :: () {
     }
     
     // Check if we have a project
-    project_file_path := tprint("%/temp/%/project", exe_dir, session.name);
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!! replace with state.ini !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    project_file_path := get_session_file_path_tmp("project");
     project_name, success := read_entire_file(project_file_path);
     if success then session_set_project(project_name);
+}
+
+init_logger :: () {
+    log_path       := get_session_file_path_tmp("log.txt");
+    log_error_path := get_session_file_path_tmp("log_error.txt");
+    
+    success: bool;
+    logger_data := New(Session_Logger_Data);
+    logger_data.log_file, success = file_open(log_path, for_writing = true, keep_existing_content = true, log_errors = false);
+    if !success {
+        log_error("Couldn't open file '%' for writing. Logger is not initialized.", log_path);
+        return;
+    }
+    logger_data.log_error_file, success = file_open(log_error_path, for_writing = true, keep_existing_content = true, log_errors = false);
+    if !success {
+        log_error("Couldn't open file '%' for writing. Logger is not initialized.", log_path);
+        return;
+    }
+    
+    logger_data.initted = true;
+    
+    context.logger      = session_logger;
+    context.logger_data = logger_data;
+    
+    // Check default logger, how it handles log levels
+}
+
+deinit_logger :: () {
+    if !context.logger_data return;
+    logger_data := cast(*Session_Logger_Data) context.logger_data;
+    if !logger_data.initted return;
+    
+    file_close(*logger_data.log_file);
+    file_close(*logger_data.log_error_file);
 }
 
 session_notify_modified_buffer :: (buffer_id: s64) {
@@ -207,11 +242,30 @@ dump_buffer_state :: (buffer_id: s64) -> [] u8 #must {
     return cast([] u8) str;
 }
 
+session_logger :: (message: string, data: *void, info: Log_Info) {
+    write_string("[session logger] ");
+    write_string(message);
+    write_string("\n");
+}
+
+get_session_file_path_tmp :: (subpath: string, args: .. Any) -> string /* temp */ {
+    assert(exe_dir.count > 0);
+    assert(session.name.count > 0);
+    file_path := tprint(subpath, ..args);
+    return tprint("%/temp/%/%", exe_dir, session.name, file_path);
+}
+
 #scope_export
 
 session: Session;
 
 #scope_file
+
+Session_Logger_Data :: struct {
+    log_file: File;
+    log_error_file: File;
+    initted := false;
+}
 
 Session :: struct {
     name: string;

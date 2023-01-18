@@ -24,6 +24,10 @@ main :: () {
     load_global_config();
     init_workspace();
     
+    // Init logger after we know the session dir and the config
+    init_logger();
+    defer deinit_logger();  // closes log file handles
+    
     dpi_scale = platform_get_dpi_scale(window);
     init_fonts();
     old_line_height = line_height;

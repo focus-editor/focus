@@ -2,9 +2,9 @@ init_workspace :: () {
     if !make_directory_if_it_does_not_exist("projects") then panic_messagebox("Couldn't create folder %/projects. Is the directory writable?", exe_dir);
     if !make_directory_if_it_does_not_exist("temp")     then panic_messagebox("Couldn't create folder %/temp for temporary files. Is the directory writable?", exe_dir);
     
-    // Maybe open file passed in the command line
     args := get_command_line_arguments();
     if args.count == 2 && file_exists(args[1]) {
+        // Open file passed in the command line
         start_fresh_session();
         editors_open_file(args[1]);
     } else {

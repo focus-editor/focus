@@ -33,7 +33,8 @@
     - Have a user error log - with an icon in the title bar to toggle it
 
 - Add logging calls to buffer backup code
-- Make sure the logger writes to logs in the session folder (buffered)
+    - Make sure the logger writes to logs in the session folder (buffered)
+        - Make a custom logger which writes to files in the session
     
 - Projects
     - Save layout state alongside project (change the project file to "state") - have a version at the top
@@ -76,6 +77,7 @@
     - Convert tabs to spaces on load = false    
     - cursor_style = block/line
     - highlight selection occurrences
+    - log_level = info/error
     
 - Rewrite the input system using the keymap handler
 
