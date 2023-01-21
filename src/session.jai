@@ -74,8 +74,16 @@ session_notify_modified_buffer :: (buffer_id: s64) {
     array_add_if_unique(*session.modified_buffers, buffer_id);
 }
 
-maybe_save_buffer_state_into_session :: () {
-    TIMEOUT_MS :: 500;  // how long to wait after last edit before saving the state
+maybe_save_editor_state_into_session :: () {
+    // Remember editor state if changed
+    // editors_layout: Editors_Layout = .None;
+    // editor_active: s64 = -1;
+    // editor_left:   s64 = -1;
+    // editor_right:  s64 = -1;
+    // editor_expanded := false;  // whether the active editor should be larger
+    
+    // Maybe remember buffer state
+    TIMEOUT_MS :: 500;  // how long to wait after last edit before saving the buffer state
     if !session.modified_buffers return;
     if to_milliseconds(current_time_monotonic() - session.last_modified_time) < TIMEOUT_MS return;
     
@@ -105,7 +113,7 @@ maybe_save_buffer_state_into_session :: () {
     }
     
     for buffer_id : session.modified_buffers {
-        // If the buffer is already in flight, skip it for now (next time it will hopefully not be in flight)
+        // If the buffer save is already in flight, skip it for now (next time it will hopefully not be in flight)
         for saves_in_flight {
             if buffer_id == it.buffer_id continue buffer_id;
         }

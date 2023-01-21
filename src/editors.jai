@@ -123,10 +123,10 @@ editors_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
             }
 
         case #char "L";
-            if only_ctrl_shift_pressed(mods) && editors_layout == .Double {
-                editor_expanded = !editor_expanded;
-                if editor_expanded {
-                    editors_start_moving_splitter(ifx editor_active == editor_left then 0.9 else 0.1);
+            if only_ctrl_shift_pressed(mods) && editors.layout == .Double {
+                editors.expanded = !editors.expanded;
+                if editors.expanded {
+                    editors_start_moving_splitter(ifx editors.active == editors.left then 0.9 else 0.1);
                 } else {
                     editors_start_moving_splitter(0.5);  // back to center
                 }
@@ -154,7 +154,7 @@ editors_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
                 switch_to_pane(.left);
                 handled = true;
             } else if only_ctrl_alt_shift_pressed(mods) {
-                if editor_active == editor_right then swap_panes();
+                if editors.active == editors.right then swap_panes();
                 handled = true;
             }
 
@@ -163,7 +163,7 @@ editors_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
                 switch_to_pane(.right);
                 handled = true;
             } else if only_ctrl_alt_shift_pressed(mods) {
-                if editor_active == editor_left then swap_panes();
+                if editors.active == editors.left then swap_panes();
                 handled = true;
             }
 
@@ -422,8 +422,8 @@ editors_handle_text_input :: (char: u32) {
 }
 
 get_active_editor_and_buffer :: () -> *Editor, *Buffer {
-    if editors_layout == .None return null, null;
-    editor := *open_editors[editor_active];
+    if editors.layout == .None return null, null;
+    editor := *open_editors[editors.active];
     buffer := *open_buffers[editor.buffer_id];
     return editor, buffer;
 }
@@ -450,36 +450,36 @@ editors_open_file :: (path: string, on_the_side := false) {
 }
 
 editors_open_buffer :: (buffer_id: s64, on_the_side := false) {
-    if #complete editors_layout == {
+    if #complete editors.layout == {
         case .None;
-            editor_active = find_or_create_editor(buffer_id);
-            editors_layout = .Single;
+            editors.active = find_or_create_editor(buffer_id);
+            editors.layout = .Single;
 
         case .Single;
             if !on_the_side {
                 // Open in place
-                editor_active  = find_or_create_editor(buffer_id);
+                editors.active  = find_or_create_editor(buffer_id);
             } else {
                 // Open on the right
-                editor_right   = find_or_create_editor(buffer_id, editor_active);
-                editor_left    = editor_active;
-                editor_active  = editor_right;
-                editors_layout = .Double;
+                editors.right   = find_or_create_editor(buffer_id, editors.active);
+                editors.left    = editors.active;
+                editors.active  = editors.right;
+                editors.layout = .Double;
                 editors_start_moving_splitter(0.5, start = 1.0);
             }
 
         case .Double;
             on_the_right := on_the_side;
-            if editor_active == editor_right then on_the_right = !on_the_right;
+            if editors.active == editors.right then on_the_right = !on_the_right;
 
             if on_the_right {
                 // Open on the right (obviously)
-                editor_right = find_or_create_editor(buffer_id, editor_left);
-                editor_active = editor_right;
+                editors.right = find_or_create_editor(buffer_id, editors.left);
+                editors.active = editors.right;
             } else {
                 // Open on the left
-                editor_left = find_or_create_editor(buffer_id, editor_right);
-                editor_active = editor_left;
+                editors.left = find_or_create_editor(buffer_id, editors.right);
+                editors.active = editors.left;
             }
     }
 }
@@ -661,41 +661,41 @@ new_edit_group :: (buffer: *Buffer, editor: *Editor) {
 }
 
 close_current_editor :: () {
-    if editors_layout == {
+    if editors.layout == {
         case .None;     return;
-        case .Single;   editors_layout = .None;  // close immediately
+        case .Single;   editors.layout = .None;  // close immediately
         case .Double;
             // Start the animation (the layout will change when the animation is finished)
-            if editor_active == editor_left {
+            if editors.active == editors.left {
                 editors_start_moving_splitter(0.0);  // close left
-                editor_active = editor_right;
+                editors.active = editors.right;
             } else {
                 editors_start_moving_splitter(1.0);  // close right
-                editor_active = editor_left;
+                editors.active = editors.left;
             }
-            editor_closing = true;
+            editors.closing = true;
     }
 }
 
 
 close_other_editor :: () {
-    if editors_layout == {
+    if editors.layout == {
         case .None;     return;
         case .Single;   return;  // don't do anything
         case .Double;
             // Start the animation (the layout will change when the animation is finished)
-            if editor_active == editor_left {
+            if editors.active == editors.left {
                 editors_start_moving_splitter(1.0);  // close right
             } else {
                 editors_start_moving_splitter(0.0);  // close left
             }
-            editor_closing = true;
+            editors.closing = true;
     }
 }
 
 finish_closing_editor :: () {
-    if editors_layout == .Double then editors_layout = .Single;
-    editor_closing = false;
+    if editors.layout == .Double then editors.layout = .Single;
+    editors.closing = false;
 }
 
 search_bar_is_open :: inline (using editor: *Editor) -> bool {
@@ -913,34 +913,34 @@ maybe_create_additional_cursor :: (using editor: *Editor, buffer: Buffer) -> cre
 }
 
 switch_to_pane :: (side: enum { left; right; }, dup_editor := false) {
-    if editors_layout == {
+    if editors.layout == {
         case .None; return;
 
         case .Single;
             if !dup_editor return;
-            current_editor := *open_editors[editor_active];
-            new_editor := find_or_create_editor(current_editor.buffer_id, editor_active);
+            current_editor := *open_editors[editors.active];
+            new_editor := find_or_create_editor(current_editor.buffer_id, editors.active);
             if side == .left {
-                editor_left   = new_editor;
-                editor_right  = editor_active;
-                editor_active = editor_left;
+                editors.left   = new_editor;
+                editors.right  = editors.active;
+                editors.active = editors.left;
                 editors_start_moving_splitter(0.5, start = 0.0);
             } else {
-                editor_left   = editor_active;
-                editor_right  = new_editor;
-                editor_active = editor_right;
+                editors.left   = editors.active;
+                editors.right  = new_editor;
+                editors.active = editors.right;
                 editors_start_moving_splitter(0.5, start = 1.0);
             }
-            editors_layout = .Double;
+            editors.layout = .Double;
 
         case .Double;
-            editor_active = ifx side == .left then editor_left else editor_right;
+            editors.active = ifx side == .left then editors.left else editors.right;
     }
 }
 
 swap_panes :: () {
-    if editors_layout != .Double return;
-    editor_left, editor_right = swap(editor_left, editor_right);
+    if editors.layout != .Double return;
+    editors.left, editors.right = swap(editors.left, editors.right);
 }
 
 find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_id: s64 {
@@ -1597,23 +1597,28 @@ Paste_Animation :: struct {
     SPEED :: 0.5;
 }
 
-Editors_Layout :: enum {
-    None;
-    Single;
-    Double;
+Editor_State :: struct {
+    layout: Layout = .None;
+    
+    active: s64 = -1;
+    left:   s64 = -1;
+    right:  s64 = -1;
+    
+    expanded := false;  // whether the active editor should be larger
+    closing  := false;  // whether the active editor is currently being closed (so that we can change the layout when it's done closing)
+    
+    Layout :: enum u8 {
+        None    :: 0;
+        Single  :: 1;
+        Double  :: 2;
+    }
 }
 
 open_buffers: [..] Buffer;
 open_editors: [..] Editor;
-buffers_table: Table(string, s64);
+buffers_table: Table(string, s64);  // a map from full buffer path to buffer id (only for the open buffers, obviously)
 
-editors_layout: Editors_Layout = .None;
-
-editor_active: s64 = -1;
-editor_left:   s64 = -1;
-editor_right:  s64 = -1;
-editor_expanded := false;  // whether the active editor should be larger
-editor_closing  := false;  // whether the active editor is currently being closed (so that we can change the layout when it's done closing)
+editors: Editor_State;
 
 // Triggered by alt + up/down
 editor_smooth_scroll: struct {

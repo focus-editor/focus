@@ -123,7 +123,7 @@ main :: () {
 
         pointer_end_frame();
         
-        maybe_save_buffer_state_into_session();
+        maybe_save_editor_state_into_session();
 
         reset_temporary_storage();
         

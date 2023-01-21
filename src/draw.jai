@@ -10,35 +10,35 @@ draw_frame :: () {
     footer_height := font_ui_line_height * 1.6;
 
     // Draw editors
-    if #complete editors_layout == {
+    if #complete editors.layout == {
         case .None;
             editors_snap_splitter(0.5);
             // TODO: draw a shortcut cheat-sheet?
         case .Single;
             editors_snap_splitter(0.5);
-            draw_editor(editor_active, screen, footer_height, .editor_single);
+            draw_editor(editors.active, screen, footer_height, .editor_single);
         case .Double;
             // Drag splitter
             if ui.active == .editor_splitter {
                 editors_snap_splitter((mouse.pointer.x - screen.x) / screen.w);
-                editor_expanded = false;
+                editors.expanded = false;
             }
             if !values_are_close(splitter_pos, splitter_anim.target) {
                 redraw_requested = true;
                 splitter_pos = get_animation_value(splitter_anim);  // removed the clamp because we want to close smoothly. Will this cause problems? Not sure
-            } else if editor_closing {
+            } else if editors.closing {
                 finish_closing_editor();
             }
-            if editor_expanded {
-                if editor_active == editor_left  && !values_are_close(splitter_anim.target, 0.9) then editors_start_moving_splitter(0.9);
-                if editor_active == editor_right && !values_are_close(splitter_anim.target, 0.1) then editors_start_moving_splitter(0.1);
+            if editors.expanded {
+                if editors.active == editors.left  && !values_are_close(splitter_anim.target, 0.9) then editors_start_moving_splitter(0.9);
+                if editors.active == editors.right && !values_are_close(splitter_anim.target, 0.1) then editors_start_moving_splitter(0.1);
             }
 
             split_x := screen.w * splitter_pos;
             left_rect, right_rect := cut_left(screen, split_x, margin = 2);
 
-            draw_editor(editor_left,  left_rect,  footer_height, .editor_left,  screen);
-            draw_editor(editor_right, right_rect, footer_height, .editor_right, screen);
+            draw_editor(editors.left,  left_rect,  footer_height, .editor_left,  screen);
+            draw_editor(editors.right, right_rect, footer_height, .editor_right, screen);
 
             splitter_rect := make_rect(left_rect.x + left_rect.w, left_rect.y + footer_height, 2, left_rect.h - footer_height);
             draw_splitter(splitter_rect, split_x, .editor_splitter);
@@ -84,7 +84,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     using editor := *open_editors[editor_id];
     buffer := *open_buffers[buffer_id];
 
-    editor_is_active := editor_id == editor_active && Input.input_application_has_focus;
+    editor_is_active := editor_id == editors.active && Input.input_application_has_focus;
 
     // Calculate text origin in screen coordinates
     text_offset := make_vector2(char_size * 2, -char_size * 2);
@@ -121,7 +121,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             array_reset_keeping_memory(*editor.highlights);
 
             // Activate editor
-            editor_active = editor_id;
+            editors.active = editor_id;
             redraw_requested = true;  // so that we don't draw 2 active editors
         }
 
@@ -209,7 +209,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
 
         // Smooth keyboard scrolling
-        if editor_smooth_scroll.active && editor_id == editor_active {
+        if editor_smooth_scroll.active && editor_id == editors.active {
             speed := 60 * line_height;  // pixels per second
             time_elapsed := cast(float) (frame_time - editor_smooth_scroll.started_at);
             new_scroll_pos := editor_smooth_scroll.start_y + time_elapsed * speed * (ifx editor_smooth_scroll.up then -1 else 1);
@@ -399,7 +399,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
         if ui.active == input_id {
             active = true;  // activate on click
-            editor_active = editor_id;  // make sure the editor is also activated
+            editors.active = editor_id;  // make sure the editor is also activated
             redraw_requested = true;
         }
     }

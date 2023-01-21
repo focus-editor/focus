@@ -166,7 +166,7 @@ finder_open_selected_result :: (selected_num := -1, on_the_side := false) {
     
     result := results[selected];
     
-    old_layout := editors_layout;    
+    old_layout := editors.layout;    
     editors_open_buffer(result.buffer_id, on_the_side = on_the_side);
     
     // Select the search result
@@ -178,7 +178,7 @@ finder_open_selected_result :: (selected_num := -1, on_the_side := false) {
     cursor.pos = offset_to_pos(buffer, match_end);
 
     editor.scroll_to_cursor = .yes;
-    if old_layout == .Single && editors_layout == .Double {
+    if old_layout == .Single && editors.layout == .Double {
         // We've just opened a new editor, so need to let it know it's being opened,
         // so that it can use the target rect width for its scroll calculations
         // (otherwise it'll be too small and the scroll will not animate where expected)

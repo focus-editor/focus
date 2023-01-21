@@ -34,6 +34,8 @@
     
 - Projects
     - Save layout state alongside project (change the project file to "state") - have a version at the top
+        - When changing editor layout, log layout changes
+        - Save layout changes in the session
     - When loading previous session, load "state", not "project"
     - Add a checksum to verify the integrity of a saved buffer file
     - Load previously opened editors from the last session:
@@ -54,6 +56,9 @@
     - When an editor is closed using Ctrl+W, use session_notify_closed_editor to remove the buffer backup (if unmodified)
       (or maybe when it hasn't been edited or opened in this session?)
     
+- BUG: can't open a file by double-click and the logger is not set up
+    - Maybe setup a temporary logger before setting up a session logger?
+
 - Be able to ignore individual files
 - Investigate a crash: try running a profiler in a separate editor. Then it might crash when trying to search.
 
