@@ -33,9 +33,8 @@
     - Have a user error log - with an icon in the title bar to toggle it
     
 - Projects
-    - Save layout state alongside project (change the project file to "state") - have a version at the top
-        - When changing editor layout, log layout changes
-        - Save layout changes in the session
+    + Save layout state alongside project (change the project file to "state")
+    - Save buffer state after opening a new editor
     - When loading previous session, load "state", not "project"
     - Add a checksum to verify the integrity of a saved buffer file
     - Load previously opened editors from the last session:

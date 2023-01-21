@@ -23,16 +23,15 @@ maybe_load_previous_session :: () {
     session = start_fresh_session();
     
     if found {
-        // Copy last session's data over to the new one
-        copied := copy_session_data(last_session_name, session.name);
-        if !copied log_error("Couldn't copy last session data '%' into the new session '%'", last_session_name, session.name);
+        copy_session_data(last_session_name, session.name);
     }
     
     // Check if we have a project
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!! replace with state.ini !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     project_file_path := get_session_file_path_tmp("project");
     project_name, success := read_entire_file(project_file_path);
     if success then session_set_project(project_name);
+    
+    // TODO: load editor state!
 }
 
 init_logger :: () {
@@ -76,11 +75,10 @@ session_notify_modified_buffer :: (buffer_id: s64) {
 
 maybe_save_editor_state_into_session :: () {
     // Remember editor state if changed
-    // editors_layout: Editors_Layout = .None;
-    // editor_active: s64 = -1;
-    // editor_left:   s64 = -1;
-    // editor_right:  s64 = -1;
-    // editor_expanded := false;  // whether the active editor should be larger
+    if editor_state_changed() {
+        session.editors = editors;
+        save_editor_state_into_file();
+    }
     
     // Maybe remember buffer state
     TIMEOUT_MS :: 500;  // how long to wait after last edit before saving the buffer state
@@ -184,24 +182,46 @@ get_last_session_name :: () -> string, found: bool {
     return session_dirs[0].name, true;
 }
 
-copy_session_data :: (source: string, dest: string) -> success: bool {
+copy_session_data :: (source: string, dest: string) {
     src_session := tprint("%/temp/%", exe_dir, source);
     dst_session := tprint("%/temp/%", exe_dir, dest);
     
-    success := true;
-    
-    if file_exists(tprint("%/state.ini", src_session)) {
-        success = copy_file(tprint("%/state.ini", src_session), tprint("%/state.ini", dst_session));
+    visitor :: (info: *File_Visit_Info, dst_dir: *string) {
+        if !(
+            info.short_name == "state" ||
+            info.short_name == "project" || 
+            begins_with(info.short_name, "buffer")
+        ) return;
+        
+        success := copy_file(info.full_name, tprint("%/%", <<dst_dir, info.short_name));
+        if !success log_error("Couldn't copy session file '%' into '%'", info.full_name, <<dst_dir);
     }
     
-    // TODO: copy other files when we have them
-    
-    return success;
+    visit_files(src_session, recursive = false, *dst_session, visitor);
 }
 
 session_set_project :: (project: string) {
     session.project = project;
     platform_set_window_title(tprint("% - Focus", project));
+}
+
+save_editor_state_into_file :: () {
+    state_file_path := get_session_file_path_tmp("state");
+    
+    builder: String_Builder;
+    init_string_builder(*builder);
+    
+    data: string = ---;
+    data.data  = cast(*u8) *session.editors;
+    data.count = size_of(type_of(session.editors));
+    
+    hash := calculate_meow_hash(to_bytes(data));
+    
+    append(*builder, data);
+    append(*builder, cast(*u8) *hash, size_of(type_of(hash)));
+    
+    success := write_entire_file(state_file_path, *builder, do_reset = true);
+    if !success then log_error("Couldn't save editor state into file '%'", state_file_path);
 }
 
 dump_buffer_state :: (buffer_id: s64) -> [] u8 #must {
@@ -220,7 +240,7 @@ dump_buffer_state :: (buffer_id: s64) -> [] u8 #must {
     state.last_size    = buffer.last_size;
     
     // Find editors and remember their state
-    editor_states: [2] Editor_State = ---;
+    editor_states: [2] Buffer_State.Editor = ---;
     num_editors := 0;
     for open_editors {
        if it.buffer_id != buffer_id continue;
@@ -281,6 +301,17 @@ get_session_file_path_tmp :: (subpath: string, args: .. Any) -> string /* temp *
     return tprint("%/temp/%/%", exe_dir, session.name, file_path);
 }
 
+editor_state_changed :: () -> bool {
+    return (
+        editors.active   != session.editors.active   ||
+        editors.left     != session.editors.left     ||
+        editors.right    != session.editors.right    ||
+        editors.layout   != session.editors.layout   ||
+        editors.expanded != session.editors.expanded
+        // NOTE: we ignore .closing because we don't care
+    );
+}
+
 #scope_export
 
 session: Session;
@@ -296,6 +327,7 @@ Session_Logger_Data :: struct {
 Session :: struct {
     name: string;
     project: string;
+    editors: Editor_State;
     last_edit: Apollo_Time;
     
     modified_buffers: [..] s64;
@@ -321,22 +353,22 @@ Buffer_State :: struct {
     last_size: s64;
     
     // Every buffer may have up to 2 editors
-    editor1: Editor_State;
-    editor2: Editor_State;
+    editor1: Editor;
+    editor2: Editor;
     editor2_exists := false;
     
     bytes_size: s64;
     // bytes will go here in the file (if the file is unsaved)
     
     CURRENT_VERSION :: 1;
-}
-
-Editor_State :: struct {
-    editor_id: s64;  // for identifying whether this buffer is shown in the saved layout. No use for it otherwise
-    main_cursor: Cursor.State;
     
-    viewport_top:  s32;
-    viewport_left: s32;
+    Editor :: struct {
+        editor_id: s64;  // for identifying whether this buffer is shown in the saved layout. No use for it otherwise
+        main_cursor: Cursor.State;
+        
+        viewport_top:  s32;
+        viewport_left: s32;
+    }
 }
 
 Async_Buffer_Save :: struct {
@@ -351,4 +383,4 @@ saves_in_flight: [..] Async_Buffer_Save;
 
 logger_mutex: Mutex;
 
-MAX_SESSIONS_TO_STORE :: 10;
+MAX_SESSIONS_TO_STORE :: 20;  // in case people open several files in several editors, hopefully should be enough
