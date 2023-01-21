@@ -39,6 +39,8 @@ init_logger :: () {
     log_path       := get_session_file_path_tmp("log.txt");
     log_error_path := get_session_file_path_tmp("log_error.txt");
     
+    init(*logger_mutex, "Session Logger Mutex");
+    
     success: bool;
     logger_data := New(Session_Logger_Data);
     logger_data.log_file, success = file_open(log_path, for_writing = true, keep_existing_content = true, log_errors = false);
@@ -243,6 +245,9 @@ dump_buffer_state :: (buffer_id: s64) -> [] u8 #must {
 }
 
 session_logger :: (message: string, data: *void, info: Log_Info) {
+    lock(*logger_mutex);
+    defer unlock(*logger_mutex);
+    
     write_string("[session logger] ");
     write_string(message);
     write_string("\n");
@@ -322,5 +327,7 @@ queue: File_Async.Queue(s64);
 queue_initted := false;
 
 saves_in_flight: [..] Async_Buffer_Save;
+
+logger_mutex: Mutex;
 
 MAX_SESSIONS_TO_STORE :: 10;
