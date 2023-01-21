@@ -5,6 +5,7 @@
     + Support tabs (just draw them, not even necessarily wide, just draw in some way - but wide would be best)
     + Finish text input improvements
     + Bake fonts
+    + Log errors into focus-log.txt, focus-log1.txt, ... in release mode
     - Tokenizer parses everything correctly
     - Ignore project folders which are children of another project folder?
     - Try to support tabs properly
@@ -25,7 +26,6 @@
     - Adjust cursors in joint editors properly
     - Highlight C/C++
     - Jump to line on Ctrl+G
-    - Log errors into focus-log.txt, focus-log1.txt, ... in release mode
     - See if memory usage can be improved
     - Custom title bar (currently too much work and not very robust)
     - Linux support
@@ -33,18 +33,16 @@
     - Have a user error log - with an icon in the title bar to toggle it
 
 - Add logging calls to buffer backup code
-    - Make sure the logger writes to logs in the session folder (buffered)
-        - Make a custom logger which writes to files in the session
     
 - Projects
     - Save layout state alongside project (change the project file to "state") - have a version at the top
-    - Add a checksum to verify the integrity of a file
+    - When loading previous session, load "state", not "project"
+    - Add a checksum to verify the integrity of a saved buffer file
     - Load previously opened editors from the last session:
         - If they are not modified and last modtime matches, load as is, together with the undo history
         - If a buffer was modified:
             - If the modtime matches the file, load as modified
             - If the modtime of the file is later, load as modified and modified_on_disk
-    - Save modified buffers together with some limited undo/redo history
     - On the splash screen list all previous sessions (one per project)
         - Display last edit time
         - Display project name
@@ -55,7 +53,7 @@
     - Hot-load user config file and apply the changes immediately (how do we handle the project dir changes?)
     - Have a command to edit global config or project config (it will open the corresponding file)
     - Every time a config file changes, the configs need to be reloaded and re-merged (and the changes need to be applied)
-    - When an editor is closed using Ctrl+W, use session_notify_closed_editor to remove the buffer backup
+    - When an editor is closed using Ctrl+W, use session_notify_closed_editor to remove the buffer backup (if unmodified)
       (or maybe when it hasn't been edited or opened in this session?)
     
 - Be able to ignore individual files
@@ -190,6 +188,9 @@
 - Support "Open file in" in the context menu on Windows?
 
 # DONE
++ Make sure the logger writes to logs in the session folder (buffered)
+    + Make a custom logger which writes to files in the session
+    + When DEBUG=true, log also to the standard output/error
 + Fix the global config not being loaded
 + Basic project/session stuff
     + Assuming the dir containing the focus executable is writable, create a projects folder in it

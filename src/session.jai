@@ -244,13 +244,22 @@ dump_buffer_state :: (buffer_id: s64) -> [] u8 #must {
     return cast([] u8) str;
 }
 
-session_logger :: (message: string, data: *void, info: Log_Info) {
-    lock(*logger_mutex);
-    defer unlock(*logger_mutex);
+session_logger :: (message: string, data: *void, info: Log_Info) {    
+    {
+        lock(*logger_mutex);
+        defer unlock(*logger_mutex);
+        
+        d := cast(*Session_Logger_Data) data;
     
-    write_string("[session logger] ");
-    write_string(message);
-    write_string("\n");
+        file := ifx (info.common_flags & .ERROR) != 0 then *d.log_error_file else *d.log_file;
+        file_write(file, message);
+        if message[message.count-1] != #char "\n" then file_write(file, "\n");
+    }
+    
+    #if DEBUG {
+        // Write to stdout/stderr
+        context.default_logger(message, data, info);
+    }    
 }
 
 get_session_file_path_tmp :: (subpath: string, args: .. Any) -> string /* temp */ {
