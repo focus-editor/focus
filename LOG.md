@@ -31,8 +31,6 @@
     - Linux support
     - Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
     - Have a user error log - with an icon in the title bar to toggle it
-
-- Add logging calls to buffer backup code
     
 - Projects
     - Save layout state alongside project (change the project file to "state") - have a version at the top
@@ -97,6 +95,7 @@
 - Ctrl + Backspace/Delete to erase an entire word.
 - Ctrl + Home/End to jump to beginning/end of the file
 - Alt + PgUp/PgDown to scroll viewport by page
+- Ctrl + J to join lines (should there be a limit of how many?)
 - (Ctrl (VSCode) or Alt (N++) or Alt+Shift (macOS)) + Mouse Click to add an additional cursor wherever the mouse is.
 - Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt
 - Save font size in the current project config when changed

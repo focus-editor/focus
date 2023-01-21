@@ -58,8 +58,6 @@ init_logger :: () {
     
     context.logger      = session_logger;
     context.logger_data = logger_data;
-    
-    // Check default logger, how it handles log levels
 }
 
 deinit_logger :: () {
@@ -87,14 +85,20 @@ maybe_save_buffer_state_into_session :: () {
     }
     
     // Check for any completed saves and free the data
-    for saves_in_flight {
+    for 0 .. saves_in_flight.count - 1 {
         buffer_id, _, result := File_Async.wait_for_completion(*queue, check_only = true);
         if result.code == {
             case .Success;
-                array_free(it.data);
-                remove it;
+                for saves_in_flight {
+                    if it.buffer_id == buffer_id {
+                        array_free(it.data);
+                        remove it;
+                        break;
+                    }
+                }
             case .DidNotWait;
                 // Do nothing, we just checked
+                break;
             case;
                 log_error("Error when trying to wait for completion of an async buffer backup: %", result);
         }
