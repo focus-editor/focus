@@ -32,16 +32,22 @@
     - Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
     - Have a user error log - with an icon in the title bar to toggle it
     
+- BUG: viewport no longer moves right when typing off the edge of it
+    
 - Projects
     + Save layout state alongside project (change the project file to "state")
-    - Save buffer state after opening a new editor
-    - When loading previous session, load "state", not "project"
-    - Add a checksum to verify the integrity of a saved buffer file
+    + Save buffer state after opening a new editor
+    + When loading previous session, load "state" and apply it
+        + If hash doesn't match, abort loading completely
+    + Add a checksum to verify the integrity of a saved buffer file
     - Load previously opened editors from the last session:
+        + Don't copy buffers into the current session, load them directly from the last session
+        - Load unmodified buffers only if they are currently open in the layout
         - If they are not modified and last modtime matches, load as is, together with the undo history
         - If a buffer was modified:
             - If the modtime matches the file, load as modified
             - If the modtime of the file is later, load as modified and modified_on_disk
+    - If a project doesn't exist, don't set it when loading previous session
     - On the splash screen list all previous sessions (one per project)
         - Display last edit time
         - Display project name

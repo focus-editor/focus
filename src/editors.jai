@@ -461,9 +461,9 @@ editors_open_buffer :: (buffer_id: s64, on_the_side := false) {
                 editors.active  = find_or_create_editor(buffer_id);
             } else {
                 // Open on the right
-                editors.right   = find_or_create_editor(buffer_id, editors.active);
-                editors.left    = editors.active;
-                editors.active  = editors.right;
+                editors.right  = find_or_create_editor(buffer_id, editors.active);
+                editors.left   = editors.active;
+                editors.active = editors.right;
                 editors.layout = .Double;
                 editors_start_moving_splitter(0.5, start = 1.0);
             }
@@ -474,14 +474,16 @@ editors_open_buffer :: (buffer_id: s64, on_the_side := false) {
 
             if on_the_right {
                 // Open on the right (obviously)
-                editors.right = find_or_create_editor(buffer_id, editors.left);
+                editors.right  = find_or_create_editor(buffer_id, editors.left);
                 editors.active = editors.right;
             } else {
                 // Open on the left
-                editors.left = find_or_create_editor(buffer_id, editors.right);
+                editors.left   = find_or_create_editor(buffer_id, editors.right);
                 editors.active = editors.left;
             }
     }
+    
+    session_notify_modified_buffer(buffer_id);
 }
 
 move_viewport :: (editor: *Editor, dir: enum { left; up; right; down; }) {
