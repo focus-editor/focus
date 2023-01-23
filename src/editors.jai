@@ -419,6 +419,8 @@ editors_handle_text_input :: (char: u32) {
     }
 
     if buffer.dirty then recalculate_lines(buffer);
+    
+    editor.cursor_moved = true;
 }
 
 get_active_editor_and_buffer :: () -> *Editor, *Buffer {

@@ -32,8 +32,6 @@
     - Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
     - Have a user error log - with an icon in the title bar to toggle it
     
-- BUG: viewport no longer moves right when typing off the edge of it
-    
 - Projects
     - If a project doesn't exist, don't set it when loading previous session
     - On the splash screen list all previous sessions (one per project)
@@ -184,6 +182,7 @@
 - Support "Open file in" in the context menu on Windows?
 
 # DONE
++ BUG: viewport no longer moves right when typing off the edge of it
 + Make sure the logger writes to logs in the session folder (buffered)
     + Make a custom logger which writes to files in the session
     + When DEBUG=true, log also to the standard output/error

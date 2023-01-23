@@ -64,10 +64,10 @@ maybe_load_previous_session :: () {
         // This is therefore just a temporary storage for the loaded data, it will be finalised when we process
         // all the buffer data stored in the session and know the actual ids.
         session.editors = state_data.editor_state;
-        editors.layout = session.editors.layout;
-        editors.active = 0;
-        editors.left   = 0;
-        editors.right  = 0;
+        // editors.layout = session.editors.layout;
+        // editors.active = 0;
+        // editors.left   = 0;
+        // editors.right  = 0;
     }
     
     // Load previously open buffers
@@ -105,38 +105,38 @@ maybe_load_previous_session :: () {
             // assert(buf.has_file, "UNIMPLEMENTED: we don't support buffers without files yet");
             if !buf.has_file return;
             
-            // Process the file
-            buffer_id := find_or_create_buffer(buf.file.full_path);
-            
-            // recover_editor :: (buffer_id: s64, )
-            
-            if !buf.unsaved {
-                using session.editors;
-                // Only create an editor for a buffer that wasn't modified if it was open in a visible editor
-                if #complete layout == {
-                    case .None;
-                        return;  // not open anywhere
-                    case .Single;
-                        if active != buf.editor1.editor_id && (!buf.editor2_exists || active != buf.editor2.editor_id) return;
-                    case .Double;
-                        if (
-                            left != buf.editor1.editor_id && right != buf.editor1.editor_id &&
-                            (!buf.editor2_exists || (left != buf.editor2.editor_id && right != buf.editor2.editor_id))
-                        ) return;
-                }
-                
-                // // Create buffer and recover editor(s)
-                // buffer_id := find_or_create_buffer(buf.file.full_path);
-                // editor_id, created := find_or_create_editor(buffer_id);
-                // editors.active = editor_id;
-                // if created {
-                //     // Recover cursor and viewport position
-                //     editor := *open_editors[editor_id];
-                //     editor.cursors[0].state = editor_state.main_cursor;
-                //     editor.viewport.top  = editor_state.viewport_top;
-                //     editor.viewport.left = editor_state.viewport_left;
-                // }
-            }
+            // // Process the file
+            // buffer_id := find_or_create_buffer(buf.file.full_path);
+            // 
+            // // recover_editor :: (buffer_id: s64, )
+            // 
+            // if !buf.unsaved {
+            //     using session.editors;
+            //     // Only create an editor for a buffer that wasn't modified if it was open in a visible editor
+            //     if #complete layout == {
+            //         case .None;
+            //             return;  // not open anywhere
+            //         case .Single;
+            //             if active != buf.editor1.editor_id && (!buf.editor2_exists || active != buf.editor2.editor_id) return;
+            //         case .Double;
+            //             if (
+            //                 left != buf.editor1.editor_id && right != buf.editor1.editor_id &&
+            //                 (!buf.editor2_exists || (left != buf.editor2.editor_id && right != buf.editor2.editor_id))
+            //             ) return;
+            //     }
+            //     
+            //     // // Create buffer and recover editor(s)
+            //     // buffer_id := find_or_create_buffer(buf.file.full_path);
+            //     // editor_id, created := find_or_create_editor(buffer_id);
+            //     // editors.active = editor_id;
+            //     // if created {
+            //     //     // Recover cursor and viewport position
+            //     //     editor := *open_editors[editor_id];
+            //     //     editor.cursors[0].state = editor_state.main_cursor;
+            //     //     editor.viewport.top  = editor_state.viewport_top;
+            //     //     editor.viewport.left = editor_state.viewport_left;
+            //     // }
+            // }
         }
         
         visit_files(last_session_dir, recursive = false, null, visitor);
