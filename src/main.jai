@@ -16,12 +16,33 @@ main :: () {
 
     init_buffers();
     
+    // Remember important directories
     exe_dir = copy_string(path_strip_filename(get_path_of_running_executable()));
     if ends_with(exe_dir, "/") exe_dir.count -= 1;
-    assert(exe_dir.count > 0);
+    temp_dir     = sprint("%/temp",     exe_dir);
+    projects_dir = sprint("%/projects", exe_dir);
     
+    assert(exe_dir.count > 0);
     set_working_directory(exe_dir);
     load_global_config();
+    
+    if !make_directory_if_it_does_not_exist("projects") then panic_messagebox("Couldn't create folder %/projects. Is the directory writable?", exe_dir);
+    if !make_directory_if_it_does_not_exist("temp")     then panic_messagebox("Couldn't create folder %/temp for temporary files. Is the directory writable?", exe_dir);
+    
+    args := get_command_line_arguments();
+    if args.count == 2 && file_exists(args[1]) {
+        // Open file passed in the command line
+        session = start_fresh_session();
+        editors_open_file(args[1]);
+    } else {
+        session = maybe_load_previous_session();
+        if session.project {
+            success := load_project_config(session.project);
+            if !success then log_error("Couldn't load project config '%'", session.project);
+        }
+    }
+    
+    // Requires the session to be created and the configs to be loaded
     init_workspace();
     
     // Init logger after we know the session dir and the config
@@ -271,7 +292,10 @@ ctrl_pressed :: inline () -> bool {
     return key_state(.CTRL) & .DOWN != 0;
 }
 
-exe_dir: string;
+// Important directories
+exe_dir:      string;
+temp_dir:     string;
+projects_dir: string;
 
 window: Window_Type;
 window_width  := 1920;

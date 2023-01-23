@@ -2,7 +2,7 @@ start_fresh_session :: () -> Session {
     // Create a new folder to store session data
     now := current_time_consensus();
     current_session_name := tprint("session_%_%", formatInt(now.high, base=16), formatInt(now.low, base=16));
-    current_session_dir  := tprint("%/temp/%", exe_dir, current_session_name);
+    current_session_dir  := tprint("%/%", temp_dir, current_session_name);
     
     if !make_directory_if_it_does_not_exist(current_session_dir) {
         panic_messagebox("Couldn't create a new session '%' - please check directory permissions", current_session_dir);
@@ -10,137 +10,153 @@ start_fresh_session :: () -> Session {
     
     new_session := Session.{};
     new_session.name      = copy_string(current_session_name);
-    new_session.last_edit = current_time_consensus();
+    new_session.last_edit = now;
     
     return new_session;
 }
 
-maybe_load_previous_session :: () {            
-    last_session_name, found := get_last_session_name();
+maybe_load_previous_session :: () -> Session {
+    assert(!session.name, "If we need to recreate a session then the old one needs to be cleared");
+    
+    session_dirs := get_sorted_session_dirs_tmp();
+    
+    // Delete old sessions if we have too many
+    {
+        num_old_sessions := session_dirs.count - MAX_SESSIONS_TO_STORE;
+        if num_old_sessions > 0 {
+            for i : 1 .. num_old_sessions {
+                session_dir := tprint("%/%", temp_dir, session_dirs[session_dirs.count - i].name);
+                deleted := delete_directory(session_dir);
+                if !deleted log_error("Couldn't delete old session '%'", session_dir);
+            }
+        }
+    }
     
     // Create a new session dir after looking for the last one
-    assert(!session.name, "If we need to recreate a session then the old one needs to be cleared");
-    session = start_fresh_session();
+    new_session := start_fresh_session();
     
-    if found {
-        copy_session_data(last_session_name, session.name);
+    if session_dirs {
+        last_session_name := session_dirs[0].name;
+        copy_session_data(last_session_name, new_session.name);
     }
     
-    // Set active project if it exists
-    {
-        project_file_path := get_session_file_path_tmp("project");
-        project_name, success := read_entire_file(project_file_path);
-        if success then session_set_project(project_name);
-    }
+    return new_session;
     
-    // Load editor state
-    {
-        state_file_path := get_session_file_path_tmp("state");
-        file_data, success := read_entire_file(state_file_path);
-        if !success return;  // no need to load anything else from the session if no state present
-        
-        State_File_Data :: struct {
-            editor_state: Editor_State;
-            meow_hash: u64;
-        }
-        
-        if file_data.count != size_of(State_File_Data) {
-            log_error("Session state file '%' - unexpected size % bytes. Expected % bytes.", state_file_path, file_data.count, size_of(State_File_Data));
-            return;
-        }
-        
-        state_data := cast(*State_File_Data) file_data.data;
-        contents: [] u8 = --- ;
-        contents.data  = cast(*u8) state_data;
-        contents.count = size_of(Editor_State);
-        hash := calculate_meow_hash(contents);
-        if hash != state_data.meow_hash {
-            log_error("Session state file '%' possibly corrupted - hash doesn't match", state_file_path);
-            return;
-        }
-        
-        // At this point the editor state is verifiably correct, but obviously we can't just replace the actual
-        // editor state with the loaded one, because the opened editor ids are all different etc.
-        // This is therefore just a temporary storage for the loaded data, it will be finalised when we process
-        // all the buffer data stored in the session and know the actual ids.
-        session.editors = state_data.editor_state;
-        // editors.layout = session.editors.layout;
-        // editors.active = 0;
-        // editors.left   = 0;
-        // editors.right  = 0;
-    }
-    
-    // Load previously open buffers
-    {
-        last_session_dir := tprint("%/temp/%", exe_dir, last_session_name);
-        
-        visitor :: (info: *File_Visit_Info, _data: *void) {
-            if !begins_with(info.short_name, "buffer") return;
-    
-            file_data, success := read_entire_file(info.full_name);
-            if !success {
-                log_error("Couldn't read the buffer backup file '%'", info.full_name);
-                return;
-            }
-            
-            min_file_size := size_of(Buffer_State) + size_of(u64);
-            if file_data.count < min_file_size {
-                log_error("File '%' is less than the minimum expected size '%'. Actual size: '%'. Skipping.", info.full_name, min_file_size, file_data.count);
-                return;
-            }
-            
-            file_data.count -= size_of(u64);  // cut off the hash at the end
-            stored_hash := << cast(*u64) (file_data.data + file_data.count);            
-            if stored_hash != calculate_meow_hash(to_bytes(file_data)) {
-                log_error("File '%' may be corrupt - hashes don't match", info.full_name);
-                return;  // don't process this file
-            }
-            
-            buf := cast(*Buffer_State) file_data.data;
-            if buf.version != Buffer_State.CURRENT_VERSION {
-                log_error("File '%' has an old version - skipping", info.full_name);
-                return;
-            }
-                        
-            // assert(buf.has_file, "UNIMPLEMENTED: we don't support buffers without files yet");
-            if !buf.has_file return;
-            
-            // // Process the file
-            // buffer_id := find_or_create_buffer(buf.file.full_path);
-            // 
-            // // recover_editor :: (buffer_id: s64, )
-            // 
-            // if !buf.unsaved {
-            //     using session.editors;
-            //     // Only create an editor for a buffer that wasn't modified if it was open in a visible editor
-            //     if #complete layout == {
-            //         case .None;
-            //             return;  // not open anywhere
-            //         case .Single;
-            //             if active != buf.editor1.editor_id && (!buf.editor2_exists || active != buf.editor2.editor_id) return;
-            //         case .Double;
-            //             if (
-            //                 left != buf.editor1.editor_id && right != buf.editor1.editor_id &&
-            //                 (!buf.editor2_exists || (left != buf.editor2.editor_id && right != buf.editor2.editor_id))
-            //             ) return;
-            //     }
-            //     
-            //     // // Create buffer and recover editor(s)
-            //     // buffer_id := find_or_create_buffer(buf.file.full_path);
-            //     // editor_id, created := find_or_create_editor(buffer_id);
-            //     // editors.active = editor_id;
-            //     // if created {
-            //     //     // Recover cursor and viewport position
-            //     //     editor := *open_editors[editor_id];
-            //     //     editor.cursors[0].state = editor_state.main_cursor;
-            //     //     editor.viewport.top  = editor_state.viewport_top;
-            //     //     editor.viewport.left = editor_state.viewport_left;
-            //     // }
-            // }
-        }
-        
-        visit_files(last_session_dir, recursive = false, null, visitor);
-    }
+    // // Set active project if it exists
+    // {
+    //     project_file_path := get_session_file_path_tmp("project");
+    //     project_name, success := read_entire_file(project_file_path);
+    //     if success then session_set_project(project_name);
+    // }
+    // 
+    // // Load editor state
+    // {
+    //     state_file_path := get_session_file_path_tmp("state");
+    //     file_data, success := read_entire_file(state_file_path);
+    //     if !success return;  // no need to load anything else from the session if no state present
+    //     
+    //     State_File_Data :: struct {
+    //         editor_state: Editor_State;
+    //         meow_hash: u64;
+    //     }
+    //     
+    //     if file_data.count != size_of(State_File_Data) {
+    //         log_error("Session state file '%' - unexpected size % bytes. Expected % bytes.", state_file_path, file_data.count, size_of(State_File_Data));
+    //         return;
+    //     }
+    //     
+    //     state_data := cast(*State_File_Data) file_data.data;
+    //     contents: [] u8 = --- ;
+    //     contents.data  = cast(*u8) state_data;
+    //     contents.count = size_of(Editor_State);
+    //     hash := calculate_meow_hash(contents);
+    //     if hash != state_data.meow_hash {
+    //         log_error("Session state file '%' possibly corrupted - hash doesn't match", state_file_path);
+    //         return;
+    //     }
+    //     
+    //     // At this point the editor state is verifiably correct, but obviously we can't just replace the actual
+    //     // editor state with the loaded one, because the opened editor ids are all different etc.
+    //     // This is therefore just a temporary storage for the loaded data, it will be finalised when we process
+    //     // all the buffer data stored in the session and know the actual ids.
+    //     session.editors = state_data.editor_state;
+    //     // editors.layout = session.editors.layout;
+    //     // editors.active = 0;
+    //     // editors.left   = 0;
+    //     // editors.right  = 0;
+    // }
+    // 
+    // // Load previously open buffers
+    // {
+    //     last_session_dir := tprint("%/%", temp_dir, last_session_name);
+    //     
+    //     visitor :: (info: *File_Visit_Info, _data: *void) {
+    //         if !begins_with(info.short_name, "buffer") return;
+    // 
+    //         file_data, success := read_entire_file(info.full_name);
+    //         if !success {
+    //             log_error("Couldn't read the buffer backup file '%'", info.full_name);
+    //             return;
+    //         }
+    //         
+    //         min_file_size := size_of(Buffer_State) + size_of(u64);
+    //         if file_data.count < min_file_size {
+    //             log_error("File '%' is less than the minimum expected size '%'. Actual size: '%'. Skipping.", info.full_name, min_file_size, file_data.count);
+    //             return;
+    //         }
+    //         
+    //         file_data.count -= size_of(u64);  // cut off the hash at the end
+    //         stored_hash := << cast(*u64) (file_data.data + file_data.count);            
+    //         if stored_hash != calculate_meow_hash(to_bytes(file_data)) {
+    //             log_error("File '%' may be corrupt - hashes don't match", info.full_name);
+    //             return;  // don't process this file
+    //         }
+    //         
+    //         buf := cast(*Buffer_State) file_data.data;
+    //         if buf.version != Buffer_State.CURRENT_VERSION {
+    //             log_error("File '%' has an old version - skipping", info.full_name);
+    //             return;
+    //         }
+    //                     
+    //         // assert(buf.has_file, "UNIMPLEMENTED: we don't support buffers without files yet");
+    //         if !buf.has_file return;
+    //         
+    //         // // Process the file
+    //         // buffer_id := find_or_create_buffer(buf.file.full_path);
+    //         // 
+    //         // // recover_editor :: (buffer_id: s64, )
+    //         // 
+    //         // if !buf.unsaved {
+    //         //     using session.editors;
+    //         //     // Only create an editor for a buffer that wasn't modified if it was open in a visible editor
+    //         //     if #complete layout == {
+    //         //         case .None;
+    //         //             return;  // not open anywhere
+    //         //         case .Single;
+    //         //             if active != buf.editor1.editor_id && (!buf.editor2_exists || active != buf.editor2.editor_id) return;
+    //         //         case .Double;
+    //         //             if (
+    //         //                 left != buf.editor1.editor_id && right != buf.editor1.editor_id &&
+    //         //                 (!buf.editor2_exists || (left != buf.editor2.editor_id && right != buf.editor2.editor_id))
+    //         //             ) return;
+    //         //     }
+    //         //     
+    //         //     // // Create buffer and recover editor(s)
+    //         //     // buffer_id := find_or_create_buffer(buf.file.full_path);
+    //         //     // editor_id, created := find_or_create_editor(buffer_id);
+    //         //     // editors.active = editor_id;
+    //         //     // if created {
+    //         //     //     // Recover cursor and viewport position
+    //         //     //     editor := *open_editors[editor_id];
+    //         //     //     editor.cursors[0].state = editor_state.main_cursor;
+    //         //     //     editor.viewport.top  = editor_state.viewport_top;
+    //         //     //     editor.viewport.left = editor_state.viewport_left;
+    //         //     // }
+    //         // }
+    //     }
+    //     
+    //     visit_files(last_session_dir, recursive = false, null, visitor);
+    // }
 }
 
 init_logger :: () {
@@ -230,7 +246,7 @@ maybe_save_editor_state_into_session :: () {
         data := dump_buffer_state(buffer_id);
         
         // Start an async write to the file
-        file_path := tprint("%/temp/%/buffer%", exe_dir, session.name, buffer_id);
+        file_path := tprint("%/%/buffer%", temp_dir, session.name, buffer_id);
         result := File_Async.write_entire_file(*queue, file_path, data, buffer_id);
         if result.code == {
             case .Success;
@@ -255,9 +271,7 @@ maybe_save_editor_state_into_session :: () {
 
 #scope_file
 
-get_last_session_name :: () -> string, found: bool {
-    temp_dir := tprint("%/temp", exe_dir);
-    
+get_sorted_session_dirs_tmp :: () -> [] Session_Dir /* temporary storage */ {    
     session_dirs: [..] Session_Dir;
     session_dirs.allocator = temp;
     
@@ -269,7 +283,7 @@ get_last_session_name :: () -> string, found: bool {
     }
     visit_files(temp_dir, recursive = false, *session_dirs, visitor, visit_files = false, visit_directories = true);
     
-    if !session_dirs return "", false;
+    if !session_dirs return Session_Dir.[];
     
     // Sort the dirs from newest to oldest
     cmp_dirs :: (dir1: Session_Dir, dir2: Session_Dir) -> s64 {
@@ -279,22 +293,12 @@ get_last_session_name :: () -> string, found: bool {
     }
     bubble_sort(session_dirs, cmp_dirs);
     
-    // Delete old sessions
-    num_old_sessions := session_dirs.count - MAX_SESSIONS_TO_STORE;
-    if num_old_sessions > 0 {
-        for i : 1 .. num_old_sessions {
-            session_dir := tprint("%/%", temp_dir, session_dirs[session_dirs.count - i].name);
-            deleted := delete_directory(session_dir);
-            if !deleted log_error("Couldn't delete old session '%'", session_dir);
-        }
-    }
-    
-    return session_dirs[0].name, true;
+    return session_dirs;
 }
 
 copy_session_data :: (source: string, dest: string) {
-    src_session := tprint("%/temp/%", exe_dir, source);
-    dst_session := tprint("%/temp/%", exe_dir, dest);
+    src_session := tprint("%/%", temp_dir, source);
+    dst_session := tprint("%/%", temp_dir, dest);
     
     visitor :: (info: *File_Visit_Info, dst_dir: *string) {
         if info.short_name != "state" && info.short_name != "project" return;
@@ -407,10 +411,9 @@ session_logger :: (message: string, data: *void, info: Log_Info) {
 }
 
 get_session_file_path_tmp :: (subpath: string, args: .. Any) -> string /* temp */ {
-    assert(exe_dir.count > 0);
     assert(session.name.count > 0);
     file_path := tprint(subpath, ..args);
-    return tprint("%/temp/%/%", exe_dir, session.name, file_path);
+    return tprint("%/%/%", temp_dir, session.name, file_path);
 }
 
 editor_state_changed :: () -> bool {

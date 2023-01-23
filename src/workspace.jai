@@ -1,21 +1,4 @@
-init_workspace :: () {
-    if !make_directory_if_it_does_not_exist("projects") then panic_messagebox("Couldn't create folder %/projects. Is the directory writable?", exe_dir);
-    if !make_directory_if_it_does_not_exist("temp")     then panic_messagebox("Couldn't create folder %/temp for temporary files. Is the directory writable?", exe_dir);
-    
-    args := get_command_line_arguments();
-    if args.count == 2 && file_exists(args[1]) {
-        // Open file passed in the command line
-        start_fresh_session();
-        editors_open_file(args[1]);
-    } else {
-        maybe_load_previous_session();
-    }
-    
-    if session.project {
-        success := load_project_config(session.project);
-        if !success then log_error("Couldn't load project config '%'", session.project);
-    }
-    
+init_workspace :: () {    
     // workspace_dirs := ifx !DEBUG then config.workspace.workspace_dirs else string.[ "W:/focus", "C:/jai" ];
     for path, i : config.workspace.workspace_dirs {
         dir: Project_Dir = ---;

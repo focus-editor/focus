@@ -32,9 +32,18 @@
     - Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
     - Have a user error log - with an icon in the title bar to toggle it
     
+- Sessions and buffer backups:
+    - Write down a step by step loading process to identify the easiest format to load
+    - When editing, remember:
+        - A list of currently open editors with cursor/viewport/buffer information
+            - Which buffer file corresponds to this editor
+        - Editor layout (none/single/double)
+        - Which editor was open on which side
+    
 - Projects
     - If a project doesn't exist, don't set it when loading previous session
-    - On the splash screen list all previous sessions (one per project)
+    - On the splash screen list all previous sessions
+        - Display create time
         - Display last edit time
         - Display project name
         - Maybe display the number of unsaved buffers
@@ -45,11 +54,13 @@
     - Every time a config file changes, the configs need to be reloaded and re-merged (and the changes need to be applied)
     - When an editor is closed using Ctrl+W, use session_notify_closed_editor to remove the buffer backup (if unmodified)
       (or maybe when it hasn't been edited or opened in this session?)
+    - Be able to ignore individual files
+      
+- Add a timeout on dragging after double clicks (to avoid being too sensitive)
     
 - BUG: can't open a file by double-click and the logger is not set up
     - Maybe setup a temporary logger before setting up a session logger?
 
-- Be able to ignore individual files
 - Investigate a crash: try running a profiler in a separate editor. Then it might crash when trying to search.
 
 - BUG: When reloading file from disk (refresh_buffer_from_disk) make sure to remove crlf (until it's supported at least)
@@ -69,6 +80,7 @@
     - cursor_style = block/line
     - highlight selection occurrences
     - log_level = info/error
+    - load last session on start ?
     
 - Rewrite the input system using the keymap handler
 
