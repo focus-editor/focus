@@ -412,7 +412,7 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     buffer_id, found_buffer := table_find(*buffers_table, path);
     if found_buffer return buffer_id, false;
     
-    print("Buffer not found in the table, opening file %\n", path);
+    log("Buffer not found in the table, opening file %\n", path);
 
     // Create and load file
     file_data, success := read_entire_file(path);
@@ -429,11 +429,11 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
 }
 
 refresh_buffer_from_disk :: (path: string) {
-    print("refreshing '%'\n", path);
+    log("refreshing '%'\n", path);
     buffer_id, created := find_or_create_buffer(path);
     if created return;
     
-    print("--- buffer found, checking if it's changed on disk...\n");
+    log("--- buffer found, checking if it's changed on disk...\n");
             
     buffer := *open_buffers[buffer_id];
     

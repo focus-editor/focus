@@ -945,16 +945,16 @@ swap_panes :: () {
     editors.left, editors.right = swap(editors.left, editors.right);
 }
 
-find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_id: s64 {
+find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_id: s64, created: bool {
     assert(buffer_id >= 0 && buffer_id < open_buffers.count, "Attempt to create editor for nonexistent buffer");
     for open_editors {
-        if it.buffer_id == buffer_id && it_index != existing_editor return it_index;
+        if it.buffer_id == buffer_id && it_index != existing_editor return it_index, false;
     }
     editor_id := open_editors.count;
     editor := array_add(*open_editors);
     editor.buffer_id = buffer_id;
     array_add(*editor.cursors, Cursor.{});
-    return editor_id;
+    return editor_id, true;
 }
 
 maybe_undo :: (buffer: *Buffer, editor: *Editor) {

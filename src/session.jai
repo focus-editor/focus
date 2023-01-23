@@ -96,31 +96,47 @@ maybe_load_previous_session :: () {
                 return;  // don't process this file
             }
             
-            buffer_state := cast(*Buffer_State) file_data.data;
-            if buffer_state.version != Buffer_State.CURRENT_VERSION {
+            buf := cast(*Buffer_State) file_data.data;
+            if buf.version != Buffer_State.CURRENT_VERSION {
                 log_error("File '%' has an old version - skipping", info.full_name);
                 return;
             }
+                        
+            // assert(buf.has_file, "UNIMPLEMENTED: we don't support buffers without files yet");
+            if !buf.has_file return;
             
-            // assert(buffer_state.has_file, "UNIMPLEMENTED: we don't support buffers without files yet");
-            if !buffer_state.has_file return;
+            // Process the file
+            buffer_id := find_or_create_buffer(buf.file.full_path);
             
-            // // Process the file
-            // if !buffer_state.unsaved {
-            //     // Only load a buffer that wasn't modified if it was open in a visible editor
-            //     using session.editors;
-            //     if #complete layout == {
-            //         case .None;
-            //             return;  // not open anywhere
-            //         case .Single;
-            //             if active != buffer_state.buffer_id return;
-            //             
-            //             // TODO: open manually, make sure if the second editor is also visible then also load it
-            //             // editors_open_file(buffer_state.file.full_path);
-            //         case .Double;
-            //             if left != buffer_state.buffer_id && right != buffer_state.buffer_id return;
-            //     }
-            // }
+            // recover_editor :: (buffer_id: s64, )
+            
+            if !buf.unsaved {
+                using session.editors;
+                // Only create an editor for a buffer that wasn't modified if it was open in a visible editor
+                if #complete layout == {
+                    case .None;
+                        return;  // not open anywhere
+                    case .Single;
+                        if active != buf.editor1.editor_id && (!buf.editor2_exists || active != buf.editor2.editor_id) return;
+                    case .Double;
+                        if (
+                            left != buf.editor1.editor_id && right != buf.editor1.editor_id &&
+                            (!buf.editor2_exists || (left != buf.editor2.editor_id && right != buf.editor2.editor_id))
+                        ) return;
+                }
+                
+                // // Create buffer and recover editor(s)
+                // buffer_id := find_or_create_buffer(buf.file.full_path);
+                // editor_id, created := find_or_create_editor(buffer_id);
+                // editors.active = editor_id;
+                // if created {
+                //     // Recover cursor and viewport position
+                //     editor := *open_editors[editor_id];
+                //     editor.cursors[0].state = editor_state.main_cursor;
+                //     editor.viewport.top  = editor_state.viewport_top;
+                //     editor.viewport.left = editor_state.viewport_left;
+                // }
+            }
         }
         
         visit_files(last_session_dir, recursive = false, null, visitor);
