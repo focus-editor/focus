@@ -114,6 +114,7 @@ main :: () {
                                 if event.ctrl_pressed {
                                     font_size += 1;
                                     font_ui_size += 1;
+                                    font_ui_small_size += 1;
                                     font_icons_size += 1;
                                     init_fonts();
                                 }
@@ -121,6 +122,7 @@ main :: () {
                                 if event.ctrl_pressed {
                                     font_size -= 1;
                                     font_ui_size -= 1;
+                                    font_ui_small_size -= 1;
                                     font_icons_size -= 1;
                                     init_fonts();
                                 }

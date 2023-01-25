@@ -194,6 +194,7 @@
 - Support "Open file in" in the context menu on Windows?
 
 # DONE
++ Fix: when changing font size, the size of the path in the open file dialog doesn't change
 + BUG: viewport no longer moves right when typing off the edge of it
 + Make sure the logger writes to logs in the session folder (buffered)
     + Make a custom logger which writes to files in the session
