@@ -236,6 +236,10 @@ merge_scanned_buffers_into_open_buffers :: () {
         for * editor : open_editors {
             if editor.buffer_id == old_buffer_id then editor.buffer_id = new_buffer_id;
         }
+        // Reroute the modified buffers
+        for * session.modified_buffers {
+            if <<it == old_buffer_id then <<it = new_buffer_id;
+        }
     }
 }
 

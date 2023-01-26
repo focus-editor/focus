@@ -57,9 +57,6 @@
     - Be able to ignore individual files
       
 - Add a timeout on dragging after double clicks (to avoid being too sensitive)
-    
-- BUG: can't open a file by double-click and the logger is not set up
-    - Maybe setup a temporary logger before setting up a session logger?
 
 - Investigate a crash: try running a profiler in a separate editor. Then it might crash when trying to search.
 
@@ -194,6 +191,7 @@
 - Support "Open file in" in the context menu on Windows?
 
 # DONE
++ BUG: can't open a file by double-click and the logger is not set up
 + Fix: when changing font size, the size of the path in the open file dialog doesn't change
 + BUG: viewport no longer moves right when typing off the edge of it
 + Make sure the logger writes to logs in the session folder (buffered)

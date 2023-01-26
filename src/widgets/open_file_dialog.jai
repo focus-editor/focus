@@ -73,6 +73,7 @@ open_file_dialog_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
 
 open_file_dialog_open_entry :: (selected: s64, on_the_side: bool) {
     using open_file_dialog;
+    if selected >= entries.filtered.count return;
     path := entries.filtered[selected].full_path;
     editors_open_file(path, on_the_side);
     hide_open_file_dialog();
