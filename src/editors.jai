@@ -1249,6 +1249,17 @@ handle_backspace :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
         pos = range.start;
         return;
     }
+    
+    // Maybe delete whole word
+    if only_ctrl_pressed(mods) {
+        select_word(cursor, buffer);
+        if has_selection(cursor) {
+            range := get_selection(cursor);
+            delete_range(buffer, range);
+            pos = range.start;
+            return;
+        }
+    }
 
     // Or handle the more complex case with tabs etc
     to_prev_tabstop := pos.col % TAB_SIZE;
