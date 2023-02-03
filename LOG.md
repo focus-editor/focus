@@ -119,9 +119,9 @@
     + Make $ a separate token
     + Backtick as a separate token
     + Parse @notes
-    - ^
-    - Allow \ in identifiers
+    + ^
     - Report any invalid tokens and fix them
+    - Allow \ in identifiers
     - Browse everything in the modules folder and try to find anything that sticks out
 
 - Search:
@@ -179,8 +179,6 @@
       so if that position moved then so do the cursors
       (just like the individual letters would)
 
-- Try to improve memory usage (where did 100Mb go?)
-
 - Look into subpixel font positioning
     - Revisit the font loading code as it has some rounding to pixels there
       and consider using floats or other units for font metrics
@@ -189,7 +187,6 @@
 - Get rid of the window top bar
 - Subpixel rendering: support other types of panels (lookup ft2-lcd_rendering)
   (not useful for the editor, but may be useful for games)
-- Support "Open file in" in the context menu on Windows?
 
 # DONE
 + Ctrl + Backspace/Delete to erase an entire word.

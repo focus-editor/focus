@@ -68,6 +68,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "|";  parse_pipe              (tokenizer, *token);
         case #char "%";  parse_percent           (tokenizer, *token);
         case #char "@";  parse_note              (tokenizer, *token);
+        case #char "^";  parse_caret             (tokenizer, *token);
 
         case #char ";";  token.type = .punctuation; token.punctuation = .semicolon; t += 1;
         case #char ",";  token.type = .punctuation; token.punctuation = .comma;     t += 1;
@@ -266,6 +267,20 @@ parse_percent :: (using tokenizer: *Tokenizer, token: *Token) {
     if << t == {
         case #char "=";
             token.operation = .percent_equal;
+            t += 1;
+    }
+}
+
+parse_caret :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .operation;
+    token.operation = .caret;
+
+    t += 1;
+    if t >= max_t return;
+
+    if << t == {
+        case #char "=";
+            token.operation = .caret_equal;
             t += 1;
     }
 }
@@ -472,6 +487,7 @@ OPERATIONS :: string.[
     "percent", "percent_equal", "less_than", "double_less_than", "less_than_equal", "greater_than", "greater_than_equal", 
     "minus", "minus_equal", "triple_dash", "asterisk", "asterisk_equal", "colon", "colon_equal", "double_colon", "slash",
     "plus", "plus_equal", "slash_equal", "ampersand", "double_ampersand", "ampersand_equal", "tilde", "unknown",
+    "caret", "caret_equal",
 ];
 
 KEYWORDS :: string.[
