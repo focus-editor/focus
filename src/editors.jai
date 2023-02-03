@@ -43,7 +43,7 @@ editors_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
                     search_bar_toggle_expand(editor);
                 }
 
-            // TODO: consider falling through (and closing) for some other combinations such as ctrl+z, ctrl+alt+arrows etc
+            // TODO: consider falling through (and closing) for some other combinations such as ctrl+alt+arrows etc
         }
         return;
     }
@@ -1242,24 +1242,16 @@ handle_enter :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
 }
 
 handle_backspace :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
+    // Maybe delete whole word
+    if only_ctrl_pressed(mods) && !has_selection(cursor) then select_word(cursor, buffer);
+    
     // Either remove the selection
     if has_selection(cursor) {
         range := get_selection(cursor);
         delete_range(buffer, range);
         pos = range.start;
         return;
-    }
-    
-    // Maybe delete whole word
-    if only_ctrl_pressed(mods) {
-        select_word(cursor, buffer);
-        if has_selection(cursor) {
-            range := get_selection(cursor);
-            delete_range(buffer, range);
-            pos = range.start;
-            return;
-        }
-    }
+    }    
 
     // Or handle the more complex case with tabs etc
     to_prev_tabstop := pos.col % TAB_SIZE;
@@ -1297,6 +1289,9 @@ handle_backspace :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
 }
 
 handle_delete :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
+    // Maybe delete the whole word
+    if only_ctrl_pressed(mods) && !has_selection(cursor) then select_word(cursor, buffer);
+
     if has_selection(cursor) {
         range := get_selection(cursor);
         delete_range(buffer, range);

@@ -31,7 +31,9 @@
     - Linux support
     - Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
     - Have a user error log - with an icon in the title bar to toggle it
-    
+
+- Test git pull to make sure everything gets updated
+
 - Sessions and buffer backups:
     - Write down a step by step loading process to identify the easiest format to load
     - When editing, remember:
@@ -39,7 +41,7 @@
             - Which buffer file corresponds to this editor
         - Editor layout (none/single/double)
         - Which editor was open on which side
-    
+
 - Projects
     - If a project doesn't exist, don't set it when loading previous session
     - On the splash screen list all previous sessions
@@ -47,7 +49,7 @@
         - Display last edit time
         - Display project name
         - Maybe display the number of unsaved buffers
-        
+
 - Config files:
     - Hot-load user config file and apply the changes immediately (how do we handle the project dir changes?)
     - Have a command to edit global config or project config (it will open the corresponding file)
@@ -55,7 +57,7 @@
     - When an editor is closed using Ctrl+W, use session_notify_closed_editor to remove the buffer backup (if unmodified)
       (or maybe when it hasn't been edited or opened in this session?)
     - Be able to ignore individual files
-      
+
 - Add a timeout on dragging after double clicks (to avoid being too sensitive)
 
 - Investigate a crash: try running a profiler in a separate editor. Then it might crash when trying to search.
@@ -63,22 +65,22 @@
 - BUG: When reloading file from disk (refresh_buffer_from_disk) make sure to remove crlf (until it's supported at least)
 
 - Ctrl + 1/2 when opening files to specify the preferred side
-    
+
 - Proper tab support:
     - Draw them wide (only in the visible part of the text)
     - Consider them a whitespace when calculating line start - they never need to show on the left in finder results
     - If it turns out to be too hard or messy, could just convert them to spaces on load
-    
+
 - Config parameters:
     - Convert to LF on load = true
     - "disable_that_annoying_paste_effect = false"
     - tab_size = 4
-    - Convert tabs to spaces on load = false    
+    - Convert tabs to spaces on load = false
     - cursor_style = block/line
     - highlight selection occurrences
     - log_level = info/error
     - load last session on start ?
-    
+
 - Rewrite the input system using the keymap handler
 
 - Hide scrollbars unless scrolling or hovering over editor
@@ -86,31 +88,30 @@
     - Scroll by alt+left/right
 - Search in buffer:
     - When pressing up/down to switch to prev/next result, don't wrap (but do wrap when using Enter - what else to go back?)
-    
+
 - Try using File_Async when scanning project folders and measure how long it takes (measure yourself without using the profiler)
 
 - Fix the whole word matching when creating new cursors (underscore seems to be considered not a word char, but inconsistently)
     - Easy to detect when using variables like success, success_read, log_error, error etc
     - Make sure when selected a word by double clicking, the highlights only highlight whole words
-    
-- Strip trailing whitespace on save    
+
+- Strip trailing whitespace on save
 - Ctrl + [ and Ctrl + ] to indent lines
     - Need to refactor the input system first
-- Ctrl + Backspace/Delete to erase an entire word.
 - Ctrl + Home/End to jump to beginning/end of the file
 - Alt + PgUp/PgDown to scroll viewport by page
 - Ctrl + J to join lines (should there be a limit of how many?)
 - (Ctrl (VSCode) or Alt (N++) or Alt+Shift (macOS)) + Mouse Click to add an additional cursor wherever the mouse is.
 - Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt
 - Save font size in the current project config when changed
-    
+
 - Save editor state on editor operations:
     - Alt + minus to open previous state
     - Alt + plus to open next state
-    
+
 - Save modified buffers to temporary files and recover after crashes
     - Save undo/redo history in temporary files
-    
+
 - When cutting search results in finder, go by characters and not bytes
 
 - Tokenizer:
@@ -118,7 +119,7 @@
     + Make $ a separate token
     + Backtick as a separate token
     + Parse @notes
-    - ^ 
+    - ^
     - Allow \ in identifiers
     - Report any invalid tokens and fix them
     - Browse everything in the modules folder and try to find anything that sticks out
@@ -152,7 +153,7 @@
     - Review and cleanup code
     - Put the open editors at the top
     - Implement fuzzy searching with letter highlighting etc
-    
+
 - Remove 3D-related stuff from Simp
 
 - When there are several cursors where some of them are above the viewport, hitting enter will shift everything down
@@ -191,6 +192,7 @@
 - Support "Open file in" in the context menu on Windows?
 
 # DONE
++ Ctrl + Backspace/Delete to erase an entire word.
 + BUG: can't open a file by double-click and the logger is not set up
 + Fix: when changing font size, the size of the path in the open file dialog doesn't change
 + BUG: viewport no longer moves right when typing off the edge of it
@@ -267,7 +269,7 @@
 + Start lines and columns from 1
 + File watcher: make sure a rescan doesn't include binary files
 + Rewrite finder to search in all in-memory project files:
-    + At the start of the program start a thread which will scan all files and open buffers for them 
+    + At the start of the program start a thread which will scan all files and open buffers for them
     + Before starting, open whatever editors there are from the previous session, so that it opens fast
     + Make sure there are no synchronisation conflicts:
         + The thread doing the initial scan should create all buffers in a separate array and have a separate hash table?
@@ -289,7 +291,7 @@
         + Display code lines
         + Color the code
         + Highlight matches
-        + Move the cursor 
+        + Move the cursor
         + Open the results
 + Maybe sleep at least a little bit, don't render too many frames
 + Finder improvements
