@@ -6,7 +6,7 @@
     + Finish text input improvements
     + Bake fonts
     + Log errors into focus-log.txt, focus-log1.txt, ... in release mode
-    - Tokenizer parses everything correctly
+    + Jai tokenizer parses everything correctly
     - Ignore project folders which are children of another project folder?
     - Try to support tabs properly
     - Show help on F1
@@ -33,6 +33,9 @@
     - Have a user error log - with an icon in the title bar to toggle it
 
 - Test git pull to make sure everything gets updated
+- BUG: 
+    - Create a new file (test.jai)
+    - Try to search in there
 
 - Sessions and buffer backups:
     - Write down a step by step loading process to identify the easiest format to load
@@ -59,6 +62,7 @@
     - Be able to ignore individual files
 
 - Add a timeout on dragging after double clicks (to avoid being too sensitive)
+- Log time with the session logger
 
 - Investigate a crash: try running a profiler in a separate editor. Then it might crash when trying to search.
 
@@ -113,16 +117,6 @@
     - Save undo/redo history in temporary files
 
 - When cutting search results in finder, go by characters and not bytes
-
-- Tokenizer:
-    + Identifiers can start with _
-    + Make $ a separate token
-    + Backtick as a separate token
-    + Parse @notes
-    + ^
-    - Report any invalid tokens and fix them
-    - Allow \ in identifiers
-    - Browse everything in the modules folder and try to find anything that sticks out
 
 - Search:
     - Implement case-insensitive search in buffer
@@ -189,6 +183,14 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Tokenizer:
+    + Identifiers can start with _
+    + Make $ a separate token
+    + Backtick as a separate token
+    + Parse @notes
+    + ^
+    + Report any invalid tokens and fix them
+    + Allow \ in identifiers
 + Ctrl + Backspace/Delete to erase an entire word.
 + BUG: can't open a file by double-click and the logger is not set up
 + Fix: when changing font size, the size of the path in the open file dialog doesn't change

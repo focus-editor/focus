@@ -9,6 +9,10 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
     while true {
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
+        
+        if token.type == .invalid && buffer.has_file {
+            log_error("Invalid token in file: %", file.full_path);
+        }
 
         using tokenizer;
         if token.type == .punctuation && token.punctuation == .l_paren {
@@ -94,16 +98,33 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
 
 parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
+    
+    mark := get_temporary_storage_mark();
+    defer   set_temporary_storage_mark(mark);
+    
+    identifier: [..] u8;
+    identifier.allocator = temp;
+    
+    array_add(*identifier, <<t);
 
     t += 1;
-    while t < max_t && is_alnum(<< t) t += 1;
-    if t >= max_t return;
+    slash_mode := false;
+    
+    while t < max_t {
+        c := <<t;
+        if is_alnum(c)      { t += 1; slash_mode = false; array_add(*identifier, c); continue; }
+        if c == #char "\\"  { t += 1; slash_mode = true;  continue; }
+        if slash_mode && is_white_space(c) { t += 1; continue; }
+        break;
+    }
+    if t >= max_t then t = max_t;
 
     // Maybe it's a keyword
-    identifier_str := to_string(buf.data + token.start, t - start_t);
-    if identifier_str.count > MAX_KEYWORD_LENGTH return;
-    type, ok := table_find(*KEYWORD_MAP, identifier_str);
-    if ok { token.type = type; return; }
+    identifier_str := to_string(identifier);
+    if identifier_str.count <= MAX_KEYWORD_LENGTH {
+        type, ok := table_find(*KEYWORD_MAP, identifier_str);
+        if ok { token.type = type; return; }
+    }
 
     // Check for here-string
     if last_tokens[1].type == .compiler_directive && last_tokens[1].compiler_directive == .directive_string {
