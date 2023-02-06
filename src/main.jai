@@ -2,9 +2,6 @@ main :: () {
     #assert OS == .WINDOWS "Currently only supporting Windows";
     platform_setup();
     
-    profiler_begin_session("focus", "focus-trace.json");
-    defer profiler_end_session();
-
     window_x, window_y := platform_get_biggest_monitor_pos();
     window_title := ifx DEBUG then "Focus (debug mode)" else "Focus";
     window = create_window(window_width, window_height, window_title, window_x, window_y, background_color_rgb = as_3_floats(Colors.BACKGROUND));
@@ -149,6 +146,8 @@ main :: () {
         maybe_save_editor_state_into_session();
 
         reset_temporary_storage();
+        
+        #if DEBUG FrameMark();
         
         if cast(Time) get_time() - frame_time <= QUICK_FRAME_DT {
             // It should be ok to sleep a bit after a quick frame to avoid pegging the core.
@@ -419,9 +418,12 @@ Project_Dir :: struct {
 #import "Sort";
 #import "Unicode";
 #import "Window_Creation";
-#import "Profiler"(ENABLE_PROFILER = false);
 #import "Thread";
 #import "Compiler";
+
+#if DEBUG {
+    #import "Tracy";
+}
 
 File_Async :: #import "File_Async";
 
