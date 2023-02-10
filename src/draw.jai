@@ -340,7 +340,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             range.start = move_offset_by_chars(line.start,  hidden_chars_on_left, buffer.bytes, line.end);
             range.end   = move_offset_by_chars(range.start, max_chars_per_page,   buffer.bytes, line.end);
         }
-        if buffer.needs_coloring then recalculate_colors(buffer);  // right before drawing
+        if buffer.needs_coloring || buffer.colors.count != buffer.bytes.count then recalculate_colors(buffer);  // right before drawing
         Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, code_ranges, buffer.bytes, buffer.colors, CODE_COLOR_MAP);
     }
 
@@ -867,7 +867,7 @@ draw_finder :: () {
                 code_line: [1] Simp.Code_Range;  // one line
                 code_line[0].start = line_start + xx byte_offset;
                 code_line[0].end   = min(buffer_line.end, line_start + xx byte_offset + 4 * max_code_chars);  // max 4 bytes per char
-                if buffer.needs_coloring then recalculate_colors(buffer);  // right before drawing
+                if buffer.needs_coloring || buffer.colors.count != buffer.bytes.count then recalculate_colors(buffer);  // right before drawing
                 
                 // Draw highlight
                 highlight_rect := entry_rect;

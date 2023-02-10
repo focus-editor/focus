@@ -451,7 +451,7 @@ refresh_buffer_from_disk :: (path: string) {
     
     // Buffer has changed on disk
     assert(path == buffer.file.full_path);
-    
+        
     // Reload buffer from disk
     file_contents, success := read_entire_file(path);
     if !success { log_error("Couldn't read file '%'\n", path); return; }

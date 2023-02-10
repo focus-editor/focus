@@ -10,9 +10,9 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
         
-        if token.type == .invalid && buffer.has_file {
-            log_error("Invalid token in file: %", file.full_path);
-        }
+        // if token.type == .invalid && buffer.has_file {
+        //     log_error("Invalid token in file: %", file.full_path);
+        // }
 
         using tokenizer;
         if token.type == .punctuation && token.punctuation == .l_paren {

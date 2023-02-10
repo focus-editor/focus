@@ -31,12 +31,7 @@
     - Linux support
     - Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
     - Have a user error log - with an icon in the title bar to toggle it
-
-- Test git pull to make sure everything gets updated
-- BUG: 
-    - Create a new file (test.jai)
-    - Try to search in there
-
+    
 - Sessions and buffer backups:
     - Write down a step by step loading process to identify the easiest format to load
     - When editing, remember:
@@ -154,8 +149,7 @@
   and will jerk briefly, which is annoying
     - Ideally we need a way to glue viewport to a line, so that if it shifts then we shift the viewport too
 
-- Detect tab symbols and draw them differently
-- Don't redraw if mouse move is outside the window
+- Don't redraw if mouse move is outside the window?
 - Add a warning on large texts (maybe semi-transparent)
 - When unable to save file, show a warning (have an error log?)
 
@@ -178,11 +172,11 @@
       and consider using floats or other units for font metrics
     - Simp.draw_text only allows integer positioning
     - Should we keep using GL_NEAREST for sampling?
-- Get rid of the window top bar
 - Subpixel rendering: support other types of panels (lookup ft2-lcd_rendering)
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Fix a bug with not colorising text loaded externally
 + Tokenizer:
     + Identifiers can start with _
     + Make $ a separate token
