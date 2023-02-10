@@ -51,7 +51,14 @@ open_file_dialog_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
 
     if key_code == {
         case .ENTER;
-            open_file_dialog_open_entry(entries.selected, on_the_side = only_ctrl_pressed(mods));
+            placement := ifx only_ctrl_pressed(mods) then Editor_Placement.on_the_side else .in_place;
+            open_file_dialog_open_entry(entries.selected, placement);
+            
+        case #char "1";
+            if only_ctrl_pressed(mods) open_file_dialog_open_entry(entries.selected, placement = .left);
+            
+        case #char "2";
+            if only_ctrl_pressed(mods) open_file_dialog_open_entry(entries.selected, placement = .right);
 
         case .ARROW_DOWN; #through;
         case .ARROW_UP;
@@ -71,11 +78,11 @@ open_file_dialog_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
     }
 }
 
-open_file_dialog_open_entry :: (selected: s64, on_the_side: bool) {
+open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement) {
     using open_file_dialog;
     if selected >= entries.filtered.count return;
     path := entries.filtered[selected].full_path;
-    editors_open_file(path, on_the_side);
+    editors_open_file(path, placement);
     hide_open_file_dialog();
 }
 

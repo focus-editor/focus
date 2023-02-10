@@ -443,36 +443,46 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
     }
 }
 
-editors_open_file :: (path: string, on_the_side := false) {
+editors_open_file :: (path: string, placement: Editor_Placement = .in_place) {
     full_path := get_absolute_path(path);  // returns temporary storage
     path_overwrite_separators(full_path, separator = #char "/");
     buffer_id := find_or_create_buffer(full_path);
 
-    editors_open_buffer(buffer_id, on_the_side);
+    editors_open_buffer(buffer_id, placement);
 }
 
-editors_open_buffer :: (buffer_id: s64, on_the_side := false) {
+editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place) {
     if #complete editors.layout == {
         case .None;
             editors.active = find_or_create_editor(buffer_id);
             editors.layout = .Single;
 
         case .Single;
-            if !on_the_side {
+            if placement == .in_place {
                 // Open in place
                 editors.active  = find_or_create_editor(buffer_id);
-            } else {
+            } else if placement == .on_the_side || placement == .right {
                 // Open on the right
                 editors.right  = find_or_create_editor(buffer_id, editors.active);
                 editors.left   = editors.active;
                 editors.active = editors.right;
                 editors.layout = .Double;
                 editors_start_moving_splitter(0.5, start = 1.0);
+            } else {
+                // Open on the left
+                editors.left   = find_or_create_editor(buffer_id, editors.active);
+                editors.right  = editors.active;
+                editors.active = editors.left;
+                editors.layout = .Double;
+                editors_start_moving_splitter(0.5, start = 0.0);
             }
 
         case .Double;
-            on_the_right := on_the_side;
-            if editors.active == editors.right then on_the_right = !on_the_right;
+            on_the_right := (
+                placement == .right || 
+                (placement == .in_place    && editors.active == editors.right) ||
+                (placement == .on_the_side && editors.active == editors.left)
+            );
 
             if on_the_right {
                 // Open on the right (obviously)
@@ -1622,6 +1632,14 @@ Editor_State :: struct {
         Single  :: 1;
         Double  :: 2;
     }
+}
+
+// When opening a new editor, we can specify where in the layout it should go
+Editor_Placement :: enum {
+    in_place;
+    on_the_side;
+    left;
+    right;
 }
 
 open_buffers: [..] Buffer;

@@ -41,7 +41,14 @@ finder_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
 
     if key_code == {
         case #char "L";    if only_ctrl_shift_pressed(mods) toggle_expand();
-        case .ENTER;       finder_open_selected_result(on_the_side = only_ctrl_pressed(mods));
+        case .ENTER;
+            placement := ifx only_ctrl_pressed(mods) then Editor_Placement.on_the_side else .in_place;
+            finder_open_selected_result(placement = placement);
+            
+        case #char "1";
+            if only_ctrl_pressed(mods) finder_open_selected_result(placement = .left);            
+        case #char "2";
+            if only_ctrl_pressed(mods) finder_open_selected_result(placement = .right);
         
         case .ARROW_DOWN; #through;
         case .ARROW_UP;
@@ -156,7 +163,7 @@ finder_update :: () {
     if request.in_progress then redraw_requested = true;
 }
 
-finder_open_selected_result :: (selected_num := -1, on_the_side := false) {
+finder_open_selected_result :: (selected_num := -1, placement: Editor_Placement) {
     using finder;
     if request.in_progress return;
     if selected_num >= 0 then selected = selected_num;
@@ -167,7 +174,7 @@ finder_open_selected_result :: (selected_num := -1, on_the_side := false) {
     result := results[selected];
     
     old_layout := editors.layout;    
-    editors_open_buffer(result.buffer_id, on_the_side = on_the_side);
+    editors_open_buffer(result.buffer_id, placement);
     
     // Select the search result
     editor, buffer := get_active_editor_and_buffer();

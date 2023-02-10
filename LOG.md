@@ -61,8 +61,6 @@
 
 - BUG: When reloading file from disk (refresh_buffer_from_disk) make sure to remove crlf (until it's supported at least)
 
-- Ctrl + 1/2 when opening files to specify the preferred side
-
 - Proper tab support:
     - Draw them wide (only in the visible part of the text)
     - Consider them a whitespace when calculating line start - they never need to show on the left in finder results
@@ -174,6 +172,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Ctrl + 1/2 when opening files to specify the preferred side
 + Add a timeout on dragging after double clicks (to avoid being too sensitive)
 + Fix a bug with not colorising text loaded externally
 + Tokenizer:

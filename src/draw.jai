@@ -609,7 +609,8 @@ draw_open_file_dialog :: () {
             if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
                 if mouse.left.just_pressed then entries.selected_by_mouse = entry_index;
                 if entries.selected_by_mouse == -1 then draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
-                if entries.selected_by_mouse == entry_index && mouse.left.just_released then open_file_dialog_open_entry(entry_index, on_the_side = ctrl_pressed());
+                placement := ifx ctrl_pressed() then Editor_Placement.on_the_side else .in_place;
+                if entries.selected_by_mouse == entry_index && mouse.left.just_released then open_file_dialog_open_entry(entry_index, placement);
             }
             if entries.selected_by_mouse == entry_index then draw_rect(entry_rect, Colors.LIST_CURSOR);
             if entry_index == selected then draw_rect(entry_rect, Colors.LIST_CURSOR);
@@ -776,7 +777,8 @@ draw_finder :: () {
             if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
                 if mouse.left.just_pressed then selected_by_mouse = entry_index;
                 if selected_by_mouse == -1 then draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
-                if selected_by_mouse == entry_index && mouse.left.just_released then finder_open_selected_result(entry_index, on_the_side = ctrl_pressed());
+                placement := ifx ctrl_pressed() then Editor_Placement.on_the_side else .in_place;
+                if selected_by_mouse == entry_index && mouse.left.just_released then finder_open_selected_result(entry_index, placement);
             }
             if selected_by_mouse == entry_index then draw_rect(entry_rect, Colors.LIST_CURSOR);
             if entry_index == selected then draw_rect(entry_rect, Colors.LIST_CURSOR);
