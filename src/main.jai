@@ -227,7 +227,7 @@ update_mouse_state :: () {
             button.just_triple_clicked = false;
         }
 
-        button.is_dragging   = button.is_down && mouse.pointer != button.last_down_pos;
+        button.is_dragging = button.is_down && mouse.pointer != button.last_down_pos && frame_time - button.last_double_click_time >= DRAG_AFTER_DOUBLE_CLICK_TIMEOUT;
     }
 }
 
@@ -452,6 +452,7 @@ MIN_WINDOW_HEIGHT :: 50;
 
 DOUBLE_CLICK_SPEED     :: 0.3;  // how many seconds between clicks to consider it a double click
 DOUBLE_CLICK_TOLERANCE :: 2;    // how many pixels between the click locations are allowed
+DRAG_AFTER_DOUBLE_CLICK_TIMEOUT :: 0.3;  // when we double-click to select a word, it's very easy to accidentally drag the mouse and unselect the word
 
 // Embed default fonts
 FONT         :: #run load_font("FiraCode-Retina.ttf");

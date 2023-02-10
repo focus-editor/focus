@@ -56,10 +56,8 @@
       (or maybe when it hasn't been edited or opened in this session?)
     - Be able to ignore individual files
 
-- Add a timeout on dragging after double clicks (to avoid being too sensitive)
 - Log time with the session logger
-
-- Investigate a crash: try running a profiler in a separate editor. Then it might crash when trying to search.
+- Try to log asserts into log_error.txt - would be very helpful for debugging release builds
 
 - BUG: When reloading file from disk (refresh_buffer_from_disk) make sure to remove crlf (until it's supported at least)
 
@@ -88,7 +86,7 @@
 - Search in buffer:
     - When pressing up/down to switch to prev/next result, don't wrap (but do wrap when using Enter - what else to go back?)
 
-- Try using File_Async when scanning project folders and measure how long it takes (measure yourself without using the profiler)
+- Try using File_Async when scanning project folders and measure how long it takes
 
 - Fix the whole word matching when creating new cursors (underscore seems to be considered not a word char, but inconsistently)
     - Easy to detect when using variables like success, success_read, log_error, error etc
@@ -176,6 +174,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Add a timeout on dragging after double clicks (to avoid being too sensitive)
 + Fix a bug with not colorising text loaded externally
 + Tokenizer:
     + Identifiers can start with _

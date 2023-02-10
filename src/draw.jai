@@ -97,7 +97,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         became_active := maybe_set_hot_or_active(ui_id, rect, .TEXT_SELECT);
         if became_active then active_global_widget = .editors;
-
+        
         if ui.active == ui_id && (mouse.left.just_pressed || mouse.left.is_dragging) {
             pointer := snap_to_rect(mouse.pointer, rect);  // when we drag outside the editor we still want to interact
 
@@ -116,7 +116,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
             if !shift_pressed() && mouse.left.just_pressed then remove_selection(cursor);
             if mouse.left.just_double_clicked then select_word(cursor, buffer);
-            if mouse.left.just_triple_clicked then select_lines(cursor, buffer);;
+            if mouse.left.just_triple_clicked then select_lines(cursor, buffer);
 
             array_reset_keeping_memory(*editor.highlights);
 
