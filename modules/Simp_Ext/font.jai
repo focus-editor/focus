@@ -163,7 +163,6 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height
 
     // Setup OpenGL stuff. We do it all in one place because it's easier and there will be only one backend - GL.
     // Otherwise we would have to create temporary glyphs and pass them on to the backend draw function.
-    // Hope I'm not trashing my i-cache by not doing this
     CheckInit();
     set_shader_for_text();
     glBlendFunc(GL_SRC1_COLOR, GL_ONE_MINUS_SRC1_COLOR);
@@ -251,6 +250,108 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height
     immediate_flush();
 
     glDisable(GL_BLEND);
+}
+
+// @Copypasta: some GL copypasta present
+// We represent highlights as an array of bools, which is wasteful but we don't care
+draw_text_with_highlights :: (font: *Dynamic_Font, x: s64, y: s64, text: string, highlights: [] bool, color: Vector4, highlight_color: Vector4) -> width: s64 {
+    if !text return 0;
+    
+    assert(text.count == highlights.count, "In Simp.draw_text_with_highlights, the text length doesn't match the highlight length");
+
+    CheckInit();
+    set_shader_for_text();
+    glBlendFunc(GL_SRC1_COLOR, GL_ONE_MINUS_SRC1_COLOR);
+    glEnable(GL_BLEND);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    
+    use_kerning := FT_HAS_KERNING(font.face);
+    prev_glyph: u32 = 0;
+    width_in_pixels := 0;
+
+    last_texture: GLuint = 0xFFFFFFFF;
+
+    sx := cast(float) x;
+    sy := cast(float) y;
+
+    t := text.data;
+    while t < text.data + text.count {
+        // Convert current char to glyph
+        utf32 := character_utf8_to_utf32(t, text.data + text.count - t);
+        glyph := find_or_create_glyph(font, utf32);
+        assert(glyph != null, "find_or_create_glyph returned null");
+        assert(glyph.page != null, "glyph has no font page");
+
+        texture := *glyph.page.texture;
+        if glyph.page.dirty {
+            glyph.page.dirty = false;
+            texture_load_from_bitmap(texture, glyph.page.bitmap_data);
+        }
+
+        if texture.gl_handle != last_texture {
+            immediate_flush();
+            last_texture = texture.gl_handle;
+
+            shader := state.current_shader;
+            loc := glGetUniformLocation(shader.gl_handle, "text_sampler");
+            if loc < 0  log_error("Unable to find text_sampler in shader_text!");
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, texture.gl_handle);  // Bind handle to slot 0.
+            glUniform1i(loc, 0);
+        }
+
+        // Draw glyph
+        {
+            x1 := sx + cast(float) glyph.offset_x;
+            x2 := x1 + cast(float) glyph.width;
+
+            y2 := sy + cast(float) glyph.ascent;
+            y1 := y2 - cast(float) glyph.height;
+
+            sx += cast(float) glyph.advance;
+            
+            width_in_pixels += glyph.advance;
+            
+            if use_kerning && prev_glyph {
+                delta: FT_Vector = ---;
+                error := FT_Get_Kerning(font.face, prev_glyph, glyph.glyph_index_within_font, xx FT_Kerning_Mode.DEFAULT, *delta);
+                if !error {
+                    sx += cast(float) (delta.x >> 6);
+                    width_in_pixels += (delta.x >> 6);
+                }
+            }
+
+            // Create quad
+            quad: Font_Quad = ---;
+            quad.glyph = glyph;
+            quad.p0.x  = x1;
+            quad.p1.x  = x2;
+            quad.p2.x  = x2;
+            quad.p3.x  = x1;
+            quad.p0.y  = y1;
+            quad.p1.y  = y1;
+            quad.p2.y  = y2;
+            quad.p3.y  = y2;
+
+            quad.u0 = glyph.x0 / cast(float) texture.width;
+            quad.u1 = (cast(float) glyph.x0 + glyph.width) / texture.width;
+            quad.v0 = glyph.y0 / cast(float) texture.height;
+            quad.v1 = (cast(float) glyph.y0 + glyph.height) / texture.height;
+
+            immediate_letter_quad(quad, ifx highlights[t - text.data] then highlight_color else color);
+        }
+
+        t = unicode_next_character(t);
+        prev_glyph = glyph.glyph_index_within_font;
+    }
+
+    immediate_flush();
+
+    glDisable(GL_BLEND);
+    
+    return width_in_pixels;
 }
 
 set_unknown_character :: (font: *Dynamic_Font, utf32: u32) -> bool {

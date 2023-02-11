@@ -616,7 +616,7 @@ draw_open_file_dialog :: () {
             if entry_index == selected then draw_rect(entry_rect, Colors.LIST_CURSOR);
 
             pen := make_vector2(
-                entry_rect.x + 2 * margin,
+                entry_rect.x + margin + padding,
                 entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
             );
             width: float;
@@ -631,13 +631,11 @@ draw_open_file_dialog :: () {
 
             // Draw name
             pen.x += xx font_icons.em_width + padding;
-            width += xx Simp.prepare_text(font_ui, entry.name);
-            Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = name_color);
+            width = xx Simp.draw_text_with_highlights(font_ui, xx pen.x, xx pen.y, entry.name, entry.name_highlights, color = name_color, highlight_color = Colors.LETTER_HIGHLIGHT);
             
             if entry.flags & .MODIFIED_ON_DISK {
                 pen.x += width + padding;
-                width = xx Simp.prepare_text(font_ui_bold, "[modified on disk]");
-                Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
+                width = xx Simp.draw_text(font_ui_bold, xx pen.x, xx pen.y, "[modified on disk]", color = Colors.UI_ERROR);
             }
 
             // // Draw separator
@@ -648,8 +646,7 @@ draw_open_file_dialog :: () {
             // Draw file path
             pen.x += width + padding;
             if pen.x < path_align_x then pen.x = path_align_x;
-            width = xx Simp.prepare_text(font_ui_small, entry.path);
-            Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+            width = xx Simp.draw_text_with_highlights(font_ui, xx pen.x, xx pen.y, entry.path, entry.path_highlights, color = Colors.CODE_COMMENT, highlight_color = Colors.LETTER_HIGHLIGHT);
         }
 
         // Deselect any previously clicked entry

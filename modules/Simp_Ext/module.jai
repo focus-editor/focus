@@ -104,10 +104,11 @@ update_window :: (window: Window_Type) {
     }
 }
 
-draw_text :: (font: *Dynamic_Font, x: s64, y: s64, text: string, color := Vector4.{1,1,1,1}) {
+draw_text :: (font: *Dynamic_Font, x: s64, y: s64, text: string, color := Vector4.{1,1,1,1}) -> width: s64 {
     // @Cleanup: generate_quads should return quads in a threadsafe way?
-    prepare_text(font, text);
+    width := prepare_text(font, text);
     draw_prepared_text(font, x, y, color);
+    return width;
 }
 
 draw_prepared_text :: (font: *Dynamic_Font, x: s64, y: s64, color := Vector4.{1, 1, 1, 1}) {

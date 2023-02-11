@@ -63,6 +63,26 @@ decode_utf8_string_to_temp_chars :: (str: string, max_char: s64) -> [] u32 {
     return chars;
 }
 
+decode_utf8_string_to_temp_char_substrings :: (str: string) -> [] string {
+    substrings: [..] string;
+    substrings.allocator = temp;
+    
+    if !str return substrings;
+    
+    array_reserve(*substrings, str.count);
+    
+    t := str.data;
+    while t < str.data + str.count {
+        substr: string = ---;
+        substr.data = t;
+        t = unicode_next_character(t);
+        substr.count = t - substr.data;
+        array_add(*substrings, substr);
+    }
+    
+    return substrings;
+}
+
 maybe_free_and_clear :: (str: *string) {
     if !str.data || str.count == 0 return;
     free(<< str);

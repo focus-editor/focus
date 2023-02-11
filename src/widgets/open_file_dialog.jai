@@ -5,7 +5,6 @@ open_file_dialog_handle_event :: (event: Input.Event) {
                 if event.key_code == {
                     case .ESCAPE;   hide_open_file_dialog(); return;
                     case #char "L"; if only_ctrl_shift_pressed(event.modifier_flags) { toggle_expand(); return; }
-                    // case #char "F"; if only_ctrl_shift_pressed(event.modifier_flags) { if !finder_is_open() then open_finder(); else activate_finder(); return; }
                 }
                 open_file_dialog_handle_key_press(event.key_code, event.modifier_flags);
             }
@@ -16,13 +15,7 @@ open_file_dialog_handle_event :: (event: Input.Event) {
 }
 
 init_open_file_dialog :: () {
-    using open_file_dialog;
-
-    pool_allocator := get_pool_allocator();
-    push_allocator(pool_allocator);
-
-    reset(*memory_pool);  // to avoid having to free each string. NOTE: now we don't even copy strings?
-
+    // There used to be more stuff here
     recalculate_filtered_entries();
 }
 
@@ -101,27 +94,89 @@ open_file_dialog_handle_text_input :: (char: u32) {
 
 recalculate_filtered_entries :: () {
     using open_file_dialog;
+    
+    pool_allocator := get_pool_allocator();
+    push_allocator(pool_allocator);
+
+    reset(*memory_pool);  // to avoid having to free each string
 
     scroll_to_cursor = true;
     entries.scroll_y = 0;
     entries.selected = 0;
     array_reset(*entries.filtered);
+    
+    filter_chars := decode_utf8_string_to_temp_char_substrings(to_string(input.text));
 
     // @MEMORY SAFETY: if we ever delete buffers from open_buffers and free memory, this will have to copy everything!
-    str := to_string(input.text);
-    num := 0;
+    num_entries := 0;
     for buffer : open_buffers {
-        if !buffer.has_file || buffer.deleted continue;
-        if str && !contains_nocase(buffer.file.full_path, str) continue; 
+        if !buffer.has_file || buffer.deleted continue;  // NOTE: we might still want to see externally deleted buffers.
+                                                         // Maybe use 'deleted' and 'modified_on_disk' to distingiush the buffers
+                                                         // we haven't deleted ourselves?
+                                                         // Alternatively, if there's an editor for a deleted buffer we probably
+                                                         // still want to see it here
+        
+        score, name_highlights, path_highlights := fuzzy_match(buffer, filter_chars);
+        if score < 0 continue;
         
         entry := array_add(*entries.filtered);
         entry.file = buffer.file;
+        entry.name_highlights = name_highlights;
+        entry.path_highlights = path_highlights;
+        entry.score = score;
+        
         if buffer.modified         then entry.flags |= .MODIFIED;
         if buffer.modified_on_disk then entry.flags |= .MODIFIED_ON_DISK;
         
-        num += 1;
-        if num >= MAX_ENTRIES_TO_SHOW break;
+        num_entries += 1;
+        if num_entries >= MAX_ENTRIES_TO_SHOW break;
     }
+    
+    quick_sort(entries.filtered, compare_score);
+    
+    compare_score :: (e1: Entry, e2: Entry) -> s64 {
+        score_diff := e2.score - e1.score;
+        if score_diff != 0 return score_diff;
+        
+        // TODO: compare alphabetically
+        return 0;
+    }
+}
+
+fuzzy_match :: (buffer: Buffer, chars: [] string) -> score: s64, name_highlights: [] bool, path_highlights: [] bool {
+    assert(buffer.has_file);
+    name := buffer.file.name;
+    path := buffer.file.path;  // TODO: for non-file buffers replace these with something else
+    
+    name_highlights := NewArray(name.count, bool, initialized = true);  // allocates from the pool
+    path_highlights := NewArray(path.count, bool, initialized = true);  // we "leak" if there's no match but that should be ok
+    
+    if !chars return 0, name_highlights, path_highlights;
+    
+    MAX_CHARS :: 200;
+    
+    match_str :: (str: string, chars: [] string, out_highlights: [] bool) -> score: s64 {
+        score := 0;
+        pos := 0;
+        for char : chars {
+            index := find_index_from_left_nocase(str, char, pos);
+            if index < 0 return -1;
+            out_highlights[index] = true;
+            score += MAX_CHARS - index;  // the closer to the beginning, the better
+            pos = index + char.count;
+        }
+        return score;
+    }
+    
+    // Search in the name
+    name_score := match_str(name, chars, name_highlights);
+    
+    // Search in the path
+    path_score := match_str(path, chars, path_highlights);
+    
+    score := MAX_CHARS * name_score + path_score;  // name score is much more important
+    
+    return score, name_highlights, path_highlights;
 }
 
 toggle_expand :: () {
@@ -164,16 +219,21 @@ Open_File_Dialog :: struct {
         per_page: s64 = 10;
     }
     
-    Entry :: struct {
-        using file: File_Info;
-        flags: enum_flags u8 {
-            MODIFIED;
-            MODIFIED_ON_DISK;
-        }
-    }
-    
     width_percentage := WIDTH_NORMAL;  // how much of the screen the popup occupies
     width_anim: Tween_Animation(float) = #run Tween_Animation(float).{ start = WIDTH_NORMAL, target = WIDTH_NORMAL, speed = 0.1 };
     WIDTH_NORMAL   :: 0.4;
     WIDTH_EXPANDED :: 0.8;
+}
+
+#scope_file
+
+Entry :: struct {
+    using file: File_Info;
+    flags: enum_flags u8 {
+        MODIFIED;
+        MODIFIED_ON_DISK;
+    }
+    name_highlights: [] bool;
+    path_highlights: [] bool;
+    score: s64;
 }

@@ -29,8 +29,26 @@
     - See if memory usage can be improved
     - Custom title bar (currently too much work and not very robust)
     - Linux support
+    - Windows 11 support
     - Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
     - Have a user error log - with an icon in the title bar to toggle it
+    
+- File management:
+    - Existing open file dialog:
+        + Review and cleanup code
+        + Implement fuzzy searching with letter highlighting etc
+        - Put the open editors at the top
+    - Create a new open file dialog:
+        - Ctrl+O to open dialog in the current file's folder
+        - Ctrl+Shift+O to open from root
+    - Create new files:
+        - Ctrl + N to create a new buffer
+        - If a buffer has no name, use the first N non-whitespace characters
+        - Ctrl + S to open a save file dialog
+    - File context menu:
+        - Rename file
+        - Delete file
+        - Close file?
     
 - Sessions and buffer backups:
     - Write down a step by step loading process to identify the easiest format to load
@@ -132,13 +150,6 @@
         - One idea: always copy buffer into a temporary string and rebuild the buffer every time, making changes for every cursor as we go. It would be probably a bit slower for one cursor, but still acceptable and much more predictable for many cursors
       (also this may be a good occasion to make sure other editors' cursors are adjusted when edits are done elsewhere)
 
-- Open file dialog:
-    - Ctrl+O to open dialog in the current file's folder
-    - Ctrl+Shift+O to open from root
-    - Review and cleanup code
-    - Put the open editors at the top
-    - Implement fuzzy searching with letter highlighting etc
-
 - Remove 3D-related stuff from Simp
 
 - When there are several cursors where some of them are above the viewport, hitting enter will shift everything down
@@ -155,7 +166,6 @@
     - Highlight shadowed variables
     - Color cursor differently depending on what scope we're in
 - Highlight matching braces
-- Make sure cursor positioning is correct for all fonts and sizes
 - Set a proper horizontal scroll limit
 - Maybe don't draw too many horizontal characters
 - When changing buffer in another editor, adjust cursors

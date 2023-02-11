@@ -228,6 +228,7 @@ Colors :: struct {
     PASTE_ANIMATION         :: Color.{ r = 0.11, g = 0.267, b = 0.29 };
     SPLITTER                :: Color.{ r = 0.131, g = 0.202, b = 0.25 };
     SPLITTER_HOVER          :: Color.{ r = 0.110, g = 0.267, b = 0.29 };
+    LETTER_HIGHLIGHT        :: Color.{ r = 0.35, g = 0.6, b = 0.6 };
 
     LIST_CURSOR_LITE        :: Color.{ r = 0.20, g = 0.80, b = 0.80, a = 0.1 };  // @TODO: do without alpha?
     LIST_CURSOR             :: Color.{ r = 0.20, g = 0.80, b = 0.80, a = 0.3 };

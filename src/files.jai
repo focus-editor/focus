@@ -14,6 +14,7 @@ get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> Fil
         for project_dirs {
             if begins_with_nocase(path, it.path) {
                 proj_prefix_len = it.path_prefix_len;
+                info.project_dir_id = xx it_index;
                 break;
             }
         }
@@ -73,9 +74,10 @@ File_Info :: struct {
     name: string;
     path: string;
     icon: File_Icon;
+    project_dir_id: s8 = -1;  // to be used for sorting
 }
 
-File_Icon :: enum u32 {
+File_Icon :: enum u16 {
     // These are character codes for the font-awesome font
     unknown :: 0xf15b;
     text    :: 0xf15c;
