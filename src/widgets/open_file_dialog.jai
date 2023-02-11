@@ -123,7 +123,11 @@ recalculate_filtered_entries :: () {
         entry.file = buffer.file;
         entry.name_highlights = name_highlights;
         entry.path_highlights = path_highlights;
-        entry.score = score;
+        // NOTE: there's space left in the sort key in case we need to add more parameters
+        dir_id_part:     u64 = (cast,trunc(u64) (127 - buffer.file.project_dir_id)) << 56;
+        score_part:      u64 = (cast,trunc(u64) score)                              << 16;
+        times_open_part: u64 = (cast,trunc(u64) buffer.num_times_opened)            <<  0;
+        entry.sort_key = dir_id_part | score_part | times_open_part;
         
         if buffer.modified         then entry.flags |= .MODIFIED;
         if buffer.modified_on_disk then entry.flags |= .MODIFIED_ON_DISK;
@@ -132,18 +136,16 @@ recalculate_filtered_entries :: () {
         if num_entries >= MAX_ENTRIES_TO_SHOW break;
     }
     
-    quick_sort(entries.filtered, compare_score);
+    quick_sort(entries.filtered, compare_entries);
     
-    compare_score :: (e1: Entry, e2: Entry) -> s64 {
-        score_diff := e2.score - e1.score;
-        if score_diff != 0 return score_diff;
-        
-        // TODO: compare alphabetically
-        return 0;
+    compare_entries :: (e1: Entry, e2: Entry) -> s64 {
+        key_diff := cast,no_check(s64) e2.sort_key - cast,no_check(s64) e1.sort_key;
+        if key_diff != 0 return key_diff;
+        return memcmp(e1.name.data, e2.name.data, min(e1.name.count, e2.name.count));
     }
 }
 
-fuzzy_match :: (buffer: Buffer, chars: [] string) -> score: s64, name_highlights: [] bool, path_highlights: [] bool {
+fuzzy_match :: (buffer: Buffer, chars: [] string) -> score: s32, name_highlights: [] bool, path_highlights: [] bool {
     assert(buffer.has_file);
     name := buffer.file.name;
     path := buffer.file.path;  // TODO: for non-file buffers replace these with something else
@@ -155,14 +157,14 @@ fuzzy_match :: (buffer: Buffer, chars: [] string) -> score: s64, name_highlights
     
     MAX_CHARS :: 200;
     
-    match_str :: (str: string, chars: [] string, out_highlights: [] bool) -> score: s64 {
-        score := 0;
+    match_str :: (str: string, chars: [] string, out_highlights: [] bool) -> score: s32 {
+        score: s32;
         pos := 0;
         for char : chars {
             index := find_index_from_left_nocase(str, char, pos);
             if index < 0 return -1;
             out_highlights[index] = true;
-            score += MAX_CHARS - index;  // the closer to the beginning, the better
+            score += cast(s32) (MAX_CHARS - index);  // the closer to the beginning, the better
             pos = index + char.count;
         }
         return score;
@@ -170,11 +172,14 @@ fuzzy_match :: (buffer: Buffer, chars: [] string) -> score: s64, name_highlights
     
     // Search in the name
     name_score := match_str(name, chars, name_highlights);
+    if name_score < 0 then memset(name_highlights.data, 0, name_highlights.count);  // no match -> no highlighting
     
     // Search in the path
     path_score := match_str(path, chars, path_highlights);
+    if path_score < 0 then memset(path_highlights.data, 0, path_highlights.count);  // no match -> no highlighting
     
     score := MAX_CHARS * name_score + path_score;  // name score is much more important
+    
     
     return score, name_highlights, path_highlights;
 }
@@ -235,5 +240,5 @@ Entry :: struct {
     }
     name_highlights: [] bool;
     path_highlights: [] bool;
-    score: s64;
+    sort_key: u64;
 }

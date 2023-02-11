@@ -7,13 +7,11 @@
     + Bake fonts
     + Log errors into focus-log.txt, focus-log1.txt, ... in release mode
     + Jai tokenizer parses everything correctly
-    - Ignore project folders which are children of another project folder?
+    - New open file dialog
     - Try to support tabs properly
     - Show help on F1
     - Test the exe on different machines
     - Improve cursor: change color based on scope + draw occluded letters on top
-    - Remove the edited status on a timeout after last edit/undo/whatever
-    - New open file dialog
     - Create new files
     - Notify about unsaved buffers on close
     - Ctrl + R to search by symbol within buffer (jump immediately when moving cursor between options)
@@ -32,12 +30,9 @@
     - Windows 11 support
     - Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
     - Have a user error log - with an icon in the title bar to toggle it
+    - Ignore project folders which are children of another project folder?
     
 - File management:
-    - Existing open file dialog:
-        + Review and cleanup code
-        + Implement fuzzy searching with letter highlighting etc
-        - Put the open editors at the top
     - Create a new open file dialog:
         - Ctrl+O to open dialog in the current file's folder
         - Ctrl+Shift+O to open from root
@@ -182,6 +177,11 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Existing open file dialog:
+    + Review and cleanup code
+    + Implement fuzzy searching with letter highlighting etc
+    + Put the open editors at the top
+    + Take into account how many times a buffer was opened
 + Ctrl + 1/2 when opening files to specify the preferred side
 + Add a timeout on dragging after double clicks (to avoid being too sensitive)
 + Fix a bug with not colorising text loaded externally

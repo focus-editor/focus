@@ -638,9 +638,9 @@ draw_open_file_dialog :: () {
                 width = xx Simp.draw_text(font_ui_bold, xx pen.x, xx pen.y, "[modified on disk]", color = Colors.UI_ERROR);
             }
 
-            // // Draw separator
+            // // Draw score
             // pen.x += width + padding;
-            // width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
+            // width = xx Simp.prepare_text(font_ui_small, tprint("%", formatInt(entry.sort_key, base=16)));
             // Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
 
             // Draw file path

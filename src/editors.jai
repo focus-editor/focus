@@ -494,6 +494,8 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
                 editors.active = editors.left;
             }
     }
+    buffer := *open_buffers[buffer_id];
+    if buffer.num_times_opened < 255 then buffer.num_times_opened += 1;
     
     session_notify_modified_buffer(buffer_id);
 }
@@ -843,12 +845,6 @@ init_buffers :: () {
 }
 
 fill_in_buffer_from_file_data :: (buffer: *Buffer, path: string, file_data: string) {
-    for project_dirs {
-        if begins_with_nocase(path, it.path) {
-            buffer.project_dir_index = cast(u8)it_index;
-            break;
-        }
-    }
     buffer.file = get_file_info_from_full_path(path);
     buffer.has_file = true;
     remember_last_modtime_and_size(buffer);

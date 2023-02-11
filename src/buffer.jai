@@ -598,8 +598,8 @@ deinit :: (using edit_group: *Buffer.Edit_Group) {
 // TODO: reorganise to reduce size
 Buffer :: struct {
     file: File_Info;
-    has_file := false;  // false for freestanding buffers. TODO: make freestanding buffers separate
-    project_dir_index: u8;
+    has_file := false;  // false for freestanding buffers. TODO: make freestanding buffers separate?
+    num_times_opened: u8;
 
     meow_hash: u64;
     last_modtime: Apollo_Time;  // for detecting whether a file has changed

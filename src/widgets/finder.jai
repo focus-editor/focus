@@ -144,9 +144,7 @@ finder_update :: () {
             needle = copy_string(request.needle);
             
             compare_search_results :: (r1: Search_Result, r2: Search_Result) -> s64 {
-                if r1.sort_key < r2.sort_key return -1;
-                if r1.sort_key > r2.sort_key return  1;
-                return 0;
+                return cast,no_check(s64) r1.sort_key - cast,no_check(s64) r2.sort_key;
             }
             
             // Clean up task data
@@ -249,7 +247,7 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
             result := *results[num_results];
             result.buffer_id = buffer_id;
             result.match_offset = xx offset;
-            result.sort_key = (cast(u64) buffer.project_dir_index) << 56 | (cast(u64) buffer_id) << 32 | cast(u64) offset;
+            result.sort_key = (cast(u64) buffer.file.project_dir_id) << 56 | (cast(u64) buffer_id) << 32 | cast(u64) offset;
             num_results += 1;
             if num_results >= MAX_RESULTS_PER_WORKER break buffer_id;
             
