@@ -114,10 +114,7 @@ Shader_Platform :: struct {
 
     position_loc:      GLint = -1;
     color_scale_loc:   GLint = -1;
-    normal_loc:        GLint = -1;
-    tangent_loc:       GLint = -1;
     uv_0_loc:          GLint = -1;
-    uv_1_loc:          GLint = -1;
 
     diffuse_texture_loc: GLint = -1;
 
@@ -382,7 +379,7 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
             // @Speed
             // NOTE(ivan): this will cause a flush for every call to draw_text.
             // But if we don't do this then we won't set the texture.
-            // Need to refactor the text rendering code so that we don't have to deal with this BS
+            // Need to refactor the text rendering code so that we don't have to deal with this
             immediate_flush();
             last_texture = map.gl_handle;
 
@@ -397,7 +394,7 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
         immediate_letter_quad(quad, color);
     }
 
-    // Same as above. This is BS
+    // Same as above. This is not good
     immediate_flush();
 
     glDisable(GL_BLEND);

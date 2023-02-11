@@ -22,22 +22,11 @@ Immediate_State :: struct {
 
 //
 // Immediate_Vertex is meant to be flexible rather than efficient.
-// It has a bunch of members for different things you may or may not
-// be doing: for example, it's got a normal and tangent in case you
-// are doing 3D rendering; it's got two pairs of uv coordinates so
-// that you can do two-layer texture effects. If these aren't used,
-// the memory for the vertices is still occupied, but the shader
-// just ignores the coefficients. This is all fine; if you want
-// high-performance rendering, you should use pre-baked meshes rather
-// than this interface.
 //
 Immediate_Vertex :: struct {
-    position:    Vector3;
+    position:    Vector2;
     color_scale: Vector4;
     uv0:         Vector2;
-    uv1:         Vector2;
-    normal:      Vector3;
-    tangent:     Vector4;
 }
 
 immediate_reset :: () {
@@ -67,12 +56,7 @@ immediate_set_shader :: (s: *Shader) {
     p := s.gl_handle;
     s.position_loc    = glGetAttribLocation(p, "vert_position");
     s.color_scale_loc = glGetAttribLocation(p, "vert_color");
-    s.normal_loc      = glGetAttribLocation(p, "vert_normal");
-    s.tangent_loc     = glGetAttribLocation(p, "vert_tangent");
     s.uv_0_loc        = glGetAttribLocation(p, "vert_uv0");
-    s.uv_1_loc        = glGetAttribLocation(p, "vert_uv1");
-
-//    s.transform_loc = glGetUniformLocation(p, "projection");
 
     state.current_shader = s;
     backend_use_shader(s);
@@ -109,13 +93,17 @@ immediate_flush :: () {
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
 
-    // @Speed:
-    #if true { // !vertex_format_set_to_XCNUU) {
-        set_vertex_format_to_XCNUU(shader);
-        DumpGLErrors("XCNUU");
-	}
+    if !shader.vertex_format_set {
+        if #complete shader.vertex_format == {
+            case .XCU;
+                set_vertex_format_to_XCU(shader);
+                DumpGLErrors("XCU");       
+            // other formats maybe later
+        }
+        shader.vertex_format_set = true;
+    }
 
-	glDrawArrays(GL_TRIANGLES, 0, xx count);
+    glDrawArrays(GL_TRIANGLES, 0, xx count);
 
     DumpGLErrors("out");
 }
@@ -123,12 +111,7 @@ immediate_flush :: () {
 
 #scope_file
 
-
-set_vertex_format_to_XCNUU :: (shader: *Shader) {
-//    using extensions;
-
-//    vertex_format_set_to_XCNUU = true;
-
+set_vertex_format_to_XCU :: (shader: *Shader) {
     T :: Immediate_Vertex;
     stride : u32 = size_of(T);
     offset: *T: null;
@@ -139,7 +122,7 @@ set_vertex_format_to_XCNUU :: (shader: *Shader) {
         // glEnableVertexArrayAttrib(opengl_is_stupid_vao, xx shader.position_loc);
         glEnableVertexAttribArray(xx shader.position_loc);
         DumpGLErrors("position - mid");
-        glVertexAttribPointer(xx shader.position_loc, 3, GL_FLOAT, xx false, stride, xx *offset.position);
+        glVertexAttribPointer(xx shader.position_loc, 2, GL_FLOAT, xx false, stride, xx *offset.position);
         DumpGLErrors("position - After");
     }
 
@@ -151,32 +134,11 @@ set_vertex_format_to_XCNUU :: (shader: *Shader) {
         DumpGLErrors("color");
     }
 
-    if shader.normal_loc != -1 {
-        glVertexAttribPointer(xx shader.normal_loc, 3, GL_FLOAT, xx false, stride, xx *offset.normal);
-        glEnableVertexAttribArray(xx shader.normal_loc);
-        DumpGLErrors("normal");
-    }
-
-    if shader.tangent_loc != -1 {
-        glVertexAttribPointer(xx shader.tangent_loc, 4, GL_FLOAT, xx false, stride, xx *offset.tangent);
-        glEnableVertexAttribArray(xx shader.tangent_loc);
-        DumpGLErrors("tangent");
-    }
-
     if shader.uv_0_loc != -1 {
         glVertexAttribPointer(xx shader.uv_0_loc, 2, GL_FLOAT, xx false, stride, xx *offset.uv0);
         glEnableVertexAttribArray(xx shader.uv_0_loc);
         DumpGLErrors("uv0");
     }
-
-    if shader.uv_1_loc != -1 {
-        glVertexAttribPointer(xx shader.uv_1_loc, 2, GL_FLOAT, xx false, stride, xx *offset.uv1);
-        glEnableVertexAttribArray(xx shader.uv_1_loc);
-        DumpGLErrors("uv1");
-    }
-
-//    if shader.blend_weights_loc != -1  glDisableVertexAttribArray(xx shader.blend_weights_loc);
-//    if shader.blend_indices_loc != -1  glDisableVertexAttribArray(xx shader.blend_indices_loc);
 }
 
 //
@@ -184,41 +146,10 @@ set_vertex_format_to_XCNUU :: (shader: *Shader) {
 //
 
 put_vertex :: inline (using vertex: *Immediate_Vertex, p: Vector2, color: Vector4, u: float, v: float) {
-    position.xy  = p;
-    position.z   = 0;
-    color_scale  = color;
-    normal       = .{z=1};
-    uv0.x        = u;
-    uv0.y        = v;
-    uv1          = .{};
-}
-
-put_vertex :: inline (using vertex: *Immediate_Vertex, p: Vector3, color: Vector4, u: float, v: float) {
     position     = p;
     color_scale  = color;
-    normal       = .{z=1};
     uv0.x        = u;
     uv0.y        = v;
-    uv1          = .{};
-}
-
-put_vertex :: inline (using vertex: *Immediate_Vertex, p: Vector3, color: Vector4, _normal: Vector3, u: float, v: float) {
-    position     = p;
-    color_scale  = color;
-    normal       = _normal;
-    uv0.x        = u;
-    uv0.y        = v;
-    uv1          = .{};
-}
-
-put_vertex :: inline (using vertex: *Immediate_Vertex, p: Vector3, color: Vector4,
-                      _normal: Vector3, _tangent: Vector4, _uv0: Vector2, _uv1: Vector2) {
-    position     = p;
-    color_scale  = color;
-    normal       = _normal;
-    tangent      = _tangent;
-    uv0          = _uv0;
-    uv1          = _uv1;
 }
 
 #scope_export
@@ -234,44 +165,11 @@ put_vertex :: inline (using vertex: *Immediate_Vertex, p: Vector3, color: Vector
 // This API only does triangles, so, every 3 vertices indicates one triangle.
 //
 
-// If you are outputting 3D vertices with a color at each vertex:
-
-/*
-These are omitted for brevity, because we can do it all with one immediate_vertex():
-immediate_vertex :: (position: Vector3, color_scale: Vector4) {
-    CheckSpace(1);
-    put_vertex(v, position, color_scale, 0, 0);
-}
-
-immediate_vertex :: (position: Vector3, color_scale: Vector4, uv: Vector2) {
-    CheckSpace(1);
-    put_vertex(v, position, color_scale, uv.x, uv.y);
-}
-
-// Four 3D points plus a color and an optional normal:
-immediate_quad :: (p0: Vector3, p1: Vector3, p2: Vector3, p3: Vector3, color: Vector4, normal := Vector3.{z=1}) {
-    CheckSpace(6);
-
-    put_vertex(*v[0], p0, color,  normal,  0, 0);
-    put_vertex(*v[1], p1, color,  normal,  1, 0);
-    put_vertex(*v[2], p2, color,  normal,  1, 1);
-
-    put_vertex(*v[3], p0, color,  normal,  0, 0);
-    put_vertex(*v[4], p2, color,  normal,  1, 1);
-    put_vertex(*v[5], p3, color,  normal,  0, 1);
-}
-*/
-
-immediate_vertex :: (position: Vector3, color_scale: Vector4, uv: Vector2 = .{}, normal: Vector3 = .{}) {
-    CheckSpace(1);
-    put_vertex(v, position, color_scale, normal, uv.x, uv.y);
-}
-
 //
 // Most of the time, you want to output quads: quadrilaterals, where the 4 points
 // don't need to be in any particular relation. (The sides don't have to be the same length,
 // the angles don't have to be the same). We do assume that this quad represents
-// a convex positive area. If in 3D, we assume the 4 vertices are coplanar.
+// a convex positive area.
 //
 // We output quads just by outputting two triangles, as 6 vertices.
 //
@@ -332,80 +230,6 @@ immediate_quad :: (x0: float, y0: float, x1: float, y1: float,
     put_vertex(*v[3], make_vector2(x1, y1), c11,  1, 1);
     put_vertex(*v[4], make_vector2(x0, y0), c00,  0, 0);
     put_vertex(*v[5], make_vector2(x0, y1), c01,  0, 1);
-}
-
-
-// Four 3D points plus a color, and optional uv coordinates and a normal:
-immediate_quad :: (p0: Vector3, p1: Vector3, p2: Vector3, p3: Vector3, color: Vector4,
-                   uv0 := Vector2.{0,0}, uv1 := Vector2.{1,0}, uv2 := Vector2.{1,1}, uv3 := Vector2.{0, 1}, normal := Vector3.{z=1}) {
-    CheckSpace(6);
-
-    put_vertex(*v[0], p0, color, normal, uv0.x, uv0.y);
-    put_vertex(*v[1], p1, color, normal, uv1.x, uv1.y);
-    put_vertex(*v[2], p2, color, normal, uv2.x, uv2.y);
-
-    put_vertex(*v[3], p0, color, normal, uv0.x, uv0.y);
-    put_vertex(*v[4], p2, color, normal, uv2.x, uv2.y);
-    put_vertex(*v[5], p3, color, normal, uv3.x, uv3.y);
-}
-
-
-//
-// And, the 3D quad for that special someone who already has everything:
-//
-immediate_quad :: (p0: Vector3, p1: Vector3, p2: Vector3, p3: Vector3, color: Vector4,
-                   uv0: Vector2, uv1: Vector2, uv2: Vector2, uv3: Vector2,
-                   st0: Vector2, st1: Vector2, st2: Vector2, st3: Vector2,
-                   normal: Vector3, tangent: Vector4) {
-
-    // I guess the Vector4 part of tangent says whether we are right or left-handed?
-
-    CheckSpace(6);
-
-    put_vertex(*v[0], p0, color, normal, tangent, uv0, st0);
-    put_vertex(*v[1], p1, color, normal, tangent, uv1, st1);
-    put_vertex(*v[2], p2, color, normal, tangent, uv2, st2);
-
-    put_vertex(*v[3], p0, color, normal, tangent, uv0, st0);
-    put_vertex(*v[4], p2, color, normal, tangent, uv2, st2);
-    put_vertex(*v[5], p3, color, normal, tangent, uv3, st3);
-}
-
-
-//
-// You can make your own immediate_quad functions that, for example,
-// pass one color per vertex, and so forth. Actually, we should probably
-// provide that here. @Incomplete.
-//
-
-//
-// You can draw individual triangles instead of quads. For example,
-// if you want to draw a circle, you can make it out of triangles.
-//
-// Here we just provide one, for simplicity (if you want to draw 2D stuff,
-// just put in a dummy Z coordinate, like 0):
-//
-
-/*
-immediate_triangle :: (p0: Vector3, p1: Vector3, p2: Vector3,
-                       color: Vector4,
-                       uv0 := Vector2.{}, uv1 := Vector2.{}, uv2 := Vector2.{},
-                       normal := Vector3.{z=1}) {
-    CheckSpace(3);
-    put_vertex(*v[0], p0, color, normal, uv0.x, uv0.y);
-    put_vertex(*v[1], p1, color, normal, uv1.x, uv1.y);
-    put_vertex(*v[2], p2, color, normal, uv2.x, uv2.y);
-}
-*/
-
-immediate_triangle :: (p0: Vector3, p1: Vector3, p2: Vector3,
-                       c1: Vector4, c2: Vector4, c3: Vector4,
-                       uv0 := Vector2.{}, uv1 := Vector2.{}, uv2 := Vector2.{},
-                       normal := Vector3.{z=1}) {
-    CheckSpace(3);
-    put_vertex(*v[0], p0, c1, normal, uv0.x, uv0.y);
-    put_vertex(*v[1], p1, c2, normal, uv1.x, uv1.y);
-    put_vertex(*v[2], p2, c3, normal, uv2.x, uv2.y);
 }
 
 immediate_triangle_fan :: (base: Vector2, points: [] Vector2, color: Vector4, base_color: Vector4) {

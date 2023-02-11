@@ -32,6 +32,12 @@
     - Have a user error log - with an icon in the title bar to toggle it
     - Ignore project folders which are children of another project folder?
     
+- Smooth rounded corners:
+    + Review the current code
+    - Try to find a way to implement rounded corners using SDF:
+        - Check how uniforms are passed in
+    - If no good way found, go back to doing it using a generated texture
+    
 - File management:
     - Create a new open file dialog:
         - Ctrl+O to open dialog in the current file's folder
@@ -44,6 +50,8 @@
         - Rename file
         - Delete file
         - Close file?
+        
+- Consider using smoothstep instead of lerp for tween animations
     
 - Sessions and buffer backups:
     - Write down a step by step loading process to identify the easiest format to load
@@ -145,8 +153,6 @@
         - One idea: always copy buffer into a temporary string and rebuild the buffer every time, making changes for every cursor as we go. It would be probably a bit slower for one cursor, but still acceptable and much more predictable for many cursors
       (also this may be a good occasion to make sure other editors' cursors are adjusted when edits are done elsewhere)
 
-- Remove 3D-related stuff from Simp
-
 - When there are several cursors where some of them are above the viewport, hitting enter will shift everything down
   and will jerk briefly, which is annoying
     - Ideally we need a way to glue viewport to a line, so that if it shifts then we shift the viewport too
@@ -177,6 +183,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Remove 3D-related stuff from Simp
 + Existing open file dialog:
     + Review and cleanup code
     + Implement fuzzy searching with letter highlighting etc

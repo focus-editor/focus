@@ -1,7 +1,13 @@
 #scope_export
 
-Shader  :: struct {
+Shader :: struct {
     using platform: Shader_Platform;
+    
+    vertex_format_set: bool;
+    vertex_format: enum {
+        XCU;
+        // TODO: other formats go here
+    } = .XCU;
 }
 
 set_projection :: () {
