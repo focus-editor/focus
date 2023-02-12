@@ -54,17 +54,14 @@ main :: () {
 
     while !should_quit {
         if !redraw_requested platform_wait_message();
-        redraw_requested = false;
-        old_line_height = line_height;
         
-        maybe_update_workspace_buffers();
-
         Input.update_window_events();
-
+        
         current_time := cast(Time) get_time();
         frame_dt   = min(current_time - frame_time, MAX_FRAME_DT);
         frame_time = current_time;
 
+        old_line_height = line_height;
         for Input.get_window_resizes() {
             Simp.update_window(it.window);
             if (it.window == window) {
@@ -81,8 +78,14 @@ main :: () {
 
         // Don't do anything when window is resized to a size that's too small
         if window_width < MIN_WINDOW_WIDTH || window_height < MIN_WINDOW_HEIGHT continue;
-
+        
         update_mouse_state();
+        
+        // Don't redraw if we're mousing around outside the window
+        if !redraw_requested && !Input.events_this_frame && !mouse_pointer_is_within(screen) continue;
+        redraw_requested = false;
+
+        maybe_update_workspace_buffers();
         finder_update();
 
         for * editor : open_editors {

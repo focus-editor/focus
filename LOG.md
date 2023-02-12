@@ -32,8 +32,6 @@
     - Have a user error log - with an icon in the title bar to toggle it
     - Ignore project folders which are children of another project folder?
 
-- Don't redraw if mouse move is outside the window?
-
 - File management:
     - Create a new open file dialog:
         - Ctrl+O to open dialog in the current file's folder
@@ -184,6 +182,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Don't redraw if mouse move is outside the window
 + Smooth rounded corners:
     + Review the current code
     + Try to find a way to implement rounded corners using SDF
