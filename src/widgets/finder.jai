@@ -313,11 +313,11 @@ Finder :: struct {
     per_page := 10;
     
     scroll_y: s32;
-    scroll_anim: Tween_Animation(s32);
+    scroll_anim := #run Tween_Animation(s32).{ speed = xx 0.1, func = .lerp };
     scroll_to_cursor: bool;
     
     width_percentage := WIDTH_NORMAL;  // how much of the screen the popup occupies
-    width_anim: Tween_Animation(float) = #run Tween_Animation(float).{ start = WIDTH_NORMAL, target = WIDTH_NORMAL, speed = 0.1 };
+    width_anim := #run Tween_Animation(float).{ start = WIDTH_NORMAL, target = WIDTH_NORMAL };
     WIDTH_NORMAL   :: 0.7;
     WIDTH_EXPANDED :: 0.95;
     

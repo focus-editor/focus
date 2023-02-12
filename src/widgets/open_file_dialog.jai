@@ -220,12 +220,12 @@ Open_File_Dialog :: struct {
         selected_by_mouse: s64 = -1;  // to remember which entry the left mouse button went down on
 
         scroll_y: s32;
-        scroll_anim: Tween_Animation(s32);
+        scroll_anim := #run Tween_Animation(s32).{ speed = xx 0.1, func = .lerp };
         per_page: s64 = 10;
     }
     
     width_percentage := WIDTH_NORMAL;  // how much of the screen the popup occupies
-    width_anim: Tween_Animation(float) = #run Tween_Animation(float).{ start = WIDTH_NORMAL, target = WIDTH_NORMAL, speed = 0.1 };
+    width_anim := #run Tween_Animation(float).{ start = WIDTH_NORMAL, target = WIDTH_NORMAL };
     WIDTH_NORMAL   :: 0.4;
     WIDTH_EXPANDED :: 0.8;
 }

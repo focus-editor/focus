@@ -7,18 +7,18 @@
     + Bake fonts
     + Log errors into focus-log.txt, focus-log1.txt, ... in release mode
     + Jai tokenizer parses everything correctly
+    + Figure out how to anti-alias rounded corners
+    - Improve cursor: draw occluded letters on top
     - New open file dialog
     - Try to support tabs properly
     - Show help on F1
     - Test the exe on different machines
-    - Improve cursor: change color based on scope + draw occluded letters on top
     - Create new files
     - Notify about unsaved buffers on close
     - Ctrl + R to search by symbol within buffer (jump immediately when moving cursor between options)
     - Ctrl + Shift + R to search by symbol within workspace
     - Try to implement "jump to symbol definition". Display a popup if more than one. Do a scan of jai files for that.
     - Horizontal scrolling
-    - Figure out how to anti-alias rounded corners
     - Support CRLF (ugh)
     - Have the option to not strip trailing whitespace (in the config?) Or can do ctrl+s as a main way to save, ctr+shift+s as an alternative way
     - Adjust cursors in joint editors properly
@@ -32,6 +32,9 @@
     - Have a user error log - with an icon in the title bar to toggle it
     - Ignore project folders which are children of another project folder?
 
+- Fix selection rounding
+- When the window loses focus, redraw
+
 - File management:
     - Create a new open file dialog:
         - Ctrl+O to open dialog in the current file's folder
@@ -44,8 +47,6 @@
         - Rename file
         - Delete file
         - Close file?
-        
-- Consider using smoothstep instead of lerp for tween animations
     
 - Sessions and buffer backups:
     - Write down a step by step loading process to identify the easiest format to load
@@ -182,6 +183,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Use smoothstep instead of lerp for tween animations
 + Don't redraw if mouse move is outside the window
 + Smooth rounded corners:
     + Review the current code

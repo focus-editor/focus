@@ -508,14 +508,14 @@ move_viewport :: (editor: *Editor, dir: enum { left; up; right; down; }) {
             horiz_delta := cast(s32) (10 * char_size);
             new_target := ifx dir == .left then scroll_x.target - horiz_delta else scroll_x.target + horiz_delta;
             if new_target < 0 then new_target = 0;
-            start_animation(*scroll_x, left, new_target);
+            start_animation(*scroll_x, left, new_target, snappy = true);
 
         case .up; #through;
         case .down;
             vert_delta := cast(s32) (10 * line_height);
             new_target := ifx dir == .up then scroll_y.target - vert_delta else scroll_y.target + vert_delta;
             new_target = clamp(new_target, 0, get_max_y_scroll(open_buffers[editor.buffer_id]));
-            start_animation(*scroll_y, top, new_target);
+            start_animation(*scroll_y, top, new_target, snappy = true);
     }
 }
 
@@ -739,7 +739,7 @@ open_search_bar :: (using editor: *Editor, buffer: Buffer) {
 
     search_and_update_results(editor, buffer);
 
-    start_animation(*open_anim, openness, 1.0, speed = xx 0.2);
+    start_animation(*open_anim, openness, 1.0);
 }
 
 close_search_bar :: inline (editor: *Editor) {
@@ -749,7 +749,7 @@ close_search_bar :: inline (editor: *Editor) {
     reset_search_results(*editor.search_bar);
     array_reset_keeping_memory(*editor.highlights);
 
-    start_animation(*open_anim, openness, 0.0, speed = xx 0.2);
+    start_animation(*open_anim, openness, 0.0);
 }
 
 search_bar_toggle_expand :: (using editor: *Editor) {
@@ -1581,8 +1581,8 @@ Editor :: struct {
 Viewport :: struct {
     top:  s32;
     left: s32;
-    scroll_y: Tween_Animation(s32);
-    scroll_x: Tween_Animation(s32);
+    scroll_y := #run Tween_Animation(s32).{ speed = xx 0.1, func = .lerp };
+    scroll_x := #run Tween_Animation(s32).{ speed = xx 0.1, func = .lerp };
 }
 
 Search_Bar :: struct {
@@ -1591,7 +1591,7 @@ Search_Bar :: struct {
     open_anim: Tween_Animation(float);
     
     width_percentage := WIDTH_NORMAL;  // how much of the screen the popup occupies
-    width_anim: Tween_Animation(float) = #run Tween_Animation(float).{ start = WIDTH_NORMAL, target = WIDTH_NORMAL, speed = 0.1 };
+    width_anim := #run Tween_Animation(float).{ start = WIDTH_NORMAL, target = WIDTH_NORMAL };
     WIDTH_NORMAL   :: 0.5;
     WIDTH_EXPANDED :: 0.9;
 

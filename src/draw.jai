@@ -912,7 +912,10 @@ draw_cursors :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_o
 
             rect := make_rect(cursor_pos.x, cursor_pos.y, char_size, line_height);
             draw_rounded_rect(rect, Colors.CURSOR, radius = rounding_radius_small, set_shader = true);
-            if !is_active {
+            if is_active {
+                // Draw the letter on top for better visibility
+                
+            } else {
                 draw_rounded_rect(shrink(rect, 1), Colors.BACKGROUND, radius = rounding_radius_small, set_shader = false);
             }
         }

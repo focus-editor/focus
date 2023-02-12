@@ -232,10 +232,10 @@ is_all_whitespace :: (s: string) -> bool {
     return true;
 }
 
-start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: Time = xx 0.1, $snappy := false) {
+start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: Time = xx 0.0, $snappy := false) {
     anim.start  = start;
     anim.target = target;
-    anim.speed  = speed;
+    if speed > 0 then anim.speed = speed;
     #if snappy {
         // Pretend the animation started last frame so we start moving right away
         anim.started_at = frame_time - MAX_FRAME_DT;
@@ -246,11 +246,11 @@ start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: Time
 }
 
 get_animation_value :: (using anim: Tween_Animation($T)) -> T {
-    t := (frame_time - started_at) / speed;
-    if t >= 1 || t < 0 {
-        return target;
-    } else {
-        return start + cast(T) (cast(float)(target - start) * cast(float)t);
+    t := cast(float) ((frame_time - started_at) / speed);
+    t = clamp(t, 0, 1);
+    if #complete func == {
+        case .lerp;       return start + cast(T) (cast(float)(target - start) * t);
+        case .smoothstep; return start + cast(T) (cast(float)(target - start) * t * t * (3.0 - 2.0 * t));
     }
 }
 
@@ -260,6 +260,6 @@ get_animation_value :: (using anim: Tween_Animation($T)) -> T {
 Tween_Animation :: struct(T: Type) {
     start, target: T;
     started_at: Time;
-    speed: Time;  // how many seconds to finish
-    // NOTE: currently only uses lerp, but should be easy to add other functions later if needed
+    speed: Time = xx 0.2;  // how many seconds to finish
+    func: enum { lerp; smoothstep; } = .smoothstep;
 }
