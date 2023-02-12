@@ -75,6 +75,12 @@
     - When an editor is closed using Ctrl+W, use session_notify_closed_editor to remove the buffer backup (if unmodified)
       (or maybe when it hasn't been edited or opened in this session?)
     - Be able to ignore individual files
+    
+- New search-in-buffer widget:
+    - It's much nicer to see all occurrences at the same time, rather than trying to cycle through them blindly
+    - Make it look like the project search widget, but without the file names (so can be smaller)
+    - Jump to the occurrence under cursor immediately
+    - Can extend to support searching by symbol (possibly by adding a # or something like Sublime/VSCode)
 
 - Log time with the session logger
 - Try to log asserts into log_error.txt - would be very helpful for debugging release builds

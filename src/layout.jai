@@ -66,6 +66,8 @@ shrink_y :: (rect: Rect, amount: float) -> Rect {
 }
 
 cut_left :: (rect: Rect, amount: float, $margin := 0) -> (left: Rect,  remainder: Rect) {
+    amount = floor(amount);
+    
     remainder := rect;
 
     remainder.w -= amount;
@@ -86,6 +88,8 @@ cut_left :: (rect: Rect, amount: float, $margin := 0) -> (left: Rect,  remainder
 }
 
 cut_right :: (rect: Rect, amount: float) -> (right: Rect, remainder: Rect) {
+    amount = floor(amount);
+    
     remainder := rect;
 
     remainder.w -= amount;
@@ -98,6 +102,8 @@ cut_right :: (rect: Rect, amount: float) -> (right: Rect, remainder: Rect) {
 }
 
 cut_bottom :: (rect: Rect, amount: float) -> (bottom: Rect, remainder: Rect) {
+    amount = floor(amount);
+    
     remainder := rect;
 
     remainder.h -= amount;
@@ -110,6 +116,8 @@ cut_bottom :: (rect: Rect, amount: float) -> (bottom: Rect, remainder: Rect) {
 }
 
 cut_top :: (rect: Rect, amount: float) -> (top: Rect, remainder: Rect) {
+    amount = floor(amount);
+    
     remainder := rect;
 
     remainder.h -= amount;

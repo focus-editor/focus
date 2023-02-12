@@ -199,8 +199,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
 
         // Scrollbar
-        scrollbar_width := 1.5 * char_size;
-        new_scroll_target := draw_scrollbar(rect, scrollbar_width, rect.h + xx max_y_scroll, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
+        new_scroll_target := draw_scrollbar(rect, scrollbar_size, rect.h + xx max_y_scroll, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
         if new_scroll_target != viewport.scroll_y.target {
             // Jump immediately to the scroll point when dragging or clicking scrollbar
             viewport.top = new_scroll_target;
@@ -240,7 +239,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         // Draw scrollbar marks
         {
-            marks_rect := cut_right(rect, scrollbar_width);
+            marks_rect := cut_right(rect, scrollbar_size);
             marks_rect =  cut_top(marks_rect, rect.h * max_y_scroll / (rect.h + xx max_y_scroll));  // account for the non-text area at the bottom
             marks_rect_top := marks_rect.y + marks_rect.h;
             assert(buffer.lines.count > 0);
@@ -511,8 +510,8 @@ draw_open_file_dialog :: () {
         return;
     }
 
-    margin  := 12 * dpi_scale;
-    padding :=  4 * dpi_scale;
+    margin  := floor(12 * dpi_scale);
+    padding := floor( 4 * dpi_scale);
     input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
     entry_height := font_ui_line_height + padding * 2;
 
@@ -525,14 +524,15 @@ draw_open_file_dialog :: () {
         }
         width := screen.w * width_percentage;
         width = clamp(width, 400 * dpi_scale, 2000 * dpi_scale);
+        width = floor(width);
         
         height := clamp(input_rect_height + entry_height * entries.filtered.count + padding, 0, screen.h / 1.5);
-        x := (screen.w - width) / 2;
-        y := clamp(100 * dpi_scale, 0, (screen.h - height) / 2);
+        x := floor((screen.w - width) / 2);
+        y := floor(clamp(100 * dpi_scale, 0, (screen.h - height) / 2));
         box_rect = make_rect(x, screen.h - height - y, width, height);
         if !is_valid(box_rect) return;
     }
-    draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = char_size / 1.5, shadow_size = char_size * 1.5);
+    draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = rounding_radius_large, shadow_size = char_size * 1.5);
 
     maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
 
@@ -560,7 +560,7 @@ draw_open_file_dialog :: () {
             // Scrollbar
             content_height := filtered.count * entry_height;
             max_y_scroll := content_height - files_rect.h;
-            new_scroll_target := draw_scrollbar(files_rect, 1.5 * char_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
+            new_scroll_target := draw_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
             if new_scroll_target != scroll_anim.target {
                 scroll_y = new_scroll_target;
                 scroll_anim.target = new_scroll_target;
@@ -688,7 +688,7 @@ draw_finder :: () {
         box_rect = make_rect(x, screen.h - height - y, width, height);
         if !is_valid(box_rect) return;
     }
-    draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = char_size / 1.5, shadow_size = char_size * 1.5);
+    draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = rounding_radius_large, shadow_size = char_size * 1.5);
 
     maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
 
@@ -714,7 +714,7 @@ draw_finder :: () {
             // Scrollbar
             content_height := results.count * entry_height;
             max_y_scroll := content_height - files_rect.h;
-            new_scroll_target := draw_scrollbar(files_rect, 1.5 * char_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
+            new_scroll_target := draw_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
             if new_scroll_target != scroll_anim.target {
                 scroll_y = new_scroll_target;
                 scroll_anim.target = new_scroll_target;
@@ -911,9 +911,9 @@ draw_cursors :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_o
             // draw_rect_raw(line_rect, Colors.BACKGROUND_HIGHLIGHT);
 
             rect := make_rect(cursor_pos.x, cursor_pos.y, char_size, line_height);
-            draw_rounded_rect(rect, Colors.CURSOR, radius = 3, set_shader = false);
+            draw_rounded_rect(rect, Colors.CURSOR, radius = rounding_radius_small, set_shader = false);
             if !is_active {
-                draw_rounded_rect(shrink(rect, 1), Colors.BACKGROUND, radius = 3, set_shader = false);
+                draw_rounded_rect(shrink(rect, 1), Colors.BACKGROUND, radius = rounding_radius_small, set_shader = false);
             }
         }
     }
@@ -1050,7 +1050,7 @@ draw_rounded_rect :: (rect: Rect, color: Color,
                       br: Corner_Rounding = .in, bl: Corner_Rounding = .in,
                       radius := 0.0, softness := 1.0, $set_shader := true) {
     #if set_shader then Simp.set_shader_for_rects();
-    if radius <= 0 then radius = char_size / 2;
+    if radius <= 0 then radius = rounding_radius;
     
     center := Vector2.{ x = rect.x + rect.w / 2, y = rect.y + rect.h / 2 };
     size   := Vector2.{ x = rect.w / 2, y = rect.h / 2 };    
@@ -1111,9 +1111,9 @@ draw_rounded_rect :: (rect: Rect, color: Color,
 // }
 
 draw_rounded_rect_with_shadow :: (rect: Rect, color: Color, radius := 0.0, shadow_size := 10.0) {
-    r := ifx radius > 0 then radius else char_size / 3.0;  // rounding radius
+    if radius <= 0 then radius = rounding_radius;
     shadow_rect := expand(rect, shadow_size);
-    shadow_radius := r + shadow_size;
+    shadow_radius := radius + shadow_size;
 
     top, bottom, left, right, base, corner: Rect = ---;
     top,    base = cut_top(shadow_rect, shadow_radius);
@@ -1147,7 +1147,7 @@ draw_rounded_rect_with_shadow :: (rect: Rect, color: Color, radius := 0.0, shado
     draw_rect_raw(top,    s, t, s, t);
     draw_rect_raw(bottom, t, s, t, s);
 
-    draw_rounded_rect(rect, color, radius = r);
+    draw_rounded_rect(rect, color, radius = radius);
 }
 
 draw_top_down_shadow :: (rect: Rect) {
@@ -1197,7 +1197,7 @@ draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll:
 
     area := cut_right(main_rect, width);  // the scrollbar area of the main rect
     scrollbar := area;  // handle
-    scrollbar.h = area.h * (area.h / content_height);
+    scrollbar.h = floor(area.h * (area.h / content_height));
     scroll_zone_size := area.h - scrollbar.h;  // the room for y to move
 
     if scroll_zone_size <= 0 return scroll_target;  // don't draw
@@ -1206,18 +1206,18 @@ draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll:
 
     // Draw
     color := Colors.SCROLLBAR;
-    rounding_radius := 2.0;
 
     if ui.active == ui_id || (ui.hot_last_frame == ui_id && ui.active == .none) {
-        draw_rounded_rect(area, Colors.SCROLLBAR_BACKGROUND, radius = rounding_radius);
+        draw_rounded_rect(area, Colors.SCROLLBAR_BACKGROUND, radius = rounding_radius_small);
         color = Colors.SCROLLBAR_HOVER;
     }
-    separator_rect := shrink_y(cut_left(area, 1), rounding_radius);
+    separator_rect := shrink_y(cut_left(area, 1), rounding_radius_small);
     draw_rect(separator_rect, Colors.SCROLLBAR_BACKGROUND);
     scrollbar.y += (cast(float) (max_scroll - scroll) / max_scroll) * scroll_zone_size;
+    scrollbar.y = floor(scrollbar.y);
     scrollbar = shrink(scrollbar, 1);
     if scrollbar.h < 5 then scrollbar.h = 5;  // don't make it too tiny
-    draw_rounded_rect(scrollbar, color, radius = rounding_radius);
+    draw_rounded_rect(scrollbar, color, radius = rounding_radius_small);
 
     // Maybe drag the slider
     if ui.active == ui_id {

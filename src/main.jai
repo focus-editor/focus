@@ -47,7 +47,7 @@ main :: () {
     defer deinit_logger();  // closes log file handles
     
     dpi_scale = platform_get_dpi_scale(window);
-    init_fonts();
+    init_fonts_and_dependent_things();
     old_line_height = line_height;
 
     should_quit := false;
@@ -74,7 +74,7 @@ main :: () {
                 if should_reinit {
                     screen    = make_rect(0, 0, window_width, window_height);
                     dpi_scale = platform_get_dpi_scale(window);
-                    init_fonts();
+                    init_fonts_and_dependent_things();
                 }
             }
         }
@@ -115,7 +115,7 @@ main :: () {
                                         font_ui_size += 1;
                                         font_ui_small_size += 1;
                                         font_icons_size += 1;
-                                        init_fonts();
+                                        init_fonts_and_dependent_things();
                                     }
                                 }
                             case #char "-";
@@ -126,7 +126,7 @@ main :: () {
                                         font_ui_size -= 1;
                                         font_ui_small_size -= 1;
                                         font_icons_size -= 1;
-                                        init_fonts();
+                                        init_fonts_and_dependent_things();
                                     }
                                 }
                         }
@@ -166,12 +166,9 @@ main :: () {
     // log_leak_report(report);
 }
 
-init_fonts :: () {
+init_fonts_and_dependent_things :: () {
     font = Simp.get_font_at_size(FONT.name, FONT.data, cast(int) (font_size * dpi_scale));
     assert(font != null, "Couldn't init main text font\n");
-    char_size   = cast(float) font.em_width;
-    old_line_height = line_height;
-    line_height = cast(float) font.default_line_spacing * LINE_HEIGHT_SCALE;
 
     font_ui = Simp.get_font_at_size(FONT_UI.name, FONT_UI.data, cast(int) (font_ui_size * dpi_scale));
     assert(font_ui != null, "Couldn't init main ui font\n");
@@ -197,6 +194,15 @@ init_fonts :: () {
     Simp.prepare_text(font_ui_bold,  COMMON_CHARS);
     Simp.prepare_text(font_ui_small, COMMON_CHARS);
     // TODO: prepare icons as well
+    
+    // Things that depend on char size
+    char_size       = cast(float) font.em_width;
+    old_line_height = line_height;
+    line_height     = floor(cast(float) font.default_line_spacing * LINE_HEIGHT_SCALE);
+    scrollbar_size  = floor(1.5 * char_size);
+    rounding_radius = floor(char_size / 2);
+    rounding_radius_large = floor(char_size / 1.5);
+    rounding_radius_small = floor(char_size / 3);
 }
 
 update_mouse_state :: () {
@@ -346,10 +352,14 @@ Mouse_Button_State :: struct {
     last_double_click_time: Time;
 }
 
-// Depend on font
+// Depend on font size
 char_size:   float;
 line_height: float;
 old_line_height: float;  // to track font changes
+scrollbar_size:  float;
+rounding_radius: float;
+rounding_radius_large: float;
+rounding_radius_small: float;
 
 LINE_HEIGHT_SCALE :: 1.2;
 
