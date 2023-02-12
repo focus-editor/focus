@@ -115,6 +115,10 @@ Shader_Platform :: struct {
     position_loc:      GLint = -1;
     color_scale_loc:   GLint = -1;
     uv_0_loc:          GLint = -1;
+    rect_center_loc:   GLint = -1;
+    rect_size_loc:     GLint = -1;
+    rect_corner_radius_loc: GLint = -1;
+    rect_edge_softness_loc: GLint = -1;
 
     diffuse_texture_loc: GLint = -1;
 
@@ -172,6 +176,9 @@ backend_init_shaders :: () {
 
     shader_sprite.gl_handle   = get_shader_program(SHADER_SPRITE);
     shader_sprite.alpha_blend = true;
+
+    shader_rounded_rect.gl_handle   = get_shader_program(SHADER_ROUNDED_RECT);
+    shader_rounded_rect.alpha_blend = true;
 }
 
 #scope_file
@@ -187,14 +194,14 @@ OUT_IN vec2 TextureCoords;
 OUT_IN vec4 iterated_color;
 
 #ifdef VERTEX_SHADER
-in vec4 vert_position;
+in vec2 vert_position;
 in vec4 vert_color;
 in vec2 vert_uv0;
 
 uniform mat4 projection;
 
 void main() {
-    gl_Position     = projection * vec4(vert_position.xy, 0.0, 1.0);
+    gl_Position     = projection * vec4(vert_position, 0.0, 1.0);
     iterated_color  = vert_color;
     TextureCoords   = vert_uv0;
 }
@@ -223,13 +230,13 @@ SHADER_COLOR :: #string END
 OUT_IN vec4 iterated_color;
 
 #ifdef VERTEX_SHADER
-in vec4 vert_position;
+in vec2 vert_position;
 in vec4 vert_color;
 
 uniform mat4 projection;
 
 void main() {
-    gl_Position = projection * vec4(vert_position.xy, 0.0, 1.0);
+    gl_Position = projection * vec4(vert_position, 0.0, 1.0);
     iterated_color    = vert_color;
 }
 #endif // VERTEX_SHADER
@@ -252,7 +259,7 @@ OUT_IN vec2 TexCoords;
 OUT_IN vec4 iterated_color;
 
 #ifdef VERTEX_SHADER
-in vec4 vert_position;
+in vec2 vert_position;
 in vec4 vert_color;
 in vec2 vert_uv0;
 
@@ -260,7 +267,7 @@ uniform mat4 projection;
 
 void main() {
     TexCoords = vec2(vert_uv0.x, 1-vert_uv0.y);  // @Cleanup: Figure out what to do to avoid this vertical flip... sigh!
-    gl_Position = projection * vec4(vert_position.xy, 0.0, 1.0);
+    gl_Position = projection * vec4(vert_position, 0.0, 1.0);
     iterated_color = vert_color;
 }
 #endif // VERTEX_SHADER
@@ -276,6 +283,51 @@ void main () {
 
     color = color_tex;
 }
+#endif // FRAGMENT_SHADER
+END
+
+SHADER_ROUNDED_RECT :: #string END
+OUT_IN vec4 iterated_color;
+flat OUT_IN vec2 rect_center;
+flat OUT_IN vec2 rect_size;
+flat OUT_IN float rect_corner_radius;
+flat OUT_IN float rect_edge_softness;
+
+#ifdef VERTEX_SHADER
+in vec2 vert_position;
+in vec4 vert_color;
+
+in vec2 vert_rect_center;
+in vec2 vert_rect_size;
+in float vert_rect_corner_radius;
+in float vert_rect_edge_softness;
+
+uniform mat4 projection;
+
+void main() {
+    gl_Position = projection * vec4(vert_position, 0.0, 1.0);
+    iterated_color    = vert_color;
+    
+    rect_center = vert_rect_center;
+    rect_size = vert_rect_size;
+    rect_corner_radius = vert_rect_corner_radius;
+    rect_edge_softness = vert_rect_edge_softness;
+}
+#endif // VERTEX_SHADER
+
+#ifdef FRAGMENT_SHADER
+out vec4 color;
+
+float rounded_rect_sdf(vec2 frag_pos, vec2 rect_center, vec2 size, float radius) {
+    return length(max(abs(frag_pos - rect_center) - size + radius, 0.0)) - radius;
+}
+
+void main () {
+    float distance = rounded_rect_sdf(gl_FragCoord.xy, rect_center, rect_size, rect_corner_radius);
+    float smoothed_alpha = 1.0f - smoothstep(0.0f, rect_edge_softness, distance);
+    color = vec4(iterated_color.xyz, iterated_color.a * smoothed_alpha);
+}
+
 #endif // FRAGMENT_SHADER
 END
 

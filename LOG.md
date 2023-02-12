@@ -34,9 +34,8 @@
     
 - Smooth rounded corners:
     + Review the current code
-    - Try to find a way to implement rounded corners using SDF:
-        - Check how uniforms are passed in
-    - If no good way found, go back to doing it using a generated texture
+    + Try to find a way to implement rounded corners using SDF
+    - Try with integer heights - maybe it'll help to get rid of blurry edges
     
 - File management:
     - Create a new open file dialog:

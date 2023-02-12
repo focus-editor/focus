@@ -27,6 +27,13 @@ Immediate_Vertex :: struct {
     position:    Vector2;
     color_scale: Vector4;
     uv0:         Vector2;
+    
+    // The following values are for rendering rounded rects - most of the time they are not used, but it's ok
+    // because it's simpler than the alternatives and the performance is good enough for our purposes
+    rect_center: Vector2;
+    rect_size:   Vector2;
+    rect_corner_radius: float;
+    rect_edge_softness: float = 1.0;
 }
 
 immediate_reset :: () {
@@ -57,6 +64,11 @@ immediate_set_shader :: (s: *Shader) {
     s.position_loc    = glGetAttribLocation(p, "vert_position");
     s.color_scale_loc = glGetAttribLocation(p, "vert_color");
     s.uv_0_loc        = glGetAttribLocation(p, "vert_uv0");
+    
+    s.rect_center_loc        = glGetAttribLocation(p, "vert_rect_center");
+    s.rect_size_loc          = glGetAttribLocation(p, "vert_rect_size");
+    s.rect_corner_radius_loc = glGetAttribLocation(p, "vert_rect_corner_radius");
+    s.rect_edge_softness_loc = glGetAttribLocation(p, "vert_rect_edge_softness");
 
     state.current_shader = s;
     backend_use_shader(s);
@@ -93,15 +105,9 @@ immediate_flush :: () {
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
 
-    if !shader.vertex_format_set {
-        if #complete shader.vertex_format == {
-            case .XCU;
-                set_vertex_format_to_XCU(shader);
-                DumpGLErrors("XCU");       
-            // other formats maybe later
-        }
-        shader.vertex_format_set = true;
-    }
+    // @Speed: for some reason we have to set vertex format every time, otherwise the text is not rendered correctly
+    set_vertex_format(shader);
+    DumpGLErrors("set_vertex_format");
 
     glDrawArrays(GL_TRIANGLES, 0, xx count);
 
@@ -111,7 +117,7 @@ immediate_flush :: () {
 
 #scope_file
 
-set_vertex_format_to_XCU :: (shader: *Shader) {
+set_vertex_format :: (shader: *Shader) {
     T :: Immediate_Vertex;
     stride : u32 = size_of(T);
     offset: *T: null;
@@ -139,6 +145,30 @@ set_vertex_format_to_XCU :: (shader: *Shader) {
         glEnableVertexAttribArray(xx shader.uv_0_loc);
         DumpGLErrors("uv0");
     }
+
+    if shader.rect_center_loc != -1 {
+        glVertexAttribPointer(xx shader.rect_center_loc, 2, GL_FLOAT, xx false, stride, xx *offset.rect_center);
+        glEnableVertexAttribArray(xx shader.rect_center_loc);
+        DumpGLErrors("rect_center");
+    }
+
+    if shader.rect_size_loc != -1 {
+        glVertexAttribPointer(xx shader.rect_size_loc, 2, GL_FLOAT, xx false, stride, xx *offset.rect_size);
+        glEnableVertexAttribArray(xx shader.rect_size_loc);
+        DumpGLErrors("rect_size");
+    }
+    
+    if shader.rect_corner_radius_loc != -1 {
+        glVertexAttribPointer(xx shader.rect_corner_radius_loc, 1, GL_FLOAT, xx false, stride, xx *offset.rect_corner_radius);
+        glEnableVertexAttribArray(xx shader.rect_corner_radius_loc);
+        DumpGLErrors("rect_corner_radius");
+    }
+    
+    if shader.rect_edge_softness_loc != -1 {
+        glVertexAttribPointer(xx shader.rect_edge_softness_loc, 1, GL_FLOAT, xx false, stride, xx *offset.rect_edge_softness);
+        glEnableVertexAttribArray(xx shader.rect_edge_softness_loc);
+        DumpGLErrors("rect_edge_softness");
+    }
 }
 
 //
@@ -150,6 +180,15 @@ put_vertex :: inline (using vertex: *Immediate_Vertex, p: Vector2, color: Vector
     color_scale  = color;
     uv0.x        = u;
     uv0.y        = v;
+}
+
+put_vertex :: inline (using vertex: *Immediate_Vertex, p: Vector2, color: Vector4, center: Vector2, size: Vector2, radius: float, softness: float) {
+    position     = p;
+    color_scale  = color;
+    rect_center  = center;
+    rect_size    = size;
+    rect_corner_radius = radius;
+    rect_edge_softness = softness;
 }
 
 #scope_export
@@ -230,6 +269,22 @@ immediate_quad :: (x0: float, y0: float, x1: float, y1: float,
     put_vertex(*v[3], make_vector2(x1, y1), c11,  1, 1);
     put_vertex(*v[4], make_vector2(x0, y0), c00,  0, 0);
     put_vertex(*v[5], make_vector2(x0, y1), c01,  0, 1);
+}
+
+// p0 = bottom left, p2 = top right
+immediate_rounded_rect :: (p0: Vector2, p2: Vector2, color: Vector4, center: Vector2, size: Vector2, radius: float, softness := 1.0) {
+    CheckSpace(6);
+    
+    p1 := Vector2.{ x = p0.x, y = p2.y };
+    p3 := Vector2.{ x = p2.x, y = p0.y };
+
+    put_vertex(*v[0], p0, color, center, size, radius, softness);
+    put_vertex(*v[1], p1, color, center, size, radius, softness);
+    put_vertex(*v[2], p2, color, center, size, radius, softness);
+
+    put_vertex(*v[3], p0, color, center, size, radius, softness);
+    put_vertex(*v[4], p2, color, center, size, radius, softness);
+    put_vertex(*v[5], p3, color, center, size, radius, softness);
 }
 
 immediate_triangle_fan :: (base: Vector2, points: [] Vector2, color: Vector4, base_color: Vector4) {

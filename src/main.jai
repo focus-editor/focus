@@ -109,19 +109,25 @@ main :: () {
 
                             case #char "+";
                                 if event.ctrl_pressed {
-                                    font_size += 1;
-                                    font_ui_size += 1;
-                                    font_ui_small_size += 1;
-                                    font_icons_size += 1;
-                                    init_fonts();
+                                    new_size := cast(int) ((font_size + 1) * dpi_scale);
+                                    if new_size <= MAX_FONT_SIZE {
+                                        font_size += 1;
+                                        font_ui_size += 1;
+                                        font_ui_small_size += 1;
+                                        font_icons_size += 1;
+                                        init_fonts();
+                                    }
                                 }
                             case #char "-";
                                 if event.ctrl_pressed {
-                                    font_size -= 1;
-                                    font_ui_size -= 1;
-                                    font_ui_small_size -= 1;
-                                    font_icons_size -= 1;
-                                    init_fonts();
+                                    new_size := cast(int) ((font_size - 1) * dpi_scale);
+                                    if new_size >= MIN_FONT_SIZE {
+                                        font_size -= 1;
+                                        font_ui_size -= 1;
+                                        font_ui_small_size -= 1;
+                                        font_icons_size -= 1;
+                                        init_fonts();
+                                    }
                                 }
                         }
                     }
@@ -459,6 +465,10 @@ FONT         :: #run load_font("FiraCode-Retina.ttf");
 FONT_UI      :: #run load_font("SEGOEUI.TTF");
 FONT_UI_BOLD :: #run load_font("SEGUISB.TTF");
 FONT_ICONS   :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
+
+MIN_FONT_SIZE :: 4;
+MAX_FONT_SIZE :: 40;  // setting a larger size has caused freetype to crash - not sure yet why. 
+                      // Probably we don't give it enough memory for a glyph bitmap when rendering it?
 
 load_font :: (name: string) -> Embedded_Font {
     path := tprint("fonts/%", name);

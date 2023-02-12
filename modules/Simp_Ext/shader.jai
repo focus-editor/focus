@@ -2,12 +2,6 @@
 
 Shader :: struct {
     using platform: Shader_Platform;
-    
-    vertex_format_set: bool;
-    vertex_format: enum {
-        XCU;
-        // TODO: other formats go here
-    } = .XCU;
 }
 
 set_projection :: () {
@@ -48,7 +42,16 @@ set_shader_for_images :: (texture: *Texture) {
     immediate_set_texture(texture);
 }
 
+set_shader_for_rects :: () {
+    CheckInit();
+    if state.current_shader != *shader_rounded_rect {
+        immediate_set_shader(*shader_rounded_rect);
+        set_projection();
+    }
+}
+
+shader_sprite: Shader;
 shader_text:   Shader;
 shader_color:  Shader;
 shader_color_with_blend:  Shader;
-shader_sprite: Shader;
+shader_rounded_rect:      Shader;
