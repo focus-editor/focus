@@ -31,12 +31,9 @@
     - Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
     - Have a user error log - with an icon in the title bar to toggle it
     - Ignore project folders which are children of another project folder?
-    
-- Smooth rounded corners:
-    + Review the current code
-    + Try to find a way to implement rounded corners using SDF
-    - Try with integer heights - maybe it'll help to get rid of blurry edges
-    
+
+- Don't redraw if mouse move is outside the window?
+
 - File management:
     - Create a new open file dialog:
         - Ctrl+O to open dialog in the current file's folder
@@ -162,7 +159,6 @@
   and will jerk briefly, which is annoying
     - Ideally we need a way to glue viewport to a line, so that if it shifts then we shift the viewport too
 
-- Don't redraw if mouse move is outside the window?
 - Add a warning on large texts (maybe semi-transparent)
 - When unable to save file, show a warning (have an error log?)
 
@@ -188,6 +184,13 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Smooth rounded corners:
+    + Review the current code
+    + Try to find a way to implement rounded corners using SDF
+    + Try with integer heights - maybe it'll help to get rid of blurry edges
+    + Figure out a way to invert the colors using the same shader
+    + Cursor is not rounded when selection is present
+    + Rewrite shadows, get rid of draw_corner
 + Remove 3D-related stuff from Simp
 + Existing open file dialog:
     + Review and cleanup code
