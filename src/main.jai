@@ -51,6 +51,7 @@ main :: () {
     old_line_height = line_height;
 
     window_has_focus := true;
+    window_resized   := false;
     should_quit := false;
 
     while !should_quit {
@@ -74,6 +75,7 @@ main :: () {
                     dpi_scale = platform_get_dpi_scale(window);
                     init_fonts_and_dependent_things();
                 }
+                window_resized = true;
             }
         }
 
@@ -83,8 +85,9 @@ main :: () {
         update_mouse_state();
         
         // Don't redraw if we're mousing around outside the window
-        if !redraw_requested && !Input.events_this_frame && !mouse_pointer_is_within(screen) && window_has_focus == Input.input_application_has_focus continue;
+        if !redraw_requested && !Input.events_this_frame && !mouse_pointer_is_within(screen) && window_has_focus == Input.input_application_has_focus && !window_resized continue;
         redraw_requested = false;
+        window_resized   = false;
         window_has_focus = Input.input_application_has_focus;  // so that we always redraw when the window first loses focus
 
         maybe_update_workspace_buffers();
