@@ -31,11 +31,21 @@
     - Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
     - Have a user error log - with an icon in the title bar to toggle it
     - Ignore project folders which are children of another project folder?
+    
+- BUG: When changing font size, it can be increased to a larger size on lower dpi screens
 
 - File management:
     - Create a new open file dialog:
-        - Ctrl+O to open dialog in the current file's folder
-        - Ctrl+Shift+O to open from root
+        + Create 2 states: 
+            + Search files in the project
+            + Open files by navigating
+        + Draw the navigator differently
+        - From root (no path chunks present or from_root = true):
+            - Display project dirs
+            - Display available drives (on Windows)
+        - When not starting from root - generate
+        - Don't draw file paths for the navigator (unless starting from root)
+        - Open folder by enter, tab, or slashes
     - Create new files:
         - Ctrl + N to create a new buffer
         - If a buffer has no name, use the first N non-whitespace characters
@@ -69,7 +79,7 @@
       (or maybe when it hasn't been edited or opened in this session?)
     - Be able to ignore individual files
     
-- New search-in-buffer widget:
+- New search-in-buffer widget - an extension from finder (with differet modes of work, with transitions between each):
     - It's much nicer to see all occurrences at the same time, rather than trying to cycle through them blindly
     - Make it look like the project search widget, but without the file names (so can be smaller)
     - Jump to the occurrence under cursor immediately

@@ -6,8 +6,13 @@ editors_handle_event :: (event: Input.Event) {
             // Maybe open/switch to other widgets
             if event.key_pressed {
                 if event.key_code == {
-                    case #char "P"; if only_ctrl_pressed(mods)       { show_open_file_dialog();   return; }
-                    case #char "F"; if only_ctrl_shift_pressed(mods) { finder_open_from_editor(); return; }
+                    case #char "P"; 
+                        if only_ctrl_pressed(mods)       { show_open_file_dialog(mode = .search); return; }
+                    case #char "O"; 
+                        if only_ctrl_pressed(mods)       { show_open_file_dialog(mode = .navigate); return; }
+                        if only_ctrl_shift_pressed(mods) { show_open_file_dialog(mode = .navigate, from_root = true); return; }
+                    case #char "F"; 
+                        if only_ctrl_shift_pressed(mods) { finder_open_from_editor(); return; }
                 }
             }
 

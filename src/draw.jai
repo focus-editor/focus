@@ -527,11 +527,8 @@ draw_open_file_dialog :: () {
             width_percentage = get_animation_value(width_anim);
             redraw_requested = true;
         }
-        width := screen.w * width_percentage;
-        width = clamp(width, 400 * dpi_scale, 2000 * dpi_scale);
-        width = floor(width);
-        
-        height := clamp(input_rect_height + entry_height * entries.filtered.count + padding, 0, screen.h / 1.5);
+        width  := floor(clamp(screen.w * width_percentage, 400 * dpi_scale, 2000 * dpi_scale));        
+        height := floor(clamp(input_rect_height + entry_height * entries.filtered.count + padding, 0, screen.h / 1.5));
         x := floor((screen.w - width) / 2);
         y := floor(clamp(100 * dpi_scale, 0, (screen.h - height) / 2));
         box_rect = make_rect(x, screen.h - height - y, width, height);
@@ -545,8 +542,35 @@ draw_open_file_dialog :: () {
     input_rect, files_rect := cut_top(box_rect, input_rect_height);
     input_rect = shrink(input_rect, margin);
     input_id := get_ui_id_from_loc(parent_id = ui_id);
-    label := ifx finder.initted then "Type to filter" else "Still indexing project files. Please wait...";
-    draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = label);
+    
+    if mode == .search {
+        label := ifx finder.initted then "Search files by name" else "Still indexing project files. Please wait...";
+        draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = label);
+    } else {
+        label := ifx path_chunks then "type to filter" else "Navigate to file";
+        
+        half_padding := floor(padding / 2);
+        
+        // Figure out how much to pad on the left (if only there were a Javascript library for that…)
+        margin_left := 0.0;
+        for path_chunks { margin_left += cast(float) Simp.get_text_width(font_ui, it) + padding * 2 + half_padding * 3; }
+        
+        draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = label, margin_left = margin_left);
+        
+        push_scissor(shrink_x(input_rect, padding));
+        defer pop_scissor();
+        
+        dir_rect := shrink(input_rect, padding);
+        text_y := dir_rect.y + floor((dir_rect.h - cast(float)font_ui.em_width) / 2);
+        for path_chunks {
+            width := cast(float) Simp.prepare_text(font_ui, it);
+            dir_rect.w = width + 2 * padding + 2 * half_padding;
+            draw_rounded_rect(dir_rect, Colors.SELECTION_ACTIVE);
+            Simp.draw_prepared_text(font_ui, xx (dir_rect.x + padding + half_padding), xx text_y, Colors.UI_DEFAULT);
+            dir_rect.x += dir_rect.w + half_padding;
+        }
+    }
+    
     _pad: Rect = ---;  // allow some space at the bottom so that we don't cover up the rounded corners with the cursor
     _pad, files_rect = cut_bottom(files_rect, padding);
 
@@ -981,7 +1005,7 @@ draw_range :: (using range: Range, buffer: Buffer, visible_start: s64, visible_e
     }
 }
 
-draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active := false, label: string = "", font: *Simp.Dynamic_Font = null, color := Colors.UI_DEFAULT) {
+draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active := false, label: string = "", font: *Simp.Dynamic_Font = null, color := Colors.UI_DEFAULT, margin_left := 1.0, margin_right := 1.0) {
     if !is_valid(rect_) return;
 
     rect := align_to_grid(rect_);  // to get a consistent outline
@@ -991,14 +1015,18 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
 
     draw_rect(rect, ifx active then Colors.CURSOR_INACTIVE else Colors.BACKGROUND_DARK);
     input_rect := shrink(rect, 1);
-    if !is_valid(input_rect) return;
+    draw_rect(input_rect, Colors.BACKGROUND);
 
     maybe_set_hot_or_active(ui_id, input_rect, .TEXT_SELECT);
 
-    push_scissor(shrink_x(input_rect, 1));
+    input_rect.w -= (margin_left + margin_right);
+    input_rect.x += margin_left;
+        
+    if !is_valid(input_rect) return;
+    
+    push_scissor(input_rect);
     defer pop_scissor();
 
-    draw_rect(input_rect, Colors.BACKGROUND);
     input_rect = shrink(input_rect, padding);
 
     input_text := to_string(text);

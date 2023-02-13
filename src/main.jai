@@ -88,11 +88,13 @@ main :: () {
         screen_with_title_bar.h += 200;  // should be enough to include the title bar
         
         // Don't redraw if we're mousing around outside the window
-        if !redraw_requested && 
-           !Input.events_this_frame && 
-           !mouse_pointer_is_within(screen_with_title_bar) && 
-           window_has_focus == Input.input_application_has_focus && 
-           !window_resized then continue;
+        if !redraw_requested 
+            && !Input.events_this_frame 
+            && !mouse_pointer_is_within(screen_with_title_bar) 
+            && window_has_focus == Input.input_application_has_focus 
+            && !window_resized 
+        then 
+            continue;
            
         redraw_requested = false;
         window_resized   = false;
@@ -415,7 +417,7 @@ Mods :: Input.Event.Modifier_Flags;
 
 Time :: #type,isa float64;
 
-project_dirs: [..] Project_Dir;  // TODO: load them from a config file or something
+project_dirs: [..] Project_Dir;
 
 active_global_widget: enum {
     editors;

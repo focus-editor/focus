@@ -15,14 +15,21 @@ init_finder :: () {
 }
 
 finder_handle_event :: (event: Input.Event) {
+    mods := event.modifier_flags;
+    
     if event.type == {
         case .KEYBOARD;
             if event.key_pressed {
                 if event.key_code == {
-                    case .ESCAPE;   finder_close(); return;
-                    case #char "P"; if only_ctrl_pressed(event.modifier_flags) { show_open_file_dialog(); return; }
+                    case .ESCAPE;   
+                        finder_close(); return;
+                    case #char "P"; 
+                        if only_ctrl_pressed(mods)       { show_open_file_dialog(mode = .search); return; }
+                    case #char "O"; 
+                        if only_ctrl_pressed(mods)       { show_open_file_dialog(mode = .navigate); return; }
+                        if only_ctrl_shift_pressed(mods) { show_open_file_dialog(mode = .navigate, from_root = true); return; }
                 }
-                finder_handle_key_press(event.key_code, event.modifier_flags);
+                finder_handle_key_press(event.key_code, mods);
             }
 
         case .TEXT_INPUT;

@@ -16,16 +16,19 @@ open_file_dialog_handle_event :: (event: Input.Event) {
 
 init_open_file_dialog :: () {
     // There used to be more stuff here
-    recalculate_filtered_entries();
+    refresh_entries();
 }
 
-show_open_file_dialog :: () {
-    using open_file_dialog;
+show_open_file_dialog :: (mode: Open_File_Dialog.Mode, from_root := false) {
     active_global_widget = .open_file_dialog;
-    array_reset(*input.text);
-    input.cursor.pos = 0;
-    input.cursor.sel = 0;
-    recalculate_filtered_entries();
+    
+    open_file_dialog.mode = mode;
+    
+    array_reset(*open_file_dialog.input.text);
+    open_file_dialog.input.cursor.pos = 0;
+    open_file_dialog.input.cursor.sel = 0;
+    
+    refresh_entries(from_root);
 }
 
 hide_open_file_dialog :: () {
@@ -38,7 +41,7 @@ open_file_dialog_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
     input_text := copy_temporary_string(to_string(input.text));
     handled := text_input_handle_keypress(*input, key_code, mods);
     if handled {
-        if input_text != to_string(input.text) then recalculate_filtered_entries();
+        if input_text != to_string(input.text) then refresh_entries();
         return;
     }
 
@@ -86,13 +89,13 @@ open_file_dialog_handle_text_input :: (char: u32) {
 
     text_input_type_char(*open_file_dialog.input, char);
 
-    recalculate_filtered_entries();
+    refresh_entries();
 }
 
 
 #scope_file
 
-recalculate_filtered_entries :: () {
+refresh_entries :: (from_root := false) {
     using open_file_dialog;
     
     pool_allocator := get_pool_allocator();
@@ -105,35 +108,44 @@ recalculate_filtered_entries :: () {
     entries.selected = 0;
     array_reset(*entries.filtered);
     
-    filter_chars := decode_utf8_string_to_temp_char_substrings(to_string(input.text));
+    if #complete mode == {
+        case .navigate;
+            array_reset(*path_chunks);
+            if !from_root {
+                // TODO: populate path chunks from the current buffer path
+            } 
+            
+        case .search;
+            filter_chars := decode_utf8_string_to_temp_char_substrings(to_string(input.text));
 
-    // @MEMORY SAFETY: if we ever delete buffers from open_buffers and free memory, this will have to copy everything!
-    num_entries := 0;
-    for buffer : open_buffers {
-        if !buffer.has_file || buffer.deleted continue;  // NOTE: we might still want to see externally deleted buffers.
-                                                         // Maybe use 'deleted' and 'modified_on_disk' to distingiush the buffers
-                                                         // we haven't deleted ourselves?
-                                                         // Alternatively, if there's an editor for a deleted buffer we probably
-                                                         // still want to see it here
-        
-        score, name_highlights, path_highlights := fuzzy_match(buffer, filter_chars);
-        if score < 0 continue;
-        
-        entry := array_add(*entries.filtered);
-        entry.file = buffer.file;
-        entry.name_highlights = name_highlights;
-        entry.path_highlights = path_highlights;
-        // NOTE: there's space left in the sort key in case we need to add more parameters
-        dir_id_part:     u64 = (cast,trunc(u64) (127 - buffer.file.project_dir_id)) << 56;
-        score_part:      u64 = (cast,trunc(u64) score)                              << 16;
-        times_open_part: u64 = (cast,trunc(u64) buffer.num_times_opened)            <<  0;
-        entry.sort_key = dir_id_part | score_part | times_open_part;
-        
-        if buffer.modified         then entry.flags |= .MODIFIED;
-        if buffer.modified_on_disk then entry.flags |= .MODIFIED_ON_DISK;
-        
-        num_entries += 1;
-        if num_entries >= MAX_ENTRIES_TO_SHOW break;
+            // @MEMORY SAFETY: if we ever delete buffers from open_buffers and free memory, this will have to copy everything!
+            num_entries := 0;
+            for buffer : open_buffers {
+                if !buffer.has_file || buffer.deleted continue;  // NOTE: we might still want to see externally deleted buffers.
+                                                                 // Maybe use 'deleted' and 'modified_on_disk' to distingiush the buffers
+                                                                 // we haven't deleted ourselves?
+                                                                 // Alternatively, if there's an editor for a deleted buffer we probably
+                                                                 // still want to see it here
+                
+                score, name_highlights, path_highlights := fuzzy_match(buffer, filter_chars);
+                if score < 0 continue;
+                
+                entry := array_add(*entries.filtered);
+                entry.file = buffer.file;
+                entry.name_highlights = name_highlights;
+                entry.path_highlights = path_highlights;
+                // NOTE: there's space left in the sort key in case we need to add more parameters
+                dir_id_part:     u64 = (cast,trunc(u64) (127 - buffer.file.project_dir_id)) << 56;
+                score_part:      u64 = (cast,trunc(u64) score)                              << 16;
+                times_open_part: u64 = (cast,trunc(u64) buffer.num_times_opened)            <<  0;
+                entry.sort_key = dir_id_part | score_part | times_open_part;
+                
+                if buffer.modified         then entry.flags |= .MODIFIED;
+                if buffer.modified_on_disk then entry.flags |= .MODIFIED_ON_DISK;
+                
+                num_entries += 1;
+                if num_entries >= MAX_ENTRIES_TO_SHOW break;
+            }
     }
     
     quick_sort(entries.filtered, compare_entries);
@@ -210,9 +222,11 @@ MAX_ENTRIES_TO_SHOW :: 300;
 open_file_dialog: Open_File_Dialog;
 
 Open_File_Dialog :: struct {
+    mode: Mode;
     scroll_to_cursor := false;
 
     input: Text_Input;
+    path_chunks: [..] string;
 
     entries: struct {
         filtered: [..] Entry;
@@ -228,6 +242,11 @@ Open_File_Dialog :: struct {
     width_anim := #run Tween_Animation(float).{ start = WIDTH_NORMAL, target = WIDTH_NORMAL };
     WIDTH_NORMAL   :: 0.4;
     WIDTH_EXPANDED :: 0.8;
+    
+    Mode :: enum {
+        search;
+        navigate;
+    }
 }
 
 #scope_file
