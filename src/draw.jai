@@ -295,7 +295,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         // Draw cursors after selection highlights, but before search results
         cursors_active := editor_is_active && active_global_widget == .editors;
-        draw_cursors(editor, buffer, rect, text_origin, visible_lines_start, visible_lines_end, cursors_active, editor.search_bar.active);
+        draw_selections(editor, buffer, rect, text_origin, visible_lines_start, visible_lines_end, cursors_active);
 
         // Draw search results
         if search_bar_is_open(editor) {
@@ -341,6 +341,11 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
         if buffer.needs_coloring || buffer.colors.count != buffer.bytes.count then recalculate_colors(buffer);  // right before drawing
         Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, code_ranges, buffer.bytes, buffer.colors, CODE_COLOR_MAP);
+        
+        // Draw cursors on top of text
+        if !editor.search_bar.active {
+            draw_cursors(editor, buffer, rect, text_origin, cursors_active);
+        }
     }
 
     // Draw search bar
@@ -892,7 +897,7 @@ get_cursor_screen_pos :: (text_origin: Vector2, pos: Pos) -> Vector2 {
     );
 }
 
-draw_cursors :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_origin: Vector2, visible_start: s64, visible_end: s64, is_active: bool, search_bar_shown: bool) {
+draw_selections :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_origin: Vector2, visible_start: s64, visible_end: s64, is_active: bool) {
     Simp.set_shader_for_rects();
     for cursor : cursors {
         if has_selection(cursor) {
@@ -901,23 +906,28 @@ draw_cursors :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_o
             color := ifx is_active then Colors.SELECTION_ACTIVE else Colors.SELECTION_INACTIVE;
             draw_range(selection, buffer, visible_start, visible_end, text_origin, color);
         }
+    }
+}
 
-        if !search_bar_shown {
-            cursor_pos := get_cursor_screen_pos(text_origin, cursor.pos);
+draw_cursors :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_origin: Vector2, is_active: bool) {
+    Simp.set_shader_for_rects();
+    for cursor : cursors {
+        cursor_pos := get_cursor_screen_pos(text_origin, cursor.pos);
 
-            // Uncomment if you need a line highlight
-            // line_rect := cut_top(editor_rect, line_height);
-            // line_rect.y = cursor_pos.y;
-            // draw_rect_raw(line_rect, Colors.BACKGROUND_HIGHLIGHT);
+        // Uncomment if you need a line highlight
+        // line_rect := cut_top(editor_rect, line_height);
+        // line_rect.y = cursor_pos.y;
+        // draw_rect_raw(line_rect, Colors.BACKGROUND_HIGHLIGHT);
 
-            rect := make_rect(cursor_pos.x, cursor_pos.y, char_size, line_height);
-            draw_rounded_rect(rect, Colors.CURSOR, radius = rounding_radius_small, set_shader = true);
-            if is_active {
-                // Draw the letter on top for better visibility
-                
-            } else {
-                draw_rounded_rect(shrink(rect, 1), Colors.BACKGROUND, radius = rounding_radius_small, set_shader = false);
-            }
+        rect := make_rect(cursor_pos.x, cursor_pos.y, char_size, line_height);
+        draw_rounded_rect(rect, Colors.CURSOR, radius = rounding_radius_small, set_shader = true);
+        if !is_active {
+            draw_rounded_rect(shrink(rect, 1), Colors.BACKGROUND, radius = rounding_radius_small, set_shader = false);
+        }
+        // Draw the letter on top for better visibility
+        letter := get_letter_at_pos(buffer, cursor.pos);
+        if letter != "\n" {
+            Simp.draw_text(font, xx rect.x, xx (rect.y + (line_height - char_size) / 2), letter);
         }
     }
 }

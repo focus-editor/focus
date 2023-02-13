@@ -100,6 +100,16 @@ get_offset :: (using buffer: Buffer, pos: Pos) -> s64 {
     return offset;
 }
 
+get_letter_at_pos :: (using buffer: Buffer, pos: Pos) -> string {
+    offset := get_offset(buffer, pos);
+    
+    letter: string = ---;
+    letter.data  = *bytes[offset];
+    letter.count = 1 + trailingBytesForUTF8[bytes[offset]];
+    
+    return letter;
+}
+
 offset_to_pos :: (using buffer: Buffer, offset: s64) -> Pos {
     pos: Pos = ---;
     pos.line = offset_to_line(buffer, offset);

@@ -8,7 +8,7 @@
     + Log errors into focus-log.txt, focus-log1.txt, ... in release mode
     + Jai tokenizer parses everything correctly
     + Figure out how to anti-alias rounded corners
-    - Improve cursor: draw occluded letters on top
+    + Improve cursor: draw occluded letters on top
     - New open file dialog
     - Try to support tabs properly
     - Show help on F1
