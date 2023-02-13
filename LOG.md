@@ -182,6 +182,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Fix select_word in empty inputs
 + Fix selection rounding
 + Use smoothstep instead of lerp for tween animations
 + Don't redraw if mouse move is outside the window
