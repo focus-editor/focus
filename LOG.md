@@ -31,8 +31,6 @@
     - Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
     - Have a user error log - with an icon in the title bar to toggle it
     - Ignore project folders which are children of another project folder?
-    
-- When mouse pointer is over the title bar, change the to arrow
 
 - File management:
     - Create a new open file dialog:
@@ -182,6 +180,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ When mouse pointer is over the title bar, change the to arrow
 + When window is resized, redraw
 + Ctrl + 0 to revert to the default font size
 + When the window loses focus, redraw
