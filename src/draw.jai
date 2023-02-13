@@ -973,7 +973,7 @@ draw_range :: (using range: Range, buffer: Buffer, visible_start: s64, visible_e
             next_start := 0;
             next_end   := ifx i == selected_lines.count - 2 then end.col else selected_lines[i + 1].num_chars + 1;
             if next_start < first_char then bl = .out;
-            if next_start > first_char || next_end < first_char then bl = .in;
+            if next_start > first_char || next_end < first_char || next_end == 0 then bl = .in;
             if next_end < last_char then br = .in;
             if next_end > last_char then br = .out;
         }

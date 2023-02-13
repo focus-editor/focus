@@ -32,7 +32,6 @@
     - Have a user error log - with an icon in the title bar to toggle it
     - Ignore project folders which are children of another project folder?
 
-- Fix selection rounding
 - When the window loses focus, redraw
 
 - File management:
@@ -183,6 +182,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Fix selection rounding
 + Use smoothstep instead of lerp for tween animations
 + Don't redraw if mouse move is outside the window
 + Smooth rounded corners:
