@@ -32,8 +32,6 @@
     - Have a user error log - with an icon in the title bar to toggle it
     - Ignore project folders which are children of another project folder?
 
-- When the window loses focus, redraw
-
 - File management:
     - Create a new open file dialog:
         - Ctrl+O to open dialog in the current file's folder
@@ -182,6 +180,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ When the window loses focus, redraw
 + Fix select_word in empty inputs
 + Fix selection rounding
 + Use smoothstep instead of lerp for tween animations
