@@ -134,6 +134,16 @@ main :: () {
                                         init_fonts_and_dependent_things();
                                     }
                                 }
+                            case #char "0";
+                                if event.ctrl_pressed {
+                                    // Revert the font sizes to the default values
+                                    delta := font_size - DEFAULT_FONT_SIZE;
+                                    font_size          -= delta;
+                                    font_ui_size       -= delta;
+                                    font_ui_small_size -= delta;
+                                    font_icons_size    -= delta;
+                                    init_fonts_and_dependent_things();
+                                }
                         }
                     }
             }
@@ -373,8 +383,10 @@ WHEEL_SENSITIVITY :: 1.0;
 BULLET_CHAR           :: #run to_string(*convert_utf32_to_utf8(0x2022));
 MAGNIFYING_GLASS_CHAR :: #run to_string(*convert_utf32_to_utf8(0x2022));
 
+DEFAULT_FONT_SIZE :: 14;
+
 font      :  *Simp.Dynamic_Font;
-font_size := 14;
+font_size := DEFAULT_FONT_SIZE;
 
 font_ui      :  *Simp.Dynamic_Font;
 font_ui_bold :  *Simp.Dynamic_Font;

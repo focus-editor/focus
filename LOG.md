@@ -180,6 +180,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Ctrl + 0 to revert to the default font size
 + When the window loses focus, redraw
 + Fix select_word in empty inputs
 + Fix selection rounding
