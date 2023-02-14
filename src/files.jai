@@ -132,4 +132,6 @@ File_Icon :: enum u16 {
     gear    :: 0xf013;
     folder  :: 0xe185;
     drive   :: 0xf0a0;
+    
+    dots    :: 0xf141;
 }

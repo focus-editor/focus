@@ -646,18 +646,20 @@ draw_open_file_dialog :: () {
             entry_index := visible_start + i;
             entry_rect.y = files_rect.y + files_rect.h - (entry_index + 1) * entry_height + scroll_y;
 
-            if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
-                if mouse.left.just_pressed then entries.selected_by_mouse = entry_index;
-                if entries.selected_by_mouse == -1 then draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
-                placement := ifx ctrl_pressed() then Editor_Placement.on_the_side else .in_place;
-                if entries.selected_by_mouse == entry_index && mouse.left.just_released {
-                    open_file_dialog_open_entry(entry_index, placement);
-                    redraw_requested = true;
-                    break;  // don't finish drawing entries because the entries will likely change
+            if entry.type != .nothing {
+                if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
+                    if mouse.left.just_pressed then entries.selected_by_mouse = entry_index;
+                    if entries.selected_by_mouse == -1 then draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
+                    placement := ifx ctrl_pressed() then Editor_Placement.on_the_side else .in_place;
+                    if entries.selected_by_mouse == entry_index && mouse.left.just_released {
+                        open_file_dialog_open_entry(entry_index, placement);
+                        redraw_requested = true;
+                        break;  // don't finish drawing entries because the entries will likely change
+                    }
                 }
+                if entries.selected_by_mouse == entry_index then draw_rect(entry_rect, Colors.LIST_CURSOR);
+                if entry_index == selected then draw_rect(entry_rect, Colors.LIST_CURSOR);
             }
-            if entries.selected_by_mouse == entry_index then draw_rect(entry_rect, Colors.LIST_CURSOR);
-            if entry_index == selected then draw_rect(entry_rect, Colors.LIST_CURSOR);
 
             pen := make_vector2(
                 entry_rect.x + margin + padding,

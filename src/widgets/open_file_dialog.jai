@@ -115,6 +115,9 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
     entry := entries.filtered[selected];
     
     if entry.type == {
+        case .nothing;
+            return;
+            
         case .file;
             if folder_only return;
             path := entry.full_path;
@@ -295,6 +298,20 @@ refresh_entries :: (scan_folder := false) {
     
     quick_sort(entries.filtered, compare_entries);
     
+    if !entries.filtered {
+        array_add(*entries.filtered, Entry.{
+            file = File_Info.{
+                full_path = "",
+                name = "",
+                path = "",
+                icon = .dots,
+            },
+            type = .nothing,
+            name_highlights = .[],
+            path_highlights = .[],
+        });
+    }
+    
     compare_entries :: (e1: Entry, e2: Entry) -> s64 {
         key_diff := cast,no_check(s64) e2.sort_key - cast,no_check(s64) e1.sort_key;
         if key_diff != 0 return key_diff;
@@ -429,7 +446,7 @@ Entry :: struct {
         MODIFIED;
         MODIFIED_ON_DISK;
     }
-    type: enum u8 { file; folder; drive; project_dir; } = .file;
+    type: enum u8 { file; folder; drive; project_dir; nothing; } = .file;
     name_highlights: [] bool;
     path_highlights: [] bool;
     sort_key: u64;

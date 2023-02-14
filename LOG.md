@@ -34,9 +34,6 @@
     - Ignore project folders which are children of another project folder?
 
 - File management:
-    - Open file dialog:
-        - Display something to indicate no entries
-        - Fix the jiggling at the bottom when typing every second letter
     - Create new files:
         - Ctrl + N to create a new buffer
         - If a buffer has no name, use the first N non-whitespace characters
@@ -182,6 +179,9 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Open file dialog:
+    + Display something to indicate no entries
+    + Fix the jiggling at the bottom when typing every second letter
 + BUG: when pressing shift + backspace, a selection is created because we're holding shift. This is confusing.
 + BUG: Cursor is not shown correctly in the scrollbar area
 + BUG: When changing font size, it can be increased to a larger size on lower dpi screens
