@@ -2,15 +2,14 @@ open_file_dialog_handle_event :: (event: Input.Event) {
     if event.type == {
         case .KEYBOARD;
             if event.key_pressed {
-                if event.key_code == {
-                    case .ESCAPE;   hide_open_file_dialog(); return;
-                    case #char "L"; if only_ctrl_shift_pressed(event.modifier_flags) { toggle_expand(); return; }
-                }
                 open_file_dialog_handle_key_press(event.key_code, event.modifier_flags);
             }
 
         case .TEXT_INPUT;
-            open_file_dialog_handle_text_input(event.utf32);
+            char := event.utf32;
+            if open_file_dialog.mode == .navigate && (char == #char "/" || char == #char "\\") return;  // these are special chars, don't handle
+            
+            open_file_dialog_handle_text_input(char);
     }
 }
 
@@ -23,16 +22,21 @@ show_open_file_dialog :: (mode: Open_File_Dialog.Mode, from_root := false) {
     active_global_widget = .open_file_dialog;
     
     open_file_dialog.mode = mode;
+    if from_root then array_reset(*open_file_dialog.path_chunks);
     
-    array_reset(*open_file_dialog.input.text);
-    open_file_dialog.input.cursor.pos = 0;
-    open_file_dialog.input.cursor.sel = 0;
+    clear_input();
     
-    refresh_entries(from_root);
+    refresh_entries();
 }
 
 hide_open_file_dialog :: () {
     active_global_widget = .editors;
+}
+
+clear_input :: () {
+    array_reset(*open_file_dialog.input.text);
+    open_file_dialog.input.cursor.pos = 0;
+    open_file_dialog.input.cursor.sel = 0;
 }
 
 open_file_dialog_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
@@ -46,6 +50,19 @@ open_file_dialog_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
     }
 
     if key_code == {
+        case .ESCAPE;   
+            hide_open_file_dialog();
+            
+        case .TAB;       #through;
+        case #char "/";  #through;
+        case #char "\\";
+            if mode == .navigate {
+                open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true);
+            }
+        
+        case #char "L"; 
+            if only_ctrl_shift_pressed(mods) then toggle_expand();
+        
         case .ENTER;
             placement := ifx only_ctrl_pressed(mods) then Editor_Placement.on_the_side else .in_place;
             open_file_dialog_open_entry(entries.selected, placement);
@@ -74,12 +91,33 @@ open_file_dialog_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
     }
 }
 
-open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement) {
+open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, folder_only := false) {
     using open_file_dialog;
     if selected >= entries.filtered.count return;
-    path := entries.filtered[selected].full_path;
-    editors_open_file(path, placement);
-    hide_open_file_dialog();
+    
+    entry := entries.filtered[selected];
+    
+    if entry.type == {
+        case .file;
+            if folder_only return;
+            path := entry.full_path;
+            editors_open_file(path, placement);
+            hide_open_file_dialog();
+    
+        case .drive;
+            array_reset(*path_chunks);
+            array_add(*path_chunks, entry.name);
+            root_dir = entry.name;
+            clear_input();
+            refresh_entries();
+            
+        case .project_dir;
+            array_reset(*path_chunks);
+            array_add(*path_chunks, entry.name);
+            root_dir = entry.full_path;
+            clear_input();
+            refresh_entries();
+    }
 }
 
 open_file_dialog_handle_text_input :: (char: u32) {
@@ -95,7 +133,7 @@ open_file_dialog_handle_text_input :: (char: u32) {
 
 #scope_file
 
-refresh_entries :: (from_root := false) {
+refresh_entries :: () {
     using open_file_dialog;
     
     pool_allocator := get_pool_allocator();
@@ -112,9 +150,8 @@ refresh_entries :: (from_root := false) {
     
     if #complete mode == {
         case .navigate;
-            if from_root then array_reset(*path_chunks);
             if !path_chunks {
-                // Display project dirs and drive letters (on Windows)
+                // Display project dirs and drives
                 for project_dirs {
                     name := advance(it.path, it.path_prefix_len);
                     
@@ -122,41 +159,43 @@ refresh_entries :: (from_root := false) {
                     if score < 0 continue;
                     
                     entry := array_add(*entries.filtered);
-                    entry.file.full_path = it.path;
-                    entry.file.name = name;
-                    entry.file.path = it.path;
-                    entry.file.icon = .folder;
-                    entry.file.project_dir_id = xx it_index;
+                    entry.type = .project_dir;
+                    entry.full_path = it.path;
+                    entry.name = name;
+                    entry.path = it.path;
+                    entry.icon = .folder;
+                    entry.project_dir_id = xx it_index;
                     entry.name_highlights = name_highlights;
                     entry.path_highlights = NewArray(entry.path.count, bool);
+                    
+                    dir_id_part:     u64 = (cast,trunc(u64) (127 - entry.project_dir_id)) << 56;
+                    score_part:      u64 = (cast,trunc(u64) score)                        << 16;
+                    entry.sort_key = dir_id_part | score_part;
                 }
                 #if OS == .WINDOWS {
-                    // Enumerate all logical drives and put them into a buffer, separated by zeroes
-                    drives: [..] string;
+                    drives := platform_enumerate_logical_drives();
+                } else {
+                    drives := string.["/"];
+                }
+                for drives {
+                    name := copy_string(it);
                     
-                    drives_buf: [500] u16;
-                    GetLogicalDriveStringsW(500, drives_buf.data);
+                    score, name_highlights := fuzzy_match(name, filter_chars);
+                    if score < 0 continue;
                     
-                    drive_wstr := drives_buf.data;
-                    for drives_buf {
-                        if it == 0 {
-                            drive, success := wide_to_utf8(drive_wstr);
-                            if !drive || !success break;
-                            drive.count -= 1;  // cut off separator
-                            array_add(*drives, drive);
-                            drive_wstr = *drives_buf[it_index + 1];
-                        }
-                    }
-                    for drives {
-                        entry := array_add(*entries.filtered);
-                        entry.file.full_path = "";
-                        entry.file.name = copy_string(it);
-                        entry.file.path = "";
-                        entry.file.icon = .drive;
-                        entry.file.project_dir_id = 127;
-                        entry.name_highlights = NewArray(it.count, bool);
-                        entry.path_highlights = .[];
-                    }
+                    entry := array_add(*entries.filtered);
+                    entry.type = .drive;
+                    entry.full_path = "";
+                    entry.name = name;
+                    entry.path = "";
+                    entry.icon = .drive;
+                    entry.project_dir_id = 127;
+                    entry.name_highlights = name_highlights;
+                    entry.path_highlights = .[];
+                    
+                    dir_id_part:     u64 = (cast,trunc(u64) (127 - entry.project_dir_id)) << 56;
+                    score_part:      u64 = (cast,trunc(u64) score)                        << 16;
+                    entry.sort_key = dir_id_part | score_part;
                 }
             } else {
             
@@ -258,6 +297,7 @@ Open_File_Dialog :: struct {
 
     input: Text_Input;
     path_chunks: [..] string;
+    root_dir: string;
 
     entries: struct {
         filtered: [..] Entry;
@@ -288,6 +328,7 @@ Entry :: struct {
         MODIFIED;
         MODIFIED_ON_DISK;
     }
+    type: enum u8 { file; folder; drive; project_dir; } = .file;
     name_highlights: [] bool;
     path_highlights: [] bool;
     sort_key: u64;

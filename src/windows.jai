@@ -35,7 +35,25 @@ platform_wait_message :: inline () {
     WaitMessage();
 }
 
-GetLogicalDriveStringsW :: (nBufferLength: DWORD, lpBuffer: *u16) -> DWORD #foreign kernel32;
+platform_enumerate_logical_drives :: () -> [] string {
+    drives: [..] string;
+    
+    drives_buf: [500] u16;
+    GetLogicalDriveStringsW(500, drives_buf.data);
+    
+    drive_wstr := drives_buf.data;
+    for drives_buf {
+        if it == 0 {
+            drive, success := wide_to_utf8(drive_wstr);
+            if !drive || !success break;
+            drive.count -= 1;  // cut off separator
+            array_add(*drives, drive);
+            drive_wstr = *drives_buf[it_index + 1];
+        }
+    }
+    
+    return drives;
+}
 
 #scope_file
 
@@ -68,5 +86,6 @@ kernel32 :: #system_library "kernel32";
 
 WaitMessage :: () -> s32 #foreign user32;
 GetDpiForWindow :: (hWnd: HWND) -> u32 #foreign user32;
+GetLogicalDriveStringsW :: (nBufferLength: DWORD, lpBuffer: *u16) -> DWORD #foreign kernel32;
 
 #import "Windows";

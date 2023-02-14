@@ -44,10 +44,10 @@
         + From root (no path chunks present or from_root = true):
             + Display project dirs
             + Display available drives (on Windows)
-        - Project dirs first, then drives
+        + Project dirs first, then drives
+        + Open folder by enter, tab, or slashes
         - When not starting from root - generate
         - Don't draw file paths for the navigator (unless starting from root)
-        - Open folder by enter, tab, or slashes
     - Create new files:
         - Ctrl + N to create a new buffer
         - If a buffer has no name, use the first N non-whitespace characters
