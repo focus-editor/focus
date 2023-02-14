@@ -546,6 +546,7 @@ draw_open_file_dialog :: () {
     if mode == .search {
         label := ifx finder.initted then "Search files by name" else "Still indexing project files. Please wait...";
         draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = label);
+        if !finder.initted then redraw_requested = true;  // update as soon as we're done
     } else {
         label := ifx path_chunks then "" else " Navigate to file";
         

@@ -130,6 +130,6 @@ File_Icon :: enum u16 {
     font    :: 0xf031;
     key     :: 0xf084;
     gear    :: 0xf013;
-    folder  :: 0xf07b;
+    folder  :: 0xe185;
     drive   :: 0xf0a0;
 }

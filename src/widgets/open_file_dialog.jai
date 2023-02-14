@@ -8,7 +8,8 @@ open_file_dialog_handle_event :: (event: Input.Event) {
                     if mode == .navigate && !input.text && path_chunks {
                         last := pop(*path_chunks);
                         free(last);
-                        refresh_entries();
+                        
+                        refresh_entries(scan_folder = true);
                         return;
                     }
                 }
@@ -34,9 +35,7 @@ show_open_file_dialog :: (mode: Open_File_Dialog.Mode, from_root := false) {
     open_file_dialog.mode = mode;
     if from_root then clear_path_chunks();
     
-    clear_input();
-    
-    refresh_entries();
+    refresh_entries(scan_folder = true);
 }
 
 hide_open_file_dialog :: () {
@@ -113,20 +112,17 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
             entry_name := copy_string(entry.name);
             array_add(*path_chunks, entry_name);
             root_dir = entry_name;
-            clear_input();
-            refresh_entries();
+            refresh_entries(scan_folder = true);
             
         case .project_dir;
             clear_path_chunks();
             array_add(*path_chunks, copy_string(entry.name));
             root_dir = entry.full_path;
-            clear_input();
-            refresh_entries();
+            refresh_entries(scan_folder = true);
             
         case .folder;
             array_add(*path_chunks, copy_string(entry.name));
-            clear_input();
-            refresh_entries();
+            refresh_entries(scan_folder = true);
     }
 }
 
@@ -154,8 +150,15 @@ clear_path_chunks :: () {
     array_reset(*open_file_dialog.path_chunks);
 }
 
-refresh_entries :: () {
+refresh_entries :: (scan_folder := false) {
     using open_file_dialog;
+    
+    if scan_folder {
+        // Do it before pushing the pool allocator because the input and the folder scan results 
+        // use the global heap
+        clear_input();
+        scan_current_folder();
+    }
     
     pool_allocator := get_pool_allocator();
     push_allocator(pool_allocator);
@@ -219,45 +222,19 @@ refresh_entries :: () {
                     entry.sort_key = dir_id_part | score_part;
                 }
             } else {
-                // Display directory contents
-                path_chunks_trimmed := array_view(path_chunks, 1, path_chunks.count - 1);
-                dir_path := sprint("%/%", root_dir, join(..path_chunks_trimmed, separator = "/"));
-                
-                visit_files(dir_path, recursive = false, *filter_chars, visitor_func, visit_directories = true);
-                
-                visitor_func :: (file: *File_Visit_Info, userdata: *[] string) {
-                    if file.had_error || file.is_symlink return;
-                    if file.is_directory {
-                        if should_ignore_dir(file.short_name) return;
-                    } else {
-                        if should_ignore_file(file.full_name) return;
-                    }
+                // Filter current files
+                for current_files {
+                    score, name_highlights := fuzzy_match(it.name, filter_chars);
+                    if score < 0 continue;
                     
-                    filter_chars := <<userdata;
+                    entry := array_add(*entries.filtered);
+                    <<entry = it;
                     
-                    full_path := copy_string(file.full_name);
-                    path, basename, extension, name := path_decomp(full_path);
-                    
-                    score, name_highlights := fuzzy_match(name, filter_chars);
-                    if score < 0 return;
-                    
-                    entry := array_add(*open_file_dialog.entries.filtered);
-                    if file.is_directory then entry.type = .folder;
-                    entry.full_path = full_path;
-                    entry.name = name;
-                    entry.path = "";
-                    if file.is_directory {
-                        entry.icon = .folder;
-                        entry.type = .folder;
-                    } else {
-                        entry.icon = get_file_icon(name, extension);
-                        entry.type = .file;
-                    }
                     entry.name_highlights = name_highlights;
                     entry.path_highlights = .[];
                     
-                    is_dir_part: u64 = (cast,trunc(u64) (file.is_directory)) << 56;  // directories come first
-                    score_part:  u64 = (cast,trunc(u64) score)               << 16;
+                    is_dir_part: u64 = (cast,trunc(u64) (entry.type == .folder)) << 56;  // directories come first
+                    score_part:  u64 = (cast,trunc(u64) score)                   << 16;
                     entry.sort_key = is_dir_part | score_part;
                 }
             }
@@ -301,6 +278,46 @@ refresh_entries :: () {
         key_diff := cast,no_check(s64) e2.sort_key - cast,no_check(s64) e1.sort_key;
         if key_diff != 0 return key_diff;
         return memcmp(e1.name.data, e2.name.data, min(e1.name.count, e2.name.count));
+    }
+}
+
+scan_current_folder :: () {
+    using open_file_dialog;
+    if mode != .navigate || !path_chunks return;
+    
+    path_chunks_trimmed := array_view(path_chunks, 1, path_chunks.count - 1);
+    dir_path := sprint("%/%", root_dir, join(..path_chunks_trimmed, separator = "/"));
+    
+    // Reset current files
+    for current_files free(it.full_path);
+    array_reset(*current_files);
+    
+    // Scan the current folder
+    visit_files(dir_path, recursive = false, null, visitor_func, visit_directories = true);
+    
+    visitor_func :: (file: *File_Visit_Info, userdata: *void) {
+        if file.had_error || file.is_symlink return;
+        if file.is_directory {
+            if should_ignore_dir(file.short_name) return;
+        } else {
+            if should_ignore_file(file.full_name) return;
+        }
+        
+        full_path := copy_string(file.full_name);  // one allocation, the rest are views into it
+        path, basename, extension, name := path_decomp(full_path);
+        
+        entry := array_add(*open_file_dialog.current_files);
+        if file.is_directory then entry.type = .folder;
+        entry.full_path = full_path;
+        entry.name = name;
+        entry.path = "";
+        if file.is_directory {
+            entry.icon = .folder;
+            entry.type = .folder;
+        } else {
+            entry.icon = get_file_icon(name, extension);
+            entry.type = .file;
+        }    
     }
 }
 
@@ -357,8 +374,10 @@ Open_File_Dialog :: struct {
     scroll_to_cursor := false;
 
     input: Text_Input;
+    
     path_chunks: [..] string;
     root_dir: string;
+    current_files: [..] Entry;  // files in the current folder (used in .navigate mode only)
 
     entries: struct {
         filtered: [..] Entry;

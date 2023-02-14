@@ -9,11 +9,11 @@
     + Jai tokenizer parses everything correctly
     + Figure out how to anti-alias rounded corners
     + Improve cursor: draw occluded letters on top
-    - New open file dialog
+    + New open file dialog
+    - Create new files
     - Try to support tabs properly
     - Show help on F1
     - Test the exe on different machines
-    - Create new files
     - Notify about unsaved buffers on close
     - Ctrl + R to search by symbol within buffer (jump immediately when moving cursor between options)
     - Ctrl + Shift + R to search by symbol within workspace
@@ -34,6 +34,7 @@
     
 - BUG: When changing font size, it can be increased to a larger size on lower dpi screens
 - BUG: Cursor is not shown correctly in the scrollbar area
+- Don't highlight occurrences when they only contain whitespace and newlines (or CRLF)
 
 - File management:
     - Create a new open file dialog:
@@ -49,10 +50,12 @@
         + Display directory contents
             + Filter files we're not going to open anyway
             + Don't draw file paths for the navigator (unless starting from root)
+        + Don't scan folders on every keystroke
         - Switch between modes while the dialog is open
             - Make the default size of the open file dialog smaller
             - When switching in between, start an animation
                 - While animation is playing, don't draw anything
+        - Expand the dialog if there's no space in the input
         - Support clicking on path chunks 
             - Highlight on hover
     - Create new files:
