@@ -37,24 +37,6 @@
 - Don't highlight occurrences when they only contain whitespace and newlines (or CRLF)
 
 - File management:
-    - Create a new open file dialog:
-        + Create 2 states: 
-            + Search files in the project
-            + Open files by navigating
-        + Draw the navigator differently
-        + From root (no path chunks present or from_root = true):
-            + Display project dirs
-            + Display available drives (on Windows)
-        + Project dirs first, then drives
-        + Open folder by enter, tab, or slashes
-        + Display directory contents
-            + Filter files we're not going to open anyway
-            + Don't draw file paths for the navigator (unless starting from root)
-        + Don't scan folders on every keystroke
-        + Switch between modes while the dialog is open
-        - Support clicking on path chunks
-            + Highlight on hover
-            - Rewind to the corresponding chunk on click
     - Create new files:
         - Ctrl + N to create a new buffer
         - If a buffer has no name, use the first N non-whitespace characters
@@ -199,6 +181,24 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Create a new open file dialog:
+    + Create 2 states: 
+        + Search files in the project
+        + Open files by navigating
+    + Draw the navigator differently
+    + From root (no path chunks present or from_root = true):
+        + Display project dirs
+        + Display available drives (on Windows)
+    + Project dirs first, then drives
+    + Open folder by enter, tab, or slashes
+    + Display directory contents
+        + Filter files we're not going to open anyway
+        + Don't draw file paths for the navigator (unless starting from root)
+    + Don't scan folders on every keystroke
+    + Switch between modes while the dialog is open
+    + Support clicking on path chunks
+        + Highlight on hover
+        + Rewind to the corresponding chunk on click
 + Bug: undos can cause a crash in certain situations with the open file dialog
 + When mouse pointer is over the title bar, change the to arrow
 + When window is resized, redraw

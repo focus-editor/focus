@@ -570,6 +570,7 @@ draw_open_file_dialog :: () {
             if ui.hot_last_frame == input_id && mouse_pointer_is_within(dir_rect) {
                 color = Colors.LIST_CURSOR;
                 set_pointer_image(.PRESSABLE);
+                if mouse.left.just_pressed { open_file_dialog_truncate_path_chunks(it_index); redraw_requested = true; }
             }
             draw_rounded_rect(dir_rect, color);
             Simp.draw_prepared_text(font_ui, xx (dir_rect.x + padding + half_padding), xx text_y, Colors.UI_DEFAULT);
@@ -645,7 +646,11 @@ draw_open_file_dialog :: () {
                 if mouse.left.just_pressed then entries.selected_by_mouse = entry_index;
                 if entries.selected_by_mouse == -1 then draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
                 placement := ifx ctrl_pressed() then Editor_Placement.on_the_side else .in_place;
-                if entries.selected_by_mouse == entry_index && mouse.left.just_released then open_file_dialog_open_entry(entry_index, placement);
+                if entries.selected_by_mouse == entry_index && mouse.left.just_released {
+                    open_file_dialog_open_entry(entry_index, placement);
+                    redraw_requested = true;
+                    break;  // don't finish drawing entries because the entries will likely change
+                }
             }
             if entries.selected_by_mouse == entry_index then draw_rect(entry_rect, Colors.LIST_CURSOR);
             if entry_index == selected then draw_rect(entry_rect, Colors.LIST_CURSOR);

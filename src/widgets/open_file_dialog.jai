@@ -140,6 +140,19 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
     }
 }
 
+open_file_dialog_truncate_path_chunks :: (chunk_index: s64) {
+    using open_file_dialog;
+    
+    if chunk_index >= path_chunks.count return;
+    
+    for i : chunk_index + 1 .. path_chunks.count - 1 {
+        free(path_chunks[i]);
+    }
+    path_chunks.count = chunk_index + 1;
+    
+    refresh_entries(scan_folder = true);
+}
+
 open_file_dialog_handle_text_input :: (char: u32) {
     if char == 127 return;  // there seems to be a bug in the Input module
                             // which generates a TEXT_INPUT event for DEL
