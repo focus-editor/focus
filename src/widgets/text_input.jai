@@ -133,6 +133,15 @@ text_input_type_char :: (using input: *Text_Input, char: u32) {
     last_edit_time = frame_time;
 }
 
+text_input_fully_clear :: (using input: *Text_Input) {
+    new_edit_group(input);
+    clear_undos(input);
+    clear_redos(input);
+    array_reset(*text);
+    cursor.pos = 0;
+    cursor.sel = 0;
+}
+
 get_selected_offsets :: (text: [..] u8, cursor: Text_Input.Cursor) -> left: s64, right: s64 {
     str := to_string(text);
     left  := pos_to_offset(str, min(cursor.sel, cursor.pos));
@@ -336,11 +345,16 @@ new_delete_edit :: (input: *Text_Input, start: s32, end: s32, old_str: string) {
 }
 
 clear_redos :: (using input: *Text_Input) {
-    for * redos  deinit(it);
+    for * redos deinit(it);
     array_reset_keeping_memory(*redos);
 }
 
-deinit :: (using edit_group: *Text_Input.Edit_Group) {
+clear_undos :: (using input: *Text_Input) {
+    for * undos deinit(it);
+    array_reset_keeping_memory(*undos);
+}
+
+deinit :: inline (using edit_group: *Text_Input.Edit_Group) {
     for edit : edits {
         using edit;
         if #complete type == {

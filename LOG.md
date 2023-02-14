@@ -202,6 +202,7 @@
   (not useful for the editor, but may be useful for games)
 
 # DONE
++ Bug: undos can cause a crash in certain situations with the open file dialog
 + When mouse pointer is over the title bar, change the to arrow
 + When window is resized, redraw
 + Ctrl + 0 to revert to the default font size

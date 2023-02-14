@@ -139,12 +139,6 @@ open_file_dialog_handle_text_input :: (char: u32) {
 
 #scope_file
 
-clear_input :: () {
-    array_reset(*open_file_dialog.input.text);
-    open_file_dialog.input.cursor.pos = 0;
-    open_file_dialog.input.cursor.sel = 0;
-}
-
 clear_path_chunks :: () {
     for open_file_dialog.path_chunks free(it);
     array_reset(*open_file_dialog.path_chunks);
@@ -156,7 +150,7 @@ refresh_entries :: (scan_folder := false) {
     if scan_folder {
         // Do it before pushing the pool allocator because the input and the folder scan results 
         // use the global heap
-        clear_input();
+        text_input_fully_clear(*input);
         scan_current_folder();
     }
     
