@@ -118,7 +118,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             if mouse.left.just_double_clicked then select_word(cursor, buffer);
             if mouse.left.just_triple_clicked then select_lines(cursor, buffer);
 
-            array_reset_keeping_memory(*editor.highlights);
+            editor.refresh_highlights = true;
 
             // Activate editor
             editors.active = editor_id;
@@ -176,8 +176,10 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
 
         // Maybe update selection highlights
-        if editor.highlights.count == 0 {
-            // @Speed: we're recalculating it quite often. We should probably not do it as often
+        if editor.refresh_highlights {
+            editor.refresh_highlights = false;
+            array_reset_keeping_memory(*editor.highlights);
+            
             selected_text := get_selected_text_all_cursors(editor, buffer);
             if selected_text.count > 2 && selected_text.count < 1000 && !is_all_whitespace(selected_text) {
                 search_func: (s: string, substring: string, start_index := 0) -> s64;
@@ -239,6 +241,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         // Draw scrollbar marks
         {
+            Simp.set_shader_for_color(enable_blend = true);
+            
             marks_rect := cut_right(rect, scrollbar_size);
             marks_rect =  cut_top(marks_rect, rect.h * max_y_scroll / (rect.h + xx max_y_scroll));  // account for the non-text area at the bottom
             marks_rect_top := marks_rect.y + marks_rect.h;

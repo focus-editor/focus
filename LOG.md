@@ -33,11 +33,13 @@
     - Have a user error log - with an icon in the title bar to toggle it
     - Ignore project folders which are children of another project folder?
 
-- BUG: Cursor is not shown correctly in the scrollbar area
 - Don't highlight occurrences when they only contain whitespace and newlines (or CRLF)
 - BUG: when pressing shift + backspace, a selection is created because we're holding shift. This is confusing. Also it acts as a DEL.
 
 - File management:
+    - Open file dialog:
+        - Display something to indicate no entries
+        - Fix the jiggling at the bottom when typing every second letter
     - Create new files:
         - Ctrl + N to create a new buffer
         - If a buffer has no name, use the first N non-whitespace characters
@@ -71,7 +73,7 @@
       (or maybe when it hasn't been edited or opened in this session?)
     - Be able to ignore individual files
     
-- New search-in-buffer widget - an extension from finder (with differet modes of work, with transitions between each):
+- New search-in-buffer widget - an extension from finder (with different modes of work, with transitions between each):
     - It's much nicer to see all occurrences at the same time, rather than trying to cycle through them blindly
     - Make it look like the project search widget, but without the file names (so can be smaller)
     - Jump to the occurrence under cursor immediately
@@ -183,6 +185,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ BUG: Cursor is not shown correctly in the scrollbar area
 + BUG: When changing font size, it can be increased to a larger size on lower dpi screens
 + Create a new open file dialog:
     + Create 2 states: 

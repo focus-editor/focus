@@ -341,7 +341,7 @@ editors_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
     for *cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
     if cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
     
-    if cursor_moved then array_reset_keeping_memory(*editor.highlights);
+    if cursor_moved then editor.refresh_highlights = true;
 
     if save_buffer && buffer.has_file {
         // Handle save last so that the buffer is not marked as modified
@@ -443,7 +443,7 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
         if e.cursors.count > 1 then organise_cursors(e);
         
         // Refresh highlights and search results
-        array_reset_keeping_memory(*e.highlights);
+        e.refresh_highlights = true;
         if search_bar_is_open(e) search_and_update_results(e, buffer);
     }
 }
@@ -752,7 +752,7 @@ close_search_bar :: inline (editor: *Editor) {
     active = false;  // stop receiving input immediately
 
     reset_search_results(*editor.search_bar);
-    array_reset_keeping_memory(*editor.highlights);
+    editor.refresh_highlights = true;
 
     start_animation(*open_anim, openness, 0.0);
 }
@@ -1574,6 +1574,7 @@ Editor :: struct {
     scroll_to_cursor: enum u8 { no; yes; yes_new_editor; }  // trigger a scroll so that the cursor is in the center vertically
 
     highlights: [..] Text_Highlight;
+    refresh_highlights: bool;
     selected_text_length: s64;
 
     search_bar: Search_Bar;
