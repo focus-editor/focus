@@ -102,6 +102,7 @@ get_offset :: (using buffer: Buffer, pos: Pos) -> s64 {
 
 get_letter_at_pos :: (using buffer: Buffer, pos: Pos) -> string {
     offset := get_offset(buffer, pos);
+    if offset >= bytes.count return "";
     
     letter: string = ---;
     letter.data  = *bytes[offset];

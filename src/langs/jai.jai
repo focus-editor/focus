@@ -529,8 +529,8 @@ VALUE_KEYWORDS :: string.[
 COMPILER_DIRECTIVES :: string.[
     "add_context", "align", "as", "asm", "assert", "bake_arguments", "bake_constants", "bytes", "c_call", "caller_code",
     "caller_location", "char", "code", "compiler", "complete", "cpp_method", "cpp_return_type_is_non_pod", "deprecated",
-    "dump", "dynamic_specialize", "elsewhere", "expand", "file", "filepath", "foreign", "foreign_library",
-    "foreign_system_library", "if", "ifx", "import", "insert", "insert_internal", "intrinsic", "line", "load",
+    "dump", "dynamic_specialize", "elsewhere", "expand", "file", "filepath", "foreign", "library", "system_library",
+    "if", "ifx", "import", "insert", "insert_internal", "intrinsic", "line", "load",
     "location", "modify", "module_parameters", "must", "no_abc", "no_alias", "no_context", "no_padding", "no_reset",
     "place", "placeholder", "poke_name", "procedure_of_call", "program_export", "run", "runtime_support",
     "scope_export", "scope_file", "scope_module", "specified", "string", "symmetric", "this", "through", "type",
@@ -542,7 +542,6 @@ MODIFIERS :: string.[
     "isa", "distinct",  // type
     "only", "except", "map",  // using
     "no_check", "truncate",  // cast
-    "no_dll",  // foreign_library
     "file", "dir", "string",  // import
     "scope",  // insert
 ];

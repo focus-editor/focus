@@ -33,6 +33,7 @@
     - Ignore project folders which are children of another project folder?
     
 - BUG: When changing font size, it can be increased to a larger size on lower dpi screens
+- BUG: Cursor is not shown correctly in the scrollbar area
 
 - File management:
     - Create a new open file dialog:
@@ -40,9 +41,10 @@
             + Search files in the project
             + Open files by navigating
         + Draw the navigator differently
-        - From root (no path chunks present or from_root = true):
-            - Display project dirs
-            - Display available drives (on Windows)
+        + From root (no path chunks present or from_root = true):
+            + Display project dirs
+            + Display available drives (on Windows)
+        - Project dirs first, then drives
         - When not starting from root - generate
         - Don't draw file paths for the navigator (unless starting from root)
         - Open folder by enter, tab, or slashes

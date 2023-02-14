@@ -108,16 +108,61 @@ refresh_entries :: (from_root := false) {
     entries.selected = 0;
     array_reset(*entries.filtered);
     
+    filter_chars := decode_utf8_string_to_temp_char_substrings(to_string(input.text));
+    
     if #complete mode == {
         case .navigate;
-            array_reset(*path_chunks);
-            if !from_root {
-                // TODO: populate path chunks from the current buffer path
-            } 
+            if from_root then array_reset(*path_chunks);
+            if !path_chunks {
+                // Display project dirs and drive letters (on Windows)
+                for project_dirs {
+                    name := advance(it.path, it.path_prefix_len);
+                    
+                    score, name_highlights := fuzzy_match(name, filter_chars);
+                    if score < 0 continue;
+                    
+                    entry := array_add(*entries.filtered);
+                    entry.file.full_path = it.path;
+                    entry.file.name = name;
+                    entry.file.path = it.path;
+                    entry.file.icon = .folder;
+                    entry.file.project_dir_id = xx it_index;
+                    entry.name_highlights = name_highlights;
+                    entry.path_highlights = NewArray(entry.path.count, bool);
+                }
+                #if OS == .WINDOWS {
+                    // Enumerate all logical drives and put them into a buffer, separated by zeroes
+                    drives: [..] string;
+                    
+                    drives_buf: [500] u16;
+                    GetLogicalDriveStringsW(500, drives_buf.data);
+                    
+                    drive_wstr := drives_buf.data;
+                    for drives_buf {
+                        if it == 0 {
+                            drive, success := wide_to_utf8(drive_wstr);
+                            if !drive || !success break;
+                            drive.count -= 1;  // cut off separator
+                            array_add(*drives, drive);
+                            drive_wstr = *drives_buf[it_index + 1];
+                        }
+                    }
+                    for drives {
+                        entry := array_add(*entries.filtered);
+                        entry.file.full_path = "";
+                        entry.file.name = copy_string(it);
+                        entry.file.path = "";
+                        entry.file.icon = .drive;
+                        entry.file.project_dir_id = 127;
+                        entry.name_highlights = NewArray(it.count, bool);
+                        entry.path_highlights = .[];
+                    }
+                }
+            } else {
+            
+            }
             
         case .search;
-            filter_chars := decode_utf8_string_to_temp_char_substrings(to_string(input.text));
-
             // @MEMORY SAFETY: if we ever delete buffers from open_buffers and free memory, this will have to copy everything!
             num_entries := 0;
             for buffer : open_buffers {
@@ -127,7 +172,9 @@ refresh_entries :: (from_root := false) {
                                                                  // Alternatively, if there's an editor for a deleted buffer we probably
                                                                  // still want to see it here
                 
-                score, name_highlights, path_highlights := fuzzy_match(buffer, filter_chars);
+                name_score, name_highlights := fuzzy_match(buffer.file.name, filter_chars);
+                path_score, path_highlights := fuzzy_match(buffer.file.path, filter_chars);
+                score := 200 * name_score + path_score;  // name score is much more important
                 if score < 0 continue;
                 
                 entry := array_add(*entries.filtered);
@@ -157,43 +204,27 @@ refresh_entries :: (from_root := false) {
     }
 }
 
-fuzzy_match :: (buffer: Buffer, chars: [] string) -> score: s32, name_highlights: [] bool, path_highlights: [] bool {
-    assert(buffer.has_file);
-    name := buffer.file.name;
-    path := buffer.file.path;  // TODO: for non-file buffers replace these with something else
-    
-    name_highlights := NewArray(name.count, bool, initialized = true);  // allocates from the pool
-    path_highlights := NewArray(path.count, bool, initialized = true);  // we "leak" if there's no match but that should be ok
-    
-    if !chars return 0, name_highlights, path_highlights;
+fuzzy_match :: (str: string, chars: [] string) -> score: s32, highlights: [] bool {
+    highlights := NewArray(str.count, bool, initialized = true);  // allocates from the pool
+                                                                  // we "leak" if there's no match but that should be ok                                                            
+    if !chars return 0, highlights;
     
     MAX_CHARS :: 200;
     
-    match_str :: (str: string, chars: [] string, out_highlights: [] bool) -> score: s32 {
-        score: s32;
-        pos := 0;
-        for char : chars {
-            index := find_index_from_left_nocase(str, char, pos);
-            if index < 0 return -1;
-            out_highlights[index] = true;
-            score += cast(s32) (MAX_CHARS - index);  // the closer to the beginning, the better
-            pos = index + char.count;
-        }
-        return score;
+    score: s32;
+    pos := 0;
+    
+    for char : chars {
+        index := find_index_from_left_nocase(str, char, pos);
+        if index < 0 { score = -1; break; }
+        highlights[index] = true;
+        score += cast(s32) (MAX_CHARS - index);  // the closer to the beginning, the better
+        pos = index + char.count;
     }
     
-    // Search in the name
-    name_score := match_str(name, chars, name_highlights);
-    if name_score < 0 then memset(name_highlights.data, 0, name_highlights.count);  // no match -> no highlighting
+    if score < 0 then memset(highlights.data, 0, highlights.count);  // no match -> no highlighting
     
-    // Search in the path
-    path_score := match_str(path, chars, path_highlights);
-    if path_score < 0 then memset(path_highlights.data, 0, path_highlights.count);  // no match -> no highlighting
-    
-    score := MAX_CHARS * name_score + path_score;  // name score is much more important
-    
-    
-    return score, name_highlights, path_highlights;
+    return score, highlights;
 }
 
 toggle_expand :: () {

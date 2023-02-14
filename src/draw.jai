@@ -659,7 +659,7 @@ draw_open_file_dialog :: () {
             Simp.draw_prepared_text(font_icons, xx icon_x, xx pen.y, color = name_color);
 
             // Draw name
-            pen.x += xx font_icons.em_width + padding;
+            pen.x += xx font_icons.em_width + padding * 1.5;
             width = xx Simp.draw_text_with_highlights(font_ui, xx pen.x, xx pen.y, entry.name, entry.name_highlights, color = name_color, highlight_color = Colors.LETTER_HIGHLIGHT);
             
             if entry.flags & .MODIFIED_ON_DISK {

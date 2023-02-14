@@ -35,6 +35,8 @@ platform_wait_message :: inline () {
     WaitMessage();
 }
 
+GetLogicalDriveStringsW :: (nBufferLength: DWORD, lpBuffer: *u16) -> DWORD #foreign kernel32;
+
 #scope_file
 
 monitor_enum_proc :: (hMonitor: HMONITOR, hdc: HDC, rect: *RECT, data: LPARAM) -> BOOL #c_call {
@@ -61,7 +63,8 @@ Monitor :: struct {
 
 monitors : [..] Monitor;
 
-user32 :: #system_library "user32";
+user32   :: #system_library "user32";
+kernel32 :: #system_library "kernel32";
 
 WaitMessage :: () -> s32 #foreign user32;
 GetDpiForWindow :: (hWnd: HWND) -> u32 #foreign user32;
