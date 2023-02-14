@@ -1098,6 +1098,7 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
 Corner_Rounding :: enum { none; in; out; }
 
 draw_rounded_rect :: (rect: Rect, color: Color, radius := 0.0, softness := 1.0, $set_shader := true) {
+    if !is_valid(rect) return;
     #if set_shader then Simp.set_shader_for_rects();
     if radius <= 0 then radius = rounding_radius;
     
@@ -1129,40 +1130,40 @@ draw_rounded_rect_with_corners :: (rect: Rect, color: Color,
     if tl == {
         case .in;
             corner, top = cut_left(top, radius);
-            Simp.immediate_rounded_rect(bottom_left(corner), top_right(corner), color, center, size, radius, softness);
+            if is_valid(corner) Simp.immediate_rounded_rect(bottom_left(corner), top_right(corner), color, center, size, radius, softness);
         case .out;
             corner = top; corner.w = radius; corner.x -= radius;
             fake_center := center - Vector2.{ x = rect.w - 1, y = -1 };
-            Simp.immediate_rounded_rect(bottom_left(corner), top_right(corner), color, fake_center, size, radius, -softness);
+            if is_valid(corner) Simp.immediate_rounded_rect(bottom_left(corner), top_right(corner), color, fake_center, size, radius, -softness);
     }
     if tr == {
         case .in;
             corner, top = cut_right(top, radius);
-            Simp.immediate_rounded_rect(bottom_left(corner), top_right(corner), color, center, size, radius, softness);
+            if is_valid(corner) Simp.immediate_rounded_rect(bottom_left(corner), top_right(corner), color, center, size, radius, softness);
         case .out;
             corner = top; corner.w = radius; corner.x += top.w;
             fake_center := center + Vector2.{ x = rect.w - 1, y = 1 };
-            Simp.immediate_rounded_rect(bottom_left(corner), top_right(corner), color, fake_center, size, radius, -softness);
+            if is_valid(corner) Simp.immediate_rounded_rect(bottom_left(corner), top_right(corner), color, fake_center, size, radius, -softness);
     }
 
     // Draw bottom corners
     if bl == {
         case .in;
             corner, bottom = cut_left(bottom, radius);
-            Simp.immediate_rounded_rect(bottom_left(corner), top_right(corner), color, center, size, radius, softness);
+            if is_valid(corner) Simp.immediate_rounded_rect(bottom_left(corner), top_right(corner), color, center, size, radius, softness);
         case .out;
             corner = bottom; corner.w = radius; corner.x -= radius;
             fake_center := center - Vector2.{ x = rect.w - 1, y = 1 };
-            Simp.immediate_rounded_rect(bottom_left(corner), top_right(corner), color, fake_center, size, radius, -softness);
+            if is_valid(corner) Simp.immediate_rounded_rect(bottom_left(corner), top_right(corner), color, fake_center, size, radius, -softness);
     }
     if br == {
         case .in;
             corner, bottom = cut_right(bottom, radius);
-            Simp.immediate_rounded_rect(bottom_left(corner), top_right(corner), color, center, size, radius, softness);
+            if is_valid(corner) Simp.immediate_rounded_rect(bottom_left(corner), top_right(corner), color, center, size, radius, softness);
         case .out;
             corner = bottom; corner.w = radius; corner.x += bottom.w;
             fake_center := center + Vector2.{ x = rect.w - 1, y = -1 };
-            Simp.immediate_rounded_rect(bottom_left(corner), top_right(corner), color, fake_center, size, radius, -softness);
+            if is_valid(corner) Simp.immediate_rounded_rect(bottom_left(corner), top_right(corner), color, fake_center, size, radius, -softness);
     }
     
     // Draw base rects

@@ -127,34 +127,21 @@ main :: () {
 
                             case #char "+";
                                 if event.ctrl_pressed {
-                                    new_size := cast(int) ((font_size + 1) * dpi_scale);
-                                    if new_size <= MAX_FONT_SIZE {
+                                    if (font_size + 1) <= MAX_FONT_SIZE {
                                         font_size += 1;
-                                        font_ui_size += 1;
-                                        font_ui_small_size += 1;
-                                        font_icons_size += 1;
                                         init_fonts_and_dependent_things();
                                     }
                                 }
                             case #char "-";
                                 if event.ctrl_pressed {
-                                    new_size := cast(int) ((font_size - 1) * dpi_scale);
-                                    if new_size >= MIN_FONT_SIZE {
+                                    if (font_size - 1) >= MIN_FONT_SIZE {
                                         font_size -= 1;
-                                        font_ui_size -= 1;
-                                        font_ui_small_size -= 1;
-                                        font_icons_size -= 1;
                                         init_fonts_and_dependent_things();
                                     }
                                 }
                             case #char "0";
                                 if event.ctrl_pressed {
-                                    // Revert the font sizes to the default values
-                                    delta := font_size - DEFAULT_FONT_SIZE;
-                                    font_size          -= delta;
-                                    font_ui_size       -= delta;
-                                    font_ui_small_size -= delta;
-                                    font_icons_size    -= delta;
+                                    font_size = DEFAULT_FONT_SIZE;
                                     init_fonts_and_dependent_things();
                                 }
                         }
@@ -195,6 +182,11 @@ main :: () {
 }
 
 init_fonts_and_dependent_things :: () {
+    delta := font_size - DEFAULT_FONT_SIZE;
+    font_ui_size       = DEFAULT_FONT_UI_SIZE       + delta;
+    font_ui_small_size = DEFAULT_FONT_UI_SMALL_SIZE + delta;
+    font_icons_size    = DEFAULT_FONT_ICONS_SIZE    + delta;
+    
     font = Simp.get_font_at_size(FONT.name, FONT.data, cast(int) (font_size * dpi_scale));
     assert(font != null, "Couldn't init main text font\n");
 
@@ -207,7 +199,6 @@ init_fonts_and_dependent_things :: () {
 
     font_ui_small = Simp.get_font_at_size(FONT_UI.name, FONT_UI.data, cast(int) (font_ui_small_size * dpi_scale));
     assert(font_ui_small != null, "Couldn't init small ui font\n");
-    font_ui_small_line_height = cast(float) font_ui.default_line_spacing;
 
     font_icons = Simp.get_font_at_size(FONT_ICONS.name, FONT_ICONS.data, cast(int) (font_icons_size * dpi_scale));
     assert(font_icons != null, "Couldn't init main icon font\n");
@@ -380,15 +371,6 @@ Mouse_Button_State :: struct {
     last_double_click_time: Time;
 }
 
-// Depend on font size
-char_size:   float;
-line_height: float;
-old_line_height: float;  // to track font changes
-scrollbar_size:  float;
-rounding_radius: float;
-rounding_radius_large: float;
-rounding_radius_small: float;
-
 LINE_HEIGHT_SCALE :: 1.2;
 
 WHEEL_SENSITIVITY :: 1.0;
@@ -396,22 +378,31 @@ WHEEL_SENSITIVITY :: 1.0;
 BULLET_CHAR           :: #run to_string(*convert_utf32_to_utf8(0x2022));
 MAGNIFYING_GLASS_CHAR :: #run to_string(*convert_utf32_to_utf8(0x2022));
 
-DEFAULT_FONT_SIZE :: 14;
+font:           *Simp.Dynamic_Font;
+font_ui:        *Simp.Dynamic_Font;
+font_ui_bold:   *Simp.Dynamic_Font;
+font_ui_small:  *Simp.Dynamic_Font;
+font_icons:     *Simp.Dynamic_Font;
 
-font      :  *Simp.Dynamic_Font;
-font_size := DEFAULT_FONT_SIZE;
+DEFAULT_FONT_SIZE           :: 14;
+DEFAULT_FONT_UI_SIZE        :: 16;
+DEFAULT_FONT_UI_SMALL_SIZE  :: 15;
+DEFAULT_FONT_ICONS_SIZE     :: 16;
 
-font_ui      :  *Simp.Dynamic_Font;
-font_ui_bold :  *Simp.Dynamic_Font;
-font_ui_size := 16;
-font_ui_line_height: float;
+font_size           := DEFAULT_FONT_SIZE;  // when changing font size, we change just this one and then derive the other ones from it
+font_ui_size        := DEFAULT_FONT_UI_SIZE;
+font_ui_small_size  := DEFAULT_FONT_UI_SMALL_SIZE;
+font_icons_size     := DEFAULT_FONT_ICONS_SIZE;
 
-font_ui_small      :  *Simp.Dynamic_Font;
-font_ui_small_size := 15;
-font_ui_small_line_height: float;
-
-font_icons      : *Simp.Dynamic_Font;
-font_icons_size := 16;
+// Depend on font size
+char_size:              float;
+line_height:            float;
+old_line_height:        float;  // to track font changes
+font_ui_line_height:    float;
+rounding_radius:        float;
+rounding_radius_large:  float;
+rounding_radius_small:  float;
+scrollbar_size:         float;
 
 Mods :: Input.Event.Modifier_Flags;
 
@@ -507,7 +498,7 @@ FONT_UI_BOLD :: #run load_font("SEGUISB.TTF");
 FONT_ICONS   :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
 
 MIN_FONT_SIZE :: 4;
-MAX_FONT_SIZE :: 40;  // setting a larger size has caused freetype to crash - not sure yet why. 
+MAX_FONT_SIZE :: 30;  // setting a larger size has caused freetype to crash - not sure yet why. 
                       // Probably we don't give it enough memory for a glyph bitmap when rendering it?
 
 load_font :: (name: string) -> Embedded_Font {

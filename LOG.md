@@ -24,6 +24,7 @@
     - Adjust cursors in joint editors properly
     - Highlight C/C++
     - Jump to line on Ctrl+G
+    - Word wrap
     - See if memory usage can be improved
     - Custom title bar (currently too much work and not very robust)
     - Linux support
@@ -31,10 +32,10 @@
     - Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
     - Have a user error log - with an icon in the title bar to toggle it
     - Ignore project folders which are children of another project folder?
-    
-- BUG: When changing font size, it can be increased to a larger size on lower dpi screens
+
 - BUG: Cursor is not shown correctly in the scrollbar area
 - Don't highlight occurrences when they only contain whitespace and newlines (or CRLF)
+- BUG: when pressing shift + backspace, a selection is created because we're holding shift. This is confusing. Also it acts as a DEL.
 
 - File management:
     - Create new files:
@@ -179,8 +180,10 @@
     - Should we keep using GL_NEAREST for sampling?
 - Subpixel rendering: support other types of panels (lookup ft2-lcd_rendering)
   (not useful for the editor, but may be useful for games)
+- Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ BUG: When changing font size, it can be increased to a larger size on lower dpi screens
 + Create a new open file dialog:
     + Create 2 states: 
         + Search files in the project
