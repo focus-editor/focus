@@ -65,6 +65,20 @@ open_file_dialog_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
         
         case #char "L"; 
             if only_ctrl_shift_pressed(mods) then toggle_expand();
+            
+        case #char "P";
+            // Maybe switch to search
+            if only_ctrl_pressed(mods) {
+                if mode != .search { show_open_file_dialog(mode = .search); return; }
+            }
+        case #char "O";
+            if only_ctrl_pressed(mods) {
+                if mode != .navigate { show_open_file_dialog(mode = .navigate); return; }
+            }
+            if only_ctrl_shift_pressed(mods) { 
+                show_open_file_dialog(mode = .navigate, from_root = true); 
+                return;
+            }
         
         case .ENTER;
             placement := ifx only_ctrl_pressed(mods) then Editor_Placement.on_the_side else .in_place;

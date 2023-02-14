@@ -544,7 +544,7 @@ draw_open_file_dialog :: () {
     input_id := get_ui_id_from_loc(parent_id = ui_id);
     
     if mode == .search {
-        label := ifx finder.initted then "Search files by name" else "Still indexing project files. Please wait...";
+        label := ifx finder.initted then " Search files by name" else " Still indexing project files. Please wait...";
         draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = label);
         if !finder.initted then redraw_requested = true;  // update as soon as we're done
     } else {
@@ -566,7 +566,12 @@ draw_open_file_dialog :: () {
         for path_chunks {
             width := cast(float) Simp.prepare_text(font_ui, it);
             dir_rect.w = width + 2 * padding + 2 * half_padding;
-            draw_rounded_rect(dir_rect, Colors.SELECTION_ACTIVE);
+            color := Colors.SELECTION_ACTIVE;
+            if ui.hot_last_frame == input_id && mouse_pointer_is_within(dir_rect) {
+                color = Colors.LIST_CURSOR;
+                set_pointer_image(.PRESSABLE);
+            }
+            draw_rounded_rect(dir_rect, color);
             Simp.draw_prepared_text(font_ui, xx (dir_rect.x + padding + half_padding), xx text_y, Colors.UI_DEFAULT);
             dir_rect.x += dir_rect.w + half_padding;
         }

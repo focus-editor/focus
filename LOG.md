@@ -51,13 +51,10 @@
             + Filter files we're not going to open anyway
             + Don't draw file paths for the navigator (unless starting from root)
         + Don't scan folders on every keystroke
-        - Switch between modes while the dialog is open
-            - Make the default size of the open file dialog smaller
-            - When switching in between, start an animation
-                - While animation is playing, don't draw anything
-        - Expand the dialog if there's no space in the input
-        - Support clicking on path chunks 
-            - Highlight on hover
+        + Switch between modes while the dialog is open
+        - Support clicking on path chunks
+            + Highlight on hover
+            - Rewind to the corresponding chunk on click
     - Create new files:
         - Ctrl + N to create a new buffer
         - If a buffer has no name, use the first N non-whitespace characters
