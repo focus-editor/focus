@@ -229,7 +229,7 @@ is_word_char :: (ch: u32) -> bool {
 is_all_whitespace :: (s: string) -> bool {
     for byte : to_bytes(s) {
         // Multi-byte whitespace is not included
-        if byte != #char " " && byte != #char "\t" && byte != #char "\n" then return false;
+        if byte != #char " " && byte != #char "\t" && byte != #char "\n" && byte != #char "\r" then return false;
     }
     return true;
 }

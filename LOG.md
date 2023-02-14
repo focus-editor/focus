@@ -33,9 +33,6 @@
     - Have a user error log - with an icon in the title bar to toggle it
     - Ignore project folders which are children of another project folder?
 
-- Don't highlight occurrences when they only contain whitespace and newlines (or CRLF)
-- BUG: when pressing shift + backspace, a selection is created because we're holding shift. This is confusing. Also it acts as a DEL.
-
 - File management:
     - Open file dialog:
         - Display something to indicate no entries
@@ -185,6 +182,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ BUG: when pressing shift + backspace, a selection is created because we're holding shift. This is confusing.
 + BUG: Cursor is not shown correctly in the scrollbar area
 + BUG: When changing font size, it can be increased to a larger size on lower dpi screens
 + Create a new open file dialog:

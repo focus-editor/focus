@@ -1296,6 +1296,7 @@ handle_backspace :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
     delete_range(buffer, range);
 
     pos = range.start;
+    sel = pos;  // always remove selection
     col_wanted = pos.col;
 }
 
