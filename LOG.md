@@ -46,8 +46,15 @@
             + Display available drives (on Windows)
         + Project dirs first, then drives
         + Open folder by enter, tab, or slashes
-        - When not starting from root - generate
-        - Don't draw file paths for the navigator (unless starting from root)
+        + Display directory contents
+            + Filter files we're not going to open anyway
+            + Don't draw file paths for the navigator (unless starting from root)
+        - Switch between modes while the dialog is open
+            - Make the default size of the open file dialog smaller
+            - When switching in between, start an animation
+                - While animation is playing, don't draw anything
+        - Support clicking on path chunks 
+            - Highlight on hover
     - Create new files:
         - Ctrl + N to create a new buffer
         - If a buffer has no name, use the first N non-whitespace characters

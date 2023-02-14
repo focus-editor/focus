@@ -20,9 +20,15 @@ get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> Fil
         }
     }
     if proj_prefix_len > 0 then info.path = advance(info.path, proj_prefix_len);
+    
+    info.icon = get_file_icon(name, extension);
 
-    // Determine icon
+    return info;
+}
+
+get_file_icon :: (name: string, extension: string) -> File_Icon {
     icon := File_Icon.unknown;
+    
     if extension == {
         case "jai";
             icon = .jai;
@@ -63,10 +69,44 @@ get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> Fil
             icon = .git;
         }
     }
+    
+    return icon;
+}
 
-    info.icon = icon;
+should_ignore_file :: (path: string) -> bool {    
+    // Allow known text file extensions since they are the most common
+    for allowed_ext : config.workspace.allow_file_extensions {
+        if ends_with_nocase(path, allowed_ext) return false;
+    }
+    
+    // Then check for common known binary file extensions
+    for config.workspace.ignore_file_extensions {
+        if ends_with_nocase(path, it) return true;  // TODO: do a wildcard match
+    }
+    
+    // Check for zeroes in the file - if there are any, it's not a well-formed text file.
+    // There's a small chance that a binary file will have no zeroes, but it's the easiest
+    // thing to check, so that's what we're doing.
+    // Sorry non-binary files, there are only 2 digits, please don't cancel me.
+    file_data, success := read_entire_file(path);
+    if !success return true;
+    has_zeroes := find_index_from_left(file_data, byte = 0) >= 0;
+    free(file_data);
+    if has_zeroes return true;  // ignore
+    
+    // In this case the file will be read again, but it's OK because:
+    // 1. It should happen rarely
+    // 2. The file will be in the filesystem cache
+    return false;
+}
 
-    return info;
+should_ignore_dir :: (name: string) -> bool {
+    for config.workspace.ignore_dirs {
+        if equal_nocase(name, it) {  // TODO: do a wildcard match
+            return true;
+        }
+    }
+    return false;
 }
 
 File_Info :: struct {

@@ -34,6 +34,7 @@ temp
 .mp3 .wav .ogg
 .blend .obj .fbx .dae .3ds
 .mpg .mpeg .psd .codex
+.sys
 
 [[settings]]
 # TODO

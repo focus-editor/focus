@@ -1,7 +1,17 @@
 open_file_dialog_handle_event :: (event: Input.Event) {
+    using open_file_dialog;
     if event.type == {
         case .KEYBOARD;
             if event.key_pressed {
+                if event.key_code == .BACKSPACE {
+                    // Checking it here because otherwise the input would handle it
+                    if mode == .navigate && !input.text && path_chunks {
+                        last := pop(*path_chunks);
+                        free(last);
+                        refresh_entries();
+                        return;
+                    }
+                }
                 open_file_dialog_handle_key_press(event.key_code, event.modifier_flags);
             }
 
@@ -22,7 +32,7 @@ show_open_file_dialog :: (mode: Open_File_Dialog.Mode, from_root := false) {
     active_global_widget = .open_file_dialog;
     
     open_file_dialog.mode = mode;
-    if from_root then array_reset(*open_file_dialog.path_chunks);
+    if from_root then clear_path_chunks();
     
     clear_input();
     
@@ -31,12 +41,6 @@ show_open_file_dialog :: (mode: Open_File_Dialog.Mode, from_root := false) {
 
 hide_open_file_dialog :: () {
     active_global_widget = .editors;
-}
-
-clear_input :: () {
-    array_reset(*open_file_dialog.input.text);
-    open_file_dialog.input.cursor.pos = 0;
-    open_file_dialog.input.cursor.sel = 0;
 }
 
 open_file_dialog_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
@@ -105,16 +109,22 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
             hide_open_file_dialog();
     
         case .drive;
-            array_reset(*path_chunks);
-            array_add(*path_chunks, entry.name);
-            root_dir = entry.name;
+            clear_path_chunks();
+            entry_name := copy_string(entry.name);
+            array_add(*path_chunks, entry_name);
+            root_dir = entry_name;
             clear_input();
             refresh_entries();
             
         case .project_dir;
-            array_reset(*path_chunks);
-            array_add(*path_chunks, entry.name);
+            clear_path_chunks();
+            array_add(*path_chunks, copy_string(entry.name));
             root_dir = entry.full_path;
+            clear_input();
+            refresh_entries();
+            
+        case .folder;
+            array_add(*path_chunks, copy_string(entry.name));
             clear_input();
             refresh_entries();
     }
@@ -132,6 +142,17 @@ open_file_dialog_handle_text_input :: (char: u32) {
 
 
 #scope_file
+
+clear_input :: () {
+    array_reset(*open_file_dialog.input.text);
+    open_file_dialog.input.cursor.pos = 0;
+    open_file_dialog.input.cursor.sel = 0;
+}
+
+clear_path_chunks :: () {
+    for open_file_dialog.path_chunks free(it);
+    array_reset(*open_file_dialog.path_chunks);
+}
 
 refresh_entries :: () {
     using open_file_dialog;
@@ -168,8 +189,8 @@ refresh_entries :: () {
                     entry.name_highlights = name_highlights;
                     entry.path_highlights = NewArray(entry.path.count, bool);
                     
-                    dir_id_part:     u64 = (cast,trunc(u64) (127 - entry.project_dir_id)) << 56;
-                    score_part:      u64 = (cast,trunc(u64) score)                        << 16;
+                    dir_id_part: u64 = (cast,trunc(u64) (127 - entry.project_dir_id)) << 56;
+                    score_part:  u64 = (cast,trunc(u64) score)                        << 16;
                     entry.sort_key = dir_id_part | score_part;
                 }
                 #if OS == .WINDOWS {
@@ -193,12 +214,52 @@ refresh_entries :: () {
                     entry.name_highlights = name_highlights;
                     entry.path_highlights = .[];
                     
-                    dir_id_part:     u64 = (cast,trunc(u64) (127 - entry.project_dir_id)) << 56;
-                    score_part:      u64 = (cast,trunc(u64) score)                        << 16;
+                    dir_id_part: u64 = (cast,trunc(u64) (127 - entry.project_dir_id)) << 56;
+                    score_part:  u64 = (cast,trunc(u64) score)                        << 16;
                     entry.sort_key = dir_id_part | score_part;
                 }
             } else {
-            
+                // Display directory contents
+                path_chunks_trimmed := array_view(path_chunks, 1, path_chunks.count - 1);
+                dir_path := sprint("%/%", root_dir, join(..path_chunks_trimmed, separator = "/"));
+                
+                visit_files(dir_path, recursive = false, *filter_chars, visitor_func, visit_directories = true);
+                
+                visitor_func :: (file: *File_Visit_Info, userdata: *[] string) {
+                    if file.had_error || file.is_symlink return;
+                    if file.is_directory {
+                        if should_ignore_dir(file.short_name) return;
+                    } else {
+                        if should_ignore_file(file.full_name) return;
+                    }
+                    
+                    filter_chars := <<userdata;
+                    
+                    full_path := copy_string(file.full_name);
+                    path, basename, extension, name := path_decomp(full_path);
+                    
+                    score, name_highlights := fuzzy_match(name, filter_chars);
+                    if score < 0 return;
+                    
+                    entry := array_add(*open_file_dialog.entries.filtered);
+                    if file.is_directory then entry.type = .folder;
+                    entry.full_path = full_path;
+                    entry.name = name;
+                    entry.path = "";
+                    if file.is_directory {
+                        entry.icon = .folder;
+                        entry.type = .folder;
+                    } else {
+                        entry.icon = get_file_icon(name, extension);
+                        entry.type = .file;
+                    }
+                    entry.name_highlights = name_highlights;
+                    entry.path_highlights = .[];
+                    
+                    is_dir_part: u64 = (cast,trunc(u64) (file.is_directory)) << 56;  // directories come first
+                    score_part:  u64 = (cast,trunc(u64) score)               << 16;
+                    entry.sort_key = is_dir_part | score_part;
+                }
             }
             
         case .search;
