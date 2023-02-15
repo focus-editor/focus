@@ -1,9 +1,5 @@
 [1]  # Version number. Do not delete.
 
-# WARNING. If you override any of the settings in the [[workspace]] section, they will completely replace the default ones,
-#          therefore you'll probably want to copy the default ones and extend them instead.
-#          The keymap and the colors will be merged instead, so you can override only a few of the keys/colors if you want.
-
 [[workspace]]
 
 [workspace dirs]
@@ -24,23 +20,136 @@ temp
 # These files are explicitly allowed so that the editor doesn't waste time figuring out
 # whether it should ignore these or not (if a file is not explicitly allowed or ignored, 
 # it will be read to determine if it's binary or not).
-.jai .c .cpp .h .txt .md .focus-config
+.jai .c .cpp .h .hpp .cc .txt .md .focus-config .ini .csv .log .sql .py .m .html .xml .js .ts .yml .yaml .toml
 
 [ignore file extensions]
 # Files with the following extensions will not appear in the file open dialog and won't be indexed.
 # It makes sense to add all known binary file extensions here.
 .exe .pdb .ttf .otf .dll .lib .dylib .so .so.0 .so.1 .so.2 .a
-.jpg .png .gif .jpeg .ico .tif .tiff .tga .bmp  # maybe someday we'll support opening images
-.mp3 .wav .ogg
+.jpg .png .gif .jpeg .ico .tif .tiff .tga .bmp .webp  # maybe someday we'll support opening images
+.mp3 .wav .ogg .wma 
 .blend .obj .fbx .dae .3ds
-.mpg .mpeg .psd .codex
-.sys
+.mpg .mpeg .psd .codex .webm .wma
+.zip .rar .7z 
+.bin .sys .iso
 
 [[settings]]
 # TODO
 
-[[keymap]]
-# TODO
-
 [[colors]]
 # TODO
+
+[[keymap]]
+
+[common]
+
+Ctrl-F              search_in_buffer
+Ctrl-Shift-F        search_in_project
+
+Ctrl-P              show_open_file_dialog_in_search_mode
+Ctrl-O              show_open_file_dialog_in_navigate_mode
+Ctrl-Shift-O        show_open_file_dialog_in_navigate_mode_from_root
+
+Ctrl-C              copy
+Ctrl-X              cut
+Ctrl-V              paste
+
+Ctrl-Z              undo
+Ctrl-Shift-Z        redo
+
+Ctrl-A              select_all
+
+Ctrl-Shift-L        toggle_expand
+
+ArrowUp             move_up
+Ctrl-ArrowUp        move_up_fast
+PageUp              move_up_one_page
+
+ArrowDown           move_down
+Ctrl-ArrowDown      move_down_fast
+PageDown            move_down_one_page
+
+ArrowLeft           move_left
+Alt-ArrowLeft       move_left_by_word
+Ctrl-ArrowLeft      move_left_by_word_end
+
+ArrowRight          move_right
+Alt-ArrowRight      move_right_by_word
+Ctrl-ArrowRight     move_right_by_word_end
+
+Home                home
+End                 end
+
+Backspace           delete_left_char
+Delete              delete_right_char
+
+Ctrl-Plus           increase_font_size
+Ctrl-Minus          decrease_font_size
+Ctrl-0              reset_font_size_to_default
+
+[editors]
+
+Ctrl-D              select_word_or_create_another_cursor
+
+Ctrl-Shift-D        duplicate_lines
+
+Ctrl-Alt-ArrowUp    move_selected_lines_up
+Ctrl-Alt-ArrowDown  move_selected_lines_down
+
+Tab                 indent_or_go_to_next_tabstop
+Shift-Tab           unindent
+
+Ctrl-]              indent
+Ctrl-[              unindent
+
+Ctrl-W              close_current_editor
+Ctrl-Shift-W        close_other_editor
+
+Ctrl-S              save
+
+Ctrl-/              toggle_comment
+
+Alt-ArrowUp         scroll_viewport_up
+Alt-ArrowDown       scroll_viewport_down
+Alt-ArrowLeft       scroll_viewport_left
+Alt-ArrowRight      scroll_viewport_right
+
+Alt-C               move_cursor_to_viewport_center
+
+Escape              remove_additional_cursors
+
+Enter               break_line
+Ctrl-Enter          new_line_below_without_breaking
+Ctrl-Shift-Enter    new_line_above_without_breaking
+
+Ctrl-Alt-ArrowLeft          switch_to_left_editor
+Ctrl-1                      switch_to_left_editor
+Ctrl-Alt-ArrowRight         switch_to_right_editor
+Ctrl-2                      switch_to_right_editor
+
+Ctrl-Alt-Shift-ArrowLeft    move_editor_to_the_left
+Ctrl-Alt-Shift-ArrowRight   move_editor_to_the_right
+
+
+[open file dialog]
+
+Escape              close_dialog
+
+Enter               open_entry_in_place
+Ctrl-Enter          open_entry_on_the_side
+Ctrl-1              open_entry_on_the_left
+Ctrl-2              open_entry_on_the_right
+
+Tab                 open_directory
+/                   open_directory
+\                   open_directory
+
+
+[search dialog]
+
+Escape              close_dialog
+
+Enter               open_entry_in_place
+Ctrl-Enter          open_entry_on_the_side
+Ctrl-1              open_entry_on_the_left
+Ctrl-2              open_entry_on_the_right

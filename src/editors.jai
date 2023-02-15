@@ -3,9 +3,9 @@ editors_handle_event :: (event: Input.Event) {
 
     if event.type == {
         case .KEYBOARD;
-            // Maybe open/switch to other widgets
             if event.key_pressed {
                 if event.key_code == {
+                    // Maybe open/switch to other widgets
                     case #char "P"; 
                         if only_ctrl_pressed(mods)       { show_open_file_dialog(mode = .search); return; }
                     case #char "O"; 
@@ -13,6 +13,11 @@ editors_handle_event :: (event: Input.Event) {
                         if only_ctrl_shift_pressed(mods) { show_open_file_dialog(mode = .navigate, from_root = true); return; }
                     case #char "F"; 
                         if only_ctrl_shift_pressed(mods) { finder_open_from_editor(); return; }
+                        
+                    // Maybe open new buffer
+                    // TODO: finish when done rewriting the input system
+                    // case #char "N";
+                    //     if 
                 }
             }
 

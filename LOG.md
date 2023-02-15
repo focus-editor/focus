@@ -12,14 +12,14 @@
     + New open file dialog
     - Create new files
     - Try to support tabs properly
-    - Show help on F1
+    - Horizontal scrolling
+    - Support CRLF (ugh)
     - Test the exe on different machines
     - Notify about unsaved buffers on close
     - Ctrl + R to search by symbol within buffer (jump immediately when moving cursor between options)
     - Ctrl + Shift + R to search by symbol within workspace
     - Try to implement "jump to symbol definition". Display a popup if more than one. Do a scan of jai files for that.
-    - Horizontal scrolling
-    - Support CRLF (ugh)
+    - Show help on F1
     - Have the option to not strip trailing whitespace (in the config?) Or can do ctrl+s as a main way to save, ctr+shift+s as an alternative way
     - Adjust cursors in joint editors properly
     - Highlight C/C++
@@ -32,16 +32,30 @@
     - Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
     - Have a user error log - with an icon in the title bar to toggle it
     - Ignore project folders which are children of another project folder?
+    
+- Rewrite the input system using the keymap handler
+    - Modify the config syntax highlighter so that it understands keymap
+    - Support commenting out stuff in focus config
+
+- Display files that are deleted on disk but modified in the open file dialog
 
 - File management:
     - Create new files:
         - Ctrl + N to create a new buffer
+            - Check if we have any non-file buffers with nothing in them first, to avoid creating a million buffers
+            - If there's an empty buffer already, just switch to it
         - If a buffer has no name, use the first N non-whitespace characters
         - Ctrl + S to open a save file dialog
     - File context menu:
         - Rename file
         - Delete file
         - Close file?
+        
+- New selection modes:
+    - After double-click: enter word-selection mode
+    - After triple-click: enter line-selection mode
+    - Maintain both modes until mouse button is up
+    - Can get rid of the timeout when it's done
     
 - Sessions and buffer backups:
     - Write down a step by step loading process to identify the easiest format to load
@@ -75,6 +89,7 @@
 
 - Log time with the session logger
 - Try to log asserts into log_error.txt - would be very helpful for debugging release builds
+- Either limit the number of bytes in text input, or improve the handling of cursor (currently calculating the length every frame)
 
 - BUG: When reloading file from disk (refresh_buffer_from_disk) make sure to remove crlf (until it's supported at least)
 
@@ -92,8 +107,6 @@
     - highlight selection occurrences
     - log_level = info/error
     - load last session on start ?
-
-- Rewrite the input system using the keymap handler
 
 - Hide scrollbars unless scrolling or hovering over editor
 - Add horizontal scrollbar
