@@ -50,138 +50,13 @@ merge_configs :: (dst: *Config, src: Config) {
     // TODO: other sections;
 }
 
-parse_config :: (name: string, filename: string, file_data: string) -> Config, success: bool {
-    handler: Text_File_Handler;
-    // NOTE: we don't free on purpose, because some of the parsed data will point into the file data
-    
-    start_from_memory(*handler, name, filename, file_data);
-    if handler.failed return Config.{}, false;
-    
-    parser: Config_Parser;
-    result: Config;
-    
-    // Will be filled as the file parses
-    workspace_dirs:         [..] string;
-    ignore_dirs:            [..] string;
-    allow_file_extensions:  [..] string;
-    ignore_file_extensions: [..] string;
-    
-    while true {
-        line, found := consume_next_line(*handler);
-        if !found break;
-        
-        // Maybe switch to a different top section
-        if begins_with(line, "[[") {
-            error := switch_top_section(*parser, line);
-            if error return Config.{}, false;
-            continue;
-        }
-        
-        if #complete parser.top_section == {
-            case .none;
-                log_error("Expected a top-level section definition, got '%'", line);
-                return result, false;
-                
-            case .workspace;
-                if begins_with(line, "[") {
-                    if line == {
-                        case "[workspace dirs]";         parser.workspace_subsection = .workspace_dirs;
-                        case "[ignore dirs]";            parser.workspace_subsection = .ignore_dirs;
-                        case "[allow file extensions]";  parser.workspace_subsection = .allow_file_extensions;
-                        case "[ignore file extensions]"; parser.workspace_subsection = .ignore_file_extensions;
-                        case; log_error("Unknown subsection '%'", line); return result, false;
-                    }
-                    continue;
-                }
-                if #complete parser.workspace_subsection == {
-                    case .none;
-                        log_error("Expected a subsection definition, got '%'", line);
-                        return result, false;
-                    case .workspace_dirs;
-                        dir_path := line;
-                        if file_exists(dir_path) {
-                            array_add(*workspace_dirs, dir_path);
-                        } else {
-                            log_error("Directory '%' doesn't exist, skipping...", dir_path);
-                        }
-                    case .ignore_dirs;
-                        dirs := split(line, cast(u8) #char " ");
-                        for dir : dirs {
-                            if !dir continue;
-                            array_add(*ignore_dirs, dir);
-                        }
-                    case .allow_file_extensions;
-                        extensions := split(line, cast(u8) #char " ");
-                        for extensions {
-                            if !it continue;
-                            array_add(*allow_file_extensions, it);
-                        }
-                    case .ignore_file_extensions;
-                        extensions := split(line, cast(u8) #char " ");
-                        for extensions {
-                            if !it continue;
-                            array_add(*ignore_file_extensions, it);
-                        }
-                }                
-                
-            case .settings;
-                // TODO
-                
-            case .keymap;
-                // TODO
-                
-            case .colors;
-                // TODO
-                                
-        }
-    }
-    
-    // Cast away the extendable arrays into array views
-    result.workspace.workspace_dirs = workspace_dirs;
-    result.workspace.ignore_dirs = ignore_dirs;
-    result.workspace.allow_file_extensions = allow_file_extensions;
-    result.workspace.ignore_file_extensions = ignore_file_extensions;
-    
-    return result, true;
-}
-
-
-switch_top_section :: (using parser: *Config_Parser, line: string) -> error: bool {
-    if line == {
-        case "[[workspace]]";
-            top_section = .workspace;
-            if seen_top_sections & .workspace { log_error("The section '[[workspace]]' is defined twice. This is an error."); return true; }
-            seen_top_sections |= .workspace;
-            
-        case "[[keymap]]";
-            top_section = .keymap;
-            if seen_top_sections & .keymap { log_error("The section '[[keymap]]' is defined twice. This is an error."); return true; }
-            seen_top_sections |= .keymap;
-            
-        case "[[colors]]";
-            top_section = .colors;
-            if seen_top_sections & .colors { log_error("The section '[[colors]]' is defined twice. This is an error."); return true; }
-            seen_top_sections |= .colors;
-            
-        case "[[settings]]";
-            top_section = .settings;
-            if seen_top_sections & .settings { log_error("The section '[[settings]]' is defined twice. This is an error."); return true; }
-            seen_top_sections |= .settings;
-            
-        case;
-            log_error("Expected one of the following top-level sections: '[[workspace]]', '[[settings]]', '[[keymap]]', '[[colors]]', but found '%'", line);
-            return true;
-    }
-    
-    return false;
-}
-
 #scope_export
 
 config: Config = DEFAULT_CONFIG;
 
 Config :: struct {
     workspace: Workspace;
+    settings: Settings;
     keymap: Keymap;
     colors: Colors;
 }
@@ -191,6 +66,10 @@ Workspace :: struct {
     ignore_dirs: [] string;
     allow_file_extensions:  [] string;
     ignore_file_extensions: [] string;
+}
+
+Settings :: struct {
+    // TODO
 }
 
 Keymap :: struct {
@@ -289,31 +168,6 @@ is_none :: (using color: Color) -> bool {
 
 #scope_file
 
-Config_Parser :: struct {
-    top_section: enum {
-        none;
-        workspace;
-        keymap;
-        colors;
-        settings;
-    } = .none;
-    
-    seen_top_sections: enum_flags {
-        workspace;
-        keymap;
-        colors;
-        settings;
-    };
-    
-    workspace_subsection: enum {
-        none;
-        workspace_dirs;
-        ignore_dirs;
-        allow_file_extensions;
-        ignore_file_extensions;
-    };
-}
-
 DEFAULT_CONFIG_NAME :: "default.focus-config";  // in the focus project folder
 
 DEFAULT_CONFIG_FILE_DATA :: #run read_entire_file(DEFAULT_CONFIG_NAME);
@@ -324,5 +178,4 @@ DEFAULT_CONFIG :: #run -> Config {
     return config;
 };
 
-
-#import "Text_File_Handler";
+#load "config_parser.jai";
