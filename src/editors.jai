@@ -22,7 +22,7 @@ editors_handle_event :: (event: Input.Event) {
             }
 
             // Let the active editor handle the event
-            if event.key_pressed then editors_handle_key_press  (event.key_code, mods);
+            if event.key_pressed then editors_handle_key_press  (event);
                                  else editors_handle_key_release(event.key_code, mods);
 
         case .TEXT_INPUT;
@@ -30,17 +30,20 @@ editors_handle_event :: (event: Input.Event) {
     }
 }
 
-editors_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
+editors_handle_key_press :: (event: Input.Event) {
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
-
+    
+    key_code := event.key_code;
+    mods := event.modifier_flags;
+    
     if editor.search_bar.active {
         using editor.search_bar;
         old_search_str := copy_temporary_string(to_string(input.text));
-        handled := text_input_handle_keypress(*input, key_code, mods);
+        handled := text_input_handle_event(*input, event);
         if handled && old_search_str != to_string(input.text) then search_and_update_results(editor, buffer, jump = true);
 
-        if key_code == {
+        if event.key_code == {
             case .ESCAPE;
                 close_search_bar(editor);
             case .ENTER; #through;

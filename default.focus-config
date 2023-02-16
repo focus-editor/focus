@@ -45,6 +45,9 @@ disable_that_annoying_paste_effect: false
 
 [[keymap]]
 
+# {Shift}- means shift is optional, the key combination will still be matched.
+# NOTE: the first matching combination will be used, so order matters.
+
 [common]
 
 Ctrl-F              search_in_buffer
@@ -61,28 +64,29 @@ Ctrl-V              paste
 Ctrl-Z              undo
 Ctrl-Shift-Z        redo
 
+Ctrl-D              select_word
 Ctrl-A              select_all
 
 Ctrl-Shift-L        toggle_expand
 
-ArrowUp             move_up
-Ctrl-ArrowUp        move_up_fast
-PageUp              move_up_one_page
+{Shift}-ArrowUp             move_up
+{Shift}-Ctrl-ArrowUp        move_up_fast
+{Shift}-PageUp              move_up_one_page
 
-ArrowDown           move_down
-Ctrl-ArrowDown      move_down_fast
-PageDown            move_down_one_page
+{Shift}-ArrowDown           move_down
+{Shift}-Ctrl-ArrowDown      move_down_fast
+{Shift}-PageDown            move_down_one_page
 
-ArrowLeft           move_left
-Alt-ArrowLeft       move_left_by_word
-Ctrl-ArrowLeft      move_left_by_word_end
+{Shift}-ArrowLeft           move_left
+{Shift}-Alt-ArrowLeft       move_left_by_word
+{Shift}-Ctrl-ArrowLeft      move_left_by_word_ends
 
-ArrowRight          move_right
-Alt-ArrowRight      move_right_by_word
-Ctrl-ArrowRight     move_right_by_word_end
+{Shift}-ArrowRight          move_right
+{Shift}-Alt-ArrowRight      move_right_by_word
+{Shift}-Ctrl-ArrowRight     move_right_by_word_ends
 
-Home                home
-End                 end
+{Shift}-Home                home
+{Shift}-End                 end
 
 Backspace           delete_left_char
 Delete              delete_right_char
@@ -147,6 +151,8 @@ Ctrl-2              open_entry_on_the_right
 Tab                 open_directory
 /                   open_directory
 \                   open_directory
+
+Backspace           pop_directory
 
 
 [search dialog]

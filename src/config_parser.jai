@@ -175,9 +175,12 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo
         found, mod_key, remainder := split_from_left(modifier_string, cast(u8) #char "-");
         if !found break;
         
-        if      equal_nocase(mod_key, "ctrl")  result.mods.ctrl_pressed  = true;
-        else if equal_nocase(mod_key, "shift") result.mods.shift_pressed = true;
-        else if equal_nocase(mod_key, "alt")   result.mods.alt_pressed   = true;
+        if      equal_nocase(mod_key, "ctrl")       result.mods.ctrl_pressed    = true;
+        else if equal_nocase(mod_key, "shift")      result.mods.shift_pressed   = true;
+        else if equal_nocase(mod_key, "alt")        result.mods.alt_pressed     = true;
+        else if equal_nocase(mod_key, "{ctrl}")     result.ignore.ctrl_pressed  = true;
+        else if equal_nocase(mod_key, "{shift}")    result.ignore.shift_pressed = true;
+        else if equal_nocase(mod_key, "{alt}")      result.ignore.alt_pressed   = true;
         else {
             error(handler, "Unknown modifier key '%'", mod_key);
             return result, false;
@@ -265,6 +268,9 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo
         
         result.key_code = key_code;
     }
+    
+    // Pre-apply the ignore mask
+    result.mods.packed |= result.ignore.packed;
     
     return result, true;
 }

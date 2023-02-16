@@ -29,7 +29,7 @@ finder_handle_event :: (event: Input.Event) {
                         if only_ctrl_pressed(mods)       { show_open_file_dialog(mode = .navigate); return; }
                         if only_ctrl_shift_pressed(mods) { show_open_file_dialog(mode = .navigate, from_root = true); return; }
                 }
-                finder_handle_key_press(event.key_code, mods);
+                finder_handle_key_press(event);
             }
 
         case .TEXT_INPUT;
@@ -37,10 +37,13 @@ finder_handle_event :: (event: Input.Event) {
     }
 }
 
-finder_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
+finder_handle_key_press :: (event: Input.Event) {
     using finder;
+    
+    key_code := event.key_code;
+    mods := event.modifier_flags;
 
-    handled := text_input_handle_keypress(*input, key_code, mods);
+    handled := text_input_handle_event(*input, event);
     if handled {
         start_new_search();
         return;

@@ -32,6 +32,7 @@
     - Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
     - Have a user error log - with an icon in the title bar to toggle it
     - Ignore project folders which are children of another project folder?
+    - Trace the whole project to see if we're doing something stupid
     
 - Rewrite the input system using the keymap handler
     - Debug the config key map

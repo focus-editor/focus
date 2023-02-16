@@ -1,29 +1,29 @@
-map_event_to_action :: (event: Input.Event, $action_type: $T) -> action_type, success: bool {
-    #if action_type == Actions_Common {
+map_event_to_action :: (event: Input.Event, $action_type: Type) -> action_type {
+    #if action_type == Action_Common {
         keymap := config.keymap.common;
-    } else #if action_type == Actions_Editors {
+    } else #if action_type == Action_Editors {
         keymap := config.keymap.editors;
-    } else #if action_type == Actions_Open_File_Dialog {
+    } else #if action_type == Action_Open_File_Dialog {
         keymap := config.keymap.open_file_dialog;
-    } else #if action_type == Actions_Search_Dialog {
+    } else #if action_type == Action_Search_Dialog {
         keymap := config.keymap.search_dialog;
     } else {
-        #assert(false, "In map_event_to_action, the passed action_type is not supported.");
+        #assert(false, "In map_event_to_action, the passed action type is not supported.");
     }
     
-    invalid := cast(action_type) 0;
+    invalid := cast(action_type) 0xFFFF;
     
-    if event.type != .KEYBOARD return invalid, false;
-    if !event.key_pressed return invalid, false;
+    if event.type != .KEYBOARD return invalid;
+    if !event.key_pressed return invalid;
     
-    event_combo: u64 = (cast(u64) event.key_code) << 32 | cast(u64) event.modifier_flags.packed;
+    event_key_code := cast(u32) event.key_code;
     
-    for mapping : keymap {
-        if mapping.combo.packed == event_combo {
-            return cast(action_type) mapping.action, true;
+    for keymap {
+        if it.combo.key_code == event_key_code && it.combo.mods.packed == (event.modifier_flags.packed | it.combo.ignore.packed) {
+            return cast(action_type) it.action;
         }
     }
-    return invalid, false;
+    return invalid;
 }
 
 Key_Mapping :: struct {
@@ -31,13 +31,11 @@ Key_Mapping :: struct {
     action: u32;  // NOTE: tried to use a union with actual enums here, but the compiler crashes @compilerbug
 }
 
-Key_Combo :: union {
-    struct {
-        key_code: u32;
-        mods: Mods;
-    };
-    packed: u64;
-}
+Key_Combo :: struct {
+    key_code: u32;
+    mods: Mods;  
+    ignore: Mods;
+} #no_padding;
 
 // Generate action enums from the corresponding arrays below
 #insert -> string {
@@ -45,15 +43,15 @@ Key_Combo :: union {
     init_string_builder(*b);
 
     define_enum :: (b: *String_Builder, enum_name: string, values: [] string) {
-        print_to_builder(b, "% :: enum u32 {\n", enum_name);
+        print_to_builder(b, "% :: enum u16 {\n", enum_name);
         for v : values print_to_builder(b, "    %;\n", v);
         print_to_builder(b, "}\n");
     }
 
-    define_enum(*b, "Actions_Common",           ACTIONS_COMMON);
-    define_enum(*b, "Actions_Editors",          ACTIONS_EDITORS);
-    define_enum(*b, "Actions_Open_File_Dialog", ACTIONS_OPEN_FILE_DIALOG);
-    define_enum(*b, "Actions_Search_Dialog",    ACTIONS_SEARCH_DIALOG);
+    define_enum(*b, "Action_Common",           ACTIONS_COMMON);
+    define_enum(*b, "Action_Editors",          ACTIONS_EDITORS);
+    define_enum(*b, "Action_Open_File_Dialog", ACTIONS_OPEN_FILE_DIALOG);
+    define_enum(*b, "Action_Search_Dialog",    ACTIONS_SEARCH_DIALOG);
 
     return builder_to_string(*b);
 }
@@ -69,6 +67,7 @@ ACTIONS_COMMON :: string.[
     "paste",
     "undo",
     "redo",
+    "select_word",
     "select_all",
     "toggle_expand",
     "move_up",
@@ -79,10 +78,10 @@ ACTIONS_COMMON :: string.[
     "move_down_one_page",
     "move_left",
     "move_left_by_word",
-    "move_left_by_word_end",
+    "move_left_by_word_ends",
     "move_right",
     "move_right_by_word",
-    "move_right_by_word_end",
+    "move_right_by_word_ends",
     "home",
     "end",
     "delete_left_char",
@@ -126,6 +125,7 @@ ACTIONS_OPEN_FILE_DIALOG :: string.[
     "open_entry_on_the_left",
     "open_entry_on_the_right",
     "open_directory",
+    "pop_directory",
 ];
 
 ACTIONS_SEARCH_DIALOG :: string.[

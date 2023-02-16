@@ -1,36 +1,49 @@
 open_file_dialog_handle_event :: (event: Input.Event) {
     using open_file_dialog;
-    if event.type == {
-        case .KEYBOARD;
-            if event.key_pressed {
-                if event.key_code == .BACKSPACE {
-                    // Checking it here because otherwise the input would handle it
-                    if mode == .navigate && !input.text && path_chunks {
-                        last := pop(*path_chunks);
-                        free(last);
-                        
-                        refresh_entries(scan_folder = true);
-                        return;
-                    }
-                }
-                
-                // ????????????????????
-                action, success := map_event_to_action(event, Actions_Open_File_Dialog);
-                if success {
-                    print("matched\n");
-                    if action == Actions_Open_File_Dialog.close_dialog {
-                        print("closing\n");
-                        hide_open_file_dialog();
-                    }
-                }
-                open_file_dialog_handle_key_press(event.key_code, event.modifier_flags);
-            }
-
-        case .TEXT_INPUT;
-            char := event.utf32;
-            if open_file_dialog.mode == .navigate && (char == #char "/" || char == #char "\\") return;  // these are special chars, don't handle
+    
+    if event.type == .KEYBOARD && event.key_pressed {
+        dialog_action := map_event_to_action(event, Action_Open_File_Dialog);
+        if #complete dialog_action == {
+            case .close_dialog;             hide_open_file_dialog(); return;
+            case .open_entry_in_place;      open_file_dialog_open_entry(entries.selected, .in_place);    return;
+            case .open_entry_on_the_side;   open_file_dialog_open_entry(entries.selected, .on_the_side); return;
+            case .open_entry_on_the_left;   open_file_dialog_open_entry(entries.selected, .left);        return;
+            case .open_entry_on_the_right;  open_file_dialog_open_entry(entries.selected, .right);       return;
+            case .open_directory;           open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true); return;
+            case .pop_directory;            if pop_directory() return;
+        }
+        
+        
+        handled := maybe_handle_text_input_event(*input, event);
+        if handled return;
+        
+        common_action := map_event_to_action(event, Action_Common);
+        if common_action == {
+            case .search_in_buffer;     return;  // TODO: handle when the widget is rewritten
+            case .search_in_project;    finder_open();                  return;
+            case .toggle_expand;        toggle_expand();                return;
+            case .move_up;              move_cursor(-1, wrap = true);   return;
+            case .move_down;            move_cursor( 1, wrap = true);   return;
+            case .move_up_fast;         move_cursor(-5);                return;
+            case .move_down_fast;       move_cursor( 5);                return;
+            case .move_up_one_page;     move_cursor(-entries.per_page); return;
+            case .move_down_one_page;   move_cursor( entries.per_page); return;
             
-            open_file_dialog_handle_text_input(char);
+            case .show_open_file_dialog_in_search_mode;
+            case .show_open_file_dialog_in_navigate_mode;
+            case .show_open_file_dialog_in_navigate_mode_from_root;
+        }
+        
+    } else if event.type == .TEXT_INPUT {
+        char := event.utf32;
+        if open_file_dialog.mode == .navigate && (char == #char "/" || char == #char "\\") return;  // these are special chars, don't handle
+        
+        if char == 127 return;  // there seems to be a bug in the Input module
+                                // which generates a TEXT_INPUT event for DEL
+                                // when Ctrl+Backspace is pressed
+    
+        text_input_type_char(*open_file_dialog.input, char);
+        refresh_entries();
     }
 }
 
@@ -50,72 +63,6 @@ show_open_file_dialog :: (mode: Open_File_Dialog.Mode, from_root := false) {
 
 hide_open_file_dialog :: () {
     active_global_widget = .editors;
-}
-
-open_file_dialog_handle_key_press :: (key_code: Input.Key_Code, mods: Mods) {
-    using open_file_dialog;
-
-    input_text := copy_temporary_string(to_string(input.text));
-    handled := text_input_handle_keypress(*input, key_code, mods);
-    if handled {
-        if input_text != to_string(input.text) then refresh_entries();
-        return;
-    }
-
-    if key_code == {
-        case .ESCAPE;   
-            hide_open_file_dialog();
-            
-        case .TAB;       #through;
-        case #char "/";  #through;
-        case #char "\\";
-            if mode == .navigate {
-                open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true);
-            }
-        
-        case #char "L"; 
-            if only_ctrl_shift_pressed(mods) then toggle_expand();
-            
-        case #char "P";
-            // Maybe switch to search
-            if only_ctrl_pressed(mods) {
-                if mode != .search { show_open_file_dialog(mode = .search); return; }
-            }
-        case #char "O";
-            if only_ctrl_pressed(mods) {
-                if mode != .navigate { show_open_file_dialog(mode = .navigate); return; }
-            }
-            if only_ctrl_shift_pressed(mods) { 
-                show_open_file_dialog(mode = .navigate, from_root = true); 
-                return;
-            }
-        
-        case .ENTER;
-            placement := ifx only_ctrl_pressed(mods) then Editor_Placement.on_the_side else .in_place;
-            open_file_dialog_open_entry(entries.selected, placement);
-            
-        case #char "1";
-            if only_ctrl_pressed(mods) open_file_dialog_open_entry(entries.selected, placement = .left);
-            
-        case #char "2";
-            if only_ctrl_pressed(mods) open_file_dialog_open_entry(entries.selected, placement = .right);
-
-        case .ARROW_DOWN; #through;
-        case .ARROW_UP;
-            using entries;
-            selected += ifx key_code == .ARROW_UP then -1 else 1;
-            if selected < 0 then selected = max(0, filtered.count - 1);
-            if selected >= filtered.count then selected = 0;
-            scroll_to_cursor = true;
-
-        case .PAGE_UP; #through;
-        case .PAGE_DOWN;
-            using entries;
-            selected += ifx key_code == .PAGE_UP then -entries.per_page else entries.per_page;
-            if selected < 0 then selected = 0;
-            if selected >= filtered.count then selected = filtered.count - 1;
-            scroll_to_cursor = true;
-    }
 }
 
 open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, folder_only := false) {
@@ -166,18 +113,45 @@ open_file_dialog_truncate_path_chunks :: (chunk_index: s64) {
     refresh_entries(scan_folder = true);
 }
 
-open_file_dialog_handle_text_input :: (char: u32) {
-    if char == 127 return;  // there seems to be a bug in the Input module
-                            // which generates a TEXT_INPUT event for DEL
-                            // when Ctrl+Backspace is pressed
-
-    text_input_type_char(*open_file_dialog.input, char);
-
-    refresh_entries();
-}
-
 
 #scope_file
+
+maybe_handle_text_input_event :: (using input: *Text_Input, event: Input.Event) -> handled: bool {
+    input_text := copy_temporary_string(to_string(text));
+    handled := text_input_handle_event(input, event);
+    if handled {
+        if input_text != to_string(input.text) then refresh_entries();
+        return true;
+    }
+    return false;
+}
+
+move_cursor :: (delta: s64, wrap := false) {
+    using open_file_dialog.entries;
+    
+    selected += delta;
+    
+    if wrap {
+        if selected < 0 then selected = max(0, filtered.count - 1);
+        if selected >= filtered.count then selected = 0;
+    } else {
+        if selected < 0 then selected = 0;
+        if selected >= filtered.count then selected = filtered.count - 1;
+    }
+    open_file_dialog.scroll_to_cursor = true;
+}
+
+pop_directory :: () -> handled: bool {
+    using open_file_dialog;
+    if mode != .navigate || input.text || !path_chunks return false;
+    
+    last := pop(*path_chunks);
+    free(last);
+    
+    refresh_entries(scan_folder = true);
+    
+    return true;
+}
 
 clear_path_chunks :: () {
     for open_file_dialog.path_chunks free(it);

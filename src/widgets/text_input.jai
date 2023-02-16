@@ -1,100 +1,34 @@
-text_input_handle_keypress :: (using input: *Text_Input, key_code: Input.Key_Code, mods: Mods) -> handled: bool {
+text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> handled: bool {
     old_text := copy_temporary_string(to_string(text));
     if edits.count == 0 {
         // Always remember cursor before any edits
         cursor_before_edits = cursor;
     }
     if frame_time - last_edit_time >= EDIT_GROUP_TIMEOUT then new_edit_group(input);
+
+    action := map_event_to_action(event, Action_Common);
     
-    if key_code == {
-        case .ARROW_LEFT; #through;
-        case .ARROW_RIGHT;
-            if cursor.pos != cursor.sel && !mods.shift_pressed {
-                if key_code == .ARROW_LEFT {
-                    cursor.pos = min(cursor.pos, cursor.sel);
-                } else {
-                    cursor.pos = max(cursor.pos, cursor.sel);
-                }
-                cursor.sel = cursor.pos;
-            } else {
-                step := cast(s32) ifx mods.ctrl_pressed || mods.alt_pressed then 5 else 1;
-                cursor.pos += ifx key_code == .ARROW_LEFT then -step else step;
-                cursor.pos = clamp(cursor.pos, 0, get_num_chars(text));
-                if !mods.shift_pressed then cursor.sel = cursor.pos;
-            }
-
-        case .HOME;
-            cursor.pos = 0;
-            if !mods.shift_pressed then cursor.sel = cursor.pos;
-
-        case .END;
-            cursor.pos = get_num_chars(text);
-            if !mods.shift_pressed then cursor.sel = cursor.pos;
-
-        case .BACKSPACE; #through;
-        case .DELETE;            
-            if cursor.pos == cursor.sel {
-                cursor.sel = ifx key_code == .DELETE then cursor.pos + 1 else cursor.pos - 1;
-                cursor.sel = clamp(cursor.sel, 0, get_num_chars(text));
-            }
-
-            left, right := get_selected_offsets(text, cursor);
-            if right > left then delete_range(input, left, right);
-
-            cursor.pos = min(cursor.sel, cursor.pos);
-            cursor.sel = cursor.pos;
-
-        case #char "A";
-            if only_ctrl_pressed(mods) {
-                select_all(input);
-            }
-
-        case #char "C"; #through;
-        case #char "X";
-            if only_ctrl_pressed(mods) && cursor.pos != cursor.sel {
-                left, right := get_selected_offsets(text, cursor);
-
-                os_clipboard_set_text(slice(to_string(text), left, right - left));
-
-                if key_code == #char "X" {
-                    if right > left then delete_range(input, left, right);
-                    cursor.pos = min(cursor.sel, cursor.pos);
-                    cursor.sel = cursor.pos;
-                }
-            }
-
-        case #char "V";
-            if only_ctrl_pressed(mods) {
-                str := os_clipboard_get_text();
-                defer free(str);
-
-                left, right := get_selected_offsets(text, cursor);
-
-                if cursor.pos != cursor.sel {
-                    replace_range(input, left, right, str);
-                } else {
-                    insert_string_at_offset(input, left, str);
-                }
-
-                cursor.pos = get_num_chars(array_view(text, 0, left + str.count));
-                cursor.sel = cursor.pos;
-            }
-            
-        case #char "D";
-            if only_ctrl_pressed(mods) {
-                select_word(input);
-            }
-            
-        case #char "Z";
-            if only_ctrl_pressed(mods) {
-                new_edit_group(input);
-                maybe_undo(input);
-            } else if only_ctrl_shift_pressed(mods) {
-                maybe_redo(input);
-            }
-
-        case;
-            return false;
+    extend_selection := event.shift_pressed;
+    
+    if action == {
+        case .copy;                     copy(input);
+        case .cut;                      cut(input);
+        case .paste;                    paste(input);
+        case .undo;                     undo(input);
+        case .redo;                     redo(input);
+        case .select_word;              select_word(input);
+        case .select_all;               select_all(input);
+        case .move_left;                move_cursor(input, -1, extend_selection);
+        case .move_left_by_word;        move_cursor(input, -5, extend_selection);   // TODO 
+        case .move_left_by_word_ends;   move_cursor(input, -5, extend_selection);   // TODO
+        case .move_right;               move_cursor(input,  1, extend_selection);
+        case .move_right_by_word;       move_cursor(input,  5, extend_selection);   // TODO
+        case .move_right_by_word_ends;  move_cursor(input,  5, extend_selection);   // TODO
+        case .home;                     move_home(input, extend_selection);
+        case .end;                      move_end (input, extend_selection);
+        case .delete_left_char;         delete_left_char (input);
+        case .delete_right_char;        delete_right_char(input);
+        case;                           return false;
     }
     
     if old_text != to_string(text) then last_edit_time = frame_time;
@@ -215,7 +149,40 @@ replace_text :: (using input: *Text_Input, new_text: string) {
 
 #scope_file
 
-maybe_undo :: (using input: *Text_Input) {
+copy :: (using input: Text_Input) {
+    if cursor.pos == cursor.sel return;
+    left, right := get_selected_offsets(text, cursor);
+    os_clipboard_set_text(slice(to_string(text), left, right - left));
+}
+
+cut :: (using input: *Text_Input) {
+    if cursor.pos == cursor.sel return;
+    left, right := get_selected_offsets(text, cursor);
+    os_clipboard_set_text(slice(to_string(text), left, right - left));
+    if right > left then delete_range(input, left, right);
+    cursor.pos = min(cursor.sel, cursor.pos);
+    cursor.sel = cursor.pos;
+}
+
+paste :: (using input: *Text_Input) {
+    str := os_clipboard_get_text();
+    defer free(str);
+
+    left, right := get_selected_offsets(text, cursor);
+
+    if cursor.pos != cursor.sel {
+        replace_range(input, left, right, str);
+    } else {
+        insert_string_at_offset(input, left, str);
+    }
+
+    cursor.pos = get_num_chars(array_view(text, 0, left + str.count));
+    cursor.sel = cursor.pos;
+}
+
+undo :: (using input: *Text_Input) {
+    new_edit_group(input);
+    
     if undos.count == 0 return;
     edit_group := pop(*undos);
     // Revert edits in the backwards order
@@ -235,7 +202,7 @@ maybe_undo :: (using input: *Text_Input) {
     cursor_before_edits = edit_group.cursor;
 }
 
-maybe_redo :: (using input: *Text_Input) {
+redo :: (using input: *Text_Input) {
     if redos.count == 0 return;
     edit_group := pop(*redos);
     // Replay edits in the normal order
@@ -253,6 +220,59 @@ maybe_redo :: (using input: *Text_Input) {
     undo.cursor = cursor;
     cursor = edit_group.cursor;
     cursor_before_edits = edit_group.cursor;
+}
+
+move_cursor :: (using input: *Text_Input, delta: s32, extend_selection := false) {
+    if cursor.pos != cursor.sel && !extend_selection {
+        // Jump to selection edge
+        if delta < 0 {
+            cursor.pos = min(cursor.pos, cursor.sel);
+        } else {
+            cursor.pos = max(cursor.pos, cursor.sel);
+        }
+        cursor.sel = cursor.pos;
+    } else {
+        // Move normally
+        cursor.pos += delta;
+        cursor.pos = clamp(cursor.pos, 0, get_num_chars(text));
+        if !extend_selection then cursor.sel = cursor.pos;
+    }
+}
+
+move_home :: inline (using input: *Text_Input, extend_selection := false) {
+    cursor.pos = 0;
+    if !extend_selection then cursor.sel = cursor.pos;
+}
+
+move_end :: inline (using input: *Text_Input, extend_selection := false) {
+    cursor.pos = get_num_chars(text);
+    if !extend_selection then cursor.sel = cursor.pos;
+}
+
+delete_left_char :: inline (using input: *Text_Input) {
+    if cursor.pos == cursor.sel {
+        // No selection - create one
+        cursor.sel = cursor.pos - 1;
+        cursor.sel = clamp(cursor.sel, 0, get_num_chars(text));
+    }
+    delete_selection(input);
+}
+
+delete_right_char :: inline (using input: *Text_Input) {
+    if cursor.pos == cursor.sel {
+        // No selection - create one
+        cursor.sel = cursor.pos + 1;
+        cursor.sel = clamp(cursor.sel, 0, get_num_chars(text));
+    }
+    delete_selection(input);
+}
+
+delete_selection :: inline (using input: *Text_Input) {
+    left, right := get_selected_offsets(text, cursor);
+    if right > left then delete_range(input, left, right);
+
+    cursor.pos = min(cursor.sel, cursor.pos);
+    cursor.sel = cursor.pos;
 }
 
 new_edit_group :: (using input: *Text_Input) {
