@@ -13,6 +13,16 @@ open_file_dialog_handle_event :: (event: Input.Event) {
                         return;
                     }
                 }
+                
+                // ????????????????????
+                action, success := map_event_to_action(event, Actions_Open_File_Dialog);
+                if success {
+                    print("matched\n");
+                    if action == Actions_Open_File_Dialog.close_dialog {
+                        print("closing\n");
+                        hide_open_file_dialog();
+                    }
+                }
                 open_file_dialog_handle_key_press(event.key_code, event.modifier_flags);
             }
 

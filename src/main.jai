@@ -433,6 +433,7 @@ Project_Dir :: struct {
 #load "files.jai";
 #load "workspace.jai";
 #load "config.jai";
+#load "keymap.jai";
 #load "session.jai";
 #load "meow_hash.jai";
 #load "widgets/text_input.jai";

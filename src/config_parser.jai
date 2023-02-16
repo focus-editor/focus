@@ -34,7 +34,7 @@ parse_config :: (name: string, filename: string, file_data: string) -> Config, s
             case .keymap;
                 success := parse_keymap_line(*parser, line);
                 if !success return result, false;
-                                
+
         }
     }
     
@@ -43,6 +43,11 @@ parse_config :: (name: string, filename: string, file_data: string) -> Config, s
     result.workspace.ignore_dirs = parser.data.ignore_dirs;
     result.workspace.allow_file_extensions = parser.data.allow_file_extensions;
     result.workspace.ignore_file_extensions = parser.data.ignore_file_extensions;
+    
+    result.keymap.common           = parser.data.keymap_common;
+    result.keymap.editors          = parser.data.keymap_editors;
+    result.keymap.open_file_dialog = parser.data.keymap_open_file_dialog;
+    result.keymap.search_dialog    = parser.data.keymap_search_dialog;
     
     return result, true;
 }
@@ -136,25 +141,26 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
     }
     
     // Parse actions
-    available_actions: [] string;
-    subsection: string;
-    if #complete keymap_subsection == {
-        case .common;           available_actions = KEYMAP_COMMON_ACTIONS;           subsection = "[common]";
-        case .editors;          available_actions = KEYMAP_EDITORS_ACTIONS;          subsection = "[editors]";
-        case .open_file_dialog; available_actions = KEYMAP_OPEN_FILE_DIALOG_ACTIONS; subsection = "[open file dialog]";
-        case .search_dialog;    available_actions = KEYMAP_SEARCH_DIALOG_ACTIONS;    subsection = "[search dialog]";
-    }
-    found := false;
-    for available_actions {
-        if equal_nocase(action_name, it) {
-            // TODO: map to action
-            found = true;
-            break;
+    map_action :: (name: string, combo: Key_Combo, available_actions: [] string, target_keymap: *[..] Key_Mapping, subsection: string) #expand {
+        found := false;
+        for available_actions {
+            if equal_nocase(name, it) {
+                array_add(target_keymap, Key_Mapping.{ combo = combo, action = cast(u32) it_index });
+                found = true;
+                break;
+            }
         }
+        if !found {
+            error(handler, "Invalid action '%'. Possible options in the % context are: \n%", name, subsection, join(..available_actions, "\n"));
+            `return false;
+        }   
     }
-    if !found {
-        error(handler, "Invalid action '%'. Possible options in the % context are: \n%", action_name, subsection, join(..available_actions, "\n"));
-        return false;
+    
+    if #complete keymap_subsection == {
+        case .common;           map_action(action_name, key_combo, ACTIONS_COMMON,           *data.keymap_common,           "[[common]]");
+        case .editors;          map_action(action_name, key_combo, ACTIONS_EDITORS,          *data.keymap_editors,          "[[editors]]");
+        case .open_file_dialog; map_action(action_name, key_combo, ACTIONS_OPEN_FILE_DIALOG, *data.keymap_open_file_dialog, "[[open file dialog]]");
+        case .search_dialog;    map_action(action_name, key_combo, ACTIONS_SEARCH_DIALOG,    *data.keymap_search_dialog,    "[[search dialog]]");
     }
     
     return true;
@@ -242,7 +248,7 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo
     }
     if !result.key_code {
         s := key_string;
-        // Map single key chars, e.g. Ctrl-A, Ctrl-C etc.
+        // Try single key chars, e.g. Ctrl-A, Ctrl-C etc.
         key_code, success := utf8_next_character(*s);
         if success != .CONVERSION_OK return result, false;
 
@@ -317,93 +323,14 @@ Config_Parser :: struct {
         ignore_dirs:            [..] string;
         allow_file_extensions:  [..] string;
         ignore_file_extensions: [..] string;
+        
+        // Keymap
+        keymap_common:           [..] Key_Mapping;
+        keymap_editors:          [..] Key_Mapping;
+        keymap_open_file_dialog: [..] Key_Mapping;
+        keymap_search_dialog:    [..] Key_Mapping;
     };
 }
-
-Key_Combo :: struct {
-    key_code: u32;
-    mods: Mods;
-}
-
-KEYMAP_COMMON_ACTIONS :: string.[
-    "search_in_buffer",
-    "search_in_project",
-    "show_open_file_dialog_in_search_mode",
-    "show_open_file_dialog_in_navigate_mode",
-    "show_open_file_dialog_in_navigate_mode_from_root",
-    "copy",
-    "cut",
-    "paste",
-    "undo",
-    "redo",
-    "select_all",
-    "toggle_expand",
-    "move_up",
-    "move_up_fast",
-    "move_up_one_page",
-    "move_down",
-    "move_down_fast",
-    "move_down_one_page",
-    "move_left",
-    "move_left_by_word",
-    "move_left_by_word_end",
-    "move_right",
-    "move_right_by_word",
-    "move_right_by_word_end",
-    "home",
-    "end",
-    "delete_left_char",
-    "delete_right_char",
-    "increase_font_size",
-    "decrease_font_size",
-    "reset_font_size_to_default",
-];
-
-KEYMAP_EDITORS_ACTIONS :: string.[
-    "select_word_or_create_another_cursor",
-    "duplicate_lines",
-    "move_selected_lines_up",
-    "move_selected_lines_down",
-    "indent_or_go_to_next_tabstop",
-    "unindent",
-    "indent",
-    "close_current_editor",
-    "close_other_editor",
-    "save",
-    "toggle_comment",
-    "scroll_viewport_up",
-    "scroll_viewport_down",
-    "scroll_viewport_left",
-    "scroll_viewport_right",
-    "move_cursor_to_viewport_center",
-    "remove_additional_cursors",
-    "break_line",
-    "new_line_below_without_breaking",
-    "new_line_above_without_breaking",
-    "switch_to_left_editor",
-    "switch_to_left_editor",
-    "switch_to_right_editor",
-    "switch_to_right_editor",
-    "move_editor_to_the_left",
-    "move_editor_to_the_right",
-];
-
-KEYMAP_OPEN_FILE_DIALOG_ACTIONS :: string.[
-    "close_dialog",
-    "open_entry_in_place",
-    "open_entry_on_the_side",
-    "open_entry_on_the_left",
-    "open_entry_on_the_right",
-    "open_directory",
-];
-
-KEYMAP_SEARCH_DIALOG_ACTIONS :: string.[
-    "close_dialog",
-    "open_entry_in_place",
-    "open_entry_on_the_side",
-    "open_entry_on_the_left",
-    "open_entry_on_the_right",
-];
 
 
 #import "Text_File_Handler";

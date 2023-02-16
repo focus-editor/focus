@@ -256,6 +256,17 @@ get_animation_value :: (using anim: Tween_Animation($T)) -> T {
     }
 }
 
+get_identifier_name :: (name: Code) -> string {
+    node := compiler_get_nodes(name);
+    if node.kind != .IDENT {
+        compiler_report("Not an identifier.", make_location(node));
+        return "";
+    }
+
+    ident := cast(*Code_Ident) node;
+    return ident.name;
+}
+
 
 #scope_export
 

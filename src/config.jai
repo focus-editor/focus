@@ -73,7 +73,10 @@ Settings :: struct {
 }
 
 Keymap :: struct {
-    // TODO
+    common:           [] Key_Mapping;
+    editors:          [] Key_Mapping;
+    open_file_dialog: [] Key_Mapping;
+    search_dialog:    [] Key_Mapping;
 }
 
 Color :: struct {

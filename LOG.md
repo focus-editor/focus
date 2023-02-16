@@ -34,6 +34,7 @@
     - Ignore project folders which are children of another project folder?
     
 - Rewrite the input system using the keymap handler
+    - Debug the config key map
     - Modify the config syntax highlighter so that it understands keymap
     - Support commenting out stuff in focus config
 
@@ -93,6 +94,7 @@
 - Log time with the session logger
 - Try to log asserts into log_error.txt - would be very helpful for debugging release builds
 - Either limit the number of bytes in text input, or improve the handling of cursor (currently calculating the length every frame)
+- Select word: depending on the char under cursor, select either word chars or punctuation
 
 - BUG: When reloading file from disk (refresh_buffer_from_disk) make sure to remove crlf (until it's supported at least)
 
