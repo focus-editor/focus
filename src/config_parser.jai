@@ -1,3 +1,5 @@
+// Adapted code from modules/Keymap
+
 parse_config :: (name: string, filename: string, file_data: string) -> Config, success: bool {
     parser: Config_Parser;
     result: Config;
@@ -126,17 +128,39 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
         return false;
     }
     
-    
-    key_combo, key_ok := parse_key_combo(handler, key_name);
+    // Parse key combo
+    key_combo, key_ok := parse_key_combo(parser, key_name);
     if !key_ok {
-        error(handler, "Invalid key combo: '%'. Note that spaces aren't allowed in key combos.", key_name);
+        error(handler, "Invalid key combo: '%'. Note that spaces aren't allowed in key combos.", line);
+        return false;
+    }
+    
+    // Parse actions
+    available_actions: [] string;
+    subsection: string;
+    if #complete keymap_subsection == {
+        case .common;           available_actions = KEYMAP_COMMON_ACTIONS;           subsection = "[common]";
+        case .editors;          available_actions = KEYMAP_EDITORS_ACTIONS;          subsection = "[editors]";
+        case .open_file_dialog; available_actions = KEYMAP_OPEN_FILE_DIALOG_ACTIONS; subsection = "[open file dialog]";
+        case .search_dialog;    available_actions = KEYMAP_SEARCH_DIALOG_ACTIONS;    subsection = "[search dialog]";
+    }
+    found := false;
+    for available_actions {
+        if equal_nocase(action_name, it) {
+            // TODO: map to action
+            found = true;
+            break;
+        }
+    }
+    if !found {
+        error(handler, "Invalid action '%'. Possible options in the % context are: \n%", action_name, subsection, join(..available_actions, "\n"));
         return false;
     }
     
     return true;
 }
 
-parse_key_combo :: (handler: Text_File_Handler, key_name: string) -> Key_Combo, success: bool {
+parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo, success: bool {
     result: Key_Combo;
     
     // Parse modifier flags
@@ -159,6 +183,81 @@ parse_key_combo :: (handler: Text_File_Handler, key_name: string) -> Key_Combo, 
     if !key_string {
         error(handler, "Missing key code after modifier flags: '%'", key_name);
         return result, false;
+    }
+    
+    Str_Code :: struct { str: string; code: Input.Key_Code; }
+    using Input.Key_Code;
+    STRING_TO_CODE_MAP :: Str_Code.[
+        .{ "ArrowUp",           ARROW_UP },
+        .{ "ArrowDown",         ARROW_DOWN },
+        .{ "ArrowLeft",         ARROW_LEFT },
+        .{ "ArrowRight",        ARROW_RIGHT },
+        
+        .{ "Escape",            ESCAPE },
+        .{ "Delete",            DELETE },
+        .{ "Insert",            INSERT },
+        .{ "End",               END },
+        .{ "Home",              HOME },
+        .{ "Backspace",         BACKSPACE },
+        .{ "PrintScreen",       PRINT_SCREEN },
+        .{ "Pause",             PAUSE },
+        .{ "PageUp",            PAGE_UP },
+        .{ "PageDown",          PAGE_DOWN },
+        .{ "ScrollLock",        SCROLL_LOCK },
+        .{ "Enter",             ENTER },
+        .{ "Return",            ENTER },
+        .{ "Tab",               TAB },
+        .{ "Shift",             SHIFT },
+        .{ "Alt",               ALT },
+        .{ "Control",           CTRL },
+        .{ "Space",             #char " " },
+        .{ "Plus",              #char "+" },
+        .{ "Minus",             #char "-" },
+        
+        .{ "F1",                F1 },
+        .{ "F2",                F2 },
+        .{ "F3",                F3 },
+        .{ "F4",                F4 },
+        .{ "F5",                F5 },
+        .{ "F6",                F6 },
+        .{ "F7",                F7 },
+        .{ "F8",                F8 },
+        .{ "F9",                F9 },
+        .{ "F10",               F10 },
+        .{ "F11",               F11 },
+        .{ "F12",               F12 },
+
+        .{ "MouseLeft",         MOUSE_BUTTON_LEFT },
+        .{ "MouseRight",        MOUSE_BUTTON_RIGHT },
+        .{ "MouseMiddle",       MOUSE_BUTTON_MIDDLE },
+        .{ "MouseWheelUp",      MOUSE_WHEEL_UP },
+        .{ "MouseWheelDown",    MOUSE_WHEEL_DOWN },
+    ];
+    
+    for STRING_TO_CODE_MAP {
+        if equal_nocase(key_string, it.str) {
+            result.key_code = cast(u32) it.code;
+            break; 
+        }
+    }
+    if !result.key_code {
+        s := key_string;
+        // Map single key chars, e.g. Ctrl-A, Ctrl-C etc.
+        key_code, success := utf8_next_character(*s);
+        if success != .CONVERSION_OK return result, false;
+
+        if (key_code >= #char "a") && (key_code <= #char "z") {
+            // Uppercase it, since our keyboard codes are uppercase.
+            key_code += cast,trunc(u32) (#char "A" - #char "a");  // This is a negative number; but we cast it to u32 and get the same result, because, twos-complement. The trunc is to make this legal.
+        }
+    
+        if s.count > 0 {
+            // There are extra characters, report an error
+            error(handler, "Expected a single char key code, got: '%'.\n", key_string);
+            return result, false;
+        }
+        
+        result.key_code = key_code;
     }
     
     return result, true;
@@ -201,7 +300,7 @@ Config_Parser :: struct {
         common;
         editors;
         open_file_dialog;
-        search_dialog;  
+        search_dialog;
     };
     KEYMAP_SUBSECTIONS :: string.[
         // Must match the order of the enum above
@@ -222,7 +321,7 @@ Config_Parser :: struct {
 }
 
 Key_Combo :: struct {
-    key_code: Input.Key_Code;
+    key_code: u32;
     mods: Mods;
 }
 
