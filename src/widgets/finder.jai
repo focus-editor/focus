@@ -15,75 +15,48 @@ init_finder :: () {
 }
 
 finder_handle_event :: (event: Input.Event) {
-    mods := event.modifier_flags;
-    
-    if event.type == {
-        case .KEYBOARD;
-            if event.key_pressed {
-                if event.key_code == {
-                    case .ESCAPE;   
-                        finder_close(); return;
-                    case #char "P"; 
-                        if only_ctrl_pressed(mods)       { show_open_file_dialog(mode = .search); return; }
-                    case #char "O"; 
-                        if only_ctrl_pressed(mods)       { show_open_file_dialog(mode = .navigate); return; }
-                        if only_ctrl_shift_pressed(mods) { show_open_file_dialog(mode = .navigate, from_root = true); return; }
-                }
-                finder_handle_key_press(event);
-            }
-
-        case .TEXT_INPUT;
-            finder_handle_text_input(event.utf32);
-    }
-}
-
-finder_handle_key_press :: (event: Input.Event) {
     using finder;
     
-    key_code := event.key_code;
-    mods := event.modifier_flags;
-
-    handled := text_input_handle_event(*input, event);
-    if handled {
-        start_new_search();
-        return;
-    }
-
-    if key_code == {
-        case #char "L";    if only_ctrl_shift_pressed(mods) toggle_expand();
-        case .ENTER;
-            placement := ifx only_ctrl_pressed(mods) then Editor_Placement.on_the_side else .in_place;
-            finder_open_selected_result(placement = placement);
+    if event.type == .KEYBOARD && event.key_pressed {
+        common_action := map_event_to_action(event, Action_Common);
+        if common_action == {
+            // case .search_in_buffer;     return;  // TODO: handle when the widget is rewritten
+            // case .search_in_project;    finder_open();                  return;
             
-        case #char "1";
-            if only_ctrl_pressed(mods) finder_open_selected_result(placement = .left);            
-        case #char "2";
-            if only_ctrl_pressed(mods) finder_open_selected_result(placement = .right);
+            case .toggle_expand;        toggle_expand();                return;
+            case .move_up;              move_cursor(-1, wrap = true);   return;
+            case .move_down;            move_cursor( 1, wrap = true);   return;
+            case .move_up_fast;         move_cursor(-5);                return;
+            case .move_down_fast;       move_cursor( 5);                return;
+            case .move_up_one_page;     move_cursor(-per_page);         return;
+            case .move_down_one_page;   move_cursor( per_page);         return;
+            
+            case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
+            case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
+            case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);
+        }
         
-        case .ARROW_DOWN; #through;
-        case .ARROW_UP;
-            move_by := ifx only_ctrl_pressed(mods) then 5 else 1;
-            selected += ifx key_code == .ARROW_UP then -move_by else move_by;
-            if selected < 0 then selected = max(0, results.count - 1);
-            if selected >= results.count then selected = 0;
-            scroll_to_cursor = true;
-
-        case .PAGE_UP; #through;
-        case .PAGE_DOWN;
-            selected += ifx key_code == .PAGE_UP then -per_page else per_page;
-            if selected < 0 then selected = 0;
-            if selected >= results.count then selected = results.count - 1;
-            scroll_to_cursor = true;
+        handled := text_input_handle_event(*input, event);
+        if handled { start_new_search(); return; }
+        
+        dialog_action := map_event_to_action(event, Action_Search_Dialog);
+        if #complete dialog_action == {
+            case .close_dialog;             finder_close();     return;
+            case .open_entry_in_place;      finder_open_selected_result(selected, .in_place);     return;
+            case .open_entry_on_the_side;   finder_open_selected_result(selected, .on_the_side);  return;
+            case .open_entry_on_the_left;   finder_open_selected_result(selected, .left);         return;
+            case .open_entry_on_the_right;  finder_open_selected_result(selected, .right);        return;
+        }
+        
+    } else if event.type == .TEXT_INPUT {
+        char := event.utf32;
+        if char == 127 return;  // there seems to be a bug in the Input module
+                                // which generates a TEXT_INPUT event for DEL
+                                // when Ctrl+Backspace is pressed
+    
+        text_input_type_char(*finder.input, char);
+        start_new_search();
     }
-}
-
-finder_handle_text_input :: (char: u32) {
-    if char == 127 return;  // there seems to be a bug in the Input module
-                            // which generates a TEXT_INPUT event for DEL
-                            // when Ctrl+Backspace is pressed
-
-    text_input_type_char(*finder.input, char);
-    start_new_search();
 }
 
 finder_open :: () {
@@ -202,6 +175,21 @@ finder_open_selected_result :: (selected_num := -1, placement: Editor_Placement)
 }
 
 #scope_file
+
+move_cursor :: (delta: s64, wrap := false) {
+    using finder;
+    
+    selected += delta;
+    
+    if wrap {
+        if selected < 0 then selected = max(0, results.count - 1);
+        if selected >= results.count then selected = 0;
+    } else {
+        if selected < 0 then selected = 0;
+        if selected >= results.count then selected = results.count - 1;
+    }
+    scroll_to_cursor = true;
+}
 
 start_new_search :: (force := false) {
     using finder;

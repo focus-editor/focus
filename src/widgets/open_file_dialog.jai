@@ -13,7 +13,6 @@ open_file_dialog_handle_event :: (event: Input.Event) {
             case .pop_directory;            if pop_directory() return;
         }
         
-        
         handled := maybe_handle_text_input_event(*input, event);
         if handled return;
         
@@ -29,9 +28,9 @@ open_file_dialog_handle_event :: (event: Input.Event) {
             case .move_up_one_page;     move_cursor(-entries.per_page); return;
             case .move_down_one_page;   move_cursor( entries.per_page); return;
             
-            case .show_open_file_dialog_in_search_mode;
-            case .show_open_file_dialog_in_navigate_mode;
-            case .show_open_file_dialog_in_navigate_mode_from_root;
+            case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
+            case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
+            case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);
         }
         
     } else if event.type == .TEXT_INPUT {
