@@ -34,10 +34,14 @@ temp
 .bin .sys .iso
 
 [[settings]]
-# TODO
-
-[[colors]]
-# TODO
+theme: default  # TODO: colors + things like rounding radius, fonts, font sizes etc.
+tab_size: 4
+cursor_style: block  # block or line
+convert_crlf_to_lf_on_load:         true
+convert_tabs_to_spaces_on_load:     false
+highlight_selection_occurrences:    true
+load_last_session_on_start:         true
+disable_that_annoying_paste_effect: false
 
 [[keymap]]
 

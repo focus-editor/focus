@@ -81,6 +81,9 @@
       (or maybe when it hasn't been edited or opened in this session?)
     - Be able to ignore individual files
     
+- Multiple cursors: when cursors have copied something into their own buffers and we remove the cursors,
+  their buffers should be concatenated and put into the OS buffer
+    
 - New search-in-buffer widget - an extension from finder (with different modes of work, with transitions between each):
     - It's much nicer to see all occurrences at the same time, rather than trying to cycle through them blindly
     - Make it look like the project search widget, but without the file names (so can be smaller)
@@ -128,7 +131,8 @@
 - Ctrl + J to join lines (should there be a limit of how many?)
 - (Ctrl (VSCode) or Alt (N++) or Alt+Shift (macOS)) + Mouse Click to add an additional cursor wherever the mouse is.
 - Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt
-- Save font size in the current project config when changed
+
+- Optimisation: with large files, disable selection highlights
 
 - Save editor state on editor operations:
     - Alt + minus to open previous state
