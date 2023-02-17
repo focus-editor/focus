@@ -50,24 +50,24 @@ disable_that_annoying_paste_effect: false
 
 [common]
 
-Ctrl-F              search_in_buffer
-Ctrl-Shift-F        search_in_project
+Ctrl-F                      search_in_buffer
+Ctrl-Shift-F                search_in_project
 
-Ctrl-P              show_open_file_dialog_in_search_mode
-Ctrl-O              show_open_file_dialog_in_navigate_mode
-Ctrl-Shift-O        show_open_file_dialog_in_navigate_mode_from_root
+Ctrl-P                      show_open_file_dialog_in_search_mode
+Ctrl-O                      show_open_file_dialog_in_navigate_mode
+Ctrl-Shift-O                show_open_file_dialog_in_navigate_mode_from_root
 
-Ctrl-C              copy
-Ctrl-X              cut
-Ctrl-V              paste
+Ctrl-C                      copy
+Ctrl-X                      cut
+Ctrl-V                      paste
 
-Ctrl-Z              undo
-Ctrl-Shift-Z        redo
+Ctrl-Z                      undo
+Ctrl-Shift-Z                redo
 
-Ctrl-D              select_word
-Ctrl-A              select_all
+Ctrl-D                      select_word
+Ctrl-A                      select_all
 
-Ctrl-Shift-L        toggle_expand
+Ctrl-Shift-L                toggle_expand
 
 {Shift}-ArrowUp             move_up
 {Shift}-Ctrl-ArrowUp        move_up_fast
@@ -88,47 +88,49 @@ Ctrl-Shift-L        toggle_expand
 {Shift}-Home                home
 {Shift}-End                 end
 
-Backspace           delete_left_char
-Delete              delete_right_char
+Backspace                   delete_left_char
+Delete                      delete_right_char
 
-Ctrl-Plus           increase_font_size
-Ctrl-Minus          decrease_font_size
-Ctrl-0              reset_font_size_to_default
+Ctrl-Plus                   increase_font_size
+Ctrl-Minus                  decrease_font_size
+Ctrl-0                      reset_font_size_to_default
 
 [editors]
 
-Ctrl-D              select_word_or_create_another_cursor
+Ctrl-D                      select_word_or_create_another_cursor
 
-Ctrl-Shift-D        duplicate_lines
+Ctrl-Shift-D                duplicate_lines
 
-Ctrl-Alt-ArrowUp    move_selected_lines_up
-Ctrl-Alt-ArrowDown  move_selected_lines_down
+Ctrl-Shift-ArrowUp          move_selected_lines_up
+Ctrl-Shift-ArrowDown        move_selected_lines_down
 
-Tab                 indent_or_go_to_next_tabstop
-Shift-Tab           unindent
+Tab                         indent_or_go_to_next_tabstop
+Shift-Tab                   unindent
 
-Ctrl-]              indent
-Ctrl-[              unindent
+Ctrl-]                      indent
+Ctrl-[                      unindent
 
-Ctrl-W              close_current_editor
-Ctrl-Shift-W        close_other_editor
+Ctrl-W                      close_current_editor
+Ctrl-Shift-W                close_other_editor
 
-Ctrl-S              save
+Ctrl-S                      save
 
-Ctrl-/              toggle_comment
+Ctrl-/                      toggle_comment
+Ctrl-L                      select_line
 
-Alt-ArrowUp         scroll_viewport_up
-Alt-ArrowDown       scroll_viewport_down
-Alt-ArrowLeft       scroll_viewport_left
-Alt-ArrowRight      scroll_viewport_right
+# TODO: use other shortcuts
+#Alt-ArrowUp                 scroll_viewport_up
+#Alt-ArrowDown               scroll_viewport_down
+#Alt-ArrowLeft               scroll_viewport_left
+#Alt-ArrowRight              scroll_viewport_right
 
-Alt-C               move_cursor_to_viewport_center
+Alt-C                       move_cursor_to_viewport_center
 
-Escape              remove_additional_cursors
+Escape                      remove_additional_cursors
 
-Enter               break_line
-Ctrl-Enter          new_line_below_without_breaking
-Ctrl-Shift-Enter    new_line_above_without_breaking
+Enter                       break_line
+Ctrl-Enter                  new_line_below_without_breaking
+Ctrl-Shift-Enter            new_line_above_without_breaking
 
 Ctrl-Alt-ArrowLeft          switch_to_left_editor
 Ctrl-1                      switch_to_left_editor
@@ -141,25 +143,25 @@ Ctrl-Alt-Shift-ArrowRight   move_editor_to_the_right
 
 [open file dialog]
 
-Escape              close_dialog
+Escape                      close_dialog
 
-Enter               open_entry_in_place
-Ctrl-Enter          open_entry_on_the_side
-Ctrl-1              open_entry_on_the_left
-Ctrl-2              open_entry_on_the_right
+Enter                       open_entry_in_place
+Ctrl-Enter                  open_entry_on_the_side
+Ctrl-1                      open_entry_on_the_left
+Ctrl-2                      open_entry_on_the_right
 
-Tab                 open_directory
-/                   open_directory
-\                   open_directory
+Tab                         open_directory
+/                           open_directory
+\                           open_directory
 
-Backspace           pop_directory
+Backspace                   pop_directory
 
 
 [search dialog]
 
-Escape              close_dialog
+Escape                      close_dialog
 
-Enter               open_entry_in_place
-Ctrl-Enter          open_entry_on_the_side
-Ctrl-1              open_entry_on_the_left
-Ctrl-2              open_entry_on_the_right
+Enter                       open_entry_in_place
+Ctrl-Enter                  open_entry_on_the_side
+Ctrl-1                      open_entry_on_the_left
+Ctrl-2                      open_entry_on_the_right

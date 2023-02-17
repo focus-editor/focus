@@ -53,6 +53,8 @@
         - Delete file
         - Close file?
         
+- BUG: cursor is being drawn on the other pane sometimes
+        
 - New selection modes:
     - After double-click: enter word-selection mode
     - After triple-click: enter line-selection mode

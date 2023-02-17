@@ -103,6 +103,7 @@ ACTIONS_EDITORS :: string.[
     "close_other_editor",
     "save",
     "toggle_comment",
+    "select_line",
     "scroll_viewport_up",
     "scroll_viewport_down",
     "scroll_viewport_left",
