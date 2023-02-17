@@ -101,8 +101,8 @@ Ctrl-D                      select_word_or_create_another_cursor
 
 Ctrl-Shift-D                duplicate_lines
 
-Ctrl-Shift-ArrowUp          move_selected_lines_up
-Ctrl-Shift-ArrowDown        move_selected_lines_down
+Alt-Shift-ArrowUp           move_selected_lines_up
+Alt-Shift-ArrowDown         move_selected_lines_down
 
 Tab                         indent_or_go_to_next_tabstop
 Shift-Tab                   unindent

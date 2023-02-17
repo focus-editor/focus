@@ -120,51 +120,65 @@ editors_handle_key_press :: (event: Input.Event, common_action: Action_Common) {
                 buf_len = new_len;
             }
             
-            //  !!!!!  Try to get rid of "cursor_moved" !!!!!!!!
+            editor_action_handled := true;
+            common_action_handled := false;
+            
             if editor_action == {
-                case .break_line;                       break_line    (cursor, buffer); cursor_moved = true;
-                case .new_line_below_without_breaking;  new_line_below(cursor, buffer); cursor_moved = true;
-                case .new_line_above_without_breaking;  new_line_above(cursor, buffer); cursor_moved = true;
+                case .break_line;                       break_line    (cursor, buffer);
+                case .new_line_below_without_breaking;  new_line_below(cursor, buffer);
+                case .new_line_above_without_breaking;  new_line_above(cursor, buffer);
                 
-                case .duplicate_lines;                  if cursors.count == 1 { duplicate_lines(cursor, buffer); keep_selection = true; cursor_moved = true; }
-                case .move_selected_lines_up;           if cursors.count == 1 { move_lines_up  (cursor, buffer); keep_selection = true; cursor_moved = true; }
-                case .move_selected_lines_down;         if cursors.count == 1 { move_lines_down(cursor, buffer); keep_selection = true; cursor_moved = true; }
+                case .duplicate_lines;                  if cursors.count == 1 { duplicate_lines(cursor, buffer); keep_selection = true; }
+                case .move_selected_lines_up;           if cursors.count == 1 { move_lines_up  (cursor, buffer); keep_selection = true; }
+                case .move_selected_lines_down;         if cursors.count == 1 { move_lines_down(cursor, buffer); keep_selection = true; }
                 
-                case .indent_or_go_to_next_tabstop;     if indent_or_tab(cursor, buffer) keep_selection = true; cursor_moved = true;
-                case .indent;                           indent_lines  (cursor, buffer);  keep_selection = true; cursor_moved = true;
-                case .unindent;                         unindent_lines(cursor, buffer);  keep_selection = true; cursor_moved = true;
+                case .indent_or_go_to_next_tabstop;     if indent_or_tab(cursor, buffer) keep_selection = true;
+                case .indent;                           indent_lines  (cursor, buffer);  keep_selection = true;
+                case .unindent;                         unindent_lines(cursor, buffer);  keep_selection = true;
                 
-                case .toggle_comment;                   comment_block(cursor, buffer); keep_selection = true; cursor_moved = true;
-                case .select_line;                      select_lines(cursor, buffer); keep_selection = true; cursor_moved = true;
+                case .toggle_comment;                   comment_block(cursor, buffer); keep_selection = true;
+                case .select_line;                      select_lines(cursor, buffer); keep_selection = true;
+                
+                case;                                   editor_action_handled = false;
             }
-            // !!!!!!!!!!! check if handled
-            if common_action == {
-                // !!!!!!!!!!!!! TODO: split 
-                case .move_left;                move_cursor_left(cursor, buffer, mods); cursor_moved = true;
-                case .move_left_by_word;        move_cursor_left(cursor, buffer, mods); cursor_moved = true;
-                case .move_left_by_word_ends;   move_cursor_left(cursor, buffer, mods); cursor_moved = true;
-                case .move_right;               move_cursor_right(cursor, buffer, mods); cursor_moved = true;
-                case .move_right_by_word;       move_cursor_right(cursor, buffer, mods); cursor_moved = true;
-                case .move_right_by_word_ends;  move_cursor_right(cursor, buffer, mods); cursor_moved = true;
+            
+            
+            if !editor_action_handled {
+                common_action_handled = true;
                 
-                case .move_up;                  move_cursor_vertically(cursor, buffer, mods, .up);      cursor_moved = true; // !!!!!!!
-                case .move_down;                move_cursor_vertically(cursor, buffer, mods, .down);    cursor_moved = true; // !!!!!!!      
-                case .move_up_fast;             move_cursor_to_empty_line(cursor, buffer, mods, .up);   cursor_moved = true; // !!!!!!!!!!!!
-                case .move_down_fast;           move_cursor_to_empty_line(cursor, buffer, mods, .down); cursor_moved = true; // !!!!!!!!!!!!
-                case .move_up_one_page;         move_cursor_by_page(cursor, buffer, mods, .up);         cursor_moved = true; // !!!!
-                case .move_down_one_page;       move_cursor_by_page(cursor, buffer, mods, .down);       cursor_moved = true; // !!!!!!!!
-                
-                case .copy;                     copy_selection_to_clipboard(cursor, buffer, cursors.count == 1);
-                case .cut;                      copy_selection_to_clipboard(cursor, buffer, cursors.count == 1, cut = true); cursor_moved = true;
-                case .paste;                    paste_from_clipboard(editor, cursor, buffer); cursor_moved = true;
-                
-                case .select_word;              if !has_selection(cursor) { select_word(cursor, buffer); editor.search_whole_words = true; enabled_whole_words = true; cursor_moved = true; }
-                
-                case .home;                     move_cursor_home(cursor, buffer, mods); cursor_moved = true;
-                case .end;                      move_cursor_end (cursor, buffer, mods); cursor_moved = true;
-                case .delete_left_char;         handle_backspace(cursor, buffer, mods); cursor_moved = true;
-                case .delete_right_char;        handle_delete   (cursor, buffer, mods); cursor_moved = true;
+                if common_action == {
+                    // !!!!!!!!!!!!! TODO: split
+                    case .move_left;                move_cursor_left(cursor, buffer, mods);
+                    case .move_left_by_word;        move_cursor_left(cursor, buffer, mods);
+                    case .move_left_by_word_ends;   move_cursor_left(cursor, buffer, mods);
+                    case .move_right;               move_cursor_right(cursor, buffer, mods);
+                    case .move_right_by_word;       move_cursor_right(cursor, buffer, mods);
+                    case .move_right_by_word_ends;  move_cursor_right(cursor, buffer, mods);
+                    
+                    case .move_up;                  move_cursor_vertically(cursor, buffer, mods, .up);   // !!!!!!!
+                    case .move_down;                move_cursor_vertically(cursor, buffer, mods, .down); // !!!!!!!      
+                    case .move_up_fast;             move_cursor_to_empty_line(cursor, buffer, mods, .up);   // !!!!!!!!!!!!
+                    case .move_down_fast;           move_cursor_to_empty_line(cursor, buffer, mods, .down); // !!!!!!!!!!!!
+                    case .move_up_one_page;         move_cursor_by_page(cursor, buffer, mods, .up);      // !!!!
+                    case .move_down_one_page;       move_cursor_by_page(cursor, buffer, mods, .down);    // !!!!!!!!
+                    
+                    case .copy;                     copy_selection_to_clipboard(cursor, buffer, cursors.count == 1);
+                    case .cut;                      copy_selection_to_clipboard(cursor, buffer, cursors.count == 1, cut = true);
+                    case .paste;                    paste_from_clipboard(editor, cursor, buffer);
+                    
+                    case .select_word;              if !has_selection(cursor) { select_word(cursor, buffer); editor.search_whole_words = true; enabled_whole_words = true; }
+                    
+                    case .home;                     move_cursor_home(cursor, buffer, mods);
+                    case .end;                      move_cursor_end (cursor, buffer, mods);
+                    case .delete_left_char;         handle_backspace(cursor, buffer, mods);
+                    case .delete_right_char;        handle_delete   (cursor, buffer, mods);
+                    
+                    case;                           common_action_handled = false;
+                }
             }
+            
+            // Cursor doesn't move only when we copy, so this is to avoid specifying that it moved every time
+            if editor_action_handled || (common_action_handled && common_action != .copy) then cursor_moved = true;
 
         }
 
