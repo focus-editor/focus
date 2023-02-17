@@ -2,10 +2,10 @@ editors_handle_event :: (event: Input.Event) {
     mods := event.modifier_flags;
 
     if event.type == .KEYBOARD && event.key_pressed {
-        common_action := map_event_to_action(event, Action_Common);
+        action := map_event_to_action(event, Action_Editors);
         
         // Actions that do not require an active editor
-        if common_action == {
+        if action == {
             case .search_in_project;    finder_open_from_editor();         return;            
             case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
             case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
@@ -13,16 +13,21 @@ editors_handle_event :: (event: Input.Event) {
         }
 
         // Let the active editor handle the event
-        editors_handle_key_press(event, common_action);
+        active_editor_handle_event(event, action);
     
     } else if event.type == .KEYBOARD && !event.key_pressed {
-        editors_handle_key_release(event.key_code, mods);
+        // TODO: support hold actions
+        // if key_code == {
+        //     case .ARROW_UP; #through;
+        //     case .ARROW_DOWN;
+        //         editor_smooth_scroll.active = false;
+        // }
     } else if event.type == .TEXT_INPUT {
-        editors_handle_text_input(event.utf32);
+        active_editor_type_text(event.utf32);
     }
 }
 
-editors_handle_key_press :: (event: Input.Event, common_action: Action_Common) {
+active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
     
@@ -70,8 +75,7 @@ editors_handle_key_press :: (event: Input.Event, common_action: Action_Common) {
     // Handle general actions (which are not associated with any cursor)
     handled := true;
     
-    editor_action := map_event_to_action(event, Action_Editors);
-    if editor_action == {
+    if action == {
         case .close_current_editor;                 close_current_editor();
         case .close_other_editor;                   close_other_editor();
         case .save;                                 save_buffer(editor, buffer);
@@ -82,18 +86,17 @@ editors_handle_key_press :: (event: Input.Event, common_action: Action_Common) {
         case .move_editor_to_the_right;             if editors.active == editors.left  then swap_panes();
         case .move_cursor_to_viewport_center;       move_cursor_to_viewport_center(editor, buffer); cursor_moved = true;
         case .remove_additional_cursors;            cursor := leave_only_original_cursor(editor); remove_selection(cursor); cursor_moved = true;
-        case .scroll_viewport_up;                   vertical_smooth_scroll(editor, up = true);
-        case .scroll_viewport_down;                 vertical_smooth_scroll(editor, up = false);
+        // TODO: support hold actions, currently it's not configurable
+        // case .scroll_viewport_up;                   vertical_smooth_scroll(editor, up = true);
+        // case .scroll_viewport_down;                 vertical_smooth_scroll(editor, up = false);
         case .scroll_viewport_left;                 print("scroll_viewport_left - not implemented\n");
         case .scroll_viewport_right;                print("scroll_viewport_right - not implemented\n");
-        case;
-            if common_action == {
-                case .undo;             undo(buffer, editor); keep_selection = true; cursor_moved = true; handled = true;
-                case .redo;             redo(buffer, editor); keep_selection = true; cursor_moved = true; handled = true;
-                case .select_all;       cursor := leave_only_original_cursor(editor); select_all(cursor, buffer); keep_selection = true;
-                case .toggle_expand;    toggle_expand();
-                case;                   handled = false;
-            }
+        
+        case .undo;             undo(buffer, editor); keep_selection = true; cursor_moved = true; handled = true;
+        case .redo;             redo(buffer, editor); keep_selection = true; cursor_moved = true; handled = true;
+        case .select_all;       cursor := leave_only_original_cursor(editor); select_all(cursor, buffer); keep_selection = true;
+        case .toggle_expand;    toggle_expand();
+        case;                   handled = false;
     }
 
     if !handled {
@@ -120,10 +123,9 @@ editors_handle_key_press :: (event: Input.Event, common_action: Action_Common) {
                 buf_len = new_len;
             }
             
-            editor_action_handled := true;
-            common_action_handled := false;
+            handled = true;
             
-            if editor_action == {
+            if action == {
                 case .break_line;                       break_line    (cursor, buffer);
                 case .new_line_below_without_breaking;  new_line_below(cursor, buffer);
                 case .new_line_above_without_breaking;  new_line_above(cursor, buffer);
@@ -139,46 +141,36 @@ editors_handle_key_press :: (event: Input.Event, common_action: Action_Common) {
                 case .toggle_comment;                   comment_block(cursor, buffer); keep_selection = true;
                 case .select_line;                      select_lines(cursor, buffer); keep_selection = true;
                 
-                case;                                   editor_action_handled = false;
-            }
-            
-            
-            if !editor_action_handled {
-                common_action_handled = true;
+                case .move_left;                        move_cursor_left(cursor, buffer, mods);
+                case .move_left_by_word;                move_cursor_left(cursor, buffer, mods);
+                case .move_left_by_word_ends;           move_cursor_left(cursor, buffer, mods);
+                case .move_right;                       move_cursor_right(cursor, buffer, mods);
+                case .move_right_by_word;               move_cursor_right(cursor, buffer, mods);
+                case .move_right_by_word_ends;          move_cursor_right(cursor, buffer, mods);
                 
-                if common_action == {
-                    // !!!!!!!!!!!!! TODO: split
-                    case .move_left;                move_cursor_left(cursor, buffer, mods);
-                    case .move_left_by_word;        move_cursor_left(cursor, buffer, mods);
-                    case .move_left_by_word_ends;   move_cursor_left(cursor, buffer, mods);
-                    case .move_right;               move_cursor_right(cursor, buffer, mods);
-                    case .move_right_by_word;       move_cursor_right(cursor, buffer, mods);
-                    case .move_right_by_word_ends;  move_cursor_right(cursor, buffer, mods);
-                    
-                    case .move_up;                  move_cursor_vertically(cursor, buffer, mods, .up);   // !!!!!!!
-                    case .move_down;                move_cursor_vertically(cursor, buffer, mods, .down); // !!!!!!!      
-                    case .move_up_fast;             move_cursor_to_empty_line(cursor, buffer, mods, .up);   // !!!!!!!!!!!!
-                    case .move_down_fast;           move_cursor_to_empty_line(cursor, buffer, mods, .down); // !!!!!!!!!!!!
-                    case .move_up_one_page;         move_cursor_by_page(cursor, buffer, mods, .up);      // !!!!
-                    case .move_down_one_page;       move_cursor_by_page(cursor, buffer, mods, .down);    // !!!!!!!!
-                    
-                    case .copy;                     copy_selection_to_clipboard(cursor, buffer, cursors.count == 1);
-                    case .cut;                      copy_selection_to_clipboard(cursor, buffer, cursors.count == 1, cut = true);
-                    case .paste;                    paste_from_clipboard(editor, cursor, buffer);
-                    
-                    case .select_word;              if !has_selection(cursor) { select_word(cursor, buffer); editor.search_whole_words = true; enabled_whole_words = true; }
-                    
-                    case .home;                     move_cursor_home(cursor, buffer, mods);
-                    case .end;                      move_cursor_end (cursor, buffer, mods);
-                    case .delete_left_char;         handle_backspace(cursor, buffer, mods);
-                    case .delete_right_char;        handle_delete   (cursor, buffer, mods);
-                    
-                    case;                           common_action_handled = false;
-                }
+                case .move_up;                          move_cursor_vertically(cursor, buffer, mods, .up);   // !!!!!!!
+                case .move_down;                        move_cursor_vertically(cursor, buffer, mods, .down); // !!!!!!!      
+                case .move_up_fast;                     move_cursor_to_empty_line(cursor, buffer, mods, .up);   // !!!!!!!!!!!!
+                case .move_down_fast;                   move_cursor_to_empty_line(cursor, buffer, mods, .down); // !!!!!!!!!!!!
+                case .move_up_one_page;                 move_cursor_by_page(cursor, buffer, mods, .up);      // !!!!
+                case .move_down_one_page;               move_cursor_by_page(cursor, buffer, mods, .down);    // !!!!!!!!
+                
+                case .copy;                             copy_selection_to_clipboard(cursor, buffer, cursors.count == 1);
+                case .cut;                              copy_selection_to_clipboard(cursor, buffer, cursors.count == 1, cut = true);
+                case .paste;                            paste_from_clipboard(editor, cursor, buffer);
+                
+                case .select_word;                      if !has_selection(cursor) { select_word(cursor, buffer); editor.search_whole_words = true; enabled_whole_words = true; }
+                
+                case .home;                             move_cursor_home(cursor, buffer, mods);
+                case .end;                              move_cursor_end (cursor, buffer, mods);
+                case .delete_left_char;                 handle_backspace(cursor, buffer, mods);
+                case .delete_right_char;                handle_delete   (cursor, buffer, mods);
+                
+                case;                                   handled = false;
             }
             
             // Cursor doesn't move only when we copy, so this is to avoid specifying that it moved every time
-            if editor_action_handled || (common_action_handled && common_action != .copy) then cursor_moved = true;
+            if handled && action != .copy then cursor_moved = true;
 
         }
 
@@ -203,15 +195,7 @@ editors_handle_key_press :: (event: Input.Event, common_action: Action_Common) {
     editor.cursor_moved = cursor_moved;
 }
 
-editors_handle_key_release :: (key_code: Input.Key_Code, mods: Mods) {
-    if key_code == {
-        case .ARROW_UP; #through;
-        case .ARROW_DOWN;
-            editor_smooth_scroll.active = false;
-    }
-}
-
-editors_handle_text_input :: (char: u32) {
+active_editor_type_text :: (char: u32) {
     if char == 127 return;  // there seems to be a bug in the Input module
                             // which generates a TEXT_INPUT event for DEL
                             // when Ctrl+Backspace is pressed
@@ -914,8 +898,11 @@ restore_cursor_state :: (using editor: *Editor, cursor_state: []Cursor.State) {
 }
 
 new_edit_group_required_for_action :: (key_code: Input.Key_Code, mods: Mods, cursor: Cursor) -> bool {
+
+
     // NOTE: we could abstract away actions instead of checking keys here directly, but
     // I won't do it for now because I want to avoid needless refactoring
+    
 
     if key_code == {
         case .BACKSPACE; #through;

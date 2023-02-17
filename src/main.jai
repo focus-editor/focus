@@ -173,7 +173,7 @@ main :: () {
         if cast(Time) get_time() - frame_time <= QUICK_FRAME_DT {
             // It should be ok to sleep a bit after a quick frame to avoid pegging the core.
             // NOTE: I tried vsync but for some reason it felt super bad - didn't figure out exactly why
-            sleep_milliseconds(1);
+            sleep_milliseconds(2);
         }
     }
 

@@ -17,12 +17,12 @@ init_finder :: () {
 finder_handle_event :: (event: Input.Event) {
     using finder;
     
-    if event.type == .KEYBOARD && event.key_pressed {
-        common_action := map_event_to_action(event, Action_Common);
-        if common_action == {
-            // case .search_in_buffer;     return;  // TODO: handle when the widget is rewritten
-            // case .search_in_project;    finder_open();                  return;
-            
+    if event.type == .KEYBOARD && event.key_pressed {        
+        handled := text_input_handle_event(*input, event);
+        if handled { start_new_search(); return; }
+        
+        action := map_event_to_action(event, Action_Search_Dialog);
+        if action == {
             case .toggle_expand;        toggle_expand();                return;
             case .move_up;              move_cursor(-1, wrap = true);   return;
             case .move_down;            move_cursor( 1, wrap = true);   return;
@@ -34,13 +34,7 @@ finder_handle_event :: (event: Input.Event) {
             case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
             case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
             case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);
-        }
-        
-        handled := text_input_handle_event(*input, event);
-        if handled { start_new_search(); return; }
-        
-        dialog_action := map_event_to_action(event, Action_Search_Dialog);
-        if #complete dialog_action == {
+            
             case .close_dialog;             finder_close();     return;
             case .open_entry_in_place;      finder_open_selected_result(selected, .in_place);     return;
             case .open_entry_on_the_side;   finder_open_selected_result(selected, .on_the_side);  return;

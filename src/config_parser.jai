@@ -44,6 +44,11 @@ parse_config :: (name: string, filename: string, file_data: string) -> Config, s
     result.workspace.allow_file_extensions = parser.data.allow_file_extensions;
     result.workspace.ignore_file_extensions = parser.data.ignore_file_extensions;
     
+    // Merge and store keymaps in the config
+    // (keys defined in the common section need to be present in the other sections unless overridden there)
+    array_extend(*parser.data.keymap_editors,          parser.data.keymap_common);
+    array_extend(*parser.data.keymap_open_file_dialog, parser.data.keymap_common);
+    array_extend(*parser.data.keymap_search_dialog,    parser.data.keymap_common);
     result.keymap.common           = parser.data.keymap_common;
     result.keymap.editors          = parser.data.keymap_editors;
     result.keymap.open_file_dialog = parser.data.keymap_open_file_dialog;
@@ -274,7 +279,6 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo
     
     return result, true;
 }
-
 
 #scope_file
 

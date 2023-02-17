@@ -47,6 +47,14 @@ to_bytes :: (src: string) -> [] u8 {
     return result;
 }
 
+// Intended for compile-time
+arrays_concat :: (array1: [] $T, array2: [] T) -> [] T {
+    result: [..] T;
+    array_extend(*result, array1);
+    array_extend(*result, array2);
+    return result;
+}
+
 decode_utf8_string_to_temp_chars :: (str: string, max_char: s64) -> [] u32 {
     chars: [..] u32;
     chars.allocator = temp;

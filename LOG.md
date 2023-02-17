@@ -35,9 +35,20 @@
     - Trace the whole project to see if we're doing something stupid
     
 - Rewrite the input system using the keymap handler
-    - Debug the config key map
+    + Debug the config key map
+    + Have only one action per context
     - Modify the config syntax highlighter so that it understands keymap
     - Support commenting out stuff in focus config
+    
+- Improve resource usage: query monitor refresh rate and adjust sleeping time based on that
+    - Draw a figure - will that cause longer frames sometimes? Probably that's ok?
+    
+- Alt+up/down to move fast, ctrl+alt/down to move to blank line (editor action)
+- Ctrl + Home/End to jump to beginning/end of the file
+- Alt + PgUp/PgDown to scroll viewport by page
+- Ctrl + J to join lines (should there be a limit of how many?)
+- (Ctrl (VSCode) or Alt (N++) or Alt+Shift (macOS)) + Mouse Click to add an additional cursor wherever the mouse is.
+- Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt
 
 - Display files that are deleted on disk but modified in the open file dialog
 
@@ -118,7 +129,8 @@
 
 - Hide scrollbars unless scrolling or hovering over editor
 - Add horizontal scrollbar
-    - Scroll by alt+left/right
+    - Scroll by alt+left/right  (or some other combo)
+        - Modify the keymap to support hold actions (see Keymap for reference)
 - Search in buffer:
     - When pressing up/down to switch to prev/next result, don't wrap (but do wrap when using Enter - what else to go back?)
 
@@ -129,14 +141,6 @@
     - Make sure when selected a word by double clicking, the highlights only highlight whole words
 
 - Strip trailing whitespace on save
-- Ctrl + [ and Ctrl + ] to indent lines
-    - Need to refactor the input system first
-- Ctrl + Home/End to jump to beginning/end of the file
-- Alt + PgUp/PgDown to scroll viewport by page
-- Ctrl + J to join lines (should there be a limit of how many?)
-- (Ctrl (VSCode) or Alt (N++) or Alt+Shift (macOS)) + Mouse Click to add an additional cursor wherever the mouse is.
-- Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt
-
 - Optimisation: with large files, disable selection highlights
 
 - Save editor state on editor operations:
@@ -201,6 +205,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Ctrl + [ and Ctrl + ] to indent lines
 + Open file dialog:
     + Display something to indicate no entries
     + Fix the jiggling at the bottom when typing every second letter

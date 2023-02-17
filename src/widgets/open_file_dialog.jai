@@ -2,8 +2,8 @@ open_file_dialog_handle_event :: (event: Input.Event) {
     using open_file_dialog;
     
     if event.type == .KEYBOARD && event.key_pressed {
-        dialog_action := map_event_to_action(event, Action_Open_File_Dialog);
-        if #complete dialog_action == {
+        action := map_event_to_action(event, Action_Open_File_Dialog);
+        if action == {
             case .close_dialog;             hide_open_file_dialog(); return;
             case .open_entry_in_place;      open_file_dialog_open_entry(entries.selected, .in_place);    return;
             case .open_entry_on_the_side;   open_file_dialog_open_entry(entries.selected, .on_the_side); return;
@@ -11,13 +11,7 @@ open_file_dialog_handle_event :: (event: Input.Event) {
             case .open_entry_on_the_right;  open_file_dialog_open_entry(entries.selected, .right);       return;
             case .open_directory;           open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true); return;
             case .pop_directory;            if pop_directory() return;
-        }
-        
-        handled := maybe_handle_text_input_event(*input, event);
-        if handled return;
-        
-        common_action := map_event_to_action(event, Action_Common);
-        if common_action == {
+            
             case .search_in_buffer;     return;  // TODO: handle when the widget is rewritten
             case .search_in_project;    finder_open();                  return;
             case .toggle_expand;        toggle_expand();                return;
@@ -32,6 +26,9 @@ open_file_dialog_handle_event :: (event: Input.Event) {
             case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
             case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);
         }
+        
+        handled := maybe_handle_text_input_event(*input, event);
+        if handled return;
         
     } else if event.type == .TEXT_INPUT {
         char := event.utf32;

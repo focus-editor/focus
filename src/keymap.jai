@@ -91,7 +91,7 @@ ACTIONS_COMMON :: string.[
     "reset_font_size_to_default",
 ];
 
-ACTIONS_EDITORS :: string.[
+ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "select_word_or_create_another_cursor",
     "duplicate_lines",
     "move_selected_lines_up",
@@ -117,9 +117,9 @@ ACTIONS_EDITORS :: string.[
     "switch_to_right_editor",
     "move_editor_to_the_left",
     "move_editor_to_the_right",
-];
+]);
 
-ACTIONS_OPEN_FILE_DIALOG :: string.[
+ACTIONS_OPEN_FILE_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[
     "close_dialog",
     "open_entry_in_place",
     "open_entry_on_the_side",
@@ -127,12 +127,12 @@ ACTIONS_OPEN_FILE_DIALOG :: string.[
     "open_entry_on_the_right",
     "open_directory",
     "pop_directory",
-];
+]);
 
-ACTIONS_SEARCH_DIALOG :: string.[
+ACTIONS_SEARCH_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[
     "close_dialog",
     "open_entry_in_place",
     "open_entry_on_the_side",
     "open_entry_on_the_left",
     "open_entry_on_the_right",
-];
+]);
