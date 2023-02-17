@@ -120,23 +120,24 @@ editors_handle_key_press :: (event: Input.Event, common_action: Action_Common) {
                 buf_len = new_len;
             }
             
-            // Try to get rid of "cursor_moved"
+            //  !!!!!  Try to get rid of "cursor_moved" !!!!!!!!
             if editor_action == {
-                // !!!!!!!!!!!!
-                case .break_line;                       handle_enter(cursor, buffer, mods); cursor_moved = true;
-                case .new_line_below_without_breaking;  handle_enter(cursor, buffer, mods); cursor_moved = true;
-                case .new_line_above_without_breaking;  handle_enter(cursor, buffer, mods); cursor_moved = true;
+                case .break_line;                       break_line    (cursor, buffer); cursor_moved = true;
+                case .new_line_below_without_breaking;  new_line_below(cursor, buffer); cursor_moved = true;
+                case .new_line_above_without_breaking;  new_line_above(cursor, buffer); cursor_moved = true;
+                
                 case .duplicate_lines;                  if cursors.count == 1 { duplicate_lines(cursor, buffer); keep_selection = true; cursor_moved = true; }
                 case .move_selected_lines_up;           if cursors.count == 1 { move_lines_up  (cursor, buffer); keep_selection = true; cursor_moved = true; }
                 case .move_selected_lines_down;         if cursors.count == 1 { move_lines_down(cursor, buffer); keep_selection = true; cursor_moved = true; }
                 
-                case .indent_or_go_to_next_tabstop;     keep_selection = handle_tab(cursor, buffer, mods); cursor_moved = true;
-                case .unindent;                         keep_selection = handle_tab(cursor, buffer, mods); cursor_moved = true;
-                case .indent;                           keep_selection = handle_tab(cursor, buffer, mods); cursor_moved = true;
+                case .indent_or_go_to_next_tabstop;     if indent_or_tab(cursor, buffer) keep_selection = true; cursor_moved = true;
+                case .indent;                           indent_lines  (cursor, buffer);  keep_selection = true; cursor_moved = true;
+                case .unindent;                         unindent_lines(cursor, buffer);  keep_selection = true; cursor_moved = true;
                 
-                case .toggle_comment;                   if buffer.lang == .Jai { comment_block(cursor, buffer); } keep_selection = true; cursor_moved = true;
+                case .toggle_comment;                   comment_block(cursor, buffer); keep_selection = true; cursor_moved = true;
                 case .select_line;                      select_lines(cursor, buffer); keep_selection = true; cursor_moved = true;
             }
+            // !!!!!!!!!!! check if handled
             if common_action == {
                 // !!!!!!!!!!!!! TODO: split 
                 case .move_left;                move_cursor_left(cursor, buffer, mods); cursor_moved = true;
@@ -1082,40 +1083,56 @@ move_cursor_end :: (using cursor: *Cursor, buffer: Buffer, mods: Mods) {
     col_wanted = pos.col;
 }
 
-handle_enter :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
+break_line :: (using cursor: *Cursor, buffer: *Buffer) {
     line := buffer.lines[pos.line];
     indent := line.text_start - line.start;
     insert := talloc_string(indent + 1);
     memset(insert.data, #char " ", indent + 1);
 
     insert_pos := pos;
-    if only_ctrl_pressed(mods) {
-        // Insert line below without breaking
-        insert[0] = #char "\n";
-        insert_pos.col = line.num_chars;
-        pos.line += 1;
-        insert_string_at_pos(buffer, insert_pos, insert);
-    } else if only_ctrl_shift_pressed(mods) {
-        // Insert line above
-        insert[indent] = #char "\n";
-        insert_pos.col = 0;
-        insert_string_at_pos(buffer, insert_pos, insert);
-    } else if nothing_pressed(mods) {
-        // Break line normally
-        insert[0] = #char "\n";
-        indent = min(indent, pos.col);  // don't indent too much
-        insert.count = indent + 1;
-        if has_selection(cursor) {
-            selection := get_selection(cursor);
-            replace_range(buffer, selection, insert);
-            pos = selection.start;
-        } else {
-            insert_string_at_pos(buffer, insert_pos, insert);
-        }
-        pos.line += 1;
+    insert[0] = #char "\n";
+    indent = min(indent, pos.col);  // don't indent too much
+    insert.count = indent + 1;
+    if has_selection(cursor) {
+        selection := get_selection(cursor);
+        replace_range(buffer, selection, insert);
+        pos = selection.start;
     } else {
-        return; // Not a supported operation
+        insert_string_at_pos(buffer, insert_pos, insert);
     }
+    pos.line += 1;
+    pos.col = indent;
+    col_wanted = pos.col;
+    sel = pos;
+}
+
+new_line_below :: (using cursor: *Cursor, buffer: *Buffer) {
+    line := buffer.lines[pos.line];
+    indent := line.text_start - line.start;
+    insert := talloc_string(indent + 1);
+    memset(insert.data, #char " ", indent + 1);
+
+    insert_pos := pos;
+    insert[0] = #char "\n";
+    insert_pos.col = line.num_chars;
+    pos.line += 1;
+    insert_string_at_pos(buffer, insert_pos, insert);
+
+    pos.col = indent;
+    col_wanted = pos.col;
+    sel = pos;
+}
+
+new_line_above :: (using cursor: *Cursor, buffer: *Buffer) {
+    line := buffer.lines[pos.line];
+    indent := line.text_start - line.start;
+    insert := talloc_string(indent + 1);
+    memset(insert.data, #char " ", indent + 1);
+
+    insert_pos := pos;
+    insert[indent] = #char "\n";
+    insert_pos.col = 0;
+    insert_string_at_pos(buffer, insert_pos, insert);
 
     pos.col = indent;
     col_wanted = pos.col;
@@ -1189,10 +1206,15 @@ handle_delete :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) {
     col_wanted = pos.col;
 }
 
-handle_tab :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) -> keep_selection: bool {
-    spaces := "    ";
-    assert(spaces.count == TAB_SIZE);
+get_tmp_spaces :: (num: s64) -> string {
+    spaces := talloc_string(num);
+    memset(spaces.data, cast(u8) #char " ", num);
+    return spaces;
+}
 
+indent_or_tab :: (using cursor: *Cursor, buffer: *Buffer) -> keep_selection: bool {
+    spaces := get_tmp_spaces(TAB_SIZE);
+    
     if !has_selection(cursor) {
         // Insert tab
         to_next_tabstop := TAB_SIZE - pos.col % TAB_SIZE;
@@ -1203,51 +1225,65 @@ handle_tab :: (using cursor: *Cursor, buffer: *Buffer, mods: Mods) -> keep_selec
 
         return false;
     }
+    
+    indent_lines(cursor, buffer);
 
-    // We have a selection
+    return true;
+}
+
+indent_lines :: (using cursor: *Cursor, buffer: *Buffer) {
+    spaces := get_tmp_spaces(TAB_SIZE);
+    
     range := get_selection_whole_lines(cursor, buffer);
     lines := array_view(buffer.lines, range.start.line, range.end.line - range.start.line + 1);
     new_bytes: [..] u8;
     new_bytes.allocator = temp;
 
-    if mods.shift_pressed {
-        // Unindent selection
-        array_reserve(*new_bytes, bytes_in_range(buffer, range));
-        for line, i : lines {
-            line_len := line.end - line.start;
-            if i < lines.count - 1 then line_len += 1;  // include newline
-            spaces_to_remove := min(TAB_SIZE, line.text_start - line.start);
-            src := array_view(buffer.bytes, line.start + spaces_to_remove, line_len - spaces_to_remove);
-            array_add_bytes(*new_bytes, src);
+    // Indent selection
+    array_reserve(*new_bytes, bytes_in_range(buffer, range) + TAB_SIZE * lines.count);
+    tab := to_bytes(spaces);
+    for line, i : lines {
+        array_add_bytes(*new_bytes, tab);
 
-            // Adjust selection
-            line_num := range.start.line + i;
-            if line_num == pos.line then pos.col -= xx spaces_to_remove;
-            if line_num == sel.line then sel.col -= xx spaces_to_remove;
-        }
-        replace_range(buffer, range, to_string(new_bytes));
-    } else {
-        // Indent selection
-        array_reserve(*new_bytes, bytes_in_range(buffer, range) + TAB_SIZE * lines.count);
-        tab := to_bytes(spaces);
-        for line, i : lines {
-            array_add_bytes(*new_bytes, tab);
-
-            line_len := line.end - line.start;
-            if i < lines.count - 1 then line_len += 1;  // include newline
-            src := array_view(buffer.bytes, line.start, line_len);
-            array_add_bytes(*new_bytes, src);
-        }
-        replace_range(buffer, range, to_string(new_bytes));
-
-        // Adjust selection
-        pos.col += TAB_SIZE;
-        sel.col += TAB_SIZE;
+        line_len := line.end - line.start;
+        if i < lines.count - 1 then line_len += 1;  // include newline
+        src := array_view(buffer.bytes, line.start, line_len);
+        array_add_bytes(*new_bytes, src);
     }
+    replace_range(buffer, range, to_string(new_bytes));
+
+    // Adjust selection
+    pos.col += TAB_SIZE;
+    sel.col += TAB_SIZE;
 
     col_wanted = pos.col;
+}
 
-    return true;
+unindent_lines :: (using cursor: *Cursor, buffer: *Buffer) {
+    spaces := get_tmp_spaces(TAB_SIZE);
+    
+    range := get_selection_whole_lines(cursor, buffer);
+    lines := array_view(buffer.lines, range.start.line, range.end.line - range.start.line + 1);
+    new_bytes: [..] u8;
+    new_bytes.allocator = temp;
+
+    // Unindent selection
+    array_reserve(*new_bytes, bytes_in_range(buffer, range));
+    for line, i : lines {
+        line_len := line.end - line.start;
+        if i < lines.count - 1 then line_len += 1;  // include newline
+        spaces_to_remove := min(TAB_SIZE, line.text_start - line.start);
+        src := array_view(buffer.bytes, line.start + spaces_to_remove, line_len - spaces_to_remove);
+        array_add_bytes(*new_bytes, src);
+
+        // Adjust selection
+        line_num := range.start.line + i;
+        if line_num == pos.line then pos.col -= xx spaces_to_remove;
+        if line_num == sel.line then sel.col -= xx spaces_to_remove;
+    }
+    replace_range(buffer, range, to_string(new_bytes));
+
+    col_wanted = pos.col;
 }
 
 select_all :: (using cursor: *Cursor, buffer: Buffer) {
@@ -1366,6 +1402,16 @@ paste_from_clipboard :: (editor: *Editor, cursor: *Cursor, buffer: *Buffer) {
 }
 
 comment_block :: (cursor: *Cursor, buffer: *Buffer) {
+    comment_without_space: string;
+    comment: string;
+    
+    if buffer.lang == {
+        case .Jai;          comment_without_space = "//";
+        case .Focus_Config; comment_without_space = "#";
+        case;               return;
+    }
+    comment = tprint("% ", comment_without_space);
+    
     assert(!buffer.dirty);
     range := get_selection_whole_lines(cursor, buffer);
     lines := array_view(buffer.lines, range.start.line, range.end.line - range.start.line + 1);
@@ -1377,15 +1423,15 @@ comment_block :: (cursor: *Cursor, buffer: *Buffer) {
             if min_text_start < 0 then min_text_start = 0;
             continue;
         }
-        start := buffer.bytes.data + line.text_start;  // a pointer to where text starts in the line
-        if !comment_out && (line.num_chars < 2 || start[0] != #char "/" || start[1] != #char "/") then comment_out = true;
+        start: string = ---;
+        start.data  = buffer.bytes.data + line.text_start;
+        start.count = line.end - line.text_start;
+        if !comment_out && start && !begins_with(start, comment) then comment_out = true;
         len_whitespace := line.text_start - line.start;
         if min_text_start < 0 || len_whitespace < min_text_start then min_text_start = len_whitespace;
     }
     assert(min_text_start >= 0);
 
-    comment := "// ";
-    comment_without_space := "//";
     new_bytes: [..] u8;
     new_bytes.allocator = temp;
     array_reserve(*new_bytes, range_length_in_bytes(buffer, range) + lines.count * comment.count);
