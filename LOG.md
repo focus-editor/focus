@@ -37,12 +37,18 @@
 - Rewrite the input system using the keymap handler
     + Debug the config key map
     + Have only one action per context
+    - Finish splitting the editor action functions
     - Modify the config syntax highlighter so that it understands keymap
     - Support commenting out stuff in focus config
     
 - Improve resource usage: query monitor refresh rate and adjust sleeping time based on that
     - Draw a figure - will that cause longer frames sometimes? Probably that's ok?
+    - Don't skip frames when dragging scrollbar
     
+- Alt+HJKL smooth scroll (hopefully the vim people will be happy)
+    - Ctrl+Alt+arrows to scroll
+        - Modify the keymap to support hold actions (see Keymap for reference)
+    - Add horizontal scrollbar
 - Alt+up/down to move fast, ctrl+alt/down to move to blank line (editor action)
 - Ctrl + Home/End to jump to beginning/end of the file
 - Alt + PgUp/PgDown to scroll viewport by page
@@ -51,6 +57,7 @@
 - Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt
 
 - Display files that are deleted on disk but modified in the open file dialog
+
 
 - File management:
     - Create new files:
@@ -65,6 +72,7 @@
         - Close file?
         
 - BUG: cursor is being drawn on the other pane sometimes
+- BUG: if a project folder is deleted, the editor doesn't know about that and doesn't give any errors when trying to save files
         
 - New selection modes:
     - After double-click: enter word-selection mode
@@ -128,9 +136,6 @@
     - load last session on start ?
 
 - Hide scrollbars unless scrolling or hovering over editor
-- Add horizontal scrollbar
-    - Scroll by alt+left/right  (or some other combo)
-        - Modify the keymap to support hold actions (see Keymap for reference)
 - Search in buffer:
     - When pressing up/down to switch to prev/next result, don't wrap (but do wrap when using Enter - what else to go back?)
 

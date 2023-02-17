@@ -50,6 +50,9 @@ disable_that_annoying_paste_effect: false
 
 [common]
 
+# Common key combos may be used as a fallback if they are not defined in more specific sections.
+# For example, if "move_up" is not defined in [editors], the [common] one will be used.
+
 Ctrl-F                      search_in_buffer
 Ctrl-Shift-F                search_in_project
 
@@ -88,8 +91,10 @@ Ctrl-Shift-L                toggle_expand
 {Shift}-Home                home
 {Shift}-End                 end
 
-Backspace                   delete_left_char
-Delete                      delete_right_char
+{Shift}-Backspace           delete_left_char
+{Shift}-Delete              delete_right_char
+{Shift}-Ctrl-Backspace      delete_word_left
+{Shift}-Ctrl-Delete         delete_word_right
 
 Ctrl-Plus                   increase_font_size
 Ctrl-Minus                  decrease_font_size
@@ -118,13 +123,14 @@ Ctrl-S                      save
 Ctrl-/                      toggle_comment
 Ctrl-L                      select_line
 
-# TODO: use other shortcuts
-#Alt-ArrowUp                 scroll_viewport_up
-#Alt-ArrowDown               scroll_viewport_down
-#Alt-ArrowLeft               scroll_viewport_left
-#Alt-ArrowRight              scroll_viewport_right
+Alt-K                       scroll_viewport_up
+Alt-J                       scroll_viewport_down
+Alt-H                       scroll_viewport_left
+Alt-L                       scroll_viewport_right
 
 Alt-C                       move_cursor_to_viewport_center
+{Shift}-Ctrl-ArrowUp        move_up_to_empty_line
+{Shift}-Ctrl-ArrowDown      move_down_to_empty_line
 
 Escape                      remove_additional_cursors
 
