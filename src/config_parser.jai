@@ -162,10 +162,10 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
     }
     
     if #complete keymap_subsection == {
-        case .common;           map_action(action_name, key_combo, ACTIONS_COMMON,           *data.keymap_common,           "[[common]]");
-        case .editors;          map_action(action_name, key_combo, ACTIONS_EDITORS,          *data.keymap_editors,          "[[editors]]");
-        case .open_file_dialog; map_action(action_name, key_combo, ACTIONS_OPEN_FILE_DIALOG, *data.keymap_open_file_dialog, "[[open file dialog]]");
-        case .search_dialog;    map_action(action_name, key_combo, ACTIONS_SEARCH_DIALOG,    *data.keymap_search_dialog,    "[[search dialog]]");
+        case .common;           map_action(action_name, key_combo, ACTIONS_COMMON,           *data.keymap_common,           "[common]");
+        case .editors;          map_action(action_name, key_combo, ACTIONS_EDITORS,          *data.keymap_editors,          "[editors]");
+        case .open_file_dialog; map_action(action_name, key_combo, ACTIONS_OPEN_FILE_DIALOG, *data.keymap_open_file_dialog, "[open file dialog]");
+        case .search_dialog;    map_action(action_name, key_combo, ACTIONS_SEARCH_DIALOG,    *data.keymap_search_dialog,    "[search dialog]");
     }
     
     return true;

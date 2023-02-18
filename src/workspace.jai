@@ -2,8 +2,8 @@ init_workspace :: () {
     // workspace_dirs := ifx !DEBUG then config.workspace.workspace_dirs else string.[ "W:/focus", "C:/jai" ];
     for path, i : config.workspace.workspace_dirs {
         dir: Project_Dir = ---;
-        dir.path = path;
-        dir.path_prefix_len = find_index_of_any_from_right(path, ".\\/") + 1;
+        dir.path = trim_right(path, "/\\");
+        dir.path_prefix_len = find_index_of_any_from_right(dir.path, ".\\/") + 1;
         // TODO: check whether project path exists - add to error log
         array_add(*project_dirs, dir);
     }

@@ -16,12 +16,15 @@ editors_handle_event :: (event: Input.Event) {
         active_editor_handle_event(event, action);
     
     } else if event.type == .KEYBOARD && !event.key_pressed {
-        // TODO: support hold actions
-        // if key_code == {
-        //     case .ARROW_UP; #through;
-        //     case .ARROW_DOWN;
-        //         editor_smooth_scroll.active = false;
-        // }
+        actions := map_key_release_event_to_actions(event, Action_Editors);
+        for actions {
+            if it == {
+                case .scroll_viewport_up;       if  editor_smooth_scroll.up then editor_smooth_scroll.active = false;
+                case .scroll_viewport_down;     if !editor_smooth_scroll.up then editor_smooth_scroll.active = false;
+                // case .scroll_viewport_left;
+                // case .scroll_viewport_right;
+            }
+        }
     } else if event.type == .TEXT_INPUT {
         active_editor_type_text(event.utf32);
     }
@@ -87,8 +90,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .remove_additional_cursors;        cursor := leave_only_original_cursor(editor); remove_selection(cursor); cursor_moved = true;
         
         // TODO: support hold actions, currently it's not configurable
-        // case .scroll_viewport_up;                vertical_smooth_scroll(editor, up = true);
-        // case .scroll_viewport_down;              vertical_smooth_scroll(editor, up = false);
+        case .scroll_viewport_up;               vertical_smooth_scroll(editor, up = true);
+        case .scroll_viewport_down;             vertical_smooth_scroll(editor, up = false);
         case .scroll_viewport_left;             print("scroll_viewport_left - not implemented\n");
         case .scroll_viewport_right;            print("scroll_viewport_right - not implemented\n");
         
@@ -110,7 +113,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
 
         // We always want to put some actions in a separate edit group (e.g. block indent)
         new_group := false;
-        for cursor : cursors { if new_edit_group_required_for_action(event.key_code, mods, cursor) { new_group = true; break; } }
+        for cursor : cursors { if new_edit_group_required_for_action(action, cursor) { new_group = true; break; } }
         if new_group then new_edit_group(buffer, editor);  // do it before action
 
         // TODO: refactor this so that we don't do switches for every cursor
@@ -893,7 +896,7 @@ redo :: (buffer: *Buffer, editor: *Editor) {
     array_free(edit_group.cursors);
 }
 
-restore_cursor_state :: (using editor: *Editor, cursor_state: []Cursor.State) {
+restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor.State) {
     if cursor_state.count == 0 return;  // the first undo doesn't have any remembered cursors
 
     for * cursors maybe_free_and_clear(*it.clipboard);
@@ -907,35 +910,26 @@ restore_cursor_state :: (using editor: *Editor, cursor_state: []Cursor.State) {
     if main_cursor >= cursors.count then main_cursor = cursors.count - 1;  // maybe we should remember it too
 }
 
-new_edit_group_required_for_action :: (key_code: Input.Key_Code, mods: Mods, cursor: Cursor) -> bool {
-
-
-    // NOTE: we could abstract away actions instead of checking keys here directly, but
-    // I won't do it for now because I want to avoid needless refactoring
-    
-
-    if key_code == {
-        case .BACKSPACE; #through;
-        case .DELETE;    #through; // delete range
-        case .ENTER;               // replace range with newline
-            if has_selection(cursor) return true;
-
-        case .ARROW_UP; #through;
-        case .ARROW_DOWN;
-            if only_ctrl_alt_pressed(mods) return true;  // move lines up or down
-
-        case .TAB;  // any indentation
-            return true;
-
-        case #char "D";
-            if only_ctrl_shift_pressed(mods) return true;  // duplicate lines
-
-        case #char "V";
-            if only_ctrl_pressed(mods) return true;  // paste
-
-        case #char "X";
-            if only_ctrl_pressed(mods) return true;  // cut
-    }
+new_edit_group_required_for_action :: (action: Action_Editors, cursor: Cursor) -> bool {
+    if action == {
+        case .break_line;                       if has_selection(cursor) return true;
+        case .new_line_below_without_breaking;  if has_selection(cursor) return true;
+        case .new_line_above_without_breaking;  if has_selection(cursor) return true;
+        case .delete_left_char;                 if has_selection(cursor) return true;
+        case .delete_right_char;                if has_selection(cursor) return true;
+            
+        case .cut;                              return true;
+        case .paste;                            return true;
+        case .toggle_comment;                   return true;
+        case .indent_or_go_to_next_tabstop;     return true;
+        case .indent;                           return true;
+        case .unindent;                         return true;
+        case .duplicate_lines;                  return true;
+        case .move_selected_lines_up;           return true;
+        case .move_selected_lines_down;         return true;
+        case .delete_word_left;                 return true;
+        case .delete_word_right;                return true;
+    }    
 
     return false;
 }

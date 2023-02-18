@@ -29,37 +29,50 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     char := << t;
     
     if char == {
-        case #char "["; parse_header (tokenizer, *token);
+        case #char "["; try_parsing_header(tokenizer, *token);
         case #char "#"; parse_comment(tokenizer, *token);
-        case;           parse_line(tokenizer, *token);
+        case;
+            if section == {
+                case .keymap;       parse_keymap_line(tokenizer, *token);
+                case .workspace;    parse_line(tokenizer, *token);
+                case .settings;     parse_line(tokenizer, *token);
+                case; 
+                    parse_line(tokenizer, *token);
+            }
     }
     
     if t >= max_t then t = max_t;
     token.len = cast(s32) (t - start_t);
     
-    if token.type == .header {
-        // Detect top-level headers
-        token_str: string = ---;
-        token_str.data  = buf.data + token.start;
-        token_str.count = token.len;
-        if begins_with(token_str, "[[") && ends_with(token_str, "]]") {
-            token.type = .header_top_level;
-        }
-    }
-    
     return token;
 }
 
-parse_header :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .header;
+try_parsing_header :: (using tokenizer: *Tokenizer, token: *Token) {
+    old_t := t;
     
-    seen_brackets := 1;
-    t += 1;
-    while t < max_t && <<t != #char "\n" && seen_brackets > 0 {
-        char := << t;
-        if char == #char "[" then seen_brackets += 1;
-        if char == #char "]" then seen_brackets -= 1;
-        t += 1;
+    eat_until_newline_or_comment(tokenizer);
+    
+    str: string = ---;
+    str.data  = old_t;
+    str.count = t - old_t;
+    
+    str = trim_right(str);
+    
+    if str == {
+        case "[[workspace]]";   section = .workspace; token.type = .header_top_level;
+        case "[[settings]]";    section = .settings;  token.type = .header_top_level;
+        case "[[keymap]]";      section = .keymap;    token.type = .header_top_level;
+        
+        case "[workspace dirs]";            token.type = .header;
+        case "[ignore dirs]";               token.type = .header;
+        case "[allow file extensions]";     token.type = .header;
+        case "[ignore file extensions]";    token.type = .header;
+        case "[common]";                    token.type = .header;
+        case "[editors]";                   token.type = .header;
+        case "[open file dialog]";          token.type = .header;
+        case "[search dialog]";             token.type = .header;
+        
+        case; token.type = .default; t = old_t + 1;
     }
 }
 
@@ -71,10 +84,37 @@ parse_comment :: (using tokenizer: *Tokenizer, token: *Token) {
 }
 
 parse_line :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .line;
+    token.type = .default;
     
     t += 1;
     eat_until_newline_or_comment(tokenizer);
+}
+
+parse_keymap_line :: (using tokenizer: *Tokenizer, token: *Token) {
+    if !is_alnum(<<t) {
+        t += 1;
+        token.type = .default;
+        return;
+    }
+    
+    token.type = .default;
+    
+    old_t := t;
+    t += 1;
+    while t < max_t && is_alnum(<<t) {
+        t += 1;
+    }
+    
+    str: string = ---;
+    str.data  = old_t;
+    str.count = t - old_t;
+    
+    if equal_nocase(str, "Shift") || equal_nocase(str, "Alt") || equal_nocase(str, "Ctrl") {
+        token.type = .modifier_key;
+    } else {
+    
+    }
+    
 }
 
 eat_until_newline :: (using tokenizer: *Tokenizer) {
@@ -102,10 +142,11 @@ Tokenizer :: struct {
     t:       *u8;  // cursor
     
     section: enum {
-        Project;
-        Keymap;
-        Colors;
-    };
+        none;
+        workspace;
+        keymap;
+        settings;
+    } = .none;
 }
 
 Token :: struct {
@@ -114,11 +155,16 @@ Token :: struct {
 
     Type :: enum u16 {
         eof;
-
+    
+        error;
+        default;
         comment;
-        line;
         header;
         header_top_level;
+        
+        // Keymap
+        modifier_key;
+        action;
     }
 }
 
@@ -126,8 +172,14 @@ Token :: struct {
 COLOR_MAP :: Simp.Code_Color.[
     .COMMENT,       // eof - obviously not used
     
+    .ERROR,         // error
+    .DEFAULT,       // default
     .COMMENT,       // comment
-    .DEFAULT,       // line
-    .FUNCTION,      // header
+    .OPERATION,     // header
     .KEYWORD,       // header_top_level
+    
+    .FUNCTION,      // modifier_key
+    .FUNCTION,      // action
 ];
+
+#run assert(enum_highest_value(Token.Type) == COLOR_MAP.count - 1);

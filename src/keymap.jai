@@ -1,30 +1,57 @@
-map_event_to_action :: (event: Input.Event, $action_type: Type) -> action_type {
-    #if action_type == Action_Common {
-        keymap := config.keymap.common;
-    } else #if action_type == Action_Editors {
-        keymap := config.keymap.editors;
-    } else #if action_type == Action_Open_File_Dialog {
-        keymap := config.keymap.open_file_dialog;
-    } else #if action_type == Action_Search_Dialog {
-        keymap := config.keymap.search_dialog;
-    } else {
-        #assert(false, "In map_event_to_action, the passed action type is not supported.");
-    }
-    
-    invalid := cast(action_type) 0xFFFF;
-    
+map_event_to_action :: (event: Input.Event, $Action: Type) -> Action {
+    invalid := cast(Action) 0xFFFF;
     if event.type != .KEYBOARD return invalid;
     if !event.key_pressed return invalid;
     
+    keymap := get_keymap_for_action_type(Action);
+
     event_key_code := cast(u32) event.key_code;
     
     for keymap {
         if it.combo.key_code == event_key_code && it.combo.mods.packed == (event.modifier_flags.packed | it.combo.ignore.packed) {
-            return cast(action_type) it.action;
+            return cast(Action) it.action;
         }
     }
     return invalid;
 }
+
+// Only reacts to non-modifier keys being released
+map_key_release_event_to_actions :: (event: Input.Event, $Action: Type) -> [] Action /* temporary storage */ {
+    if event.type != .KEYBOARD || event.key_pressed return .[];
+    
+    actions: [..] Action;
+    actions.allocator = temp;
+    
+    keymap := get_keymap_for_action_type(Action);
+
+    event_key_code := cast(u32) event.key_code;
+    
+    for keymap {
+        if it.combo.key_code == event_key_code {
+            array_add(*actions, cast(Action) it.action);
+        }
+    }
+    return actions;
+}
+
+
+#scope_file
+
+get_keymap_for_action_type :: ($Action: Type) -> [] Key_Mapping #expand {
+    #if Action == Action_Common {
+        return config.keymap.common;
+    } else #if Action == Action_Editors {
+        return config.keymap.editors;
+    } else #if Action == Action_Open_File_Dialog {
+        return config.keymap.open_file_dialog;
+    } else #if Action == Action_Search_Dialog {
+        return config.keymap.search_dialog;
+    } else {
+        #assert(false, "In map_event_to_action, the passed action type is not supported.");
+    }
+}
+
+#scope_export
 
 Key_Mapping :: struct {
     combo:  Key_Combo;

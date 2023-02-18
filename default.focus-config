@@ -128,6 +128,11 @@ Alt-J                       scroll_viewport_down
 Alt-H                       scroll_viewport_left
 Alt-L                       scroll_viewport_right
 
+Ctrl-Alt-ArrowUp            scroll_viewport_up
+Ctrl-Alt-ArrowDown          scroll_viewport_down
+Ctrl-Alt-ArrowLeft          scroll_viewport_left
+Ctrl-Alt-ArrowRight         scroll_viewport_right
+
 Alt-C                       move_cursor_to_viewport_center
 {Shift}-Ctrl-ArrowUp        move_up_to_empty_line
 {Shift}-Ctrl-ArrowDown      move_down_to_empty_line
@@ -138,9 +143,7 @@ Enter                       break_line
 Ctrl-Enter                  new_line_below_without_breaking
 Ctrl-Shift-Enter            new_line_above_without_breaking
 
-Ctrl-Alt-ArrowLeft          switch_to_left_editor
 Ctrl-1                      switch_to_left_editor
-Ctrl-Alt-ArrowRight         switch_to_right_editor
 Ctrl-2                      switch_to_right_editor
 
 Ctrl-Alt-Shift-ArrowLeft    move_editor_to_the_left

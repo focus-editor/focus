@@ -37,18 +37,24 @@
 - Rewrite the input system using the keymap handler
     + Debug the config key map
     + Have only one action per context
-    - Finish splitting the editor action functions
+    + Finish splitting the editor action functions
+    + Modify the keymap to support hold actions (see Keymap for reference)
+    + Alt+JK smooth scroll (hopefully the vim people will be happy)
+    + Ctrl+Alt+arrows to scroll
     - Modify the config syntax highlighter so that it understands keymap
+        - Build compile time hash tables to test action names
+    - Ctrl-, to switch to another editor
     - Support commenting out stuff in focus config
+    
+- On del, when deleting a newline, delete until the text starts, if the line is empty (then maybe no whitespace trimming will be required)
     
 - Improve resource usage: query monitor refresh rate and adjust sleeping time based on that
     - Draw a figure - will that cause longer frames sometimes? Probably that's ok?
     - Don't skip frames when dragging scrollbar
     
-- Alt+HJKL smooth scroll (hopefully the vim people will be happy)
-    - Ctrl+Alt+arrows to scroll
-        - Modify the keymap to support hold actions (see Keymap for reference)
-    - Add horizontal scrollbar
+- Add horizontal scrollbar
+    - Alt-HL smooth scroll
+- Alt-U/D or Alt-PgUp/Down scroll fast
 - Alt+up/down to move fast, ctrl+alt/down to move to blank line (editor action)
 - Ctrl + Home/End to jump to beginning/end of the file
 - Alt + PgUp/PgDown to scroll viewport by page
