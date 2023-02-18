@@ -1,7 +1,9 @@
-map_event_to_action :: (event: Input.Event, $Action: Type) -> Action {
-    invalid := cast(Action) 0xFFFF;
-    if event.type != .KEYBOARD return invalid;
-    if !event.key_pressed return invalid;
+map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mapping {
+    invalid_action  := cast(Action) 0xFFFF;
+    invalid_mapping := Key_Mapping.{};
+    
+    if event.type != .KEYBOARD return invalid_action, invalid_mapping;
+    if !event.key_pressed return invalid_action, invalid_mapping;
     
     keymap := get_keymap_for_action_type(Action);
 
@@ -9,31 +11,47 @@ map_event_to_action :: (event: Input.Event, $Action: Type) -> Action {
     
     for keymap {
         if it.combo.key_code == event_key_code && it.combo.mods.packed == (event.modifier_flags.packed | it.combo.ignore.packed) {
-            return cast(Action) it.action;
+            return cast(Action) it.action, it;
         }
     }
-    return invalid;
+    return invalid_action, invalid_mapping;
 }
 
-// Only reacts to non-modifier keys being released
-map_key_release_event_to_actions :: (event: Input.Event, $Action: Type) -> [] Action /* temporary storage */ {
+activate_hold_action :: (action: $Action_Type, event: Input.Event) {
+    _, matched_mapping := map_event_to_action(event, Action_Type);  // we map it here again to avoid passing it in through multiple functions
+    hold_action := Hold_Action.{ action_type = Action_Type, matched_mapping = matched_mapping };
+    
+    // NOTE: array_add_if_unique didn't work because it couldn't find the operator == for Hold_Actions. 
+    // I tried making it public but it didn't help.
+    // array_add_if_unique(*active_hold_actions, hold_action);
+    
+    for active_hold_actions {
+        if it == hold_action return;  // already there
+    }
+    array_add(*active_hold_actions, hold_action);
+}
+
+map_key_release_to_hold_actions :: (event: Input.Event, $Action: Type) -> [] Action /* temporary storage */ {
     if event.type != .KEYBOARD || event.key_pressed return .[];
     
     actions: [..] Action;
     actions.allocator = temp;
     
-    keymap := get_keymap_for_action_type(Action);
-
-    event_key_code := cast(u32) event.key_code;
-    
-    for keymap {
-        if it.combo.key_code == event_key_code {
-            array_add(*actions, cast(Action) it.action);
+    for active_hold_actions {
+        if it.action_type != Action continue;
+        combo := it.matched_mapping.combo;
+        if combo.key_code == cast(u32) event.key_code || 
+          (event.key_code == .SHIFT && combo.mods.shift_pressed && !combo.ignore.shift_pressed) ||
+          (event.key_code == .CTRL  && combo.mods.ctrl_pressed  && !combo.ignore.ctrl_pressed)  ||
+          (event.key_code == .ALT   && combo.mods.alt_pressed   && !combo.ignore.alt_pressed)
+        {
+            // We have released a button that's part of the key combo which activated this action
+            array_add(*actions, cast(Action) it.matched_mapping.action);
         }
     }
+    
     return actions;
 }
-
 
 #scope_file
 
@@ -49,6 +67,20 @@ get_keymap_for_action_type :: ($Action: Type) -> [] Key_Mapping #expand {
     } else {
         #assert(false, "In map_event_to_action, the passed action type is not supported.");
     }
+}
+
+active_hold_actions: [..] Hold_Action;
+
+// We have to get store the matched mapping because one action may be matched
+// by multiple key combos, so when a key is released, in order to deactivate the action
+// we need to check whether it actually belongs to the combo that activated the action!
+Hold_Action :: struct {
+    action_type: Type;
+    matched_mapping: Key_Mapping;
+}
+
+operator == :: (a: Hold_Action, b: Hold_Action) -> bool {
+    return memcmp(*a, *b, size_of(Hold_Action)) == 0;
 }
 
 #scope_export

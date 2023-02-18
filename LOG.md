@@ -34,20 +34,8 @@
     - Ignore project folders which are children of another project folder?
     - Trace the whole project to see if we're doing something stupid
     
-- Rewrite the input system using the keymap handler
-    + Debug the config key map
-    + Have only one action per context
-    + Finish splitting the editor action functions
-    + Modify the keymap to support hold actions (see Keymap for reference)
-    + Alt+JK smooth scroll (hopefully the vim people will be happy)
-    + Support commenting out stuff in focus config
-    + Ctrl+Alt+arrows to scroll
-    + Modify the config syntax highlighter so that it understands keymap
-        + Build compile time hash tables to test action names
-    + Ctrl-, to switch to other editor
-    - Fix the hold actions - cancel them when a modifier is released too (have a list of active actions)
-    
 - On del, when deleting a newline, delete until the text starts, if the line is empty (then maybe no whitespace trimming will be required)
+    - Also, check if it's whitespace all until the newline, then maybe delete all that in one go?
     
 - Improve resource usage: query monitor refresh rate and adjust sleeping time based on that
     - Draw a figure - will that cause longer frames sometimes? Probably that's ok?
@@ -56,15 +44,13 @@
 - Add horizontal scrollbar
     - Alt-HL smooth scroll
 - Alt-U/D or Alt-PgUp/Down scroll fast
-- Alt+up/down to move fast, ctrl+alt/down to move to blank line (editor action)
+- Alt+up/down to move fast (editor action)
 - Ctrl + Home/End to jump to beginning/end of the file
-- Alt + PgUp/PgDown to scroll viewport by page
 - Ctrl + J to join lines (should there be a limit of how many?)
 - (Ctrl (VSCode) or Alt (N++) or Alt+Shift (macOS)) + Mouse Click to add an additional cursor wherever the mouse is.
 - Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt
 
 - Display files that are deleted on disk but modified in the open file dialog
-
 
 - File management:
     - Create new files:
@@ -217,6 +203,18 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Rewrite the input system using the keymap handler
+    + Debug the config key map
+    + Have only one action per context
+    + Finish splitting the editor action functions
+    + Modify the keymap to support hold actions (see Keymap for reference)
+    + Alt+JK smooth scroll (hopefully the vim people will be happy)
+    + Support commenting out stuff in focus config
+    + Ctrl+Alt+arrows to scroll
+    + Modify the config syntax highlighter so that it understands keymap
+        + Build compile time hash tables to test action names
+    + Ctrl-, to switch to other editor
+    + Fix the hold actions - cancel them when a modifier is released too (have a list of active actions)
 + Ctrl + [ and Ctrl + ] to indent lines
 + Open file dialog:
     + Display something to indicate no entries

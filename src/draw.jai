@@ -827,7 +827,7 @@ draw_finder :: () {
             if entry_index == selected then draw_rect(entry_rect, Colors.LIST_CURSOR);
 
             pen := make_vector2(
-                entry_rect.x + 2 * margin,
+                entry_rect.x + margin + padding,
                 entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
             );
             width: float;
