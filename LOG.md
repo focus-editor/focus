@@ -40,11 +40,12 @@
     + Finish splitting the editor action functions
     + Modify the keymap to support hold actions (see Keymap for reference)
     + Alt+JK smooth scroll (hopefully the vim people will be happy)
+    + Support commenting out stuff in focus config
     + Ctrl+Alt+arrows to scroll
-    - Modify the config syntax highlighter so that it understands keymap
-        - Build compile time hash tables to test action names
+    + Modify the config syntax highlighter so that it understands keymap
+        + Build compile time hash tables to test action names
     - Ctrl-, to switch to another editor
-    - Support commenting out stuff in focus config
+    - Fix the hold actions - cancel them when a modifier is released too (have a list of active actions)
     
 - On del, when deleting a newline, delete until the text starts, if the line is empty (then maybe no whitespace trimming will be required)
     
@@ -67,7 +68,7 @@
 
 - File management:
     - Create new files:
-        - Ctrl + N to create a new buffer
+        - Ctrl + N to create a new buffer ( ctrl-shift-N to create in another pane )
             - Check if we have any non-file buffers with nothing in them first, to avoid creating a million buffers
             - If there's an empty buffer already, just switch to it
         - If a buffer has no name, use the first N non-whitespace characters

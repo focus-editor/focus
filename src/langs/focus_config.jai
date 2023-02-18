@@ -91,13 +91,12 @@ parse_line :: (using tokenizer: *Tokenizer, token: *Token) {
 }
 
 parse_keymap_line :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .default;
+    
     if !is_alnum(<<t) {
         t += 1;
-        token.type = .default;
         return;
     }
-    
-    token.type = .default;
     
     old_t := t;
     t += 1;
@@ -112,7 +111,14 @@ parse_keymap_line :: (using tokenizer: *Tokenizer, token: *Token) {
     if equal_nocase(str, "Shift") || equal_nocase(str, "Alt") || equal_nocase(str, "Ctrl") {
         token.type = .modifier_key;
     } else {
-    
+        _, found_action := table_find(*Keymap_Action_Strings, str);
+        if found_action {
+            token.type = .action;
+        } else if keymap_map_key_string(str) { 
+            token.type = .key_string;
+        } else if str.count > 1 {
+            token.type = .error;
+        }
     }
     
 }
@@ -164,6 +170,7 @@ Token :: struct {
         
         // Keymap
         modifier_key;
+        key_string;
         action;
     }
 }
@@ -179,7 +186,8 @@ COLOR_MAP :: Simp.Code_Color.[
     .KEYWORD,       // header_top_level
     
     .FUNCTION,      // modifier_key
-    .FUNCTION,      // action
+    .DEFAULT,       // key_string
+    .DEFAULT,       // action
 ];
 
 #run assert(enum_highest_value(Token.Type) == COLOR_MAP.count - 1);

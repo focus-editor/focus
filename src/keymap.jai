@@ -167,3 +167,15 @@ ACTIONS_SEARCH_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[
     "open_entry_on_the_left",
     "open_entry_on_the_right",
 ]);
+
+// Used for testing strings in parser
+Keymap_Action_Strings :: #run -> Table(string, void) {
+    table: Table(string, void);
+    nothing: void;
+    
+    for ACTIONS_EDITORS             table_set(*table, it, nothing);
+    for ACTIONS_OPEN_FILE_DIALOG    table_set(*table, it, nothing);
+    for ACTIONS_SEARCH_DIALOG       table_set(*table, it, nothing);
+    
+    return table;
+}

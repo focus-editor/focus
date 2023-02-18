@@ -57,6 +57,64 @@ parse_config :: (name: string, filename: string, file_data: string) -> Config, s
     return result, true;
 }
 
+keymap_map_key_string :: (key_string: string) -> u32 {
+    Str_Code :: struct { str: string; code: Input.Key_Code; }
+    using Input.Key_Code;
+    STRING_TO_CODE_MAP :: Str_Code.[
+        .{ "ArrowUp",           ARROW_UP },
+        .{ "ArrowDown",         ARROW_DOWN },
+        .{ "ArrowLeft",         ARROW_LEFT },
+        .{ "ArrowRight",        ARROW_RIGHT },
+        
+        .{ "Escape",            ESCAPE },
+        .{ "Delete",            DELETE },
+        .{ "Insert",            INSERT },
+        .{ "End",               END },
+        .{ "Home",              HOME },
+        .{ "Backspace",         BACKSPACE },
+        .{ "PrintScreen",       PRINT_SCREEN },
+        .{ "Pause",             PAUSE },
+        .{ "PageUp",            PAGE_UP },
+        .{ "PageDown",          PAGE_DOWN },
+        .{ "ScrollLock",        SCROLL_LOCK },
+        .{ "Enter",             ENTER },
+        .{ "Return",            ENTER },
+        .{ "Tab",               TAB },
+        .{ "Shift",             SHIFT },
+        .{ "Alt",               ALT },
+        .{ "Control",           CTRL },
+        .{ "Space",             #char " " },
+        .{ "Plus",              #char "+" },
+        .{ "Minus",             #char "-" },
+        
+        .{ "F1",                F1 },
+        .{ "F2",                F2 },
+        .{ "F3",                F3 },
+        .{ "F4",                F4 },
+        .{ "F5",                F5 },
+        .{ "F6",                F6 },
+        .{ "F7",                F7 },
+        .{ "F8",                F8 },
+        .{ "F9",                F9 },
+        .{ "F10",               F10 },
+        .{ "F11",               F11 },
+        .{ "F12",               F12 },
+
+        .{ "MouseLeft",         MOUSE_BUTTON_LEFT },
+        .{ "MouseRight",        MOUSE_BUTTON_RIGHT },
+        .{ "MouseMiddle",       MOUSE_BUTTON_MIDDLE },
+        .{ "MouseWheelUp",      MOUSE_WHEEL_UP },
+        .{ "MouseWheelDown",    MOUSE_WHEEL_DOWN },
+    ];
+    
+    for STRING_TO_CODE_MAP {
+        if equal_nocase(key_string, it.str) {
+            return cast(u32) it.code;
+        }
+    }
+    return 0;
+}
+
 
 #scope_file
 
@@ -149,7 +207,7 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
     map_action :: (name: string, combo: Key_Combo, available_actions: [] string, target_keymap: *[..] Key_Mapping, subsection: string) #expand {
         found := false;
         for available_actions {
-            if equal_nocase(name, it) {
+            if name == it {
                 array_add(target_keymap, Key_Mapping.{ combo = combo, action = cast(u32) it_index });
                 found = true;
                 break;
@@ -199,61 +257,8 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo
         return result, false;
     }
     
-    Str_Code :: struct { str: string; code: Input.Key_Code; }
-    using Input.Key_Code;
-    STRING_TO_CODE_MAP :: Str_Code.[
-        .{ "ArrowUp",           ARROW_UP },
-        .{ "ArrowDown",         ARROW_DOWN },
-        .{ "ArrowLeft",         ARROW_LEFT },
-        .{ "ArrowRight",        ARROW_RIGHT },
-        
-        .{ "Escape",            ESCAPE },
-        .{ "Delete",            DELETE },
-        .{ "Insert",            INSERT },
-        .{ "End",               END },
-        .{ "Home",              HOME },
-        .{ "Backspace",         BACKSPACE },
-        .{ "PrintScreen",       PRINT_SCREEN },
-        .{ "Pause",             PAUSE },
-        .{ "PageUp",            PAGE_UP },
-        .{ "PageDown",          PAGE_DOWN },
-        .{ "ScrollLock",        SCROLL_LOCK },
-        .{ "Enter",             ENTER },
-        .{ "Return",            ENTER },
-        .{ "Tab",               TAB },
-        .{ "Shift",             SHIFT },
-        .{ "Alt",               ALT },
-        .{ "Control",           CTRL },
-        .{ "Space",             #char " " },
-        .{ "Plus",              #char "+" },
-        .{ "Minus",             #char "-" },
-        
-        .{ "F1",                F1 },
-        .{ "F2",                F2 },
-        .{ "F3",                F3 },
-        .{ "F4",                F4 },
-        .{ "F5",                F5 },
-        .{ "F6",                F6 },
-        .{ "F7",                F7 },
-        .{ "F8",                F8 },
-        .{ "F9",                F9 },
-        .{ "F10",               F10 },
-        .{ "F11",               F11 },
-        .{ "F12",               F12 },
-
-        .{ "MouseLeft",         MOUSE_BUTTON_LEFT },
-        .{ "MouseRight",        MOUSE_BUTTON_RIGHT },
-        .{ "MouseMiddle",       MOUSE_BUTTON_MIDDLE },
-        .{ "MouseWheelUp",      MOUSE_WHEEL_UP },
-        .{ "MouseWheelDown",    MOUSE_WHEEL_DOWN },
-    ];
+    result.key_code = keymap_map_key_string(key_string);
     
-    for STRING_TO_CODE_MAP {
-        if equal_nocase(key_string, it.str) {
-            result.key_code = cast(u32) it.code;
-            break; 
-        }
-    }
     if !result.key_code {
         s := key_string;
         // Try single key chars, e.g. Ctrl-A, Ctrl-C etc.
