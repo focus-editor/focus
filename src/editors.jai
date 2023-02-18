@@ -82,8 +82,9 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .close_current_editor;             close_current_editor();
         case .close_other_editor;               close_other_editor();
         case .save;                             save_buffer(editor, buffer);
-        case .switch_to_left_editor;            switch_to_pane(.left);
-        case .switch_to_right_editor;           switch_to_pane(.right);
+        case .switch_to_left_editor;            switch_to_editor(.left);
+        case .switch_to_right_editor;           switch_to_editor(.right);
+        case .switch_to_other_editor;           switch_to_editor(.other);
         case .move_editor_to_the_left;          if editors.active == editors.right then swap_panes();
         case .move_editor_to_the_right;         if editors.active == editors.left  then swap_panes();
         case .move_cursor_to_viewport_center;   move_cursor_to_viewport_center(editor, buffer); cursor_moved = true;
@@ -785,27 +786,32 @@ save_buffer :: (editor: *Editor, buffer: *Buffer) {
     save_buffer_to_disk(buffer);
 }
 
-switch_to_pane :: (side: enum { left; right; }) {
+switch_to_editor :: (side: enum { left; right; other; }) {
     if editors.layout == {
         case .None; return;
 
         case .Single;
             current_editor := *open_editors[editors.active];
             new_editor := find_or_create_editor(current_editor.buffer_id, editors.active);
-            if side == .left {
-                editors.left   = new_editor;
-                editors.right  = editors.active;
-                editors.active = editors.left;
-                editors_start_moving_splitter(0.5, start = 0.0);
-            } else {
-                editors.left   = editors.active;
-                editors.right  = new_editor;
-                editors.active = editors.right;
-                editors_start_moving_splitter(0.5, start = 1.0);
+            if side == {
+                case .left;
+                    editors.left   = new_editor;
+                    editors.right  = editors.active;
+                    editors.active = editors.left;
+                    editors_start_moving_splitter(0.5, start = 0.0);
+                case .right; #through;
+                case .other;
+                    editors.left   = editors.active;
+                    editors.right  = new_editor;
+                    editors.active = editors.right;
+                    editors_start_moving_splitter(0.5, start = 1.0);
             }
             editors.layout = .Double;
 
         case .Double;
+            if side == .other {
+                if editors.active == editors.left then side = .right; else side = .left;
+            }
             editors.active = ifx side == .left then editors.left else editors.right;
     }
 }

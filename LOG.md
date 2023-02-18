@@ -44,7 +44,7 @@
     + Ctrl+Alt+arrows to scroll
     + Modify the config syntax highlighter so that it understands keymap
         + Build compile time hash tables to test action names
-    - Ctrl-, to switch to another editor
+    + Ctrl-, to switch to other editor
     - Fix the hold actions - cancel them when a modifier is released too (have a list of active actions)
     
 - On del, when deleting a newline, delete until the text starts, if the line is empty (then maybe no whitespace trimming will be required)
