@@ -1196,15 +1196,45 @@ delete_left_char :: (using cursor: *Cursor, buffer: *Buffer) {
 
 delete_right_char :: (using cursor: *Cursor, buffer: *Buffer) {
     if has_selection(cursor) {
+        // Delete selection
         range := get_selection(cursor);
         delete_range(buffer, range);
         pos = range.start;
         sel = range.start;
     } else {
+        // If we have spaces all the way to the newline on the right, we want to delete them all, including the newline
+        // (and if the second line has only spaces, we want to delete them all too)
+        first_newline  := -1;
+        second_newline := -1;
+        offset := pos_to_offset(buffer, pos);
+        while offset < buffer.bytes.count - 1 {
+            c := buffer.bytes[offset];
+            offset += 1;
+            if c == #char " " continue;
+            if c == #char "\n" then first_newline = offset; 
+            break;
+        }
+        if first_newline > 0 {
+            while offset < buffer.bytes.count - 1 {
+                c := buffer.bytes[offset];
+                offset += 1;
+                if c == #char " " continue;
+                if c == #char "\n" then second_newline = offset - 1; // we don't want to delete the second newline
+                break;
+            }
+        }
+        
+        // Figure out what range to delete
         range: Range = ---;
         range.start = pos;
-        range.end = pos;
-        range.end.col += 1;
+        if second_newline > 0 {
+            range.end = offset_to_pos(buffer, second_newline);
+        } else if first_newline > 0 {
+            range.end = offset_to_pos(buffer, first_newline);
+        } else {
+            range.end = pos;
+            range.end.col += 1;   
+        }
         delete_range(buffer, range);
     }
     col_wanted = pos.col;

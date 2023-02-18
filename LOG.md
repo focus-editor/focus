@@ -34,8 +34,10 @@
     - Ignore project folders which are children of another project folder?
     - Trace the whole project to see if we're doing something stupid
     
-- On del, when deleting a newline, delete until the text starts, if the line is empty (then maybe no whitespace trimming will be required)
-    - Also, check if it's whitespace all until the newline, then maybe delete all that in one go?
++ On del, when deleting a newline, delete until the text starts, if the line is empty (then maybe no whitespace trimming will be required)
+    + Also, check if it's whitespace all until the newline, then maybe delete all that in one go?
+- On backspace, don't delete to tab stops if in the middle of a line
+    - Also, when deleting a newline, delete all the way to non-space
     
 - Improve resource usage: query monitor refresh rate and adjust sleeping time based on that
     - Draw a figure - will that cause longer frames sometimes? Probably that's ok?
