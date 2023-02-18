@@ -102,25 +102,9 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     mark := get_temporary_storage_mark();
     defer   set_temporary_storage_mark(mark);
     
-    identifier: [..] u8;
-    identifier.allocator = temp;
-    
-    array_add(*identifier, <<t);
-
-    t += 1;
-    slash_mode := false;
-    
-    while t < max_t {
-        c := <<t;
-        if is_alnum(c)      { t += 1; slash_mode = false; array_add(*identifier, c); continue; }
-        if c == #char "\\"  { t += 1; slash_mode = true;  continue; }
-        if slash_mode && is_white_space(c) { t += 1; continue; }
-        break;
-    }
-    if t >= max_t then t = max_t;
+    identifier_str := read_identifier_string_tmp(tokenizer);
 
     // Maybe it's a keyword
-    identifier_str := to_string(identifier);
     if identifier_str.count <= MAX_KEYWORD_LENGTH {
         type, ok := table_find(*KEYWORD_MAP, identifier_str);
         if ok { token.type = type; return; }
@@ -171,13 +155,20 @@ parse_compiler_directive :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
 
     t += 1;
+    t = eat_white_space(t, max_t);  // there may be spaces between the # and the name
+    if !is_alpha(<<t) return;
+    
+    mark := get_temporary_storage_mark();
+    defer   set_temporary_storage_mark(mark);
+    
+    directive_str := read_identifier_string_tmp(tokenizer);
+    
     while t < max_t && is_alnum(<< t) t += 1;
     if t >= max_t return;
 
     // Check if it's one of the existing directives
-    identifier_str := to_string(buf.data + token.start + 1, t - start_t - 1);
-    if identifier_str.count > MAX_DIRECTIVE_LENGTH return;
-    directive, ok := table_find(*COMPILER_DIRECTIVES_MAP, identifier_str);
+    if directive_str.count > MAX_DIRECTIVE_LENGTH return;
+    directive, ok := table_find(*COMPILER_DIRECTIVES_MAP, directive_str);
     if ok {
         token.type = .compiler_directive;
         token.compiler_directive = directive;
@@ -438,6 +429,27 @@ parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
 }
 
+read_identifier_string_tmp :: (using tokenizer: *Tokenizer) -> string /* temp */ {
+    identifier: [..] u8;
+    identifier.allocator = temp;
+    
+    array_add(*identifier, <<t);
+
+    t += 1;
+    slash_mode := false;
+    
+    while t < max_t {
+        c := <<t;
+        if is_alnum(c)      { t += 1; slash_mode = false; array_add(*identifier, c); continue; }
+        if c == #char "\\"  { t += 1; slash_mode = true;  continue; }
+        if slash_mode && is_white_space(c) { t += 1; continue; }
+        break;
+    }
+    if t >= max_t then t = max_t;
+    
+    return to_string(identifier);
+}
+
 Tokenizer :: struct {
     buf: string;
     max_t:   *u8;
@@ -612,15 +624,13 @@ MAX_DIRECTIVE_LENGTH :: #run -> s32 {
 
 eat_white_space :: inline (start: *u8, max_t: *u8) -> *u8 {
     t := start;
-    while t < max_t {
-        is_whitespace := inline is_white_space(<< t);
-        if !is_whitespace break;
+    while t < max_t && is_white_space(<<t) {
         t += 1;
     }
     return t;
 }
 
-is_white_space :: (c: u8) -> bool {
+is_white_space :: inline (c: u8) -> bool {
     return c == #char " " || c == #char "\r" || c == #char "\n";
 }
 
