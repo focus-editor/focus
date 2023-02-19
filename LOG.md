@@ -36,8 +36,8 @@
     
 + On del, when deleting a newline, delete until the text starts, if the line is empty (then maybe no whitespace trimming will be required)
     + Also, check if it's whitespace all until the newline, then maybe delete all that in one go?
-- On backspace, don't delete to tab stops if in the middle of a line
-    - Also, when deleting a newline, delete all the way to non-space
++ On backspace, don't delete to tab stops if in the middle of a line
+- Also, when deleting a newline, delete all the way to non-space
     
 - Improve resource usage: query monitor refresh rate and adjust sleeping time based on that
     - Draw a figure - will that cause longer frames sometimes? Probably that's ok?
@@ -53,6 +53,8 @@
 - Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt
 
 - Display files that are deleted on disk but modified in the open file dialog
+
+- Select all by 4-click
 
 - File management:
     - Create new files:

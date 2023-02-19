@@ -1159,27 +1159,12 @@ delete_left_char :: (using cursor: *Cursor, buffer: *Buffer) {
     }    
 
     // Or handle the more complex case with tabs etc
-    to_prev_tabstop := pos.col % TAB_SIZE;
-    if to_prev_tabstop == 0 && pos.col > 0 then to_prev_tabstop = TAB_SIZE;
-    all_spaces := false;
-    if to_prev_tabstop > 0 {
-        left_pos := pos;
-        left_pos.col -= to_prev_tabstop;
-        start := pos_to_offset(buffer, left_pos);
-        end   := pos_to_offset(buffer, pos);
-        all_spaces = true;
-        for i : start..end-1 {
-            if buffer.bytes[i] != #char " " {
-                all_spaces = false;
-                break;
-            }
-        }
-    }
-    spaces_to_remove := ifx all_spaces then to_prev_tabstop else 1;
-    range: Range = ---;
-    range.start = pos;
-    range.end = pos;
-    range.start.col -= spaces_to_remove;
+    chars_to_delete := pos.col % TAB_SIZE;
+    if chars_to_delete == 0 && pos.col > 0 then chars_to_delete = TAB_SIZE;
+    if pos.col > buffer.lines[pos.line].text_start then chars_to_delete = 1;  // don't delete to tabstops in the middle of the line
+    
+    range := Range.{ start = pos, end = pos };
+    range.start.col -= chars_to_delete;
     if range.start.col < 0 {
         range.start.col = 0;
         if range.start.line > 0 {
@@ -1190,7 +1175,7 @@ delete_left_char :: (using cursor: *Cursor, buffer: *Buffer) {
     delete_range(buffer, range);
 
     pos = range.start;
-    sel = pos;  // always remove selection
+    sel = pos;  // always remove selection (otherwise if shift is pressed it may create one, which will be bad)
     col_wanted = pos.col;
 }
 
