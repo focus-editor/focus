@@ -228,10 +228,11 @@ is_word_char :: (ch: u32) -> bool {
     return
         (#char "a" <= ch && ch <= #char "z") ||
         (#char "A" <= ch && ch <= #char "Z") ||
+        (ch == #char "_") ||
         (#char "0" <= ch && ch <= #char "9") ||
         (#char "а" <= ch && ch <= #char "я") ||
         (#char "А" <= ch && ch <= #char "Я") ||
-        (ch == #char "_");
+        (ch == #char "ё" || ch == #char "Ё");  // TODO: include other common chars
 }
 
 is_all_whitespace :: (s: string) -> bool {

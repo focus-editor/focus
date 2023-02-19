@@ -38,8 +38,8 @@
     + Also, check if it's whitespace all until the newline, then maybe delete all that in one go?
 + On backspace, don't delete to tab stops if in the middle of a line
 + Ctrl+Backspace to delete all whitespace to the next non-whitespace
-- Fix delete_word - actually delete both types of words (ideally ignore 1 space before the word)
-- Also, when deleting a newline, delete all the way to non-space
++ Fix delete_word - actually delete both types of words (ideally ignore 1 space before the word)
+- Implement delete_word on the right
 - Important: improve jumping by words - treat non-word-char "words" as words too
 - Select word: don't decode the whole line
     

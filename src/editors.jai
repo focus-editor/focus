@@ -139,8 +139,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
                 case .duplicate_lines;                  if cursors.count == 1 { duplicate_lines(cursor, buffer); keep_selection = true; }
                 case .move_selected_lines_up;           if cursors.count == 1 { move_lines_up  (cursor, buffer); keep_selection = true; }
                 case .move_selected_lines_down;         if cursors.count == 1 { move_lines_down(cursor, buffer); keep_selection = true; }                
-                case .delete_word_left;                 if cursors.count == 1 { delete_word(cursor, buffer, .left);  }
-                case .delete_word_right;                if cursors.count == 1 { delete_word(cursor, buffer, .right); }
+                case .delete_word_left;                 if cursors.count == 1 { delete_word_left(cursor, buffer);  }
+                case .delete_word_right;                if cursors.count == 1 { delete_word_right(cursor, buffer); }
                 
                 case .indent_or_go_to_next_tabstop;     if indent_or_tab(cursor, buffer) keep_selection = true;
                 case .indent;                           indent_lines  (cursor, buffer);  keep_selection = true;
@@ -1143,32 +1143,47 @@ new_line_above :: (using cursor: *Cursor, buffer: *Buffer) {
     sel = pos;
 }
 
-delete_word :: (using cursor: *Cursor, buffer: *Buffer, dir: enum { left; right; }) {
+delete_word_left :: (using cursor: *Cursor, using buffer: *Buffer) {
     if !buffer.bytes return;
     
-    // Maybe select all the spaces and delete in one go
     if !has_selection(cursor) {
+        // Select a contiguous range of characters of the same type to delete them in one go
         offset := pos_to_offset(buffer, pos);
-        if dir == .left {
-            offset = max(offset - 1, 0);
-            while offset > 0 && offset < buffer.bytes.count {
-                if buffer.bytes[offset] != #char " " break;
-                offset -= 1;
-            }
-            offset += 1;
-        } else {
-            while offset < buffer.bytes.count - 1 {
-                if buffer.bytes[offset] != #char " " break;
-                offset += 1;
-            }
+        if offset == 0 return;  // nothing to delete
+        
+        t := *bytes[offset];
+        line_start := *bytes[lines[pos.line].start];
+        char: u32;
+        t, char = unicode_prev_character(t);
+        if char == #char " " && t > line_start then t, char = unicode_prev_character(t);  // skip a single space character if present
+        
+        if char == #char " " {
+            // Only spaces
+            while t > bytes.data && char == #char " "   { t, char = unicode_prev_character(t); }
+        } else if is_word_char(char) {
+            // Only word chars
+            while t > bytes.data && is_word_char(char)  { t, char = unicode_prev_character(t); }
+        } else if char != #char "\n" {
+            // Only non-word chars
+            while t > bytes.data && !is_word_char(char) && char != #char " " && char != #char "\n" { t, char = unicode_prev_character(t); }
         }
-        sel = offset_to_pos(buffer, offset);
+        
+        if t <= bytes.data then t = bytes.data; else t = unicode_next_character(t);
+        
+        pos = offset_to_pos(buffer, max(0, t - bytes.data));
     }
     
-    if dir == {
-        case .left;  delete_left_char (cursor, buffer);
-        case .right; delete_right_char(cursor, buffer);
+    delete_left_char(cursor, buffer);
+}
+
+delete_word_right :: (using cursor: *Cursor, using buffer: *Buffer) {
+    if !buffer.bytes return;
+    
+    if !has_selection(cursor) {
+    
     }
+    
+    delete_right_char(cursor, buffer);
 }
 
 delete_left_char :: (using cursor: *Cursor, buffer: *Buffer) {

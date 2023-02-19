@@ -51,3 +51,11 @@ move_offset_by_chars :: (offset: s32, num_chars: s32, bytes: [] u8, max_offset: 
     }
     return cast(s32) (t - bytes.data);
 }
+
+unicode_prev_character :: (s: *u8) -> new_s: *u8, char: u32 {  // NOTE: assuming the memory is valid utf-8, no checks are done!
+    t := s - 1;
+    while (<<t & 0b1100_0000) == 0b1000_0000 t -= 1;  // rewind to the first byte of a utf-8 sequence (all non-first bytes start with 10)
+    
+    char, _, result := character_utf8_to_utf32(t, s - t);
+    return t, char;
+}
