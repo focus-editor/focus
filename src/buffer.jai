@@ -27,7 +27,7 @@ put_cursor_in_valid_spot :: (using cursor: *Cursor, buffer: Buffer) {
 }
 
 insert_string_at_pos :: (buffer: *Buffer, pos: Pos, str: string) {
-    offset := get_offset(buffer, pos);
+    offset := pos_to_offset(buffer, pos);
     insert_string_at_offset(buffer, offset, str);
 }
 
@@ -37,7 +37,7 @@ insert_string_at_offset :: (buffer: *Buffer, offset: s64, str: string) {
 }
 
 insert_char_at_pos :: (buffer: *Buffer, pos: Pos, char: Utf8_Char) {
-    offset := get_offset(buffer, pos);
+    offset := pos_to_offset(buffer, pos);
     new_insert_char_edit(buffer, offset, char);
     str := to_string(*char);
     insert_string_raw(buffer, offset, str);
@@ -86,22 +86,8 @@ replace_range_raw :: (buffer: *Buffer, start: s32, end: s32, str: string) {
     insert_string_raw(buffer, start, str);
 }
 
-get_offset :: (using buffer: Buffer, pos: Pos) -> s64 {
-    assert(!dirty);
-    line := lines[pos.line];
-    assert(0 <= pos.col && pos.col <= line.num_chars);
-    offset := line.start;
-    col := 0;
-    while offset < line.end && col < pos.col {
-        byte := bytes[offset];
-        col += 1;
-        offset += 1 + trailingBytesForUTF8[byte];
-    }
-    return offset;
-}
-
 get_letter_at_pos :: (using buffer: Buffer, pos: Pos) -> string {
-    offset := get_offset(buffer, pos);
+    offset := pos_to_offset(buffer, pos);
     if offset >= bytes.count return "";
     
     letter: string = ---;

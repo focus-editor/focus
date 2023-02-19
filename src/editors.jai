@@ -465,8 +465,11 @@ add_paste_animation :: (using editor: *Editor, range: Range) {
 
 select_word :: (using cursor: *Cursor, buffer: Buffer) {
     // Decode the characters on the line for scanning
-    chars := get_temp_unicode_chars_for_line(buffer, pos.line, max_char = 5000);  // arbitrary limit
+    MAX_CHAR :: 5000;  // arbitrary limit
+    chars := get_temp_unicode_chars_for_line(buffer, pos.line, max_char = MAX_CHAR);
     if !chars return;  // empty line
+
+    if pos.col >= MAX_CHAR { log_error("Line too long when trying to select word."); return; }
 
     col := -1;
     if is_word_char(chars[pos.col]) {
@@ -479,7 +482,7 @@ select_word :: (using cursor: *Cursor, buffer: Buffer) {
 
     // Go left
     start := col;
-    while start >= 0 {
+    while start >= 0 && start < MAX_CHAR {
         if !is_word_char(chars[start]) then { start += 1; break; }
         start -= 1;
     }
@@ -487,7 +490,7 @@ select_word :: (using cursor: *Cursor, buffer: Buffer) {
 
     // Go right
     end := col + 1;
-    while end < chars.count - 1 && is_word_char(chars[end]) { end += 1; }
+    while end < chars.count - 1 && end < MAX_CHAR && is_word_char(chars[end]) { end += 1; }
 
     assert(start <= end);
     sel.col = xx start;
@@ -1141,7 +1144,27 @@ new_line_above :: (using cursor: *Cursor, buffer: *Buffer) {
 }
 
 delete_word :: (using cursor: *Cursor, buffer: *Buffer, dir: enum { left; right; }) {
-    if !has_selection(cursor) then select_word(cursor, buffer);
+    if !buffer.bytes return;
+    
+    // Maybe select all the spaces and delete in one go
+    if !has_selection(cursor) {
+        offset := pos_to_offset(buffer, pos);
+        if dir == .left {
+            offset = max(offset - 1, 0);
+            while offset > 0 && offset < buffer.bytes.count {
+                if buffer.bytes[offset] != #char " " break;
+                offset -= 1;
+            }
+            offset += 1;
+        } else {
+            while offset < buffer.bytes.count - 1 {
+                if buffer.bytes[offset] != #char " " break;
+                offset += 1;
+            }
+        }
+        sel = offset_to_pos(buffer, offset);
+    }
+    
     if dir == {
         case .left;  delete_left_char (cursor, buffer);
         case .right; delete_right_char(cursor, buffer);
@@ -1161,7 +1184,10 @@ delete_left_char :: (using cursor: *Cursor, buffer: *Buffer) {
     // Or handle the more complex case with tabs etc
     chars_to_delete := pos.col % TAB_SIZE;
     if chars_to_delete == 0 && pos.col > 0 then chars_to_delete = TAB_SIZE;
-    if pos.col > buffer.lines[pos.line].text_start then chars_to_delete = 1;  // don't delete to tabstops in the middle of the line
+    if chars_to_delete == 0 then chars_to_delete = 1;
+    
+    offset := pos_to_offset(buffer, pos);
+    if offset > buffer.lines[pos.line].text_start then chars_to_delete = 1;  // don't delete to tabstops in the middle of the line
     
     range := Range.{ start = pos, end = pos };
     range.start.col -= chars_to_delete;
@@ -1407,7 +1433,7 @@ paste_from_clipboard :: (editor: *Editor, cursor: *Cursor, buffer: *Buffer) {
     replace_range(buffer, selection, str);
 
     recalculate_lines(buffer);
-    offset := get_offset(buffer, selection.start);
+    offset := pos_to_offset(buffer, selection.start);
     new_cursor_pos := offset_to_pos(buffer, offset + str.count);
 
     cursor.pos = new_cursor_pos;
