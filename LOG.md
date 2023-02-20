@@ -34,18 +34,12 @@
     - Ignore project folders which are children of another project folder?
     - Trace the whole project to see if we're doing something stupid
     
-+ On del, when deleting a newline, delete until the text starts, if the line is empty (then maybe no whitespace trimming will be required)
-    + Also, check if it's whitespace all until the newline, then maybe delete all that in one go?
-+ On backspace, don't delete to tab stops if in the middle of a line
-+ Ctrl+Backspace to delete all whitespace to the next non-whitespace
-+ Fix delete_word - actually delete both types of words (ideally ignore 1 space before the word)
-+ Implement delete_word on the right
 - Important: improve jumping by words - treat non-word-char "words" as words too
-- Select word: don't decode the whole line
     
-- Improve resource usage: query monitor refresh rate and adjust sleeping time based on that
-    - Draw a figure - will that cause longer frames sometimes? Probably that's ok?
-    - Don't skip frames when dragging scrollbar
+- Proper tab support:
+    - Draw them wide (only in the visible part of the text)
+    - Consider them a whitespace when calculating line start - they never need to show on the left in finder results
+    - If it turns out to be too hard or messy, could just convert them to spaces on load
     
 - Add horizontal scrollbar
     - Alt-HL smooth scroll
@@ -121,20 +115,7 @@
 
 - BUG: When reloading file from disk (refresh_buffer_from_disk) make sure to remove crlf (until it's supported at least)
 
-- Proper tab support:
-    - Draw them wide (only in the visible part of the text)
-    - Consider them a whitespace when calculating line start - they never need to show on the left in finder results
-    - If it turns out to be too hard or messy, could just convert them to spaces on load
-
-- Config parameters:
-    - Convert to LF on load = true
-    - "disable_that_annoying_paste_effect = false"
-    - tab_size = 4
-    - Convert tabs to spaces on load = false
-    - cursor_style = block/line
-    - highlight selection occurrences
-    - log_level = info/error
-    - load last session on start ?
+- Keymap: add a "nothing" function (this is for merging)
 
 - Hide scrollbars unless scrolling or hovering over editor
 - Search in buffer:
@@ -180,6 +161,10 @@
     - Figure out a way to do edits with multiple cursors more efficiently
         - One idea: always copy buffer into a temporary string and rebuild the buffer every time, making changes for every cursor as we go. It would be probably a bit slower for one cursor, but still acceptable and much more predictable for many cursors
       (also this may be a good occasion to make sure other editors' cursors are adjusted when edits are done elsewhere)
+      
+- Improve resource usage: query monitor refresh rate and adjust sleeping time based on that
+    - Draw a figure - will that cause longer frames sometimes? Probably that's ok?
+    - Don't skip frames when dragging scrollbar
 
 - When there are several cursors where some of them are above the viewport, hitting enter will shift everything down
   and will jerk briefly, which is annoying
@@ -211,6 +196,18 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Select word:
+    + Favor the word on the left if present
+    + Select all sorts of chars by double clicking
+    + Don't select single characters by ctrl+D
+    + Fix the issue near the beginning of the buffer (e.g. "!main" is selected)
++ On del, when deleting a newline, delete until the text starts, if the line is empty (then maybe no whitespace trimming will be required)
+    + Also, check if it's whitespace all until the newline, then maybe delete all that in one go?
++ On backspace, don't delete to tab stops if in the middle of a line
++ Ctrl+Backspace to delete all whitespace to the next non-whitespace
++ Fix delete_word - actually delete both types of words (ideally ignore 1 space before the word)
++ Implement delete_word on the right
++ Select word: don't decode the whole line
 + Rewrite the input system using the keymap handler
     + Debug the config key map
     + Have only one action per context

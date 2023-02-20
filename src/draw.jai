@@ -115,7 +115,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             if !mouse_pointer_is_within(rect) then cursor_moved = true;
 
             if !shift_pressed() && mouse.left.just_pressed then remove_selection(cursor);
-            if mouse.left.just_double_clicked then select_word(cursor, buffer);
+            if mouse.left.just_double_clicked then select_word(cursor, buffer, only_word_chars = false);
             if mouse.left.just_triple_clicked then select_lines(cursor, buffer);
 
             editor.refresh_highlights = true;
@@ -966,7 +966,7 @@ draw_cursors :: (using editor: Editor, buffer: Buffer, editor_rect: Rect, text_o
             draw_rounded_rect(shrink(rect, 1), Colors.BACKGROUND, radius = rounding_radius_small, set_shader = false);
         }
         // Draw the letter on top for better visibility
-        letter := get_letter_at_pos(buffer, cursor.pos);
+        letter := get_char_at_pos_as_string(buffer, cursor.pos);
         if letter != "\n" {
             Simp.draw_text(font, xx rect.x, xx (rect.y + (line_height - char_size) / 2), letter);
         }

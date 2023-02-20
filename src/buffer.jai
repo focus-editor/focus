@@ -86,15 +86,23 @@ replace_range_raw :: (buffer: *Buffer, start: s32, end: s32, str: string) {
     insert_string_raw(buffer, start, str);
 }
 
-get_letter_at_pos :: (using buffer: Buffer, pos: Pos) -> string {
-    offset := pos_to_offset(buffer, pos);
+get_char_at_pos :: (using buffer: Buffer, pos: Pos) -> u32 {
+    str := get_char_at_pos_as_string(buffer, pos);
+    if !str return 0;
+    
+    char := utf8_next_character(*str);
+    return char;
+}
+
+get_char_at_pos_as_string :: (using buffer: Buffer, pos: Pos) -> string {
+    offset := pos_to_offset(buffer, make_valid_pos(buffer, pos));
     if offset >= bytes.count return "";
     
-    letter: string = ---;
-    letter.data  = *bytes[offset];
-    letter.count = 1 + trailingBytesForUTF8[bytes[offset]];
+    char: string = ---;
+    char.data  = *bytes[offset];
+    char.count = 1 + trailingBytesForUTF8[bytes[offset]];
     
-    return letter;
+    return char;
 }
 
 offset_to_pos :: (using buffer: Buffer, offset: s64) -> Pos {
@@ -691,4 +699,12 @@ Pos :: struct {
 
 Range :: struct {
     start, end: Pos;
+}
+
+Char_Type :: enum {
+    none;
+    word;
+    non_word;
+    space;
+    other;
 }

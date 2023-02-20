@@ -235,6 +235,10 @@ is_word_char :: (ch: u32) -> bool {
         (ch == #char "ё" || ch == #char "Ё");  // TODO: include other common chars
 }
 
+is_non_word_char :: inline (ch: u32) -> bool {
+    return !is_word_char(ch) && ch != #char " " && ch != #char "\n";
+}
+
 is_all_whitespace :: (s: string) -> bool {
     for byte : to_bytes(s) {
         // Multi-byte whitespace is not included
