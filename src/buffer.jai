@@ -700,11 +700,3 @@ Pos :: struct {
 Range :: struct {
     start, end: Pos;
 }
-
-Char_Type :: enum {
-    none;
-    word;
-    non_word;
-    space;
-    other;
-}

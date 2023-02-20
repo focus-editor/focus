@@ -33,8 +33,7 @@
     - Have a user error log - with an icon in the title bar to toggle it
     - Ignore project folders which are children of another project folder?
     - Trace the whole project to see if we're doing something stupid
-    
-- Important: improve jumping by words - treat non-word-char "words" as words too
+
     
 - Proper tab support:
     - Draw them wide (only in the visible part of the text)
@@ -196,6 +195,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Important: improve jumping by words - treat non-word-char "words" as words too
 + Select word:
     + Favor the word on the left if present
     + Select all sorts of chars by double clicking

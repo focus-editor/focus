@@ -474,17 +474,8 @@ select_word :: (cursor: *Cursor, buffer: Buffer, only_word_chars := true) {
         char = char_left;
     }
     
-    char_type: Char_Type;
-    if is_word_char(char) {
-        char_type = .word;
-    } else if char == #char " " {
-        char_type = .space;
-    } else if char != #char "\n" {
-        char_type = .non_word;
-    } else {
-        return; 
-    }
-    
+    char_type := get_char_type(char);
+    if char_type == .other return;
     if only_word_chars then char_type = .word;
     
     cursor.pos = scan_through_similar_chars_on_the_right(pos, buffer, char_type, skip_one_space = false);
@@ -939,87 +930,96 @@ new_edit_group_required_for_action :: (action: Action_Editors, cursor: Cursor) -
     return false;
 }
 
-scan_until_word_char :: (condition: bool, chars: [] u32, start: s32, direction: enum { left; right; }) -> index: s32 {
-    i := start;
-    if direction == .left {
-        while i >= 0 {
-            if is_word_char(chars[i]) == condition break;
-            i -= 1;
-        }
-    } else {
-        while i < chars.count {
-            if is_word_char(chars[i]) == condition break;
-            i += 1;
-        }
-    }
-    return i;
-}
-
 move_cursor_left :: (using cursor: *Cursor, buffer: Buffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
     if has_selection(cursor) && !extend_selection {
+        // Delete selection
         pos = get_selection(cursor).start;
         remove_selection(cursor);
-    } else {
+    } else if pos.col <= 0 {
+        // Move up one line
+        if pos.line > 0 { pos.line -= 1; pos.col = buffer.lines[pos.line].num_chars; }
+        else pos.col = 0;
+    } else if by == .char {
+        // Just move left
         pos.col -= 1;
-        if pos.col < 0 {
-            if pos.line > 0 { pos.line -= 1; pos.col = buffer.lines[pos.line].num_chars; }
-            else pos.col = 0;
-        }
-        if pos.col > 0 && (by == .word || by == .word_ends) {
-            chars := get_temp_unicode_chars_for_line(buffer, pos.line, max_char = pos.col);
-
-            i := pos.col;
-            if by == .word {
-                if is_word_char(chars[i]) {
-                    i = scan_until_word_char(false, chars, i, .left);
-                } else {
-                    i = scan_until_word_char(true, chars, i, .left);
-                }
-            } else if by == .word_ends {
-                // Scan until we see a word char, then a non-word char
-                i = scan_until_word_char(true,  chars, i, .left);
-                i = scan_until_word_char(false, chars, i, .left);
-            }
-            pos.col = i + 1;
-            pos = make_valid_pos(buffer, pos);
+    } else {
+        if by == {
+            case .word;
+                context.underscore_is_part_of_word = false;
+                pos = scan_through_similar_chars_on_the_left(pos, buffer);
+                context.underscore_is_part_of_word = true;
+            case .word_ends;
+                char := get_char_at_pos(buffer, pos);
+                char_type := get_char_type(char);
+                if char_type != .word then pos = scan_through_similar_chars_on_the_left(pos, buffer, char_type, skip_one_space = false);
+                pos = scan_through_similar_chars_on_the_left(pos, buffer);
         }
     }
     col_wanted = pos.col;
 }
 
 move_cursor_right :: (using cursor: *Cursor, buffer: Buffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
+    line_len := buffer.lines[pos.line].num_chars;
+    
     if has_selection(cursor) && !extend_selection {
-        pos = get_selection(cursor).end;
+        // Delete selection
+        pos = get_selection(cursor).start;
         remove_selection(cursor);
+    } else if pos.col >= line_len {
+        // Move down one line
+        if pos.line < buffer.lines.count - 1 { pos.line += 1; pos.col = 0; }
+    } else if by == .char {
+        // Just move right
+        pos.col += 1;
     } else {
-        line_len := buffer.lines[pos.line].num_chars;
-        if pos.col >= line_len && pos.line < buffer.lines.count - 1 {
-            pos.line += 1;
-            pos.col   = 0;
-        } else if pos.col < line_len {
-            pos.col += 1;
-            if pos.col < buffer.lines[pos.line].num_chars && (by == .word || by == .word_ends) {
-                chars := get_temp_unicode_chars_for_line(buffer, pos.line, max_char = 5000);  // arbitrary limit
-
-                i := pos.col - 1;
-                if by == .word {
-                    if is_word_char(chars[i]) {
-                        i = scan_until_word_char(false, chars, i, .right);
-                    } else {
-                        i = scan_until_word_char(true, chars, i, .right);
-                    }
-                } else if by == .word_ends {
-                    // Scan until we see a word char, then a non-word char
-                    i = scan_until_word_char(true,  chars, i, .right);
-                    i = scan_until_word_char(false, chars, i, .right);
-                }
-                pos.col = i;
-                pos = make_valid_pos(buffer, pos);
-            }
+        if by == {
+            case .word;
+                context.underscore_is_part_of_word = false;
+                pos = scan_through_similar_chars_on_the_right(pos, buffer);
+                context.underscore_is_part_of_word = true;
+            case .word_ends;
+                char_type := get_char_type(get_char_at_pos(buffer, pos));
+                if char_type != .word  then pos = scan_through_similar_chars_on_the_right(pos, buffer, char_type, skip_one_space = false);
+                char_type = get_char_type(get_char_at_pos(buffer, pos));
+                if char_type != .other then pos = scan_through_similar_chars_on_the_right(pos, buffer);
         }
     }
     col_wanted = pos.col;
 }
+
+// move_cursor_right :: (using cursor: *Cursor, buffer: Buffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
+//     if has_selection(cursor) && !extend_selection {
+//         pos = get_selection(cursor).end;
+//         remove_selection(cursor);
+//     } else {
+//         line_len := buffer.lines[pos.line].num_chars;
+//         if pos.col >= line_len && pos.line < buffer.lines.count - 1 {
+//             pos.line += 1;
+//             pos.col   = 0;
+//         } else if pos.col < line_len {
+//             pos.col += 1;
+//             if pos.col < buffer.lines[pos.line].num_chars && (by == .word || by == .word_ends) {
+//                 chars := get_temp_unicode_chars_for_line(buffer, pos.line, max_char = 5000);  // arbitrary limit
+
+//                 i := pos.col - 1;
+//                 if by == .word {
+//                     if is_word_char(chars[i]) {
+//                         i = scan_until_word_char(false, chars, i, .right);
+//                     } else {
+//                         i = scan_until_word_char(true, chars, i, .right);
+//                     }
+//                 } else if by == .word_ends {
+//                     // Scan until we see a word char, then a non-word char
+//                     i = scan_until_word_char(true,  chars, i, .right);
+//                     i = scan_until_word_char(false, chars, i, .right);
+//                 }
+//                 pos.col = i;
+//                 pos = make_valid_pos(buffer, pos);
+//             }
+//         }
+//     }
+//     col_wanted = pos.col;
+// }
 
 move_cursor_vertically :: (using cursor: *Cursor, buffer: Buffer, delta: s32, extend_selection: bool) {
     if has_selection(cursor) && !extend_selection {
@@ -1142,7 +1142,7 @@ new_line_above :: (using cursor: *Cursor, buffer: *Buffer) {
     sel = pos;
 }
 
-scan_through_similar_chars_on_the_left :: (pos: Pos, using buffer: Buffer, only: Char_Type = .none, skip_one_space := true) -> Pos {
+scan_through_similar_chars_on_the_left :: (pos: Pos, using buffer: Buffer, char_type: Char_Type = .none, skip_one_space := true) -> Pos {
     if !buffer.bytes return pos;
     
     offset := pos_to_offset(buffer, pos);
@@ -1152,25 +1152,19 @@ scan_through_similar_chars_on_the_left :: (pos: Pos, using buffer: Buffer, only:
     line_start := bytes.data + lines[pos.line].start;
     char: u32;
     t, char = unicode_prev_character(t);
-    if only == {
-        case .word;     if !is_word_char(char)     return pos;
-        case .non_word; if !is_non_word_char(char) return pos;
-        case .space;    if  char != #char " "      return pos;
-    }
+    if char_type != .none && char_type != get_char_type(char) return pos;
     if skip_one_space && char == #char " " && t > line_start then t, char = unicode_prev_character(t);
     
-    if char == #char " " {
-        // Only spaces
-        while t > bytes.data && char == #char " "  { t, char = unicode_prev_character(t); }
-        if char != #char " " then t = unicode_next_character(t);
-    } else if is_word_char(char) {
-        // Only word chars
-        while t > bytes.data && is_word_char(char) { t, char = unicode_prev_character(t); }
-        if !is_word_char(char) then t = unicode_next_character(t);
-    } else if char != #char "\n" {
-        // Only non-word chars
-        while t > bytes.data && is_non_word_char(char) { t, char = unicode_prev_character(t); }
-        if !is_non_word_char(char) then t = unicode_next_character(t);
+    if get_char_type(char) == {
+        case .space;
+            while t > bytes.data && is_space_char(char)  { t, char = unicode_prev_character(t); }
+            if char != #char " " then t = unicode_next_character(t);
+        case .word;
+            while t > bytes.data && is_word_char(char) { t, char = unicode_prev_character(t); }
+            if !is_word_char(char) then t = unicode_next_character(t);
+        case .non_word;
+            while t > bytes.data && is_non_word_char(char) { t, char = unicode_prev_character(t); }
+            if !is_non_word_char(char) then t = unicode_next_character(t);
     }
     
     if t < bytes.data then t = bytes.data;

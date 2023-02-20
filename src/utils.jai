@@ -224,11 +224,13 @@ find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) 
     return -1;
 }
 
+#add_context underscore_is_part_of_word := true;
+
 is_word_char :: (ch: u32) -> bool {
     return
         (#char "a" <= ch && ch <= #char "z") ||
         (#char "A" <= ch && ch <= #char "Z") ||
-        (ch == #char "_") ||
+        (ch == #char "_" && context.underscore_is_part_of_word) ||
         (#char "0" <= ch && ch <= #char "9") ||
         (#char "а" <= ch && ch <= #char "я") ||
         (#char "А" <= ch && ch <= #char "Я") ||
@@ -237,6 +239,22 @@ is_word_char :: (ch: u32) -> bool {
 
 is_non_word_char :: inline (ch: u32) -> bool {
     return !is_word_char(ch) && ch != #char " " && ch != #char "\n";
+}
+
+is_space_char :: inline (ch: u32) -> bool {
+    return ch == #char " " || (!context.underscore_is_part_of_word && ch == #char "_");
+}
+
+get_char_type :: (ch: u32) -> Char_Type {
+    if is_word_char(ch) {
+        return .word;
+    } else if is_space_char(ch) {
+        return .space;
+    } else if ch != #char "\n" {
+        return .non_word;
+    } else {
+        return .other;
+    }
 }
 
 is_all_whitespace :: (s: string) -> bool {
@@ -288,4 +306,12 @@ Tween_Animation :: struct(T: Type) {
     started_at: Time;
     speed: Time = xx 0.2;  // how many seconds to finish
     func: enum { lerp; smoothstep; } = .smoothstep;
+}
+
+Char_Type :: enum {
+    none;
+    word;
+    non_word;
+    space;
+    other;
 }
