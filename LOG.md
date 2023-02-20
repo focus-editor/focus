@@ -34,8 +34,6 @@
     - Ignore project folders which are children of another project folder?
     - Trace the whole project to see if we're doing something stupid
 
-
-- Alt-U/D or Alt-PgUp/Down scroll fast
 - Alt+up/down to move fast (editor action)
 - Ctrl + Shift + , to duplicate current editor on the other pane
 - Ctrl + Home/End to jump to beginning/end of the file
@@ -196,6 +194,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Alt-U/D or Alt-PgUp/Down scroll fast
 + Alt-Backspace/Delete to delete words 
 + Shift-backspace - delete_line_and_go_up
 + Shift-Delete - delete_line

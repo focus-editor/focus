@@ -212,6 +212,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // Smooth keyboard scrolling
         if editor_smooth_scroll.active && editor_id == editors.active {
             speed := 60 * line_height;  // pixels per second
+            if editor_smooth_scroll.fast then speed *= 2;
             time_elapsed := cast(float) (frame_time - editor_smooth_scroll.started_at);
             new_scroll_pos := editor_smooth_scroll.start_y + time_elapsed * speed * (ifx editor_smooth_scroll.up then -1 else 1);
             viewport.top = clamp(cast(s32) new_scroll_pos, 0, max_y_scroll);

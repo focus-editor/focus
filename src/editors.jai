@@ -19,8 +19,10 @@ editors_handle_event :: (event: Input.Event) {
         hold_actions_to_be_stopped := map_key_release_to_hold_actions(event, Action_Editors);
         for hold_actions_to_be_stopped {
             if it == {
-                case .scroll_viewport_up;       if  editor_smooth_scroll.up then editor_smooth_scroll.active = false;
-                case .scroll_viewport_down;     if !editor_smooth_scroll.up then editor_smooth_scroll.active = false;
+                case .scroll_viewport_up;           if  editor_smooth_scroll.up then editor_smooth_scroll.active = false;
+                case .scroll_viewport_up_fast;      if  editor_smooth_scroll.up then editor_smooth_scroll.active = false;
+                case .scroll_viewport_down;         if !editor_smooth_scroll.up then editor_smooth_scroll.active = false;
+                case .scroll_viewport_down_fast;    if !editor_smooth_scroll.up then editor_smooth_scroll.active = false;
                 // case .scroll_viewport_left;
                 // case .scroll_viewport_right;
             }
@@ -89,8 +91,10 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .move_editor_to_the_right;         if editors.active == editors.left  then swap_panes();
         case .move_cursor_to_viewport_center;   move_cursor_to_viewport_center(editor, buffer); cursor_moved = true;
         case .remove_additional_cursors;        cursor := leave_only_original_cursor(editor); remove_selection(cursor); cursor_moved = true;       
-        case .scroll_viewport_up;               vertical_smooth_scroll(editor, up = true);  activate_hold_action(action, event);
-        case .scroll_viewport_down;             vertical_smooth_scroll(editor, up = false); activate_hold_action(action, event);
+        case .scroll_viewport_up;               vertical_smooth_scroll(editor, up = true);               activate_hold_action(action, event);
+        case .scroll_viewport_up_fast;          vertical_smooth_scroll(editor, up = true, fast = true);  activate_hold_action(action, event);
+        case .scroll_viewport_down;             vertical_smooth_scroll(editor, up = false);              activate_hold_action(action, event);
+        case .scroll_viewport_down_fast;        vertical_smooth_scroll(editor, up = false, fast = true); activate_hold_action(action, event);
         case .scroll_viewport_left;             print("scroll_viewport_left - not implemented\n");
         case .scroll_viewport_right;            print("scroll_viewport_right - not implemented\n");
         case .undo;                             undo(buffer, editor); keep_selection = true; cursor_moved = true;
@@ -826,13 +830,14 @@ toggle_expand :: () {
     }
 }
 
-vertical_smooth_scroll :: (editor: Editor, up: bool) {
+vertical_smooth_scroll :: (editor: Editor, up: bool, fast := false) {
     if !editor_smooth_scroll.active {
         // Start smooth scrolling
         editor_smooth_scroll.active     = true;
         editor_smooth_scroll.started_at = frame_time;
         editor_smooth_scroll.start_y    = editor.viewport.top;
         editor_smooth_scroll.up         = up;
+        editor_smooth_scroll.fast       = fast;
     }
 } 
 
@@ -1677,6 +1682,7 @@ editors: Editor_State;
 editor_smooth_scroll: struct {
     active: bool;
     up:     bool;  // if not up, then down
+    fast:   bool;
     started_at: Time;
     start_y: s32;
 };
