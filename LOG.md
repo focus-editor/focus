@@ -34,9 +34,7 @@
     - Ignore project folders which are children of another project folder?
     - Trace the whole project to see if we're doing something stupid
 
-- Ctrl + Shift + , to duplicate current editor on the other pane
 - Ctrl + J to join lines (should there be a limit of how many?)
-- (Ctrl (VSCode) or Alt (N++) or Alt+Shift (macOS)) + Mouse Click to add an additional cursor wherever the mouse is.
 - Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt
 - Add horizontal scrollbar
     - Alt-HL smooth scroll
@@ -187,6 +185,8 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ (Ctrl (VSCode) or Alt (N++) or Alt+Shift (macOS)) + Mouse Click to add an additional cursor wherever the mouse is.
++ Ctrl + Shift + , to duplicate current editor on the other pane
 + Ctrl + Home/End to jump to beginning/end of the file
 + Alt+up/down to move fast (editor action)
 + Alt-U/D or Alt-PgUp/Down scroll fast

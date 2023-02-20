@@ -721,6 +721,14 @@ select_lines :: (using cursor: *Cursor, buffer: Buffer) {
     pos = make_valid_pos(buffer, pos);
 }
 
+create_cursor_at_pos :: (using editor: *Editor, buffer: Buffer, pos: Pos) {
+    // NOTE: assuming the pos is valid!
+    new_cursor := array_add(*cursors);
+    new_cursor.sel = pos;
+    new_cursor.pos = pos;
+    main_cursor = cursors.count - 1;
+}
+
 #scope_file
 
 maybe_create_additional_cursor :: (using editor: *Editor, buffer: Buffer) -> created: bool {

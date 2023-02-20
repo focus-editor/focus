@@ -99,24 +99,29 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         if became_active then active_global_widget = .editors;
         
         if ui.active == ui_id && (mouse.left.just_pressed || mouse.left.is_dragging) {
+            // Calculate the position of the mouse
             pointer := snap_to_rect(mouse.pointer, rect);  // when we drag outside the editor we still want to interact
-
-            // Maybe change cursor position
-            cursor := leave_only_original_cursor(editor);
             mouse_pos := pointer - bottom_left(rect) - text_offset;
             mouse_pos.x += viewport.left;
             mouse_pos.y = rect.h - mouse_pos.y + viewport.top - ifx dpi_scale > 1.0 then 1 else 0;
-            cursor.pos.line = xx (mouse_pos.y / line_height);
-            cursor.pos.col  = xx ((mouse_pos.x / char_size) + 0.5);
-            cursor.pos = make_valid_pos(buffer, cursor.pos);
-            cursor.col_wanted = cursor.pos.col;
-
-            // We mark cursor as moved to trigger auto-scroll if we drag outside the editor
-            if !mouse_pointer_is_within(rect) then cursor_moved = true;
-
-            if !shift_pressed() && mouse.left.just_pressed then remove_selection(cursor);
-            if mouse.left.just_double_clicked then select_word(cursor, buffer, only_word_chars = false);
-            if mouse.left.just_triple_clicked then select_lines(cursor, buffer);
+            pos := Pos.{ line = xx (mouse_pos.y / line_height), col = xx ((mouse_pos.x / char_size) + 0.5) };
+            pos = make_valid_pos(buffer, pos);
+        
+            if !mouse.left.is_dragging && ctrl_pressed() {
+                create_cursor_at_pos(editor, buffer, pos);
+            } else if !ctrl_pressed() {
+                // Maybe change cursor position
+                cursor := leave_only_original_cursor(editor);
+                cursor.pos = pos;
+                cursor.col_wanted = cursor.pos.col;
+    
+                // We mark cursor as moved to trigger auto-scroll if we drag outside the editor
+                if !mouse_pointer_is_within(rect) then cursor_moved = true;
+    
+                if !shift_pressed() && mouse.left.just_pressed then remove_selection(cursor);
+                if mouse.left.just_double_clicked then select_word(cursor, buffer, only_word_chars = false);
+                if mouse.left.just_triple_clicked then select_lines(cursor, buffer);
+            }
 
             editor.refresh_highlights = true;
 
