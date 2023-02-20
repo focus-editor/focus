@@ -88,8 +88,10 @@ Ctrl-Shift-L                toggle_expand
 {Shift}-Alt-ArrowRight      move_right_by_word
 {Shift}-Ctrl-ArrowRight     move_right_by_word_ends
 
-{Shift}-Home                home
-{Shift}-End                 end
+{Shift}-Home                jump_to_line_start
+{Shift}-End                 jump_to_line_end
+{Shift}-Ctrl-Home           jump_to_file_start
+{Shift}-Ctrl-End            jump_to_file_end
 
 {Shift}-Backspace           delete_left_char
 {Shift}-Delete              delete_right_char
@@ -144,8 +146,11 @@ Ctrl-Alt-ArrowLeft          scroll_viewport_left
 Ctrl-Alt-ArrowRight         scroll_viewport_right
 
 Alt-C                       move_cursor_to_viewport_center
+
 {Shift}-Ctrl-ArrowUp        move_up_to_empty_line
 {Shift}-Ctrl-ArrowDown      move_down_to_empty_line
+{Shift}-Alt-ArrowUp         move_up_fast
+{Shift}-Alt-ArrowDown       move_down_fast
 
 Escape                      remove_additional_cursors
 

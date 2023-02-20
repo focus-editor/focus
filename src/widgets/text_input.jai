@@ -24,8 +24,10 @@ text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> han
         case .move_right;               move_cursor(input,  1, extend_selection);
         case .move_right_by_word;       move_cursor(input,  5, extend_selection);   // TODO
         case .move_right_by_word_ends;  move_cursor(input,  5, extend_selection);   // TODO
-        case .home;                     move_home(input, extend_selection);
-        case .end;                      move_end (input, extend_selection);
+        case .jump_to_line_start; #through;
+        case .jump_to_file_start;       move_home(input, extend_selection);
+        case .jump_to_line_end; #through;
+        case .jump_to_file_end;         move_end (input, extend_selection);
         case .delete_left_char;         delete_left_char (input);
         case .delete_right_char;        delete_right_char(input);
         case;                           return false;

@@ -177,8 +177,10 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
                 case .cut;                              copy_selection_to_clipboard(cursor, buffer, cursors.count == 1, cut = true);
                 case .paste;                            paste_from_clipboard(editor, cursor, buffer);
                 
-                case .home;                             move_cursor_home(cursor, buffer);
-                case .end;                              move_cursor_end (cursor, buffer);
+                case .jump_to_line_start;               move_cursor_home(cursor, buffer);
+                case .jump_to_line_end;                 move_cursor_end (cursor, buffer);
+                case .jump_to_file_start;               move_to_file_start(cursor, buffer);
+                case .jump_to_file_end;                 move_to_file_end  (cursor, buffer);
                 
                 case .delete_left_char;                 delete_left_char (cursor, buffer);
                 case .delete_right_char;                delete_right_char(cursor, buffer);
@@ -1058,6 +1060,18 @@ move_cursor_home :: (using cursor: *Cursor, buffer: Buffer) {
 
 move_cursor_end :: (using cursor: *Cursor, buffer: Buffer) {
     pos.col = buffer.lines[pos.line].num_chars;
+    col_wanted = pos.col;
+}
+
+move_to_file_start :: (using cursor: *Cursor, buffer: Buffer) {
+    pos.line = 0;
+    pos.col  = 0;
+    col_wanted = pos.col;
+}
+
+move_to_file_end :: (using cursor: *Cursor, buffer: Buffer) {
+    pos.line = xx (buffer.lines.count - 1);
+    pos.col  = buffer.lines[pos.line].num_chars;
     col_wanted = pos.col;
 }
 

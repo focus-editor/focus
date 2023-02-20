@@ -34,9 +34,7 @@
     - Ignore project folders which are children of another project folder?
     - Trace the whole project to see if we're doing something stupid
 
-- Alt+up/down to move fast (editor action)
 - Ctrl + Shift + , to duplicate current editor on the other pane
-- Ctrl + Home/End to jump to beginning/end of the file
 - Ctrl + J to join lines (should there be a limit of how many?)
 - (Ctrl (VSCode) or Alt (N++) or Alt+Shift (macOS)) + Mouse Click to add an additional cursor wherever the mouse is.
 - Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt
@@ -80,6 +78,8 @@
             - Which buffer file corresponds to this editor
         - Editor layout (none/single/double)
         - Which editor was open on which side
+
+- Highlight matching braces
 
 - Projects
     - If a project doesn't exist, don't set it when loading previous session
@@ -176,13 +176,6 @@
     - Highlight globals?
     - Highlight shadowed variables
     - Color cursor differently depending on what scope we're in
-- Highlight matching braces
-- Set a proper horizontal scroll limit
-- Maybe don't draw too many horizontal characters
-- When changing buffer in another editor, adjust cursors
-    - It seems that in vscode cursors are tied to their position in buffer,
-      so if that position moved then so do the cursors
-      (just like the individual letters would)
 
 - Look into subpixel font positioning
     - Revisit the font loading code as it has some rounding to pixels there
@@ -194,6 +187,8 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Ctrl + Home/End to jump to beginning/end of the file
++ Alt+up/down to move fast (editor action)
 + Alt-U/D or Alt-PgUp/Down scroll fast
 + Alt-Backspace/Delete to delete words 
 + Shift-backspace - delete_line_and_go_up
