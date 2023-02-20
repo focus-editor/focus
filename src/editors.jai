@@ -818,7 +818,12 @@ switch_to_editor :: (side: enum { left; right; other; }) {
 
 swap_panes :: () {
     if editors.layout != .Double return;
-    editors.left, editors.right = swap(editors.left, editors.right);
+    tmp := editors.left;
+    editors.left  = editors.right;
+    editors.right = tmp;
+    
+    // NOTE: this line started crashing with an access violation - @compilerbug?
+    // editors.left, editors.right = swap(editors.left, editors.right);
 }
 
 toggle_expand :: () {
@@ -1151,18 +1156,18 @@ delete_word_left :: (using cursor: *Cursor, using buffer: *Buffer) {
         offset := pos_to_offset(buffer, pos);
         if offset == 0 return;  // nothing to delete
         
-        t := *bytes[offset];
-        line_start := *bytes[lines[pos.line].start];
+        t := bytes.data + offset;
+        line_start := bytes.data + lines[pos.line].start;
         char: u32;
         t, char = unicode_prev_character(t);
         if char == #char " " && t > line_start then t, char = unicode_prev_character(t);  // skip a single space character if present
         
         if char == #char " " {
             // Only spaces
-            while t > bytes.data && char == #char " "   { t, char = unicode_prev_character(t); }
+            while t > bytes.data && char == #char " "  { t, char = unicode_prev_character(t); }
         } else if is_word_char(char) {
             // Only word chars
-            while t > bytes.data && is_word_char(char)  { t, char = unicode_prev_character(t); }
+            while t > bytes.data && is_word_char(char) { t, char = unicode_prev_character(t); }
         } else if char != #char "\n" {
             // Only non-word chars
             while t > bytes.data && !is_word_char(char) && char != #char " " && char != #char "\n" { t, char = unicode_prev_character(t); }
@@ -1180,7 +1185,33 @@ delete_word_right :: (using cursor: *Cursor, using buffer: *Buffer) {
     if !buffer.bytes return;
     
     if !has_selection(cursor) {
-    
+        // Select a contiguous range of characters of the same type to delete them in one go
+        offset := pos_to_offset(buffer, pos);
+        if offset >= bytes.count return;  // nothing to delete
+        
+        line_end := *bytes[min(lines[pos.line].end, cast(s32)(bytes.count-1))];
+        
+        s: string = ---;
+        s.data  = *bytes[offset];
+        s.count = (bytes.data + bytes.count) - s.data;
+        
+        char := utf8_next_character(*s);
+        if char == #char " " && s && s.data <= line_end then char = utf8_next_character(*s);  // skip a single space character if present
+        
+        if char == #char " " {
+            // Only spaces
+            while s && char == #char " "  { char = utf8_next_character(*s); }
+        } else if is_word_char(char) {
+            // Only word chars
+            while s && is_word_char(char) { char = utf8_next_character(*s); }
+        } else if char != #char "\n" {
+            // Only non-word chars
+            while s && !is_word_char(char) && char != #char " " && char != #char "\n" { char = utf8_next_character(*s); }
+        }
+        
+        if s { s.data, char = unicode_prev_character(s.data); }
+        
+        pos = offset_to_pos(buffer, min(bytes.count, s.data - bytes.data));
     }
     
     delete_right_char(cursor, buffer);
