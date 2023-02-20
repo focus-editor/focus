@@ -87,6 +87,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .switch_to_left_editor;            switch_to_editor(.left);
         case .switch_to_right_editor;           switch_to_editor(.right);
         case .switch_to_other_editor;           switch_to_editor(.other);
+        case .duplicate_editor;                 switch_to_editor(.other, duplicate_current = true);
         case .move_editor_to_the_left;          if editors.active == editors.right then swap_panes();
         case .move_editor_to_the_right;         if editors.active == editors.left  then swap_panes();
         case .move_cursor_to_viewport_center;   move_cursor_to_viewport_center(editor, buffer); cursor_moved = true;
@@ -781,7 +782,7 @@ save_buffer :: (editor: *Editor, buffer: *Buffer) {
     save_buffer_to_disk(buffer);
 }
 
-switch_to_editor :: (side: enum { left; right; other; }) {
+switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := false) {
     if editors.layout == {
         case .None; return;
 
@@ -806,6 +807,18 @@ switch_to_editor :: (side: enum { left; right; other; }) {
         case .Double;
             if side == .other {
                 if editors.active == editors.left then side = .right; else side = .left;
+            }
+            if duplicate_current {
+                current_editor := *open_editors[editors.active];
+                new_editor := find_or_create_editor(current_editor.buffer_id, editors.active);
+                if side == .left {
+                    editors.left   = new_editor;
+                    editors.right  = editors.active;
+                } else {
+                    editors.right  = new_editor;
+                    editors.left   = editors.active;
+                }
+                editors.active = new_editor;
             }
             editors.active = ifx side == .left then editors.left else editors.right;
     }

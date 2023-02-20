@@ -161,6 +161,7 @@ Ctrl-Shift-Enter            new_line_above_without_breaking
 Ctrl-1                      switch_to_left_editor
 Ctrl-2                      switch_to_right_editor
 Ctrl-,                      switch_to_other_editor
+Ctrl-Shift-,                duplicate_editor
 
 Ctrl-Alt-Shift-ArrowLeft    move_editor_to_the_left
 Ctrl-Alt-Shift-ArrowRight   move_editor_to_the_right

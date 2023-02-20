@@ -187,6 +187,7 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "switch_to_left_editor",
     "switch_to_right_editor",
     "switch_to_other_editor",
+    "duplicate_editor",
     "move_editor_to_the_left",
     "move_editor_to_the_right",
 ]);
