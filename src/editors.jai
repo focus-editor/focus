@@ -139,8 +139,12 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
                 case .duplicate_lines;                  if cursors.count == 1 { duplicate_lines(cursor, buffer); keep_selection = true; }
                 case .move_selected_lines_up;           if cursors.count == 1 { move_lines_up  (cursor, buffer); keep_selection = true; }
                 case .move_selected_lines_down;         if cursors.count == 1 { move_lines_down(cursor, buffer); keep_selection = true; }                
-                case .delete_word_left;                 if cursors.count == 1 { delete_word_left(cursor, buffer);  }
-                case .delete_word_right;                if cursors.count == 1 { delete_word_right(cursor, buffer); }
+                case .delete_word_left;                 if cursors.count == 1 { delete_word_left  (cursor, buffer); }
+                case .delete_word_right;                if cursors.count == 1 { delete_word_right (cursor, buffer); }
+                case .delete_word_left_no_underscore;   if cursors.count == 1 { delete_word_left_no_underscore (cursor, buffer); }
+                case .delete_word_right_no_underscore;  if cursors.count == 1 { delete_word_right_no_underscore(cursor, buffer); }
+                case .delete_line;                      if cursors.count == 1 { delete_line(cursor, buffer); }
+                case .delete_line_and_go_up;            if cursors.count == 1 { delete_line_and_go_up(cursor, buffer); }
                 
                 case .indent_or_go_to_next_tabstop;     if indent_or_tab(cursor, buffer) keep_selection = true;
                 case .indent;                           indent_lines  (cursor, buffer);  keep_selection = true;
@@ -925,6 +929,8 @@ new_edit_group_required_for_action :: (action: Action_Editors, cursor: Cursor) -
         case .move_selected_lines_down;         return true;
         case .delete_word_left;                 return true;
         case .delete_word_right;                return true;
+        case .delete_word_left_no_underscore;   return true;
+        case .delete_word_right_no_underscore;  return true;
     }    
 
     return false;
@@ -932,7 +938,6 @@ new_edit_group_required_for_action :: (action: Action_Editors, cursor: Cursor) -
 
 move_cursor_left :: (using cursor: *Cursor, buffer: Buffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
     if has_selection(cursor) && !extend_selection {
-        // Delete selection
         pos = get_selection(cursor).start;
         remove_selection(cursor);
     } else if pos.col <= 0 {
@@ -962,7 +967,6 @@ move_cursor_right :: (using cursor: *Cursor, buffer: Buffer, by: enum { char; wo
     line_len := buffer.lines[pos.line].num_chars;
     
     if has_selection(cursor) && !extend_selection {
-        // Delete selection
         pos = get_selection(cursor).start;
         remove_selection(cursor);
     } else if pos.col >= line_len {
@@ -986,40 +990,6 @@ move_cursor_right :: (using cursor: *Cursor, buffer: Buffer, by: enum { char; wo
     }
     col_wanted = pos.col;
 }
-
-// move_cursor_right :: (using cursor: *Cursor, buffer: Buffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
-//     if has_selection(cursor) && !extend_selection {
-//         pos = get_selection(cursor).end;
-//         remove_selection(cursor);
-//     } else {
-//         line_len := buffer.lines[pos.line].num_chars;
-//         if pos.col >= line_len && pos.line < buffer.lines.count - 1 {
-//             pos.line += 1;
-//             pos.col   = 0;
-//         } else if pos.col < line_len {
-//             pos.col += 1;
-//             if pos.col < buffer.lines[pos.line].num_chars && (by == .word || by == .word_ends) {
-//                 chars := get_temp_unicode_chars_for_line(buffer, pos.line, max_char = 5000);  // arbitrary limit
-
-//                 i := pos.col - 1;
-//                 if by == .word {
-//                     if is_word_char(chars[i]) {
-//                         i = scan_until_word_char(false, chars, i, .right);
-//                     } else {
-//                         i = scan_until_word_char(true, chars, i, .right);
-//                     }
-//                 } else if by == .word_ends {
-//                     // Scan until we see a word char, then a non-word char
-//                     i = scan_until_word_char(true,  chars, i, .right);
-//                     i = scan_until_word_char(false, chars, i, .right);
-//                 }
-//                 pos.col = i;
-//                 pos = make_valid_pos(buffer, pos);
-//             }
-//         }
-//     }
-//     col_wanted = pos.col;
-// }
 
 move_cursor_vertically :: (using cursor: *Cursor, buffer: Buffer, delta: s32, extend_selection: bool) {
     if has_selection(cursor) && !extend_selection {
@@ -1210,8 +1180,6 @@ scan_through_similar_chars_on_the_right :: (pos: Pos, using buffer: Buffer, only
 }
 
 delete_word_left :: (using cursor: *Cursor, using buffer: *Buffer) {
-    if !buffer.bytes return;
-    
     if !has_selection(cursor) then pos = scan_through_similar_chars_on_the_left(pos, buffer);
     
     delete_left_char(cursor, buffer);
@@ -1223,15 +1191,36 @@ delete_word_right :: (using cursor: *Cursor, using buffer: *Buffer) {
     delete_right_char(cursor, buffer);
 }
 
+delete_word_left_no_underscore :: (using cursor: *Cursor, using buffer: *Buffer) {
+    context.underscore_is_part_of_word = false;
+    if !has_selection(cursor) then pos = scan_through_similar_chars_on_the_left(pos, buffer);
+    context.underscore_is_part_of_word = true;
+    
+    delete_left_char(cursor, buffer);
+}
+
+delete_word_right_no_underscore :: (using cursor: *Cursor, using buffer: *Buffer) {
+    context.underscore_is_part_of_word = false;
+    if !has_selection(cursor) then pos = scan_through_similar_chars_on_the_right(pos, buffer);
+    context.underscore_is_part_of_word = true;
+    
+    delete_right_char(cursor, buffer);
+}
+
+delete_selected_text :: (using cursor: *Cursor, buffer: *Buffer, set_col_wanted := true) -> deleted: bool {
+    if !has_selection(cursor) return false; 
+    
+    range := get_selection(cursor);
+    delete_range(buffer, range);
+    pos = range.start;
+    sel = pos;
+    if set_col_wanted then col_wanted = pos.col;
+    
+    return true;
+}
+
 delete_left_char :: (using cursor: *Cursor, buffer: *Buffer) {
-    // Either remove the selection
-    if has_selection(cursor) {
-        range := get_selection(cursor);
-        delete_range(buffer, range);
-        pos = range.start;
-        sel = pos;
-        return;
-    }    
+    if delete_selected_text(cursor, buffer) return;
 
     // Or handle the more complex case with tabs etc
     chars_to_delete := pos.col % TAB_SIZE;
@@ -1258,49 +1247,65 @@ delete_left_char :: (using cursor: *Cursor, buffer: *Buffer) {
 }
 
 delete_right_char :: (using cursor: *Cursor, buffer: *Buffer) {
-    if has_selection(cursor) {
-        // Delete selection
-        range := get_selection(cursor);
-        delete_range(buffer, range);
-        pos = range.start;
-        sel = range.start;
-    } else {
-        // If we have spaces all the way to the newline on the right, we want to delete them all, including the newline
-        // (and if the second line has only spaces, we want to delete them all too)
-        first_newline  := -1;
-        second_newline := -1;
-        offset := pos_to_offset(buffer, pos);
+    if delete_selected_text(cursor, buffer) return;
+    
+    // If we have spaces all the way to the newline on the right, we want to delete them all, including the newline
+    // (and if the second line has only spaces, we want to delete them all too)
+    first_newline  := -1;
+    second_newline := -1;
+    offset := pos_to_offset(buffer, pos);
+    while offset < buffer.bytes.count - 1 {
+        c := buffer.bytes[offset];
+        offset += 1;
+        if c == #char " " continue;
+        if c == #char "\n" then first_newline = offset; 
+        break;
+    }
+    if first_newline > 0 {
         while offset < buffer.bytes.count - 1 {
             c := buffer.bytes[offset];
             offset += 1;
             if c == #char " " continue;
-            if c == #char "\n" then first_newline = offset; 
+            if c == #char "\n" then second_newline = offset - 1; // we don't want to delete the second newline
             break;
         }
-        if first_newline > 0 {
-            while offset < buffer.bytes.count - 1 {
-                c := buffer.bytes[offset];
-                offset += 1;
-                if c == #char " " continue;
-                if c == #char "\n" then second_newline = offset - 1; // we don't want to delete the second newline
-                break;
-            }
-        }
-        
-        // Figure out what range to delete
-        range: Range = ---;
-        range.start = pos;
-        if second_newline > 0 {
-            range.end = offset_to_pos(buffer, second_newline);
-        } else if first_newline > 0 {
-            range.end = offset_to_pos(buffer, first_newline);
-        } else {
-            range.end = pos;
-            range.end.col += 1;   
-        }
-        delete_range(buffer, range);
     }
-    col_wanted = pos.col;
+    
+    // Figure out what range to delete
+    range: Range = ---;
+    range.start = pos;
+    if second_newline > 0 {
+        range.end = offset_to_pos(buffer, second_newline);
+    } else if first_newline > 0 {
+        range.end = offset_to_pos(buffer, first_newline);
+    } else {
+        range.end = pos;
+        range.end.col += 1;   
+    }
+    delete_range(buffer, range);
+}
+
+delete_line :: (using cursor: *Cursor, using buffer: *Buffer) {
+    old_pos := get_selection(cursor).start;
+    select_lines(cursor, buffer);
+    delete_selected_text(cursor, buffer, set_col_wanted = false);
+    recalculate_lines(buffer);
+    pos = old_pos;
+    pos.col = col_wanted;
+    pos = make_valid_pos(buffer, pos);
+    sel = pos;
+}
+
+delete_line_and_go_up :: (using cursor: *Cursor, using buffer: *Buffer) {
+    old_pos := get_selection(cursor).start;
+    select_lines(cursor, buffer);
+    delete_selected_text(cursor, buffer, set_col_wanted = false);
+    recalculate_lines(buffer);
+    pos = old_pos;
+    pos.col = col_wanted;
+    pos.line -= 1;
+    pos = make_valid_pos(buffer, pos);
+    sel = pos;
 }
 
 get_tmp_spaces :: (num: s64) -> string {

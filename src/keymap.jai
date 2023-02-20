@@ -147,6 +147,8 @@ ACTIONS_COMMON :: string.[
     "delete_right_char",
     "delete_word_left",
     "delete_word_right",
+    "delete_word_left_no_underscore",
+    "delete_word_right_no_underscore",
     "increase_font_size",
     "decrease_font_size",
     "reset_font_size_to_default",
@@ -155,6 +157,8 @@ ACTIONS_COMMON :: string.[
 ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "select_word_or_create_another_cursor",
     "duplicate_lines",
+    "delete_line_and_go_up",
+    "delete_line",
     "move_selected_lines_up",
     "move_selected_lines_down",
     "indent_or_go_to_next_tabstop",
