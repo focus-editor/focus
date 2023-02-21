@@ -58,8 +58,7 @@
         - Rename file
         - Delete file
         - Close file?
-        
-- BUG: cursor is being drawn on the other pane sometimes
+
 - BUG: if a project folder is deleted, the editor doesn't know about that and doesn't give any errors when trying to save files
         
 - New selection modes:
@@ -67,6 +66,9 @@
     - After triple-click: enter line-selection mode
     - Maintain both modes until mouse button is up
     - Can get rid of the timeout when it's done
+    
+- Word wrap:
+    - Before doing it, implement sticky viewport, so that it can glue itself to a line
     
 - Sessions and buffer backups:
     - Write down a step by step loading process to identify the easiest format to load
@@ -123,7 +125,7 @@
     - Make sure when selected a word by double clicking, the highlights only highlight whole words
 
 - Strip trailing whitespace on save
-- Optimisation: with large files, disable selection highlights
+- Optimisation: with large files, disable selection highlights (because we're calculating them every frame when dragging)
 
 - Save editor state on editor operations:
     - Alt + minus to open previous state
@@ -135,7 +137,6 @@
 - When cutting search results in finder, go by characters and not bytes
 
 - Search:
-    - Implement case-insensitive search in buffer
     - Finder improvements:
         - Have an extra input for filtering by file path
         - Case-sensitive search
@@ -147,7 +148,6 @@
     - Update the lookup table on file/buffer changes (buffers always take precedence over what's in files)
 
 - Navigating project dirs in a dialog
-- Create new files (with a mini-dialog?)
 - If a buffer is modified on disk, ask for confirmation before saving (use the function and not the flag)
 
 - Optimisation:
@@ -184,6 +184,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ BUG: cursor is being drawn on the other pane sometimes
 + Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt
 + (Ctrl (VSCode) or Alt (N++) or Alt+Shift (macOS)) + Mouse Click to add an additional cursor wherever the mouse is.
 + Ctrl + Shift + , to duplicate current editor on the other pane

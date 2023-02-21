@@ -1294,6 +1294,8 @@ push_scissor :: (rect: Rect) {
 }
 
 pop_scissor :: () {
+    Simp.immediate_flush();  // if we have any remaining vertices, flush them before removing the scissor
+    
     assert(scissor_stack.count > 0);
     pop(*scissor_stack);
     if scissor_stack.count > 0 {

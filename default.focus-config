@@ -103,6 +103,7 @@ Ctrl-Shift-L                toggle_expand
 Ctrl-Plus                   increase_font_size
 Ctrl-Minus                  decrease_font_size
 Ctrl-0                      reset_font_size_to_default
+Ctrl-MouseMiddle            reset_font_size_to_default
 
 [editors]
 
