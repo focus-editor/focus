@@ -103,8 +103,11 @@ keymap_map_key_string :: (key_string: string) -> u32 {
         .{ "MouseLeft",         MOUSE_BUTTON_LEFT },
         .{ "MouseRight",        MOUSE_BUTTON_RIGHT },
         .{ "MouseMiddle",       MOUSE_BUTTON_MIDDLE },
-        .{ "MouseWheelUp",      MOUSE_WHEEL_UP },
-        .{ "MouseWheelDown",    MOUSE_WHEEL_DOWN },
+        
+        // We don't support mouse wheel events because we'd need to block scrolling
+        // if they are handled and we don't want to do it just yet.
+        // .{ "MouseWheelUp",      MOUSE_WHEEL_UP },
+        // .{ "MouseWheelDown",    MOUSE_WHEEL_DOWN },
     ];
     
     for STRING_TO_CODE_MAP {

@@ -133,7 +133,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // Handle editor scrolling here because we only know the layout at this point.
         // Some people would say this is not "clean", but hey, we'll see if we have any issues.
         max_y_scroll := get_max_y_scroll(buffer);
-        if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_y_delta != 0 {
+        if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
             using editor.viewport;
             new_target := clamp(scroll_y.target - mouse.scroll_y_delta, 0, max_y_scroll);
             start_animation(*scroll_y, top, new_target);
@@ -628,7 +628,7 @@ draw_open_file_dialog :: () {
             // Mouse scrolling
             if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(files_rect) {
                 if ui.hot_last_frame == ui_id && ui.active == .none then set_pointer_image(.PRESSABLE);
-                if mouse.scroll_y_delta != 0 {
+                if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
                     target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
                     start_animation(*scroll_anim, scroll_y, target);
                 }
@@ -788,7 +788,7 @@ draw_finder :: () {
             // Mouse scrolling
             if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(files_rect) {
                 if ui.hot_last_frame == ui_id && ui.active == .none then set_pointer_image(.PRESSABLE);
-                if mouse.scroll_y_delta != 0 {
+                if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
                     target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
                     start_animation(*scroll_anim, scroll_y, target);
                 }

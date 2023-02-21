@@ -98,6 +98,7 @@ main :: () {
            
         redraw_requested = false;
         window_resized   = false;
+        dont_scroll_this_frame = false;
         window_has_focus = Input.input_application_has_focus;  // so that we always redraw when the window first loses focus
 
         maybe_update_workspace_buffers();
@@ -124,26 +125,22 @@ main :: () {
                         if event.key_code == {
                             case .F4;
                                 if event.alt_pressed should_quit = true;
-
-                            case #char "+";
-                                if event.ctrl_pressed {
-                                    if (font_size + 1) <= MAX_FONT_SIZE {
-                                        font_size += 1;
-                                        init_fonts_and_dependent_things();
-                                    }
-                                }
-                            case #char "-";
-                                if event.ctrl_pressed {
-                                    if (font_size - 1) >= MIN_FONT_SIZE {
-                                        font_size -= 1;
-                                        init_fonts_and_dependent_things();
-                                    }
-                                }
-                            case #char "0";
-                                if event.ctrl_pressed {
-                                    font_size = DEFAULT_FONT_SIZE;
-                                    init_fonts_and_dependent_things();
-                                }
+                        }
+                    }
+                    action := map_event_to_action(event, Action_Common);
+                    if action == {
+                        case .increase_font_size;           increase_font_size();
+                        case .decrease_font_size;           decrease_font_size();
+                        case .reset_font_size_to_default;   reset_font_size_to_default();
+                    }
+                case .MOUSE_WHEEL;
+                    if ctrl_pressed() {
+                        if event.wheel_delta < 0  {
+                            decrease_font_size();
+                            dont_scroll_this_frame = true;
+                        } else if event.wheel_delta > 0 {
+                            increase_font_size();
+                            dont_scroll_this_frame = true;
                         }
                     }
             }
@@ -260,6 +257,25 @@ update_mouse_state :: () {
 
         button.is_dragging = button.is_down && mouse.pointer != button.last_down_pos && frame_time - button.last_double_click_time >= DRAG_AFTER_DOUBLE_CLICK_TIMEOUT;
     }
+}
+
+increase_font_size :: () {
+    if (font_size + 1) <= MAX_FONT_SIZE {
+        font_size += 1;
+        init_fonts_and_dependent_things();
+    }
+}
+
+decrease_font_size :: () {
+    if (font_size - 1) >= MIN_FONT_SIZE {
+        font_size -= 1;
+        init_fonts_and_dependent_things();
+    }
+}
+
+reset_font_size_to_default :: () {
+    font_size = DEFAULT_FONT_SIZE;
+    init_fonts_and_dependent_things();
 }
 
 panic :: (format_string: string, args: .. Any, exit_code : s32 = 1) {
@@ -403,6 +419,8 @@ rounding_radius:        float;
 rounding_radius_large:  float;
 rounding_radius_small:  float;
 scrollbar_size:         float;
+
+dont_scroll_this_frame := false;  // because e.g. a mouse wheel event has been handled
 
 Mods :: Input.Event.Modifier_Flags;
 

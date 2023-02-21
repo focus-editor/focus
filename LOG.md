@@ -35,7 +35,6 @@
     - Trace the whole project to see if we're doing something stupid
 
 - Ctrl + J to join lines (should there be a limit of how many?)
-- Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt
 - Add horizontal scrollbar
     - Alt-HL smooth scroll
 
@@ -185,6 +184,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt
 + (Ctrl (VSCode) or Alt (N++) or Alt+Shift (macOS)) + Mouse Click to add an additional cursor wherever the mouse is.
 + Ctrl + Shift + , to duplicate current editor on the other pane
 + Ctrl + Home/End to jump to beginning/end of the file
