@@ -144,6 +144,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
                 case .duplicate_lines;                  if cursors.count == 1 { duplicate_lines(cursor, buffer); keep_selection = true; }
                 case .move_selected_lines_up;           if cursors.count == 1 { move_lines_up  (cursor, buffer); keep_selection = true; }
                 case .move_selected_lines_down;         if cursors.count == 1 { move_lines_down(cursor, buffer); keep_selection = true; }                
+                case .join_lines;                       if cursors.count == 1 { join_lines(cursor, buffer);      keep_selection = true; }
+                case .join_lines_no_spaces_in_between;  if cursors.count == 1 { join_lines(cursor, buffer, in_between = ""); keep_selection = true; }
                 case .delete_word_left;                 if cursors.count == 1 { delete_word_left  (cursor, buffer); }
                 case .delete_word_right;                if cursors.count == 1 { delete_word_right (cursor, buffer); }
                 case .delete_word_left_no_underscore;   if cursors.count == 1 { delete_word_left_no_underscore (cursor, buffer); }
@@ -1346,6 +1348,42 @@ delete_line_and_go_up :: (using cursor: *Cursor, using buffer: *Buffer) {
     pos.line -= 1;
     pos = make_valid_pos(buffer, pos);
     sel = pos;
+}
+
+join_lines :: (using cursor: *Cursor, buffer: *Buffer, in_between := " ") {
+    range := get_selection_whole_lines(cursor, buffer);
+    num_lines := range.end.line - range.start.line + 1;
+    if num_lines <= 1 return;
+    
+    b: String_Builder;
+    init_string_builder(*b);
+    
+    // Do the first line separately because we don't want to trim it on the left and
+    // also because we can always append the in-between value in the loop first
+    first_line := buffer.lines[range.start.line];
+    first_str: string = ---;
+    first_str.data = buffer.bytes.data + first_line.start;
+    first_str.count = first_line.end - first_line.start;
+    append(*b, trim_right(first_str));
+    
+    remaining_lines := array_view(buffer.lines, range.start.line + 1, num_lines - 1);
+    for remaining_lines {
+        line_str: string = ---;
+        line_str.data = buffer.bytes.data + it.start;
+        line_str.count = it.end - it.start;
+        
+        append(*b, in_between);
+        append(*b, trim(line_str));
+    }
+    
+    str := builder_to_string(*b);
+    defer free(str);
+    replace_range(buffer, range, str);
+    recalculate_lines(buffer);
+    
+    sel = range.start;
+    pos = offset_to_pos(buffer, buffer.lines[range.start.line].end);
+    col_wanted = pos.col;
 }
 
 get_tmp_spaces :: (num: s64) -> string {

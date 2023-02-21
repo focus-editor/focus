@@ -34,7 +34,6 @@
     - Ignore project folders which are children of another project folder?
     - Trace the whole project to see if we're doing something stupid
 
-- Ctrl + J to join lines (should there be a limit of how many?)
 - Add horizontal scrollbar
     - Alt-HL smooth scroll
 
@@ -184,6 +183,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Ctrl + J to join lines (should there be a limit of how many?)
 + BUG: cursor is being drawn on the other pane sometimes
 + Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt
 + (Ctrl (VSCode) or Alt (N++) or Alt+Shift (macOS)) + Mouse Click to add an additional cursor wherever the mouse is.

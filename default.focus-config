@@ -111,12 +111,15 @@ Ctrl-D                      select_word_or_create_another_cursor
 
 Ctrl-Shift-D                duplicate_lines
 
-# These shortcuts can be annoying, so are commented out
+# These shortcuts can be annoying, so are commented out by default
 # Shift-Backspace             delete_line_and_go_up
 # Shift-Delete                delete_line
 
 Alt-Shift-ArrowUp           move_selected_lines_up
 Alt-Shift-ArrowDown         move_selected_lines_down
+
+Ctrl-J                      join_lines
+Ctrl-Shift-J                join_lines_no_spaces_in_between
 
 Tab                         indent_or_go_to_next_tabstop
 Shift-Tab                   unindent

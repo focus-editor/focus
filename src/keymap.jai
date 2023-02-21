@@ -163,6 +163,8 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "delete_line",
     "move_selected_lines_up",
     "move_selected_lines_down",
+    "join_lines",
+    "join_lines_no_spaces_in_between",
     "indent_or_go_to_next_tabstop",
     "unindent",
     "indent",
