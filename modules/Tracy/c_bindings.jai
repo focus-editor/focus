@@ -135,6 +135,6 @@ TracyClientLib :: #library "TracyClient";
 
 #run {
 	// Tracy requires these libs to work.
-	Compiler :: #import "Compiler";
-	Compiler.set_build_options_dc(.{append_linker_arguments=.["ws2_32.lib", "msvcprtd.lib"]});
+// 	Compiler :: #import "Compiler";
+// 	Compiler.set_build_options_dc(.{append_linker_arguments=.["ws2_32.lib", "msvcprtd.lib"]});
 }
