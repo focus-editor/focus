@@ -157,6 +157,8 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
     if #complete workspace_subsection == {
         case .workspace_dirs;
             dir_path := line;
+            dir_path = copy_string(get_absolute_path(dir_path));
+            path_overwrite_separators(dir_path, #char "/");
             if file_exists(dir_path) {
                 array_add(*data.workspace_dirs, dir_path);
             } else {
@@ -166,6 +168,7 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
             dirs := split(line, cast(u8) #char " ");
             for dir : dirs {
                 if !dir continue;
+                path_overwrite_separators(dir, #char "/");
                 array_add(*data.ignore_dirs, dir);
             }
         case .allow_file_extensions;

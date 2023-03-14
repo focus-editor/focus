@@ -30,6 +30,7 @@ main :: () {
     if args.count == 2 && file_exists(args[1]) {
         // Open file passed in the command line
         session = start_fresh_session();
+        
         editors_open_file(args[1]);
     } else {
         session = maybe_load_previous_session();

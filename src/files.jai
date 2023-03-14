@@ -110,11 +110,24 @@ should_ignore_file :: (path: string) -> bool {
 
 should_ignore_dir :: (name: string) -> bool {
     for config.workspace.ignore_dirs {
-        if equal_nocase(name, it) {  // TODO: do a wildcard match
+        if contains_nocase(name, it) {  // TODO: do a wildcard match
             return true;
         }
     }
     return false;
+}
+
+dir_is_within_project :: (dir_path: string) -> bool {
+    for project_dirs {
+        if begins_with_nocase(dir_path, it.path) return true;
+    }
+    return false;
+}
+
+get_parent_dir_path :: (file_path: string) -> string {
+    path := path_strip_filename(file_path);
+    if path.count > 1 && path[path.count-1] == #char "/" then path.count -= 1;  // don't include trailing path separator
+    return path;
 }
 
 File_Info :: struct {

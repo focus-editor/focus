@@ -2,8 +2,8 @@ init_workspace :: () {
     // workspace_dirs := ifx !DEBUG then config.workspace.workspace_dirs else string.[ "W:/focus", "C:/jai" ];
     for path, i : config.workspace.workspace_dirs {
         dir: Project_Dir = ---;
-        dir.path = trim_right(path, "/\\");
-        dir.path_prefix_len = find_index_of_any_from_right(dir.path, ".\\/") + 1;
+        dir.path = trim_right(path, "/");
+        dir.path_prefix_len = find_index_of_any_from_right(dir.path, "./") + 1;
         // TODO: check whether project path exists - add to error log
         array_add(*project_dirs, dir);
     }
@@ -49,7 +49,7 @@ maybe_update_workspace_buffers :: () {
     
     visitor_func :: (file: *File_Visit_Info, userdata: *void) {
         if file.is_directory {
-            if should_ignore_dir(file.short_name) {
+            if should_ignore_dir(file.full_name) {
                 file.descend_into_directory = false;
                 return;
             }
@@ -66,6 +66,27 @@ maybe_update_workspace_buffers :: () {
     watcher_file_modified = "";
 }
 
+start_watching_file :: (file_path: string) {
+    parent_dir := get_parent_dir_path(file_path);
+    if !array_find(watch_dirs, parent_dir) {
+        parent_dir = copy_string(parent_dir);
+        array_add(*watch_dirs, parent_dir);
+        add_directories(*file_watcher, parent_dir);
+    }
+    full_path := copy_string(get_absolute_path(file_path));
+    path_overwrite_separators(full_path, #char "/");
+    array_add_if_unique(*watch_files, full_path);
+}
+
+file_is_watched :: (file_path: string) -> bool {
+    parent_dir := get_parent_dir_path(file_path);
+    if dir_is_within_project(parent_dir) return true;  // project dirs are watched
+    for watch_files {
+        if equal_nocase(it, file_path) return true;
+    }
+    return false;
+}
+
 #scope_file
 
 initial_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
@@ -75,7 +96,7 @@ initial_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) 
     
     visitor_func :: (file: *File_Visit_Info, userdata: *void) {
         if file.is_directory {
-            if should_ignore_dir(file.short_name) {
+            if should_ignore_dir(file.full_name) {
                 file.descend_into_directory = false;
                 return;
             }
@@ -220,17 +241,26 @@ start_file_watcher :: () {
     }
     
     for project_dirs add_directories(*file_watcher, it.path);
-    dirs_to_rescan.allocator = temp;    
+    dirs_to_rescan.allocator = temp;
+    
+    // Add directories that contain standalone files which we want to watch
+    for watch_dirs {
+        if dir_is_within_project(it) {
+            remove it;
+            continue;
+        }
+        add_directories(*file_watcher, it);
+    }
 }
 
 file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
+    parent_dir := get_parent_dir_path(change.full_path);
+    
     // If the change is in one of the ignored dirs, ignore it
-    path_parts := split(change.full_path, cast(u8) #char "/");
-    for part : path_parts {
-        for dir : config.workspace.ignore_dirs {
-            if part == dir return;
-        }
-    }
+    if should_ignore_dir(parent_dir) return;
+    
+    // If the change is caused by watching a dir containing a standalone file, ignore it
+    if !dir_is_within_project(parent_dir) && !file_is_watched(change.full_path) return;
     
     // Most commonly we will receive only a single MODIFIED event for a single file (after saving a buffer)
     // In this case we don't want to rescan anything, but only if no other events were received in the same frame
@@ -254,12 +284,6 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
         maybe_add_to_queue(dir);
     }
     
-    get_parent_dir_path :: (file_path: string) -> string {
-        path := path_strip_filename(file_path);
-        if path.count > 1 && path[path.count-1] == #char "/" then path.count -= 1;  // don't include trailing path separator
-        return path;
-    }
-    
     maybe_add_to_queue :: (dir: string) {
         add_to_queue := true;
         for dirs_to_rescan {
@@ -280,7 +304,8 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
     // {"W:/focus-zig/src/nPTuLLfc1yEADcLL", ADDED | MODIFIED | MOVED | MOVED_FROM, 52.296619}
     // {"W:/focus-zig/src/Editors.zig", MOVED | MOVED_TO | REMOVED, 52.296619}
     // {"W:/focus-zig/src", MODIFIED | SCAN_CHILDREN, 52.29665}
-    // Not very useful, is it? So we can't really rely on those 
+    // That's probably how Sublime Text modifies files, but still, processing each message here would
+    // be harder than just rescanning the containing folder.
     // So instead of processing each event the easiest option here would be to add W:/focus-zig/src
     // to the scanning queue
 
@@ -298,6 +323,9 @@ file_watcher: File_Watcher;
 dirs_to_rescan: [..] string;    // will use temporary storage
 watcher_file_modified: string;  // will contain the path of a file if if was modified and it was the only event in a group,
                                 // otherwise it won't be used and a scan will be done instead
+                                
+watch_dirs:  [..] string;       // dirs we watch which are not project dirs
+watch_files: [..] string;       // files outside of projects that we want to watch
 
 scanner_thread: Thread_Group;
 

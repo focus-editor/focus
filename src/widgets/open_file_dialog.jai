@@ -316,7 +316,7 @@ scan_current_folder :: () {
     visitor_func :: (file: *File_Visit_Info, userdata: *void) {
         if file.had_error || file.is_symlink return;
         if file.is_directory {
-            if should_ignore_dir(file.short_name) return;
+            if should_ignore_dir(file.full_name) return;
         } else {
             if should_ignore_file(file.full_name) return;
         }

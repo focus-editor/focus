@@ -4,19 +4,13 @@ array_insert_bytes_at :: (array: *[..] u8, offset: s64, bytes: [] u8) {
 
     new_size := array.count + bytes.count;
     array_reserve(array, new_size);
-
-    // Copy in chunks of str.count while possible
-    source := array.count - bytes.count;
-    dest   := array.count;
-    while source >= offset {
-        memcpy(array.data + dest, array.data + source, bytes.count);
-        source -= bytes.count;
-        dest   -= bytes.count;
-    }
-    // If there's a leftover, copy it as well
-    if source != offset {
-        memcpy(array.data + offset + bytes.count, array.data + offset, bytes.count - (offset - source));
-    }
+    
+    // NOTE: assuming memcpy works well with overlapping ranges!
+    // (tested on Windows with all backends)
+    src := array.data + offset;
+    dst := src + bytes.count;
+    memcpy(dst, src, array.count - offset);
+    
     // Insert the string
     memcpy(array.data + offset, bytes.data, bytes.count);
 

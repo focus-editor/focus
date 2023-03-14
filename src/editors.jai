@@ -305,6 +305,8 @@ editors_open_file :: (path: string, placement: Editor_Placement = .in_place) {
     full_path := get_absolute_path(path);  // returns temporary storage
     path_overwrite_separators(full_path, separator = #char "/");
     buffer_id := find_or_create_buffer(full_path);
+    
+    if !file_is_watched(full_path) start_watching_file(full_path);
 
     editors_open_buffer(buffer_id, placement);
 }

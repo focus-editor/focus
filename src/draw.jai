@@ -87,7 +87,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     editor_is_active := editor_id == editors.active && Input.input_application_has_focus;
 
     // Calculate text origin in screen coordinates
-    text_offset := make_vector2(char_size * 2, -char_size * 2);
+    text_offset := make_vector2(char_size, -char_size);
     text_origin := top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
 
     // Draw editor

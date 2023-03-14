@@ -10,6 +10,7 @@
     + Figure out how to anti-alias rounded corners
     + Improve cursor: draw occluded letters on top
     + New open file dialog
+    + Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
     - Create new files
     - Try to support tabs properly
     - Horizontal scrolling
@@ -28,18 +29,42 @@
     - See if memory usage can be improved
     - Custom title bar (currently too much work and not very robust)
     - Linux support
-    - Windows 11 support
-    - Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
+    - Windows 11 support (custom title bar only, otherwise ok)
     - Have a user error log - with an icon in the title bar to toggle it
     - Ignore project folders which are children of another project folder?
-    - Trace the whole project to see if we're doing something stupid
+    - Profile the whole project to see if we're doing something stupid
+    
+- Open files by drag/drop (add them to standalone files if needed)
+    
+- Optimise line offset storage and recalculation
+    - We currently recalculate lines:
+        - in refresh_open_buffers, every frame, if dirty - ok
+        - in refresh_buffer_from_disk, after reloading contents - ok
+        - in fill_in_buffer_from_disk_data - ok
+        - in active_editor_handle_event, after each edit made by each cursor (!!!!) ( 2 places )
+        - in active_editor_type_text, after each cursor (!!!!) ( 2 places )
+        - in delete_line* - because make_valid_pos requires non-dirty buffer
+        - in join_lines - because need to access the lines after that
+        - in move_lines_down - because insert_string_at_pos needs line info
+        - in paste_from_clipboard - because need to calculate new cursor pos after that
+    - What if we use cursor offset instead of line/col? Or use them together?
+    - Having a line/col is needed every frame to display the cursor and it's easier to move the cursor
+        - Where else do we really need to have a line/col?
+        - If we always keep both line/col and offset, it might be easier to avoid recalculating it by binary search each frame
+    - Where do we need text_length and text_start - probably not worth it to recalculate for every line?
+    - Remove cursor_offsets at the end
+- Optimise cursor clipboard (use shared memory with offsets)
+- Optimise edits: 
+    - try to use the same memory for additions if possible?
+    - merge consecutive inserts - should be easy if the above is done
+- Load UE5 source and try to scan it
+    - When doing it, collect info on any binary files that had to be read to be ignored
+    - Compare with async scanning
 
 - Add horizontal scrollbar
     - Alt-HL smooth scroll
 
 - Display files that are deleted on disk but modified in the open file dialog
-
-- Select all by 4-click
 
 - Proper tab support:
     - Draw them wide (only in the visible part of the text)
@@ -63,6 +88,7 @@
 - New selection modes:
     - After double-click: enter word-selection mode
     - After triple-click: enter line-selection mode
+    - After 4-click: select all
     - Maintain both modes until mouse button is up
     - Can get rid of the timeout when it's done
     
@@ -88,6 +114,7 @@
         - Maybe display the number of unsaved buffers
 
 - Config files:
+    - When parsing project dirs, replace path separators with /
     - Hot-load user config file and apply the changes immediately (how do we handle the project dir changes?)
     - Have a command to edit global config or project config (it will open the corresponding file)
     - Every time a config file changes, the configs need to be reloaded and re-merged (and the changes need to be applied)
@@ -183,6 +210,9 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
++ Measure how much time it takes to copy 8 mb of data
++ Test memcpy with overlapping ranges with debug/release/compile time
 + Ctrl + J to join lines (should there be a limit of how many?)
 + BUG: cursor is being drawn on the other pane sometimes
 + Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt

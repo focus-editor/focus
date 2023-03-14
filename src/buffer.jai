@@ -600,7 +600,9 @@ deinit :: (using edit_group: *Buffer.Edit_Group) {
 
 #scope_export
 
-// TODO: reorganise to reduce size
+// TODO: 
+// - reorganise to reduce size
+// - replace all [..] with a custom array type without an allocator (also probably using s32's)
 Buffer :: struct {
     file: File_Info;
     has_file := false;  // false for freestanding buffers. TODO: make freestanding buffers separate?
