@@ -28,13 +28,12 @@
     - Word wrap
     - See if memory usage can be improved
     - Custom title bar (currently too much work and not very robust)
-    - Linux support
+    - Linux support:
+        - Test drag and drop
     - Windows 11 support (custom title bar only, otherwise ok)
     - Have a user error log - with an icon in the title bar to toggle it
     - Ignore project folders which are children of another project folder?
     - Profile the whole project to see if we're doing something stupid
-    
-- Open files by drag/drop (add them to standalone files if needed)
     
 - Optimise line offset storage and recalculation
     - We currently recalculate lines:
@@ -210,6 +209,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Open files by drag/drop (add them to standalone files if needed)
 + Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
 + Measure how much time it takes to copy 8 mb of data
 + Test memcpy with overlapping ranges with debug/release/compile time

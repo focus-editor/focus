@@ -32,6 +32,25 @@ editors_handle_event :: (event: Input.Event) {
     }
 }
 
+editors_handle_file_drop :: (files: [] string) {
+    if editors.layout == .Double && files.count == 1 {
+        // Open file in the closest editor - will be handled by the drawing code because we only know the layout then
+        just_dropped_file = files[0];
+    } else {
+        if files.count == 1 {
+            // When one file, open in a single editor
+            editors_open_file(files[0]);
+        } else {
+            // When more than 2 files, open all of them, but put the first 2 side by side
+            for 1..files.count-1 {
+                editors_open_file(files[it]);  // create a buffer and an editor
+            }
+            editors_open_file(files[0], .left);
+            editors_open_file(files[1], .right);
+        }
+    }
+}
+
 active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
@@ -304,6 +323,9 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
 editors_open_file :: (path: string, placement: Editor_Placement = .in_place) {
     full_path := get_absolute_path(path);  // returns temporary storage
     path_overwrite_separators(full_path, separator = #char "/");
+    if !file_exists(full_path) {
+        log_error("Can't find file %", full_path);
+    }
     buffer_id := find_or_create_buffer(full_path);
     
     if !file_is_watched(full_path) start_watching_file(full_path);

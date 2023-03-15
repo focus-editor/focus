@@ -6,6 +6,16 @@ main :: () {
     window_title := ifx DEBUG then "Focus (debug mode)" else "Focus";
     window = create_window(window_width, window_height, window_title, window_x, window_y, background_color_rgb = as_3_floats(Colors.BACKGROUND));
     platform_maximize_window(window);
+    
+    #if OS == .WINDOWS {
+        Windows.DragAcceptFiles(window, cast(Windows.BOOL) true);
+    } else #if OS == .LINUX {
+        X11 :: #import "X11";
+        typelist := string.["url/url", "text/uri-list", "text/plain", "application/octet-stream"];  // @Incomplete: test this on Linux
+        X11.enable_drag_and_drop(window, typelist);
+    } else #if OS == .MACOS {
+        // @Incomplete
+    }
 
     window_width, window_height = Simp.get_render_dimensions(window);
     screen = make_rect(0, 0, window_width, window_height);
@@ -144,6 +154,8 @@ main :: () {
                             dont_scroll_this_frame = true;
                         }
                     }
+                case .DRAG_AND_DROP_FILES;
+                    editors_handle_file_drop(event.files);
             }
 
             // Pass events to the active widget.
@@ -439,6 +451,9 @@ Project_Dir :: struct {
     path: string;          // e.g. "C:/projects/focus"
     path_prefix_len: s64;  // in this case the length of "C:/projects/"
 }
+
+// A string which contains the path to a file which was just drag-and-dropped into the editor (for the draw code to use)
+just_dropped_file := "";
 
 
 #load "layout.jai";
