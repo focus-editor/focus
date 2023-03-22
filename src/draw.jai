@@ -248,7 +248,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         visible_lines_start := cast(s64) (viewport.top / line_height) - 1;
         visible_lines_start  = clamp(visible_lines_start, 0, buffer.lines.count);
-        visible_lines_end := visible_lines_start + cast(s64) (rect.h / line_height) + 1;
+        visible_lines_end := visible_lines_start + cast(s64) (rect.h / line_height) + 2;
         visible_lines_end  = clamp(visible_lines_end,   0, buffer.lines.count);
 
         // Draw scrollbar marks

@@ -2,14 +2,40 @@
 
 A simple editor that tries to not stand in your way.
 
-Jai version required for compiling: 0.1.051
+## Quick start
+
+- Copy the exe into a folder where it will live. The folder needs to be writable.
+- Launch the exe. This will create a global config file next to it.
+- Open the global.focus-config file by e.g. dragging it to the editor window (or by using the Open With dialog and pointing to the config file).
+- In the config file you can specify the paths to your workspace folders (it's probably a good idea to add the jai folder to the list
+  because then you'll be able to search within all jai modules folder as well as your project files)
+- Save the global config, then relaunch the editor. It should scan all the files in your workspace.
+- Use Ctrl + P to open file from your workspace, or Ctrl - O to navigate to file.
+
+## Disclaimer
+
+The editor is not finished and there's a big list of things to do before release. Your bug reports and comments are welcome!
+Notable missing features:
+- Tab support (currently tabs are drawn as a one-symbol arrow, and when you press tab spaces are inserted to the next tab stop)
+- Creating new files (no UI for it yet - please use other ways of creating files until it's implemented)
+- Projects and sessions: about 70% done, not ready to use yet
+- Horizontal scrollbar is missing
+- Line wrap
+- Jump to line by number
+- No UI error reporting (e.g. when a project is misconfigured or a file fails to save)
+- Settings in the config file are not usable yet
+- Color schemes
 
 ## Basic shortcuts
 
+(you can see the full list of shortcuts and redefine keys in the global config file)
+
 - Ctrl + P - open file (if you hold Ctrl when opening a file it will open on the side)
 - Ctrl + W - close current file
+- Ctrl + S - save
 - Ctrl + Shift + W - close other file (when 2 files are open side-by-side)
-- Ctrl + Alt + left(right) switch to the left/right editor
+- Ctrl + 1 / 2 switch to the left/right editor
+- Ctrl + comma - toggle active pane
 - Ctrl + Shift + L - enlarge/shrink the current editor (in the side-by-side layout)
 - Ctrl + arrow keys - move cursor by word/paragraph
 - Ctrl + Enter - insert a new line below without breaking

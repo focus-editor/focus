@@ -64,11 +64,13 @@
     - Alt-HL smooth scroll
 
 - Display files that are deleted on disk but modified in the open file dialog
+- Drop a folder into the editor to add it to workspace
 
 - Proper tab support:
     - Draw them wide (only in the visible part of the text)
     - Consider them a whitespace when calculating line start - they never need to show on the left in finder results
     - If it turns out to be too hard or messy, could just convert them to spaces on load
+    - Have an option to insert tabs instead of spaces
 
 - File management:
     - Create new files:
@@ -155,9 +157,15 @@
 - Save editor state on editor operations:
     - Alt + minus to open previous state
     - Alt + plus to open next state
+    
+- Cursors:
+    - Create new cursors above/below by ctrl+alt+shift+arrows
+    - Try not merging adjacent selections and only merging overlapping selections
 
 - Save modified buffers to temporary files and recover after crashes
-    - Save undo/redo history in temporary files
+    - Save undo/redo history in temporary files?
+    
+- Add an option to not open in biggest monitor
 
 - When cutting search results in finder, go by characters and not bytes
 
@@ -198,6 +206,8 @@
     - Highlight globals?
     - Highlight shadowed variables
     - Color cursor differently depending on what scope we're in
+    
+- Remember window position (in session maybe)
 
 - Look into subpixel font positioning
     - Revisit the font loading code as it has some rounding to pixels there

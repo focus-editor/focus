@@ -34,6 +34,7 @@ temp
 .bin .sys .iso
 
 [[settings]]
+# NOT IMPLEMENTED YET
 theme: default  # TODO: colors + things like rounding radius, fonts, font sizes etc.
 tab_size: 4
 cursor_style: block  # block or line
