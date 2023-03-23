@@ -36,18 +36,37 @@ main :: () {
     if !make_directory_if_it_does_not_exist("projects") then panic_messagebox("Couldn't create folder %/projects. Is the directory writable?", exe_dir);
     if !make_directory_if_it_does_not_exist("temp")     then panic_messagebox("Couldn't create folder %/temp for temporary files. Is the directory writable?", exe_dir);
     
-    args := get_command_line_arguments();
-    if args.count == 2 && file_exists(args[1]) {
-        // Open file passed in the command line
-        session = start_fresh_session();
-        
-        editors_open_file(args[1]);
-    } else {
+    init_session_with_no_guidance :: () #expand {
         session = maybe_load_previous_session();
         if session.project {
             success := load_project_config(session.project);
             if !success then log_error("Couldn't load project config '%'", session.project);
         }
+    }
+    
+    args := get_command_line_arguments();
+    
+    if args.count == 2 {
+        // Check if a directory or file was passed in the command line (or by drag/dropping a file/directory onto the executable)
+        if is_directory(args[1]) {
+            // Open directory passed in the command line
+            session = start_fresh_session();
+            
+            path_overwrite_separators(args[1], #char "/");
+            
+            workspace_dirs := resizable(config.workspace.workspace_dirs);
+            array_add(*workspace_dirs, args[1]);
+            config.workspace.workspace_dirs = workspace_dirs;
+        } else if file_exists(args[1]) {
+            // Open file passed in the command line
+            session = start_fresh_session();
+            
+            editors_open_file(args[1]);
+        } else {
+            init_session_with_no_guidance();
+        }
+    } else {
+        init_session_with_no_guidance();
     }
     
     // Requires the session to be created and the configs to be loaded
