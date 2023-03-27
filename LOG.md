@@ -161,6 +161,7 @@
 - Cursors:
     - Create new cursors above/below by ctrl+alt+shift+arrows
     - Try not merging adjacent selections and only merging overlapping selections
+    - f ff f
 
 - Save modified buffers to temporary files and recover after crashes
     - Save undo/redo history in temporary files?

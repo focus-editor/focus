@@ -1021,7 +1021,7 @@ move_cursor_right :: (using cursor: *Cursor, buffer: Buffer, by: enum { char; wo
     line_len := buffer.lines[pos.line].num_chars;
     
     if has_selection(cursor) && !extend_selection {
-        pos = get_selection(cursor).start;
+        pos = get_selection(cursor).end;
         remove_selection(cursor);
     } else if pos.col >= line_len {
         // Move down one line

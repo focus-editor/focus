@@ -46,6 +46,7 @@ convert_tabs_to_spaces_on_load:     false
 highlight_selection_occurrences:    true
 load_last_session_on_start:         true
 disable_that_annoying_paste_effect: false
+disable_file_open_close_animations: false
 max_entries_in_open_file_dialog:    300
 
 [[keymap]]
