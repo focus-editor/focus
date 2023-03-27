@@ -42,7 +42,9 @@ parse_config :: (name: string, filename: string, file_data: string) -> Config, s
     result.workspace.workspace_dirs = parser.data.workspace_dirs;
     result.workspace.ignore_dirs = parser.data.ignore_dirs;
     result.workspace.allow_file_extensions = parser.data.allow_file_extensions;
+    result.workspace.allow_file_extension_wildcards = parser.data.allow_file_extension_wildcards;
     result.workspace.ignore_file_extensions = parser.data.ignore_file_extensions;
+    result.workspace.ignore_file_extension_wildcards = parser.data.ignore_file_extension_wildcards;
     
     // Merge and store keymaps in the config
     // (keys defined in the common section need to be present in the other sections unless overridden there)
@@ -175,13 +177,21 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
             extensions := split(line, cast(u8) #char " ");
             for extensions {
                 if !it continue;
-                array_add(*data.allow_file_extensions, it);
+                if contains_any_character(it, "*?") {
+                    array_add(*data.allow_file_extension_wildcards, trim_left(it, ".\t "));
+                } else {
+                    array_add(*data.allow_file_extensions, trim_left(it, ".\t "));
+                }
             }
         case .ignore_file_extensions;
             extensions := split(line, cast(u8) #char " ");
             for extensions {
                 if !it continue;
-                array_add(*data.ignore_file_extensions, it);
+                if contains_any_character(it, "*?") {
+                    array_add(*data.ignore_file_extension_wildcards, trim_left(it, ".\t "));
+                } else {
+                    array_add(*data.ignore_file_extensions, trim_left(it, ".\t "));
+                }
             }
     }
     return true;
@@ -343,7 +353,9 @@ Config_Parser :: struct {
         workspace_dirs:         [..] string;
         ignore_dirs:            [..] string;
         allow_file_extensions:  [..] string;
+        allow_file_extension_wildcards:  [..] string;
         ignore_file_extensions: [..] string;
+        ignore_file_extension_wildcards: [..] string;
         
         // Keymap
         keymap_common:           [..] Key_Mapping;

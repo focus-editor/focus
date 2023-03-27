@@ -51,11 +51,12 @@ main :: () {
         if is_directory(args[1]) {
             // Open directory passed in the command line
             session = start_fresh_session();
+            dir_path := copy_string(get_absolute_path(args[1]));
             
-            path_overwrite_separators(args[1], #char "/");
+            path_overwrite_separators(dir_path, #char "/");
             
             workspace_dirs := resizable(config.workspace.workspace_dirs);
-            array_add(*workspace_dirs, args[1]);
+            array_add(*workspace_dirs, dir_path);
             config.workspace.workspace_dirs = workspace_dirs;
         } else if file_exists(args[1]) {
             // Open file passed in the command line

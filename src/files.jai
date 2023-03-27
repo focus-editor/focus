@@ -81,15 +81,37 @@ get_file_icon :: (name: string, extension: string) -> File_Icon {
     return icon;
 }
 
-should_ignore_file :: (path: string) -> bool {    
-    // Allow known text file extensions since they are the most common
-    for allowed_ext : config.workspace.allow_file_extensions {
-        if ends_with_nocase(path, allowed_ext) return false;
-    }
+get_lowercase_extension :: (path: string) -> string /* temp */, found_extension: bool {
+    // NOTE: not using path_extension because it won't handle filenames with multiple dots as expected (e.g. lib.so.1.1)
+    just_path := path_strip_filename(path);
+    basename_with_extension := advance(path, just_path.count);
+    index := find_index_from_left(basename_with_extension, cast(u8) #char ".");
+    if index < 0 return "", false;
+    extension := advance(basename_with_extension, index + 1);
+    if !extension return "", false;
     
-    // Then check for common known binary file extensions
-    for config.workspace.ignore_file_extensions {
-        if ends_with_nocase(path, it) return true;  // TODO: do a wildcard match
+    return to_lower_copy(extension), true;
+}
+
+should_ignore_file :: (path: string) -> bool {
+    extension, found_extension := get_lowercase_extension(path);
+    
+    if found_extension {
+        // Allow known text file extensions since they are the most common
+        for config.workspace.allow_file_extensions {
+            if ends_with_nocase(path, it) return false;
+        }
+        for config.workspace.allow_file_extension_wildcards {
+            if wildcard_match(extension, it) return false;
+        }
+        
+        // Then check for common known binary file extensions
+        for config.workspace.ignore_file_extensions {
+            if ends_with_nocase(path, it) return true;
+        }
+        for config.workspace.ignore_file_extension_wildcards {
+            if wildcard_match(extension, it) return true;
+        }
     }
     
     // Check for zeroes in the file - if there are any, it's not a well-formed text file.
@@ -98,8 +120,12 @@ should_ignore_file :: (path: string) -> bool {
     // Sorry non-binary files, there are only 2 digits, please don't cancel me.
     file_data, success := read_entire_file(path);
     if !success return true;
+    
     has_zeroes := find_index_from_left(file_data, byte = 0) >= 0;
     free(file_data);
+    
+    if has_zeroes then print("read binary file %\n", path);
+    
     if has_zeroes return true;  // ignore
     
     // In this case the file will be read again, but it's OK because:
@@ -108,10 +134,11 @@ should_ignore_file :: (path: string) -> bool {
     return false;
 }
 
-should_ignore_dir :: (name: string) -> bool {
+should_ignore_dir :: (path: string) -> bool {
+    path_chunks := split(path, "/");
     for config.workspace.ignore_dirs {
-        if contains_nocase(name, it) {  // TODO: do a wildcard match
-            return true;
+        for chunk : path_chunks {
+            if wildcard_match(chunk, it) return true;
         }
     }
     return false;

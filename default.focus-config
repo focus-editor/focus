@@ -15,23 +15,26 @@
 .git
 bin
 temp
+__pycache__
 
 [allow file extensions]
 # These files are explicitly allowed so that the editor doesn't waste time figuring out
 # whether it should ignore these or not (if a file is not explicitly allowed or ignored, 
 # it will be read to determine if it's binary or not).
-.jai .c .cpp .h .hpp .cc .txt .md .focus-config .ini .csv .log .sql .py .m .html .xml .js .ts .yml .yaml .toml
+.jai .c .cpp .h .hpp .cc .txt .md .focus-* .ini .csv .log .sql .py .m .html .xml .js .ts .yml .yaml .toml
 
 [ignore file extensions]
 # Files with the following extensions will not appear in the file open dialog and won't be indexed.
 # It makes sense to add all known binary file extensions here.
-.exe .pdb .ttf .otf .dll .lib .dylib .so .so.0 .so.1 .so.2 .a
+.exe .pdb .ttf .otf .eot .woff *woff? .dll .lib .dylib .so *so.* .a .o .pdf
 .jpg .png .gif .jpeg .ico .tif .tiff .tga .bmp .webp  # maybe someday we'll support opening images
 .mp3 .wav .ogg .wma 
 .blend .obj .fbx .dae .3ds
 .mpg .mpeg .psd .codex .webm .wma
 .zip .rar .7z 
 .bin .sys .iso
+.nib .exp .plist
+.pyc .rpyc
 
 [[settings]]
 # NOT IMPLEMENTED YET
@@ -43,10 +46,10 @@ convert_tabs_to_spaces_on_load:     false
 highlight_selection_occurrences:    true
 load_last_session_on_start:         true
 disable_that_annoying_paste_effect: false
+max_entries_in_open_file_dialog:    300
 
 [[keymap]]
 
-# {Shift}- means shift is optional, the key combination will still be matched.
 # NOTE: the first matching combination will be used, so order matters.
 
 [common]
@@ -73,6 +76,7 @@ Ctrl-A                      select_all
 
 Ctrl-Shift-L                toggle_expand
 
+# {Shift}- means shift is optional, the key combination will still be matched.
 {Shift}-ArrowUp             move_up
 {Shift}-Ctrl-ArrowUp        move_up_fast
 {Shift}-PageUp              move_up_one_page

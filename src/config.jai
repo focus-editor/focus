@@ -44,8 +44,14 @@ merge_configs :: (dst: *Config, src: Config) {
     // Workspace
     if src.workspace.workspace_dirs         then dst.workspace.workspace_dirs         = src.workspace.workspace_dirs;
     if src.workspace.ignore_dirs            then dst.workspace.ignore_dirs            = src.workspace.ignore_dirs;
-    if src.workspace.allow_file_extensions  then dst.workspace.allow_file_extensions  = src.workspace.allow_file_extensions;
-    if src.workspace.ignore_file_extensions then dst.workspace.ignore_file_extensions = src.workspace.ignore_file_extensions;
+    if src.workspace.allow_file_extensions || src.workspace.allow_file_extension_wildcards {
+        dst.workspace.allow_file_extensions          = src.workspace.allow_file_extensions;
+        dst.workspace.allow_file_extension_wildcards = src.workspace.allow_file_extension_wildcards;
+    }
+    if src.workspace.ignore_file_extensions || src.workspace.ignore_file_extension_wildcards {
+        dst.workspace.ignore_file_extensions          = src.workspace.ignore_file_extensions;
+        dst.workspace.ignore_file_extension_wildcards = src.workspace.ignore_file_extension_wildcards;
+    }
     
     // TODO: other sections;
 }
@@ -63,9 +69,11 @@ Config :: struct {
 
 Workspace :: struct {
     workspace_dirs: [] string;
-    ignore_dirs: [] string;
+    ignore_dirs:    [] string;
     allow_file_extensions:  [] string;
     ignore_file_extensions: [] string;
+    allow_file_extension_wildcards:  [] string;
+    ignore_file_extension_wildcards: [] string;
 }
 
 Settings :: struct {

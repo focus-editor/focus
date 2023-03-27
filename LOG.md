@@ -219,6 +219,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Wildcard support in config
 + Open files by drag/drop (add them to standalone files if needed)
 + Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
 + Measure how much time it takes to copy 8 mb of data
