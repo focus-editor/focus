@@ -457,6 +457,13 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             pen.x += width + padding;
             width = xx Simp.prepare_text(font_ui_bold, buffer.file.name);
             Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = file_name_color);
+            
+            if buffer.modified {
+                pen.x += width + padding;
+                width = xx Simp.prepare_text(font_icons_small, PEN_CHAR);
+                y_padding := (font_icons.character_height - font_icons_small.character_height) / 4.0;
+                Simp.draw_prepared_text(font_icons_small, xx pen.x, xx (pen.y + y_padding), color = file_name_color);
+            }
 
             // Maybe warnings
             if buffer.deleted {

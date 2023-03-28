@@ -213,9 +213,10 @@ main :: () {
 
 init_fonts_and_dependent_things :: () {
     delta := font_size - DEFAULT_FONT_SIZE;
-    font_ui_size       = DEFAULT_FONT_UI_SIZE       + delta;
-    font_ui_small_size = DEFAULT_FONT_UI_SMALL_SIZE + delta;
-    font_icons_size    = DEFAULT_FONT_ICONS_SIZE    + delta;
+    font_ui_size          = DEFAULT_FONT_UI_SIZE       + delta;
+    font_ui_small_size    = DEFAULT_FONT_UI_SMALL_SIZE + delta;
+    font_icons_size       = DEFAULT_FONT_ICONS_SIZE    + delta;
+    font_icons_small_size = DEFAULT_FONT_ICONS_SMALL_SIZE + delta;
     
     font = Simp.get_font_at_size(FONT.name, FONT.data, cast(int) (font_size * dpi_scale));
     assert(font != null, "Couldn't init main text font\n");
@@ -232,17 +233,31 @@ init_fonts_and_dependent_things :: () {
 
     font_icons = Simp.get_font_at_size(FONT_ICONS.name, FONT_ICONS.data, cast(int) (font_icons_size * dpi_scale));
     assert(font_icons != null, "Couldn't init main icon font\n");
+    
+    font_icons_small = Simp.get_font_at_size(FONT_ICONS.name, FONT_ICONS.data, cast(int) (font_icons_small_size * dpi_scale));
+    assert(font_icons_small != null, "Couldn't init small icon font\n");
 
     // WORKAROUND:
     // Make a dummy call with most common chars for each font so that
     // we have all the font atlases loaded in the GPU memory once
     // (TODO: maybe there's an easy way for Simp to only update textures on flush?)
-    COMMON_CHARS :: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789… ~!@#$%^&*()-|\"':;_+={}[]\\/`,.<>?АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчщъыьэюя¶";
+    COMMON_CHARS :: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789… ~!@#$%^&*()-|\"':;_+={}[]\\/`,.<>?АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчщъыьэюя¶•";
     Simp.prepare_text(font,          COMMON_CHARS);
     Simp.prepare_text(font_ui,       COMMON_CHARS);
     Simp.prepare_text(font_ui_bold,  COMMON_CHARS);
     Simp.prepare_text(font_ui_small, COMMON_CHARS);
-    // TODO: prepare icons as well
+    
+    common_icons: String_Builder;
+    common_icons.allocator = temp;
+    for enum_values_as_enum(File_Icon) {
+        char := convert_utf32_to_utf8(xx it);
+        append(*common_icons, to_string(*char));
+    }
+    append(*common_icons, PEN_CHAR);
+    icons_string := builder_to_string(*common_icons);
+    
+    Simp.prepare_text(font_icons,       icons_string);
+    Simp.prepare_text(font_icons_small, icons_string);
     
     // Things that depend on char size
     char_size       = cast(float) font.em_width;
@@ -424,24 +439,27 @@ LINE_HEIGHT_SCALE :: 1.2;
 
 WHEEL_SENSITIVITY :: 1.0;
 
+PEN_CHAR              :: #run to_string(*convert_utf32_to_utf8(0xf304));
 BULLET_CHAR           :: #run to_string(*convert_utf32_to_utf8(0x2022));
-MAGNIFYING_GLASS_CHAR :: #run to_string(*convert_utf32_to_utf8(0x2022));
 
-font:           *Simp.Dynamic_Font;
-font_ui:        *Simp.Dynamic_Font;
-font_ui_bold:   *Simp.Dynamic_Font;
-font_ui_small:  *Simp.Dynamic_Font;
-font_icons:     *Simp.Dynamic_Font;
+font:               *Simp.Dynamic_Font;
+font_ui:            *Simp.Dynamic_Font;
+font_ui_bold:       *Simp.Dynamic_Font;
+font_ui_small:      *Simp.Dynamic_Font;
+font_icons:         *Simp.Dynamic_Font;
+font_icons_small:   *Simp.Dynamic_Font;
 
-DEFAULT_FONT_SIZE           :: 14;
-DEFAULT_FONT_UI_SIZE        :: 16;
-DEFAULT_FONT_UI_SMALL_SIZE  :: 15;
-DEFAULT_FONT_ICONS_SIZE     :: 16;
+DEFAULT_FONT_SIZE               :: 14;
+DEFAULT_FONT_UI_SIZE            :: 16;
+DEFAULT_FONT_UI_SMALL_SIZE      :: 15;
+DEFAULT_FONT_ICONS_SIZE         :: 16;
+DEFAULT_FONT_ICONS_SMALL_SIZE   :: 8;
 
-font_size           := DEFAULT_FONT_SIZE;  // when changing font size, we change just this one and then derive the other ones from it
-font_ui_size        := DEFAULT_FONT_UI_SIZE;
-font_ui_small_size  := DEFAULT_FONT_UI_SMALL_SIZE;
-font_icons_size     := DEFAULT_FONT_ICONS_SIZE;
+font_size               := DEFAULT_FONT_SIZE;  // when changing font size, we change just this one and then derive the other ones from it
+font_ui_size            := DEFAULT_FONT_UI_SIZE;
+font_ui_small_size      := DEFAULT_FONT_UI_SMALL_SIZE;
+font_icons_size         := DEFAULT_FONT_ICONS_SIZE;
+font_icons_small_size   := DEFAULT_FONT_ICONS_SMALL_SIZE;
 
 // Depend on font size
 char_size:              float;
