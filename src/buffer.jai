@@ -73,6 +73,7 @@ delete_range_raw :: (using buffer: *Buffer, start: s64, end: s64) {
 }
 
 insert_string_raw :: (buffer: *Buffer, offset: s64, str: string) {
+    ZoneScoped();
     bytes: [] u8;
     bytes.data  = str.data;
     bytes.count = str.count;
@@ -94,14 +95,19 @@ get_char_at_pos :: (using buffer: Buffer, pos: Pos) -> u32 {
     return char;
 }
 
-get_char_at_pos_as_string :: (using buffer: Buffer, pos: Pos) -> string {
-    offset := pos_to_offset(buffer, make_valid_pos(buffer, pos));
-    if offset >= bytes.count return "";
-    
+get_char_at_offset_as_string :: (using buffer: NewBuffer, offset: s32) -> string {
     char: string = ---;
     char.data  = *bytes[offset];
     char.count = 1 + trailingBytesForUTF8[bytes[offset]];
-    
+    return char;
+}
+
+get_char_at_pos_as_string :: (using buffer: Buffer, pos: Pos) -> string {
+    offset := pos_to_offset(buffer, make_valid_pos(buffer, pos));
+    if offset >= bytes.count return "";
+    char: string = ---;
+    char.data  = *bytes[offset];
+    char.count = 1 + trailingBytesForUTF8[bytes[offset]];
     return char;
 }
 
@@ -282,6 +288,12 @@ remove_selection :: inline (using cursor: *Cursor) {
     sel = pos;
 }
 
+
+drop_selection :: inline (using cursor: *Caret) {
+    sel.offset = pos.offset;
+    sel.coords = pos.coords;
+}
+
 remove_crlf :: (using buffer: *Buffer) {
     dst := bytes.data;
     src := bytes.data;
@@ -312,10 +324,68 @@ last_line :: inline (using buffer: Buffer, line: s32) -> bool {
     return line == lines.count - 1;
 }
 
+rescan_for_lines :: (using buffer: *NewBuffer) {
+    ZoneScoped(color=0xFF00FFFF);
+    array_reset_keeping_memory(*line_starts);
+    array_add(*line_starts, 0);  // first line
+    
+    s := to_string(bytes);
+    
+    // NOTE: this implementation is slightly faster on my machine, but really not by much - need to test on other machines
+    if check_feature(cpu_info.feature_leaves, x86_Feature_Flag.AVX2) {
+        // Scan by 16 bytes at a time
+        lf := 0xA; // '\n'
+        #asm AVX2 {
+            movq lf_source:, lf;
+            pbroadcastb.x line_feeds:, lf_source;
+        }
+        data := s.data;
+        count := s.count;
+        while count >= 16 {
+            mask:  u32 = ---;
+            #asm { 
+                movdqu      batch:, [data];
+                pcmpeqb.x   batch, line_feeds;
+                pmovmskb.x  mask, batch;
+            }
+            shift := 0;
+            bit_id: u32 = ---;
+            while mask {
+                #asm {
+                    bsf.d bit_id, mask;
+                }
+                mask >>= (bit_id + 1);
+                shift += bit_id + 1;
+                array_add(*line_starts, cast,no_check(s32)(data - bytes.data + shift));
+            }
+            count -= 16;
+            data  += 16;
+        }
+        s.data = data;
+        s.count = count;
+    }
+    
+    start_index := s.data - bytes.data;
+    while true {
+        index := inline find_index_from_left(s, 0xA, start_index);
+        if index > 0 {
+            start_index = index + 1;
+            array_add(*line_starts, cast,no_check(s32) start_index);
+        } else {
+            break;
+        }
+    }
+    
+    array_add(*line_starts, cast(s32) bytes.count);  // last line
+    array_add(*line_starts, cast(s32) bytes.count);  // sentinel
+}
+
 recalculate_lines :: (buffer: *Buffer) {
+    ZoneScoped(color=0xFF0000FF);
     // We mainly use dirty for lines. We may want to recalculate lines
     // a few times within one frame, but we don't want to e.g. rehighlight code
     // more than once (before display)
+    // !!!!!!!!!!!!!!!! maybe this will change now and we won't recalculate nearly as often? !!!!!!!!!!!!!!!!!!
     if buffer.dirty {
         buffer.was_dirty_during_frame = true;
         buffer.dirty = false;
@@ -368,6 +438,8 @@ save_buffer_to_disk :: (using buffer: *Buffer) {
         deleted = false;
         
         meow_hash = calculate_meow_hash(bytes);
+    } else {
+        // TODO: report an error
     }
     remember_last_modtime_and_size(buffer);
 }
@@ -450,7 +522,7 @@ refresh_buffer_from_disk :: (path: string) {
     
     if !buffer_file_has_changed_on_disk(buffer) return;
     
-    print("--- reloading data from disk...\n");
+    log("--- reloading data from disk...\n");
     
     finder.need_to_refresh_results = true;
     
@@ -600,6 +672,39 @@ deinit :: (using edit_group: *Buffer.Edit_Group) {
 
 #scope_export
 
+NewBuffer :: struct {
+    file: File_Info;
+    has_file := false;  // false for freestanding buffers. TODO: make freestanding buffers separate?
+    num_times_opened: u8;
+    
+    meow_hash: u64;
+    last_modtime: Apollo_Time;  // for detecting whether a file has changed
+    last_size: s64;             // --
+
+    bytes:  [..] u8;
+    line_starts: [..] s32;
+    
+    colors: [..] Simp.Code_Color;  // u8 - we color each byte (even for multi-byte chars)
+                                   // @Space: we could use a u4 instead
+
+    // TODO: put into enum_flags
+    dirty                  := false;
+    was_dirty_during_frame := false;  // consider removing
+    modified               := false;
+    modified_on_disk       := false;
+    deleted                := false;
+    needs_coloring         := false;
+
+    last_edit_time: Time;  // for creating new edit groups
+
+    lang: enum u8 {
+        Plain_Text :: 0;
+        Jai;
+        Focus_Config;
+        Worklog;
+    } = .Plain_Text;
+}
+
 // TODO: 
 // - reorganise to reduce size
 // - replace all [..] with a custom array type without an allocator (also probably using s32's)
@@ -613,9 +718,12 @@ Buffer :: struct {
     last_size: s64;             // --
 
     bytes:  [..] u8;
-    lines:  [..] Line;
+    
     colors: [..] Simp.Code_Color;  // u8 - we color each byte (even for multi-byte chars)
                                    // @Space: we could use a u4 instead
+    
+    // deprecated
+    lines:  [..] Line;
 
     undos: [..] Edit_Group;
     redos: [..] Edit_Group;
@@ -674,6 +782,18 @@ Buffer :: struct {
         start, end: s32;  // we won't open large files anyway
     }
 }
+
+Caret :: struct {
+    // even though the coords can be calculated from offsets, we're keeping them here because it's cheaper to keep track of them 
+    // when they move than to recalculate every frame
+    pos: struct { offset: s32; coords: Pos; };
+    sel: struct { offset: s32; coords: Pos; };
+    
+    col_wanted: s32;
+    clipboard: struct { start: s32; count: s32; };
+}
+
+#assert size_of(Caret) == (3 + 3 + 1 + 2) * size_of(s32);  // make sure no padding accidentally gets added
 
 Line :: struct {
     start, end: s32;

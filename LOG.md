@@ -37,11 +37,11 @@
     
 - Optimise line offset storage and recalculation
     - We currently recalculate lines:
+        - in active_editor_handle_event, after each edit made by each cursor (!!!!) ( 2 places )
+        - in active_editor_type_text, after each cursor (!!!!) ( 2 places )
         - in refresh_open_buffers, every frame, if dirty - ok
         - in refresh_buffer_from_disk, after reloading contents - ok
         - in fill_in_buffer_from_disk_data - ok
-        - in active_editor_handle_event, after each edit made by each cursor (!!!!) ( 2 places )
-        - in active_editor_type_text, after each cursor (!!!!) ( 2 places )
         - in delete_line* - because make_valid_pos requires non-dirty buffer
         - in join_lines - because need to access the lines after that
         - in move_lines_down - because insert_string_at_pos needs line info
@@ -56,12 +56,15 @@
 - Optimise edits: 
     - try to use the same memory for additions if possible?
     - merge consecutive inserts - should be easy if the above is done
+    
 - Load UE5 source and try to scan it
     - When doing it, collect info on any binary files that had to be read to be ignored
     - Compare with async scanning
 
 - Add horizontal scrollbar
     - Alt-HL smooth scroll
+    
+- Make sure move to empty line works on lines with just whitespace
 
 - Display files that are deleted on disk but modified in the open file dialog
 - Drop a folder into the editor to add it to workspace

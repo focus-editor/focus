@@ -1,4 +1,5 @@
 main :: () {
+    cpu_info = get_cpu_info();
     platform_setup();
     
     window_x, window_y := platform_get_biggest_monitor_pos();
@@ -13,6 +14,40 @@ main :: () {
     Simp.set_render_target(window);
 
     init_buffers();
+    
+    // !!!!!!!
+    // Setup temporary editor and buffer for testing new buffer representation 
+    {
+        // Create and load file
+        // path := copy_string(get_absolute_path(".gitignore"));
+        path := copy_string(get_absolute_path("sqlite3.c"));
+        file_data, success := read_entire_file(path);
+        if !success then file_data = sprint("Couldn't load file '%'", path);
+        
+        new_buffer.file = get_file_info_from_full_path(path);
+        new_buffer.has_file = true;
+        // remember_last_modtime_and_size(buffer);
+        
+        new_buffer.bytes = resizable(to_bytes(file_data));
+        // remove_crlf(buffer);
+        rescan_for_lines(*new_buffer);
+        
+        new_buffer.meow_hash = calculate_meow_hash(new_buffer.bytes);
+        
+        array_add(*new_editor.cursors, Cursor.{});
+        array_add(*new_editor.carets, Caret.{});
+        
+    }
+    
+    {
+        // Test buffer
+        // Create and load file
+        path := copy_string(get_absolute_path("sqlite3.c"));
+        file_data, success := read_entire_file(path);
+        if !success then file_data = sprint("Couldn't load file '%'", path);
+        
+        fill_in_buffer_from_file_data(*test_buffer, path, file_data);
+    }
     
     // Remember important directories
     exe_dir = copy_string(path_strip_filename(get_path_of_running_executable()));
@@ -484,6 +519,14 @@ Project_Dir :: struct {
 // A string which contains the path to a file which was just drag-and-dropped into the editor (for the draw code to use)
 just_dropped_file := "";
 
+cpu_info: Cpu_X86;
+
+// !!!!!!!!!!!!!!!
+new_editor: Editor;
+new_buffer: NewBuffer;
+test_buffer: Buffer;
+// !!!!!!!!!!!!!!!
+
 
 #load "layout.jai";
 #load "editors.jai";
@@ -531,10 +574,11 @@ just_dropped_file := "";
 #import "Window_Creation";
 #import "Thread";
 #import "Compiler";
+#import "Machine_X64";
 
-#if DEBUG {
+// #if DEBUG {
     #import "Tracy";
-}
+// }
 
 File_Async :: #import "File_Async";
 
