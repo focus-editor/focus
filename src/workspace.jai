@@ -256,12 +256,11 @@ start_file_watcher :: () {
 file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
     print("%\n", <<change);
     
-    parent_dir := get_parent_dir_path(change.full_path);
-    
     // If the change is in one of the ignored dirs, ignore it
-    if should_ignore_dir(parent_dir) return;
+    if should_ignore_dir(change.full_path) return;
     
     // If the change is caused by watching a dir containing a standalone file, ignore it
+    parent_dir := get_parent_dir_path(change.full_path);
     if !dir_is_within_project(parent_dir) && !file_is_watched(change.full_path) return;
     
     // Most commonly we will receive only a single MODIFIED event for a single file (after saving a buffer)
