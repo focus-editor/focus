@@ -254,6 +254,8 @@ start_file_watcher :: () {
 }
 
 file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
+    print("%\n", <<change);
+    
     parent_dir := get_parent_dir_path(change.full_path);
     
     // If the change is in one of the ignored dirs, ignore it
@@ -312,7 +314,6 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
     // if change.events & .MODIFIED      then buffer_maybe_changed_on_disk(change.full_path);
     // if change.events & .REMOVED       then buffer_maybe_deleted_on_disk(change.full_path);
     // if change.events & .SCAN_CHILDREN then refresh_buffers_in_directory(change.full_path);
-    print("%\n", <<change);
     
     if (change.events & .REMOVED) || (change.events & .MOVED_FROM) then maybe_mark_buffer_as_deleted(change.full_path);
 }
