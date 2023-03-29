@@ -137,8 +137,14 @@ should_ignore_file :: (path: string) -> bool {
 should_ignore_dir :: (path: string) -> bool {
     path_chunks := split(path, "/");
     for config.workspace.ignore_dirs {
-        for chunk : path_chunks {
-            if wildcard_match(chunk, it) return true;
+        if contains(it, cast(u8) #char "/") {
+            // Match whole path
+            if wildcard_match(path, it) return true;
+        } else {
+            // Match partial path
+            for chunk : path_chunks {
+                if wildcard_match(chunk, it) return true;
+            }
         }
     }
     return false;
