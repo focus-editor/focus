@@ -213,10 +213,10 @@ main :: () {
 
 init_fonts_and_dependent_things :: () {
     delta := font_size - DEFAULT_FONT_SIZE;
-    font_ui_size          = DEFAULT_FONT_UI_SIZE       + delta;
-    font_ui_small_size    = DEFAULT_FONT_UI_SMALL_SIZE + delta;
-    font_icons_size       = DEFAULT_FONT_ICONS_SIZE    + delta;
-    font_icons_small_size = DEFAULT_FONT_ICONS_SMALL_SIZE + delta;
+    font_ui_size          = clamp(DEFAULT_FONT_UI_SIZE       + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_ui_small_size    = clamp(DEFAULT_FONT_UI_SMALL_SIZE + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_icons_size       = clamp(DEFAULT_FONT_ICONS_SIZE    + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_icons_small_size = clamp(DEFAULT_FONT_ICONS_SMALL_SIZE + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
     
     font = Simp.get_font_at_size(FONT.name, FONT.data, cast(int) (font_size * dpi_scale));
     assert(font != null, "Couldn't init main text font\n");
