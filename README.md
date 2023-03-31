@@ -6,7 +6,7 @@ A simple editor that tries to not stand in your way.
 
 - Copy the exe into a folder where it will live. The folder needs to be writable.
 - Launch the exe. This will create a global config file next to it.
-- Open the global.focus-config file by e.g. dragging it to the editor window (or by using the Open With dialog and pointing to the config file).
+- Open the global.focus-config file by e.g. dragging it to the editor window (or by using the Open With dialog and pointing to the editor's exe).
 - In the config file you can specify the paths to your workspace folders (it's probably a good idea to add the jai folder to the list
   because then you'll be able to search within all jai modules folder as well as your project files)
 - Save the global config, then relaunch the editor. It should scan all the files in your workspace.

@@ -25,7 +25,7 @@
     - Adjust cursors in joint editors properly
     - Highlight C/C++
     - Jump to line on Ctrl+G
-    - Word wrap
+    - Line wrap
     - See if memory usage can be improved
     - Custom title bar (currently too much work and not very robust)
     - Linux support:

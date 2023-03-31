@@ -1,5 +1,4 @@
 main :: () {
-    #assert OS == .WINDOWS "Currently only supporting Windows";
     platform_setup();
     
     window_x, window_y := platform_get_biggest_monitor_pos();
@@ -7,15 +6,7 @@ main :: () {
     window = create_window(window_width, window_height, window_title, window_x, window_y, background_color_rgb = as_3_floats(Colors.BACKGROUND));
     platform_maximize_window(window);
     
-    #if OS == .WINDOWS {
-        Windows.DragAcceptFiles(window, cast(Windows.BOOL) true);
-    } else #if OS == .LINUX {
-        X11 :: #import "X11";
-        typelist := string.["url/url", "text/uri-list", "text/plain", "application/octet-stream"];  // @Incomplete: test this on Linux
-        X11.enable_drag_and_drop(window, typelist);
-    } else #if OS == .MACOS {
-        // @Incomplete
-    }
+    platform_enable_drag_and_drop(window);
 
     window_width, window_height = Simp.get_render_dimensions(window);
     screen = make_rect(0, 0, window_width, window_height);
@@ -30,7 +21,6 @@ main :: () {
     projects_dir = sprint("%/projects", exe_dir);
     
     assert(exe_dir.count > 0);
-    set_working_directory(exe_dir);
     load_global_config();
     
     if !make_directory_if_it_does_not_exist("projects") then panic_messagebox("Couldn't create folder %/projects. Is the directory writable?", exe_dir);
@@ -497,7 +487,6 @@ just_dropped_file := "";
 #load "layout.jai";
 #load "editors.jai";
 #load "buffer.jai";
-#load "windows.jai";
 #load "unicode.jai";
 #load "draw.jai";
 #load "pointer_image.jai";
@@ -514,6 +503,17 @@ just_dropped_file := "";
 #load "langs/jai.jai";
 #load "langs/focus_config.jai";
 #load "langs/worklog.jai";
+
+#if OS == .WINDOWS {
+    #load "platform/windows.jai";
+    #import "Windows_Utf8";
+} else #if OS == .LINUX {
+    #load "platform/linux.jai";
+} else #if OS == .MACOS {
+    #load "platform/macos.jai";
+} else {
+    #assert false, "Unsupported OS";
+}
 
 // #import "Basic"()(MEMORY_DEBUGGER = true);
 #import "Basic";
@@ -536,10 +536,6 @@ just_dropped_file := "";
 }
 
 File_Async :: #import "File_Async";
-
-#if OS == .WINDOWS {
-    #import "Windows_Utf8";
-}
 
 Simp :: #import "Simp_Ext";
 Input :: #import "Input";

@@ -21,6 +21,10 @@ platform_maximize_window :: (window: Window_Type) {
     ShowWindow(window, SW_MAXIMIZE);
 }
 
+platform_enable_drag_and_drop :: (window: Window_Type) {
+    Windows.DragAcceptFiles(window, cast(Windows.BOOL) true);
+}
+
 platform_get_dpi_scale :: (window: Window_Type) -> float {
     #assert OS == .WINDOWS;
     dpi := cast(float) GetDpiForWindow(window);
