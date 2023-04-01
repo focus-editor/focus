@@ -1,3 +1,4 @@
+// @buffer: 
 refresh_open_buffers :: () {
     for *editor : open_editors {
         buffer := *open_buffers[editor.buffer_id];
@@ -21,9 +22,22 @@ refresh_open_buffers :: () {
     }
 }
 
+// !!!!!!!!!!!!
 put_cursor_in_valid_spot :: (using cursor: *Cursor, buffer: Buffer) {
     pos = make_valid_pos(buffer, pos);
     sel = make_valid_pos(buffer, sel);
+}
+
+put_cursor_in_valid_spot :: (using cursor: *Caret, buffer: NewBuffer) {
+    pos.offset = clamp(pos.offset, 0, xx buffer.bytes.count);
+    sel.offset = clamp(sel.offset, 0, xx buffer.bytes.count);
+    
+    pos.coords = offset_to_pos(buffer, pos.offset);
+    if sel.offset == pos.offset {
+        sel.coords = pos.coords;
+    } else {
+        sel.coords = offset_to_pos(buffer, sel.offset);
+    }
 }
 
 insert_string_at_pos :: (buffer: *Buffer, pos: Pos, str: string) {
@@ -111,6 +125,48 @@ get_char_at_pos_as_string :: (using buffer: Buffer, pos: Pos) -> string {
     return char;
 }
 
+offset_to_pos :: (using buffer: NewBuffer, offset: s64) -> Pos {
+    pos: Pos = ---;
+    pos.line = offset_to_line(buffer, offset);
+
+    // Find col by scanning the line
+    pos.col = 0;
+    i := line_starts[pos.line];
+    while i < offset {
+        pos.col += 1;
+        i += 1 + trailingBytesForUTF8[bytes[i]];
+    }
+
+    return pos;
+}
+
+offset_to_line :: (using buffer: NewBuffer, offset: s64) -> line_num: s32 {
+    assert(!dirty, "buffer is dirty, can't calculate line from offset");
+    assert(offset <= bytes.count, "offset exceeds buffer size, can't calculate line");
+
+    line_num := 0;
+
+    left  := 0;
+    right := line_starts.count - 1;
+
+    if offset >= line_starts[right] {
+        line_num = right;
+    } else {
+        while (right - left) > 1 {
+            middle := left + (right - left) / 2;
+            if offset < line_starts[middle] {
+                right = middle;
+            } else {
+                left = middle;
+            }
+        }
+        line_num = left;
+    }
+    
+    return cast(s32) line_num;
+}
+
+// !!!!!!!!!!
 offset_to_pos :: (using buffer: Buffer, offset: s64) -> Pos {
     pos: Pos = ---;
     pos.line = offset_to_line(buffer, offset);
@@ -126,6 +182,7 @@ offset_to_pos :: (using buffer: Buffer, offset: s64) -> Pos {
     return pos;
 }
 
+// !!!!!!!!!!
 offset_to_line :: (using buffer: Buffer, offset: s64) -> s32 {
     assert(!dirty, "buffer is dirty, can't calculate pos from offset");
     assert(offset <= lines[lines.count - 1].end, "offset exceeds buffer size, can't calculate pos");

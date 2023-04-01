@@ -173,11 +173,14 @@ tmp_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
     }
 
     if !extend_selection && editor.cursor_moved && !keep_selection {
-        for * cursors { drop_selection(it); }
+        for * cursors drop_selection(it);
     }
+    
 //     if cursor_moved && !enabled_whole_words then editor.search_whole_words = false;
 
     if buffer.dirty rescan_for_lines(buffer);
+    for * cursors put_cursor_in_valid_spot(it, buffer);
+    
 //     
 //     // NOTE: we're processing cursors here and then again later in refresh_open_buffers,
 //     // but this is so that we can be sure if another event is processed in the same frame,
@@ -453,6 +456,7 @@ get_active_editor_and_buffer :: () -> *Editor, *Buffer {
     return editor, buffer;
 }
 
+// !!!!!!!!!!!!!!!!
 refresh_all_editors_for_buffer :: (buffer_id: s64) {    
     buffer := *open_buffers[buffer_id];
     for *e : open_editors {
