@@ -38,7 +38,11 @@
 - Optimise line offset storage and recalculation
     + Drop cursor positions and just use offsets
     + Move cursor up and down
-    - Calculate positions of only visible cursors when drawing, then throw them away
+    + Follow cursor
+    - Calculate positions of only visible cursors when drawing
+    - Draw selections
+    
+    - Remove cursor_offsets at the end
     
     - We currently recalculate lines:
         - in active_editor_handle_event, after each edit made by each cursor (!!!!) ( 2 places )
@@ -50,12 +54,7 @@
         - in join_lines - because need to access the lines after that
         - in move_lines_down - because insert_string_at_pos needs line info
         - in paste_from_clipboard - because need to calculate new cursor pos after that
-    - What if we use cursor offset instead of line/col? Or use them together?
-    - Having a line/col is needed every frame to display the cursor and it's easier to move the cursor
-        - Where else do we really need to have a line/col?
-        - If we always keep both line/col and offset, it might be easier to avoid recalculating it by binary search each frame
-    - Where do we need text_length and text_start - probably not worth it to recalculate for every line?
-    - Remove cursor_offsets at the end
+    
 - Optimise cursor clipboard (use shared memory with offsets)
 - Optimise edits: 
     - try to use the same memory for additions if possible?

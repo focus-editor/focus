@@ -127,31 +127,35 @@ tmp_draw_new_editor :: (rect: Rect) {
         using editor.viewport;
         new_target := clamp(scroll_y.target - mouse.scroll_y_delta, 0, max_y_scroll);
         start_animation(*scroll_y, top, new_target);
+    } else if cursor_moved {
+        // !!!!
+        cursor_moved = false;  // TODO: remove when no longer using the temp editor
+        
+        // Detect if cursor is off screen and start scrolling to it
+        bounds := shrink_x(rect, text_offset.x + char_size * 3);
+        bounds  = shrink_y(bounds, -text_offset.y + line_height * 3);
+        bounds.h += 2;
+        bounds.y -= line_height + 2;
+        if bounds.w < 0 || bounds.h < 0 then bounds = rect;  // fall back
+        // draw_rect(bounds, Colors.BACKGROUND_DARK);
+
+        coords := offset_to_coords(buffer, carets[main_cursor].pos);
+        screen_pos := get_cursor_screen_pos(text_origin, coords);
+        if !point_within(screen_pos, bounds) {
+            left, top, right, bottom := get_rect_sides(bounds);
+            offset: Vector2;
+            if screen_pos.x < left   then offset.x = screen_pos.x - left;
+            if screen_pos.y < bottom then offset.y = screen_pos.y - bottom;
+            if right < screen_pos.x  then offset.x = screen_pos.x - right;
+            if top   < screen_pos.y  then offset.y = screen_pos.y - top;
+
+            left_target := max(viewport.left + cast(s32) offset.x, 0);
+            top_target  := clamp(viewport.top - cast(s32) offset.y, 0, max_y_scroll);
+
+            if left_target != viewport.scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target);
+            if top_target  != viewport.scroll_y.target then start_animation(*viewport.scroll_y, viewport.top,  top_target);
+        }
     }
-    // } else if cursor_moved {
-    //     // Detect if cursor is off screen and start scrolling to it
-    //     bounds := shrink_x(rect, text_offset.x + char_size * 3);
-    //     bounds  = shrink_y(bounds, -text_offset.y + line_height * 3);
-    //     bounds.h += 2;
-    //     bounds.y -= line_height + 2;
-    //     if bounds.w < 0 || bounds.h < 0 then bounds = rect;  // fall back
-    //     // draw_rect(bounds, Colors.BACKGROUND_DARK);
-
-    //     cursor_pos := get_cursor_screen_pos(text_origin, cursors[main_cursor].pos);
-    //     if !point_within(cursor_pos, bounds) {
-    //         left, top, right, bottom := get_rect_sides(bounds);
-    //         offset: Vector2;
-    //         if cursor_pos.x < left   then offset.x = cursor_pos.x - left;
-    //         if cursor_pos.y < bottom then offset.y = cursor_pos.y - bottom;
-    //         if right < cursor_pos.x  then offset.x = cursor_pos.x - right;
-    //         if top   < cursor_pos.y  then offset.y = cursor_pos.y - top;
-
-    //         left_target := max(viewport.left + cast(s32) offset.x, 0);
-    //         top_target  := clamp(viewport.top - cast(s32) offset.y, 0, max_y_scroll);
-
-    //         if left_target != viewport.scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target);
-    //         if top_target  != viewport.scroll_y.target then start_animation(*viewport.scroll_y, viewport.top,  top_target);
-    //     }
     // } else if scroll_to_cursor != .no {
     //     using editor.viewport;
     //     
