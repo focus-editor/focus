@@ -36,6 +36,10 @@
     - Profile the whole project to see if we're doing something stupid
     
 - Optimise line offset storage and recalculation
+    + Drop cursor positions and just use offsets
+    + Move cursor up and down
+    - Calculate positions of only visible cursors when drawing, then throw them away
+    
     - We currently recalculate lines:
         - in active_editor_handle_event, after each edit made by each cursor (!!!!) ( 2 places )
         - in active_editor_type_text, after each cursor (!!!!) ( 2 places )

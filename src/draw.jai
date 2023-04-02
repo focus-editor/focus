@@ -121,7 +121,7 @@ tmp_draw_new_editor :: (rect: Rect) {
     
     // Handle editor scrolling here because we only know the layout at this point.
     assert(!buffer.dirty);
-    max_y_scroll := max(cast(s32)((buffer.line_starts.count - 1) * line_height), 0);
+    max_y_scroll := max(cast(s32)((buffer.line_starts.count - 2) * line_height), 0);
     
     if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
         using editor.viewport;
@@ -325,11 +325,6 @@ tmp_draw_new_editor :: (rect: Rect) {
     // if editor.paste_animations.count > 0 then redraw_requested = true;
     
     // Draw text
-    // rescan_for_lines_find(buffer);
-    // rescan_for_lines_slow(buffer);
-    rescan_for_lines(buffer);
-    // recalculate_lines(*test_buffer);
-    
     pen := text_origin;
     pen.y += (line_height - char_size) / 2 - visible_lines_start * line_height;
     for visible_lines_start .. visible_lines_end-1 {
@@ -345,8 +340,8 @@ tmp_draw_new_editor :: (rect: Rect) {
         Simp.set_shader_for_rects();
         for cursor : carets {
             // TODO: check for whether the cursor is outside the visible range
-            
-            screen_pos := get_cursor_screen_pos(text_origin, cursor.pos.coords);
+            coords := offset_to_coords(buffer, cursor.pos);
+            screen_pos := get_cursor_screen_pos(text_origin, coords);
 
             rect := make_rect(screen_pos.x, screen_pos.y, char_size, line_height);
             draw_rounded_rect(rect, Colors.CURSOR, radius = rounding_radius_small, set_shader = true);
@@ -355,7 +350,7 @@ tmp_draw_new_editor :: (rect: Rect) {
             }
             
             // Draw the letter on top for better visibility
-            letter := get_char_at_offset_as_string(buffer, cursor.pos.offset);
+            letter := get_char_at_offset_as_string(buffer, cursor.pos);
             if letter != "\n" {
                 Simp.draw_text(font, xx rect.x, xx (rect.y + (line_height - char_size) / 2), letter);
             }
@@ -1271,10 +1266,18 @@ draw_finder :: () {
     }
 }
 
+// !!!!!
 get_cursor_screen_pos :: (text_origin: Vector2, pos: Pos) -> Vector2 {
     return make_vector2(
         text_origin.x + pos.col * char_size,
         text_origin.y - pos.line * line_height,
+    );
+}
+
+get_cursor_screen_pos :: (text_origin: Vector2, coords: Coords) -> Vector2 {
+    return make_vector2(
+        text_origin.x + coords.col * char_size,
+        text_origin.y - coords.line * line_height,
     );
 }
 

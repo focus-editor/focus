@@ -29,15 +29,8 @@ put_cursor_in_valid_spot :: (using cursor: *Cursor, buffer: Buffer) {
 }
 
 put_cursor_in_valid_spot :: (using cursor: *Caret, buffer: NewBuffer) {
-    pos.offset = clamp(pos.offset, 0, xx buffer.bytes.count);
-    sel.offset = clamp(sel.offset, 0, xx buffer.bytes.count);
-    
-    pos.coords = offset_to_pos(buffer, pos.offset);
-    if sel.offset == pos.offset {
-        sel.coords = pos.coords;
-    } else {
-        sel.coords = offset_to_pos(buffer, sel.offset);
-    }
+    pos = clamp(pos, 0, xx buffer.bytes.count);
+    sel = clamp(sel, 0, xx buffer.bytes.count);
 }
 
 insert_string_at_pos :: (buffer: *Buffer, pos: Pos, str: string) {
@@ -110,6 +103,7 @@ get_char_at_pos :: (using buffer: Buffer, pos: Pos) -> u32 {
 }
 
 get_char_at_offset_as_string :: (using buffer: NewBuffer, offset: s32) -> string {
+    if offset >= bytes.count return "";
     char: string = ---;
     char.data  = *bytes[offset];
     char.count = 1 + trailingBytesForUTF8[bytes[offset]];
@@ -125,19 +119,19 @@ get_char_at_pos_as_string :: (using buffer: Buffer, pos: Pos) -> string {
     return char;
 }
 
-offset_to_pos :: (using buffer: NewBuffer, offset: s64) -> Pos {
-    pos: Pos = ---;
-    pos.line = offset_to_line(buffer, offset);
+offset_to_coords :: (using buffer: NewBuffer, offset: s64) -> Coords {
+    coords: Coords = ---;
+    coords.line = offset_to_line(buffer, offset);
 
     // Find col by scanning the line
-    pos.col = 0;
-    i := line_starts[pos.line];
+    coords.col = 0;
+    i := line_starts[coords.line];
     while i < offset {
-        pos.col += 1;
+        coords.col += 1;
         i += 1 + trailingBytesForUTF8[bytes[i]];
     }
 
-    return pos;
+    return coords;
 }
 
 offset_to_line :: (using buffer: NewBuffer, offset: s64) -> line_num: s32 {
@@ -147,7 +141,7 @@ offset_to_line :: (using buffer: NewBuffer, offset: s64) -> line_num: s32 {
     line_num := 0;
 
     left  := 0;
-    right := line_starts.count - 1;
+    right := line_starts.count - 2;
 
     if offset >= line_starts[right] {
         line_num = right;
@@ -261,6 +255,24 @@ bytes_in_range :: (buffer: Buffer, range: Range) -> s64 {
     return end - start;
 }
 
+coords_to_offset :: (using buffer: NewBuffer, coords: Coords) -> s32 {
+    assert(!buffer.dirty);
+    
+    line := clamp(coords.line, 0, cast(s32)line_starts.count - 2);
+    offset := line_starts[line];
+    if offset >= bytes.count - 1 return offset;
+    next_line_offset := line_starts[line + 1];
+    
+    for col : 0..coords.col-1 {
+        byte := bytes[offset];
+        next_offset := offset + 1 + trailingBytesForUTF8[byte];
+        if next_offset >= next_line_offset break;
+        offset = next_offset;
+    }
+    return offset;
+}
+
+// !!!!!
 pos_to_offset :: (buffer: Buffer, pos: Pos) -> s32 {
     assert(!buffer.dirty);
     line := buffer.lines[pos.line];
@@ -272,14 +284,24 @@ pos_to_offset :: (buffer: Buffer, pos: Pos) -> s32 {
     return offset;
 }
 
+// !!!!
 has_selection :: inline (using cursor: Cursor) -> bool {
     return pos != sel;
 }
 
+has_selection :: inline (using cursor: Caret) -> bool {
+    return pos != sel;
+}
+
+// !!!!
 get_selection :: (using cursor: Cursor) -> Range {
     using range: Range = ---;
     if pos < sel { start = pos; end = sel; } else { start = sel; end = pos; }
     return range;
+}
+
+get_selection :: (using cursor: Caret) -> Offset_Range {
+    return .{ start = min(pos, sel), end = max(pos, sel) };
 }
 
 get_selection_whole_lines :: (cursor: Cursor, buffer: Buffer) -> Range {
@@ -345,12 +367,6 @@ remove_selection :: inline (using cursor: *Cursor) {
     sel = pos;
 }
 
-
-drop_selection :: inline (using cursor: *Caret) {
-    sel.offset = pos.offset;
-    sel.coords = pos.coords;
-}
-
 remove_crlf :: (using buffer: *Buffer) {
     dst := bytes.data;
     src := bytes.data;
@@ -382,7 +398,8 @@ last_line :: inline (using buffer: Buffer, line: s32) -> bool {
 }
 
 rescan_for_lines :: (using buffer: *NewBuffer) {
-    ZoneScoped(color=0xFF00FFFF);
+    buffer.dirty = false;
+    
     array_reset_keeping_memory(*line_starts);
     array_add(*line_starts, 0);  // first line
     
@@ -533,6 +550,10 @@ operator == :: (a: Pos, b: Pos) -> bool {
 
 operator < :: (a: Pos, b: Pos) -> bool {
     return a.line < b.line || (a.line == b.line && a.col < b.col);
+}
+
+operator <= :: (a: Pos, b: Pos) -> bool {
+    return a.line < b.line || (a.line == b.line && a.col <= b.col);
 }
 
 operator - :: (a: Pos, b: Pos) -> Pos {
@@ -729,6 +750,9 @@ deinit :: (using edit_group: *Buffer.Edit_Group) {
 
 #scope_export
 
+// TODO: 
+// - reorganise to reduce size
+// - replace all [..] with a custom array type without an allocator (also probably using s32's)
 NewBuffer :: struct {
     file: File_Info;
     has_file := false;  // false for freestanding buffers. TODO: make freestanding buffers separate?
@@ -739,7 +763,8 @@ NewBuffer :: struct {
     last_size: s64;             // --
 
     bytes:  [..] u8;
-    line_starts: [..] s32;
+    line_starts: [..] s32;       // may not correspond to actual line breaks in the buffer
+    real_line_starts: [..] s32;  // for displaying the line/column numbers
     
     colors: [..] Simp.Code_Color;  // u8 - we color each byte (even for multi-byte chars)
                                    // @Space: we could use a u4 instead
@@ -762,9 +787,6 @@ NewBuffer :: struct {
     } = .Plain_Text;
 }
 
-// TODO: 
-// - reorganise to reduce size
-// - replace all [..] with a custom array type without an allocator (also probably using s32's)
 Buffer :: struct {
     file: File_Info;
     has_file := false;  // false for freestanding buffers. TODO: make freestanding buffers separate?
@@ -834,23 +856,15 @@ Buffer :: struct {
             };
         }
     }
-    
-    Offset_Range :: struct {
-        start, end: s32;  // we won't open large files anyway
-    }
 }
 
 Caret :: struct {
-    // even though the coords can be calculated from offsets, we're keeping them here because it's cheaper to keep track of them 
-    // when they move than to recalculate every frame
-    pos: struct { offset: s32; coords: Pos; };
-    sel: struct { offset: s32; coords: Pos; };
-    
+    pos, sel: s32;
     col_wanted: s32;
-    clipboard: struct { start: s32; count: s32; };
+    clipboard: struct { start: s32; count: s32; };  // TODO: consider using just one s32?
 }
 
-#assert size_of(Caret) == (3 + 3 + 1 + 2) * size_of(s32);  // make sure no padding accidentally gets added
+#assert size_of(Caret) == (2 + 1 + 2) * size_of(s32);  // make sure no padding accidentally gets added
 
 Line :: struct {
     start, end: s32;
@@ -872,10 +886,19 @@ Cursor_Offsets :: struct {
     pos, sel: s32;
 }
 
+Coords :: struct {
+    line, col: s32;
+}
+
+// !!!!!!
 Pos :: struct {
     line, col: s32;
 }
 
 Range :: struct {
     start, end: Pos;
+}
+
+Offset_Range :: struct {
+    start, end: s32;  // we won't open large files anyway
 }

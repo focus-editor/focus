@@ -39,16 +39,6 @@ main :: () {
         
     }
     
-    {
-        // Test buffer
-        // Create and load file
-        path := copy_string(get_absolute_path("sqlite3.c"));
-        file_data, success := read_entire_file(path);
-        if !success then file_data = sprint("Couldn't load file '%'", path);
-        
-        fill_in_buffer_from_file_data(*test_buffer, path, file_data);
-    }
-    
     // Remember important directories
     exe_dir = copy_string(path_strip_filename(get_path_of_running_executable()));
     if ends_with(exe_dir, "/") exe_dir.count -= 1;
@@ -524,7 +514,6 @@ cpu_info: Cpu_X86;
 // !!!!!!!!!!!!!!!
 new_editor: Editor;
 new_buffer: NewBuffer;
-test_buffer: Buffer;
 // !!!!!!!!!!!!!!!
 
 

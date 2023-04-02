@@ -128,11 +128,10 @@ tmp_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .move_right;                       move_cursors_right(editor, buffer, by = .char,      extend_selection);
         case .move_right_by_word;               move_cursors_right(editor, buffer, by = .word,      extend_selection);
         case .move_right_by_word_ends;          move_cursors_right(editor, buffer, by = .word_ends, extend_selection);
-        // 
-        // case .move_up;                          move_cursor_vertically(cursor, buffer, -1, extend_selection);
-        // case .move_down;                        move_cursor_vertically(cursor, buffer,  1, extend_selection);
-        // case .move_up_fast;                     move_cursor_vertically(cursor, buffer, -5, extend_selection);
-        // case .move_down_fast;                   move_cursor_vertically(cursor, buffer,  5, extend_selection);
+        case .move_up;                          move_cursors_vertically(editor, buffer, -1, extend_selection);
+        case .move_down;                        move_cursors_vertically(editor, buffer,  1, extend_selection);
+        case .move_up_fast;                     move_cursors_vertically(editor, buffer, -5, extend_selection);
+        case .move_down_fast;                   move_cursors_vertically(editor, buffer,  5, extend_selection);
         // case .move_up_to_empty_line;            move_cursor_to_empty_line(cursor, buffer, .up);
         // case .move_down_to_empty_line;          move_cursor_to_empty_line(cursor, buffer, .down);
         // case .move_up_one_page;                 move_cursor_by_page(cursor, buffer, .up);
@@ -170,27 +169,24 @@ tmp_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         // case .delete_right_char;                delete_right_char(cursor, buffer);
         // 
         // case .select_word_or_create_another_cursor; if !has_selection(cursor) { select_word(cursor, buffer); editor.search_whole_words = true; enabled_whole_words = true; }
+        case;                                   return;  // not handled
     }
 
     if !extend_selection && editor.cursor_moved && !keep_selection {
-        for * cursors drop_selection(it);
+        for * cursors { it.sel = it.pos; }  // remove selection
     }
     
 //     if cursor_moved && !enabled_whole_words then editor.search_whole_words = false;
 
     if buffer.dirty rescan_for_lines(buffer);
-    for * cursors put_cursor_in_valid_spot(it, buffer);
     
-//     
-//     // NOTE: we're processing cursors here and then again later in refresh_open_buffers,
-//     // but this is so that we can be sure if another event is processed in the same frame,
-//     // the cursors will be sorted and in valid places
-//     for *cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
-//     if cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
-//     
-//     if cursor_moved then editor.refresh_highlights = true;
-
-//     editor.cursor_moved = cursor_moved;
+    // NOTE: even though we also do it in refresh_open_buffers, we do it here
+    // so that if more than one event is processed in the same frame, the next one
+    // sees the cursors in valid places and up to date
+    for * cursors put_cursor_in_valid_spot(it, buffer);
+    if cursors.count > 1 then organise_carets(editor);  // sort and maybe merge overlapping cursors
+    
+    if editor.cursor_moved then editor.refresh_highlights = true;  // update or remove highlights
 }
 
 active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
@@ -585,6 +581,56 @@ remember_cursor_offsets :: (using editor: *Editor, buffer: Buffer) -> []Cursor_O
         offsets[i].sel = pos_to_offset(buffer, cursor.sel);
     }
     return offsets;
+}
+
+organise_carets :: (using editor: *Editor) {
+    compare_cursors :: (c1: Caret, c2: Caret) -> s64 {
+        return min(c1.pos, c1.sel) - min(c2.pos, c2.sel);
+    }
+    
+    maybe_subsume :: (c1: *Caret, c2: Caret) -> bool {
+        s1 := get_selection(c1);
+        s2 := get_selection(c2);
+        if s1.end < s2.start || s2.end < s1.start return false;  // cursors are disjoint
+        if (s1.end == s2.start || s2.end == s1.start) && (s1.start < s1.end || s2.start < s2.end) return false;  // adjacent cursors with a selection
+
+        new_start := min(s1.start, s2.start);
+        new_end   := min(s1.start, s2.start);
+
+        if c1.pos == s1.end || c2.pos == s2.end {
+            c1.sel = new_start;
+            c1.pos = new_end;
+        } else {
+            c1.pos = new_start;
+            c1.sel = new_end;
+        }
+
+        return true;
+    }
+    
+    main_cursor_offset     := carets[main_cursor].pos;
+    original_cursor_offset := carets[original_cursor].pos;
+
+    quick_sort(carets, compare_cursors);
+
+    // Adjust main and original cursor indices because they could've moved
+    for cursor, i : carets {
+        if cursor.pos == main_cursor_offset     then main_cursor = i;
+        if cursor.pos == original_cursor_offset then original_cursor = i;
+    }
+
+    // Merge overlapping cursors
+    i := 0;
+    while (i < carets.count - 1) {
+        cursor := *carets[i];
+        if maybe_subsume(cursor, carets[i+1]) {
+            array_ordered_remove_by_index(*carets, i+1);
+            if main_cursor     > i then main_cursor -= 1;
+            if original_cursor > i then original_cursor -= 1;
+        } else {
+            i += 1;
+        }
+    }
 }
 
 organise_cursors :: (using editor: *Editor) {
@@ -1220,23 +1266,46 @@ move_cursor_right :: (using cursor: *Cursor, buffer: Buffer, by: enum { char; wo
 
 move_cursors_left :: (editor: *Editor, using buffer: *NewBuffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
     for * cursor : editor.carets {
-        if cursor.pos.offset > 0 {
+        if cursor.pos > 0 {
             if by == .char {
-                cursor.pos.offset = prev_char_offset(bytes, cursor.pos.offset);
+                cursor.pos = prev_char_offset(bytes, cursor.pos);
             }
         }
+        cursor.col_wanted = offset_to_coords(buffer, cursor.pos).col;
     }
+    editor.cursor_moved = true;
 }
 
 move_cursors_right :: (editor: *Editor, using buffer: *NewBuffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
     for * cursor : editor.carets {
-        using cursor;
-        if pos.offset < bytes.count-1 {
+        if cursor.pos < bytes.count {
             if by == .char {
-                pos.offset = next_char_offset(bytes, pos.offset);
+                cursor.pos = next_char_offset(bytes, cursor.pos);
             }
         }
+        cursor.col_wanted = offset_to_coords(buffer, cursor.pos).col;
     }
+    editor.cursor_moved = true;
+}
+
+move_cursors_vertically :: (editor: *Editor, using buffer: NewBuffer, delta: s32, extend_selection: bool) {
+    for * cursor : editor.carets {
+        if has_selection(cursor) && !extend_selection {
+            selection := get_selection(cursor);
+            new_pos := ifx delta < 0 then selection.start else selection.end;
+            if cursor.pos != new_pos {
+                // Move cursor to the beginning of the selection and update col_wanted
+                cursor.pos = new_pos;
+                coords := offset_to_coords(buffer, cursor.pos);
+                cursor.col_wanted = coords.col;
+            }
+        }
+        coords := offset_to_coords(buffer, cursor.pos);
+        coords.line += delta;
+        coords.col = cursor.col_wanted;
+        cursor.pos = coords_to_offset(buffer, coords);
+    }
+    editor.cursor_moved = true;
 }
 
 move_cursor_vertically :: (using cursor: *Cursor, buffer: Buffer, delta: s32, extend_selection: bool) {
