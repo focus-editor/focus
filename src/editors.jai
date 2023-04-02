@@ -134,8 +134,8 @@ tmp_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .move_down_fast;                   move_cursors_vertically(editor, buffer,  5, extend_selection);
         case .move_up_to_empty_line;            move_cursors_to_empty_line(editor, buffer, .up);
         case .move_down_to_empty_line;          move_cursors_to_empty_line(editor, buffer, .down);
-        // case .move_up_one_page;                 move_cursor_by_page(cursor, buffer, .up);
-        // case .move_down_one_page;               move_cursor_by_page(cursor, buffer, .down);
+        case .move_up_one_page;                 move_cursors_by_page(editor, buffer, .up);
+        case .move_down_one_page;               move_cursors_by_page(editor, buffer, .down);
         
         // case .duplicate_lines;                  if cursors.count == 1 { duplicate_lines(cursor, buffer); keep_selection = true; }
         // case .move_selected_lines_up;           if cursors.count == 1 { move_lines_up  (cursor, buffer); keep_selection = true; }
@@ -1266,9 +1266,20 @@ move_cursor_right :: (using cursor: *Cursor, buffer: Buffer, by: enum { char; wo
 
 move_cursors_left :: (editor: *Editor, using buffer: *NewBuffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
     for * cursor : editor.carets {
-        if cursor.pos > 0 {
-            if by == .char {
-                cursor.pos = prev_char_offset(bytes, cursor.pos);
+        if has_selection(cursor) && !extend_selection {
+            cursor.pos = get_selection(cursor).start;
+        } else if by == .char {
+            cursor.pos = prev_char_offset(bytes, cursor.pos);  // @crlf
+        } else {
+            if by == {
+                case .word;
+                    context.underscore_is_part_of_word = false;
+                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos);
+                    context.underscore_is_part_of_word = true;
+                case .word_ends;
+                    char_type := get_char_type(get_char_at_offset(buffer, cursor.pos));
+                    if char_type != .word then cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, char_type, skip_one_space = false);
+                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos);
             }
         }
         cursor.col_wanted = offset_to_coords(buffer, cursor.pos).col;
@@ -1278,9 +1289,22 @@ move_cursors_left :: (editor: *Editor, using buffer: *NewBuffer, by: enum { char
 
 move_cursors_right :: (editor: *Editor, using buffer: *NewBuffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
     for * cursor : editor.carets {
-        if cursor.pos < bytes.count {
-            if by == .char {
-                cursor.pos = next_char_offset(bytes, cursor.pos);
+        if has_selection(cursor) && !extend_selection {
+            cursor.pos = get_selection(cursor).end;
+        } else if by == .char {
+            cursor.pos = next_char_offset(bytes, cursor.pos);  // @crlf
+        } else {
+            if by == {
+                case .word;
+                    context.underscore_is_part_of_word = false;
+                    cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos);
+                    context.underscore_is_part_of_word = true;
+                case .word_ends;
+                    char := get_char_at_offset(buffer, cursor.pos);
+                    char_type := get_char_type(char);
+                    if char_type != .word  then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, char_type, skip_one_space = false);
+                    char_type = get_char_type(get_char_at_offset(buffer, cursor.pos));
+                    if char_type != .other && char != #char "\n" /* @crlf */ then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos);
             }
         }
         cursor.col_wanted = offset_to_coords(buffer, cursor.pos).col;
@@ -1310,23 +1334,35 @@ move_cursors_vertically :: (editor: *Editor, using buffer: NewBuffer, delta: s32
 
 move_cursors_to_empty_line :: (editor: *Editor, buffer: NewBuffer, dir: enum { up; down; }) {
     for * cursor : editor.carets {
-        coords := offset_to_coords(buffer, cursor.pos);
-        coords.col = cursor.col_wanted;
-        
+        line := offset_to_line(buffer, cursor.pos);
         if dir == .up {
-            while coords.line > 0 {
-                coords.line -= 1;
-                if is_empty(buffer, coords.line) break;
+            while line > 0 {
+                line -= 1;
+                if is_empty(buffer, line) break;
             }
         } else {
-            while coords.line < buffer.line_starts.count - 2 {
-                coords.line += 1;
-                if is_empty(buffer, coords.line) break;
+            while line < buffer.line_starts.count - 2 {
+                line += 1;
+                if is_empty(buffer, line) break;
             }
         }
-        cursor.pos = coords_to_offset(buffer, coords);
+        cursor.pos = coords_to_offset(buffer, Coords.{ line = line, col = cursor.col_wanted });
     }
     editor.cursor_moved = true;
+}
+
+move_cursors_by_page :: (editor: *Editor, buffer: NewBuffer, dir: enum { up; down; }) {
+    page_size := cast(s32) (window_height / line_height);
+    
+    for * cursor : editor.carets {
+        line := offset_to_line(buffer, cursor.pos);
+        if dir == .up {
+            line -= page_size;
+        } else {
+            line += page_size;
+        }
+        cursor.pos = coords_to_offset(buffer, Coords.{ line = line, col = cursor.col_wanted });
+    }
 }
 
 move_cursor_vertically :: (using cursor: *Cursor, buffer: Buffer, delta: s32, extend_selection: bool) {
@@ -1463,6 +1499,67 @@ new_line_above :: (using cursor: *Cursor, buffer: *Buffer) {
     sel = pos;
 }
 
+scan_through_similar_chars_on_the_left :: (using buffer: NewBuffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true) -> offset: s32 {
+    if !buffer.bytes return 0;
+    
+    line_start := bytes.data + line_starts[offset_to_line(buffer, offset)];
+    char: u32;
+    t := bytes.data + offset;
+    t, char = unicode_prev_character(t);
+    if char_type != .none && char_type != get_char_type(char) return offset;
+    if skip_one_space && char == #char " " && t > line_start then t, char = unicode_prev_character(t);
+    
+    if get_char_type(char) == {
+        case .space;
+            while t > bytes.data && is_space_char(char)  { t, char = unicode_prev_character(t); }
+            if char != #char " " then t = unicode_next_character(t);
+        case .word;
+            while t > bytes.data && is_word_char(char) { t, char = unicode_prev_character(t); }
+            if !is_word_char(char) then t = unicode_next_character(t);
+        case .non_word;
+            while t > bytes.data && is_non_word_char(char) { t, char = unicode_prev_character(t); }
+            if !is_non_word_char(char) then t = unicode_next_character(t);
+    }
+    
+    if t < bytes.data then t = bytes.data;
+    
+    return cast(s32) max(0, t - bytes.data);
+}
+
+scan_through_similar_chars_on_the_right :: (using buffer: NewBuffer, offset: s32, only: Char_Type = .none, skip_one_space := true) -> offset: s32 {
+    if !buffer.bytes return 0;
+    if offset >= bytes.count return offset;  // nowhere to go
+    
+    s: string = ---;
+    s.data  = *bytes[offset];
+    s.count = (bytes.data + bytes.count) - s.data;
+    
+    char := utf8_next_character(*s);
+    if only == {
+        case .word;     if !is_word_char(char)     return offset;
+        case .non_word; if !is_non_word_char(char) return offset;
+        case .space;    if  char != #char " "      return offset;
+    }
+    if skip_one_space && char == #char " " && s then char = utf8_next_character(*s);
+    
+    if char == #char " " {
+        // Only spaces
+        while s && char == #char " "  { char = utf8_next_character(*s); }
+        if char != #char " " { s.data, char = unicode_prev_character(s.data); }
+    } else if is_word_char(char) {
+        // Only word chars
+        while s && is_word_char(char) { char = utf8_next_character(*s); }
+        if !is_word_char(char) { s.data, char = unicode_prev_character(s.data); }
+    } else if char != #char "\n" {
+        // Only non-word chars
+        while s && is_non_word_char(char) { char = utf8_next_character(*s); }
+        if !is_non_word_char(char) { s.data, char = unicode_prev_character(s.data); }
+    }
+    
+    return cast(s32) min(bytes.count, s.data - bytes.data);
+}
+
+// !!!
 scan_through_similar_chars_on_the_left :: (pos: Pos, using buffer: Buffer, char_type: Char_Type = .none, skip_one_space := true) -> Pos {
     if !buffer.bytes return pos;
     
@@ -1493,6 +1590,7 @@ scan_through_similar_chars_on_the_left :: (pos: Pos, using buffer: Buffer, char_
     return offset_to_pos(buffer, max(0, t - bytes.data));
 }
 
+// !!!!
 scan_through_similar_chars_on_the_right :: (pos: Pos, using buffer: Buffer, only: Char_Type = .none, skip_one_space := true) -> Pos {
     if !buffer.bytes return pos;
     

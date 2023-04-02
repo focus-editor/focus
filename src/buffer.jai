@@ -94,6 +94,15 @@ replace_range_raw :: (buffer: *Buffer, start: s32, end: s32, str: string) {
     insert_string_raw(buffer, start, str);
 }
 
+get_char_at_offset :: (using buffer: NewBuffer, offset: s32) -> u32 {
+    str := get_char_at_offset_as_string(buffer, offset);
+    if !str return 0;
+    
+    char := utf8_next_character(*str);
+    return char;
+}
+
+// !!!!
 get_char_at_pos :: (using buffer: Buffer, pos: Pos) -> u32 {
     str := get_char_at_pos_as_string(buffer, pos);
     if !str return 0;
