@@ -132,8 +132,8 @@ tmp_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .move_down;                        move_cursors_vertically(editor, buffer,  1, extend_selection);
         case .move_up_fast;                     move_cursors_vertically(editor, buffer, -5, extend_selection);
         case .move_down_fast;                   move_cursors_vertically(editor, buffer,  5, extend_selection);
-        // case .move_up_to_empty_line;            move_cursor_to_empty_line(cursor, buffer, .up);
-        // case .move_down_to_empty_line;          move_cursor_to_empty_line(cursor, buffer, .down);
+        case .move_up_to_empty_line;            move_cursors_to_empty_line(editor, buffer, .up);
+        case .move_down_to_empty_line;          move_cursors_to_empty_line(editor, buffer, .down);
         // case .move_up_one_page;                 move_cursor_by_page(cursor, buffer, .up);
         // case .move_down_one_page;               move_cursor_by_page(cursor, buffer, .down);
         
@@ -1308,6 +1308,27 @@ move_cursors_vertically :: (editor: *Editor, using buffer: NewBuffer, delta: s32
     editor.cursor_moved = true;
 }
 
+move_cursors_to_empty_line :: (editor: *Editor, buffer: NewBuffer, dir: enum { up; down; }) {
+    for * cursor : editor.carets {
+        coords := offset_to_coords(buffer, cursor.pos);
+        coords.col = cursor.col_wanted;
+        
+        if dir == .up {
+            while coords.line > 0 {
+                coords.line -= 1;
+                if is_empty(buffer, coords.line) break;
+            }
+        } else {
+            while coords.line < buffer.line_starts.count - 2 {
+                coords.line += 1;
+                if is_empty(buffer, coords.line) break;
+            }
+        }
+        cursor.pos = coords_to_offset(buffer, coords);
+    }
+    editor.cursor_moved = true;
+}
+
 move_cursor_vertically :: (using cursor: *Cursor, buffer: Buffer, delta: s32, extend_selection: bool) {
     if has_selection(cursor) && !extend_selection {
         selection := get_selection(cursor);
@@ -1325,6 +1346,7 @@ move_cursor_vertically :: (using cursor: *Cursor, buffer: Buffer, delta: s32, ex
     }
 }
 
+// !!!!
 move_cursor_to_empty_line :: (using cursor: *Cursor, buffer: Buffer, dir: enum { up; down; }) {
     if dir == .up {
         while pos.line > 0 {

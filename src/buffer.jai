@@ -265,6 +265,7 @@ coords_to_offset :: (using buffer: NewBuffer, coords: Coords) -> s32 {
     
     for col : 0..coords.col-1 {
         byte := bytes[offset];
+        // @tab_support: move col to the next tabstop on tab
         next_offset := offset + 1 + trailingBytesForUTF8[byte];
         if next_offset >= next_line_offset break;
         offset = next_offset;
@@ -542,6 +543,27 @@ buffer_file_has_changed_on_disk :: (using buffer: *Buffer) -> changed: bool {
 
 is_empty :: inline (line: Line) -> bool {
     return line.num_chars == 0;
+}
+
+is_empty :: (using buffer: NewBuffer, line_num: s32) -> bool {
+    s := get_line_as_string(buffer, line_num);
+    return is_all_whitespace(s);
+}
+
+get_line_as_string :: (using buffer: NewBuffer, line_num: s32) -> string {
+    assert(!buffer.dirty);
+    if line_num < 0 || line_num >= buffer.line_starts.count - 1 return "";
+    
+    // @crlf
+    
+    start := line_starts[line_num];
+    end   := line_starts[line_num + 1];
+    
+    result: string = ---;
+    result.data  = bytes.data + start;
+    result.count = end - start;
+    
+    return result;
 }
 
 operator == :: (a: Pos, b: Pos) -> bool {
