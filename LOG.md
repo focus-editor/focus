@@ -46,7 +46,10 @@
     + Follow cursor
     + Calculate positions of only visible cursors when drawing
     + Draw selections
+    + Handle mouse
+    + Create new cursors on ctrl+click
     
+    - Word selection / line selection mode
     - Remove cursor_offsets at the end
     
     - We currently recalculate lines:

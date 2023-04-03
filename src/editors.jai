@@ -559,6 +559,7 @@ move_cursor_to_viewport_center :: (editor: *Editor, buffer: Buffer) {
     remove_selection(cursor);
 }
 
+// !!!!
 leave_only_original_cursor :: (using editor: *Editor) -> *Cursor {
     // Remove all cursors except the original one
     for *cursor : cursors {
@@ -570,6 +571,17 @@ leave_only_original_cursor :: (using editor: *Editor) -> *Cursor {
     main_cursor = 0;
     cursors[original_cursor] = cursor;
     return *cursors[original_cursor];
+}
+
+// !!!! TODO: handle clipboard
+leave_only_original_caret :: (using editor: *Editor) -> *Caret {
+    // Remove all cursors except the original one
+    cursor := carets[original_cursor];
+    carets.count = 1;
+    original_cursor = 0;
+    main_cursor = 0;
+    carets[0] = cursor;
+    return *carets[0];
 }
 
 remember_cursor_offsets :: (using editor: *Editor, buffer: Buffer) -> []Cursor_Offsets /* temporary storage */ {
@@ -595,7 +607,7 @@ organise_carets :: (using editor: *Editor) {
         if (s1.end == s2.start || s2.end == s1.start) && (s1.start < s1.end || s2.start < s2.end) return false;  // adjacent cursors with a selection
 
         new_start := min(s1.start, s2.start);
-        new_end   := min(s1.start, s2.start);
+        new_end   := max(s1.end,   s2.end);
 
         if c1.pos == s1.end || c2.pos == s2.end {
             c1.sel = new_start;
@@ -949,6 +961,7 @@ select_lines :: (using cursor: *Cursor, buffer: Buffer) {
     pos = make_valid_pos(buffer, pos);
 }
 
+// !!!
 create_cursor_at_pos :: (using editor: *Editor, buffer: Buffer, pos: Pos) {
     // NOTE: assuming the pos is valid!
     new_cursor := array_add(*cursors);

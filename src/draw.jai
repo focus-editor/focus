@@ -88,36 +88,40 @@ tmp_draw_new_editor :: (rect: Rect) {
     text_offset := make_vector2(char_size, -char_size);
     text_origin := top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
     
-    // if ui.active == ui_id && (mouse.left.just_pressed || mouse.left.is_dragging) {
-    //     // Calculate the position of the mouse
-    //     pointer := snap_to_rect(mouse.pointer, rect);  // when we drag outside the editor we still want to interact
-    //     mouse_pos := pointer - bottom_left(rect) - text_offset;
-    //     mouse_pos.x += viewport.left;
-    //     mouse_pos.y = rect.h - mouse_pos.y + viewport.top - ifx dpi_scale > 1.0 then 1 else 0;
-    //     pos := Pos.{ line = xx (mouse_pos.y / line_height), col = xx ((mouse_pos.x / char_size) + 0.5) };
-    //     pos = make_valid_pos(buffer, pos);
-    // 
-    //     if !mouse.left.is_dragging && ctrl_pressed() {
-    //         create_cursor_at_pos(editor, buffer, pos);
-    //     } else if !ctrl_pressed() {
-    //         // Maybe change cursor position
-    //         cursor := leave_only_original_cursor(editor);
-    //         cursor.pos = pos;
-    //         cursor.col_wanted = cursor.pos.col;
+    if ui.active == ui_id && (mouse.left.just_pressed || mouse.left.is_dragging) {
+        // Calculate the position of the mouse
+        pointer := snap_to_rect(mouse.pointer, rect);  // when we drag outside the editor we still want to interact
+        mouse_pos := pointer - bottom_left(rect) - text_offset;
+        mouse_pos.x += viewport.left;
+        mouse_pos.y = rect.h - mouse_pos.y + viewport.top - ifx dpi_scale > 1.0 then 1 else 0;
+        coords := Coords.{ line = xx (mouse_pos.y / line_height), col = xx ((mouse_pos.x / char_size) + 0.5) };
+    
+        if !mouse.left.is_dragging && ctrl_pressed() {
+            // Create new cursor
+            new_cursor := array_add(*carets);
+            new_cursor.pos = coords_to_offset(buffer, coords);
+            new_cursor.sel = new_cursor.pos;
+            main_cursor = carets.count - 1;
+        } else if !ctrl_pressed() {
+            // Maybe change cursor position
+            cursor := leave_only_original_caret(editor);
+            cursor.pos = coords_to_offset(buffer, coords);
+            cursor.col_wanted = coords.col;
 
-    //         // We mark cursor as moved to trigger auto-scroll if we drag outside the editor
-    //         if !mouse_pointer_is_within(rect) then cursor_moved = true;
+            // We mark cursor as moved to trigger auto-scroll if we drag outside the editor
+            if !mouse_pointer_is_within(rect) then cursor_moved = true;
 
-    //         if !shift_pressed() && mouse.left.just_pressed then remove_selection(cursor);
-    //         if mouse.left.just_double_clicked then select_word(cursor, buffer, only_word_chars = false);
-    //         if mouse.left.just_triple_clicked then select_lines(cursor, buffer);
-    //     }
+            if !shift_pressed() && mouse.left.just_pressed then cursor.sel = cursor.pos;
+            // TODO: 
+            // if mouse.left.just_double_clicked then select_word(cursor, buffer, only_word_chars = false);
+            // if mouse.left.just_triple_clicked then select_lines(cursor, buffer);
+        }
+        
+        editor.refresh_highlights = true;
 
-    //     editor.refresh_highlights = true;
-
-    //     // Activate editor
-    //     if mouse.left.just_pressed then redraw_requested = true;  // so that we don't draw 2 active editors
-    // }
+        // Activate editor
+        if mouse.left.just_pressed then redraw_requested = true;  // so that we don't draw 2 active editors
+    }
     
     // Handle editor scrolling here because we only know the layout at this point.
     assert(!buffer.dirty);
