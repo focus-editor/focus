@@ -71,3 +71,16 @@ unicode_prev_character :: (s: *u8) -> new_s: *u8, char: u32 {  // NOTE: assuming
     char, _, result := character_utf8_to_utf32(t, s - t);
     return t, char;
 }
+
+num_utf8_chars_in_string :: (s: string) -> s32 {
+    num_chars: s32 = 0;
+    
+    t := s.data;
+    end := s.data + s.count;
+    while t < end {
+        t += 1 + trailingBytesForUTF8[<<t];
+        num_chars += 1;
+    }
+    
+    return num_chars;
+}

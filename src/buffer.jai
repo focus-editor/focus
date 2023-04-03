@@ -314,6 +314,14 @@ get_selection :: (using cursor: Caret) -> Offset_Range {
     return .{ start = min(pos, sel), end = max(pos, sel) };
 }
 
+get_selection_coords :: (buffer: NewBuffer, using cursor: Caret) -> Coords_Range {
+    selection := inline get_selection(cursor);
+    return .{ 
+        start = offset_to_coords(buffer, selection.start),
+        end   = offset_to_coords(buffer, selection.end),
+    };
+}
+
 get_selection_whole_lines :: (cursor: Cursor, buffer: Buffer) -> Range {
     assert(!buffer.dirty);
     selection := get_selection(cursor);
@@ -932,4 +940,8 @@ Range :: struct {
 
 Offset_Range :: struct {
     start, end: s32;  // we won't open large files anyway
+}
+
+Coords_Range :: struct {
+    start, end: Coords;  
 }

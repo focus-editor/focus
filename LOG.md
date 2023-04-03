@@ -34,13 +34,18 @@
     - Have a user error log - with an icon in the title bar to toggle it
     - Ignore project folders which are children of another project folder?
     - Profile the whole project to see if we're doing something stupid
-    
+
+- Limitations:
+    - Not designed for large files
+    - CRLF?
+    - Multi-byte Unicode symbols are not supported
+
 - Optimise line offset storage and recalculation
     + Drop cursor positions and just use offsets
     + Move cursor up and down
     + Follow cursor
-    - Calculate positions of only visible cursors when drawing
-    - Draw selections
+    + Calculate positions of only visible cursors when drawing
+    + Draw selections
     
     - Remove cursor_offsets at the end
     

@@ -235,10 +235,13 @@ tmp_draw_new_editor :: (rect: Rect) {
     // Need to update after updating scrolling to reduce latency
     text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
 
-    visible_lines_start := cast(s64) (viewport.top / line_height) - 1;
-    visible_lines_start  = clamp(visible_lines_start, 0, buffer.line_starts.count);
-    visible_lines_end := visible_lines_start + cast(s64) (rect.h / line_height) + 1;
-    visible_lines_end  = clamp(visible_lines_end,   0, buffer.line_starts.count - 1);
+    max_lines := cast(s32) buffer.line_starts.count - 2;
+    visible_lines_start := clamp(cast(s32) (viewport.top / line_height) - 1, 0, max_lines);
+    visible_lines_end   := clamp(visible_lines_start + cast(s32) (rect.h / line_height) + 1, 0, max_lines);
+    visible_offset_range := Offset_Range.{
+        start = buffer.line_starts[visible_lines_start],
+        end   = buffer.line_starts[visible_lines_end + 1],
+    };
 
     // // Draw scrollbar marks
     // {
@@ -299,7 +302,19 @@ tmp_draw_new_editor :: (rect: Rect) {
     // }
 
     cursors_active := editor_is_active && active_global_widget == .editors;
-    // draw_selections(editor, buffer, rect, text_origin, visible_lines_start, visible_lines_end, cursors_active);
+    
+    // Draw selections
+    {
+        Simp.set_shader_for_rects();
+        for cursor : carets {
+            if has_selection(cursor) {
+                selection := get_selection_coords(buffer, cursor);
+                if selection.end.line < visible_lines_start || selection.start.line > visible_lines_end continue;
+                color := ifx cursors_active then Colors.SELECTION_ACTIVE else Colors.SELECTION_INACTIVE;
+                draw_range(selection, buffer, visible_lines_start, visible_lines_end, text_origin, color);
+            }
+        }
+    }
 
     // // Draw search results
     // if search_bar_is_open(editor) {
@@ -331,7 +346,7 @@ tmp_draw_new_editor :: (rect: Rect) {
     // Draw text
     pen := text_origin;
     pen.y += (line_height - char_size) / 2 - visible_lines_start * line_height;
-    for visible_lines_start .. visible_lines_end-1 {
+    for visible_lines_start .. visible_lines_end {
         line_start := buffer.line_starts[it];
         length := buffer.line_starts[it+1] - line_start;
         line := trim_right(to_string(array_view(buffer.bytes, line_start, length)), " \r\n");
@@ -343,7 +358,7 @@ tmp_draw_new_editor :: (rect: Rect) {
     {
         Simp.set_shader_for_rects();
         for cursor : carets {
-            // TODO: check for whether the cursor is outside the visible range
+            if cursor.pos < visible_offset_range.start || cursor.pos > visible_offset_range.end continue;
             coords := offset_to_coords(buffer, cursor.pos);
             screen_pos := get_cursor_screen_pos(text_origin, coords);
 
@@ -1315,6 +1330,65 @@ draw_cursors :: (using editor: Editor, buffer: Buffer, text_origin: Vector2, is_
     }
 }
 
+draw_range :: (range: Coords_Range, buffer: NewBuffer, visible_start: s32, visible_end: s32, text_origin: Vector2, color: Color) {
+    // Scan the visible range and add the number of chars on each line
+    range_chars: [..] s32;
+    range_chars.allocator = temp;
+    // array_reserve(*range_chars, visible_end - visible_start + 1);
+    
+    start := max(range.start.line, visible_start);
+    end   := min(range.end.line,   visible_end);
+    
+    for start..end {
+        s := get_line_as_string(buffer, xx it);
+        array_add(*range_chars, num_utf8_chars_in_string(s));  // we need to refer to prev/next line, so storing it in an array
+    }
+    
+    for line_num : start..end {
+        i := line_num - start;
+        is_first := i == 0;
+        is_last  := i == range_chars.count - 1;
+
+        first_char := 0;
+        last_char  := range_chars[i];
+        if is_first then first_char = range.start.col;
+        if is_last  then last_char  = range.end.col;
+
+        if first_char == last_char continue;  // nothing is selected on this line
+
+        rect := make_rect(
+            text_origin.x + first_char * char_size,
+            text_origin.y - line_num * line_height,
+            (last_char - first_char) * char_size,
+            line_height,
+        );
+
+        tl, tr, bl, br: Corner_Rounding = .none;
+        if is_first {
+            tl = .in; tr = .in;
+        } else {
+            prev_start := ifx i == 1 then range.start.col else 0;
+            prev_end   := range_chars[i - 1];
+            if prev_start < first_char then tl = .out;
+            if prev_start > first_char then tl = .in;
+            if prev_end > last_char then tr = .out;
+            if prev_end < last_char || prev_start > last_char then tr = .in;
+        }
+        if is_last {
+            bl = .in; br = .in;
+        } else {
+            next_start := 0;
+            next_end   := ifx i == range_chars.count - 2 then range.end.col else range_chars[i + 1];
+            if next_start < first_char then bl = .out;
+            if next_start > first_char || next_end < first_char || next_end == 0 then bl = .in;
+            if next_end < last_char then br = .in;
+            if next_end > last_char then br = .out;
+        }
+        draw_rounded_rect_with_corners(rect, color, tl, tr, br, bl);
+    }
+}
+
+// !!!!!
 draw_range :: (using range: Range, buffer: Buffer, visible_start: s64, visible_end: s64, text_origin: Vector2, color: Color) {
     selected_lines := array_view(buffer.lines, start.line, end.line - start.line + 1);
     for line, i : selected_lines {
