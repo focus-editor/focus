@@ -88,14 +88,17 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
     // }
     
     cursors := editor.carets;
-    // 
-    // // We want to remember where cursors were before we do any edits
-    // if buffer.edits.count == 0 {
-    //     array_resize(*buffer.cursors, cursors.count);
-    //     for * cursor, i : buffer.cursors { <<cursor = cursors[i].state; }
-    // }
-
-    // if frame_time - buffer.last_edit_time >= EDIT_GROUP_TIMEOUT then new_edit_group(buffer, editor);
+    
+    // We always want to put some actions in a separate edit group (e.g. block indent)
+    new_group := false;
+    for cursor : cursors { if new_edit_group_required_for_action(action, cursor) { new_group = true; break; } }
+    if new_group || frame_time - buffer.last_edit_time >= EDIT_GROUP_TIMEOUT then new_edit_group(buffer, editor);  // do it before action
+    
+    // We want to remember where cursors were before we do any edits
+    if buffer.edits.count == 0 {
+        array_resize(*buffer.cursors, cursors.count);
+        for * cursor, i : buffer.cursors { <<cursor = cursors[i].state; }
+    }
 
     keep_selection := false;
     enabled_whole_words := false;
@@ -176,6 +179,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         // case .select_word_or_create_another_cursor; if !has_selection(cursor) { select_word(cursor, buffer); editor.search_whole_words = true; enabled_whole_words = true; }
         case;                                   return;  // not handled
     }
+    
+    if new_group then new_edit_group(buffer, editor);  // do it after action
 
     if !extend_selection && editor.cursor_moved && !keep_selection {
         for * cursors { it.sel = it.pos; }  // remove selection
@@ -441,6 +446,7 @@ active_editor_type_char :: (char: u32) {
     if editor.carets.count > 1 then organise_carets(editor);
     for * cursor : editor.carets  cursor.col_wanted = offset_to_coords(buffer, cursor.pos).col;
     
+    buffer.last_edit_time = frame_time;
     editor.cursor_moved = true;
 }
 
@@ -1278,7 +1284,34 @@ restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor.State) {
     if main_cursor >= cursors.count then main_cursor = cursors.count - 1;  // maybe we should remember it too
 }
 
+// !!!!
 new_edit_group_required_for_action :: (action: Action_Editors, cursor: Cursor) -> bool {
+    if action == {
+        case .break_line;                       if has_selection(cursor) return true;
+        case .new_line_below_without_breaking;  if has_selection(cursor) return true;
+        case .new_line_above_without_breaking;  if has_selection(cursor) return true;
+        case .delete_left_char;                 if has_selection(cursor) return true;
+        case .delete_right_char;                if has_selection(cursor) return true;
+            
+        case .cut;                              return true;
+        case .paste;                            return true;
+        case .toggle_comment;                   return true;
+        case .indent_or_go_to_next_tabstop;     return true;
+        case .indent;                           return true;
+        case .unindent;                         return true;
+        case .duplicate_lines;                  return true;
+        case .move_selected_lines_up;           return true;
+        case .move_selected_lines_down;         return true;
+        case .delete_word_left;                 return true;
+        case .delete_word_right;                return true;
+        case .delete_word_left_no_underscore;   return true;
+        case .delete_word_right_no_underscore;  return true;
+    }    
+
+    return false;
+}
+
+new_edit_group_required_for_action :: (action: Action_Editors, cursor: Caret) -> bool {
     if action == {
         case .break_line;                       if has_selection(cursor) return true;
         case .new_line_below_without_breaking;  if has_selection(cursor) return true;

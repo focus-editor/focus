@@ -105,6 +105,7 @@ main :: () {
         
         Input.update_window_events();
         
+        if frame_time > MAX_TIME_BEFORE_RESETTING then { init_time(); frame_time = cast(Time) get_time(); }
         current_time := cast(Time) get_time();
         frame_dt   = min(current_time - frame_time, MAX_FRAME_DT);
         frame_time = current_time;
@@ -421,7 +422,8 @@ redraw_requested := true;  // set to true to render the first frame
 frame_time: Time;                 // ever-increasing time since start in seconds
 frame_dt:   Time = MAX_FRAME_DT;  // time delta since the last frame
 MAX_FRAME_DT:   Time : xx (1.0 / 60);
-QUICK_FRAME_DT: Time : xx (1.0 / 300);  // sorry, 300Hz monitor users
+QUICK_FRAME_DT: Time : xx (1.0 / 300);  // sorry 300Hz monitor users
+MAX_TIME_BEFORE_RESETTING: Time : xx (60 * 60 * 24 * 7);  // reset timer after a week to avoid losing timer precision
 
 EDIT_GROUP_TIMEOUT :: 0.3;  // for undo/redo
 

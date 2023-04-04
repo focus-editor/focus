@@ -51,13 +51,23 @@
     + Move tmp functions to non-tmp ones
     + Type text
     + Undo/redo
-    - Make sure edit groups work properly
-    - Fix the crash after last undo
+    + Make sure edit groups work properly
+    - Implement the rest of edits
     
-    - Use custom allocators for edits to reduce memory fragmentation
+    - Optimise cursor clipboard (use shared memory with offsets)
+    - Sticky viewport
+    - Allow tabs
+    - Enable line wrap for buffer
+    - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
+    - Adjust cursors in joint editors properly on edits
+    
+    
     - Be able to open actual files in the new buffers
     - Word selection / line selection mode
+    - Fix the crash after last undo (already fixed?)
     - Remove cursor_offsets at the end
+    - Use custom allocators for edits to reduce memory fragmentation (maybe later)
+    - See if we can join edits in edit groups (maybe on the fly on undo/redo)
     
     - We currently recalculate lines:
         - in active_editor_handle_event, after each edit made by each cursor (!!!!) ( 2 places )
@@ -69,11 +79,6 @@
         - in join_lines - because need to access the lines after that
         - in move_lines_down - because insert_string_at_pos needs line info
         - in paste_from_clipboard - because need to calculate new cursor pos after that
-    
-- Optimise cursor clipboard (use shared memory with offsets)
-- Optimise edits: 
-    - try to use the same memory for additions if possible?
-    - merge consecutive inserts - should be easy if the above is done
     
 - Load UE5 source and try to scan it
     - When doing it, collect info on any binary files that had to be read to be ignored
