@@ -115,7 +115,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .duplicate_editor;                 // switch_to_editor(.other, duplicate_current = true);
         case .move_editor_to_the_left;          // if editors.active == editors.right then swap_panes();
         case .move_editor_to_the_right;         // if editors.active == editors.left  then swap_panes();
-        case .move_cursor_to_viewport_center;   // move_cursor_to_viewport_center(editor, buffer); cursor_moved = true;
+        case .move_cursor_to_viewport_center;   move_cursor_to_viewport_center(editor, buffer);
         case .remove_additional_cursors;        remove_additional_cursors(editor); 
         case .scroll_viewport_up;               vertical_smooth_scroll(editor, up = true);               activate_hold_action(action, event);
         case .scroll_viewport_up_fast;          vertical_smooth_scroll(editor, up = true, fast = true);  activate_hold_action(action, event);
@@ -553,6 +553,18 @@ move_viewport :: (editor: *Editor, dir: enum { left; up; right; down; }) {
     }
 }
 
+move_cursor_to_viewport_center :: (editor: *Editor, buffer: NewBuffer) {
+    cursor := leave_only_original_caret(editor);
+    // We assume that editors always take up most of the screen vertically.
+    // If that ever changes we'll need to change this code (and do it when we know the layout)
+    cursor_px_pos := editor.viewport.top +  window_height / 2;
+    coords := Coords.{ line = xx (cursor_px_pos / line_height), col = 0 };
+    cursor.pos = coords_to_offset(buffer, coords);
+    cursor.sel = cursor.pos;
+    editor.cursor_moved = true;
+}
+
+// !!!!
 move_cursor_to_viewport_center :: (editor: *Editor, buffer: Buffer) {
     cursor := leave_only_original_cursor(editor);
     // We assume that editors always take up most of the screen vertically.
