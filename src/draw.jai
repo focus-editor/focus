@@ -13,12 +13,8 @@ draw_frame :: () {
     if #complete editors.layout == {
         case .None;
             editors_snap_splitter(0.5);
-            
-            // !!!!!!!!!!
-            tmp_draw_new_editor(screen);
-            // !!!!!!!!!!
-            
             // TODO: draw a shortcut cheat-sheet?
+            draw_editor(0, screen, footer_height, get_ui_id_from_loc());
         case .Single;
             editors_snap_splitter(0.5);
             draw_editor(editors.active, screen, footer_height, .editor_single);
@@ -70,17 +66,19 @@ draw_frame :: () {
     Simp.swap_buffers(window);
 }
 
-tmp_draw_new_editor :: (rect: Rect) {
-    ui_id := get_ui_id_from_loc();
+draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui_Id, total_editor_area := Rect.{}) {
     scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
     
-    total_editor_area := rect;
+    footer_rect, rect := cut_bottom(main_area, footer_height);
+    if !is_valid(rect) return;
     
     became_active := maybe_set_hot_or_active(ui_id, rect, .TEXT_SELECT);
     if became_active then active_global_widget = .editors;
     
     using editor := *new_editor;
     buffer := *new_buffer;
+    // using editor := *open_editors[editor_id];
+    // buffer := *open_buffers[buffer_id];
     
     editor_is_active := Input.input_application_has_focus;
 
@@ -102,6 +100,7 @@ tmp_draw_new_editor :: (rect: Rect) {
             new_cursor.pos = coords_to_offset(buffer, coords);
             new_cursor.sel = new_cursor.pos;
             main_cursor = carets.count - 1;
+            organise_carets(editor);
         } else if !ctrl_pressed() {
             // Maybe change cursor position
             cursor := leave_only_original_caret(editor);
@@ -420,7 +419,7 @@ draw_splitter :: (splitter_rect: Rect, split_x: float, ui_id: Ui_Id) {
     draw_rect(rect, color);
 }
 
-draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui_Id, total_editor_area := Rect.{}) {
+old_draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui_Id, total_editor_area := Rect.{}) {
     scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
 
     footer_rect, rect := cut_bottom(main_area, footer_height);

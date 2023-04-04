@@ -48,7 +48,11 @@
     + Draw selections
     + Handle mouse
     + Create new cursors on ctrl+click
+    + Move tmp functions to non-tmp ones
+    + Type text
+    - Undo/redo
     
+    - Be able to open actual files in the new buffers
     - Word selection / line selection mode
     - Remove cursor_offsets at the end
     

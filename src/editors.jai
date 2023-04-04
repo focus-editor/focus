@@ -28,7 +28,7 @@ editors_handle_event :: (event: Input.Event) {
             }
         }
     } else if event.type == .TEXT_INPUT {
-        active_editor_type_text(event.utf32);
+        active_editor_type_char(event.utf32);
     }
 }
 
@@ -51,12 +51,17 @@ editors_handle_file_drop :: (files: [] string) {
     }
 }
 
-tmp_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
+active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
+    // editor, buffer := get_active_editor_and_buffer();
+    // if !editor return;
+    
     editor := *new_editor;
     buffer := *new_buffer;
     
     mods := event.modifier_flags;
     extend_selection := event.modifier_flags.shift_pressed;
+    
+    // TODO: rewrite the search bar
     
     // if editor.search_bar.active {
     //     using editor.search_bar;
@@ -189,258 +194,250 @@ tmp_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
     if editor.cursor_moved then editor.refresh_highlights = true;  // update or remove highlights
 }
 
-active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
-    editor, buffer := get_active_editor_and_buffer();
-    
-    // !!!!!!!!!!!!!!!!!!!!!!!
-    
-    if !editor tmp_editor_handle_event(event, action);
-    
-    // !!!!!!!!!!!!!!!!!!!!!!!
-    
-    if !editor return;
-    
-    mods := event.modifier_flags;
-    extend_selection := event.modifier_flags.shift_pressed;
-    
-    if editor.search_bar.active {
-        using editor.search_bar;
-        old_search_str := copy_temporary_string(to_string(input.text));
-        handled := text_input_handle_event(*input, event);
-        if handled && old_search_str != to_string(input.text) then search_and_update_results(editor, buffer, jump = true);
+// active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
+//     editor, buffer := get_active_editor_and_buffer();
+//     if !editor return;
+//     
+//     mods := event.modifier_flags;
+//     extend_selection := event.modifier_flags.shift_pressed;
+//     
+//     if editor.search_bar.active {
+//         using editor.search_bar;
+//         old_search_str := copy_temporary_string(to_string(input.text));
+//         handled := text_input_handle_event(*input, event);
+//         if handled && old_search_str != to_string(input.text) then search_and_update_results(editor, buffer, jump = true);
 
-        if event.key_code == {
-            case .ESCAPE;
-                close_search_bar(editor);
-            case .ENTER; #through;
-            case .ARROW_DOWN;
-                jump_to_next_search_result(editor, buffer);
-            case .ARROW_UP;
-                jump_to_prev_search_result(editor, buffer);
-            case #char "L";
-                if only_ctrl_shift_pressed(mods) {
-                    search_bar_toggle_expand(editor);
-                }
+//         if event.key_code == {
+//             case .ESCAPE;
+//                 close_search_bar(editor);
+//             case .ENTER; #through;
+//             case .ARROW_DOWN;
+//                 jump_to_next_search_result(editor, buffer);
+//             case .ARROW_UP;
+//                 jump_to_prev_search_result(editor, buffer);
+//             case #char "L";
+//                 if only_ctrl_shift_pressed(mods) {
+//                     search_bar_toggle_expand(editor);
+//                 }
 
-            // TODO: rewrite the search bar
-        }
-        return;
-    }
-    
-    cursors := editor.cursors;
-    
-    // We want to remember where cursors were before we do any edits
-    if buffer.edits.count == 0 {
-        array_resize(*buffer.cursors, cursors.count);
-        for * cursor, i : buffer.cursors { <<cursor = cursors[i].state; }
-    }
+//             // TODO: rewrite the search bar
+//         }
+//         return;
+//     }
+//     
+//     cursors := editor.cursors;
+//     
+//     // We want to remember where cursors were before we do any edits
+//     if buffer.edits.count == 0 {
+//         array_resize(*buffer.cursors, cursors.count);
+//         for * cursor, i : buffer.cursors { <<cursor = cursors[i].state; }
+//     }
 
-    if frame_time - buffer.last_edit_time >= EDIT_GROUP_TIMEOUT then new_edit_group(buffer, editor);
+//     if frame_time - buffer.last_edit_time >= EDIT_GROUP_TIMEOUT then new_edit_group(buffer, editor);
 
-    cursor_moved   := false;
-    keep_selection := false;
-    enabled_whole_words := false;
+//     cursor_moved   := false;
+//     keep_selection := false;
+//     enabled_whole_words := false;
 
-    // Handle general actions (which are not associated with any cursor)
-    handled := true;
-    if action == {
-        case .search_in_buffer;                 open_search_bar(editor, buffer);
-        case .close_current_editor;             close_current_editor();
-        case .close_other_editor;               close_other_editor();
-        case .save;                             save_buffer(editor, buffer);
-        case .switch_to_left_editor;            switch_to_editor(.left);
-        case .switch_to_right_editor;           switch_to_editor(.right);
-        case .switch_to_other_editor;           switch_to_editor(.other);
-        case .duplicate_editor;                 switch_to_editor(.other, duplicate_current = true);
-        case .move_editor_to_the_left;          if editors.active == editors.right then swap_panes();
-        case .move_editor_to_the_right;         if editors.active == editors.left  then swap_panes();
-        case .move_cursor_to_viewport_center;   move_cursor_to_viewport_center(editor, buffer); cursor_moved = true;
-        case .remove_additional_cursors;        cursor := leave_only_original_cursor(editor); remove_selection(cursor); cursor_moved = true; close_search_bar(editor);  // TODO: rename action?
-        case .scroll_viewport_up;               vertical_smooth_scroll(editor, up = true);               activate_hold_action(action, event);
-        case .scroll_viewport_up_fast;          vertical_smooth_scroll(editor, up = true, fast = true);  activate_hold_action(action, event);
-        case .scroll_viewport_down;             vertical_smooth_scroll(editor, up = false);              activate_hold_action(action, event);
-        case .scroll_viewport_down_fast;        vertical_smooth_scroll(editor, up = false, fast = true); activate_hold_action(action, event);
-        case .scroll_viewport_left;             print("scroll_viewport_left - not implemented\n");
-        case .scroll_viewport_right;            print("scroll_viewport_right - not implemented\n");
-        case .undo;                             undo(buffer, editor); keep_selection = true; cursor_moved = true;
-        case .redo;                             redo(buffer, editor); keep_selection = true; cursor_moved = true;
-        case .select_all;                       cursor := leave_only_original_cursor(editor); select_all(cursor, buffer); keep_selection = true;
-        case .toggle_expand;                    toggle_expand();
-        
-        case .select_word_or_create_another_cursor; handled = maybe_create_additional_cursor(editor, buffer); cursor_moved = handled; keep_selection = true;
-        
-        case;                                   handled = false;
-    }
+//     // Handle general actions (which are not associated with any cursor)
+//     handled := true;
+//     if action == {
+//         case .search_in_buffer;                 open_search_bar(editor, buffer);
+//         case .close_current_editor;             close_current_editor();
+//         case .close_other_editor;               close_other_editor();
+//         case .save;                             save_buffer(editor, buffer);
+//         case .switch_to_left_editor;            switch_to_editor(.left);
+//         case .switch_to_right_editor;           switch_to_editor(.right);
+//         case .switch_to_other_editor;           switch_to_editor(.other);
+//         case .duplicate_editor;                 switch_to_editor(.other, duplicate_current = true);
+//         case .move_editor_to_the_left;          if editors.active == editors.right then swap_panes();
+//         case .move_editor_to_the_right;         if editors.active == editors.left  then swap_panes();
+//         case .move_cursor_to_viewport_center;   move_cursor_to_viewport_center(editor, buffer); cursor_moved = true;
+//         case .remove_additional_cursors;        cursor := leave_only_original_cursor(editor); remove_selection(cursor); cursor_moved = true; close_search_bar(editor);  // TODO: rename action?
+//         case .scroll_viewport_up;               vertical_smooth_scroll(editor, up = true);               activate_hold_action(action, event);
+//         case .scroll_viewport_up_fast;          vertical_smooth_scroll(editor, up = true, fast = true);  activate_hold_action(action, event);
+//         case .scroll_viewport_down;             vertical_smooth_scroll(editor, up = false);              activate_hold_action(action, event);
+//         case .scroll_viewport_down_fast;        vertical_smooth_scroll(editor, up = false, fast = true); activate_hold_action(action, event);
+//         case .scroll_viewport_left;             print("scroll_viewport_left - not implemented\n");
+//         case .scroll_viewport_right;            print("scroll_viewport_right - not implemented\n");
+//         case .undo;                             undo(buffer, editor); keep_selection = true; cursor_moved = true;
+//         case .redo;                             redo(buffer, editor); keep_selection = true; cursor_moved = true;
+//         case .select_all;                       cursor := leave_only_original_cursor(editor); select_all(cursor, buffer); keep_selection = true;
+//         case .toggle_expand;                    toggle_expand();
+//         
+//         case .select_word_or_create_another_cursor; handled = maybe_create_additional_cursor(editor, buffer); cursor_moved = handled; keep_selection = true;
+//         
+//         case;                                   handled = false;
+//     }
 
-    if !handled {
-        // Process individual cursors
-        cursor_delta := 0;
-        buf_len := buffer.bytes.count;
-        offsets := remember_cursor_offsets(editor, buffer);
+//     if !handled {
+//         // Process individual cursors
+//         cursor_delta := 0;
+//         buf_len := buffer.bytes.count;
+//         offsets := remember_cursor_offsets(editor, buffer);
 
-        // We always want to put some actions in a separate edit group (e.g. block indent)
-        new_group := false;
-        for cursor : cursors { if new_edit_group_required_for_action(action, cursor) { new_group = true; break; } }
-        if new_group then new_edit_group(buffer, editor);  // do it before action
+//         // We always want to put some actions in a separate edit group (e.g. block indent)
+//         new_group := false;
+//         for cursor : cursors { if new_edit_group_required_for_action(action, cursor) { new_group = true; break; } }
+//         if new_group then new_edit_group(buffer, editor);  // do it before action
 
-        // TODO: refactor this so that we don't do switches for every cursor
-        
-        for *cursor, i : cursors {
-            // Adjust cursor if the previous cursor has changed the buffer
-            new_len := buffer.bytes.count;
-            if new_len != buf_len || buffer.dirty {
-                recalculate_lines(buffer);
-                cursor_delta += new_len - buf_len;
-                cursor.pos = offset_to_pos(buffer, offsets[i].pos + cursor_delta);
-                cursor.sel = offset_to_pos(buffer, offsets[i].sel + cursor_delta);
-                buf_len = new_len;
-            }
-            
-            // Cursor-specific action
-            handled = true;            
-            if action == {
-                case .break_line;                       break_line    (cursor, buffer);
-                case .new_line_below_without_breaking;  new_line_below(cursor, buffer);
-                case .new_line_above_without_breaking;  new_line_above(cursor, buffer);
-                
-                // TODO: implement for multiple cursors when we have an inner loop for each
-                // (then we can gather all the info on selections first, then maybe merge selections and then proceed)
-                case .duplicate_lines;                  if cursors.count == 1 { duplicate_lines(cursor, buffer); keep_selection = true; }
-                case .move_selected_lines_up;           if cursors.count == 1 { move_lines_up  (cursor, buffer); keep_selection = true; }
-                case .move_selected_lines_down;         if cursors.count == 1 { move_lines_down(cursor, buffer); keep_selection = true; }                
-                case .join_lines;                       if cursors.count == 1 { join_lines(cursor, buffer);      keep_selection = true; }
-                case .join_lines_no_spaces_in_between;  if cursors.count == 1 { join_lines(cursor, buffer, in_between = ""); keep_selection = true; }
-                case .delete_word_left;                 if cursors.count == 1 { delete_word_left  (cursor, buffer); }
-                case .delete_word_right;                if cursors.count == 1 { delete_word_right (cursor, buffer); }
-                case .delete_word_left_no_underscore;   if cursors.count == 1 { delete_word_left_no_underscore (cursor, buffer); }
-                case .delete_word_right_no_underscore;  if cursors.count == 1 { delete_word_right_no_underscore(cursor, buffer); }
-                case .delete_line;                      if cursors.count == 1 { delete_line(cursor, buffer); }
-                case .delete_line_and_go_up;            if cursors.count == 1 { delete_line_and_go_up(cursor, buffer); }
-                
-                case .indent_or_go_to_next_tabstop;     if indent_or_tab(cursor, buffer) keep_selection = true;
-                case .indent;                           indent_lines  (cursor, buffer);  keep_selection = true;
-                case .unindent;                         unindent_lines(cursor, buffer);  keep_selection = true;
-                
-                case .toggle_comment;                   comment_block(cursor, buffer); keep_selection = true;
-                case .select_line;                      select_lines(cursor, buffer);  keep_selection = true;
-                
-                case .move_left;                        move_cursor_left (cursor, buffer, by = .char,      extend_selection);
-                case .move_left_by_word;                move_cursor_left (cursor, buffer, by = .word,      extend_selection);
-                case .move_left_by_word_ends;           move_cursor_left (cursor, buffer, by = .word_ends, extend_selection);
-                case .move_right;                       move_cursor_right(cursor, buffer, by = .char,      extend_selection);
-                case .move_right_by_word;               move_cursor_right(cursor, buffer, by = .word,      extend_selection);
-                case .move_right_by_word_ends;          move_cursor_right(cursor, buffer, by = .word_ends, extend_selection);
-                
-                case .move_up;                          move_cursor_vertically(cursor, buffer, -1, extend_selection);
-                case .move_down;                        move_cursor_vertically(cursor, buffer,  1, extend_selection);
-                case .move_up_fast;                     move_cursor_vertically(cursor, buffer, -5, extend_selection);
-                case .move_down_fast;                   move_cursor_vertically(cursor, buffer,  5, extend_selection);
-                case .move_up_to_empty_line;            move_cursor_to_empty_line(cursor, buffer, .up);
-                case .move_down_to_empty_line;          move_cursor_to_empty_line(cursor, buffer, .down);
-                case .move_up_one_page;                 move_cursor_by_page(cursor, buffer, .up);
-                case .move_down_one_page;               move_cursor_by_page(cursor, buffer, .down);
-                
-                case .copy;                             copy_selection_to_clipboard(cursor, buffer, cursors.count == 1);
-                case .cut;                              copy_selection_to_clipboard(cursor, buffer, cursors.count == 1, cut = true);
-                case .paste;                            paste_from_clipboard(editor, cursor, buffer);
-                
-                case .jump_to_line_start;               move_cursor_home(cursor, buffer);
-                case .jump_to_line_end;                 move_cursor_end (cursor, buffer);
-                case .jump_to_file_start;               move_to_file_start(cursor, buffer);
-                case .jump_to_file_end;                 move_to_file_end  (cursor, buffer);
-                
-                case .delete_left_char;                 delete_left_char (cursor, buffer);
-                case .delete_right_char;                delete_right_char(cursor, buffer);
-                
-                case .select_word_or_create_another_cursor; if !has_selection(cursor) { select_word(cursor, buffer); editor.search_whole_words = true; enabled_whole_words = true; }
-                
-                case;                                   handled = false;
-            }
-            
-            // Cursor doesn't move only when we copy, so this is to avoid specifying that it moved every time
-            if handled && action != .copy then cursor_moved = true;
+//         // TODO: refactor this so that we don't do switches for every cursor
+//         
+//         for *cursor, i : cursors {
+//             // Adjust cursor if the previous cursor has changed the buffer
+//             new_len := buffer.bytes.count;
+//             if new_len != buf_len || buffer.dirty {
+//                 recalculate_lines(buffer);
+//                 cursor_delta += new_len - buf_len;
+//                 cursor.pos = offset_to_pos(buffer, offsets[i].pos + cursor_delta);
+//                 cursor.sel = offset_to_pos(buffer, offsets[i].sel + cursor_delta);
+//                 buf_len = new_len;
+//             }
+//             
+//             // Cursor-specific action
+//             handled = true;            
+//             if action == {
+//                 case .break_line;                       break_line    (cursor, buffer);
+//                 case .new_line_below_without_breaking;  new_line_below(cursor, buffer);
+//                 case .new_line_above_without_breaking;  new_line_above(cursor, buffer);
+//                 
+//                 // TODO: implement for multiple cursors when we have an inner loop for each
+//                 // (then we can gather all the info on selections first, then maybe merge selections and then proceed)
+//                 case .duplicate_lines;                  if cursors.count == 1 { duplicate_lines(cursor, buffer); keep_selection = true; }
+//                 case .move_selected_lines_up;           if cursors.count == 1 { move_lines_up  (cursor, buffer); keep_selection = true; }
+//                 case .move_selected_lines_down;         if cursors.count == 1 { move_lines_down(cursor, buffer); keep_selection = true; }                
+//                 case .join_lines;                       if cursors.count == 1 { join_lines(cursor, buffer);      keep_selection = true; }
+//                 case .join_lines_no_spaces_in_between;  if cursors.count == 1 { join_lines(cursor, buffer, in_between = ""); keep_selection = true; }
+//                 case .delete_word_left;                 if cursors.count == 1 { delete_word_left  (cursor, buffer); }
+//                 case .delete_word_right;                if cursors.count == 1 { delete_word_right (cursor, buffer); }
+//                 case .delete_word_left_no_underscore;   if cursors.count == 1 { delete_word_left_no_underscore (cursor, buffer); }
+//                 case .delete_word_right_no_underscore;  if cursors.count == 1 { delete_word_right_no_underscore(cursor, buffer); }
+//                 case .delete_line;                      if cursors.count == 1 { delete_line(cursor, buffer); }
+//                 case .delete_line_and_go_up;            if cursors.count == 1 { delete_line_and_go_up(cursor, buffer); }
+//                 
+//                 case .indent_or_go_to_next_tabstop;     if indent_or_tab(cursor, buffer) keep_selection = true;
+//                 case .indent;                           indent_lines  (cursor, buffer);  keep_selection = true;
+//                 case .unindent;                         unindent_lines(cursor, buffer);  keep_selection = true;
+//                 
+//                 case .toggle_comment;                   comment_block(cursor, buffer); keep_selection = true;
+//                 case .select_line;                      select_lines(cursor, buffer);  keep_selection = true;
+//                 
+//                 case .move_left;                        move_cursor_left (cursor, buffer, by = .char,      extend_selection);
+//                 case .move_left_by_word;                move_cursor_left (cursor, buffer, by = .word,      extend_selection);
+//                 case .move_left_by_word_ends;           move_cursor_left (cursor, buffer, by = .word_ends, extend_selection);
+//                 case .move_right;                       move_cursor_right(cursor, buffer, by = .char,      extend_selection);
+//                 case .move_right_by_word;               move_cursor_right(cursor, buffer, by = .word,      extend_selection);
+//                 case .move_right_by_word_ends;          move_cursor_right(cursor, buffer, by = .word_ends, extend_selection);
+//                 
+//                 case .move_up;                          move_cursor_vertically(cursor, buffer, -1, extend_selection);
+//                 case .move_down;                        move_cursor_vertically(cursor, buffer,  1, extend_selection);
+//                 case .move_up_fast;                     move_cursor_vertically(cursor, buffer, -5, extend_selection);
+//                 case .move_down_fast;                   move_cursor_vertically(cursor, buffer,  5, extend_selection);
+//                 case .move_up_to_empty_line;            move_cursor_to_empty_line(cursor, buffer, .up);
+//                 case .move_down_to_empty_line;          move_cursor_to_empty_line(cursor, buffer, .down);
+//                 case .move_up_one_page;                 move_cursor_by_page(cursor, buffer, .up);
+//                 case .move_down_one_page;               move_cursor_by_page(cursor, buffer, .down);
+//                 
+//                 case .copy;                             copy_selection_to_clipboard(cursor, buffer, cursors.count == 1);
+//                 case .cut;                              copy_selection_to_clipboard(cursor, buffer, cursors.count == 1, cut = true);
+//                 case .paste;                            paste_from_clipboard(editor, cursor, buffer);
+//                 
+//                 case .jump_to_line_start;               move_cursor_home(cursor, buffer);
+//                 case .jump_to_line_end;                 move_cursor_end (cursor, buffer);
+//                 case .jump_to_file_start;               move_to_file_start(cursor, buffer);
+//                 case .jump_to_file_end;                 move_to_file_end  (cursor, buffer);
+//                 
+//                 case .delete_left_char;                 delete_left_char (cursor, buffer);
+//                 case .delete_right_char;                delete_right_char(cursor, buffer);
+//                 
+//                 case .select_word_or_create_another_cursor; if !has_selection(cursor) { select_word(cursor, buffer); editor.search_whole_words = true; enabled_whole_words = true; }
+//                 
+//                 case;                                   handled = false;
+//             }
+//             
+//             // Cursor doesn't move only when we copy, so this is to avoid specifying that it moved every time
+//             if handled && action != .copy then cursor_moved = true;
 
-        }
+//         }
 
-        if new_group then new_edit_group(buffer, editor);  // do it after action
-    }
+//         if new_group then new_edit_group(buffer, editor);  // do it after action
+//     }
 
-    if !extend_selection && cursor_moved && !keep_selection {
-        for *cursor : cursors { remove_selection(cursor); }
-    }
-    if cursor_moved && !enabled_whole_words then editor.search_whole_words = false;
+//     if !extend_selection && cursor_moved && !keep_selection {
+//         for *cursor : cursors { remove_selection(cursor); }
+//     }
+//     if cursor_moved && !enabled_whole_words then editor.search_whole_words = false;
 
-    if buffer.dirty recalculate_lines(buffer);
-    
-    // NOTE: we're processing cursors here and then again later in refresh_open_buffers,
-    // but this is so that we can be sure if another event is processed in the same frame,
-    // the cursors will be sorted and in valid places
-    for *cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
-    if cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
-    
-    if cursor_moved then editor.refresh_highlights = true;
+//     if buffer.dirty recalculate_lines(buffer);
+//     
+//     // NOTE: we're processing cursors here and then again later in refresh_open_buffers,
+//     // but this is so that we can be sure if another event is processed in the same frame,
+//     // the cursors will be sorted and in valid places
+//     for *cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
+//     if cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
+//     
+//     if cursor_moved then editor.refresh_highlights = true;
 
-    editor.cursor_moved = cursor_moved;
-}
+//     editor.cursor_moved = cursor_moved;
+// }
 
-active_editor_type_text :: (char: u32) {
+active_editor_type_char :: (char: u32) {
     if char == 127 return;  // there seems to be a bug in the Input module
                             // which generates a TEXT_INPUT event for DEL
                             // when Ctrl+Backspace is pressed
 
-    editor, buffer := get_active_editor_and_buffer();
-    if !editor return;
+    // editor, buffer := get_active_editor_and_buffer();
+    // if !editor return;
+    editor := *new_editor;
+    buffer := *new_buffer;
+    
 
-    if editor.search_bar.active {
-        text_input_type_char(*editor.search_bar.input, char);
-        search_and_update_results(editor, buffer, jump = true);
-        return;
-    }
+    // if editor.search_bar.active {
+    //     text_input_type_char(*editor.search_bar.input, char);
+    //     search_and_update_results(editor, buffer, jump = true);
+    //     return;
+    // }
 
     utf8_char := convert_utf32_to_utf8(char);
+    
+    new_group := false;  // we always want to remember cursor state when a selection is replaced with anything
+    for editor.carets { if has_selection(it) { new_group = true; break; } }
+    
+    if new_group || frame_time - buffer.last_edit_time >= EDIT_GROUP_TIMEOUT {
+        // new_edit_group(buffer, editor);
+    }
 
     if buffer.edits.count == 0 {
         // We want to remember where cursors were before we do any edits
-        array_resize(*buffer.cursors, editor.cursors.count);
-        for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
-    } else {
-        // We always want to remember cursor state when a selection is replaced with anything
-        new_group := false;
-        for editor.cursors { if has_selection(it) { new_group = true; break; } }
-        if new_group || frame_time - buffer.last_edit_time >= EDIT_GROUP_TIMEOUT {
-            new_edit_group(buffer, editor);
-        }
+        array_resize(*buffer.cursors, editor.carets.count);
+        for * cursor, i : buffer.cursors { <<cursor = editor.carets[i].state; }
     }
-
-    cursor_delta := 0;
-    buf_len := buffer.bytes.count;
-    offsets := remember_cursor_offsets(editor, buffer);
-
-    for *cursor, i : editor.cursors {
-        // Adjust cursor if the previous cursor has changed the buffer
-        new_len := buffer.bytes.count;
-        if new_len != buf_len || buffer.dirty {
-            recalculate_lines(buffer);
-            cursor_delta += new_len - buf_len;
-            cursor.pos = offset_to_pos(buffer, offsets[i].pos + cursor_delta);
-            cursor.sel = offset_to_pos(buffer, offsets[i].sel + cursor_delta);
+    
+    offset_delta: s32 = 0;
+    buf_len := cast(s32) buffer.bytes.count;
+    for * cursor : editor.carets {
+        new_len := cast(s32) buffer.bytes.count;
+        if new_len != buf_len {
+            offset_delta += new_len - buf_len;
+            cursor.pos += offset_delta;
+            cursor.sel += offset_delta;
             buf_len = new_len;
         }
-
+        
         if has_selection(cursor) {
-            str := to_string(*utf8_char);
             selection := get_selection(cursor);
-            replace_range(buffer, selection, str);
+            delete_range(buffer, selection);
             cursor.pos = selection.start;
-        } else {
-            insert_char_at_pos(buffer, cursor.pos, utf8_char);
         }
-        cursor.pos.col += 1;  // we know it's just one symbol
-        cursor.col_wanted = cursor.pos.col;
-        remove_selection(cursor);
+        insert_char_at_offset(buffer, cursor.pos, utf8_char);
+        
+        cursor.pos = next_char_offset(buffer.bytes, cursor.pos);
+        cursor.sel = cursor.pos;
     }
 
-    if buffer.dirty then recalculate_lines(buffer);
+    rescan_for_lines(buffer);
+    if editor.carets.count > 1 then organise_carets(editor);
+    for * cursor : editor.carets  cursor.col_wanted = offset_to_coords(buffer, cursor.pos).col;
     
     editor.cursor_moved = true;
 }

@@ -43,6 +43,13 @@ insert_string_at_offset :: (buffer: *Buffer, offset: s64, str: string) {
     insert_string_raw(buffer, offset, str);
 }
 
+insert_char_at_offset :: (buffer: *NewBuffer, offset: s32, char: Utf8_Char) {
+    // new_insert_char_edit(buffer, offset, char);
+    str := to_string(*char);
+    insert_string_raw(buffer, offset, str);
+}
+
+// !!!!
 insert_char_at_pos :: (buffer: *Buffer, pos: Pos, char: Utf8_Char) {
     offset := pos_to_offset(buffer, pos);
     new_insert_char_edit(buffer, offset, char);
@@ -50,11 +57,19 @@ insert_char_at_pos :: (buffer: *Buffer, pos: Pos, char: Utf8_Char) {
     insert_string_raw(buffer, offset, str);
 }
 
+// !!!!
 delete_range :: (buffer: *Buffer, range: Range) {
     start, end := range_to_byte_offsets(buffer, make_valid_range(buffer, range));
     if start == end return;
     old_str := to_string(array_view(buffer.bytes, start, end - start));
     new_delete_edit(buffer, start, end, old_str);
+    delete_range_raw(buffer, start, end);
+}
+
+delete_range :: (buffer: *NewBuffer, using range: Offset_Range) {
+    if start == end return;
+    old_str := to_string(array_view(buffer.bytes, start, end - start));
+    // new_delete_edit(buffer, start, end, old_str);
     delete_range_raw(buffer, start, end);
 }
 
@@ -70,6 +85,16 @@ replace_range :: (buffer: *Buffer, range: Range, str: string) {
     replace_range_raw(buffer, start, end, str);
 }
 
+delete_range_raw :: (using buffer: *NewBuffer, start: s64, end: s64) {
+    len := end - start;
+    if len <= 0 return;
+
+    array_delete_bytes(*bytes, start, len);
+
+    buffer.dirty = true;
+}
+
+// !!!!
 delete_range_raw :: (using buffer: *Buffer, start: s64, end: s64) {
     len := end - start;
     if len <= 0 return;
@@ -79,8 +104,17 @@ delete_range_raw :: (using buffer: *Buffer, start: s64, end: s64) {
     buffer.dirty = true;
 }
 
+insert_string_raw :: (buffer: *NewBuffer, offset: s64, str: string) {
+    bytes: [] u8;
+    bytes.data  = str.data;
+    bytes.count = str.count;
+    array_insert_bytes_at(*buffer.bytes, offset, bytes);
+
+    buffer.dirty = true;
+}
+
+// !!!!
 insert_string_raw :: (buffer: *Buffer, offset: s64, str: string) {
-    ZoneScoped();
     bytes: [] u8;
     bytes.data  = str.data;
     bytes.count = str.count;
@@ -817,6 +851,11 @@ NewBuffer :: struct {
     needs_coloring         := false;
 
     last_edit_time: Time;  // for creating new edit groups
+    
+    undos: [..] Edit_Group;
+    redos: [..] Edit_Group;
+    edits: [..] Edit;  // current edits, not in a group yet
+    cursors: [..] Caret.State;  // cursor state before any current edits were made
 
     lang: enum u8 {
         Plain_Text :: 0;
@@ -824,6 +863,36 @@ NewBuffer :: struct {
         Focus_Config;
         Worklog;
     } = .Plain_Text;
+    
+    Edit_Group :: struct {
+        edits: [] Edit;
+        cursors: [] Caret.State;
+    }
+    
+    // All strings in this struct are owned
+    Edit :: struct {
+        type: enum { insert; insert_char; replace; delete; };
+        union {
+            insert: struct {
+                offset: s64;
+                new_bytes: string;
+            };
+            insert_char: struct {
+                offset: s64;
+                char: Utf8_Char;  // same as `insert`, but no need to allocate strings on the heap
+                                  // it's probably the most common edit so it's worth it
+            };
+            replace: struct {
+                offset_range: Offset_Range;
+                new_bytes: string;
+                old_bytes: string;
+            };
+            delete: struct {
+                offset_range: Offset_Range;
+                old_bytes: string;
+            };
+        }
+    }
 }
 
 Buffer :: struct {
@@ -898,9 +967,10 @@ Buffer :: struct {
 }
 
 Caret :: struct {
-    pos, sel: s32;
-    col_wanted: s32;
+    using state: State;
     clipboard: struct { start: s32; count: s32; };  // TODO: consider using just one s32?
+    
+    State :: struct { pos, sel: s32; col_wanted: s32; }
 }
 
 #assert size_of(Caret) == (2 + 1 + 2) * size_of(s32);  // make sure no padding accidentally gets added
