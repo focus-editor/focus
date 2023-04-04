@@ -120,8 +120,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .scroll_viewport_down_fast;        vertical_smooth_scroll(editor, up = false, fast = true); activate_hold_action(action, event);
         case .scroll_viewport_left;             // print("scroll_viewport_left - not implemented\n");
         case .scroll_viewport_right;            // print("scroll_viewport_right - not implemented\n");
-        case .undo;                             // undo(buffer, editor); keep_selection = true; cursor_moved = true;
-        case .redo;                             // redo(buffer, editor); keep_selection = true; cursor_moved = true;
+        case .undo;                             undo(buffer, editor); keep_selection = true;
+        case .redo;                             redo(buffer, editor); keep_selection = true;
         case .select_all;                       // cursor := leave_only_original_cursor(editor); select_all(cursor, buffer); keep_selection = true;
         case .toggle_expand;                    // toggle_expand();
         case .select_word_or_create_another_cursor;  // handled = maybe_create_additional_cursor(editor, buffer); cursor_moved = handled; keep_selection = true;
@@ -404,7 +404,7 @@ active_editor_type_char :: (char: u32) {
     for editor.carets { if has_selection(it) { new_group = true; break; } }
     
     if new_group || frame_time - buffer.last_edit_time >= EDIT_GROUP_TIMEOUT {
-        // new_edit_group(buffer, editor);
+        new_edit_group(buffer, editor);
     }
 
     if buffer.edits.count == 0 {
@@ -434,6 +434,8 @@ active_editor_type_char :: (char: u32) {
         cursor.pos = next_char_offset(buffer.bytes, cursor.pos);
         cursor.sel = cursor.pos;
     }
+    
+    if new_group then new_edit_group(buffer, editor);  // make sure selection operations have a dedicated group
 
     rescan_for_lines(buffer);
     if editor.carets.count > 1 then organise_carets(editor);
@@ -740,6 +742,19 @@ get_selected_text_all_cursors :: (using editor: Editor, buffer: Buffer) -> strin
     return text;
 }
 
+new_edit_group :: (buffer: *NewBuffer, editor: *Editor) {
+    if buffer.edits.count == 0 return;
+
+    new_group := array_add(*buffer.undos);
+    new_group.edits = to_owned_array(*buffer.edits);  // @Speed: could group all char inserts into one if needed
+    new_group.cursors = to_owned_array(*buffer.cursors);
+
+    // Remember cursor state
+    array_resize(*buffer.cursors, editor.carets.count);
+    for * cursor, i : buffer.cursors { <<cursor = editor.carets[i].state; }
+}
+
+// !!!
 new_edit_group :: (buffer: *Buffer, editor: *Editor) {
     if buffer.edits.count == 0 return;
 
@@ -1131,6 +1146,59 @@ find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_i
     return editor_id, true;
 }
 
+undo :: (buffer: *NewBuffer, editor: *Editor) {
+    new_edit_group(buffer, editor);
+    
+    if buffer.undos.count == 0 return;
+    
+    edit_group := pop(*buffer.undos);
+    // Revert edits in the backwards order
+    for < e : edit_group.edits {
+        if #complete e.type == {
+            case .delete;  using e.delete;  insert_string_raw(buffer, offset_range.start, old_bytes);
+            case .replace; using e.replace; replace_range_raw(buffer, offset_range.start, offset_range.start + xx new_bytes.count, old_bytes);
+            case .insert;  using e.insert;  delete_range_raw (buffer, offset, offset + new_bytes.count);
+            case .insert_char; using e.insert_char;  delete_range_raw (buffer, offset, offset + char.count);
+        }
+    }
+    // Add a new redo group
+    redo := array_add(*buffer.redos);
+    redo.edits = edit_group.edits;
+    redo.cursors = to_owned_array(*buffer.cursors);
+
+    array_extend(*buffer.cursors, edit_group.cursors);
+    restore_cursor_state(editor, edit_group.cursors);
+    array_free(edit_group.cursors);
+    
+    editor.cursor_moved = true;
+}
+
+redo :: (buffer: *NewBuffer, editor: *Editor) {
+    if buffer.redos.count == 0 return;
+    
+    edit_group := pop(*buffer.redos);
+    // Replay edits in the normal order
+    for e : edit_group.edits {
+        if #complete e.type == {
+            case .delete;  using e.delete;  delete_range_raw (buffer, offset_range.start, offset_range.end);
+            case .replace; using e.replace; replace_range_raw(buffer, offset_range.start, offset_range.end, new_bytes);
+            case .insert;  using e.insert;  insert_string_raw(buffer, offset, new_bytes);
+            case .insert_char; using e.insert_char; insert_string_raw(buffer, offset, to_string(*char));
+        }
+    }
+    // Add a new undo group
+    undo := array_add(*buffer.undos);
+    undo.edits = edit_group.edits;
+    undo.cursors = to_owned_array(*buffer.cursors);
+
+    array_extend(*buffer.cursors, edit_group.cursors);
+    restore_cursor_state(editor, edit_group.cursors);
+    array_free(edit_group.cursors);
+    
+    editor.cursor_moved = true;
+}
+
+// !!!!
 undo :: (buffer: *Buffer, editor: *Editor) {
     new_edit_group(buffer, editor);
     
@@ -1156,6 +1224,7 @@ undo :: (buffer: *Buffer, editor: *Editor) {
     array_free(edit_group.cursors);
 }
 
+// !!!!
 redo :: (buffer: *Buffer, editor: *Editor) {
     if buffer.redos.count == 0 return;
     
@@ -1179,6 +1248,22 @@ redo :: (buffer: *Buffer, editor: *Editor) {
     array_free(edit_group.cursors);
 }
 
+restore_cursor_state :: (using editor: *Editor, cursor_state: [] Caret.State) {
+    if cursor_state.count == 0 return;  // the first undo doesn't have any remembered cursors
+
+    // for * carets maybe_free_and_clear(*it.clipboard);
+    array_resize(*carets, cursor_state.count);
+    for * cursor, i : carets {
+        cursor.state = cursor_state[i];
+        // TODO: !!!
+        // cursor.col_wanted = cursor.pos.col;
+        // cursor.clipboard.count = 0;
+        // cursor.clipboard.data = null;
+    }
+    if main_cursor >= carets.count then main_cursor = carets.count - 1;  // maybe we should remember it too
+}
+
+// !!!!
 restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor.State) {
     if cursor_state.count == 0 return;  // the first undo doesn't have any remembered cursors
 

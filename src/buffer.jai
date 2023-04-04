@@ -44,7 +44,7 @@ insert_string_at_offset :: (buffer: *Buffer, offset: s64, str: string) {
 }
 
 insert_char_at_offset :: (buffer: *NewBuffer, offset: s32, char: Utf8_Char) {
-    // new_insert_char_edit(buffer, offset, char);
+    new_insert_char_edit(buffer, offset, char);
     str := to_string(*char);
     insert_string_raw(buffer, offset, str);
 }
@@ -69,7 +69,7 @@ delete_range :: (buffer: *Buffer, range: Range) {
 delete_range :: (buffer: *NewBuffer, using range: Offset_Range) {
     if start == end return;
     old_str := to_string(array_view(buffer.bytes, start, end - start));
-    // new_delete_edit(buffer, start, end, old_str);
+    new_delete_edit(buffer, start, end, old_str);
     delete_range_raw(buffer, start, end);
 }
 
@@ -123,6 +123,12 @@ insert_string_raw :: (buffer: *Buffer, offset: s64, str: string) {
     buffer.dirty = true;
 }
 
+replace_range_raw :: (buffer: *NewBuffer, start: s32, end: s32, str: string) {
+    delete_range_raw(buffer, start, end);
+    insert_string_raw(buffer, start, str);
+}
+
+// !!!!
 replace_range_raw :: (buffer: *Buffer, start: s32, end: s32, str: string) {
     delete_range_raw(buffer, start, end);
     insert_string_raw(buffer, start, str);
@@ -781,6 +787,16 @@ new_insert_edit :: (buffer: *Buffer, offset: s64, str: string) {
     clear_redos(buffer);
 }
 
+new_insert_char_edit :: (buffer: *NewBuffer, offset: s64, char: Utf8_Char) {
+    edit := array_add(*buffer.edits);
+    edit.type = .insert_char;
+    edit.insert_char.offset = offset;
+    edit.insert_char.char = char;
+
+    clear_redos(buffer);
+}
+
+// !!!!
 new_insert_char_edit :: (buffer: *Buffer, offset: s64, char: Utf8_Char) {
     edit := array_add(*buffer.edits);
     edit.type = .insert_char;
@@ -790,6 +806,18 @@ new_insert_char_edit :: (buffer: *Buffer, offset: s64, char: Utf8_Char) {
     clear_redos(buffer);
 }
 
+new_delete_edit :: (buffer: *NewBuffer, start: s32, end: s32, old_str: string) {
+    edit := array_add(*buffer.edits);
+    edit.type = .delete;
+    using edit.delete;
+    offset_range.start = start;
+    offset_range.end   = end;
+    old_bytes = copy_string(old_str);
+
+    clear_redos(buffer);
+}
+
+// !!!!
 new_delete_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string) {
     edit := array_add(*buffer.edits);
     edit.type = .delete;
@@ -801,11 +829,33 @@ new_delete_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string) {
     clear_redos(buffer);
 }
 
+clear_redos :: (using buffer: *NewBuffer) {
+    for * redos  deinit(it);
+    array_reset_keeping_memory(*redos);
+}
+
+// !!!!
 clear_redos :: (using buffer: *Buffer) {
     for * redos  deinit(it);
     array_reset_keeping_memory(*redos);
 }
 
+deinit :: (using edit_group: *NewBuffer.Edit_Group) {
+    for edit : edits {
+        using edit;
+        if #complete type == {
+            case .insert;  free(insert.new_bytes);
+            case .delete;  free(delete.old_bytes);
+            case .replace; free(replace.new_bytes);
+                           free(replace.old_bytes);
+            case .insert_char;  // nothing to free
+        }
+    }
+    array_free(edits);
+    array_free(cursors);
+}
+
+// !!!!
 deinit :: (using edit_group: *Buffer.Edit_Group) {
     for edit : edits {
         using edit;
