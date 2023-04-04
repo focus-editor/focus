@@ -116,18 +116,18 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .move_editor_to_the_left;          // if editors.active == editors.right then swap_panes();
         case .move_editor_to_the_right;         // if editors.active == editors.left  then swap_panes();
         case .move_cursor_to_viewport_center;   // move_cursor_to_viewport_center(editor, buffer); cursor_moved = true;
-        case .remove_additional_cursors;        // cursor := leave_only_original_cursor(editor); remove_selection(cursor); cursor_moved = true; close_search_bar(editor);  // TODO: rename action?
+        case .remove_additional_cursors;        remove_additional_cursors(editor); 
         case .scroll_viewport_up;               vertical_smooth_scroll(editor, up = true);               activate_hold_action(action, event);
         case .scroll_viewport_up_fast;          vertical_smooth_scroll(editor, up = true, fast = true);  activate_hold_action(action, event);
         case .scroll_viewport_down;             vertical_smooth_scroll(editor, up = false);              activate_hold_action(action, event);
         case .scroll_viewport_down_fast;        vertical_smooth_scroll(editor, up = false, fast = true); activate_hold_action(action, event);
         case .scroll_viewport_left;             // print("scroll_viewport_left - not implemented\n");
         case .scroll_viewport_right;            // print("scroll_viewport_right - not implemented\n");
-        case .undo;                             undo(buffer, editor); keep_selection = true;
-        case .redo;                             redo(buffer, editor); keep_selection = true;
-        case .select_all;                       // cursor := leave_only_original_cursor(editor); select_all(cursor, buffer); keep_selection = true;
-        case .toggle_expand;                    // toggle_expand();
-        case .select_word_or_create_another_cursor;  // handled = maybe_create_additional_cursor(editor, buffer); cursor_moved = handled; keep_selection = true;
+        case .undo;                             undo(editor, buffer); keep_selection = true;
+        case .redo;                             redo(editor, buffer); keep_selection = true;
+        case .select_all;                       select_all(editor, buffer); keep_selection = true;
+        case .toggle_expand;                    toggle_expand();
+        case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
         
         // Actions that do something per cursor
         case .move_left;                        move_cursors_left (editor, buffer, by = .char,      extend_selection);
@@ -185,8 +185,6 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
     if !extend_selection && editor.cursor_moved && !keep_selection {
         for * cursors { it.sel = it.pos; }  // remove selection
     }
-    
-//     if cursor_moved && !enabled_whole_words then editor.search_whole_words = false;
 
     if buffer.dirty rescan_for_lines(buffer);
     
@@ -196,6 +194,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
     for * cursors put_cursor_in_valid_spot(it, buffer);
     if cursors.count > 1 then organise_carets(editor);  // sort and maybe merge overlapping cursors
     
+    if editor.cursor_moved && !enabled_whole_words then editor.search_whole_words = false;
     if editor.cursor_moved then editor.refresh_highlights = true;  // update or remove highlights
 }
 
@@ -714,6 +713,25 @@ add_paste_animation :: (using editor: *Editor, range: Range) {
     anim.started_at = frame_time;
 }
 
+select_word :: (buffer: NewBuffer, cursor: *Caret) {
+    pos       := cursor.pos;
+    pos_left  := prev_char_offset(buffer.bytes, pos);
+    char      := get_char_at_offset(buffer, pos);
+    char_left := get_char_at_offset(buffer, pos_left);
+    
+    if !is_word_char(char) && is_word_char(char_left) {
+        pos  = pos_left;  // favor the word to the left
+        char = char_left;
+    }
+    
+    char_type := get_char_type(char);
+    if char_type == .other return;
+    
+    cursor.pos = scan_through_similar_chars_on_the_right(buffer, pos, char_type, skip_one_space = false);
+    cursor.sel = scan_through_similar_chars_on_the_left (buffer, pos, char_type, skip_one_space = false);
+}
+
+// !!!!
 select_word :: (cursor: *Cursor, buffer: Buffer, only_word_chars := true) {
     pos       := cursor.pos;
     pos_left  := Pos.{ line = pos.line, col = pos.col - 1 };
@@ -733,16 +751,30 @@ select_word :: (cursor: *Cursor, buffer: Buffer, only_word_chars := true) {
     cursor.sel = scan_through_similar_chars_on_the_left (pos, buffer, char_type, skip_one_space = false);
 }
 
+get_selected_text_all_cursors :: (using editor: Editor, buffer: NewBuffer) -> string {  // returns view into buffer
+    // Returns a selected string only if all cursors have the same text selected.
+    // Otherwise returns an empty string.
+
+    text := get_selected_string(carets[main_cursor], buffer);
+    if text.count == 0 return "";
+
+    for cursor : carets {
+        if text != get_selected_string(cursor, buffer) return "";
+    }
+
+    return text;
+}
+
+// !!!!
 get_selected_text_all_cursors :: (using editor: Editor, buffer: Buffer) -> string {  // returns view into buffer
     // Returns a selected string only if all cursors have the same text selected.
     // Otherwise returns an empty string.
-    empty: string;
 
     text := get_selected_string(cursors[main_cursor], buffer);
-    if text.count == 0 return empty;
+    if text.count == 0 return "";
 
     for cursor : cursors {
-        if text != get_selected_string(cursor, buffer) return empty;
+        if text != get_selected_string(cursor, buffer) return "";
     }
 
     return text;
@@ -990,6 +1022,60 @@ create_cursor_at_pos :: (using editor: *Editor, buffer: Buffer, pos: Pos) {
 
 #scope_file
 
+select_word_or_create_another_cursor :: (using editor: *Editor, buffer: NewBuffer) -> whole_words: bool {
+    editor.cursor_moved = true;
+    
+    selected_text := get_selected_text_all_cursors(editor, buffer);
+    if selected_text {
+        // Cursors have the same text selected - attempt to create another cursor
+        buffer_str := to_string(buffer.bytes);
+    
+        search_func: (s: string, substring: string, start_index := 0) -> s64;
+        search_func = ifx search_whole_words then find_index_from_left_whole_word else find_index_from_left;
+    
+        // Search from the main cursor downwards, possibly with a wraparound
+        start_offset := get_selection(carets[main_cursor]).end;
+        found_offset := -1;
+        if main_cursor == carets.count - 1 {
+            // Main cursor is last - search with a wraparound
+            end_offset  := get_selection(carets[0]).start;
+            before_wrap := slice(buffer_str, start_offset, buffer_str.count - start_offset);
+            after_wrap  := slice(buffer_str, 0, end_offset);
+    
+            index := search_func(before_wrap, selected_text);
+            if index >= 0 then found_offset = start_offset + index;
+            if found_offset < 0 then found_offset = search_func(after_wrap, selected_text);
+        } else {
+            // Main cursor is not last - search until the next cursor only
+            end_offset := get_selection(carets[main_cursor+1]).start;
+            target_range := slice(buffer_str, start_offset, end_offset - start_offset);
+            index := search_func(target_range, selected_text);
+            if index >= 0 then found_offset = start_offset + index;
+        }
+        if found_offset < 0 {
+            if main_cursor != original_cursor {
+                main_cursor = original_cursor;  // go back to original and stop
+            }
+            return editor.search_whole_words;  // found no matches
+        }
+    
+        new_cursor := array_add(*carets);
+        new_cursor.sel = cast(s32) found_offset;
+        new_cursor.pos = cast(s32) (found_offset + selected_text.count);
+        main_cursor = carets.count - 1;
+        
+    } else {
+        // Cursors either don't have anything selected, or the selected text is different
+        for * editor.carets {
+            if has_selection(it) continue;
+            select_word(buffer, it);
+            editor.search_whole_words = true;
+        }
+    }
+    
+    return editor.search_whole_words;
+}
+
 maybe_create_additional_cursor :: (using editor: *Editor, buffer: Buffer) -> created: bool {
     selected_text := get_selected_text_all_cursors(editor, buffer);
     if selected_text.count == 0 return false;
@@ -1152,7 +1238,7 @@ find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_i
     return editor_id, true;
 }
 
-undo :: (buffer: *NewBuffer, editor: *Editor) {
+undo :: (editor: *Editor, buffer: *NewBuffer) {
     new_edit_group(buffer, editor);
     
     if buffer.undos.count == 0 return;
@@ -1179,7 +1265,7 @@ undo :: (buffer: *NewBuffer, editor: *Editor) {
     editor.cursor_moved = true;
 }
 
-redo :: (buffer: *NewBuffer, editor: *Editor) {
+redo :: (editor: *Editor, buffer: *NewBuffer) {
     if buffer.redos.count == 0 return;
     
     edit_group := pop(*buffer.redos);
@@ -2006,6 +2092,19 @@ unindent_lines :: (using cursor: *Cursor, buffer: *Buffer) {
     col_wanted = pos.col;
 }
 
+remove_additional_cursors :: (editor: *Editor) {
+    cursor := leave_only_original_caret(editor); 
+    cursor.sel = cursor.pos;
+    editor.cursor_moved = true;
+}
+
+select_all :: (editor: *Editor, buffer: NewBuffer) {
+    cursor := leave_only_original_caret(editor); 
+    cursor.sel = 0;
+    cursor.pos = cast(s32) buffer.bytes.count;
+}
+
+// !!!!
 select_all :: (using cursor: *Cursor, buffer: Buffer) {
     sel.line = 0;
     sel.col  = 0;

@@ -377,6 +377,16 @@ get_selection_whole_lines :: (cursor: Cursor, buffer: Buffer) -> Range {
     return range;
 }
 
+get_selected_string :: (cursor: Caret, buffer: NewBuffer) -> string {
+    result: string;
+    if !has_selection(cursor) return result;
+    selection  := get_selection(cursor);
+    result.data  = buffer.bytes.data + selection.start;
+    result.count = selection.end - selection.start;
+    return result;
+}
+
+// !!!!
 get_selected_string :: (cursor: Cursor, buffer: Buffer) -> string {
     result: string;
     if !has_selection(cursor) return result;

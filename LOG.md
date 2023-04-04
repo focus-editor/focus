@@ -52,8 +52,11 @@
     + Type text
     + Undo/redo
     + Make sure edit groups work properly
+    + f ff f
     - Implement the rest of edits
     
+    - Create new cursors above/below by ctrl+alt+shift+arrows
+    - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
     - Optimise cursor clipboard (use shared memory with offsets)
     - Sticky viewport
     - Allow tabs
@@ -183,11 +186,6 @@
 - Save editor state on editor operations:
     - Alt + minus to open previous state
     - Alt + plus to open next state
-    
-- Cursors:
-    - Create new cursors above/below by ctrl+alt+shift+arrows
-    - Try not merging adjacent selections and only merging overlapping selections
-    - f ff f
 
 - Save modified buffers to temporary files and recover after crashes
     - Save undo/redo history in temporary files?
