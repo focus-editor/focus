@@ -144,6 +144,10 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .move_down_to_empty_line;          move_cursors_to_empty_line(editor, buffer, .down);
         case .move_up_one_page;                 move_cursors_by_page(editor, buffer, .up);
         case .move_down_one_page;               move_cursors_by_page(editor, buffer, .down);
+        case .jump_to_line_start;               move_cursors_home(editor, buffer);
+        case .jump_to_line_end;                 move_cursors_end (editor, buffer);
+        // case .jump_to_file_start;               move_to_file_start(cursor, buffer);
+        // case .jump_to_file_end;                 move_to_file_end  (cursor, buffer);
         
         // case .duplicate_lines;                  if cursors.count == 1 { duplicate_lines(cursor, buffer); keep_selection = true; }
         // case .move_selected_lines_up;           if cursors.count == 1 { move_lines_up  (cursor, buffer); keep_selection = true; }
@@ -168,10 +172,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         // case .cut;                              copy_selection_to_clipboard(cursor, buffer, cursors.count == 1, cut = true);
         // case .paste;                            paste_from_clipboard(editor, cursor, buffer);
         // 
-        // case .jump_to_line_start;               move_cursor_home(cursor, buffer);
-        // case .jump_to_line_end;                 move_cursor_end (cursor, buffer);
-        // case .jump_to_file_start;               move_to_file_start(cursor, buffer);
-        // case .jump_to_file_end;                 move_to_file_end  (cursor, buffer);
+        
         // 
         // case .delete_left_char;                 delete_left_char (cursor, buffer);
         // case .delete_right_char;                delete_right_char(cursor, buffer);
@@ -1579,6 +1580,36 @@ move_cursors_by_page :: (editor: *Editor, buffer: NewBuffer, dir: enum { up; dow
             line += page_size;
         }
         cursor.pos = coords_to_offset(buffer, Coords.{ line = line, col = cursor.col_wanted });
+    }
+    
+    editor.cursor_moved = true;
+}
+
+move_cursors_home :: (editor: *Editor, buffer: NewBuffer) {
+    for * cursor : editor.carets {
+        line := offset_to_line(buffer, cursor.pos);
+        start, end := buffer.line_starts[line], prev_char_offset(buffer.bytes, buffer.line_starts[line+1]);  // @crlf
+        
+        text_start_col: s32 = 0;
+        i := start;
+        while i < end {
+            byte := buffer.bytes[i];
+            if byte != #char " " && byte != #char "\t" break;
+            text_start_col += 1;
+            i += 1 + trailingBytesForUTF8[byte];
+        }
+        if cursor.pos > i || cursor.pos == start then cursor.pos = i; else cursor.pos = start;
+        cursor.col_wanted = offset_to_coords(buffer, cursor.pos).col;
+    }
+    
+    editor.cursor_moved = true;
+}
+
+move_cursors_end :: (editor: *Editor, buffer: NewBuffer) {
+    for * cursor : editor.carets {
+        line := offset_to_line(buffer, cursor.pos);
+        cursor.pos = prev_char_offset(buffer.bytes, buffer.line_starts[line+1]);  // @crlf
+        cursor.col_wanted = offset_to_coords(buffer, cursor.pos).col;
     }
     
     editor.cursor_moved = true;

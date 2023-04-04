@@ -55,14 +55,18 @@
     + f ff f
     - Implement the rest of edits
     
+    - Fix issues near the end of file
+    - Allow tabs
+    - Selection highlights and marks
     - Create new cursors above/below by ctrl+alt+shift+arrows
+    - Rollback creating another cursor (ctrl+alt+D?)
     - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
     - Optimise cursor clipboard (use shared memory with offsets)
     - Sticky viewport
-    - Allow tabs
     - Enable line wrap for buffer
     - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
     - Adjust cursors in joint editors properly on edits
+    - Ctrl+shift+delete/backspace - remove until start/end of line
     
     
     - Be able to open actual files in the new buffers
