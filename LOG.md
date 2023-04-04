@@ -56,6 +56,8 @@
     - Implement the rest of edits
     
     - Fix issues near the end of file
+        + Crash
+        - Not processing the last line properly
     - Allow tabs
     - Selection highlights and marks
     - Create new cursors above/below by ctrl+alt+shift+arrows

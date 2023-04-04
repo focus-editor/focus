@@ -146,8 +146,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .move_down_one_page;               move_cursors_by_page(editor, buffer, .down);
         case .jump_to_line_start;               move_cursors_home(editor, buffer);
         case .jump_to_line_end;                 move_cursors_end (editor, buffer);
-        // case .jump_to_file_start;               move_to_file_start(cursor, buffer);
-        // case .jump_to_file_end;                 move_to_file_end  (cursor, buffer);
+        case .jump_to_file_start;               move_to_file_start(editor, buffer);
+        case .jump_to_file_end;                 move_to_file_end  (editor, buffer);
         
         // case .duplicate_lines;                  if cursors.count == 1 { duplicate_lines(cursor, buffer); keep_selection = true; }
         // case .move_selected_lines_up;           if cursors.count == 1 { move_lines_up  (cursor, buffer); keep_selection = true; }
@@ -1504,6 +1504,8 @@ move_cursors_left :: (editor: *Editor, using buffer: *NewBuffer, by: enum { char
 
 move_cursors_right :: (editor: *Editor, using buffer: *NewBuffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
     for * cursor : editor.carets {
+        if cursor.pos >= bytes.count continue;  // nowhere to go
+        
         if has_selection(cursor) && !extend_selection {
             cursor.pos = get_selection(cursor).end;
         } else if by == .char {
@@ -1681,12 +1683,28 @@ move_cursor_end :: (using cursor: *Cursor, buffer: Buffer) {
     col_wanted = pos.col;
 }
 
+move_to_file_start :: (editor: *Editor, buffer: NewBuffer) {
+    cursor := leave_only_original_caret(editor);
+    cursor.pos = 0;
+    cursor.col_wanted = 0;
+    editor.cursor_moved = true;
+}
+
+move_to_file_end :: (editor: *Editor, buffer: NewBuffer) {
+    cursor := leave_only_original_caret(editor);
+    cursor.pos = cast(s32) buffer.bytes.count;
+    cursor.col_wanted = offset_to_coords(buffer, cursor.pos).col;
+    editor.cursor_moved = true;
+}
+
+// !!!!
 move_to_file_start :: (using cursor: *Cursor, buffer: Buffer) {
     pos.line = 0;
     pos.col  = 0;
     col_wanted = pos.col;
 }
 
+// !!!!
 move_to_file_end :: (using cursor: *Cursor, buffer: Buffer) {
     pos.line = xx (buffer.lines.count - 1);
     pos.col  = buffer.lines[pos.line].num_chars;
