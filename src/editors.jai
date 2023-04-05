@@ -149,19 +149,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .jump_to_file_start;               move_to_file_start(editor, buffer);
         case .jump_to_file_end;                 move_to_file_end  (editor, buffer);
         
-        // case .duplicate_lines;                  if cursors.count == 1 { duplicate_lines(cursor, buffer); keep_selection = true; }
-        // case .move_selected_lines_up;           if cursors.count == 1 { move_lines_up  (cursor, buffer); keep_selection = true; }
-        // case .move_selected_lines_down;         if cursors.count == 1 { move_lines_down(cursor, buffer); keep_selection = true; }                
-        // case .join_lines;                       if cursors.count == 1 { join_lines(cursor, buffer);      keep_selection = true; }
-        // case .join_lines_no_spaces_in_between;  if cursors.count == 1 { join_lines(cursor, buffer, in_between = ""); keep_selection = true; }
-        // case .delete_word_left;                 if cursors.count == 1 { delete_word_left  (cursor, buffer); }
-        // case .delete_word_right;                if cursors.count == 1 { delete_word_right (cursor, buffer); }
-        // case .delete_word_left_no_underscore;   if cursors.count == 1 { delete_word_left_no_underscore (cursor, buffer); }
-        // case .delete_word_right_no_underscore;  if cursors.count == 1 { delete_word_right_no_underscore(cursor, buffer); }
-        // case .delete_line;                      if cursors.count == 1 { delete_line(cursor, buffer); }
-        // case .delete_line_and_go_up;            if cursors.count == 1 { delete_line_and_go_up(cursor, buffer); }
-        
-        // case .indent_or_go_to_next_tabstop;     if indent_or_tab(cursor, buffer) keep_selection = true;
+        case .indent_or_go_to_next_tabstop;     indent_or_tab(editor, buffer); keep_selection = true;
         // case .indent;                           indent_lines  (cursor, buffer);  keep_selection = true;
         // case .unindent;                         unindent_lines(cursor, buffer);  keep_selection = true;
         // 
@@ -177,7 +165,19 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         // case .delete_left_char;                 delete_left_char (cursor, buffer);
         // case .delete_right_char;                delete_right_char(cursor, buffer);
         // 
-        // case .select_word_or_create_another_cursor; if !has_selection(cursor) { select_word(cursor, buffer); editor.search_whole_words = true; enabled_whole_words = true; }
+        
+        // case .duplicate_lines;                  if cursors.count == 1 { duplicate_lines(cursor, buffer); keep_selection = true; }
+        // case .move_selected_lines_up;           if cursors.count == 1 { move_lines_up  (cursor, buffer); keep_selection = true; }
+        // case .move_selected_lines_down;         if cursors.count == 1 { move_lines_down(cursor, buffer); keep_selection = true; }                
+        // case .join_lines;                       if cursors.count == 1 { join_lines(cursor, buffer);      keep_selection = true; }
+        // case .join_lines_no_spaces_in_between;  if cursors.count == 1 { join_lines(cursor, buffer, in_between = ""); keep_selection = true; }
+        // case .delete_word_left;                 if cursors.count == 1 { delete_word_left  (cursor, buffer); }
+        // case .delete_word_right;                if cursors.count == 1 { delete_word_right (cursor, buffer); }
+        // case .delete_word_left_no_underscore;   if cursors.count == 1 { delete_word_left_no_underscore (cursor, buffer); }
+        // case .delete_word_right_no_underscore;  if cursors.count == 1 { delete_word_right_no_underscore(cursor, buffer); }
+        // case .delete_line;                      if cursors.count == 1 { delete_line(cursor, buffer); }
+        // case .delete_line_and_go_up;            if cursors.count == 1 { delete_line_and_go_up(cursor, buffer); }
+        
         case;                                   return;  // not handled
     }
     
@@ -2079,6 +2079,81 @@ get_tmp_spaces :: (num: s64) -> string {
     return spaces;
 }
 
+indent_or_tab :: (editor: *Editor, buffer: *NewBuffer) {
+    indent := true;
+    for editor.carets { if !has_selection(it) { indent = false; break; } }
+    
+    if indent {
+        // indent_lines(editor, buffer);
+    } else {
+        insert_tab_at_each_cursor(editor, buffer);
+    }
+}
+
+insert_tab_at_each_cursor :: (editor: *Editor, buffer: *NewBuffer) {
+    spaces := get_tmp_spaces(TAB_SIZE);
+    
+    offset_delta: s32 = 0;
+    buf_len := cast(s32) buffer.bytes.count;
+    
+    for * cursor : editor.carets {
+        new_len := cast(s32) buffer.bytes.count;
+        if new_len != buf_len {
+            offset_delta += new_len - buf_len;
+            cursor.pos += offset_delta;
+            cursor.sel += offset_delta;
+            buf_len = new_len;
+        }
+        
+        selection := get_selection(cursor);
+        
+        if selection.start != selection.end {
+            cursor.pos = selection.start;
+            delete_range(buffer, selection);
+        }
+        
+        // Insert tab
+        cursor_col := find_col_by_scanning_left(buffer, cursor.pos);  // @linewrap: check
+        to_next_tabstop := TAB_SIZE - cursor_col % TAB_SIZE;
+        spaces.count = to_next_tabstop;
+        insert_string_at_offset(buffer, cursor.pos, spaces);  // @tabs
+        cursor.pos += to_next_tabstop;
+        cursor.sel = cursor.pos;
+        cursor.col_wanted = cursor_col + to_next_tabstop;
+    }
+    
+    editor.cursor_moved = true;
+}
+
+indent_lines :: (editor: *Editor, buffer: *NewBuffer) {
+    // spaces := get_tmp_spaces(TAB_SIZE);
+    // 
+    // range := get_selection_whole_lines(cursor, buffer);
+    // lines := array_view(buffer.lines, range.start.line, range.end.line - range.start.line + 1);
+    // new_bytes: [..] u8;
+    // new_bytes.allocator = temp;
+
+    // // Indent selection
+    // array_reserve(*new_bytes, bytes_in_range(buffer, range) + TAB_SIZE * lines.count);
+    // tab := to_bytes(spaces);
+    // for line, i : lines {
+    //     array_add_bytes(*new_bytes, tab);
+
+    //     line_len := line.end - line.start;
+    //     if i < lines.count - 1 then line_len += 1;  // include newline
+    //     src := array_view(buffer.bytes, line.start, line_len);
+    //     array_add_bytes(*new_bytes, src);
+    // }
+    // replace_range(buffer, range, to_string(new_bytes));
+
+    // // Adjust selection
+    // pos.col += TAB_SIZE;
+    // sel.col += TAB_SIZE;
+
+    // col_wanted = pos.col;
+}
+
+// !!!
 indent_or_tab :: (using cursor: *Cursor, buffer: *Buffer) -> keep_selection: bool {
     spaces := get_tmp_spaces(TAB_SIZE);
     

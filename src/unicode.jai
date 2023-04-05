@@ -57,11 +57,15 @@ next_char_offset :: inline (bytes: [] u8, offset: s32) -> s32 {
     return offset + 1 + trailingBytesForUTF8[bytes[offset]];
 }
 
-prev_char_offset :: (bytes: [] u8, offset: s32) -> s32 {
+prev_char_offset :: (bytes: [] u8, offset: s32) -> s32, byte: u8 {
     assert(offset > 0);
     new_offset := offset - 1;
-    while (bytes[new_offset] & 0b1100_0000) == 0b1000_0000 new_offset -= 1;
-    return new_offset;
+    byte := bytes[new_offset];
+    while (byte & 0b1100_0000) == 0b1000_0000 { 
+        new_offset -= 1;
+        byte = bytes[new_offset];
+    }
+    return new_offset, byte;
 }
 
 unicode_prev_character :: (s: *u8) -> new_s: *u8, char: u32 {  // NOTE: assuming the memory is valid utf-8, no checks are done!

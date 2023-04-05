@@ -38,7 +38,13 @@ insert_string_at_pos :: (buffer: *Buffer, pos: Pos, str: string) {
     insert_string_at_offset(buffer, offset, str);
 }
 
+// !!!!
 insert_string_at_offset :: (buffer: *Buffer, offset: s64, str: string) {
+    new_insert_edit(buffer, offset, str);
+    insert_string_raw(buffer, offset, str);
+}
+
+insert_string_at_offset :: (buffer: *NewBuffer, offset: s64, str: string) {
     new_insert_edit(buffer, offset, str);
     insert_string_raw(buffer, offset, str);
 }
@@ -73,7 +79,16 @@ delete_range :: (buffer: *NewBuffer, using range: Offset_Range) {
     delete_range_raw(buffer, start, end);
 }
 
-// A dedicated function to avoid having to recalculate lines between deleting range and inserting string
+replace_range :: (buffer: *NewBuffer, using range: Offset_Range, str: string) {
+    old_str := to_string(array_view(buffer.bytes, start, end - start));
+    if str == old_str return;
+
+    new_replace_edit(buffer, start, end, old_str, str);
+
+    replace_range_raw(buffer, start, end, str);
+}
+
+// !!!! A dedicated function to avoid having to recalculate lines between deleting range and inserting string
 replace_range :: (buffer: *Buffer, range: Range, str: string) {
     start, end := range_to_byte_offsets(buffer, make_valid_range(buffer, range));
 
@@ -761,6 +776,20 @@ deinit :: (using buffer: *Buffer) {
     array_free(cursors);
 }
 
+// NOTE: this works with absolute columns only, with no regard to line wrapping!
+find_col_by_scanning_left :: (using buffer: *NewBuffer, offset: s32) -> col: s32 {
+    byte: u8;
+    col: s32;
+    
+    while offset > 0 {
+        offset, byte = prev_char_offset(bytes, offset);
+        col += 1;
+        if byte == #char "\n" break;  // @crlf
+    }
+    
+    return col;
+}
+
 #scope_file
 
 compare_with_contents_on_disk_and_maybe_unmark_as_modified :: (using buffer: *Buffer) {
@@ -776,6 +805,19 @@ compare_with_contents_on_disk_and_maybe_unmark_as_modified :: (using buffer: *Bu
     if contents == to_string(bytes) then buffer.modified = false;
 }
 
+new_replace_edit :: (buffer: *NewBuffer, start: s32, end: s32, old_str: string, new_str: string) {
+    edit := array_add(*buffer.edits);
+    edit.type = .replace;
+    using edit.replace;
+    offset_range.start = start;
+    offset_range.end   = end;
+    new_bytes = copy_string(new_str);
+    old_bytes = copy_string(old_str);
+
+    clear_redos(buffer);
+}
+
+// !!!!!
 new_replace_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string, new_str: string) {
     edit := array_add(*buffer.edits);
     edit.type = .replace;
@@ -788,6 +830,16 @@ new_replace_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string, new
     clear_redos(buffer);
 }
 
+new_insert_edit :: (buffer: *NewBuffer, offset: s64, str: string) {
+    edit := array_add(*buffer.edits);
+    edit.type = .insert;
+    edit.insert.offset = offset;
+    edit.insert.new_bytes = copy_string(str);
+
+    clear_redos(buffer);
+}
+
+// !!!!!
 new_insert_edit :: (buffer: *Buffer, offset: s64, str: string) {
     edit := array_add(*buffer.edits);
     edit.type = .insert;
