@@ -2171,33 +2171,65 @@ indent_lines :: (editor: *Editor, buffer: *NewBuffer) {
     
     range := Offset_Range.{ start = xx line_starts[0], end = xx last_line_end_offset };
     replace_range(buffer, range, str);
+    
+    editor.cursor_moved = true;
 }
 
 unindent_lines :: (editor: *Editor, buffer: *NewBuffer) {
-    // spaces := get_tmp_spaces(TAB_SIZE);
-    // 
-    // range := get_selection_whole_lines(cursor, buffer);
-    // lines := array_view(buffer.lines, range.start.line, range.end.line - range.start.line + 1);
-    // new_bytes: [..] u8;
-    // new_bytes.allocator = temp;
-
-    // // Unindent selection
-    // array_reserve(*new_bytes, bytes_in_range(buffer, range));
-    // for line, i : lines {
-    //     line_len := line.end - line.start;
-    //     if i < lines.count - 1 then line_len += 1;  // include newline
-    //     spaces_to_remove := min(TAB_SIZE, line.text_start - line.start);
-    //     src := array_view(buffer.bytes, line.start + spaces_to_remove, line_len - spaces_to_remove);
-    //     array_add_bytes(*new_bytes, src);
-
-    //     // Adjust selection
-    //     line_num := range.start.line + i;
-    //     if line_num == pos.line then pos.col -= xx spaces_to_remove;
-    //     if line_num == sel.line then sel.col -= xx spaces_to_remove;
-    // }
-    // replace_range(buffer, range, to_string(new_bytes));
-
-    // col_wanted = pos.col;
+    spaces := get_tmp_spaces(TAB_SIZE);
+    
+    // @copypasta from indent_lines above
+    // Find lines which will be affected (we don't want to unindent the same line more than once if it has more than 1 cursor on it)
+    line_starts: [..] s64;
+    line_starts.allocator = temp;
+    
+    last_added := -1;
+    last_line_end_offset := 0;
+    for cursor : editor.carets {
+        selection := get_selection(cursor);
+        start_line := offset_to_line(buffer, selection.start);
+        end_line   := ifx selection.start != selection.end then offset_to_line(buffer, selection.end) else start_line;
+        for start_line..end_line {
+            line_start := buffer.line_starts[it];
+            if last_added < line_start { array_add(*line_starts, line_start); last_added = line_start; }    
+        }
+        last_line_end_offset = buffer.line_starts[end_line+1];
+    }
+    
+    // Remove spaces and keep a running offset delta to unindent cursors
+    // (properly handle the case when cursor is in the deleted range)
+    array_add(*line_starts, last_line_end_offset);
+    new_str: String_Builder;  // not using the temp allocator because the string may be too large
+    spaces_removed := 0;
+    for 0..line_starts.count-2 {
+        start, end := line_starts[it], line_starts[it+1];
+        if start >= buffer.bytes.count continue;
+        spaces_at_line_start := 0;
+        if buffer.bytes[start] == #char "\t" {
+            // When seeing a tab, just remove it (and do nothing else)
+            spaces_at_line_start = 1;
+        } else {
+            for start..min(start + TAB_SIZE, end - 1) - 1 {
+                if buffer.bytes[it] != #char " " break;
+                spaces_at_line_start += 1;
+            }
+        }
+        adjusted_start := start - spaces_removed;
+        for * cursor : editor.carets {
+            if cursor.pos > adjusted_start then cursor.pos -= xx min(cursor.pos - adjusted_start, spaces_at_line_start); 
+            if cursor.sel > adjusted_start then cursor.sel -= xx min(cursor.sel - adjusted_start, spaces_at_line_start); 
+        }
+        new_start := start + spaces_at_line_start;
+        append(*new_str, to_string(array_view(buffer.bytes, new_start, end-new_start)));
+        spaces_removed += spaces_at_line_start;
+    }
+    str := builder_to_string(*new_str);
+    defer free(str);
+    
+    range := Offset_Range.{ start = xx line_starts[0], end = xx last_line_end_offset };
+    replace_range(buffer, range, str);
+    
+    editor.cursor_moved = true;
 }
 
 // !!!
@@ -2220,6 +2252,7 @@ indent_or_tab :: (using cursor: *Cursor, buffer: *Buffer) -> keep_selection: boo
     return true;
 }
 
+// !!!!
 indent_lines :: (using cursor: *Cursor, buffer: *Buffer) {
     spaces := get_tmp_spaces(TAB_SIZE);
     

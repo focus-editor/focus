@@ -53,12 +53,14 @@
     + Undo/redo
     + Make sure edit groups work properly
     + f ff f
+    + Indentation
     - Implement the rest of edits
     
     - Fix issues near the end of file
         + Crash
-        - Not processing the last line properly
-    - Allow tabs
+        - Not processing the last line properly (when scanning for newlines)
+        - Test indent/unindent
+    - Draw tabs
     - Selection highlights and marks
     - Create new cursors above/below by ctrl+alt+shift+arrows
     - Rollback creating another cursor (ctrl+alt+D?)
