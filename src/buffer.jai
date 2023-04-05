@@ -313,6 +313,7 @@ range_length_in_bytes :: (buffer: Buffer, range: Range) -> s64 {
     return end - start;
 }
 
+// !!!
 bytes_in_range :: (buffer: Buffer, range: Range) -> s64 {
     start, end := range_to_byte_offsets(buffer, range);
     assert(start <= end);

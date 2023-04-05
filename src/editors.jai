@@ -149,9 +149,10 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .jump_to_file_start;               move_to_file_start(editor, buffer);
         case .jump_to_file_end;                 move_to_file_end  (editor, buffer);
         
-        case .indent_or_go_to_next_tabstop;     indent_or_tab(editor, buffer); keep_selection = true;
-        // case .indent;                           indent_lines  (cursor, buffer);  keep_selection = true;
-        // case .unindent;                         unindent_lines(cursor, buffer);  keep_selection = true;
+        case .indent_or_go_to_next_tabstop;     indent_or_tab (editor, buffer); keep_selection = true;
+        case .indent;                           indent_lines  (editor, buffer); keep_selection = true;
+        case .unindent;                         unindent_lines(editor, buffer); keep_selection = true;
+        
         // 
         // case .toggle_comment;                   comment_block(cursor, buffer); keep_selection = true;
         // case .select_line;                      select_lines(cursor, buffer);  keep_selection = true;
@@ -2084,7 +2085,7 @@ indent_or_tab :: (editor: *Editor, buffer: *NewBuffer) {
     for editor.carets { if !has_selection(it) { indent = false; break; } }
     
     if indent {
-        // indent_lines(editor, buffer);
+        indent_lines(editor, buffer);
     } else {
         insert_tab_at_each_cursor(editor, buffer);
     }
@@ -2126,6 +2127,53 @@ insert_tab_at_each_cursor :: (editor: *Editor, buffer: *NewBuffer) {
 }
 
 indent_lines :: (editor: *Editor, buffer: *NewBuffer) {
+    spaces := get_tmp_spaces(TAB_SIZE);
+    
+    // Find lines which will be affected (we don't want to indent the same line more than once if it has more than 1 cursor on it)
+    line_starts: [..] s64;
+    line_starts.allocator = temp;
+    
+    last_added := -1;
+    last_line_end_offset := 0;
+    for cursor : editor.carets {
+        selection := get_selection(cursor);
+        start_line := offset_to_line(buffer, selection.start);
+        end_line   := ifx selection.start != selection.end then offset_to_line(buffer, selection.end) else start_line;
+        for start_line..end_line {
+            line_start := buffer.line_starts[it];
+            if last_added < line_start { array_add(*line_starts, line_start); last_added = line_start; }    
+        }
+        last_line_end_offset = buffer.line_starts[end_line+1];
+    }
+    
+    // Indent cursors
+    for * cursor : editor.carets {
+        pos := cursor.pos;
+        sel := cursor.sel;
+        for line_start : line_starts { // @tabs
+            if line_start <= pos then cursor.pos += TAB_SIZE;
+            if line_start <= sel then cursor.sel += TAB_SIZE;
+            if line_start > pos && line_start > sel break;
+        }
+        cursor.col_wanted += TAB_SIZE;
+    }
+    
+    // Build a replacement string
+    new_str: String_Builder;  // not using the temp allocator because the string may be too large
+    array_add(*line_starts, last_line_end_offset);
+    for 0..line_starts.count-2 {
+        start, end := line_starts[it], line_starts[it+1];
+        append(*new_str, spaces);
+        append(*new_str, to_string(array_view(buffer.bytes, start, end-start)));
+    }
+    str := builder_to_string(*new_str);
+    defer free(str);
+    
+    range := Offset_Range.{ start = xx line_starts[0], end = xx last_line_end_offset };
+    replace_range(buffer, range, str);
+}
+
+unindent_lines :: (editor: *Editor, buffer: *NewBuffer) {
     // spaces := get_tmp_spaces(TAB_SIZE);
     // 
     // range := get_selection_whole_lines(cursor, buffer);
@@ -2133,22 +2181,21 @@ indent_lines :: (editor: *Editor, buffer: *NewBuffer) {
     // new_bytes: [..] u8;
     // new_bytes.allocator = temp;
 
-    // // Indent selection
-    // array_reserve(*new_bytes, bytes_in_range(buffer, range) + TAB_SIZE * lines.count);
-    // tab := to_bytes(spaces);
+    // // Unindent selection
+    // array_reserve(*new_bytes, bytes_in_range(buffer, range));
     // for line, i : lines {
-    //     array_add_bytes(*new_bytes, tab);
-
     //     line_len := line.end - line.start;
     //     if i < lines.count - 1 then line_len += 1;  // include newline
-    //     src := array_view(buffer.bytes, line.start, line_len);
+    //     spaces_to_remove := min(TAB_SIZE, line.text_start - line.start);
+    //     src := array_view(buffer.bytes, line.start + spaces_to_remove, line_len - spaces_to_remove);
     //     array_add_bytes(*new_bytes, src);
+
+    //     // Adjust selection
+    //     line_num := range.start.line + i;
+    //     if line_num == pos.line then pos.col -= xx spaces_to_remove;
+    //     if line_num == sel.line then sel.col -= xx spaces_to_remove;
     // }
     // replace_range(buffer, range, to_string(new_bytes));
-
-    // // Adjust selection
-    // pos.col += TAB_SIZE;
-    // sel.col += TAB_SIZE;
 
     // col_wanted = pos.col;
 }
@@ -2201,6 +2248,7 @@ indent_lines :: (using cursor: *Cursor, buffer: *Buffer) {
     col_wanted = pos.col;
 }
 
+// !!!!
 unindent_lines :: (using cursor: *Cursor, buffer: *Buffer) {
     spaces := get_tmp_spaces(TAB_SIZE);
     
