@@ -2221,7 +2221,7 @@ unindent_lines :: (editor: *Editor, buffer: *NewBuffer) {
     range := Offset_Range.{ start = xx line_starts[0], end = xx last_line_end_offset };
     replace_range(buffer, range, new_str);
     
-    for * cursor : editor.carets { cursor.col_wanted = -1; } 
+    for * cursor : editor.carets { cursor.col_wanted = -1; }
     
     editor.cursor_moved = true;
 }
@@ -2467,16 +2467,25 @@ toggle_comment :: (editor: *Editor, buffer: *NewBuffer) {
     if comment_out {
         // Add comments to nonempty strings
         spaces := get_tmp_spaces(min_whitespace);
+        chars_added := 0;
         for 0..line_starts.count-2 {
             start, end := line_starts[it], line_starts[it+1];
             if start > buffer.bytes.count continue;
             str := to_string(array_view(buffer.bytes, start, end-start));
             trimmed_str := trim_left(str, " \r\n");
             if !trimmed_str { append(*b, str); continue; }  // append as is
+            
             append(*b, spaces);
             append(*b, comment);
             append(*b, to_string(array_view(buffer.bytes, start + min_whitespace, end - start - min_whitespace)));
-            // ??? adjust cursors
+            
+            adjusted_start := start + chars_added + min_whitespace;
+            for * cursor : editor.carets {
+                if cursor.pos >= adjusted_start then cursor.pos += xx comment.count;
+                if cursor.sel >= adjusted_start then cursor.sel += xx comment.count;
+            }
+            
+            chars_added += comment.count;
         }
     } else {
         // Remove comments from nonempty strings
@@ -2488,6 +2497,10 @@ toggle_comment :: (editor: *Editor, buffer: *NewBuffer) {
     
     range := Offset_Range.{ start = xx line_starts[0], end = xx last_line_end_offset };
     replace_range(buffer, range, new_str);
+    
+    for * cursor : editor.carets { cursor.col_wanted = -1; }
+    
+    editor.cursor_moved = true;
     
     // if comment_out {
     //     // Comment out block
