@@ -20,7 +20,9 @@ platform_get_dpi_scale :: (window: Window_Type) -> float {
 }
 
 platform_set_window_title :: (title: string) {
-    unimplemented();
+    d := X11.x_global_display;
+    win_name := temp_c_string(title);
+    X11.XStoreName(d, window, win_name);
 }
 
 platform_wait_message :: inline () {
