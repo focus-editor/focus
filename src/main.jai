@@ -23,8 +23,8 @@ main :: () {
     assert(exe_dir.count > 0);
     load_global_config();
     
-    if !make_directory_if_it_does_not_exist("projects") then panic_messagebox("Couldn't create folder %/projects. Is the directory writable?", exe_dir);
-    if !make_directory_if_it_does_not_exist("temp")     then panic_messagebox("Couldn't create folder %/temp for temporary files. Is the directory writable?", exe_dir);
+    if !make_directory_if_it_does_not_exist(projects_dir) then panic_messagebox("Couldn't create folder %. Is the directory writable?", projects_dir);
+    if !make_directory_if_it_does_not_exist(temp_dir)     then panic_messagebox("Couldn't create folder % for temporary files. Is the directory writable?", temp_dir);
     
     init_session_with_no_guidance :: () #expand {
         session = maybe_load_previous_session();
