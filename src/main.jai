@@ -46,7 +46,7 @@ main :: () {
             path_overwrite_separators(dir_path, #char "/");
             
             workspace_dirs := resizable(config.workspace.workspace_dirs);
-            array_add(*workspace_dirs, dir_path);
+            array_insert_at(*workspace_dirs, dir_path, 0);
             config.workspace.workspace_dirs = workspace_dirs;
         } else if file_exists(args[1]) {
             // Open file passed in the command line
