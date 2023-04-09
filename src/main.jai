@@ -2,8 +2,8 @@ main :: () {
     platform_setup();
     
     window_x, window_y := platform_get_biggest_monitor_pos();
-    window_title := ifx DEBUG then "Focus (debug mode)" else "Focus";
-    window = create_window(window_width, window_height, window_title, window_x, window_y, background_color_rgb = as_3_floats(Colors.BACKGROUND));
+    window_generic_title = ifx DEBUG then "Focus (debug mode)" else "Focus";
+    window = create_window(window_width, window_height, window_generic_title, window_x, window_y, background_color_rgb = as_3_floats(Colors.BACKGROUND));
     platform_maximize_window(window);
     
     platform_enable_drag_and_drop(window);
@@ -384,6 +384,7 @@ temp_dir:     string;
 projects_dir: string;
 
 window: Window_Type;
+window_generic_title: string = ---;
 window_width  := 1920;
 window_height := 1080;
 window_x  := -1;

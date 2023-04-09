@@ -379,6 +379,7 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
     buffer := *open_buffers[buffer_id];
     if buffer.num_times_opened < 255 then buffer.num_times_opened += 1;
     
+    update_window_title(buffer_id);
     session_notify_modified_buffer(buffer_id);
 }
 
@@ -549,7 +550,10 @@ new_edit_group :: (buffer: *Buffer, editor: *Editor) {
 close_current_editor :: () {
     if editors.layout == {
         case .None;     return;
-        case .Single;   editors.layout = .None;  // close immediately
+        case .Single;
+            editors.layout = .None;  // close immediately
+            update_window_title();
+            
         case .Double;
             // Start the animation (the layout will change when the animation is finished)
             if editors.active == editors.left {
@@ -560,6 +564,8 @@ close_current_editor :: () {
                 editors.active = editors.left;
             }
             editors.closing = true;
+            
+            update_window_title(open_editors[editors.active].buffer_id);
     }
 }
 
@@ -856,6 +862,8 @@ switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := fa
             }
             editors.active = ifx side == .left then editors.left else editors.right;
     }
+    
+    update_window_title(open_editors[editors.active].buffer_id);
 }
 
 swap_panes :: () {
@@ -888,7 +896,12 @@ vertical_smooth_scroll :: (editor: Editor, up: bool, fast := false) {
         editor_smooth_scroll.up         = up;
         editor_smooth_scroll.fast       = fast;
     }
-} 
+}
+
+update_window_title :: (buffer_id: s64 = -1) {
+    if buffer_id == -1 then platform_set_window_title(window_generic_title);
+    else platform_set_window_title(tprint("% - %", open_buffers[buffer_id].file.name, window_generic_title));
+}
 
 find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_id: s64, created: bool {
     assert(buffer_id >= 0 && buffer_id < open_buffers.count, "Attempt to create editor for nonexistent buffer");

@@ -19,7 +19,7 @@ platform_get_dpi_scale :: (window: Window_Type) -> float {
 }
 
 platform_set_window_title :: (title: string) {
-    unimplemented();
+    NSWindow.setTitle(window, title);
 }
 
 platform_wait_message :: inline () {
