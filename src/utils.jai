@@ -298,7 +298,7 @@ get_identifier_name :: (name: Code) -> string {
 Tween_Animation :: struct(T: Type) {
     start, target: T;
     started_at: Time;
-    speed: Time = xx 0.2;  // how many seconds to finish
+    speed: Time = xx 0.1;  // how many seconds to finish
     func: enum { lerp; smoothstep; } = .smoothstep;
 }
 
