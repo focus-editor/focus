@@ -40,3 +40,5 @@ Monitor :: struct {
 };
 
 monitors : [..] Monitor;
+
+#import "Objective_C";
