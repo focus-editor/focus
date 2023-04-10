@@ -347,6 +347,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     // if editor.paste_animations.count > 0 then redraw_requested = true;
     
     // Draw text
+    if buffer.needs_coloring || buffer.colors.count != buffer.bytes.count then recalculate_colors(buffer);  // right before drawing
     pen := text_origin;
     pen.y += (line_height - char_size) / 2 - visible_lines_start * line_height;
     for visible_lines_start .. visible_lines_end {

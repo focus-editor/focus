@@ -71,7 +71,7 @@
     - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
     - Adjust cursors in joint editors properly on edits
     - Ctrl+shift+delete/backspace - remove until start/end of line
-    
+    - Use SIMD for syntax highlighting
     
     - Be able to open actual files in the new buffers
     - Word selection / line selection mode

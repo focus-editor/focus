@@ -442,6 +442,9 @@ active_editor_type_char :: (char: u32) {
     }
     
     if new_group then new_edit_group(buffer, editor);  // make sure selection operations have a dedicated group
+    
+    // !!! 
+    buffer.needs_coloring = true;
 
     rescan_for_lines(buffer);
     if editor.carets.count > 1 then organise_carets(editor);
@@ -1001,12 +1004,25 @@ fill_in_buffer_from_file_data :: (buffer: *Buffer, path: string, file_data: stri
     remove_crlf(buffer);
     
     buffer.meow_hash = calculate_meow_hash(buffer.bytes);
+    
+    extension, found_extension := get_lowercase_extension(path);
+    if found_extension {
+        if extension == {
+            case "jai";            buffer.lang = .Jai;
+            case "focus-config";   buffer.lang = .Focus_Config;
+            
+            case "c";   #through;
+            case "h";   #through;
+            case "cpp"; #through;
+            case "cxx"; #through;
+            case "c++"; #through;
+            case "hpp"; #through;
+            case "cc";
+                buffer.lang = .Jai;  // TODO: C/C++
+        }
+    }
 
-    if ends_with_nocase(path, ".jai") {
-        buffer.lang = .Jai;
-    } else if ends_with(path, ".focus-config") {
-        buffer.lang = .Focus_Config;
-    } else if ends_with(path, "LOG.md") {
+    if equal_nocase(path, "LOG.md") {
         buffer.lang = .Worklog;
     }
 
@@ -2449,14 +2465,14 @@ toggle_comment :: (editor: *Editor, buffer: *NewBuffer) {
     
     // Figure out whether we're commenting out or removing comments
     min_whitespace := -1;
-    comment_out := false;
+    add_comment := false;
     for 0..line_starts.count-2 {
         start, end := line_starts[it], line_starts[it+1];
         str := to_string(array_view(buffer.bytes, start, end-start));
         trimmed_str := trim_left(str, " \r\n");
         if !trimmed_str continue;
-        if !comment_out && !begins_with(trimmed_str, comment) then comment_out = true;
         
+        if !add_comment && !begins_with(trimmed_str, comment_without_space) then add_comment = true;
         len_whitespace := str.count - trimmed_str.count;
         if min_whitespace < 0 || len_whitespace < min_whitespace then min_whitespace = len_whitespace;
     }
@@ -2464,7 +2480,7 @@ toggle_comment :: (editor: *Editor, buffer: *NewBuffer) {
     
     // Build a replacement string
     b: String_Builder;  // not using temp because the string may be too large
-    if comment_out {
+    if add_comment {
         // Add comments to nonempty strings
         spaces := get_tmp_spaces(min_whitespace);
         chars_added := 0;
@@ -2472,7 +2488,7 @@ toggle_comment :: (editor: *Editor, buffer: *NewBuffer) {
             start, end := line_starts[it], line_starts[it+1];
             if start > buffer.bytes.count continue;
             str := to_string(array_view(buffer.bytes, start, end-start));
-            trimmed_str := trim_left(str, " \r\n");
+            trimmed_str := trim_left(str, " \r\n\t");
             if !trimmed_str { append(*b, str); continue; }  // append as is
             
             append(*b, spaces);
@@ -2489,7 +2505,29 @@ toggle_comment :: (editor: *Editor, buffer: *NewBuffer) {
         }
     } else {
         // Remove comments from nonempty strings
-        
+        chars_removed := 0;
+        for 0..line_starts.count-2 {
+            start, end := line_starts[it], line_starts[it+1];
+            if start > buffer.bytes.count continue;
+            str := to_string(array_view(buffer.bytes, start, end-start));
+            trimmed_str := trim_left(str, " \r\n\t");
+            if !trimmed_str { append(*b, str); continue; }  // append as is
+            
+            len_whitespace := str.count - trimmed_str.count;
+            append(*b, to_string(array_view(buffer.bytes, start, len_whitespace)));  // spaces before the comment
+            advance(*str, len_whitespace);
+            len_comment := ifx begins_with(str, comment) then comment.count else comment_without_space.count;
+            advance(*str, len_comment);
+            append(*b, str);
+            
+            adjusted_start := start - chars_removed + len_whitespace;
+            for * cursor : editor.carets {
+                if cursor.pos >= adjusted_start then cursor.pos -= xx min(len_comment, cursor.pos - adjusted_start);
+                if cursor.sel >= adjusted_start then cursor.sel -= xx min(len_comment, cursor.sel - adjusted_start);
+            }
+            
+            chars_removed += len_comment;
+        }
     }
     
     new_str := builder_to_string(*b);
@@ -2501,49 +2539,6 @@ toggle_comment :: (editor: *Editor, buffer: *NewBuffer) {
     for * cursor : editor.carets { cursor.col_wanted = -1; }
     
     editor.cursor_moved = true;
-    
-    // if comment_out {
-    //     // Comment out block
-    //     for line, i : lines {
-    //         if !is_empty(line) {
-    //             array_add_bytes(*new_bytes, array_view(buffer.bytes, line.start, min_text_start));
-    //             array_add_bytes(*new_bytes, to_bytes(comment));
-    //             array_add_bytes(*new_bytes, array_view(buffer.bytes, line.start + min_text_start, line.end - line.start - min_text_start));
-    //         }
-    //         if i != lines.count - 1 then array_add(*new_bytes, #char "\n");
-    //     }
-
-    //     // Only adjust cursor if after comment
-    //     if cursor.pos.col >= min_text_start then cursor.pos.col += xx comment.count;
-    //     if cursor.sel.col >= min_text_start then cursor.sel.col += xx comment.count;
-    // } else {
-    //     // Uncomment block
-    //     for line, i : lines {
-    //         if !is_empty(line) {
-    //             len_whitespace := line.text_start - line.start;
-    //             array_add_bytes(*new_bytes, array_view(buffer.bytes, line.start, len_whitespace));
-    //             line_text := to_string(array_view(buffer.bytes, line.text_start, line.end - line.text_start));
-    //             chars_to_remove := 0;
-    //             if starts_with(line_text, comment) {
-    //                 chars_to_remove = comment.count;
-    //             } else if starts_with(line_text, comment_without_space) {
-    //                 chars_to_remove = comment_without_space.count;
-    //             }
-    //             array_add_bytes(*new_bytes, array_view(buffer.bytes, line.text_start + chars_to_remove, line.end - line.text_start - chars_to_remove));
-
-    //             // Adjust cursor
-    //             if cursor.pos.line == range.start.line + i && cursor.pos.col > len_whitespace {
-    //                 cursor.pos.col -= min(cursor.pos.col - len_whitespace, cast(s32) chars_to_remove);
-    //             }
-    //             if cursor.sel.line == range.start.line + i && cursor.sel.col > len_whitespace {
-    //                 cursor.sel.col -= min(cursor.sel.col - len_whitespace, cast(s32) chars_to_remove);
-    //             }
-    //         }
-    //         if i != lines.count - 1 then array_add(*new_bytes, #char "\n");
-    //     }
-    // }
-
-    // if new_bytes.count > 0 then replace_range(buffer, range, to_string(new_bytes));
 }
 
 // !!!

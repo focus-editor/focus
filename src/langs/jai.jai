@@ -1,3 +1,41 @@
+highlight_jai_syntax :: (using buffer: *NewBuffer) {
+    tokenizer: Tokenizer = ---;
+    tokenizer.buf   = to_string(bytes);
+    tokenizer.max_t = bytes.data + bytes.count;
+    tokenizer.t     = bytes.data;
+
+    color: Simp.Code_Color;
+
+    while true {
+        token := get_next_token(*tokenizer);
+        if token.type == .eof break;
+        
+        // if token.type == .invalid && buffer.has_file {
+        //     log_error("Invalid token in file: %", file.full_path);
+        // }
+
+        using tokenizer;
+        if token.type == .punctuation && token.punctuation == .l_paren {
+            // Maybe retroactively highlight a function
+            prev        := last_tokens[1];
+            before_prev := last_tokens[0];
+            if prev.type == .identifier {
+                memset(colors.data + prev.start, xx Simp.Code_Color.FUNCTION, prev.len);
+            } else if prev.type == .operation && prev.operation == .double_colon && before_prev.type == .identifier {
+                memset(colors.data + before_prev.start, xx Simp.Code_Color.FUNCTION, before_prev.len);
+            }
+        }
+
+        // Remember last 2 tokens
+        last_tokens[0] = last_tokens[1];
+        last_tokens[1] = token;
+
+        color := COLOR_MAP[token.type];
+        memset(colors.data + token.start, xx color, token.len);
+    }
+}
+
+// !!!
 highlight_jai_syntax :: (using buffer: *Buffer) {
     tokenizer: Tokenizer = ---;
     tokenizer.buf   = to_string(bytes);

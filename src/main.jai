@@ -33,6 +33,7 @@ main :: () {
         rescan_for_lines(*new_buffer);
         
         new_buffer.meow_hash = calculate_meow_hash(new_buffer.bytes);
+        // new_buffer.lang = .Jai;
         
         array_add(*new_editor.cursors, Cursor.{});
         array_add(*new_editor.carets, Caret.{});

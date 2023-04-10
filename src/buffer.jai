@@ -576,6 +576,19 @@ recalculate_lines :: (buffer: *Buffer) {
     array_add(*buffer.lines, line);
 }
 
+recalculate_colors :: (buffer: *NewBuffer) {
+    assert(!buffer.dirty);
+    buffer.needs_coloring = false;
+    array_resize(*buffer.colors, buffer.bytes.count);  // this will reset colors to 0
+
+    if buffer.lang == {
+        case .Jai;          highlight_jai_syntax(buffer);
+        // case .Focus_Config; highlight_focus_config_syntax(buffer);
+        // case .Worklog;      highlight_worklog(buffer);
+    }
+}
+
+// !!!!
 recalculate_colors :: (buffer: *Buffer) {
     assert(!buffer.dirty);
     buffer.needs_coloring = false;
