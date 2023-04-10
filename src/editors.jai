@@ -105,6 +105,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
 
     if action == {
         // General actions (which are not associated with any cursor)
+        case .toggle_expand;                    toggle_expand();
         case .search_in_buffer;                 // open_search_bar(editor, buffer);
         case .close_current_editor;             // close_current_editor();
         case .close_other_editor;               // close_other_editor();
@@ -117,16 +118,15 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .move_editor_to_the_right;         // if editors.active == editors.left  then swap_panes();
         case .move_cursor_to_viewport_center;   move_cursor_to_viewport_center(editor, buffer);
         case .remove_additional_cursors;        remove_additional_cursors(editor); 
-        case .scroll_viewport_up;               vertical_smooth_scroll(editor, up = true);               activate_hold_action(action, event);
-        case .scroll_viewport_up_fast;          vertical_smooth_scroll(editor, up = true, fast = true);  activate_hold_action(action, event);
-        case .scroll_viewport_down;             vertical_smooth_scroll(editor, up = false);              activate_hold_action(action, event);
-        case .scroll_viewport_down_fast;        vertical_smooth_scroll(editor, up = false, fast = true); activate_hold_action(action, event);
+        case .scroll_viewport_up;               vertical_smooth_scroll  (editor, up = true);               activate_hold_action(action, event);
+        case .scroll_viewport_up_fast;          vertical_smooth_scroll  (editor, up = true, fast = true);  activate_hold_action(action, event);
+        case .scroll_viewport_down;             vertical_smooth_scroll  (editor, up = false);              activate_hold_action(action, event);
+        case .scroll_viewport_down_fast;        vertical_smooth_scroll  (editor, up = false, fast = true); activate_hold_action(action, event);
         case .scroll_viewport_left;             // print("scroll_viewport_left - not implemented\n");
         case .scroll_viewport_right;            // print("scroll_viewport_right - not implemented\n");
-        case .undo;                             undo(editor, buffer); keep_selection = true;
-        case .redo;                             redo(editor, buffer); keep_selection = true;
-        case .select_all;                       select_all(editor, buffer); keep_selection = true;
-        case .toggle_expand;                    toggle_expand();
+        case .undo;                             undo                    (editor, buffer); keep_selection = true;
+        case .redo;                             redo                    (editor, buffer); keep_selection = true;
+        case .select_all;                       select_all              (editor, buffer); keep_selection = true;
         case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
         
         // Actions that do something per cursor
@@ -148,14 +148,17 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .jump_to_line_end;                 move_cursors_end            (editor, buffer);
         case .jump_to_file_start;               move_to_file_start          (editor, buffer);
         case .jump_to_file_end;                 move_to_file_end            (editor, buffer);
-        
+
         case .indent_or_go_to_next_tabstop;     indent_or_tab               (editor, buffer); keep_selection = true;
         case .indent;                           indent_lines                (editor, buffer); keep_selection = true;
-        case .unindent;                         unindent_lines              (editor, buffer); keep_selection = true;
+        case .unindent;                         unindent_lines              (editor, buffer); keep_selection = true;        
+        case .toggle_comment;                   toggle_comment              (editor, buffer); keep_selection = true;
+        case .select_line;                      select_lines                (editor, buffer); keep_selection = true;
         
-        case .toggle_comment;                   toggle_comment               (editor, buffer); keep_selection = true;
-        // 
-        // case .select_line;                      select_lines(cursor, buffer);  keep_selection = true;
+        // case .break_line;                       break_line    (cursor, buffer);
+        // case .new_line_below_without_breaking;  new_line_below(cursor, buffer);
+        // case .new_line_above_without_breaking;  new_line_above(cursor, buffer);
+        
         // 
         // case .copy;                             copy_selection_to_clipboard(cursor, buffer, cursors.count == 1);
         // case .cut;                              copy_selection_to_clipboard(cursor, buffer, cursors.count == 1, cut = true);
@@ -1030,6 +1033,17 @@ fill_in_buffer_from_file_data :: (buffer: *Buffer, path: string, file_data: stri
     recalculate_colors(buffer);
 }
 
+select_lines :: (editor: *Editor, buffer: NewBuffer) {
+    for * cursor : editor.carets {
+        selection  := get_selection(cursor);
+        start_line := offset_to_line(buffer, selection.start);
+        end\ _line := ifx selection.start != selection.end then offset_to_line(buffer, selection.end) else start_line;
+        cursor.sel = buffer.line_starts[start_line];
+        cursor.pos = buffer.line_starts[end_line+1];
+    }
+}
+
+// !!!!
 select_lines :: (using cursor: *Cursor, buffer: Buffer) {
     range := get_selection_whole_lines(cursor, buffer);
     sel = range.start;
