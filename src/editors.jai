@@ -155,7 +155,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .toggle_comment;                   toggle_comment              (editor, buffer); keep_selection = true;
         case .select_line;                      select_lines                (editor, buffer); keep_selection = true;
         
-        // case .break_line;                       break_line    (cursor, buffer);
+        case .break_line;                       break_line                  (editor, buffer);
         // case .new_line_below_without_breaking;  new_line_below(cursor, buffer);
         // case .new_line_above_without_breaking;  new_line_above(cursor, buffer);
         
@@ -1755,6 +1755,43 @@ move_to_file_end :: (using cursor: *Cursor, buffer: Buffer) {
     col_wanted = pos.col;
 }
 
+break_line :: (editor: *Editor, buffer: *NewBuffer) {
+    // Remember by how much we need to indent the new lines upfront to avoid any scanning of the dirty buffer later
+    whitespace_per_cursor := NewArray(editor.carets.count, string, initialized = false, allocator = temp);
+    for cursor : editor.carets {
+        selection := get_selection(cursor);
+        start := buffer.line_starts[offset_to_line(buffer, selection.start)];
+        str := to_string(array_view(buffer.bytes, start, selection.start - start));
+        trimmed_str := trim_left(str, " \r\n\t");
+        if trimmed_str then str.count = xx (trimmed_str.data - str.data);
+        whitespace_per_cursor[it_index] = str;
+    }
+    
+    offset_delta := 0;
+    for * cursor : editor.carets {
+        whitespace := whitespace_per_cursor[it_index];
+        whitespace.data += offset_delta;
+        insert_str := tprint("\n%", whitespace);  // @crlf
+        
+        cursor.pos += xx offset_delta;
+        cursor.sel += xx offset_delta;
+        
+        selection := get_selection(cursor);
+        if selection.start != selection.end {
+            replace_range(buffer, selection, insert_str);
+            offset_delta += insert_str.count - (selection.end - selection.start);
+        } else {
+            insert_string_at_offset(buffer, cursor.pos, insert_str);
+            offset_delta += insert_str.count;
+        }
+        cursor.pos += xx insert_str.count;
+        cursor.col_wanted = -1;
+    }
+    
+    editor.cursor_moved = true;
+}
+
+// !!!!
 break_line :: (using cursor: *Cursor, buffer: *Buffer) {
     line := buffer.lines[pos.line];
     indent := line.text_start - line.start;
@@ -2483,7 +2520,7 @@ toggle_comment :: (editor: *Editor, buffer: *NewBuffer) {
     for 0..line_starts.count-2 {
         start, end := line_starts[it], line_starts[it+1];
         str := to_string(array_view(buffer.bytes, start, end-start));
-        trimmed_str := trim_left(str, " \r\n");
+        trimmed_str := trim_left(str, " \r\n\t");
         if !trimmed_str continue;
         
         if !add_comment && !begins_with(trimmed_str, comment_without_space) then add_comment = true;
