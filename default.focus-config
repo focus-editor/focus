@@ -51,75 +51,22 @@ max_entries_in_open_file_dialog:    300
 
 [[keymap]]
 
-# NOTE: the first matching combination will be used, so order matters.
+# - The first matching combination will be used, so order matters
+# - E.g. [open file dialog] means the keys in this section will only be used when the open file dialog is open
+# - You can override the keys partially - the default combinations will be used for the actions you didn't specify
+# - If you want to disable a particular combination, use a do_nothing action for it
 
-[common]
+[editors]   # <- context
 
-# Common key combos may be used as a fallback if they are not defined in more specific sections.
-# For example, if "move_up" is not defined in [editors], the [common] one will be used.
-
-Ctrl-F                      search_in_buffer
-Ctrl-Shift-F                search_in_project
-
-Ctrl-P                      show_open_file_dialog_in_search_mode
-Ctrl-O                      show_open_file_dialog_in_navigate_mode
-Ctrl-Shift-O                show_open_file_dialog_in_navigate_mode_from_root
-
-Ctrl-C                      copy
-Ctrl-X                      cut
-Ctrl-V                      paste
-
-Ctrl-Z                      undo
-Ctrl-Shift-Z                redo
-
-Ctrl-D                      select_word
-Ctrl-A                      select_all
-
-Ctrl-Shift-L                toggle_expand
-
-# {Shift}- means shift is optional, the key combination will still be matched.
-{Shift}-ArrowUp             move_up
-{Shift}-Ctrl-ArrowUp        move_up_fast
-{Shift}-PageUp              move_up_one_page
-
-{Shift}-ArrowDown           move_down
-{Shift}-Ctrl-ArrowDown      move_down_fast
-{Shift}-PageDown            move_down_one_page
-
-{Shift}-ArrowLeft           move_left
-{Shift}-Alt-ArrowLeft       move_left_by_word
-{Shift}-Ctrl-ArrowLeft      move_left_by_word_ends
-
-{Shift}-ArrowRight          move_right
-{Shift}-Alt-ArrowRight      move_right_by_word
-{Shift}-Ctrl-ArrowRight     move_right_by_word_ends
-
-{Shift}-Home                jump_to_line_start
-{Shift}-End                 jump_to_line_end
-{Shift}-Ctrl-Home           jump_to_file_start
-{Shift}-Ctrl-End            jump_to_file_end
-
-{Shift}-Backspace           delete_left_char
-{Shift}-Delete              delete_right_char
-{Shift}-Alt-Backspace       delete_word_left_no_underscore
-{Shift}-Alt-Delete          delete_word_right_no_underscore
-{Shift}-Ctrl-Backspace      delete_word_left
-{Shift}-Ctrl-Delete         delete_word_right
-
-Ctrl-Plus                   increase_font_size
-Ctrl-Minus                  decrease_font_size
-Ctrl-0                      reset_font_size_to_default
-Ctrl-MouseMiddle            reset_font_size_to_default
-
-[editors]
+# Key combination           Action
 
 Ctrl-D                      select_word_or_create_another_cursor
 
 Ctrl-Shift-D                duplicate_lines
 
 # These shortcuts can be annoying, so are commented out by default
-# Shift-Backspace             delete_line_and_go_up
-# Shift-Delete                delete_line
+Shift-Backspace             delete_line_and_go_up
+Shift-Delete                delete_line
 
 Alt-Shift-ArrowUp           move_selected_lines_up
 Alt-Shift-ArrowDown         move_selected_lines_down
@@ -201,3 +148,61 @@ Enter                       open_entry_in_place
 Ctrl-Enter                  open_entry_on_the_side
 Ctrl-1                      open_entry_on_the_left
 Ctrl-2                      open_entry_on_the_right
+
+[common]
+
+# Common key combos may be used as a fallback if they are not defined in more specific sections.
+# For example, if "move_up" is not defined in [editors], the [common] one will be used.
+
+Ctrl-F                      search_in_buffer
+Ctrl-Shift-F                search_in_project
+
+Ctrl-P                      show_open_file_dialog_in_search_mode
+Ctrl-O                      show_open_file_dialog_in_navigate_mode
+Ctrl-Shift-O                show_open_file_dialog_in_navigate_mode_from_root
+
+Ctrl-C                      copy
+Ctrl-X                      cut
+Ctrl-V                      paste
+
+Ctrl-Z                      undo
+Ctrl-Shift-Z                redo
+
+Ctrl-D                      select_word
+Ctrl-A                      select_all
+
+Ctrl-Shift-L                toggle_expand
+
+# {Shift}- means shift is optional, the key combination will still be matched.
+{Shift}-ArrowUp             move_up
+{Shift}-Ctrl-ArrowUp        move_up_fast
+{Shift}-PageUp              move_up_one_page
+
+{Shift}-ArrowDown           move_down
+{Shift}-Ctrl-ArrowDown      move_down_fast
+{Shift}-PageDown            move_down_one_page
+
+{Shift}-ArrowLeft           move_left
+{Shift}-Alt-ArrowLeft       move_left_by_word
+{Shift}-Ctrl-ArrowLeft      move_left_by_word_ends
+
+{Shift}-ArrowRight          move_right
+{Shift}-Alt-ArrowRight      move_right_by_word
+{Shift}-Ctrl-ArrowRight     move_right_by_word_ends
+
+{Shift}-Home                jump_to_line_start
+{Shift}-End                 jump_to_line_end
+{Shift}-Ctrl-Home           jump_to_file_start
+{Shift}-Ctrl-End            jump_to_file_end
+
+{Shift}-Backspace           delete_left_char
+{Shift}-Delete              delete_right_char
+{Shift}-Alt-Backspace       delete_word_left_no_underscore
+{Shift}-Alt-Delete          delete_word_right_no_underscore
+{Shift}-Ctrl-Backspace      delete_word_left
+{Shift}-Ctrl-Delete         delete_word_right
+
+Ctrl-Plus                   increase_font_size
+Ctrl-Minus                  decrease_font_size
+Ctrl-0                      reset_font_size_to_default
+Ctrl-MouseMiddle            reset_font_size_to_default

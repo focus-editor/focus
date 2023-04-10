@@ -42,8 +42,9 @@ load_config :: (file_path: string, create_if_doesnt_exist := false) -> Config, s
 
 merge_configs :: (dst: *Config, src: Config) {
     // Workspace
-    if src.workspace.workspace_dirs         then dst.workspace.workspace_dirs         = src.workspace.workspace_dirs;
-    if src.workspace.ignore_dirs            then dst.workspace.ignore_dirs            = src.workspace.ignore_dirs;
+    if src.workspace.workspace_dirs then dst.workspace.workspace_dirs = src.workspace.workspace_dirs;
+    if src.workspace.ignore_dirs    then dst.workspace.ignore_dirs    = src.workspace.ignore_dirs;
+    
     if src.workspace.allow_file_extensions || src.workspace.allow_file_extension_wildcards {
         dst.workspace.allow_file_extensions          = src.workspace.allow_file_extensions;
         dst.workspace.allow_file_extension_wildcards = src.workspace.allow_file_extension_wildcards;
@@ -52,6 +53,18 @@ merge_configs :: (dst: *Config, src: Config) {
         dst.workspace.ignore_file_extensions          = src.workspace.ignore_file_extensions;
         dst.workspace.ignore_file_extension_wildcards = src.workspace.ignore_file_extension_wildcards;
     }
+    
+    // Keymap
+    merge_keymaps :: (dst_keymap: *[] Key_Mapping, src_keymap: [] Key_Mapping) #expand {
+        if !src_keymap return;
+        result := resizable(src_keymap);  // the source goes first, because it needs to have priority
+        array_extend(*result, <<dst_keymap);
+        <<dst_keymap = result;
+    }
+    merge_keymaps(*dst.keymap.common,           src.keymap.common);
+    merge_keymaps(*dst.keymap.editors,          src.keymap.editors);
+    merge_keymaps(*dst.keymap.open_file_dialog, src.keymap.open_file_dialog);
+    merge_keymaps(*dst.keymap.search_dialog,    src.keymap.search_dialog);
     
     // TODO: other sections;
 }
