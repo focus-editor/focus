@@ -899,8 +899,18 @@ vertical_smooth_scroll :: (editor: Editor, up: bool, fast := false) {
 }
 
 update_window_title :: (buffer_id: s64 = -1) {
-    if buffer_id == -1 then platform_set_window_title(window_generic_title);
-    else platform_set_window_title(tprint("% - %", open_buffers[buffer_id].file.name, window_generic_title));
+    title := window_generic_title;
+    if buffer_id > 0 {
+        buffer := open_buffers[buffer_id];
+        if buffer.has_file {
+            title = tprint("% • % • %", buffer.file.name, buffer.file.path, window_generic_title);
+        } else {
+            buffer_name := to_string(array_view(buffer.bytes, 0, min(30, buffer.bytes.count)));
+            if !buffer_name then buffer_name = "<new file>";
+            title = tprint("% • %", buffer_name, window_generic_title);
+        }
+    }
+    platform_set_window_title(title);
 }
 
 find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_id: s64, created: bool {

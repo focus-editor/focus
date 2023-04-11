@@ -430,8 +430,8 @@ LINE_HEIGHT_SCALE :: 1.2;
 
 WHEEL_SENSITIVITY :: 1.0;
 
-PEN_CHAR              :: #run to_string(*convert_utf32_to_utf8(0xf304));
-BULLET_CHAR           :: #run to_string(*convert_utf32_to_utf8(0x2022));
+PEN_CHAR    :: #run to_string(*convert_utf32_to_utf8(0xf304));
+BULLET_CHAR :: #run to_string(*convert_utf32_to_utf8(0x2022));
 
 font:               *Simp.Dynamic_Font;
 font_ui:            *Simp.Dynamic_Font;
