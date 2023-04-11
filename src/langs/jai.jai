@@ -15,13 +15,20 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
         // }
 
         using tokenizer;
+        
+        // Maybe retroactively highlight a function
         if token.type == .punctuation && token.punctuation == .l_paren {
-            // Maybe retroactively highlight a function
-            prev        := last_tokens[1];
-            before_prev := last_tokens[0];
+            // Handle "func :: ("
+            before_prev, prev := last_tokens[0], last_tokens[1];
             if prev.type == .identifier {
                 memset(colors.data + prev.start, xx Simp.Code_Color.FUNCTION, prev.len);
-            } else if prev.type == .operation && prev.operation == .double_colon && before_prev.type == .identifier {
+            } else if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
+                memset(colors.data + before_prev.start, xx Simp.Code_Color.FUNCTION, before_prev.len);
+            }
+        } else if token.type == .keyword && token.keyword == .kw_inline {
+            // Handle "func :: inline"
+            before_prev, prev := last_tokens[0], last_tokens[1];
+            if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
                 memset(colors.data + before_prev.start, xx Simp.Code_Color.FUNCTION, before_prev.len);
             }
         }
@@ -106,8 +113,8 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
 
     // Maybe it's a keyword
     if identifier_str.count <= MAX_KEYWORD_LENGTH {
-        type, ok := table_find(*KEYWORD_MAP, identifier_str);
-        if ok { token.type = type; return; }
+        kw_token, ok := table_find(*KEYWORD_MAP, identifier_str);
+        if ok { token.type = kw_token.type; token.keyword = kw_token.keyword; return; }
     }
 
     // Check for here-string
@@ -578,14 +585,23 @@ MODIFIERS :: string.[
     return builder_to_string(*b);
 }
 
-KEYWORD_MAP :: #run -> Table(string, Token.Type) {
-    table: Table(string, Token.Type);
+Keyword_Token :: struct {
+    type: Token.Type;
+    keyword: Keyword;
+}
+
+KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
+    table: Table(string, Keyword_Token);
     size := 2 * (KEYWORDS.count + TYPE_KEYWORDS.count + VALUE_KEYWORDS.count);
     init(*table, size);
 
-    for KEYWORDS        table_add(*table, it, .keyword);
-    for TYPE_KEYWORDS   table_add(*table, it, .type_keyword);
-    for VALUE_KEYWORDS  table_add(*table, it, .value_keyword);
+    #insert -> string {
+        b: String_Builder;
+        for KEYWORDS        append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .keyword,       keyword = .kw_% });\n", it, it));
+        for TYPE_KEYWORDS   append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .type_keyword,  keyword = .kw_% });\n", it, it));
+        for VALUE_KEYWORDS  append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .value_keyword, keyword = .kw_% });\n", it, it));
+        return builder_to_string(*b);
+    }
 
     return table;
 }
