@@ -159,11 +159,9 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .new_line_below_without_breaking;  new_line_below              (editor, buffer);
         case .new_line_above_without_breaking;  new_line_above              (editor, buffer);
         
-        // 
-        // case .copy;                             copy_selection_to_clipboard(cursor, buffer, cursors.count == 1);
-        // case .cut;                              copy_selection_to_clipboard(cursor, buffer, cursors.count == 1, cut = true);
-        // case .paste;                            paste_from_clipboard(editor, cursor, buffer);
-        // 
+        case .copy;                             copy_selection_to_clipboard (editor, buffer);
+        case .cut;                              copy_selection_to_clipboard (editor, buffer, cut = true);
+        case .paste;                            paste_from_clipboard        (editor, buffer);
         
         // 
         // case .delete_left_char;                 delete_left_char (cursor, buffer);
@@ -2539,6 +2537,41 @@ move_lines_down :: (cursor: *Cursor, buffer: *Buffer) {
     cursor.sel.line += 1;
 }
 
+copy_selection_to_clipboard :: (editor: *Editor, buffer: *NewBuffer, cut := false) {
+    b: String_Builder;
+    offset := 0;
+    for * cursor : editor.carets {
+        selection := get_selection(cursor);
+        str := get_string_from_range(selection, buffer);
+        append(*b, str);
+        append(*b, "\n");  // @crlf
+        cursor.clipboard = .{ start = xx offset, count = xx str.count };
+        offset += str.count + 1;  // @crlf
+    }
+    
+    combined_str := builder_to_string(*b);
+    if combined_str { 
+        os_clipboard_set_text(combined_str);
+        if editor.clipboard then free(editor.clipboard);
+        editor.clipboard = combined_str;
+    }
+    
+    if cut {
+        offset_delta := 0;
+        for * cursor : editor.carets {
+            cursor.pos -= xx offset_delta;
+            cursor.sel -= xx offset_delta;
+            selection := get_selection(cursor);
+            delete_range(buffer, selection);
+            cursor.col_wanted = -1;
+            cursor.pos = selection.start;
+            offset_delta += selection.end - selection.start;
+        }
+        editor.cursor_moved = true;
+    }
+}
+
+// !!!!
 copy_selection_to_clipboard :: (cursor: *Cursor, buffer: *Buffer, single_cursor: bool, cut := false) {
     selection := get_selection(cursor);
     str := get_string_from_range(selection, buffer);
@@ -2559,6 +2592,36 @@ copy_selection_to_clipboard :: (cursor: *Cursor, buffer: *Buffer, single_cursor:
     }
 }
 
+paste_from_clipboard :: (editor: *Editor, buffer: *NewBuffer) {
+    system_clipboard_text := os_clipboard_get_text();
+    
+    if system_clipboard_text != editor.clipboard {
+        // Editor clipboard and system clipboard are out of sync - drop the editor one
+        if editor.clipboard free(editor.clipboard);
+        editor.clipboard = system_clipboard_text;
+        for * cursor : editor.carets { cursor.clipboard = .{ start = 0, count = xx editor.clipboard.count }; }
+    } else {
+        free(system_clipboard_text);
+    }
+    
+    offset_delta := 0;
+    for * cursor : editor.carets {
+        cursor.pos += xx offset_delta;
+        cursor.sel += xx offset_delta;
+        selection := get_selection(cursor);
+        str := slice(editor.clipboard, cursor.clipboard.start, cursor.clipboard.count);
+        replace_range(buffer, selection, str);
+        cursor.pos = xx (selection.start + str.count);
+        cursor.col_wanted = -1;
+        offset_delta += str.count - (selection.end - selection.start);
+    }
+    
+    editor.cursor_moved = true;
+    
+    // TODO: paste animation
+}
+
+// !!!!
 paste_from_clipboard :: (editor: *Editor, cursor: *Cursor, buffer: *Buffer) {
     all_clipboards_empty := true;
     for c : editor.cursors { if c.clipboard { all_clipboards_empty = false; break; } }
@@ -2598,8 +2661,7 @@ toggle_comment :: (editor: *Editor, buffer: *NewBuffer) {
     if buffer.lang == {
         case .Jai;          comment_without_space = "//";
         case .Focus_Config; comment_without_space = "#";
-        case;               comment_without_space = "//";  // !!!!!!!!!!!!!!!!! remove
-        // case;               return;
+        case;               return;
     }
     comment = tprint("% ", comment_without_space);
     
@@ -2778,6 +2840,8 @@ Editor :: struct {
     carets: [..] Caret;
     main_caret: s64;        // newly added cursors become main so that we jump to them
     original_caret: s64;    // we remember the original cursor when first creating multiple cursors (and go back to it on escape)
+    
+    clipboard: string;
     
     search_whole_words := false;  // used when creating new cursors
     cursor_moved       := false;  // this may trigger a scroll so that the cursor is within acceptable bounds

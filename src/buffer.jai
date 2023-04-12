@@ -413,6 +413,14 @@ get_selected_string :: (cursor: Cursor, buffer: Buffer) -> string {
     return result;
 }
 
+get_string_from_range :: (range: Offset_Range, buffer: NewBuffer) -> string {
+    result: string = ---;
+    result.data  = buffer.bytes.data + range.start;
+    result.count = range.end - range.start;
+    return result;
+}
+
+// !!!!
 get_string_from_range :: (range: Range, buffer: Buffer) -> string {
     result: string;
     start, end := range_to_byte_offsets(buffer, range);

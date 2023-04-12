@@ -64,6 +64,7 @@
     - Selection highlights and marks
     - Create new cursors above/below by ctrl+alt+shift+arrows
     - Rollback creating another cursor (ctrl+alt+D?)
+    - Paste animation
     - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
     - Optimise cursor clipboard (use shared memory with offsets)
     - Sticky viewport
