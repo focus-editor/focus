@@ -259,6 +259,14 @@ is_all_whitespace :: (s: string) -> bool {
     return true;
 }
 
+count_whitespace :: (bytes: [] u8, start_offset: s64, max_offset: s64, spaces := DEFAULT_SPACES) -> count: s32 {
+    subarray := array_view(bytes, start_offset, max_offset - start_offset);
+    for subarray {
+        if !is_any(it, spaces) return cast(s32) it_index;
+    }
+    return cast(s32) (max_offset - start_offset);
+}
+
 start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: Time = xx 0.0, $snappy := false) {
     anim.start  = start;
     anim.target = target;

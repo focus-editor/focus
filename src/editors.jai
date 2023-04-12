@@ -59,7 +59,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
     buffer := *new_buffer;
     
     mods := event.modifier_flags;
-    extend_selection := event.modifier_flags.shift_pressed;
+    shift_pressed := event.modifier_flags.shift_pressed;
     
     // TODO: rewrite the search bar
     
@@ -130,16 +130,16 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
         
         // Actions that do something per cursor
-        case .move_left;                        move_cursors_left           (editor, buffer, by = .char,      extend_selection);
-        case .move_left_by_word;                move_cursors_left           (editor, buffer, by = .word,      extend_selection);
-        case .move_left_by_word_ends;           move_cursors_left           (editor, buffer, by = .word_ends, extend_selection);
-        case .move_right;                       move_cursors_right          (editor, buffer, by = .char,      extend_selection);
-        case .move_right_by_word;               move_cursors_right          (editor, buffer, by = .word,      extend_selection);
-        case .move_right_by_word_ends;          move_cursors_right          (editor, buffer, by = .word_ends, extend_selection);
-        case .move_up;                          move_cursors_vertically     (editor, buffer, -1, extend_selection);
-        case .move_down;                        move_cursors_vertically     (editor, buffer,  1, extend_selection);
-        case .move_up_fast;                     move_cursors_vertically     (editor, buffer, -5, extend_selection);
-        case .move_down_fast;                   move_cursors_vertically     (editor, buffer,  5, extend_selection);
+        case .move_left;                        move_cursors_left           (editor, buffer, by = .char,      shift_pressed);
+        case .move_left_by_word;                move_cursors_left           (editor, buffer, by = .word,      shift_pressed);
+        case .move_left_by_word_ends;           move_cursors_left           (editor, buffer, by = .word_ends, shift_pressed);
+        case .move_right;                       move_cursors_right          (editor, buffer, by = .char,      shift_pressed);
+        case .move_right_by_word;               move_cursors_right          (editor, buffer, by = .word,      shift_pressed);
+        case .move_right_by_word_ends;          move_cursors_right          (editor, buffer, by = .word_ends, shift_pressed);
+        case .move_up;                          move_cursors_vertically     (editor, buffer, -1, shift_pressed);
+        case .move_down;                        move_cursors_vertically     (editor, buffer,  1, shift_pressed);
+        case .move_up_fast;                     move_cursors_vertically     (editor, buffer, -5, shift_pressed);
+        case .move_down_fast;                   move_cursors_vertically     (editor, buffer,  5, shift_pressed);
         case .move_up_to_empty_line;            move_cursors_to_empty_line  (editor, buffer, .up);
         case .move_down_to_empty_line;          move_cursors_to_empty_line  (editor, buffer, .down);
         case .move_up_one_page;                 move_cursors_by_page        (editor, buffer, .up);
@@ -156,8 +156,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .select_line;                      select_lines                (editor, buffer); keep_selection = true;
         
         case .break_line;                       break_line                  (editor, buffer);
-        // case .new_line_below_without_breaking;  new_line_below(cursor, buffer);
-        // case .new_line_above_without_breaking;  new_line_above(cursor, buffer);
+        case .new_line_below_without_breaking;  new_line_below              (editor, buffer);
+        case .new_line_above_without_breaking;  new_line_above              (editor, buffer);
         
         // 
         // case .copy;                             copy_selection_to_clipboard(cursor, buffer, cursors.count == 1);
@@ -186,8 +186,10 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
     }
     
     if new_group then new_edit_group(buffer, editor);  // do it after action
+    
+    if is_a_move_action(action) && shift_pressed then keep_selection = true;
 
-    if !extend_selection && editor.cursor_moved && !keep_selection {
+    if editor.cursor_moved && !keep_selection {
         for * cursors { it.sel = it.pos; }  // remove selection
     }
 
@@ -643,6 +645,8 @@ organise_carets :: (using editor: *Editor) {
 
         return true;
     }
+    
+    if original_cursor >= carets.count then original_cursor = main_cursor;  // we don't remember original cursor on edits (maybe we should)
     
     main_cursor_offset     := carets[main_cursor].pos;
     original_cursor_offset := carets[original_cursor].pos;
@@ -1467,6 +1471,30 @@ new_edit_group_required_for_action :: (action: Action_Editors, cursor: Caret) ->
     return false;
 }
 
+is_a_move_action :: (action: Action_Editors) -> bool {
+    if action == {
+        case .move_left;                        return true;
+        case .move_left_by_word;                return true;
+        case .move_left_by_word_ends;           return true;
+        case .move_right;                       return true;
+        case .move_right_by_word;               return true;
+        case .move_right_by_word_ends;          return true;
+        case .move_up;                          return true;
+        case .move_down;                        return true;
+        case .move_up_fast;                     return true;
+        case .move_down_fast;                   return true;
+        case .move_up_to_empty_line;            return true;
+        case .move_down_to_empty_line;          return true;
+        case .move_up_one_page;                 return true;
+        case .move_down_one_page;               return true;
+        case .jump_to_line_start;               return true;
+        case .jump_to_line_end;                 return true;
+        case .jump_to_file_start;               return true;
+        case .jump_to_file_end;                 return true;
+    }
+    return false;
+}
+
 move_cursor_left :: (using cursor: *Cursor, buffer: Buffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
     if has_selection(cursor) && !extend_selection {
         pos = get_selection(cursor).start;
@@ -1757,21 +1785,22 @@ move_to_file_end :: (using cursor: *Cursor, buffer: Buffer) {
 
 break_line :: (editor: *Editor, buffer: *NewBuffer) {
     // Remember by how much we need to indent the new lines upfront to avoid any scanning of the dirty buffer later
-    whitespace_per_cursor := NewArray(editor.carets.count, string, initialized = false, allocator = temp);
+    Space :: struct { start: s32; count: s32; original_start: s32; }  // not a string to avoid invalid pointers
+    space_per_cursor := NewArray(editor.carets.count, Space, initialized = false, allocator = temp);
     for cursor : editor.carets {
         selection := get_selection(cursor);
         start := buffer.line_starts[offset_to_line(buffer, selection.start)];
-        str := to_string(array_view(buffer.bytes, start, selection.start - start));
-        trimmed_str := trim_left(str, " \r\n\t");
-        if trimmed_str then str.count = xx (trimmed_str.data - str.data);
-        whitespace_per_cursor[it_index] = str;
+        whitespace_bytes := count_whitespace(buffer.bytes, start, selection.start);
+        space_per_cursor[it_index] = .{ start = start, count = whitespace_bytes, original_start = start };
     }
     
     offset_delta := 0;
     for * cursor : editor.carets {
-        whitespace := whitespace_per_cursor[it_index];
-        whitespace.data += offset_delta;
-        insert_str := tprint("\n%", whitespace);  // @crlf
+        space := *space_per_cursor[it_index];
+        prev_space := space_per_cursor[max(it_index-1, 0)];
+        if space.original_start == prev_space.original_start then space.start = prev_space.start; else space.start += xx offset_delta;  // handle cursors on the same line well
+        space_str := to_string(array_view(buffer.bytes, space.start, space.count));
+        insert_str := tprint("\n%", space_str);  // @crlf
         
         cursor.pos += xx offset_delta;
         cursor.sel += xx offset_delta;
@@ -1784,7 +1813,7 @@ break_line :: (editor: *Editor, buffer: *NewBuffer) {
             insert_string_at_offset(buffer, cursor.pos, insert_str);
             offset_delta += insert_str.count;
         }
-        cursor.pos += xx insert_str.count;
+        cursor.pos = selection.start + xx insert_str.count;
         cursor.col_wanted = -1;
     }
     
@@ -1815,6 +1844,69 @@ break_line :: (using cursor: *Cursor, buffer: *Buffer) {
     sel = pos;
 }
 
+new_line_below :: (editor: *Editor, buffer: *NewBuffer) {
+    Line_Info :: struct { end: s32; space: struct { start, count, original_start: s32; }; };
+    line_info_per_cursor := NewArray(editor.carets.count, Line_Info, initialized = false, allocator = temp);
+    for cursor : editor.carets {
+        selection := get_selection(cursor);
+        last_line := offset_to_line(buffer, selection.end);
+        start := buffer.line_starts[last_line];
+        end   := buffer.line_starts[last_line+1];
+        whitespace_bytes := count_whitespace(buffer.bytes, start, end);
+        line_info_per_cursor[it_index] = .{ end = end, space = .{ start = start, count = whitespace_bytes, original_start = start } };
+    }
+    
+    offset_delta := 0;
+    for * cursor : editor.carets {
+        line_info := *line_info_per_cursor[it_index];
+        prev_line_info := line_info_per_cursor[max(it_index-1, 0)];
+        if line_info.space.original_start == prev_line_info.space.original_start then line_info.space.start = prev_line_info.space.start; else line_info.space.start += xx offset_delta;  // handle cursors on the same line well
+        line_info.end += xx offset_delta;
+        whitespace_str := to_string(array_view(buffer.bytes, line_info.space.start, line_info.space.count));  // construct string from offsets to avoid memory errors on buffer reallocation
+        insert_str := tprint("%\n", whitespace_str);  // @crlf
+        
+        insert_string_at_offset(buffer, line_info.end, insert_str);
+        
+        offset_delta += insert_str.count;
+        cursor.pos = line_info.end + xx insert_str.count - 1;  // @crlf: 1 byte here, would be 2 for CRLF
+        cursor.col_wanted = -1;
+    }
+    
+    editor.cursor_moved = true;
+}
+
+new_line_above :: (editor: *Editor, buffer: *NewBuffer) {
+    Line_Info :: struct { start: s32; space: struct { start, count, original_start: s32; }; };
+    line_info_per_cursor := NewArray(editor.carets.count, Line_Info, initialized = false, allocator = temp);
+    for cursor : editor.carets {
+        selection  := get_selection(cursor);
+        first_line := offset_to_line(buffer, selection.start);
+        start := buffer.line_starts[first_line];
+        end   := buffer.line_starts[first_line+1];
+        whitespace_bytes := count_whitespace(buffer.bytes, start, end);
+        line_info_per_cursor[it_index] = .{ start = start, space = .{ start = start, count = whitespace_bytes, original_start = start } };
+    }
+    
+    offset_delta := 0;
+    for * cursor : editor.carets {
+        line_info := *line_info_per_cursor[it_index];
+        prev_line_info := line_info_per_cursor[max(it_index-1, 0)];
+        if line_info.space.original_start == prev_line_info.space.original_start then line_info.space.start = prev_line_info.space.start; else line_info.space.start += xx offset_delta;  // handle cursors on the same line well
+        line_info.start += xx offset_delta;
+        whitespace_str := to_string(array_view(buffer.bytes, line_info.space.start, line_info.space.count));  // construct string from offsets to avoid memory errors on buffer reallocation
+        insert_str := tprint("%\n", whitespace_str);  // @crlf
+        
+        insert_string_at_offset(buffer, line_info.start, insert_str);
+        
+        offset_delta += insert_str.count;
+        cursor.pos = line_info.start + xx insert_str.count - 1;  // @crlf: 1 byte here, would be 2 for CRLF
+        cursor.col_wanted = -1;
+    }
+    
+    editor.cursor_moved = true;
+}
+
+// !!!!
 new_line_below :: (using cursor: *Cursor, buffer: *Buffer) {
     line := buffer.lines[pos.line];
     indent := line.text_start - line.start;
@@ -1832,6 +1924,7 @@ new_line_below :: (using cursor: *Cursor, buffer: *Buffer) {
     sel = pos;
 }
 
+// !!!
 new_line_above :: (using cursor: *Cursor, buffer: *Buffer) {
     line := buffer.lines[pos.line];
     indent := line.text_start - line.start;
