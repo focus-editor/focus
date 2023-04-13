@@ -163,10 +163,9 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .cut;                              copy_selection_to_clipboard (editor, buffer, cut = true);
         case .paste;                            paste_from_clipboard        (editor, buffer);
         
-        // 
-        // case .delete_left_char;                 delete_left_char (cursor, buffer);
+        case .delete_left_char;                 delete_left_char            (editor, buffer);
         // case .delete_right_char;                delete_right_char(cursor, buffer);
-        // 
+        
         
         // case .duplicate_lines;                  if cursors.count == 1 { duplicate_lines(cursor, buffer); keep_selection = true; }
         // case .move_selected_lines_up;           if cursors.count == 1 { move_lines_up  (cursor, buffer); keep_selection = true; }
@@ -601,6 +600,7 @@ leave_only_original_cursor :: (using editor: *Editor) -> *Cursor {
 leave_only_original_caret :: (using editor: *Editor) -> *Caret {
     // Remove all cursors except the original one
     cursor := carets[original_cursor];
+    cursor.clipboard = .{ start = 0, count = xx clipboard.count };
     carets.count = 1;
     original_cursor = 0;
     main_cursor = 0;
@@ -628,7 +628,7 @@ organise_carets :: (using editor: *Editor) {
         s1 := get_selection(c1);
         s2 := get_selection(c2);
         if s1.end < s2.start || s2.end < s1.start return false;  // cursors are disjoint
-        if (s1.end == s2.start || s2.end == s1.start) && (s1.start < s1.end || s2.start < s2.end) return false;  // adjacent cursors with a selection
+        if s1.start != s1.end && s2.start != s2.end && (s1.end == s2.start || s2.end == s1.start) && (s1.start < s1.end || s2.start < s2.end) return false;  // adjacent cursors with a selection
 
         new_start := min(s1.start, s2.start);
         new_end   := max(s1.end,   s2.end);
@@ -2096,6 +2096,7 @@ delete_word_right_no_underscore :: (using cursor: *Cursor, using buffer: *Buffer
     delete_right_char(cursor, buffer);
 }
 
+// !!!!
 delete_selected_text :: (using cursor: *Cursor, buffer: *Buffer, set_col_wanted := true) -> deleted: bool {
     if !has_selection(cursor) return false; 
     
@@ -2108,6 +2109,53 @@ delete_selected_text :: (using cursor: *Cursor, buffer: *Buffer, set_col_wanted 
     return true;
 }
 
+delete_left_char :: (editor: *Editor, buffer: *NewBuffer) {
+    // NOTE: we don't have to worry about a cursor with no selection being immediately next
+    //       to the non-cursor end of another cursor's selection (thanks to organise_cursors), 
+    //       so it should be safe to delete at least one character to the left of every cursor if there is one
+    range_per_cursor := NewArray(editor.carets.count, Offset_Range, initialized = false, allocator = temp);
+    for cursor : editor.carets {
+        if has_selection(cursor) {
+            range_per_cursor[it_index] = get_selection(cursor);
+        } else if cursor.pos == 0 {
+            range_per_cursor[it_index] = Offset_Range.{};
+        } else {
+            coords := offset_to_coords(buffer, cursor.pos);
+            chars_to_delete := coords.col % TAB_SIZE;
+            if chars_to_delete == 0 then chars_to_delete = TAB_SIZE;
+            if chars_to_delete > 1 {
+                // Don't delete more than one char unless the cursor is between line start and text start
+                whitespace_bytes := count_whitespace(buffer.bytes, buffer.line_starts[coords.line], cursor.pos);
+                if whitespace_bytes < coords.col then chars_to_delete = 1;
+            }
+            start := cursor.pos;
+            for i : 0..chars_to_delete-1 {
+                offset, byte := prev_char_offset(buffer.bytes, start);
+                if byte == #char "\n" { /* TODO: @crlf: delete \r\n */ } 
+                if i == 0 || byte == #char " " start = offset; else break;
+            }
+            range_per_cursor[it_index] = .{ start = start, end = cursor.pos };
+        }
+    }
+    
+    offset_delta := 0;
+    for * cursor : editor.carets {
+        range := range_per_cursor[it_index];
+        range.start -= xx offset_delta;
+        range.end   -= xx offset_delta;
+        
+        delete_range(buffer, range);
+        
+        cursor.pos = range.start;
+        cursor.col_wanted = -1;
+        
+        offset_delta += (range.end - range.start);
+    }
+    
+    editor.cursor_moved = true;
+}
+
+// !!!!!
 delete_left_char :: (using cursor: *Cursor, buffer: *Buffer) {
     if delete_selected_text(cursor, buffer) return;
 
