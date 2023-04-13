@@ -54,7 +54,7 @@
     + Make sure edit groups work properly
     + f ff f
     + Indentation
-    - Implement the rest of edits
+    + Implement the most important edits
     
     - Fix issues near the end of file
         + Crash
