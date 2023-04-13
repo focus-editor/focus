@@ -283,20 +283,16 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
     array_reset_keeping_memory(*buffer.edit_notifications);
 }
 
-adjust_cursors_and_viewport :: (editor: *Editor, buffer: NewBuffer, editor_id: s64) {
+adjust_cursors_and_viewport :: (editor: *Editor, buffer: NewBuffer, current_editor_id: s64) {
     // When edits are made in another editor for the same buffer, this editor's cursors 
     // need to be adjusted. The viewport glue point also needs to move.
     
     for edit : buffer.edit_notifications {
-        if edit.editor_id == editor_id continue;  // this editor knows about this edit
+        if edit.editor_id == current_editor_id continue;  // this editor knows about this edit
+        using edit;
         for * cursor : editor.carets {
-            if cursor.pos >= edit.offset {
-                // TODO: handle case in the middle
-                cursor.pos += edit.new_count - edit.old_count;
-            }
-            if cursor.sel >= edit.offset {
-                cursor.sel += edit.new_count - edit.old_count;
-            }
+            if cursor.pos >= offset then cursor.pos = max(cursor.pos + delta, offset);
+            if cursor.sel >= offset then cursor.sel = max(cursor.sel + delta, offset);
         }
     }
     

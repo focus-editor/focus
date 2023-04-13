@@ -571,9 +571,8 @@ add_edit_notification :: (using buffer: *NewBuffer, offset: s64, old_count: s64,
     if num_editors_open < 2 return;
     array_add(*edit_notifications, NewBuffer.Edit_Notification.{
         editor_id = cast(s32) context.current_editor_id,
-        offset    = cast(s32) offset,
-        old_count = cast(s32) old_count,
-        new_count = cast(s32) new_count,
+        offset    = cast(s32) (offset + min(old_count, new_count)),
+        delta     = cast(s32) (new_count - old_count),
     });
 }
 
@@ -718,11 +717,11 @@ NewBuffer :: struct {
     Edit_Notification :: struct {
         editor_id: s32;
         offset:    s32;
-        old_count: s32;
-        new_count: s32;
+        delta:     s32;
     }
 }
 
+// !!!
 Buffer :: struct {
     file: File_Info;
     has_file := false;  // false for freestanding buffers. TODO: make freestanding buffers separate?
