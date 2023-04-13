@@ -1,25 +1,25 @@
 // @buffer: 
 refresh_open_buffers :: () {
-    for *editor : open_editors {
-        buffer := *open_buffers[editor.buffer_id];
-        if !buffer.dirty && !buffer.was_dirty_during_frame continue;
-        
-        if buffer.dirty recalculate_lines(buffer);  
-        
-        buffer.was_dirty_during_frame = false;
-        buffer.needs_coloring = true;
-        buffer.last_edit_time = frame_time;
-        
-        refresh_all_editors_for_buffer(editor.buffer_id);
-        
-        session_notify_modified_buffer(editor.buffer_id);
-    
-        // Maybe mark buffer as not modified if we've made it match the contents on disk
-        buffer.modified = buffer.meow_hash != calculate_meow_hash(buffer.bytes);
-        if !buffer.modified then buffer.modified_on_disk = false;  // we've verified that the contents matches that on disk
-        
-        finder.need_to_refresh_results = true;
-    }
+    // for *editor : open_editors {
+    //     buffer := *open_buffers[editor.buffer_id];
+    //     if !buffer.dirty && !buffer.was_dirty_during_frame continue;
+    //     
+    //     if buffer.dirty recalculate_lines(buffer);  
+    //     
+    //     buffer.was_dirty_during_frame = false;
+    //     buffer.needs_coloring = true;
+    //     buffer.last_edit_time = frame_time;
+    //     
+    //     refresh_all_editors_for_buffer(editor.buffer_id);
+    //     
+    //     session_notify_modified_buffer(editor.buffer_id);
+    // 
+    //     // Maybe mark buffer as not modified if we've made it match the contents on disk
+    //     buffer.modified = buffer.meow_hash != calculate_meow_hash(buffer.bytes);
+    //     if !buffer.modified then buffer.modified_on_disk = false;  // we've verified that the contents matches that on disk
+    //     
+    //     finder.need_to_refresh_results = true;
+    // }
 }
 
 put_cursor_in_valid_spot :: (using cursor: *Caret, buffer: NewBuffer) {
@@ -108,6 +108,12 @@ offset_to_coords :: (using buffer: NewBuffer, offset: s64) -> Coords {
     return coords;
 }
 
+get_cursor_coords :: (buffer: NewBuffer, using cursor: Caret) -> Cursor_Coords {
+    pos_coords := offset_to_coords(buffer, pos);
+    sel_coords := ifx pos != sel then offset_to_coords(buffer, sel) else pos_coords;
+    return Cursor_Coords.{ pos = pos_coords, sel = sel_coords };
+}
+
 offset_to_line :: (using buffer: NewBuffer, offset: s64) -> line_num: s32 {
     assert(!dirty, "buffer is dirty, can't calculate line from offset");
     assert(offset <= bytes.count, "offset exceeds buffer size, can't calculate line");
@@ -184,12 +190,13 @@ get_string_from_range :: (range: Offset_Range, buffer: NewBuffer) -> string {
     return result;
 }
 
-remove_crlf :: (using buffer: *Buffer) {
+remove_crlf :: (using buffer: *NewBuffer) {
     dst := bytes.data;
     src := bytes.data;
     end := bytes.data + bytes.count;
     cursor := bytes.data;
-
+    
+    // @buffer!!! : use SIMD
     // Remove all CR's in one pass
     while cursor < end {
         byte := <<cursor;
@@ -334,7 +341,7 @@ recalculate_colors :: (buffer: *Buffer) {
     }
 }
 
-save_buffer_to_disk :: (using buffer: *Buffer) {
+save_buffer_to_disk :: (using buffer: *NewBuffer) {
     success := write_entire_file(file.full_path, to_string(bytes));
     if success {
         modified = false;
@@ -348,7 +355,7 @@ save_buffer_to_disk :: (using buffer: *Buffer) {
     remember_last_modtime_and_size(buffer);
 }
 
-remember_last_modtime_and_size :: (using buffer: *Buffer) {
+remember_last_modtime_and_size :: (using buffer: *NewBuffer) {
     assert(has_file, "Trying to remember last modtime and size of a buffer with no file. This is a bug");
 
     modtime, size, success := file_modtime_and_size(file.full_path);
@@ -509,10 +516,10 @@ maybe_mark_buffer_as_deleted :: (path: string) {
     finder.need_to_refresh_results = true;
 }
 
-deinit :: (using buffer: *Buffer) {
+deinit :: (using buffer: *NewBuffer) {
     // We don't do it often so it's ok to be slow here
     array_free(bytes);
-    array_free(lines);
+    array_free(line_starts);
     array_free(colors);
     
     for * undos deinit(it);
@@ -853,6 +860,10 @@ Cursor :: struct {
 
 Cursor_Offsets :: struct {
     pos, sel: s32;
+}
+
+Cursor_Coords :: struct {
+    pos, sel: Coords;
 }
 
 Coords :: struct {

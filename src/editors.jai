@@ -52,11 +52,8 @@ editors_handle_file_drop :: (files: [] string) {
 }
 
 active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
-    // editor, buffer := get_active_editor_and_buffer();
-    // if !editor return;
-    
-    editor := *new_editor;
-    buffer := *new_buffer;
+    editor, buffer := get_active_editor_and_buffer();
+    if !editor return;
     
     mods := event.modifier_flags;
     shift_pressed := event.modifier_flags.shift_pressed;
@@ -394,11 +391,8 @@ active_editor_type_char :: (char: u32) {
                             // which generates a TEXT_INPUT event for DEL
                             // when Ctrl+Backspace is pressed
 
-    // editor, buffer := get_active_editor_and_buffer();
-    // if !editor return;
-    editor := *new_editor;
-    buffer := *new_buffer;
-    
+    editor, buffer := get_active_editor_and_buffer();
+    if !editor return;
 
     // if editor.search_bar.active {
     //     text_input_type_char(*editor.search_bar.input, char);
@@ -456,25 +450,25 @@ active_editor_type_char :: (char: u32) {
     editor.cursor_moved = true;
 }
 
-get_active_editor_and_buffer :: () -> *Editor, *Buffer {
+get_active_editor_and_buffer :: () -> *Editor, *NewBuffer {
     if editors.layout == .None return null, null;
     editor := *open_editors[editors.active];
     buffer := *open_buffers[editor.buffer_id];
     return editor, buffer;
 }
 
-// !!!!!!!!!!!!!!!!
+// @buffer!!!!!!!!!!!!!!!!
 refresh_all_editors_for_buffer :: (buffer_id: s64) {    
-    buffer := *open_buffers[buffer_id];
-    for *e : open_editors {
-        if e.buffer_id != buffer_id continue;
-        // for *cursor : e.cursors { put_cursor_in_valid_spot(cursor, buffer); }  // @buffer !!!
-        // if e.cursors.count > 1 then organise_cursors(e);
-        
-        // Refresh highlights and search results
-        e.refresh_highlights = true;
-        if search_bar_is_open(e) search_and_update_results(e, buffer);
-    }
+    // buffer := *open_buffers[buffer_id];
+    // for *e : open_editors {
+    //     if e.buffer_id != buffer_id continue;
+    //     // for *cursor : e.cursors { put_cursor_in_valid_spot(cursor, buffer); }  // @buffer !!!
+    //     // if e.cursors.count > 1 then organise_cursors(e);
+    //     
+    //     // Refresh highlights and search results
+    //     e.refresh_highlights = true;
+    //     if search_bar_is_open(e) search_and_update_results(e, buffer);
+    // }
 }
 
 editors_open_file :: (path: string, placement: Editor_Placement = .in_place) {
@@ -634,12 +628,12 @@ organise_carets :: (using editor: *Editor) {
     }
 }
 
-get_max_y_scroll :: (buffer: Buffer) -> s32 {
+get_max_y_scroll :: (buffer: NewBuffer) -> s32 {
     assert(!buffer.dirty);
-    return max(cast(s32) ((buffer.lines.count - 1)  * line_height), 0);
+    return max(cast(s32) ((buffer.line_starts.count - 2)  * line_height), 0);
 }
 
-add_paste_animation :: (using editor: *Editor, range: Range) {
+add_paste_animation :: (using editor: *Editor, range: Offset_Range) {
     anim := array_add(*paste_animations);
     anim.range = range;
     anim.started_at = frame_time;
@@ -647,7 +641,7 @@ add_paste_animation :: (using editor: *Editor, range: Range) {
 
 select_word :: (buffer: NewBuffer, cursor: *Caret) {
     pos       := cursor.pos;
-    pos_left  := prev_char_offset(buffer.bytes, pos);
+    pos_left  := ifx cursor.pos > 0 then prev_char_offset(buffer.bytes, pos) else 0;
     char      := get_char_at_offset(buffer, pos);
     char_left := get_char_at_offset(buffer, pos_left);
     
@@ -866,7 +860,7 @@ init_buffers :: () {
     init(*buffers_table, slots_to_allocate = 3000);
 }
 
-fill_in_buffer_from_file_data :: (buffer: *Buffer, path: string, file_data: string) {
+fill_in_buffer_from_file_data :: (buffer: *NewBuffer, path: string, file_data: string) {
     buffer.file = get_file_info_from_full_path(path);
     buffer.has_file = true;
     remember_last_modtime_and_size(buffer);
@@ -897,7 +891,7 @@ fill_in_buffer_from_file_data :: (buffer: *Buffer, path: string, file_data: stri
         buffer.lang = .Worklog;
     }
 
-    recalculate_lines(buffer);
+    rescan_for_lines(buffer);
     recalculate_colors(buffer);
 }
 
@@ -909,15 +903,6 @@ select_lines :: (editor: *Editor, buffer: NewBuffer) {
         cursor.sel = buffer.line_starts[start_line];
         cursor.pos = buffer.line_starts[end_line+1];
     }
-}
-
-// !!!
-create_cursor_at_pos :: (using editor: *Editor, buffer: Buffer, pos: Pos) {
-    // NOTE: assuming the pos is valid!
-    new_cursor := array_add(*cursors);
-    new_cursor.sel = pos;
-    new_cursor.pos = pos;
-    main_cursor = cursors.count - 1;
 }
 
 #scope_file
@@ -1092,7 +1077,7 @@ find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_i
     editor_id := open_editors.count;
     editor := array_add(*open_editors);
     editor.buffer_id = buffer_id;
-    array_add(*editor.cursors, Cursor.{});
+    array_add(*editor.carets, Caret.{});
     return editor_id, true;
 }
 
@@ -1892,11 +1877,11 @@ paste_from_clipboard :: (editor: *Editor, buffer: *NewBuffer) {
         cursor.pos = xx (selection.start + str.count);
         cursor.col_wanted = -1;
         offset_delta += str.count - (selection.end - selection.start);
+        
+        add_paste_animation(editor, Offset_Range.{ start = selection.start, end = selection.start + cast(s32) str.count });
     }
     
     editor.cursor_moved = true;
-    
-    // TODO: paste animation
 }
 
 toggle_comment :: (editor: *Editor, buffer: *NewBuffer) {
@@ -1997,14 +1982,11 @@ toggle_comment :: (editor: *Editor, buffer: *NewBuffer) {
 Editor :: struct {
     buffer_id: s64;
 
-    // deprecated
-    cursors: [..] Cursor;
+    // // deprecated
+    // cursors: [..] Cursor;
+    carets: [..] Caret;
     main_cursor: s64;      // newly added cursors become main so that we jump to them
     original_cursor: s64;  // we remember the original cursor when first creating multiple cursors (and go back to it on escape)
-    
-    carets: [..] Caret;
-    main_caret: s64;        // newly added cursors become main so that we jump to them
-    original_caret: s64;    // we remember the original cursor when first creating multiple cursors (and go back to it on escape)
     
     clipboard: string;
     
@@ -2049,12 +2031,14 @@ Search_Bar :: struct {
 }
 
 Text_Highlight :: struct {
-    offset: s64;     // we'll convert this to position range, but only for the visible highlights
-    start_pos: Pos;  // useful to know pos immediately to display in the scrollbar area
+    offset: s64;    // we'll convert this to position range, but only for the visible highlights
+    line: s32;      // useful to know line immediately to display in the scrollbar area
 }
 
 Paste_Animation :: struct {
-    range: Range;
+    range: Offset_Range;
+    coords_range: Coords_Range;
+    initted := false;
     started_at: Time;
     SPEED :: 0.5;
 }
@@ -2084,7 +2068,7 @@ Editor_Placement :: enum {
     right;
 }
 
-open_buffers: [..] Buffer;
+open_buffers: [..] NewBuffer;
 open_editors: [..] Editor;
 buffers_table: Table(string, s64);  // a map from full buffer path to buffer id (only for the open buffers, obviously)
 

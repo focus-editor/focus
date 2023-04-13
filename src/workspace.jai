@@ -329,6 +329,6 @@ watch_files: [..] string;       // files outside of projects that we want to wat
 
 scanner_thread: Thread_Group;
 
-scanned_buffers: [..] Buffer;
+scanned_buffers: [..] NewBuffer;
 initial_scan_complete := false;
 num_dirs_scanned := 0;
