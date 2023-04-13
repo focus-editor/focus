@@ -1,25 +1,24 @@
-// @buffer: 
 refresh_open_buffers :: () {
-    // for *editor : open_editors {
-    //     buffer := *open_buffers[editor.buffer_id];
-    //     if !buffer.dirty && !buffer.was_dirty_during_frame continue;
-    //     
-    //     if buffer.dirty recalculate_lines(buffer);  
-    //     
-    //     buffer.was_dirty_during_frame = false;
-    //     buffer.needs_coloring = true;
-    //     buffer.last_edit_time = frame_time;
-    //     
-    //     refresh_all_editors_for_buffer(editor.buffer_id);
-    //     
-    //     session_notify_modified_buffer(editor.buffer_id);
-    // 
-    //     // Maybe mark buffer as not modified if we've made it match the contents on disk
-    //     buffer.modified = buffer.meow_hash != calculate_meow_hash(buffer.bytes);
-    //     if !buffer.modified then buffer.modified_on_disk = false;  // we've verified that the contents matches that on disk
-    //     
-    //     finder.need_to_refresh_results = true;
-    // }
+    for *editor : open_editors {
+        buffer := *open_buffers[editor.buffer_id];
+        if !buffer.dirty && !buffer.was_dirty_during_frame continue;
+        
+        if buffer.dirty rescan_for_lines(buffer);
+        
+        buffer.was_dirty_during_frame = false;
+        buffer.needs_coloring = true;
+        buffer.last_edit_time = frame_time;
+        
+        refresh_all_editors_for_buffer(editor.buffer_id);
+        
+        session_notify_modified_buffer(editor.buffer_id);
+    
+        // Maybe mark buffer as not modified if we've made it match the contents on disk
+        buffer.modified = buffer.meow_hash != calculate_meow_hash(buffer.bytes);
+        if !buffer.modified then buffer.modified_on_disk = false;  // we've verified that the contents matches that on disk
+        
+        finder.need_to_refresh_results = true;
+    }
 }
 
 put_cursor_in_valid_spot :: (using cursor: *Caret, buffer: NewBuffer) {
@@ -54,27 +53,32 @@ replace_range :: (buffer: *NewBuffer, using range: Offset_Range, str: string) {
     replace_range_raw(buffer, start, end, str);
 }
 
-delete_range_raw :: (using buffer: *NewBuffer, start: s64, end: s64) {
+delete_range_raw :: (using buffer: *NewBuffer, start: s64, end: s64, $notify := true) {
     len := end - start;
     if len <= 0 return;
 
     array_delete_bytes(*bytes, start, len);
+    
+    #if notify add_edit_notification(buffer, start, end - start, 0);
 
     buffer.dirty = true;
 }
 
-insert_string_raw :: (buffer: *NewBuffer, offset: s64, str: string) {
+insert_string_raw :: (buffer: *NewBuffer, offset: s64, str: string, $notify := true) {
     bytes: [] u8;
     bytes.data  = str.data;
     bytes.count = str.count;
     array_insert_bytes_at(*buffer.bytes, offset, bytes);
+    
+    #if notify add_edit_notification(buffer, offset, 0, str.count);
 
     buffer.dirty = true;
 }
 
 replace_range_raw :: (buffer: *NewBuffer, start: s32, end: s32, str: string) {
-    delete_range_raw(buffer, start, end);
-    insert_string_raw(buffer, start, str);
+    delete_range_raw(buffer, start, end, notify = false);
+    insert_string_raw(buffer, start, str, notify = false);
+    add_edit_notification(buffer, start, end - start, str.count);
 }
 
 get_char_at_offset :: (using buffer: NewBuffer, offset: s32) -> u32 {
@@ -222,7 +226,10 @@ last_line :: inline (using buffer: Buffer, line: s32) -> bool {
 }
 
 rescan_for_lines :: (using buffer: *NewBuffer) {
-    buffer.dirty = false;
+    if dirty {
+        was_dirty_during_frame = true;
+        dirty = false;
+    }
     
     array_reset_keeping_memory(*line_starts);
     array_add(*line_starts, 0);  // first line
@@ -560,20 +567,17 @@ compare_with_contents_on_disk_and_maybe_unmark_as_modified :: (using buffer: *Bu
     if contents == to_string(bytes) then buffer.modified = false;
 }
 
-new_replace_edit :: (buffer: *NewBuffer, start: s32, end: s32, old_str: string, new_str: string) {
-    edit := array_add(*buffer.edits);
-    edit.type = .replace;
-    using edit.replace;
-    offset_range.start = start;
-    offset_range.end   = end;
-    new_bytes = copy_string(new_str);
-    old_bytes = copy_string(old_str);
-
-    clear_redos(buffer);
+add_edit_notification :: (using buffer: *NewBuffer, offset: s64, old_count: s64, new_count: s64) {
+    if num_editors_open < 2 return;
+    array_add(*edit_notifications, NewBuffer.Edit_Notification.{
+        editor_id = cast(s32) context.current_editor_id,
+        offset    = cast(s32) offset,
+        old_count = cast(s32) old_count,
+        new_count = cast(s32) new_count,
+    });
 }
 
-// !!!!!
-new_replace_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string, new_str: string) {
+new_replace_edit :: (buffer: *NewBuffer, start: s32, end: s32, old_str: string, new_str: string) {
     edit := array_add(*buffer.edits);
     edit.type = .replace;
     using edit.replace;
@@ -594,48 +598,16 @@ new_insert_edit :: (buffer: *NewBuffer, offset: s64, str: string) {
     clear_redos(buffer);
 }
 
-// !!!!!
-new_insert_edit :: (buffer: *Buffer, offset: s64, str: string) {
-    edit := array_add(*buffer.edits);
-    edit.type = .insert;
-    edit.insert.offset = offset;
-    edit.insert.new_bytes = copy_string(str);
-
-    clear_redos(buffer);
-}
-
 new_insert_char_edit :: (buffer: *NewBuffer, offset: s64, char: Utf8_Char) {
     edit := array_add(*buffer.edits);
     edit.type = .insert_char;
     edit.insert_char.offset = offset;
     edit.insert_char.char = char;
-
-    clear_redos(buffer);
-}
-
-// !!!!
-new_insert_char_edit :: (buffer: *Buffer, offset: s64, char: Utf8_Char) {
-    edit := array_add(*buffer.edits);
-    edit.type = .insert_char;
-    edit.insert_char.offset = offset;
-    edit.insert_char.char = char;
-
+    
     clear_redos(buffer);
 }
 
 new_delete_edit :: (buffer: *NewBuffer, start: s32, end: s32, old_str: string) {
-    edit := array_add(*buffer.edits);
-    edit.type = .delete;
-    using edit.delete;
-    offset_range.start = start;
-    offset_range.end   = end;
-    old_bytes = copy_string(old_str);
-
-    clear_redos(buffer);
-}
-
-// !!!!
-new_delete_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string) {
     edit := array_add(*buffer.edits);
     edit.type = .delete;
     using edit.delete;
@@ -651,29 +623,7 @@ clear_redos :: (using buffer: *NewBuffer) {
     array_reset_keeping_memory(*redos);
 }
 
-// !!!!
-clear_redos :: (using buffer: *Buffer) {
-    for * redos  deinit(it);
-    array_reset_keeping_memory(*redos);
-}
-
 deinit :: (using edit_group: *NewBuffer.Edit_Group) {
-    for edit : edits {
-        using edit;
-        if #complete type == {
-            case .insert;  free(insert.new_bytes);
-            case .delete;  free(delete.old_bytes);
-            case .replace; free(replace.new_bytes);
-                           free(replace.old_bytes);
-            case .insert_char;  // nothing to free
-        }
-    }
-    array_free(edits);
-    array_free(cursors);
-}
-
-// !!!!
-deinit :: (using edit_group: *Buffer.Edit_Group) {
     for edit : edits {
         using edit;
         if #complete type == {
@@ -695,8 +645,8 @@ deinit :: (using edit_group: *Buffer.Edit_Group) {
 // - replace all [..] with a custom array type without an allocator (also probably using s32's)
 NewBuffer :: struct {
     file: File_Info;
-    has_file := false;  // false for freestanding buffers. TODO: make freestanding buffers separate?
     num_times_opened: u8;
+    num_editors_open: u8;
     
     meow_hash: u64;
     last_modtime: Apollo_Time;  // for detecting whether a file has changed
@@ -710,8 +660,9 @@ NewBuffer :: struct {
                                    // @Space: we could use a u4 instead
 
     // TODO: put into enum_flags
+    has_file := false;  // false for freestanding buffers. TODO: make freestanding buffers separate?
     dirty                  := false;
-    was_dirty_during_frame := false;  // consider removing
+    was_dirty_during_frame := false;
     modified               := false;
     modified_on_disk       := false;
     deleted                := false;
@@ -723,6 +674,7 @@ NewBuffer :: struct {
     redos: [..] Edit_Group;
     edits: [..] Edit;  // current edits, not in a group yet
     cursors: [..] Caret.State;  // cursor state before any current edits were made
+    edit_notifications: [..] Edit_Notification;
 
     lang: enum u8 {
         Plain_Text :: 0;
@@ -760,6 +712,15 @@ NewBuffer :: struct {
             };
         }
     }
+    
+    // This is used to notify other editors for a buffer about edits.
+    // This field set represents inserts, replaces and deletes in a uniform way
+    Edit_Notification :: struct {
+        editor_id: s32;
+        offset:    s32;
+        old_count: s32;
+        new_count: s32;
+    }
 }
 
 Buffer :: struct {
@@ -782,7 +743,7 @@ Buffer :: struct {
     undos: [..] Edit_Group;
     redos: [..] Edit_Group;
     edits: [..] Edit;  // current edits, not in a group yet
-    cursors: [..] Cursor.State;  // cursor state before any current edits were made
+    // cursors: [..] Cursor.State;  // cursor state before any current edits were made
     
 
     // TODO: put into enum_flags
@@ -804,7 +765,7 @@ Buffer :: struct {
     
     Edit_Group :: struct {
         edits: [] Edit;
-        cursors: [] Cursor.State;
+        // cursors: [] Cursor.State;
     }
     
     // All strings in this struct are owned
@@ -848,15 +809,15 @@ Line :: struct {
     num_chars:  s32;
 }
 
-Cursor :: struct {
-    using state: State;
-    col_wanted: s32;
-    clipboard: string;
+// Cursor :: struct {
+//     using state: State;
+//     col_wanted: s32;
+//     clipboard: string;
 
-    State :: struct {
-        pos, sel: Pos;  // if pos != sel, then we have an active selection
-    }
-}
+//     State :: struct {
+//         pos, sel: Pos;  // if pos != sel, then we have an active selection
+//     }
+// }
 
 Cursor_Offsets :: struct {
     pos, sel: s32;
