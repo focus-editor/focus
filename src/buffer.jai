@@ -22,26 +22,9 @@ refresh_open_buffers :: () {
     }
 }
 
-// !!!!!!!!!!!!
-put_cursor_in_valid_spot :: (using cursor: *Cursor, buffer: Buffer) {
-    pos = make_valid_pos(buffer, pos);
-    sel = make_valid_pos(buffer, sel);
-}
-
 put_cursor_in_valid_spot :: (using cursor: *Caret, buffer: NewBuffer) {
     pos = clamp(pos, 0, xx buffer.bytes.count);
     sel = clamp(sel, 0, xx buffer.bytes.count);
-}
-
-insert_string_at_pos :: (buffer: *Buffer, pos: Pos, str: string) {
-    offset := pos_to_offset(buffer, pos);
-    insert_string_at_offset(buffer, offset, str);
-}
-
-// !!!!
-insert_string_at_offset :: (buffer: *Buffer, offset: s64, str: string) {
-    new_insert_edit(buffer, offset, str);
-    insert_string_raw(buffer, offset, str);
 }
 
 insert_string_at_offset :: (buffer: *NewBuffer, offset: s64, str: string) {
@@ -53,23 +36,6 @@ insert_char_at_offset :: (buffer: *NewBuffer, offset: s32, char: Utf8_Char) {
     new_insert_char_edit(buffer, offset, char);
     str := to_string(*char);
     insert_string_raw(buffer, offset, str);
-}
-
-// !!!!
-insert_char_at_pos :: (buffer: *Buffer, pos: Pos, char: Utf8_Char) {
-    offset := pos_to_offset(buffer, pos);
-    new_insert_char_edit(buffer, offset, char);
-    str := to_string(*char);
-    insert_string_raw(buffer, offset, str);
-}
-
-// !!!!
-delete_range :: (buffer: *Buffer, range: Range) {
-    start, end := range_to_byte_offsets(buffer, make_valid_range(buffer, range));
-    if start == end return;
-    old_str := to_string(array_view(buffer.bytes, start, end - start));
-    new_delete_edit(buffer, start, end, old_str);
-    delete_range_raw(buffer, start, end);
 }
 
 delete_range :: (buffer: *NewBuffer, using range: Offset_Range) {
@@ -88,29 +54,7 @@ replace_range :: (buffer: *NewBuffer, using range: Offset_Range, str: string) {
     replace_range_raw(buffer, start, end, str);
 }
 
-// !!!! A dedicated function to avoid having to recalculate lines between deleting range and inserting string
-replace_range :: (buffer: *Buffer, range: Range, str: string) {
-    start, end := range_to_byte_offsets(buffer, make_valid_range(buffer, range));
-
-    old_str := to_string(array_view(buffer.bytes, start, end - start));
-    if str == old_str return;
-
-    new_replace_edit(buffer, start, end, old_str, str);
-
-    replace_range_raw(buffer, start, end, str);
-}
-
 delete_range_raw :: (using buffer: *NewBuffer, start: s64, end: s64) {
-    len := end - start;
-    if len <= 0 return;
-
-    array_delete_bytes(*bytes, start, len);
-
-    buffer.dirty = true;
-}
-
-// !!!!
-delete_range_raw :: (using buffer: *Buffer, start: s64, end: s64) {
     len := end - start;
     if len <= 0 return;
 
@@ -128,23 +72,7 @@ insert_string_raw :: (buffer: *NewBuffer, offset: s64, str: string) {
     buffer.dirty = true;
 }
 
-// !!!!
-insert_string_raw :: (buffer: *Buffer, offset: s64, str: string) {
-    bytes: [] u8;
-    bytes.data  = str.data;
-    bytes.count = str.count;
-    array_insert_bytes_at(*buffer.bytes, offset, bytes);
-
-    buffer.dirty = true;
-}
-
 replace_range_raw :: (buffer: *NewBuffer, start: s32, end: s32, str: string) {
-    delete_range_raw(buffer, start, end);
-    insert_string_raw(buffer, start, str);
-}
-
-// !!!!
-replace_range_raw :: (buffer: *Buffer, start: s32, end: s32, str: string) {
     delete_range_raw(buffer, start, end);
     insert_string_raw(buffer, start, str);
 }
@@ -157,25 +85,7 @@ get_char_at_offset :: (using buffer: NewBuffer, offset: s32) -> u32 {
     return char;
 }
 
-// !!!!
-get_char_at_pos :: (using buffer: Buffer, pos: Pos) -> u32 {
-    str := get_char_at_pos_as_string(buffer, pos);
-    if !str return 0;
-    
-    char := utf8_next_character(*str);
-    return char;
-}
-
 get_char_at_offset_as_string :: (using buffer: NewBuffer, offset: s32) -> string {
-    if offset >= bytes.count return "";
-    char: string = ---;
-    char.data  = *bytes[offset];
-    char.count = 1 + trailingBytesForUTF8[bytes[offset]];
-    return char;
-}
-
-get_char_at_pos_as_string :: (using buffer: Buffer, pos: Pos) -> string {
-    offset := pos_to_offset(buffer, make_valid_pos(buffer, pos));
     if offset >= bytes.count return "";
     char: string = ---;
     char.data  = *bytes[offset];
@@ -224,102 +134,6 @@ offset_to_line :: (using buffer: NewBuffer, offset: s64) -> line_num: s32 {
     return cast(s32) line_num;
 }
 
-// !!!!!!!!!!
-offset_to_pos :: (using buffer: Buffer, offset: s64) -> Pos {
-    pos: Pos = ---;
-    pos.line = offset_to_line(buffer, offset);
-
-    // Find col by scanning the line
-    pos.col = 0;
-    i := lines[pos.line].start;
-    while i < offset {
-        pos.col += 1;
-        i += 1 + trailingBytesForUTF8[bytes[i]];
-    }
-
-    return pos;
-}
-
-// !!!!!!!!!!
-offset_to_line :: (using buffer: Buffer, offset: s64) -> s32 {
-    assert(!dirty, "buffer is dirty, can't calculate pos from offset");
-    assert(offset <= lines[lines.count - 1].end, "offset exceeds buffer size, can't calculate pos");
-
-    line_num := 0;
-
-    left  := 0;
-    right := lines.count - 1;
-
-    if offset >= lines[right].start {
-        line_num = right;
-    } else {
-        while (right - left) > 1 {
-            middle := left + (right - left) / 2;
-            if offset < lines[middle].start {
-                right = middle;
-            } else {
-                left = middle;
-            }
-        }
-        line_num = left;
-    }
-    
-    return cast(s32) line_num;
-}
-
-make_valid_range :: (buffer: Buffer, range: Range) -> Range {
-    start := make_valid_pos(buffer, range.start, for_cursor = false);
-    end   := make_valid_pos(buffer, range.end, for_cursor = false);
-    if start.line > end.line || (start.line == end.line && start.col > end.col) {
-        start, end = swap(start, end);
-    }
-    result: Range = ---;
-    result.start = start;
-    result.end   = end;
-    return result;
-}
-
-make_valid_pos :: (using buffer: Buffer, _pos: Pos, for_cursor := true) -> Pos {
-    assert(!dirty);
-    pos := _pos;
-    if pos.line < 0 then pos.line = 0;
-    if pos.col  < 0 then pos.col  = 0;
-    if pos.line >= lines.count then pos.line = xx (lines.count - 1);
-
-    line_len := lines[pos.line].num_chars;
-    if !last_line(buffer, pos.line) then line_len += 1;  // we have a trailing \n
-    if for_cursor {
-        if pos.col >= line_len {
-            if !last_line(buffer, pos.line) {
-                pos.col = max(line_len - 1, 0);  // cursor can't stand after the newline
-            } else {
-                pos.col = line_len;  // there's no newline anyway
-            }
-        }
-    } else {
-        if pos.col > line_len then pos.col = line_len;
-    }
-    return pos;
-}
-
-range_to_byte_offsets :: (buffer: Buffer, range: Range) -> start: s32, end: s32 {
-    start := pos_to_offset(buffer, range.start);
-    end   := pos_to_offset(buffer, range.end);
-    return start, end;
-}
-
-range_length_in_bytes :: (buffer: Buffer, range: Range) -> s64 {
-    start, end := range_to_byte_offsets(buffer, range);
-    return end - start;
-}
-
-// !!!
-bytes_in_range :: (buffer: Buffer, range: Range) -> s64 {
-    start, end := range_to_byte_offsets(buffer, range);
-    assert(start <= end);
-    return end - start;
-}
-
 coords_to_offset :: (using buffer: NewBuffer, coords: Coords) -> s32 {
     assert(!buffer.dirty);
     
@@ -338,32 +152,8 @@ coords_to_offset :: (using buffer: NewBuffer, coords: Coords) -> s32 {
     return offset;
 }
 
-// !!!!!
-pos_to_offset :: (buffer: Buffer, pos: Pos) -> s32 {
-    assert(!buffer.dirty);
-    line := buffer.lines[pos.line];
-    offset := line.start;
-    for col : 0..pos.col-1 {
-        byte := buffer.bytes[offset];
-        offset += 1 + trailingBytesForUTF8[byte];
-    }
-    return offset;
-}
-
-// !!!!
-has_selection :: inline (using cursor: Cursor) -> bool {
-    return pos != sel;
-}
-
 has_selection :: inline (using cursor: Caret) -> bool {
     return pos != sel;
-}
-
-// !!!!
-get_selection :: (using cursor: Cursor) -> Range {
-    using range: Range = ---;
-    if pos < sel { start = pos; end = sel; } else { start = sel; end = pos; }
-    return range;
 }
 
 get_selection :: (using cursor: Caret) -> Offset_Range {
@@ -378,21 +168,6 @@ get_selection_coords :: (buffer: NewBuffer, using cursor: Caret) -> Coords_Range
     };
 }
 
-get_selection_whole_lines :: (cursor: Cursor, buffer: Buffer) -> Range {
-    assert(!buffer.dirty);
-    selection := get_selection(cursor);
-    using range: Range = ---;
-    start = selection.start;
-    start.col = 0;
-    end = selection.end;
-    if start != end && end.col == 0 && cursor.pos != end {
-        // Nothing is selected on the last line - don't include it
-        end.line -= 1;
-    }
-    end.col = buffer.lines[end.line].num_chars;
-    return range;
-}
-
 get_selected_string :: (cursor: Caret, buffer: NewBuffer) -> string {
     result: string;
     if !has_selection(cursor) return result;
@@ -402,61 +177,11 @@ get_selected_string :: (cursor: Caret, buffer: NewBuffer) -> string {
     return result;
 }
 
-// !!!!
-get_selected_string :: (cursor: Cursor, buffer: Buffer) -> string {
-    result: string;
-    if !has_selection(cursor) return result;
-    selection  := get_selection(cursor);
-    start, end := range_to_byte_offsets(buffer, selection);
-    result.data  = buffer.bytes.data + start;
-    result.count = end - start;
-    return result;
-}
-
 get_string_from_range :: (range: Offset_Range, buffer: NewBuffer) -> string {
     result: string = ---;
     result.data  = buffer.bytes.data + range.start;
     result.count = range.end - range.start;
     return result;
-}
-
-// !!!!
-get_string_from_range :: (range: Range, buffer: Buffer) -> string {
-    result: string;
-    start, end := range_to_byte_offsets(buffer, range);
-    if start == end return result;
-
-    result.data  = buffer.bytes.data + start;
-    result.count = end - start;
-    return result;
-}
-
-copy_lines_to_temp_string :: (buffer: Buffer, range: Range) -> string {
-    // NOTE: copies whole lines, not just the range
-    assert(!buffer.dirty);
-    start := buffer.lines[range.start.line].start;
-    end   := buffer.lines[range.end.line  ].end;
-    str   := to_string(array_view(buffer.bytes, start, end - start));
-    return copy_temporary_string(str);
-}
-
-get_temp_unicode_chars_for_line :: (buffer: Buffer, line_num: s32, max_char: s32) -> [] u32 {
-    assert(!buffer.dirty);
-
-    if line_num < 0 || line_num >= buffer.lines.count return .[];
-
-    line := buffer.lines[line_num];
-    str: string = ---;
-    str.data = buffer.bytes.data + line.start;
-    str.count = line.end - line.start;
-    if str.count <= 0 return .[];
-
-    chars := decode_utf8_string_to_temp_chars(str, max_char);
-    return chars;
-}
-
-remove_selection :: inline (using cursor: *Cursor) {
-    sel = pos;
 }
 
 remove_crlf :: (using buffer: *Buffer) {
@@ -710,67 +435,68 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
 }
 
 refresh_buffer_from_disk :: (path: string) {
-    log("refreshing '%'\n", path);
-    buffer_id, created := find_or_create_buffer(path);
-    if created return;
-    
-    log("--- buffer found, checking if it's changed on disk...\n");
-            
-    buffer := *open_buffers[buffer_id];
-    
-    if !file_exists(path) {
-        buffer.deleted = true;
-        finder.need_to_refresh_results = true;
-        return;
-    }
-    
-    if !buffer_file_has_changed_on_disk(buffer) return;
-    
-    log("--- reloading data from disk...\n");
-    
-    finder.need_to_refresh_results = true;
-    
-    // Buffer has changed on disk
-    assert(path == buffer.file.full_path);
-        
-    // Reload buffer from disk
-    file_contents, success := read_entire_file(path);
-    if !success { log_error("Couldn't read file '%'\n", path); return; }
-    defer free(file_contents);  // @memory: could probably use temporary storage and reset mark after?
-    
-    buffer.meow_hash = calculate_meow_hash(cast([] u8)file_contents);
-    buffer.deleted = false;
-    
-    if buffer.modified {
-        // Mark conflict
-        // TODO: display a dialog prompting to reload
-        buffer.modified_on_disk = true;
-    } else {
-        remember_last_modtime_and_size(buffer);
+    // @buffer
+    // log("refreshing '%'\n", path);
+    // buffer_id, created := find_or_create_buffer(path);
+    // if created return;
+    // 
+    // log("--- buffer found, checking if it's changed on disk...\n");
+    //         
+    // buffer := *open_buffers[buffer_id];
+    // 
+    // if !file_exists(path) {
+    //     buffer.deleted = true;
+    //     finder.need_to_refresh_results = true;
+    //     return;
+    // }
+    // 
+    // if !buffer_file_has_changed_on_disk(buffer) return;
+    // 
+    // log("--- reloading data from disk...\n");
+    // 
+    // finder.need_to_refresh_results = true;
+    // 
+    // // Buffer has changed on disk
+    // assert(path == buffer.file.full_path);
+    //     
+    // // Reload buffer from disk
+    // file_contents, success := read_entire_file(path);
+    // if !success { log_error("Couldn't read file '%'\n", path); return; }
+    // defer free(file_contents);  // @memory: could probably use temporary storage and reset mark after?
+    // 
+    // buffer.meow_hash = calculate_meow_hash(cast([] u8)file_contents);
+    // buffer.deleted = false;
+    // 
+    // if buffer.modified {
+    //     // Mark conflict
+    //     // TODO: display a dialog prompting to reload
+    //     buffer.modified_on_disk = true;
+    // } else {
+    //     remember_last_modtime_and_size(buffer);
 
-        // Remember cursor state - if we have 2 editors then the last editor's state will be remembered
-        for * editor : open_editors {
-            if editor.buffer_id != buffer_id continue;
+    //     // Remember cursor state - if we have 2 editors then the last editor's state will be remembered
+    //     for * editor : open_editors {
+    //         if editor.buffer_id != buffer_id continue;
 
-            new_edit_group(buffer, editor);
-            array_resize(*buffer.cursors, editor.cursors.count);
-            for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
-        }
+    //         new_edit_group(buffer, editor);
+    //         array_resize(*buffer.cursors, editor.cursors.count);
+    //         for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
+    //     }
 
-        // Reload its contents
-        new_replace_edit(buffer, 0, xx buffer.bytes.count, to_string(buffer.bytes), file_contents);
-        replace_range_raw(buffer, 0, xx buffer.bytes.count, file_contents);
-        recalculate_lines(buffer);
+    //     // Reload its contents
+    //     new_replace_edit(buffer, 0, xx buffer.bytes.count, to_string(buffer.bytes), file_contents);
+    //     replace_range_raw(buffer, 0, xx buffer.bytes.count, file_contents);
+    //     recalculate_lines(buffer);
 
-        // Save edits and put cursors in correct places
-        for * editor : open_editors {
-            if editor.buffer_id != buffer_id continue;
-            new_edit_group(buffer, editor);
-            for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
-        }
-    }
-    
-    refresh_all_editors_for_buffer(buffer_id);
+    //     // Save edits and put cursors in correct places
+    //     for * editor : open_editors {
+    //         if editor.buffer_id != buffer_id continue;
+    //         new_edit_group(buffer, editor);
+    //         // for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }  // @buffer!!!
+    //     }
+    // }
+    // 
+    // refresh_all_editors_for_buffer(buffer_id);
 }
 
 maybe_mark_buffer_as_deleted :: (path: string) {

@@ -66,18 +66,19 @@ finder_close :: () {
 
 finder_open_from_editor :: () {
     editor, buffer := get_active_editor_and_buffer();
-
-    // If there was some text selected that doesn't span more than one line, use it for search
-    if editor && editor.cursors.count == 1 {
-        cursor := editor.cursors[0];
-        selected_text := get_selected_string(cursor, buffer);
-        if selected_text && cursor.sel.line == cursor.pos.line {
-            replace_text(*finder.input, selected_text);
-            reset_results();
-            start_new_search(force = true);
-        }
-    }
     
+    // @buffer!!
+    // // If there was some text selected that doesn't span more than one line, use it for search
+    // if editor && editor.cursors.count == 1 {
+    //     cursor := editor.cursors[0];
+    //     selected_text := get_selected_string(cursor, buffer);
+    //     if selected_text && cursor.sel.line == cursor.pos.line {
+    //         replace_text(*finder.input, selected_text);
+    //         reset_results();
+    //         start_new_search(force = true);
+    //     }
+    // }
+    // 
     finder_open();
 }
 
@@ -139,33 +140,34 @@ finder_update :: () {
 }
 
 finder_open_selected_result :: (selected_num := -1, placement: Editor_Placement) {
-    using finder;
-    if request.in_progress return;
-    if selected_num >= 0 then selected = selected_num;
-    if selected >= results.count return;
-    
-    active_global_widget = .editors;
-    
-    result := results[selected];
-    
-    old_layout := editors.layout;    
-    editors_open_buffer(result.buffer_id, placement);
-    
-    // Select the search result
-    editor, buffer := get_active_editor_and_buffer();
-    match_start := min(result.match_offset,                xx buffer.bytes.count);  // buffer could've changed, so offset may not be valid any more
-    match_end   := min(result.match_offset + needle.count, xx buffer.bytes.count);
-    cursor := leave_only_original_cursor(editor);
-    cursor.sel = offset_to_pos(buffer, match_start);
-    cursor.pos = offset_to_pos(buffer, match_end);
+    // @buffer!!!
+    // using finder;
+    // if request.in_progress return;
+    // if selected_num >= 0 then selected = selected_num;
+    // if selected >= results.count return;
+    // 
+    // active_global_widget = .editors;
+    // 
+    // result := results[selected];
+    // 
+    // old_layout := editors.layout;    
+    // editors_open_buffer(result.buffer_id, placement);
+    // 
+    // // Select the search result
+    // editor, buffer := get_active_editor_and_buffer();
+    // match_start := min(result.match_offset,                xx buffer.bytes.count);  // buffer could've changed, so offset may not be valid any more
+    // match_end   := min(result.match_offset + needle.count, xx buffer.bytes.count);
+    // cursor := leave_only_original_cursor(editor);
+    // cursor.sel = offset_to_pos(buffer, match_start);
+    // cursor.pos = offset_to_pos(buffer, match_end);
 
-    editor.scroll_to_cursor = .yes;
-    if old_layout == .Single && editors.layout == .Double {
-        // We've just opened a new editor, so need to let it know it's being opened,
-        // so that it can use the target rect width for its scroll calculations
-        // (otherwise it'll be too small and the scroll will not animate where expected)
-        editor.scroll_to_cursor = .yes_new_editor;
-    }
+    // editor.scroll_to_cursor = .yes;
+    // if old_layout == .Single && editors.layout == .Double {
+    //     // We've just opened a new editor, so need to let it know it's being opened,
+    //     // so that it can use the target rect width for its scroll calculations
+    //     // (otherwise it'll be too small and the scroll will not animate where expected)
+    //     editor.scroll_to_cursor = .yes_new_editor;
+    // }
 }
 
 #scope_file
