@@ -242,6 +242,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     max_lines := cast(s32) buffer.line_starts.count - 2;
     visible_lines_start := clamp(cast(s32) (viewport.top / line_height) - 1, 0, max_lines);
     visible_lines_end   := clamp(visible_lines_start + cast(s32) (rect.h / line_height) + 1, 0, max_lines);
+    num_visible_lines   := visible_lines_end - visible_lines_start + 1;
     visible_offset_range := Offset_Range.{
         start = buffer.line_starts[visible_lines_start],
         end   = buffer.line_starts[visible_lines_end + 1],
@@ -368,15 +369,43 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     
     // Draw text
     if buffer.needs_coloring || buffer.colors.count != buffer.bytes.count then recalculate_colors(buffer);  // right before drawing
+    
+    hidden_chars_on_the_left := cast(s32) max((viewport.left / char_size) - 2, 0);
+    max_chars_horizontally   := cast(s32) (rect.w / char_size) + 2;
+    
     pen := text_origin;
     pen.y += (line_height - char_size) / 2 - visible_lines_start * line_height;
-    for visible_lines_start .. visible_lines_end {
-        line_start := buffer.line_starts[it];
-        length := buffer.line_starts[it+1] - line_start;
-        line := trim_right(to_string(array_view(buffer.bytes, line_start, length)), " \r\n");
-        Simp.draw_text(font, xx pen.x, xx pen.y, line, .{0.8, 0.8, 0.8, 1.0});
-        pen.y -= line_height;
+    
+    code_lines := NewArray(num_visible_lines, Simp.Code_Line, initialized = false, allocator = temp);
+    for line_num : visible_lines_start .. visible_lines_end {
+        line_start := buffer.line_starts[line_num];
+        length := buffer.line_starts[line_num+1] - line_start;
+        line := to_string(array_view(buffer.bytes, line_start, length));
+        line = advance_by_chars  (line, hidden_chars_on_the_left);
+        line = take_first_n_chars(line, max_chars_horizontally);
+        line = trim_right(line, " \r\n");
+        colors := ifx line then array_view(buffer.colors, line.data - buffer.bytes.data, line.count) else .[];
+        code_lines[line_num-visible_lines_start] = .{ line = line, colors = colors };
     }
+    Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, code_lines, CODE_COLOR_MAP);
+    
+    // // Draw text
+    // pen := text_origin;
+    // pen.y += (line_height - char_size) / 2 - visible_lines_start * line_height;
+    // visible_lines := array_view(buffer.lines, visible_lines_start, visible_lines_end - visible_lines_start);
+    // hidden_chars_on_left := cast(s32) (viewport.left / char_size) - 2;
+    // if hidden_chars_on_left < 0 then hidden_chars_on_left = 0;
+    // max_chars_per_page   := cast(s32) (rect.w   / char_size) + 2;
+    // pen.x += hidden_chars_on_left * char_size;
+    // code_ranges: [..] Simp.Code_Range;  // visible code ranges
+    // code_ranges.allocator = temp;
+    // for line : visible_lines {
+    //     range := array_add(*code_ranges);
+    //     range.start = move_offset_by_chars(line.start,  hidden_chars_on_left, buffer.bytes, line.end);
+    //     range.end   = move_offset_by_chars(range.start, max_chars_per_page,   buffer.bytes, line.end);
+    // }
+    // if buffer.needs_coloring || buffer.colors.count != buffer.bytes.count then recalculate_colors(buffer);  // right before drawing
+    // Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, code_ranges, buffer.bytes, buffer.colors, CODE_COLOR_MAP);
     
     // Draw active cursors
     if cursors_active {
@@ -395,29 +424,6 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             }
         }
     }
-
-    // // Draw text
-    // pen := text_origin;
-    // pen.y += (line_height - char_size) / 2 - visible_lines_start * line_height;
-    // visible_lines := array_view(buffer.lines, visible_lines_start, visible_lines_end - visible_lines_start);
-    // hidden_chars_on_left := cast(s32) (viewport.left / char_size) - 2;
-    // if hidden_chars_on_left < 0 then hidden_chars_on_left = 0;
-    // max_chars_per_page   := cast(s32) (rect.w   / char_size) + 2;
-    // pen.x += hidden_chars_on_left * char_size;
-    // code_ranges: [..] Simp.Code_Range;  // visible code ranges
-    // code_ranges.allocator = temp;
-    // for line : visible_lines {
-    //     range := array_add(*code_ranges);
-    //     range.start = move_offset_by_chars(line.start,  hidden_chars_on_left, buffer.bytes, line.end);
-    //     range.end   = move_offset_by_chars(range.start, max_chars_per_page,   buffer.bytes, line.end);
-    // }
-    // if buffer.needs_coloring || buffer.colors.count != buffer.bytes.count then recalculate_colors(buffer);  // right before drawing
-    // Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, code_ranges, buffer.bytes, buffer.colors, CODE_COLOR_MAP);
-    // 
-    // // Draw cursors on top of text
-    // if !editor.search_bar.active {
-    //     draw_cursors(editor, buffer, rect, text_origin, cursors_active);
-    // }
 }
 
 draw_splitter :: (splitter_rect: Rect, split_x: float, ui_id: Ui_Id) {

@@ -64,25 +64,9 @@ Font_Line :: struct {
     height: int;
 };
 
-// For code rendering
-Code_Range :: struct {
-    start, end: s32;  // in bytes
-}
-
-Code_Color :: enum u8 {
-    DEFAULT;
-    COMMENT;
-    TYPE;
-    KEYWORD;
-    VALUE_KEYWORD;
-    VALUE;
-    FUNCTION;
-    PUNCTUATION;
-    STRING;
-    ERROR;
-    OPERATION;
-
-    NUM_COLORS;
+Code_Line :: struct {
+    line:   string;
+    colors: [] u8;
 }
 
 init_fonts :: (_page_size_x: s32 = -1, _page_size_y: s32 = -1) {
@@ -158,9 +142,7 @@ convert_to_temporary_glyphs :: (font: *Dynamic_Font, s: string) -> width_in_pixe
     return width_in_pixels;
 }
 
-draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height: float, visible_lines: [] Code_Range, whole_code: [] u8, colors: [] Code_Color, color_map: [] Vector4) {
-    assert(whole_code.count == colors.count);
-
+draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height: float, visible_lines: [] Code_Line, color_map: [] Vector4) {
     // Setup OpenGL stuff. We do it all in one place because it's easier and there will be only one backend - GL.
     // Otherwise we would have to create temporary glyphs and pass them on to the backend draw function.
     CheckInit();
@@ -177,9 +159,8 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height
 
     // Draw all lines
     for visible_lines {
-        line: string = ---;
-        line.data  = whole_code.data + it.start;
-        line.count = it.end - it.start;
+        line   := it.line;
+        colors := it.colors;
 
         sx := cast(float) x;
 
@@ -237,7 +218,7 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height
                 quad.v0 = glyph.y0 / cast(float) texture.height;
                 quad.v1 = (cast(float) glyph.y0 + glyph.height) / texture.height;
 
-                color := colors[it.start + t - line.data];
+                color := colors[t - line.data];
                 immediate_letter_quad(quad, color_map[color]);
             }
 

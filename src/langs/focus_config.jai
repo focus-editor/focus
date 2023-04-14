@@ -176,7 +176,7 @@ Token :: struct {
 }
 
 // Must match the order of the types in the enum above
-COLOR_MAP :: Simp.Code_Color.[
+COLOR_MAP :: Code_Color.[
     .COMMENT,       // eof - obviously not used
     
     .ERROR,         // error

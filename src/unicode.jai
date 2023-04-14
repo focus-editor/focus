@@ -42,14 +42,19 @@ Utf8_Char :: struct {
     count: s32;
 }
 
-move_offset_by_chars :: (offset: s32, num_chars: s32, bytes: [] u8, max_offset: s32) -> new_offset: s32 {
-    max_t := bytes.data + min(max_offset, cast(s32)bytes.count);
-    t := bytes.data + offset;
-    for i : 0..num_chars-1 {
-        if t >= max_t break;
-        t = unicode_next_character(t);
+advance_by_chars :: (s: string, num_chars: s64) -> string #must {
+    result := s;
+    while result && num_chars > 0 {
+        advance(*result, 1 + trailingBytesForUTF8[s[0]]);
+        num_chars -= 1;
     }
-    return cast(s32) (t - bytes.data);
+    return result;
+}
+
+take_first_n_chars :: (s: string, num_chars: s64) -> string #must {
+    result := s;
+    result.count -= advance_by_chars(result, num_chars).count;
+    return result;
 }
 
 next_char_offset :: inline (bytes: [] u8, offset: s32) -> s32 {

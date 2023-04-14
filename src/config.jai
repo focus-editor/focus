@@ -158,8 +158,24 @@ Colors :: struct {
     CODE_KEYWORD        :: Color.{ r = 0.902, g = 0.493, b = 0.457, a = 1.0 };
 };
 
+Code_Color :: enum u8 {
+    DEFAULT;
+    COMMENT;
+    TYPE;
+    KEYWORD;
+    VALUE_KEYWORD;
+    VALUE;
+    FUNCTION;
+    PUNCTUATION;
+    STRING;
+    ERROR;
+    OPERATION;
+
+    NUM_COLORS;
+}
+
 CODE_COLOR_MAP :: #run -> [] Vector4 {
-    using Simp.Code_Color;
+    using Code_Color;
 
     result: [NUM_COLORS] Vector4;
 

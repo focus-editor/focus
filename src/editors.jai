@@ -397,7 +397,7 @@ move_cursor_to_viewport_center :: (editor: *Editor, buffer: NewBuffer) {
 leave_only_original_caret :: (using editor: *Editor) -> *Caret {
     // Remove all cursors except the original one
     cursor := carets[original_cursor];
-    cursor.clipboard = .{ start = 0, count = xx clipboard.count };
+    cursor.clipboard = .{ start = 0, count = xx max(clipboard.count-1, 0) };
     carets.count = 1;
     original_cursor = 0;
     main_cursor = 0;

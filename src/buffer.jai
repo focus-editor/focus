@@ -655,8 +655,8 @@ NewBuffer :: struct {
     line_starts: [..] s32;       // may not correspond to actual line breaks in the buffer
     real_line_starts: [..] s32;  // for displaying the line/column numbers
     
-    colors: [..] Simp.Code_Color;  // u8 - we color each byte (even for multi-byte chars)
-                                   // @Space: we could use a u4 instead
+    colors: [..] u8;             // we color each byte (even for multi-byte chars)
+                                 // @Space: we could use a u4 instead
 
     // TODO: put into enum_flags
     has_file := false;  // false for freestanding buffers. TODO: make freestanding buffers separate?
@@ -733,7 +733,7 @@ Buffer :: struct {
 
     bytes:  [..] u8;
     
-    colors: [..] Simp.Code_Color;  // u8 - we color each byte (even for multi-byte chars)
+    colors: [..] u8; // we color each byte (even for multi-byte chars)
                                    // @Space: we could use a u4 instead
     
     // deprecated

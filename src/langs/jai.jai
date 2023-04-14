@@ -4,7 +4,7 @@ highlight_jai_syntax :: (using buffer: *NewBuffer) {
     tokenizer.max_t = bytes.data + bytes.count;
     tokenizer.t     = bytes.data;
 
-    color: Simp.Code_Color;
+    color: Code_Color;
 
     while true {
         token := get_next_token(*tokenizer);
@@ -20,9 +20,9 @@ highlight_jai_syntax :: (using buffer: *NewBuffer) {
             prev        := last_tokens[1];
             before_prev := last_tokens[0];
             if prev.type == .identifier {
-                memset(colors.data + prev.start, xx Simp.Code_Color.FUNCTION, prev.len);
+                memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
             } else if prev.type == .operation && prev.operation == .double_colon && before_prev.type == .identifier {
-                memset(colors.data + before_prev.start, xx Simp.Code_Color.FUNCTION, before_prev.len);
+                memset(colors.data + before_prev.start, xx Code_Color.FUNCTION, before_prev.len);
             }
         }
 
@@ -42,7 +42,7 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
     tokenizer.max_t = bytes.data + bytes.count;
     tokenizer.t     = bytes.data;
 
-    color: Simp.Code_Color;
+    color: Code_Color;
 
     while true {
         token := get_next_token(*tokenizer);
@@ -59,15 +59,15 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
             // Handle "func :: ("
             before_prev, prev := last_tokens[0], last_tokens[1];
             if prev.type == .identifier {
-                memset(colors.data + prev.start, xx Simp.Code_Color.FUNCTION, prev.len);
+                memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
             } else if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
-                memset(colors.data + before_prev.start, xx Simp.Code_Color.FUNCTION, before_prev.len);
+                memset(colors.data + before_prev.start, xx Code_Color.FUNCTION, before_prev.len);
             }
         } else if token.type == .keyword && token.keyword == .kw_inline {
             // Handle "func :: inline"
             before_prev, prev := last_tokens[0], last_tokens[1];
             if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
-                memset(colors.data + before_prev.start, xx Simp.Code_Color.FUNCTION, before_prev.len);
+                memset(colors.data + before_prev.start, xx Code_Color.FUNCTION, before_prev.len);
             }
         }
 
@@ -537,7 +537,7 @@ Token :: struct {
 }
 
 // Must match the order of the types in the enum
-COLOR_MAP :: Simp.Code_Color.[
+COLOR_MAP :: Code_Color.[
     .COMMENT,       // eof - obviously not used
     .DEFAULT,       // identifier
     .STRING,        // string_literal

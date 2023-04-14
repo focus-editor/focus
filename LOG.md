@@ -65,6 +65,7 @@
     + Remove cursor_offsets at the end
     - Draw new buffers using one draw call
     - Draw tabs
+        - Calculate cursor coords taking tabs into account
     
     - Line wrap:
         - Implement wrapping for buffer
@@ -86,6 +87,7 @@
     - I should probably draw the project boundary in the file open dialog so that you see why JaiDE files appear at the top even when the match is worse
 
 - Nice to haves:
+    - Mark modified buffers in the navigate dialog
     - Create new cursors above/below by ctrl+alt+shift+arrows
     - Rollback creating another cursor (ctrl+alt+D?)
     - Word selection / line selection mode
