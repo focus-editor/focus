@@ -220,7 +220,7 @@ void main () {
     float sample_center = texture(text_sampler, TextureCoords).r;
     float sample_right  = textureOffset(text_sampler, TextureCoords, ivec2( 1, 0)).r;
     color = iterated_color;
-    colorMask = vec4(sample_left, sample_center, sample_right, 1.0);
+    colorMask = vec4(sample_left * color.a, sample_center * color.a, sample_right * color.a, 1.0);
 }
 #endif // FRAGMENT_SHADER
 END

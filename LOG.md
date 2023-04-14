@@ -12,11 +12,11 @@
     + New open file dialog
     + Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
     + Adjust cursors in joint editors properly
+    + Try to support tabs properly
+    + Test the exe on different machines
     - Create new files
-    - Try to support tabs properly
     - Horizontal scrolling
     - Support CRLF (ugh)
-    - Test the exe on different machines
     - Notify about unsaved buffers on close
     - Ctrl + R to search by symbol within buffer (jump immediately when moving cursor between options)
     - Ctrl + Shift + R to search by symbol within workspace
@@ -63,9 +63,10 @@
     + Optimise cursor clipboard (use shared memory with offsets)
     + Be able to open actual files in the new buffers
     + Remove cursor_offsets at the end
-    - Draw new buffers using one draw call
-    - Draw tabs
-        - Calculate cursor coords taking tabs into account
+    + Draw new buffers using one draw call
+    + Draw tabs
+    + Calculate cursor coords taking tabs into account
+    - Implement the rest of actions
     
     - Line wrap:
         - Implement wrapping for buffer

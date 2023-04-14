@@ -1921,6 +1921,4 @@ splitter_anim: Tween_Animation(float);
 
 #scope_file
 
-TAB_SIZE :: 4;
-
 #import "Clipboard";

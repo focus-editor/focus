@@ -105,8 +105,14 @@ offset_to_coords :: (using buffer: NewBuffer, offset: s64) -> Coords {
     coords.col = 0;
     i := line_starts[coords.line];
     while i < offset {
-        coords.col += 1;
-        i += 1 + trailingBytesForUTF8[bytes[i]];
+        byte := bytes[i];
+        if byte != #char "\t" {  // I hate tabs
+            coords.col += 1;
+            i += 1 + trailingBytesForUTF8[bytes[i]];
+        } else {
+            coords.col += TAB_SIZE - coords.col % TAB_SIZE;
+            i += 1;
+        }
     }
 
     return coords;
@@ -152,9 +158,11 @@ coords_to_offset :: (using buffer: NewBuffer, coords: Coords) -> s32 {
     if offset >= bytes.count - 1 return offset;
     next_line_offset := line_starts[line + 1];
     
-    for col : 0..coords.col-1 {
+    col := 0;
+    while true {
         byte := bytes[offset];
-        // @tab_support: move col to the next tabstop on tab
+        if byte != #char "\t" then col += 1; else col += TAB_SIZE - col % TAB_SIZE;
+        if col > coords.col break;
         next_offset := offset + 1 + trailingBytesForUTF8[byte];
         if next_offset >= next_line_offset break;
         offset = next_offset;
@@ -545,8 +553,8 @@ find_col_by_scanning_left :: (using buffer: *NewBuffer, offset: s32) -> col: s32
     
     while offset > 0 {
         offset, byte = prev_char_offset(bytes, offset);
-        col += 1;
         if byte == #char "\n" break;  // @crlf
+        col += 1;
     }
     
     return col;

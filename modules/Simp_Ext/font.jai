@@ -142,7 +142,7 @@ convert_to_temporary_glyphs :: (font: *Dynamic_Font, s: string) -> width_in_pixe
     return width_in_pixels;
 }
 
-draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height: float, visible_lines: [] Code_Line, color_map: [] Vector4) {
+draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height: float, visible_lines: [] Code_Line, color_map: [] Vector4, tab_size: s64 = 4) {
     // Setup OpenGL stuff. We do it all in one place because it's easier and there will be only one backend - GL.
     // Otherwise we would have to create temporary glyphs and pass them on to the backend draw function.
     CheckInit();
@@ -162,7 +162,8 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height
         line   := it.line;
         colors := it.colors;
 
-        sx := cast(float) x;
+        sx  := cast(float) x;
+        col := 0;
 
         // Draw one line
         t := line.data;
@@ -199,8 +200,6 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height
                 y2 := sy + cast(float) glyph.ascent;
                 y1 := y2 - cast(float) glyph.height;
 
-                sx += char_size;
-
                 // Create quad
                 quad: Font_Quad = ---;
                 quad.glyph = glyph;
@@ -218,8 +217,18 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height
                 quad.v0 = glyph.y0 / cast(float) texture.height;
                 quad.v1 = (cast(float) glyph.y0 + glyph.height) / texture.height;
 
-                color := colors[t - line.data];
-                immediate_letter_quad(quad, color_map[color]);
+                color := color_map[colors[t - line.data]];
+                if utf32 != #char "\t" {
+                    sx  += char_size;
+                    col += 1;
+                } else {
+                    // Draw tabs wide 
+                    chars_to_tabstop := tab_size - col % tab_size;
+                    sx  += chars_to_tabstop * char_size;
+                    col += chars_to_tabstop;
+                    color.w = 0.2;  // don't make it too bright
+                }
+                immediate_letter_quad(quad, color);
             }
 
             t = unicode_next_character(t);
