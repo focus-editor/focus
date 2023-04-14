@@ -11,6 +11,7 @@
     + Improve cursor: draw occluded letters on top
     + New open file dialog
     + Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
+    + Adjust cursors in joint editors properly
     - Create new files
     - Try to support tabs properly
     - Horizontal scrolling
@@ -22,7 +23,6 @@
     - Try to implement "jump to symbol definition". Display a popup if more than one. Do a scan of jai files for that.
     - Show help on F1
     - Have the option to not strip trailing whitespace (in the config?) Or can do ctrl+s as a main way to save, ctr+shift+s as an alternative way
-    - Adjust cursors in joint editors properly
     - Highlight C/C++
     - Jump to line on Ctrl+G
     - Line wrap
@@ -39,6 +39,7 @@
     - Not designed for large files
     - CRLF?
     - Multi-byte Unicode symbols are not supported
+    - Currently only RGB monitor panels
 
 - Optimise line offset storage and recalculation
     + Drop cursor positions and just use offsets
@@ -55,42 +56,44 @@
     + f ff f
     + Indentation
     + Implement the most important edits
+    + Adjust cursors in joint editors properly on edits
+    + Paste animation
+    + Fix the crash after last undo (already fixed?)
+    + Selection highlights and marks
+    + Optimise cursor clipboard (use shared memory with offsets)
+    + Be able to open actual files in the new buffers
+    + Remove cursor_offsets at the end
+    - Draw new buffers using one draw call
+    - Draw tabs
+    
+    - Line wrap:
+        - Implement wrapping for buffer
+        - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
     
     - Fix issues near the end of file
         + Crash
         - Not processing the last line properly (when scanning for newlines)
         - Test indent/unindent
-    - Draw tabs
-    - Selection highlights and marks
+    - Use SIMD for syntax highlighting
+    - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
+        
+- Improve scrolling using shitty touchpads
+- Then: Sticky viewport
+        
+- Buffer ordering improvements:
+    - Make sure that files opened by double clicking or dragging which are within one of project dirs have their path displayed as the rest of the files
+    - All files opened separately should always appear at the top in searches
+    - I should probably draw the project boundary in the file open dialog so that you see why JaiDE files appear at the top even when the match is worse
+
+- Nice to haves:
     - Create new cursors above/below by ctrl+alt+shift+arrows
     - Rollback creating another cursor (ctrl+alt+D?)
-    - Paste animation
-    - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
-    - Optimise cursor clipboard (use shared memory with offsets)
-    - Sticky viewport
-    - Enable line wrap for buffer
-    - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
-    - Adjust cursors in joint editors properly on edits
-    - Ctrl+shift+delete/backspace - remove until start/end of line
-    - Use SIMD for syntax highlighting
-    
-    - Be able to open actual files in the new buffers
     - Word selection / line selection mode
-    - Fix the crash after last undo (already fixed?)
-    - Remove cursor_offsets at the end
-    - Use custom allocators for edits to reduce memory fragmentation (maybe later)
-    - See if we can join edits in edit groups (maybe on the fly on undo/redo)
+    - Ctrl+shift+delete/backspace - remove until start/end of line
     
-    - We currently recalculate lines:
-        - in active_editor_handle_event, after each edit made by each cursor (!!!!) ( 2 places )
-        - in active_editor_type_text, after each cursor (!!!!) ( 2 places )
-        - in refresh_open_buffers, every frame, if dirty - ok
-        - in refresh_buffer_from_disk, after reloading contents - ok
-        - in fill_in_buffer_from_disk_data - ok
-        - in delete_line* - because make_valid_pos requires non-dirty buffer
-        - in join_lines - because need to access the lines after that
-        - in move_lines_down - because insert_string_at_pos needs line info
-        - in paste_from_clipboard - because need to calculate new cursor pos after that
+- Optimisation:
+    - See if we can join edits in edit groups (maybe on the fly on undo/redo)
+    - Use custom allocators for edits to reduce memory fragmentation (maybe later)
     
 - Load UE5 source and try to scan it
     - When doing it, collect info on any binary files that had to be read to be ignored

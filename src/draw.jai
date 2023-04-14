@@ -78,11 +78,6 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     buffer := *open_buffers[buffer_id];
     
     editor_is_active := editor_id == editors.active && Input.input_application_has_focus;
-    
-    // Get the coordinates of all cursors
-    // TODO: instead of doing it every frame we could do it when cursors change only
-    cursor_coords := NewArray(carets.count, Cursor_Coords, initialized = false, allocator = temp);
-    for carets cursor_coords[it_index] = get_cursor_coords(buffer, it);
 
     // Calculate text origin in screen coordinates
     text_offset := make_vector2(char_size, -char_size);
@@ -124,6 +119,11 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         editors.active = editor_id;
         if mouse.left.just_pressed then redraw_requested = true;  // so that we don't draw 2 active editors
     }
+    
+    // Get the coordinates of all cursors
+    // @Speed: instead of doing it every frame we could do it when cursors change only - but probably it's ok
+    cursor_coords := NewArray(carets.count, Cursor_Coords, initialized = false, allocator = temp);
+    for carets cursor_coords[it_index] = get_cursor_coords(buffer, it);
     
     // Handle editor scrolling here because we only know the layout at this point.
     assert(!buffer.dirty);

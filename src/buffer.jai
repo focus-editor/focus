@@ -808,20 +808,6 @@ Line :: struct {
     num_chars:  s32;
 }
 
-// Cursor :: struct {
-//     using state: State;
-//     col_wanted: s32;
-//     clipboard: string;
-
-//     State :: struct {
-//         pos, sel: Pos;  // if pos != sel, then we have an active selection
-//     }
-// }
-
-Cursor_Offsets :: struct {
-    pos, sel: s32;
-}
-
 Cursor_Coords :: struct {
     pos, sel: Coords;
 }
