@@ -66,6 +66,9 @@
     + Draw new buffers using one draw call
     + Draw tabs
     + Calculate cursor coords taking tabs into account
+    + Save buffer
+    + Draw footer
+    - Fix the cursor when scrolled horizontally
     - Implement the rest of actions
     
     - Line wrap:
@@ -80,7 +83,12 @@
     - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
         
 - Improve scrolling using shitty touchpads
-- Then: Sticky viewport
+    - Then: Sticky viewport
+        - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
+        
+- Generalise TODO highlighting
+- Implement general language highlighting with a set of common keywords etc
+- Select syntax highlighting dialog
         
 - Buffer ordering improvements:
     - Make sure that files opened by double clicking or dragging which are within one of project dirs have their path displayed as the rest of the files
@@ -90,6 +98,7 @@
 - Nice to haves:
     - Mark modified buffers in the navigate dialog
     - Create new cursors above/below by ctrl+alt+shift+arrows
+    - Display the number of cursors in the footer
     - Rollback creating another cursor (ctrl+alt+D?)
     - Word selection / line selection mode
     - Ctrl+shift+delete/backspace - remove until start/end of line

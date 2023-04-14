@@ -125,287 +125,394 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     cursor_coords := NewArray(carets.count, Cursor_Coords, initialized = false, allocator = temp);
     for carets cursor_coords[it_index] = get_cursor_coords(buffer, it);
     
-    // Handle editor scrolling here because we only know the layout at this point.
-    assert(!buffer.dirty);
-    max_y_scroll := max(cast(s32)((buffer.line_starts.count - 2) * line_height), 0);
-    
-    if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
-        using editor.viewport;
-        new_target := clamp(scroll_y.target - mouse.scroll_y_delta, 0, max_y_scroll);
-        start_animation(*scroll_y, top, new_target);
-    } else if cursor_moved {
-        // @buffer!!!!
-        cursor_moved = false;  // TODO: remove when no longer using the temp editor
-        
-        // Detect if cursor is off screen and start scrolling to it
-        bounds := shrink_x(rect, text_offset.x + char_size * 3);
-        bounds  = shrink_y(bounds, -text_offset.y + line_height * 3);
-        bounds.h += 2;
-        bounds.y -= line_height + 2;
-        if bounds.w < 0 || bounds.h < 0 then bounds = rect;  // fall back
-        // draw_rect(bounds, Colors.BACKGROUND_DARK);
-
-        screen_pos := get_cursor_screen_pos(text_origin, cursor_coords[main_cursor].pos);
-        if !point_within(screen_pos, bounds) {
-            left, top, right, bottom := get_rect_sides(bounds);
-            offset: Vector2;
-            if screen_pos.x < left   then offset.x = screen_pos.x - left;
-            if screen_pos.y < bottom then offset.y = screen_pos.y - bottom;
-            if right < screen_pos.x  then offset.x = screen_pos.x - right;
-            if top   < screen_pos.y  then offset.y = screen_pos.y - top;
-
-            left_target := max(viewport.left + cast(s32) offset.x, 0);
-            top_target  := clamp(viewport.top - cast(s32) offset.y, 0, max_y_scroll);
-
-            if left_target != viewport.scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target);
-            if top_target  != viewport.scroll_y.target then start_animation(*viewport.scroll_y, viewport.top,  top_target);
-        }
-    } else if scroll_to_cursor != .no {
-        using editor.viewport;
-        
-        // Use the target editor width (not current width) when a new editor is appearing
-        editor_width := ifx scroll_to_cursor == .yes_new_editor then total_editor_area.w / 2 else rect.w;
-        
-        cursor_pos_from_left := cursor_coords[main_cursor].pos.col * char_size + text_offset.x;
-        left_target := cast(s32)(cursor_pos_from_left - editor_width + char_size * 3);
-        if left_target < 0 then left_target = 0;
-        if left_target != scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target);
-
-        cursor_pos_from_top := cursor_coords[main_cursor].pos.line * line_height;
-        top_target := cast(s32)(cursor_pos_from_top - rect.h / 2);
-        if top_target < 0 then top_target = 0;
-        if top_target != scroll_y.target then start_animation(*viewport.scroll_y, viewport.top, top_target);            
-
-        scroll_to_cursor = .no;
-    }
-
-    // Maybe update selection highlights
-    if editor.refresh_highlights && buffer.bytes.count <= MAX_BUFFER_SIZE_FOR_HIGHLIGHTS {
-        editor.refresh_highlights = false;
-        array_reset_keeping_memory(*editor.highlights);
-        
-        selected_text := get_selected_text_all_cursors(editor, buffer);
-        if selected_text.count > 2 && selected_text.count < 1000 && !is_all_whitespace(selected_text) {
-            search_func: (s: string, substring: string, start_index := 0) -> s64;
-            search_func = ifx editor.search_whole_words then find_index_from_left_whole_word else find_index_from_left;
-            buffer_str := to_string(buffer.bytes);
-            offset := 0;
-            while true {
-                offset = search_func(buffer_str, selected_text, start_index = offset);
-                if offset < 0 break;
-
-                highlight := array_add(*editor.highlights);
-                highlight.offset = offset;
-                highlight.line   = offset_to_line(buffer, offset);
-
-                offset += selected_text.count;
-            }
-        }
-        editor.selected_text_length = selected_text.count;
-    }
-
-    // Scrollbar
-    new_scroll_target := draw_scrollbar(rect, scrollbar_size, rect.h + xx max_y_scroll, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
-    if new_scroll_target != viewport.scroll_y.target {
-        // Jump immediately to the scroll point when dragging or clicking scrollbar
-        viewport.top = new_scroll_target;
-        viewport.scroll_y.target = new_scroll_target;
-        redraw_requested = true;
-    }
-
-    // Smooth keyboard scrolling
-    if editor_smooth_scroll.active {
-        speed := 60 * line_height;  // pixels per second
-        if editor_smooth_scroll.fast then speed *= 2;
-        time_elapsed := cast(float) (frame_time - editor_smooth_scroll.started_at);
-        new_scroll_pos := editor_smooth_scroll.start_y + time_elapsed * speed * (ifx editor_smooth_scroll.up then -1 else 1);
-        viewport.top = clamp(cast(s32) new_scroll_pos, 0, max_y_scroll);
-        viewport.scroll_y.target = viewport.top;
-        redraw_requested = true;
-    }
-
-    // Vertical scrolling
-    if viewport.top != viewport.scroll_y.target {
-        redraw_requested = true;
-        viewport.top = get_animation_value(viewport.scroll_y);
-    }
-
-    // Horizontal scrolling
-    if viewport.left != viewport.scroll_x.target {
-        redraw_requested = true;
-        viewport.left = get_animation_value(viewport.scroll_x);
-    }
-
-    // Need to update after updating scrolling to reduce latency
-    text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
-
-    max_lines := cast(s32) buffer.line_starts.count - 2;
-    visible_lines_start := clamp(cast(s32) (viewport.top / line_height) - 1, 0, max_lines);
-    visible_lines_end   := clamp(visible_lines_start + cast(s32) (rect.h / line_height) + 1, 0, max_lines);
-    num_visible_lines   := visible_lines_end - visible_lines_start + 1;
-    visible_offset_range := Offset_Range.{
-        start = buffer.line_starts[visible_lines_start],
-        end   = buffer.line_starts[visible_lines_end + 1],
-    };
-
-    // Draw scrollbar marks
+    // Draw editor
     {
-        Simp.set_shader_for_color(enable_blend = true);
+        push_scissor(rect);
+        defer pop_scissor();
         
-        marks_rect := cut_right(rect, scrollbar_size);
-        marks_rect =  cut_top(marks_rect, rect.h * max_y_scroll / (rect.h + xx max_y_scroll));  // account for the non-text area at the bottom
-        marks_rect_top := marks_rect.y + marks_rect.h;
-        assert(buffer.line_starts.count > 0);
-        mark_line_height := marks_rect.h / cast(float) buffer.line_starts.count;  // the height of the rect which corresponds to one line
-
-        highlight_mark_rect := shrink_x(marks_rect, marks_rect.w / 3);
-        highlight_mark_rect.h = 4 * dpi_scale;
-
-        if search_bar_is_open(editor) && search_bar.results {
-            // Search results
-            for search_bar.results {
-                highlight_mark_rect.y = marks_rect_top - it.line * mark_line_height - highlight_mark_rect.h;
-                draw_rect_raw(highlight_mark_rect, ifx it_index == search_bar.selected_result then Colors.SEARCH_RESULT_ACTIVE else Colors.SEARCH_RESULT_INACTIVE);
-            }
-        }
-
-        if !search_bar_is_open(editor) {
-            // Selection highlights
-            for highlights {
-                highlight_mark_rect.y = marks_rect_top - it.line * mark_line_height - highlight_mark_rect.h;
-                draw_rect_raw(highlight_mark_rect, Colors.SELECTION_HIGHLIGHT);
-            }
-        }
-
-        // Cursors
-        cursor_mark_rect := marks_rect;
-        cursor_mark_rect.h = 2 * dpi_scale;
-        selection_mark_rect := cut_left(marks_rect, marks_rect.w / 3);
-        for cursor : carets {
-            coords := cursor_coords[it_index];
-            cursor_mark_rect.y = marks_rect_top - coords.pos.line * mark_line_height - cursor_mark_rect.h;
-            if has_selection(cursor) {
-                selection_mark_rect.y = marks_rect_top - coords.sel.line * mark_line_height - cursor_mark_rect.h;
-                selection_mark_rect.h = (coords.sel.line - coords.pos.line + 1) * mark_line_height;
-                draw_rect_raw(selection_mark_rect, Colors.SELECTION_INACTIVE);
-            }
-            draw_rect_raw(cursor_mark_rect, Colors.CURSOR);
-        }
-    }
-
-    // Draw selection highlights
-    if !search_bar_is_open(editor) {
-        for highlights {
-            if it.line < visible_lines_start continue;
-            if it.line > visible_lines_end   break;
-
-            range: Coords_Range = ---;
-            range.start = offset_to_coords(buffer, it.offset);
-            range.end   = offset_to_coords(buffer, it.offset + selected_text_length);
-            draw_range(range, buffer, visible_lines_start, visible_lines_end, text_origin, Colors.SELECTION_HIGHLIGHT);
-        }
-    }
-
-    cursors_active := editor_is_active && active_global_widget == .editors;
-    
-    // Draw selections
-    {
-        Simp.set_shader_for_rects();
-        for cursor : carets {
-            if has_selection(cursor) {
-                selection := get_selection_coords(buffer, cursor);
-                if selection.end.line < visible_lines_start || selection.start.line > visible_lines_end continue;
-                color := ifx cursors_active then Colors.SELECTION_ACTIVE else Colors.SELECTION_INACTIVE;
-                draw_range(selection, buffer, visible_lines_start, visible_lines_end, text_origin, color);
-            }
-        }
-    }
-
-    // // Draw search results
-    // if search_bar_is_open(editor) {
-    //     for search_bar.results {
-    //         if it.start_pos.line < visible_lines_start continue;
-    //         if it.start_pos.line > visible_lines_end   break;
-
-    //         range: Range = ---;
-    //         range.start = it.start_pos;
-    //         range.end   = offset_to_pos(buffer, it.offset + search_bar.input.text.count);
-    //         color := ifx search_bar.selected_result == it_index then Colors.SEARCH_RESULT_ACTIVE else Colors.SEARCH_RESULT_INACTIVE;
-    //         draw_range(range, buffer, visible_lines_start, visible_lines_end, text_origin, color);
-    //     }
-    // }
-
-    // Draw paste animations
-    for * anim : editor.paste_animations {
-        if !anim.initted {
-            // We can't calculate coords when we're adding the animation, so have to defer to right before drawing
-            anim.initted = true;
-            anim.coords_range.start = offset_to_coords(buffer, anim.range.start);
-            anim.coords_range.end   = offset_to_coords(buffer, anim.range.end);
-        }
-        t := (frame_time - anim.started_at) / Paste_Animation.SPEED;
-        if t < 1 {
-            color := Colors.PASTE_ANIMATION;
-            color.a = xx (1 - t);
-            draw_range(anim.coords_range, buffer, visible_lines_start, visible_lines_end, text_origin, color);
-        } else {
-            remove anim;
-        }
-    }
-    if editor.paste_animations.count > 0 then redraw_requested = true;
-    
-    // Draw inactive cursors before text
-    if !cursors_active {
-        Simp.set_shader_for_rects();
-        for cursor : carets {
-            if cursor.pos < visible_offset_range.start || cursor.pos > visible_offset_range.end continue;
-            screen_pos := get_cursor_screen_pos(text_origin, cursor_coords[it_index].pos);
-
-            rect := make_rect(screen_pos.x, screen_pos.y, char_size, line_height);
-            draw_rounded_rect(rect, Colors.CURSOR, radius = rounding_radius_small, set_shader = true);
-            draw_rounded_rect(shrink(rect, 1), Colors.BACKGROUND, radius = rounding_radius_small, set_shader = false);
-        }
-    }
-    
-    // Draw text
-    if buffer.needs_coloring || buffer.colors.count != buffer.bytes.count then recalculate_colors(buffer);  // right before drawing
-    
-    hidden_chars_on_the_left := cast(s32) max((viewport.left / char_size) - 2, 0);
-    max_chars_horizontally   := cast(s32) (rect.w / char_size) + 2;
-    
-    pen := text_origin;
-    pen.y += (line_height - char_size) / 2 - visible_lines_start * line_height;
-    
-    code_lines := NewArray(num_visible_lines, Simp.Code_Line, initialized = false, allocator = temp);
-    for line_num : visible_lines_start .. visible_lines_end {
-        line_start := buffer.line_starts[line_num];
-        length := buffer.line_starts[line_num+1] - line_start;
-        line := to_string(array_view(buffer.bytes, line_start, length));
-        line = advance_by_chars  (line, hidden_chars_on_the_left);
-        line = take_first_n_chars(line, max_chars_horizontally);
-        line = trim_right(line, " \r\n");
-        colors := ifx line then array_view(buffer.colors, line.data - buffer.bytes.data, line.count) else .[];
-        code_lines[line_num-visible_lines_start] = .{ line = line, colors = colors };
-    }
-    Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);
-    
-    // Draw active cursors
-    if cursors_active {
-        Simp.set_shader_for_rects();
-        for cursor : carets {
-            if cursor.pos < visible_offset_range.start || cursor.pos > visible_offset_range.end continue;
-            screen_pos := get_cursor_screen_pos(text_origin, cursor_coords[it_index].pos);
-
-            rect := make_rect(screen_pos.x, screen_pos.y, char_size, line_height);
-            draw_rounded_rect(rect, Colors.CURSOR, radius = rounding_radius_small, set_shader = true);
+        // Handle editor scrolling here because we only know the layout at this point.
+        assert(!buffer.dirty);
+        max_y_scroll := max(cast(s32)((buffer.line_starts.count - 2) * line_height), 0);
+        
+        if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
+            using editor.viewport;
+            new_target := clamp(scroll_y.target - mouse.scroll_y_delta, 0, max_y_scroll);
+            start_animation(*scroll_y, top, new_target);
+        } else if cursor_moved {
+            // @buffer!!!!
+            cursor_moved = false;  // TODO: remove when no longer using the temp editor
             
-            // Draw the letter on top for better visibility
-            letter := get_char_at_offset_as_string(buffer, cursor.pos);
-            if letter != "\n" {
-                Simp.draw_text(font, xx rect.x, xx (rect.y + (line_height - char_size) / 2), letter);
+            // Detect if cursor is off screen and start scrolling to it
+            bounds := shrink_x(rect, text_offset.x + char_size * 3);
+            bounds  = shrink_y(bounds, -text_offset.y + line_height * 3);
+            bounds.h += 2;
+            bounds.y -= line_height + 2;
+            if bounds.w < 0 || bounds.h < 0 then bounds = rect;  // fall back
+            // draw_rect(bounds, Colors.BACKGROUND_DARK);
+    
+            screen_pos := get_cursor_screen_pos(text_origin, cursor_coords[main_cursor].pos);
+            if !point_within(screen_pos, bounds) {
+                left, top, right, bottom := get_rect_sides(bounds);
+                offset: Vector2;
+                if screen_pos.x < left   then offset.x = screen_pos.x - left;
+                if screen_pos.y < bottom then offset.y = screen_pos.y - bottom;
+                if right < screen_pos.x  then offset.x = screen_pos.x - right;
+                if top   < screen_pos.y  then offset.y = screen_pos.y - top;
+    
+                left_target := max(viewport.left + cast(s32) offset.x, 0);
+                top_target  := clamp(viewport.top - cast(s32) offset.y, 0, max_y_scroll);
+    
+                if left_target != viewport.scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target);
+                if top_target  != viewport.scroll_y.target then start_animation(*viewport.scroll_y, viewport.top,  top_target);
+            }
+        } else if scroll_to_cursor != .no {
+            using editor.viewport;
+            
+            // Use the target editor width (not current width) when a new editor is appearing
+            editor_width := ifx scroll_to_cursor == .yes_new_editor then total_editor_area.w / 2 else rect.w;
+            
+            cursor_pos_from_left := cursor_coords[main_cursor].pos.col * char_size + text_offset.x;
+            left_target := cast(s32)(cursor_pos_from_left - editor_width + char_size * 3);
+            if left_target < 0 then left_target = 0;
+            if left_target != scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target);
+    
+            cursor_pos_from_top := cursor_coords[main_cursor].pos.line * line_height;
+            top_target := cast(s32)(cursor_pos_from_top - rect.h / 2);
+            if top_target < 0 then top_target = 0;
+            if top_target != scroll_y.target then start_animation(*viewport.scroll_y, viewport.top, top_target);            
+    
+            scroll_to_cursor = .no;
+        }
+    
+        // Maybe update selection highlights
+        if editor.refresh_highlights && buffer.bytes.count <= MAX_BUFFER_SIZE_FOR_HIGHLIGHTS {
+            editor.refresh_highlights = false;
+            array_reset_keeping_memory(*editor.highlights);
+            
+            selected_text := get_selected_text_all_cursors(editor, buffer);
+            if selected_text.count > 2 && selected_text.count < 1000 && !is_all_whitespace(selected_text) {
+                search_func: (s: string, substring: string, start_index := 0) -> s64;
+                search_func = ifx editor.search_whole_words then find_index_from_left_whole_word else find_index_from_left;
+                buffer_str := to_string(buffer.bytes);
+                offset := 0;
+                while true {
+                    offset = search_func(buffer_str, selected_text, start_index = offset);
+                    if offset < 0 break;
+    
+                    highlight := array_add(*editor.highlights);
+                    highlight.offset = offset;
+                    highlight.line   = offset_to_line(buffer, offset);
+    
+                    offset += selected_text.count;
+                }
+            }
+            editor.selected_text_length = selected_text.count;
+        }
+    
+        // Scrollbar
+        new_scroll_target := draw_scrollbar(rect, scrollbar_size, rect.h + xx max_y_scroll, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
+        if new_scroll_target != viewport.scroll_y.target {
+            // Jump immediately to the scroll point when dragging or clicking scrollbar
+            viewport.top = new_scroll_target;
+            viewport.scroll_y.target = new_scroll_target;
+            redraw_requested = true;
+        }
+    
+        // Smooth keyboard scrolling
+        if editor_smooth_scroll.active {
+            speed := 60 * line_height;  // pixels per second
+            if editor_smooth_scroll.fast then speed *= 2;
+            time_elapsed := cast(float) (frame_time - editor_smooth_scroll.started_at);
+            new_scroll_pos := editor_smooth_scroll.start_y + time_elapsed * speed * (ifx editor_smooth_scroll.up then -1 else 1);
+            viewport.top = clamp(cast(s32) new_scroll_pos, 0, max_y_scroll);
+            viewport.scroll_y.target = viewport.top;
+            redraw_requested = true;
+        }
+    
+        // Vertical scrolling
+        if viewport.top != viewport.scroll_y.target {
+            redraw_requested = true;
+            viewport.top = get_animation_value(viewport.scroll_y);
+        }
+    
+        // Horizontal scrolling
+        if viewport.left != viewport.scroll_x.target {
+            redraw_requested = true;
+            viewport.left = get_animation_value(viewport.scroll_x);
+        }
+    
+        // Need to update after updating scrolling to reduce latency
+        text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
+    
+        max_lines := cast(s32) buffer.line_starts.count - 2;
+        visible_lines_start := clamp(cast(s32) (viewport.top / line_height) - 1, 0, max_lines);
+        visible_lines_end   := clamp(visible_lines_start + cast(s32) (rect.h / line_height) + 1, 0, max_lines);
+        num_visible_lines   := visible_lines_end - visible_lines_start + 1;
+        visible_offset_range := Offset_Range.{
+            start = buffer.line_starts[visible_lines_start],
+            end   = buffer.line_starts[visible_lines_end + 1],
+        };
+    
+        // Draw scrollbar marks
+        {
+            Simp.set_shader_for_color(enable_blend = true);
+            
+            marks_rect := cut_right(rect, scrollbar_size);
+            marks_rect =  cut_top(marks_rect, rect.h * max_y_scroll / (rect.h + xx max_y_scroll));  // account for the non-text area at the bottom
+            marks_rect_top := marks_rect.y + marks_rect.h;
+            assert(buffer.line_starts.count > 0);
+            mark_line_height := marks_rect.h / cast(float) buffer.line_starts.count;  // the height of the rect which corresponds to one line
+    
+            highlight_mark_rect := shrink_x(marks_rect, marks_rect.w / 3);
+            highlight_mark_rect.h = 4 * dpi_scale;
+    
+            if search_bar_is_open(editor) && search_bar.results {
+                // Search results
+                for search_bar.results {
+                    highlight_mark_rect.y = marks_rect_top - it.line * mark_line_height - highlight_mark_rect.h;
+                    draw_rect_raw(highlight_mark_rect, ifx it_index == search_bar.selected_result then Colors.SEARCH_RESULT_ACTIVE else Colors.SEARCH_RESULT_INACTIVE);
+                }
+            }
+    
+            if !search_bar_is_open(editor) {
+                // Selection highlights
+                for highlights {
+                    highlight_mark_rect.y = marks_rect_top - it.line * mark_line_height - highlight_mark_rect.h;
+                    draw_rect_raw(highlight_mark_rect, Colors.SELECTION_HIGHLIGHT);
+                }
+            }
+    
+            // Cursors
+            cursor_mark_rect := marks_rect;
+            cursor_mark_rect.h = 2 * dpi_scale;
+            selection_mark_rect := cut_left(marks_rect, marks_rect.w / 3);
+            for cursor : carets {
+                coords := cursor_coords[it_index];
+                cursor_mark_rect.y = marks_rect_top - coords.pos.line * mark_line_height - cursor_mark_rect.h;
+                if has_selection(cursor) {
+                    selection_mark_rect.y = marks_rect_top - coords.sel.line * mark_line_height - cursor_mark_rect.h;
+                    selection_mark_rect.h = (coords.sel.line - coords.pos.line + 1) * mark_line_height;
+                    draw_rect_raw(selection_mark_rect, Colors.SELECTION_INACTIVE);
+                }
+                draw_rect_raw(cursor_mark_rect, Colors.CURSOR);
+            }
+        }
+    
+        // Draw selection highlights
+        if !search_bar_is_open(editor) {
+            for highlights {
+                if it.line < visible_lines_start continue;
+                if it.line > visible_lines_end   break;
+    
+                range: Coords_Range = ---;
+                range.start = offset_to_coords(buffer, it.offset);
+                range.end   = offset_to_coords(buffer, it.offset + selected_text_length);
+                draw_range(range, buffer, visible_lines_start, visible_lines_end, text_origin, Colors.SELECTION_HIGHLIGHT);
+            }
+        }
+    
+        cursors_active := editor_is_active && active_global_widget == .editors;
+        
+        // Draw selections
+        {
+            Simp.set_shader_for_rects();
+            for cursor : carets {
+                if has_selection(cursor) {
+                    selection := get_selection_coords(buffer, cursor);
+                    if selection.end.line < visible_lines_start || selection.start.line > visible_lines_end continue;
+                    color := ifx cursors_active then Colors.SELECTION_ACTIVE else Colors.SELECTION_INACTIVE;
+                    draw_range(selection, buffer, visible_lines_start, visible_lines_end, text_origin, color);
+                }
+            }
+        }
+    
+        // // Draw search results
+        // if search_bar_is_open(editor) {
+        //     for search_bar.results {
+        //         if it.start_pos.line < visible_lines_start continue;
+        //         if it.start_pos.line > visible_lines_end   break;
+    
+        //         range: Range = ---;
+        //         range.start = it.start_pos;
+        //         range.end   = offset_to_pos(buffer, it.offset + search_bar.input.text.count);
+        //         color := ifx search_bar.selected_result == it_index then Colors.SEARCH_RESULT_ACTIVE else Colors.SEARCH_RESULT_INACTIVE;
+        //         draw_range(range, buffer, visible_lines_start, visible_lines_end, text_origin, color);
+        //     }
+        // }
+    
+        // Draw paste animations
+        for * anim : editor.paste_animations {
+            if !anim.initted {
+                // We can't calculate coords when we're adding the animation, so have to defer to right before drawing
+                anim.initted = true;
+                anim.coords_range.start = offset_to_coords(buffer, anim.range.start);
+                anim.coords_range.end   = offset_to_coords(buffer, anim.range.end);
+            }
+            t := (frame_time - anim.started_at) / Paste_Animation.SPEED;
+            if t < 1 {
+                color := Colors.PASTE_ANIMATION;
+                color.a = xx (1 - t);
+                draw_range(anim.coords_range, buffer, visible_lines_start, visible_lines_end, text_origin, color);
+            } else {
+                remove anim;
+            }
+        }
+        if editor.paste_animations.count > 0 then redraw_requested = true;
+        
+        // Draw inactive cursors before text
+        if !cursors_active {
+            Simp.set_shader_for_rects();
+            for cursor : carets {
+                if cursor.pos < visible_offset_range.start || cursor.pos > visible_offset_range.end continue;
+                screen_pos := get_cursor_screen_pos(text_origin, cursor_coords[it_index].pos);
+    
+                rect := make_rect(screen_pos.x, screen_pos.y, char_size, line_height);
+                draw_rounded_rect(rect, Colors.CURSOR, radius = rounding_radius_small, set_shader = true);
+                draw_rounded_rect(shrink(rect, 1), Colors.BACKGROUND, radius = rounding_radius_small, set_shader = false);
+            }
+        }
+        
+        // Draw text
+        if buffer.needs_coloring || buffer.colors.count != buffer.bytes.count then recalculate_colors(buffer);  // right before drawing
+        
+        hidden_chars_on_the_left := cast(s32) max((viewport.left / char_size) - 2, 0);
+        max_chars_horizontally   := cast(s32) (rect.w / char_size) + 2;
+        
+        pen := text_origin;
+        pen.y += (line_height - char_size) / 2 - visible_lines_start * line_height;
+        
+        code_lines := NewArray(num_visible_lines, Simp.Code_Line, initialized = false, allocator = temp);
+        for line_num : visible_lines_start .. visible_lines_end {
+            line_start := buffer.line_starts[line_num];
+            length := buffer.line_starts[line_num+1] - line_start;
+            line := to_string(array_view(buffer.bytes, line_start, length));
+            line = advance_by_chars  (line, hidden_chars_on_the_left);
+            line = take_first_n_chars(line, max_chars_horizontally);
+            line = trim_right(line, " \r\n");
+            colors := ifx line then array_view(buffer.colors, line.data - buffer.bytes.data, line.count) else .[];
+            code_lines[line_num-visible_lines_start] = .{ line = line, colors = colors };
+        }
+        Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);
+        
+        // Draw active cursors
+        if cursors_active {
+            Simp.set_shader_for_rects();
+            for cursor : carets {
+                if cursor.pos < visible_offset_range.start || cursor.pos > visible_offset_range.end continue;
+                screen_pos := get_cursor_screen_pos(text_origin, cursor_coords[it_index].pos);
+    
+                rect := make_rect(screen_pos.x, screen_pos.y, char_size, line_height);
+                draw_rounded_rect(rect, Colors.CURSOR, radius = rounding_radius_small, set_shader = true);
+                
+                // Draw the letter on top for better visibility
+                letter := get_char_at_offset_as_string(buffer, cursor.pos);
+                if letter != "\n" {
+                    Simp.draw_text(font, xx rect.x, xx (rect.y + (line_height - char_size) / 2), letter);
+                }
             }
         }
     }
+    
+    // Draw footer
+    {
+        footer_color := Colors.BACKGROUND_BRIGHT;
+        draw_rect(footer_rect, footer_color);
+        draw_top_shadow(footer_rect);
+
+        push_scissor(footer_rect);
+        defer pop_scissor();
+
+        footer_rect = shrink_x(footer_rect, text_offset.x);
+
+        width   := 0.0;
+        padding := 4 * dpi_scale;
+
+        pen := make_vector2(
+            footer_rect.x,
+            footer_rect.y + (footer_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+        );
+
+        // Draw file name and path
+        file_name_color := Colors.UI_DEFAULT;
+        if buffer.modified then file_name_color = Colors.UI_WARNING;
+
+        if buffer.has_file {
+            // Icon
+            icon_char := convert_utf32_to_utf8(xx buffer.file.icon);
+            width = xx Simp.prepare_text(font_icons, to_string(*icon_char));
+            Simp.draw_prepared_text(font_icons, xx pen.x, xx pen.y, color = file_name_color);
+
+            // File name
+            pen.x += width + padding;
+            width = xx Simp.prepare_text(font_ui_bold, buffer.file.name);
+            Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = file_name_color);
+            
+            if buffer.modified {
+                pen.x += width + padding;
+                width = xx Simp.prepare_text(font_icons_small, PEN_CHAR);
+                y_padding := (font_icons.character_height - font_icons_small.character_height) / 4.0;
+                Simp.draw_prepared_text(font_icons_small, xx pen.x, xx (pen.y + y_padding), color = file_name_color);
+            }
+
+            // Maybe warnings
+            if buffer.deleted {
+                pen.x += width + padding;
+                width = xx Simp.prepare_text(font_ui_bold, "[deleted on disk]");
+                Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
+            } else if buffer.modified_on_disk {
+                pen.x += width + padding;
+                width = xx Simp.prepare_text(font_ui_bold, "[modified on disk]");
+                Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
+            }
+
+            // Draw separator
+            pen.x += width + padding;
+            width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
+            Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
+
+            // Draw file path
+            pen.x += width + padding;
+            width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
+            Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
+
+            pen.x += width;
+        } else {
+            // No file
+            icon_char := convert_utf32_to_utf8(xx File_Icon.text);
+            width = xx Simp.prepare_text(font_icons, to_string(*icon_char));
+            Simp.draw_prepared_text(font_icons, xx pen.x, xx pen.y, color = file_name_color);
+
+            // File name
+            pen.x += width + padding;
+            width = xx Simp.prepare_text(font_ui, "<new file>");
+            Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = file_name_color);
+
+            pen.x += width;
+        }
+
+        // Draw line and column numbers
+        {
+            cut_rect := footer_rect;
+            cut_rect.x = pen.x + padding;
+            cut_rect.w = footer_rect.x + footer_rect.w - cut_rect.x;
+            push_scissor(cut_rect);
+            defer pop_scissor();
+
+            coords := cursor_coords[main_cursor].pos;
+            width = xx Simp.prepare_text(font_ui_bold, tprint("Line: %  Col: %", coords.line + 1, coords.col + 1));
+            line_col_start_x := footer_rect.x + footer_rect.w - width;
+            Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = Colors.CODE_COMMENT);
+
+            // Make sure the text is cut nicely
+            fadeout_rect := cut_rect;
+            fadeout_rect.w = 4 * padding;
+            trans := footer_color;
+            trans.a = 0;
+            Simp.set_shader_for_color(enable_blend = true);
+            draw_rect_raw(fadeout_rect, c00 = footer_color, c10 = trans, c01 = footer_color, c11 = trans);
+        }
+    }
+    
 }
 
 draw_splitter :: (splitter_rect: Rect, split_x: float, ui_id: Ui_Id) {

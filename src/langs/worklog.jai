@@ -1,4 +1,4 @@
-highlight_worklog :: (using buffer: *Buffer) {
+highlight_worklog :: (using buffer: *NewBuffer) {
     tokenizer: Tokenizer = ---;
     tokenizer.buf   = to_string(bytes);
     tokenizer.max_t = bytes.data + bytes.count;

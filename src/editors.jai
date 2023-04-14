@@ -109,9 +109,9 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         // General actions (which are not associated with any cursor)
         case .toggle_expand;                    toggle_expand();
         case .search_in_buffer;                 // open_search_bar(editor, buffer);
-        case .close_current_editor;             // close_current_editor();
-        case .close_other_editor;               // close_other_editor();
-        case .save;                             // save_buffer(editor, buffer);
+        case .close_current_editor;             close_current_editor();
+        case .close_other_editor;               close_other_editor();
+        case .save;                             save_buffer(editor, buffer);
         case .switch_to_left_editor;            // switch_to_editor(.left);
         case .switch_to_right_editor;           // switch_to_editor(.right);
         case .switch_to_other_editor;           // switch_to_editor(.other);
@@ -716,7 +716,7 @@ fill_in_buffer_from_file_data :: (buffer: *NewBuffer, path: string, file_data: s
         }
     }
 
-    if equal_nocase(path, "LOG.md") {
+    if ends_with_nocase(path, "LOG.md") {
         buffer.lang = .Worklog;
     }
 
@@ -790,21 +790,20 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: NewBuffe
     return editor.search_whole_words;
 }
 
-save_buffer :: (editor: *Editor, buffer: *Buffer) {
+save_buffer :: (editor: *Editor, buffer: *NewBuffer) {
     if !buffer.has_file {
         print("Buffer has no file - unimplemented!\n");
         return;
     }
 
-    // @buffer!!!
-    // new_edit_group(buffer, editor);
-    // // TODO:
-    // // - strip trailing whitespace
-    // // - recalculate lines
-    // // - adjust cursors
-    // 
+    new_edit_group(buffer, editor);
+    // TODO:
+    // - strip trailing whitespace
+    // - recalculate lines
+    // - adjust cursors
+    
     // session_notify_modified_buffer(editor.buffer_id);
-    // save_buffer_to_disk(buffer);
+    save_buffer_to_disk(buffer);
 }
 
 switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := false) {
