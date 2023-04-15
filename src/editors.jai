@@ -1609,51 +1609,9 @@ select_all :: (editor: *Editor, buffer: NewBuffer) {
     cursor.pos = cast(s32) buffer.bytes.count;
 }
 
-duplicate_lines :: (editor: *Editor, buffer: *NewBuffer) {
-    // Get lines with cursors on them
-    lines: [..] Offset_Range;
-    lines.allocator = temp;
-    {
-        last_end_line := -1;
-        for cursor : editor.carets {
-            selection := get_selection(cursor);
-            start_line := offset_to_line(buffer, selection.start);
-            end_line   := ifx selection.start != selection.end then offset_to_line(buffer, selection.end) else start_line;
-            
-            if start_line == last_end_line {
-                // Extend last line range
-                lines[lines.count-1].end = buffer.line_starts[end_line+1];
-            } else {
-                // Add a new line range
-                array_add(*lines, .{ start = buffer.line_starts[start_line], end = buffer.line_starts[end_line+1] });
-            }
-            last_end_line = end_line;
-        }    
-    }
-    
-    offset_delta := 0;
-    for * line : lines {
-        line.start += xx offset_delta;
-        line.end   += xx offset_delta;
-        str := copy_temporary_string(to_string(array_view(buffer.bytes, line.start, line.end - line.start)));
-        insert_string_at_offset(buffer, line.end, str);
-        
-        for * cursor : editor.carets {
-            if line.start <= cursor.pos {  // no need to check for cursor.sel because we have whole line ranges
-                cursor.pos += xx str.count;
-                cursor.sel += xx str.count;
-            }
-        }
-        
-        offset_delta += str.count;
-    }
-    
-    editor.cursor_moved = true;
-}
-
 Line_Range :: struct { prev_line_start: s32; next_line_end: s32; range: Offset_Range; };
 
-get_whole_line_ranges_for_cursors :: (editor: Editor, buffer: NewBuffer) -> [] Line_Range /* tmp */ {
+get_whole_line_ranges_for_cursors :: (editor: Editor, buffer: NewBuffer, merge_adjacent := true) -> [] Line_Range /* tmp */ {
     line_ranges: [..] Line_Range;
     line_ranges.allocator = temp;
     // @line_wrap: use real_line_starts
@@ -1666,7 +1624,12 @@ get_whole_line_ranges_for_cursors :: (editor: Editor, buffer: NewBuffer) -> [] L
             
             next_line_end := buffer.line_starts[min(end_line+2, cast(s32)buffer.line_starts.count-1)];
             
-            if line_ranges.count > 0 && start_line <= last_end_line+1 {
+            should_extend := line_ranges.count > 0 && (
+                (merge_adjacent  && start_line <= last_end_line+1) ||
+                (!merge_adjacent && start_line == last_end_line)
+            );
+            
+            if should_extend {
                 // Extend last line range
                 line_ranges[line_ranges.count-1].range.end = buffer.line_starts[end_line+1];
                 line_ranges[line_ranges.count-1].next_line_end = next_line_end;
@@ -1682,6 +1645,30 @@ get_whole_line_ranges_for_cursors :: (editor: Editor, buffer: NewBuffer) -> [] L
         }
     }
     return line_ranges;
+}
+
+duplicate_lines :: (editor: *Editor, buffer: *NewBuffer) {
+    lines := get_whole_line_ranges_for_cursors(editor, buffer);
+    
+    offset_delta := 0;
+    for * line : lines {
+        line.range.start += xx offset_delta;
+        line.range.end   += xx offset_delta;
+        str := copy_temporary_string(to_string(array_view(buffer.bytes, line.range.start, line.range.end - line.range.start)));
+        insert_string_at_offset(buffer, line.range.end, str);
+        add_paste_animation(editor, .{ start = line.range.end, end = line.range.end + cast(s32)str.count });
+        
+        for * cursor : editor.carets {
+            if line.range.start <= cursor.pos {  // no need to check for cursor.sel because we have whole line ranges
+                cursor.pos += xx str.count;
+                cursor.sel += xx str.count;
+            }
+        }
+        
+        offset_delta += str.count;
+    }
+    
+    editor.cursor_moved = true;
 }
 
 move_lines_up :: (editor: *Editor, buffer: *NewBuffer) {
