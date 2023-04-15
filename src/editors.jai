@@ -173,9 +173,9 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .delete_word_right_no_underscore;  delete_word_right_no_underscore     (editor, buffer);
         
         case .duplicate_lines;                  duplicate_lines                     (editor, buffer); keep_selection = true;
+        case .move_selected_lines_up;           move_lines_up                       (editor, buffer); keep_selection = true;
+        // case .move_selected_lines_down;         move_lines_down                     (editor, buffer); keep_selection = true;
         
-        // case .move_selected_lines_up;           if cursors.count == 1 { move_lines_up  (cursor, buffer); keep_selection = true; }
-        // case .move_selected_lines_down;         if cursors.count == 1 { move_lines_down(cursor, buffer); keep_selection = true; }                
         // case .join_lines;                       if cursors.count == 1 { join_lines(cursor, buffer);      keep_selection = true; }
         // case .join_lines_no_spaces_in_between;  if cursors.count == 1 { join_lines(cursor, buffer, in_between = ""); keep_selection = true; }
         // case .delete_line;                      if cursors.count == 1 { delete_line(cursor, buffer); }
@@ -1609,8 +1609,14 @@ select_all :: (editor: *Editor, buffer: NewBuffer) {
     cursor.pos = cast(s32) buffer.bytes.count;
 }
 
-get_whole_lines_with_cursors_tmp :: (editor: *Editor, buffer: NewBuffer) -> [..] Offset_Range /* tmp */ {
-    lines: [..] Offset_Range;
+Whole_Line :: struct {
+    start_line: s32;
+    end_line:   s32;
+    offsets: Offset_Range;
+}
+
+get_whole_lines_with_cursors_tmp :: (editor: *Editor, buffer: NewBuffer) -> [..] Whole_Line /* tmp */ {
+    lines: [..] Whole_Line;
     lines.allocator = temp;
     
     last_end_line := -1;
@@ -1622,10 +1628,15 @@ get_whole_lines_with_cursors_tmp :: (editor: *Editor, buffer: NewBuffer) -> [..]
         
         if start_line == last_end_line {
             // Extend last line range
-            lines[lines.count-1].end = buffer.line_starts[end_line+1];
+            lines[lines.count-1].end_line    = end_line;
+            lines[lines.count-1].offsets.end = buffer.line_starts[end_line+1];
         } else {
             // Add a new line range
-            array_add(*lines, Offset_Range.{ start = buffer.line_starts[start_line], end = buffer.line_starts[end_line+1] });
+            array_add(*lines, Whole_Line.{
+                start_line = start_line,
+                end_line   = end_line,
+                offsets    = .{ start = buffer.line_starts[start_line], end = buffer.line_starts[end_line+1] },
+            });
         }
         last_end_line = end_line;
     }
@@ -1638,13 +1649,15 @@ duplicate_lines :: (editor: *Editor, buffer: *NewBuffer) {
     
     offset_delta := 0;
     for * line : lines {
-        line.start += xx offset_delta;
-        line.end   += xx offset_delta;
-        str := copy_temporary_string(to_string(array_view(buffer.bytes, line.start, line.end - line.start)));
-        insert_string_at_offset(buffer, line.end, str);
+        using line.offsets;
+        
+        start += xx offset_delta;
+        end   += xx offset_delta;
+        str := copy_temporary_string(to_string(array_view(buffer.bytes, start, end - start)));
+        insert_string_at_offset(buffer, end, str);
         
         for * cursor : editor.carets {
-            if line.start <= cursor.pos {  // no need to check for cursor.sel because we have whole line ranges
+            if start <= cursor.pos {  // no need to check for cursor.sel because we have whole line ranges
                 cursor.pos += xx str.count;
                 cursor.sel += xx str.count;
             }
@@ -1652,29 +1665,32 @@ duplicate_lines :: (editor: *Editor, buffer: *NewBuffer) {
         
         offset_delta += str.count;
     }
+    
+    editor.cursor_moved = true;
 }
 
-// move_lines_up :: (cursor: *Cursor, buffer: *Buffer) {
-//     range := get_selection_whole_lines(cursor, buffer);
-//     if range.start.line == 0 return;
-
-//     // Include the last newline in the selection
-//     range.end.col += 1;
-//     range.end = make_valid_pos(buffer, range.end, for_cursor = false);
-
-//     str := copy_lines_to_temp_string(buffer, range);
-
-//     insert_pos := range.start;
-//     insert_pos.line -= 1;
-//     insert_pos.col   = 0;
-//     offset := pos_to_offset(buffer, insert_pos);
-
-//     delete_range(buffer, range);
-//     insert_string_at_offset(buffer, offset, tprint("%\n", str));
-
-//     cursor.pos.line -= 1;
-//     cursor.sel.line -= 1;
-// }
+move_lines_up :: (editor: *Editor, buffer: *NewBuffer) {
+    lines := get_whole_lines_with_cursors_tmp(editor, buffer);
+    
+    offset_delta := 0;
+    for * line : lines {
+        // line.start += xx offset_delta;
+        // line.end   += xx offset_delta;
+        // str := copy_temporary_string(to_string(array_view(buffer.bytes, line.start, line.end - line.start)));
+        // insert_string_at_offset(buffer, line.end, str);
+        // 
+        // for * cursor : editor.carets {
+        //     if line.start <= cursor.pos {  // no need to check for cursor.sel because we have whole line ranges
+        //         cursor.pos += xx str.count;
+        //         cursor.sel += xx str.count;
+        //     }
+        // }
+        // 
+        // offset_delta += str.count;
+    }
+    
+    editor.cursor_moved = true;
+}
 
 // move_lines_down :: (cursor: *Cursor, buffer: *Buffer) {
 //     range := get_selection_whole_lines(cursor, buffer);
