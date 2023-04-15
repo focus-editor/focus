@@ -68,8 +68,10 @@
     + Calculate cursor coords taking tabs into account
     + Save buffer
     + Draw footer
-    - Fix the cursor when scrolled horizontally
+    + Fix the cursor when scrolled horizontally
     - Implement the rest of actions
+    - Global search
+    - Local search
     
     - Line wrap:
         - Implement wrapping for buffer
@@ -86,6 +88,7 @@
     - Then: Sticky viewport
         - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
         
+- Implement scrolling by dragging in all directions and with different speed
 - Generalise TODO highlighting
 - Implement general language highlighting with a set of common keywords etc
 - Select syntax highlighting dialog
@@ -192,8 +195,6 @@
 
 - BUG: When reloading file from disk (refresh_buffer_from_disk) make sure to remove crlf (until it's supported at least)
 
-- Keymap: add a "nothing" function (this is for merging)
-
 - Hide scrollbars unless scrolling or hovering over editor
 - Search in buffer:
     - When pressing up/down to switch to prev/next result, don't wrap (but do wrap when using Enter - what else to go back?)
@@ -268,6 +269,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Keymap: add a "nothing" function (this is for merging)
 + Wildcard support in config
 + Open files by drag/drop (add them to standalone files if needed)
 + Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that

@@ -98,11 +98,9 @@ get_char_at_offset_as_string :: (using buffer: NewBuffer, offset: s32) -> string
 }
 
 offset_to_coords :: (using buffer: NewBuffer, offset: s64) -> Coords {
-    coords: Coords = ---;
-    coords.line = offset_to_line(buffer, offset);
+    coords := Coords.{ line = offset_to_line(buffer, offset), col = 0 };
 
     // Find col by scanning the line
-    coords.col = 0;
     i := line_starts[coords.line];
     while i < offset {
         byte := bytes[i];
@@ -180,7 +178,7 @@ get_selection :: (using cursor: Caret) -> Offset_Range {
 
 get_selection_coords :: (buffer: NewBuffer, using cursor: Caret) -> Coords_Range {
     selection := inline get_selection(cursor);
-    return .{ 
+    return .{
         start = offset_to_coords(buffer, selection.start),
         end   = offset_to_coords(buffer, selection.end),
     };

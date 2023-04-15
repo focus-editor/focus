@@ -42,19 +42,43 @@ Utf8_Char :: struct {
     count: s32;
 }
 
-advance_by_chars :: (s: string, num_chars: s64) -> string #must {
+advance_by_chars :: (s: string, num_chars: s64) -> string #must, remainder: s64 {
     result := s;
-    while result && num_chars > 0 {
-        advance(*result, 1 + trailingBytesForUTF8[s[0]]);
-        num_chars -= 1;
+    col := 0;
+    while result && col < num_chars {
+        byte := result[0];
+        if byte != #char "\t" {
+            advance(*result, 1 + trailingBytesForUTF8[byte]);
+            col += 1;
+        } else {
+            advance(*result, 1);
+            col += TAB_SIZE - col % TAB_SIZE;
+        }
     }
-    return result;
+    return result, col - num_chars;
 }
 
 take_first_n_chars :: (s: string, num_chars: s64) -> string #must {
     result := s;
     result.count -= advance_by_chars(result, num_chars).count;
     return result;
+}
+
+num_chars_in_string :: (s: string) -> s32 {
+    num_chars: s32 = 0;
+    
+    while s {
+        byte := s[0];
+        if byte != #char "\t" {
+            advance(*s, 1 + trailingBytesForUTF8[byte]);
+            num_chars += 1;
+        } else {
+            advance(*s, 1);
+            num_chars += TAB_SIZE - num_chars % TAB_SIZE;
+        }
+    }
+    
+    return num_chars;
 }
 
 next_char_offset :: inline (bytes: [] u8, offset: s32) -> s32 {
@@ -79,17 +103,4 @@ unicode_prev_character :: (s: *u8) -> new_s: *u8, char: u32 {  // NOTE: assuming
     
     char, _, result := character_utf8_to_utf32(t, s - t);
     return t, char;
-}
-
-num_utf8_chars_in_string :: (s: string) -> s32 {
-    num_chars: s32 = 0;
-    
-    t := s.data;
-    end := s.data + s.count;
-    while t < end {
-        t += 1 + trailingBytesForUTF8[<<t];
-        num_chars += 1;
-    }
-    
-    return num_chars;
 }

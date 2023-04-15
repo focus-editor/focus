@@ -112,12 +112,12 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .close_current_editor;             close_current_editor();
         case .close_other_editor;               close_other_editor();
         case .save;                             save_buffer(editor, buffer);
-        case .switch_to_left_editor;            // switch_to_editor(.left);
-        case .switch_to_right_editor;           // switch_to_editor(.right);
-        case .switch_to_other_editor;           // switch_to_editor(.other);
-        case .duplicate_editor;                 // switch_to_editor(.other, duplicate_current = true);
-        case .move_editor_to_the_left;          // if editors.active == editors.right then swap_panes();
-        case .move_editor_to_the_right;         // if editors.active == editors.left  then swap_panes();
+        case .switch_to_left_editor;            switch_to_editor(.left);
+        case .switch_to_right_editor;           switch_to_editor(.right);
+        case .switch_to_other_editor;           switch_to_editor(.other);
+        case .duplicate_editor;                 switch_to_editor(.other, duplicate_current = true);
+        case .move_editor_to_the_left;          if editors.active == editors.right then swap_panes();
+        case .move_editor_to_the_right;         if editors.active == editors.left  then swap_panes();
         case .move_cursor_to_viewport_center;   move_cursor_to_viewport_center      (editor, buffer);
         case .remove_additional_cursors;        remove_additional_cursors           (editor); 
         case .scroll_viewport_up;               vertical_smooth_scroll              (editor, up = true);               activate_hold_action(action, event);

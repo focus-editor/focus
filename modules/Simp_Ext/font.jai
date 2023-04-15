@@ -66,6 +66,7 @@ Font_Line :: struct {
 
 Code_Line :: struct {
     line:   string;
+    tab_spaces: s64;
     colors: [] u8;
 }
 
@@ -162,7 +163,7 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height
         line   := it.line;
         colors := it.colors;
 
-        sx  := cast(float) x;
+        sx  := cast(float) (x + it.tab_spaces * char_size);
         col := 0;
 
         // Draw one line
@@ -226,7 +227,7 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height
                     chars_to_tabstop := tab_size - col % tab_size;
                     sx  += chars_to_tabstop * char_size;
                     col += chars_to_tabstop;
-                    color.w = 0.2;  // don't make it too bright
+                    color.w = 0.1;  // don't make it too bright
                 }
                 immediate_letter_quad(quad, color);
             }
