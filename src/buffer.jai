@@ -757,6 +757,7 @@ Caret :: struct {
 
 #assert size_of(Caret) == (2 + 1 + 2) * size_of(s32);  // make sure no padding accidentally gets added
 
+// !!!
 Line :: struct {
     start, end: s32;
     text_start: s32 = -1;
