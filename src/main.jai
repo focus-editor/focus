@@ -14,31 +14,7 @@ main :: () {
     Simp.set_render_target(window);
 
     init_buffers();
-    
-    // @buffer!!!!!!!
-    // // Setup temporary editor and buffer for testing new buffer representation 
-    // {
-    //     // Create and load file
-    //     // path := copy_string(get_absolute_path(".gitignore"));
-    //     path := copy_string(get_absolute_path("sqlite3.c"));
-    //     file_data, success := read_entire_file(path);
-    //     if !success then file_data = sprint("Couldn't load file '%'", path);
-    //     
-    //     new_buffer.file = get_file_info_from_full_path(path);
-    //     new_buffer.has_file = true;
-    //     // remember_last_modtime_and_size(buffer);
-    //     
-    //     new_buffer.bytes = resizable(to_bytes(file_data));
-    //     // remove_crlf(buffer);
-    //     rescan_for_lines(*new_buffer);
-    //     
-    //     new_buffer.meow_hash = calculate_meow_hash(new_buffer.bytes);
-    //     // new_buffer.lang = .Jai;
-    //     
-    //     array_add(*new_editor.carets, Caret.{});
-    //     
-    // }
-    
+
     // Remember important directories
     exe_dir = copy_string(path_strip_filename(get_path_of_running_executable()));
     if ends_with(exe_dir, "/") exe_dir.count -= 1;

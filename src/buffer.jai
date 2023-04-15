@@ -291,44 +291,6 @@ rescan_for_lines :: (using buffer: *NewBuffer) {
     array_add(*line_starts, cast(s32) bytes.count);  // sentinel
 }
 
-recalculate_lines :: (buffer: *Buffer) {
-    ZoneScoped(color=0xFF0000FF);
-    // We mainly use dirty for lines. We may want to recalculate lines
-    // a few times within one frame, but we don't want to e.g. rehighlight code
-    // more than once (before display)
-    // !!!!!!!!!!!!!!!! maybe this will change now and we won't recalculate nearly as often? !!!!!!!!!!!!!!!!!!
-    if buffer.dirty {
-        buffer.was_dirty_during_frame = true;
-        buffer.dirty = false;
-    }
-
-    array_reset_keeping_memory(*buffer.lines);
-    byte_index: s32 = 0;
-    char_index: s32 = 0;
-    line: Line;
-    while byte_index < buffer.bytes.count {
-        byte := buffer.bytes[byte_index];
-        if line.text_start < 0 && byte != #char " " {
-            line.text_start = byte_index;
-        }
-        if byte == #char "\n" {
-            line.end = byte_index;
-            line.num_chars = char_index;
-            char_index = -1;  // will turn to 0
-            array_add(*buffer.lines, line);
-            line.start = byte_index + 1;
-            line.text_start = -1;
-        }
-        byte_index += 1 + trailingBytesForUTF8[byte];
-        char_index += 1;
-    }
-    // Final line
-    if line.text_start < 0 then line.text_start = byte_index;
-    line.end = byte_index;
-    line.num_chars = char_index;
-    array_add(*buffer.lines, line);
-}
-
 recalculate_colors :: (buffer: *NewBuffer) {
     assert(!buffer.dirty);
     buffer.needs_coloring = false;

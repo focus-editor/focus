@@ -172,8 +172,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .delete_word_left_no_underscore;   delete_word_left_no_underscore      (editor, buffer);
         case .delete_word_right_no_underscore;  delete_word_right_no_underscore     (editor, buffer);
         
+        case .duplicate_lines;                  duplicate_lines                     (editor, buffer); keep_selection = true;
         
-        // case .duplicate_lines;                  if cursors.count == 1 { duplicate_lines(cursor, buffer); keep_selection = true; }
         // case .move_selected_lines_up;           if cursors.count == 1 { move_lines_up  (cursor, buffer); keep_selection = true; }
         // case .move_selected_lines_down;         if cursors.count == 1 { move_lines_down(cursor, buffer); keep_selection = true; }                
         // case .join_lines;                       if cursors.count == 1 { join_lines(cursor, buffer);      keep_selection = true; }
@@ -1607,6 +1607,51 @@ select_all :: (editor: *Editor, buffer: NewBuffer) {
     cursor := leave_only_original_caret(editor); 
     cursor.sel = 0;
     cursor.pos = cast(s32) buffer.bytes.count;
+}
+
+get_whole_lines_with_cursors_tmp :: (editor: *Editor, buffer: NewBuffer) -> [..] Offset_Range /* tmp */ {
+    lines: [..] Offset_Range;
+    lines.allocator = temp;
+    
+    last_end_line := -1;
+    
+    for cursor : editor.carets {
+        selection := get_selection(cursor);
+        start_line := offset_to_line(buffer, selection.start);
+        end_line   := ifx selection.start != selection.end then offset_to_line(buffer, selection.end) else start_line;
+        
+        if start_line == last_end_line {
+            // Extend last line range
+            lines[lines.count-1].end = buffer.line_starts[end_line+1];
+        } else {
+            // Add a new line range
+            array_add(*lines, Offset_Range.{ start = buffer.line_starts[start_line], end = buffer.line_starts[end_line+1] });
+        }
+        last_end_line = end_line;
+    }
+    
+    return lines;
+}
+
+duplicate_lines :: (editor: *Editor, buffer: *NewBuffer) {
+    lines := get_whole_lines_with_cursors_tmp(editor, buffer);
+    
+    offset_delta := 0;
+    for * line : lines {
+        line.start += xx offset_delta;
+        line.end   += xx offset_delta;
+        str := copy_temporary_string(to_string(array_view(buffer.bytes, line.start, line.end - line.start)));
+        insert_string_at_offset(buffer, line.end, str);
+        
+        for * cursor : editor.carets {
+            if line.start <= cursor.pos {  // no need to check for cursor.sel because we have whole line ranges
+                cursor.pos += xx str.count;
+                cursor.sel += xx str.count;
+            }
+        }
+        
+        offset_delta += str.count;
+    }
 }
 
 // move_lines_up :: (cursor: *Cursor, buffer: *Buffer) {
