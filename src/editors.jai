@@ -174,7 +174,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         
         case .duplicate_lines;                  duplicate_lines                     (editor, buffer); keep_selection = true;
         case .move_selected_lines_up;           move_lines_up                       (editor, buffer); keep_selection = true;
-        // case .move_selected_lines_down;         move_lines_down                     (editor, buffer); keep_selection = true;
+        case .move_selected_lines_down;         move_lines_down                     (editor, buffer); keep_selection = true;
         
         // case .join_lines;                       if cursors.count == 1 { join_lines(cursor, buffer);      keep_selection = true; }
         // case .join_lines_no_spaces_in_between;  if cursors.count == 1 { join_lines(cursor, buffer, in_between = ""); keep_selection = true; }
@@ -1651,11 +1651,12 @@ duplicate_lines :: (editor: *Editor, buffer: *NewBuffer) {
     editor.cursor_moved = true;
 }
 
-move_lines_up :: (editor: *Editor, buffer: *NewBuffer) {
-    // Get line ranges with cursors on them
-    Line_Range :: struct { prev_line_start: s32; range: Offset_Range; };
-    lines: [..] Line_Range;
-    lines.allocator = temp;
+Line_Range :: struct { prev_line_start: s32; next_line_end: s32; range: Offset_Range; };
+
+get_whole_line_ranges_for_cursors :: (editor: Editor, buffer: NewBuffer) -> [] Line_Range /* tmp */ {
+    line_ranges: [..] Line_Range;
+    line_ranges.allocator = temp;
+    // @line_wrap: use real_line_starts
     {
         last_end_line := -1;
         for cursor : editor.carets {
@@ -1663,19 +1664,28 @@ move_lines_up :: (editor: *Editor, buffer: *NewBuffer) {
             start_line := offset_to_line(buffer, selection.start);
             end_line   := ifx selection.start != selection.end then offset_to_line(buffer, selection.end) else start_line;
             
-            if lines.count > 0 && start_line <= last_end_line+1 {
+            next_line_end := buffer.line_starts[min(end_line+2, cast(s32)buffer.line_starts.count-1)];
+            
+            if line_ranges.count > 0 && start_line <= last_end_line+1 {
                 // Extend last line range
-                lines[lines.count-1].range.end = buffer.line_starts[end_line+1];
+                line_ranges[line_ranges.count-1].range.end = buffer.line_starts[end_line+1];
+                line_ranges[line_ranges.count-1].next_line_end = next_line_end;
             } else {
                 // Add a new line range
-                array_add(*lines, Line_Range.{ 
+                array_add(*line_ranges, Line_Range.{ 
                     prev_line_start = buffer.line_starts[max(0, start_line-1)],
-                    range   = .{ start = buffer.line_starts[start_line], end = buffer.line_starts[end_line+1] },
+                    next_line_end   = next_line_end,
+                    range = .{ start = buffer.line_starts[start_line], end = buffer.line_starts[end_line+1] },
                 });
             }
             last_end_line = end_line;
         }
     }
+    return line_ranges;
+}
+
+move_lines_up :: (editor: *Editor, buffer: *NewBuffer) {
+    lines := get_whole_line_ranges_for_cursors(editor, buffer);
     
     for * line : lines {
         prev_str_range := Offset_Range.{ start = line.prev_line_start, end = line.range.start };
@@ -1697,27 +1707,27 @@ move_lines_up :: (editor: *Editor, buffer: *NewBuffer) {
     editor.cursor_moved = true;
 }
 
-// move_lines_down :: (cursor: *Cursor, buffer: *Buffer) {
-//     range := get_selection_whole_lines(cursor, buffer);
-//     if range.end.line >= buffer.lines.count - 2 return;
-
-//     // Include the last newline in the selection
-//     range.end.col += 1;
-//     range.end = make_valid_pos(buffer, range.end, for_cursor = false);
-
-//     str := copy_lines_to_temp_string(buffer, range);
-
-//     insert_pos := range.start;
-//     insert_pos.line += 1;
-//     insert_pos.col   = 0;
-
-//     delete_range(buffer, range);
-//     recalculate_lines(buffer);
-//     insert_string_at_pos(buffer, insert_pos, tprint("%\n", str));
-
-//     cursor.pos.line += 1;
-//     cursor.sel.line += 1;
-// }
+move_lines_down :: (editor: *Editor, buffer: *NewBuffer) {
+    lines := get_whole_line_ranges_for_cursors(editor, buffer);
+    
+    for * line : lines {
+        next_str_range := Offset_Range.{ start = line.range.end, end = line.next_line_end };
+        if next_str_range.end <= next_str_range.start continue;  // we're at the bottom
+        next_str := copy_temporary_string(to_string(array_view(buffer.bytes, next_str_range.start, next_str_range.end - next_str_range.start )));
+        
+        delete_range(buffer, next_str_range);
+        insert_string_at_offset(buffer, line.range.start, next_str);
+        
+        for * cursor : editor.carets {
+            if line.range.start <= cursor.pos && cursor.pos <= line.range.end {  // no need to check for cursor.sel because we have whole line ranges
+                cursor.pos += xx next_str.count;
+                cursor.sel += xx next_str.count;
+            }
+        }
+    }
+    
+    editor.cursor_moved = true;
+}
 
 copy_selection_to_clipboard :: (editor: *Editor, buffer: *NewBuffer, cut := false) {
     b: String_Builder;
