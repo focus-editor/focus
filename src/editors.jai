@@ -1654,7 +1654,7 @@ duplicate_lines :: (editor: *Editor, buffer: *NewBuffer) {
     for * line : lines {
         line.range.start += xx offset_delta;
         line.range.end   += xx offset_delta;
-        str := copy_temporary_string(to_string(array_view(buffer.bytes, line.range.start, line.range.end - line.range.start)));
+        str := copy_temporary_string(get_range_as_string(buffer, line.range));
         insert_string_at_offset(buffer, line.range.end, str);
         add_paste_animation(editor, .{ start = line.range.end, end = line.range.end + cast(s32)str.count });
         
@@ -1675,11 +1675,12 @@ move_lines_up :: (editor: *Editor, buffer: *NewBuffer) {
     lines := get_whole_line_ranges_for_cursors(editor, buffer);
     
     for * line : lines {
-        prev_str_range := Offset_Range.{ start = line.prev_line_start, end = line.range.start };
-        prev_str := copy_temporary_string(to_string(array_view(buffer.bytes, prev_str_range.start, prev_str_range.end - prev_str_range.start )));
+        prev_line_range := Offset_Range.{ start = line.prev_line_start, end = line.range.start };
+        prev_str := copy_temporary_string(get_range_as_string(buffer, prev_line_range));
         if !prev_str continue;  // we're at the top
         
-        delete_range(buffer, prev_str_range);
+        delete_range(buffer, prev_line_range);
+        add_paste_animation(editor, .{ start = prev_line_range.start, end = prev_line_range.start + line.range.end - line.range.start });
         
         for * cursor : editor.carets {
             if line.range.start <= cursor.pos && cursor.pos <= line.range.end {  // no need to check for cursor.sel because we have whole line ranges
@@ -1698,12 +1699,13 @@ move_lines_down :: (editor: *Editor, buffer: *NewBuffer) {
     lines := get_whole_line_ranges_for_cursors(editor, buffer);
     
     for * line : lines {
-        next_str_range := Offset_Range.{ start = line.range.end, end = line.next_line_end };
-        if next_str_range.end <= next_str_range.start continue;  // we're at the bottom
-        next_str := copy_temporary_string(to_string(array_view(buffer.bytes, next_str_range.start, next_str_range.end - next_str_range.start )));
+        next_line_range := Offset_Range.{ start = line.range.end, end = line.next_line_end };
+        if next_line_range.end <= next_line_range.start continue;  // we're at the bottom
+        next_str := copy_temporary_string(get_range_as_string(buffer, next_line_range));
         
-        delete_range(buffer, next_str_range);
+        delete_range(buffer, next_line_range);
         insert_string_at_offset(buffer, line.range.start, next_str);
+        add_paste_animation(editor, .{ start = line.range.start + cast(s32)next_str.count, end = line.range.end + cast(s32)next_str.count });
         
         for * cursor : editor.carets {
             if line.range.start <= cursor.pos && cursor.pos <= line.range.end {  // no need to check for cursor.sel because we have whole line ranges

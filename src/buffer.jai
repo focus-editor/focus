@@ -507,6 +507,15 @@ find_col_by_scanning_left :: (using buffer: *NewBuffer, offset: s32) -> col: s32
     return col;
 }
 
+get_range_as_string :: (buffer: NewBuffer, range: Offset_Range) -> string {
+    result: string = ---;
+    
+    result.data  = buffer.bytes.data + range.start;
+    result.count =  max(range.end - range.start, 0);
+    
+    return result;
+}
+
 #scope_file
 
 compare_with_contents_on_disk_and_maybe_unmark_as_modified :: (using buffer: *Buffer) {
