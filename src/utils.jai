@@ -300,6 +300,23 @@ get_identifier_name :: (name: Code) -> string {
     return ident.name;
 }
 
+trim_both_sides :: (s: string, chars := DEFAULT_SPACES) -> string, left: s64, right: s64 {
+    left  := 0;
+    right := 0;
+    
+    for 0..s.count-1 {
+        if is_any(s[it], chars) left += 1; 
+        else break;
+    }
+    
+    for < s.count-1..left {
+        if is_any(s[it], chars) right += 1;
+        else break;
+    }
+    
+    return slice(s, left, s.count - left - right), left, right;
+}
+
 
 #scope_export
 

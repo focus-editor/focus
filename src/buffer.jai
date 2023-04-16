@@ -761,7 +761,7 @@ Caret :: struct {
     using state: State;
     clipboard: struct { start: s32; count: s32; };  // TODO: consider using just one s32?
     
-    State :: struct { pos, sel: s32; col_wanted: s32; }
+    State :: struct { pos, sel: s32; col_wanted: s32 = -1; }
 }
 
 #assert size_of(Caret) == (2 + 1 + 2) * size_of(s32);  // make sure no padding accidentally gets added

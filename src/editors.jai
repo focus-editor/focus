@@ -176,8 +176,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .move_selected_lines_up;           move_lines_up                       (editor, buffer); keep_selection = true;
         case .move_selected_lines_down;         move_lines_down                     (editor, buffer); keep_selection = true;
         
-        // case .join_lines;                       if cursors.count == 1 { join_lines(cursor, buffer);      keep_selection = true; }
-        // case .join_lines_no_spaces_in_between;  if cursors.count == 1 { join_lines(cursor, buffer, in_between = ""); keep_selection = true; }
+        case .join_lines;                       join_lines                          (editor, buffer);                  keep_selection = true;
+        case .join_lines_no_spaces_in_between;  join_lines                          (editor, buffer, in_between = ""); keep_selection = true;
         // case .delete_line;                      if cursors.count == 1 { delete_line(cursor, buffer); }
         // case .delete_line_and_go_up;            if cursors.count == 1 { delete_line_and_go_up(cursor, buffer); }
         
@@ -1001,6 +1001,8 @@ new_edit_group_required_for_action :: (action: Action_Editors, cursor: Caret) ->
         case .delete_word_right;                return true;
         case .delete_word_left_no_underscore;   return true;
         case .delete_word_right_no_underscore;  return true;
+        case .join_lines;                       return true;
+        case .join_lines_no_spaces_in_between;  return true;
     }    
 
     return false;
@@ -1035,7 +1037,7 @@ move_cursors_left :: (editor: *Editor, using buffer: *NewBuffer, by: enum { char
         if has_selection(cursor) && !extend_selection {
             cursor.pos = get_selection(cursor).start;
         } else if by == .char {
-            cursor.pos = prev_char_offset(bytes, cursor.pos);  // @crlf
+            if cursor.pos > 0 then cursor.pos = prev_char_offset(bytes, cursor.pos);
         } else {
             if by == {
                 case .word;
@@ -1060,7 +1062,7 @@ move_cursors_right :: (editor: *Editor, using buffer: *NewBuffer, by: enum { cha
         if has_selection(cursor) && !extend_selection {
             cursor.pos = get_selection(cursor).end;
         } else if by == .char {
-            cursor.pos = next_char_offset(bytes, cursor.pos);  // @crlf
+            cursor.pos = next_char_offset(bytes, cursor.pos);
         } else {
             if by == {
                 case .word;
@@ -1611,7 +1613,7 @@ select_all :: (editor: *Editor, buffer: NewBuffer) {
 
 Line_Range :: struct { prev_line_start: s32; next_line_end: s32; range: Offset_Range; };
 
-get_whole_line_ranges_for_cursors :: (editor: Editor, buffer: NewBuffer, merge_adjacent := true) -> [] Line_Range /* tmp */ {
+get_whole_line_ranges_for_cursors :: (editor: Editor, buffer: NewBuffer, merge_adjacent := true, select_next_for_single_lines := false) -> [] Line_Range /* tmp */ {
     line_ranges: [..] Line_Range;
     line_ranges.allocator = temp;
     // @line_wrap: use real_line_starts
@@ -1621,12 +1623,13 @@ get_whole_line_ranges_for_cursors :: (editor: Editor, buffer: NewBuffer, merge_a
             selection := get_selection(cursor);
             start_line := offset_to_line(buffer, selection.start);
             end_line   := ifx selection.start != selection.end then offset_to_line(buffer, selection.end) else start_line;
+            if start_line == end_line && select_next_for_single_lines then end_line += 1;
             
             next_line_end := buffer.line_starts[min(end_line+2, cast(s32)buffer.line_starts.count-1)];
             
             should_extend := line_ranges.count > 0 && (
                 (merge_adjacent  && start_line <= last_end_line+1) ||
-                (!merge_adjacent && start_line == last_end_line)
+                (!merge_adjacent && start_line <= last_end_line)
             );
             
             if should_extend {
@@ -1648,7 +1651,7 @@ get_whole_line_ranges_for_cursors :: (editor: Editor, buffer: NewBuffer, merge_a
 }
 
 duplicate_lines :: (editor: *Editor, buffer: *NewBuffer) {
-    lines := get_whole_line_ranges_for_cursors(editor, buffer);
+    lines := get_whole_line_ranges_for_cursors(editor, buffer, merge_adjacent = false);
     
     offset_delta := 0;
     for * line : lines {
@@ -1674,7 +1677,7 @@ duplicate_lines :: (editor: *Editor, buffer: *NewBuffer) {
 move_lines_up :: (editor: *Editor, buffer: *NewBuffer) {
     lines := get_whole_line_ranges_for_cursors(editor, buffer);
     
-    for * line : lines {
+    for line : lines {
         prev_line_range := Offset_Range.{ start = line.prev_line_start, end = line.range.start };
         prev_str := copy_temporary_string(get_range_as_string(buffer, prev_line_range));
         if !prev_str continue;  // we're at the top
@@ -1698,7 +1701,7 @@ move_lines_up :: (editor: *Editor, buffer: *NewBuffer) {
 move_lines_down :: (editor: *Editor, buffer: *NewBuffer) {
     lines := get_whole_line_ranges_for_cursors(editor, buffer);
     
-    for * line : lines {
+    for line : lines {
         next_line_range := Offset_Range.{ start = line.range.end, end = line.next_line_end };
         if next_line_range.end <= next_line_range.start continue;  // we're at the bottom
         next_str := copy_temporary_string(get_range_as_string(buffer, next_line_range));
@@ -1712,6 +1715,71 @@ move_lines_down :: (editor: *Editor, buffer: *NewBuffer) {
                 cursor.pos += xx next_str.count;
                 cursor.sel += xx next_str.count;
             }
+        }
+    }
+    
+    editor.cursor_moved = true;
+}
+
+Deletion :: struct { offset: s64; amount: s64; }
+
+join_lines :: (editor: *Editor, buffer: *NewBuffer, in_between := " ") {
+    ranges := get_whole_line_ranges_for_cursors(editor, buffer, merge_adjacent = false, select_next_for_single_lines = true);
+    
+    b: String_Builder;
+    b.allocator = temp;
+    
+    deletions: [..] Deletion;  // for easy cursor adjustments
+    deletions.allocator = temp;
+    
+    add_deletion :: (amount: s64) #expand {
+        if amount != 0 then array_add(*`deletions, Deletion.{ offset = `delete_offset, amount = amount });
+    }
+    
+    offset_delta := 0;
+    
+    for * range : ranges {
+        range.range.start += xx offset_delta;
+        range.range.end   += xx offset_delta;
+        
+        range_str := get_range_as_string(buffer, range.range);
+        individual_lines := split(trim_right(range_str), cast(u8) #char "\n");
+        if individual_lines.count <= 1 continue;  // nothing to join
+        
+        first_line         := individual_lines[0];
+        first_line_trimmed := trim_right(first_line);
+        remaining_lines    := array_view(individual_lines, 1, individual_lines.count - 1);
+        
+        delete_offset := range.range.start + first_line_trimmed.count;
+        add_deletion(first_line.count - first_line_trimmed.count);
+        
+        append(*b, first_line_trimmed);
+        for line : remaining_lines {
+            trimmed, left, right := trim_both_sides(line);
+            padding := ifx trimmed then in_between.count else 0;
+            add_deletion(left + 1 - padding);
+            if !trimmed continue;
+            append(*b, in_between);
+            append(*b, trimmed);
+            delete_offset += trimmed.count + in_between.count;
+            add_deletion(right);
+        }
+        append(*b, "\n");
+        add_deletion(-1);
+        
+        new_str := builder_to_string(*b, do_reset = true);
+        replace_range(buffer, range.range, new_str);
+        add_paste_animation(editor, .{ start = range.range.start + cast(s32)first_line.count, end = range.range.start + cast(s32)new_str.count });
+        
+        offset_delta += new_str.count - range_str.count;
+    }
+    
+    
+    // Adjust cursors
+    for * cursor, cursor_id : editor.carets {
+        for deletion : deletions {
+            if cursor.pos >= deletion.offset then cursor.pos = xx max(cursor.pos - deletion.amount, deletion.offset);
+            if cursor.sel >= deletion.offset then cursor.sel = xx max(cursor.sel - deletion.amount, deletion.offset);
         }
     }
     
@@ -1936,7 +2004,7 @@ Paste_Animation :: struct {
     coords_range: Coords_Range;
     initted := false;
     started_at: Time;
-    SPEED :: 0.5;
+    SPEED :: 0.3;
 }
 
 Editor_State :: struct {
