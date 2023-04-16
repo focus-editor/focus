@@ -23,6 +23,7 @@ main :: () {
     
     assert(exe_dir.count > 0);
     load_global_config();
+    init_workspace();
     
     if !make_directory_if_it_does_not_exist(projects_dir) then panic_messagebox("Couldn't create folder %. Is the directory writable?", projects_dir);
     if !make_directory_if_it_does_not_exist(temp_dir)     then panic_messagebox("Couldn't create folder % for temporary files. Is the directory writable?", temp_dir);
@@ -42,17 +43,10 @@ main :: () {
         if is_directory(args[1]) {
             // Open directory passed in the command line
             session = start_fresh_session();
-            dir_path := copy_string(get_absolute_path(args[1]));
-            
-            path_overwrite_separators(dir_path, #char "/");
-            
-            workspace_dirs := resizable(config.workspace.workspace_dirs);
-            array_insert_at(*workspace_dirs, dir_path, 0);
-            config.workspace.workspace_dirs = workspace_dirs;
+            add_directory_to_workspace(args[1], index = 0);  // should go first
         } else if file_exists(args[1]) {
             // Open file passed in the command line
             session = start_fresh_session();
-            
             editors_open_file(args[1]);
         } else {
             init_session_with_no_guidance();
@@ -61,8 +55,10 @@ main :: () {
         init_session_with_no_guidance();
     }
     
+    // editors_open_file("W:/focus/src/main.jai");
+    
     // Requires the session to be created and the configs to be loaded
-    init_workspace();
+    start_initial_workspace_scan();
     
     // Init logger after we know the session dir and the config
     init_logger();

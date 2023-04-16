@@ -668,6 +668,8 @@ draw_open_file_dialog :: () {
         entry_rect := cut_top(files_rect, entry_height);
 
         path_align_x := files_rect.x + files_rect.w / 2.5;
+        
+        project_dir_id := -1;  // to draw project boundary
 
         for entry, i : visible_entries {
             entry_index := visible_start + i;
@@ -686,6 +688,15 @@ draw_open_file_dialog :: () {
                 }
                 if entries.selected_by_mouse == entry_index then draw_rect(entry_rect, Colors.LIST_CURSOR);
                 if entry_index == selected then draw_rect(entry_rect, Colors.LIST_CURSOR);
+            }
+            
+            // Maybe draw project boundary
+            if project_dir_id < 0 then project_dir_id = entry.project_dir_id;
+            if entry.project_dir_id != project_dir_id {
+                project_dir_id = entry.project_dir_id;
+                separator := cut_top(entry_rect, 2 * dpi_scale);
+                separator.y += 1;
+                draw_rect(separator, Colors.LIST_CURSOR_LITE);
             }
 
             pen := make_vector2(
@@ -710,7 +721,7 @@ draw_open_file_dialog :: () {
                 pen.x += width + padding;
                 width = xx Simp.draw_text(font_ui_bold, xx pen.x, xx pen.y, "[modified on disk]", color = Colors.UI_ERROR);
             }
-
+            
             // // Draw score
             // pen.x += width + padding;
             // width = xx Simp.prepare_text(font_ui_small, tprint("%", formatInt(entry.sort_key, base=16)));

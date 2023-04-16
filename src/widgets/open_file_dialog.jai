@@ -192,7 +192,7 @@ refresh_entries :: (scan_folder := false) {
                     entry.name = name;
                     entry.path = it.path;
                     entry.icon = .folder;
-                    entry.project_dir_id = xx it_index;
+                    entry.project_dir_id = xx (it_index + 1);
                     entry.name_highlights = name_highlights;
                     entry.path_highlights = NewArray(entry.path.count, bool);
                     
@@ -247,7 +247,7 @@ refresh_entries :: (scan_folder := false) {
             // @MEMORY SAFETY: if we ever delete buffers from open_buffers and free memory, this will have to copy everything!
             num_entries := 0;
             for buffer : open_buffers {
-                if !buffer.has_file || buffer.deleted continue;  // NOTE: we might still want to see externally deleted buffers.
+                if buffer.deleted && !buffer.modified continue;  // NOTE: we might still want to see externally deleted buffers.
                                                                  // Maybe use 'deleted' and 'modified_on_disk' to distingiush the buffers
                                                                  // we haven't deleted ourselves?
                                                                  // Alternatively, if there's an editor for a deleted buffer we probably

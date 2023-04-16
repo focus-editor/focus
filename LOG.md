@@ -70,6 +70,7 @@
     + Draw footer
     + Fix the cursor when scrolled horizontally
     - Implement the rest of actions
+    - Refresh buffers from disk
     - Global search
     - Local search
     
@@ -93,10 +94,10 @@
 - Implement general language highlighting with a set of common keywords etc
 - Select syntax highlighting dialog
         
-- Buffer ordering improvements:
-    - Make sure that files opened by double clicking or dragging which are within one of project dirs have their path displayed as the rest of the files
-    - All files opened separately should always appear at the top in searches
-    - I should probably draw the project boundary in the file open dialog so that you see why JaiDE files appear at the top even when the match is worse
++ Buffer ordering improvements:
+    + Make sure that files opened by double clicking or dragging which are within one of project dirs have their path displayed as the rest of the files
+    + I should probably draw the project boundary in the file open dialog so that you see why JaiDE files appear at the top even when the match is worse
+    - TEST THIS: All files opened separately should always appear at the top in searches
 
 - Nice to haves:
     - Mark modified buffers in the navigate dialog

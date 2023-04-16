@@ -1,16 +1,38 @@
-init_workspace :: () {    
-    // workspace_dirs := ifx !DEBUG then config.workspace.workspace_dirs else string.[ "W:/focus", "C:/jai" ];
-    for path, i : config.workspace.workspace_dirs {
-        dir: Project_Dir = ---;
-        dir.path = trim_right(path, "/");
-        dir.path_prefix_len = find_index_of_any_from_right(dir.path, "./") + 1;
-        // TODO: check whether project path exists - add to error log
-        array_add(*project_dirs, dir);
+init_workspace :: () {
+    for path : config.workspace.workspace_dirs {
+        add_directory_to_workspace(path);
     }
+}
 
-    // Start initial scan of the workspace files
+add_directory_to_workspace :: (path: string, index := -1) {
+    full_path := copy_string(get_absolute_path(path));
+    path_overwrite_separators(full_path, #char "/");
+    
+    if !is_directory(full_path) {
+        log_error("Couldn't add % to workspace. Directory doesn't exist or is invalid.", full_path);
+        return;
+    }
+    
+    dir: Project_Dir;
+    dir.path = trim_right(full_path, "/");
+    dir.path_prefix_len = find_index_of_any_from_right(dir.path, "./") + 1;
+    
+    in_project, parent_dir := dir_is_within_project(dir.path);
+    if in_project {
+        log_error("Directory % is already in the project: %", dir.path, parent_dir);
+        return;
+    }
+    
+    if index < 0 {
+        array_add(*project_dirs, dir);
+    } else {
+        array_insert_at(*project_dirs, dir, index);
+    }
+}
+
+start_initial_workspace_scan :: () {
     init(*scanner_thread, num_threads = 1, group_proc = initial_scan_threadproc);
-    scanner_thread.name = "Project Scanner";
+    scanner_thread.name = "Workspace Scanner";
     scanner_thread.logging = true;
         
     start(*scanner_thread);

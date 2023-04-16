@@ -4,7 +4,7 @@ get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> Fil
     full_path := copy_string(abs_path);  // one allocation, the rest are views into it
     path, basename, extension, name := path_decomp(full_path);
 
-    info: File_Info = ---;
+    info: File_Info;
     info.full_path = full_path;
     info.name = name;
     if ends_with(path, "/") then path.count -= 1;  // strip the separator
@@ -14,7 +14,7 @@ get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> Fil
         for project_dirs {
             if begins_with_nocase(path, it.path) {
                 proj_prefix_len = it.path_prefix_len;
-                info.project_dir_id = xx it_index;
+                info.project_dir_id = xx (it_index + 1);
                 break;
             }
         }
@@ -150,11 +150,11 @@ should_ignore_dir :: (path: string) -> bool {
     return false;
 }
 
-dir_is_within_project :: (dir_path: string) -> bool {
+dir_is_within_project :: (dir_path: string) -> bool, project_dir: string {
     for project_dirs {
-        if begins_with_nocase(dir_path, it.path) return true;
+        if equal_nocase(dir_path, it.path) || contains_nocase(dir_path, tprint("%/", it.path)) return true, it.path;
     }
-    return false;
+    return false, "";
 }
 
 get_parent_dir_path :: (file_path: string) -> string {
@@ -168,7 +168,7 @@ File_Info :: struct {
     name: string;
     path: string;
     icon: File_Icon;
-    project_dir_id: s8 = -1;  // to be used for sorting
+    project_dir_id: s8 = 0;  // to be used for sorting
 }
 
 File_Icon :: enum u16 {
