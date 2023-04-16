@@ -162,6 +162,8 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "duplicate_lines",
     "delete_line_and_go_up",
     "delete_line",
+    "delete_to_start_of_line",
+    "delete_to_end_of_line",
     "move_selected_lines_up",
     "move_selected_lines_down",
     "join_lines",

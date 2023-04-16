@@ -16,7 +16,6 @@
     + Test the exe on different machines
     - Create new files
     - Horizontal scrolling
-    - Support CRLF (ugh)
     - Notify about unsaved buffers on close
     - Ctrl + R to search by symbol within buffer (jump immediately when moving cursor between options)
     - Ctrl + Shift + R to search by symbol within workspace
@@ -69,9 +68,9 @@
     + Save buffer
     + Draw footer
     + Fix the cursor when scrolled horizontally
-    - Implement the rest of actions
-    - Ctrl+x without a selection deletes line (but only if no cursors have a selection)
-    - Delete to end of line (Ctrl+K)
+    + Implement the rest of actions
+    + Delete to end of line (Ctrl+K)
+    - Ctrl+x without a selection cuts the whole line (but only if no cursors have a selection)
     - Fix issues near the end of file
         + Crash
         - Not processing the last line properly (when scanning for newlines)

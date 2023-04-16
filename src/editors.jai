@@ -182,7 +182,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .delete_line;                      delete_line                         (editor, buffer);
         case .delete_line_and_go_up;            delete_line                         (editor, buffer, go_up = true);
         
-        // TODO: delete to end of line
+        case .delete_to_start_of_line;          delete_to_start_of_line             (editor, buffer);
+        case .delete_to_end_of_line;            delete_to_end_of_line               (editor, buffer);
         
         case;                                   return;  // not handled
     }
@@ -1816,6 +1817,26 @@ delete_line :: (editor: *Editor, buffer: *NewBuffer, go_up := false) {
     }
     
     editor.cursor_moved = true;
+}
+
+delete_to_start_of_line :: (editor: *Editor, buffer: *NewBuffer) {
+    for * cursor : editor.carets {
+        selection := get_selection(cursor);
+        cursor.sel = selection.end;
+        cursor.pos = buffer.line_starts[offset_to_line(buffer, selection.start)];
+    }
+    organise_carets(editor);  // resolve overlapping selections
+    delete_left_char(editor, buffer);
+}
+
+delete_to_end_of_line :: (editor: *Editor, buffer: *NewBuffer) {
+    for * cursor : editor.carets {
+        selection := get_selection(cursor);
+        cursor.sel = selection.start;
+        cursor.pos = buffer.line_starts[offset_to_line(buffer, selection.end) + 1] - 1;
+    }
+    organise_carets(editor);  // resolve overlapping selections
+    delete_right_char(editor, buffer);
 }
 
 copy_selection_to_clipboard :: (editor: *Editor, buffer: *NewBuffer, cut := false) {
