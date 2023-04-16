@@ -153,7 +153,7 @@ coords_to_offset :: (using buffer: NewBuffer, coords: Coords) -> s32 {
     
     line := clamp(coords.line, 0, cast(s32)line_starts.count - 2);
     offset := line_starts[line];
-    if offset >= bytes.count - 1 return offset;
+    if offset >= bytes.count return offset;
     next_line_offset := line_starts[line + 1];
     
     col := 0;
@@ -276,19 +276,19 @@ rescan_for_lines :: (using buffer: *NewBuffer) {
         s.count = count;
     }
     
-    start_index := s.data - bytes.data;
+    processed_with_simd := s.data - bytes.data;
+    start_index := 0;
     while true {
         index := inline find_index_from_left(s, 0xA, start_index);
-        if index > 0 {
+        if index >= 0 {
             start_index = index + 1;
-            array_add(*line_starts, cast,no_check(s32) start_index);
+            array_add(*line_starts, cast,no_check(s32) (processed_with_simd + start_index));
         } else {
             break;
         }
     }
     
-    array_add(*line_starts, cast(s32) bytes.count);  // last line
-    array_add(*line_starts, cast(s32) bytes.count);  // sentinel
+    array_add(*line_starts, cast(s32) bytes.count);  // last line sentinel
 }
 
 recalculate_colors :: (buffer: *NewBuffer) {

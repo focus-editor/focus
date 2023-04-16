@@ -153,6 +153,9 @@
 - Word wrap:
     - Before doing it, implement sticky viewport, so that it can glue itself to a line
     
+- When adding a directory to workspace, the check for parent directory is NOT RELIABLE. Paths are case-sensitive on Linux
+    - Also, what if we add a parent dir to a dir already in the project - what would be the expected behaviour? Delete the child dir? Keep it and dedup the files?
+    
 - Sessions and buffer backups:
     - Write down a step by step loading process to identify the easiest format to load
     - When editing, remember:

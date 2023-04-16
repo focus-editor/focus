@@ -1436,7 +1436,7 @@ delete_right_char :: (editor: *Editor, buffer: *NewBuffer) {
         
         if has_selection(cursor) {
             range = get_selection(cursor);
-        } else if cursor.pos < buffer.bytes.count - 1 {
+        } else if cursor.pos < buffer.bytes.count {
             end := cursor.pos + 1 + trailingBytesForUTF8[buffer.bytes[cursor.pos]];
             range = .{ start = cursor.pos, end = min(end, cast(s32) buffer.bytes.count) };
         }
