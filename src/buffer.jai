@@ -153,8 +153,9 @@ coords_to_offset :: (using buffer: NewBuffer, coords: Coords) -> s32 {
     
     line := clamp(coords.line, 0, cast(s32)line_starts.count - 2);
     offset := line_starts[line];
-    if offset >= bytes.count return offset;
-    next_line_offset := line_starts[line + 1];
+    if offset >= bytes.count return xx bytes.count;
+    
+    max_offset := get_line_end_offset(buffer, line);
     
     col := 0;
     while true {
@@ -162,9 +163,22 @@ coords_to_offset :: (using buffer: NewBuffer, coords: Coords) -> s32 {
         if byte != #char "\t" then col += 1; else col += TAB_SIZE - col % TAB_SIZE;
         if col > coords.col break;
         next_offset := offset + 1 + trailingBytesForUTF8[byte];
-        if next_offset >= next_line_offset break;
+        if next_offset >= max_offset {
+            offset = max_offset;
+            break;
+        }
         offset = next_offset;
     }
+    return offset;
+}
+
+is_last_line :: (using buffer: NewBuffer, line: s32) -> bool {
+    return line >= line_starts.count - 2;
+}
+
+get_line_end_offset :: (using buffer: NewBuffer, line: s32) -> s32 {
+    offset := line_starts[line + 1];
+    if !is_last_line(buffer, line) then offset -= 1;
     return offset;
 }
 
@@ -288,7 +302,7 @@ rescan_for_lines :: (using buffer: *NewBuffer) {
         }
     }
     
-    array_add(*line_starts, cast(s32) bytes.count);  // last line sentinel
+    array_add(*line_starts, cast(s32) bytes.count);  // last line
 }
 
 recalculate_colors :: (buffer: *NewBuffer) {
@@ -351,8 +365,6 @@ is_empty :: (using buffer: NewBuffer, line_num: s32) -> bool {
 get_line_as_string :: (using buffer: NewBuffer, line_num: s32) -> string {
     assert(!buffer.dirty);
     if line_num < 0 || line_num >= buffer.line_starts.count - 1 return "";
-    
-    // @crlf
     
     start := line_starts[line_num];
     end   := line_starts[line_num + 1];
@@ -500,7 +512,7 @@ find_col_by_scanning_left :: (using buffer: *NewBuffer, offset: s32) -> col: s32
     
     while offset > 0 {
         offset, byte = prev_char_offset(bytes, offset);
-        if byte == #char "\n" break;  // @crlf
+        if byte == #char "\n" break;
         col += 1;
     }
     

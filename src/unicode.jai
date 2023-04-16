@@ -87,7 +87,6 @@ next_char_offset :: inline (bytes: [] u8, offset: s32) -> s32 {
 }
 
 prev_char_offset :: (bytes: [] u8, offset: s32) -> s32, byte: u8 {
-    assert(offset > 0);
     new_offset := offset - 1;
     byte := bytes[new_offset];
     while (byte & 0b1100_0000) == 0b1000_0000 { 

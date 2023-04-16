@@ -71,10 +71,14 @@
     + Implement the rest of actions
     + Delete to end of line (Ctrl+K)
     + Ctrl+x without a selection cuts the whole line (but only if no cursors have a selection)
-    - Fix issues near the end of file
+    + Fix issues near the end of file
         + Crash
-        - Not processing the last line properly (when scanning for newlines)
-        - Test indent/unindent
+        + Not processing the last line properly (when scanning for newlines)
+        + Typing near the end is bugged
+        + Fix joining lines
+        + Test indent/unindent
+        + New line without breaking on last line
+        + Move last line up
     - Refresh buffers from disk
     - Global search
         - Double shift to search
@@ -84,6 +88,7 @@
     - Line wrap:
         - Implement wrapping for buffer
         - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
+        - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
     - Use SIMD for syntax highlighting
     - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
         
@@ -99,9 +104,9 @@
 - Select syntax highlighting dialog
 
 - CRLF:
+    + Get rid of crlf notes
     - BUG: When reloading file from disk (refresh_buffer_from_disk) make sure to remove crlf (until it's supported at least)
     - Show a warning when a CRLF file is loaded, then dismiss on save
-    - Get rid of crlf notes
 
 - Nice to haves:
     - Mark modified buffers in the navigate dialog
