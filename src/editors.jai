@@ -178,8 +178,11 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         
         case .join_lines;                       join_lines                          (editor, buffer);                  keep_selection = true;
         case .join_lines_no_spaces_in_between;  join_lines                          (editor, buffer, in_between = ""); keep_selection = true;
-        // case .delete_line;                      if cursors.count == 1 { delete_line(cursor, buffer); }
-        // case .delete_line_and_go_up;            if cursors.count == 1 { delete_line_and_go_up(cursor, buffer); }
+        
+        case .delete_line;                      delete_line                         (editor, buffer);
+        case .delete_line_and_go_up;            delete_line                         (editor, buffer, go_up = true);
+        
+        // TODO: delete to end of line
         
         case;                                   return;  // not handled
     }
@@ -1721,7 +1724,6 @@ move_lines_down :: (editor: *Editor, buffer: *NewBuffer) {
     editor.cursor_moved = true;
 }
 
-Deletion :: struct { offset: s64; amount: s64; }
 
 join_lines :: (editor: *Editor, buffer: *NewBuffer, in_between := " ") {
     ranges := get_whole_line_ranges_for_cursors(editor, buffer, merge_adjacent = false, select_next_for_single_lines = true);
@@ -1729,6 +1731,7 @@ join_lines :: (editor: *Editor, buffer: *NewBuffer, in_between := " ") {
     b: String_Builder;
     b.allocator = temp;
     
+    Deletion :: struct { offset: s64; amount: s64; }
     deletions: [..] Deletion;  // for easy cursor adjustments
     deletions.allocator = temp;
     
@@ -1781,6 +1784,35 @@ join_lines :: (editor: *Editor, buffer: *NewBuffer, in_between := " ") {
             if cursor.pos >= deletion.offset then cursor.pos = xx max(cursor.pos - deletion.amount, deletion.offset);
             if cursor.sel >= deletion.offset then cursor.sel = xx max(cursor.sel - deletion.amount, deletion.offset);
         }
+    }
+    
+    editor.cursor_moved = true;
+}
+
+delete_line :: (editor: *Editor, buffer: *NewBuffer, go_up := false) {
+    lines := get_whole_line_ranges_for_cursors(editor, buffer);
+    
+    offset_delta := 0;
+    
+    for * line : lines {
+        line.prev_line_start -= xx offset_delta;
+        line.range.start -= xx offset_delta;
+        line.range.end   -= xx offset_delta;
+        
+        str := get_range_as_string(buffer, line.range);
+        delete_range(buffer, line.range);
+        
+        for * cursor : editor.carets {
+            if line.range.start <= cursor.pos && cursor.pos <= line.range.end {  // no need to check for cursor.sel because we have whole line ranges
+                cursor.pos = ifx go_up then line.prev_line_start else line.range.start;
+                cursor.col_wanted = -1;
+            } else if cursor.pos >= line.range.end {
+                cursor.pos -= xx str.count;
+                cursor.sel -= xx str.count;
+            }
+        }
+        
+        offset_delta += str.count;
     }
     
     editor.cursor_moved = true;

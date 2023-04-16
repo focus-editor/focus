@@ -70,18 +70,21 @@
     + Draw footer
     + Fix the cursor when scrolled horizontally
     - Implement the rest of actions
+    - Ctrl+x without a selection deletes line (but only if no cursors have a selection)
+    - Delete to end of line (Ctrl+K)
+    - Fix issues near the end of file
+        + Crash
+        - Not processing the last line properly (when scanning for newlines)
+        - Test indent/unindent
     - Refresh buffers from disk
     - Global search
+        - Double shift to search
+        - TEST THIS: All files opened separately should always appear at the top in searches
     - Local search
     
     - Line wrap:
         - Implement wrapping for buffer
         - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
-    
-    - Fix issues near the end of file
-        + Crash
-        - Not processing the last line properly (when scanning for newlines)
-        - Test indent/unindent
     - Use SIMD for syntax highlighting
     - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
         
@@ -89,15 +92,17 @@
     - Then: Sticky viewport
         - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
         
+- Project scanning: Use threads more efficiently
+        
 - Implement scrolling by dragging in all directions and with different speed
 - Generalise TODO highlighting
 - Implement general language highlighting with a set of common keywords etc
 - Select syntax highlighting dialog
-        
-+ Buffer ordering improvements:
-    + Make sure that files opened by double clicking or dragging which are within one of project dirs have their path displayed as the rest of the files
-    + I should probably draw the project boundary in the file open dialog so that you see why JaiDE files appear at the top even when the match is worse
-    - TEST THIS: All files opened separately should always appear at the top in searches
+
+- CRLF:
+    - BUG: When reloading file from disk (refresh_buffer_from_disk) make sure to remove crlf (until it's supported at least)
+    - Show a warning when a CRLF file is loaded, then dismiss on save
+    - Get rid of crlf notes
 
 - Nice to haves:
     - Mark modified buffers in the navigate dialog
@@ -106,10 +111,6 @@
     - Rollback creating another cursor (ctrl+alt+D?)
     - Word selection / line selection mode
     - Ctrl+shift+delete/backspace - remove until start/end of line
-    
-- Optimisation:
-    - See if we can join edits in edit groups (maybe on the fly on undo/redo)
-    - Use custom allocators for edits to reduce memory fragmentation (maybe later)
     
 - Load UE5 source and try to scan it
     - When doing it, collect info on any binary files that had to be read to be ignored
@@ -180,9 +181,6 @@
       (or maybe when it hasn't been edited or opened in this session?)
     - Be able to ignore individual files
     
-- Multiple cursors: when cursors have copied something into their own buffers and we remove the cursors,
-  their buffers should be concatenated and put into the OS buffer
-    
 - New search-in-buffer widget - an extension from finder (with different modes of work, with transitions between each):
     - It's much nicer to see all occurrences at the same time, rather than trying to cycle through them blindly
     - Make it look like the project search widget, but without the file names (so can be smaller)
@@ -193,8 +191,6 @@
 - Try to log asserts into log_error.txt - would be very helpful for debugging release builds
 - Either limit the number of bytes in text input, or improve the handling of cursor (currently calculating the length every frame)
 - Select word: depending on the char under cursor, select either word chars or punctuation
-
-- BUG: When reloading file from disk (refresh_buffer_from_disk) make sure to remove crlf (until it's supported at least)
 
 - Hide scrollbars unless scrolling or hovering over editor
 - Search in buffer:
@@ -231,23 +227,11 @@
       (Do without scopes for now, later if we find we have to limit potential results we can do it)
     - Update the lookup table on file/buffer changes (buffers always take precedence over what's in files)
 
-- Navigating project dirs in a dialog
 - If a buffer is modified on disk, ask for confirmation before saving (use the function and not the flag)
 
-- Optimisation:
-    - Measure how long it takes to insert a char/string into a buffer of various length
-    - If it's long enough then consider how this could be optimised
-    - Figure out a way to do edits with multiple cursors more efficiently
-        - One idea: always copy buffer into a temporary string and rebuild the buffer every time, making changes for every cursor as we go. It would be probably a bit slower for one cursor, but still acceptable and much more predictable for many cursors
-      (also this may be a good occasion to make sure other editors' cursors are adjusted when edits are done elsewhere)
-      
 - Improve resource usage: query monitor refresh rate and adjust sleeping time based on that
     - Draw a figure - will that cause longer frames sometimes? Probably that's ok?
     - Don't skip frames when dragging scrollbar
-
-- When there are several cursors where some of them are above the viewport, hitting enter will shift everything down
-  and will jerk briefly, which is annoying
-    - Ideally we need a way to glue viewport to a line, so that if it shifts then we shift the viewport too
 
 - Add a warning on large texts (maybe semi-transparent)
 - When unable to save file, show a warning (have an error log?)
@@ -260,6 +244,10 @@
     
 - Remember window position (in session maybe)
 
+- Optimisation:
+    - See if we can join edits in edit groups (maybe on the fly on undo/redo)
+    - Use custom allocators for edits to reduce memory fragmentation (maybe later)
+
 - Look into subpixel font positioning
     - Revisit the font loading code as it has some rounding to pixels there
       and consider using floats or other units for font metrics
@@ -270,6 +258,9 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Buffer ordering improvements:
+    + Make sure that files opened by double clicking or dragging which are within one of project dirs have their path displayed as the rest of the files
+    + I should probably draw the project boundary in the file open dialog so that you see why JaiDE files appear at the top even when the match is worse
 + Keymap: add a "nothing" function (this is for merging)
 + Wildcard support in config
 + Open files by drag/drop (add them to standalone files if needed)
