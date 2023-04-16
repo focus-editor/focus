@@ -1840,22 +1840,38 @@ delete_to_end_of_line :: (editor: *Editor, buffer: *NewBuffer) {
 }
 
 copy_selection_to_clipboard :: (editor: *Editor, buffer: *NewBuffer, cut := false) {
+    if cut {
+        // If no cursors have a selection, then pressing cut will cut whole lines
+        any_selection := false;
+        for cursor : editor.carets { if has_selection(cursor) { any_selection = true; break; } }
+        if !any_selection {
+            for * cursor : editor.carets {
+                // Select the whole line
+                line := offset_to_line(buffer, cursor.pos);
+                cursor.sel = buffer.line_starts[line];
+                cursor.pos = buffer.line_starts[line+1];
+                cursor.col_wanted = -1;
+            }
+            organise_carets(editor);  // resolve overlapping selections
+        }
+    }
+
     b: String_Builder;
     offset := 0;
     for * cursor : editor.carets {
         selection := get_selection(cursor);
         str := get_string_from_range(selection, buffer);
         append(*b, str);
-        append(*b, "\n");  // @crlf
+        append(*b, "\n");
         cursor.clipboard = .{ start = xx offset, count = xx str.count };
-        offset += str.count + 1;  // @crlf
+        offset += str.count + 1;
     }
     
     combined_str := builder_to_string(*b);
     if combined_str { 
         os_clipboard_set_text(combined_str);
         if editor.clipboard then free(editor.clipboard);
-        editor.clipboard = combined_str;
+        editor.clipboard = combined_str;  // now it owns it
     }
     
     if cut {

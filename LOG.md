@@ -70,7 +70,7 @@
     + Fix the cursor when scrolled horizontally
     + Implement the rest of actions
     + Delete to end of line (Ctrl+K)
-    - Ctrl+x without a selection cuts the whole line (but only if no cursors have a selection)
+    + Ctrl+x without a selection cuts the whole line (but only if no cursors have a selection)
     - Fix issues near the end of file
         + Crash
         - Not processing the last line properly (when scanning for newlines)
