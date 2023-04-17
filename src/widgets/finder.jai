@@ -67,18 +67,17 @@ finder_close :: () {
 finder_open_from_editor :: () {
     editor, buffer := get_active_editor_and_buffer();
     
-    // @buffer!!
-    // // If there was some text selected that doesn't span more than one line, use it for search
-    // if editor && editor.cursors.count == 1 {
-    //     cursor := editor.cursors[0];
-    //     selected_text := get_selected_string(cursor, buffer);
-    //     if selected_text && cursor.sel.line == cursor.pos.line {
-    //         replace_text(*finder.input, selected_text);
-    //         reset_results();
-    //         start_new_search(force = true);
-    //     }
-    // }
-    // 
+    // If there was some text selected that doesn't span more than one line, use it for search
+    if editor && editor.carets.count == 1 {
+        cursor := editor.carets[0];
+        selected_text := get_selected_string(cursor, buffer);
+        if selected_text && offset_to_line(buffer, cursor.pos) == offset_to_line(buffer, cursor.sel) {
+            replace_text(*finder.input, selected_text);
+            reset_results();
+            start_new_search(force = true);
+        }
+    }
+    
     finder_open();
 }
 

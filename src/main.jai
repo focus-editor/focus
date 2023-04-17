@@ -1,4 +1,4 @@
-VERSION      :: "0.1.0";
+VERSION      :: "0.1.0-rc";
 RELEASE_DATE :: "26 April 2023";
 
 main :: () {

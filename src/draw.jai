@@ -261,9 +261,6 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             new_target := clamp(scroll_y.target - mouse.scroll_y_delta, 0, max_y_scroll);
             start_animation(*scroll_y, top, new_target);
         } else if cursor_moved {
-            // @buffer!!!!
-            cursor_moved = false;  // TODO: remove when no longer using the temp editor
-            
             // Detect if cursor is off screen and start scrolling to it
             bounds := shrink_x(rect, text_offset.x + char_size * 3);
             bounds  = shrink_y(bounds, -text_offset.y + line_height * 3);
