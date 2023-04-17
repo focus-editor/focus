@@ -80,37 +80,51 @@
     + Don't draw separators in the navigate mode
     + Look up the combo for an action from the keymap
     - Global search
+        + Make it work
+        - Auto-search etc.
         - Double shift to search
         - TEST THIS: All files opened separately should always appear at the top in searches
     - Local search
         - New widget
-    - Refresh buffers from disk
-        + Make it work
-        + Remove crlf on load every time
-        + Even if a file is reported as changed, calculate hash and compare after removing crlf before proceeding
-        + Test a crlf file changed externally
-        - Test different scenarios, like 
-            - pulling changes, 
-            - stashing changes
-            - applying a stash
-            - deleting project dir
-            - deleting a dir containing a non-project file
-    - Improve scrolling using shitty touchpads
-    - Then: Sticky viewport
-        - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
+        
+- Implement config options
+    - Report errors on wrong configs (write the usage code first)
+    - maximize_on_start
+    - open_on_biggest_monitor
+    - Have an error log
+        - Display an error list in a corner
+        - Have a maximum number of errors to store / show
+        - Have a use log file so the user can go there and see the error they clicked
+    - Have a theme file (create a default one if doesn't exist)
     
-    - Line wrap:
-        - Sticky viewport before that!
-        - Implement wrapping for buffer
-        - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
-        - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
-    - Check all @buffer notes
-    - Use SIMD for syntax highlighting
-    - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
-    - Project scanning: Use threads more efficiently:
-        - Draw a simple progress bar in a corner
-    - Rename carets and newbuffer
-    
+- Refresh buffers from disk
+    + Make it work
+    + Remove crlf on load every time
+    + Even if a file is reported as changed, calculate hash and compare after removing crlf before proceeding
+    + Test a crlf file changed externally
+    - Test different scenarios, like 
+        - pulling changes, 
+        - stashing changes
+        - applying a stash
+        - deleting project dir
+        - deleting a dir containing a non-project file
+        
+- Improve scrolling using shitty touchpads
+- Then: Sticky viewport
+    - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
+
+- Line wrap:
+    - Sticky viewport before that!
+    - Implement wrapping for buffer
+    - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
+    - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
+- Check all @buffer notes
+- Use SIMD for syntax highlighting
+- Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
+- Project scanning: Use threads more efficiently:
+    - Draw a simple progress bar in a corner
+- Rename carets and newbuffer
+
 - When subsuming cursors, do something with the clipboard (also when undoing/redoing)
         
 - Implement scrolling by dragging in all directions and with different speed
@@ -136,7 +150,6 @@
 - Add horizontal scrollbar
     - Alt-HL smooth scroll
     
-
 - Select syntax highlighting dialog
 
 - Display files that are deleted on disk but modified in the open file dialog
@@ -218,7 +231,6 @@
     - Make sure when selected a word by double clicking, the highlights only highlight whole words
 
 - Strip trailing whitespace on save
-- Optimisation: with large files, disable selection highlights (because we're calculating them every frame when dragging)
 
 - Save editor state on editor operations:
     - Alt + minus to open previous state
@@ -273,6 +285,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Optimisation: with large files, disable selection highlights (because we're calculating them every frame when dragging)
 + Make sure move to empty line works on lines with just whitespace
 + Buffer ordering improvements:
     + Make sure that files opened by double clicking or dragging which are within one of project dirs have their path displayed as the rest of the files

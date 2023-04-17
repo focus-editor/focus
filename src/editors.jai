@@ -1859,8 +1859,7 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *NewBuffer, cut := fals
     b: String_Builder;
     offset := 0;
     for * cursor : editor.carets {
-        selection := get_selection(cursor);
-        str := get_string_from_range(selection, buffer);
+        str := get_selected_string(cursor, buffer);
         append(*b, str);
         append(*b, "\n");
         cursor.clipboard = .{ start = xx offset, count = xx str.count };

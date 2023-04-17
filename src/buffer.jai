@@ -199,15 +199,11 @@ get_selection_coords :: (buffer: NewBuffer, using cursor: Caret) -> Coords_Range
 }
 
 get_selected_string :: (cursor: Caret, buffer: NewBuffer) -> string {
-    result: string;
-    if !has_selection(cursor) return result;
-    selection  := get_selection(cursor);
-    result.data  = buffer.bytes.data + selection.start;
-    result.count = selection.end - selection.start;
-    return result;
+    if !has_selection(cursor) return "";
+    return get_string_from_range(buffer, get_selection(cursor));
 }
 
-get_string_from_range :: (range: Offset_Range, buffer: NewBuffer) -> string {
+get_string_from_range :: (buffer: NewBuffer, range: Offset_Range) -> string {
     result: string = ---;
     result.data  = buffer.bytes.data + range.start;
     result.count = range.end - range.start;
