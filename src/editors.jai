@@ -699,7 +699,7 @@ fill_in_buffer_from_file_data :: (buffer: *NewBuffer, path: string, file_data: s
     remember_last_modtime_and_size(buffer);
     
     buffer.bytes = resizable(to_bytes(file_data));
-    remove_crlf(buffer);
+    remove_crlf_in_place(*buffer.bytes);
     
     buffer.meow_hash = calculate_meow_hash(buffer.bytes);
     

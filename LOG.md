@@ -25,11 +25,9 @@
     - Highlight C/C++
     - Jump to line on Ctrl+G
     - Line wrap
-    - See if memory usage can be improved
     - Custom title bar (currently too much work and not very robust)
     - Linux support:
         - Test drag and drop
-    - Windows 11 support (custom title bar only, otherwise ok)
     - Have a user error log - with an icon in the title bar to toggle it
     - Ignore project folders which are children of another project folder?
     - Profile the whole project to see if we're doing something stupid
@@ -80,32 +78,42 @@
         + New line without breaking on last line
         + Move last line up
     - Refresh buffers from disk
+        + Make it work
+        + Remove crlf on load every time
+        + Even if a file is reported as changed, calculate hash and compare after removing crlf before proceeding
+        - Test a crlf file changed externally
+        - Test different scenarios, like 
+            - pulling changes, 
+            - stashing changes
+            - applying a stash
+            - deleting project dir
+            - deleting a dir containing a non-project file
+    - Improve scrolling using shitty touchpads
+    - Then: Sticky viewport
+        - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
     - Global search
         - Double shift to search
         - TEST THIS: All files opened separately should always appear at the top in searches
     - Local search
     
     - Line wrap:
+        - Sticky viewport before that!
         - Implement wrapping for buffer
         - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
         - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
+    - Check all @buffer notes
     - Use SIMD for syntax highlighting
     - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
-        
-- Improve scrolling using shitty touchpads
-    - Then: Sticky viewport
-        - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
-        
-- Project scanning: Use threads more efficiently
+    - Project scanning: Use threads more efficiently:
+        - Draw a simple progress bar in a corner
+    - Rename carets and newbuffer
         
 - Implement scrolling by dragging in all directions and with different speed
 - Generalise TODO highlighting
 - Implement general language highlighting with a set of common keywords etc
-- Select syntax highlighting dialog
 
 - CRLF:
     + Get rid of crlf notes
-    - BUG: When reloading file from disk (refresh_buffer_from_disk) make sure to remove crlf (until it's supported at least)
     - Show a warning when a CRLF file is loaded, then dismiss on save
 
 - Nice to haves:
@@ -123,15 +131,13 @@
 - Add horizontal scrollbar
     - Alt-HL smooth scroll
     
-- Make sure move to empty line works on lines with just whitespace
+
+- Select syntax highlighting dialog
 
 - Display files that are deleted on disk but modified in the open file dialog
 - Drop a folder into the editor to add it to workspace
 
 - Proper tab support:
-    - Draw them wide (only in the visible part of the text)
-    - Consider them a whitespace when calculating line start - they never need to show on the left in finder results
-    - If it turns out to be too hard or messy, could just convert them to spaces on load
     - Have an option to insert tabs instead of spaces
 
 - File management:
@@ -154,9 +160,6 @@
     - After 4-click: select all
     - Maintain both modes until mouse button is up
     - Can get rid of the timeout when it's done
-    
-- Word wrap:
-    - Before doing it, implement sticky viewport, so that it can glue itself to a line
     
 - When adding a directory to workspace, the check for parent directory is NOT RELIABLE. Paths are case-sensitive on Linux
     - Also, what if we add a parent dir to a dir already in the project - what would be the expected behaviour? Delete the child dir? Keep it and dedup the files?
@@ -265,6 +268,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Make sure move to empty line works on lines with just whitespace
 + Buffer ordering improvements:
     + Make sure that files opened by double clicking or dragging which are within one of project dirs have their path displayed as the rest of the files
     + I should probably draw the project boundary in the file open dialog so that you see why JaiDE files appear at the top even when the match is worse

@@ -214,13 +214,13 @@ get_string_from_range :: (range: Offset_Range, buffer: NewBuffer) -> string {
     return result;
 }
 
-remove_crlf :: (using buffer: *NewBuffer) {
+remove_crlf_in_place :: (bytes: *[] u8) {
     dst := bytes.data;
     src := bytes.data;
     end := bytes.data + bytes.count;
     cursor := bytes.data;
     
-    // @buffer!!! : use SIMD
+    // @buffer!!! : use SIMD or at least don't check for utf8!!!
     // Remove all CR's in one pass
     while cursor < end {
         byte := <<cursor;
@@ -343,7 +343,7 @@ remember_last_modtime_and_size :: (using buffer: *NewBuffer) {
     }
 }
 
-buffer_file_has_changed_on_disk :: (using buffer: *Buffer) -> changed: bool {
+buffer_file_has_changed_on_disk :: (using buffer: *NewBuffer) -> changed: bool {
     assert(has_file);
     modtime, size, success := file_modtime_and_size(file.full_path);
     if !success {
@@ -416,68 +416,75 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
 }
 
 refresh_buffer_from_disk :: (path: string) {
-    // @buffer
-    // log("refreshing '%'\n", path);
-    // buffer_id, created := find_or_create_buffer(path);
-    // if created return;
-    // 
-    // log("--- buffer found, checking if it's changed on disk...\n");
-    //         
-    // buffer := *open_buffers[buffer_id];
-    // 
-    // if !file_exists(path) {
-    //     buffer.deleted = true;
-    //     finder.need_to_refresh_results = true;
-    //     return;
-    // }
-    // 
-    // if !buffer_file_has_changed_on_disk(buffer) return;
-    // 
-    // log("--- reloading data from disk...\n");
-    // 
-    // finder.need_to_refresh_results = true;
-    // 
-    // // Buffer has changed on disk
-    // assert(path == buffer.file.full_path);
-    //     
-    // // Reload buffer from disk
-    // file_contents, success := read_entire_file(path);
-    // if !success { log_error("Couldn't read file '%'\n", path); return; }
-    // defer free(file_contents);  // @memory: could probably use temporary storage and reset mark after?
-    // 
-    // buffer.meow_hash = calculate_meow_hash(cast([] u8)file_contents);
-    // buffer.deleted = false;
-    // 
-    // if buffer.modified {
-    //     // Mark conflict
-    //     // TODO: display a dialog prompting to reload
-    //     buffer.modified_on_disk = true;
-    // } else {
-    //     remember_last_modtime_and_size(buffer);
+    log("refreshing '%'\n", path);
+    buffer_id, created := find_or_create_buffer(path);
+    if created return;
+    
+    log("--- buffer found, checking if it's changed on disk...\n");
+            
+    buffer := *open_buffers[buffer_id];
+    
+    if !file_exists(path) {
+        buffer.deleted = true;
+        finder.need_to_refresh_results = true;
+        return;
+    }
+    
+    if !buffer_file_has_changed_on_disk(buffer) return;
+    
+    log("--- reloading data from disk...\n");
+    
+    finder.need_to_refresh_results = true;
+    
+    // Buffer may have changed on disk - reload and compare hashes to be sure
+    assert(path == buffer.file.full_path);
+        
+    // Reload buffer from disk
+    file_contents_str, success := read_entire_file(path);
+    if !success { log_error("Couldn't read file '%'\n", path); return; }
+    defer free(file_contents_str);
+    
+    file_contents := cast([] u8) file_contents_str;
+    remove_crlf_in_place(*file_contents);
+    file_contents_str = to_string(file_contents);
+    
+    file_hash := calculate_meow_hash(file_contents);
+    if buffer.meow_hash == file_hash return;  // file hasn't actually changed
+    
+    buffer.meow_hash = file_hash;
+    buffer.deleted = false;
+    
+    if buffer.modified {
+        // Mark conflict
+        // TODO: display a dialog prompting to reload
+        buffer.modified_on_disk = true;
+    } else {
+        remember_last_modtime_and_size(buffer);
 
-    //     // Remember cursor state - if we have 2 editors then the last editor's state will be remembered
-    //     for * editor : open_editors {
-    //         if editor.buffer_id != buffer_id continue;
+        // Remember cursor state - if we have 2 editors then the last editor's state will be remembered
+        for * editor : open_editors {
+            if editor.buffer_id != buffer_id continue;
 
-    //         new_edit_group(buffer, editor);
-    //         array_resize(*buffer.cursors, editor.cursors.count);
-    //         for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
-    //     }
+            new_edit_group(buffer, editor);
+            array_resize(*buffer.cursors, editor.carets.count);
+            for * cursor, i : buffer.cursors { <<cursor = editor.carets[i].state; }
+        }
 
-    //     // Reload its contents
-    //     new_replace_edit(buffer, 0, xx buffer.bytes.count, to_string(buffer.bytes), file_contents);
-    //     replace_range_raw(buffer, 0, xx buffer.bytes.count, file_contents);
-    //     recalculate_lines(buffer);
+        // Reload its contents
+        new_replace_edit(buffer, 0, xx buffer.bytes.count, to_string(buffer.bytes), file_contents_str);
+        replace_range_raw(buffer, 0, xx buffer.bytes.count, file_contents_str);
+        rescan_for_lines(buffer);
 
-    //     // Save edits and put cursors in correct places
-    //     for * editor : open_editors {
-    //         if editor.buffer_id != buffer_id continue;
-    //         new_edit_group(buffer, editor);
-    //         // for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }  // @buffer!!!
-    //     }
-    // }
-    // 
-    // refresh_all_editors_for_buffer(buffer_id);
+        // Save edits and put cursors in correct places
+        for * editor : open_editors {
+            if editor.buffer_id != buffer_id continue;
+            new_edit_group(buffer, editor);
+            for * cursor : editor.carets { put_cursor_in_valid_spot(cursor, buffer); } 
+            organise_carets(editor);
+        }
+    }
+    
+    refresh_all_editors_for_buffer(buffer_id);
 }
 
 maybe_mark_buffer_as_deleted :: (path: string) {
