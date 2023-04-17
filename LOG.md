@@ -77,8 +77,13 @@
         + Test indent/unindent
         + New line without breaking on last line
         + Move last line up
-    - Don't draw separators in the navigate mode
+    + Don't draw separators in the navigate mode
     - Look up the combo for an action from the keymap
+    - Global search
+        - Double shift to search
+        - TEST THIS: All files opened separately should always appear at the top in searches
+    - Local search
+        - New widget
     - Refresh buffers from disk
         + Make it work
         + Remove crlf on load every time
@@ -93,10 +98,6 @@
     - Improve scrolling using shitty touchpads
     - Then: Sticky viewport
         - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
-    - Global search
-        - Double shift to search
-        - TEST THIS: All files opened separately should always appear at the top in searches
-    - Local search
     
     - Line wrap:
         - Sticky viewport before that!

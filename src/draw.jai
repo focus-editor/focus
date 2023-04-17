@@ -830,12 +830,14 @@ draw_open_file_dialog :: () {
             }
             
             // Maybe draw project boundary
-            if project_dir_id < 0 then project_dir_id = entry.project_dir_id;
-            if entry.project_dir_id != project_dir_id {
-                project_dir_id = entry.project_dir_id;
-                separator := cut_top(entry_rect, 2 * dpi_scale);
-                separator.y += 1;
-                draw_rect(separator, Colors.LIST_CURSOR_LITE);
+            if mode == .search {
+                if project_dir_id < 0 then project_dir_id = entry.project_dir_id;
+                if entry.project_dir_id != project_dir_id {
+                    project_dir_id = entry.project_dir_id;
+                    separator := cut_top(entry_rect, 2 * dpi_scale);
+                    separator.y += 1;
+                    draw_rect(separator, Colors.LIST_CURSOR_LITE);
+                }
             }
 
             pen := make_vector2(
