@@ -60,58 +60,6 @@ parse_config :: (name: string, filename: string, file_data: string) -> Config, s
 }
 
 keymap_map_key_string :: (key_string: string) -> u32 {
-    Str_Code :: struct { str: string; code: Input.Key_Code; }
-    using Input.Key_Code;
-    STRING_TO_CODE_MAP :: Str_Code.[
-        .{ "ArrowUp",           ARROW_UP },
-        .{ "ArrowDown",         ARROW_DOWN },
-        .{ "ArrowLeft",         ARROW_LEFT },
-        .{ "ArrowRight",        ARROW_RIGHT },
-        
-        .{ "Escape",            ESCAPE },
-        .{ "Delete",            DELETE },
-        .{ "Insert",            INSERT },
-        .{ "End",               END },
-        .{ "Home",              HOME },
-        .{ "Backspace",         BACKSPACE },
-        .{ "PrintScreen",       PRINT_SCREEN },
-        .{ "Pause",             PAUSE },
-        .{ "PageUp",            PAGE_UP },
-        .{ "PageDown",          PAGE_DOWN },
-        .{ "ScrollLock",        SCROLL_LOCK },
-        .{ "Enter",             ENTER },
-        .{ "Return",            ENTER },
-        .{ "Tab",               TAB },
-        .{ "Shift",             SHIFT },
-        .{ "Alt",               ALT },
-        .{ "Control",           CTRL },
-        .{ "Space",             #char " " },
-        .{ "Plus",              #char "+" },
-        .{ "Minus",             #char "-" },
-        
-        .{ "F1",                F1 },
-        .{ "F2",                F2 },
-        .{ "F3",                F3 },
-        .{ "F4",                F4 },
-        .{ "F5",                F5 },
-        .{ "F6",                F6 },
-        .{ "F7",                F7 },
-        .{ "F8",                F8 },
-        .{ "F9",                F9 },
-        .{ "F10",               F10 },
-        .{ "F11",               F11 },
-        .{ "F12",               F12 },
-
-        .{ "MouseLeft",         MOUSE_BUTTON_LEFT },
-        .{ "MouseRight",        MOUSE_BUTTON_RIGHT },
-        .{ "MouseMiddle",       MOUSE_BUTTON_MIDDLE },
-        
-        // We don't support mouse wheel events because we'd need to block scrolling
-        // if they are handled and we don't want to do it just yet.
-        // .{ "MouseWheelUp",      MOUSE_WHEEL_UP },
-        // .{ "MouseWheelDown",    MOUSE_WHEEL_DOWN },
-    ];
-    
     for STRING_TO_CODE_MAP {
         if equal_nocase(key_string, it.str) {
             return cast(u32) it.code;
@@ -120,8 +68,76 @@ keymap_map_key_string :: (key_string: string) -> u32 {
     return 0;
 }
 
+keymap_map_key_code_to_string :: (key_code: u32) -> string /* temp */ {
+    if #char "!" <= key_code && key_code <= #char "~" {
+        // Ascii printable range
+        s: string;
+        s.data  = xx *key_code;
+        s.count = 1;
+        return tprint("%", s);  // couldn't find a way to print a char
+    }
+    
+    for STRING_TO_CODE_MAP {
+        if cast(u32) it.code == key_code return it.str;
+    }
+    
+    return "??";
+}
+
 
 #scope_file
+
+Str_Code :: struct { str: string; code: Input.Key_Code; }
+using Input.Key_Code;
+STRING_TO_CODE_MAP :: Str_Code.[
+    .{ "ArrowUp",           ARROW_UP },
+    .{ "ArrowDown",         ARROW_DOWN },
+    .{ "ArrowLeft",         ARROW_LEFT },
+    .{ "ArrowRight",        ARROW_RIGHT },
+    
+    .{ "Escape",            ESCAPE },
+    .{ "Delete",            DELETE },
+    .{ "Insert",            INSERT },
+    .{ "End",               END },
+    .{ "Home",              HOME },
+    .{ "Backspace",         BACKSPACE },
+    .{ "PrintScreen",       PRINT_SCREEN },
+    .{ "Pause",             PAUSE },
+    .{ "PageUp",            PAGE_UP },
+    .{ "PageDown",          PAGE_DOWN },
+    .{ "ScrollLock",        SCROLL_LOCK },
+    .{ "Enter",             ENTER },
+    .{ "Return",            ENTER },
+    .{ "Tab",               TAB },
+    .{ "Shift",             SHIFT },
+    .{ "Alt",               ALT },
+    .{ "Control",           CTRL },
+    .{ "Space",             #char " " },
+    .{ "Plus",              #char "+" },
+    .{ "Minus",             #char "-" },
+    
+    .{ "F1",                F1 },
+    .{ "F2",                F2 },
+    .{ "F3",                F3 },
+    .{ "F4",                F4 },
+    .{ "F5",                F5 },
+    .{ "F6",                F6 },
+    .{ "F7",                F7 },
+    .{ "F8",                F8 },
+    .{ "F9",                F9 },
+    .{ "F10",               F10 },
+    .{ "F11",               F11 },
+    .{ "F12",               F12 },
+
+    .{ "MouseLeft",         MOUSE_BUTTON_LEFT },
+    .{ "MouseRight",        MOUSE_BUTTON_RIGHT },
+    .{ "MouseMiddle",       MOUSE_BUTTON_MIDDLE },
+    
+    // We don't support mouse wheel events because we'd need to block scrolling
+    // if they are handled and we don't want to do it just yet.
+    // .{ "MouseWheelUp",      MOUSE_WHEEL_UP },
+    // .{ "MouseWheelDown",    MOUSE_WHEEL_DOWN },
+];
 
 switch_top_section :: (using parser: *Config_Parser, line: string) -> error: bool {
     if line == {

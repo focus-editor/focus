@@ -78,7 +78,7 @@
         + New line without breaking on last line
         + Move last line up
     + Don't draw separators in the navigate mode
-    - Look up the combo for an action from the keymap
+    + Look up the combo for an action from the keymap
     - Global search
         - Double shift to search
         - TEST THIS: All files opened separately should always appear at the top in searches
@@ -110,6 +110,8 @@
     - Project scanning: Use threads more efficiently:
         - Draw a simple progress bar in a corner
     - Rename carets and newbuffer
+    
+- When subsuming cursors, do something with the clipboard (also when undoing/redoing)
         
 - Implement scrolling by dragging in all directions and with different speed
 - Generalise TODO highlighting

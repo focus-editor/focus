@@ -121,34 +121,17 @@ draw_splash_screen :: (main_area: Rect) {
     }
     
     // Draw the right part
-    {
-        // COMBOS_TO_DISPLAY :: Action_Common.[
-        //     .show_commands,
-        //     .show_open_file_dialog_in_search_mode,
-        //     .show_open_file_dialog_in_navigate_mode,
-        //     .search_in_project,
-        //     .search_in_buffer,
-        // ];
+    {   
+        Shortcut :: struct { action: Action_Common; description: string; }
         
-        COMBOS_TO_DISPLAY :: []string.[
-            string.["Alt", "X"],
-            string.["Ctrl", "P"],
-            string.["Ctrl", "O"],
-            string.["Ctrl", "Shift", "O"],
-            string.["Ctrl", "Shift", "F"],
-            string.["Ctrl", "F"],
+        SHORTCUTS_TO_DISPLAY :: Shortcut.[
+            .{ .show_commands,                                      "Show All Commands" },
+            .{ .show_open_file_dialog_in_search_mode,               "Open File By Name" },
+            .{ .show_open_file_dialog_in_navigate_mode,             "Navigate To File" },
+            .{ .show_open_file_dialog_in_navigate_mode_from_root,   "Navigate To File From Root" },
+            .{ .search_in_buffer,                                   "Search In Open File" },
+            .{ .search_in_project,                                  "Search In Workspace" },
         ];
-        
-        COMBO_DESCRIPTIONS :: string.[
-            "Show All Commands",
-            "Open File By Name",
-            "Navigate To File",
-            "Navigate To File From Root",
-            "Search In Workspace",
-            "Search In Open File",
-        ];
-        
-        #assert COMBOS_TO_DISPLAY.count == COMBO_DESCRIPTIONS.count;
         
         right_area = shrink(right_area, margin);
         
@@ -156,16 +139,16 @@ draw_splash_screen :: (main_area: Rect) {
         align_x := right_area.w - (right_area.w / GOLDEN_RATIO);
         
         key_height  := cast(float) font_ui.character_height + 2 * padding;
-        line_height := max(key_height * 2, (logo_rect.h - key_height * COMBOS_TO_DISPLAY.count) / (COMBOS_TO_DISPLAY.count - 1) + key_height);
+        line_height := max(key_height * 2, (logo_rect.h - key_height * SHORTCUTS_TO_DISPLAY.count) / (SHORTCUTS_TO_DISPLAY.count - 1) + key_height);
         line_height = min(line_height, key_height * 3);
         
-        total_height := line_height * COMBOS_TO_DISPLAY.count - key_height;
+        total_height := line_height * SHORTCUTS_TO_DISPLAY.count - key_height;
         
         x := right_area.x;
         y := logo_rect.y + logo_rect.h - key_height - (logo_rect.h - total_height) / 2;
         
-        for combo : COMBOS_TO_DISPLAY {
-            description := COMBO_DESCRIPTIONS[it_index];
+        for shortcut : SHORTCUTS_TO_DISPLAY {
+            combo := get_first_matching_key_combo_from_action(shortcut.action);
             
             // Figure out combo width for aligning right
             combo_width := 0.0;
@@ -196,7 +179,7 @@ draw_splash_screen :: (main_area: Rect) {
                     x += plus_width + 2 * padding;
                 }
             }
-            Simp.draw_text(font_ui, xx (x + padding * 10), xx text_y, description, Colors.UI_DEFAULT);
+            Simp.draw_text(font_ui, xx (x + padding * 10), xx text_y, shortcut.description, Colors.UI_DEFAULT);
             
             y -= line_height;
         }

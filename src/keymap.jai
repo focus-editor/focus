@@ -53,6 +53,35 @@ map_key_release_to_hold_actions :: (event: Input.Event, $Action: Type) -> [] Act
     return actions;
 }
 
+get_first_matching_key_combo_from_action :: (action: Action_Common) -> [] string /* temp */ {
+    keymap := get_keymap_for_action_type(type_of(action));
+    combo: Key_Combo = ---;
+    found := false;
+    action_code := cast(u32) action;
+    
+    for mapping : keymap {
+        if action_code == mapping.action {
+            combo = mapping.combo;
+            found = true;
+            break;
+        }
+    }
+    if !found return .[];
+    
+    keys: [..] string;
+    keys.allocator = temp;
+    array_reserve(*keys, 4);  // modifiers + key
+    
+    if combo.mods.ctrl_pressed  then array_add(*keys, "Ctrl");
+    if combo.mods.alt_pressed   then array_add(*keys, "Alt");
+    if combo.mods.shift_pressed then array_add(*keys, "Shift");
+    
+    key_name := keymap_map_key_code_to_string(combo.key_code);
+    array_add(*keys, key_name);
+    
+    return keys;
+}
+
 #scope_file
 
 get_keymap_for_action_type :: ($Action: Type) -> [] Key_Mapping #expand {
