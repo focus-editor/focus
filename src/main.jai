@@ -1,3 +1,6 @@
+VERSION      :: "0.1.0";
+RELEASE_DATE :: "26 April 2023";
+
 main :: () {
     cpu_info = get_cpu_info();
     platform_setup();
@@ -203,6 +206,7 @@ main :: () {
 init_fonts_and_dependent_things :: () {
     delta := font_size - DEFAULT_FONT_SIZE;
     font_ui_size          = clamp(DEFAULT_FONT_UI_SIZE       + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_ui_big_size      = clamp(DEFAULT_FONT_UI_BIG_SIZE   + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_ui_small_size    = clamp(DEFAULT_FONT_UI_SMALL_SIZE + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_icons_size       = clamp(DEFAULT_FONT_ICONS_SIZE    + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_icons_small_size = clamp(DEFAULT_FONT_ICONS_SMALL_SIZE + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
@@ -213,6 +217,10 @@ init_fonts_and_dependent_things :: () {
     font_ui = Simp.get_font_at_size(FONT_UI.name, FONT_UI.data, cast(int) (font_ui_size * dpi_scale));
     assert(font_ui != null, "Couldn't init main ui font\n");
     font_ui_line_height = cast(float) font_ui.default_line_spacing;
+    
+    font_ui_big = Simp.get_font_at_size(FONT_UI.name, FONT_UI.data, cast(int) (font_ui_big_size * dpi_scale));
+    assert(font_ui != null, "Couldn't init big ui font\n");
+    font_ui_big_line_height = cast(float) font_ui.default_line_spacing;
 
     font_ui_bold = Simp.get_font_at_size(FONT_UI_BOLD.name, FONT_UI_BOLD.data, cast(int) (font_ui_size * dpi_scale));
     assert(font_ui_bold != null, "Couldn't init bold ui font\n");
@@ -438,31 +446,35 @@ TAB_SIZE :: 4;
 font:               *Simp.Dynamic_Font;
 font_ui:            *Simp.Dynamic_Font;
 font_ui_bold:       *Simp.Dynamic_Font;
+font_ui_big:        *Simp.Dynamic_Font;
 font_ui_small:      *Simp.Dynamic_Font;
 font_icons:         *Simp.Dynamic_Font;
 font_icons_small:   *Simp.Dynamic_Font;
 
 DEFAULT_FONT_SIZE               :: 14;
 DEFAULT_FONT_UI_SIZE            :: 16;
+DEFAULT_FONT_UI_BIG_SIZE        :: 28;
 DEFAULT_FONT_UI_SMALL_SIZE      :: 15;
 DEFAULT_FONT_ICONS_SIZE         :: 16;
 DEFAULT_FONT_ICONS_SMALL_SIZE   :: 8;
 
 font_size               := DEFAULT_FONT_SIZE;  // when changing font size, we change just this one and then derive the other ones from it
 font_ui_size            := DEFAULT_FONT_UI_SIZE;
+font_ui_big_size        := DEFAULT_FONT_UI_BIG_SIZE;
 font_ui_small_size      := DEFAULT_FONT_UI_SMALL_SIZE;
 font_icons_size         := DEFAULT_FONT_ICONS_SIZE;
 font_icons_small_size   := DEFAULT_FONT_ICONS_SMALL_SIZE;
 
 // Depend on font size
-char_size:              float;
-line_height:            float;
-old_line_height:        float;  // to track font changes
-font_ui_line_height:    float;
-rounding_radius:        float;
-rounding_radius_large:  float;
-rounding_radius_small:  float;
-scrollbar_size:         float;
+char_size:                  float;
+line_height:                float;
+old_line_height:            float;  // to track font changes
+font_ui_line_height:        float;
+font_ui_big_line_height:    float;
+rounding_radius:            float;
+rounding_radius_large:      float;
+rounding_radius_small:      float;
+scrollbar_size:             float;
 
 dont_scroll_this_frame := false;  // because e.g. a mouse wheel event has been handled
 

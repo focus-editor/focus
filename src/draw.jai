@@ -13,7 +13,7 @@ draw_frame :: () {
     if #complete editors.layout == {
         case .None;
             editors_snap_splitter(0.5);
-            // TODO: draw a shortcut cheat-sheet?
+            draw_splash_screen(screen);
         case .Single;
             editors_snap_splitter(0.5);
             draw_editor(editors.active, screen, footer_height, .editor_single);
@@ -63,6 +63,145 @@ draw_frame :: () {
     ui.hot_last_frame = ui.hot;
 
     Simp.swap_buffers(window);
+}
+
+draw_splash_screen :: (main_area: Rect) {
+    ui_id := get_ui_id_from_loc();
+    
+    right_area, left_area := cut_right(main_area, main_area.w / GOLDEN_RATIO);
+    logo_area, info_area := cut_top(left_area, left_area.h / GOLDEN_RATIO);
+    
+    logo_rect := logo_area;
+    logo_rect.w = min(logo_area.w, logo_area.h) / GOLDEN_RATIO;
+    logo_rect.h = logo_rect.w;
+    logo_rect.x = (logo_area.w - logo_rect.w) / 2;
+    
+    margin      := logo_rect.x;
+    shrink_step := logo_rect.w / 6.5;
+    
+    // Draw the left part
+    {
+        draw_rect(left_area, Colors.BACKGROUND_LIGHT);
+    
+        // TODO: fix the circle shader
+        // center := center_of(logo_rect);
+        // draw_circle(center, Colors.BACKGROUND_DARK, radius = logo_rect.w / 2);
+        // shrink_step := logo_rect.w / 6.5;
+        // logo_rect = shrink(logo_rect, shrink_step);
+        // draw_circle(center, Colors.BACKGROUND, radius = logo_rect.w / 2);
+        // logo_rect = shrink(logo_rect, shrink_step);
+        // draw_circle(center, Colors.BACKGROUND_LIGHT, radius = logo_rect.w / 2);
+        
+        Simp.set_shader_for_rects();
+        
+        circle := logo_rect;
+        draw_rounded_rect(circle, Colors.BACKGROUND_DARK, radius = circle.w / 2, set_shader = false);
+        circle = shrink(circle, shrink_step);
+        draw_rounded_rect(circle, Colors.BACKGROUND, radius = circle.w / 2, set_shader = false);
+        circle = shrink(circle, shrink_step);
+        draw_rounded_rect(circle, Colors.BACKGROUND_LIGHT, radius = circle.w / 2, set_shader = false);
+        
+        font := font_ui_big;
+        version_text := tprint("Version %", VERSION);
+        version_width := cast(float) Simp.prepare_text(font, version_text);
+        if version_width / info_area.w > 0.4 {
+            font = font_ui;
+            version_width = cast(float) Simp.prepare_text(font, version_text);
+        }
+        if version_width < info_area.w {
+            x := (info_area.w - version_width) / 2;
+            y := info_area.y + info_area.h - shrink_step - font_ui_line_height;
+            Simp.draw_prepared_text(font, xx x, xx y, color = Colors.UI_DIM);
+            
+            date_width := Simp.prepare_text(font_ui, RELEASE_DATE);
+            x = (info_area.w - date_width) / 2;
+            y -= 1.5 * font_ui_big_line_height;
+            Simp.draw_prepared_text(font_ui, xx x, xx y, color = Colors.UI_DIM);
+        }
+    }
+    
+    // Draw the right part
+    {
+        // COMBOS_TO_DISPLAY :: Action_Common.[
+        //     .show_commands,
+        //     .show_open_file_dialog_in_search_mode,
+        //     .show_open_file_dialog_in_navigate_mode,
+        //     .search_in_project,
+        //     .search_in_buffer,
+        // ];
+        
+        COMBOS_TO_DISPLAY :: []string.[
+            string.["Alt", "X"],
+            string.["Ctrl", "P"],
+            string.["Ctrl", "O"],
+            string.["Ctrl", "Shift", "O"],
+            string.["Ctrl", "Shift", "F"],
+            string.["Ctrl", "F"],
+        ];
+        
+        COMBO_DESCRIPTIONS :: string.[
+            "Show All Commands",
+            "Open File By Name",
+            "Navigate To File",
+            "Navigate To File From Root",
+            "Search In Workspace",
+            "Search In Open File",
+        ];
+        
+        #assert COMBOS_TO_DISPLAY.count == COMBO_DESCRIPTIONS.count;
+        
+        right_area = shrink(right_area, margin);
+        
+        padding := floor(4 * dpi_scale);
+        align_x := right_area.w - (right_area.w / GOLDEN_RATIO);
+        
+        key_height  := cast(float) font_ui.character_height + 2 * padding;
+        line_height := max(key_height * 2, (logo_rect.h - key_height * COMBOS_TO_DISPLAY.count) / (COMBOS_TO_DISPLAY.count - 1) + key_height);
+        line_height = min(line_height, key_height * 3);
+        
+        total_height := line_height * COMBOS_TO_DISPLAY.count - key_height;
+        
+        x := right_area.x;
+        y := logo_rect.y + logo_rect.h - key_height - (logo_rect.h - total_height) / 2;
+        
+        for combo : COMBOS_TO_DISPLAY {
+            description := COMBO_DESCRIPTIONS[it_index];
+            
+            // Figure out combo width for aligning right
+            combo_width := 0.0;
+            plus_width  := cast(float) Simp.prepare_text(font_ui, "+");
+            for combo {
+                combo_width += xx Simp.prepare_text(font_ui, it) + 2 * padding;
+                if it_index < combo.count - 1 {
+                    combo_width += plus_width + 2 * padding;
+                }
+            }
+            
+            x = right_area.x + align_x - combo_width;
+            text_y := y + padding * 1.5;
+            
+            key_rect := Rect.{ x = x, y = y, w = 0, h = key_height };
+            for combo {
+                key_rect.x = x;
+                key_rect.w = xx Simp.prepare_text(font_ui, it) + 2 * padding;
+                key_rect = align_to_grid(key_rect);
+                shadow_rect := expand(key_rect, 1);
+                shadow_rect.y -= 2;
+                draw_rounded_rect(shadow_rect, Colors.BACKGROUND_DARK);
+                draw_rounded_rect(key_rect, Colors.SELECTION_ACTIVE);
+                Simp.draw_prepared_text(font_ui, xx (x + padding), xx text_y, Colors.UI_DEFAULT);
+                x += key_rect.w;
+                if it_index < combo.count - 1 {
+                    Simp.draw_text(font_ui, xx (x + padding), xx text_y, "+", Colors.UI_DEFAULT);
+                    x += plus_width + 2 * padding;
+                }
+            }
+            Simp.draw_text(font_ui, xx (x + padding * 10), xx text_y, description, Colors.UI_DEFAULT);
+            
+            y -= line_height;
+        }
+    }
+    
 }
 
 draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui_Id, total_editor_area := Rect.{}) {
@@ -1129,7 +1268,6 @@ draw_rounded_rect :: (rect: Rect, color: Color, radius := 0.0, softness := 1.0, 
     Simp.immediate_rounded_rect(p0, p2, color, center, size, radius, softness);
 }
 
-
 draw_rounded_rect_with_corners :: (rect: Rect, color: Color,
                                    tl: Corner_Rounding = .in, tr: Corner_Rounding = .in,
                                    br: Corner_Rounding = .in, bl: Corner_Rounding = .in, 
@@ -1216,6 +1354,18 @@ draw_rounded_rect_with_shadow :: (rect: Rect, color: Color, radius := 0.0, shado
     Simp.immediate_rounded_rect(bottom_left(right),  top_right(right),  shadow_color, center, size, radius, softness = shadow_size);
 
     draw_rounded_rect(rect, color, radius = radius, set_shader = false);
+}
+
+draw_circle :: (center: Vector2, color: Color, radius: float, softness := 1.0, $set_shader := true) {
+    #if set_shader then Simp.set_shader_for_circles();
+    if radius <= 0 then radius = rounding_radius;
+    
+    rect := Rect.{ x = center.x - radius, y = center.y - radius, w = radius * 2, h = radius * 2 };
+    
+    p0 := bottom_left(rect);
+    p2 := top_right(rect);
+    
+    Simp.immediate_rounded_rect(p0, p2, color, center, .{}, radius, softness);
 }
 
 draw_top_down_shadow :: (rect: Rect) {
@@ -1360,15 +1510,16 @@ ui: struct {
 }
 
 Ui_Id :: enum s64 {
-    unavailable :: -2;
-    none :: -1;
+    none                :: -1;
+    unavailable         :: -2;
 
-    editor_single :: -3;
-    editor_left   :: -4;
-    editor_right  :: -5;
-    editor_splitter   :: -6;
-    open_file_dialog  :: -7;
-    finder            :: -8;
+    editor_single       :: -3;
+    editor_left         :: -4;
+    editor_right        :: -5;
+    editor_splitter     :: -6;
+    open_file_dialog    :: -7;
+    finder              :: -8;
+    splash_screen       :: -9;
 
     // The rest will be derived from loc
 }
@@ -1384,3 +1535,5 @@ scissor_stack: [..] Rect;
 
 // Please keep at the bottom - needed for ui elements parent-child relationships
 NUM_LINES_OF_CODE :: #run #location().line_number;
+
+GOLDEN_RATIO :: 1.6180339;

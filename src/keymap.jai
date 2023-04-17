@@ -117,6 +117,7 @@ Key_Combo :: struct {
 
 ACTIONS_COMMON :: string.[
     "do_nothing",   // to disable key combinations
+    "show_commands",
     "search_in_buffer",
     "search_in_project",
     "show_open_file_dialog_in_search_mode",

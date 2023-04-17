@@ -77,11 +77,13 @@
         + Test indent/unindent
         + New line without breaking on last line
         + Move last line up
+    - Don't draw separators in the navigate mode
+    - Look up the combo for an action from the keymap
     - Refresh buffers from disk
         + Make it work
         + Remove crlf on load every time
         + Even if a file is reported as changed, calculate hash and compare after removing crlf before proceeding
-        - Test a crlf file changed externally
+        + Test a crlf file changed externally
         - Test different scenarios, like 
             - pulling changes, 
             - stashing changes

@@ -179,6 +179,9 @@ backend_init_shaders :: () {
 
     shader_rounded_rect.gl_handle   = get_shader_program(SHADER_ROUNDED_RECT);
     shader_rounded_rect.alpha_blend = true;
+
+    shader_circle.gl_handle   = get_shader_program(SHADER_CIRCLE);
+    shader_circle.alpha_blend = true;
 }
 
 #scope_file
@@ -325,6 +328,46 @@ float rounded_rect_sdf(vec2 frag_pos, vec2 rect_center, vec2 size, float radius)
 void main () {
     float distance = rounded_rect_sdf(gl_FragCoord.xy, rect_center, rect_size, rect_corner_radius);
     float smoothed_alpha = 1.0f - smoothstep(0.0f, rect_edge_softness, distance);
+    color = vec4(iterated_color.xyz, iterated_color.a * smoothed_alpha);
+}
+
+#endif // FRAGMENT_SHADER
+END
+
+// TODO: finish
+SHADER_CIRCLE :: #string END
+OUT_IN vec4 iterated_color;
+flat OUT_IN vec2 center;
+flat OUT_IN float radius;
+flat OUT_IN float softness;
+
+#ifdef VERTEX_SHADER
+in vec2 vert_position;
+in vec4 vert_color;
+
+in vec2 vert_rect_center;
+in vec2 vert_rect_size;
+in float vert_rect_corner_radius;
+in float vert_rect_edge_softness;
+
+uniform mat4 projection;
+
+void main() {
+    gl_Position = projection * vec4(vert_position, 0.0, 1.0);
+    iterated_color    = vert_color;
+    
+    center = vert_rect_center;
+    radius = vert_rect_corner_radius;
+    softness = vert_rect_edge_softness;
+}
+#endif // VERTEX_SHADER
+
+#ifdef FRAGMENT_SHADER
+out vec4 color;
+
+void main () {
+    float distance = length(max(abs(gl_FragCoord.xy - center) + radius, 0.0)) - radius;
+    float smoothed_alpha = 1.0f - smoothstep(0.0f, softness, distance);
     color = vec4(iterated_color.xyz, iterated_color.a * smoothed_alpha);
 }
 

@@ -29,7 +29,7 @@ __pycache__
 .exe .pdb .ttf .otf .eot .woff *woff? .dll .lib .dylib .so *so.* .a .o .pdf
 .jpg .png .gif .jpeg .ico .tif .tiff .tga .bmp .webp  # maybe someday we'll support opening images
 .mp3 .wav .ogg .wma 
-.blend .obj .fbx .dae .3ds
+.blend .obj .fbx .dae .3ds .dat
 .mpg .mpeg .psd .codex .webm .wma
 .zip .rar .7z 
 .bin .sys .iso
@@ -156,7 +156,10 @@ Ctrl-2                      open_entry_on_the_right
 [common]
 
 # Common key combos may be used as a fallback if they are not defined in more specific sections.
-# For example, if "move_up" is not defined in [editors], the [common] one will be used.
+# For example, if "move_up" is not defined in [editors], the one in the [common] section will be matched.
+
+Alt-X                       show_commands
+Ctrl-Shift-P                show_commands
 
 Ctrl-F                      search_in_buffer
 Ctrl-Shift-F                search_in_project
