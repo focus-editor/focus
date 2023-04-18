@@ -275,6 +275,10 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ BUGS:
+    + Copying off-by-one
+    + Smooth scrolling
+    + Cursor subsuming
 + Show in the program title when it's running in debug mode
 + Support tabs (just draw them, not even necessarily wide, just draw in some way - but wide would be best)
 + Finish text input improvements

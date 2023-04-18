@@ -401,7 +401,7 @@ move_cursor_to_viewport_center :: (editor: *Editor, buffer: NewBuffer) {
 leave_only_original_caret :: (using editor: *Editor) -> *Caret {
     // Remove all cursors except the original one
     cursor := carets[original_cursor];
-    cursor.clipboard = .{ start = 0, count = xx max(clipboard.count-1, 0) };
+    cursor.clipboard = .{ start = 0, count = xx max(clipboard.count, 0) };
     carets.count = 1;
     original_cursor = 0;
     main_cursor = 0;
@@ -449,15 +449,27 @@ organise_carets :: (using editor: *Editor) {
 
     // Merge overlapping cursors
     i := 0;
+    reset_clipboard : = false;
     while (i < carets.count - 1) {
-        cursor := *carets[i];
-        if maybe_subsume(cursor, carets[i+1]) {
+        cursor      := *carets[i];
+        next_cursor := carets[i+1];
+        if maybe_subsume(cursor, next_cursor) {
+            if cursor.clipboard.start + cursor.clipboard.count + 1 == next_cursor.clipboard.start {
+                cursor.clipboard.count += 1 + next_cursor.clipboard.count;  // "\n" + whatever was selected
+            } else {
+                reset_clipboard = true;
+            }
             array_ordered_remove_by_index(*carets, i+1);
             if main_cursor     > i then main_cursor -= 1;
             if original_cursor > i then original_cursor -= 1;
         } else {
             i += 1;
         }
+    }
+    
+    if reset_clipboard {
+        // Cursors have mixed beyond repair
+        carets[main_cursor].clipboard = .{ start = 0, count = xx max(clipboard.count, 0) };
     }
 }
 
@@ -1861,7 +1873,7 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *NewBuffer, cut := fals
     for * cursor : editor.carets {
         str := get_selected_string(cursor, buffer);
         append(*b, str);
-        append(*b, "\n");
+        if it_index < editor.carets.count -1 then append(*b, "\n");
         cursor.clipboard = .{ start = xx offset, count = xx str.count };
         offset += str.count + 1;
     }
