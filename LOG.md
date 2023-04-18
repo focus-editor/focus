@@ -78,11 +78,15 @@
         + Maintain both modes until mouse button is up
         + Can get rid of the timeout when it's done
     + BUG: search results sort order sometimes wrong
+    + Fix the crash from last night
+    - Rename carets and newbuffer
+    - Rewrite the editor/buffer arrays using bucket arrays
     - Local search
         - New widget
-    - Check all @buffer notes
-    - Rename carets and newbuffer
+    - remove_crlf_in_place - optimise a bit
     - Can merge!
+    
+- When sorting the file list, put the modified buffers on top
 
 - Implement config options
     - Report errors on wrong configs (write the usage code first)

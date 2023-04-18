@@ -21,7 +21,7 @@ refresh_open_buffers :: () {
     }
 }
 
-put_cursor_in_valid_spot :: (using cursor: *Caret, buffer: NewBuffer) {
+put_cursor_in_valid_spot :: (using cursor: *Cursor, buffer: NewBuffer) {
     pos = clamp(pos, 0, xx buffer.bytes.count);
     sel = clamp(sel, 0, xx buffer.bytes.count);
 }
@@ -116,7 +116,7 @@ offset_to_coords :: (using buffer: NewBuffer, offset: s64) -> Coords {
     return coords;
 }
 
-get_cursor_coords :: (buffer: NewBuffer, using cursor: Caret) -> Cursor_Coords {
+get_cursor_coords :: (buffer: NewBuffer, using cursor: Cursor) -> Cursor_Coords {
     pos_coords := offset_to_coords(buffer, pos);
     sel_coords := ifx pos != sel then offset_to_coords(buffer, sel) else pos_coords;
     return Cursor_Coords.{ pos = pos_coords, sel = sel_coords };
@@ -182,15 +182,15 @@ get_line_end_offset :: (using buffer: NewBuffer, line: s32) -> s32 {
     return offset;
 }
 
-has_selection :: inline (using cursor: Caret) -> bool {
+has_selection :: inline (using cursor: Cursor) -> bool {
     return pos != sel;
 }
 
-get_selection :: (using cursor: Caret) -> Offset_Range {
+get_selection :: (using cursor: Cursor) -> Offset_Range {
     return .{ start = min(pos, sel), end = max(pos, sel) };
 }
 
-get_selection_coords :: (buffer: NewBuffer, using cursor: Caret) -> Coords_Range {
+get_selection_coords :: (buffer: NewBuffer, using cursor: Cursor) -> Coords_Range {
     selection := inline get_selection(cursor);
     return .{
         start = offset_to_coords(buffer, selection.start),
@@ -198,7 +198,7 @@ get_selection_coords :: (buffer: NewBuffer, using cursor: Caret) -> Coords_Range
     };
 }
 
-get_selected_string :: (cursor: Caret, buffer: NewBuffer) -> string {
+get_selected_string :: (cursor: Cursor, buffer: NewBuffer) -> string {
     if !has_selection(cursor) return "";
     return get_string_from_range(buffer, get_selection(cursor));
 }
@@ -235,10 +235,6 @@ remove_crlf_in_place :: (bytes: *[] u8) {
     memcpy(dst, src, count);
 
     bytes.count = dst + count - bytes.data;
-}
-
-last_line :: inline (using buffer: Buffer, line: s32) -> bool {
-    return line == lines.count - 1;
 }
 
 rescan_for_lines :: (using buffer: *NewBuffer) {
@@ -403,8 +399,9 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     
     buffer_id = open_buffers.count;
     buffer := array_add(*open_buffers);
+    init_buffer(buffer);
     fill_in_buffer_from_file_data(buffer, path, file_data);
-    
+            
     // It should be ok to leak some memory here when we no longer need a buffer
     table_add(*buffers_table, copy_string(path), buffer_id);
     
@@ -462,8 +459,8 @@ refresh_buffer_from_disk :: (path: string) {
             if editor.buffer_id != buffer_id continue;
 
             new_edit_group(buffer, editor);
-            array_resize(*buffer.cursors, editor.carets.count);
-            for * cursor, i : buffer.cursors { <<cursor = editor.carets[i].state; }
+            array_resize(*buffer.cursors, editor.cursors.count);
+            for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
         }
 
         // Reload its contents
@@ -475,8 +472,8 @@ refresh_buffer_from_disk :: (path: string) {
         for * editor : open_editors {
             if editor.buffer_id != buffer_id continue;
             new_edit_group(buffer, editor);
-            for * cursor : editor.carets { put_cursor_in_valid_spot(cursor, buffer); } 
-            organise_carets(editor);
+            for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); } 
+            organise_cursors(editor);
         }
     }
     
@@ -531,20 +528,14 @@ get_range_as_string :: (buffer: NewBuffer, range: Offset_Range) -> string {
     return result;
 }
 
-#scope_file
-
-compare_with_contents_on_disk_and_maybe_unmark_as_modified :: (using buffer: *Buffer) {
-    if !has_file || !modified return;
-    
-    mark := get_temporary_storage_mark();
-    defer   set_temporary_storage_mark(mark);
-    push_allocator(temp);
-    
-    contents, success := read_entire_file(file.full_path);
-    if !success { log_error("Couldn't read file '%'", file.full_path); return; }
-    
-    if contents == to_string(bytes) then buffer.modified = false;
+init_buffer :: (buffer: *NewBuffer) {
+    mutex: Mutex;
+    _, content_lock_ptr := bucket_array_add(*buffer_content_locks, mutex);
+    buffer.content_lock = content_lock_ptr;
+    init(buffer.content_lock);
 }
+
+#scope_file
 
 add_edit_notification :: (using buffer: *NewBuffer, offset: s64, old_count: s64, new_count: s64) {
     if num_editors_open < 2 return;
@@ -645,13 +636,15 @@ NewBuffer :: struct {
     modified_on_disk       := false;
     deleted                := false;
     needs_coloring         := false;
+    
+    content_lock: *Mutex;  // must hold while modifying content (or reading in an off thread)
 
     last_edit_time: Time;  // for creating new edit groups
     
     undos: [..] Edit_Group;
     redos: [..] Edit_Group;
     edits: [..] Edit;  // current edits, not in a group yet
-    cursors: [..] Caret.State;  // cursor state before any current edits were made
+    cursors: [..] Cursor.State;  // cursor state before any current edits were made
     edit_notifications: [..] Edit_Notification;
 
     lang: enum u8 {
@@ -663,7 +656,7 @@ NewBuffer :: struct {
     
     Edit_Group :: struct {
         edits: [] Edit;
-        cursors: [] Caret.State;
+        cursors: [] Cursor.State;
     }
     
     // All strings in this struct are owned
@@ -700,86 +693,14 @@ NewBuffer :: struct {
     }
 }
 
-// !!!
-Buffer :: struct {
-    file: File_Info;
-    has_file := false;  // false for freestanding buffers. TODO: make freestanding buffers separate?
-    num_times_opened: u8;
-
-    meow_hash: u64;
-    last_modtime: Apollo_Time;  // for detecting whether a file has changed
-    last_size: s64;             // --
-
-    bytes:  [..] u8;
-    
-    colors: [..] u8; // we color each byte (even for multi-byte chars)
-                                   // @Space: we could use a u4 instead
-    
-    // deprecated
-    lines:  [..] Line;
-
-    undos: [..] Edit_Group;
-    redos: [..] Edit_Group;
-    edits: [..] Edit;  // current edits, not in a group yet
-    // cursors: [..] Cursor.State;  // cursor state before any current edits were made
-    
-
-    // TODO: put into enum_flags
-    dirty                  := false;
-    was_dirty_during_frame := false;
-    modified               := false;
-    modified_on_disk       := false;
-    deleted                := false;
-    needs_coloring         := false;
-
-    last_edit_time: Time;  // for creating new edit groups
-
-    lang: enum u8 {
-        Plain_Text :: 0;
-        Jai;
-        Focus_Config;
-        Worklog;
-    } = .Plain_Text;
-    
-    Edit_Group :: struct {
-        edits: [] Edit;
-        // cursors: [] Cursor.State;
-    }
-    
-    // All strings in this struct are owned
-    Edit :: struct {
-        type: enum { insert; insert_char; replace; delete; };
-        union {
-            insert: struct {
-                offset: s64;
-                new_bytes: string;
-            };
-            insert_char: struct {
-                offset: s64;
-                char: Utf8_Char;  // same as `insert`, but no need to allocate strings on the heap
-                                  // it's probably the most common edit so it's worth it
-            };
-            replace: struct {
-                offset_range: Offset_Range;
-                new_bytes: string;
-                old_bytes: string;
-            };
-            delete: struct {
-                offset_range: Offset_Range;
-                old_bytes: string;
-            };
-        }
-    }
-}
-
-Caret :: struct {
+Cursor :: struct {
     using state: State;
     clipboard: struct { start: s32; count: s32; };  // TODO: consider using just one s32?
     
     State :: struct { pos, sel: s32; col_wanted: s32 = -1; }
 }
 
-#assert size_of(Caret) == (2 + 1 + 2) * size_of(s32);  // make sure no padding accidentally gets added
+#assert size_of(Cursor) == (2 + 1 + 2) * size_of(s32);  // make sure no padding accidentally gets added
 
 // !!!
 Line :: struct {
@@ -812,3 +733,7 @@ Offset_Range :: struct {
 Coords_Range :: struct {
     start, end: Coords;  
 }
+
+#scope_file
+
+buffer_content_locks: Bucket_Array(Mutex, items_per_bucket = 1024, always_iterate_by_pointer = true);

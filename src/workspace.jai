@@ -131,7 +131,8 @@ initial_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) 
         file_data, success := read_entire_file(file.full_name);
         if !success return; 
         
-        buffer := array_add(*scanned_buffers);    
+        buffer := array_add(*scanned_buffers);
+        init_buffer(buffer);
         fill_in_buffer_from_file_data(buffer, file.full_name, file_data);
     }
     

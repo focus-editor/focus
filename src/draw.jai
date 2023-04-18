@@ -216,14 +216,14 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     
         if !mouse.left.is_dragging && ctrl_pressed() {
             // Create new cursor
-            new_cursor := array_add(*carets);
+            new_cursor := array_add(*cursors);
             new_cursor.pos = coords_to_offset(buffer, coords);
             new_cursor.sel = new_cursor.pos;
-            main_cursor = carets.count - 1;
-            organise_carets(editor);
+            main_cursor = cursors.count - 1;
+            organise_cursors(editor);
         } else if !ctrl_pressed() {
             // Maybe change cursor position
-            cursor := leave_only_original_caret(editor);
+            cursor := leave_only_original_cursor(editor);
             cursor.pos = coords_to_offset(buffer, coords);
             cursor.col_wanted = -1;
             
@@ -279,8 +279,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     
     // Get the coordinates of all cursors
     // @Speed: instead of doing it every frame we could do it when cursors change only - but probably it's ok
-    cursor_coords := NewArray(carets.count, Cursor_Coords, initialized = false, allocator = temp);
-    for carets cursor_coords[it_index] = get_cursor_coords(buffer, it);
+    cursor_coords := NewArray(cursors.count, Cursor_Coords, initialized = false, allocator = temp);
+    for cursors cursor_coords[it_index] = get_cursor_coords(buffer, it);
     
     // Draw editor
     {
@@ -440,7 +440,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             cursor_mark_rect := marks_rect;
             cursor_mark_rect.h = 2 * dpi_scale;
             selection_mark_rect := cut_left(marks_rect, marks_rect.w / 3);
-            for cursor : carets {
+            for cursor : cursors {
                 coords := cursor_coords[it_index];
                 cursor_mark_rect.y = marks_rect_top - coords.pos.line * mark_line_height - cursor_mark_rect.h;
                 if has_selection(cursor) {
@@ -468,9 +468,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         cursors_active := editor_is_active && active_global_widget == .editors;
         
         // Draw selections
-        {
+        if !search_bar_is_open(editor) {
             Simp.set_shader_for_rects();
-            for cursor : carets {
+            for cursor : cursors {
                 if has_selection(cursor) {
                     coords := cursor_coords[it_index];
                     selection := ifx cursor.pos < cursor.sel then Coords_Range.{ start = coords.pos, end = coords.sel } else .{ start = coords.sel, end = coords.pos };
@@ -481,19 +481,19 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             }
         }
     
-        // // Draw search results
-        // if search_bar_is_open(editor) {
-        //     for search_bar.results {
-        //         if it.start_pos.line < visible_lines_start continue;
-        //         if it.start_pos.line > visible_lines_end   break;
-    
-        //         range: Range = ---;
-        //         range.start = it.start_pos;
-        //         range.end   = offset_to_pos(buffer, it.offset + search_bar.input.text.count);
-        //         color := ifx search_bar.selected_result == it_index then Colors.SEARCH_RESULT_ACTIVE else Colors.SEARCH_RESULT_INACTIVE;
-        //         draw_range(range, buffer, visible_lines_start, visible_lines_end, text_origin, color);
-        //     }
-        // }
+        // Draw search results
+        if search_bar_is_open(editor) {
+            for search_bar.results {
+                if it.line < visible_lines_start continue;
+                if it.line > visible_lines_end   break;
+                
+                range: Coords_Range = ---;
+                range.start = offset_to_coords(buffer, it.offset);
+                range.end   = offset_to_coords(buffer, it.offset + search_bar.input.text.count);
+                color := ifx search_bar.selected_result == it_index then Colors.SEARCH_RESULT_ACTIVE else Colors.SEARCH_RESULT_INACTIVE;
+                draw_range(range, buffer, visible_lines_start, visible_lines_end, text_origin, color);
+            }
+        }
     
         // Draw paste animations
         for * anim : editor.paste_animations {
@@ -515,9 +515,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         if editor.paste_animations.count > 0 then redraw_requested = true;
         
         // Draw inactive cursors before text
-        if !cursors_active {
+        if !cursors_active && !search_bar_is_open(editor) {
             Simp.set_shader_for_rects();
-            for cursor : carets {
+            for cursor : cursors {
                 if cursor.pos < visible_offset_range.start || cursor.pos > visible_offset_range.end continue;
                 screen_pos := get_cursor_screen_pos(text_origin, cursor_coords[it_index].pos);
     
@@ -552,9 +552,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);
         
         // Draw active cursors
-        if cursors_active {
+        if cursors_active && !search_bar_is_open(editor) {
             Simp.set_shader_for_rects();
-            for cursor : carets {
+            for cursor : cursors {
                 if cursor.pos < visible_offset_range.start || cursor.pos > visible_offset_range.end continue;
                 screen_pos := get_cursor_screen_pos(text_origin, cursor_coords[it_index].pos);
     
@@ -567,6 +567,59 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                     Simp.draw_text(font, xx rect.x, xx (rect.y + (line_height - char_size) / 2), letter);
                 }
             }
+        }
+    }
+    
+    // Draw search bar
+    if search_bar_is_open(editor) {
+        using search_bar;
+        input_id := get_ui_id_from_loc(parent_id = ui_id);
+        
+        if width_percentage != width_anim.target {
+            width_percentage = get_animation_value(width_anim);
+            redraw_requested = true;
+        }
+
+        margin_x := 12 * dpi_scale;
+        margin_y :=  7 * dpi_scale;
+        padding  :=  4 * dpi_scale;
+        bar_rect_height := font_ui_line_height + 2 * padding + 2 * margin_y + 2;
+
+        bar_rect := cut_top(main_area, bar_rect_height);
+        bar_rect = cut_right(bar_rect, bar_rect.w * width_percentage);
+        bar_rect.x -= 2 * char_size;
+        
+        draw_rounded_rect_with_shadow(bar_rect, Colors.BACKGROUND_LIGHT);
+        
+        push_scissor(bar_rect);
+        defer pop_scissor();
+
+        // Clicking on the bar should activate input
+        maybe_set_hot_or_active(input_id, bar_rect, .NORMAL);
+
+        result_label: string;
+        if results {
+            result_label = tprint("% of %", selected_result + 1, results.count);
+        } else {
+            result_label = "No results";
+        }
+        results_width := cast(float) Simp.prepare_text(font_ui_small, result_label);
+        bar_rect = shrink_x(bar_rect, margin_x);
+        bar_rect = shrink_y(bar_rect, margin_y);
+        results_rect, input_rect := cut_right(bar_rect, results_width + padding);
+
+        Simp.draw_prepared_text(font_ui_small, xx (results_rect.x + padding), xx (results_rect.y + (results_rect.h - font_ui_small.character_height) / 2.0), color = Colors.UI_DEFAULT);
+        input_active := editor_is_active && search_bar.active && active_global_widget == .editors;
+        draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id, label = "Find in buffer");
+
+        if ui.active != .none && ui.active != input_id {
+            active = false;  // deactivate on clicks elsewhere
+            redraw_requested = true;
+        }
+        if ui.active == input_id {
+            active = true;  // activate on click
+            editors.active = editor_id;  // make sure the editor is also activated
+            redraw_requested = true;
         }
     }
     

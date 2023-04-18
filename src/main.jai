@@ -58,7 +58,7 @@ main :: () {
         init_session_with_no_guidance();
     }
     
-    // editors_open_file("W:/focus/src/main.jai");
+    editors_open_file("W:/focus/src/main.jai");
     
     // Requires the session to be created and the configs to be loaded
     start_initial_workspace_scan();
@@ -210,7 +210,7 @@ main :: () {
 
         reset_temporary_storage();
         
-        #if DEBUG FrameMark();
+        // #if DEBUG FrameMark();
         
         if cast(Time) get_time() - frame_time <= QUICK_FRAME_DT {
             // It should be ok to sleep a bit after a quick frame to avoid pegging the core.
@@ -554,6 +554,7 @@ cpu_info: Cpu_X86;
 
 // #import "Basic"()(MEMORY_DEBUGGER = true);
 #import "Basic";
+#import "Bucket_Array";
 #import "Math";
 #import "Sloppy_Math";
 #import "File";
@@ -570,7 +571,7 @@ cpu_info: Cpu_X86;
 #import "Machine_X64";
 
 // #if DEBUG {
-    #import "Tracy";
+//     #import "Tracy";
 // }
 
 File_Async :: #import "File_Async";

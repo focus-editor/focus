@@ -35,51 +35,6 @@ highlight_jai_syntax :: (using buffer: *NewBuffer) {
     }
 }
 
-// !!!
-highlight_jai_syntax :: (using buffer: *Buffer) {
-    tokenizer: Tokenizer = ---;
-    tokenizer.buf   = to_string(bytes);
-    tokenizer.max_t = bytes.data + bytes.count;
-    tokenizer.t     = bytes.data;
-
-    color: Code_Color;
-
-    while true {
-        token := get_next_token(*tokenizer);
-        if token.type == .eof break;
-        
-        // if token.type == .invalid && buffer.has_file {
-        //     log_error("Invalid token in file: %", file.full_path);
-        // }
-
-        using tokenizer;
-        
-        // Maybe retroactively highlight a function
-        if token.type == .punctuation && token.punctuation == .l_paren {
-            // Handle "func :: ("
-            before_prev, prev := last_tokens[0], last_tokens[1];
-            if prev.type == .identifier {
-                memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
-            } else if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
-                memset(colors.data + before_prev.start, xx Code_Color.FUNCTION, before_prev.len);
-            }
-        } else if token.type == .keyword && token.keyword == .kw_inline {
-            // Handle "func :: inline"
-            before_prev, prev := last_tokens[0], last_tokens[1];
-            if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
-                memset(colors.data + before_prev.start, xx Code_Color.FUNCTION, before_prev.len);
-            }
-        }
-
-        // Remember last 2 tokens
-        last_tokens[0] = last_tokens[1];
-        last_tokens[1] = token;
-
-        color := COLOR_MAP[token.type];
-        memset(colors.data + token.start, xx color, token.len);
-    }
-}
-
 #scope_file
 
 get_next_token :: (using tokenizer: *Tokenizer) -> Token {

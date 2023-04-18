@@ -72,8 +72,8 @@ finder_open_from_editor :: () {
     editor, buffer := get_active_editor_and_buffer();
     
     // If there was some text selected that doesn't span more than one line, use it for search
-    if editor && editor.carets.count == 1 {
-        cursor := editor.carets[0];
+    if editor && editor.cursors.count == 1 {
+        cursor := editor.cursors[0];
         selected_text := get_selected_string(cursor, buffer);
         if selected_text && offset_to_line(buffer, cursor.pos) == offset_to_line(buffer, cursor.sel) {
             replace_text(*finder.input, selected_text);
@@ -159,7 +159,7 @@ finder_open_selected_result :: (selected_num := -1, placement: Editor_Placement)
     editor, buffer := get_active_editor_and_buffer();
     match_start := min(result.match_offset,                xx buffer.bytes.count);  // buffer could've changed, so offset may not be valid any more
     match_end   := min(result.match_offset + needle.count, xx buffer.bytes.count);
-    cursor := leave_only_original_caret(editor);
+    cursor := leave_only_original_cursor(editor);
     cursor.sel = xx match_start;
     cursor.pos = xx match_end;
 
@@ -231,7 +231,12 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
     for buffer_id : buffer_start_index .. buffer_end_index {
         // Search in buffer
         buffer := *open_buffers[buffer_id];
-        if buffer.deleted continue;  // do not search in deleted buffers
+        if buffer.deleted && !buffer.modified continue;  // do not search in deleted unmodified buffers
+        
+        // Make sure the buffer contents doesn't change while we're scanning it
+        lock(buffer.content_lock);
+        defer unlock(buffer.content_lock);
+        
         contents := to_string(buffer.bytes);
         
         file_end := contents.data + contents.count;
