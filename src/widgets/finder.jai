@@ -244,9 +244,9 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
             result.buffer_id = buffer_id;
             result.match_offset = xx offset;
             
-            dir_id_part:    u64 = (cast,trunc(u64) (buffer.file.project_dir_id + 1))   << 56;
-            buffer_id_part: u64 = (cast,trunc(u64) buffer_id)                          << 16;
-            offset_part:    u64 = (cast,trunc(u64) offset)                             <<  0;
+            dir_id_part:    u64 = (cast,trunc(u64) (buffer.file.project_dir_id + 1)) << 56;
+            buffer_id_part: u64 = (cast,trunc(u64) buffer_id)                        << 32;
+            offset_part:    u64 = (cast,trunc(u64) offset)                           <<  0;
             result.sort_key = dir_id_part | buffer_id_part | offset_part;
             
             num_results += 1;

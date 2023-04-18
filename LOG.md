@@ -77,7 +77,7 @@
         + After triple-click: enter line-selection mode
         + Maintain both modes until mouse button is up
         + Can get rid of the timeout when it's done
-    - BUG: search results sort order sometimes wrong
+    + BUG: search results sort order sometimes wrong
     - Local search
         - New widget
     - Check all @buffer notes
