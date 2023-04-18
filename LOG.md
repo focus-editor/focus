@@ -1,26 +1,12 @@
 # TODO
 
 - Before I ship:
-    + Show in the program title when it's running in debug mode
-    + Support tabs (just draw them, not even necessarily wide, just draw in some way - but wide would be best)
-    + Finish text input improvements
-    + Bake fonts
-    + Log errors into focus-log.txt, focus-log1.txt, ... in release mode
-    + Jai tokenizer parses everything correctly
-    + Figure out how to anti-alias rounded corners
-    + Improve cursor: draw occluded letters on top
-    + New open file dialog
-    + Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
-    + Adjust cursors in joint editors properly
-    + Try to support tabs properly
-    + Test the exe on different machines
     - Create new files
     - Horizontal scrolling
     - Notify about unsaved buffers on close
     - Ctrl + R to search by symbol within buffer (jump immediately when moving cursor between options)
     - Ctrl + Shift + R to search by symbol within workspace
     - Try to implement "jump to symbol definition". Display a popup if more than one. Do a scan of jai files for that.
-    - Show help on F1
     - Have the option to not strip trailing whitespace (in the config?) Or can do ctrl+s as a main way to save, ctr+shift+s as an alternative way
     - Highlight C/C++
     - Jump to line on Ctrl+G
@@ -33,6 +19,7 @@
     - Profile the whole project to see if we're doing something stupid
 
 - Limitations:
+    - Windows only on release
     - Not designed for large files
     - CRLF?
     - Multi-byte Unicode symbols are not supported
@@ -84,19 +71,19 @@
         + Auto-search etc.
         + Double shift to search
         + All files opened separately should always appear at the top in searches
-    - New selection modes:
-        - BUG: Selecting after Ctrl+D still selects in whole words mode
-        - After double-click: enter word-selection mode
-        - After triple-click: enter line-selection mode
-        - After 4-click: select all
-        - Maintain both modes until mouse button is up
-        - Can get rid of the timeout when it's done
+    + New selection modes:
+        + BUG: Selecting after Ctrl+D still selects in whole words mode
+        + After double-click: enter word-selection mode
+        + After triple-click: enter line-selection mode
+        + Maintain both modes until mouse button is up
+        + Can get rid of the timeout when it's done
+    - BUG: search results sort order sometimes wrong
     - Local search
         - New widget
     - Check all @buffer notes
     - Rename carets and newbuffer
     - Can merge!
-                
+
 - Implement config options
     - Report errors on wrong configs (write the usage code first)
     - maximize_on_start
@@ -288,6 +275,19 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Show in the program title when it's running in debug mode
++ Support tabs (just draw them, not even necessarily wide, just draw in some way - but wide would be best)
++ Finish text input improvements
++ Bake fonts
++ Log errors into focus-log.txt, focus-log1.txt, ... in release mode
++ Jai tokenizer parses everything correctly
++ Figure out how to anti-alias rounded corners
++ Improve cursor: draw occluded letters on top
++ New open file dialog
++ Watch single open files (not in project folders) - but don't watch the containing folders because we don't want that
++ Adjust cursors in joint editors properly
++ Try to support tabs properly
++ Test the exe on different machines
 + Optimisation: with large files, disable selection highlights (because we're calculating them every frame when dragging)
 + Make sure move to empty line works on lines with just whitespace
 + Buffer ordering improvements:

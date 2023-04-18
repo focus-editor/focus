@@ -158,7 +158,7 @@ main :: () {
                         using shift_key;
                         if !event.key_pressed then last_release = frame_time;
                         if event.key_pressed && only_shift_pressed(event.modifier_flags) {
-                            if last_press < last_release && press_count > 0 && frame_time - last_press < DOUBLE_CLICK_SPEED {
+                            if last_press < last_release && press_count > 0 && frame_time - last_press < 0.2 {
                                 if finder_is_open() then finder_close();
                                 else finder_open_from_editor();
                                 press_count = 0;
@@ -320,7 +320,7 @@ update_mouse_state :: () {
             button.just_triple_clicked = false;
         }
 
-        button.is_dragging = button.is_down && mouse.pointer != button.last_down_pos && frame_time - button.last_double_click_time >= DRAG_AFTER_DOUBLE_CLICK_TIMEOUT;
+        button.is_dragging = button.is_down && mouse.pointer != button.last_down_pos;
     }
 }
 
@@ -598,7 +598,6 @@ MIN_WINDOW_HEIGHT :: 50;
 
 DOUBLE_CLICK_SPEED     :: 0.3;  // how many seconds between clicks to consider it a double click
 DOUBLE_CLICK_TOLERANCE :: 2;    // how many pixels between the click locations are allowed
-DRAG_AFTER_DOUBLE_CLICK_TIMEOUT :: 0.3;  // when we double-click to select a word, it's very easy to accidentally drag the mouse and unselect the word
 
 // Embed default fonts
 FONT         :: #run load_font("FiraCode-Retina.ttf");

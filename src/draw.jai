@@ -225,14 +225,48 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             // Maybe change cursor position
             cursor := leave_only_original_caret(editor);
             cursor.pos = coords_to_offset(buffer, coords);
-            cursor.col_wanted = coords.col;
+            cursor.col_wanted = -1;
+            
+            if selection_mode.type == {
+                case .chars;
+                    search_whole_words = false;
+                    
+                case .words;
+                    char_type := get_char_type(get_char_at_offset(buffer, cursor.pos));
+                    
+                    if cursor.pos < selection_mode.range.start {
+                        cursor.sel = selection_mode.range.end;
+                        cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, char_type, skip_one_space = false);
+                    } else {
+                        cursor.sel = selection_mode.range.start;
+                        cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, char_type, skip_one_space = false);
+                    }
+                    
+                case .lines;
+                    cursor.sel = selection_mode.range.start;
+                    select_lines(editor, buffer);
+                    if cursor.sel < selection_mode.range.start {
+                        pos := cursor.pos - 1;  // don't select the last \n
+                        cursor.pos = cursor.sel;
+                        cursor.sel = pos;
+                    }
+            }
 
             // We mark cursor as moved to trigger auto-scroll if we drag outside the editor
             if !mouse_pointer_is_within(rect) then cursor_moved = true;
 
             if !shift_pressed() && mouse.left.just_pressed then cursor.sel = cursor.pos;
-            if mouse.left.just_double_clicked then select_word(buffer, cursor);
-            if mouse.left.just_triple_clicked then select_lines(editor, buffer);
+            
+            if mouse.left.just_double_clicked {
+                select_word(buffer, cursor);
+                selection_mode.type  = .words;
+                selection_mode.range = get_selection(cursor);
+            }
+            if mouse.left.just_triple_clicked {
+                select_lines(editor, buffer);
+                selection_mode.type  = .lines;
+                selection_mode.range = get_selection(cursor);
+            }
         }
         
         editor.refresh_highlights = true;
@@ -240,7 +274,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // Activate editor
         editors.active = editor_id;
         if mouse.left.just_pressed then redraw_requested = true;  // so that we don't draw 2 active editors
-    }
+    } 
+    if !mouse.left.is_down || mouse.left.just_released then selection_mode.type = .chars;
     
     // Get the coordinates of all cursors
     // @Speed: instead of doing it every frame we could do it when cursors change only - but probably it's ok
@@ -1524,6 +1559,12 @@ Ui_Id :: enum s64 {
 // clean way this should probably be stored in widget storage?
 // Problem is, we don't have much else to store for scrollbars...
 scrollbar_grab_point: float;
+
+// What to select when dragging
+selection_mode: struct {
+    type: enum { chars; words; lines; } = .chars;
+    range: Offset_Range;
+}
 
 scissor_stack: [..] Rect;
 

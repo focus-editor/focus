@@ -738,6 +738,66 @@ select_lines :: (editor: *Editor, buffer: NewBuffer) {
     }
 }
 
+scan_through_similar_chars_on_the_left :: (using buffer: NewBuffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true) -> offset: s32 {
+    if !buffer.bytes return 0;
+    
+    line_start := bytes.data + line_starts[offset_to_line(buffer, offset)];
+    char: u32;
+    t := bytes.data + offset;
+    t, char = unicode_prev_character(t);
+    if char_type != .none && char_type != get_char_type(char) return offset;
+    if skip_one_space && char == #char " " && t > line_start then t, char = unicode_prev_character(t);
+    
+    if get_char_type(char) == {
+        case .space;
+            while t > bytes.data && is_space_char(char)  { t, char = unicode_prev_character(t); }
+            if char != #char " " then t = unicode_next_character(t);
+        case .word;
+            while t > bytes.data && is_word_char(char) { t, char = unicode_prev_character(t); }
+            if !is_word_char(char) then t = unicode_next_character(t);
+        case .non_word;
+            while t > bytes.data && is_non_word_char(char) { t, char = unicode_prev_character(t); }
+            if !is_non_word_char(char) then t = unicode_next_character(t);
+    }
+    
+    if t < bytes.data then t = bytes.data;
+    
+    return cast(s32) max(0, t - bytes.data);
+}
+
+scan_through_similar_chars_on_the_right :: (using buffer: NewBuffer, offset: s32, only: Char_Type = .none, skip_one_space := true) -> offset: s32 {
+    if !buffer.bytes return 0;
+    if offset >= bytes.count return offset;  // nowhere to go
+    
+    s: string = ---;
+    s.data  = *bytes[offset];
+    s.count = (bytes.data + bytes.count) - s.data;
+    
+    char := utf8_next_character(*s);
+    if only == {
+        case .word;     if !is_word_char(char)     return offset;
+        case .non_word; if !is_non_word_char(char) return offset;
+        case .space;    if  char != #char " "      return offset;
+    }
+    if skip_one_space && char == #char " " && s then char = utf8_next_character(*s);
+    
+    if char == #char " " {
+        // Only spaces
+        while s && char == #char " "  { char = utf8_next_character(*s); }
+        if char != #char " " { s.data, char = unicode_prev_character(s.data); }
+    } else if is_word_char(char) {
+        // Only word chars
+        while s && is_word_char(char) { char = utf8_next_character(*s); }
+        if !is_word_char(char) { s.data, char = unicode_prev_character(s.data); }
+    } else if char != #char "\n" {
+        // Only non-word chars
+        while s && is_non_word_char(char) { char = utf8_next_character(*s); }
+        if !is_non_word_char(char) { s.data, char = unicode_prev_character(s.data); }
+    }
+    
+    return cast(s32) min(bytes.count, s.data - bytes.data);
+}
+
 #scope_file
 
 select_word_or_create_another_cursor :: (using editor: *Editor, buffer: NewBuffer) -> whole_words: bool {
@@ -1286,66 +1346,6 @@ new_line_above :: (editor: *Editor, buffer: *NewBuffer) {
     }
     
     editor.cursor_moved = true;
-}
-
-scan_through_similar_chars_on_the_left :: (using buffer: NewBuffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true) -> offset: s32 {
-    if !buffer.bytes return 0;
-    
-    line_start := bytes.data + line_starts[offset_to_line(buffer, offset)];
-    char: u32;
-    t := bytes.data + offset;
-    t, char = unicode_prev_character(t);
-    if char_type != .none && char_type != get_char_type(char) return offset;
-    if skip_one_space && char == #char " " && t > line_start then t, char = unicode_prev_character(t);
-    
-    if get_char_type(char) == {
-        case .space;
-            while t > bytes.data && is_space_char(char)  { t, char = unicode_prev_character(t); }
-            if char != #char " " then t = unicode_next_character(t);
-        case .word;
-            while t > bytes.data && is_word_char(char) { t, char = unicode_prev_character(t); }
-            if !is_word_char(char) then t = unicode_next_character(t);
-        case .non_word;
-            while t > bytes.data && is_non_word_char(char) { t, char = unicode_prev_character(t); }
-            if !is_non_word_char(char) then t = unicode_next_character(t);
-    }
-    
-    if t < bytes.data then t = bytes.data;
-    
-    return cast(s32) max(0, t - bytes.data);
-}
-
-scan_through_similar_chars_on_the_right :: (using buffer: NewBuffer, offset: s32, only: Char_Type = .none, skip_one_space := true) -> offset: s32 {
-    if !buffer.bytes return 0;
-    if offset >= bytes.count return offset;  // nowhere to go
-    
-    s: string = ---;
-    s.data  = *bytes[offset];
-    s.count = (bytes.data + bytes.count) - s.data;
-    
-    char := utf8_next_character(*s);
-    if only == {
-        case .word;     if !is_word_char(char)     return offset;
-        case .non_word; if !is_non_word_char(char) return offset;
-        case .space;    if  char != #char " "      return offset;
-    }
-    if skip_one_space && char == #char " " && s then char = utf8_next_character(*s);
-    
-    if char == #char " " {
-        // Only spaces
-        while s && char == #char " "  { char = utf8_next_character(*s); }
-        if char != #char " " { s.data, char = unicode_prev_character(s.data); }
-    } else if is_word_char(char) {
-        // Only word chars
-        while s && is_word_char(char) { char = utf8_next_character(*s); }
-        if !is_word_char(char) { s.data, char = unicode_prev_character(s.data); }
-    } else if char != #char "\n" {
-        // Only non-word chars
-        while s && is_non_word_char(char) { char = utf8_next_character(*s); }
-        if !is_non_word_char(char) { s.data, char = unicode_prev_character(s.data); }
-    }
-    
-    return cast(s32) min(bytes.count, s.data - bytes.data);
 }
 
 delete_word_left :: (editor: *Editor, buffer: *NewBuffer) {
