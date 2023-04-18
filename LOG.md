@@ -79,14 +79,24 @@
         + Move last line up
     + Don't draw separators in the navigate mode
     + Look up the combo for an action from the keymap
-    - Global search
+    + Global search
         + Make it work
-        - Auto-search etc.
-        - Double shift to search
-        - TEST THIS: All files opened separately should always appear at the top in searches
+        + Auto-search etc.
+        + Double shift to search
+        + All files opened separately should always appear at the top in searches
+    - New selection modes:
+        - BUG: Selecting after Ctrl+D still selects in whole words mode
+        - After double-click: enter word-selection mode
+        - After triple-click: enter line-selection mode
+        - After 4-click: select all
+        - Maintain both modes until mouse button is up
+        - Can get rid of the timeout when it's done
     - Local search
         - New widget
-        
+    - Check all @buffer notes
+    - Rename carets and newbuffer
+    - Can merge!
+                
 - Implement config options
     - Report errors on wrong configs (write the usage code first)
     - maximize_on_start
@@ -118,15 +128,14 @@
     - Implement wrapping for buffer
     - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
     - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
-- Check all @buffer notes
 - Use SIMD for syntax highlighting
 - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
 - Project scanning: Use threads more efficiently:
     - Draw a simple progress bar in a corner
-- Rename carets and newbuffer
 
 - When subsuming cursors, do something with the clipboard (also when undoing/redoing)
         
+- F12 to search by current identifier
 - Implement scrolling by dragging in all directions and with different speed
 - Generalise TODO highlighting
 - Implement general language highlighting with a set of common keywords etc
@@ -171,13 +180,7 @@
         - Close file?
 
 - BUG: if a project folder is deleted, the editor doesn't know about that and doesn't give any errors when trying to save files
-        
-- New selection modes:
-    - After double-click: enter word-selection mode
-    - After triple-click: enter line-selection mode
-    - After 4-click: select all
-    - Maintain both modes until mouse button is up
-    - Can get rid of the timeout when it's done
+
     
 - When adding a directory to workspace, the check for parent directory is NOT RELIABLE. Paths are case-sensitive on Linux
     - Also, what if we add a parent dir to a dir already in the project - what would be the expected behaviour? Delete the child dir? Keep it and dedup the files?

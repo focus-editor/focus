@@ -41,13 +41,14 @@ __pycache__
 theme: default  # TODO: colors + things like rounding radius, fonts, font sizes etc.
 tab_size: 4
 cursor_style: block  # block or line
-convert_crlf_to_lf_on_load:         true
-convert_tabs_to_spaces_on_load:     false
-highlight_selection_occurrences:    true
-load_last_session_on_start:         true
-disable_that_annoying_paste_effect: false
-disable_file_open_close_animations: false
-max_entries_in_open_file_dialog:    300
+convert_crlf_to_lf_on_load:          true
+convert_tabs_to_spaces_on_load:      false
+highlight_selection_occurrences:     true
+load_last_session_on_start:          true
+disable_that_annoying_paste_effect:  false
+disable_file_open_close_animations:  false
+max_entries_in_open_file_dialog:     300
+double_shift_to_search_in_workspace: true
 
 [[keymap]]
 

@@ -74,6 +74,12 @@ main :: () {
     window_has_focus := true;
     window_resized   := false;
     should_quit := false;
+    
+    shift_key: struct {
+        last_press:   Time = -1;
+        last_release: Time = -1;
+        press_count := 0;
+    };
 
     while !should_quit {
         if !redraw_requested platform_wait_message();
@@ -109,7 +115,7 @@ main :: () {
         screen_with_title_bar := screen;
         screen_with_title_bar.h += 200;  // should be enough to include the title bar
         
-        // NOTE: this optimisation caused some problems, so commenting it out for now
+        // NOTE: this optimisation has caused some problems, so commenting it out for now
         // // Don't redraw if we're mousing around outside the window
         // if !redraw_requested 
         //     && !Input.events_this_frame 
@@ -144,12 +150,26 @@ main :: () {
                 case .QUIT;
                     should_quit = true;
                 case .KEYBOARD;
-                    if event.key_pressed {
-                        if event.key_code == {
-                            case .F4;
-                                if event.alt_pressed should_quit = true;
+                    // Alt + F4
+                    if event.key_pressed && event.key_code == .F4 && event.alt_pressed then should_quit = true;
+                    
+                    // Double shift click
+                    if event.key_code == .SHIFT {
+                        using shift_key;
+                        if !event.key_pressed then last_release = frame_time;
+                        if event.key_pressed && only_shift_pressed(event.modifier_flags) {
+                            if last_press < last_release && press_count > 0 && frame_time - last_press < DOUBLE_CLICK_SPEED {
+                                if finder_is_open() then finder_close();
+                                else finder_open_from_editor();
+                                press_count = 0;
+                            } else {
+                                press_count = 1;
+                            }
+                            last_press = frame_time;
                         }
+                        if event.key_pressed then last_press = frame_time;
                     }
+                    
                     action := map_event_to_action(event, Action_Common);
                     if action == {
                         case .increase_font_size;           increase_font_size();

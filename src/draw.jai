@@ -125,7 +125,7 @@ draw_splash_screen :: (main_area: Rect) {
         Shortcut :: struct { action: Action_Common; description: string; }
         
         SHORTCUTS_TO_DISPLAY :: Shortcut.[
-            .{ .show_commands,                                      "Show All Commands" },
+            .{ .show_commands,                                      "Show All Commands [NOT IMPLEMENTED YET]" },
             .{ .show_open_file_dialog_in_search_mode,               "Open File By Name" },
             .{ .show_open_file_dialog_in_navigate_mode,             "Navigate To File" },
             .{ .show_open_file_dialog_in_navigate_mode_from_root,   "Navigate To File From Root" },
@@ -135,10 +135,11 @@ draw_splash_screen :: (main_area: Rect) {
         
         right_area = shrink(right_area, margin);
         
-        padding := floor(4 * dpi_scale);
+        padding_v := floor(4 * dpi_scale);
+        padding_h := floor(6 * dpi_scale);
         align_x := right_area.w - (right_area.w / GOLDEN_RATIO);
         
-        key_height  := cast(float) font_ui.character_height + 2 * padding;
+        key_height  := cast(float) font_ui.character_height + 2 * padding_v;
         line_height := max(key_height * 2, (logo_rect.h - key_height * SHORTCUTS_TO_DISPLAY.count) / (SHORTCUTS_TO_DISPLAY.count - 1) + key_height);
         line_height = min(line_height, key_height * 3);
         
@@ -154,32 +155,32 @@ draw_splash_screen :: (main_area: Rect) {
             combo_width := 0.0;
             plus_width  := cast(float) Simp.prepare_text(font_ui, "+");
             for combo {
-                combo_width += xx Simp.prepare_text(font_ui, it) + 2 * padding;
+                combo_width += xx Simp.prepare_text(font_ui, it) + 2 * padding_h;
                 if it_index < combo.count - 1 {
-                    combo_width += plus_width + 2 * padding;
+                    combo_width += plus_width + 2 * padding_h;
                 }
             }
             
             x = right_area.x + align_x - combo_width;
-            text_y := y + padding * 1.5;
+            text_y := y + padding_v * 1.5;
             
             key_rect := Rect.{ x = x, y = y, w = 0, h = key_height };
             for combo {
                 key_rect.x = x;
-                key_rect.w = xx Simp.prepare_text(font_ui, it) + 2 * padding;
+                key_rect.w = xx Simp.prepare_text(font_ui, it) + 2 * padding_h;
                 key_rect = align_to_grid(key_rect);
                 shadow_rect := expand(key_rect, 1);
                 shadow_rect.y -= 2;
                 draw_rounded_rect(shadow_rect, Colors.BACKGROUND_DARK);
                 draw_rounded_rect(key_rect, Colors.SELECTION_ACTIVE);
-                Simp.draw_prepared_text(font_ui, xx (x + padding), xx text_y, Colors.UI_DEFAULT);
+                Simp.draw_prepared_text(font_ui, xx (x + padding_h), xx text_y, Colors.UI_DEFAULT);
                 x += key_rect.w;
                 if it_index < combo.count - 1 {
-                    Simp.draw_text(font_ui, xx (x + padding), xx text_y, "+", Colors.UI_DEFAULT);
-                    x += plus_width + 2 * padding;
+                    Simp.draw_text(font_ui, xx (x + padding_h), xx text_y, "+", Colors.UI_DEFAULT);
+                    x += plus_width + 2 * padding_h;
                 }
             }
-            Simp.draw_text(font_ui, xx (x + padding * 10), xx text_y, shortcut.description, Colors.UI_DEFAULT);
+            Simp.draw_text(font_ui, xx (x + padding_h * 10), xx text_y, shortcut.description, Colors.UI_DEFAULT);
             
             y -= line_height;
         }
@@ -230,9 +231,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             if !mouse_pointer_is_within(rect) then cursor_moved = true;
 
             if !shift_pressed() && mouse.left.just_pressed then cursor.sel = cursor.pos;
-            // TODO: 
-            // if mouse.left.just_double_clicked then select_word(cursor, buffer, only_word_chars = false);
-            // if mouse.left.just_triple_clicked then select_lines(cursor, buffer);
+            if mouse.left.just_double_clicked then select_word(buffer, cursor);
+            if mouse.left.just_triple_clicked then select_lines(editor, buffer);
         }
         
         editor.refresh_highlights = true;
@@ -901,7 +901,7 @@ draw_finder :: () {
     input_rect, files_rect := cut_top(box_rect, input_rect_height);
     input_rect = shrink(input_rect, margin);
     input_id := get_ui_id_from_loc(parent_id = ui_id);
-    label := ifx initted then "Type to search within project" else "Still indexing. Please wait...";
+    label := ifx initted then "Type to search in workspace" else "Still indexing. Please wait...";
     draw_text_input(*finder.input, input_rect, ui_id = input_id, active = true, label = label);
     _pad: Rect = ---;  // allow some space at the bottom so that we don't cover up the rounded corners with the cursor
     _pad, files_rect = cut_bottom(files_rect, padding);
@@ -1020,16 +1020,23 @@ draw_finder :: () {
                     width = xx Simp.prepare_text(font_ui_bold, "[modified on disk]");
                     Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
                 }
-    
-                // Draw separator
-                pen.x += width + padding;
-                width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
-                Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
-    
-                // Draw file path
-                pen.x += width + padding;
-                width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
-                Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+                
+                if buffer.has_file {
+                    // Draw separator
+                    pen.x += width + padding;
+                    width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
+                    Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+                    
+                    // // Draw score
+                    // pen.x += width + padding;
+                    // width = xx Simp.prepare_text(font_ui_small, tprint("%", formatInt(entry.sort_key, base=16)));
+                    // Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+        
+                    // Draw file path
+                    pen.x += width + padding;
+                    width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
+                    Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+                }
             }
             
             // Line number

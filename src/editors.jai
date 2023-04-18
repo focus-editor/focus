@@ -1688,7 +1688,7 @@ move_lines_up :: (editor: *Editor, buffer: *NewBuffer) {
         if !prev_str continue;  // we're at the top
         
         delete_range(buffer, prev_line_range);
-        add_paste_animation(editor, .{ start = prev_line_range.start, end = prev_line_range.start + line.range.end - line.range.start });
+        // add_paste_animation(editor, .{ start = prev_line_range.start, end = prev_line_range.start + line.range.end - line.range.start });
         
         for * cursor : editor.carets {
             if line.range.start <= cursor.pos && cursor.pos <= line.range.end {  // no need to check for cursor.sel because we have whole line ranges
@@ -1712,7 +1712,7 @@ move_lines_down :: (editor: *Editor, buffer: *NewBuffer) {
         
         delete_range(buffer, next_line_range);
         insert_string_at_offset(buffer, line.range.start, next_str);
-        add_paste_animation(editor, .{ start = line.range.start + cast(s32)next_str.count, end = line.range.end + cast(s32)next_str.count });
+        // add_paste_animation(editor, .{ start = line.range.start + cast(s32)next_str.count, end = line.range.end + cast(s32)next_str.count });
         
         for * cursor : editor.carets {
             if line.range.start <= cursor.pos && cursor.pos <= line.range.end {  // no need to check for cursor.sel because we have whole line ranges

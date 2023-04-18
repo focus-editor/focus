@@ -53,6 +53,10 @@ finder_handle_event :: (event: Input.Event) {
     }
 }
 
+finder_is_open :: () -> bool {
+    return active_global_widget == .finder;
+}
+
 finder_open :: () {
     active_global_widget = .finder;
     using finder;
@@ -239,7 +243,12 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
             result := *results[num_results];
             result.buffer_id = buffer_id;
             result.match_offset = xx offset;
-            result.sort_key = (cast(u64) buffer.file.project_dir_id) << 56 | (cast(u64) buffer_id) << 32 | cast(u64) offset;
+            
+            dir_id_part:    u64 = (cast,trunc(u64) (buffer.file.project_dir_id + 1))   << 56;
+            buffer_id_part: u64 = (cast,trunc(u64) buffer_id)                          << 16;
+            offset_part:    u64 = (cast,trunc(u64) offset)                             <<  0;
+            result.sort_key = dir_id_part | buffer_id_part | offset_part;
+            
             num_results += 1;
             if num_results >= MAX_RESULTS_PER_WORKER break buffer_id;
             
