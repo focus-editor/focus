@@ -3,6 +3,7 @@ RELEASE_DATE :: "26 April 2023";
 
 main :: () {
     cpu_info = get_cpu_info();
+    
     platform_setup();
     
     window_x, window_y := platform_get_biggest_monitor_pos();
@@ -70,7 +71,7 @@ main :: () {
     dpi_scale = platform_get_dpi_scale(window);
     init_fonts_and_dependent_things();
     old_line_height = line_height;
-
+    
     window_has_focus := true;
     window_resized   := false;
     should_quit := false;
@@ -554,7 +555,6 @@ cpu_info: Cpu_X86;
 
 // #import "Basic"()(MEMORY_DEBUGGER = true);
 #import "Basic";
-#import "Bucket_Array";
 #import "Math";
 #import "Sloppy_Math";
 #import "File";
@@ -564,6 +564,7 @@ cpu_info: Cpu_X86;
 #import "System";
 #import "String";
 #import "Sort";
+#import "Simple_Bucket_Array";
 #import "Unicode";
 #import "Window_Creation";
 #import "Thread";

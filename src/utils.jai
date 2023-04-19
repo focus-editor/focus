@@ -317,6 +317,16 @@ trim_both_sides :: (s: string, chars := DEFAULT_SPACES) -> string, left: s64, ri
     return slice(s, left, s.count - left - right), left, right;
 }
 
+get_num_cpus :: () -> s32 {
+    num_cpus := clamp(get_number_of_processors(), 2, 200);
+    
+    #if (OS == .WINDOWS) || (OS == .LINUX) {
+        num_cpus /= 2; // this routine reports hyperthreads, so, divide by two, because of Intel marketing.
+    }
+    
+    return num_cpus;
+}
+
 
 #scope_export
 

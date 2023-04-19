@@ -79,14 +79,19 @@
         + Can get rid of the timeout when it's done
     + BUG: search results sort order sometimes wrong
     + Fix the crash from last night
-    - Rename carets and newbuffer
+    + Rename carets and newbuffer
     - Rewrite the editor/buffer arrays using bucket arrays
+        - Parallelize workspace scanning
+            - Get the list of all files upfront
+        - Make sure the files are sorted correctly in the files list
+    - Actually lock the buffer contents when modifying it
     - Local search
         - New widget
     - remove_crlf_in_place - optimise a bit
     - Can merge!
     
 - When sorting the file list, put the modified buffers on top
+- When switching to buffer or trying to save it, check that the file exists
 
 - Implement config options
     - Report errors on wrong configs (write the usage code first)

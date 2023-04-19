@@ -1,4 +1,4 @@
-highlight_focus_config_syntax :: (using buffer: *NewBuffer) {
+highlight_focus_config_syntax :: (using buffer: *Buffer) {
     tokenizer: Tokenizer = ---;
     tokenizer.buf   = to_string(bytes);
     tokenizer.max_t = bytes.data + bytes.count;

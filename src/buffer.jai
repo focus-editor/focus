@@ -21,30 +21,30 @@ refresh_open_buffers :: () {
     }
 }
 
-put_cursor_in_valid_spot :: (using cursor: *Cursor, buffer: NewBuffer) {
+put_cursor_in_valid_spot :: (using cursor: *Cursor, buffer: Buffer) {
     pos = clamp(pos, 0, xx buffer.bytes.count);
     sel = clamp(sel, 0, xx buffer.bytes.count);
 }
 
-insert_string_at_offset :: (buffer: *NewBuffer, offset: s64, str: string) {
+insert_string_at_offset :: (buffer: *Buffer, offset: s64, str: string) {
     new_insert_edit(buffer, offset, str);
     insert_string_raw(buffer, offset, str);
 }
 
-insert_char_at_offset :: (buffer: *NewBuffer, offset: s32, char: Utf8_Char) {
+insert_char_at_offset :: (buffer: *Buffer, offset: s32, char: Utf8_Char) {
     new_insert_char_edit(buffer, offset, char);
     str := to_string(*char);
     insert_string_raw(buffer, offset, str);
 }
 
-delete_range :: (buffer: *NewBuffer, using range: Offset_Range) {
+delete_range :: (buffer: *Buffer, using range: Offset_Range) {
     if start == end return;
     old_str := to_string(array_view(buffer.bytes, start, end - start));
     new_delete_edit(buffer, start, end, old_str);
     delete_range_raw(buffer, start, end);
 }
 
-replace_range :: (buffer: *NewBuffer, using range: Offset_Range, str: string) {
+replace_range :: (buffer: *Buffer, using range: Offset_Range, str: string) {
     old_str := to_string(array_view(buffer.bytes, start, end - start));
     if str == old_str return;
 
@@ -53,7 +53,7 @@ replace_range :: (buffer: *NewBuffer, using range: Offset_Range, str: string) {
     replace_range_raw(buffer, start, end, str);
 }
 
-delete_range_raw :: (using buffer: *NewBuffer, start: s64, end: s64, $notify := true) {
+delete_range_raw :: (using buffer: *Buffer, start: s64, end: s64, $notify := true) {
     len := end - start;
     if len <= 0 return;
 
@@ -64,7 +64,7 @@ delete_range_raw :: (using buffer: *NewBuffer, start: s64, end: s64, $notify := 
     buffer.dirty = true;
 }
 
-insert_string_raw :: (buffer: *NewBuffer, offset: s64, str: string, $notify := true) {
+insert_string_raw :: (buffer: *Buffer, offset: s64, str: string, $notify := true) {
     bytes: [] u8;
     bytes.data  = str.data;
     bytes.count = str.count;
@@ -75,13 +75,13 @@ insert_string_raw :: (buffer: *NewBuffer, offset: s64, str: string, $notify := t
     buffer.dirty = true;
 }
 
-replace_range_raw :: (buffer: *NewBuffer, start: s32, end: s32, str: string) {
+replace_range_raw :: (buffer: *Buffer, start: s32, end: s32, str: string) {
     delete_range_raw(buffer, start, end, notify = false);
     insert_string_raw(buffer, start, str, notify = false);
     add_edit_notification(buffer, start, end - start, str.count);
 }
 
-get_char_at_offset :: (using buffer: NewBuffer, offset: s32) -> u32 {
+get_char_at_offset :: (using buffer: Buffer, offset: s32) -> u32 {
     str := get_char_at_offset_as_string(buffer, offset);
     if !str return 0;
     
@@ -89,7 +89,7 @@ get_char_at_offset :: (using buffer: NewBuffer, offset: s32) -> u32 {
     return char;
 }
 
-get_char_at_offset_as_string :: (using buffer: NewBuffer, offset: s32) -> string {
+get_char_at_offset_as_string :: (using buffer: Buffer, offset: s32) -> string {
     if offset >= bytes.count return "";
     char: string = ---;
     char.data  = *bytes[offset];
@@ -97,7 +97,7 @@ get_char_at_offset_as_string :: (using buffer: NewBuffer, offset: s32) -> string
     return char;
 }
 
-offset_to_coords :: (using buffer: NewBuffer, offset: s64) -> Coords {
+offset_to_coords :: (using buffer: Buffer, offset: s64) -> Coords {
     coords := Coords.{ line = offset_to_line(buffer, offset), col = 0 };
 
     // Find col by scanning the line
@@ -116,13 +116,13 @@ offset_to_coords :: (using buffer: NewBuffer, offset: s64) -> Coords {
     return coords;
 }
 
-get_cursor_coords :: (buffer: NewBuffer, using cursor: Cursor) -> Cursor_Coords {
+get_cursor_coords :: (buffer: Buffer, using cursor: Cursor) -> Cursor_Coords {
     pos_coords := offset_to_coords(buffer, pos);
     sel_coords := ifx pos != sel then offset_to_coords(buffer, sel) else pos_coords;
     return Cursor_Coords.{ pos = pos_coords, sel = sel_coords };
 }
 
-offset_to_line :: (using buffer: NewBuffer, offset: s64) -> line_num: s32 {
+offset_to_line :: (using buffer: Buffer, offset: s64) -> line_num: s32 {
     assert(!dirty, "buffer is dirty, can't calculate line from offset");
     assert(offset <= bytes.count, "offset exceeds buffer size, can't calculate line");
 
@@ -148,7 +148,7 @@ offset_to_line :: (using buffer: NewBuffer, offset: s64) -> line_num: s32 {
     return cast(s32) line_num;
 }
 
-coords_to_offset :: (using buffer: NewBuffer, coords: Coords) -> s32 {
+coords_to_offset :: (using buffer: Buffer, coords: Coords) -> s32 {
     assert(!buffer.dirty);
     
     line := clamp(coords.line, 0, cast(s32)line_starts.count - 2);
@@ -172,11 +172,11 @@ coords_to_offset :: (using buffer: NewBuffer, coords: Coords) -> s32 {
     return offset;
 }
 
-is_last_line :: (using buffer: NewBuffer, line: s32) -> bool {
+is_last_line :: (using buffer: Buffer, line: s32) -> bool {
     return line >= line_starts.count - 2;
 }
 
-get_line_end_offset :: (using buffer: NewBuffer, line: s32) -> s32 {
+get_line_end_offset :: (using buffer: Buffer, line: s32) -> s32 {
     offset := line_starts[line + 1];
     if !is_last_line(buffer, line) then offset -= 1;
     return offset;
@@ -190,7 +190,7 @@ get_selection :: (using cursor: Cursor) -> Offset_Range {
     return .{ start = min(pos, sel), end = max(pos, sel) };
 }
 
-get_selection_coords :: (buffer: NewBuffer, using cursor: Cursor) -> Coords_Range {
+get_selection_coords :: (buffer: Buffer, using cursor: Cursor) -> Coords_Range {
     selection := inline get_selection(cursor);
     return .{
         start = offset_to_coords(buffer, selection.start),
@@ -198,12 +198,12 @@ get_selection_coords :: (buffer: NewBuffer, using cursor: Cursor) -> Coords_Rang
     };
 }
 
-get_selected_string :: (cursor: Cursor, buffer: NewBuffer) -> string {
+get_selected_string :: (cursor: Cursor, buffer: Buffer) -> string {
     if !has_selection(cursor) return "";
     return get_string_from_range(buffer, get_selection(cursor));
 }
 
-get_string_from_range :: (buffer: NewBuffer, range: Offset_Range) -> string {
+get_string_from_range :: (buffer: Buffer, range: Offset_Range) -> string {
     result: string = ---;
     result.data  = buffer.bytes.data + range.start;
     result.count = range.end - range.start;
@@ -237,7 +237,7 @@ remove_crlf_in_place :: (bytes: *[] u8) {
     bytes.count = dst + count - bytes.data;
 }
 
-rescan_for_lines :: (using buffer: *NewBuffer) {
+rescan_for_lines :: (using buffer: *Buffer) {
     if dirty {
         was_dirty_during_frame = true;
         dirty = false;
@@ -297,7 +297,7 @@ rescan_for_lines :: (using buffer: *NewBuffer) {
     array_add(*line_starts, cast(s32) bytes.count);  // last line
 }
 
-recalculate_colors :: (buffer: *NewBuffer) {
+recalculate_colors :: (buffer: *Buffer) {
     assert(!buffer.dirty);
     buffer.needs_coloring = false;
     array_resize(*buffer.colors, buffer.bytes.count);  // this will reset colors to 0
@@ -309,7 +309,7 @@ recalculate_colors :: (buffer: *NewBuffer) {
     }
 }
 
-save_buffer_to_disk :: (using buffer: *NewBuffer) {
+save_buffer_to_disk :: (using buffer: *Buffer) {
     success := write_entire_file(file.full_path, to_string(bytes));
     if success {
         modified = false;
@@ -323,7 +323,7 @@ save_buffer_to_disk :: (using buffer: *NewBuffer) {
     remember_last_modtime_and_size(buffer);
 }
 
-remember_last_modtime_and_size :: (using buffer: *NewBuffer) {
+remember_last_modtime_and_size :: (using buffer: *Buffer) {
     assert(has_file, "Trying to remember last modtime and size of a buffer with no file. This is a bug");
 
     modtime, size, success := file_modtime_and_size(file.full_path);
@@ -335,7 +335,7 @@ remember_last_modtime_and_size :: (using buffer: *NewBuffer) {
     }
 }
 
-buffer_file_has_changed_on_disk :: (using buffer: *NewBuffer) -> changed: bool {
+buffer_file_has_changed_on_disk :: (using buffer: *Buffer) -> changed: bool {
     assert(has_file);
     modtime, size, success := file_modtime_and_size(file.full_path);
     if !success {
@@ -349,12 +349,12 @@ is_empty :: inline (line: Line) -> bool {
     return line.num_chars == 0;
 }
 
-is_empty :: (using buffer: NewBuffer, line_num: s32) -> bool {
+is_empty :: (using buffer: Buffer, line_num: s32) -> bool {
     s := get_line_as_string(buffer, line_num);
     return is_all_whitespace(s);
 }
 
-get_line_as_string :: (using buffer: NewBuffer, line_num: s32) -> string {
+get_line_as_string :: (using buffer: Buffer, line_num: s32) -> string {
     assert(!buffer.dirty);
     if line_num < 0 || line_num >= buffer.line_starts.count - 1 return "";
     
@@ -388,22 +388,29 @@ operator - :: (a: Pos, b: Pos) -> Pos {
 }
 
 find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
+    lock(*open_buffers_lock);
+    
     buffer_id, found_buffer := table_find(*buffers_table, path);
+    buffer: *Buffer = ---;
+    
+    if !found_buffer {
+        buffer_id = open_buffers.count;
+        buffer = bucket_array_add(*open_buffers);
+        init_buffer(buffer);
+        table_add(*buffers_table, copy_string(path), buffer_id);  // It should be ok to leak some memory here when we no longer need a buffer
+    }
+    
+    unlock(*open_buffers_lock);  // only hold the lock when it's critical
+    
     if found_buffer return buffer_id, false;
     
-    log("Buffer not found in the table, opening file %\n", path);
+    // log("Buffer not found in the table, opening file %\n", path);
 
     // Create and load file
     file_data, success := read_entire_file(path);
     if !success then file_data = sprint("Couldn't load file '%'", path);
     
-    buffer_id = open_buffers.count;
-    buffer := array_add(*open_buffers);
-    init_buffer(buffer);
     fill_in_buffer_from_file_data(buffer, path, file_data);
-            
-    // It should be ok to leak some memory here when we no longer need a buffer
-    table_add(*buffers_table, copy_string(path), buffer_id);
     
     return buffer_id, true;
 }
@@ -490,7 +497,7 @@ maybe_mark_buffer_as_deleted :: (path: string) {
     finder.need_to_refresh_results = true;
 }
 
-deinit :: (using buffer: *NewBuffer) {
+deinit :: (using buffer: *Buffer) {
     // We don't do it often so it's ok to be slow here
     array_free(bytes);
     array_free(line_starts);
@@ -506,7 +513,7 @@ deinit :: (using buffer: *NewBuffer) {
 }
 
 // NOTE: this works with absolute columns only, with no regard to line wrapping!
-find_col_by_scanning_left :: (using buffer: *NewBuffer, offset: s32) -> col: s32 {
+find_col_by_scanning_left :: (using buffer: *Buffer, offset: s32) -> col: s32 {
     byte: u8;
     col: s32;
     
@@ -519,7 +526,7 @@ find_col_by_scanning_left :: (using buffer: *NewBuffer, offset: s32) -> col: s32
     return col;
 }
 
-get_range_as_string :: (buffer: NewBuffer, range: Offset_Range) -> string {
+get_range_as_string :: (buffer: Buffer, range: Offset_Range) -> string {
     result: string = ---;
     
     result.data  = buffer.bytes.data + range.start;
@@ -528,25 +535,22 @@ get_range_as_string :: (buffer: NewBuffer, range: Offset_Range) -> string {
     return result;
 }
 
-init_buffer :: (buffer: *NewBuffer) {
-    mutex: Mutex;
-    _, content_lock_ptr := bucket_array_add(*buffer_content_locks, mutex);
-    buffer.content_lock = content_lock_ptr;
-    init(buffer.content_lock);
+init_buffer :: (buffer: *Buffer) {
+    init(*buffer.content_lock);
 }
 
 #scope_file
 
-add_edit_notification :: (using buffer: *NewBuffer, offset: s64, old_count: s64, new_count: s64) {
+add_edit_notification :: (using buffer: *Buffer, offset: s64, old_count: s64, new_count: s64) {
     if num_editors_open < 2 return;
-    array_add(*edit_notifications, NewBuffer.Edit_Notification.{
+    array_add(*edit_notifications, Buffer.Edit_Notification.{
         editor_id = cast(s32) context.current_editor_id,
         offset    = cast(s32) (offset + min(old_count, new_count)),
         delta     = cast(s32) (new_count - old_count),
     });
 }
 
-new_replace_edit :: (buffer: *NewBuffer, start: s32, end: s32, old_str: string, new_str: string) {
+new_replace_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string, new_str: string) {
     edit := array_add(*buffer.edits);
     edit.type = .replace;
     using edit.replace;
@@ -558,7 +562,7 @@ new_replace_edit :: (buffer: *NewBuffer, start: s32, end: s32, old_str: string, 
     clear_redos(buffer);
 }
 
-new_insert_edit :: (buffer: *NewBuffer, offset: s64, str: string) {
+new_insert_edit :: (buffer: *Buffer, offset: s64, str: string) {
     edit := array_add(*buffer.edits);
     edit.type = .insert;
     edit.insert.offset = offset;
@@ -567,7 +571,7 @@ new_insert_edit :: (buffer: *NewBuffer, offset: s64, str: string) {
     clear_redos(buffer);
 }
 
-new_insert_char_edit :: (buffer: *NewBuffer, offset: s64, char: Utf8_Char) {
+new_insert_char_edit :: (buffer: *Buffer, offset: s64, char: Utf8_Char) {
     edit := array_add(*buffer.edits);
     edit.type = .insert_char;
     edit.insert_char.offset = offset;
@@ -576,7 +580,7 @@ new_insert_char_edit :: (buffer: *NewBuffer, offset: s64, char: Utf8_Char) {
     clear_redos(buffer);
 }
 
-new_delete_edit :: (buffer: *NewBuffer, start: s32, end: s32, old_str: string) {
+new_delete_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string) {
     edit := array_add(*buffer.edits);
     edit.type = .delete;
     using edit.delete;
@@ -587,12 +591,12 @@ new_delete_edit :: (buffer: *NewBuffer, start: s32, end: s32, old_str: string) {
     clear_redos(buffer);
 }
 
-clear_redos :: (using buffer: *NewBuffer) {
+clear_redos :: (using buffer: *Buffer) {
     for * redos  deinit(it);
     array_reset_keeping_memory(*redos);
 }
 
-deinit :: (using edit_group: *NewBuffer.Edit_Group) {
+deinit :: (using edit_group: *Buffer.Edit_Group) {
     for edit : edits {
         using edit;
         if #complete type == {
@@ -612,7 +616,7 @@ deinit :: (using edit_group: *NewBuffer.Edit_Group) {
 // TODO: 
 // - reorganise to reduce size
 // - replace all [..] with a custom array type without an allocator (also probably using s32's)
-NewBuffer :: struct {
+Buffer :: struct {
     file: File_Info;
     num_times_opened: u8;
     num_editors_open: u8;
@@ -637,7 +641,7 @@ NewBuffer :: struct {
     deleted                := false;
     needs_coloring         := false;
     
-    content_lock: *Mutex;  // must hold while modifying content (or reading in an off thread)
+    content_lock: Mutex;  // must hold while modifying content (or reading in an off thread)
 
     last_edit_time: Time;  // for creating new edit groups
     
@@ -734,6 +738,3 @@ Coords_Range :: struct {
     start, end: Coords;  
 }
 
-#scope_file
-
-buffer_content_locks: Bucket_Array(Mutex, items_per_bucket = 1024, always_iterate_by_pointer = true);

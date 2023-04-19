@@ -1,9 +1,5 @@
 init_finder :: () {
-    num_cpus := clamp(get_number_of_processors(), 2, 200);
-    #if (OS == .WINDOWS) || (OS == .LINUX) {
-        num_cpus /= 2; // this routine reports hyperthreads, so, divide by two, because of Intel marketing.
-    }
-    
+    num_cpus := get_num_cpus();    
     num_threads := max(num_cpus - 1, 1);        
     init(*thread_group, num_threads, group_proc = search_threadproc);
     thread_group.name = "Finder";
@@ -234,8 +230,8 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
         if buffer.deleted && !buffer.modified continue;  // do not search in deleted unmodified buffers
         
         // Make sure the buffer contents doesn't change while we're scanning it
-        lock(buffer.content_lock);
-        defer unlock(buffer.content_lock);
+        lock(*buffer.content_lock);
+        defer unlock(*buffer.content_lock);
         
         contents := to_string(buffer.bytes);
         

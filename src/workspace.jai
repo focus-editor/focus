@@ -31,7 +31,12 @@ add_directory_to_workspace :: (path: string, index := -1) {
 }
 
 start_initial_workspace_scan :: () {
-    init(*scanner_thread, num_threads = 1, group_proc = initial_scan_threadproc);
+    
+
+    num_cpus := get_num_cpus();
+    num_threads := max(num_cpus - 1, 1);
+    
+    init(*scanner_thread, num_threads = num_threads, group_proc = initial_scan_threadproc);
     scanner_thread.name = "Workspace Scanner";
     scanner_thread.logging = true;
         
@@ -48,7 +53,7 @@ maybe_update_workspace_buffers :: () {
         if num_dirs_scanned >= project_dirs.count {
             initial_scan_complete = true;
             shutdown(*scanner_thread);
-            merge_scanned_buffers_into_open_buffers();
+            // merge_scanned_buffers_into_open_buffers();
             start_file_watcher();
             init_open_file_dialog();
             init_finder();
@@ -128,133 +133,60 @@ initial_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) 
         
         if should_ignore_file(file.full_name) return;
         
-        file_data, success := read_entire_file(file.full_name);
-        if !success return; 
-        
-        buffer := array_add(*scanned_buffers);
-        init_buffer(buffer);
-        fill_in_buffer_from_file_data(buffer, file.full_name, file_data);
+        // NOTE: assuming that file.full_name is normalized!
+        find_or_create_buffer(file.full_name);
     }
-    
-    /* -
-       commented out the async file reader code for now, because there seems to be a bug with
-       the io completion ports module - it doesn't close handles when using read_entire_file etc.
-       NOTE: this has been fixed, so could uncomment and adapt this code
-
-    // Visit every file in the project and maybe open a buffer for it
-    Visitor_Data :: struct {
-        queue: *File_Async.Queue(string);
-        files_left_to_read: s64;
-    }
-    using visitor_data: Visitor_Data;
-    queue = File_Async.initialize_queue(string);
-    defer File_Async.destroy_queue(queue);
-    
-    visit_files(dir.path, recursive = true, *visitor_data, visitor_func, visit_directories = true);
-    
-    visitor_func :: (file: *File_Visit_Info, using visitor_data: *Visitor_Data) {
-        if file.is_directory {
-            for config.workspace.ignore_dirs {
-                if equal_nocase(file.short_name, it) {  // TODO: do a wildcard match
-                    file.descend_into_directory = false;
-                    return;
-                }
-            }
-            return;
-        }
-        if file.is_symlink return;
-        
-        for allowed_ext : config.workspace.allow_file_extensions {
-            // Allow known text file extensions since they are the most common
-            if ends_with_nocase(file.short_name, allowed_ext) break;
-            
-            // Then check for common known binary file extensions
-            for config.workspace.ignore_file_extensions {
-                if ends_with_nocase(file.short_name, it) return;  // TODO: do a wildcard match
-            }
-        }
-    
-        // Start an asynchronous read
-        file_path := copy_temporary_string(file.full_name);
-        result := File_Async.read_entire_file(queue, file_path, file_path);
-        files_left_to_read += 1;
-        if result.code == .FullQueue {
-            full_path, data, success := File_Async.wait_for_completion(queue);
-            if success.code == .Success {
-                create_buffer_for_file(full_path, to_string(data));
-            } else {
-                log_error("Error while waiting for completion: %\n", success);
-            }
-            files_left_to_read -= 1;
-            result = File_Async.read_entire_file(queue, file_path, file_path);
-        }
-        if result.code != .Success {
-            log_error("Error while trying to read file % asynchronously: %\n", file_path, result);
-            files_left_to_read -= 1;
-        }
-    }
-    
-    // Finish reading files
-    for 1 .. files_left_to_read {
-        full_path, data, success := File_Async.wait_for_completion(queue);
-        if success.code == .Success {
-            create_buffer_for_file(full_path, to_string(data));
-        } else {
-            log_error("Error while waiting for completion: %\n", success);
-        }
-    }
-    */
     
     return .CONTINUE;
 }
 
-merge_scanned_buffers_into_open_buffers :: () {
-    // Merge the scanned buffers with the buffers the user may have opened while we were scanning
-    // (this happens in the main thread so no synchronization is required)
-    // We're assuming the number of scanned buffers will be way higher than the number of open buffers, so we don't copy them
-    open_buffers_copy := array_copy(open_buffers);
-    open_buffers = scanned_buffers;
+// merge_scanned_buffers_into_open_buffers :: () {
+//     // Merge the scanned buffers with the buffers the user may have opened while we were scanning
+//     // (this happens in the main thread so no synchronization is required)
+//     // We're assuming the number of scanned buffers will be way higher than the number of open buffers, so we don't copy them
+//     open_buffers_copy := array_copy(open_buffers);
+//     open_buffers = scanned_buffers;
         
-    // NOTE: as we're adding some pointers from the buffers array to the hash table, we should
-    // be very careful if we're ever going to remove buffers from the array, because the memory
-    // may become invalid
+//     // NOTE: as we're adding some pointers from the buffers array to the hash table, we should
+//     // be very careful if we're ever going to remove buffers from the array, because the memory
+//     // may become invalid
         
-    // Recreate the path-to-id hash table
-    table_reset(*buffers_table);
-    for buffer, buffer_id : open_buffers {
-        table_add(*buffers_table, buffer.file.full_path, buffer_id);
-    }
+//     // Recreate the path-to-id hash table
+//     table_reset(*buffers_table);
+//     for buffer, buffer_id : open_buffers {
+//         table_add(*buffers_table, buffer.file.full_path, buffer_id);
+//     }
     
-    // Overwrite the open buffers on top of the scanned ones - they may be more recent
-    for buffer, old_buffer_id : open_buffers_copy {
-        new_buffer_id := open_buffers.count;  // in case we append
-        if buffer.has_file {
-            scanned_buffer_id, success := table_find(*buffers_table, buffer.file.full_path);
-            if success {
-                // Overwrite
-                deinit(*open_buffers[scanned_buffer_id]);
-                open_buffers[scanned_buffer_id] = buffer;
-                new_buffer_id = scanned_buffer_id;
-            } else {
-                // This is a new buffer - append
-                array_add(*open_buffers, buffer);
-                table_set(*buffers_table, buffer.file.full_path, new_buffer_id);
-            }
-        } else {
-            // This is a buffer without a file, so append
-            // NOTE: we're not adding it to the table because there's no path
-            array_add(*open_buffers, buffer);
-        }
-        // Reroute the editors
-        for * editor : open_editors {
-            if editor.buffer_id == old_buffer_id then editor.buffer_id = new_buffer_id;
-        }
-        // Reroute the modified buffers
-        for * session.modified_buffers {
-            if <<it == old_buffer_id then <<it = new_buffer_id;
-        }
-    }
-}
+//     // Overwrite the open buffers on top of the scanned ones - they may be more recent
+//     for buffer, old_buffer_id : open_buffers_copy {
+//         new_buffer_id := open_buffers.count;  // in case we append
+//         if buffer.has_file {
+//             scanned_buffer_id, success := table_find(*buffers_table, buffer.file.full_path);
+//             if success {
+//                 // Overwrite
+//                 deinit(*open_buffers[scanned_buffer_id]);
+//                 open_buffers[scanned_buffer_id] = buffer;
+//                 new_buffer_id = scanned_buffer_id;
+//             } else {
+//                 // This is a new buffer - append
+//                 bucket_array_add(*open_buffers, buffer);
+//                 table_set(*buffers_table, buffer.file.full_path, new_buffer_id);
+//             }
+//         } else {
+//             // This is a buffer without a file, so append
+//             // NOTE: we're not adding it to the table because there's no path
+//             bucket_array_add(*open_buffers, buffer);
+//         }
+//         // Reroute the editors
+//         for * editor : open_editors {
+//             if editor.buffer_id == old_buffer_id then editor.buffer_id = new_buffer_id;
+//         }
+//         // Reroute the modified buffers
+//         for * session.modified_buffers {
+//             if <<it == old_buffer_id then <<it = new_buffer_id;
+//         }
+//     }
+// }
 
 start_file_watcher :: () {
     if !init(*file_watcher, file_change_callback) {
@@ -352,6 +284,6 @@ watch_files: [..] string;       // files outside of projects that we want to wat
 
 scanner_thread: Thread_Group;
 
-scanned_buffers: [..] NewBuffer;
+scanned_buffers: [..] Buffer;
 initial_scan_complete := false;
 num_dirs_scanned := 0;

@@ -1198,7 +1198,7 @@ get_cursor_screen_pos :: (text_origin: Vector2, coords: Coords) -> Vector2 {
     );
 }
 
-draw_range :: (range: Coords_Range, buffer: NewBuffer, visible_start: s32, visible_end: s32, text_origin: Vector2, color: Color) {
+draw_range :: (range: Coords_Range, buffer: Buffer, visible_start: s32, visible_end: s32, text_origin: Vector2, color: Color) {
     // Scan the visible range and add the number of chars on each line
     range_chars: [..] s32;
     range_chars.allocator = temp;

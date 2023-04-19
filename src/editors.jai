@@ -266,7 +266,7 @@ active_editor_type_char :: (char: u32) {
     editor.cursor_moved = true;
 }
 
-get_active_editor_and_buffer :: () -> *Editor, *NewBuffer {
+get_active_editor_and_buffer :: () -> *Editor, *Buffer {
     if editors.layout == .None return null, null;
     editor := *open_editors[editors.active];
     buffer := *open_buffers[editor.buffer_id];
@@ -285,7 +285,7 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
     array_reset_keeping_memory(*buffer.edit_notifications);
 }
 
-adjust_cursors_and_viewport :: (editor: *Editor, buffer: NewBuffer, current_editor_id: s64) {
+adjust_cursors_and_viewport :: (editor: *Editor, buffer: Buffer, current_editor_id: s64) {
     // When edits are made in another editor for the same buffer, this editor's cursors 
     // need to be adjusted. The viewport glue point also needs to move.
     
@@ -384,7 +384,7 @@ move_viewport :: (editor: *Editor, dir: enum { left; up; right; down; }) {
     }
 }
 
-move_cursor_to_viewport_center :: (editor: *Editor, buffer: NewBuffer) {
+move_cursor_to_viewport_center :: (editor: *Editor, buffer: Buffer) {
     cursor := leave_only_original_cursor(editor);
     // We assume that editors always take up most of the screen vertically.
     // If that ever changes we'll need to change this code (and do it when we know the layout)
@@ -471,7 +471,7 @@ organise_cursors :: (using editor: *Editor) {
     }
 }
 
-get_max_y_scroll :: (buffer: NewBuffer) -> s32 {
+get_max_y_scroll :: (buffer: Buffer) -> s32 {
     assert(!buffer.dirty);
     return max(cast(s32) ((buffer.line_starts.count - 2)  * line_height), 0);
 }
@@ -482,7 +482,7 @@ add_paste_animation :: (using editor: *Editor, range: Offset_Range) {
     anim.started_at = frame_time;
 }
 
-select_word :: (buffer: NewBuffer, cursor: *Cursor) {
+select_word :: (buffer: Buffer, cursor: *Cursor) {
     pos       := cursor.pos;
     pos_left  := ifx cursor.pos > 0 then prev_char_offset(buffer.bytes, pos) else 0;
     char      := get_char_at_offset(buffer, pos);
@@ -500,7 +500,7 @@ select_word :: (buffer: NewBuffer, cursor: *Cursor) {
     cursor.sel = scan_through_similar_chars_on_the_left (buffer, pos, char_type, skip_one_space = false);
 }
 
-get_selected_text_all_cursors :: (using editor: Editor, buffer: NewBuffer) -> string {  // returns view into buffer
+get_selected_text_all_cursors :: (using editor: Editor, buffer: Buffer) -> string {  // returns view into buffer
     // Returns a selected string only if all cursors have the same text selected.
     // Otherwise returns an empty string.
 
@@ -514,7 +514,7 @@ get_selected_text_all_cursors :: (using editor: Editor, buffer: NewBuffer) -> st
     return text;
 }
 
-new_edit_group :: (buffer: *NewBuffer, editor: *Editor) {
+new_edit_group :: (buffer: *Buffer, editor: *Editor) {
     if buffer.edits.count == 0 return;
 
     new_group := array_add(*buffer.undos);
@@ -573,7 +573,7 @@ search_bar_is_open :: inline (using editor: *Editor) -> bool {
     return search_bar.active;  // used to be more stuff in here
 }
 
-open_search_bar :: (using editor: *Editor, buffer: NewBuffer) {
+open_search_bar :: (using editor: *Editor, buffer: Buffer) {
     using editor.search_bar;
     active = true;
     
@@ -613,7 +613,7 @@ search_bar_toggle_expand :: (using editor: *Editor) {
     }
 }
 
-search_and_update_results :: (using editor: *Editor, buffer: NewBuffer, jump := false) {
+search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := false) {
     reset_search_results(*search_bar);
 
     using search_bar;
@@ -644,7 +644,7 @@ search_and_update_results :: (using editor: *Editor, buffer: NewBuffer, jump := 
     if selected_result >= 0 && jump then jump_to_search_result(editor, buffer);
 }
 
-jump_to_search_result :: (using editor: *Editor, buffer: NewBuffer, move_search_point := false) {
+jump_to_search_result :: (using editor: *Editor, buffer: Buffer, move_search_point := false) {
     using search_bar;
     if !results || selected_result < 0 return;
 
@@ -657,7 +657,7 @@ jump_to_search_result :: (using editor: *Editor, buffer: NewBuffer, move_search_
     if move_search_point then search_point_offset = xx result.offset;
 }
 
-jump_to_prev_search_result :: (using editor: *Editor, buffer: NewBuffer) {
+jump_to_prev_search_result :: (using editor: *Editor, buffer: Buffer) {
     using search_bar;
     if !results return;
     selected_result -= 1;
@@ -665,7 +665,7 @@ jump_to_prev_search_result :: (using editor: *Editor, buffer: NewBuffer) {
     jump_to_search_result(editor, buffer, move_search_point = true);
 }
 
-jump_to_next_search_result :: (using editor: *Editor, buffer: NewBuffer) {
+jump_to_next_search_result :: (using editor: *Editor, buffer: Buffer) {
     using search_bar;
     if !results return;
     selected_result = (selected_result + 1) % results.count;
@@ -693,9 +693,11 @@ init_buffers :: () {
     // 3000 * 70% = 2100 is a reasonable number of text files in a workspace, which 
     // most codebases will hopefully not exceed (so that we don't have to grow the hash table)
     init(*buffers_table, slots_to_allocate = 3000);
+    
+    init(*open_buffers_lock);
 }
 
-fill_in_buffer_from_file_data :: (buffer: *NewBuffer, path: string, file_data: string) {
+fill_in_buffer_from_file_data :: (buffer: *Buffer, path: string, file_data: string) {
     buffer.file = get_file_info_from_full_path(path);
     buffer.has_file = true;
     remember_last_modtime_and_size(buffer);
@@ -730,7 +732,7 @@ fill_in_buffer_from_file_data :: (buffer: *NewBuffer, path: string, file_data: s
     recalculate_colors(buffer);
 }
 
-select_lines :: (editor: *Editor, buffer: NewBuffer) {
+select_lines :: (editor: *Editor, buffer: Buffer) {
     for * cursor : editor.cursors {
         selection  := get_selection(cursor);
         start_line := offset_to_line(buffer, selection.start);
@@ -740,7 +742,7 @@ select_lines :: (editor: *Editor, buffer: NewBuffer) {
     }
 }
 
-scan_through_similar_chars_on_the_left :: (using buffer: NewBuffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true) -> offset: s32 {
+scan_through_similar_chars_on_the_left :: (using buffer: Buffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true) -> offset: s32 {
     if !buffer.bytes return 0;
     
     line_start := bytes.data + line_starts[offset_to_line(buffer, offset)];
@@ -767,7 +769,7 @@ scan_through_similar_chars_on_the_left :: (using buffer: NewBuffer, offset: s32,
     return cast(s32) max(0, t - bytes.data);
 }
 
-scan_through_similar_chars_on_the_right :: (using buffer: NewBuffer, offset: s32, only: Char_Type = .none, skip_one_space := true) -> offset: s32 {
+scan_through_similar_chars_on_the_right :: (using buffer: Buffer, offset: s32, only: Char_Type = .none, skip_one_space := true) -> offset: s32 {
     if !buffer.bytes return 0;
     if offset >= bytes.count return offset;  // nowhere to go
     
@@ -802,7 +804,7 @@ scan_through_similar_chars_on_the_right :: (using buffer: NewBuffer, offset: s32
 
 #scope_file
 
-select_word_or_create_another_cursor :: (using editor: *Editor, buffer: NewBuffer) -> whole_words: bool {
+select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) -> whole_words: bool {
     editor.cursor_moved = true;
     
     selected_text := get_selected_text_all_cursors(editor, buffer);
@@ -856,7 +858,7 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: NewBuffe
     return editor.search_whole_words;
 }
 
-save_buffer :: (editor: *Editor, buffer: *NewBuffer) {
+save_buffer :: (editor: *Editor, buffer: *Buffer) {
     if !buffer.has_file {
         print("Buffer has no file - unimplemented!\n");
         return;
@@ -979,7 +981,7 @@ find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_i
     return editor_id, true;
 }
 
-undo :: (editor: *Editor, buffer: *NewBuffer) {
+undo :: (editor: *Editor, buffer: *Buffer) {
     new_edit_group(buffer, editor);
     
     if buffer.undos.count == 0 return;
@@ -1006,7 +1008,7 @@ undo :: (editor: *Editor, buffer: *NewBuffer) {
     editor.cursor_moved = true;
 }
 
-redo :: (editor: *Editor, buffer: *NewBuffer) {
+redo :: (editor: *Editor, buffer: *Buffer) {
     if buffer.redos.count == 0 return;
     
     edit_group := pop(*buffer.redos);
@@ -1098,7 +1100,7 @@ is_a_move_action :: (action: Action_Editors) -> bool {
     return false;
 }
 
-move_cursors_left :: (editor: *Editor, using buffer: *NewBuffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
+move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
     for * cursor : editor.cursors {
         if has_selection(cursor) && !extend_selection {
             cursor.pos = get_selection(cursor).start;
@@ -1121,7 +1123,7 @@ move_cursors_left :: (editor: *Editor, using buffer: *NewBuffer, by: enum { char
     editor.cursor_moved = true;
 }
 
-move_cursors_right :: (editor: *Editor, using buffer: *NewBuffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
+move_cursors_right :: (editor: *Editor, using buffer: *Buffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
     for * cursor : editor.cursors {
         if cursor.pos >= bytes.count continue;  // nowhere to go
         
@@ -1149,7 +1151,7 @@ move_cursors_right :: (editor: *Editor, using buffer: *NewBuffer, by: enum { cha
     editor.cursor_moved = true;
 }
 
-move_cursors_vertically :: (editor: *Editor, using buffer: NewBuffer, delta: s32, extend_selection: bool) {
+move_cursors_vertically :: (editor: *Editor, using buffer: Buffer, delta: s32, extend_selection: bool) {
     for * cursor : editor.cursors {
         if has_selection(cursor) && !extend_selection {
             selection := get_selection(cursor);
@@ -1171,7 +1173,7 @@ move_cursors_vertically :: (editor: *Editor, using buffer: NewBuffer, delta: s32
     editor.cursor_moved = true;
 }
 
-move_cursors_to_empty_line :: (editor: *Editor, buffer: NewBuffer, dir: enum { up; down; }) {
+move_cursors_to_empty_line :: (editor: *Editor, buffer: Buffer, dir: enum { up; down; }) {
     for * cursor : editor.cursors {
         line := offset_to_line(buffer, cursor.pos);
         if dir == .up {
@@ -1191,7 +1193,7 @@ move_cursors_to_empty_line :: (editor: *Editor, buffer: NewBuffer, dir: enum { u
     editor.cursor_moved = true;
 }
 
-move_cursors_by_page :: (editor: *Editor, buffer: NewBuffer, dir: enum { up; down; }) {
+move_cursors_by_page :: (editor: *Editor, buffer: Buffer, dir: enum { up; down; }) {
     page_size := cast(s32) (window_height / line_height);
     
     for * cursor : editor.cursors {
@@ -1207,7 +1209,7 @@ move_cursors_by_page :: (editor: *Editor, buffer: NewBuffer, dir: enum { up; dow
     editor.cursor_moved = true;
 }
 
-move_cursors_home :: (editor: *Editor, buffer: NewBuffer) {
+move_cursors_home :: (editor: *Editor, buffer: Buffer) {
     for * cursor : editor.cursors {
         line := offset_to_line(buffer, cursor.pos);
         start, end := buffer.line_starts[line], buffer.line_starts[line+1] - 1;
@@ -1227,7 +1229,7 @@ move_cursors_home :: (editor: *Editor, buffer: NewBuffer) {
     editor.cursor_moved = true;
 }
 
-move_cursors_end :: (editor: *Editor, buffer: NewBuffer) {
+move_cursors_end :: (editor: *Editor, buffer: Buffer) {
     for * cursor : editor.cursors {
         line := offset_to_line(buffer, cursor.pos);
         cursor.pos = get_line_end_offset(buffer, line);
@@ -1237,21 +1239,21 @@ move_cursors_end :: (editor: *Editor, buffer: NewBuffer) {
     editor.cursor_moved = true;
 }
 
-move_to_file_start :: (editor: *Editor, buffer: NewBuffer) {
+move_to_file_start :: (editor: *Editor, buffer: Buffer) {
     cursor := leave_only_original_cursor(editor);
     cursor.pos = 0;
     cursor.col_wanted = 0;
     editor.cursor_moved = true;
 }
 
-move_to_file_end :: (editor: *Editor, buffer: NewBuffer) {
+move_to_file_end :: (editor: *Editor, buffer: Buffer) {
     cursor := leave_only_original_cursor(editor);
     cursor.pos = cast(s32) buffer.bytes.count;
     cursor.col_wanted = -1;
     editor.cursor_moved = true;
 }
 
-break_line :: (editor: *Editor, buffer: *NewBuffer) {
+break_line :: (editor: *Editor, buffer: *Buffer) {
     // Remember by how much we need to indent the new lines upfront to avoid any scanning of the dirty buffer later
     Space :: struct { start: s32; count: s32; original_start: s32; }  // not a string to avoid invalid pointers
     space_per_cursor := NewArray(editor.cursors.count, Space, initialized = false, allocator = temp);
@@ -1288,7 +1290,7 @@ break_line :: (editor: *Editor, buffer: *NewBuffer) {
     editor.cursor_moved = true;
 }
 
-new_line_below :: (editor: *Editor, buffer: *NewBuffer) {
+new_line_below :: (editor: *Editor, buffer: *Buffer) {
     Line_Info :: struct { end: s32; space: struct { start, count, original_start: s32; }; last_line: bool; };
     line_info_per_cursor := NewArray(editor.cursors.count, Line_Info, initialized = false, allocator = temp);
     for cursor : editor.cursors {
@@ -1319,7 +1321,7 @@ new_line_below :: (editor: *Editor, buffer: *NewBuffer) {
     editor.cursor_moved = true;
 }
 
-new_line_above :: (editor: *Editor, buffer: *NewBuffer) {
+new_line_above :: (editor: *Editor, buffer: *Buffer) {
     Line_Info :: struct { start: s32; space: struct { start, count, original_start: s32; }; };
     line_info_per_cursor := NewArray(editor.cursors.count, Line_Info, initialized = false, allocator = temp);
     for cursor : editor.cursors {
@@ -1350,7 +1352,7 @@ new_line_above :: (editor: *Editor, buffer: *NewBuffer) {
     editor.cursor_moved = true;
 }
 
-delete_word_left :: (editor: *Editor, buffer: *NewBuffer) {
+delete_word_left :: (editor: *Editor, buffer: *Buffer) {
     for * cursor : editor.cursors {
         if !has_selection(cursor) then cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos);
     }
@@ -1358,7 +1360,7 @@ delete_word_left :: (editor: *Editor, buffer: *NewBuffer) {
     delete_left_char(editor, buffer);
 }
 
-delete_word_right :: (editor: *Editor, buffer: *NewBuffer) {
+delete_word_right :: (editor: *Editor, buffer: *Buffer) {
     for * cursor : editor.cursors {
         if !has_selection(cursor) then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos);
     }
@@ -1366,19 +1368,19 @@ delete_word_right :: (editor: *Editor, buffer: *NewBuffer) {
     delete_right_char(editor, buffer);
 }
 
-delete_word_left_no_underscore :: (editor: *Editor, buffer: *NewBuffer) {
+delete_word_left_no_underscore :: (editor: *Editor, buffer: *Buffer) {
     context.underscore_is_part_of_word = false;
     delete_word_left(editor, buffer);
     context.underscore_is_part_of_word = true;
 }
 
-delete_word_right_no_underscore :: (editor: *Editor, buffer: *NewBuffer) {
+delete_word_right_no_underscore :: (editor: *Editor, buffer: *Buffer) {
     context.underscore_is_part_of_word = false;
     delete_word_right(editor, buffer);
     context.underscore_is_part_of_word = true;
 }
 
-delete_left_char :: (editor: *Editor, buffer: *NewBuffer) {
+delete_left_char :: (editor: *Editor, buffer: *Buffer) {
     // NOTE: we don't have to worry about a cursor with no selection being immediately next
     //       to the non-cursor end of another cursor's selection (thanks to organise_cursors), 
     //       so it should be safe to delete at least one character to the left of every cursor if there is one
@@ -1423,7 +1425,7 @@ delete_left_char :: (editor: *Editor, buffer: *NewBuffer) {
     editor.cursor_moved = true;
 }
 
-delete_right_char :: (editor: *Editor, buffer: *NewBuffer) {
+delete_right_char :: (editor: *Editor, buffer: *Buffer) {
     // NOTE: we don't have to worry about a cursor with no selection being immediately next
     //       to the non-cursor end of another cursor's selection (thanks to organise_cursors), 
     //       so it should be safe to delete at least one character to the right of every cursor if there is one
@@ -1459,7 +1461,7 @@ get_tmp_spaces :: (num: s64) -> string {
     return spaces;
 }
 
-indent_or_tab :: (editor: *Editor, buffer: *NewBuffer) {
+indent_or_tab :: (editor: *Editor, buffer: *Buffer) {
     indent := true;
     for editor.cursors { if !has_selection(it) { indent = false; break; } }
     
@@ -1470,7 +1472,7 @@ indent_or_tab :: (editor: *Editor, buffer: *NewBuffer) {
     }
 }
 
-insert_tab_at_each_cursor :: (editor: *Editor, buffer: *NewBuffer) {
+insert_tab_at_each_cursor :: (editor: *Editor, buffer: *Buffer) {
     spaces := get_tmp_spaces(TAB_SIZE);
     
     offset_delta: s32 = 0;
@@ -1505,7 +1507,7 @@ insert_tab_at_each_cursor :: (editor: *Editor, buffer: *NewBuffer) {
     editor.cursor_moved = true;
 }
 
-get_line_starts_for_lines_with_cursors_tmp :: (editor: *Editor, buffer: *NewBuffer) -> [..] s64 /* tmp */, last_line_end_offset: s64 {
+get_line_starts_for_lines_with_cursors_tmp :: (editor: *Editor, buffer: *Buffer) -> [..] s64 /* tmp */, last_line_end_offset: s64 {
     line_starts: [..] s64;
     line_starts.allocator = temp;
     
@@ -1525,7 +1527,7 @@ get_line_starts_for_lines_with_cursors_tmp :: (editor: *Editor, buffer: *NewBuff
     return line_starts, last_line_end_offset;
 }
 
-indent_lines :: (editor: *Editor, buffer: *NewBuffer) {
+indent_lines :: (editor: *Editor, buffer: *Buffer) {
     spaces := get_tmp_spaces(TAB_SIZE);
     
     // Find lines which will be affected (we don't want to indent the same line more than once if it has more than 1 cursor on it)
@@ -1560,7 +1562,7 @@ indent_lines :: (editor: *Editor, buffer: *NewBuffer) {
     editor.cursor_moved = true;
 }
 
-unindent_lines :: (editor: *Editor, buffer: *NewBuffer) {
+unindent_lines :: (editor: *Editor, buffer: *Buffer) {
     spaces := get_tmp_spaces(TAB_SIZE);
     
     // Find lines which will be affected (we don't want to unindent the same line more than once if it has more than 1 cursor on it)
@@ -1610,7 +1612,7 @@ remove_additional_cursors :: (editor: *Editor) {
     editor.cursor_moved = true;
 }
 
-select_all :: (editor: *Editor, buffer: NewBuffer) {
+select_all :: (editor: *Editor, buffer: Buffer) {
     cursor := leave_only_original_cursor(editor); 
     cursor.sel = 0;
     cursor.pos = cast(s32) buffer.bytes.count;
@@ -1618,7 +1620,7 @@ select_all :: (editor: *Editor, buffer: NewBuffer) {
 
 Line_Range :: struct { prev_line_start: s32; next_line_end: s32; range: Offset_Range; is_last: bool; };
 
-get_whole_line_ranges_for_cursors :: (editor: Editor, buffer: NewBuffer, merge_adjacent := true, select_next_for_single_lines := false) -> [] Line_Range /* tmp */ {
+get_whole_line_ranges_for_cursors :: (editor: Editor, buffer: Buffer, merge_adjacent := true, select_next_for_single_lines := false) -> [] Line_Range /* tmp */ {
     line_ranges: [..] Line_Range;
     line_ranges.allocator = temp;
     // @line_wrap: use real_line_starts
@@ -1657,7 +1659,7 @@ get_whole_line_ranges_for_cursors :: (editor: Editor, buffer: NewBuffer, merge_a
     return line_ranges;
 }
 
-duplicate_lines :: (editor: *Editor, buffer: *NewBuffer) {
+duplicate_lines :: (editor: *Editor, buffer: *Buffer) {
     lines := get_whole_line_ranges_for_cursors(editor, buffer, merge_adjacent = false);
     
     offset_delta := 0;
@@ -1681,7 +1683,7 @@ duplicate_lines :: (editor: *Editor, buffer: *NewBuffer) {
     editor.cursor_moved = true;
 }
 
-move_lines_up :: (editor: *Editor, buffer: *NewBuffer) {
+move_lines_up :: (editor: *Editor, buffer: *Buffer) {
     lines := get_whole_line_ranges_for_cursors(editor, buffer);
     
     for line : lines {
@@ -1704,7 +1706,7 @@ move_lines_up :: (editor: *Editor, buffer: *NewBuffer) {
     editor.cursor_moved = true;
 }
 
-move_lines_down :: (editor: *Editor, buffer: *NewBuffer) {
+move_lines_down :: (editor: *Editor, buffer: *Buffer) {
     lines := get_whole_line_ranges_for_cursors(editor, buffer);
     
     for line : lines {
@@ -1728,7 +1730,7 @@ move_lines_down :: (editor: *Editor, buffer: *NewBuffer) {
 }
 
 
-join_lines :: (editor: *Editor, buffer: *NewBuffer, in_between := " ") {
+join_lines :: (editor: *Editor, buffer: *Buffer, in_between := " ") {
     ranges := get_whole_line_ranges_for_cursors(editor, buffer, merge_adjacent = false, select_next_for_single_lines = true);
     
     b: String_Builder;
@@ -1792,7 +1794,7 @@ join_lines :: (editor: *Editor, buffer: *NewBuffer, in_between := " ") {
     editor.cursor_moved = true;
 }
 
-delete_line :: (editor: *Editor, buffer: *NewBuffer, go_up := false) {
+delete_line :: (editor: *Editor, buffer: *Buffer, go_up := false) {
     lines := get_whole_line_ranges_for_cursors(editor, buffer);
     
     offset_delta := 0;
@@ -1821,7 +1823,7 @@ delete_line :: (editor: *Editor, buffer: *NewBuffer, go_up := false) {
     editor.cursor_moved = true;
 }
 
-delete_to_start_of_line :: (editor: *Editor, buffer: *NewBuffer) {
+delete_to_start_of_line :: (editor: *Editor, buffer: *Buffer) {
     for * cursor : editor.cursors {
         selection := get_selection(cursor);
         cursor.sel = selection.end;
@@ -1831,7 +1833,7 @@ delete_to_start_of_line :: (editor: *Editor, buffer: *NewBuffer) {
     delete_left_char(editor, buffer);
 }
 
-delete_to_end_of_line :: (editor: *Editor, buffer: *NewBuffer) {
+delete_to_end_of_line :: (editor: *Editor, buffer: *Buffer) {
     for * cursor : editor.cursors {
         selection := get_selection(cursor);
         cursor.sel = selection.start;
@@ -1841,7 +1843,7 @@ delete_to_end_of_line :: (editor: *Editor, buffer: *NewBuffer) {
     delete_right_char(editor, buffer);
 }
 
-copy_selection_to_clipboard :: (editor: *Editor, buffer: *NewBuffer, cut := false) {
+copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) {
     if cut {
         // If no cursors have a selection, then pressing cut will cut whole lines
         any_selection := false;
@@ -1890,7 +1892,7 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *NewBuffer, cut := fals
     }
 }
 
-paste_from_clipboard :: (editor: *Editor, buffer: *NewBuffer) {
+paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
     system_clipboard_text := os_clipboard_get_text();
     
     if system_clipboard_text != editor.clipboard {
@@ -1919,7 +1921,7 @@ paste_from_clipboard :: (editor: *Editor, buffer: *NewBuffer) {
     editor.cursor_moved = true;
 }
 
-toggle_comment :: (editor: *Editor, buffer: *NewBuffer) {
+toggle_comment :: (editor: *Editor, buffer: *Buffer) {
     comment_without_space: string;
     comment: string;
     
@@ -2100,9 +2102,11 @@ Editor_Placement :: enum {
     right;
 }
 
-open_buffers: [..] NewBuffer;
+open_buffers: Simple_Bucket_Array(Buffer, items_per_bucket = 1024, max_buckets = 1024);  // 8 Kb for pointer array, ~1 million buffers is the maximum
 open_editors: [..] Editor;
 buffers_table: Table(string, s64);  // a map from full buffer path to buffer id (only for the open buffers, obviously)
+
+open_buffers_lock: Mutex;  // must hold while adding a new buffer
 
 editors: Editor_State;
 

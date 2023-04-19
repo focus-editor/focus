@@ -1,4 +1,4 @@
-highlight_jai_syntax :: (using buffer: *NewBuffer) {
+highlight_jai_syntax :: (using buffer: *Buffer) {
     tokenizer: Tokenizer = ---;
     tokenizer.buf   = to_string(bytes);
     tokenizer.max_t = bytes.data + bytes.count;
