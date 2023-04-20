@@ -24,7 +24,7 @@
     - CRLF?
     - Multi-byte Unicode symbols are not supported
     - Currently only RGB monitor panels
-    
+
 - Ctrl+C without a selection removes the selection
 - Local search
     - New widget
@@ -49,7 +49,7 @@
     + Remove crlf on load every time
     + Even if a file is reported as changed, calculate hash and compare after removing crlf before proceeding
     + Test a crlf file changed externally
-    - Test different scenarios, like 
+    - Test different scenarios, like
         - pulling changes
         - stashing changes
         - applying a stash

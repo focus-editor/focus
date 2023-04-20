@@ -60,8 +60,7 @@ start_initial_workspace_scan :: () {
     num_cpus := get_num_cpus();
     num_threads := max(num_cpus - 1, 1);
     
-    files_per_thread := (files_to_scan.count / num_threads) + 1;
-    num_files_scanned = 0;
+    files_per_thread := min((files_to_scan.count / num_threads) + 1, MAX_FILES_PER_JOB);
     
     init(*scanner_thread_group, num_threads = num_threads, group_proc = directory_scan_threadproc);
     scanner_thread_group.name = "Workspace Scanner";
@@ -69,28 +68,35 @@ start_initial_workspace_scan :: () {
         
     start(*scanner_thread_group);
     
-    file_ranges: = NewArray(num_threads, [] string, allocator = scan_pool_allocator);
-    for 0..num_threads-1 {
+    num_jobs_to_complete = 0;
+    
+    num_ranges  := (files_to_scan.count / files_per_thread) + 1;
+    file_ranges := NewArray(num_ranges, [] string, allocator = scan_pool_allocator);
+    
+    for 0..num_ranges-1 {
         file_range := *file_ranges[it];
         start := it * files_per_thread;
         count := min(files_per_thread, files_to_scan.count - start);
-        if count <= 0 continue;
+        if count <= 0 break;
         << file_range = array_view(files_to_scan, start, count);
         
         add_work(*scanner_thread_group, file_range, sprint("Scan [%:%]", start, start + count));
+        
+        num_jobs_to_complete += 1;
     }
+    
 }
 
 get_workspace_scan_progress :: () -> float {
-    files_scanned := cast(float) atomic_read(*num_files_scanned);
-    return clamp(files_scanned / files_to_scan.count, 0.0, 1.0);
+    return clamp(cast(float) num_jobs_completed / num_jobs_to_complete, 0.0, 1.0);
 }
 
 maybe_update_workspace_buffers :: () {
     if !initial_scan_complete {
         results := get_completed_work(*scanner_thread_group);
         
-        if atomic_read(*num_files_scanned) >= files_to_scan.count {
+        num_jobs_completed += results.count;
+        if num_jobs_completed >= num_jobs_to_complete {
             initial_scan_complete = true;
             shutdown(*scanner_thread_group);
             
@@ -162,7 +168,6 @@ directory_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void
         if !should_ignore_file(path) {
             find_or_create_buffer(path);
         }
-        atomic_increment(*num_files_scanned);
     }
     
     return .CONTINUE;
@@ -189,7 +194,7 @@ start_file_watcher :: () {
 }
 
 file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
-    print("%\n", <<change);
+    log("%\n", <<change);
     
     // If the change is in one of the ignored dirs, ignore it
     if should_ignore_dir(change.full_path) return;
@@ -275,4 +280,9 @@ scan_memory_pool: Flat_Pool;
 files_to_scan: [..] string;
 
 initial_scan_complete := false;
-num_files_scanned     := 0;
+num_jobs_to_complete  := 0;
+num_jobs_completed    := 0;
+
+MAX_FILES_PER_JOB :: 500;  // we don't want to give huge jobs to threads because then it's more likely
+                           // that some threads will finish faster than others and will sit around twiddling
+                           // their thumbs while they could be doing work if the work pieces were smaller
