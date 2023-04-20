@@ -81,11 +81,18 @@ get_file_icon :: (name: string, extension: string) -> File_Icon {
     return icon;
 }
 
-get_lowercase_extension :: (path: string) -> string /* temp */, found_extension: bool {
+get_lowercase_extension :: (path: string, greedy := true) -> string /* temp */, found_extension: bool {
     // NOTE: not using path_extension because it won't handle filenames with multiple dots as expected (e.g. lib.so.1.1)
     just_path := path_strip_filename(path);
     basename_with_extension := advance(path, just_path.count);
-    index := find_index_from_left(basename_with_extension, cast(u8) #char ".");
+    index := 0;
+    if greedy {
+        // file.1.jai -> 1.jai
+        index = find_index_from_left(basename_with_extension, cast(u8) #char ".");
+    } else {
+        // file.1.jai -> jai
+        index = find_index_from_right(basename_with_extension, cast(u8) #char ".");
+    }
     if index < 0 return "", false;
     extension := advance(basename_with_extension, index + 1);
     if !extension return "", false;
@@ -124,7 +131,7 @@ should_ignore_file :: (path: string) -> bool {
     has_zeroes := find_index_from_left(file_data, byte = 0) >= 0;
     free(file_data);
     
-    if has_zeroes then print("read binary file %\n", path);
+    if has_zeroes then log("read binary file %\n", path);
     
     if has_zeroes return true;  // ignore
     

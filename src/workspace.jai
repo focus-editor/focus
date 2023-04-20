@@ -31,29 +31,66 @@ add_directory_to_workspace :: (path: string, index := -1) {
 }
 
 start_initial_workspace_scan :: () {
+    scan_pool_allocator := get_scan_pool_allocator();
     
-
+    // Get the list of all files in the project
+    {
+        push_allocator(scan_pool_allocator);
+        
+        for project_dirs visit_files(it.path, recursive = true, null, maybe_add_file_to_scan_list, visit_directories = true);
+        
+        maybe_add_file_to_scan_list :: (file: *File_Visit_Info, userdata: *void) {
+            if file.is_directory {
+                if should_ignore_dir(file.full_name) {
+                    file.descend_into_directory = false;
+                    return;
+                }
+                return;
+            }
+            if file.is_symlink return;
+            
+            // NOTE: not checking whether we should ignore the file here,
+            // because it may involve reading the file and checking for zeroes,
+            // and we'd rather it's done in threads (also if later we find there are no
+            // zeroes in the file then the file data will be in cache ready to use)
+            array_add(*files_to_scan, copy_string(file.full_name));
+        }
+    }
+    
     num_cpus := get_num_cpus();
     num_threads := max(num_cpus - 1, 1);
     
-    init(*scanner_thread, num_threads = num_threads, group_proc = initial_scan_threadproc);
-    scanner_thread.name = "Workspace Scanner";
-    scanner_thread.logging = true;
-        
-    start(*scanner_thread);
+    files_per_thread := (files_to_scan.count / num_cpus) + 1;
     
-    for * project_dirs add_work(*scanner_thread, it, it.path);
+    init(*scanner_thread_group, num_threads = num_threads, group_proc = directory_scan_threadproc);
+    scanner_thread_group.name = "Workspace Scanner";
+    scanner_thread_group.logging = DEBUG;
+        
+    start(*scanner_thread_group);
+    
+    file_ranges: = NewArray(num_threads, [] string, allocator = scan_pool_allocator);
+    for 0..num_threads-1 {
+        file_range := *file_ranges[it];
+        start := it * files_per_thread;
+        count := min(files_per_thread, files_to_scan.count - start);
+        if count <= 0 continue;
+        << file_range = array_view(files_to_scan, start, count);
+        
+        add_work(*scanner_thread_group, file_range, sprint("Scan [%:%]", start, start + count));
+    }
 }
 
 maybe_update_workspace_buffers :: () {
     if !initial_scan_complete {
-        results := get_completed_work(*scanner_thread);
+        results := get_completed_work(*scanner_thread_group);
         
-        num_dirs_scanned += results.count;
-        if num_dirs_scanned >= project_dirs.count {
+        num_jobs_to_complete -= results.count;
+        if num_jobs_to_complete <= 0 {
             initial_scan_complete = true;
-            shutdown(*scanner_thread);
-            // merge_scanned_buffers_into_open_buffers();
+            shutdown(*scanner_thread_group);
+            
+            reset(*scan_memory_pool);
+            
             start_file_watcher();
             init_open_file_dialog();
             init_finder();
@@ -116,77 +153,16 @@ file_is_watched :: (file_path: string) -> bool {
 
 #scope_file
 
-initial_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
-    dir := << cast(*Project_Dir) work;
+directory_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
+    file_range := cast(*[] string) work;
     
-    visit_files(dir.path, recursive = true, null, visitor_func, visit_directories = true);
-    
-    visitor_func :: (file: *File_Visit_Info, userdata: *void) {
-        if file.is_directory {
-            if should_ignore_dir(file.full_name) {
-                file.descend_into_directory = false;
-                return;
-            }
-            return;
-        }
-        if file.is_symlink return;
-        
-        if should_ignore_file(file.full_name) return;
-        
-        // NOTE: assuming that file.full_name is normalized!
-        find_or_create_buffer(file.full_name);
+    for path : << file_range {
+        if should_ignore_file(path) continue;
+        find_or_create_buffer(path);
     }
     
     return .CONTINUE;
 }
-
-// merge_scanned_buffers_into_open_buffers :: () {
-//     // Merge the scanned buffers with the buffers the user may have opened while we were scanning
-//     // (this happens in the main thread so no synchronization is required)
-//     // We're assuming the number of scanned buffers will be way higher than the number of open buffers, so we don't copy them
-//     open_buffers_copy := array_copy(open_buffers);
-//     open_buffers = scanned_buffers;
-        
-//     // NOTE: as we're adding some pointers from the buffers array to the hash table, we should
-//     // be very careful if we're ever going to remove buffers from the array, because the memory
-//     // may become invalid
-        
-//     // Recreate the path-to-id hash table
-//     table_reset(*buffers_table);
-//     for buffer, buffer_id : open_buffers {
-//         table_add(*buffers_table, buffer.file.full_path, buffer_id);
-//     }
-    
-//     // Overwrite the open buffers on top of the scanned ones - they may be more recent
-//     for buffer, old_buffer_id : open_buffers_copy {
-//         new_buffer_id := open_buffers.count;  // in case we append
-//         if buffer.has_file {
-//             scanned_buffer_id, success := table_find(*buffers_table, buffer.file.full_path);
-//             if success {
-//                 // Overwrite
-//                 deinit(*open_buffers[scanned_buffer_id]);
-//                 open_buffers[scanned_buffer_id] = buffer;
-//                 new_buffer_id = scanned_buffer_id;
-//             } else {
-//                 // This is a new buffer - append
-//                 bucket_array_add(*open_buffers, buffer);
-//                 table_set(*buffers_table, buffer.file.full_path, new_buffer_id);
-//             }
-//         } else {
-//             // This is a buffer without a file, so append
-//             // NOTE: we're not adding it to the table because there's no path
-//             bucket_array_add(*open_buffers, buffer);
-//         }
-//         // Reroute the editors
-//         for * editor : open_editors {
-//             if editor.buffer_id == old_buffer_id then editor.buffer_id = new_buffer_id;
-//         }
-//         // Reroute the modified buffers
-//         for * session.modified_buffers {
-//             if <<it == old_buffer_id then <<it = new_buffer_id;
-//         }
-//     }
-// }
 
 start_file_watcher :: () {
     if !init(*file_watcher, file_change_callback) {
@@ -274,6 +250,13 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
 
 #scope_file
 
+get_scan_pool_allocator :: () -> Allocator {
+    a: Allocator;
+    a.proc = flat_pool_allocator_proc;
+    a.data = *scan_memory_pool;
+    return a;
+}
+
 file_watcher: File_Watcher;
 dirs_to_rescan: [..] string;    // will use temporary storage
 watcher_file_modified: string;  // will contain the path of a file if if was modified and it was the only event in a group,
@@ -282,8 +265,10 @@ watcher_file_modified: string;  // will contain the path of a file if if was mod
 watch_dirs:  [..] string;       // dirs we watch which are not project dirs
 watch_files: [..] string;       // files outside of projects that we want to watch
 
-scanner_thread: Thread_Group;
+scanner_thread_group: Thread_Group;
 
-scanned_buffers: [..] Buffer;
+scan_memory_pool: Flat_Pool;
+files_to_scan: [..] string;
+
 initial_scan_complete := false;
-num_dirs_scanned := 0;
+num_jobs_to_complete := 0;

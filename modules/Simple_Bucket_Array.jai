@@ -52,10 +52,16 @@ for_expansion :: (array: *$T/Simple_Bucket_Array, body: Code, flags: For_Flags) 
     
     `it_index := -1;
     
-    for bucket : array.buckets {
-        for *=DO_POINTER  `it : bucket.data {
+    num_buckets := array.count / array.items_per_bucket + 1;
+    if array.count <= 0 then num_buckets = 0;
+    
+    buckets := array_view(array.buckets, 0, num_buckets);
+    items_in_last_bucket := array.count % array.items_per_bucket;
+    
+    for bucket, bi : buckets {
+        items := array_view(bucket.data, 0, ifx bi == buckets.count-1 then items_in_last_bucket else array.items_per_bucket);        
+        for *=DO_POINTER `it, i : items {
             it_index += 1;
-
             #insert (break=break bucket, remove=#assert(false)) body;
         }
     }

@@ -80,16 +80,22 @@
     + BUG: search results sort order sometimes wrong
     + Fix the crash from last night
     + Rename carets and newbuffer
-    - Rewrite the editor/buffer arrays using bucket arrays
-        - Parallelize workspace scanning
-            - Get the list of all files upfront
-        - Make sure the files are sorted correctly in the files list
+    + Rewrite the buffer array using bucket array
+        + Parallelize workspace scanning
+            + Get the list of all files upfront
+            + Test scanning on small folders
+        + Test with smaller buffer bucket sizes
+        + Make sure the files are sorted correctly in the files list and in the search results
     - Actually lock the buffer contents when modifying it
     - Local search
         - New widget
     - remove_crlf_in_place - optimise a bit
+    - Opening webm crashes
+    - When searching check if we're ditching the work quicker if a new request is present - if no we should
     - Can merge!
     
+- Change title when opening using double click, if this is still a problem
+- Definitely ignore the editor's own temp dir, even if the user doesn't include it
 - When sorting the file list, put the modified buffers on top
 - When switching to buffer or trying to save it, check that the file exists
 

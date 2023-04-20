@@ -707,7 +707,7 @@ fill_in_buffer_from_file_data :: (buffer: *Buffer, path: string, file_data: stri
     
     buffer.meow_hash = calculate_meow_hash(buffer.bytes);
     
-    extension, found_extension := get_lowercase_extension(path);
+    extension, found_extension := get_lowercase_extension(path, greedy = false);
     if found_extension {
         if extension == {
             case "jai";            buffer.lang = .Jai;

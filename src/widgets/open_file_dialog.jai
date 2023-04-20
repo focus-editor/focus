@@ -246,6 +246,7 @@ refresh_entries :: (scan_folder := false) {
         case .search;
             // @MEMORY SAFETY: if we ever delete buffers from open_buffers and free memory, this will have to copy everything!
             num_entries := 0;
+            
             for buffer : open_buffers {
                 if buffer.deleted && !buffer.modified continue;  // NOTE: we might still want to see externally deleted buffers.
                                                                  // Maybe use 'deleted' and 'modified_on_disk' to distingiush the buffers

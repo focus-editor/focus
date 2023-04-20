@@ -196,7 +196,7 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
                 if contains_any_character(it, "*?") {
                     array_add(*data.allow_file_extension_wildcards, trim_left(it, ".\t "));
                 } else {
-                    array_add(*data.allow_file_extensions, trim_left(it, ".\t "));
+                    array_add(*data.allow_file_extensions, trim_left(it, "\t "));
                 }
             }
         case .ignore_file_extensions;
@@ -206,7 +206,7 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
                 if contains_any_character(it, "*?") {
                     array_add(*data.ignore_file_extension_wildcards, trim_left(it, ".\t "));
                 } else {
-                    array_add(*data.ignore_file_extensions, trim_left(it, ".\t "));
+                    array_add(*data.ignore_file_extensions, trim_left(it, "\t "));
                 }
             }
     }
