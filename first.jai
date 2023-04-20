@@ -15,8 +15,8 @@ build :: () {
         if arg == {
           case "release";
             optimized = true;
-            // set_optimization(*options, .VERY_OPTIMIZED);
-            set_optimization_level(*options, 2, 0);
+            set_optimization(*options, .VERY_OPTIMIZED);
+            options.llvm_options.enable_split_modules = false;
             options.output_executable_name = "focus";
           case "debug";
           case;
@@ -30,6 +30,8 @@ build :: () {
         // Disable runtime console
         if optimized {
             set_build_options_dc(.{append_linker_arguments=.["/SUBSYSTEM:windows", "/ENTRY:mainCRTStartup"]}, w);
+            
+            // For tracing release builds use this:
             // set_build_options_dc(.{append_linker_arguments=.["/SUBSYSTEM:windows", "/ENTRY:mainCRTStartup", "ws2_32.lib", "msvcprtd.lib"]}, w);
         } else {
             set_build_options_dc(.{append_linker_arguments=.["ws2_32.lib", "msvcprtd.lib"]}, w);
