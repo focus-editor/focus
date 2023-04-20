@@ -15,7 +15,8 @@ build :: () {
         if arg == {
           case "release";
             optimized = true;
-            set_optimization(*options, .VERY_OPTIMIZED);
+            // set_optimization(*options, .VERY_OPTIMIZED);
+            set_optimization_level(*options, 2, 0);
             options.output_executable_name = "focus";
           case "debug";
           case;

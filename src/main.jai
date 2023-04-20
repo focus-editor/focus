@@ -554,6 +554,7 @@ cpu_info: Cpu_X86;
 }
 
 // #import "Basic"()(MEMORY_DEBUGGER = true);
+#import "Atomics";
 #import "Basic";
 #import "Math";
 #import "Sloppy_Math";

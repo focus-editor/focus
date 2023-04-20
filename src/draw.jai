@@ -794,7 +794,14 @@ draw_open_file_dialog :: () {
     if mode == .search {
         label := ifx finder.initted then " Search files by name" else " Still indexing project files. Please wait...";
         draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = label);
-        if !finder.initted then redraw_requested = true;  // update as soon as we're done
+        if !finder.initted then redraw_requested = true;  // draw the progress bar and update as soon as we're done
+        
+        scan_progress := get_workspace_scan_progress();
+        if scan_progress < 1.0 {
+            progress_bar_rect := shrink(input_rect, 1);
+            progress_bar_rect.w *= scan_progress;;
+            draw_rect(progress_bar_rect, Colors.LIST_CURSOR_LITE);
+        }
     } else {
         label := ifx path_chunks then "" else " Navigate to file";
         
@@ -1001,6 +1008,14 @@ draw_finder :: () {
     input_id := get_ui_id_from_loc(parent_id = ui_id);
     label := ifx initted then "Type to search in workspace" else "Still indexing. Please wait...";
     draw_text_input(*finder.input, input_rect, ui_id = input_id, active = true, label = label);
+    
+    scan_progress := get_workspace_scan_progress();
+    if scan_progress < 1.0 {
+        progress_bar_rect := shrink(input_rect, 1);
+        progress_bar_rect.w *= scan_progress;;
+        draw_rect(progress_bar_rect, Colors.LIST_CURSOR_LITE);
+    }
+    
     _pad: Rect = ---;  // allow some space at the bottom so that we don't cover up the rounded corners with the cursor
     _pad, files_rect = cut_bottom(files_rect, padding);
 

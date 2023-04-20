@@ -60,7 +60,8 @@ start_initial_workspace_scan :: () {
     num_cpus := get_num_cpus();
     num_threads := max(num_cpus - 1, 1);
     
-    files_per_thread := (files_to_scan.count / num_cpus) + 1;
+    files_per_thread := (files_to_scan.count / num_threads) + 1;
+    num_files_scanned = 0;
     
     init(*scanner_thread_group, num_threads = num_threads, group_proc = directory_scan_threadproc);
     scanner_thread_group.name = "Workspace Scanner";
@@ -78,16 +79,18 @@ start_initial_workspace_scan :: () {
         
         add_work(*scanner_thread_group, file_range, sprint("Scan [%:%]", start, start + count));
     }
-    
-    num_jobs_to_complete = file_ranges.count;
+}
+
+get_workspace_scan_progress :: () -> float {
+    files_scanned := cast(float) atomic_read(*num_files_scanned);
+    return clamp(files_scanned / files_to_scan.count, 0.0, 1.0);
 }
 
 maybe_update_workspace_buffers :: () {
     if !initial_scan_complete {
         results := get_completed_work(*scanner_thread_group);
         
-        num_jobs_to_complete -= results.count;
-        if num_jobs_to_complete <= 0 {
+        if atomic_read(*num_files_scanned) >= files_to_scan.count {
             initial_scan_complete = true;
             shutdown(*scanner_thread_group);
             
@@ -156,8 +159,10 @@ directory_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void
     file_range := cast(*[] string) work;
     
     for path : << file_range {
-        if should_ignore_file(path) continue;
-        find_or_create_buffer(path);
+        if !should_ignore_file(path) {
+            find_or_create_buffer(path);
+        }
+        atomic_increment(*num_files_scanned);
     }
     
     return .CONTINUE;
@@ -270,4 +275,4 @@ scan_memory_pool: Flat_Pool;
 files_to_scan: [..] string;
 
 initial_scan_complete := false;
-num_jobs_to_complete := 0;
+num_files_scanned     := 0;

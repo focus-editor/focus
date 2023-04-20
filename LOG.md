@@ -25,12 +25,12 @@
     - Multi-byte Unicode symbols are not supported
     - Currently only RGB monitor panels
     
+- Ctrl+C without a selection removes the selection
 - Local search
     - New widget
     
-- Ctrl+C without a selection removes the selection
 - Definitely ignore the editor's own temp dir, even if the user doesn't include it
-- When sorting the file list, put the modified buffers on top
+- When sorting the file list, put the modified buffers on top (even ignoring the project boundary?)
 - When switching to buffer or trying to save it, check that the file exists
 - remove_crlf_in_place - optimise a bit
 
@@ -218,6 +218,10 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Progress bar when scanning workspace
+    + Draw a simple progress bar 
+    + Have an atomic counter
+    + At the end wait a bit, then dissolve
 + Try to log asserts into log_error.txt - would be very helpful for debugging release builds
 + When unable to save file, show a warning (have an error log?)
 + Optimise line offset storage and recalculation
