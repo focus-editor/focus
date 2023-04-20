@@ -24,76 +24,9 @@
     - CRLF?
     - Multi-byte Unicode symbols are not supported
     - Currently only RGB monitor panels
-
-- Optimise line offset storage and recalculation
-    + Drop cursor positions and just use offsets
-    + Move cursor up and down
-    + Follow cursor
-    + Calculate positions of only visible cursors when drawing
-    + Draw selections
-    + Handle mouse
-    + Create new cursors on ctrl+click
-    + Move tmp functions to non-tmp ones
-    + Type text
-    + Undo/redo
-    + Make sure edit groups work properly
-    + f ff f
-    + Indentation
-    + Implement the most important edits
-    + Adjust cursors in joint editors properly on edits
-    + Paste animation
-    + Fix the crash after last undo (already fixed?)
-    + Selection highlights and marks
-    + Optimise cursor clipboard (use shared memory with offsets)
-    + Be able to open actual files in the new buffers
-    + Remove cursor_offsets at the end
-    + Draw new buffers using one draw call
-    + Draw tabs
-    + Calculate cursor coords taking tabs into account
-    + Save buffer
-    + Draw footer
-    + Fix the cursor when scrolled horizontally
-    + Implement the rest of actions
-    + Delete to end of line (Ctrl+K)
-    + Ctrl+x without a selection cuts the whole line (but only if no cursors have a selection)
-    + Fix issues near the end of file
-        + Crash
-        + Not processing the last line properly (when scanning for newlines)
-        + Typing near the end is bugged
-        + Fix joining lines
-        + Test indent/unindent
-        + New line without breaking on last line
-        + Move last line up
-    + Don't draw separators in the navigate mode
-    + Look up the combo for an action from the keymap
-    + Global search
-        + Make it work
-        + Auto-search etc.
-        + Double shift to search
-        + All files opened separately should always appear at the top in searches
-    + New selection modes:
-        + BUG: Selecting after Ctrl+D still selects in whole words mode
-        + After double-click: enter word-selection mode
-        + After triple-click: enter line-selection mode
-        + Maintain both modes until mouse button is up
-        + Can get rid of the timeout when it's done
-    + BUG: search results sort order sometimes wrong
-    + Fix the crash from last night
-    + Rename carets and newbuffer
-    + Rewrite the buffer array using bucket array
-        + Parallelize workspace scanning
-            + Get the list of all files upfront
-            + Test scanning on small folders
-        + Test with smaller buffer bucket sizes
-        + Make sure the files are sorted correctly in the files list and in the search results
-    + Opening webm crashes
-        + Don't display binary files
-    + Actually lock the buffer contents when modifying it
-    - Local search
-        - New widget
     
-    - When searching check if we're ditching the work quicker if a new request is present - if no we should
-    - Can merge!
+- Local search
+    - New widget
     
 - Ctrl+C without a selection removes the selection
 - Definitely ignore the editor's own temp dir, even if the user doesn't include it
@@ -117,7 +50,7 @@
     + Even if a file is reported as changed, calculate hash and compare after removing crlf before proceeding
     + Test a crlf file changed externally
     - Test different scenarios, like 
-        - pulling changes, 
+        - pulling changes
         - stashing changes
         - applying a stash
         - deleting project dir
@@ -292,6 +225,70 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Optimise line offset storage and recalculation
+    + Drop cursor positions and just use offsets
+    + Move cursor up and down
+    + Follow cursor
+    + Calculate positions of only visible cursors when drawing
+    + Draw selections
+    + Handle mouse
+    + Create new cursors on ctrl+click
+    + Move tmp functions to non-tmp ones
+    + Type text
+    + Undo/redo
+    + Make sure edit groups work properly
+    + f ff f
+    + Indentation
+    + Implement the most important edits
+    + Adjust cursors in joint editors properly on edits
+    + Paste animation
+    + Fix the crash after last undo (already fixed?)
+    + Selection highlights and marks
+    + Optimise cursor clipboard (use shared memory with offsets)
+    + Be able to open actual files in the new buffers
+    + Remove cursor_offsets at the end
+    + Draw new buffers using one draw call
+    + Draw tabs
+    + Calculate cursor coords taking tabs into account
+    + Save buffer
+    + Draw footer
+    + Fix the cursor when scrolled horizontally
+    + Implement the rest of actions
+    + Delete to end of line (Ctrl+K)
+    + Ctrl+x without a selection cuts the whole line (but only if no cursors have a selection)
+    + Fix issues near the end of file
+        + Crash
+        + Not processing the last line properly (when scanning for newlines)
+        + Typing near the end is bugged
+        + Fix joining lines
+        + Test indent/unindent
+        + New line without breaking on last line
+        + Move last line up
+    + Don't draw separators in the navigate mode
+    + Look up the combo for an action from the keymap
+    + Global search
+        + Make it work
+        + Auto-search etc.
+        + Double shift to search
+        + All files opened separately should always appear at the top in searches
+    + New selection modes:
+        + BUG: Selecting after Ctrl+D still selects in whole words mode
+        + After double-click: enter word-selection mode
+        + After triple-click: enter line-selection mode
+        + Maintain both modes until mouse button is up
+        + Can get rid of the timeout when it's done
+    + BUG: search results sort order sometimes wrong
+    + Fix the crash from last night
+    + Rename carets and newbuffer
+    + Rewrite the buffer array using bucket array
+        + Parallelize workspace scanning
+            + Get the list of all files upfront
+            + Test scanning on small folders
+        + Test with smaller buffer bucket sizes
+        + Make sure the files are sorted correctly in the files list and in the search results
+    + Opening webm crashes
+        + Don't display binary files
+    + Actually lock the buffer contents when modifying it
 + BUGS:
     + Copying off-by-one
     + Smooth scrolling

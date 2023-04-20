@@ -59,7 +59,7 @@ main :: () {
         init_session_with_no_guidance();
     }
     
-    editors_open_file("W:/focus/src/main.jai");
+    // editors_open_file("W:/focus/src/main.jai");
     
     // Requires the session to be created and the configs to be loaded
     start_initial_workspace_scan();
