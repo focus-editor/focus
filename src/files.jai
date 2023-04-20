@@ -100,6 +100,14 @@ get_lowercase_extension :: (path: string, greedy := true) -> string /* temp */, 
     return to_lower_copy(extension), true;
 }
 
+is_file_binary :: (file_data: string) -> bool {
+    // Check for zeroes in the file - if there are any, it's not a well-formed text file.
+    // There's a small chance that a binary file will have no zeroes, but it's the easiest
+    // thing to check, so that's what we're doing.
+    has_zeroes := find_index_from_left(file_data, byte = 0) >= 0;
+    return has_zeroes;
+}
+
 should_ignore_file :: (path: string) -> bool {
     extension, found_extension := get_lowercase_extension(path);
     
@@ -121,23 +129,6 @@ should_ignore_file :: (path: string) -> bool {
         }
     }
     
-    // Check for zeroes in the file - if there are any, it's not a well-formed text file.
-    // There's a small chance that a binary file will have no zeroes, but it's the easiest
-    // thing to check, so that's what we're doing.
-    // Sorry non-binary files, there are only 2 digits, please don't cancel me.
-    file_data, success := read_entire_file(path);
-    if !success return true;
-    
-    has_zeroes := find_index_from_left(file_data, byte = 0) >= 0;
-    free(file_data);
-    
-    if has_zeroes then log("read binary file %\n", path);
-    
-    if has_zeroes return true;  // ignore
-    
-    // In this case the file will be read again, but it's OK because:
-    // 1. It should happen rarely
-    // 2. The file will be in the filesystem cache
     return false;
 }
 

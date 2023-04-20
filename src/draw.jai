@@ -674,6 +674,16 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 width = xx Simp.prepare_text(font_ui_bold, "[modified on disk]");
                 Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
             }
+            if buffer.readonly {
+                pen.x += width + padding;
+                width = xx Simp.prepare_text(font_ui_bold, "[readonly]");
+                Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
+            }
+            if buffer.error_when_saving {
+                pen.x += width + padding;
+                width = xx Simp.prepare_text(font_ui_bold, "[couldn't save file]");
+                Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
+            }
 
             // Draw separator
             pen.x += width + padding;

@@ -310,6 +310,8 @@ recalculate_colors :: (buffer: *Buffer) {
 }
 
 save_buffer_to_disk :: (using buffer: *Buffer) {
+    if readonly return;
+    
     success := write_entire_file(file.full_path, to_string(bytes));
     if success {
         modified = false;
@@ -317,8 +319,10 @@ save_buffer_to_disk :: (using buffer: *Buffer) {
         deleted = false;
         
         meow_hash = calculate_meow_hash(bytes);
+        
+        error_when_saving = false;
     } else {
-        // TODO: report an error
+        error_when_saving = true;
     }
     remember_last_modtime_and_size(buffer);
 }
@@ -409,6 +413,11 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     // Create and load file
     file_data, success := read_entire_file(path);
     if !success then file_data = sprint("Couldn't load file '%'", path);
+    if is_file_binary(file_data) {
+        free(file_data);
+        file_data = sprint("Couldn't display file '%' because it's either binary or non-UTF8.", path);
+        buffer.readonly = true;
+    }
     
     fill_in_buffer_from_file_data(buffer, path, file_data);
     
@@ -441,6 +450,12 @@ refresh_buffer_from_disk :: (path: string) {
         
     // Reload buffer from disk
     file_contents_str, success := read_entire_file(path);
+    if is_file_binary(file_contents_str) {
+        free(file_contents_str);
+        file_contents_str = sprint("Couldn't display file '%' because it's either binary or non-UTF8.", path);
+        buffer.readonly = true;
+    }
+    
     if !success { log_error("Couldn't read file '%'\n", path); return; }
     defer free(file_contents_str);
     
@@ -640,6 +655,8 @@ Buffer :: struct {
     modified_on_disk       := false;
     deleted                := false;
     needs_coloring         := false;
+    readonly               := false;
+    error_when_saving      := false;
     
     content_lock: Mutex;  // must hold while modifying content (or reading in an off thread)
 

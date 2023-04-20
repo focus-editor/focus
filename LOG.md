@@ -86,11 +86,12 @@
             + Test scanning on small folders
         + Test with smaller buffer bucket sizes
         + Make sure the files are sorted correctly in the files list and in the search results
+    + Opening webm crashes
+        + Don't display binary files
     - Actually lock the buffer contents when modifying it
     - Local search
         - New widget
     - remove_crlf_in_place - optimise a bit
-    - Opening webm crashes
     - When searching check if we're ditching the work quicker if a new request is present - if no we should
     - Can merge!
     
