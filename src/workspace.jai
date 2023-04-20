@@ -97,10 +97,7 @@ maybe_update_workspace_buffers :: () {
         }
         return;
     }
-    
-    if finder.request.in_progress return;  // don't refresh any buffers while there's an active search request (to avoid a race).
-                                           // it should finish soon enough so we can update the buffers after that
-    
+        
     files_changed := process_changes(*file_watcher);
     if files_changed {
         if watcher_file_modified.count > 0 && !should_ignore_file(watcher_file_modified) {

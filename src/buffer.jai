@@ -57,7 +57,9 @@ delete_range_raw :: (using buffer: *Buffer, start: s64, end: s64, $notify := tru
     len := end - start;
     if len <= 0 return;
 
+    lock(*buffer.content_lock);
     array_delete_bytes(*bytes, start, len);
+    unlock(*buffer.content_lock);
     
     #if notify add_edit_notification(buffer, start, end - start, 0);
 
@@ -68,7 +70,10 @@ insert_string_raw :: (buffer: *Buffer, offset: s64, str: string, $notify := true
     bytes: [] u8;
     bytes.data  = str.data;
     bytes.count = str.count;
+    
+    lock(*buffer.content_lock);
     array_insert_bytes_at(*buffer.bytes, offset, bytes);
+    unlock(*buffer.content_lock);
     
     #if notify add_edit_notification(buffer, offset, 0, str.count);
 

@@ -88,17 +88,18 @@
         + Make sure the files are sorted correctly in the files list and in the search results
     + Opening webm crashes
         + Don't display binary files
-    - Actually lock the buffer contents when modifying it
+    + Actually lock the buffer contents when modifying it
     - Local search
         - New widget
-    - remove_crlf_in_place - optimise a bit
+    
     - When searching check if we're ditching the work quicker if a new request is present - if no we should
     - Can merge!
     
-- Change title when opening using double click, if this is still a problem
+- Ctrl+C without a selection removes the selection
 - Definitely ignore the editor's own temp dir, even if the user doesn't include it
 - When sorting the file list, put the modified buffers on top
 - When switching to buffer or trying to save it, check that the file exists
+- remove_crlf_in_place - optimise a bit
 
 - Implement config options
     - Report errors on wrong configs (write the usage code first)
