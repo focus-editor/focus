@@ -78,6 +78,8 @@ start_initial_workspace_scan :: () {
         
         add_work(*scanner_thread_group, file_range, sprint("Scan [%:%]", start, start + count));
     }
+    
+    num_jobs_to_complete = file_ranges.count;
 }
 
 maybe_update_workspace_buffers :: () {
@@ -163,7 +165,7 @@ directory_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void
 
 start_file_watcher :: () {
     if !init(*file_watcher, file_change_callback) {
-        log_error("Could not initialize workspace file watcher");
+        log_error("Could not initialize the workspace file watcher");
         // TODO: add the error to the error log when we have it
         return;
     }

@@ -91,7 +91,6 @@
     
 - Load UE5 source and try to scan it
     - When doing it, collect info on any binary files that had to be read to be ignored
-    - Compare with async scanning
 
 - Add horizontal scrollbar
     - Alt-HL smooth scroll
@@ -118,7 +117,6 @@
 
 - BUG: if a project folder is deleted, the editor doesn't know about that and doesn't give any errors when trying to save files
 
-    
 - When adding a directory to workspace, the check for parent directory is NOT RELIABLE. Paths are case-sensitive on Linux
     - Also, what if we add a parent dir to a dir already in the project - what would be the expected behaviour? Delete the child dir? Keep it and dedup the files?
     
@@ -156,9 +154,8 @@
     - Can extend to support searching by symbol (possibly by adding a # or something like Sublime/VSCode)
 
 - Log time with the session logger
-- Try to log asserts into log_error.txt - would be very helpful for debugging release builds
+
 - Either limit the number of bytes in text input, or improve the handling of cursor (currently calculating the length every frame)
-- Select word: depending on the char under cursor, select either word chars or punctuation
 
 - Hide scrollbars unless scrolling or hovering over editor
 - Search in buffer:
@@ -177,8 +174,7 @@
     - Alt + plus to open next state
 
 - Save modified buffers to temporary files and recover after crashes
-    - Save undo/redo history in temporary files?
-    
+
 - Add an option to not open in biggest monitor
 
 - When cutting search results in finder, go by characters and not bytes
@@ -199,9 +195,6 @@
 - Improve resource usage: query monitor refresh rate and adjust sleeping time based on that
     - Draw a figure - will that cause longer frames sometimes? Probably that's ok?
     - Don't skip frames when dragging scrollbar
-
-- Add a warning on large texts (maybe semi-transparent)
-- When unable to save file, show a warning (have an error log?)
 
 - Implement semantic highlighting
     - Polymorphic structs and possibly other types
@@ -225,6 +218,8 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Try to log asserts into log_error.txt - would be very helpful for debugging release builds
++ When unable to save file, show a warning (have an error log?)
 + Optimise line offset storage and recalculation
     + Drop cursor positions and just use offsets
     + Move cursor up and down
