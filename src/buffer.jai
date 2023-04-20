@@ -422,6 +422,7 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
         free(file_data);
         file_data = sprint("Couldn't display file '%' because it's either binary or non-UTF8.", path);
         buffer.readonly = true;
+        buffer.binary   = true;
     }
     
     fill_in_buffer_from_file_data(buffer, path, file_data);
@@ -661,6 +662,7 @@ Buffer :: struct {
     deleted                := false;
     needs_coloring         := false;
     readonly               := false;
+    binary                 := false;
     error_when_saving      := false;
     
     content_lock: Mutex;  // must hold while modifying content (or reading in an off thread)

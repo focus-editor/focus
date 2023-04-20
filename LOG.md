@@ -31,7 +31,6 @@
 - Definitely ignore the editor's own temp dir, even if the user doesn't include it
 - When sorting the file list, put the modified buffers on top (even ignoring the project boundary?)
 - When switching to buffer or trying to save it, check that the file exists
-- remove_crlf_in_place - optimise a bit
 
 - Implement config options
     - Report errors on wrong configs (write the usage code first)
@@ -79,6 +78,7 @@
 - CRLF:
     + Get rid of crlf notes
     - Show a warning when a CRLF file is loaded, then dismiss on save
+    - remove_crlf_in_place - optimise a bit
 
 - Nice to haves:
     - Mark modified buffers in the navigate dialog
@@ -87,9 +87,6 @@
     - Rollback creating another cursor (ctrl+alt+D?)
     - Word selection / line selection mode
     - Ctrl+shift+delete/backspace - remove until start/end of line
-    
-- Load UE5 source and try to scan it
-    - When doing it, collect info on any binary files that had to be read to be ignored
 
 - Add horizontal scrollbar
     - Alt-HL smooth scroll
@@ -217,6 +214,8 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Load UE5 source and try to scan it
+    + When doing it, collect info on any binary files that had to be read to be ignored
 + Ctrl+C without a selection removes the selection
 + Progress bar when scanning workspace
     + Draw a simple progress bar 
