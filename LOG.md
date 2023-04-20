@@ -25,7 +25,6 @@
     - Multi-byte Unicode symbols are not supported
     - Currently only RGB monitor panels
 
-- Ctrl+C without a selection removes the selection
 - Local search
     - New widget
     
@@ -218,6 +217,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Ctrl+C without a selection removes the selection
 + Progress bar when scanning workspace
     + Draw a simple progress bar 
     + Have an atomic counter

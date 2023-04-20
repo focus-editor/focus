@@ -612,8 +612,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         input_active := editor_is_active && search_bar.active && active_global_widget == .editors;
         draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id, label = "Find in buffer");
 
-        if ui.active != .none && ui.active != input_id {
-            active = false;  // deactivate on clicks elsewhere
+        if ui.active != .none && ui.active != input_id && ui.active != scrollbar_id {
+            active = false;  // deactivate on clicks elsewhere (except scrollbar)
             redraw_requested = true;
         }
         if ui.active == input_id {

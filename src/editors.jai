@@ -1844,20 +1844,22 @@ delete_to_end_of_line :: (editor: *Editor, buffer: *Buffer) {
 }
 
 copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) {
-    if cut {
+    any_selection := false;
+    for cursor : editor.cursors { if has_selection(cursor) { any_selection = true; break; } }
+    
+    if cut && !any_selection {
         // If no cursors have a selection, then pressing cut will cut whole lines
-        any_selection := false;
-        for cursor : editor.cursors { if has_selection(cursor) { any_selection = true; break; } }
-        if !any_selection {
-            for * cursor : editor.cursors {
-                // Select the whole line
-                line := offset_to_line(buffer, cursor.pos);
-                cursor.sel = buffer.line_starts[line];
-                cursor.pos = buffer.line_starts[line+1];
-                cursor.col_wanted = -1;
-            }
-            organise_cursors(editor);  // resolve overlapping selections
+        for * cursor : editor.cursors {
+            // Select the whole line
+            line := offset_to_line(buffer, cursor.pos);
+            cursor.sel = buffer.line_starts[line];
+            cursor.pos = buffer.line_starts[line+1];
+            cursor.col_wanted = -1;
         }
+        organise_cursors(editor);  // resolve overlapping selections
+    } else if !cut && !any_selection {
+        // TODO: have a config option to copy line where there's no selection for those who want it
+        return;  // don't want to trash the clipboard when you accidentally press Ctrl+C
     }
 
     b: String_Builder;
