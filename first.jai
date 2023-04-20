@@ -7,13 +7,15 @@ build :: () {
     set_build_options_dc(.{do_output=false});
     set_working_directory(#filepath);
 
-    options.optimization_level = .DEBUG;
+    optimized := false;
     options.output_executable_name = "focus_debug";
+    set_optimization(*options, .DEBUG);
 
     for arg: args {
         if arg == {
           case "release";
-            set_optimization_level(*options, 2, 0);
+            optimized = true;
+            set_optimization(*options, .VERY_OPTIMIZED);
             options.output_executable_name = "focus";
           case "debug";
           case;
@@ -25,9 +27,9 @@ build :: () {
     set_build_options(options, w);
     #if OS == .WINDOWS {
         // Disable runtime console
-        if options.optimization_level == .RELEASE {
-            // set_build_options_dc(.{append_linker_arguments=.["/SUBSYSTEM:windows", "/ENTRY:mainCRTStartup"]}, w);
-            set_build_options_dc(.{append_linker_arguments=.["/SUBSYSTEM:windows", "/ENTRY:mainCRTStartup", "ws2_32.lib", "msvcprtd.lib"]}, w);
+        if optimized {
+            set_build_options_dc(.{append_linker_arguments=.["/SUBSYSTEM:windows", "/ENTRY:mainCRTStartup"]}, w);
+            // set_build_options_dc(.{append_linker_arguments=.["/SUBSYSTEM:windows", "/ENTRY:mainCRTStartup", "ws2_32.lib", "msvcprtd.lib"]}, w);
         } else {
             set_build_options_dc(.{append_linker_arguments=.["ws2_32.lib", "msvcprtd.lib"]}, w);
         }

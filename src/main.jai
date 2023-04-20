@@ -580,7 +580,7 @@ File_Async :: #import "File_Async";
 Simp :: #import "Simp_Ext";
 Input :: #import "Input";
 
-DEBUG :: #run get_build_options().optimization_level != .RELEASE;
+DEBUG :: #run get_build_options().array_bounds_check != .OFF;  // this is a sloppy way of checking whether we're in debug mode!
 
 MAX_BUFFER_SIZE_FOR_HIGHLIGHTS :: 5 * 1024 * 1024;
 

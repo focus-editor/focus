@@ -952,7 +952,7 @@ vertical_smooth_scroll :: (editor: Editor, up: bool, fast := false) {
 
 update_window_title :: (buffer_id: s64 = -1) {
     title := window_generic_title;
-    if buffer_id > 0 {
+    if buffer_id >= 0 {
         buffer := open_buffers[buffer_id];
         if buffer.has_file {
             title = tprint("% • % • %", buffer.file.name, buffer.file.path, window_generic_title);
