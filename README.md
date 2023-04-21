@@ -56,3 +56,5 @@ Notable missing features:
   Nothing other than the name was borrowed from his editor - the name was just too good.
   
 - The default font is created by Nikita Prokopov - https://github.com/tonsky/FiraCode
+
+- Icons - Font Awesome by Dave Gandy - http://fontawesome.io
