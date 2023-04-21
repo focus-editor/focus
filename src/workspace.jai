@@ -31,60 +31,13 @@ add_directory_to_workspace :: (path: string, index := -1) {
 }
 
 start_initial_workspace_scan :: () {
-    scan_pool_allocator := get_scan_pool_allocator();
+    // Get the list of all files in the project asynchronously (depending on the size it can cause a startup delay otherwise)
+    init(*file_list_thread_group, num_threads = 1, group_proc = file_list_threadproc);
+    file_list_thread_group.name = "Async workspace file list builder";
+    file_list_thread_group.logging = DEBUG;
     
-    // Get the list of all files in the project
-    {
-        push_allocator(scan_pool_allocator);
-        
-        for project_dirs visit_files(it.path, recursive = true, null, maybe_add_file_to_scan_list, visit_directories = true);
-        
-        maybe_add_file_to_scan_list :: (file: *File_Visit_Info, userdata: *void) {
-            if file.is_directory {
-                if should_ignore_dir(file.full_name) {
-                    file.descend_into_directory = false;
-                    return;
-                }
-                return;
-            }
-            if file.is_symlink return;
-            
-            // NOTE: not checking whether we should ignore the file here,
-            // because it may involve reading the file and checking for zeroes,
-            // and we'd rather it's done in threads (also if later we find there are no
-            // zeroes in the file then the file data will be in cache ready to use)
-            array_add(*files_to_scan, copy_string(file.full_name));
-        }
-    }
-    
-    num_cpus := get_num_cpus();
-    num_threads := max(num_cpus - 1, 1);
-    
-    files_per_thread := min((files_to_scan.count / num_threads) + 1, MAX_FILES_PER_JOB);
-    
-    init(*scanner_thread_group, num_threads = num_threads, group_proc = directory_scan_threadproc);
-    scanner_thread_group.name = "Workspace Scanner";
-    scanner_thread_group.logging = DEBUG;
-        
-    start(*scanner_thread_group);
-    
-    num_jobs_to_complete = 0;
-    
-    num_ranges  := (files_to_scan.count / files_per_thread) + 1;
-    file_ranges := NewArray(num_ranges, [] string, allocator = scan_pool_allocator);
-    
-    for 0..num_ranges-1 {
-        file_range := *file_ranges[it];
-        start := it * files_per_thread;
-        count := min(files_per_thread, files_to_scan.count - start);
-        if count <= 0 break;
-        << file_range = array_view(files_to_scan, start, count);
-        
-        add_work(*scanner_thread_group, file_range, sprint("Scan [%:%]", start, start + count));
-        
-        num_jobs_to_complete += 1;
-    }
-    
+    start(*file_list_thread_group);
+    add_work(*file_list_thread_group, cast(*void) 0);  // a dummy piece of work
 }
 
 get_workspace_scan_progress :: () -> float {
@@ -93,6 +46,44 @@ get_workspace_scan_progress :: () -> float {
 
 maybe_update_workspace_buffers :: () {
     if !initial_scan_complete {
+        if !file_list_ready {
+            results := get_completed_work(*file_list_thread_group);
+            if results {
+                file_list_ready = true;
+                shutdown(*file_list_thread_group);
+                
+                // Start the actual scanning of the workspace
+                num_jobs_to_complete = 0;
+        
+                num_cpus := get_num_cpus();
+                num_threads := max(num_cpus - 1, 1);
+                
+                init(*scanner_thread_group, num_threads = num_threads, group_proc = directory_scan_threadproc);
+                scanner_thread_group.name = "Workspace Scanner";
+                scanner_thread_group.logging = false;
+                    
+                start(*scanner_thread_group);
+                
+                files_per_thread := min((files_to_scan.count / num_threads) + 1, MAX_FILES_PER_JOB);
+                num_ranges  := (files_to_scan.count / files_per_thread) + 1;
+                file_ranges := NewArray(num_ranges, [] string, allocator = get_scan_pool_allocator());
+                
+                for 0..num_ranges-1 {
+                    file_range := *file_ranges[it];
+                    start := it * files_per_thread;
+                    count := min(files_per_thread, files_to_scan.count - start);
+                    if count <= 0 break;
+                    << file_range = array_view(files_to_scan, start, count);
+                    
+                    add_work(*scanner_thread_group, file_range, sprint("Scan [%:%]", start, start + count));
+                    
+                    num_jobs_to_complete += 1;
+                }
+            }
+            
+            return;
+        }
+    
         results := get_completed_work(*scanner_thread_group);
         
         num_jobs_completed += results.count;
@@ -160,6 +151,32 @@ file_is_watched :: (file_path: string) -> bool {
 }
 
 #scope_file
+
+file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
+    scan_pool_allocator := get_scan_pool_allocator();
+    push_allocator(scan_pool_allocator);
+    
+    for project_dirs visit_files(it.path, recursive = true, null, maybe_add_file_to_scan_list, visit_directories = true);
+    
+    maybe_add_file_to_scan_list :: (file: *File_Visit_Info, userdata: *void) {
+        if file.is_directory {
+            if should_ignore_dir(file.full_name) {
+                file.descend_into_directory = false;
+                return;
+            }
+            return;
+        }
+        if file.is_symlink return;
+        
+        // NOTE: not checking whether we should ignore the file here,
+        // because it may involve reading the file and checking for zeroes,
+        // and we'd rather it's done in threads (also if later we find there are no
+        // zeroes in the file then the file data will be in cache ready to use)
+        array_add(*files_to_scan, copy_string(file.full_name));
+    }
+    
+    return .STOP;  // don't need you no mo
+}
 
 directory_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
     file_range := cast(*[] string) work;
@@ -274,11 +291,13 @@ watcher_file_modified: string;  // will contain the path of a file if if was mod
 watch_dirs:  [..] string;       // dirs we watch which are not project dirs
 watch_files: [..] string;       // files outside of projects that we want to watch
 
+file_list_thread_group: Thread_Group;
 scanner_thread_group: Thread_Group;
 
 scan_memory_pool: Flat_Pool;
 files_to_scan: [..] string;
 
+file_list_ready       := false;
 initial_scan_complete := false;
 num_jobs_to_complete  := 0;
 num_jobs_completed    := 0;
