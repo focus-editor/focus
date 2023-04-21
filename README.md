@@ -52,9 +52,14 @@ Notable missing features:
 
 ### Acknowledgements
 
-- The editor was inspired by Jamie Brandon's blog post (https://www.scattered-thoughts.net/writing/focus-intro/).
-  Nothing other than the name was borrowed from his editor - the name was just too good.
+- The editor was made possible by the fantastic Jai programming language by Jonathan Blow
+
+- The editor was inspired by Jamie Brandon's blog post (https://www.scattered-thoughts.net/writing/focus-intro/). Nothing other than the name was borrowed from his editor - the name was just too good.
   
 - The default font is created by Nikita Prokopov - https://github.com/tonsky/FiraCode
 
 - Icons - Font Awesome by Dave Gandy - http://fontawesome.io
+
+- Special thanks to the two early adopters who helped make the editor more robust: @cookednick and @ustance.
+
+- If not for VSCode's annoying "restart to apply the latest update" notifications every other day, this editor might never have been created.
