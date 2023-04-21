@@ -298,8 +298,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             start_animation(*scroll_y, top, new_target);
         } else if cursor_moved {
             // Detect if cursor is off screen and start scrolling to it
-            bounds := shrink_x(rect, text_offset.x + char_size * 3);
-            bounds  = shrink_y(bounds, -text_offset.y + line_height * 3);
+            bounds := shrink_x(rect, text_offset.x + char_size * 5);
+            bounds  = shrink_y(bounds, -text_offset.y + line_height * 5);
             bounds.h += 2;
             bounds.y -= line_height + 2;
             if bounds.w < 0 || bounds.h < 0 then bounds = rect;  // fall back
