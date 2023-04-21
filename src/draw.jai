@@ -214,6 +214,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         mouse_pos.x += viewport.left;
         mouse_pos.y = rect.h - mouse_pos.y + viewport.top - ifx dpi_scale > 1.0 then 1 else 0;
         coords := Coords.{ line = xx (mouse_pos.y / line_height), col = xx ((mouse_pos.x / char_size) + 0.5) };
+        
+        cursors_stop_blinking();
     
         if !mouse.left.is_dragging && ctrl_pressed() {
             // Create new cursor

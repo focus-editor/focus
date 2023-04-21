@@ -878,12 +878,20 @@ scan_through_similar_chars_on_the_right :: (using buffer: Buffer, offset: s32, o
 cursors_start_blinking :: inline () {
     cursor_blink_start = frame_time;
     platform_set_refresh_timer(window);
+    cursors_blinking = true;
+}
+
+cursors_stop_blinking :: inline () {
+    cursors_blinking = false;
+    platform_kill_refresh_timer(window);
 }
 
 should_draw_cursors :: inline () -> bool {
+    if !cursors_blinking return true;
+    
     ms_since_start := cast(s64) ((frame_time - cursor_blink_start) * 1000);
     if ms_since_start > CURSOR_BLINK_TIMEOUT_MS {
-        platform_kill_refresh_timer(window);
+        cursors_stop_blinking();
         return true;
     }
     return (ms_since_start / CURSOR_BLINK_SPEED_MS) % 2 == 0;
@@ -2228,6 +2236,7 @@ splitter_anim: Tween_Animation(float);
 #scope_file
 
 cursor_blink_start: Time;
+cursors_blinking := false;
 
 CURSOR_BLINK_SPEED_MS   :: 500;
 CURSOR_BLINK_TIMEOUT_MS :: 5_000;  // when to stop blinking on inaction
