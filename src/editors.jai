@@ -74,9 +74,9 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         
         if action == {
             case .toggle_expand;                    search_bar_toggle_expand(editor);
-            case .close_dialog;                     close_search_bar(editor);
-            case .search_in_buffer;                 open_search_bar(editor, buffer);
-            case .search_in_buffer_dropdown_mode;   open_search_bar(editor, buffer, .dropdown);
+            
+            case .search_in_buffer;                 open_search_bar(editor, buffer, remember_cursor_position = false);
+            case .search_in_buffer_dropdown_mode;   open_search_bar(editor, buffer, .dropdown, remember_cursor_position = false);
             
             case .move_up;                          search_bar_move_cursor(editor, buffer, -1, wrap = true);
             case .move_down;                        search_bar_move_cursor(editor, buffer,  1, wrap = true);
@@ -89,10 +89,13 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
 
         if mode == .classic {
             if action == {
+                case .close_dialog;                 close_search_bar(editor);
                 case .open_entry_in_place;          search_bar_move_cursor(editor, buffer,  1, wrap = true);
             }
         } else {
             if action == {
+                case .close_dialog;                 close_search_bar(editor, jump_to_original_cursor = true);
+            
                 case .move_up_one_page;             search_bar_move_cursor(editor, buffer, -per_page);
                 case .move_down_one_page;           search_bar_move_cursor(editor, buffer,  per_page);
                 
@@ -415,10 +418,9 @@ move_cursor_to_viewport_center :: (editor: *Editor, buffer: Buffer) {
     editor.cursor_moved = true;
 }
 
-// !!!! TODO: handle clipboard
 leave_only_original_cursor :: (using editor: *Editor) -> *Cursor {
     // Remove all cursors except the original one
-    cursor := cursors[original_cursor];
+    cursor := cursors[max(original_cursor, cursors.count-1)];
     cursor.clipboard = .{ start = 0, count = xx max(clipboard.count, 0) };
     cursors.count = 1;
     original_cursor = 0;
@@ -593,7 +595,7 @@ search_bar_is_open :: inline (using editor: *Editor) -> bool {
     return search_bar.active;  // used to be more stuff in here
 }
 
-open_search_bar :: (using editor: *Editor, buffer: Buffer, requested_mode: Search_Bar.Mode = .classic) {
+open_search_bar :: (using editor: *Editor, buffer: Buffer, requested_mode: Search_Bar.Mode = .classic, remember_cursor_position := true) {
     using editor.search_bar;
     active = true;
     mode = requested_mode;
@@ -612,15 +614,26 @@ open_search_bar :: (using editor: *Editor, buffer: Buffer, requested_mode: Searc
     input.cursor.pos = get_num_chars(input.text);
 
     search_point_offset = get_selection(cursors[main_cursor]).start;
+    
+    if remember_cursor_position {
+        original_cursor_position = cursors[main_cursor].state;
+        jumped = false;
+    }
 
     search_and_update_results(editor, buffer);
     scroll_y = 0;
     scroll_to_selected = .snap;
 }
 
-close_search_bar :: inline (editor: *Editor) {
+close_search_bar :: inline (editor: *Editor, jump_to_original_cursor := false) {
     using editor.search_bar;
     active = false;  // stop receiving input immediately
+    
+    if jump_to_original_cursor && jumped {
+        cursor := leave_only_original_cursor(editor);
+        cursor.state = original_cursor_position;
+        editor.scroll_to_cursor = .yes;
+    }
 
     reset_search_results(*editor.search_bar);
     editor.refresh_highlights = true;
@@ -690,7 +703,6 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
 
     buffer_str := to_string(buffer.bytes);
 
-    // Use Boyer-Moore-Horspool to search
     assert(buffer_str.count < S32_MAX && needle.count < S32_MAX);
     skip_table := bmh_prepare_skip_table(needle, case_sensitive = false);
     offset := 0;
@@ -722,7 +734,10 @@ jump_to_search_result :: (using editor: *Editor, buffer: Buffer, move_search_poi
     cursor.pos = xx (result.offset + input.text.count);
     scroll_to_cursor = .yes;
 
-    if move_search_point then search_point_offset = xx result.offset;
+    if move_search_point {
+        search_point_offset = xx result.offset;
+        jumped = true;
+    }
 }
 
 reset_search_results :: (using search_bar: *Search_Bar) {
@@ -2118,6 +2133,9 @@ Search_Bar :: struct {
     results: [..] Text_Highlight;
     selected_result: s64 = -1;
     search_point_offset: s32;  // the point used to determine the next search result. Fixed so that we can set cursor without jumping around
+    
+    original_cursor_position: Cursor.State;  // remember main cursor position so we can go back to it on Esc
+    jumped := false;
     
     per_page := 10;
     scroll_to_selected: Scroll_Mode = .no;
