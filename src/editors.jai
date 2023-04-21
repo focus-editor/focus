@@ -225,6 +225,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
     
     if editor.cursor_moved && !enabled_whole_words then editor.search_whole_words = false;
     if editor.cursor_moved then editor.refresh_highlights = true;  // update or remove highlights
+    if editor.cursor_moved then cursors_start_blinking();
 }
 
 active_editor_type_char :: (char: u32) {
@@ -287,6 +288,7 @@ active_editor_type_char :: (char: u32) {
     
     buffer.last_edit_time = frame_time;
     editor.cursor_moved = true;
+    cursors_start_blinking();
 }
 
 get_active_editor_and_buffer :: () -> *Editor, *Buffer {
@@ -386,6 +388,7 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
     
     update_window_title(buffer_id);
     session_notify_modified_buffer(buffer_id);
+    cursors_start_blinking();
 }
 
 move_viewport :: (editor: *Editor, dir: enum { left; up; right; down; }) {
@@ -738,6 +741,8 @@ jump_to_search_result :: (using editor: *Editor, buffer: Buffer, move_search_poi
         search_point_offset = xx result.offset;
         jumped = true;
     }
+    
+    cursors_start_blinking();
 }
 
 reset_search_results :: (using search_bar: *Search_Bar) {
@@ -868,6 +873,16 @@ scan_through_similar_chars_on_the_right :: (using buffer: Buffer, offset: s32, o
     }
     
     return cast(s32) min(bytes.count, s.data - bytes.data);
+}
+
+cursors_start_blinking :: inline () {
+    cursor_blink_start = frame_time;
+}
+
+should_draw_cursors :: inline () -> bool {
+    ms_since_start := cast(s64) ((frame_time - cursor_blink_start) * 1000);
+    if ms_since_start > CURSOR_BLINK_TIMEOUT_MS return true;
+    return (ms_since_start / CURSOR_BLINK_SPEED_MS) % 2 == 0;
 }
 
 #scope_file
@@ -2207,5 +2222,10 @@ splitter_anim: Tween_Animation(float);
 
 
 #scope_file
+
+cursor_blink_start: Time;
+
+CURSOR_BLINK_SPEED_MS   :: 500;
+CURSOR_BLINK_TIMEOUT_MS :: 5_000;  // when to stop blinking on inaction
 
 #import "Clipboard";

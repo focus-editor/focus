@@ -39,6 +39,10 @@ platform_wait_message :: inline () {
     WaitMessage();
 }
 
+platform_set_refresh_timer :: (window: Window_Type) {
+    SetTimer(window, 0, 100, cast(*void) 0);  // refresh every 100ms
+}
+
 platform_enumerate_logical_drives :: () -> [] string {
     drives: [..] string;
     
@@ -89,6 +93,7 @@ user32   :: #system_library "user32";
 kernel32 :: #system_library "kernel32";
 
 WaitMessage :: () -> s32 #foreign user32;
+SetTimer :: (hWnd: HWND, nIDEvent: u64, uElapse: u32, lpTimerFunc: *void) -> s32 #foreign user32;
 GetDpiForWindow :: (hWnd: HWND) -> u32 #foreign user32;
 GetLogicalDriveStringsW :: (nBufferLength: DWORD, lpBuffer: *u16) -> DWORD #foreign kernel32;
 

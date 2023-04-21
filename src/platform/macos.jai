@@ -26,6 +26,10 @@ platform_wait_message :: inline () {
     unimplemented();
 }
 
+platform_set_refresh_timer :: (window: Window_Type) {
+    unimplemented();
+}
+
 platform_enumerate_logical_drives :: () -> [] string {
     unimplemented();
 }

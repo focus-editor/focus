@@ -337,6 +337,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             if top_target != scroll_y.target then start_animation(*viewport.scroll_y, viewport.top, top_target);            
     
             scroll_to_cursor = .no;
+            
+            cursors_start_blinking();
         }
     
         // Maybe update selection highlights
@@ -437,7 +439,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 }
             }
     
-            // Cursors
+            // Cursor and selection marks
             cursor_mark_rect := marks_rect;
             cursor_mark_rect.h = 2 * dpi_scale;
             selection_mark_rect := cut_left(marks_rect, marks_rect.w / 3);
@@ -553,7 +555,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);
         
         // Draw active cursors
-        if cursors_active && !search_bar_is_open(editor) {
+        if cursors_active && should_draw_cursors() && !search_bar_is_open(editor) {
             Simp.set_shader_for_rects();
             for cursor : cursors {
                 if cursor.pos < visible_offset_range.start || cursor.pos > visible_offset_range.end continue;

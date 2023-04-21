@@ -16,11 +16,13 @@
     - Profile the whole project to see if we're doing something stupid
 
 - Limitations:
-    - Windows only on release
+    - Windows64 only on release
     - Not designed for large files
     - CRLF?
     - Multi-byte Unicode symbols are not supported
     - Currently only RGB monitor panels
+    
+- Jump to line on Ctrl+G
     
 - Definitely ignore the editor's own temp dir, even if the user doesn't include it
 - When sorting the file list, put the modified buffers on top (even ignoring the project boundary?)
@@ -208,6 +210,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Blinking cursor
 + Local search
     + New widget
     + Keep the classic mode
