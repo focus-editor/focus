@@ -24,12 +24,6 @@
     - CRLF?
     - Multi-byte Unicode symbols are not supported
     - Currently only RGB monitor panels
-
-- Local search
-    + New widget
-    + Keep the classic mode
-    - Open in another pane on ctrl+enter, ctrl+1/2
-        - Support search actions?    
     
 - Definitely ignore the editor's own temp dir, even if the user doesn't include it
 - When sorting the file list, put the modified buffers on top (even ignoring the project boundary?)
@@ -217,6 +211,11 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Local search
+    + New widget
+    + Keep the classic mode
+    + Open in another pane on ctrl+enter, ctrl+1/2
+    + Support search actions
 + Load UE5 source and try to scan it
     + When doing it, collect info on any binary files that had to be read to be ignored
 + Ctrl+C without a selection removes the selection

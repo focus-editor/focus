@@ -572,6 +572,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     }
     
     // Draw search bar
+    if active_global_widget != .editors then search_bar.active = false;
+    
     if search_bar_is_open(editor) {
         using search_bar;
         
@@ -767,10 +769,12 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                         end   = min(line_range.end, line_start + xx byte_offset + 4 * max_code_chars),  // max 4 bytes per char
                     };
                     line_str := get_string_from_range(buffer, visible_range);
-                    colors   := array_view(buffer.colors, visible_range.start, line_str.count);
-                    code_lines: [1] Simp.Code_Line;
-                    code_lines[0] = .{ line = line_str, tab_spaces = 0, colors = colors };
-                    Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);
+                    if line_str.count > 0 {
+                        colors   := array_view(buffer.colors, visible_range.start, line_str.count);
+                        code_lines: [1] Simp.Code_Line;
+                        code_lines[0] = .{ line = line_str, tab_spaces = 0, colors = colors };
+                        Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);
+                    }
                 }
             }
     
@@ -1389,10 +1393,12 @@ draw_finder :: () {
                     end   = min(line_range.end, line_start + xx byte_offset + 4 * max_code_chars),  // max 4 bytes per char
                 };
                 line_str := get_string_from_range(buffer, visible_range);
-                colors   := array_view(buffer.colors, visible_range.start, line_str.count);
-                code_lines: [1] Simp.Code_Line;
-                code_lines[0] = .{ line = line_str, tab_spaces = 0, colors = colors };
-                Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);
+                if line_str.count > 0 {
+                    colors   := array_view(buffer.colors, visible_range.start, line_str.count);
+                    code_lines: [1] Simp.Code_Line;
+                    code_lines[0] = .{ line = line_str, tab_spaces = 0, colors = colors };
+                    Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);
+                }
             }
         }
 

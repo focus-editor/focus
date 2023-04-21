@@ -186,6 +186,8 @@ ACTIONS_COMMON :: string.[
     "increase_font_size",
     "decrease_font_size",
     "reset_font_size_to_default",
+    "close_current_editor",
+    "close_other_editor",
 ];
 
 ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
@@ -202,8 +204,6 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "indent_or_go_to_next_tabstop",
     "unindent",
     "indent",
-    "close_current_editor",
-    "close_other_editor",
     "save",
     "toggle_comment",
     "select_line",

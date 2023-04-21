@@ -85,9 +85,6 @@ Shift-Tab                   unindent
 Ctrl-]                      indent
 Ctrl-[                      unindent
 
-Ctrl-W                      close_current_editor
-Ctrl-Shift-W                close_other_editor
-
 Ctrl-S                      save
 
 Ctrl-/                      toggle_comment
@@ -181,6 +178,9 @@ Ctrl-Shift-Z                redo
 
 Ctrl-D                      select_word
 Ctrl-A                      select_all
+
+Ctrl-W                      close_current_editor
+Ctrl-Shift-W                close_other_editor
 
 Ctrl-Shift-L                toggle_expand
 

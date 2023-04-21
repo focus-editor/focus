@@ -78,25 +78,28 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
             case .search_in_buffer;                 open_search_bar(editor, buffer);
             case .search_in_buffer_dropdown_mode;   open_search_bar(editor, buffer, .dropdown);
             
-            case .move_up;              search_bar_move_cursor(editor, buffer, -1, wrap = true);
-            case .move_down;            search_bar_move_cursor(editor, buffer,  1, wrap = true);
-            case .move_up_fast;         search_bar_move_cursor(editor, buffer, -5);
-            case .move_down_fast;       search_bar_move_cursor(editor, buffer,  5);
+            case .move_up;                          search_bar_move_cursor(editor, buffer, -1, wrap = true);
+            case .move_down;                        search_bar_move_cursor(editor, buffer,  1, wrap = true);
+            case .move_up_fast;                     search_bar_move_cursor(editor, buffer, -5);
+            case .move_down_fast;                   search_bar_move_cursor(editor, buffer,  5);
+            
+            case .close_current_editor;             close_search_bar(editor); close_current_editor();
+            case .close_other_editor;               close_other_editor();
         }
 
         if mode == .classic {
             if action == {
-                case .open_entry_in_place;  search_bar_move_cursor(editor, buffer,  1, wrap = true);
+                case .open_entry_in_place;          search_bar_move_cursor(editor, buffer,  1, wrap = true);
             }
         } else {
             if action == {
-                case .move_up_one_page;     search_bar_move_cursor(editor, buffer, -per_page);
-                case .move_down_one_page;   search_bar_move_cursor(editor, buffer,  per_page);
+                case .move_up_one_page;             search_bar_move_cursor(editor, buffer, -per_page);
+                case .move_down_one_page;           search_bar_move_cursor(editor, buffer,  per_page);
                 
-                case .open_entry_in_place;  close_search_bar(editor);
-                // case .open_entry_on_the_side;   finder_open_selected_result(selected, .on_the_side);  return;
-                // case .open_entry_on_the_left;   finder_open_selected_result(selected, .left);         return;
-                // case .open_entry_on_the_right;  finder_open_selected_result(selected, .right);        return;
+                case .open_entry_in_place;          close_search_bar(editor);
+                case .open_entry_on_the_side;       search_bar_open_selected_result(editor, buffer, .on_the_side);
+                case .open_entry_on_the_left;       search_bar_open_selected_result(editor, buffer, .left);
+                case .open_entry_on_the_right;      search_bar_open_selected_result(editor, buffer, .right);
             }
         }
         return;
@@ -649,6 +652,33 @@ search_bar_move_cursor :: (using editor: *Editor, buffer: Buffer, delta: s64, wr
     jump_to_search_result(editor, buffer, move_search_point = true);
     
     scroll_to_selected = ifx snap then Scroll_Mode.snap else .yes;
+}
+
+search_bar_open_selected_result :: (editor: Editor, buffer: Buffer, placement: Editor_Placement) {
+    using editor.search_bar;
+    
+    active = false;  // close it immediately
+    
+    result := results[selected_result];
+    
+    old_layout := editors.layout;
+    editors_open_buffer(editor.buffer_id, placement);
+    
+    // Select the search result
+    editor, buffer := get_active_editor_and_buffer();
+    match_start := min(result.offset,                    xx buffer.bytes.count);  // buffer could've changed, so offset may not be valid any more
+    match_end   := min(result.offset + input.text.count, xx buffer.bytes.count);
+    cursor := leave_only_original_cursor(editor);
+    cursor.sel = xx match_start;
+    cursor.pos = xx match_end;
+
+    editor.scroll_to_cursor = .yes;
+    if old_layout == .Single && editors.layout == .Double {
+        // We've just opened a new editor, so need to let it know it's being opened,
+        // so that it can use the target rect width for its scroll calculations
+        // (otherwise it'll be too small and the scroll will not animate where expected)
+        editor.scroll_to_cursor = .yes_new_editor;
+    }
 }
 
 search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := false) {
