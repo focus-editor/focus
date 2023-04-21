@@ -130,6 +130,7 @@ draw_splash_screen :: (main_area: Rect) {
             .{ .show_open_file_dialog_in_navigate_mode,             "Navigate To File" },
             .{ .show_open_file_dialog_in_navigate_mode_from_root,   "Navigate To File From Root" },
             .{ .search_in_buffer,                                   "Search In Open File" },
+            .{ .search_in_buffer_dropdown_mode,                     "Search In Open File (Dropdown Mode)" },
             .{ .search_in_project,                                  "Search In Workspace" },
         ];
         
@@ -591,6 +592,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         max_search_results := cast(s64) (rect.h * 0.3 / entry_height);
         num_search_results := min(results.count, max_search_results);
         
+        if mode == .classic then num_search_results = 0;
+        
         top_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
         bar_rect_height := top_rect_height + entry_height * num_search_results;
 
@@ -620,7 +623,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id, label = "Find in buffer");
         
         // Draw search results
-        if results {
+        if results && mode == .dropdown {
             // Remember how many fits per page
             per_page = cast(s64) (results_rect.h / entry_height);
             if per_page <= 0 then per_page = 2;
@@ -632,7 +635,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 // Scrollbar
                 content_height := results.count * entry_height;
                 max_y_scroll := content_height - results_rect.h;
-                new_scroll_target := draw_scrollbar(results_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, search_scrollbar_id);
+                new_scroll_target := get_new_scroll_target_from_scrollbar(results_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, search_scrollbar_id);
                 if new_scroll_target != scroll_anim.target {
                     scroll_y = new_scroll_target;
                     scroll_anim.target = new_scroll_target;
@@ -640,16 +643,23 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 }
     
                 // Scrolling update
-                if scroll_to_selected {
+                if scroll_to_selected != .no {
                     // We only want to scroll to cursor when cursor is moved by arrow keys
                     target := scroll_anim.target;
                     selected_top    := selected_result * entry_height - target;
                     selected_bottom := selected_top + entry_height;
-                    if selected_top < 0 then target = cast(s32) (selected_result * entry_height);
+                    if selected_top < entry_height then target = cast(s32) (selected_result * entry_height);
                     if selected_bottom > results_rect.h then target = cast(s32) ((selected_result + 1) * entry_height - results_rect.h);
                     if content_height - target < results_rect.h then target = cast(s32) (content_height - results_rect.h);
-                    if target != scroll_anim.target then start_animation(*scroll_anim, scroll_y, target);
-                    scroll_to_selected = false;
+                    if target != scroll_anim.target { 
+                        if scroll_to_selected == .yes {
+                            start_animation(*scroll_anim, scroll_y, target);
+                        } else {
+                            scroll_y = target;
+                            scroll_anim.target = target;
+                        }
+                    }
+                    scroll_to_selected = .no;
                 }
     
                 // Mouse scrolling
@@ -665,6 +675,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                     redraw_requested = true;
                     scroll_y = get_animation_value(scroll_anim);
                 }
+                
+                // The above operations could've updated scrollbar position, so drawing it here
+                draw_scrollbar(results_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, search_scrollbar_id);
             }
             
             visible_start := clamp(cast(s64) (scroll_y / entry_height), 0, results.count);
@@ -1004,7 +1017,7 @@ draw_open_file_dialog :: () {
             // Scrollbar
             content_height := filtered.count * entry_height;
             max_y_scroll := content_height - files_rect.h;
-            new_scroll_target := draw_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
+            new_scroll_target := get_new_scroll_target_from_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
             if new_scroll_target != scroll_anim.target {
                 scroll_y = new_scroll_target;
                 scroll_anim.target = new_scroll_target;
@@ -1012,15 +1025,22 @@ draw_open_file_dialog :: () {
             }
 
             // Scrolling update
-            if scroll_to_cursor {
+            if scroll_to_cursor != .no {
                 // We only want to scroll to cursor when cursor is moved by arrow keys
                 target := scroll_anim.target;
                 selected_top    := selected * entry_height - target;
                 selected_bottom := selected_top + entry_height;
                 if selected_top < 0 then target = cast(s32) (selected * entry_height);
                 if selected_bottom > files_rect.h then target = cast(s32) ((selected + 1) * entry_height - files_rect.h);
-                if target != scroll_anim.target then start_animation(*scroll_anim, scroll_y, target);
-                scroll_to_cursor = false;
+                if target != scroll_anim.target { 
+                    if scroll_to_cursor == .yes {
+                        start_animation(*scroll_anim, scroll_y, target);
+                    } else {
+                        scroll_y = target;
+                        scroll_anim.target = target;
+                    }
+                }
+                scroll_to_cursor = .no;
             }
 
             // Mouse scrolling
@@ -1036,6 +1056,9 @@ draw_open_file_dialog :: () {
                 redraw_requested = true;
                 scroll_y = get_animation_value(scroll_anim);
             }
+            
+            // The above operations could've updated scrollbar position, so drawing it here
+            draw_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
         }
 
         visible_start := clamp(cast(s64) (scroll_y / entry_height), 0, filtered.count);
@@ -1185,7 +1208,7 @@ draw_finder :: () {
             // Scrollbar
             content_height := results.count * entry_height;
             max_y_scroll := content_height - files_rect.h;
-            new_scroll_target := draw_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
+            new_scroll_target := get_new_scroll_target_from_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
             if new_scroll_target != scroll_anim.target {
                 scroll_y = new_scroll_target;
                 scroll_anim.target = new_scroll_target;
@@ -1193,7 +1216,7 @@ draw_finder :: () {
             }
 
             // Scrolling update
-            if scroll_to_cursor {
+            if scroll_to_cursor != .no {
                 // We only want to scroll to cursor when cursor is moved by arrow keys
                 target := scroll_anim.target;
                 selected_top    := selected * entry_height - target;
@@ -1201,8 +1224,15 @@ draw_finder :: () {
                 if selected_top < 0 then target = cast(s32) (selected * entry_height);
                 if selected_bottom > files_rect.h then target = cast(s32) ((selected + 1) * entry_height - files_rect.h);
                 if content_height - target < files_rect.h then target = cast(s32) (content_height - files_rect.h);
-                if target != scroll_anim.target then start_animation(*scroll_anim, scroll_y, target);
-                scroll_to_cursor = false;
+                if target != scroll_anim.target { 
+                    if scroll_to_cursor == .yes {
+                        start_animation(*scroll_anim, scroll_y, target);
+                    } else {
+                        scroll_y = target;
+                        scroll_anim.target = target;
+                    }
+                }
+                scroll_to_cursor = .no;
             }
 
             // Mouse scrolling
@@ -1218,6 +1248,9 @@ draw_finder :: () {
                 redraw_requested = true;
                 scroll_y = get_animation_value(scroll_anim);
             }
+            
+            // The above operations could've updated scrollbar position, so drawing it here
+            draw_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
         }
         
         if !initted {
@@ -1656,7 +1689,11 @@ draw_top_shadow :: (using rect: Rect, size: float = 10.0) {
     Simp.immediate_quad(x, y + h, x + w, y + h + size * dpi_scale, c00 = s, c01 = t, c10 = s, c11 = t);
 }
 
-draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id) -> new_scroll_target: s32 {
+get_new_scroll_target_from_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id) -> new_scroll_target: s32 {
+    return draw_scrollbar(main_rect, width, content_height, scroll, scroll_target, max_scroll, ui_id, draw = false);
+}
+
+draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id, $draw := true) -> new_scroll_target: s32 {
     if max_scroll <= 0 return scroll_target;
 
     area := cut_right(main_rect, width);  // the scrollbar area of the main rect
@@ -1672,16 +1709,16 @@ draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll:
     color := Colors.SCROLLBAR;
 
     if ui.active == ui_id || (ui.hot_last_frame == ui_id && ui.active == .none) {
-        draw_rounded_rect(area, Colors.SCROLLBAR_BACKGROUND, radius = rounding_radius_small);
+        #if draw draw_rounded_rect(area, Colors.SCROLLBAR_BACKGROUND, radius = rounding_radius_small);
         color = Colors.SCROLLBAR_HOVER;
     }
     separator_rect := shrink_y(cut_left(area, 1), rounding_radius_small);
-    draw_rect(separator_rect, Colors.SCROLLBAR_BACKGROUND);
+    #if draw draw_rect(separator_rect, Colors.SCROLLBAR_BACKGROUND);
     scrollbar.y += (cast(float) (max_scroll - scroll) / max_scroll) * scroll_zone_size;
     scrollbar.y = floor(scrollbar.y);
     scrollbar = shrink(scrollbar, 1);
     if scrollbar.h < 5 then scrollbar.h = 5;  // don't make it too tiny
-    draw_rounded_rect(scrollbar, color, radius = rounding_radius_small);
+    #if draw draw_rounded_rect(scrollbar, color, radius = rounding_radius_small);
 
     // Maybe drag the slider
     if ui.active == ui_id {
@@ -1697,12 +1734,12 @@ draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll:
         new_scrollbar_pos_from_top := (area.h - (mouse.pointer.y - scrollbar_grab_point - area.y)) - scrollbar.h / 2;
         new_scroll_percentage := new_scrollbar_pos_from_top / (area.h - scrollbar.h);
         new_scroll_target: = max_scroll * new_scroll_percentage;
-        return clamp(cast(s32) new_scroll_target, 0, max_scroll);
-    } else {
-        return scroll_target;
+        
+        scroll_target = clamp(cast(s32) new_scroll_target, 0, max_scroll);
     }
+    
+    return scroll_target;
 }
-
 
 #scope_file
 

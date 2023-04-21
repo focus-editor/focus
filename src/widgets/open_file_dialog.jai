@@ -122,7 +122,7 @@ maybe_handle_text_input_event :: (using input: *Text_Input, event: Input.Event) 
     return false;
 }
 
-move_cursor :: (delta: s64, wrap := false) {
+move_cursor :: (delta: s64, wrap := false, snap := true) {
     using open_file_dialog.entries;
     
     selected += delta;
@@ -134,7 +134,7 @@ move_cursor :: (delta: s64, wrap := false) {
         if selected < 0 then selected = 0;
         if selected >= filtered.count then selected = filtered.count - 1;
     }
-    open_file_dialog.scroll_to_cursor = true;
+    open_file_dialog.scroll_to_cursor = ifx snap then Scroll_Mode.snap else .yes;
 }
 
 pop_directory :: () -> handled: bool {
@@ -169,7 +169,7 @@ refresh_entries :: (scan_folder := false) {
 
     reset(*memory_pool);  // to avoid having to free each string
 
-    scroll_to_cursor = true;
+    scroll_to_cursor = .snap;
     entries.scroll_y = 0;
     entries.selected = 0;
     array_reset(*entries.filtered);
@@ -390,7 +390,7 @@ open_file_dialog: Open_File_Dialog;
 
 Open_File_Dialog :: struct {
     mode: Mode;
-    scroll_to_cursor := false;
+    scroll_to_cursor: Scroll_Mode = .no;
 
     input: Text_Input;
     

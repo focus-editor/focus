@@ -170,7 +170,7 @@ finder_open_selected_result :: (selected_num := -1, placement: Editor_Placement)
 
 #scope_file
 
-move_cursor :: (delta: s64, wrap := false) {
+move_cursor :: (delta: s64, wrap := false, snap := true) {
     using finder;
     
     selected += delta;
@@ -182,7 +182,7 @@ move_cursor :: (delta: s64, wrap := false) {
         if selected < 0 then selected = 0;
         if selected >= results.count then selected = results.count - 1;
     }
-    scroll_to_cursor = true;
+    scroll_to_cursor = ifx snap then Scroll_Mode.snap else .yes;
 }
 
 start_new_search :: (force := false) {
@@ -316,7 +316,7 @@ Finder :: struct {
     
     scroll_y: s32;
     scroll_anim := #run Tween_Animation(s32).{ speed = xx 0.1, func = .lerp };
-    scroll_to_cursor: bool;
+    scroll_to_cursor: Scroll_Mode = .no;
     
     width_percentage := WIDTH_NORMAL;  // how much of the screen the popup occupies
     width_anim := #run Tween_Animation(float).{ start = WIDTH_NORMAL, target = WIDTH_NORMAL };

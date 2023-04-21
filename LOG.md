@@ -26,7 +26,10 @@
     - Currently only RGB monitor panels
 
 - Local search
-    - New widget
+    + New widget
+    + Keep the classic mode
+    - Open in another pane on ctrl+enter, ctrl+1/2
+        - Support search actions?    
     
 - Definitely ignore the editor's own temp dir, even if the user doesn't include it
 - When sorting the file list, put the modified buffers on top (even ignoring the project boundary?)
