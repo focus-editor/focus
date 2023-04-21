@@ -418,7 +418,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             mark_line_height := marks_rect.h / cast(float) buffer.line_starts.count;  // the height of the rect which corresponds to one line
     
             highlight_mark_rect := shrink_x(marks_rect, marks_rect.w / 3);
-            highlight_mark_rect.h = 4 * dpi_scale;
+            highlight_mark_rect.h = floor(4 * dpi_scale);
     
             if search_bar_is_open(editor) && search_bar.results {
                 // Search results
@@ -573,46 +573,198 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     // Draw search bar
     if search_bar_is_open(editor) {
         using search_bar;
-        input_id := get_ui_id_from_loc(parent_id = ui_id);
+        
+        input_id            := get_ui_id_from_loc(parent_id = ui_id);
+        results_id          := get_ui_id_from_loc(parent_id = ui_id);
+        search_scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
         
         if width_percentage != width_anim.target {
             width_percentage = get_animation_value(width_anim);
             redraw_requested = true;
         }
-
-        margin_x := 12 * dpi_scale;
-        margin_y :=  7 * dpi_scale;
-        padding  :=  4 * dpi_scale;
-        bar_rect_height := font_ui_line_height + 2 * padding + 2 * margin_y + 2;
+        
+        margin  := floor(8 * dpi_scale);
+        padding := floor(4 * dpi_scale);
+        
+        entry_height := font_ui_line_height + padding * 2;
+        
+        max_search_results := cast(s64) (rect.h * 0.3 / entry_height);
+        num_search_results := min(results.count, max_search_results);
+        
+        top_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
+        bar_rect_height := top_rect_height + entry_height * num_search_results;
 
         bar_rect := cut_top(main_area, bar_rect_height);
         bar_rect = cut_right(bar_rect, bar_rect.w * width_percentage);
         bar_rect.x -= 2 * char_size;
         
-        draw_rounded_rect_with_shadow(bar_rect, Colors.BACKGROUND_LIGHT);
+        top_rect, results_rect := cut_top(bar_rect, top_rect_height);
         
-        push_scissor(bar_rect);
-        defer pop_scissor();
+        draw_rounded_rect_with_shadow(bar_rect, Colors.BACKGROUND_LIGHT);
 
-        // Clicking on the bar should activate input
-        maybe_set_hot_or_active(input_id, bar_rect, .NORMAL);
+        maybe_set_hot_or_active(input_id,   bar_rect, .NORMAL);
+        maybe_set_hot_or_active(results_id, bar_rect, .NORMAL);
 
-        result_label: string;
+        numbers_label: string;
         if results {
-            result_label = tprint("% of %", selected_result + 1, results.count);
+            numbers_label = tprint("% of %", selected_result + 1, results.count);
         } else {
-            result_label = "No results";
+            numbers_label = "No results";
         }
-        results_width := cast(float) Simp.prepare_text(font_ui_small, result_label);
-        bar_rect = shrink_x(bar_rect, margin_x);
-        bar_rect = shrink_y(bar_rect, margin_y);
-        results_rect, input_rect := cut_right(bar_rect, results_width + padding);
+        numbers_width := cast(float) Simp.prepare_text(font_ui_small, numbers_label);
+        top_rect = shrink(top_rect, margin);
+        numbers_rect, input_rect := cut_right(top_rect, numbers_width + padding);
 
-        Simp.draw_prepared_text(font_ui_small, xx (results_rect.x + padding), xx (results_rect.y + (results_rect.h - font_ui_small.character_height) / 2.0), color = Colors.UI_DEFAULT);
+        Simp.draw_prepared_text(font_ui_small, xx (numbers_rect.x + padding), xx (numbers_rect.y + (numbers_rect.h - font_ui_small.character_height) / 2.0), color = Colors.UI_DEFAULT);
         input_active := editor_is_active && search_bar.active && active_global_widget == .editors;
         draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id, label = "Find in buffer");
-
-        if ui.active != .none && ui.active != input_id && ui.active != scrollbar_id {
+        
+        // Draw search results
+        if results {
+            // Remember how many fits per page
+            per_page = cast(s64) (results_rect.h / entry_height);
+            if per_page <= 0 then per_page = 2;
+    
+            push_scissor(results_rect);
+            defer pop_scissor();
+            
+            {
+                // Scrollbar
+                content_height := results.count * entry_height;
+                max_y_scroll := content_height - results_rect.h;
+                new_scroll_target := draw_scrollbar(results_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, search_scrollbar_id);
+                if new_scroll_target != scroll_anim.target {
+                    scroll_y = new_scroll_target;
+                    scroll_anim.target = new_scroll_target;
+                    redraw_requested = true;
+                }
+    
+                // Scrolling update
+                if scroll_to_selected {
+                    // We only want to scroll to cursor when cursor is moved by arrow keys
+                    target := scroll_anim.target;
+                    selected_top    := selected_result * entry_height - target;
+                    selected_bottom := selected_top + entry_height;
+                    if selected_top < 0 then target = cast(s32) (selected_result * entry_height);
+                    if selected_bottom > results_rect.h then target = cast(s32) ((selected_result + 1) * entry_height - results_rect.h);
+                    if content_height - target < results_rect.h then target = cast(s32) (content_height - results_rect.h);
+                    if target != scroll_anim.target then start_animation(*scroll_anim, scroll_y, target);
+                    scroll_to_selected = false;
+                }
+    
+                // Mouse scrolling
+                if (ui.hot_last_frame == results_id || ui.hot_last_frame == search_scrollbar_id) && mouse_pointer_is_within(results_rect) {
+                    if ui.hot_last_frame == results_id && ui.active == .none then set_pointer_image(.PRESSABLE);
+                    if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
+                        target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
+                        start_animation(*scroll_anim, scroll_y, target);
+                    }
+                }
+    
+                if scroll_y != scroll_anim.target {
+                    redraw_requested = true;
+                    scroll_y = get_animation_value(scroll_anim);
+                }
+            }
+            
+            visible_start := clamp(cast(s64) (scroll_y / entry_height), 0, results.count);
+            visible_count := cast(s64) (results_rect.h / entry_height) + 2;
+            visible_entries := array_view(results, visible_start, visible_count);
+    
+            last_line_num := ifx results then results[results.count-1].line + 1 else 1;
+            line_num_col_width := char_size * tprint("%", last_line_num).count;
+            line_num_x := results_rect.x + margin;
+            text_x     := line_num_x + line_num_col_width + margin * 1.5;
+            
+            max_code_chars := cast(s32)((results_rect.x + results_rect.w - text_x) / char_size) - 1;  // NOTE: counts tab as one char
+                
+            entry_rect := cut_top(results_rect, entry_height);
+            filename_scissor := cut_left(results_rect, line_num_x - entry_rect.x - char_size);
+            if !is_valid(filename_scissor) then filename_scissor = entry_rect;
+    
+            for entry, i : visible_entries {
+                entry_index := visible_start + i;
+                entry_rect.y = results_rect.y + results_rect.h - (entry_index + 1) * entry_height + scroll_y;
+    
+                if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == results_id && (ui.active == .none || ui.active == results_id) {
+                    if mouse.left.just_pressed { 
+                        selected_result = entry_index;
+                        jump_to_search_result(editor, buffer); 
+                        close_search_bar(editor);
+                    }
+                    draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
+                }
+                if entry_index == selected_result then draw_rect(entry_rect, Colors.LIST_CURSOR);
+    
+                pen := make_vector2(
+                    entry_rect.x + margin + padding,
+                    entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+                );
+                width: float;
+             
+                line_range := Offset_Range.{ start = buffer.line_starts[entry.line], end = get_line_end_offset(buffer, entry.line) };
+                text_start := line_range.start + count_whitespace(buffer.bytes, line_range.start, line_range.end);
+                
+                // Line number
+                width = xx Simp.prepare_text(font_ui_small, tprint("%", entry.line + 1));
+                Simp.draw_prepared_text(font_ui_small, xx (line_num_x + line_num_col_width - width), xx pen.y, color = Colors.CODE_COMMENT);
+                                
+                // Draw code line
+                {
+                    match_start := entry.offset;
+                    match_end   := min(entry.offset + search_bar.input.text.count, line_range.end);  // if we have a multi-line match, we will still show only the first line
+                    line_start  := ifx text_start <= match_start then text_start else line_range.start;
+                    chars_until_match_start := get_num_chars(array_view(buffer.bytes, line_start, match_start - line_start));
+                    chars_until_match_end   := get_num_chars(array_view(buffer.bytes, line_start, match_end   - line_start));
+                    
+                    // Figure out whether we need to cut the line so that the match is visible
+                    char_offset := 0;
+                    byte_offset := 0;
+                    pad_chars := 2;
+                    if chars_until_match_end > max_code_chars {
+                        if (chars_until_match_end - chars_until_match_start) >= max_code_chars {
+                            // The match won't fit on the screen anyway - stick it to the left
+                            char_offset = xx max(0, chars_until_match_start - pad_chars);
+                        } else {
+                            // Stick the match to the right
+                            char_offset = chars_until_match_end - xx (max_code_chars - pad_chars);
+                        }
+                    }
+                    if char_offset > 0 {
+                        line_str := to_string(array_view(buffer.bytes, line_start, line_range.end));
+                        byte_offset = slice_chars(line_str, 0, xx char_offset).count;
+                    }
+                    
+                    pen.x = text_x;
+                    if char_offset > 0 {
+                        // Line was cut on the left, draw an ellipsis
+                        Simp.draw_text(font, xx pen.x, xx pen.y, "…", color = Colors.CODE_COMMENT);
+                        pen.x += char_size;
+                    }
+                    
+                    // Draw highlight
+                    highlight_rect := entry_rect;
+                    highlight_rect.x = pen.x + char_size * (chars_until_match_start - char_offset);
+                    highlight_rect.w = char_size * (chars_until_match_end - chars_until_match_start);
+                    draw_rect(shrink_y(highlight_rect, padding), Colors.SEARCH_RESULT_INACTIVE);
+                    
+                    // Draw line
+                    visible_range := Offset_Range.{
+                        start = line_start + xx byte_offset,
+                        end   = min(line_range.end, line_start + xx byte_offset + 4 * max_code_chars),  // max 4 bytes per char
+                    };
+                    line_str := get_string_from_range(buffer, visible_range);
+                    colors   := array_view(buffer.colors, visible_range.start, line_str.count);
+                    code_lines: [1] Simp.Code_Line;
+                    code_lines[0] = .{ line = line_str, tab_spaces = 0, colors = colors };
+                    Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);
+                }
+            }
+    
+            if scroll_y != 0 then draw_top_down_shadow(cut_top(results_rect, char_size));
+        }
+        
+        if ui.active != .none && ui.active != input_id && ui.active != results_id && ui.active != scrollbar_id && ui.active != search_scrollbar_id {
             active = false;  // deactivate on clicks elsewhere (except scrollbar)
             redraw_requested = true;
         }
@@ -621,6 +773,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             editors.active = editor_id;  // make sure the editor is also activated
             redraw_requested = true;
         }
+        
     }
     
     // Draw footer
@@ -635,7 +788,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         footer_rect = shrink_x(footer_rect, text_offset.x);
 
         width   := 0.0;
-        padding := 4 * dpi_scale;
+        padding := floor(4 * dpi_scale);
 
         pen := make_vector2(
             footer_rect.x,
@@ -792,7 +945,7 @@ draw_open_file_dialog :: () {
     input_id := get_ui_id_from_loc(parent_id = ui_id);
     
     if mode == .search {
-        label := ifx finder.initted then " Search files by name" else " Still indexing project files. Please wait...";
+        label := ifx finder.initted then " Search files by name" else " Still scanning the workspace. Please wait...";
         draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = label);
         if !finder.initted then redraw_requested = true;  // draw the progress bar and update as soon as we're done
         
@@ -977,8 +1130,8 @@ draw_finder :: () {
         return;
     }
 
-    margin  := 12 * dpi_scale;
-    padding :=  4 * dpi_scale;
+    margin  := floor(12 * dpi_scale);
+    padding := floor( 4 * dpi_scale);
     input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
     entry_height := font_ui_line_height + padding * 2;
 
@@ -1006,7 +1159,7 @@ draw_finder :: () {
     input_rect, files_rect := cut_top(box_rect, input_rect_height);
     input_rect = shrink(input_rect, margin);
     input_id := get_ui_id_from_loc(parent_id = ui_id);
-    label := ifx initted then "Type to search in workspace" else "Still indexing. Please wait...";
+    label := ifx initted then "Type to search in workspace" else "Still scanning the workspace. Please wait...";
     draw_text_input(*finder.input, input_rect, ui_id = input_id, active = true, label = label);
     
     scan_progress := get_workspace_scan_progress();
@@ -1047,6 +1200,7 @@ draw_finder :: () {
                 selected_bottom := selected_top + entry_height;
                 if selected_top < 0 then target = cast(s32) (selected * entry_height);
                 if selected_bottom > files_rect.h then target = cast(s32) ((selected + 1) * entry_height - files_rect.h);
+                if content_height - target < files_rect.h then target = cast(s32) (content_height - files_rect.h);
                 if target != scroll_anim.target then start_animation(*scroll_anim, scroll_y, target);
                 scroll_to_cursor = false;
             }

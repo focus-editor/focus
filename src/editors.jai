@@ -62,6 +62,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
     
     mods := event.modifier_flags;
     shift_pressed := event.modifier_flags.shift_pressed;
+    ctrl_pressed  := event.modifier_flags.ctrl_pressed;
         
     if editor.search_bar.active {
         using editor.search_bar;
@@ -70,19 +71,37 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         if handled && old_search_str != to_string(input.text) then search_and_update_results(editor, buffer, jump = true);
 
         if event.key_code == {
-            case .ESCAPE;
+            case .ESCAPE;     
                 close_search_bar(editor);
-            case .ENTER; #through;
-            case .ARROW_DOWN;
-                jump_to_next_search_result(editor, buffer);
+            case #char "L";   
+                if only_ctrl_shift_pressed(mods) { search_bar_toggle_expand(editor); }
+            case .ENTER;      
+                jump_to_search_result(editor, buffer, move_search_point = true);
+                close_search_bar(editor);
+            case .PAGE_UP;
+                selected_result = max(selected_result - per_page, 0);
+                jump_to_search_result(editor, buffer, move_search_point = true);
+                scroll_to_selected = true;
+            case .PAGE_DOWN;
+                selected_result = min(selected_result + per_page, results.count - 1);
+                jump_to_search_result(editor, buffer, move_search_point = true);
+                scroll_to_selected = true;
             case .ARROW_UP;
-                jump_to_prev_search_result(editor, buffer);
-            case #char "L";
-                if only_ctrl_shift_pressed(mods) {
-                    search_bar_toggle_expand(editor);
+                if selected_result == 0 && !ctrl_pressed {
+                    selected_result = results.count - 1;
+                } else {
+                    selected_result = max(selected_result - ifx ctrl_pressed then 5 else 1, 0);
                 }
-
-            // TODO: rewrite the search bar
+                jump_to_search_result(editor, buffer, move_search_point = true);
+                scroll_to_selected = true;
+            case .ARROW_DOWN; 
+                if selected_result == results.count - 1 && !ctrl_pressed {
+                    selected_result = 0;
+                } else {
+                    selected_result = min(selected_result + ifx ctrl_pressed then 5 else 1, results.count - 1);
+                }
+                jump_to_search_result(editor, buffer, move_search_point = true);
+                scroll_to_selected = true;
         }
         return;
     }
@@ -216,6 +235,7 @@ active_editor_type_char :: (char: u32) {
     if editor.search_bar.active {
         text_input_type_char(*editor.search_bar.input, char);
         search_and_update_results(editor, buffer, jump = true);
+        editor.search_bar.scroll_to_selected = true;
         return;
     }
 
@@ -593,6 +613,8 @@ open_search_bar :: (using editor: *Editor, buffer: Buffer) {
     search_point_offset = get_selection(cursors[main_cursor]).start;
 
     search_and_update_results(editor, buffer);
+    scroll_y = 0;
+    scroll_to_selected = true;
 }
 
 close_search_bar :: inline (editor: *Editor) {
@@ -655,21 +677,6 @@ jump_to_search_result :: (using editor: *Editor, buffer: Buffer, move_search_poi
     scroll_to_cursor = .yes;
 
     if move_search_point then search_point_offset = xx result.offset;
-}
-
-jump_to_prev_search_result :: (using editor: *Editor, buffer: Buffer) {
-    using search_bar;
-    if !results return;
-    selected_result -= 1;
-    if selected_result < 0 then selected_result = results.count - 1;
-    jump_to_search_result(editor, buffer, move_search_point = true);
-}
-
-jump_to_next_search_result :: (using editor: *Editor, buffer: Buffer) {
-    using search_bar;
-    if !results return;
-    selected_result = (selected_result + 1) % results.count;
-    jump_to_search_result(editor, buffer, move_search_point = true);
 }
 
 reset_search_results :: (using search_bar: *Search_Bar) {
@@ -2053,6 +2060,7 @@ Viewport :: struct {
 
 Search_Bar :: struct {
     active   := false;      // it receives keyboard input when active.
+    mode: enum { classic; dropdown; } = .classic;
     
     width_percentage := WIDTH_NORMAL;  // how much of the screen the popup occupies
     width_anim := #run Tween_Animation(float).{ start = WIDTH_NORMAL, target = WIDTH_NORMAL };
@@ -2064,6 +2072,11 @@ Search_Bar :: struct {
     results: [..] Text_Highlight;
     selected_result: s64 = -1;
     search_point_offset: s32;  // the point used to determine the next search result. Fixed so that we can set cursor without jumping around
+    
+    per_page := 10;
+    scroll_to_selected := false;
+    scroll_anim := #run Tween_Animation(s32).{ speed = xx 0.1, func = .lerp };
+    scroll_y: s32;
 }
 
 Text_Highlight :: struct {
