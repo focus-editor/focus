@@ -15,13 +15,20 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
         // }
 
         using tokenizer;
+        
+        // Maybe retroactively highlight a function
         if token.type == .punctuation && token.punctuation == .l_paren {
-            // Maybe retroactively highlight a function
-            prev        := last_tokens[1];
-            before_prev := last_tokens[0];
+            // Handle "func :: ("
+            before_prev, prev := last_tokens[0], last_tokens[1];
             if prev.type == .identifier {
                 memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
-            } else if prev.type == .operation && prev.operation == .double_colon && before_prev.type == .identifier {
+            } else if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
+                memset(colors.data + before_prev.start, xx Code_Color.FUNCTION, before_prev.len);
+            }
+        } else if token.type == .keyword && token.keyword == .kw_inline {
+            // Handle "func :: inline"
+            before_prev, prev := last_tokens[0], last_tokens[1];
+            if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
                 memset(colors.data + before_prev.start, xx Code_Color.FUNCTION, before_prev.len);
             }
         }
