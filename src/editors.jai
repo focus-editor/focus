@@ -420,7 +420,7 @@ move_cursor_to_viewport_center :: (editor: *Editor, buffer: Buffer) {
 
 leave_only_original_cursor :: (using editor: *Editor) -> *Cursor {
     // Remove all cursors except the original one
-    cursor := cursors[max(original_cursor, cursors.count-1)];
+    cursor := cursors[min(original_cursor, cursors.count-1)];
     cursor.clipboard = .{ start = 0, count = xx max(clipboard.count, 0) };
     cursors.count = 1;
     original_cursor = 0;
