@@ -12,7 +12,6 @@ main :: () {
     platform_maximize_window(window);
     
     platform_enable_drag_and_drop(window);
-    platform_set_refresh_timer(window);
 
     window_width, window_height = Simp.get_render_dimensions(window);
     screen = make_rect(0, 0, window_width, window_height);

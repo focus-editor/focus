@@ -30,6 +30,10 @@ platform_set_refresh_timer :: (window: Window_Type) {
     unimplemented();
 }
 
+platform_kill_refresh_timer :: (window: Window_Type) {
+    unimplemented();
+}
+
 platform_enumerate_logical_drives :: () -> [] string {
     unimplemented();
 }

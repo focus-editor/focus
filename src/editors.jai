@@ -877,11 +877,15 @@ scan_through_similar_chars_on_the_right :: (using buffer: Buffer, offset: s32, o
 
 cursors_start_blinking :: inline () {
     cursor_blink_start = frame_time;
+    platform_set_refresh_timer(window);
 }
 
 should_draw_cursors :: inline () -> bool {
     ms_since_start := cast(s64) ((frame_time - cursor_blink_start) * 1000);
-    if ms_since_start > CURSOR_BLINK_TIMEOUT_MS return true;
+    if ms_since_start > CURSOR_BLINK_TIMEOUT_MS {
+        platform_kill_refresh_timer(window);
+        return true;
+    }
     return (ms_since_start / CURSOR_BLINK_SPEED_MS) % 2 == 0;
 }
 
