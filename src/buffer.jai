@@ -488,9 +488,14 @@ refresh_buffer_from_disk :: (path: string) {
 maybe_mark_buffer_as_deleted :: (path: string) {
     buffer_id, found_buffer := table_find(*buffers_table, path);
     if !found_buffer return;  // no buffer for this path
-    if file_exists(path) return;  // no need to mark as deleted
-    
+    maybe_mark_buffer_as_deleted(buffer_id);
+}
+
+maybe_mark_buffer_as_deleted :: (buffer_id: s64) {
     buffer := *open_buffers[buffer_id];
+    if !buffer.has_file return;
+    if file_exists(buffer.file.full_path) return;  // no need to mark as deleted
+    
     buffer.deleted = true;    
     finder.need_to_refresh_results = true;
 }

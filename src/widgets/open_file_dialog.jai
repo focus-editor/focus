@@ -247,6 +247,9 @@ refresh_entries :: (scan_folder := false) {
             // @MEMORY SAFETY: if we ever delete buffers from open_buffers and free memory, this will have to copy everything!
             num_entries := 0;
             
+            // This bit will be set when we want to make sure an entry appears on top
+            top_priority_bit: u64 = 1 << 62;  // NOT the topmost bit because we'll be converting to s64 later
+            
             for buffer : open_buffers {
                 if buffer.deleted && !buffer.modified continue;  // NOTE: we might still want to see externally deleted buffers.
                                                                  // Maybe use 'deleted' and 'modified_on_disk' to distingiush the buffers
@@ -264,13 +267,13 @@ refresh_entries :: (scan_folder := false) {
                 entry.name_highlights = name_highlights;
                 entry.path_highlights = path_highlights;
                 // NOTE: there's space left in the sort key in case we need to add more parameters
-                dir_id_part:     u64 = (cast,trunc(u64) (127 - buffer.file.project_dir_id)) << 56;
+                dir_id_part:     u64 = (cast,trunc(u64) (63 - buffer.file.project_dir_id))  << 55; 
                 score_part:      u64 = (cast,trunc(u64) score)                              << 16;
                 times_open_part: u64 = (cast,trunc(u64) buffer.num_times_opened)            <<  0;
                 entry.sort_key = dir_id_part | score_part | times_open_part;
-                
-                if buffer.modified         then entry.flags |= .MODIFIED;
-                if buffer.modified_on_disk then entry.flags |= .MODIFIED_ON_DISK;
+             
+                if buffer.modified         then { entry.flags |= .MODIFIED;         entry.sort_key |= top_priority_bit; }
+                if buffer.modified_on_disk then { entry.flags |= .MODIFIED_ON_DISK; entry.sort_key |= top_priority_bit; }
                 
                 num_entries += 1;
                 if num_entries >= MAX_ENTRIES_TO_SHOW break;

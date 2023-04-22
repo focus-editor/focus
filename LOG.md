@@ -24,9 +24,6 @@
 
 ===========================
 
-- When sorting the file list, put the modified buffers on top (even ignoring the project boundary?)
-- When switching to buffer or trying to save it, check that the file exists
-
 - Implement config options
     - Report errors on wrong configs (write the usage code first)
     - maximize_on_start
@@ -209,6 +206,8 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ When switching to buffer or trying to save it, check that the file exists
++ When sorting the file list, put the modified buffers on top
 + Definitely ignore the editor's own temp dir, even if the user doesn't include it
 + When subsuming cursors, do something with the clipboard (also when undoing/redoing)
 + Jump to line on Ctrl+G

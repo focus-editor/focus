@@ -394,6 +394,7 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
     if buffer.num_times_opened < 255 then buffer.num_times_opened += 1;
     
     update_window_title(buffer_id);
+    maybe_mark_buffer_as_deleted(buffer_id);  // check in case we missed that it's deleted
     session_notify_modified_buffer(buffer_id);
     cursors_start_blinking();
 }
@@ -973,7 +974,8 @@ save_buffer :: (editor: *Editor, buffer: *Buffer) {
     // - recalculate lines
     // - adjust cursors
     
-    // session_notify_modified_buffer(editor.buffer_id);
+    maybe_mark_buffer_as_deleted(editor.buffer_id);  // check in case we missed that it's deleted
+    session_notify_modified_buffer(editor.buffer_id);
     save_buffer_to_disk(buffer);
 }
 
@@ -1017,6 +1019,9 @@ switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := fa
             }
             editors.active = ifx side == .left then editors.left else editors.right;
     }
+    
+    editor := *open_editors[editors.active];
+    maybe_mark_buffer_as_deleted(editor.buffer_id);  // check in case we missed that it's deleted
     
     update_window_title(open_editors[editors.active].buffer_id);
     cursors_start_blinking();

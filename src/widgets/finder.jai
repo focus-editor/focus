@@ -235,6 +235,11 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
         
         contents := to_string(buffer.bytes);
         
+        // Sort key parts
+        dir_id_part:    u64 = (cast,trunc(u64) (buffer.file.project_dir_id + 1)) << 56;
+        buffer_id_part: u64 = (cast,trunc(u64) buffer_id)                        << 32;
+        if buffer.modified || buffer.modified_on_disk then dir_id_part = 0;  // make sure modified buffers are on top
+        
         file_end := contents.data + contents.count;
         offset := 0;
         while true {
@@ -245,8 +250,6 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
             result.buffer_id = buffer_id;
             result.match_offset = xx offset;
             
-            dir_id_part:    u64 = (cast,trunc(u64) (buffer.file.project_dir_id + 1)) << 56;
-            buffer_id_part: u64 = (cast,trunc(u64) buffer_id)                        << 32;
             offset_part:    u64 = (cast,trunc(u64) offset)                           <<  0;
             result.sort_key = dir_id_part | buffer_id_part | offset_part;
             
