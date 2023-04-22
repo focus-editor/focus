@@ -45,8 +45,7 @@
         - applying a stash
         - deleting project dir
         - deleting a dir containing a non-project file
-        
-- Improve scrolling using shitty touchpads
+
 - Then: Sticky viewport
     - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
 
@@ -208,6 +207,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Improve scrolling using shitty touchpads
 + When switching to buffer or trying to save it, check that the file exists
 + When sorting the file list, put the modified buffers on top
 + Definitely ignore the editor's own temp dir, even if the user doesn't include it
