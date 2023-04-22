@@ -58,7 +58,7 @@ show_open_file_dialog :: (mode: Open_File_Dialog.Mode, from_root := false) {
 }
 
 hide_open_file_dialog :: () {
-    active_global_widget = .editors;
+    activate_editors();
 }
 
 open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, folder_only := false) {

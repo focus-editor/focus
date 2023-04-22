@@ -169,6 +169,8 @@ Ctrl-P                      show_open_file_dialog_in_search_mode
 Ctrl-O                      show_open_file_dialog_in_navigate_mode
 Ctrl-Shift-O                show_open_file_dialog_in_navigate_mode_from_root
 
+Ctrl-G                      go_to_line
+
 Ctrl-C                      copy
 Ctrl-X                      cut
 Ctrl-V                      paste

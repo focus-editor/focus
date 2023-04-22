@@ -8,6 +8,8 @@ draw_frame :: () {
     if !mouse.left.is_down || mouse.left.just_released then ui.active = .none;
 
     footer_height := font_ui_line_height * 1.6;
+    
+    active_pane_rect: Rect = ---;
 
     // Draw editors
     if #complete editors.layout == {
@@ -17,6 +19,7 @@ draw_frame :: () {
         case .Single;
             editors_snap_splitter(0.5);
             draw_editor(editors.active, screen, footer_height, .editor_single);
+            active_pane_rect = screen;
         case .Double;
             // Drag splitter
             if ui.active == .editor_splitter {
@@ -45,14 +48,18 @@ draw_frame :: () {
 
             draw_editor(editors.left,  left_rect,  footer_height, .editor_left,  screen);
             draw_editor(editors.right, right_rect, footer_height, .editor_right, screen);
+            
+            active_pane_rect = ifx editors.active == editors.left then left_rect else right_rect;
 
             splitter_rect := make_rect(left_rect.x + left_rect.w, left_rect.y + footer_height, 2, left_rect.h - footer_height);
             draw_splitter(splitter_rect, split_x, .editor_splitter);
     }
 
-    // Open file dialog is modal so if it's shown it means it receives input
-    if active_global_widget == .open_file_dialog then draw_open_file_dialog();
-    if active_global_widget == .finder           then draw_finder();
+    if active_global_widget == {
+        case .open_file_dialog;         draw_open_file_dialog();
+        case .finder;                   draw_finder();
+        case .go_to_line_dialog;        draw_go_to_line_dialog(active_pane_rect);
+    } 
 
     // Reset UI state after drawing
     if !mouse.left.is_down || mouse.left.just_released {
@@ -69,7 +76,7 @@ draw_splash_screen :: (main_area: Rect) {
     ui_id := get_ui_id_from_loc();
     
     right_area, left_area := cut_right(main_area, main_area.w / GOLDEN_RATIO);
-    logo_area, info_area := cut_top(left_area, left_area.h / GOLDEN_RATIO);
+    logo_area, info_area  := cut_top(left_area, left_area.h / GOLDEN_RATIO);
     
     logo_rect := logo_area;
     logo_rect.w = min(logo_area.w, logo_area.h) / GOLDEN_RATIO;
@@ -132,6 +139,7 @@ draw_splash_screen :: (main_area: Rect) {
             .{ .search_in_buffer,                                   "Search In Open File" },
             .{ .search_in_buffer_dropdown_mode,                     "Search In Open File (Dropdown Mode)" },
             .{ .search_in_project,                                  "Search In Workspace" },
+            .{ .go_to_line,                                         "Go To Line" },
         ];
         
         right_area = shrink(right_area, margin);
@@ -196,7 +204,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     if !is_valid(rect) return;
     
     became_active := maybe_set_hot_or_active(ui_id, rect, .TEXT_SELECT);
-    if became_active then active_global_widget = .editors;
+    if became_active then activate_editors();
     
     using editor := *open_editors[editor_id];
     buffer := *open_buffers[buffer_id];
@@ -1411,6 +1419,35 @@ draw_finder :: () {
 
         if scroll_y != 0 then draw_top_down_shadow(cut_top(files_rect, char_size));
     }
+}
+
+draw_go_to_line_dialog :: (active_editor_rect: Rect) {
+    input_id := get_ui_id_from_loc();
+    
+    margin  := floor(8 * dpi_scale);
+    padding := floor(4 * dpi_scale);
+    
+    label_width := cast(float) Simp.prepare_text(font_ui, "Go to line");
+    width  := max(active_editor_rect.w * 0.5, 6 * char_size + 2 * (margin + padding + 1));
+    height := font_ui_line_height + 2 * (margin + padding + 1);
+    
+    bar_rect := cut_top(active_editor_rect, height);
+    bar_rect = cut_right(bar_rect, width);
+    bar_rect.x -= 2 * char_size;
+    
+    maybe_set_hot_or_active(input_id, bar_rect, .NORMAL);
+    
+    input_rect := shrink(bar_rect, margin);
+    input_rect = cut_right(input_rect, input_rect.w - (label_width + margin));
+    
+    draw_rounded_rect_with_shadow(bar_rect, Colors.BACKGROUND_LIGHT);
+    
+    pen := Vector2.{
+        x = bar_rect.x + margin,
+        y = bar_rect.y + (bar_rect.h - cast(s32)font_ui.character_height) / 2 + 2,  // sigh
+    };
+    Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = Colors.UI_DEFAULT);
+    draw_text_input(*go_to_line_dialog.input, input_rect, ui_id = input_id, active = true, label = " line number");
 }
 
 get_cursor_screen_pos :: (text_origin: Vector2, coords: Coords) -> Vector2 {

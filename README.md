@@ -16,50 +16,31 @@ A simple editor that tries to not stand in your way.
 
 The editor is not finished and there's a big list of things to do before release. Your bug reports and comments are welcome!
 Notable missing features:
-- Tab support (currently tabs are drawn as a one-symbol arrow, and when you press tab spaces are inserted to the next tab stop)
 - Creating new files (no UI for it yet - please use other ways of creating files until it's implemented)
 - Projects and sessions: about 70% done, not ready to use yet
 - Horizontal scrollbar is missing
 - Line wrap
-- Jump to line by number
 - No UI error reporting (e.g. when a project is misconfigured or a file fails to save)
 - Settings in the config file are not usable yet
 - Color schemes
 
-## Basic shortcuts
+## Shortcuts
 
-(you can see the full list of shortcuts and redefine keys in the global config file)
+You can see the full list of shortcuts and redefine keys in the global config file.
 
-- Ctrl + P - open file (if you hold Ctrl when opening a file it will open on the side)
-- Ctrl + W - close current file
-- Ctrl + S - save
-- Ctrl + Shift + W - close other file (when 2 files are open side-by-side)
-- Ctrl + 1 / 2 switch to the left/right editor
-- Ctrl + comma - toggle active pane
-- Ctrl + Shift + L - enlarge/shrink the current editor (in the side-by-side layout)
-- Ctrl + arrow keys - move cursor by word/paragraph
-- Ctrl + Enter - insert a new line below without breaking
-- Ctrl + Shift + Enter - insert a new line above without breaking
-- Ctrl + D - select word
-- Ctrl + D repeatedly - make a new cursor for the next occurrence
-- Ctrl + L - select line
-- Ctrl + Shift + D - duplicate selected lines
-- Ctrl + F - search within open file. When the search bar is open, up/down to jump to the prev/next search result
-- Ctrl + Shift + F - search within workspace
-- Alt + Shift + Up/Down - move selection up/down
-- Alt + arrows - scroll
-- Alt + C - move cursor to the center of the screen. Useful when you've scrolled using the keyboard and now want to edit something
 
 ### Acknowledgements
 
 - The editor was made possible by the fantastic Jai programming language by Jonathan Blow
 
 - The editor was inspired by Jamie Brandon's blog post (https://www.scattered-thoughts.net/writing/focus-intro/). Nothing other than the name was borrowed from his editor - the name was just too good.
-  
+
+- I am very grateful to my wife who supported me along the way and took on the bigger share of the housework to let me work on the editor.
+
+- A special thanks to the two early adopters who helped to make the editor more robust: @cookednick and @ustance.
+
 - The default font is created by Nikita Prokopov - https://github.com/tonsky/FiraCode
 
 - Icons - Font Awesome by Dave Gandy - http://fontawesome.io
-
-- Special thanks to the two early adopters who helped make the editor more robust: @cookednick and @ustance.
 
 - If not for VSCode's annoying "restart to apply the latest update" notifications every other day, this editor might never have been created.

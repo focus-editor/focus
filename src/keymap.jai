@@ -150,6 +150,7 @@ ACTIONS_COMMON :: string.[
     "search_in_buffer",
     "search_in_buffer_dropdown_mode",
     "search_in_project",
+    "go_to_line",
     "show_open_file_dialog_in_search_mode",
     "show_open_file_dialog_in_navigate_mode",
     "show_open_file_dialog_in_navigate_mode_from_root",

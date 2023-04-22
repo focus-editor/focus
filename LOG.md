@@ -8,12 +8,12 @@
     - Ctrl + Shift + R to search by symbol within workspace
     - Try to implement "jump to symbol definition". Display a popup if more than one. Do a scan of jai files for that.
     - Have the option to not strip trailing whitespace (in the config?) Or can do ctrl+s as a main way to save, ctr+shift+s as an alternative way
-    - Highlight C/C++
     - Line wrap
     - Custom title bar (currently too much work and not very robust)
     - Have a user error log - with an icon in the title bar to toggle it
     - Ignore project folders which are children of another project folder?
     - Profile the whole project to see if we're doing something stupid
+    - Update the README (missing features)
 
 - Limitations:
     - Windows64 only on release
@@ -21,9 +21,10 @@
     - CRLF?
     - Multi-byte Unicode symbols are not supported
     - Currently only RGB monitor panels
-    
-- Jump to line on Ctrl+G
-    
+
+- !!!! Cleanup
+    - When subsuming cursors, do something with the clipboard (also when undoing/redoing)
+
 - Definitely ignore the editor's own temp dir, even if the user doesn't include it
 - When sorting the file list, put the modified buffers on top (even ignoring the project boundary?)
 - When switching to buffer or trying to save it, check that the file exists
@@ -64,7 +65,7 @@
 - Project scanning: Use threads more efficiently:
     - Draw a simple progress bar in a corner
 
-- When subsuming cursors, do something with the clipboard (also when undoing/redoing)
+- Highlight C/C++
         
 - F12 to search by current identifier
 - Implement scrolling by dragging in all directions and with different speed
@@ -210,6 +211,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Jump to line on Ctrl+G
 + Blinking cursor
 + Local search
     + New widget

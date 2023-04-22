@@ -195,9 +195,10 @@ main :: () {
             // Note that the active widget may change during the frame, so the following events
             // will be sent to the new widget, that's why we check global widget for each event.
             if active_global_widget == {
-                case .editors;           editors_handle_event(event);
-                case .open_file_dialog;  open_file_dialog_handle_event(event);
-                case .finder;            finder_handle_event(event);
+                case .editors;            editors_handle_event(event);
+                case .finder;             finder_handle_event(event);
+                case .open_file_dialog;   open_file_dialog_handle_event(event);
+                case .go_to_line_dialog;  go_to_line_dialog_handle_event(event);
             }
         }
 
@@ -507,8 +508,10 @@ project_dirs: [..] Project_Dir;
 
 active_global_widget: enum {
     editors;
-    open_file_dialog;
     finder;
+    open_file_dialog;
+    go_to_line_dialog;
+    commands_dialog;
 } = .editors;
 
 Project_Dir :: struct {
@@ -537,6 +540,7 @@ cpu_info: Cpu_X86;
 #load "meow_hash.jai";
 #load "widgets/text_input.jai";
 #load "widgets/open_file_dialog.jai";
+#load "widgets/go_to_line_dialog.jai";
 #load "widgets/finder.jai";
 #load "langs/jai.jai";
 #load "langs/focus_config.jai";

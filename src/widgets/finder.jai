@@ -61,7 +61,7 @@ finder_open :: () {
 }
 
 finder_close :: () {
-    active_global_widget = .editors;
+    activate_editors();
 }
 
 finder_open_from_editor :: () {
@@ -144,7 +144,7 @@ finder_open_selected_result :: (selected_num := -1, placement: Editor_Placement)
     if selected_num >= 0 then selected = selected_num;
     if selected >= results.count return;
     
-    active_global_widget = .editors;
+    activate_editors();
     
     result := results[selected];
     

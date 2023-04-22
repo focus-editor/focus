@@ -11,10 +11,12 @@ editors_handle_event :: (event: Input.Event) {
         
         // Actions that do not require an active editor
         if action == {
-            case .search_in_project;    finder_open_from_editor(); return;
+            case .search_in_project;                                finder_open_from_editor(); return;
+            case .go_to_line;                                       show_go_to_line_dialog();  return;
+            
             case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
             case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
-            case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);
+            case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);            
         }
 
         // Let the active editor handle the event
@@ -35,6 +37,11 @@ editors_handle_event :: (event: Input.Event) {
     } else if event.type == .TEXT_INPUT {
         active_editor_type_char(event.utf32);
     }
+}
+
+activate_editors :: () {
+    active_global_widget = .editors;
+    cursors_start_blinking();
 }
 
 editors_handle_file_drop :: (files: [] string) {
@@ -739,8 +746,9 @@ jump_to_search_result :: (using editor: *Editor, buffer: Buffer, move_search_poi
 
     if move_search_point {
         search_point_offset = xx result.offset;
-        jumped = true;
     }
+    
+    jumped = true;
     
     cursors_start_blinking();
 }
@@ -1011,6 +1019,7 @@ switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := fa
     }
     
     update_window_title(open_editors[editors.active].buffer_id);
+    cursors_start_blinking();
 }
 
 swap_panes :: () {
