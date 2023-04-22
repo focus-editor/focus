@@ -70,7 +70,7 @@
 - CRLF:
     + Get rid of crlf notes
     - Show a warning when a CRLF file is loaded, then dismiss on save
-    - remove_crlf_in_place - optimise a bit
+
 
 - Nice to haves:
     - Mark modified buffers in the navigate dialog
@@ -84,6 +84,8 @@
     - Alt-HL smooth scroll
     
 - Select syntax highlighting dialog
+
+- remove_crlf_in_place - optimise a bit
 
 - Display files that are deleted on disk but modified in the open file dialog
 - Drop a folder into the editor to add it to workspace

@@ -221,7 +221,7 @@ remove_crlf_in_place :: (bytes: *[] u8) {
     end := bytes.data + bytes.count;
     cursor := bytes.data;
     
-    // @buffer!!! : use SIMD or at least don't check for utf8!!!
+    // @Speed TODO: should probably use SIMD
     // Remove all CR's in one pass
     while cursor < end {
         byte := <<cursor;
@@ -233,7 +233,7 @@ remove_crlf_in_place :: (bytes: *[] u8) {
             src = cursor;
             continue;
         }
-        cursor += 1 + trailingBytesForUTF8[byte];
+        cursor += 1;
     }
     // Copy the remaining bit
     count := cursor - src;
