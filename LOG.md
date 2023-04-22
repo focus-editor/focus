@@ -22,7 +22,8 @@
     - Multi-byte Unicode symbols are not supported
     - Currently only RGB monitor panels
 
-- Definitely ignore the editor's own temp dir, even if the user doesn't include it
+===========================
+
 - When sorting the file list, put the modified buffers on top (even ignoring the project boundary?)
 - When switching to buffer or trying to save it, check that the file exists
 
@@ -208,6 +209,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Definitely ignore the editor's own temp dir, even if the user doesn't include it
 + When subsuming cursors, do something with the clipboard (also when undoing/redoing)
 + Jump to line on Ctrl+G
 + Blinking cursor

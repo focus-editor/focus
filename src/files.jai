@@ -128,6 +128,7 @@ should_ignore_file :: (path: string) -> bool {
             if wildcard_match(extension, it) return true;
         }
     }
+    if begins_with_nocase(path, temp_dir) return true;  // explicitly ignore our own temp dir
     
     return false;
 }
@@ -145,6 +146,7 @@ should_ignore_dir :: (path: string) -> bool {
             }
         }
     }
+    if begins_with_nocase(path, temp_dir) return true;  // explicitly ignore our own temp dir
     return false;
 }
 
