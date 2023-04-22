@@ -1144,12 +1144,13 @@ restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor.State) {
     array_resize(*cursors, cursor_state.count);
     for * cursor, i : cursors {
         cursor.state = cursor_state[i];
-        // TODO: !!!
-        // cursor.col_wanted = cursor.pos.col;
-        // cursor.clipboard.count = 0;
-        // cursor.clipboard.data = null;
+        cursor.col_wanted = -1;
+        cursor.clipboard.start = 0;
+        cursor.clipboard.count = 0;
     }
     if main_cursor >= cursors.count then main_cursor = cursors.count - 1;  // maybe we should remember it too
+    
+    cursors[main_cursor].clipboard.count = cast(s32)editor.clipboard.count;
 }
 
 new_edit_group_required_for_action :: (action: Action_Editors, cursor: Cursor) -> bool {

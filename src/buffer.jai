@@ -354,10 +354,6 @@ buffer_file_has_changed_on_disk :: (using buffer: *Buffer) -> changed: bool {
     return modtime != last_modtime || size != last_size;
 }
 
-is_empty :: inline (line: Line) -> bool {
-    return line.num_chars == 0;
-}
-
 is_empty :: (using buffer: Buffer, line_num: s32) -> bool {
     s := get_line_as_string(buffer, line_num);
     return is_all_whitespace(s);
@@ -375,25 +371,6 @@ get_line_as_string :: (using buffer: Buffer, line_num: s32) -> string {
     result.count = end - start;
     
     return result;
-}
-
-operator == :: (a: Pos, b: Pos) -> bool {
-    return a.line == b.line && a.col == b.col;
-}
-
-operator < :: (a: Pos, b: Pos) -> bool {
-    return a.line < b.line || (a.line == b.line && a.col < b.col);
-}
-
-operator <= :: (a: Pos, b: Pos) -> bool {
-    return a.line < b.line || (a.line == b.line && a.col <= b.col);
-}
-
-operator - :: (a: Pos, b: Pos) -> Pos {
-    r: Pos = ---;
-    r.line = a.line - b.line;
-    r.col  = a.col  - b.col;
-    return r;
 }
 
 find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
@@ -730,28 +707,12 @@ Cursor :: struct {
 
 #assert size_of(Cursor) == (2 + 1 + 2) * size_of(s32);  // make sure no padding accidentally gets added
 
-// !!!
-Line :: struct {
-    start, end: s32;
-    text_start: s32 = -1;
-    num_chars:  s32;
-}
-
 Cursor_Coords :: struct {
     pos, sel: Coords;
 }
 
 Coords :: struct {
     line, col: s32;
-}
-
-// !!!!!!
-Pos :: struct {
-    line, col: s32;
-}
-
-Range :: struct {
-    start, end: Pos;
 }
 
 Offset_Range :: struct {
