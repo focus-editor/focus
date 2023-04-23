@@ -15,6 +15,7 @@ main :: () {
     assert(exe_dir.count > 0);
     load_global_config();
     init_workspace();
+    init_buffers();
     
     if !make_directory_if_it_does_not_exist(projects_dir) then panic_messagebox("Couldn't create folder %. Is the directory writable?", projects_dir);
     if !make_directory_if_it_does_not_exist(temp_dir)     then panic_messagebox("Couldn't create folder % for temporary files. Is the directory writable?", temp_dir);
@@ -62,8 +63,6 @@ main :: () {
     window_width, window_height = Simp.get_render_dimensions(window);
     screen = make_rect(0, 0, window_width, window_height);
     Simp.set_render_target(window);
-
-    init_buffers();
     
     // editors_open_file("W:/focus/src/main.jai");
     
