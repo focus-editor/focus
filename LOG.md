@@ -25,19 +25,15 @@
 ===========================
 
 - Implement config options
+    + When parsing project dirs, replace path separators with /
     + Report errors on wrong configs (write the usage code first)
-    - Parse settings
+    + Parse settings
+    - Use all current settings !!!!!!!
     - Have an option to specify the time to dismiss a user message
     - Detect conflicting keys in the same context in the same config
     - Colors
-    
-- Config files:
-    + When parsing project dirs, replace path separators with /
-    - Hot-load user config file and apply the changes immediately (how do we handle the project dir changes?)
-    - Every time a config file changes, the configs need to be reloaded and re-merged (and the changes need to be applied)
-    - When an editor is closed using Ctrl+W, use session_notify_closed_editor to remove the buffer backup (if unmodified)
-      (or maybe when it hasn't been edited or opened in this session?)
-    - Be able to ignore individual files
+    - Hot-load user config file and apply the changes immediately
+        - If workspace dirs have changed, display a message prompting to restart
     
 - Refresh buffers from disk
     + Make it work
@@ -86,6 +82,10 @@
     - Alt-HL smooth scroll
     
 - Select syntax highlighting dialog
+
+- When an editor is closed using Ctrl+W, use session_notify_closed_editor to remove the buffer backup (if unmodified)
+  (or maybe when it hasn't been edited or opened in this session?)
+- Be able to ignore individual files
 
 - Use SIMD for syntax highlighting
 - remove_crlf_in_place - optimise a bit

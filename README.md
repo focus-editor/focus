@@ -10,26 +10,17 @@ A simple editor that tries to not stand in your way.
 - In the config file you can specify the paths to your workspace folders (it's probably a good idea to add the jai folder to the list
   because then you'll be able to search within all jai modules folder as well as your project files)
 - Save the global config, then relaunch the editor. It should scan all the files in your workspace.
-- Use Ctrl + P to open file from your workspace, or Ctrl - O to navigate to file.
 
 ## Disclaimer
 
-The editor is not finished and there's a big list of things to do before release. Your bug reports and comments are welcome!
-Notable missing features:
-- Creating new files (no UI for it yet - please use other ways of creating files until it's implemented)
-- Projects and sessions: about 70% done, not ready to use yet
-- Horizontal scrollbar is missing
-- Line wrap
-- No UI error reporting (e.g. when a project is misconfigured or a file fails to save)
-- Settings in the config file are not usable yet
-- Color schemes
+The editor is in beta. This means you may encounter some bugs here and there, and not all wrinkles have been ironed out yet.
 
 ## Shortcuts
 
 You can see the full list of shortcuts and redefine keys in the global config file.
 
 
-### Acknowledgements
+## Acknowledgements
 
 - The editor was made possible by the fantastic Jai programming language by [Jonathan Blow](https://en.wikipedia.org/wiki/Jonathan_Blow).
 

@@ -510,6 +510,8 @@ get_max_y_scroll :: (buffer: Buffer) -> s32 {
 }
 
 add_paste_animation :: (using editor: *Editor, range: Offset_Range) {
+    if config.settings.disable_that_annoying_paste_effect return;
+    
     anim := array_add(*paste_animations);
     anim.range = range;
     anim.started_at = frame_time;

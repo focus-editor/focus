@@ -46,9 +46,6 @@ main :: () {
         init_session_with_no_guidance();
     }
     
-    // print("config: ==== \n%\n\n", config.settings);
-    // print("default: ==== \n%\n\n", DEFAULT_CONFIG.settings);
-    
     window_x := -1;
     window_y := -1;
     if config.settings.open_on_the_biggest_monitor {
