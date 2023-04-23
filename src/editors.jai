@@ -769,7 +769,12 @@ editors_snap_splitter :: (pos: float) {
 
 editors_start_moving_splitter :: (target: float, start := -1.0) {
     if start >= 0 then splitter_pos = start;
-    start_animation(*splitter_anim, splitter_pos, target, snappy = true);
+    if !config.settings.disable_file_open_close_animations {
+        start_animation(*splitter_anim, splitter_pos, target, snappy = true);    
+    } else {
+        splitter_anim.target = target;
+        splitter_pos = target;
+    }
     redraw_requested = true;
 }
 
