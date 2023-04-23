@@ -821,8 +821,8 @@ select_lines :: (editor: *Editor, buffer: Buffer) {
         selection  := get_selection(cursor);
         start_line := offset_to_line(buffer, selection.start);
         end\ _line := ifx selection.start != selection.end then offset_to_line(buffer, selection.end) else start_line;
-        cursor.sel = buffer.line_starts[start_line];
-        cursor.pos = buffer.line_starts[end_line+1];
+        cursor.sel = get_line_start_offset(buffer, start_line);
+        cursor.pos = get_line_start_offset(buffer, end_line+1);
     }
 }
 
@@ -1324,7 +1324,7 @@ move_cursors_by_page :: (editor: *Editor, buffer: Buffer, dir: enum { up; down; 
 move_cursors_home :: (editor: *Editor, buffer: Buffer) {
     for * cursor : editor.cursors {
         line := offset_to_line(buffer, cursor.pos);
-        start, end := buffer.line_starts[line], buffer.line_starts[line+1] - 1;
+        start, end := get_line_start_offset(buffer, line), get_line_end_offset(buffer, line);
         
         text_start_col: s32 = 0;
         i := start;
@@ -1371,7 +1371,7 @@ break_line :: (editor: *Editor, buffer: *Buffer) {
     space_per_cursor := NewArray(editor.cursors.count, Space, initialized = false, allocator = temp);
     for cursor : editor.cursors {
         selection := get_selection(cursor);
-        start := buffer.line_starts[offset_to_line(buffer, selection.start)];
+        start := get_line_start_offset(buffer, offset_to_line(buffer, selection.start));
         whitespace_bytes := count_whitespace(buffer.bytes, start, selection.start);
         space_per_cursor[it_index] = .{ start = start, count = whitespace_bytes, original_start = start };
     }
@@ -1408,8 +1408,8 @@ new_line_below :: (editor: *Editor, buffer: *Buffer) {
     for cursor : editor.cursors {
         selection := get_selection(cursor);
         last_line := offset_to_line(buffer, selection.end);
-        start := buffer.line_starts[last_line];
-        end   := buffer.line_starts[last_line+1];
+        start := get_line_start_offset(buffer, last_line);
+        end   := get_line_start_offset(buffer, last_line+1);
         whitespace_bytes := count_whitespace(buffer.bytes, start, end);
         line_info_per_cursor[it_index] = .{ end = end, space = .{ start = start, count = whitespace_bytes, original_start = start }, last_line = is_last_line(buffer, last_line) };
     }
@@ -1439,8 +1439,8 @@ new_line_above :: (editor: *Editor, buffer: *Buffer) {
     for cursor : editor.cursors {
         selection  := get_selection(cursor);
         first_line := offset_to_line(buffer, selection.start);
-        start := buffer.line_starts[first_line];
-        end   := buffer.line_starts[first_line+1];
+        start := get_line_start_offset(buffer, first_line);
+        end   := get_line_start_offset(buffer, first_line+1);
         whitespace_bytes := count_whitespace(buffer.bytes, start, end);
         line_info_per_cursor[it_index] = .{ start = start, space = .{ start = start, count = whitespace_bytes, original_start = start } };
     }
@@ -1508,7 +1508,7 @@ delete_left_char :: (editor: *Editor, buffer: *Buffer) {
             if chars_to_delete == 0 then chars_to_delete = TAB_SIZE;
             if chars_to_delete > 1 {
                 // Don't delete more than one char unless the cursor is between line start and text start
-                whitespace_bytes := count_whitespace(buffer.bytes, buffer.line_starts[coords.line], cursor.pos);
+                whitespace_bytes := count_whitespace(buffer.bytes, get_line_start_offset(buffer, coords.line), cursor.pos);
                 if whitespace_bytes < coords.col then chars_to_delete = 1;
             }
             start := cursor.pos;
@@ -1630,10 +1630,10 @@ get_line_starts_for_lines_with_cursors_tmp :: (editor: *Editor, buffer: *Buffer)
         start_line := offset_to_line(buffer, selection.start);
         end_line   := ifx selection.start != selection.end then offset_to_line(buffer, selection.end) else start_line;
         for start_line..end_line {
-            line_start := buffer.line_starts[it];
+            line_start := get_line_start_offset(buffer, it);
             if last_added < line_start { array_add(*line_starts, line_start); last_added = line_start; }    
         }
-        last_line_end_offset = buffer.line_starts[end_line+1];
+        last_line_end_offset = get_line_start_offset(buffer, end_line+1);
     }
     
     return line_starts, last_line_end_offset;
@@ -1730,7 +1730,7 @@ select_all :: (editor: *Editor, buffer: Buffer) {
     cursor.pos = cast(s32) buffer.bytes.count;
 }
 
-Line_Range :: struct { prev_line_start: s32; next_line_end: s32; range: Offset_Range; is_last: bool; };
+Line_Range :: struct { prev_line_start: s32; next_line_end: s32; range: Offset_Range; is_last: bool; next_line_is_last: bool; };
 
 get_whole_line_ranges_for_cursors :: (editor: Editor, buffer: Buffer, merge_adjacent := true, select_next_for_single_lines := false) -> [] Line_Range /* tmp */ {
     line_ranges: [..] Line_Range;
@@ -1744,7 +1744,7 @@ get_whole_line_ranges_for_cursors :: (editor: Editor, buffer: Buffer, merge_adja
             end_line   := ifx selection.start != selection.end then offset_to_line(buffer, selection.end) else start_line;
             if start_line == end_line && select_next_for_single_lines then end_line += 1;
             
-            next_line_end := buffer.line_starts[min(end_line+2, cast(s32)buffer.line_starts.count-1)];
+            next_line_end := get_line_start_offset(buffer, end_line+2);
             
             should_extend := line_ranges.count > 0 && (
                 (merge_adjacent  && start_line <= last_end_line+1) ||
@@ -1753,16 +1753,18 @@ get_whole_line_ranges_for_cursors :: (editor: Editor, buffer: Buffer, merge_adja
             
             if should_extend {
                 // Extend last line range
-                line_ranges[line_ranges.count-1].range.end = buffer.line_starts[end_line+1];
+                line_ranges[line_ranges.count-1].range.end = get_line_start_offset(buffer, end_line+1);
                 line_ranges[line_ranges.count-1].next_line_end = next_line_end;
                 line_ranges[line_ranges.count-1].is_last = is_last_line(buffer, end_line);
+                line_ranges[line_ranges.count-1].is_last = !is_last_line(buffer, end_line) && is_last_line(buffer, end_line + 1);
             } else {
                 // Add a new line range
                 array_add(*line_ranges, Line_Range.{ 
-                    prev_line_start = buffer.line_starts[max(0, start_line-1)],
-                    next_line_end   = next_line_end,
-                    range = .{ start = buffer.line_starts[start_line], end = buffer.line_starts[min(end_line+1, cast(s32)buffer.line_starts.count-1)] },
-                    is_last = is_last_line(buffer, end_line),
+                    prev_line_start   = get_line_start_offset(buffer, start_line-1),
+                    next_line_end     = next_line_end,
+                    range             = .{ start = get_line_start_offset(buffer, start_line), end = get_line_start_offset(buffer, end_line+1) },
+                    is_last           = is_last_line(buffer, end_line),
+                    next_line_is_last = !is_last_line(buffer, end_line) && is_last_line(buffer, end_line + 1),
                 });
             }
             last_end_line = end_line;
@@ -1812,7 +1814,7 @@ move_lines_up :: (editor: *Editor, buffer: *Buffer) {
                 cursor.sel -= xx prev_str.count;
             }
         }
-        insert_string_at_offset(buffer, line.range.end - prev_str.count, ifx line.is_last then tprint("\n%", prev_str) else  prev_str);
+        insert_string_at_offset(buffer, line.range.end - prev_str.count, ifx line.is_last then tprint("\n%", prev_str) else prev_str);
     }
     
     editor.cursor_moved = true;
@@ -1827,7 +1829,7 @@ move_lines_down :: (editor: *Editor, buffer: *Buffer) {
         next_str := copy_temporary_string(get_range_as_string(buffer, next_line_range));
         
         delete_range(buffer, next_line_range);
-        insert_string_at_offset(buffer, line.range.start, next_str);
+        insert_string_at_offset(buffer, line.range.start, ifx line.next_line_is_last then tprint("%\n", next_str) else next_str);
         // add_paste_animation(editor, .{ start = line.range.start + cast(s32)next_str.count, end = line.range.end + cast(s32)next_str.count });
         
         for * cursor : editor.cursors {
@@ -1939,7 +1941,7 @@ delete_to_start_of_line :: (editor: *Editor, buffer: *Buffer) {
     for * cursor : editor.cursors {
         selection := get_selection(cursor);
         cursor.sel = selection.end;
-        cursor.pos = buffer.line_starts[offset_to_line(buffer, selection.start)];
+        cursor.pos = get_line_start_offset(buffer, offset_to_line(buffer, selection.start));
     }
     organise_cursors(editor);  // resolve overlapping selections
     delete_left_char(editor, buffer);
@@ -1964,8 +1966,8 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) 
         for * cursor : editor.cursors {
             // Select the whole line
             line := offset_to_line(buffer, cursor.pos);
-            cursor.sel = buffer.line_starts[line];
-            cursor.pos = buffer.line_starts[line+1];
+            cursor.sel = get_line_start_offset(buffer, line);
+            cursor.pos = get_line_start_offset(buffer, line+1);
             cursor.col_wanted = -1;
         }
         organise_cursors(editor);  // resolve overlapping selections

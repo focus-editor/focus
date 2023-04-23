@@ -181,8 +181,12 @@ is_last_line :: (using buffer: Buffer, line: s32) -> bool {
     return line >= line_starts.count - 2;
 }
 
+get_line_start_offset :: inline (using buffer: Buffer, line: s32) -> s32 {
+    return line_starts[clamp(line, 0, cast(s32) line_starts.count - 1)];
+}
+
 get_line_end_offset :: (using buffer: Buffer, line: s32) -> s32 {
-    offset := line_starts[line + 1];
+    offset := get_line_start_offset(buffer, line + 1);
     if !is_last_line(buffer, line) then offset -= 1;
     return offset;
 }

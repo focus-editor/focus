@@ -109,8 +109,8 @@ jump_to_line :: () {
     }
     
     line_num = clamp(line_num - 1, 0, buffer.line_starts.count - 2);
-    line_start := buffer.line_starts[line_num];
-    line_end   := get_line_end_offset(buffer, cast(s32)line_num);
+    line_start := get_line_start_offset(buffer, cast(s32)line_num);
+    line_end   := get_line_end_offset  (buffer, cast(s32)line_num);
     
     cursor := leave_only_original_cursor(editor);
     cursor.pos = line_start + count_whitespace(buffer.bytes, line_start, line_end);

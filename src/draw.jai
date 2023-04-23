@@ -485,8 +485,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         visible_lines_end   := clamp(visible_lines_start + cast(s32) (rect.h / line_height) + 1, 0, max_lines);
         num_visible_lines   := visible_lines_end - visible_lines_start + 1;
         visible_offset_range := Offset_Range.{
-            start = buffer.line_starts[visible_lines_start],
-            end   = buffer.line_starts[visible_lines_end + 1],
+            start = get_line_start_offset(buffer, visible_lines_start),
+            end   = get_line_start_offset(buffer, visible_lines_end + 1),
         };
     
         // Draw scrollbar marks
@@ -621,8 +621,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         
         code_lines := NewArray(num_visible_lines, Simp.Code_Line, initialized = false, allocator = temp);
         for line_num : visible_lines_start .. visible_lines_end {
-            line_start := buffer.line_starts[line_num];
-            length := buffer.line_starts[line_num+1] - line_start;
+            line_start := get_line_start_offset(buffer, line_num);
+            length := get_line_start_offset(buffer, line_num+1) - line_start;
             line := to_string(array_view(buffer.bytes, line_start, length));
             tab_spaces := 0;
             line, tab_spaces = advance_by_chars  (line, hidden_chars_on_the_left);
@@ -803,7 +803,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 );
                 width: float;
              
-                line_range := Offset_Range.{ start = buffer.line_starts[entry.line], end = get_line_end_offset(buffer, entry.line) };
+                line_range := Offset_Range.{ start = get_line_start_offset(buffer, entry.line), end = get_line_end_offset(buffer, entry.line) };
                 text_start := line_range.start + count_whitespace(buffer.bytes, line_range.start, line_range.end);
                 
                 // Line number
@@ -1396,7 +1396,7 @@ draw_finder :: () {
             // Chose the first option at least for now.
             buffer := *open_buffers[entry.buffer_id];
             line_num := offset_to_line(buffer, min(entry.match_offset, xx buffer.bytes.count));
-            line_range := Offset_Range.{ start = buffer.line_starts[line_num], end = get_line_end_offset(buffer, line_num) };
+            line_range := Offset_Range.{ start = get_line_start_offset(buffer, line_num), end = get_line_end_offset(buffer, line_num) };
             text_start := line_range.start + count_whitespace(buffer.bytes, line_range.start, line_range.end);
             
             // Draw file info
