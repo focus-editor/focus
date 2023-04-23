@@ -709,9 +709,10 @@ Buffer :: struct {
 
 Cursor :: struct {
     using state: State;
-    clipboard: struct { start: s32; count: s32; };  // TODO: consider using just one s32?
+    clipboard: Clipboard;
     
-    State :: struct { pos, sel: s32; col_wanted: s32 = -1; }
+    State     :: struct { pos, sel: s32; col_wanted: s32 = -1; }
+    Clipboard :: struct { start: s32; count: s32; }
 }
 
 #assert size_of(Cursor) == (2 + 1 + 2) * size_of(s32);  // make sure no padding accidentally gets added

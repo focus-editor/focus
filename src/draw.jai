@@ -290,12 +290,17 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         cursors_stop_blinking();
     
         if !mouse.left.is_dragging && ctrl_pressed() {
+            same_clipboard, clipboard := cursors_have_the_same_clipboard(editor);
+            
             // Create new cursor
             new_cursor := array_add(*cursors);
             new_cursor.pos = coords_to_offset(buffer, coords);
             new_cursor.sel = new_cursor.pos;
+            if same_clipboard then new_cursor.clipboard = clipboard;
+            
             main_cursor = cursors.count - 1;
             organise_cursors(editor);
+            
         } else if !ctrl_pressed() {
             // Maybe change cursor position
             cursor := leave_only_original_cursor(editor);

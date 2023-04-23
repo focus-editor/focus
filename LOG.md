@@ -24,8 +24,6 @@
 
 ===========================
 
-- Pasting with multiple cursors broke
-
 - Implement config options
     + When parsing project dirs, replace path separators with /
     + Report errors on wrong configs (write the usage code first)
@@ -178,6 +176,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ BUG: Pasting with multiple cursors broke
 + BUG: moving lines to the last line broke again
 + Fix all line_starts accesses
 + BUG: global config not being created

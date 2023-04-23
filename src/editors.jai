@@ -908,6 +908,26 @@ should_draw_cursors :: inline () -> bool {
     return (ms_since_start / CURSOR_BLINK_SPEED_MS) % 2 == 0;
 }
 
+cursors_have_the_same_clipboard :: (using editor: Editor) -> bool, clipboard: Cursor.Clipboard {
+    same_clipboard := true;
+    first_str := get_clipboard_string(editor, cursors[0]);
+    
+    for cursor : cursors {
+        if first_str != get_clipboard_string(editor, cursor) {
+            same_clipboard = false;
+            break;
+        }
+    }
+    
+    return same_clipboard, cursors[0].clipboard;
+}
+
+get_clipboard_string :: (editor: Editor, cursor: Cursor) -> string {
+    start := clamp(cursor.clipboard.start, 0, cast(s32) editor.clipboard.count - 1);
+    count := clamp(cursor.clipboard.count, 0, cast(s32) editor.clipboard.count - start);
+    return slice(editor.clipboard, max(start, 0), count);
+}
+
 #scope_file
 
 select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) -> whole_words: bool {
@@ -946,10 +966,14 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) 
             }
             return editor.search_whole_words;  // found no matches
         }
+        
+        same_clipboard, clipboard := cursors_have_the_same_clipboard(editor);
     
         new_cursor := array_add(*cursors);
         new_cursor.sel = cast(s32) found_offset;
         new_cursor.pos = cast(s32) (found_offset + selected_text.count);
+        if same_clipboard then new_cursor.clipboard = clipboard;
+        
         main_cursor = cursors.count - 1;
         
     } else {
@@ -1153,11 +1177,9 @@ restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor.State) {
         cursor.state = cursor_state[i];
         cursor.col_wanted = -1;
         cursor.clipboard.start = 0;
-        cursor.clipboard.count = 0;
+        cursor.clipboard.count = cast(s32)editor.clipboard.count;
     }
     if main_cursor >= cursors.count then main_cursor = cursors.count - 1;  // maybe we should remember it too
-    
-    cursors[main_cursor].clipboard.count = cast(s32)editor.clipboard.count;
 }
 
 new_edit_group_required_for_action :: (action: Action_Editors, cursor: Cursor) -> bool {
@@ -2025,7 +2047,7 @@ paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
         cursor.pos += xx offset_delta;
         cursor.sel += xx offset_delta;
         selection := get_selection(cursor);
-        str := slice(editor.clipboard, cursor.clipboard.start, cursor.clipboard.count);
+        str := get_clipboard_string(editor, cursor);
         replace_range(buffer, selection, str);
         cursor.pos = xx (selection.start + str.count);
         cursor.col_wanted = -1;
