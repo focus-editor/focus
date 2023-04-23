@@ -23,7 +23,7 @@ load_and_merge_into_default :: (file_path: string, create_if_doesnt_exist := fal
     if !success {
         if !error_msg assert(false, "No error message on a config error. This is a bug.");
         log_error(error_msg);
-        add_user_error(error_msg);    
+        add_user_error(error_msg);
         return false;
     }
     

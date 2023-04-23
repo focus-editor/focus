@@ -273,7 +273,6 @@ init_fonts_and_dependent_things :: () {
         append(*common_icons, to_string(*char));
     }
     append(*common_icons, PEN_CHAR);
-    append(*common_icons, BULLET_CHAR);
     append(*common_icons, XMARK_CHAR);
     icons_string := builder_to_string(*common_icons);
     

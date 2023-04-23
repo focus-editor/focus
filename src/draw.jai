@@ -235,11 +235,9 @@ draw_user_messages :: (main_area: Rect, footer_height: float) {
         maybe_set_hot_or_active(ui_id, message_rect, .PRESSABLE);
         
         is_hovering := mouse_pointer_is_within(message_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id);
-        if is_hovering {
-            if mouse.left.just_pressed {
-                it.dismissed = true;
-                continue;
-            }
+        if is_hovering && mouse.left.just_pressed {
+            it.dismissed = true;
+            redraw_requested = true;
         }
         
         color := ifx it.level == .error then Colors.UI_ERROR else Colors.UI_WARNING;
@@ -259,7 +257,7 @@ draw_user_messages :: (main_area: Rect, footer_height: float) {
             y -= xx font_ui_line_height;
         }        
         
-        message_rect.y += message_height + margin;
+        message_rect_src.y += message_height + margin;
     }
 }
 
