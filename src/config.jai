@@ -81,7 +81,21 @@ merge_configs :: (dst: *Config, src: Config) {
     merge_keymaps(*dst.keymap.open_file_dialog, src.keymap.open_file_dialog);
     merge_keymaps(*dst.keymap.search_dialog,    src.keymap.search_dialog);
     
-    // TODO: other sections;
+    // Settings
+    #insert -> string {
+        b: String_Builder;
+        
+        for setting : SETTINGS {
+            code := #string END
+                if src.settings.%1 != DEFAULT_CONFIG.settings.%1 {
+                    dst.settings.%1 = src.settings.%1;
+                }
+            END
+            print_to_builder(*b, code, setting.name);
+        }
+        
+        return builder_to_string(*b);
+    }
 }
 
 #scope_export
@@ -90,22 +104,38 @@ config: Config = DEFAULT_CONFIG;
 
 Config :: struct {
     workspace: Workspace;
-    settings: Settings;
     keymap: Keymap;
-    colors: Colors;
+    settings: Settings;
+    style: Style;
 }
 
 Workspace :: struct {
-    workspace_dirs: [] string;
-    ignore_dirs:    [] string;
-    allow_file_extensions:  [] string;
-    ignore_file_extensions: [] string;
+    workspace_dirs:                  [] string;
+    ignore_dirs:                     [] string;
+    allow_file_extensions:           [] string;
+    ignore_file_extensions:          [] string;
     allow_file_extension_wildcards:  [] string;
     ignore_file_extension_wildcards: [] string;
 }
 
 Settings :: struct {
+    // NOTE: for various reasons this must match the settings in default.focus-config.
+    // Otherwise there will be confusion
+    maximize_on_start                   := true;
+    open_on_the_biggest_monitor         := true;
+    cursor_as_block                     := true;
+    highlight_selection_occurrences     := true;
+    disable_that_annoying_paste_effect  := false;
+    disable_file_open_close_animations  := false;
+    double_shift_to_search_in_workspace := false;
+    max_entries_in_open_file_dialog     := 1000;
+    tab_size                            := 4;
+    insert_spaces_when_pressing_tab     := true;
+    strip_trailing_whitespace_on_save   := false;
+    
     // TODO
+    // convert_tabs_to_spaces_on_load:     false  
+    // load_last_session_on_start:         true
 }
 
 Keymap :: struct {
@@ -113,6 +143,10 @@ Keymap :: struct {
     editors:          [] Key_Mapping;
     open_file_dialog: [] Key_Mapping;
     search_dialog:    [] Key_Mapping;
+}
+
+Style :: struct {
+    // TODO
 }
 
 Color :: struct {
@@ -220,6 +254,26 @@ as_3_floats :: (color: Color) -> [3] float {
 is_none :: (using color: Color) -> bool {
     return r < 0 || g < 0 || b < 0 || a < 0;
 }
+
+Setting :: struct {
+    name: string; 
+    type: enum { boolean; integer; };
+}
+
+SETTINGS :: Setting.[
+    .{ "maximize_on_start",                   .boolean },
+    .{ "open_on_the_biggest_monitor",         .boolean },
+    .{ "cursor_as_block",                     .boolean },
+    .{ "highlight_selection_occurrences",     .boolean },
+    .{ "disable_that_annoying_paste_effect",  .boolean },
+    .{ "disable_file_open_close_animations",  .boolean },
+    .{ "double_shift_to_search_in_workspace", .boolean },
+    .{ "insert_spaces_when_pressing_tab",     .boolean },
+    .{ "strip_trailing_whitespace_on_save",   .boolean },
+    
+    .{ "max_entries_in_open_file_dialog",     .integer },
+    .{ "tab_size",                            .integer },
+];
 
 #scope_file
 

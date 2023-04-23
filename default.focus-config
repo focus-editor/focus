@@ -10,7 +10,6 @@
 
 [ignore dirs]
 # The workspace scanner will not descend into the dirs that match these names.
-.build
 .svn
 .git
 bin
@@ -37,18 +36,17 @@ __pycache__
 .pyc .rpyc
 
 [[settings]]
-# NOT IMPLEMENTED YET
-theme: default  # TODO: colors + things like rounding radius, fonts, font sizes etc.
-tab_size: 4
-cursor_style: block  # block or line
-convert_crlf_to_lf_on_load:          true
-convert_tabs_to_spaces_on_load:      false
+maximize_on_start:                   true
+open_on_the_biggest_monitor:         true
+cursor_as_block:                     true
 highlight_selection_occurrences:     true
-load_last_session_on_start:          true
 disable_that_annoying_paste_effect:  false
 disable_file_open_close_animations:  false
+insert_spaces_when_pressing_tab:     true
+strip_trailing_whitespace_on_save:   true
+double_shift_to_search_in_workspace: false
 max_entries_in_open_file_dialog:     1000
-double_shift_to_search_in_workspace: true
+tab_size:                            4
 
 [[keymap]]
 

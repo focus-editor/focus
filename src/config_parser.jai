@@ -3,7 +3,7 @@
 parse_config :: (name: string, filename: string, file_data: string) -> Config, success: bool, error_msg: string /* temp */ {
     parser: Config_Parser;
     result: Config;
-    
+        
     // NOTE: we don't free on purpose, because some of the parsed data will point into the file data    
     start_from_memory(*parser.handler, name, filename, file_data);
     if parser.handler.failed return Config.{}, false, tprint("Parser couldn't read file '%'", filename);
@@ -29,32 +29,40 @@ parse_config :: (name: string, filename: string, file_data: string) -> Config, s
                 if !success return result, false, error_msg;
                 
             case .settings;
-                // TODO
+                success, error_msg := parse_settings_line(*parser, line);
+                if !success return result, false, error_msg;
                 
             case .keymap;
                 success, error_msg := parse_keymap_line(*parser, line);
                 if !success return result, false, error_msg;
+                
+            case .style;
+                // TODO
 
         }
     }
     
     // Cast away the extendable arrays into array views
-    result.workspace.workspace_dirs = parser.data.workspace_dirs;
-    result.workspace.ignore_dirs = parser.data.ignore_dirs;
-    result.workspace.allow_file_extensions = parser.data.allow_file_extensions;
-    result.workspace.allow_file_extension_wildcards = parser.data.allow_file_extension_wildcards;
-    result.workspace.ignore_file_extensions = parser.data.ignore_file_extensions;
-    result.workspace.ignore_file_extension_wildcards = parser.data.ignore_file_extension_wildcards;
+    result.workspace.workspace_dirs                   = parser.data.workspace_dirs;
+    result.workspace.ignore_dirs                      = parser.data.ignore_dirs;
+    result.workspace.allow_file_extensions            = parser.data.allow_file_extensions;
+    result.workspace.allow_file_extension_wildcards   = parser.data.allow_file_extension_wildcards;
+    result.workspace.ignore_file_extensions           = parser.data.ignore_file_extensions;
+    result.workspace.ignore_file_extension_wildcards  = parser.data.ignore_file_extension_wildcards;
     
     // Merge and store keymaps in the config
     // (keys defined in the common section need to be present in the other sections unless overridden there)
     array_extend(*parser.data.keymap_editors,          parser.data.keymap_common);
     array_extend(*parser.data.keymap_open_file_dialog, parser.data.keymap_common);
     array_extend(*parser.data.keymap_search_dialog,    parser.data.keymap_common);
+    
     result.keymap.common           = parser.data.keymap_common;
     result.keymap.editors          = parser.data.keymap_editors;
     result.keymap.open_file_dialog = parser.data.keymap_open_file_dialog;
     result.keymap.search_dialog    = parser.data.keymap_search_dialog;
+    
+    // Copy settings as is
+    result.settings = parser.parsed.settings;
     
     return result, true, "";
 }
@@ -175,13 +183,12 @@ switch_top_section :: (using parser: *Config_Parser, line: string) -> error: boo
             seen_top_sections |= .settings;
             
         case "[[style]]";
-            // TODO !!
-            // top_section = .settings;
-            // if seen_top_sections & .settings {
-            //     error_msg := log_parser_error(handler, "The section '[[settings]]' is defined twice. This is an error."); 
-            //     return true, error_msg;
-            // }
-            // seen_top_sections |= .settings;
+            top_section = .style;
+            if seen_top_sections & .style {
+                error_msg := log_parser_error(handler, "The section '[[style]]' is defined twice. This is an error."); 
+                return true, error_msg;
+            }
+            seen_top_sections |= .style;
             
         case;
             error_msg := log_parser_error(handler, "Expected one of the following top-level sections: [[workspace]], [[settings]], [[keymap]], [[style]], but found '%'", line);
@@ -238,6 +245,61 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
                 }
             }
     }
+    return true, "";
+}
+
+parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
+    setting_name, setting_value := break_by_spaces(line);
+    setting_name = trim_right(setting_name, ":");
+    
+    value := setting_value;  // will be destroyed by parsing
+    
+    #insert -> string {
+        b: String_Builder;
+        
+        append(*b, "if setting_name == {\n");
+        
+        for setting : SETTINGS {
+            print_to_builder(*b, "    case \"%\";\n", setting.name);
+            if setting.type == {
+                case .boolean;
+                    code := #string END
+                        bool_val, success := parse_bool(*value);
+                        if success {
+                            parsed.settings.%1 = bool_val;
+                        } else {
+                            error_msg := log_parser_error(handler, "Couldn't parse '%1' - expected 'true' or 'false', got '%%'", setting_value);
+                            return false, error_msg;
+                        }
+                    END;
+                    print_to_builder(*b, code, setting.name);
+                    
+                case .integer;
+                    code := #string END
+                        int_val, success := parse_int(*value);
+                        if success {
+                            parsed.settings.%1 = int_val;
+                        } else {
+                            error_msg := log_parser_error(handler, "Couldn't parse '%1' - expected a valid integer, got '%%'", setting_value);
+                            return false, error_msg;
+                        }
+                    END;
+                    print_to_builder(*b, code, setting.name);
+            }
+        }
+        
+        code := #string END
+            case;
+                error_msg := log_parser_error(handler, "Unrecognized setting '%'.", setting_name);
+                return false, error_msg;
+        END;
+        append(*b, code);
+        
+        append(*b, "}\n");
+        
+        return builder_to_string(*b);
+    }
+    
     return true, "";
 }
 
@@ -353,17 +415,21 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo
 Config_Parser :: struct {
     handler: Text_File_Handler;
     
+    parsed: Config;
+    
     top_section: enum {
         none;
         workspace;
         keymap;
         settings;
+        style;
     } = .none;
     
     seen_top_sections: enum_flags {
         workspace;
         keymap;
         settings;
+        style;
     };
     
     workspace_subsection: enum {

@@ -5,19 +5,6 @@ main :: () {
     cpu_info = get_cpu_info();
     
     platform_setup();
-    
-    window_x, window_y := platform_get_biggest_monitor_pos();
-    window_generic_title = ifx DEBUG then "Focus (debug mode)" else "Focus";
-    window = create_window(window_width, window_height, window_generic_title, window_x, window_y, background_color_rgb = as_3_floats(Colors.BACKGROUND));
-    platform_maximize_window(window);
-    
-    platform_enable_drag_and_drop(window);
-
-    window_width, window_height = Simp.get_render_dimensions(window);
-    screen = make_rect(0, 0, window_width, window_height);
-    Simp.set_render_target(window);
-
-    init_buffers();
 
     // Remember important directories
     exe_dir = copy_string(path_strip_filename(get_path_of_running_executable()));
@@ -58,6 +45,28 @@ main :: () {
     } else {
         init_session_with_no_guidance();
     }
+    
+    // print("config: ==== \n%\n\n", config.settings);
+    // print("default: ==== \n%\n\n", DEFAULT_CONFIG.settings);
+    
+    window_x := -1;
+    window_y := -1;
+    if config.settings.open_on_the_biggest_monitor {
+        window_x, window_y = platform_get_biggest_monitor_pos();
+    }
+    
+    window_generic_title = ifx DEBUG then "Focus (debug mode)" else "Focus";
+    window = create_window(window_width, window_height, window_generic_title, window_x, window_y, background_color_rgb = as_3_floats(Colors.BACKGROUND));
+    
+    if config.settings.maximize_on_start then platform_maximize_window(window);
+    
+    platform_enable_drag_and_drop(window);
+
+    window_width, window_height = Simp.get_render_dimensions(window);
+    screen = make_rect(0, 0, window_width, window_height);
+    Simp.set_render_target(window);
+
+    init_buffers();
     
     // editors_open_file("W:/focus/src/main.jai");
     

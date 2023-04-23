@@ -26,15 +26,14 @@
 
 - Implement config options
     + Report errors on wrong configs (write the usage code first)
-    - maximize_on_start
-    - open_on_biggest_monitor
-    - Colors
+    - Parse settings
+    - Have an option to specify the time to dismiss a user message
     - Detect conflicting keys in the same context in the same config
+    - Colors
     
 - Config files:
-    - When parsing project dirs, replace path separators with /
+    + When parsing project dirs, replace path separators with /
     - Hot-load user config file and apply the changes immediately (how do we handle the project dir changes?)
-    - Have a command to edit global config or project config (it will open the corresponding file)
     - Every time a config file changes, the configs need to be reloaded and re-merged (and the changes need to be applied)
     - When an editor is closed using Ctrl+W, use session_notify_closed_editor to remove the buffer backup (if unmodified)
       (or maybe when it hasn't been edited or opened in this session?)
@@ -66,9 +65,9 @@
     - Switch project
 
 - Highlight C/C++
+- Highlight matching braces
         
 - F12 to search by current identifier
-- Implement scrolling by dragging in all directions and with different speed
 - Generalise TODO highlighting
 - Implement general language highlighting with a set of common keywords etc
 
@@ -91,11 +90,7 @@
 - Use SIMD for syntax highlighting
 - remove_crlf_in_place - optimise a bit
 
-- Display files that are deleted on disk but modified in the open file dialog
 - Drop a folder into the editor to add it to workspace
-
-- Proper tab support:
-    - Have an option to insert tabs instead of spaces
 
 - File management:
     - Create new files:
@@ -109,8 +104,6 @@
         - Delete file
         - Close file?
 
-- BUG: if a project folder is deleted, the editor doesn't know about that and doesn't give any errors when trying to save files
-
 - When adding a directory to workspace, the check for parent directory is NOT RELIABLE. Paths are case-sensitive on Linux
     - Also, what if we add a parent dir to a dir already in the project - what would be the expected behaviour? Delete the child dir? Keep it and dedup the files?
     
@@ -122,8 +115,6 @@
         - Editor layout (none/single/double)
         - Which editor was open on which side
 
-- Highlight matching braces
-
 - Projects
     - If a project doesn't exist, don't set it when loading previous session
     - On the splash screen list all previous sessions
@@ -132,27 +123,14 @@
         - Display project name
         - Maybe display the number of unsaved buffers
     
-- New search-in-buffer widget - an extension from finder (with different modes of work, with transitions between each):
-    - It's much nicer to see all occurrences at the same time, rather than trying to cycle through them blindly
-    - Make it look like the project search widget, but without the file names (so can be smaller)
-    - Jump to the occurrence under cursor immediately
-    - Can extend to support searching by symbol (possibly by adding a # or something like Sublime/VSCode)
-
 - Log time with the session logger
 
 - Either limit the number of bytes in text input, or improve the handling of cursor (currently calculating the length every frame)
 
-- Hide scrollbars unless scrolling or hovering over editor
 - Search in buffer:
     - When pressing up/down to switch to prev/next result, don't wrap (but do wrap when using Enter - what else to go back?)
 
 - Try using File_Async when scanning project folders and measure how long it takes
-
-- Fix the whole word matching when creating new cursors (underscore seems to be considered not a word char, but inconsistently)
-    - Easy to detect when using variables like success, success_read, log_error, error etc
-    - Make sure when selected a word by double clicking, the highlights only highlight whole words
-
-- Strip trailing whitespace on save
 
 - Save editor state on editor operations:
     - Alt + minus to open previous state
@@ -160,14 +138,13 @@
 
 - Save modified buffers to temporary files and recover after crashes
 
-- Add an option to not open in biggest monitor
+- Implement scrolling by dragging in all directions and with different speed
 
 - When cutting search results in finder, go by characters and not bytes
 
-- Search:
-    - Finder improvements:
-        - Have an extra input for filtering by file path
-        - Case-sensitive search
+- Finder improvements:
+    - Have an extra input for filtering by file path
+    - Case-sensitive search
 
 - Jump to function definition:
     - Tokenizer: support broken down identifiers
@@ -176,10 +153,6 @@
     - Update the lookup table on file/buffer changes (buffers always take precedence over what's in files)
 
 - If a buffer is modified on disk, ask for confirmation before saving (use the function and not the flag)
-
-- Improve resource usage: query monitor refresh rate and adjust sleeping time based on that
-    - Draw a figure - will that cause longer frames sometimes? Probably that's ok?
-    - Don't skip frames when dragging scrollbar
 
 - Implement semantic highlighting
     - Polymorphic structs and possibly other types
@@ -203,6 +176,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ BUG: if a project folder is deleted, the editor doesn't know about that and doesn't give any errors when trying to save files
 + Improve scrolling using shitty touchpads
 + When switching to buffer or trying to save it, check that the file exists
 + When sorting the file list, put the modified buffers on top
