@@ -19,7 +19,7 @@ reload_config :: () {
 #scope_file
 
 load_and_merge_into_default :: (file_path: string, create_if_doesnt_exist := false) -> success: bool {
-    new_config, success, error_msg := load_config(file_path);
+    new_config, success, error_msg := load_config(file_path, create_if_doesnt_exist);
     if !success {
         if !error_msg assert(false, "No error message on a config error. This is a bug.");
         log_error(error_msg);

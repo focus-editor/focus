@@ -24,6 +24,8 @@
 
 ===========================
 
+- BUG: moving lines to the last line broke again
+
 - Implement config options
     + When parsing project dirs, replace path separators with /
     + Report errors on wrong configs (write the usage code first)
@@ -176,6 +178,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ BUG: global config not being created
 + BUG: if a project folder is deleted, the editor doesn't know about that and doesn't give any errors when trying to save files
 + Improve scrolling using shitty touchpads
 + When switching to buffer or trying to save it, check that the file exists
