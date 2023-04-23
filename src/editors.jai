@@ -1628,14 +1628,20 @@ insert_tab_at_each_cursor :: (editor: *Editor, buffer: *Buffer) {
             delete_range(buffer, selection);
         }
         
-        // Insert tab
-        cursor_col := find_col_by_scanning_left(buffer, cursor.pos);  // @linewrap: check
-        to_next_tabstop := TAB_SIZE - cursor_col % TAB_SIZE;
-        spaces.count = to_next_tabstop;
-        insert_string_at_offset(buffer, cursor.pos, spaces);  // @tabs
-        cursor.pos += to_next_tabstop;
+        if config.settings.insert_spaces_when_pressing_tab {
+            // Insert spaces to the next tabstop
+            cursor_col := find_col_by_scanning_left(buffer, cursor.pos);  // @line_wrap: check
+            to_next_tabstop := TAB_SIZE - cursor_col % TAB_SIZE;
+            spaces.count = to_next_tabstop;
+            insert_string_at_offset(buffer, cursor.pos, spaces);
+            cursor.pos += to_next_tabstop;
+        } else {
+            // Insert tab
+            insert_string_at_offset(buffer, cursor.pos, "\t");
+            cursor.pos += 1;
+        }
         cursor.sel = cursor.pos;
-        cursor.col_wanted = cursor_col + to_next_tabstop;
+        cursor.col_wanted = -1;
     }
     
     editor.cursor_moved = true;
@@ -1662,7 +1668,8 @@ get_line_starts_for_lines_with_cursors_tmp :: (editor: *Editor, buffer: *Buffer)
 }
 
 indent_lines :: (editor: *Editor, buffer: *Buffer) {
-    spaces := get_tmp_spaces(TAB_SIZE);
+    spaces   := ifx config.settings.insert_spaces_when_pressing_tab get_tmp_spaces(TAB_SIZE) else "\t";
+    tab_size := cast(s32) spaces.count;
     
     // Find lines which will be affected (we don't want to indent the same line more than once if it has more than 1 cursor on it)
     line_starts, last_line_end_offset := get_line_starts_for_lines_with_cursors_tmp(editor, buffer);
@@ -1672,11 +1679,11 @@ indent_lines :: (editor: *Editor, buffer: *Buffer) {
         pos := cursor.pos;
         sel := cursor.sel;
         for line_start : line_starts { // @tabs
-            if line_start <= pos then cursor.pos += TAB_SIZE;
-            if line_start <= sel then cursor.sel += TAB_SIZE;
+            if line_start <= pos then cursor.pos += tab_size;
+            if line_start <= sel then cursor.sel += tab_size;
             if line_start > pos && line_start > sel break;
         }
-        cursor.col_wanted += TAB_SIZE;
+        cursor.col_wanted += tab_size;
     }
     
     // Build a replacement string
@@ -1697,8 +1704,6 @@ indent_lines :: (editor: *Editor, buffer: *Buffer) {
 }
 
 unindent_lines :: (editor: *Editor, buffer: *Buffer) {
-    spaces := get_tmp_spaces(TAB_SIZE);
-    
     // Find lines which will be affected (we don't want to unindent the same line more than once if it has more than 1 cursor on it)
     line_starts, last_line_end_offset := get_line_starts_for_lines_with_cursors_tmp(editor, buffer);
     array_add(*line_starts, last_line_end_offset);
