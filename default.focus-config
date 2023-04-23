@@ -36,6 +36,8 @@ __pycache__
 .pyc .rpyc
 
 [[settings]]
+# NOTE: please copy the whole block when overriding settings, otherwise defaults will be used 
+#       for any settings you haven't listed here explicitly
 maximize_on_start:                   true
 open_on_the_biggest_monitor:         true
 cursor_as_block:                     true

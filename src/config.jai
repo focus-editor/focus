@@ -50,7 +50,7 @@ load_config :: (file_path: string, create_if_doesnt_exist := false) -> Config, s
     if !success_read return empty, false, tprint("Couldn't read the config file file '%'", file_path);
     
     config, success_parse, error_msg := parse_config("Global Config", file_path, file_data);
-    if !success_parse return empty, false, tprint("Couldn't parse config file '%'.\n%", file_path, error_msg);
+    if !success_parse return empty, false, tprint("Error when loading config file '%'.\n%", file_path, error_msg);
     
     return config, true, "";
 }

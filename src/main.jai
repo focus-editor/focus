@@ -161,7 +161,7 @@ main :: () {
                     if event.key_pressed && event.key_code == .F4 && event.alt_pressed then should_quit = true;
                     
                     // Double shift click
-                    if event.key_code == .SHIFT {
+                    if config.settings.double_shift_to_search_in_workspace && event.key_code == .SHIFT {
                         using shift_key;
                         if !event.key_pressed then last_release = frame_time;
                         if event.key_pressed && only_shift_pressed(event.modifier_flags) {
