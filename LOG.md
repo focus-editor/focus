@@ -25,26 +25,28 @@
 ===========================
 
 - Implement config options
-    - Report errors on wrong configs (write the usage code first)
+    + Report errors on wrong configs (write the usage code first)
     - maximize_on_start
     - open_on_biggest_monitor
-    - Have an error log
-        - Display an error list in a corner
-        - Have a maximum number of errors to store / show
-        - Have a use log file so the user can go there and see the error they clicked
-    - Have a theme file (create a default one if doesn't exist)
+    - Colors
+    - Detect conflicting keys in the same context in the same config
+    
+- Config files:
+    - When parsing project dirs, replace path separators with /
+    - Hot-load user config file and apply the changes immediately (how do we handle the project dir changes?)
+    - Have a command to edit global config or project config (it will open the corresponding file)
+    - Every time a config file changes, the configs need to be reloaded and re-merged (and the changes need to be applied)
+    - When an editor is closed using Ctrl+W, use session_notify_closed_editor to remove the buffer backup (if unmodified)
+      (or maybe when it hasn't been edited or opened in this session?)
+    - Be able to ignore individual files
     
 - Refresh buffers from disk
     + Make it work
     + Remove crlf on load every time
     + Even if a file is reported as changed, calculate hash and compare after removing crlf before proceeding
     + Test a crlf file changed externally
-    - Test different scenarios, like
-        - pulling changes
-        - stashing changes
-        - applying a stash
-        - deleting project dir
-        - deleting a dir containing a non-project file
+    - Refresh buffers from disk when opening, switching and saving (not just mark as deleted)
+        - When saving, if a buffer has changed its state, don't save
 
 - Then: Sticky viewport
     - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
@@ -54,10 +56,14 @@
     - Implement wrapping for buffer
     - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
     - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
-- Use SIMD for syntax highlighting
 - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
-- Project scanning: Use threads more efficiently:
-    - Draw a simple progress bar in a corner
+
+- Commands:
+    - Open error log
+    - Open global config
+    - Open project config (only if project is active)
+    - New project
+    - Switch project
 
 - Highlight C/C++
         
@@ -70,20 +76,19 @@
     + Get rid of crlf notes
     - Show a warning when a CRLF file is loaded, then dismiss on save
 
-
 - Nice to haves:
     - Mark modified buffers in the navigate dialog
+    - Mark deleted buffers in the open file dialog
     - Create new cursors above/below by ctrl+alt+shift+arrows
     - Display the number of cursors in the footer
     - Rollback creating another cursor (ctrl+alt+D?)
-    - Word selection / line selection mode
-    - Ctrl+shift+delete/backspace - remove until start/end of line
 
 - Add horizontal scrollbar
     - Alt-HL smooth scroll
     
 - Select syntax highlighting dialog
 
+- Use SIMD for syntax highlighting
 - remove_crlf_in_place - optimise a bit
 
 - Display files that are deleted on disk but modified in the open file dialog
@@ -126,15 +131,6 @@
         - Display last edit time
         - Display project name
         - Maybe display the number of unsaved buffers
-
-- Config files:
-    - When parsing project dirs, replace path separators with /
-    - Hot-load user config file and apply the changes immediately (how do we handle the project dir changes?)
-    - Have a command to edit global config or project config (it will open the corresponding file)
-    - Every time a config file changes, the configs need to be reloaded and re-merged (and the changes need to be applied)
-    - When an editor is closed using Ctrl+W, use session_notify_closed_editor to remove the buffer backup (if unmodified)
-      (or maybe when it hasn't been edited or opened in this session?)
-    - Be able to ignore individual files
     
 - New search-in-buffer widget - an extension from finder (with different modes of work, with transitions between each):
     - It's much nicer to see all occurrences at the same time, rather than trying to cycle through them blindly

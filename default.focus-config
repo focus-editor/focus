@@ -47,7 +47,7 @@ highlight_selection_occurrences:     true
 load_last_session_on_start:          true
 disable_that_annoying_paste_effect:  false
 disable_file_open_close_animations:  false
-max_entries_in_open_file_dialog:     300
+max_entries_in_open_file_dialog:     1000
 double_shift_to_search_in_workspace: true
 
 [[keymap]]

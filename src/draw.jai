@@ -59,7 +59,9 @@ draw_frame :: () {
         case .open_file_dialog;         draw_open_file_dialog();
         case .finder;                   draw_finder();
         case .go_to_line_dialog;        draw_go_to_line_dialog(active_pane_rect);
-    } 
+    }
+    
+    draw_user_messages(screen, footer_height);
 
     // Reset UI state after drawing
     if !mouse.left.is_down || mouse.left.just_released {
@@ -162,9 +164,9 @@ draw_splash_screen :: (main_area: Rect) {
             
             // Figure out combo width for aligning right
             combo_width := 0.0;
-            plus_width  := cast(float) Simp.prepare_text(font_ui, "+");
+            plus_width  := cast(float) Simp.get_text_width(font_ui, "+");
             for combo {
-                combo_width += xx Simp.prepare_text(font_ui, it) + 2 * padding_h;
+                combo_width += xx Simp.get_text_width(font_ui, it) + 2 * padding_h;
                 if it_index < combo.count - 1 {
                     combo_width += plus_width + 2 * padding_h;
                 }
@@ -195,6 +197,70 @@ draw_splash_screen :: (main_area: Rect) {
         }
     }
     
+}
+
+draw_user_messages :: (main_area: Rect, footer_height: float) {
+    user_messages := get_user_messages(frame_time);
+    if !user_messages return;
+    
+    ui_id := get_ui_id_from_loc();
+    
+    margin  := floor(12 * dpi_scale);
+    padding := floor( 8 * dpi_scale);
+    
+    message_rect_src := shrink(main_area, margin);
+    if !is_valid(message_rect_src) return;
+    
+    message_rect_src.y += footer_height;
+    
+    for * user_messages {
+        if it.dismissed continue;
+        if !it.message  continue;
+                
+        // Figure out message height
+        lines := split(it.message, cast(u8) #char "\n");
+        
+        max_seen_width := 0;
+        for line : lines {
+            line_width := Simp.get_text_width(font_ui, line);
+            max_seen_width = max(line_width, max_seen_width);
+        }
+        message_height := lines.count * font_ui_line_height + 2 * padding;
+        
+        message_rect := message_rect_src;        
+        message_rect.h = message_height;
+        message_rect.w = max_seen_width + 2 * padding;
+        message_rect.x += message_rect_src.w - message_rect.w;
+                
+        maybe_set_hot_or_active(ui_id, message_rect, .PRESSABLE);
+        
+        is_hovering := mouse_pointer_is_within(message_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id);
+        if is_hovering {
+            if mouse.left.just_pressed {
+                it.dismissed = true;
+                continue;
+            }
+        }
+        
+        color := ifx it.level == .error then Colors.UI_ERROR else Colors.UI_WARNING;
+        color.a = ifx is_hovering then 0.5 else 0.4;
+        draw_rounded_rect_with_shadow(message_rect, color);
+        
+        text_color := Colors.UI_DEFAULT;
+        text_color.a = ifx is_hovering then 1.0 else 0.8;
+        
+        pen_x := cast(s64) (message_rect.x + padding);
+        pen_y := cast(s64) (message_rect.y + message_rect.h - padding) - font_ui.character_height;
+        
+        y := pen_y;
+        for line : lines {
+            x := pen_x;
+            Simp.draw_text(font_ui, x, y, line, text_color);            
+            y -= xx font_ui_line_height;
+        }        
+        
+        message_rect.y += message_height + margin;
+    }
 }
 
 draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui_Id, total_editor_area := Rect.{}) {

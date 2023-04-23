@@ -273,6 +273,8 @@ init_fonts_and_dependent_things :: () {
         append(*common_icons, to_string(*char));
     }
     append(*common_icons, PEN_CHAR);
+    append(*common_icons, BULLET_CHAR);
+    append(*common_icons, XMARK_CHAR);
     icons_string := builder_to_string(*common_icons);
     
     Simp.prepare_text(font_icons,       icons_string);
@@ -464,6 +466,7 @@ WHEEL_SENSITIVITY :: 1.0;
 
 PEN_CHAR    :: #run to_string(*convert_utf32_to_utf8(0xf304));
 BULLET_CHAR :: #run to_string(*convert_utf32_to_utf8(0x2022));
+XMARK_CHAR  :: #run to_string(*convert_utf32_to_utf8(0xf057));
 
 TAB_SIZE :: 4;
 
@@ -540,10 +543,13 @@ cpu_info: Cpu_X86;
 #load "keymap.jai";
 #load "session.jai";
 #load "meow_hash.jai";
+#load "user_messages.jai";
+
 #load "widgets/text_input.jai";
 #load "widgets/open_file_dialog.jai";
 #load "widgets/go_to_line_dialog.jai";
 #load "widgets/finder.jai";
+
 #load "langs/jai.jai";
 #load "langs/focus_config.jai";
 #load "langs/worklog.jai";

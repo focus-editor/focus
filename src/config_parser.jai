@@ -1,12 +1,12 @@
 // Adapted code from modules/Keymap
 
-parse_config :: (name: string, filename: string, file_data: string) -> Config, success: bool {
+parse_config :: (name: string, filename: string, file_data: string) -> Config, success: bool, error_msg: string /* temp */ {
     parser: Config_Parser;
     result: Config;
     
     // NOTE: we don't free on purpose, because some of the parsed data will point into the file data    
     start_from_memory(*parser.handler, name, filename, file_data);
-    if parser.handler.failed return Config.{}, false;
+    if parser.handler.failed return Config.{}, false, tprint("Parser couldn't read file '%'", filename);
     
     while true {
         line, found := consume_next_line(*parser.handler);
@@ -14,26 +14,26 @@ parse_config :: (name: string, filename: string, file_data: string) -> Config, s
         
         // Maybe switch to a different top section
         if begins_with(line, "[[") {
-            error := switch_top_section(*parser, line);
-            if error return Config.{}, false;
+            error, error_msg := switch_top_section(*parser, line);
+            if error return Config.{}, false, error_msg;
             continue;
         }
         
         if #complete parser.top_section == {
             case .none;
-                error(parser.handler, "Expected a top-level section definition, got '%'", line);
-                return result, false;
+                error_msg := log_parser_error(parser.handler, "Expected a top-level section definition, got '%'", line);
+                return result, false, error_msg;
                 
             case .workspace;
-                success := parse_workspace_line(*parser, line);
-                if !success return result, false;
+                success, error_msg := parse_workspace_line(*parser, line);
+                if !success return result, false, error_msg;
                 
             case .settings;
                 // TODO
                 
             case .keymap;
-                success := parse_keymap_line(*parser, line);
-                if !success return result, false;
+                success, error_msg := parse_keymap_line(*parser, line);
+                if !success return result, false, error_msg;
 
         }
     }
@@ -56,7 +56,7 @@ parse_config :: (name: string, filename: string, file_data: string) -> Config, s
     result.keymap.open_file_dialog = parser.data.keymap_open_file_dialog;
     result.keymap.search_dialog    = parser.data.keymap_search_dialog;
     
-    return result, true;
+    return result, true, "";
 }
 
 keymap_map_key_string :: (key_string: string) -> u32 {
@@ -86,6 +86,15 @@ keymap_map_key_code_to_string :: (key_code: u32) -> string /* temp */ {
 
 
 #scope_file
+
+log_parser_error :: (handler: Text_File_Handler, format: string, args: .. Any, flags := Log_Flags.NONE, loc := #caller_location) -> string {
+    // Like the "error" function in the handler module, but it also returns the message because we want it
+    new_format := tprint("Line % of '%': %", handler.line_number, handler.full_path, format);
+    message := tprint(new_format, .. args);
+    log(message, flags=Log_Flags.ERROR|flags, loc=loc);
+    
+    return message;
+} @PrintLike
 
 Str_Code :: struct { str: string; code: Input.Key_Code; }
 using Input.Key_Code;
@@ -139,38 +148,56 @@ STRING_TO_CODE_MAP :: Str_Code.[
     // .{ "MouseWheelDown",    MOUSE_WHEEL_DOWN },
 ];
 
-switch_top_section :: (using parser: *Config_Parser, line: string) -> error: bool {
+switch_top_section :: (using parser: *Config_Parser, line: string) -> error: bool, msg: string /* temp */ {
     if line == {
         case "[[workspace]]";
             top_section = .workspace;
-            if seen_top_sections & .workspace { error(handler, "The section '[[workspace]]' is defined twice. This is an error."); return true; }
+            if seen_top_sections & .workspace { 
+                error_msg := log_parser_error(handler, "The section '[[workspace]]' is defined twice. This is an error."); 
+                return true, error_msg;
+            }
             seen_top_sections |= .workspace;
             
         case "[[keymap]]";
             top_section = .keymap;
-            if seen_top_sections & .keymap { error(handler, "The section '[[keymap]]' is defined twice. This is an error."); return true; }
+            if seen_top_sections & .keymap {
+                error_msg := log_parser_error(handler, "The section '[[keymap]]' is defined twice. This is an error."); 
+                return true, error_msg;
+            }
             seen_top_sections |= .keymap;
             
         case "[[settings]]";
             top_section = .settings;
-            if seen_top_sections & .settings { error(handler, "The section '[[settings]]' is defined twice. This is an error."); return true; }
+            if seen_top_sections & .settings {
+                error_msg := log_parser_error(handler, "The section '[[settings]]' is defined twice. This is an error."); 
+                return true, error_msg;
+            }
             seen_top_sections |= .settings;
             
+        case "[[style]]";
+            // TODO !!
+            // top_section = .settings;
+            // if seen_top_sections & .settings {
+            //     error_msg := log_parser_error(handler, "The section '[[settings]]' is defined twice. This is an error."); 
+            //     return true, error_msg;
+            // }
+            // seen_top_sections |= .settings;
+            
         case;
-            error(handler, "Expected one of the following top-level sections: '[[workspace]]', '[[settings]]', '[[keymap]]', but found '%'", line);
-            return true;
+            error_msg := log_parser_error(handler, "Expected one of the following top-level sections: [[workspace]], [[settings]], [[keymap]], [[style]], but found '%'", line);
+            return true, error_msg;
     }
     
-    return false;
+    return false, "";
 }
 
-parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success: bool {
+parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
     if begins_with(line, "[") {
         for WORKSPACE_SUBSECTIONS {
-            if line == it { workspace_subsection = xx it_index; return true; }
+            if line == it { workspace_subsection = xx it_index; return true, ""; }
         }
-        error(handler, "Unknown workspace subsection '%'. Available options are: %.", line, join(..WORKSPACE_SUBSECTIONS, ", ", allocator = temp));
-        return false;
+        error_msg := log_parser_error(handler, "Unknown workspace subsection '%'.\nAvailable options are: %.", line, join(..WORKSPACE_SUBSECTIONS, ", ", allocator = temp));
+        return false, error_msg;
     }
     if #complete workspace_subsection == {
         case .workspace_dirs;
@@ -180,7 +207,8 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
             if file_exists(dir_path) {
                 array_add(*data.workspace_dirs, dir_path);
             } else {
-                error(handler, "Directory '%' doesn't exist, skipping...", dir_path);
+                error_msg := log_parser_error(handler, "Directory '%' doesn't exist.", dir_path);
+                return false, error_msg;
             }
         case .ignore_dirs;
             dirs := split(line, cast(u8) #char " ");
@@ -210,29 +238,29 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
                 }
             }
     }
-    return true;
+    return true, "";
 }
 
-parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bool {
+parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
     if begins_with(line, "[") {
         for KEYMAP_SUBSECTIONS {
-            if line == it { keymap_subsection = xx it_index; return true; }
+            if line == it { keymap_subsection = xx it_index; return true, ""; }
         }
-        error(handler, "Unknown keymap subsection '%'. Available options are: %.", line, join(..KEYMAP_SUBSECTIONS, ", ", allocator = temp));
-        return false;
+        error_msg := log_parser_error(handler, "Unknown keymap subsection '%'.\nAvailable options are: %.", line, join(..KEYMAP_SUBSECTIONS, ", ", allocator = temp));
+        return false, error_msg;
     }
     
     key_name, action_name := break_by_spaces(line);
     if !action_name {
-        error(handler, "Expected a space after the key combo, found '%'", key_name);
-        return false;
+        error_msg := log_parser_error(handler, "Expected a space after the key combo, found '%'", key_name);
+        return false, error_msg;
     }
     
     // Parse key combo
-    key_combo, key_ok := parse_key_combo(parser, key_name);
+    key_combo, key_ok, msg := parse_key_combo(parser, key_name);
     if !key_ok {
-        error(handler, "Invalid key combo: '%'. Note that spaces aren't allowed in key combos.", line);
-        return false;
+        error_msg := tprint("Invalid key combo: '%'.\n%\nNote that spaces aren't allowed in key combos.", line, msg);
+        return false, error_msg;
     }
     
     // Parse actions
@@ -246,8 +274,8 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
             }
         }
         if !found {
-            error(handler, "Invalid action '%'. Possible options in the % context are: \n%", name, subsection, join(..available_actions, "\n"));
-            `return false;
+            error_msg := log_parser_error(handler, "Invalid action '%'.\nPossible reasons:\n* It's misspelled\n* It's in the wrong section\nPlease check the default config file for a reference.", name);
+            `return false, error_msg;
         }   
     }
     
@@ -258,10 +286,10 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
         case .search_dialog;    map_action(action_name, key_combo, ACTIONS_SEARCH_DIALOG,    *data.keymap_search_dialog,    "[search dialog]");
     }
     
-    return true;
+    return true, "";
 }
 
-parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo, success: bool {
+parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo, success: bool, error_msg: string /* temp */ {
     result: Key_Combo;
     
     // Parse modifier flags
@@ -277,16 +305,16 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo
         else if equal_nocase(mod_key, "{shift}")    result.ignore.shift_pressed = true;
         else if equal_nocase(mod_key, "{alt}")      result.ignore.alt_pressed   = true;
         else {
-            error(handler, "Unknown modifier key '%'", mod_key);
-            return result, false;
+            error_msg := log_parser_error(handler, "Unknown modifier key '%'", mod_key);
+            return result, false, error_msg;
         }
         modifier_string = remainder;
     }
     
     key_string := modifier_string;
     if !key_string {
-        error(handler, "Missing key code after modifier flags: '%'", key_name);
-        return result, false;
+        error_msg := log_parser_error(handler, "Missing key code after modifier flags: '%'", key_name);
+        return result, false, error_msg;
     }
     
     result.key_code = keymap_map_key_string(key_string);
@@ -295,7 +323,10 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo
         s := key_string;
         // Try single key chars, e.g. Ctrl-A, Ctrl-C etc.
         key_code, success := utf8_next_character(*s);
-        if success != .CONVERSION_OK return result, false;
+        if success != .CONVERSION_OK {
+            error_msg := log_parser_error(handler, "Line contains invalid UTF-8");
+            return result, false, error_msg;
+        }
 
         if (key_code >= #char "a") && (key_code <= #char "z") {
             // Uppercase it, since our keyboard codes are uppercase.
@@ -304,8 +335,8 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo
     
         if s.count > 0 {
             // There are extra characters, report an error
-            error(handler, "Expected a single char key code, got: '%'.\n", key_string);
-            return result, false;
+            error_msg := log_parser_error(handler, "Expected a single char key code or a valid key name, got: '%'.", key_string);
+            return result, false, error_msg;
         }
         
         result.key_code = key_code;
@@ -314,7 +345,7 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo
     // Pre-apply the ignore mask
     result.mods.packed |= result.ignore.packed;
     
-    return result, true;
+    return result, true, "";
 }
 
 #scope_file

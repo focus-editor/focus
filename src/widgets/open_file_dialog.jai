@@ -385,7 +385,7 @@ get_pool_allocator :: () -> Allocator {
 
 memory_pool: Flat_Pool;
 
-MAX_ENTRIES_TO_SHOW :: 300;
+MAX_ENTRIES_TO_SHOW :: 1000;
 
 #scope_export
 

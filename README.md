@@ -31,16 +31,16 @@ You can see the full list of shortcuts and redefine keys in the global config fi
 
 ### Acknowledgements
 
-- The editor was made possible by the fantastic Jai programming language by Jonathan Blow
+- The editor was made possible by the fantastic Jai programming language by [Jonathan Blow](https://en.wikipedia.org/wiki/Jonathan_Blow).
 
-- The editor was inspired by Jamie Brandon's blog post (https://www.scattered-thoughts.net/writing/focus-intro/). Nothing other than the name was borrowed from his editor - the name was just too good.
+- The editor was inspired by [Jamie Brandon's blog post](https://www.scattered-thoughts.net/writing/focus-intro/). Nothing other than the name was borrowed from his editor - the name was just too good.
 
 - I am very grateful to my wife who supported me along the way and took on the bigger share of the housework to let me work on the editor.
 
-- A special thanks to the two early adopters who helped to make the editor more robust: @cookednick and @ustance.
+- A special thanks to the two early adopters who helped to make the editor more robust and more enjoyable to use: [@cookednick](https://github.com/cookednick) and [@ustance](https://github.com/ustance).
 
-- The default font is created by Nikita Prokopov - https://github.com/tonsky/FiraCode
+- The default font [FiraCode](https://github.com/tonsky/FiraCode) is created by [Nikita Prokopov](https://github.com/tonsky).
 
-- Icons - Font Awesome by Dave Gandy - http://fontawesome.io
+- Icons - [Font Awesome](http://fontawesome.io) by Dave Gandy.
 
 - If not for VSCode's annoying "restart to apply the latest update" notifications every other day, this editor might never have been created.

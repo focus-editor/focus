@@ -1,41 +1,56 @@
 load_global_config :: () {
-    global_config, success, error_msg := load_config(tprint("%/global.focus-config", exe_dir), create_if_doesnt_exist = !DEBUG);
-    if !success {
-        if error_msg then log_error(error_msg);
-        return;
-    }
-    merge_configs(*config, global_config);
+    config_path := tprint("%/global.focus-config", exe_dir);
+    load_and_merge_into_default(config_path, create_if_doesnt_exist = !DEBUG);
 }
 
 load_project_config :: (project_name: string) -> success: bool {
     config_path := tprint("%/projects/%.focus-config", exe_dir, project_name);
-    project_config, success, error_msg := load_config(config_path);
-    if !success {
-        if error_msg then log_error(error_msg);
-        return false;
-    }
-    merge_configs(*config, project_config);
-    return true;
+    return load_and_merge_into_default(config_path);
+}
+
+reload_config :: () {
+    // TODO: check in watcher if the config has changed,
+    // then remember the old config, reload and compare
+    
+    // If project dirs have changed, do a diff and if something was added, add those dirs,
+    // otherwise do a hard reload, like a project change
 }
 
 #scope_file
+
+load_and_merge_into_default :: (file_path: string, create_if_doesnt_exist := false) -> success: bool {
+    new_config, success, error_msg := load_config(file_path);
+    if !success {
+        if !error_msg assert(false, "No error message on a config error. This is a bug.");
+        log_error(error_msg);
+        add_user_error(error_msg);    
+        return false;
+    }
+    
+    config = DEFAULT_CONFIG;
+    merge_configs(*config, new_config);
+    
+    if !file_is_watched(file_path) start_watching_file(file_path);
+    
+    return true;
+}
 
 load_config :: (file_path: string, create_if_doesnt_exist := false) -> Config, success: bool, error_msg: string /* tmp */ {
     empty: Config;
     
     if !file_exists(file_path) {
-        if !create_if_doesnt_exist return empty, false, "";  // no error message because it's not an error
+        if !create_if_doesnt_exist return empty, true, "";  // no error message because it's not an error
         
         // Create one with default contents
         success := write_entire_file(file_path, DEFAULT_CONFIG_FILE_DATA);
-        if !success return empty, false, tprint("Couldn't create a config file '%'", file_path);
+        if !success return empty, false, tprint("Couldn't create a new config file '%'.\nIs the directory writable?", file_path);
     }
     
     file_data, success_read := read_entire_file(file_path);
-    if !success_read return empty, false, tprint("Couldn't read file '%'", file_path);
+    if !success_read return empty, false, tprint("Couldn't read the config file file '%'", file_path);
     
-    config, success_parse := parse_config("Global Config", file_path, file_data);
-    if !success_parse return empty, false, tprint("Couldn't parse config file '%'", file_path);
+    config, success_parse, error_msg := parse_config("Global Config", file_path, file_data);
+    if !success_parse return empty, false, tprint("Couldn't parse config file '%'.\n%", file_path, error_msg);
     
     return config, true, "";
 }
