@@ -11,7 +11,7 @@ load_project_config :: (project_name: string) -> success: bool {
 reload_config :: () {
     // TODO: check in watcher if the config has changed,
     // then remember the old config, reload and compare
-    
+
     // If project dirs have changed, do a diff and if something was added, add those dirs,
     // otherwise do a hard reload, like a project change
 }
@@ -26,34 +26,34 @@ load_and_merge_into_default :: (file_path: string, create_if_doesnt_exist := fal
         add_user_error(error_msg);
         return false;
     }
-    
+
     config = DEFAULT_CONFIG;
     merge_configs(*config, new_config);
- 
+
     TAB_SIZE = clamp(cast(s32) config.settings.tab_size, 1, 100);  // be reasonable, even though 100 is unreasonable
-    
+
     if !file_is_watched(file_path) start_watching_file(file_path);
-    
+
     return true;
 }
 
 load_config :: (file_path: string, create_if_doesnt_exist := false) -> Config, success: bool, error_msg: string /* tmp */ {
     empty: Config;
-    
+
     if !file_exists(file_path) {
         if !create_if_doesnt_exist return empty, true, "";  // no error message because it's not an error
-        
+
         // Create one with default contents
         success := write_entire_file(file_path, DEFAULT_CONFIG_FILE_DATA);
         if !success return empty, false, tprint("Couldn't create a new config file '%'.\nIs the directory writable?", file_path);
     }
-    
+
     file_data, success_read := read_entire_file(file_path);
     if !success_read return empty, false, tprint("Couldn't read the config file file '%'", file_path);
-    
+
     config, success_parse, error_msg := parse_config("Global Config", file_path, file_data);
     if !success_parse return empty, false, tprint("Error when loading config file '%'.\n%", file_path, error_msg);
-    
+
     return config, true, "";
 }
 
@@ -61,7 +61,7 @@ merge_configs :: (dst: *Config, src: Config) {
     // Workspace
     if src.workspace.workspace_dirs then dst.workspace.workspace_dirs = src.workspace.workspace_dirs;
     if src.workspace.ignore_dirs    then dst.workspace.ignore_dirs    = src.workspace.ignore_dirs;
-    
+
     if src.workspace.allow_file_extensions || src.workspace.allow_file_extension_wildcards {
         dst.workspace.allow_file_extensions          = src.workspace.allow_file_extensions;
         dst.workspace.allow_file_extension_wildcards = src.workspace.allow_file_extension_wildcards;
@@ -70,7 +70,7 @@ merge_configs :: (dst: *Config, src: Config) {
         dst.workspace.ignore_file_extensions          = src.workspace.ignore_file_extensions;
         dst.workspace.ignore_file_extension_wildcards = src.workspace.ignore_file_extension_wildcards;
     }
-    
+
     // Keymap
     merge_keymaps :: (dst_keymap: *[] Key_Mapping, src_keymap: [] Key_Mapping) #expand {
         if !src_keymap return;
@@ -82,11 +82,11 @@ merge_configs :: (dst: *Config, src: Config) {
     merge_keymaps(*dst.keymap.editors,          src.keymap.editors);
     merge_keymaps(*dst.keymap.open_file_dialog, src.keymap.open_file_dialog);
     merge_keymaps(*dst.keymap.search_dialog,    src.keymap.search_dialog);
-    
+
     // Settings
     #insert -> string {
         b: String_Builder;
-        
+
         for setting : SETTINGS {
             code := #string END
                 if src.settings.%1 != DEFAULT_CONFIG.settings.%1 {
@@ -95,7 +95,7 @@ merge_configs :: (dst: *Config, src: Config) {
             END
             print_to_builder(*b, code, setting.name);
         }
-        
+
         return builder_to_string(*b);
     }
 }
@@ -134,9 +134,9 @@ Settings :: struct {
     tab_size                            := 4;
     insert_spaces_when_pressing_tab     := true;
     strip_trailing_whitespace_on_save   := false;
-    
+
     // TODO
-    // convert_tabs_to_spaces_on_load:     false  
+    // convert_tabs_to_spaces_on_load:     false
     // load_last_session_on_start:         true
 }
 
@@ -192,6 +192,7 @@ Colors :: struct {
 
     UI_DEFAULT          :: Color.{ r = 0.75, g = 0.79, b = 0.86, a = 1.0 };
     UI_DIM              :: Color.{ r = 0.533, g = 0.569, b = 0.616, a = 1.0 };
+    UI_NEUTRAL          :: Color.{ r = 0.3, g = 0.3, b = 0.3, a = 1.0 };
     UI_WARNING          :: Color.{ r = 0.85, g = 0.68, b = 0.33, a = 1.0 };
     UI_ERROR            :: Color.{ r = 1.00, g = 0.00, b = 0.00, a = 1.0 };
     UI_TEXT_INPUT_LABEL :: Color.{ r = 0.233, g = 0.269, b = 0.316, a = 1.0 };
@@ -258,7 +259,7 @@ is_none :: (using color: Color) -> bool {
 }
 
 Setting :: struct {
-    name: string; 
+    name: string;
     type: enum { boolean; integer; };
 }
 
@@ -272,7 +273,7 @@ SETTINGS :: Setting.[
     .{ "double_shift_to_search_in_workspace", .boolean },
     .{ "insert_spaces_when_pressing_tab",     .boolean },
     .{ "strip_trailing_whitespace_on_save",   .boolean },
-    
+
     .{ "max_entries_in_open_file_dialog",     .integer },
     .{ "tab_size",                            .integer },
 ];

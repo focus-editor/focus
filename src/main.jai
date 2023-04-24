@@ -3,24 +3,24 @@ RELEASE_DATE :: "26 April 2023";
 
 main :: () {
     cpu_info = get_cpu_info();
-    
+
     platform_setup();
 
     // Remember important directories
     exe_dir = copy_string(path_strip_filename(get_path_of_running_executable()));
     if ends_with(exe_dir, "/") exe_dir.count -= 1;
     assert(exe_dir.count > 0);
-    
+
     temp_dir     = sprint("%/temp",     exe_dir);
     projects_dir = sprint("%/projects", exe_dir);
-    
+
     if !make_directory_if_it_does_not_exist(projects_dir) then panic_messagebox("Couldn't create folder %. Is the directory writable?", projects_dir);
     if !make_directory_if_it_does_not_exist(temp_dir)     then panic_messagebox("Couldn't create folder % for temporary files. Is the directory writable?", temp_dir);
-    
+
     load_global_config();
     init_workspace();
-    init_buffers();    
-    
+    init_buffers();
+
     init_session_with_no_guidance :: () #expand {
         session = maybe_load_previous_session();
         if session.project {
@@ -28,9 +28,9 @@ main :: () {
             if !success then log_error("Couldn't load project config '%'", session.project);
         }
     }
-    
+
     args := get_command_line_arguments();
-    
+
     if args.count == 2 {
         // Check if a directory or file was passed in the command line (or by drag/dropping a file/directory onto the executable)
         if is_directory(args[1]) {
@@ -47,41 +47,40 @@ main :: () {
     } else {
         init_session_with_no_guidance();
     }
-    
+
     window_x := -1;
     window_y := -1;
     if config.settings.open_on_the_biggest_monitor {
         window_x, window_y = platform_get_biggest_monitor_pos();
     }
-    
+
     window_generic_title = ifx DEBUG then "Focus (debug mode)" else "Focus";
     window = create_window(window_width, window_height, window_generic_title, window_x, window_y, background_color_rgb = as_3_floats(Colors.BACKGROUND));
-    
+
     if config.settings.maximize_on_start then platform_maximize_window(window);
-    
+
     platform_enable_drag_and_drop(window);
 
     window_width, window_height = Simp.get_render_dimensions(window);
     screen = make_rect(0, 0, window_width, window_height);
     Simp.set_render_target(window);
-    
+
     // editors_open_file("W:/focus/src/main.jai");
-    
+
     // Requires the session to be created and the configs to be loaded
     start_initial_workspace_scan();
-    
+
     // Init logger after we know the session dir and the config
     init_logger();
     defer deinit_logger();  // closes log file handles
-    
+
     dpi_scale = platform_get_dpi_scale(window);
     init_fonts_and_dependent_things();
     old_line_height = line_height;
-    
+
     window_has_focus := true;
     window_resized   := false;
-    should_quit := false;
-    
+
     shift_key: struct {
         last_press:   Time = -1;
         last_release: Time = -1;
@@ -90,9 +89,9 @@ main :: () {
 
     while !should_quit {
         if !redraw_requested platform_wait_message();
-        
+
         Input.update_window_events();
-        
+
         if frame_time > MAX_TIME_BEFORE_RESETTING then { init_time(); frame_time = cast(Time) get_time(); }
         current_time := cast(Time) get_time();
         frame_dt   = min(current_time - frame_time, MAX_FRAME_DT);
@@ -116,22 +115,22 @@ main :: () {
 
         // Don't do anything when window is resized to a size that's too small
         if window_width < MIN_WINDOW_WIDTH || window_height < MIN_WINDOW_HEIGHT continue;
-        
+
         update_mouse_state();
-        
+
         screen_with_title_bar := screen;
         screen_with_title_bar.h += 200;  // should be enough to include the title bar
-        
+
         // NOTE: this optimisation has caused some problems, so commenting it out for now
         // // Don't redraw if we're mousing around outside the window
-        // if !redraw_requested 
-        //     && !Input.events_this_frame 
-        //     && !mouse_pointer_is_within(screen_with_title_bar) 
-        //     && window_has_focus == Input.input_application_has_focus 
-        //     && !window_resized 
-        // then 
+        // if !redraw_requested
+        //     && !Input.events_this_frame
+        //     && !mouse_pointer_is_within(screen_with_title_bar)
+        //     && window_has_focus == Input.input_application_has_focus
+        //     && !window_resized
+        // then
         //     continue;
-           
+
         redraw_requested = false;
         window_resized   = false;
         dont_scroll_this_frame = false;
@@ -156,10 +155,11 @@ main :: () {
             if event.type == {
                 case .QUIT;
                     should_quit = true;
+
                 case .KEYBOARD;
                     // Alt + F4
                     if event.key_pressed && event.key_code == .F4 && event.alt_pressed then should_quit = true;
-                    
+
                     // Double shift click
                     if config.settings.double_shift_to_search_in_workspace && event.key_code == .SHIFT {
                         using shift_key;
@@ -176,7 +176,7 @@ main :: () {
                         }
                         if event.key_pressed then last_press = frame_time;
                     }
-                    
+
                     action := map_event_to_action(event, Action_Common);
                     if action == {
                         case .increase_font_size;           increase_font_size();
@@ -200,26 +200,33 @@ main :: () {
             // Pass events to the active widget.
             // Note that the active widget may change during the frame, so the following events
             // will be sent to the new widget, that's why we check global widget for each event.
-            if active_global_widget == {
-                case .editors;            editors_handle_event(event);
-                case .finder;             finder_handle_event(event);
-                case .open_file_dialog;   open_file_dialog_handle_event(event);
-                case .go_to_line_dialog;  go_to_line_dialog_handle_event(event);
+            if #complete active_global_widget == {
+                case .editors;                  editors_handle_event(event);
+                case .finder;                   finder_handle_event(event);
+                case .open_file_dialog;         open_file_dialog_handle_event(event);
+                case .go_to_line_dialog;        go_to_line_dialog_handle_event(event);
+                case .unsaved_buffers_dialog;   unsaved_buffers_dialog_handle_event(event);
+                case .commands_dialog;          //unsaved_buffers_dialog_handle_event(event);
             }
         }
 
+        if should_quit && unsaved_buffers_exist() {
+            show_unsaved_buffers_dialog();
+            should_quit = false;
+        }
+
         refresh_open_buffers();
-        
+
         draw_frame();
 
         pointer_end_frame();
-        
+
         maybe_save_editor_state_into_session();
 
         reset_temporary_storage();
-        
+
         // #if DEBUG FrameMark();
-        
+
         if cast(Time) get_time() - frame_time <= QUICK_FRAME_DT {
             // It should be ok to sleep a bit after a quick frame to avoid pegging the core.
             // NOTE: I tried vsync but for some reason it felt super bad - didn't figure out exactly why
@@ -233,22 +240,27 @@ main :: () {
 
 init_fonts_and_dependent_things :: () {
     delta := font_size - DEFAULT_FONT_SIZE;
-    font_ui_size          = clamp(DEFAULT_FONT_UI_SIZE       + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_ui_big_size      = clamp(DEFAULT_FONT_UI_BIG_SIZE   + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_ui_small_size    = clamp(DEFAULT_FONT_UI_SMALL_SIZE + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_icons_size       = clamp(DEFAULT_FONT_ICONS_SIZE    + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_icons_small_size = clamp(DEFAULT_FONT_ICONS_SMALL_SIZE + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
-    
+    font_ui_size          = clamp(DEFAULT_FONT_UI_SIZE          + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_ui_big_size      = clamp(DEFAULT_FONT_UI_BIG_SIZE      + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_ui_medium_size   = clamp(DEFAULT_FONT_UI_MEDIUM_SIZE   + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_ui_small_size    = clamp(DEFAULT_FONT_UI_SMALL_SIZE    + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_icons_size       = clamp(DEFAULT_FONT_ICONS_SIZE       + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_icons_small_size = clamp(DEFAULT_FONT_ICONS_SMALL_SIZE + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
+
     font = Simp.get_font_at_size(FONT.name, FONT.data, cast(int) (font_size * dpi_scale));
     assert(font != null, "Couldn't init main text font\n");
 
     font_ui = Simp.get_font_at_size(FONT_UI.name, FONT_UI.data, cast(int) (font_ui_size * dpi_scale));
     assert(font_ui != null, "Couldn't init main ui font\n");
     font_ui_line_height = cast(float) font_ui.default_line_spacing;
-    
+
     font_ui_big = Simp.get_font_at_size(FONT_UI.name, FONT_UI.data, cast(int) (font_ui_big_size * dpi_scale));
-    assert(font_ui != null, "Couldn't init big ui font\n");
-    font_ui_big_line_height = cast(float) font_ui.default_line_spacing;
+    assert(font_ui_big != null, "Couldn't init big ui font\n");
+    font_ui_big_line_height = cast(float) font_ui_big.default_line_spacing;
+
+    font_ui_medium = Simp.get_font_at_size(FONT_UI.name, FONT_UI.data, cast(int) (font_ui_medium_size * dpi_scale));
+    assert(font_ui_medium != null, "Couldn't init medium ui font\n");
+    font_ui_medium_line_height = cast(float) font_ui_medium.default_line_spacing;
 
     font_ui_bold = Simp.get_font_at_size(FONT_UI_BOLD.name, FONT_UI_BOLD.data, cast(int) (font_ui_size * dpi_scale));
     assert(font_ui_bold != null, "Couldn't init bold ui font\n");
@@ -258,7 +270,7 @@ init_fonts_and_dependent_things :: () {
 
     font_icons = Simp.get_font_at_size(FONT_ICONS.name, FONT_ICONS.data, cast(int) (font_icons_size * dpi_scale));
     assert(font_icons != null, "Couldn't init main icon font\n");
-    
+
     font_icons_small = Simp.get_font_at_size(FONT_ICONS.name, FONT_ICONS.data, cast(int) (font_icons_small_size * dpi_scale));
     assert(font_icons_small != null, "Couldn't init small icon font\n");
 
@@ -267,11 +279,13 @@ init_fonts_and_dependent_things :: () {
     // we have all the font atlases loaded in the GPU memory once
     // (TODO: maybe there's an easy way for Simp to only update textures on flush?)
     COMMON_CHARS :: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789… ~!@#$%^&*()-|\"':;_+={}[]\\/`,.<>?АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчщъыьэюя¶•";
-    Simp.prepare_text(font,          COMMON_CHARS);
-    Simp.prepare_text(font_ui,       COMMON_CHARS);
-    Simp.prepare_text(font_ui_bold,  COMMON_CHARS);
-    Simp.prepare_text(font_ui_small, COMMON_CHARS);
-    
+    Simp.prepare_text(font,             COMMON_CHARS);
+    Simp.prepare_text(font_ui,          COMMON_CHARS);
+    Simp.prepare_text(font_ui_bold,     COMMON_CHARS);
+    Simp.prepare_text(font_ui_small,    COMMON_CHARS);
+    Simp.prepare_text(font_ui_big,      COMMON_CHARS);
+    Simp.prepare_text(font_ui_medium,   COMMON_CHARS);
+
     common_icons: String_Builder;
     common_icons.allocator = temp;
     for enum_values_as_enum(File_Icon) {
@@ -281,10 +295,10 @@ init_fonts_and_dependent_things :: () {
     append(*common_icons, PEN_CHAR);
     append(*common_icons, XMARK_CHAR);
     icons_string := builder_to_string(*common_icons);
-    
+
     Simp.prepare_text(font_icons,       icons_string);
     Simp.prepare_text(font_icons_small, icons_string);
-    
+
     // Things that depend on char size
     char_size       = cast(float) font.em_width;
     old_line_height = line_height;
@@ -429,6 +443,7 @@ window_y  := -1;
 dpi_scale := 1.0;
 
 redraw_requested := true;  // set to true to render the first frame
+should_quit := false;
 
 frame_time: Time;                 // ever-increasing time since start in seconds
 frame_dt:   Time = MAX_FRAME_DT;  // time delta since the last frame
@@ -480,12 +495,14 @@ font_ui:            *Simp.Dynamic_Font;
 font_ui_bold:       *Simp.Dynamic_Font;
 font_ui_big:        *Simp.Dynamic_Font;
 font_ui_small:      *Simp.Dynamic_Font;
+font_ui_medium:     *Simp.Dynamic_Font;
 font_icons:         *Simp.Dynamic_Font;
 font_icons_small:   *Simp.Dynamic_Font;
 
 DEFAULT_FONT_SIZE               :: 14;
 DEFAULT_FONT_UI_SIZE            :: 16;
 DEFAULT_FONT_UI_BIG_SIZE        :: 28;
+DEFAULT_FONT_UI_MEDIUM_SIZE     :: 18;
 DEFAULT_FONT_UI_SMALL_SIZE      :: 15;
 DEFAULT_FONT_ICONS_SIZE         :: 16;
 DEFAULT_FONT_ICONS_SMALL_SIZE   :: 8;
@@ -493,6 +510,7 @@ DEFAULT_FONT_ICONS_SMALL_SIZE   :: 8;
 font_size               := DEFAULT_FONT_SIZE;  // when changing font size, we change just this one and then derive the other ones from it
 font_ui_size            := DEFAULT_FONT_UI_SIZE;
 font_ui_big_size        := DEFAULT_FONT_UI_BIG_SIZE;
+font_ui_medium_size     := DEFAULT_FONT_UI_MEDIUM_SIZE;
 font_ui_small_size      := DEFAULT_FONT_UI_SMALL_SIZE;
 font_icons_size         := DEFAULT_FONT_ICONS_SIZE;
 font_icons_small_size   := DEFAULT_FONT_ICONS_SMALL_SIZE;
@@ -503,6 +521,7 @@ line_height:                float;
 old_line_height:            float;  // to track font changes
 font_ui_line_height:        float;
 font_ui_big_line_height:    float;
+font_ui_medium_line_height: float;
 rounding_radius:            float;
 rounding_radius_large:      float;
 rounding_radius_small:      float;
@@ -522,6 +541,7 @@ active_global_widget: enum {
     open_file_dialog;
     go_to_line_dialog;
     commands_dialog;
+    unsaved_buffers_dialog;
 } = .editors;
 
 Project_Dir :: struct {
@@ -554,6 +574,7 @@ cpu_info: Cpu_X86;
 #load "widgets/open_file_dialog.jai";
 #load "widgets/go_to_line_dialog.jai";
 #load "widgets/finder.jai";
+#load "widgets/unsaved_buffers.jai";
 
 #load "langs/jai.jai";
 #load "langs/focus_config.jai";
@@ -595,8 +616,8 @@ cpu_info: Cpu_X86;
 
 File_Async :: #import "File_Async";
 
-Simp :: #import "Simp_Ext";
-Input :: #import "Input";
+Simp  :: #import "Simp_Ext";
+Input :: #import "Input_Ext";
 
 DEBUG :: #run get_build_options().array_bounds_check != .OFF;  // this is a sloppy way of checking whether we're in debug mode!
 
@@ -626,14 +647,14 @@ FONT_UI_BOLD :: #run load_font("SEGUISB.TTF");
 FONT_ICONS   :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
 
 MIN_FONT_SIZE :: 4;
-MAX_FONT_SIZE :: 30;  // setting a larger size has caused freetype to crash - not sure yet why. 
+MAX_FONT_SIZE :: 30;  // setting a larger size has caused freetype to crash - not sure yet why.
                       // Probably we don't give it enough memory for a glyph bitmap when rendering it?
 
 load_font :: (name: string) -> Embedded_Font {
     path := tprint("fonts/%", name);
     data, success := read_entire_file(path);
     assert(success, "Couldn't load font '%'", path);
-    
+
     return Embedded_Font.{ name = name, data = data};
 }
 

@@ -7,22 +7,22 @@ init_workspace :: () {
 add_directory_to_workspace :: (path: string, index := -1) {
     full_path := copy_string(get_absolute_path(path));
     path_overwrite_separators(full_path, #char "/");
-    
+
     if !is_directory(full_path) {
         log_error("Couldn't add % to workspace. Directory doesn't exist or is invalid.", full_path);
         return;
     }
-    
+
     dir: Project_Dir;
     dir.path = trim_right(full_path, "/");
     dir.path_prefix_len = find_index_of_any_from_right(dir.path, "./") + 1;
-    
+
     in_project, parent_dir := dir_is_within_project(dir.path);
     if in_project {
         log_error("Directory % is already in the project: %", dir.path, parent_dir);
         return;
     }
-    
+
     if index < 0 {
         array_add(*project_dirs, dir);
     } else {
@@ -35,7 +35,7 @@ start_initial_workspace_scan :: () {
     init(*file_list_thread_group, num_threads = 1, group_proc = file_list_threadproc);
     file_list_thread_group.name = "Async workspace file list builder";
     file_list_thread_group.logging = DEBUG;
-    
+
     start(*file_list_thread_group);
     add_work(*file_list_thread_group, cast(*void) 0);  // a dummy piece of work
 }
@@ -51,55 +51,55 @@ maybe_update_workspace_buffers :: () {
             if results {
                 file_list_ready = true;
                 shutdown(*file_list_thread_group);
-                
+
                 // Start the actual scanning of the workspace
                 num_jobs_to_complete = 0;
-        
+
                 num_cpus := get_num_cpus();
                 num_threads := max(num_cpus - 1, 1);
-                
+
                 init(*scanner_thread_group, num_threads = num_threads, group_proc = directory_scan_threadproc);
                 scanner_thread_group.name = "Workspace Scanner";
                 scanner_thread_group.logging = false;
-                    
+
                 start(*scanner_thread_group);
-                
+
                 files_per_thread := min((files_to_scan.count / num_threads) + 1, MAX_FILES_PER_JOB);
                 num_ranges  := (files_to_scan.count / files_per_thread) + 1;
                 file_ranges := NewArray(num_ranges, [] string, allocator = get_scan_pool_allocator());
-                
+
                 for 0..num_ranges-1 {
                     file_range := *file_ranges[it];
                     start := it * files_per_thread;
                     count := min(files_per_thread, files_to_scan.count - start);
                     if count <= 0 break;
                     << file_range = array_view(files_to_scan, start, count);
-                    
+
                     add_work(*scanner_thread_group, file_range, sprint("Scan [%:%]", start, start + count));
-                    
+
                     num_jobs_to_complete += 1;
                 }
             }
-            
+
             return;
         }
-    
+
         results := get_completed_work(*scanner_thread_group);
-        
+
         num_jobs_completed += results.count;
         if num_jobs_completed >= num_jobs_to_complete {
             initial_scan_complete = true;
             shutdown(*scanner_thread_group);
-            
+
             reset(*scan_memory_pool);
-            
+
             start_file_watcher();
             init_open_file_dialog();
             init_finder();
         }
         return;
     }
-        
+
     files_changed := process_changes(*file_watcher);
     if files_changed {
         if watcher_file_modified.count > 0 && !should_ignore_file(watcher_file_modified) {
@@ -109,7 +109,7 @@ maybe_update_workspace_buffers :: () {
         // most of the files will already be loaded and they won't refresh if unchanged
         for dirs_to_rescan visit_files(it, recursive = true, null, visitor_func, visit_directories = true);
     }
-    
+
     visitor_func :: (file: *File_Visit_Info, userdata: *void) {
         if file.is_directory {
             if should_ignore_dir(file.full_name) {
@@ -119,12 +119,12 @@ maybe_update_workspace_buffers :: () {
             return;
         }
         if file.is_symlink return;
-        
+
         if should_ignore_file(file.full_name) return;
-        
+
         refresh_buffer_from_disk(path = file.full_name);
     }
-    
+
     array_reset(*dirs_to_rescan);
     watcher_file_modified = "";
 }
@@ -155,9 +155,9 @@ file_is_watched :: (file_path: string) -> bool {
 file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
     scan_pool_allocator := get_scan_pool_allocator();
     push_allocator(scan_pool_allocator);
-    
+
     for project_dirs visit_files(it.path, recursive = true, null, maybe_add_file_to_scan_list, visit_directories = true);
-    
+
     maybe_add_file_to_scan_list :: (file: *File_Visit_Info, userdata: *void) {
         if file.is_directory {
             if should_ignore_dir(file.full_name) {
@@ -167,26 +167,26 @@ file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> 
             return;
         }
         if file.is_symlink return;
-        
+
         // NOTE: not checking whether we should ignore the file here,
         // because it may involve reading the file and checking for zeroes,
         // and we'd rather it's done in threads (also if later we find there are no
         // zeroes in the file then the file data will be in cache ready to use)
         array_add(*files_to_scan, copy_string(file.full_name));
     }
-    
+
     return .STOP;  // don't need you no mo
 }
 
 directory_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
     file_range := cast(*[] string) work;
-    
+
     for path : << file_range {
         if !should_ignore_file(path) {
             find_or_create_buffer(path);
         }
     }
-    
+
     return .CONTINUE;
 }
 
@@ -196,10 +196,10 @@ start_file_watcher :: () {
         // TODO: add the error to the error log when we have it
         return;
     }
-    
+
     for project_dirs add_directories(*file_watcher, it.path);
     dirs_to_rescan.allocator = temp;
-    
+
     // Add directories that contain standalone files which we want to watch
     for watch_dirs {
         if dir_is_within_project(it) {
@@ -212,14 +212,14 @@ start_file_watcher :: () {
 
 file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
     log("%\n", <<change);
-    
+
     // If the change is in one of the ignored dirs, ignore it
     if should_ignore_dir(change.full_path) return;
-    
+
     // If the change is caused by watching a dir containing a standalone file, ignore it
     parent_dir := get_parent_dir_path(change.full_path);
     if !dir_is_within_project(parent_dir) && !file_is_watched(change.full_path) return;
-    
+
     // Most commonly we will receive only a single MODIFIED event for a single file (after saving a buffer)
     // In this case we don't want to rescan anything, but only if no other events were received in the same frame
     if change.events == .MODIFIED && watcher_file_modified.count == 0 {
@@ -231,7 +231,7 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
             maybe_add_to_queue(dir);
             watcher_file_modified.count = -1;  // to indicate that we have seen and rejected a MODIFIED event this frame already
         }
-        
+
         // Figure
         dir: string = ---;
         if change.events & .SCAN_CHILDREN {
@@ -241,7 +241,7 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
         }
         maybe_add_to_queue(dir);
     }
-    
+
     maybe_add_to_queue :: (dir: string) {
         add_to_queue := true;
         for dirs_to_rescan {
@@ -253,7 +253,7 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
         }
         if add_to_queue array_add(*dirs_to_rescan, dir);
     }
-    
+
     // NOTE: Instead of processing individual events and using the flags we're simply
     // adding folders to the queue for scanning, because the original events seem to be
     // not very reliable. E.g. when a file W:/focus-zig/src/Editors.zig was changed using Sublime Text,
@@ -270,7 +270,7 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
     // if change.events & .MODIFIED      then buffer_maybe_changed_on_disk(change.full_path);
     // if change.events & .REMOVED       then buffer_maybe_deleted_on_disk(change.full_path);
     // if change.events & .SCAN_CHILDREN then refresh_buffers_in_directory(change.full_path);
-    
+
     if (change.events & .REMOVED) || (change.events & .MOVED_FROM) then maybe_mark_buffer_as_deleted(change.full_path);
 }
 
@@ -287,7 +287,7 @@ file_watcher: File_Watcher;
 dirs_to_rescan: [..] string;    // will use temporary storage
 watcher_file_modified: string;  // will contain the path of a file if if was modified and it was the only event in a group,
                                 // otherwise it won't be used and a scan will be done instead
-                                
+
 watch_dirs:  [..] string;       // dirs we watch which are not project dirs
 watch_files: [..] string;       // files outside of projects that we want to watch
 

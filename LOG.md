@@ -23,8 +23,6 @@
 
 ===========================
 
-- Unsaved files dialog
-
 - Implement config options
     + When parsing project dirs, replace path separators with /
     + Report errors on wrong configs (write the usage code first)
@@ -35,7 +33,7 @@
     - Colors
     - Hot-load user config file and apply the changes immediately
         - If workspace dirs have changed, display a message prompting to restart
-    
+
 - Refresh buffers from disk
     + Make it work
     + Remove crlf on load every time
@@ -63,7 +61,7 @@
 
 - Highlight C/C++
 - Highlight matching braces
-        
+
 - F12 to search by current identifier
 - Generalise TODO highlighting
 - Implement general language highlighting with a set of common keywords etc
@@ -81,7 +79,7 @@
 
 - Add horizontal scrollbar
     - Alt-HL smooth scroll
-    
+
 - Select syntax highlighting dialog
 
 - When an editor is closed using Ctrl+W, use session_notify_closed_editor to remove the buffer backup (if unmodified)
@@ -107,7 +105,7 @@
 
 - When adding a directory to workspace, the check for parent directory is NOT RELIABLE. Paths are case-sensitive on Linux
     - Also, what if we add a parent dir to a dir already in the project - what would be the expected behaviour? Delete the child dir? Keep it and dedup the files?
-    
+
 - Sessions and buffer backups:
     - Write down a step by step loading process to identify the easiest format to load
     - When editing, remember:
@@ -123,7 +121,7 @@
         - Display last edit time
         - Display project name
         - Maybe display the number of unsaved buffers
-    
+
 - Log time with the session logger
 
 - Either limit the number of bytes in text input, or improve the handling of cursor (currently calculating the length every frame)
@@ -160,7 +158,7 @@
     - Highlight globals?
     - Highlight shadowed variables
     - Color cursor differently depending on what scope we're in
-    
+
 - Remember window position (in session maybe)
 
 - Optimisation:
@@ -177,6 +175,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Unsaved files dialog
 + BUG: Pasting with multiple cursors broke
 + BUG: moving lines to the last line broke again
 + Fix all line_starts accesses
@@ -198,7 +197,7 @@
     + When doing it, collect info on any binary files that had to be read to be ignored
 + Ctrl+C without a selection removes the selection
 + Progress bar when scanning workspace
-    + Draw a simple progress bar 
+    + Draw a simple progress bar
     + Have an atomic counter
     + At the end wait a bit, then dissolve
 + Try to log asserts into log_error.txt - would be very helpful for debugging release builds
@@ -303,7 +302,7 @@
 + Ctrl + Home/End to jump to beginning/end of the file
 + Alt+up/down to move fast (editor action)
 + Alt-U/D or Alt-PgUp/Down scroll fast
-+ Alt-Backspace/Delete to delete words 
++ Alt-Backspace/Delete to delete words
 + Shift-backspace - delete_line_and_go_up
 + Shift-Delete - delete_line
 + Important: improve jumping by words - treat non-word-char "words" as words too
@@ -339,7 +338,7 @@
 + BUG: Cursor is not shown correctly in the scrollbar area
 + BUG: When changing font size, it can be increased to a larger size on lower dpi screens
 + Create a new open file dialog:
-    + Create 2 states: 
+    + Create 2 states:
         + Search files in the project
         + Open files by navigating
     + Draw the navigator differently
