@@ -602,7 +602,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         if editor.paste_animations.count > 0 then redraw_requested = true;
         
         // Draw inactive cursors before text
-        if !cursors_active && !search_bar_is_open(editor) {
+        if !cursors_active && !search_bar_is_open(editor) && config.settings.cursor_as_block {
             Simp.set_shader_for_rects();
             for cursor : cursors {
                 if cursor.pos < visible_offset_range.start || cursor.pos > visible_offset_range.end continue;
@@ -638,20 +638,24 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
         Simp.draw_code(font, xx pen.x, xx pen.y, char_size, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);
         
-        // Draw active cursors
+        // Draw cursors when they are active
+        cursor_width := ifx config.settings.cursor_as_block then char_size else 2 * dpi_scale;
+        
         if cursors_active && should_draw_cursors() && !search_bar_is_open(editor) {
             Simp.set_shader_for_rects();
             for cursor : cursors {
                 if cursor.pos < visible_offset_range.start || cursor.pos > visible_offset_range.end continue;
                 screen_pos := get_cursor_screen_pos(text_origin, cursor_coords[it_index].pos);
     
-                rect := make_rect(screen_pos.x, screen_pos.y, char_size, line_height);
+                rect := make_rect(screen_pos.x, screen_pos.y, cursor_width, line_height);
                 draw_rounded_rect(rect, Colors.CURSOR, radius = rounding_radius_small, set_shader = true);
                 
                 // Draw the letter on top for better visibility
-                letter := get_char_at_offset_as_string(buffer, cursor.pos);
-                if letter != "\n" {
-                    Simp.draw_text(font, xx rect.x, xx (rect.y + (line_height - char_size) / 2), letter);
+                if config.settings.cursor_as_block {
+                    letter := get_char_at_offset_as_string(buffer, cursor.pos);
+                    if letter != "\n" {
+                        Simp.draw_text(font, xx rect.x, xx (rect.y + (line_height - char_size) / 2), letter);
+                    }
                 }
             }
         }
