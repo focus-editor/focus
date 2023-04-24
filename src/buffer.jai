@@ -318,8 +318,10 @@ recalculate_colors :: (buffer: *Buffer) {
     }
 }
 
-save_buffer_to_disk :: (using buffer: *Buffer) {
+save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64) {
     if readonly return;
+    
+    if config.settings.strip_trailing_whitespace_on_save then strip_trailing_whitespace(buffer, buffer_id);
     
     success := write_entire_file(file.full_path, to_string(bytes));
     if success {
@@ -334,6 +336,63 @@ save_buffer_to_disk :: (using buffer: *Buffer) {
         error_when_saving = true;
     }
     remember_last_modtime_and_size(buffer);
+}
+
+strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
+    mark := get_temporary_storage_mark();
+    defer   set_temporary_storage_mark(mark);
+    
+    b: String_Builder;
+    b.allocator = temp;
+    init_string_builder(*b, buffer_size = bytes.count + size_of(String_Builder.Buffer));
+    lines := split(to_string(bytes), cast(u8) #char "\n");
+    for line, i : lines {
+        append(*b, trim_right(line));
+        if i < lines.count - 1 then append(*b, "\n");
+    }
+    stripped := builder_to_string(*b);
+    
+    if stripped.count == bytes.count return;  // nothing stripped
+    
+    // Remember all cursor positions in all editors for the buffer
+    Editor_Cursor_State :: struct { editor_id: s64; cursor_id: s64; coords: Cursor_Coords; }
+    cursor_states: [..] Editor_Cursor_State;
+    cursor_states.allocator = temp;
+    for * editor, editor_id : open_editors {
+        if editor.buffer_id != buffer_id continue;
+        editor.refresh_highlights = true;
+        
+        for cursor, cursor_id : editor.cursors {
+            array_add(*cursor_states, Editor_Cursor_State.{ editor_id, cursor_id, get_cursor_coords(buffer, cursor) });
+        }
+    }
+    
+    // Replace buffer contents
+    new_replace_edit(buffer, 0, xx bytes.count, to_string(bytes), stripped);
+    
+    lock(*content_lock);
+    memcpy(bytes.data, stripped.data, stripped.count);
+    bytes.count = stripped.count;
+    unlock(*content_lock);
+    
+    rescan_for_lines(buffer);
+    
+    // Put cursors into valid places
+    max_line := cast(s32) buffer.line_starts.count - 2;
+    for state : cursor_states {
+        using state;
+        editor := *open_editors[editor_id];
+        
+        pos, sel := coords.pos, coords.sel;
+        pos.line = clamp(pos.line, 0, max_line);
+        pos.col  = clamp(pos.col,  0, num_chars_in_string(get_line_as_string(buffer, pos.line)));
+        sel.line = clamp(sel.line, 0, max_line);
+        sel.col  = clamp(sel.col,  0, num_chars_in_string(get_line_as_string(buffer, sel.line)));
+        
+        cursor := *editor.cursors[cursor_id];
+        cursor.pos = coords_to_offset(buffer, pos);
+        cursor.sel = coords_to_offset(buffer, sel);
+    }
 }
 
 remember_last_modtime_and_size :: (using buffer: *Buffer) {

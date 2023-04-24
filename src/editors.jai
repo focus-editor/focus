@@ -1000,14 +1000,10 @@ save_buffer :: (editor: *Editor, buffer: *Buffer) {
     }
 
     new_edit_group(buffer, editor);
-    // TODO:
-    // - strip trailing whitespace
-    // - recalculate lines
-    // - adjust cursors
-    
+        
     maybe_mark_buffer_as_deleted(editor.buffer_id);  // check in case we missed that it's deleted
     session_notify_modified_buffer(editor.buffer_id);
-    save_buffer_to_disk(buffer);
+    save_buffer_to_disk(buffer, editor.buffer_id);
 }
 
 switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := false) {

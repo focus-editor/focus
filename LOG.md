@@ -7,7 +7,6 @@
     - Ctrl + R to search by symbol within buffer (jump immediately when moving cursor between options)
     - Ctrl + Shift + R to search by symbol within workspace
     - Try to implement "jump to symbol definition". Display a popup if more than one. Do a scan of jai files for that.
-    - Have the option to not strip trailing whitespace (in the config?) Or can do ctrl+s as a main way to save, ctr+shift+s as an alternative way
     - Line wrap
     - Custom title bar (currently too much work and not very robust)
     - Have a user error log - with an icon in the title bar to toggle it
@@ -24,11 +23,13 @@
 
 ===========================
 
+- Unsaved files dialog
+
 - Implement config options
     + When parsing project dirs, replace path separators with /
     + Report errors on wrong configs (write the usage code first)
     + Parse settings
-    - Use all current settings !!!!!!!
+    + Use all current settings
     - Have an option to specify the time to dismiss a user message
     - Detect conflicting keys in the same context in the same config
     - Colors
