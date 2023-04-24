@@ -29,6 +29,8 @@ load_and_merge_into_default :: (file_path: string, create_if_doesnt_exist := fal
     
     config = DEFAULT_CONFIG;
     merge_configs(*config, new_config);
+ 
+    TAB_SIZE = clamp(cast(s32) config.settings.tab_size, 1, 100);  // be reasonable, even though 100 is unreasonable
     
     if !file_is_watched(file_path) start_watching_file(file_path);
     

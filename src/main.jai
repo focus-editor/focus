@@ -473,7 +473,7 @@ PEN_CHAR    :: #run to_string(*convert_utf32_to_utf8(0xf304));
 BULLET_CHAR :: #run to_string(*convert_utf32_to_utf8(0x2022));
 XMARK_CHAR  :: #run to_string(*convert_utf32_to_utf8(0xf057));
 
-TAB_SIZE :: 4;
+TAB_SIZE: s32 = 4;
 
 font:               *Simp.Dynamic_Font;
 font_ui:            *Simp.Dynamic_Font;
