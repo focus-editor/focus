@@ -73,5 +73,7 @@ build :: () {
 #import "Compiler";
 #import "Basic";
 
-#import "Ico_File";
-#import "Windows_Resources";
+#if OS == .WINDOWS {
+    #import "Ico_File";
+    #import "Windows_Resources";
+}

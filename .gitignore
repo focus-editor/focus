@@ -2,10 +2,13 @@
 *.pdb
 *.exe
 *.rdbg
+*.dSYM/
 
 projects/
 temp/
 
+focus
+focus_debug
 focus-trace.json
 install.bat
 global.focus-config

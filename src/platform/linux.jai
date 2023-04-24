@@ -6,6 +6,10 @@ platform_get_biggest_monitor_pos :: () -> s32, s32 {
     unimplemented();
 }
 
+platform_create_window :: () {
+    window = create_window(window_width, window_height, window_generic_title, window_x, window_y, background_color_rgb = as_3_floats(Colors.BACKGROUND));
+}
+
 platform_maximize_window :: (window: Window_Type) {
     
 }

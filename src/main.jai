@@ -55,7 +55,7 @@ main :: () {
     }
 
     window_generic_title = ifx DEBUG then "Focus (debug mode)" else "Focus";
-    window = create_window(window_width, window_height, window_generic_title, window_x, window_y, background_color_rgb = as_3_floats(Colors.BACKGROUND));
+    platform_create_window();
 
     if config.settings.maximize_on_start then platform_maximize_window(window);
 
@@ -157,9 +157,11 @@ main :: () {
                     should_quit = true;
 
                 case .KEYBOARD;
-                    // Alt + F4
-                    if event.key_pressed && event.key_code == .F4 && event.alt_pressed then should_quit = true;
-
+                    #if OS != .MACOS {
+                        // Alt + F4
+                        if event.key_pressed && event.key_code == .F4 && event.alt_pressed then should_quit = true;
+                    }
+                    
                     // Double shift click
                     if config.settings.double_shift_to_search_in_workspace && event.key_code == .SHIFT {
                         using shift_key;
@@ -390,7 +392,7 @@ panic_messagebox :: (format_string: string, args: .. Any) {
 } @PrintLike
 
 unimplemented :: (loc := #caller_location) {
-    panic("Unimplemented at %", loc);
+    print("!!!! Unimplemented at %", loc);
 }
 
 nothing_pressed :: inline (mods: Mods) -> bool {
