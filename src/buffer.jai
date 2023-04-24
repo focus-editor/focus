@@ -472,6 +472,22 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
 
 refresh_buffer_from_disk :: (path: string) {
     log("refreshing '%'\n", path);
+
+    if path == global_config_path {
+        success := load_global_config();
+        if success {
+            clear_user_messages();
+            add_success_message("Global config changes have been applied", dismiss_in_seconds = 3);
+        }
+    }
+    if path == project_config_path {
+        success := load_project_config();
+        if success {
+            clear_user_messages();
+            add_success_message(tprint("Config changes for project '%' have been applied", current_project_name), dismiss_in_seconds = 3);
+        }
+    }
+
     buffer_id, created := find_or_create_buffer(path);
     if created return;
 

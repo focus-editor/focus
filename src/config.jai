@@ -1,11 +1,23 @@
-load_global_config :: () {
-    config_path := tprint("%/global.focus-config", exe_dir);
-    load_and_merge_into_default(config_path, create_if_doesnt_exist = !DEBUG);
+load_global_config :: () -> success: bool {
+    global_config_path = sprint("%/global.focus-config", exe_dir);
+    return load_and_merge_config(global_config_path, create_if_doesnt_exist = !DEBUG);
 }
 
-load_project_config :: (project_name: string) -> success: bool {
-    config_path := tprint("%/projects/%.focus-config", exe_dir, project_name);
-    return load_and_merge_into_default(config_path);
+load_project_config :: (project: string = "") -> success: bool {
+    if !project && !current_project_name {
+        log_error("Attempted to load an empty project config. This is a bug.");
+        return false;
+    }
+    project_name := ifx project then project else current_project_name;
+    config_path  := sprint("%/projects/%.focus-config", exe_dir, project_name);
+
+    success := load_and_merge_config(project_config_path, into = config);
+    if success {
+        current_project_name = project_name;
+        project_config_path  = config_path;
+    }
+
+    return success;
 }
 
 reload_config :: () {
@@ -18,7 +30,7 @@ reload_config :: () {
 
 #scope_file
 
-load_and_merge_into_default :: (file_path: string, create_if_doesnt_exist := false) -> success: bool {
+load_and_merge_config :: (file_path: string, into: Config = DEFAULT_CONFIG, create_if_doesnt_exist := false) -> success: bool {
     new_config, success, error_msg := load_config(file_path, create_if_doesnt_exist);
     if !success {
         if !error_msg assert(false, "No error message on a config error. This is a bug.");
@@ -27,7 +39,7 @@ load_and_merge_into_default :: (file_path: string, create_if_doesnt_exist := fal
         return false;
     }
 
-    config = DEFAULT_CONFIG;
+    config = into;
     merge_configs(*config, new_config);
 
     TAB_SIZE = clamp(cast(s32) config.settings.tab_size, 1, 100);  // be reasonable, even though 100 is unreasonable
@@ -101,6 +113,10 @@ merge_configs :: (dst: *Config, src: Config) {
 }
 
 #scope_export
+
+global_config_path:  string;
+project_config_path: string;
+current_project_name: string;
 
 config: Config = DEFAULT_CONFIG;
 
@@ -194,7 +210,8 @@ Colors :: struct {
     UI_DIM              :: Color.{ r = 0.533, g = 0.569, b = 0.616, a = 1.0 };
     UI_NEUTRAL          :: Color.{ r = 0.3, g = 0.3, b = 0.3, a = 1.0 };
     UI_WARNING          :: Color.{ r = 0.85, g = 0.68, b = 0.33, a = 1.0 };
-    UI_ERROR            :: Color.{ r = 1.00, g = 0.00, b = 0.00, a = 1.0 };
+    UI_ERROR            :: Color.{ r = 0.80, g = 0.00, b = 0.00, a = 1.0 };
+    UI_SUCCESS          :: Color.{ r = 0.00, g = 0.80, b = 0.00, a = 1.0 };
     UI_TEXT_INPUT_LABEL :: Color.{ r = 0.233, g = 0.269, b = 0.316, a = 1.0 };
 
     CODE_DEFAULT        :: Color.{ r = 0.75, g = 0.79, b = 0.86, a = 1.0 };

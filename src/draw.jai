@@ -242,7 +242,12 @@ draw_user_messages :: (main_area: Rect, footer_height: float) {
             redraw_requested = true;
         }
 
-        color := ifx it.level == .error then Colors.UI_ERROR else Colors.UI_WARNING;
+        color: Color = ---;
+        if #complete it.level == {
+            case .error;    color = Colors.UI_ERROR;
+            case .warning;  color = Colors.UI_ERROR;
+            case .success;  color = Colors.UI_SUCCESS;
+        }
         color.a = ifx is_hovering then 0.5 else 0.4;
         draw_rounded_rect_with_shadow(message_rect, color);
 
@@ -450,6 +455,10 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 }
             }
             editor.selected_text_length = selected_text.count;
+        }
+        if !config.settings.highlight_selection_occurrences {
+            editor.refresh_highlights = false;
+            array_reset_keeping_memory(*editor.highlights);
         }
 
         // Scrollbar

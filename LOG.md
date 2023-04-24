@@ -28,11 +28,12 @@
     + Report errors on wrong configs (write the usage code first)
     + Parse settings
     + Use all current settings
-    - Have an option to specify the time to dismiss a user message
-    - Detect conflicting keys in the same context in the same config
-    - Colors
+    + Have an option to specify the time to dismiss a user message
     - Hot-load user config file and apply the changes immediately
+        - Remember the paths to the main configs
+        - Detect the changes to the configs
         - If workspace dirs have changed, display a message prompting to restart
+    - Colors
 
 - Refresh buffers from disk
     + Make it work
@@ -61,6 +62,8 @@
 
 - Highlight C/C++
 - Highlight matching braces
+
+- Detect conflicting keys in the same context in the same config
 
 - F12 to search by current identifier
 - Generalise TODO highlighting
