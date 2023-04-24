@@ -276,7 +276,7 @@ refresh_entries :: (scan_folder := false) {
                 if buffer.modified_on_disk then { entry.flags |= .MODIFIED_ON_DISK; entry.sort_key |= top_priority_bit; }
                 
                 num_entries += 1;
-                if num_entries >= MAX_ENTRIES_TO_SHOW break;
+                if num_entries >= config.settings.max_entries_in_open_file_dialog break;
             }
     }
     
@@ -384,8 +384,6 @@ get_pool_allocator :: () -> Allocator {
 }
 
 memory_pool: Flat_Pool;
-
-MAX_ENTRIES_TO_SHOW :: 1000;
 
 #scope_export
 
