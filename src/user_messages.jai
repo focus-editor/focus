@@ -35,12 +35,14 @@ get_user_messages :: (current_time: Time) -> [] User_Message {
 }
 
 clear_user_messages :: () {
+    for user_messages free(it.message);
     array_reset_keeping_memory(*user_messages);
 }
 
 #scope_file
 
 cleanup_old_messages :: () {
+    // TODO: fix the leak (message)
     COUNT :: 10;
     last_messages := array_view(user_messages, user_messages.count - COUNT, COUNT);
     memcpy(user_messages.data, last_messages.data, COUNT * size_of(User_Message));

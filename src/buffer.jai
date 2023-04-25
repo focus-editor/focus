@@ -473,20 +473,7 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
 refresh_buffer_from_disk :: (path: string) {
     log("refreshing '%'\n", path);
 
-    if path == global_config_path {
-        success := load_global_config();
-        if success {
-            clear_user_messages();
-            add_success_message("Global config changes have been applied", dismiss_in_seconds = 3);
-        }
-    }
-    if path == project_config_path {
-        success := load_project_config();
-        if success {
-            clear_user_messages();
-            add_success_message(tprint("Config changes for project '%' have been applied", current_project_name), dismiss_in_seconds = 3);
-        }
-    }
+    maybe_refresh_config(path);
 
     buffer_id, created := find_or_create_buffer(path);
     if created return;
@@ -522,7 +509,9 @@ refresh_buffer_from_disk :: (path: string) {
     defer free(file_contents_str);
 
     file_contents := cast([] u8) file_contents_str;
+    lock(*buffer.content_lock);
     remove_crlf_in_place(*file_contents);
+    unlock(*buffer.content_lock);
     file_contents_str = to_string(file_contents);
 
     file_hash := calculate_meow_hash(file_contents);
@@ -579,10 +568,11 @@ maybe_mark_buffer_as_deleted :: (buffer_id: s64) {
     finder.need_to_refresh_results = true;
 }
 
-deinit :: (using buffer: *Buffer) {
+free_buffer :: (using buffer: *Buffer) {
     // We don't do it often so it's ok to be slow here
     array_free(bytes);
     array_free(line_starts);
+    array_free(real_line_starts);
     array_free(colors);
 
     for * undos deinit(it);
@@ -590,8 +580,11 @@ deinit :: (using buffer: *Buffer) {
     array_free(undos);
     array_free(redos);
     array_free(edits);
+    array_free(edit_notifications);
 
     array_free(cursors);
+
+    if has_file && file.full_path then free(file.full_path);
 }
 
 // NOTE: this works with absolute columns only, with no regard to line wrapping!
@@ -629,6 +622,12 @@ unsaved_buffers_exist :: () -> bool {
         if it.modified return true;
     }
     return false;
+}
+
+remove_all_buffers :: () {
+    deinit(*buffers_table);
+    for * open_buffers free_buffer(it);
+    bucket_array_reset(*open_buffers);
 }
 
 #scope_file

@@ -1,19 +1,5 @@
 # TODO
 
-- Before I ship:
-    - Create new files
-    - Horizontal scrolling
-    - Notify about unsaved buffers on close
-    - Ctrl + R to search by symbol within buffer (jump immediately when moving cursor between options)
-    - Ctrl + Shift + R to search by symbol within workspace
-    - Try to implement "jump to symbol definition". Display a popup if more than one. Do a scan of jai files for that.
-    - Line wrap
-    - Custom title bar (currently too much work and not very robust)
-    - Have a user error log - with an icon in the title bar to toggle it
-    - Ignore project folders which are children of another project folder?
-    - Profile the whole project to see if we're doing something stupid
-    - Update the README (missing features)
-
 - Limitations:
     - Windows64 only on release
     - Not designed for large files
@@ -21,37 +7,19 @@
     - Multi-byte Unicode symbols are not supported
     - Currently only RGB monitor panels
 
+- Release checklist
+    - Remove session backuping
+    - Change the version
+    - Google Analytics?
+    - Disqus
+
 ===========================
 
-- Implement config options
-    + When parsing project dirs, replace path separators with /
-    + Report errors on wrong configs (write the usage code first)
-    + Parse settings
-    + Use all current settings
-    + Have an option to specify the time to dismiss a user message
-    - Hot-load user config file and apply the changes immediately
-        - Remember the paths to the main configs
-        - Detect the changes to the configs
-        - If workspace dirs have changed, display a message prompting to restart
-    - Colors
+- Colors
 
-- Refresh buffers from disk
-    + Make it work
-    + Remove crlf on load every time
-    + Even if a file is reported as changed, calculate hash and compare after removing crlf before proceeding
-    + Test a crlf file changed externally
-    - Refresh buffers from disk when opening, switching and saving (not just mark as deleted)
-        - When saving, if a buffer has changed its state, don't save
+- When saving, if a buffer has changed its state, don't save
 
-- Then: Sticky viewport
-    - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
-
-- Line wrap:
-    - Sticky viewport before that!
-    - Implement wrapping for buffer
-    - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
-    - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
-- Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
+- Create new files
 
 - Commands:
     - Open error log
@@ -60,28 +28,50 @@
     - New project
     - Switch project
 
+
+- Sticky viewport
+    - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
+
+- Line wrap:
+    - Sticky viewport before that!
+    - Implement wrapping for buffer
+    - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
+    - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
+
+- Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
+
 - Highlight C/C++
-- Highlight matching braces
-
-- Detect conflicting keys in the same context in the same config
-
-- F12 to search by current identifier
-- Generalise TODO highlighting
-- Implement general language highlighting with a set of common keywords etc
 
 - CRLF:
     + Get rid of crlf notes
     - Show a warning when a CRLF file is loaded, then dismiss on save
 
-- Nice to haves:
-    - Mark modified buffers in the navigate dialog
-    - Mark deleted buffers in the open file dialog
-    - Create new cursors above/below by ctrl+alt+shift+arrows
-    - Display the number of cursors in the footer
-    - Rollback creating another cursor (ctrl+alt+D?)
+- Detect conflicting keys in the same context in the same config
+
+- Highlight matching braces
+
+- F12 to search by current identifier
+- Generalise TODO highlighting
+- Implement general language highlighting with a set of common keywords etc
+
+- Mark modified buffers in the navigate dialog
+- Mark deleted buffers in the open file dialog
+- Create new cursors above/below by ctrl+alt+shift+arrows
+- Display the number of cursors in the footer
+- Rollback creating another cursor (ctrl+alt+D?)
+
+- Horizontal scrolling
+- Ctrl + R to search by symbol within buffer (jump immediately when moving cursor between options)
+- Ctrl + Shift + R to search by symbol within workspace
+- Try to implement "jump to symbol definition". Display a popup if more than one. Do a scan of jai files for that.
+- Custom title bar (currently too much work and not very robust)
+- Ignore project folders which are children of another project folder?
+- Profile the whole project to see if we're doing something stupid
 
 - Add horizontal scrollbar
     - Alt-HL smooth scroll
+
+- Hot refresh workspace (not having to restart the editor)
 
 - Select syntax highlighting dialog
 
@@ -178,6 +168,22 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Reload workspace dirs
+    + Remember old dirs before loading config
+    + If there are unsaved buffers, show the dialog
+    + Stop all threads and completely refresh everything
++ Implement config options
+    + When parsing project dirs, replace path separators with /
+    + Report errors on wrong configs (write the usage code first)
+    + Parse settings
+    + Use all current settings
+    + Have an option to specify the time to dismiss a user message
+    + Hot-load user config file and apply the changes immediately
++ Refresh buffers from disk
+    + Make it work
+    + Remove crlf on load every time
+    + Even if a file is reported as changed, calculate hash and compare after removing crlf before proceeding
+    + Test a crlf file changed externally
 + Unsaved files dialog
 + BUG: Pasting with multiple cursors broke
 + BUG: moving lines to the last line broke again

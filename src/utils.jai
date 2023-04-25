@@ -4,13 +4,13 @@ array_insert_bytes_at :: (array: *[..] u8, offset: s64, bytes: [] u8) {
 
     new_size := array.count + bytes.count;
     array_reserve(array, new_size);
-    
+
     // NOTE: assuming memcpy works well with overlapping ranges!
     // (tested on Windows with all backends)
     src := array.data + offset;
     dst := src + bytes.count;
     memcpy(dst, src, array.count - offset);
-    
+
     // Insert the string
     memcpy(array.data + offset, bytes.data, bytes.count);
 
@@ -34,6 +34,12 @@ array_delete_bytes :: (array: *[..] u8, offset: s64, count: s64) {
     array.count -= count;
 }
 
+array_copy_tmp :: (array: [] $T) -> [] T {
+    dest := NewArray(array.count, T, initialized=false, allocator = temp);
+    memcpy(dest.data, array.data, array.count * size_of(T));
+    return dest;
+}
+
 to_bytes :: (src: string) -> [] u8 {
     result: [] u8;
     result.data = src.data;
@@ -53,7 +59,7 @@ decode_utf8_string_to_temp_chars :: (str: string, max_char: s64) -> [] u32 {
     chars: [..] u32;
     chars.allocator = temp;
     if !str return chars;
-    
+
     array_reserve(*chars, str.count);  // should be enough to store chars with some buffer
 
     s := str;
@@ -70,11 +76,11 @@ decode_utf8_string_to_temp_chars :: (str: string, max_char: s64) -> [] u32 {
 decode_utf8_string_to_temp_char_substrings :: (str: string) -> [] string {
     substrings: [..] string;
     substrings.allocator = temp;
-    
+
     if !str return substrings;
-    
+
     array_reserve(*substrings, str.count);
-    
+
     t := str.data;
     while t < str.data + str.count {
         substr: string = ---;
@@ -83,7 +89,7 @@ decode_utf8_string_to_temp_char_substrings :: (str: string) -> [] string {
         substr.count = t - substr.data;
         array_add(*substrings, substr);
     }
-    
+
     return substrings;
 }
 
@@ -303,27 +309,27 @@ get_identifier_name :: (name: Code) -> string {
 trim_both_sides :: (s: string, chars := DEFAULT_SPACES) -> string, left: s64, right: s64 {
     left  := 0;
     right := 0;
-    
+
     for 0..s.count-1 {
-        if is_any(s[it], chars) left += 1; 
+        if is_any(s[it], chars) left += 1;
         else break;
     }
-    
+
     for < s.count-1..left {
         if is_any(s[it], chars) right += 1;
         else break;
     }
-    
+
     return slice(s, left, s.count - left - right), left, right;
 }
 
 get_num_cpus :: () -> s32 {
     num_cpus := clamp(get_number_of_processors(), 2, 200);
-    
+
     #if (OS == .WINDOWS) || (OS == .LINUX) {
         num_cpus /= 2; // this routine reports hyperthreads, so, divide by two, because of Intel marketing.
     }
-    
+
     return num_cpus;
 }
 

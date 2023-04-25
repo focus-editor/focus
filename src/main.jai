@@ -67,12 +67,12 @@ main :: () {
 
     // editors_open_file("W:/focus/src/main.jai");
 
-    // Requires the session to be created and the configs to be loaded
-    start_initial_workspace_scan();
-
     // Init logger after we know the session dir and the config
     init_logger();
     defer deinit_logger();  // closes log file handles
+
+    // Requires the session to be created and the configs to be loaded
+    start_initial_workspace_scan();
 
     dpi_scale = platform_get_dpi_scale(window);
     init_fonts_and_dependent_things();
@@ -221,7 +221,14 @@ main :: () {
 
         pointer_end_frame();
 
-        maybe_save_editor_state_into_session();
+        // TODO:
+        // maybe_save_editor_state_into_session();
+
+        // if should_reload_workspace {
+        //     hard_reload_workspace();
+        //     should_reload_workspace = false;
+        //     redraw_requested = true;
+        // }
 
         reset_temporary_storage();
 
@@ -442,8 +449,9 @@ window_x  := -1;
 window_y  := -1;
 dpi_scale := 1.0;
 
-redraw_requested := true;  // set to true to render the first frame
-should_quit := false;
+redraw_requested        := true;  // set to true to render the first frame
+should_quit             := false;
+should_reload_workspace := false;
 
 frame_time: Time;                 // ever-increasing time since start in seconds
 frame_dt:   Time = MAX_FRAME_DT;  // time delta since the last frame

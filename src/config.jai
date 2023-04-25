@@ -20,6 +20,53 @@ load_project_config :: (project: string = "") -> success: bool {
     return success;
 }
 
+maybe_refresh_config :: (path: string) {
+    old_workspace_dirs := array_copy_tmp(config.workspace.workspace_dirs);
+
+    if path == global_config_path {
+        success := load_global_config();
+        if success {
+            clear_user_messages();
+            add_success_message("Global config changes have been applied", dismiss_in_seconds = 3);
+        }
+        if current_project_name {
+            success = load_project_config(current_project_name);
+            if success add_success_message(tprint("Config changes for project '%' have been applied", current_project_name), dismiss_in_seconds = 3);
+        }
+    } else if path == project_config_path {
+        success := load_project_config();
+        if success {
+            clear_user_messages();
+            add_success_message(tprint("Config changes for project '%' have been applied", current_project_name), dismiss_in_seconds = 3);
+        }
+    }
+
+    // Detect changes in workspace dirs
+    dirs_added: [..] string;
+    dirs_added.allocator = temp;
+    dirs_removed: [..] string;
+    dirs_removed.allocator = temp;
+
+    for new_dir : config.workspace.workspace_dirs {
+        exists := array_find(old_workspace_dirs, new_dir);
+        if !exists array_add(*dirs_added, new_dir);
+    }
+    for old_dir : old_workspace_dirs {
+        exists := array_find(config.workspace.workspace_dirs, old_dir);
+        if !exists array_add(*dirs_removed, old_dir);
+    }
+
+    log("Comparing working directories in config...\n");
+    for dirs_added   log("ADDED:   %\n", it);
+    for dirs_removed log("REMOVED: %\n", it);
+
+    if dirs_added || dirs_removed {
+        should_reload_workspace = true;
+        add_user_warning("It seems you've changed the workspace directories.\nPlease restart the editor to reload the workspace.", dismiss_in_seconds = -1);
+    }
+}
+
+
 reload_config :: () {
     // TODO: check in watcher if the config has changed,
     // then remember the old config, reload and compare

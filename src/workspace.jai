@@ -9,7 +9,9 @@ add_directory_to_workspace :: (path: string, index := -1) {
     path_overwrite_separators(full_path, #char "/");
 
     if !is_directory(full_path) {
-        log_error("Couldn't add % to workspace. Directory doesn't exist or is invalid.", full_path);
+        error_msg := tprint("Couldn't add % to workspace. Directory doesn't exist or is invalid.", full_path);
+        add_user_error(error_msg, dismiss_in_seconds = 10);
+        log_error(error_msg);
         return;
     }
 
@@ -31,10 +33,14 @@ add_directory_to_workspace :: (path: string, index := -1) {
 }
 
 start_initial_workspace_scan :: () {
+    file_list_ready = false;
+    initial_scan_complete = false;
+    array_reset_keeping_memory(*files_to_scan);
+
     // Get the list of all files in the project asynchronously (depending on the size it can cause a startup delay otherwise)
     init(*file_list_thread_group, num_threads = 1, group_proc = file_list_threadproc);
     file_list_thread_group.name = "Async workspace file list builder";
-    file_list_thread_group.logging = DEBUG;
+    file_list_thread_group.logging = false;
 
     start(*file_list_thread_group);
     add_work(*file_list_thread_group, cast(*void) 0);  // a dummy piece of work
@@ -127,6 +133,26 @@ maybe_update_workspace_buffers :: () {
 
     array_reset(*dirs_to_rescan);
     watcher_file_modified = "";
+}
+
+hard_reload_workspace :: () {
+    // Make sure no threads are running
+    if !file_list_ready         shutdown(*file_list_thread_group);
+    if !initial_scan_complete   shutdown(*scanner_thread_group);
+
+    deinit_finder();
+    deinit_open_file_dialog();
+
+    // Remove all editors and buffers (safe to do now without any threads)
+    remove_all_editors();
+    remove_all_buffers();
+
+    // Start again
+    array_reset_keeping_memory(*project_dirs);
+    init_workspace();
+    start_initial_workspace_scan();
+
+    add_success_message("Scanning workspace...", dismiss_in_seconds=2);
 }
 
 start_watching_file :: (file_path: string) {

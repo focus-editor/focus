@@ -245,7 +245,7 @@ draw_user_messages :: (main_area: Rect, footer_height: float) {
         color: Color = ---;
         if #complete it.level == {
             case .error;    color = Colors.UI_ERROR;
-            case .warning;  color = Colors.UI_ERROR;
+            case .warning;  color = Colors.UI_WARNING;
             case .success;  color = Colors.UI_SUCCESS;
         }
         color.a = ifx is_hovering then 0.5 else 0.4;

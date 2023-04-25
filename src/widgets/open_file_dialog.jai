@@ -49,6 +49,22 @@ init_open_file_dialog :: () {
     refresh_entries();
 }
 
+deinit_open_file_dialog :: () {
+    using open_file_dialog;
+
+    initted = false;
+
+    pool_allocator := get_pool_allocator();
+    push_allocator(pool_allocator);
+
+    reset(*memory_pool);
+
+    scroll_to_cursor = .snap;
+    entries.scroll_y = 0;
+    entries.selected = 0;
+    array_reset(*entries.filtered);
+}
+
 show_open_file_dialog :: (mode: Open_File_Dialog.Mode, from_root := false) {
     active_global_widget = .open_file_dialog;
 
