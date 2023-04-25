@@ -1,5 +1,5 @@
 platform_setup :: () {
-    
+
 }
 
 platform_get_biggest_monitor_pos :: () -> s32, s32 {
@@ -22,7 +22,7 @@ platform_enable_drag_and_drop :: (window: Window_Type) {
 }
 
 platform_get_dpi_scale :: (window: Window_Type) -> float {
-    return 1; // @Hack We obviously need to return the true DPI. -Don
+    return xx NSView.convertPointToBacking(NSWindow.contentView(window), .{1, 0}).x;
 }
 
 platform_set_window_title :: (title: string) {
@@ -30,7 +30,7 @@ platform_set_window_title :: (title: string) {
 }
 
 platform_wait_message :: inline () {
-    
+
 }
 
 platform_set_refresh_timer :: (window: Window_Type) {
