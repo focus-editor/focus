@@ -8,16 +8,13 @@
     - Currently only RGB monitor panels
 
 - Release checklist
-    - Remove session backuping
     - Change the version
     - Google Analytics?
     - Disqus
 
 ===========================
 
-
 - Colors
-- When saving, if a buffer has changed its state, don't save
 - Create new files
 - Commands:
     - Open error log
@@ -163,6 +160,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Don't reload if there are unsaved buffers
 + Reload workspace dirs
     + Remember old dirs before loading config
     + If there are unsaved buffers, show the dialog

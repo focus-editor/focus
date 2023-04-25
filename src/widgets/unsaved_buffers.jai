@@ -7,8 +7,9 @@ unsaved_buffers_dialog_handle_event :: (event: Input.Event) {
     }
 }
 
-show_unsaved_buffers_dialog :: () {
+show_unsaved_buffers_dialog :: (requested_mode: Mode = .exit_program) {
     active_global_widget = .unsaved_buffers_dialog;
+    mode = requested_mode;
 
     array_reset_keeping_memory(*modified_buffers);
 
@@ -24,8 +25,11 @@ close_unsaved_buffers_dialog :: () {
 }
 
 unsaved_buffers_dialog_proceed :: () {
-    // TODO: other modes
-    should_quit = true;
+    if mode == .exit_program {
+        should_quit = true;
+    } else {
+        should_reload_workspace = true;
+    }
 
     close_unsaved_buffers_dialog();
 }
@@ -35,6 +39,12 @@ get_unsaved_buffer_ids :: () -> [] s64 {
 }
 
 
-#scope_export
+#scope_file
 
 modified_buffers: [..] s64;
+mode: Mode;
+
+Mode :: enum {
+    exit_program;
+    reload_workspace;
+}

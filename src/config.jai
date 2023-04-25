@@ -64,7 +64,12 @@ maybe_refresh_config :: (path: string) {
 
     if dirs_added || dirs_removed {
         should_reload_workspace = true;
-        // add_user_warning("It seems you've changed the workspace directories.\nPlease restart the editor to reload the workspace.", dismiss_in_seconds = -1);
+        if unsaved_buffers_exist() {
+            show_unsaved_buffers_dialog(.reload_workspace);
+            clear_user_messages();
+            add_user_warning("Workspace directories have changed in the config.\nWorkspace will need to reload, however there are unsaved changes.");
+            should_reload_workspace = false;
+        }
     }
 }
 

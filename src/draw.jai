@@ -124,10 +124,10 @@ draw_splash_screen :: (main_area: Rect) {
             y := info_area.y + info_area.h - shrink_step - font_ui_line_height;
             Simp.draw_prepared_text(font, xx x, xx y, color = Colors.UI_DIM);
 
-            date_width := Simp.prepare_text(font_ui, RELEASE_DATE);
+            date_width := Simp.prepare_text(font_ui_medium, RELEASE_DATE);
             x = (info_area.w - date_width) / 2;
             y -= 1.5 * font_ui_big_line_height;
-            Simp.draw_prepared_text(font_ui, xx x, xx y, color = Colors.UI_DIM);
+            Simp.draw_prepared_text(font_ui_medium, xx x, xx y, color = Colors.UI_DIM);
         }
     }
 
