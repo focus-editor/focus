@@ -248,12 +248,9 @@ draw_user_messages :: (main_area: Rect, footer_height: float) {
             case .warning;  color = Colors.UI_WARNING;
             case .success;  color = Colors.UI_SUCCESS;
         }
-        color.a = ifx is_hovering then 0.5 else 0.4;
         draw_rounded_rect_with_shadow(message_rect, color);
 
         text_color := Colors.UI_DEFAULT;
-        text_color.a = ifx is_hovering then 1.0 else 0.8;
-
         pen_x := cast(s64) (message_rect.x + padding);
         pen_y := cast(s64) (message_rect.y + message_rect.h - padding) - font_ui.character_height;
 
@@ -620,7 +617,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 screen_pos := get_cursor_screen_pos(text_origin, cursor_coords[it_index].pos);
 
                 rect := make_rect(screen_pos.x, screen_pos.y, char_size, line_height);
-                draw_rounded_rect(rect, Colors.CURSOR, radius = rounding_radius_small, set_shader = true);
+                draw_rounded_rect(rect, Colors.CURSOR_INACTIVE, radius = rounding_radius_small, set_shader = true);
                 draw_rounded_rect(shrink(rect, 1), Colors.BACKGROUND, radius = rounding_radius_small, set_shader = false);
             }
         }
@@ -828,7 +825,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
                 // Line number
                 width = xx Simp.prepare_text(font_ui_small, tprint("%", entry.line + 1));
-                Simp.draw_prepared_text(font_ui_small, xx (line_num_x + line_num_col_width - width), xx pen.y, color = Colors.CODE_COMMENT);
+                Simp.draw_prepared_text(font_ui_small, xx (line_num_x + line_num_col_width - width), xx pen.y, color = Colors.UI_DIM);
 
                 // Draw code line
                 {
@@ -859,7 +856,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                     pen.x = text_x;
                     if char_offset > 0 {
                         // Line was cut on the left, draw an ellipsis
-                        Simp.draw_text(font, xx pen.x, xx pen.y, "…", color = Colors.CODE_COMMENT);
+                        Simp.draw_text(font, xx pen.x, xx pen.y, "…", color = Colors.UI_DIM);
                         pen.x += char_size;
                     }
 
@@ -997,7 +994,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             coords := cursor_coords[main_cursor].pos;
             width = xx Simp.prepare_text(font_ui_bold, tprint("Line: %  Col: %", coords.line + 1, coords.col + 1));
             line_col_start_x := footer_rect.x + footer_rect.w - width;
-            Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = Colors.CODE_COMMENT);
+            Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = Colors.UI_DIM);
 
             // Make sure the text is cut nicely
             fadeout_rect := cut_rect;
@@ -1242,12 +1239,12 @@ draw_open_file_dialog :: () {
             // // Draw score
             // pen.x += width + padding;
             // width = xx Simp.prepare_text(font_ui_small, tprint("%", formatInt(entry.sort_key, base=16)));
-            // Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+            // Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
 
             // Draw file path
             pen.x += width + padding;
             if pen.x < path_align_x then pen.x = path_align_x;
-            width = xx Simp.draw_text_with_highlights(font_ui, xx pen.x, xx pen.y, entry.path, entry.path_highlights, color = Colors.CODE_COMMENT, highlight_color = Colors.LETTER_HIGHLIGHT);
+            width = xx Simp.draw_text_with_highlights(font_ui, xx pen.x, xx pen.y, entry.path, entry.path_highlights, color = Colors.UI_DIM, highlight_color = Colors.LETTER_HIGHLIGHT);
         }
 
         // Deselect any previously clicked entry
@@ -1354,12 +1351,12 @@ draw_unsaved_buffers_dialog :: () {
                     // Draw separator
                     pen.x += width + padding;
                     width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
-                    Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+                    Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
 
                     // Draw file path
                     pen.x += width + padding;
                     width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
-                    Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+                    Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
                 }
             }
 
@@ -1591,23 +1588,23 @@ draw_finder :: () {
                     // Draw separator
                     pen.x += width + padding;
                     width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
-                    Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+                    Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
 
                     // // Draw score
                     // pen.x += width + padding;
                     // width = xx Simp.prepare_text(font_ui_small, tprint("%", formatInt(entry.sort_key, base=16)));
-                    // Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+                    // Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
 
                     // Draw file path
                     pen.x += width + padding;
                     width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
-                    Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.CODE_COMMENT);
+                    Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
                 }
             }
 
             // Line number
             width = xx Simp.prepare_text(font_ui_small, tprint("%", line_num + 1));
-            Simp.draw_prepared_text(font_ui_small, xx (line_num_x + line_num_col_width - width), xx pen.y, color = Colors.CODE_COMMENT);
+            Simp.draw_prepared_text(font_ui_small, xx (line_num_x + line_num_col_width - width), xx pen.y, color = Colors.UI_DIM);
 
             // Draw code line
             {
@@ -1638,7 +1635,7 @@ draw_finder :: () {
                 pen.x = text_x;
                 if char_offset > 0 {
                     // Line was cut on the left, draw an ellipsis
-                    Simp.draw_text(font, xx pen.x, xx pen.y, "…", color = Colors.CODE_COMMENT);
+                    Simp.draw_text(font, xx pen.x, xx pen.y, "…", color = Colors.UI_DIM);
                     pen.x += char_size;
                 }
                 if buffer.needs_coloring || buffer.colors.count != buffer.bytes.count then recalculate_colors(buffer);  // right before drawing
@@ -1841,7 +1838,7 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
 
     y := input_rect.y + (input_rect.h - font.character_height) / 2 + 2 * dpi_scale;  // I don't know why we need this extra + 2, but without it the text doesn't look in the right place
 
-    if !input_text then Simp.draw_text(font, xx x, xx y, label, color = Colors.UI_TEXT_INPUT_LABEL);
+    if !input_text then Simp.draw_text(font, xx x, xx y, label, color = Colors.TEXT_INPUT_LABEL);
     draw_rect(cursor_rect, ifx active then Colors.CURSOR else Colors.CURSOR_INACTIVE);
     Simp.draw_text(font, xx x, xx y, input_text, color = color);
 }

@@ -48,6 +48,8 @@ main :: () {
         init_session_with_no_guidance();
     }
 
+    CODE_COLOR_MAP = refresh_code_color_map();
+
     if config.settings.open_on_the_biggest_monitor {
         window_x, window_y = platform_get_biggest_monitor_pos();
     }
@@ -245,7 +247,7 @@ main :: () {
     // log_leak_report(report);
 }
 
-init_fonts_and_dependent_things :: (font_data := "") {
+init_fonts_and_dependent_things :: () {
     delta := font_size - default_font_size;
     font_size             = clamp(font_size,                                MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_ui_size          = clamp(DEFAULT_FONT_UI_SIZE          + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
@@ -255,8 +257,6 @@ init_fonts_and_dependent_things :: (font_data := "") {
     font_icons_size       = clamp(DEFAULT_FONT_ICONS_SIZE       + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_icons_small_size = clamp(DEFAULT_FONT_ICONS_SMALL_SIZE + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
 
-
-    if font_data then main_font_data = font_data;
     font = Simp.get_font_at_size(main_font_name, main_font_data, cast(int) (font_size * dpi_scale));
     assert(font != null, "Couldn't init main text font\n");
 

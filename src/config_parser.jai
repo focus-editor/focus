@@ -66,9 +66,9 @@ parse_config :: (name: string, filename: string, file_data: string) -> Config, s
     result.settings = parser.parsed.settings;
 
     // Style
-    result.style.font      = parser.data.font;
-    result.style.font_size = parser.data.font_size;
-    result.style.colors    = parser.data.parsed_colors;  // @leak
+    result.style.font           = parser.data.font;
+    result.style.font_size      = parser.data.font_size;
+    result.style.parsed_colors  = parser.data.parsed_colors;  // @leak
 
     return result, true, "";
 }
@@ -102,49 +102,49 @@ map_color_name_to_color_struct :: (color_name: string) -> *Color, found: bool {
     color: *Color;
 
     if color_name == {
-        case "background";              color = *Colors.BACKGROUND;
-        case "background_dark";         color = *Colors.BACKGROUND_DARK;
-        case "background_highlight";    color = *Colors.BACKGROUND_HIGHLIGHT;
-        case "background_light";        color = *Colors.BACKGROUND_LIGHT;
-        case "background_bright";       color = *Colors.BACKGROUND_BRIGHT;
-        case "selection_active";        color = *Colors.SELECTION_ACTIVE;
-        case "selection_inactive";      color = *Colors.SELECTION_INACTIVE;
-        case "selection_highlight";     color = *Colors.SELECTION_HIGHLIGHT;
-        case "search_result_active";    color = *Colors.SEARCH_RESULT_ACTIVE;
-        case "search_result_inactive";  color = *Colors.SEARCH_RESULT_INACTIVE;
-        case "scrollbar";               color = *Colors.SCROLLBAR;
-        case "scrollbar_hover";         color = *Colors.SCROLLBAR_HOVER;
-        case "scrollbar_background";    color = *Colors.SCROLLBAR_BACKGROUND;
-        case "cursor";                  color = *Colors.CURSOR;
-        case "cursor_inactive";         color = *Colors.CURSOR_INACTIVE;
-        case "paste_animation";         color = *Colors.PASTE_ANIMATION;
-        case "splitter";                color = *Colors.SPLITTER;
-        case "splitter_hover";          color = *Colors.SPLITTER_HOVER;
-        case "letter_highlight";        color = *Colors.LETTER_HIGHLIGHT;
-        case "list_cursor_lite";        color = *Colors.LIST_CURSOR_LITE;
-        case "list_cursor";             color = *Colors.LIST_CURSOR;
-        case "shadow_dark";             color = *Colors.SHADOW_DARK;
-        case "shadow_transparent";      color = *Colors.SHADOW_TRANSPARENT;
+        case "background";                      color = *Colors.BACKGROUND;
+        case "background_dark";                 color = *Colors.BACKGROUND_DARK;
+        case "background_highlight";            color = *Colors.BACKGROUND_HIGHLIGHT;
+        case "background_light";                color = *Colors.BACKGROUND_LIGHT;
+        case "background_bright";               color = *Colors.BACKGROUND_BRIGHT;
+        case "selection_active";                color = *Colors.SELECTION_ACTIVE;
+        case "selection_inactive";              color = *Colors.SELECTION_INACTIVE;
+        case "selection_highlight";             color = *Colors.SELECTION_HIGHLIGHT;
+        case "search_result_active";            color = *Colors.SEARCH_RESULT_ACTIVE;
+        case "search_result_inactive";          color = *Colors.SEARCH_RESULT_INACTIVE;
+        case "scrollbar";                       color = *Colors.SCROLLBAR;
+        case "scrollbar_hover";                 color = *Colors.SCROLLBAR_HOVER;
+        case "scrollbar_background";            color = *Colors.SCROLLBAR_BACKGROUND;
+        case "cursor";                          color = *Colors.CURSOR;
+        case "cursor_inactive";                 color = *Colors.CURSOR_INACTIVE;
+        case "paste_animation";                 color = *Colors.PASTE_ANIMATION;
+        case "splitter";                        color = *Colors.SPLITTER;
+        case "splitter_hover";                  color = *Colors.SPLITTER_HOVER;
+        case "letter_highlight";                color = *Colors.LETTER_HIGHLIGHT;
+        case "list_cursor_lite";                color = *Colors.LIST_CURSOR_LITE;
+        case "list_cursor";                     color = *Colors.LIST_CURSOR;
+        case "shadow_dark";                     color = *Colors.SHADOW_DARK;
+        case "shadow_transparent";              color = *Colors.SHADOW_TRANSPARENT;
+        case "text_input_label";                color = *Colors.TEXT_INPUT_LABEL;
 
-        case "ui_default";              color = *Colors.UI_DEFAULT;
-        case "ui_dim";                  color = *Colors.UI_DIM;
-        case "ui_neutral";              color = *Colors.UI_NEUTRAL;
-        case "ui_warning";              color = *Colors.UI_WARNING;
-        case "ui_error";                color = *Colors.UI_ERROR;
-        case "ui_success";              color = *Colors.UI_SUCCESS;
-        case "ui_text_input_label";     color = *Colors.UI_TEXT_INPUT_LABEL;
+        case "ui_default";                      color = *Colors.UI_DEFAULT;
+        case "ui_dim";                          color = *Colors.UI_DIM;
+        case "ui_neutral";                      color = *Colors.UI_NEUTRAL;
+        case "ui_warning";                      color = *Colors.UI_WARNING;
+        case "ui_error";                        color = *Colors.UI_ERROR;
+        case "ui_success";                      color = *Colors.UI_SUCCESS;
 
-        case "code_default";            color = *Colors.CODE_DEFAULT;
-        case "code_comment";            color = *Colors.CODE_COMMENT;
-        case "code_type";               color = *Colors.CODE_TYPE;
-        case "code_function";           color = *Colors.CODE_FUNCTION;
-        case "code_punctuation";        color = *Colors.CODE_PUNCTUATION;
-        case "code_operation";          color = *Colors.CODE_OPERATION;
-        case "code_string";             color = *Colors.CODE_STRING;
-        case "code_value";              color = *Colors.CODE_VALUE;
-        case "code_highlight";          color = *Colors.CODE_HIGHLIGHT;
-        case "code_error";              color = *Colors.CODE_ERROR;
-        case "code_keyword";            color = *Colors.CODE_KEYWORD;
+        case "code_default";                    color = *Colors.CODE_DEFAULT;
+        case "code_comment";                    color = *Colors.CODE_COMMENT;
+        case "code_type";                       color = *Colors.CODE_TYPE;
+        case "code_function";                   color = *Colors.CODE_FUNCTION;
+        case "code_punctuation";                color = *Colors.CODE_PUNCTUATION;
+        case "code_operation";                  color = *Colors.CODE_OPERATION;
+        case "code_string";                     color = *Colors.CODE_STRING;
+        case "code_value";                      color = *Colors.CODE_VALUE;
+        case "code_highlight";                  color = *Colors.CODE_HIGHLIGHT;
+        case "code_error";                      color = *Colors.CODE_ERROR;
+        case "code_keyword";                    color = *Colors.CODE_KEYWORD;
 
         case; return xx 0, false;
     }
@@ -354,7 +354,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
             }
             color, success := hex_to_color(value);
             if !success {
-                error_msg := log_parser_error(handler, "Couldn't parse '%'. Expected a color in the form RRGGBBAA, got '%'", color_name, value);
+                error_msg := log_parser_error(handler, "Couldn't parse '%'. Expected a color in the form RRGGBB or RRGGBBAA, got '%'", color_name, value);
                 return false, error_msg;
             }
             array_add(*data.parsed_colors, Parsed_Color.{ color_name, color });
@@ -371,7 +371,9 @@ color_to_hex :: (using color: Color) -> string /* temp  */ {
     return tprint("#%1%2%3%4", formatInt(r_u8, 16), formatInt(g_u8, 16), formatInt(b_u8, 16), formatInt(a_u8, 16));
 }
 
-hex_to_color :: (hex: string) -> Color, success: bool {
+hex_to_color :: (src_hex: string) -> Color, success: bool {
+    hex := src_hex;
+    if hex.count == 6 then hex = tprint("%FF", hex);
     if hex.count != 8 return Color.{}, false;
 
     r := slice(hex, 0, 2);

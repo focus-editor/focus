@@ -31,6 +31,10 @@
     - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
     - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
 
+- Don't skip spaces when editing with multiple cursors
+
+- Drop a folder into the editor to add it to workspace
+
 - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
 
 - Highlight C/C++
@@ -153,6 +157,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Colors
 + Be able to override fonts
 + Don't reload if there are unsaved buffers
 + Reload workspace dirs

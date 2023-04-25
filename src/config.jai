@@ -190,33 +190,37 @@ merge_configs :: (dst: *Config, src: Config) {
         return builder_to_string(*b);
     }
 
-    // Style
-    need_to_update_fonts := false;
-    font_data := FONT.data;
-
-    if src.style.font && dst.style.font != src.style.font {
+    // Fonts
+    if src.style.font {
         dst.style.font = ifx src.style.font then src.style.font else "default";
 
         loaded_data, success := load_font_by_name(src.style.font);
         if success {
-            font_data = loaded_data;
+            main_font_data = loaded_data;
             main_font_name = src.style.font;
-
-            need_to_update_fonts = true;
         } else {
             // NOTE: this error will be removed by the config success message. Should do something about it
             add_user_error(tprint("Couldn't load font %", src.style.font));
         }
     }
-    if src.style.font_size > 0 && src.style.font_size != dst.style.font_size {
+    if src.style.font_size > 0 {
         dst.style.font_size = src.style.font_size;
         font_size = src.style.font_size;
         default_font_size = font_size;
-
-        need_to_update_fonts = true;
     }
 
-    if need_to_update_fonts init_fonts_and_dependent_things(font_data);
+    init_fonts_and_dependent_things();
+
+    // Colors
+    for src.style.parsed_colors {
+        color_ptr, success := map_color_name_to_color_struct(it.color_name);
+        if success {
+            <<color_ptr = it.color;
+        } else {
+            log_error("Couldn't map color name '%' to color pointer. This is a bug", it.color_name);
+        }
+    }
+    CODE_COLOR_MAP = refresh_code_color_map();
 }
 
 load_font_by_name :: (name: string) -> font_data: string, success: bool {
@@ -296,7 +300,7 @@ Style :: struct {
     font      := "";
     font_size := -1;
 
-    colors: [] Parsed_Color;
+    parsed_colors: [] Parsed_Color;
 }
 
 style: Style;
@@ -327,6 +331,7 @@ Color_Values :: struct {
     LIST_CURSOR             := Color.{ r = 0.20, g = 0.80, b = 0.80, a = 0.3 };
     SHADOW_DARK             := Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0.5 };
     SHADOW_TRANSPARENT      := Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0 };  // for interpolation
+    TEXT_INPUT_LABEL     := Color.{ r = 0.233, g = 0.269, b = 0.316, a = 1.0 };
 
     UI_DEFAULT              := Color.{ r = 0.75, g = 0.79, b = 0.86, a = 1.0 };
     UI_DIM                  := Color.{ r = 0.533, g = 0.569, b = 0.616, a = 1.0 };
@@ -334,7 +339,6 @@ Color_Values :: struct {
     UI_WARNING              := Color.{ r = 0.85, g = 0.68, b = 0.33, a = 1.0 };
     UI_ERROR                := Color.{ r = 0.80, g = 0.00, b = 0.00, a = 1.0 };
     UI_SUCCESS              := Color.{ r = 0.00, g = 0.80, b = 0.00, a = 1.0 };
-    UI_TEXT_INPUT_LABEL     := Color.{ r = 0.233, g = 0.269, b = 0.316, a = 1.0 };
 
     CODE_DEFAULT            := Color.{ r = 0.75, g = 0.79, b = 0.86, a = 1.0 };
     CODE_COMMENT            := Color.{ r = 0.533, g = 0.569, b = 0.616, a = 1.0 };
@@ -367,7 +371,9 @@ Code_Color :: enum u8 {
     NUM_COLORS;
 }
 
-CODE_COLOR_MAP :: #run -> [] Vector4 {
+CODE_COLOR_MAP: [Code_Color.NUM_COLORS] Vector4;
+
+refresh_code_color_map :: () -> [Code_Color.NUM_COLORS] Vector4 {
     using Code_Color;
 
     result: [NUM_COLORS] Vector4;
@@ -386,6 +392,7 @@ CODE_COLOR_MAP :: #run -> [] Vector4 {
 
     return result;
 }
+
 
 as_3_floats :: (color: Color) -> [3] float {
     result : [3] float = ---;

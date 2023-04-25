@@ -1,14 +1,14 @@
 map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mapping {
     invalid_action  := cast(Action) 0xFFFF;
     invalid_mapping := Key_Mapping.{};
-    
+
     if event.type != .KEYBOARD return invalid_action, invalid_mapping;
     if !event.key_pressed return invalid_action, invalid_mapping;
-    
+
     keymap := get_keymap_for_action_type(Action);
 
     event_key_code := cast(u32) event.key_code;
-    
+
     for keymap {
         if it.combo.key_code == event_key_code && it.combo.mods.packed == (event.modifier_flags.packed | it.combo.ignore.packed) {
             return cast(Action) it.action, it;
@@ -20,11 +20,11 @@ map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mappin
 activate_hold_action :: (action: $Action_Type, event: Input.Event) {
     _, matched_mapping := map_event_to_action(event, Action_Type);  // we map it here again to avoid passing it in through multiple functions
     hold_action := Hold_Action.{ action_type = Action_Type, matched_mapping = matched_mapping };
-    
-    // NOTE: array_add_if_unique didn't work because it couldn't find the operator == for Hold_Actions. 
+
+    // NOTE: array_add_if_unique didn't work because it couldn't find the operator == for Hold_Actions.
     // I tried making it public but it didn't help.
     // array_add_if_unique(*active_hold_actions, hold_action);
-    
+
     for active_hold_actions {
         if it == hold_action return;  // already there
     }
@@ -33,14 +33,14 @@ activate_hold_action :: (action: $Action_Type, event: Input.Event) {
 
 map_key_release_to_hold_actions :: (event: Input.Event, $Action: Type) -> [] Action /* temporary storage */ {
     if event.type != .KEYBOARD || event.key_pressed return .[];
-    
+
     actions: [..] Action;
     actions.allocator = temp;
-    
+
     for active_hold_actions {
         if it.action_type != Action continue;
         combo := it.matched_mapping.combo;
-        if combo.key_code == cast(u32) event.key_code || 
+        if combo.key_code == cast(u32) event.key_code ||
           (event.key_code == .SHIFT && combo.mods.shift_pressed && !combo.ignore.shift_pressed) ||
           (event.key_code == .CTRL  && combo.mods.ctrl_pressed  && !combo.ignore.ctrl_pressed)  ||
           (event.key_code == .ALT   && combo.mods.alt_pressed   && !combo.ignore.alt_pressed)
@@ -49,7 +49,7 @@ map_key_release_to_hold_actions :: (event: Input.Event, $Action: Type) -> [] Act
             array_add(*actions, cast(Action) it.matched_mapping.action);
         }
     }
-    
+
     return actions;
 }
 
@@ -58,7 +58,7 @@ get_first_matching_key_combo_from_action :: (action: Action_Common) -> [] string
     combo: Key_Combo = ---;
     found := false;
     action_code := cast(u32) action;
-    
+
     for mapping : keymap {
         if action_code == mapping.action {
             combo = mapping.combo;
@@ -67,18 +67,18 @@ get_first_matching_key_combo_from_action :: (action: Action_Common) -> [] string
         }
     }
     if !found return .[];
-    
+
     keys: [..] string;
     keys.allocator = temp;
     array_reserve(*keys, 4);  // modifiers + key
-    
+
     if combo.mods.ctrl_pressed  then array_add(*keys, "Ctrl");
     if combo.mods.alt_pressed   then array_add(*keys, "Alt");
     if combo.mods.shift_pressed then array_add(*keys, "Shift");
-    
+
     key_name := keymap_map_key_code_to_string(combo.key_code);
     array_add(*keys, key_name);
-    
+
     return keys;
 }
 
@@ -121,7 +121,7 @@ Key_Mapping :: struct {
 
 Key_Combo :: struct {
     key_code: u32;
-    mods: Mods;  
+    mods: Mods;
     ignore: Mods;
 } #no_padding;
 
@@ -227,6 +227,8 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "duplicate_editor",
     "move_editor_to_the_left",
     "move_editor_to_the_right",
+    "create_new_file",
+    "create_new_file_on_the_side",
 ]);
 
 ACTIONS_OPEN_FILE_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[
@@ -251,10 +253,10 @@ ACTIONS_SEARCH_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[
 Keymap_Action_Strings :: #run -> Table(string, void) {
     table: Table(string, void);
     nothing: void;
-    
+
     for ACTIONS_EDITORS             table_set(*table, it, nothing);
     for ACTIONS_OPEN_FILE_DIALOG    table_set(*table, it, nothing);
     for ACTIONS_SEARCH_DIALOG       table_set(*table, it, nothing);
-    
+
     return table;
 }
