@@ -50,7 +50,6 @@ double_shift_to_search_in_workspace: false
 max_entries_in_open_file_dialog:     2000
 tab_size:                            4
 
-[[style]]
 
 [[keymap]]
 
@@ -221,3 +220,56 @@ Ctrl-Plus                   increase_font_size
 Ctrl-Minus                  decrease_font_size
 Ctrl-0                      reset_font_size_to_default
 Ctrl-MouseMiddle            reset_font_size_to_default
+
+
+[[style]]
+
+[user interface]
+font:       default
+font_size:  14
+
+[colors]
+background:             15212AFF
+background_dark:        10191FFF
+background_highlight:   18262FFF
+background_light:       1A2831FF
+background_bright:      21333FFF
+selection_active:       1C4449FF
+selection_inactive:     1C44497F
+selection_highlight:    FCEDFC26
+search_result_active:   8E772EFF
+search_result_inactive: FCEDFC26
+scrollbar:              33CCCC19
+scrollbar_hover:        33CCCC4C
+scrollbar_background:   10191F4C
+cursor:                 26B2B2FF
+cursor_inactive:        196666FF
+paste_animation:        1C4449FF
+splitter:               21333FFF
+splitter_hover:         1C4449FF
+letter_highlight:       599999FF
+list_cursor_lite:       33CCCC19
+list_cursor:            33CCCC4C
+shadow_dark:            0E161C7F
+shadow_transparent:     0E161C00
+
+ui_default:             BFC9DBFF
+ui_dim:                 87919DFF
+ui_neutral:             4C4C4CFF
+ui_warning:             D8AD54FF
+ui_error:               CC0000FF
+ui_success:             00CC00FF
+ui_text_input_label:    3B4450FF
+
+code_default:           BFC9DBFF
+code_comment:           87919DFF
+code_type:              82AAA3FF
+code_function:          D0C5A9FF
+code_punctuation:       BFC9DBFF
+code_operation:         E0AD82FF
+code_string:            D4BC7DFF
+code_value:             D699B5FF
+code_highlight:         D89B75FF
+code_error:             FF0000FF
+code_keyword:           E67D74FF
+

@@ -48,8 +48,6 @@ main :: () {
         init_session_with_no_guidance();
     }
 
-    window_x := -1;
-    window_y := -1;
     if config.settings.open_on_the_biggest_monitor {
         window_x, window_y = platform_get_biggest_monitor_pos();
     }
