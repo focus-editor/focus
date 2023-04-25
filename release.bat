@@ -1,3 +1,3 @@
 @echo off
 
-jai -quiet -import_dir modules first.jai - release
+jai -quiet first.jai - release
