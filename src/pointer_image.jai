@@ -75,7 +75,7 @@ Pointer_Image :: enum u16 {
         pointers[DRAGGING_FREE]         = NSCursor.openHandCursor(); // @Hack: There are no publicly available cursors for this.
         pointers[DRAGGING_NW_SE]        = NSCursor.openHandCursor(); // @Hack: There are no publicly available cursors for this.
         pointers[DRAGGING_NE_SW]        = NSCursor.openHandCursor(); // @Hack: There are no publicly available cursors for this.
-        pointers[TEXT_SELECT]           = NSCursor.openHandCursor(); // @Hack: There are no publicly available cursors for this.
+        pointers[TEXT_SELECT]           = NSCursor.arrowCursor(); // @Hack: There are no publicly available cursors for this.
     }
 
     pointers: [NUM_POINTERS] *NSCursor;
