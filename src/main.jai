@@ -161,7 +161,7 @@ main :: () {
                         // Alt + F4
                         if event.key_pressed && event.key_code == .F4 && event.alt_pressed then should_quit = true;
                     }
-                    
+
                     // Double shift click
                     if config.settings.double_shift_to_search_in_workspace && event.key_code == .SHIFT {
                         using shift_key;
@@ -247,8 +247,9 @@ main :: () {
     // log_leak_report(report);
 }
 
-init_fonts_and_dependent_things :: () {
-    delta := font_size - DEFAULT_FONT_SIZE;
+init_fonts_and_dependent_things :: (font_data := "") {
+    delta := font_size - default_font_size;
+    font_size             = clamp(font_size,                                MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_ui_size          = clamp(DEFAULT_FONT_UI_SIZE          + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_ui_big_size      = clamp(DEFAULT_FONT_UI_BIG_SIZE      + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_ui_medium_size   = clamp(DEFAULT_FONT_UI_MEDIUM_SIZE   + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
@@ -256,7 +257,9 @@ init_fonts_and_dependent_things :: () {
     font_icons_size       = clamp(DEFAULT_FONT_ICONS_SIZE       + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_icons_small_size = clamp(DEFAULT_FONT_ICONS_SMALL_SIZE + delta,    MIN_FONT_SIZE, MAX_FONT_SIZE);
 
-    font = Simp.get_font_at_size(FONT.name, FONT.data, cast(int) (font_size * dpi_scale));
+
+    if font_data then main_font_data = font_data;
+    font = Simp.get_font_at_size(main_font_name, main_font_data, cast(int) (font_size * dpi_scale));
     assert(font != null, "Couldn't init main text font\n");
 
     font_ui = Simp.get_font_at_size(FONT_UI.name, FONT_UI.data, cast(int) (font_ui_size * dpi_scale));
@@ -372,7 +375,7 @@ decrease_font_size :: () {
 }
 
 reset_font_size_to_default :: () {
-    font_size = DEFAULT_FONT_SIZE;
+    font_size = default_font_size;
     init_fonts_and_dependent_things();
 }
 
@@ -517,6 +520,11 @@ DEFAULT_FONT_UI_SMALL_SIZE      :: 15;
 DEFAULT_FONT_ICONS_SIZE         :: 16;
 DEFAULT_FONT_ICONS_SMALL_SIZE   :: 8;
 
+main_font_name := "default";
+main_font_data := #run FONT.data;
+
+default_font_size       := DEFAULT_FONT_SIZE;  // can be changed in the config
+
 font_size               := DEFAULT_FONT_SIZE;  // when changing font size, we change just this one and then derive the other ones from it
 font_ui_size            := DEFAULT_FONT_UI_SIZE;
 font_ui_big_size        := DEFAULT_FONT_UI_BIG_SIZE;
@@ -649,6 +657,8 @@ MIN_WINDOW_HEIGHT :: 50;
 
 DOUBLE_CLICK_SPEED     :: 0.3;  // how many seconds between clicks to consider it a double click
 DOUBLE_CLICK_TOLERANCE :: 2;    // how many pixels between the click locations are allowed
+
+#scope_export
 
 // Embed default fonts
 FONT         :: #run load_font("FiraCode-Retina.ttf");

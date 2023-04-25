@@ -1765,8 +1765,10 @@ draw_range :: (range: Coords_Range, buffer: Buffer, visible_start: s32, visible_
     }
 }
 
-draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active := false, label: string = "", font: *Simp.Dynamic_Font = null, color := Colors.UI_DEFAULT, margin_left := 1.0, margin_right := 1.0) {
+draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active := false, label: string = "", font: *Simp.Dynamic_Font = null, _color := Colors.NONE, margin_left := 1.0, margin_right := 1.0) {
     if !is_valid(rect_) return;
+
+    color := ifx _color == Colors.NONE then Colors.UI_DEFAULT else _color;
 
     rect := align_to_grid(rect_);  // to get a consistent outline
 

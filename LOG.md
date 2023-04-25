@@ -15,6 +15,7 @@
 ===========================
 
 - Colors
+
 - Create new files
 - Commands:
     - Open error log
@@ -99,14 +100,6 @@
         - Editor layout (none/single/double)
         - Which editor was open on which side
 
-- Projects
-    - If a project doesn't exist, don't set it when loading previous session
-    - On the splash screen list all previous sessions
-        - Display create time
-        - Display last edit time
-        - Display project name
-        - Maybe display the number of unsaved buffers
-
 - Log time with the session logger
 
 - Either limit the number of bytes in text input, or improve the handling of cursor (currently calculating the length every frame)
@@ -160,6 +153,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Be able to override fonts
 + Don't reload if there are unsaved buffers
 + Reload workspace dirs
     + Remember old dirs before loading config

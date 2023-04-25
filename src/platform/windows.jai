@@ -53,10 +53,10 @@ platform_kill_refresh_timer :: (window: Window_Type) {
 
 platform_enumerate_logical_drives :: () -> [] string {
     drives: [..] string;
-    
+
     drives_buf: [500] u16;
     GetLogicalDriveStringsW(500, drives_buf.data);
-    
+
     drive_wstr := drives_buf.data;
     for drives_buf {
         if it == 0 {
@@ -67,8 +67,12 @@ platform_enumerate_logical_drives :: () -> [] string {
             drive_wstr = *drives_buf[it_index + 1];
         }
     }
-    
+
     return drives;
+}
+
+platform_get_fonts_dir :: () -> string {
+    return "C:/Windows/Fonts";
 }
 
 #scope_file

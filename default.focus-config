@@ -18,7 +18,7 @@ __pycache__
 
 [allow file extensions]
 # These files are explicitly allowed so that the editor doesn't waste time figuring out
-# whether it should ignore these or not (if a file is not explicitly allowed or ignored, 
+# whether it should ignore these or not (if a file is not explicitly allowed or ignored,
 # it will be read to determine if it's binary or not).
 .jai .c .cpp .h .hpp .cc .txt .md .focus-* .ini .csv .log .sql .py .m .html .xml .js .ts .yml .yaml .toml
 
@@ -27,16 +27,16 @@ __pycache__
 # It makes sense to add all known binary file extensions here.
 .exe .pdb .ttf .otf .eot .woff *woff? .dll .lib .dylib .so *so.* .a .o .pdf
 .jpg .png .gif .jpeg .ico .tif .tiff .tga .bmp .webp  # maybe someday we'll support opening images
-.mp3 .wav .ogg .wma 
+.mp3 .wav .ogg .wma
 .blend .obj .fbx .dae .3ds .dat
 .mpg .mpeg .psd .codex .webm .wma
-.zip .rar .7z 
+.zip .rar .7z
 .bin .sys .iso
 .nib .exp .plist
 .pyc .rpyc
 
 [[settings]]
-# NOTE: please copy the whole block when overriding settings, otherwise defaults will be used 
+# NOTE: please copy the whole block when overriding settings, otherwise defaults will be used
 #       for any settings you haven't listed here explicitly
 maximize_on_start:                   true
 open_on_the_biggest_monitor:         true
@@ -49,6 +49,8 @@ strip_trailing_whitespace_on_save:   false
 double_shift_to_search_in_workspace: false
 max_entries_in_open_file_dialog:     2000
 tab_size:                            4
+
+[[style]]
 
 [[keymap]]
 
@@ -92,7 +94,7 @@ Ctrl-L                      select_line
 
 Alt-K                       scroll_viewport_up
 Alt-E                       scroll_viewport_up_fast  # for some reason Alt-U didn't reach the window at all, so using Alt-E instead
-Alt-PageUp                  scroll_viewport_up_fast  
+Alt-PageUp                  scroll_viewport_up_fast
 Alt-J                       scroll_viewport_down
 Alt-D                       scroll_viewport_down_fast
 Alt-PageDown                scroll_viewport_down_fast

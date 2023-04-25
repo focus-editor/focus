@@ -1,5 +1,5 @@
 platform_setup :: () {
-    
+
 }
 
 platform_get_biggest_monitor_pos :: () -> s32, s32 {
@@ -11,7 +11,7 @@ platform_create_window :: () {
 }
 
 platform_maximize_window :: (window: Window_Type) {
-    
+
 }
 
 platform_enable_drag_and_drop :: (window: Window_Type) {
@@ -43,6 +43,10 @@ platform_kill_refresh_timer :: (window: Window_Type) {
 
 platform_enumerate_logical_drives :: () -> [] string {
     unimplemented();
+}
+
+platform_get_fonts_dir :: () -> string {
+    return "/usr/share/fonts";
 }
 
 #scope_file

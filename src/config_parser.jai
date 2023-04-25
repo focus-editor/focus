@@ -3,45 +3,46 @@
 parse_config :: (name: string, filename: string, file_data: string) -> Config, success: bool, error_msg: string /* temp */ {
     parser: Config_Parser;
     result: Config;
-        
-    // NOTE: we don't free on purpose, because some of the parsed data will point into the file data    
+
+    // NOTE: we don't free on purpose, because some of the parsed data will point into the file data
     start_from_memory(*parser.handler, name, filename, file_data);
     if parser.handler.failed return Config.{}, false, tprint("Parser couldn't read file '%'", filename);
-    
+
     while true {
         line, found := consume_next_line(*parser.handler);
         if !found break;
-        
+
         // Maybe switch to a different top section
         if begins_with(line, "[[") {
             error, error_msg := switch_top_section(*parser, line);
             if error return Config.{}, false, error_msg;
             continue;
         }
-        
+
         if #complete parser.top_section == {
             case .none;
                 error_msg := log_parser_error(parser.handler, "Expected a top-level section definition, got '%'", line);
                 return result, false, error_msg;
-                
+
             case .workspace;
                 success, error_msg := parse_workspace_line(*parser, line);
                 if !success return result, false, error_msg;
-                
+
             case .settings;
                 success, error_msg := parse_settings_line(*parser, line);
                 if !success return result, false, error_msg;
-                
+
             case .keymap;
                 success, error_msg := parse_keymap_line(*parser, line);
                 if !success return result, false, error_msg;
-                
+
             case .style;
-                // TODO
+                success, error_msg := parse_style_line(*parser, line);
+                if !success return result, false, error_msg;
 
         }
     }
-    
+
     // Cast away the extendable arrays into array views
     result.workspace.workspace_dirs                   = parser.data.workspace_dirs;
     result.workspace.ignore_dirs                      = parser.data.ignore_dirs;
@@ -49,21 +50,26 @@ parse_config :: (name: string, filename: string, file_data: string) -> Config, s
     result.workspace.allow_file_extension_wildcards   = parser.data.allow_file_extension_wildcards;
     result.workspace.ignore_file_extensions           = parser.data.ignore_file_extensions;
     result.workspace.ignore_file_extension_wildcards  = parser.data.ignore_file_extension_wildcards;
-    
+
     // Merge and store keymaps in the config
     // (keys defined in the common section need to be present in the other sections unless overridden there)
     array_extend(*parser.data.keymap_editors,          parser.data.keymap_common);
     array_extend(*parser.data.keymap_open_file_dialog, parser.data.keymap_common);
     array_extend(*parser.data.keymap_search_dialog,    parser.data.keymap_common);
-    
+
     result.keymap.common           = parser.data.keymap_common;
     result.keymap.editors          = parser.data.keymap_editors;
     result.keymap.open_file_dialog = parser.data.keymap_open_file_dialog;
     result.keymap.search_dialog    = parser.data.keymap_search_dialog;
-    
+
     // Copy settings as is
     result.settings = parser.parsed.settings;
-    
+
+    // Style
+    result.style.font      = parser.data.font;
+    result.style.font_size = parser.data.font_size;
+    result.style.colors    = parser.data.parsed_colors;  // @leak
+
     return result, true, "";
 }
 
@@ -84,12 +90,71 @@ keymap_map_key_code_to_string :: (key_code: u32) -> string /* temp */ {
         s.count = 1;
         return tprint("%", s);  // couldn't find a way to print a char
     }
-    
+
     for STRING_TO_CODE_MAP {
         if cast(u32) it.code == key_code return it.str;
     }
-    
+
     return "??";
+}
+
+map_color_name_to_color_struct :: (color_name: string) -> *Color, found: bool {
+    color: *Color;
+
+    if color_name == {
+        case "background";              color = *Colors.BACKGROUND;
+        case "background_dark";         color = *Colors.BACKGROUND_DARK;
+        case "background_highlight";    color = *Colors.BACKGROUND_HIGHLIGHT;
+        case "background_light";        color = *Colors.BACKGROUND_LIGHT;
+        case "background_bright";       color = *Colors.BACKGROUND_BRIGHT;
+        case "selection_active";        color = *Colors.SELECTION_ACTIVE;
+        case "selection_inactive";      color = *Colors.SELECTION_INACTIVE;
+        case "selection_highlight";     color = *Colors.SELECTION_HIGHLIGHT;
+        case "search_result_active";    color = *Colors.SEARCH_RESULT_ACTIVE;
+        case "search_result_inactive";  color = *Colors.SEARCH_RESULT_INACTIVE;
+        case "scrollbar";               color = *Colors.SCROLLBAR;
+        case "scrollbar_hover";         color = *Colors.SCROLLBAR_HOVER;
+        case "scrollbar_background";    color = *Colors.SCROLLBAR_BACKGROUND;
+        case "cursor";                  color = *Colors.CURSOR;
+        case "cursor_inactive";         color = *Colors.CURSOR_INACTIVE;
+        case "paste_animation";         color = *Colors.PASTE_ANIMATION;
+        case "splitter";                color = *Colors.SPLITTER;
+        case "splitter_hover";          color = *Colors.SPLITTER_HOVER;
+        case "letter_highlight";        color = *Colors.LETTER_HIGHLIGHT;
+        case "list_cursor_lite";        color = *Colors.LIST_CURSOR_LITE;
+        case "list_cursor";             color = *Colors.LIST_CURSOR;
+        case "shadow_dark";             color = *Colors.SHADOW_DARK;
+        case "shadow_transparent";      color = *Colors.SHADOW_TRANSPARENT;
+
+        case "ui_default";              color = *Colors.UI_DEFAULT;
+        case "ui_dim";                  color = *Colors.UI_DIM;
+        case "ui_neutral";              color = *Colors.UI_NEUTRAL;
+        case "ui_warning";              color = *Colors.UI_WARNING;
+        case "ui_error";                color = *Colors.UI_ERROR;
+        case "ui_success";              color = *Colors.UI_SUCCESS;
+        case "ui_text_input_label";     color = *Colors.UI_TEXT_INPUT_LABEL;
+
+        case "code_default";            color = *Colors.CODE_DEFAULT;
+        case "code_comment";            color = *Colors.CODE_COMMENT;
+        case "code_type";               color = *Colors.CODE_TYPE;
+        case "code_function";           color = *Colors.CODE_FUNCTION;
+        case "code_punctuation";        color = *Colors.CODE_PUNCTUATION;
+        case "code_operation";          color = *Colors.CODE_OPERATION;
+        case "code_string";             color = *Colors.CODE_STRING;
+        case "code_value";              color = *Colors.CODE_VALUE;
+        case "code_highlight";          color = *Colors.CODE_HIGHLIGHT;
+        case "code_error";              color = *Colors.CODE_ERROR;
+        case "code_keyword";            color = *Colors.CODE_KEYWORD;
+
+        case; return xx 0, false;
+    }
+
+    return color, true;
+}
+
+Parsed_Color :: struct {
+    color_name: string;
+    color: Color;
 }
 
 
@@ -100,7 +165,7 @@ log_parser_error :: (handler: Text_File_Handler, format: string, args: .. Any, f
     new_format := tprint("Line % of '%': %", handler.line_number, handler.full_path, format);
     message := tprint(new_format, .. args);
     log(message, flags=Log_Flags.ERROR|flags, loc=loc);
-    
+
     return message;
 } @PrintLike
 
@@ -111,7 +176,7 @@ STRING_TO_CODE_MAP :: Str_Code.[
     .{ "ArrowDown",         ARROW_DOWN },
     .{ "ArrowLeft",         ARROW_LEFT },
     .{ "ArrowRight",        ARROW_RIGHT },
-    
+
     .{ "Escape",            ESCAPE },
     .{ "Delete",            DELETE },
     .{ "Insert",            INSERT },
@@ -132,7 +197,7 @@ STRING_TO_CODE_MAP :: Str_Code.[
     .{ "Space",             #char " " },
     .{ "Plus",              #char "+" },
     .{ "Minus",             #char "-" },
-    
+
     .{ "F1",                F1 },
     .{ "F2",                F2 },
     .{ "F3",                F3 },
@@ -149,7 +214,7 @@ STRING_TO_CODE_MAP :: Str_Code.[
     .{ "MouseLeft",         MOUSE_BUTTON_LEFT },
     .{ "MouseRight",        MOUSE_BUTTON_RIGHT },
     .{ "MouseMiddle",       MOUSE_BUTTON_MIDDLE },
-    
+
     // We don't support mouse wheel events because we'd need to block scrolling
     // if they are handled and we don't want to do it just yet.
     // .{ "MouseWheelUp",      MOUSE_WHEEL_UP },
@@ -160,41 +225,41 @@ switch_top_section :: (using parser: *Config_Parser, line: string) -> error: boo
     if line == {
         case "[[workspace]]";
             top_section = .workspace;
-            if seen_top_sections & .workspace { 
-                error_msg := log_parser_error(handler, "The section '[[workspace]]' is defined twice. This is an error."); 
+            if seen_top_sections & .workspace {
+                error_msg := log_parser_error(handler, "The section '[[workspace]]' is defined twice. This is an error.");
                 return true, error_msg;
             }
             seen_top_sections |= .workspace;
-            
+
         case "[[keymap]]";
             top_section = .keymap;
             if seen_top_sections & .keymap {
-                error_msg := log_parser_error(handler, "The section '[[keymap]]' is defined twice. This is an error."); 
+                error_msg := log_parser_error(handler, "The section '[[keymap]]' is defined twice. This is an error.");
                 return true, error_msg;
             }
             seen_top_sections |= .keymap;
-            
+
         case "[[settings]]";
             top_section = .settings;
             if seen_top_sections & .settings {
-                error_msg := log_parser_error(handler, "The section '[[settings]]' is defined twice. This is an error."); 
+                error_msg := log_parser_error(handler, "The section '[[settings]]' is defined twice. This is an error.");
                 return true, error_msg;
             }
             seen_top_sections |= .settings;
-            
+
         case "[[style]]";
             top_section = .style;
             if seen_top_sections & .style {
-                error_msg := log_parser_error(handler, "The section '[[style]]' is defined twice. This is an error."); 
+                error_msg := log_parser_error(handler, "The section '[[style]]' is defined twice. This is an error.");
                 return true, error_msg;
             }
             seen_top_sections |= .style;
-            
+
         case;
             error_msg := log_parser_error(handler, "Expected one of the following top-level sections: [[workspace]], [[settings]], [[keymap]], [[style]], but found '%'", line);
             return true, error_msg;
     }
-    
+
     return false, "";
 }
 
@@ -248,17 +313,102 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
     return true, "";
 }
 
+parse_style_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
+    if begins_with(line, "[") {
+        for STYLE_SUBSECTIONS {
+            if line == it { style_subsection = xx it_index; return true, ""; }
+        }
+        error_msg := log_parser_error(handler, "Unknown style subsection '%'.\nAvailable options are: %.", line, join(..STYLE_SUBSECTIONS, ", ", allocator = temp));
+        return false, error_msg;
+    }
+    if #complete style_subsection == {
+        case .user_interface;
+            setting, value := break_by_spaces(line);
+            setting = trim_right(setting, ":");
+            if setting == {
+                case "font";
+                    found, error := find_font_by_name(value);
+                    if found {
+                        data.font = value;
+                    } else {
+                        error_msg := log_parser_error(handler, error);
+                        return false, error_msg;
+                    }
+                case "font_size";
+                    value_copy := value;
+                    int_val, success := parse_int(*value_copy);
+                    if success {
+                        data.font_size = int_val;
+                    } else {
+                        error_msg := log_parser_error(handler, "Couldn't parse '%' - expected a valid integer, got '%'", setting, value);
+                        return false, error_msg;
+                    }
+            }
+        case .colors;
+            color_name, value := break_by_spaces(line);
+            color_name = trim_right(color_name, ":");
+            color_ptr, found := map_color_name_to_color_struct(color_name);
+            if !found {
+                error_msg := log_parser_error(handler, "Unknown color '%'", color_name);
+                return false, error_msg;
+            }
+            color, success := hex_to_color(value);
+            if !success {
+                error_msg := log_parser_error(handler, "Couldn't parse '%'. Expected a color in the form RRGGBBAA, got '%'", color_name, value);
+                return false, error_msg;
+            }
+            array_add(*data.parsed_colors, Parsed_Color.{ color_name, color });
+    }
+
+    return true, "";
+}
+
+color_to_hex :: (using color: Color) -> string /* temp  */ {
+    r_u8 := cast(u8)(255 * r);
+    g_u8 := cast(u8)(255 * g);
+    b_u8 := cast(u8)(255 * b);
+    a_u8 := cast(u8)(255 * a);
+    return tprint("#%1%2%3%4", formatInt(r_u8, 16), formatInt(g_u8, 16), formatInt(b_u8, 16), formatInt(a_u8, 16));
+}
+
+hex_to_color :: (hex: string) -> Color, success: bool {
+    if hex.count != 8 return Color.{}, false;
+
+    r := slice(hex, 0, 2);
+    g := slice(hex, 2, 2);
+    b := slice(hex, 4, 2);
+    a := slice(hex, 6, 2);
+
+    to_float :: (byte_str: string) -> float {
+        d1, d0 := cast(float)hex_digit_to_int(byte_str[0]), cast(float) hex_digit_to_int(byte_str[1]);
+        if d1 < 0 || d0 < 0 return -1;
+
+        return (16 * d1 + d0) / 255;
+
+        hex_digit_to_int :: (char: u8) -> int {
+            char = to_upper(char);
+            if #char "0" <= char && char <= #char "9" return char - #char "0";
+            if #char "A" <= char && char <= #char "F" return 10 + char - #char "A";
+            return -1;
+        }
+    }
+
+    c := Color.{ r = to_float(r), g = to_float(g), b = to_float(b), a = to_float(a) };
+
+    return c, c.r >= 0 && c.g >= 0 && c.b >= 0 && c.a >= 0;
+}
+
 parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
     setting_name, setting_value := break_by_spaces(line);
     setting_name = trim_right(setting_name, ":");
-    
+
     value := setting_value;  // will be destroyed by parsing
-    
+
     #insert -> string {
         b: String_Builder;
-        
+
         append(*b, "if setting_name == {\n");
-        
+
         for setting : SETTINGS {
             print_to_builder(*b, "    case \"%\";\n", setting.name);
             if setting.type == {
@@ -273,7 +423,7 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
                         }
                     END;
                     print_to_builder(*b, code, setting.name);
-                    
+
                 case .integer;
                     code := #string END
                         int_val, success := parse_int(*value);
@@ -287,19 +437,19 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
                     print_to_builder(*b, code, setting.name);
             }
         }
-        
+
         code := #string END
             case;
                 error_msg := log_parser_error(handler, "Unrecognized setting '%'.", setting_name);
                 return false, error_msg;
         END;
         append(*b, code);
-        
+
         append(*b, "}\n");
-        
+
         return builder_to_string(*b);
     }
-    
+
     return true, "";
 }
 
@@ -311,20 +461,20 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
         error_msg := log_parser_error(handler, "Unknown keymap subsection '%'.\nAvailable options are: %.", line, join(..KEYMAP_SUBSECTIONS, ", ", allocator = temp));
         return false, error_msg;
     }
-    
+
     key_name, action_name := break_by_spaces(line);
     if !action_name {
         error_msg := log_parser_error(handler, "Expected a space after the key combo, found '%'", key_name);
         return false, error_msg;
     }
-    
+
     // Parse key combo
     key_combo, key_ok, msg := parse_key_combo(parser, key_name);
     if !key_ok {
         error_msg := tprint("Invalid key combo: '%'.\n%\nNote that spaces aren't allowed in key combos.", line, msg);
         return false, error_msg;
     }
-    
+
     // Parse actions
     map_action :: (name: string, combo: Key_Combo, available_actions: [] string, target_keymap: *[..] Key_Mapping, subsection: string) #expand {
         found := false;
@@ -338,28 +488,28 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
         if !found {
             error_msg := log_parser_error(handler, "Invalid action '%'.\nPossible reasons:\n* It's misspelled\n* It's in the wrong section\nPlease check the default config file for a reference.", name);
             `return false, error_msg;
-        }   
+        }
     }
-    
+
     if #complete keymap_subsection == {
         case .common;           map_action(action_name, key_combo, ACTIONS_COMMON,           *data.keymap_common,           "[common]");
         case .editors;          map_action(action_name, key_combo, ACTIONS_EDITORS,          *data.keymap_editors,          "[editors]");
         case .open_file_dialog; map_action(action_name, key_combo, ACTIONS_OPEN_FILE_DIALOG, *data.keymap_open_file_dialog, "[open file dialog]");
         case .search_dialog;    map_action(action_name, key_combo, ACTIONS_SEARCH_DIALOG,    *data.keymap_search_dialog,    "[search dialog]");
     }
-    
+
     return true, "";
 }
 
 parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo, success: bool, error_msg: string /* temp */ {
     result: Key_Combo;
-    
+
     // Parse modifier flags
     modifier_string := key_name;
     while true {
         found, mod_key, remainder := split_from_left(modifier_string, cast(u8) #char "-");
         if !found break;
-        
+
         if      equal_nocase(mod_key, "ctrl")       result.mods.ctrl_pressed    = true;
         else if equal_nocase(mod_key, "shift")      result.mods.shift_pressed   = true;
         else if equal_nocase(mod_key, "alt")        result.mods.alt_pressed     = true;
@@ -372,15 +522,15 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo
         }
         modifier_string = remainder;
     }
-    
+
     key_string := modifier_string;
     if !key_string {
         error_msg := log_parser_error(handler, "Missing key code after modifier flags: '%'", key_name);
         return result, false, error_msg;
     }
-    
+
     result.key_code = keymap_map_key_string(key_string);
-    
+
     if !result.key_code {
         s := key_string;
         // Try single key chars, e.g. Ctrl-A, Ctrl-C etc.
@@ -394,19 +544,19 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo
             // Uppercase it, since our keyboard codes are uppercase.
             key_code += cast,trunc(u32) (#char "A" - #char "a");  // This is a negative number; but we cast it to u32 and get the same result, because, twos-complement. The trunc is to make this legal.
         }
-    
+
         if s.count > 0 {
             // There are extra characters, report an error
             error_msg := log_parser_error(handler, "Expected a single char key code or a valid key name, got: '%'.", key_string);
             return result, false, error_msg;
         }
-        
+
         result.key_code = key_code;
     }
-    
+
     // Pre-apply the ignore mask
     result.mods.packed |= result.ignore.packed;
-    
+
     return result, true, "";
 }
 
@@ -414,9 +564,9 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo
 
 Config_Parser :: struct {
     handler: Text_File_Handler;
-    
+
     parsed: Config;
-    
+
     top_section: enum {
         none;
         workspace;
@@ -424,14 +574,14 @@ Config_Parser :: struct {
         settings;
         style;
     } = .none;
-    
+
     seen_top_sections: enum_flags {
         workspace;
         keymap;
         settings;
         style;
     };
-    
+
     workspace_subsection: enum {
         workspace_dirs;
         ignore_dirs;
@@ -445,7 +595,17 @@ Config_Parser :: struct {
         "[allow file extensions]",
         "[ignore file extensions]",
     ];
-    
+
+    style_subsection: enum {
+        user_interface;
+        colors;
+    };
+    STYLE_SUBSECTIONS :: string.[
+        // Must match the order of the enum above
+        "[user interface]",
+        "[colors]",
+    ];
+
     keymap_subsection: enum {
         common;
         editors;
@@ -459,7 +619,7 @@ Config_Parser :: struct {
         "[open file dialog]",
         "[search dialog]",
     ];
-    
+
     // Will be filled during parsing
     data: struct {
         // Workspace
@@ -469,14 +629,20 @@ Config_Parser :: struct {
         allow_file_extension_wildcards:  [..] string;
         ignore_file_extensions: [..] string;
         ignore_file_extension_wildcards: [..] string;
-        
+
         // Keymap
         keymap_common:           [..] Key_Mapping;
         keymap_editors:          [..] Key_Mapping;
         keymap_open_file_dialog: [..] Key_Mapping;
         keymap_search_dialog:    [..] Key_Mapping;
+
+        // Style
+        font:           string;
+        font_size:      int;
+        parsed_colors:  [..] Parsed_Color;  // not putting in a struct so that we can override only a few colors if needed
     };
 }
+
 
 
 #import "Text_File_Handler";
