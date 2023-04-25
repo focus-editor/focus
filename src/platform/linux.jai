@@ -45,6 +45,10 @@ platform_enumerate_logical_drives :: () -> [] string {
     unimplemented();
 }
 
+platform_get_save_file_name :: (name := "") -> string, bool {
+    unimplemented();
+}
+
 platform_get_fonts_dir :: () -> string {
     return "/usr/share/fonts";
 }

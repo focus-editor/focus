@@ -337,6 +337,7 @@ Color_Values :: struct {
     UI_DIM                  := Color.{ r = 0.533, g = 0.569, b = 0.616, a = 1.0 };
     UI_NEUTRAL              := Color.{ r = 0.3, g = 0.3, b = 0.3, a = 1.0 };
     UI_WARNING              := Color.{ r = 0.85, g = 0.68, b = 0.33, a = 1.0 };
+    UI_WARNING_DIM          := Color.{ r = 0.59, g = 0.37, b = 0.19, a = 1.0 };
     UI_ERROR                := Color.{ r = 0.80, g = 0.00, b = 0.00, a = 1.0 };
     UI_SUCCESS              := Color.{ r = 0.00, g = 0.80, b = 0.00, a = 1.0 };
 

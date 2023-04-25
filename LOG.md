@@ -9,14 +9,12 @@
 
 - Release checklist
     - Change the version
+    - Remove the [not implemented]
     - Google Analytics?
     - Disqus
 
 ===========================
 
-- Colors
-
-- Create new files
 - Commands:
     - Open error log
     - Open global config
@@ -44,6 +42,8 @@
     - Show a warning when a CRLF file is loaded, then dismiss on save
 
 - Detect conflicting keys in the same context in the same config
+
+- Use keyboard in the confirmation dialog
 
 - Highlight matching braces
 
@@ -79,19 +79,10 @@
 - Use SIMD for syntax highlighting
 - remove_crlf_in_place - optimise a bit
 
-- Drop a folder into the editor to add it to workspace
-
-- File management:
-    - Create new files:
-        - Ctrl + N to create a new buffer ( ctrl-shift-N to create in another pane )
-            - Check if we have any non-file buffers with nothing in them first, to avoid creating a million buffers
-            - If there's an empty buffer already, just switch to it
-        - If a buffer has no name, use the first N non-whitespace characters
-        - Ctrl + S to open a save file dialog
-    - File context menu:
-        - Rename file
-        - Delete file
-        - Close file?
+- File context menu:
+    - Rename file
+    - Delete file
+    - Close file?
 
 - When adding a directory to workspace, the check for parent directory is NOT RELIABLE. Paths are case-sensitive on Linux
     - Also, what if we add a parent dir to a dir already in the project - what would be the expected behaviour? Delete the child dir? Keep it and dedup the files?
@@ -157,6 +148,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Create new files
 + Colors
 + Be able to override fonts
 + Don't reload if there are unsaved buffers

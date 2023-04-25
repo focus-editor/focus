@@ -36,6 +36,8 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
                 case .keymap;       parse_keymap_line(tokenizer, *token);
                 case .workspace;    parse_line(tokenizer, *token);
                 case .settings;     parse_line(tokenizer, *token);
+                // case .ui;           parse_ui_line(tokenizer, *token);
+                // case .colors;       parse_color_line(tokenizer, *token);
                 case;
                     parse_line(tokenizer, *token);
             }
@@ -73,8 +75,8 @@ try_parsing_header :: (using tokenizer: *Tokenizer, token: *Token) {
         case "[open file dialog]";          token.type = .header;
         case "[search dialog]";             token.type = .header;
 
-        case "[user interface]";            token.type = .header;
-        case "[colors]";                    token.type = .header;
+        // case "[user interface]";            token.type = .header; section = .ui;
+        // case "[colors]";                    token.type = .header; section = .colors;
 
         case; token.type = .default; t = old_t + 1;
     }
@@ -124,7 +126,6 @@ parse_keymap_line :: (using tokenizer: *Tokenizer, token: *Token) {
             token.type = .error;
         }
     }
-
 }
 
 eat_until_newline :: (using tokenizer: *Tokenizer) {
@@ -156,7 +157,9 @@ Tokenizer :: struct {
         workspace;
         keymap;
         settings;
-        style;
+        style;  // unused
+        ui;
+        colors;
     } = .none;
 }
 

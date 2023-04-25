@@ -126,6 +126,9 @@ Ctrl-Shift-,                duplicate_editor
 Ctrl-Alt-Shift-ArrowLeft    move_editor_to_the_left
 Ctrl-Alt-Shift-ArrowRight   move_editor_to_the_right
 
+Ctrl-N                      create_new_file
+Ctrl-Shift-N                create_new_file_on_the_side
+
 
 [open file dialog]
 
@@ -257,10 +260,10 @@ text_input_label:               3B4450FF
 ui_default:                     BFC9DBFF
 ui_dim:                         87919DFF
 ui_neutral:                     4C4C4CFF
-ui_warning:                     A88D34FF
+ui_warning:                     F8AD34FF
+ui_warning_dim:                 986032FF
 ui_error:                       772222FF
 ui_success:                     227722FF
-text_input_label:               3B4450FF
 
 code_default:                   BFC9DBFF
 code_comment:                   87919DFF

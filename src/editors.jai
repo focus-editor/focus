@@ -17,6 +17,9 @@ editors_handle_event :: (event: Input.Event) {
             case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
             case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
             case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);
+
+            case .create_new_file;                                  editors_create_new_file();             return;
+            case .create_new_file_on_the_side;                      editors_create_new_file(.on_the_side); return;
         }
 
         // Let the active editor handle the event
@@ -343,6 +346,12 @@ editors_open_file :: (path: string, placement: Editor_Placement = .in_place) {
     buffer_id := find_or_create_buffer(full_path);
 
     if !file_is_watched(full_path) start_watching_file(full_path);
+
+    editors_open_buffer(buffer_id, placement);
+}
+
+editors_create_new_file :: (placement: Editor_Placement = .in_place) {
+    buffer_id := find_or_create_an_empty_buffer();
 
     editors_open_buffer(buffer_id, placement);
 }
@@ -1002,15 +1011,12 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) 
 }
 
 save_buffer :: (editor: *Editor, buffer: *Buffer) {
-    if !buffer.has_file {
-        print("Buffer has no file - unimplemented!\n");
-        return;
-    }
-
     new_edit_group(buffer, editor);
 
-    maybe_mark_buffer_as_deleted(editor.buffer_id);  // check in case we missed that it's deleted
-    session_notify_modified_buffer(editor.buffer_id);
+    if buffer.has_file {
+        maybe_mark_buffer_as_deleted(editor.buffer_id);  // check in case we missed that it's deleted
+        session_notify_modified_buffer(editor.buffer_id);
+    }
     save_buffer_to_disk(buffer, editor.buffer_id);
 }
 
@@ -1101,9 +1107,7 @@ update_window_title :: (buffer_id: s64 = -1) {
         if buffer.has_file {
             title = tprint("% • % • %", buffer.file.name, buffer.file.path, window_generic_title);
         } else {
-            buffer_name := to_string(array_view(buffer.bytes, 0, min(30, buffer.bytes.count)));
-            if !buffer_name then buffer_name = "<new file>";
-            title = tprint("% • %", buffer_name, window_generic_title);
+            title = tprint("% • %", get_buffer_name(buffer), window_generic_title);
         }
     }
     platform_set_window_title(title);

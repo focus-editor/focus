@@ -71,6 +71,36 @@ platform_enumerate_logical_drives :: () -> [] string {
     return drives;
 }
 
+platform_get_save_file_name :: (name := "") -> string, success: bool {
+    buffer: [512] u16;
+
+    ofn: OPENFILENAMEW;
+    ofn.lStructSize = size_of(OPENFILENAMEW);
+    ofn.lpstrFile   = buffer.data;
+    ofn.nMaxFile    = buffer.count;
+    ofn.lpstrTitle  = utf8_to_wide(tprint("Choose where to save '%'", name));
+    ofn.Flags       = OFN_NOCHANGEDIR;
+
+    for dir : project_dirs {
+        if dir.path {
+            ofn.lpstrInitialDir = utf8_to_wide(dir.path);
+            break;
+        }
+    }
+
+    open_success := GetOpenFileNameW(*ofn);
+
+    if open_success {
+        file_path, success := wide_to_utf8(buffer.data);
+        path_overwrite_separators(file_path, #char "/");
+
+        if success {
+            return file_path, success;
+        }
+    }
+    return "", false;
+}
+
 platform_get_fonts_dir :: () -> string {
     return "C:/Windows/Fonts";
 }

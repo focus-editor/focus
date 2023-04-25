@@ -318,8 +318,19 @@ recalculate_colors :: (buffer: *Buffer) {
     }
 }
 
-save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64) {
-    if readonly return;
+save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64) -> saved: bool {
+    if readonly return false;
+
+    if !buffer.has_file {
+        file_path, success := platform_get_save_file_name(get_buffer_name(buffer));
+        if success && file_path {
+            buffer.has_file = true;
+            buffer.file = get_file_info_from_full_path(file_path);
+            buffer.needs_coloring = true;
+        } else {
+            return false;
+        }
+    }
 
     if config.settings.strip_trailing_whitespace_on_save then strip_trailing_whitespace(buffer, buffer_id);
 
@@ -336,6 +347,8 @@ save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64) {
         error_when_saving = true;
     }
     remember_last_modtime_and_size(buffer);
+
+    return !error_when_saving;
 }
 
 strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
@@ -436,6 +449,27 @@ get_line_as_string :: (using buffer: Buffer, line_num: s32) -> string {
     return result;
 }
 
+find_or_create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
+    for * buffer, buffer_id : open_buffers {
+        // Return the first empty standalone buffer to avoid creating a million new buffers
+        if !buffer.has_file && !trim(to_string(buffer.bytes)) return buffer_id, false;
+    }
+
+    // Create a new buffer
+    lock(*open_buffers_lock);
+    defer unlock(*open_buffers_lock);
+
+    buffer_id := open_buffers.count;
+    buffer := bucket_array_add(*open_buffers);
+    init_buffer(buffer);
+    buffer.has_file = false;
+
+    rescan_for_lines(buffer);
+    recalculate_colors(buffer);
+
+    return buffer_id, true;
+}
+
 find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     lock(*open_buffers_lock);
 
@@ -468,6 +502,17 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     fill_in_buffer_from_file_data(buffer, path, file_data);
 
     return buffer_id, true;
+}
+
+get_buffer_name :: (buffer: Buffer) -> string {
+    if buffer.has_file return buffer.file.name;
+
+    for 0..buffer.line_starts.count-2 {
+        line := trim(get_line_as_string(buffer, xx it), "\t \n");
+        if line return take_first_n_chars(line, min(50, line.count));
+    }
+
+    return "<new file>";
 }
 
 refresh_buffer_from_disk :: (path: string) {

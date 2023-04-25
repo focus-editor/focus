@@ -45,6 +45,11 @@ platform_enumerate_logical_drives :: inline () -> [] string {
     return string.["/"]; // On macOS, root ("/") gives us access to all external volumes through /Volumes/.
 }
 
+platform_get_save_file_name :: (name := "") -> string, bool {
+    // unimplemented();
+    return "", false;
+}
+
 platform_get_fonts_dir :: () -> string {
     return "/Library/Fonts";
 }

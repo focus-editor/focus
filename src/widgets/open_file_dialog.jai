@@ -274,13 +274,19 @@ refresh_entries :: (scan_folder := false) {
                                                                  // Alternatively, if there's an editor for a deleted buffer we probably
                                                                  // still want to see it here
 
-                name_score, name_highlights := fuzzy_match(buffer.file.name, filter_chars);
+                buffer_name := get_buffer_name(buffer);
+                name_score, name_highlights := fuzzy_match(buffer_name, filter_chars);
                 path_score, path_highlights := fuzzy_match(buffer.file.path, filter_chars);
                 score := 200 * name_score + path_score;  // name score is much more important
                 if score < 0 continue;
 
                 entry := array_add(*entries.filtered);
                 entry.file = buffer.file;
+                entry.entry_name = buffer_name;
+                if !buffer.has_file {
+                    entry.entry_name = copy_string(buffer_name);
+                    entry.icon = File_Icon.text;
+                }
                 entry.name_highlights = name_highlights;
                 entry.path_highlights = path_highlights;
                 // NOTE: there's space left in the sort key in case we need to add more parameters
@@ -448,6 +454,7 @@ Entry :: struct {
         MODIFIED_ON_DISK;
     }
     type: enum u8 { file; folder; drive; project_dir; nothing; } = .file;
+    entry_name: string;
     name_highlights: [] bool;
     path_highlights: [] bool;
     sort_key: u64;
