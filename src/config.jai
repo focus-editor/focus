@@ -39,6 +39,8 @@ maybe_refresh_config :: (path: string) {
             clear_user_messages();
             add_success_message(tprint("Config changes for project '%' have been applied", current_project_name), dismiss_in_seconds = 3);
         }
+    } else {
+        return;
     }
 
     // Detect changes in workspace dirs
@@ -62,17 +64,8 @@ maybe_refresh_config :: (path: string) {
 
     if dirs_added || dirs_removed {
         should_reload_workspace = true;
-        add_user_warning("It seems you've changed the workspace directories.\nPlease restart the editor to reload the workspace.", dismiss_in_seconds = -1);
+        // add_user_warning("It seems you've changed the workspace directories.\nPlease restart the editor to reload the workspace.", dismiss_in_seconds = -1);
     }
-}
-
-
-reload_config :: () {
-    // TODO: check in watcher if the config has changed,
-    // then remember the old config, reload and compare
-
-    // If project dirs have changed, do a diff and if something was added, add those dirs,
-    // otherwise do a hard reload, like a project change
 }
 
 #scope_file

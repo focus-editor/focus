@@ -35,9 +35,10 @@ add_directory_to_workspace :: (path: string, index := -1) {
 start_initial_workspace_scan :: () {
     file_list_ready = false;
     initial_scan_complete = false;
-    array_reset_keeping_memory(*files_to_scan);
+    array_reset(*files_to_scan);
 
     // Get the list of all files in the project asynchronously (depending on the size it can cause a startup delay otherwise)
+    file_list_thread_group = Thread_Group.{};  // if we don't do this it can't be reused
     init(*file_list_thread_group, num_threads = 1, group_proc = file_list_threadproc);
     file_list_thread_group.name = "Async workspace file list builder";
     file_list_thread_group.logging = false;
@@ -56,6 +57,7 @@ maybe_update_workspace_buffers :: () {
             results := get_completed_work(*file_list_thread_group);
             if results {
                 file_list_ready = true;
+                log("File list ready\n");
                 shutdown(*file_list_thread_group);
 
                 // Start the actual scanning of the workspace
@@ -64,6 +66,7 @@ maybe_update_workspace_buffers :: () {
                 num_cpus := get_num_cpus();
                 num_threads := max(num_cpus - 1, 1);
 
+                scanner_thread_group = Thread_Group.{};  // if we don't do this it can't be reused
                 init(*scanner_thread_group, num_threads = num_threads, group_proc = directory_scan_threadproc);
                 scanner_thread_group.name = "Workspace Scanner";
                 scanner_thread_group.logging = false;
@@ -95,6 +98,7 @@ maybe_update_workspace_buffers :: () {
         num_jobs_completed += results.count;
         if num_jobs_completed >= num_jobs_to_complete {
             initial_scan_complete = true;
+            log("Initial scan complete\n");
             shutdown(*scanner_thread_group);
 
             reset(*scan_memory_pool);
@@ -150,9 +154,11 @@ hard_reload_workspace :: () {
     // Start again
     array_reset_keeping_memory(*project_dirs);
     init_workspace();
+    init_buffers();
     start_initial_workspace_scan();
 
-    add_success_message("Scanning workspace...", dismiss_in_seconds=2);
+    clear_user_messages();
+    add_success_message("Workspace has been reloaded", dismiss_in_seconds=3);
 }
 
 start_watching_file :: (file_path: string) {
@@ -179,6 +185,7 @@ file_is_watched :: (file_path: string) -> bool {
 #scope_file
 
 file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
+    reset(*scan_memory_pool);
     scan_pool_allocator := get_scan_pool_allocator();
     push_allocator(scan_pool_allocator);
 

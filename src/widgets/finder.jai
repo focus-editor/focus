@@ -1,6 +1,8 @@
 init_finder :: () {
     num_cpus := get_num_cpus();
     num_threads := max(num_cpus - 1, 1);
+
+    thread_group = Thread_Group.{};
     init(*thread_group, num_threads, group_proc = search_threadproc);
     thread_group.name = "Finder";
     thread_group.logging = false;

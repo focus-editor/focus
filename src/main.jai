@@ -224,11 +224,11 @@ main :: () {
         // TODO:
         // maybe_save_editor_state_into_session();
 
-        // if should_reload_workspace {
-        //     hard_reload_workspace();
-        //     should_reload_workspace = false;
-        //     redraw_requested = true;
-        // }
+        if should_reload_workspace {
+            hard_reload_workspace();
+            should_reload_workspace = false;
+            redraw_requested = true;
+        }
 
         reset_temporary_storage();
 

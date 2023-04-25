@@ -15,23 +15,18 @@
 
 ===========================
 
+
 - Colors
-
 - When saving, if a buffer has changed its state, don't save
-
 - Create new files
-
 - Commands:
     - Open error log
     - Open global config
     - Open project config (only if project is active)
     - New project
     - Switch project
-
-
 - Sticky viewport
     - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
-
 - Line wrap:
     - Sticky viewport before that!
     - Implement wrapping for buffer
