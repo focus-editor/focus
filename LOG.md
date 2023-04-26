@@ -15,9 +15,9 @@
 ===========================
 
 - Project commands:
-    - Open projects folder
-    - Open global config
-    - Open project config
+    + Open projects folder
+    + Open global config
+    + Open project config
     - Switch project
 
 - Line wrap:

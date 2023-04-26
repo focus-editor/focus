@@ -147,7 +147,7 @@ Key_Combo :: struct {
 ACTIONS_COMMON :: string.[
     "do_nothing",   // to disable key combinations
 
-    "switch_project",
+    "open_project",
     "open_projects_directory",
     "open_global_config",
     "open_project_config",
