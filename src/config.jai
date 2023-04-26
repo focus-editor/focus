@@ -58,10 +58,6 @@ maybe_refresh_config :: (path: string) {
         if !exists array_add(*dirs_removed, old_dir);
     }
 
-    log("Comparing working directories in config...\n");
-    for dirs_added   log("ADDED:   %\n", it);
-    for dirs_removed log("REMOVED: %\n", it);
-
     if dirs_added || dirs_removed {
         should_reload_workspace = true;
         if unsaved_buffers_exist() {

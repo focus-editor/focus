@@ -38,6 +38,8 @@ finder_handle_event :: (event: Input.Event) {
             case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
             case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);
 
+            case .show_commands;                                    show_commands_dialog();
+
             case .close_dialog;             finder_close();     return;
             case .open_entry_in_place;      finder_open_selected_result(selected, .in_place);     return;
             case .open_entry_on_the_side;   finder_open_selected_result(selected, .on_the_side);  return;

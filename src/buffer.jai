@@ -488,8 +488,6 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
 
     if found_buffer return buffer_id, false;
 
-    // log("Buffer not found in the table, opening file %\n", path);
-
     // Create and load file
     file_data, success := read_entire_file(path);
     if !success then file_data = sprint("Couldn't load file '%'", path);
@@ -517,14 +515,10 @@ get_buffer_name :: (buffer: Buffer) -> string {
 }
 
 refresh_buffer_from_disk :: (path: string) {
-    log("refreshing '%'\n", path);
-
     maybe_refresh_config(path);
 
     buffer_id, created := find_or_create_buffer(path);
     if created return;
-
-    log("--- buffer found, checking if it's changed on disk...\n");
 
     buffer := *open_buffers[buffer_id];
 
@@ -535,8 +529,6 @@ refresh_buffer_from_disk :: (path: string) {
     }
 
     if !buffer_file_has_changed_on_disk(buffer) return;
-
-    log("--- reloading data from disk...\n");
 
     finder.need_to_refresh_results = true;
 

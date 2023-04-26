@@ -22,6 +22,8 @@
     - New project
     - Switch project
 
+- Only show the crlf warning in the footer
+
 - Line wrap:
     - Sticky viewport
         - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
@@ -30,6 +32,7 @@
     - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
 
 - Don't skip spaces when editing with multiple cursors
+- Make sure new files are colorised properly when they are saved
 
 - Drop a folder into the editor to add it to workspace
 
@@ -290,7 +293,7 @@
 + BUG: cursor is being drawn on the other pane sometimes
 + Ctrl + Mouse Wheel to increase/decrease editor font size by 1 pt
 + (Ctrl (VSCode) or Alt (N++) or Alt+Shift (macOS)) + Mouse Click to add an additional cursor wherever the mouse is.
-+ Ctrl + Shift + , to duplicate current editor on the other pane
++ Ctrl + Shift + , to duplicate current vasu editor on the other pane
 + Ctrl + Home/End to jump to beginning/end of the file
 + Alt+up/down to move fast (editor action)
 + Alt-U/D or Alt-PgUp/Down scroll fast

@@ -186,6 +186,29 @@ find_index_from_left_whole_word :: (s: string, substring: string, start_index :=
     return -1;
 }
 
+fuzzy_match :: (str: string, chars: [] string) -> score: s32, highlights: [] bool {
+    highlights := NewArray(str.count, bool, initialized = true);  // allocates from the pool
+                                                                  // we "leak" if there's no match but that should be ok
+    if !chars return 0, highlights;
+
+    MAX_CHARS :: 200;
+
+    score: s32;
+    pos := 0;
+
+    for char : chars {
+        index := find_index_from_left_nocase(str, char, pos);
+        if index < 0 { score = -1; break; }
+        highlights[index] = true;
+        score += cast(s32) (MAX_CHARS - index);  // the closer to the beginning, the better
+        pos = index + char.count;
+    }
+
+    if score < 0 then memset(highlights.data, 0, highlights.count);  // no match -> no highlighting
+
+    return score, highlights;
+}
+
 bmh_prepare_skip_table :: (needle: string, $case_sensitive := false) -> [256] s32 {
     skip_table: [256] s32 = ---;
     for * skip_table { << it = cast,no_check(s32) needle.count; }

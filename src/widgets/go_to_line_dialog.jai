@@ -1,23 +1,25 @@
 go_to_line_dialog_handle_event :: (event: Input.Event) {
     using go_to_line_dialog;
-    
+
     if event.type == .KEYBOARD && event.key_pressed {
         action := map_event_to_action(event, Action_Search_Dialog);
         if action == {
             case .close_dialog;             close_go_to_line_dialog(jump_to_original_cursor = true);
             case .open_entry_in_place;      close_go_to_line_dialog();
             case .open_entry_on_the_side;   close_go_to_line_dialog();
-            
+
             case .search_in_buffer;      // TODO
             case .search_in_project;    finder_open();
-            
+
             case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
             case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
             case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);
+
+            case .show_commands;                                    show_commands_dialog();
         }
-        
+
         old_text := copy_temporary_string(to_string(input.text));
-        
+
         handled := maybe_handle_text_input_event(*input, event);
         if handled {
             // Remove any non-digit bytes in case they were pasted
@@ -33,15 +35,15 @@ go_to_line_dialog_handle_event :: (event: Input.Event) {
             input.cursor.pos = clamp(input.cursor.pos, 0, xx i);
             input.cursor.sel = clamp(input.cursor.sel, 0, xx i);
         }
-        
+
         if old_text != to_string(input.text) then jump_to_line();
-        
+
     } else if event.type == .TEXT_INPUT {
         char := event.utf32;
         if char == 127 return;  // there seems to be a bug in the Input module
                                 // which generates a TEXT_INPUT event for DEL
                                 // when Ctrl+Backspace is pressed
-        
+
         if #char "0" <= char && char <= #char "9" {
             text_input_type_char(*input, char);
             jump_to_line();
@@ -52,15 +54,15 @@ go_to_line_dialog_handle_event :: (event: Input.Event) {
 show_go_to_line_dialog :: () {
     editor, buffer := get_active_editor_and_buffer();
     if !editor || !buffer return;
-    
+
     active_global_widget = .go_to_line_dialog;
-    
+
     using go_to_line_dialog;
- 
+
     // Remember cursor position
     original_cursor_position = editor.cursors[editor.main_cursor].state;
     jumped = false;
-    
+
     // Select text when opening
     input.cursor.sel = 0;
     input.cursor.pos = get_num_chars(input.text);
@@ -68,12 +70,12 @@ show_go_to_line_dialog :: () {
 
 close_go_to_line_dialog :: (jump_to_original_cursor := false) {
     using go_to_line_dialog;
-    
+
     activate_editors();
-    
+
     editor, buffer := get_active_editor_and_buffer();
     if !editor || !buffer return;
-    
+
     if jump_to_original_cursor && jumped {
         cursor := leave_only_original_cursor(editor);
         cursor.state = original_cursor_position;
@@ -90,15 +92,15 @@ close_go_to_line_dialog :: (jump_to_original_cursor := false) {
 jump_to_line :: () {
     editor, buffer := get_active_editor_and_buffer();
     if !editor || !buffer return;
-    
+
     using go_to_line_dialog;
-    
+
     if !input.text return;
-    
+
     jumped = true;
-    
+
     line_num := 0;
-    
+
     // atoi
     n := 1;
     for < byte : input.text {
@@ -107,11 +109,11 @@ jump_to_line :: () {
         line_num += digit * n;
         n *= 10;
     }
-    
+
     line_num = clamp(line_num - 1, 0, buffer.line_starts.count - 2);
     line_start := get_line_start_offset(buffer, cast(s32)line_num);
     line_end   := get_line_end_offset  (buffer, cast(s32)line_num);
-    
+
     cursor := leave_only_original_cursor(editor);
     cursor.pos = line_start + count_whitespace(buffer.bytes, line_start, line_end);
     cursor.sel = line_end;  // to make the line visible
@@ -140,6 +142,6 @@ Go_To_Line_Dialog :: struct {
     scroll_to_cursor: Scroll_Mode = .no;
     original_cursor_position: Cursor.State;
     jumped := false;
-    
+
     input: Text_Input;
 }

@@ -18,6 +18,8 @@ editors_handle_event :: (event: Input.Event) {
             case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
             case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);
 
+            case .show_commands;                                    show_commands_dialog();
+
             case .create_new_file;                                  editors_create_new_file();             return;
             case .create_new_file_on_the_side;                      editors_create_new_file(.on_the_side); return;
         }

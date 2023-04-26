@@ -591,6 +591,7 @@ cpu_info: Cpu_X86;
 #load "widgets/go_to_line_dialog.jai";
 #load "widgets/finder.jai";
 #load "widgets/unsaved_buffers.jai";
+#load "widgets/commands.jai";
 
 #load "langs/jai.jai";
 #load "langs/focus_config.jai";

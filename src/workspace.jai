@@ -57,7 +57,6 @@ maybe_update_workspace_buffers :: () {
             results := get_completed_work(*file_list_thread_group);
             if results {
                 file_list_ready = true;
-                log("File list ready\n");
                 shutdown(*file_list_thread_group);
 
                 // Start the actual scanning of the workspace
@@ -98,7 +97,6 @@ maybe_update_workspace_buffers :: () {
         num_jobs_completed += results.count;
         if num_jobs_completed >= num_jobs_to_complete {
             initial_scan_complete = true;
-            log("Initial scan complete\n");
             shutdown(*scanner_thread_group);
 
             reset(*scan_memory_pool);
@@ -244,8 +242,6 @@ start_file_watcher :: () {
 }
 
 file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
-    log("%\n", <<change);
-
     // If the change is in one of the ignored dirs, ignore it
     if should_ignore_dir(change.full_path) return;
 

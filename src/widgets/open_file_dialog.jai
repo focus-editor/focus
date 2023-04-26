@@ -25,6 +25,8 @@ open_file_dialog_handle_event :: (event: Input.Event) {
             case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
             case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
             case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);
+
+            case .show_commands;                                    show_commands_dialog();
         }
 
         handled := maybe_handle_text_input_event(*input, event);
@@ -207,6 +209,7 @@ refresh_entries :: (scan_folder := false) {
                     entry.type = .project_dir;
                     entry.full_path = it.path;
                     entry.name = name;
+                    entry.entry_name = name;
                     entry.path = it.path;
                     entry.icon = .folder;
                     entry.project_dir_id = xx (it_index + 1);
@@ -232,6 +235,7 @@ refresh_entries :: (scan_folder := false) {
                     entry.type = .drive;
                     entry.full_path = "";
                     entry.name = name;
+                    entry.entry_name = name;
                     entry.path = "";
                     entry.icon = .drive;
                     entry.project_dir_id = 127;
@@ -251,6 +255,7 @@ refresh_entries :: (scan_folder := false) {
                     entry := array_add(*entries.filtered);
                     <<entry = it;
 
+                    entry.entry_name = entry.name;
                     entry.name_highlights = name_highlights;
                     entry.path_highlights = .[];
 
@@ -364,29 +369,6 @@ scan_current_folder :: () {
             entry.type = .file;
         }
     }
-}
-
-fuzzy_match :: (str: string, chars: [] string) -> score: s32, highlights: [] bool {
-    highlights := NewArray(str.count, bool, initialized = true);  // allocates from the pool
-                                                                  // we "leak" if there's no match but that should be ok
-    if !chars return 0, highlights;
-
-    MAX_CHARS :: 200;
-
-    score: s32;
-    pos := 0;
-
-    for char : chars {
-        index := find_index_from_left_nocase(str, char, pos);
-        if index < 0 { score = -1; break; }
-        highlights[index] = true;
-        score += cast(s32) (MAX_CHARS - index);  // the closer to the beginning, the better
-        pos = index + char.count;
-    }
-
-    if score < 0 then memset(highlights.data, 0, highlights.count);  // no match -> no highlighting
-
-    return score, highlights;
 }
 
 toggle_expand :: () {
