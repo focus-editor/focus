@@ -170,6 +170,7 @@ commands := #run Command.[
 
     .{ .close_current_editor,                               "Close Current File",                 0, true },
     .{ .close_other_editor,                                 "Close Other File",                   0, true },
+    .{ .save,                                               "Save File",                          0, true },
 
     .{ .toggle_comment,                                     "Toggle Code Comments",               0, true },
 

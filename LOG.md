@@ -108,6 +108,8 @@
     - Have an extra input for filtering by file path
     - Case-sensitive search
 
+
+
 - Jump to function definition:
     - Tokenizer: support broken down identifiers
     - Scan all jai files in a project (possibly in a separate thread) and build a lookup table for functions and structs
