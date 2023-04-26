@@ -53,6 +53,10 @@ platform_get_fonts_dir :: () -> string {
     return "/usr/share/fonts";
 }
 
+platform_open_in_explorer :: (dir: string) {
+    unimplemented();
+}
+
 #scope_file
 
 Monitor :: struct {

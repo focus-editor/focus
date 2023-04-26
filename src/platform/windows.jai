@@ -105,6 +105,10 @@ platform_get_fonts_dir :: () -> string {
     return "C:/Windows/Fonts";
 }
 
+platform_open_in_explorer :: (dir: string) {
+    ShellExecuteW(window, utf8_to_wide("explore"), utf8_to_wide(dir), xx 0, xx 0, SW_NORMAL);
+}
+
 #scope_file
 
 monitor_enum_proc :: (hMonitor: HMONITOR, hdc: HDC, rect: *RECT, data: LPARAM) -> BOOL #c_call {
@@ -135,11 +139,13 @@ REFRESH_TIMER_ID :: 0;
 
 user32   :: #system_library "user32";
 kernel32 :: #system_library "kernel32";
+shell32  :: #system_library "shell32";
 
 WaitMessage :: () -> s32 #foreign user32;
 SetTimer  :: (hWnd: HWND, nIDEvent: u64, uElapse: u32, lpTimerFunc: *void) -> s32 #foreign user32;
 KillTimer :: (hWnd: HWND, nIDEvent: u64) -> bool #foreign user32;
 GetDpiForWindow :: (hWnd: HWND) -> u32 #foreign user32;
 GetLogicalDriveStringsW :: (nBufferLength: DWORD, lpBuffer: *u16) -> DWORD #foreign kernel32;
+ShellExecuteW :: (hwnd: HWND, lpOperation: *u16, lpFile: *u16, lpParameters: *u16, lpDirectory: *u16, nShowCmd: int) -> s32 #foreign shell32;
 
 #import "Windows";

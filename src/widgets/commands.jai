@@ -62,6 +62,7 @@ commands_execute_selected :: () {
         case .do_nothing;   return;
 
         case .open_projects_directory;
+            platform_open_in_explorer(projects_dir);
         case .open_global_config;
         case .open_project_config;
         case .switch_project;
