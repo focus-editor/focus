@@ -1,55 +1,48 @@
 commands_dialog_handle_event :: (event: Input.Event) {
     using commands_dialog;
 
-    // if event.type == .KEYBOARD && event.key_pressed {
-    //     action := map_event_to_action(event, Action_Open_File_Dialog);
-    //     if action == {
-    //         case .close_dialog;             hide_open_file_dialog(); return;
-    //         case .open_entry_in_place;      open_file_dialog_open_entry(entries.selected, .in_place);    return;
-    //         case .open_entry_on_the_side;   open_file_dialog_open_entry(entries.selected, .on_the_side); return;
-    //         case .open_entry_on_the_left;   open_file_dialog_open_entry(entries.selected, .left);        return;
-    //         case .open_entry_on_the_right;  open_file_dialog_open_entry(entries.selected, .right);       return;
-    //         case .open_directory;           open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true); return;
-    //         case .pop_directory;            if pop_directory() return;
+    if event.type == .KEYBOARD && event.key_pressed {
+        action := map_event_to_action(event, Action_Open_File_Dialog);
+        if action == {
+            case .close_dialog;             hide_commands_dialog(); return;
+            case .open_entry_in_place;      commands_execute_selected(); return;
+            case .open_entry_on_the_side;   commands_execute_selected(); return;
 
-    //         case .search_in_buffer;     return;  // TODO: handle when the widget is rewritten
-    //         case .search_in_project;    finder_open();                  return;
-    //         case .toggle_expand;        toggle_expand();                return;
-    //         case .move_up;              move_cursor(-1, wrap = true);   return;
-    //         case .move_down;            move_cursor( 1, wrap = true);   return;
-    //         case .move_up_fast;         move_cursor(-5);                return;
-    //         case .move_down_fast;       move_cursor( 5);                return;
-    //         case .move_up_one_page;     move_cursor(-entries.per_page); return;
-    //         case .move_down_one_page;   move_cursor( entries.per_page); return;
+            case .move_up;              move_cursor(-1, wrap = true);   return;
+            case .move_down;            move_cursor( 1, wrap = true);   return;
+            case .move_up_fast;         move_cursor(-5);                return;
+            case .move_down_fast;       move_cursor( 5);                return;
+            case .move_up_one_page;     move_cursor(-per_page); return;
+            case .move_down_one_page;   move_cursor( per_page); return;
 
-    //         case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
-    //         case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
-    //         case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);
-    //     }
+            case .search_in_buffer;     return;  // TODO: handle when the widget is rewritten
+            case .search_in_project;    finder_open();                  return;
 
-    //     handled := maybe_handle_text_input_event(*input, event);
-    //     if handled return;
+            case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
+            case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
+            case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);
+        }
 
-    // } else if event.type == .TEXT_INPUT {
-    //     char := event.utf32;
-    //     if open_file_dialog.mode == .navigate && (char == #char "/" || char == #char "\\") return;  // these are special chars, don't handle
+        handled := maybe_handle_text_input_event(*input, event);
+        if handled return;
 
-    //     if char == 127 return;  // there seems to be a bug in the Input module
-    //                             // which generates a TEXT_INPUT event for DEL
-    //                             // when Ctrl+Backspace is pressed
+    } else if event.type == .TEXT_INPUT {
+        char := event.utf32;
+        if char == 127 return;  // there seems to be a bug in the Input module
+                                // which generates a TEXT_INPUT event for DEL
+                                // when Ctrl+Backspace is pressed
 
-    //     text_input_type_char(*open_file_dialog.input, char);
-    //     refresh_entries();
-    // }
+        text_input_type_char(*commands_dialog.input, char);
+        refresh_entries();
+    }
 }
 
 show_commands_dialog :: () {
     active_global_widget = .commands_dialog;
 
-    using commands_dialog;
+    text_input_fully_clear(*commands_dialog.input);
 
-    // array_reset_keeping_memory(*filtered);
-    // for
+    refresh_entries();
 }
 
 hide_commands_dialog :: () {
@@ -57,7 +50,71 @@ hide_commands_dialog :: () {
 }
 
 commands_execute_selected :: () {
+    using commands_dialog;
 
+    if selected >= filtered.count return;
+    command := filtered[selected].command;
+    print("Execute %\n", command.action);
+}
+
+#scope_file
+
+refresh_entries :: () {
+    using commands_dialog;
+
+    array_reset_keeping_memory(*filtered);
+
+    scroll_to_cursor = .snap;
+    scroll_y = 0;
+    selected = 0;
+
+    filter_chars := decode_utf8_string_to_temp_char_substrings(to_string(input.text));
+
+    for command : commands {
+        score, highlights := fuzzy_match(command.name, filter_chars);
+        if score < 0 continue;
+
+        entry := array_add(*filtered);
+        entry.command    = command;
+        entry.highlights = highlights;
+
+        score_part: u64 = (cast,trunc(u64) score) << 32;
+        used_part:  u64 = (cast,trunc(u64) command.num_times_used) << 0;
+        entry.sort_key = score_part | used_part;
+    }
+
+    quick_sort(filtered, compare_entries);
+
+    compare_entries :: (e1: Entry, e2: Entry) -> s64 {
+        key_diff := cast,no_check(s64) e2.sort_key - cast,no_check(s64) e1.sort_key;
+        if key_diff != 0 return key_diff;
+        return memcmp(e1.name.data, e2.name.data, min(e1.name.count, e2.name.count));
+    }
+}
+
+move_cursor :: (delta: s64, wrap := false, snap := true) {
+    using commands_dialog;
+
+    selected += delta;
+
+    if wrap {
+        if selected < 0 then selected = max(0, filtered.count - 1);
+        if selected >= filtered.count then selected = 0;
+    } else {
+        if selected < 0 then selected = 0;
+        if selected >= filtered.count then selected = filtered.count - 1;
+    }
+    scroll_to_cursor = ifx snap then Scroll_Mode.snap else .yes;
+}
+
+maybe_handle_text_input_event :: (using input: *Text_Input, event: Input.Event) -> handled: bool {
+    input_text := copy_temporary_string(to_string(text));
+    handled := text_input_handle_event(input, event);
+    if handled {
+        if input_text != to_string(input.text) then refresh_entries();
+        return true;
+    }
+    return false;
 }
 
 // for shortcut : SHORTCUTS_TO_DISPLAY {
@@ -105,7 +162,7 @@ commands_dialog: Commands_Dialog;
 
 #scope_file
 
-commands :: Command.[
+commands := #run Command.[
     .{ .show_open_file_dialog_in_search_mode,               "Open File By Name",                  0 },
     .{ .show_open_file_dialog_in_navigate_mode,             "Navigate To File",                   0 },
     .{ .show_open_file_dialog_in_navigate_mode_from_root,   "Navigate To File From Root",         0 },
@@ -158,7 +215,7 @@ commands :: Command.[
 ];
 
 Command :: struct {
-    action: Action_Editors;
+    action: Action_Editors = .do_nothing;
     name: string;
     num_times_used := 0;
 }
@@ -176,7 +233,6 @@ Commands_Dialog :: struct {
 };
 
 Entry :: struct {
-    type: enum { command; nothing; } = .command;
     using command: Command;
     highlights: [] bool;
     sort_key: u64;

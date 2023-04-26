@@ -1378,17 +1378,16 @@ draw_commands_dialog :: () {
             entry_index := visible_start + i;
             entry_rect.y = entries_rect.y + entries_rect.h - (entry_index + 1) * entry_height + scroll_y;
 
-            if entry.type != .nothing {
-                if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
-                    draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
 
-                    if mouse.left.just_pressed {
-                        commands_execute_selected();
-                        redraw_requested = true;
-                    }
+            if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
+                draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
+
+                if mouse.left.just_pressed {
+                    commands_execute_selected();
+                    redraw_requested = true;
                 }
-                if entry_index == selected then draw_rect(entry_rect, Colors.LIST_CURSOR);
             }
+            if entry_index == selected then draw_rect(entry_rect, Colors.LIST_CURSOR);
 
             pen := make_vector2(
                 entry_rect.x + margin + padding,

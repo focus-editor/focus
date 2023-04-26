@@ -208,7 +208,7 @@ main :: () {
                 case .open_file_dialog;         open_file_dialog_handle_event(event);
                 case .go_to_line_dialog;        go_to_line_dialog_handle_event(event);
                 case .unsaved_buffers_dialog;   unsaved_buffers_dialog_handle_event(event);
-                case .commands_dialog;          //unsaved_buffers_dialog_handle_event(event);
+                case .commands_dialog;          commands_dialog_handle_event(event);
             }
         }
 
