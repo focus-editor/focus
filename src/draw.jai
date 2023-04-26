@@ -989,6 +989,11 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
         width = xx Simp.prepare_text(font_ui_bold, "[couldn't save file]");
         Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
     }
+    if buffer.crlf {
+        pen.x += width + padding;
+        width = xx Simp.prepare_text(font_ui, "[CRLF will be replaced with LF on save]");
+        Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = Colors.UI_WARNING);
+    }
 
     if buffer.has_file {
         // Draw separator

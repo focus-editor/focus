@@ -343,6 +343,7 @@ save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64) -> saved: bool {
         meow_hash = calculate_meow_hash(bytes);
 
         error_when_saving = false;
+        crlf = false;
     } else {
         error_when_saving = true;
     }
@@ -779,6 +780,7 @@ Buffer :: struct {
     readonly               := false;
     binary                 := false;
     error_when_saving      := false;
+    crlf                   := false;
 
     content_lock: Mutex;  // must hold while modifying content (or reading in an off thread)
 

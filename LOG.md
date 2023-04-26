@@ -21,10 +21,10 @@
     - Open project config (only if project is active)
     - New project
     - Switch project
-- Sticky viewport
-    - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
+
 - Line wrap:
-    - Sticky viewport before that!
+    - Sticky viewport
+        - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
     - Implement wrapping for buffer
     - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
     - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
@@ -36,10 +36,6 @@
 - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
 
 - Highlight C/C++
-
-- CRLF:
-    + Get rid of crlf notes
-    - Show a warning when a CRLF file is loaded, then dismiss on save
 
 - Detect conflicting keys in the same context in the same config
 
@@ -148,6 +144,9 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ CRLF:
+    + Get rid of crlf notes
+    + Show a warning when a CRLF file is loaded, then dismiss on save
 + Create new files
 + Colors
 + Be able to override fonts

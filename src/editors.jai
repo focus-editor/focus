@@ -800,10 +800,14 @@ fill_in_buffer_from_file_data :: (buffer: *Buffer, path: string, file_data: stri
     buffer.has_file = true;
     remember_last_modtime_and_size(buffer);
 
+
     lock(*buffer.content_lock);
     buffer.bytes = resizable(to_bytes(file_data));
+    old_size := buffer.bytes.count;
     remove_crlf_in_place(*buffer.bytes);
     unlock(*buffer.content_lock);
+
+    buffer.crlf = buffer.bytes.count != old_size;
 
     buffer.meow_hash = calculate_meow_hash(buffer.bytes);
 
