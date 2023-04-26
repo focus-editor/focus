@@ -61,6 +61,7 @@ draw_frame :: () {
         case .go_to_line_dialog;        draw_go_to_line_dialog(active_pane_rect);
         case .unsaved_buffers_dialog;   draw_unsaved_buffers_dialog();
         case .commands_dialog;          draw_commands_dialog();
+        case .open_project_dialog;      draw_open_project_dialog();
     }
 
     draw_user_messages(screen, footer_height);
@@ -1429,6 +1430,156 @@ draw_commands_dialog :: () {
     }
 }
 
+draw_open_project_dialog :: () {
+    using open_project_dialog;
+
+    ui_id := Ui_Id.open_project_dialog;
+    scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
+
+    if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
+        // Close the dialog on clicks elsewhere
+        hide_open_project_dialog();
+        return;
+    }
+
+    margin  := floor(12 * dpi_scale);
+    padding := floor( 4 * dpi_scale);
+    input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
+    entry_height := font_ui_line_height + padding * 2;
+
+    // Figure out the dialog box size
+    box_rect: Rect = ---;
+    {
+        width  := floor(clamp(screen.w * 0.4, 400 * dpi_scale, 1500 * dpi_scale));
+        height := floor(clamp(input_rect_height + entry_height * filtered.count + padding, 0, screen.h / 1.5));
+        x := floor((screen.w - width) / 2);
+        y := floor(clamp(100 * dpi_scale, 0, (screen.h - height) / 2));
+        box_rect = make_rect(x, screen.h - height - y, width, height);
+        if !is_valid(box_rect) return;
+    }
+    draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = rounding_radius_large);
+
+    maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
+
+    // Draw the filter input
+    input_rect, entries_rect := cut_top(box_rect, input_rect_height);
+    input_rect = shrink(input_rect, margin);
+    input_id := get_ui_id_from_loc(parent_id = ui_id);
+
+    label := ifx filtered then " Select project to open" else tprint(" No projects found in %", projects_dir);
+    draw_text_input(*open_project_dialog.input, input_rect, ui_id = input_id, active = true, label = label);
+
+    _pad: Rect = ---;  // allow some space at the bottom so that we don't cover up the rounded corners with the cursor
+    _pad, entries_rect = cut_bottom(entries_rect, padding);
+
+    // Draw project
+    {
+        // Remember how many fits per page
+        per_page = cast(s64) (entries_rect.h / entry_height);
+        if per_page <= 0 then per_page = 2;
+
+        push_scissor(entries_rect);
+        defer pop_scissor();
+
+        {
+            // Scrollbar
+            content_height := filtered.count * entry_height;
+            max_y_scroll := content_height - entries_rect.h;
+            new_scroll_target := get_new_scroll_target_from_scrollbar(entries_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
+            if new_scroll_target != scroll_anim.target {
+                scroll_y = new_scroll_target;
+                scroll_anim.target = new_scroll_target;
+                redraw_requested = true;
+            }
+
+            // Scrolling update
+            if scroll_to_cursor != .no {
+                // We only want to scroll to cursor when cursor is moved by arrow keys
+                target := scroll_anim.target;
+                selected_top    := selected * entry_height - target;
+                selected_bottom := selected_top + entry_height;
+                if selected_top < 0 then target = cast(s32) (selected * entry_height);
+                if selected_bottom > entries_rect.h then target = cast(s32) ((selected + 1) * entry_height - entries_rect.h);
+                if target != scroll_anim.target {
+                    if scroll_to_cursor == .yes {
+                        start_animation(*scroll_anim, scroll_y, target);
+                    } else {
+                        scroll_y = target;
+                        scroll_anim.target = target;
+                    }
+                }
+                scroll_to_cursor = .no;
+            }
+
+            // Mouse scrolling
+            if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(entries_rect) {
+                if ui.hot_last_frame == ui_id && ui.active == .none then set_pointer_image(.PRESSABLE);
+                if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
+                    target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
+                    if !mouse.is_touchpad {
+                        start_animation(*scroll_anim, scroll_y, target);
+                    } else {
+                        scroll_anim.target = target;
+                        scroll_y = target;
+                    }
+                }
+            }
+
+            if scroll_y != scroll_anim.target {
+                redraw_requested = true;
+                scroll_y = get_animation_value(scroll_anim);
+            }
+
+            // The above operations could've updated scrollbar position, so drawing it here
+            draw_scrollbar(entries_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
+        }
+
+        visible_start := clamp(cast(s64) (scroll_y / entry_height), 0, filtered.count);
+        visible_count := cast(s64) (entries_rect.h / entry_height) + 2;
+        visible_entries := array_view(filtered, visible_start, visible_count);
+
+        entry_rect := cut_top(entries_rect, entry_height);
+
+        path_align_x := entries_rect.x + entries_rect.w / 2.5;
+
+        project_dir_id := -1;  // to draw project boundary
+
+        for entry, i : visible_entries {
+            entry_index := visible_start + i;
+            entry_rect.y = entries_rect.y + entries_rect.h - (entry_index + 1) * entry_height + scroll_y;
+
+
+            if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
+                if mouse.left.just_pressed then selected_by_mouse = entry_index;
+                if selected_by_mouse == -1 then draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
+                draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
+
+                if selected_by_mouse == entry_index && mouse.left.just_released {
+                    selected = entry_index;
+                    open_selected_project();
+                    redraw_requested = true;
+                    break;
+                }
+            }
+            if selected_by_mouse == entry_index then draw_rect(entry_rect, Colors.LIST_CURSOR);
+            if entry_index == selected then draw_rect(entry_rect, Colors.LIST_CURSOR);
+
+            pen := make_vector2(
+                entry_rect.x + margin + padding,
+                entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+            );
+
+            // Draw name
+            Simp.draw_text_with_highlights(font_ui, xx pen.x, xx pen.y, entry.name, entry.highlights, color = Colors.UI_DEFAULT, highlight_color = Colors.LETTER_HIGHLIGHT);
+
+        }
+
+        if mouse.left.just_released || !mouse.left.is_down then selected_by_mouse = -1;
+
+        if scroll_y != 0 then draw_top_down_shadow(cut_top(entries_rect, char_size));
+    }
+}
+
 draw_unsaved_buffers_dialog :: () {
     ui_id := Ui_Id.unsaved_buffers;
 
@@ -2249,6 +2400,7 @@ Ui_Id :: enum s64 {
     splash_screen       :: -9;
     unsaved_buffers     :: -10;
     commands_dialog     :: -11;
+    open_project_dialog :: -12;
 
     // The rest will be derived from loc
 }

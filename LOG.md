@@ -14,11 +14,7 @@
 
 ===========================
 
-- Project commands:
-    + Open projects folder
-    + Open global config
-    + Open project config
-    - Switch project
+- Switch project
 
 - Line wrap:
     - Sticky viewport
@@ -142,6 +138,9 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Open projects folder
++ Open global config
++ Open project config
 + Make sure new files are colorised properly when they are saved
 + Commands
 + Only show the crlf warning in the footer

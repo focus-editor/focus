@@ -14,8 +14,11 @@ main :: () {
     temp_dir     = sprint("%/temp",     exe_dir);
     projects_dir = sprint("%/projects", exe_dir);
 
+    projects_dir_existed := file_exists(projects_dir);
+
     if !make_directory_if_it_does_not_exist(projects_dir) then panic_messagebox("Couldn't create folder %. Is the directory writable?", projects_dir);
     if !make_directory_if_it_does_not_exist(temp_dir)     then panic_messagebox("Couldn't create folder % for temporary files. Is the directory writable?", temp_dir);
+    if !projects_dir_existed then write_entire_file(tprint("%/Example Project.focus-config", projects_dir), DEFAULT_CONFIG_FILE_DATA);
 
     load_global_config();
     init_workspace();
@@ -209,6 +212,7 @@ main :: () {
                 case .go_to_line_dialog;        go_to_line_dialog_handle_event(event);
                 case .unsaved_buffers_dialog;   unsaved_buffers_dialog_handle_event(event);
                 case .commands_dialog;          commands_dialog_handle_event(event);
+                case .open_project_dialog;      open_project_dialog_handle_event(event);
             }
         }
 
@@ -558,6 +562,7 @@ active_global_widget: enum {
     go_to_line_dialog;
     commands_dialog;
     unsaved_buffers_dialog;
+    open_project_dialog;
 } = .editors;
 
 Project_Dir :: struct {
@@ -592,6 +597,7 @@ cpu_info: Cpu_X86;
 #load "widgets/finder.jai";
 #load "widgets/unsaved_buffers.jai";
 #load "widgets/commands.jai";
+#load "widgets/open_project.jai";
 
 #load "langs/jai.jai";
 #load "langs/focus_config.jai";

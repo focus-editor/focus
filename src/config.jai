@@ -9,9 +9,9 @@ load_project_config :: (project: string = "") -> success: bool {
         return false;
     }
     project_name := ifx project then project else current_project_name;
-    config_path  := sprint("%/projects/%.focus-config", exe_dir, project_name);
+    config_path  := sprint("%/%.focus-config", projects_dir, project_name);
 
-    success := load_and_merge_config(project_config_path, into = config);
+    success := load_and_merge_config(config_path, into = config);
     if success {
         current_project_name = project_name;
         project_config_path  = config_path;
@@ -423,11 +423,12 @@ SETTINGS :: Setting.[
     .{ "tab_size",                            .integer },
 ];
 
+DEFAULT_CONFIG_FILE_DATA :: #run read_entire_file(DEFAULT_CONFIG_NAME);
+
 #scope_file
 
 DEFAULT_CONFIG_NAME :: "default.focus-config";  // in the focus project folder
 
-DEFAULT_CONFIG_FILE_DATA :: #run read_entire_file(DEFAULT_CONFIG_NAME);
 
 DEFAULT_CONFIG :: #run -> Config {
     config, success := parse_config("Default Config", DEFAULT_CONFIG_NAME, DEFAULT_CONFIG_FILE_DATA);

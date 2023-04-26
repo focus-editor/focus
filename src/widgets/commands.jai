@@ -61,6 +61,7 @@ commands_execute_selected :: () {
     if command.action == {
         case .do_nothing;   return;
 
+        case .open_project;             show_open_project_dialog();
         case .open_projects_directory;  platform_open_in_explorer(projects_dir);
         case .open_global_config;       editors_open_file(global_config_path);
         case .open_project_config;
@@ -69,7 +70,6 @@ commands_execute_selected :: () {
             } else {
                 add_user_warning("No project is active. Please open a project first.", dismiss_in_seconds = 5);
             }
-        case .open_project;
         case;
             dummy_event: Input.Event;  // TODO: refactor so that this event is not needed
                                        // (need to put the search bar into its own widget for this)
@@ -154,10 +154,10 @@ commands := #run Command.[
     .{ .show_open_file_dialog_in_navigate_mode,             "Navigate To File",                   0, false },
     .{ .show_open_file_dialog_in_navigate_mode_from_root,   "Navigate To File From Root",         0, false },
 
-    .{ .open_project,                                       "Open Project",                       0, false },
+    .{ .open_project,                                       "Switch To Project",                  0, false },
     .{ .open_projects_directory,                            "Open Projects Directory",            0, false },
     .{ .open_global_config,                                 "Open Global Config",                 0, false },
-    .{ .open_project_config,                                "Open Project Config",                0, false },
+    .{ .open_project_config,                                "Open Config For Project",            0, false },
 
     .{ .create_new_file,                                    "Create New File",                    0, false },
     .{ .create_new_file_on_the_side,                        "Create New File On The Side",        0, true },

@@ -329,6 +329,8 @@ save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64) -> saved: bool {
             set_lang_from_path(buffer, file_path);
             needs_coloring = true;
             redraw_requested = true;
+
+            if !file_is_watched(file_path) start_watching_file(file_path);
         } else {
             return false;
         }
