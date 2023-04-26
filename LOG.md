@@ -15,15 +15,6 @@
 
 ===========================
 
-- Commands:
-    - Open error log
-    - Open global config
-    - Open project config (only if project is active)
-    - New project
-    - Switch project
-
-- Only show the crlf warning in the footer
-
 - Line wrap:
     - Sticky viewport
         - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
@@ -32,7 +23,6 @@
     - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
 
 - Don't skip spaces when editing with multiple cursors
-- Make sure new files are colorised properly when they are saved
 
 - Drop a folder into the editor to add it to workspace
 
@@ -147,6 +137,9 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Make sure new files are colorised properly when they are saved
++ Commands
++ Only show the crlf warning in the footer
 + CRLF:
     + Get rid of crlf notes
     + Show a warning when a CRLF file is loaded, then dismiss on save

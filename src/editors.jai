@@ -816,6 +816,13 @@ fill_in_buffer_from_file_data :: (buffer: *Buffer, path: string, file_data: stri
 
     buffer.meow_hash = calculate_meow_hash(buffer.bytes);
 
+    set_lang_from_path(buffer, path);
+
+    rescan_for_lines(buffer);
+    recalculate_colors(buffer);
+}
+
+set_lang_from_path :: (buffer: *Buffer, path: string) {
     extension, found_extension := get_lowercase_extension(path, greedy = false);
     if found_extension {
         if extension == {
@@ -836,9 +843,6 @@ fill_in_buffer_from_file_data :: (buffer: *Buffer, path: string, file_data: stri
     if ends_with_nocase(path, "LOG.md") {
         buffer.lang = .Worklog;
     }
-
-    rescan_for_lines(buffer);
-    recalculate_colors(buffer);
 }
 
 select_lines :: (editor: *Editor, buffer: Buffer) {

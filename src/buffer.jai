@@ -321,12 +321,14 @@ recalculate_colors :: (buffer: *Buffer) {
 save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64) -> saved: bool {
     if readonly return false;
 
-    if !buffer.has_file {
+    if !has_file {
         file_path, success := platform_get_save_file_name(get_buffer_name(buffer));
         if success && file_path {
-            buffer.has_file = true;
-            buffer.file = get_file_info_from_full_path(file_path);
-            buffer.needs_coloring = true;
+            has_file = true;
+            file = get_file_info_from_full_path(file_path);
+            set_lang_from_path(buffer, file_path);
+            needs_coloring = true;
+            redraw_requested = true;
         } else {
             return false;
         }
