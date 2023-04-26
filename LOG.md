@@ -8,12 +8,17 @@
     - Currently only RGB monitor panels
 
 - Release checklist
-    - Change the version
-    - Remove the [not implemented]
+    - Update readme and package it
     - Google Analytics?
     - Disqus
 
 ===========================
+
+- Project commands:
+    - Open projects folder
+    - Open global config
+    - Open project config
+    - Switch project
 
 - Line wrap:
     - Sticky viewport

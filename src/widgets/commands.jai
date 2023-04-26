@@ -56,12 +56,20 @@ commands_execute_selected :: () {
     if selected >= filtered.count return;
 
     command := filtered[selected].command;
-
     for * commands { if command.action == it.action { it.num_times_used += 1; break; } }
 
-    dummy_event: Input.Event;  // TODO: refactor so that this event is not needed
-                               // (need to put the search bar into its own widget for this)
-    editors_handle_action(dummy_event, command.action);
+    if command.action == {
+        case .do_nothing;   return;
+
+        case .open_projects_directory;
+        case .open_global_config;
+        case .open_project_config;
+        case .switch_project;
+        case;
+            dummy_event: Input.Event;  // TODO: refactor so that this event is not needed
+                                       // (need to put the search bar into its own widget for this)
+            editors_handle_action(dummy_event, command.action);
+    }
 }
 
 #scope_file
@@ -153,6 +161,7 @@ commands := #run Command.[
 
     .{ .select_all,                                         "Select All",                         0, true },
     .{ .select_line,                                        "Select Line",                        0, true },
+    .{ .go_to_line,                                         "Go To Line",                         0, true },
 
     .{ .close_current_editor,                               "Close Current File",                 0, true },
     .{ .close_other_editor,                                 "Close Other File",                   0, true },
@@ -199,6 +208,7 @@ Commands_Dialog :: struct {
     input: Text_Input;
     filtered: [..] Entry;
     selected: s64;
+    selected_by_mouse: s64 = -1;  // to remember which entry the left mouse button went down on
 
     scroll_y: s32;
     scroll_anim := #run Tween_Animation(s32).{ speed = xx 0.1, func = .lerp };

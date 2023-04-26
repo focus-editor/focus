@@ -144,7 +144,6 @@ draw_welcome_screen :: (main_area: Rect) {
             .{ .search_in_buffer,                                   "Search In Open File" },
             .{ .search_in_buffer_dropdown_mode,                     "Search In Open File (Dropdown Mode)" },
             .{ .search_in_project,                                  "Search In Workspace" },
-            .{ .go_to_line,                                         "Go To Line" },
         ];
 
         right_area = shrink(right_area, margin);
@@ -1380,14 +1379,18 @@ draw_commands_dialog :: () {
 
 
             if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
+                if mouse.left.just_pressed then selected_by_mouse = entry_index;
+                if selected_by_mouse == -1 then draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
                 draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
 
-                if mouse.left.just_pressed {
+                if selected_by_mouse == entry_index && mouse.left.just_released {
                     selected = entry_index;
                     commands_execute_selected();
                     redraw_requested = true;
+                    break;
                 }
             }
+            if selected_by_mouse == entry_index then draw_rect(entry_rect, Colors.LIST_CURSOR);
             if entry_index == selected then draw_rect(entry_rect, Colors.LIST_CURSOR);
 
             pen := make_vector2(
@@ -1419,6 +1422,8 @@ draw_commands_dialog :: () {
                 }
             }
         }
+
+        if mouse.left.just_released || !mouse.left.is_down then selected_by_mouse = -1;
 
         if scroll_y != 0 then draw_top_down_shadow(cut_top(entries_rect, char_size));
     }
