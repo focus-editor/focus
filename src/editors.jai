@@ -9,23 +9,7 @@ editors_handle_event :: (event: Input.Event) {
     if event.type == .KEYBOARD && event.key_pressed {
         action := map_event_to_action(event, Action_Editors);
 
-        // Actions that do not require an active editor
-        if action == {
-            case .search_in_project;                                finder_open_from_editor(); return;
-            case .go_to_line;                                       show_go_to_line_dialog();  return;
-
-            case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
-            case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
-            case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);
-
-            case .show_commands;                                    show_commands_dialog();
-
-            case .create_new_file;                                  editors_create_new_file();             return;
-            case .create_new_file_on_the_side;                      editors_create_new_file(.on_the_side); return;
-        }
-
-        // Let the active editor handle the event
-        active_editor_handle_event(event, action);
+        editors_handle_action(event, action);
 
     } else if event.type == .KEYBOARD && !event.key_pressed {
         hold_actions_to_be_stopped := map_key_release_to_hold_actions(event, Action_Editors);
@@ -47,6 +31,26 @@ editors_handle_event :: (event: Input.Event) {
 activate_editors :: () {
     active_global_widget = .editors;
     cursors_start_blinking();
+}
+
+editors_handle_action :: (event: Input.Event, action: Action_Editors) {
+    // Actions that do not require an active editor
+    if action == {
+        case .search_in_project;                                finder_open_from_editor(); return;
+        case .go_to_line;                                       show_go_to_line_dialog();  return;
+
+        case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
+        case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
+        case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);
+
+        case .show_commands;                                    show_commands_dialog();
+
+        case .create_new_file;                                  editors_create_new_file();             return;
+        case .create_new_file_on_the_side;                      editors_create_new_file(.on_the_side); return;
+    }
+
+    // Let the active editor handle the event
+    active_editor_handle_event(event, action);
 }
 
 editors_handle_file_drop :: (files: [] string) {
@@ -72,7 +76,6 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
 
-    mods := event.modifier_flags;
     shift_pressed := event.modifier_flags.shift_pressed;
     ctrl_pressed  := event.modifier_flags.ctrl_pressed;
 

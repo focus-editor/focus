@@ -1383,6 +1383,7 @@ draw_commands_dialog :: () {
                 draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
 
                 if mouse.left.just_pressed {
+                    selected = entry_index;
                     commands_execute_selected();
                     redraw_requested = true;
                 }
