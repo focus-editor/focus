@@ -53,7 +53,7 @@ map_key_release_to_hold_actions :: (event: Input.Event, $Action: Type) -> [] Act
     return actions;
 }
 
-get_first_matching_key_combo_from_action :: (action: Action_Common) -> [] string /* temp */ {
+get_first_matching_key_combo_from_action :: (action: $T) -> [] string /* temp */ {
     keymap := get_keymap_for_action_type(type_of(action));
     combo: Key_Combo = ---;
     found := false;

@@ -1402,6 +1402,21 @@ draw_commands_dialog :: () {
             // pen.x += width + padding;
             // width = xx Simp.prepare_text(font_ui_small, tprint("%", formatInt(entry.sort_key, base=16)));
             // Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
+
+            combo := get_first_matching_key_combo_from_action(entry.action);
+            if combo {
+                combo_rect := shrink_x(entry_rect, margin);
+                combo_rect.x += width;
+                combo_rect.w -= width + padding;
+
+                combo_str := join(..combo, " + ", allocator = temp);
+                combo_width := cast(float) Simp.prepare_text(font_ui_small, combo_str);
+
+                if is_valid(combo_rect) && combo_width < combo_rect.w {
+                    pen.x = combo_rect.x + combo_rect.w - combo_width;
+                    Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, Colors.UI_DIM);
+                }
+            }
         }
 
         if scroll_y != 0 then draw_top_down_shadow(cut_top(entries_rect, char_size));

@@ -117,43 +117,6 @@ maybe_handle_text_input_event :: (using input: *Text_Input, event: Input.Event) 
     return false;
 }
 
-// for shortcut : SHORTCUTS_TO_DISPLAY {
-//             combo := get_first_matching_key_combo_from_action(shortcut.action);
-
-//             // Figure out combo width for aligning right
-//             combo_width := 0.0;
-//             plus_width  := cast(float) Simp.get_text_width(font_ui, "+");
-//             for combo {
-//                 combo_width += xx Simp.get_text_width(font_ui, it) + 2 * padding_h;
-//                 if it_index < combo.count - 1 {
-//                     combo_width += plus_width + 2 * padding_h;
-//                 }
-//             }
-
-//             x = right_area.x + align_x - combo_width;
-//             text_y := y + padding_v * 1.5;
-
-//             key_rect := Rect.{ x = x, y = y, w = 0, h = key_height };
-//             for combo {
-//                 key_rect.x = x;
-//                 key_rect.w = xx Simp.prepare_text(font_ui, it) + 2 * padding_h;
-//                 key_rect = align_to_grid(key_rect);
-//                 shadow_rect := expand(key_rect, 1);
-//                 shadow_rect.y -= 2;
-//                 draw_rounded_rect(shadow_rect, Colors.BACKGROUND_DARK);
-//                 draw_rounded_rect(key_rect, Colors.SELECTION_ACTIVE);
-//                 Simp.draw_prepared_text(font_ui, xx (x + padding_h), xx text_y, Colors.UI_DEFAULT);
-//                 x += key_rect.w;
-//                 if it_index < combo.count - 1 {
-//                     Simp.draw_text(font_ui, xx (x + padding_h), xx text_y, "+", Colors.UI_DEFAULT);
-//                     x += plus_width + 2 * padding_h;
-//                 }
-//             }
-//             Simp.draw_text(font_ui, xx (x + padding_h * 10), xx text_y, shortcut.description, Colors.UI_DEFAULT);
-
-//             y -= line_height;
-//         }
-//     }
 
 #scope_export
 
