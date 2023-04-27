@@ -741,6 +741,9 @@ maybe_handle_xdnd_drop_events :: (display: *Display, xevent: *XEvent, drop_info:
 
             file_name.data = file_name_bytes;
             file_name.count = i;
+            if begins_with(file_name, "file://") {
+                file_name = advance(file_name, 7);
+            }
             array_add(*files, file_name);
         }
 

@@ -15,7 +15,7 @@ platform_maximize_window :: (window: Window_Type) {
 
 platform_enable_drag_and_drop :: (window: Window_Type) {
     typelist := string.["url/url", "text/uri-list", "text/plain", "application/octet-stream"];  // @Incomplete: test this on Linux
-    // X11.enable_drag_and_drop(window, typelist);
+    LD.enable_dnd(window, typelist);
 }
 
 platform_get_dpi_scale :: (window: Window_Type) -> float {

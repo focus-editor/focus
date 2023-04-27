@@ -239,8 +239,8 @@ data_device_listener :: wl_data_device_listener.{
                  */
                 files: [..] string;
                 p := "";
-                p.data = data.data + 7;
-                p.count = data.count - 7;
+                p.data = data.data;
+                p.count = data.count;
                 while true {
                     i := find_index_from_left(p, "\r\n");
                     if i == -1  break;
@@ -253,6 +253,9 @@ data_device_listener :: wl_data_device_listener.{
 
                     file_name.data = file_name_bytes;
                     file_name.count = i;
+                    if begins_with(file_name, "file://") {
+                        file_name = advance(file_name, 7);
+                    }
                     array_add(*files, file_name);
                 }
 
@@ -444,7 +447,12 @@ wl_toggle_fullscreen :: (w: *WLWindow, desire_fullscreen: bool, _unused: *void) 
     return true, w.width, w.height;
 }
 
+wl_enable_dnd :: (w: *WLWindow, typelist: []string) {
+}
+
 #scope_file
+
+#import "String";
 
 DATA_OFFER_READ_SIZE :: 2048;
 
