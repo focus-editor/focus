@@ -1271,6 +1271,8 @@ is_a_move_action :: (action: Action_Editors) -> bool {
 }
 
 move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
+    skip_one_space := editor.cursors.count == 1;
+
     for * cursor : editor.cursors {
         if has_selection(cursor) && !extend_selection {
             cursor.pos = get_selection(cursor).start;
@@ -1280,12 +1282,12 @@ move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: enum { char; w
             if by == {
                 case .word;
                     context.underscore_is_part_of_word = false;
-                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos);
+                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = skip_one_space);
                     context.underscore_is_part_of_word = true;
                 case .word_ends;
                     char_type := get_char_type(get_char_at_offset(buffer, cursor.pos));
                     if char_type != .word then cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, char_type, skip_one_space = false);
-                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos);
+                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = skip_one_space);
             }
         }
         cursor.col_wanted = -1;
@@ -1294,6 +1296,8 @@ move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: enum { char; w
 }
 
 move_cursors_right :: (editor: *Editor, using buffer: *Buffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
+    skip_one_space := editor.cursors.count == 1;
+
     for * cursor : editor.cursors {
         if cursor.pos >= bytes.count continue;  // nowhere to go
 
@@ -1305,14 +1309,14 @@ move_cursors_right :: (editor: *Editor, using buffer: *Buffer, by: enum { char; 
             if by == {
                 case .word;
                     context.underscore_is_part_of_word = false;
-                    cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos);
+                    cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = skip_one_space);
                     context.underscore_is_part_of_word = true;
                 case .word_ends;
                     char := get_char_at_offset(buffer, cursor.pos);
                     char_type := get_char_type(char);
                     if char_type != .word  then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, char_type, skip_one_space = false);
                     char_type = get_char_type(get_char_at_offset(buffer, cursor.pos));
-                    if char_type != .other && char != #char "\n" then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos);
+                    if char_type != .other && char != #char "\n" then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = skip_one_space);
             }
         }
         cursor.col_wanted = -1;
@@ -1523,16 +1527,21 @@ new_line_above :: (editor: *Editor, buffer: *Buffer) {
 }
 
 delete_word_left :: (editor: *Editor, buffer: *Buffer) {
+    skip_one_space := editor.cursors.count == 1;  // we don't want to skip space when editing with multiple cursors
+                                                  // because this may surprise people when they see one result with one
+                                                  // cursor and a different result with another based on how many
+                                                  // spaces there are to the next word
     for * cursor : editor.cursors {
-        if !has_selection(cursor) then cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos);
+        if !has_selection(cursor) then cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = skip_one_space);
     }
     organise_cursors(editor);  // resolve overlapping selections
     delete_left_char(editor, buffer);
 }
 
 delete_word_right :: (editor: *Editor, buffer: *Buffer) {
+    skip_one_space := editor.cursors.count == 1;  // see above
     for * cursor : editor.cursors {
-        if !has_selection(cursor) then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos);
+        if !has_selection(cursor) then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = skip_one_space);
     }
     organise_cursors(editor);  // resolve overlapping selections
     delete_right_char(editor, buffer);
