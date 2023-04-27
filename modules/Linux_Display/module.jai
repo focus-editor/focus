@@ -130,6 +130,13 @@ get_mouse_pointer_position :: (right_handed := false) -> x: int, y: int, success
     return x, y, ok;
 }
 
+enable_dnd :: (win: LDWindow, typelist: []string) {
+    if win.tag == {
+        case X11Window; x11_enable_dnd(isa(win, X11Window), typelist);
+        case WLWindow; wl_enable_dnd(isa(win, WLWindow), typelist);
+    }
+}
+
 /*
  * Input functions
  */

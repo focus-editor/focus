@@ -240,3 +240,7 @@ x11_get_mouse_pointer_position :: (right_handed := false) -> x: int, y: int, suc
     x, y, success := x11_get_mouse_pointer_position(dpy, isa(win, X11Window), right_handed);
     return x, y, success;
 }
+
+x11_enable_dnd :: (win: *X11Window, typelist: []string) {
+    enable_drag_and_drop(win.handle, typelist);
+}
