@@ -26,9 +26,11 @@ keyboard_listenter :: wl_keyboard_listener.{
     },
 
     enter = (data: *void, self: *wl_keyboard, serial: u32, surface: *wl_surface, keys: *wl_array) -> void #c_call {
+        input_application_has_focus = true;
     },
 
     leave = (data: *void, self: *wl_keyboard, serial: u32, surface: *wl_surface) -> void #c_call {
+        input_application_has_focus = false;
     },
 
     key = (data: *void, self: *wl_keyboard, serial: u32, time: u32, key: u32, state: u32) -> void #c_call {
