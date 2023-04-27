@@ -92,8 +92,12 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
 
         case .file;
             if folder_only return;
-            path := entry.full_path;
-            editors_open_file(path, placement);
+            if entry.buffer_id >= 0 {
+                editors_open_buffer(entry.buffer_id, placement);
+            } else {
+                path := entry.full_path;
+                editors_open_file(path, placement);
+            }
             hide_open_file_dialog();
 
         case .drive;
@@ -272,7 +276,7 @@ refresh_entries :: (scan_folder := false) {
             // This bit will be set when we want to make sure an entry appears on top
             top_priority_bit: u64 = 1 << 62;  // NOT the topmost bit because we'll be converting to s64 later
 
-            for buffer : open_buffers {
+            for buffer, buffer_id : open_buffers {
                 if buffer.deleted && !buffer.modified continue;  // NOTE: we might still want to see externally deleted buffers.
                                                                  // Maybe use 'deleted' and 'modified_on_disk' to distingiush the buffers
                                                                  // we haven't deleted ourselves?
@@ -286,6 +290,7 @@ refresh_entries :: (scan_folder := false) {
                 if score < 0 continue;
 
                 entry := array_add(*entries.filtered);
+                entry.buffer_id = buffer_id;
                 entry.file = buffer.file;
                 entry.entry_name = buffer_name;
                 if !buffer.has_file {
@@ -430,8 +435,9 @@ Open_File_Dialog :: struct {
 #scope_file
 
 Entry :: struct {
+    buffer_id := -1;  // not all entries have buffers
     using file: File_Info;
-    flags: enum_flags u8 {
+    flags: enum_flags u8 {  // TODO: remove and just use the buffer pointer, now it should be safe
         MODIFIED;
         MODIFIED_ON_DISK;
     }

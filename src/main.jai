@@ -1,5 +1,5 @@
-VERSION      :: "0.1.0";
-RELEASE_DATE :: "26 April 2023";
+VERSION      :: "0.1.1";
+RELEASE_DATE :: "28 April 2023";
 
 main :: () {
     cpu_info = get_cpu_info();

@@ -14,11 +14,8 @@
 
 ===========================
 
-+ Save All
-+ BUG: crash when trying to delete line near the top
-- BUG: crash when trying to open the newly created file
-
-- Switch project
+- Don't skip spaces when editing with multiple cursors
+- Show default config (readonly)
 
 - Line wrap:
     - Sticky viewport
@@ -27,17 +24,13 @@
     - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
     - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
 
-- Don't skip spaces when editing with multiple cursors
-
-- Drop a folder into the editor to add it to workspace
-
 - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
 
 - Highlight C/C++
 
-- Detect conflicting keys in the same context in the same config
 
 - Use keyboard in the confirmation dialog
+- Drop a folder into the editor to add it to workspace
 
 - Highlight matching braces
 
@@ -58,6 +51,8 @@
 - Custom title bar (currently too much work and not very robust)
 - Ignore project folders which are children of another project folder?
 - Profile the whole project to see if we're doing something stupid
+
+- Detect conflicting keys in the same context in the same config
 
 - Add horizontal scrollbar
     - Alt-HL smooth scroll
@@ -146,6 +141,10 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ BUG: crash when trying to open the newly created file
++ Save All
++ BUG: crash when trying to delete line near the top
++ Switch project
 + Open projects folder
 + Open global config
 + Open project config
