@@ -244,3 +244,9 @@ x11_get_mouse_pointer_position :: (right_handed := false) -> x: int, y: int, suc
 x11_enable_dnd :: (win: *X11Window, typelist: []string) {
     enable_drag_and_drop(win.handle, typelist);
 }
+
+x11_set_window_title :: (w: *X11Window, title: string) {
+    win_title := to_c_string(title);
+    XStoreName(w.display.handle, w.handle, win_title);
+    free(win_title);
+}
