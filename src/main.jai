@@ -329,7 +329,8 @@ update_mouse_state :: () {
     mouse.pointer.y = xx (window_height - y);
 
     mouse.scroll_y_delta = cast(s32) (cast(float) Input.mouse_delta_z * WHEEL_SENSITIVITY);
-    mouse.smooth_scroll = config.settings.smooth_scrolling || (mouse.scroll_y_delta % 120) != 0;  // @Robustness: hard-coded typical delta, but it really should be ok for now
+    mouse.smooth_scroll = (mouse.scroll_y_delta % 120) == 0;  // @Robustness: hard-coded typical delta, but it really should be ok for now
+    if !config.settings.smooth_scrolling then mouse.smooth_scroll = false;
 
     update_button(*mouse.left,   .MOUSE_BUTTON_LEFT);
     update_button(*mouse.right,  .MOUSE_BUTTON_RIGHT);
@@ -642,7 +643,7 @@ File_Async :: #import "File_Async";
 Simp  :: #import "Simp_Ext";
 Input :: #import "Input_Ext";
 
-DEBUG :: #run get_build_options().array_bounds_check != .OFF;  // this is a sloppy way of checking whether we're in debug mode!
+DEBUG :: #run get_build_options().math_bounds_check != .FATAL;  // this is a sloppy way of checking whether we're in debug mode!
 
 MAX_BUFFER_SIZE_FOR_HIGHLIGHTS :: 5 * 1024 * 1024;
 
