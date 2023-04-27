@@ -11,6 +11,7 @@ platform_create_window :: () {
 }
 
 platform_maximize_window :: (window: Window_Type) {
+    LD.maximize_window(window);
 }
 
 platform_enable_drag_and_drop :: (window: Window_Type) {
