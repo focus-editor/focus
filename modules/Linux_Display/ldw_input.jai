@@ -131,12 +131,40 @@ pointer_listener :: wl_pointer_listener.{
     },
 
     axis = (data: *void, self: *wl_pointer, time: u32, axis: u32, value: wl_fixed_t) -> void #c_call {},
-    frame = (data: *void, self: *wl_pointer) -> void #c_call {},
+    frame = (data: *void, self: *wl_pointer) -> void #c_call {
+        ctx: Context;
+        push_context ctx {
+            d: *WLDisplay = wl_proxy.get_user_data(self);
+            if d.pointer_axis_accumulator[0] {
+                event: Event;
+                event.type = .MOUSE_WHEEL;
+                event.typical_wheel_delta = WHEEL_DELTA;
+                event.wheel_delta = d.pointer_axis_accumulator[0];
+                array_add(*events_this_frame, event);
+                mouse_delta_z += event.wheel_delta;
+
+                d.pointer_axis_accumulator[0] = 0;
+            }
+        }
+    },
     axis_source = (data: *void, self: *wl_pointer, axis_source: u32) -> void #c_call {},
     axis_stop = (data: *void, self: *wl_pointer, time: u32, axis: u32) -> void #c_call {},
     axis_discrete = (data: *void, self: *wl_pointer, axis: u32, discrete: s32) -> void #c_call {},
-    axis_value120 = (data: *void, self: *wl_pointer, axis: u32, value120: s32) -> void #c_call {},
-    axis_relative_direction = (data: *void, self: *wl_pointer, axis: u32, direction: u32) -> void #c_call {},
+    axis_value120 = (data: *void, self: *wl_pointer, axis: u32, value120: s32) -> void #c_call {
+        ctx: Context;
+        push_context ctx {
+            d: *WLDisplay = wl_proxy.get_user_data(self);
+            d.pointer_axis_accumulator[axis] += d.pointer_axis_multiplier[axis] * value120;
+        }
+    },
+    axis_relative_direction = (data: *void, self: *wl_pointer, axis: u32, direction: u32) -> void #c_call {
+        d: *WLDisplay = wl_proxy.get_user_data(self);
+        if direction == wl_pointer.axis_relative_direction_identical {
+            d.pointer_axis_multiplier[axis] = 1;
+        } else {
+            d.pointer_axis_multiplier[axis] = -1;
+        }
+    },
 };
 
 wl_update_window_events :: (display: *WLDisplay) {
@@ -160,3 +188,5 @@ wl_get_mouse_pointer_position :: (right_handed: bool) -> x: int, y: int, success
 #import "libxkbcommon";
 
 current_hovered_window: *WLWindow;
+
+WHEEL_DELTA : s32 : 120;

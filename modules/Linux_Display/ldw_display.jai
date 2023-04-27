@@ -23,6 +23,9 @@ WLDisplay :: struct {
     keyboard: *wl_keyboard;
     input_serial: u32;
 
+    pointer_axis_multiplier: [2]s32 = .[-1, -1];
+    pointer_axis_accumulator: [2]s32 = .[0, 0];
+
     data_device_manager: *wl_data_device_manager;
     data_device: *wl_data_device;
 
