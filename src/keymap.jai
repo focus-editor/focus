@@ -213,6 +213,7 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "unindent",
     "indent",
     "save",
+    "save_all",
     "toggle_comment",
     "select_line",
     "scroll_viewport_up",

@@ -131,6 +131,8 @@ offset_to_line :: (using buffer: Buffer, offset: s64) -> line_num: s32 {
     assert(!dirty, "buffer is dirty, can't calculate line from offset");
     assert(offset <= bytes.count, "offset exceeds buffer size, can't calculate line");
 
+    if line_starts.count < 2 return 0;
+
     line_num := 0;
 
     left  := 0;

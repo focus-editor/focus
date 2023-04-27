@@ -147,6 +147,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .close_current_editor;             close_current_editor();
         case .close_other_editor;               close_other_editor();
         case .save;                             save_buffer(editor, buffer);
+        case .save_all;                         save_all   (editor, buffer);
         case .switch_to_left_editor;            switch_to_editor(.left);
         case .switch_to_right_editor;           switch_to_editor(.right);
         case .switch_to_other_editor;           switch_to_editor(.other);
@@ -1033,6 +1034,15 @@ save_buffer :: (editor: *Editor, buffer: *Buffer) {
     save_buffer_to_disk(buffer, editor.buffer_id);
 }
 
+save_all :: (editor: *Editor, buffer: *Buffer) {
+    new_edit_group(buffer, editor);
+
+    for * buffer, buffer_id : open_buffers {
+        if !buffer.modified continue;
+        save_buffer_to_disk(buffer, buffer_id);
+    }
+}
+
 switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := false) {
     if editors.layout == {
         case .None; return;
@@ -1553,6 +1563,7 @@ delete_left_char :: (editor: *Editor, buffer: *Buffer) {
         } else {
             coords := offset_to_coords(buffer, cursor.pos);
             chars_to_delete := coords.col % TAB_SIZE;
+            if coords.col == 0      then chars_to_delete = 1;
             if chars_to_delete == 0 then chars_to_delete = TAB_SIZE;
             if chars_to_delete > 1 {
                 // Don't delete more than one char unless the cursor is between line start and text start

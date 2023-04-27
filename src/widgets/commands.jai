@@ -93,7 +93,8 @@ refresh_entries :: () {
     filter_chars := decode_utf8_string_to_temp_char_substrings(to_string(input.text));
 
     for command : commands {
-        if command.requires_editor && !editor continue;
+        if command.requires_layout == .Single && editors.layout == .None   continue;
+        if command.requires_layout == .Double && editors.layout != .Double continue;
 
         score, highlights := fuzzy_match(command.name, filter_chars);
         if score < 0 continue;
@@ -150,64 +151,66 @@ commands_dialog: Commands_Dialog;
 #scope_file
 
 commands := #run Command.[
-    .{ .show_open_file_dialog_in_search_mode,               "Open File By Name",                  0, false },
-    .{ .show_open_file_dialog_in_navigate_mode,             "Navigate To File",                   0, false },
-    .{ .show_open_file_dialog_in_navigate_mode_from_root,   "Navigate To File From Root",         0, false },
+    .{ .show_open_file_dialog_in_search_mode,               "Open File By Name",                  0, .None },
+    .{ .show_open_file_dialog_in_navigate_mode,             "Navigate To File",                   0, .None },
+    .{ .show_open_file_dialog_in_navigate_mode_from_root,   "Navigate To File From Root",         0, .None },
 
-    .{ .open_project,                                       "Switch To Project",                  0, false },
-    .{ .open_projects_directory,                            "Open Projects Directory",            0, false },
-    .{ .open_global_config,                                 "Open Global Config",                 0, false },
-    .{ .open_project_config,                                "Open Config For Project",            0, false },
+    .{ .open_project,                                       "Switch To Project",                  0, .None },
+    .{ .open_projects_directory,                            "Open Projects Directory",            0, .None },
+    .{ .open_global_config,                                 "Open Global Config",                 0, .None },
+    .{ .open_project_config,                                "Open Config For Project",            0, .None },
 
-    .{ .create_new_file,                                    "Create New File",                    0, false },
-    .{ .create_new_file_on_the_side,                        "Create New File On The Side",        0, true },
+    .{ .create_new_file,                                    "Create New File",                    0, .None },
+    .{ .create_new_file_on_the_side,                        "Create New File On The Side",        0, .Single },
 
-    .{ .search_in_project,                                  "Search In Workspace",                0, false },
+    .{ .search_in_project,                                  "Search In Workspace",                0, .None },
 
-    .{ .select_all,                                         "Select All",                         0, true },
-    .{ .select_line,                                        "Select Line",                        0, true },
-    .{ .go_to_line,                                         "Go To Line",                         0, true },
+    .{ .select_all,                                         "Select All",                         0, .Single },
+    .{ .select_line,                                        "Select Line",                        0, .Single },
+    .{ .go_to_line,                                         "Go To Line",                         0, .Single },
 
-    .{ .close_current_editor,                               "Close Current File",                 0, true },
-    .{ .close_other_editor,                                 "Close Other File",                   0, true },
-    .{ .save,                                               "Save File",                          0, true },
+    .{ .close_current_editor,                               "Close File",                         0, .Single },
+    .{ .close_other_editor,                                 "Close Other File",                   0, .Double },
 
-    .{ .toggle_comment,                                     "Toggle Code Comments",               0, true },
+    .{ .save,                                               "Save",                               0, .Single },
+    .{ .save_all,                                           "Save All",                           0, .Single },
 
-    .{ .join_lines,                                         "Join Lines",                         0, true },
-    .{ .join_lines_no_spaces_in_between,                    "Join Lines (no spaces in between)",  0, true },
+    .{ .toggle_comment,                                     "Toggle Code Comments",               0, .Single },
 
-    .{ .duplicate_lines,                                    "Duplicate Lines",                    0, true },
-    .{ .delete_line,                                        "Delete Line",                        0, true },
-    .{ .delete_line_and_go_up,                              "Delete Line And Go Up",              0, true },
-    .{ .delete_to_start_of_line,                            "Delete To Start Of Line",            0, true },
-    .{ .delete_to_end_of_line,                              "Delete To End Of Line",              0, true },
-    .{ .move_selected_lines_up,                             "Move Selected Lines Up",             0, true },
-    .{ .move_selected_lines_down,                           "Move Selected Lines Down",           0, true },
-    .{ .move_up_to_empty_line,                              "Move Up To Empty Line",              0, true },
-    .{ .move_down_to_empty_line,                            "Move Down To Empty Line",            0, true },
+    .{ .join_lines,                                         "Join Lines",                         0, .Single },
+    .{ .join_lines_no_spaces_in_between,                    "Join Lines (no spaces in between)",  0, .Single },
 
-    .{ .move_cursor_to_viewport_center,                     "Move Cursor To Screen Center",       0, true },
-    .{ .remove_additional_cursors,                          "Remove Additional Cursors",          0, true },
+    .{ .duplicate_lines,                                    "Duplicate Lines",                    0, .Single },
+    .{ .delete_line,                                        "Delete Line",                        0, .Single },
+    .{ .delete_line_and_go_up,                              "Delete Line And Go Up",              0, .Single },
+    .{ .delete_to_start_of_line,                            "Delete To Start Of Line",            0, .Single },
+    .{ .delete_to_end_of_line,                              "Delete To End Of Line",              0, .Single },
+    .{ .move_selected_lines_up,                             "Move Selected Lines Up",             0, .Single },
+    .{ .move_selected_lines_down,                           "Move Selected Lines Down",           0, .Single },
+    .{ .move_up_to_empty_line,                              "Move Up To Empty Line",              0, .Single },
+    .{ .move_down_to_empty_line,                            "Move Down To Empty Line",            0, .Single },
 
-    .{ .new_line_below_without_breaking,                    "New Line Below Without Breaking",    0, true },
-    .{ .new_line_above_without_breaking,                    "New Line Above Without Breaking",    0, true },
+    .{ .move_cursor_to_viewport_center,                     "Move Cursor To Screen Center",       0, .Single },
+    .{ .remove_additional_cursors,                          "Remove Additional Cursors",          0, .Single },
 
-    .{ .switch_to_left_editor,                              "Switch To Left Pane",                0, true },
-    .{ .switch_to_right_editor,                             "Switch To Right Pane",               0, true },
-    .{ .switch_to_other_editor,                             "Switch To Other Pane",               0, true },
+    .{ .new_line_below_without_breaking,                    "New Line Below Without Breaking",    0, .Single },
+    .{ .new_line_above_without_breaking,                    "New Line Above Without Breaking",    0, .Single },
 
-    .{ .duplicate_editor,                                   "Duplicate File On The Side",         0, true },
+    .{ .switch_to_left_editor,                              "Switch To Left Pane",                0, .Double },
+    .{ .switch_to_right_editor,                             "Switch To Right Pane",               0, .Double },
+    .{ .switch_to_other_editor,                             "Switch To Other Pane",               0, .Double },
 
-    .{ .move_editor_to_the_left,                            "Move Pane To The Left",              0, true },
-    .{ .move_editor_to_the_right,                           "Move Pane To The Right",             0, true },
+    .{ .duplicate_editor,                                   "Duplicate File On The Side",         0, .Single },
+
+    .{ .move_editor_to_the_left,                            "Move Pane To The Left",              0, .Double },
+    .{ .move_editor_to_the_right,                           "Move Pane To The Right",             0, .Double },
 ];
 
 Command :: struct {
     action: Action_Editors = .do_nothing;
     name: string;
     num_times_used  := 0;
-    requires_editor := false;
+    requires_layout: Editor_State.Layout = .None;
 }
 
 Commands_Dialog :: struct {

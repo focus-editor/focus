@@ -14,6 +14,10 @@
 
 ===========================
 
++ Save All
++ BUG: crash when trying to delete line near the top
+- BUG: crash when trying to open the newly created file
+
 - Switch project
 
 - Line wrap:
@@ -68,6 +72,8 @@
 
 - Use SIMD for syntax highlighting
 - remove_crlf_in_place - optimise a bit
+
+- Replace / replace all
 
 - File context menu:
     - Rename file
