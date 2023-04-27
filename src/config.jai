@@ -269,6 +269,7 @@ Settings :: struct {
     tab_size                            := 4;
     insert_spaces_when_pressing_tab     := true;
     strip_trailing_whitespace_on_save   := false;
+    smooth_scrolling                    := true;
 
     // TODO
     // convert_tabs_to_spaces_on_load:     false
@@ -418,6 +419,7 @@ SETTINGS :: Setting.[
     .{ "double_shift_to_search_in_workspace", .boolean },
     .{ "insert_spaces_when_pressing_tab",     .boolean },
     .{ "strip_trailing_whitespace_on_save",   .boolean },
+    .{ "smooth_scrolling",                    .boolean },
 
     .{ "max_entries_in_open_file_dialog",     .integer },
     .{ "tab_size",                            .integer },

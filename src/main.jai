@@ -329,7 +329,7 @@ update_mouse_state :: () {
     mouse.pointer.y = xx (window_height - y);
 
     mouse.scroll_y_delta = cast(s32) (cast(float) Input.mouse_delta_z * WHEEL_SENSITIVITY);
-    mouse.is_touchpad = (mouse.scroll_y_delta % 120) != 0;  // @Robustness: hard-coded typical delta, but it really should be ok for now
+    mouse.smooth_scroll = config.settings.smooth_scrolling || (mouse.scroll_y_delta % 120) != 0;  // @Robustness: hard-coded typical delta, but it really should be ok for now
 
     update_button(*mouse.left,   .MOUSE_BUTTON_LEFT);
     update_button(*mouse.right,  .MOUSE_BUTTON_RIGHT);
@@ -475,7 +475,7 @@ mouse: Mouse_State;
 Mouse_State :: struct {
     pointer: Vector2;
     scroll_y_delta: s32;
-    is_touchpad: bool;
+    smooth_scroll: bool;
 
     left:   Mouse_Button_State;
     right:  Mouse_Button_State;

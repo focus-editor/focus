@@ -3,12 +3,12 @@
 build :: () {
     options := get_build_options();
     args := options.compile_time_command_line;
-    
+
     import_path: [..] string;
     array_add(*import_path, "modules");
     array_add(*import_path, ..options.import_path);
     options.import_path = import_path;
-    
+
     set_build_options_dc(.{do_output=false});
     set_working_directory(#filepath);
 

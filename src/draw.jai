@@ -379,7 +379,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
             using editor.viewport;
             new_target := clamp(scroll_y.target - mouse.scroll_y_delta, 0, max_y_scroll);
-            if !mouse.is_touchpad {
+            if mouse.smooth_scroll {
                 start_animation(*scroll_y, top, new_target);
             } else {
                 scroll_y.target = new_target;
@@ -768,7 +768,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                     if ui.hot_last_frame == results_id && ui.active == .none then set_pointer_image(.PRESSABLE);
                     if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
                         target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
-                        if !mouse.is_touchpad {
+                        if mouse.smooth_scroll {
                             start_animation(*scroll_anim, scroll_y, target);
                         } else {
                             scroll_anim.target = target;
@@ -1162,7 +1162,7 @@ draw_open_file_dialog :: () {
                 if ui.hot_last_frame == ui_id && ui.active == .none then set_pointer_image(.PRESSABLE);
                 if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
                     target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
-                    if !mouse.is_touchpad {
+                    if mouse.smooth_scroll {
                         start_animation(*scroll_anim, scroll_y, target);
                     } else {
                         scroll_anim.target = target;
@@ -1346,7 +1346,7 @@ draw_commands_dialog :: () {
                 if ui.hot_last_frame == ui_id && ui.active == .none then set_pointer_image(.PRESSABLE);
                 if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
                     target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
-                    if !mouse.is_touchpad {
+                    if mouse.smooth_scroll {
                         start_animation(*scroll_anim, scroll_y, target);
                     } else {
                         scroll_anim.target = target;
@@ -1516,7 +1516,7 @@ draw_open_project_dialog :: () {
                 if ui.hot_last_frame == ui_id && ui.active == .none then set_pointer_image(.PRESSABLE);
                 if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
                     target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
-                    if !mouse.is_touchpad {
+                    if mouse.smooth_scroll {
                         start_animation(*scroll_anim, scroll_y, target);
                     } else {
                         scroll_anim.target = target;
@@ -1787,7 +1787,7 @@ draw_finder :: () {
                 if ui.hot_last_frame == ui_id && ui.active == .none then set_pointer_image(.PRESSABLE);
                 if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
                     target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
-                    if !mouse.is_touchpad {
+                    if mouse.smooth_scroll {
                         start_animation(*scroll_anim, scroll_y, target);
                     } else {
                         scroll_anim.target = target;
