@@ -66,9 +66,15 @@ xkb_keymap_ref :: (keymap: *xkb_keymap) -> *xkb_keymap #foreign libxkb;
 xkb_keymap_unref :: (keymap: *xkb_keymap) #foreign libxkb;
 xkb_keymap_mod_get_index :: (keymap: *xkb_keymap, name: *u8) -> xkb_mod_index_t #foreign libxkb;
 
+xkb_key_direction :: enum u32 {
+    XKB_KEY_UP;
+    XKB_KEY_DOWN;
+}
+
 xkb_state_new :: (keymap: *xkb_keymap) -> *xkb_state #foreign libxkb;
 xkb_state_ref :: (state: *xkb_state) -> *xkb_state #foreign libxkb;
 xkb_state_unref :: (state: *xkb_state) #foreign libxkb;
+xkb_state_update_key :: (state: *xkb_state, key: xkb_keycode_t, direction: xkb_key_direction) -> xkb_state_component #foreign libxkb;
 xkb_state_key_get_one_sym :: (state: *xkb_state, key: xkb_keycode_t) -> xkb_keysym_t #foreign libxkb;
 xkb_state_key_get_utf8 :: (state: *xkb_state, key: xkb_keycode_t, buffer: *u8, size: u64) -> s32 #foreign libxkb;
 xkb_state_key_get_utf32 :: (state: *xkb_state, key: xkb_keycode_t) -> u32 #foreign libxkb;
