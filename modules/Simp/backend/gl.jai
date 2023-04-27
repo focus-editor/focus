@@ -32,7 +32,8 @@ backend_init :: (info: *Window_Info) {
             // if !vsync then log_error("Couldn't enable vsync\n");
         }
         #if OS == .LINUX {
-            the_gl_context, the_gl_fbc = glx_create_context(MINIMUM_GL_MAJOR_VERSION, MINIMUM_GL_MINOR_VERSION);
+            LD.create_gl_context(MINIMUM_GL_MAJOR_VERSION, MINIMUM_GL_MINOR_VERSION);
+            the_gl_context = LD.get_gl_context();
         }
         #if OS == .MACOS {
             the_gl_context = nsgl_create_context(MINIMUM_GL_MAJOR_VERSION, MINIMUM_GL_MINOR_VERSION);
@@ -51,14 +52,11 @@ backend_init :: (info: *Window_Info) {
     }
 
     #if OS == .LINUX {
-        // Make dumb wrapper window.
-        // Mst happen before glGen*, because we make current.
-        glx_window := glXCreateWindow(x_global_display, the_gl_fbc, info.window, null);
-        info.specific.glx_window = glx_window;
+        LD.create_gl_surface(info.window);
     }
 
     if do_first_time_init {
-        #if OS == .LINUX  glXMakeCurrent(x_global_display, glx_window, the_gl_context);
+        #if OS == .LINUX  LD.make_current(info.window);
         #if OS == .MACOS {
             NSOpenGLContext.makeCurrentContext(the_gl_context);
         }
@@ -87,8 +85,7 @@ main_fbo_handle:      GLuint;
     the_gl_context: HGLRC;
     the_hdc_for_pixel_format_cloning: HDC;
 } else #if OS == .LINUX {
-    the_gl_context: GLXContext;
-    the_gl_fbc: GLXFBConfig;
+    the_gl_context: *void;
 } else {
     the_gl_context: *NSOpenGLContext;
 }
@@ -145,12 +142,11 @@ swap_buffers :: (window: Window_Type, vsync := true) {  // @Incomplete: Have som
         SwapBuffers(dc);
     } else #if OS == .LINUX {
         info := find_window_info(window);
-        if (!info) || !info.specific.glx_window {
+        if (!info) || !LD.gl_initialized(window) {
             log_error("Simp: Attempt to swap_buffers on a previously unseen window!\n");
             return;
         }
-
-        glXSwapBuffers(x_global_display, info.specific.glx_window);
+        LD.swap_buffers(info.window);
     } else #if OS == .MACOS {
         // On macOS, OpenGL buffer swapping is done on the context, not on the view.
         // So we can only swap for the active window. (And you need to swap before switching to another view).
@@ -310,7 +306,7 @@ uniform mat4 projection;
 void main() {
     gl_Position = projection * vec4(vert_position, 0.0, 1.0);
     iterated_color    = vert_color;
-    
+
     rect_center = vert_rect_center;
     rect_size = vert_rect_size;
     rect_corner_radius = vert_rect_corner_radius;
@@ -355,7 +351,7 @@ uniform mat4 projection;
 void main() {
     gl_Position = projection * vec4(vert_position, 0.0, 1.0);
     iterated_color    = vert_color;
-    
+
     center = vert_rect_center;
     radius = vert_rect_corner_radius;
     softness = vert_rect_edge_softness;
@@ -666,11 +662,7 @@ backend_set_render_target :: (info: *Window_Info) {
             success := wglMakeCurrent(info.specific.hdc, the_gl_context);
             errno := GetLastError();
         } else #if OS == .LINUX {
-            display := x_global_display;
-            XLockDisplay(display);
-            success := glXMakeCurrent(display, info.specific.glx_window, the_gl_context);
-            if !success log_error("glxMakeCurrent failed! (glx_window %, context%)\n", info.specific.glx_window, the_gl_context);
-            XUnlockDisplay(display);
+            LD.make_current(info.window);
         } else #if OS == .MACOS {
             // Get the GL view from the window.
             // This relies on this window having a content view with OpenGL support (eg. as created by Window_Creation).
@@ -793,7 +785,6 @@ backend_tweak_projection_matrix :: (m: *Matrix4) {
     }
 
     Window_Info_Platform_Specific :: struct {
-        glx_window: GLXWindow;
     }
 }
 
