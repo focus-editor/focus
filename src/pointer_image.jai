@@ -83,14 +83,14 @@ Pointer_Image :: enum u16 {
     set_pointer_image :: (image: Pointer_Image) {
         if !initted_pointers  init_pointers();
 
-        unimplemented();
+        // unimplemented();
     }
 
     init_pointers :: () {
         initted_pointers = true;
 
         using Pointer_Image;
-        unimplemented();
+        // unimplemented();
     }
 }
 
@@ -106,10 +106,8 @@ pointer_end_frame :: () {
     } else {
         #if OS == .WINDOWS {
             Windows.SetCursor(pointers[current_pointer_image]);
-        } else if OS == .MACOS {
+        } else #if OS == .MACOS {
             NSCursor.set(pointers[current_pointer_image]);
-        } else {
-            unimplemented();
         }
     }
 

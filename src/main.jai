@@ -92,7 +92,7 @@ main :: () {
     };
 
     while !should_quit {
-        if !redraw_requested platform_wait_message();
+        // if !redraw_requested platform_wait_message();
 
         Input.update_window_events();
 
@@ -399,7 +399,7 @@ panic_messagebox :: (format_string: string, args: .. Any) {
 } @PrintLike
 
 unimplemented :: (loc := #caller_location) {
-    print("!!!! Unimplemented at %", loc);
+    print("!!!! Unimplemented at %\n", loc);
 }
 
 nothing_pressed :: inline (mods: Mods) -> bool {
