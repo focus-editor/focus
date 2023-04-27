@@ -137,6 +137,13 @@ enable_dnd :: (win: LDWindow, typelist: []string) {
     }
 }
 
+set_window_title :: (win: LDWindow, title: string) {
+    if win.tag == {
+        case X11Window; x11_set_window_title(isa(win, X11Window), title);
+        case WLWindow; wl_set_window_title(isa(win, WLWindow), title);
+    }
+}
+
 /*
  * Input functions
  */

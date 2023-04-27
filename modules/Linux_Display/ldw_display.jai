@@ -453,6 +453,12 @@ wl_toggle_fullscreen :: (w: *WLWindow, desire_fullscreen: bool, _unused: *void) 
 wl_enable_dnd :: (w: *WLWindow, typelist: []string) {
 }
 
+wl_set_window_title :: (w: *WLWindow, title: string) {
+    win_title := to_c_string(title);
+    xdg_toplevel.set_title(w.x_toplevel, win_title);
+    free(win_title);
+}
+
 #scope_file
 
 #import "String";
