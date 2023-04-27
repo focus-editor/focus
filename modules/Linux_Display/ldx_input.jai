@@ -117,7 +117,7 @@ x11_update_window_events :: (x11_display: *X11Display) {
             array_add(*events_this_frame, event);
 
             keysym = XkbKeycodeToKeysym(display, xx xev.xkey.keycode, 0, shift);
-            if (keysym < XK_BackSpace || keysym > XK_Hyper_R) && !event.ctrl_pressed {
+            if (keysym < XK_BackSpace || keysym > XK_Hyper_R) && !event.ctrl_pressed && !event.alt_pressed {
                 //WM_CHAR equivalent
                 char_event: Event;
                 char_event.type = .TEXT_INPUT;

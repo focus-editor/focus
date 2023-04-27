@@ -39,6 +39,12 @@ keyboard_listenter :: wl_keyboard_listener.{
 
             buf: [16]u8;
             keycode: xkb_keycode_t = key + 8;
+
+            xkb_state_update_key(
+                d.kb_state,
+                keycode,
+                ifx state == wl_keyboard.key_state_pressed then xkb_key_direction.XKB_KEY_DOWN else .XKB_KEY_UP);
+
             keysym := xkb_state_key_get_one_sym(d.kb_state, keycode);
             utf32  := xkb_state_key_get_utf32(d.kb_state, keycode);
 
@@ -60,7 +66,7 @@ keyboard_listenter :: wl_keyboard_listener.{
 
             array_add(*events_this_frame, event);
 
-            if event.key_pressed && (keysym < XK_BackSpace || keysym > XK_Hyper_R ) && !event.ctrl_pressed && utf32 {
+            if event.key_pressed && (keysym < XK_BackSpace || keysym > XK_Hyper_R ) && !event.ctrl_pressed && !event.alt_pressed && utf32 {
                 char_event: Event;
                 char_event.type = .TEXT_INPUT;
                 char_event.utf32 = utf32;
