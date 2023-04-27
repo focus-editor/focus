@@ -124,8 +124,8 @@ get_mouse_pointer_position :: (right_handed := false) -> x: int, y: int, success
     x, y: int;
     ok := false;
     if global_display.tag == {
-        case X11Display; x, y, ok = x11_get_mouse_pointer_position(right_handed);
         case WLDisplay; x, y, ok = wl_get_mouse_pointer_position(right_handed);
+        case X11Display; x, y, ok = x11_get_mouse_pointer_position(right_handed);
     }
     return x, y, ok;
 }
@@ -141,6 +141,13 @@ set_window_title :: (win: LDWindow, title: string) {
     if win.tag == {
         case X11Window; x11_set_window_title(isa(win, X11Window), title);
         case WLWindow; wl_set_window_title(isa(win, WLWindow), title);
+    }
+}
+
+maximize_window :: (win: LDWindow) {
+    if win.tag == {
+        case X11Window; x11_maximize_window(isa(win, X11Window));
+        case WLWindow; wl_maximize_window(isa(win, WLWindow));
     }
 }
 

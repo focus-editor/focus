@@ -55,6 +55,12 @@ WLDisplay :: struct {
     mod_idx_alt_gr    : u32;
 }
 
+WLDesiredPreconfigureState :: enum {
+    NONE;
+    FULLSCREEN;
+    MAXIMIZED;
+}
+
 WLWindow :: struct {
     // we would really like this to be LDWindow but we get a circular dependency if we declare it like that
     wrapper: *void;
@@ -72,6 +78,9 @@ WLWindow :: struct {
     x_toplevel_configured: bool;
     decoration: *zxdg_toplevel_decoration_v1;
 
+    creation_width: s32;
+    creation_height: s32;
+
     width: s32;
     height: s32;
 
@@ -86,6 +95,9 @@ WLWindow :: struct {
 
     egl_native: *wl_egl_window;
     egl_surface: EGLSurface;
+
+    // dumb stuff
+    pre_configure_desired_state: WLDesiredPreconfigureState;
 }
 
 wm_base_listener :: xdg_wm_base_listener.{
@@ -355,11 +367,18 @@ x_toplevel_listener :: xdg_toplevel_listener.{
 
             if !w.x_toplevel_configured {
                 w.x_toplevel_configured = true;
+
+                if w.pre_configure_desired_state == {
+                    case .FULLSCREEN; wl_toggle_fullscreen(w, true, null);
+                    case .MAXIMIZED; wl_maximize_window(w);
+                }
+                w.pre_configure_desired_state = .NONE;
+
                 return;
             }
 
-            w.width = max(width, 400);
-            w.height = max(height, 400);
+            w.width  = ifx !width then w.creation_width else width;
+            w.height = ifx !height then w.creation_height else height;
 
             if w.egl_native  wl_egl_window.resize(w.egl_native, w.width, w.height, 0, 0);
             add_resize_record(xx w.wrapper, xx w.width, xx w.height);
@@ -385,6 +404,9 @@ wl_create_window :: (d: *WLDisplay, ld_win: LDWindow, width: int, height: int, w
     w.display = d;
 
     w.title = copy_string(window_name);
+
+    w.creation_width = xx width;
+    w.creation_height = xx height;
 
     w.width = xx width;
     w.height = xx height;
@@ -444,10 +466,22 @@ wl_get_dimensions :: (w: *WLWindow, right_handed: bool) -> (x: s32, y: s32, widt
 }
 
 wl_toggle_fullscreen :: (w: *WLWindow, desire_fullscreen: bool, _unused: *void) -> bool, s32, s32 {
+    if !w.x_toplevel_configured {
+        w.pre_configure_desired_state = .FULLSCREEN;
+        return false, w.width, w.height;;
+    }
     if desire_fullscreen xdg_toplevel.set_fullscreen(w.x_toplevel, null);
     else xdg_toplevel.unset_fullscreen(w.x_toplevel);
     wl_display.roundtrip(w.display.handle);
     return true, w.width, w.height;
+}
+
+wl_maximize_window :: (w: *WLWindow) {
+    if !w.x_toplevel_configured {
+        w.pre_configure_desired_state = .MAXIMIZED;
+        return;
+    }
+    xdg_toplevel.set_maximized(w.x_toplevel);
 }
 
 wl_enable_dnd :: (w: *WLWindow, typelist: []string) {
@@ -547,4 +581,28 @@ data_offer_read_data :: (d: *WLDisplay, mime_type: string, dst: *[..]u8) {
     }
 
     close(pipe[0]);
+}
+
+states_to_string :: (arr: *wl_array) -> string {
+    sb: String_Builder;
+    init_string_builder(*sb);
+
+    append(*sb, "[");
+    for wl_array_each(u32, arr) {
+        if it_index append(*sb, ", ");
+        if <<it == {
+            case xdg_toplevel.state_maximized; append(*sb, "maximized");
+            case xdg_toplevel.state_fullscreen; append(*sb, "fullscreen");
+            case xdg_toplevel.state_resizing; append(*sb, "resizing");
+            case xdg_toplevel.state_activated; append(*sb, "activated");
+            case xdg_toplevel.state_tiled_left; append(*sb, "tiled_left");
+            case xdg_toplevel.state_tiled_right; append(*sb, "tiled_right");
+            case xdg_toplevel.state_tiled_top; append(*sb, "tiled_top");
+            case xdg_toplevel.state_tiled_bottom; append(*sb, "tiled_bottom");
+            case; print_to_builder(*sb, "unknown(%)", <<it);
+        }
+    }
+    append(*sb, "]");
+
+    return builder_to_string(*sb);
 }

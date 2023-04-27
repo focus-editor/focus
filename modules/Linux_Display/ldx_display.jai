@@ -20,6 +20,44 @@ x11_init_display :: (display: LDDisplay) -> bool {
     return ifx x_global_display then true else false;
 }
 
+#scope_file
+x_net_wm_state_maximized_vert: Atom;
+x_net_wm_state_maximized_horz: Atom;
+
+#scope_export
+
+x11_maximize_window :: (x11_win: *X11Window) {
+    win := x11_win.handle;
+    display := x11_win.display.handle;
+
+    if !x_net_wm_state_maximized_horz {
+        x_net_wm_state_maximized_horz = XInternAtom(display, "_NET_WM_STATE_MAXIMIZED_HORZ", True);
+    }
+    if !x_net_wm_state_maximized_vert {
+        x_net_wm_state_maximized_vert = XInternAtom(display, "_NET_WM_STATE_MAXIMIZED_VERT", True);
+    }
+
+    if !x_global_net_wm_state || !x_net_wm_state_maximized_horz || !x_net_wm_state_maximized_vert return;
+
+    xev: XEvent;
+    xev.type = ClientMessage;
+    xev.xclient.window = win;
+    xev.xclient.message_type = x_global_net_wm_state;
+    xev.xclient.format = 32;
+    xev.xclient.data.l[0] = _NET_WM_STATE_ADD;
+    xev.xclient.data.l[1] = cast(s64) x_net_wm_state_maximized_horz;
+
+    XSendEvent(display, DefaultRootWindow(display), False,
+        SubstructureRedirectMask | SubstructureNotifyMask, *xev);
+
+    xev.xclient.data.l[1] = cast(s64) x_net_wm_state_maximized_vert;
+
+    XSendEvent(display, DefaultRootWindow(display), False,
+        SubstructureRedirectMask | SubstructureNotifyMask, *xev);
+
+    XSync(display, False);
+}
+
 x11_toggle_fullscreen :: (x11_win: *X11Window, desire_fullscreen: bool, saved: *Saved_Window_Info) ->
     success: bool, width: s32, height: s32
 {
