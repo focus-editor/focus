@@ -61,11 +61,11 @@ x11_translate_key_code :: (key: KeySym) -> Key_Code {
         return HOME;
     if key == XK_End || key == XK_KP_End
         return END;
-    if key == XK_Insert
+    if key == XK_Insert || key == XK_KP_Insert
         return INSERT;
-    if key == XK_Page_Up
+    if key == XK_Page_Up || key == XK_KP_Page_Up
         return PAGE_UP;
-    if key == XK_Page_Down
+    if key == XK_Page_Down || key == XK_KP_Page_Down
         return PAGE_DOWN;
 
     key = key & 0xFF;
@@ -133,6 +133,9 @@ x11_update_window_events :: (x11_display: *X11Display) {
 
             input_button_states[event.key_code] = (Key_Current_State.START | Key_Current_State.DOWN);
 
+            /*
+             * @FIXME: keypad handling is broken (NumLock state doesn't seem to matter, we always get keysyms as if NumLock was off)
+             */
             utf32 := is_char(xx keysym);
             if (utf32 != 0) && !event.ctrl_pressed && !event.alt_pressed {
                 char_event: Event;
@@ -165,7 +168,12 @@ x11_update_window_events :: (x11_display: *X11Display) {
             if xev.xkey.state & Mod1Mask
                 event.alt_pressed = true;
 
-            keysym := XkbKeycodeToKeysym(display, xx xev.xkey.keycode, 0, 0 /* English lowercase group*/);
+            shift_level: u32 = 0;
+            if (xev.xkey.state & (ShiftMask | Mod5Mask)) == (ShiftMask | Mod5Mask) shift_level = 3;
+            else if xev.xkey.state & Mod5Mask shift_level = 2;
+            else if xev.xkey.state & ShiftMask shift_level = 1;
+
+            keysym := XkbKeycodeToKeysym(display, xx xev.xkey.keycode, 0, shift_level);
             translated := x11_translate_key_code(keysym);
 
             event.type = .KEYBOARD;
