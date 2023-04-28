@@ -49,9 +49,8 @@ text_input_type_char :: (using input: *Text_Input, char: u32) {
         if has_selection(input) || frame_time - last_edit_time >= EDIT_GROUP_TIMEOUT then new_edit_group(input);
     }
 
-    num_chars := get_num_chars(text);
-    cursor.pos = clamp(cursor.pos, 0, num_chars);  // make sure cursor is in the correct position
-    cursor.sel = clamp(cursor.sel, 0, num_chars);
+    cursor.pos = clamp(cursor.pos, 0, xx text.count);  // make sure cursor is in the correct position
+    cursor.sel = clamp(cursor.sel, 0, xx text.count);
     
     utf8_char := convert_utf32_to_utf8(char);
     if !has_selection(input) {
@@ -109,40 +108,25 @@ get_char_offset :: (bytes: [] u8, pos: s32) -> s32 {
 
 select_all :: (using input: *Text_Input) {
     cursor.pos = 0;
-    cursor.sel = get_num_chars(text);
+    cursor.sel = xx text.count;
 }
 
 select_word :: (using input: *Text_Input) {
-    // Decode the characters on the line for scanning
-    chars := decode_utf8_string_to_temp_chars(to_string(text), max_char = 5000);  // arbitrary number
-    if !chars return;  // empty line
-    
-    using cursor;
+    pos       := cursor.pos;
+    pos_left  := ifx cursor.pos > 0 then prev_char_offset(text, pos) else 0;
+    char      := get_char_at_offset(input, pos);
+    char_left := get_char_at_offset(input, pos_left);
 
-    col := -1;
-    if is_word_char(chars[pos]) {
-        col = pos;
-    } else if pos > 0 && is_word_char(chars[pos - 1]) {
-        col = pos - 1;
-    } else {
-        return;  // cursor not on a word
+    if !is_word_char(char) && is_word_char(char_left) {
+        pos  = pos_left;  // favor the word to the left
+        char = char_left;
     }
 
-    // Go left
-    start := col;
-    while start >= 0 {
-        if !is_word_char(chars[start]) then { start += 1; break; }
-        start -= 1;
-    }
-    if start < 0 then start = 0;
+    char_type := get_char_type(char);
+    if char_type == .other return;
 
-    // Go right
-    end := col + 1;
-    while end < chars.count - 1 && is_word_char(chars[end]) { end += 1; }
-
-    assert(start <= end);
-    sel = xx start;
-    pos = xx end;
+    cursor.pos = scan_through_similar_chars_on_the_right(input, pos, char_type, skip_one_space = false);
+    cursor.sel = scan_through_similar_chars_on_the_left (input, pos, char_type, skip_one_space = false);
 }
 
 replace_text :: (using input: *Text_Input, new_text: string) {
@@ -180,7 +164,7 @@ paste :: (using input: *Text_Input) {
         insert_string_at_offset(input, left, str);
     }
 
-    cursor.pos = get_num_chars(array_view(text, 0, left + str.count));
+    cursor.pos = xx (left + str.count);
     cursor.sel = cursor.pos;
 }
 
@@ -235,8 +219,10 @@ move_cursor_left :: (using input: *Text_Input, by: enum { char; word; word_ends;
         // Move normally
         if by == {
             case .char;
-                cursor.pos = prev_char_offset(text, cursor.pos);
-                cursor.pos = clamp(cursor.pos, 0, get_num_chars(text));
+                if cursor.pos > 0 {
+                    cursor.pos = prev_char_offset(text, cursor.pos);
+                    cursor.pos = clamp(cursor.pos, 0, xx text.count);
+                }
             case .word;
                 context.underscore_is_part_of_word = false;
                 cursor.pos = scan_through_similar_chars_on_the_left(input, cursor.pos);
@@ -263,7 +249,7 @@ move_cursor_right :: (using input: *Text_Input, by: enum { char; word; word_ends
             if by == {
                 case .char;
                     cursor.pos = next_char_offset(text, cursor.pos);
-                    cursor.pos = clamp(cursor.pos, 0, get_num_chars(text));
+                    cursor.pos = clamp(cursor.pos, 0, xx text.count);
                 case .word;
                     context.underscore_is_part_of_word = false;
                     cursor.pos = scan_through_similar_chars_on_the_right(input, cursor.pos);
@@ -286,7 +272,7 @@ move_home :: inline (using input: *Text_Input, extend_selection := false) {
 }
 
 move_end :: inline (using input: *Text_Input, extend_selection := false) {
-    cursor.pos = get_num_chars(text);
+    cursor.pos = xx text.count;
     if !extend_selection then cursor.sel = cursor.pos;
 }
 
@@ -294,7 +280,7 @@ delete_left_char :: inline (using input: *Text_Input) {
     if !has_selection(input) {
         // No selection - create one
         cursor.sel = cursor.pos - 1;
-        cursor.sel = clamp(cursor.sel, 0, get_num_chars(text));
+        cursor.sel = clamp(cursor.sel, 0, xx text.count);
     }
     delete_selection(input);
 }
@@ -313,7 +299,7 @@ delete_right_char :: inline (using input: *Text_Input) {
     if !has_selection(input) {
         // No selection - create one
         cursor.sel = cursor.pos + 1;
-        cursor.sel = clamp(cursor.sel, 0, get_num_chars(text));
+        cursor.sel = clamp(cursor.sel, 0, xx text.count);
     }
     delete_selection(input);
 }
