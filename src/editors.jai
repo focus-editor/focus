@@ -852,7 +852,8 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
             case "focus-config";   buffer.lang = .Focus_Config;
 
             case "c";   #through;
-            case "h";   #through;
+            case "h";
+                buffer.lang = .C;
             case "cpp"; #through;
             case "cxx"; #through;
             case "c++"; #through;
@@ -2150,6 +2151,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
     comment: string;
 
     if buffer.lang == {
+        case .C;            comment_without_space = "//";
         case .Jai;          comment_without_space = "//";
         case .Focus_Config; comment_without_space = "#";
         case;               return;

@@ -308,6 +308,7 @@ recalculate_colors :: (buffer: *Buffer) {
 
     if buffer.lang == {
         case .Jai;          highlight_jai_syntax(buffer);
+        case .C;            highlight_c_syntax(buffer);
         case .Focus_Config; highlight_focus_config_syntax(buffer);
         case .Worklog;      highlight_worklog(buffer);
     }
@@ -823,6 +824,7 @@ Buffer :: struct {
     lang: enum u8 {
         Plain_Text :: 0;
         Jai;
+        C;
         Focus_Config;
         Worklog;
     } = .Plain_Text;
