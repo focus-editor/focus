@@ -9,11 +9,7 @@
 
 ===========================
 
-
-- Remove the "config saved" messages when they don't apply
-
 - See if panic behaviour can be improved in release builds
-- Show default config (readonly)
 
 - Line wrap:
     - Sticky viewport
@@ -23,6 +19,8 @@
     - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
 
 - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
+
+- Show default config (readonly)
 
 - Highlight C/C++
 
@@ -136,6 +134,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Remove the "config saved" messages when they don't apply
 + UI_ERROR_BRIGHT
 + Debug label
 + LOG.md / TODO

@@ -27,7 +27,7 @@
 
 # Main Git Branch
 
-- ...
++ Fixed a bug with the file watcher being used while uninitialized.
 
 
 # RELEASES ==================================================================
