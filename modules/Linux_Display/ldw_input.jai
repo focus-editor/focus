@@ -64,7 +64,40 @@ keyboard_listenter :: wl_keyboard_listener.{
 
             array_add(*events_this_frame, event);
 
-            if event.key_pressed && (keysym < XK_BackSpace || keysym > XK_Hyper_R ) && !event.ctrl_pressed && !event.alt_pressed && utf32 {
+            is_char :: inline (keysym: xkb_keysym_t, utf32: u32) -> bool {
+                /* ref: https://www.x.org/releases/current/doc/xproto/x11protocol.html#keysym_encoding */
+                if (keysym >= 0x20 && keysym <= 0x7e) || (keysym >= 0xa0 && keysym <= 0xff) || (keysym >= 0x01000100 && keysym <= 0x0110FFFF) {
+                    return true;
+                }
+                if !(keysym & 0x_ffff_c0_00) && utf32 return true;
+
+                if !utf32 return false;
+
+                if keysym == {
+                    case XK_KP_Equal; #through;
+                    case XK_KP_Enter; #through;
+                    case XK_KP_Multiply; #through;
+                    case XK_KP_Add; #through;
+                    case XK_KP_Separator; #through;
+                    case XK_KP_Subtract; #through;
+                    case XK_KP_Decimal; #through;
+                    case XK_KP_Divide; #through;
+
+                    case XK_KP_0; #through;
+                    case XK_KP_1; #through;
+                    case XK_KP_2; #through;
+                    case XK_KP_3; #through;
+                    case XK_KP_4; #through;
+                    case XK_KP_5; #through;
+                    case XK_KP_6; #through;
+                    case XK_KP_7; #through;
+                    case XK_KP_8; #through;
+                    case XK_KP_9; return true;
+                }
+
+                return false;
+            }
+            if is_char(keysym, utf32) && event.key_pressed && !event.ctrl_pressed && !event.alt_pressed && utf32 {
                 char_event: Event;
                 char_event.type = .TEXT_INPUT;
                 char_event.utf32 = utf32;

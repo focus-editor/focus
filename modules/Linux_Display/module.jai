@@ -7,9 +7,15 @@ LDWindow  :: *_Window;
 INVALID_WINDOW : LDWindow : null;
 
 init_display :: () -> bool {
+    prefer_x11 := (getenv("LD_PREFER_X11") != null);
     if global_display.tag != X11Display && global_display.tag != WLDisplay {
-        if x11_init_display(global_display) return true;
-        if wl_init_display(global_display) return true;
+        if prefer_x11 {
+            if x11_init_display(global_display) return true;
+            if wl_init_display(global_display) return true;
+        } else {
+            if wl_init_display(global_display) return true;
+            if x11_init_display(global_display) return true;
+        }
     }
     return true;
 }
@@ -199,6 +205,7 @@ clipboard_set_text :: (text: string) {
 #import "Tagged_Union";
 #import "Basic";
 
+#load "ldx_missing.jai";
 #load "ldx_display.jai";
 #load "ldx_input.jai";
 #load "ldw_display.jai";
