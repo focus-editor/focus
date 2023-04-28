@@ -65,7 +65,7 @@ show_go_to_line_dialog :: () {
 
     // Select text when opening
     input.cursor.sel = 0;
-    input.cursor.pos = get_num_chars(input.text);
+    input.cursor.pos = xx input.text.count;
 }
 
 close_go_to_line_dialog :: (jump_to_original_cursor := false) {
