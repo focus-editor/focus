@@ -264,6 +264,7 @@ ui_neutral:                     4C4C4CFF
 ui_warning:                     F8AD34FF
 ui_warning_dim:                 986032FF
 ui_error:                       772222FF
+ui_error_bright:                FF0000FF
 ui_success:                     227722FF
 
 code_default:                   BFC9DBFF

@@ -7,14 +7,11 @@
     - Multi-byte Unicode symbols are not supported
     - Currently only RGB monitor panels
 
-- Release checklist
-    - Update readme and package it
-    - Google Analytics?
-    - Disqus
-
 ===========================
 
-- UI_ERROR_DIM
+
+- Remove the "config saved" messages when they don't apply
+
 - See if panic behaviour can be improved in release builds
 - Show default config (readonly)
 
@@ -139,6 +136,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ UI_ERROR_BRIGHT
 + Debug label
 + LOG.md / TODO
 + Changelog

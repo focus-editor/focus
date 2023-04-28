@@ -974,21 +974,21 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
     if buffer.deleted {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_bold, "[deleted on disk]");
-        Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
+        Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR_BRIGHT);
     } else if buffer.modified_on_disk {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_bold, "[modified on disk]");
-        Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
+        Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR_BRIGHT);
     }
     if buffer.readonly {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_bold, "[readonly]");
-        Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
+        Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR_BRIGHT);
     }
     if buffer.error_when_saving {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_bold, "[couldn't save file]");
-        Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR);
+        Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR_BRIGHT);
     }
 
     if buffer.crlf && draw_crlf_warning {
@@ -1240,7 +1240,7 @@ draw_open_file_dialog :: () {
 
             if entry.flags & .MODIFIED_ON_DISK {
                 pen.x += width + padding;
-                width = xx Simp.draw_text(font_ui_bold, xx pen.x, xx pen.y, "[modified on disk]", color = Colors.UI_ERROR);
+                width = xx Simp.draw_text(font_ui_bold, xx pen.x, xx pen.y, "[modified on disk]", color = Colors.UI_ERROR_BRIGHT);
             }
 
             // // Draw score
