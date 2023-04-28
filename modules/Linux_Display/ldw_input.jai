@@ -42,17 +42,13 @@ keyboard_listenter :: wl_keyboard_listener.{
             buf: [16]u8;
             keycode: xkb_keycode_t = key + 8;
 
-            xkb_state_update_key(
-                d.kb_state,
-                keycode,
-                ifx state == wl_keyboard.key_state_pressed then xkb_key_direction.XKB_KEY_DOWN else .XKB_KEY_UP);
-
             keysym := xkb_state_key_get_one_sym(d.kb_state, keycode);
             utf32  := xkb_state_key_get_utf32(d.kb_state, keycode);
+            translated := x11_translate_key_code(keysym);
 
             event: Event;
             event.type = .KEYBOARD;
-            event.key_code = x11_translate_key_code(keysym);
+            event.key_code = translated;
             event.shift_pressed = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_shift, .XKB_STATE_MODS_DEPRESSED) == 1;
             event.ctrl_pressed  = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_ctrl, .XKB_STATE_MODS_DEPRESSED) == 1;
             event.alt_pressed   = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_alt, .XKB_STATE_MODS_DEPRESSED) == 1;
