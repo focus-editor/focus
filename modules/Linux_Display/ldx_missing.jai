@@ -1,0 +1,41 @@
+// A bunch of stuff that's missing from the X11 module
+
+XK_Insert :: 0xff63;
+
+XK_KP_Space     :: 0xff80;
+XK_KP_Tab       :: 0xff89;
+XK_KP_Enter     :: 0xff8d;
+XK_KP_F1        :: 0xff91;
+XK_KP_F2        :: 0xff92;
+XK_KP_F3        :: 0xff93;
+XK_KP_F4        :: 0xff94;
+XK_KP_Home      :: 0xff95;
+XK_KP_Left      :: 0xff96;
+XK_KP_Up        :: 0xff97;
+XK_KP_Right     :: 0xff98;
+XK_KP_Down      :: 0xff99;
+XK_KP_Prior     :: 0xff9a;
+XK_KP_Page_Up   :: 0xff9a;
+XK_KP_Next      :: 0xff9b;
+XK_KP_Page_Down :: 0xff9b;
+XK_KP_End       :: 0xff9c;
+XK_KP_Begin     :: 0xff9d;
+XK_KP_Insert    :: 0xff9e;
+XK_KP_Delete    :: 0xff9f;
+XK_KP_Equal     :: 0xffbd;
+XK_KP_Multiply  :: 0xffaa;
+XK_KP_Add       :: 0xffab;
+XK_KP_Separator :: 0xffac;
+XK_KP_Subtract  :: 0xffad;
+XK_KP_Decimal   :: 0xffae;
+XK_KP_Divide    :: 0xffaf;
+XK_KP_0         :: 0xffb0;
+XK_KP_1         :: 0xffb1;
+XK_KP_2         :: 0xffb2;
+XK_KP_3         :: 0xffb3;
+XK_KP_4         :: 0xffb4;
+XK_KP_5         :: 0xffb5;
+XK_KP_6         :: 0xffb6;
+XK_KP_7         :: 0xffb7;
+XK_KP_8         :: 0xffb8;
+XK_KP_9         :: 0xffb9;

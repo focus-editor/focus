@@ -37,7 +37,7 @@ platform_kill_refresh_timer :: (window: Window_Type) {
 }
 
 platform_enumerate_logical_drives :: () -> [] string {
-    return .[];
+    return .["/"];
 }
 
 platform_get_save_file_name :: (name := "") -> string, bool {
