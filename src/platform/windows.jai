@@ -12,7 +12,10 @@ platform_get_biggest_monitor_pos :: () -> s32, s32 {
         width  := it.right  - it.left;
         height := it.bottom - it.top;
         area   := width * height;
-        if max_area < area then biggest = it;
+        if max_area < area {
+            biggest = it;
+            max_area = area;
+        }
     }
     return cast(s32) biggest.left, cast(s32) biggest.top;
 }
