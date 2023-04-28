@@ -601,6 +601,7 @@ cpu_info: Cpu_X86;
 #load "widgets/open_project.jai";
 
 #load "langs/jai.jai";
+#load "langs/c.jai";
 #load "langs/focus_config.jai";
 #load "langs/worklog.jai";
 
