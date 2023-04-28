@@ -1,4 +1,6 @@
 x11_translate_key_code :: (key: KeySym) -> Key_Code {
+    XK_Insert :: 0xff63;
+
     using Key_Code;
 
     if key == 32 return SPACEBAR;
@@ -57,9 +59,20 @@ x11_translate_key_code :: (key: KeySym) -> Key_Code {
         return F15;
     if key == XK_F16
         return F16;
+    if key == XK_Home
+        return HOME;
+    if key == XK_End
+        return END;
+    if key == XK_Insert
+        return INSERT;
+    if key == XK_Page_Up
+        return PAGE_UP;
+    if key == XK_Page_Down
+        return PAGE_DOWN;
 
     key = key & 0xFF;
     if (key >= #char "a") && (key <= #char "z") return cast(Key_Code) (key - 0x20);
+    if key > 32 && key < 127 return cast(Key_Code) key;
 
     return UNKNOWN;
 }
@@ -107,9 +120,11 @@ x11_update_window_events :: (x11_display: *X11Display) {
                 event.alt_pressed = true;
 
             keysym := XkbKeycodeToKeysym(display, xx xev.xkey.keycode, 0, 0 /* English lowercase group*/);
+            translated := x11_translate_key_code(keysym);
+
             event.type = .KEYBOARD;
             event.key_pressed = 1;
-            event.key_code = x11_translate_key_code(keysym);
+            event.key_code = translated;
             event.shift_pressed = cast(bool) shift;
 
             input_button_states[event.key_code] = (Key_Current_State.START | Key_Current_State.DOWN);
@@ -117,7 +132,7 @@ x11_update_window_events :: (x11_display: *X11Display) {
             array_add(*events_this_frame, event);
 
             keysym = XkbKeycodeToKeysym(display, xx xev.xkey.keycode, 0, shift);
-            if (keysym < XK_BackSpace || keysym > XK_Hyper_R) && !event.ctrl_pressed && !event.alt_pressed {
+            if (keysym < XK_BackSpace || keysym > XK_Hyper_R) && !event.ctrl_pressed && !event.alt_pressed && keysym {
                 //WM_CHAR equivalent
                 char_event: Event;
                 char_event.type = .TEXT_INPUT;
@@ -151,10 +166,12 @@ x11_update_window_events :: (x11_display: *X11Display) {
                 event.alt_pressed = true;
 
             keysym := XkbKeycodeToKeysym(display, xx xev.xkey.keycode, 0, 0 /* English lowercase group*/);
+            translated := x11_translate_key_code(keysym);
+
             event.type = .KEYBOARD;
             event.key_pressed = 0;
             event.shift_pressed = cast(bool) shift;
-            event.key_code = x11_translate_key_code(keysym);
+            event.key_code = translated;
 
             input_button_states[event.key_code] = Key_Current_State.END;
 
