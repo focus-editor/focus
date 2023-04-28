@@ -841,7 +841,9 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
         }
     }
 
-    if ends_with_nocase(path, "LOG.md") {
+    path_, basename, _, basename_with_extension := path_decomp(path);
+
+    if equal_nocase(basename, "todo") || equal_nocase(basename_with_extension, "FOCUS-CHANGELOG.txt") {
         buffer.lang = .Worklog;
     }
 }

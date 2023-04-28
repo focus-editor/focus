@@ -1,0 +1,37 @@
+# ROUGH ROADMAP
+
+- Line wrap
+- Proper highlighting of C/C++
+- Config files for directories (i.e. adding a .focus-config file to your directory and have Focus load it)
+- Shortcut for adding cursors above/below
+- Case-sensitive search
+- Global search improvements (the ability to filter additionally by filename)
+- Highlight other languages
+- Horizontal scrolling
+- Identifier search
+- A little bit of semantic highlighting
+- Settings per file type
+- Custom title bar
+
+
+# Main Git Branch
+
++ Fixed the bugs caused by the change of DEFAULT_SPACES in Jai 0.1.062
++ Fixed the window title erroneously saying you're in debug mode
++ Made editing with multiple cursors less surprising when performing mass deletes using Ctrl-Backspace etc.
+
+
+# RELEASES ==================================================================
+
+
+# Version 0.1.1, 28 April 2023
+
++ Added a Save All command
++ Fixed 2 crashes
++ Improved scrolling on touchpads
++ Added an option to disable smooth scrolling (may be useful if the scrolling feels broken) - just add smooth_scrolling: false in the config
+
+
+# Version 0.1.0, 26 April 2023
+
++ Initial release
