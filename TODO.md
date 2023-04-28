@@ -7,14 +7,12 @@
     - Multi-byte Unicode symbols are not supported
     - Currently only RGB monitor panels
 
-- Release checklist
-    - Update readme and package it
-    - Google Analytics?
-    - Disqus
-
 ===========================
 
-- Don't skip spaces when editing with multiple cursors
+
+- Remove the "config saved" messages when they don't apply
+
+- See if panic behaviour can be improved in release builds
 - Show default config (readonly)
 
 - Line wrap:
@@ -90,9 +88,6 @@
 
 - Either limit the number of bytes in text input, or improve the handling of cursor (currently calculating the length every frame)
 
-- Search in buffer:
-    - When pressing up/down to switch to prev/next result, don't wrap (but do wrap when using Enter - what else to go back?)
-
 - Try using File_Async when scanning project folders and measure how long it takes
 
 - Save editor state on editor operations:
@@ -141,6 +136,11 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ UI_ERROR_BRIGHT
++ Debug label
++ LOG.md / TODO
++ Changelog
++ Don't skip spaces when editing with multiple cursors
 + BUG: crash when trying to open the newly created file
 + Save All
 + BUG: crash when trying to delete line near the top

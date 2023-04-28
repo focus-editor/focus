@@ -288,7 +288,7 @@ is_all_whitespace :: (s: string) -> bool {
     return true;
 }
 
-count_whitespace :: (bytes: [] u8, start_offset: s64, max_offset: s64, spaces := DEFAULT_SPACES) -> count: s32 {
+count_whitespace :: (bytes: [] u8, start_offset: s64, max_offset: s64, spaces := " \t") -> count: s32 {
     subarray := array_view(bytes, start_offset, max_offset - start_offset);
     for subarray {
         if !is_any(it, spaces) return cast(s32) it_index;
@@ -329,7 +329,7 @@ get_identifier_name :: (name: Code) -> string {
     return ident.name;
 }
 
-trim_both_sides :: (s: string, chars := DEFAULT_SPACES) -> string, left: s64, right: s64 {
+trim_both_sides :: (s: string, chars := " \t") -> string, left: s64, right: s64 {
     left  := 0;
     right := 0;
 

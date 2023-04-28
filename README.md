@@ -6,6 +6,12 @@ A simple editor that tries to not stand in your way.
 
 https://www.youtube.com/watch?v=iwW_UfxJMiE
 
+## How to compile
+
+$ jai first.jai - release
+
+Required Jai version: 0.1.062
+
 ## Disclaimer
 
 The editor is in beta. This means you may encounter some bugs here and there, and not all wrinkles have been ironed out yet.

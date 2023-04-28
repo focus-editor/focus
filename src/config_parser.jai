@@ -133,6 +133,7 @@ map_color_name_to_color_struct :: (color_name: string) -> *Color, found: bool {
         case "ui_warning";                      color = *Colors.UI_WARNING;
         case "ui_warning_dim";                  color = *Colors.UI_WARNING_DIM;
         case "ui_error";                        color = *Colors.UI_ERROR;
+        case "ui_error_bright";                 color = *Colors.UI_ERROR_BRIGHT;
         case "ui_success";                      color = *Colors.UI_SUCCESS;
 
         case "code_default";                    color = *Colors.CODE_DEFAULT;

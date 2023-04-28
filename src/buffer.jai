@@ -513,7 +513,7 @@ get_buffer_name :: (buffer: Buffer) -> string {
     if buffer.has_file return buffer.file.name;
 
     for 0..buffer.line_starts.count-2 {
-        line := trim(get_line_as_string(buffer, xx it), "\t \n");
+        line := trim(get_line_as_string(buffer, xx it), "\t \r\n");
         if line return take_first_n_chars(line, min(50, line.count));
     }
 
