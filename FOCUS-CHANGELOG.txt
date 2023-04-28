@@ -27,15 +27,20 @@
 
 # Main Git Branch
 
+- ...
+
+
+# RELEASES ==================================================================
+
+
+# Version 0.1.2, 29 April 2023
+
 + Added the move-by-words functionality to text inputs (thanks to @aang521)
 + Fixed the bugs caused by the change of DEFAULT_SPACES in Jai 0.1.062
 + Fixed the config file being reloaded when files are added to the same directory
 + Fixed the window title erroneously saying you're in debug mode
 + Made editing with multiple cursors less surprising when performing mass deletes using Ctrl-Backspace etc.
 + File errors are not too dim any more
-
-
-# RELEASES ==================================================================
 
 
 # Version 0.1.1, 28 April 2023
