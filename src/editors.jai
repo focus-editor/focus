@@ -1938,11 +1938,11 @@ join_lines :: (editor: *Editor, buffer: *Buffer, in_between := " ") {
         range.range.end   += xx offset_delta;
 
         range_str := get_range_as_string(buffer, range.range);
-        individual_lines := split(trim_right(range_str), cast(u8) #char "\n");
+        individual_lines := split(trim_right(range_str, " \t"), cast(u8) #char "\n");
         if individual_lines.count <= 1 continue;  // nothing to join
 
         first_line         := individual_lines[0];
-        first_line_trimmed := trim_right(first_line);
+        first_line_trimmed := trim_right(first_line, " \t");
         remaining_lines    := array_view(individual_lines, 1, individual_lines.count - 1);
 
         delete_offset := range.range.start + first_line_trimmed.count;
