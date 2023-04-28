@@ -66,7 +66,7 @@ finder_open :: () {
     active_global_widget = .finder;
     using finder;
     input.cursor.sel = 0;
-    input.cursor.pos = get_num_chars(input.text);
+    input.cursor.pos = xx input.text.count;
 }
 
 finder_close :: () {

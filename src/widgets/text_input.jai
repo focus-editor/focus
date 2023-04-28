@@ -46,25 +46,24 @@ text_input_type_char :: (using input: *Text_Input, char: u32) {
         cursor_before_edits = cursor;
     } else {
         // If we're replacing any selection, we always want a new edit group
-        if has_selection(input) || frame_time - last_edit_time >= EDIT_GROUP_TIMEOUT then new_edit_group(input);
+        if has_selection(cursor) || frame_time - last_edit_time >= EDIT_GROUP_TIMEOUT then new_edit_group(input);
     }
 
     cursor.pos = clamp(cursor.pos, 0, xx text.count);  // make sure cursor is in the correct position
     cursor.sel = clamp(cursor.sel, 0, xx text.count);
     
     utf8_char := convert_utf32_to_utf8(char);
-    if !has_selection(input) {
+    if !has_selection(cursor) {
         // No selection
-        offset := get_char_offset(text, cursor.pos);
-        new_insert_char_edit(input, offset, utf8_char);
-        insert_string_raw(input, offset, to_string(*utf8_char));
+        new_insert_char_edit(input, cursor.pos, utf8_char);
+        insert_string_raw(input, cursor.pos, to_string(*utf8_char));
     } else {
         // Selection
-        left  := get_char_offset(text, min(cursor.pos, cursor.sel));
-        right := get_char_offset(text, max(cursor.pos, cursor.sel));
+        left  := min(cursor.pos, cursor.sel);
+        right := max(cursor.pos, cursor.sel);
         replace_range(input, left, right, to_string(*utf8_char));
     }
-    cursor.pos = min(cursor.pos, cursor.sel) + 1;
+    cursor.pos = min(cursor.pos, cursor.sel) + utf8_char.count;
     cursor.sel = cursor.pos;
     
     last_edit_time = frame_time;
@@ -79,10 +78,9 @@ text_input_fully_clear :: (using input: *Text_Input) {
     cursor.sel = 0;
 }
 
-get_selected_offsets :: (text: [..] u8, cursor: Text_Input.Cursor) -> left: s64, right: s64 {
-    str := to_string(text);
-    left  := pos_to_offset(str, min(cursor.sel, cursor.pos));
-    right := pos_to_offset(str, max(cursor.sel, cursor.pos));
+get_selected_offsets :: inline (cursor: Text_Input.Cursor) -> left: s64, right: s64 {
+    left  := min(cursor.sel, cursor.pos);
+    right := max(cursor.sel, cursor.pos);
     return left, right;
 }
 
@@ -95,15 +93,6 @@ get_num_chars :: (bytes: [] u8) -> s32 {
         num_chars += 1;
     }
     return num_chars;
-}
-
-get_char_offset :: (bytes: [] u8, pos: s32) -> s32 {
-    offset: s32 = 0;
-    for i : 0..pos-1 {
-        byte := bytes[offset];
-        offset += 1 + trailingBytesForUTF8[byte];
-    }
-    return offset;
 }
 
 select_all :: (using input: *Text_Input) {
@@ -138,14 +127,14 @@ replace_text :: (using input: *Text_Input, new_text: string) {
 #scope_file
 
 copy :: (using input: Text_Input) {
-    if !has_selection(input) return;
-    left, right := get_selected_offsets(text, cursor);
+    if !has_selection(cursor) return;
+    left, right := get_selected_offsets(cursor);
     os_clipboard_set_text(slice(to_string(text), left, right - left));
 }
 
 cut :: (using input: *Text_Input) {
-    if !has_selection(input) return;
-    left, right := get_selected_offsets(text, cursor);
+    if !has_selection(cursor) return;
+    left, right := get_selected_offsets(cursor);
     os_clipboard_set_text(slice(to_string(text), left, right - left));
     if right > left then delete_range(input, left, right);
     cursor.pos = min(cursor.sel, cursor.pos);
@@ -156,9 +145,9 @@ paste :: (using input: *Text_Input) {
     str := os_clipboard_get_text();
     defer free(str);
 
-    left, right := get_selected_offsets(text, cursor);
+    left, right := get_selected_offsets(cursor);
 
-    if has_selection(input) {
+    if has_selection(cursor) {
         replace_range(input, left, right, str);
     } else {
         insert_string_at_offset(input, left, str);
@@ -211,7 +200,7 @@ redo :: (using input: *Text_Input) {
 }
 
 move_cursor_left :: (using input: *Text_Input, by: enum { char; word; word_ends; }, extend_selection := false) {
-    if has_selection(input) && !extend_selection {
+    if has_selection(cursor) && !extend_selection {
         // Jump to selection edge
         cursor.pos = min(cursor.pos, cursor.sel);
         cursor.sel = cursor.pos;
@@ -239,7 +228,7 @@ move_cursor_left :: (using input: *Text_Input, by: enum { char; word; word_ends;
 }
 
 move_cursor_right :: (using input: *Text_Input, by: enum { char; word; word_ends; }, extend_selection := false) {
-    if has_selection(input) && !extend_selection {
+    if has_selection(cursor) && !extend_selection {
         // Jump to selection edge
         cursor.pos = max(cursor.pos, cursor.sel);
         cursor.sel = cursor.pos;
@@ -277,35 +266,35 @@ move_end :: inline (using input: *Text_Input, extend_selection := false) {
 }
 
 delete_left_char :: inline (using input: *Text_Input) {
-    if !has_selection(input) {
+    if !has_selection(cursor) && cursor.pos > 0 {
         // No selection - create one
-        cursor.sel = cursor.pos - 1;
+        cursor.sel = prev_char_offset(text, cursor.pos);
+        cursor.sel = clamp(cursor.sel, 0, xx text.count);
+    }
+    delete_selection(input);
+}
+
+delete_right_char :: inline (using input: *Text_Input) {
+    if !has_selection(cursor) && cursor.pos < text.count {
+        // No selection - create one
+        cursor.sel = next_char_offset(text, cursor.pos);
         cursor.sel = clamp(cursor.sel, 0, xx text.count);
     }
     delete_selection(input);
 }
 
 delete_word_left :: inline (using input: *Text_Input) {    
-    if !has_selection(input) then cursor.pos = scan_through_similar_chars_on_the_left(input, cursor.pos);
+    if !has_selection(cursor) then cursor.pos = scan_through_similar_chars_on_the_left(input, cursor.pos);
     delete_left_char(input);
 }
 
 delete_word_right :: inline (using input: *Text_Input) {    
-    if !has_selection(input) then cursor.pos = scan_through_similar_chars_on_the_right(input, cursor.pos);
+    if !has_selection(cursor) then cursor.pos = scan_through_similar_chars_on_the_right(input, cursor.pos);
     delete_right_char(input);
 }
 
-delete_right_char :: inline (using input: *Text_Input) {
-    if !has_selection(input) {
-        // No selection - create one
-        cursor.sel = cursor.pos + 1;
-        cursor.sel = clamp(cursor.sel, 0, xx text.count);
-    }
-    delete_selection(input);
-}
-
 delete_selection :: inline (using input: *Text_Input) {
-    left, right := get_selected_offsets(text, cursor);
+    left, right := get_selected_offsets(cursor);
     if right > left then delete_range(input, left, right);
 
     cursor.pos = min(cursor.sel, cursor.pos);
@@ -425,7 +414,7 @@ deinit :: inline (using edit_group: *Text_Input.Edit_Group) {
     array_free(edits);
 }
 
-has_selection :: inline (using input: Text_Input) -> bool {
+has_selection :: inline (using cursor: Text_Input.Cursor) -> bool {
     return cursor.pos != cursor.sel;
 }
 
