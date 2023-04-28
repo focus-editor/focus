@@ -1,41 +1,49 @@
-load_global_config :: () -> success: bool {
+load_global_config :: (create_if_doesnt_exist := false) -> success: bool, changed: bool {
     global_config_path = sprint("%/global.focus-config", exe_dir);
-    return load_and_merge_config(global_config_path, create_if_doesnt_exist = !DEBUG);
+
+    if create_if_doesnt_exist && !file_exists(global_config_path) {
+        // Create one with default contents
+        success := write_entire_file(global_config_path, DEFAULT_CONFIG_FILE_DATA);
+        if !success panic_messagebox("Couldn't create a new config file '%'.\nIs the directory writable?", global_config_path);
+    }
+
+    success, changed := load_and_merge_config(global_config_path, hash = *global_config_hash);
+    return success, changed;
 }
 
-load_project_config :: (project: string = "") -> success: bool {
+load_project_config :: (project: string = "") -> success: bool, changed: bool {
     if !project && !current_project_name {
         log_error("Attempted to load an empty project config. This is a bug.");
-        return false;
+        return false, false;
     }
     project_name := ifx project then project else current_project_name;
     config_path  := sprint("%/%.focus-config", projects_dir, project_name);
 
-    success := load_and_merge_config(config_path, into = config);
+    success, changed := load_and_merge_config(config_path, into = config, hash = *project_config_hash);
     if success {
         current_project_name = project_name;
         project_config_path  = config_path;
     }
 
-    return success;
+    return success, changed;
 }
 
 maybe_refresh_config :: (path: string) {
     old_workspace_dirs := array_copy_tmp(config.workspace.workspace_dirs);
 
     if path == global_config_path {
-        success := load_global_config();
-        if success {
+        success, changed := load_global_config();
+        if success && changed {
             clear_user_messages();
             add_success_message("Global config changes have been applied", dismiss_in_seconds = 3);
         }
         if current_project_name {
-            success = load_project_config(current_project_name);
-            if success add_success_message(tprint("Config changes for project '%' have been applied", current_project_name), dismiss_in_seconds = 3);
+            success, changed = load_project_config(current_project_name);
+            if success && changed add_success_message(tprint("Config changes for project '%' have been applied", current_project_name), dismiss_in_seconds = 3);
         }
     } else if path == project_config_path {
-        success := load_project_config();
-        if success {
+        success, changed := load_project_config();
+        if success && changed {
             clear_user_messages();
             add_success_message(tprint("Config changes for project '%' have been applied", current_project_name), dismiss_in_seconds = 3);
         }
@@ -105,13 +113,13 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
 
 #scope_file
 
-load_and_merge_config :: (file_path: string, into: Config = DEFAULT_CONFIG, create_if_doesnt_exist := false) -> success: bool {
-    new_config, success, error_msg := load_config(file_path, create_if_doesnt_exist);
+load_and_merge_config :: (file_path: string, into: Config = DEFAULT_CONFIG, hash: *u64) -> success: bool, changed: bool {
+    new_config, success, changed, error_msg := load_config(file_path, hash);
     if !success {
         if !error_msg assert(false, "No error message on a config error. This is a bug.");
         log_error(error_msg);
         add_user_error(error_msg);
-        return false;
+        return false, false;
     }
 
     config = into;
@@ -121,27 +129,27 @@ load_and_merge_config :: (file_path: string, into: Config = DEFAULT_CONFIG, crea
 
     if !file_is_watched(file_path) start_watching_file(file_path);
 
-    return true;
+    return true, changed;
 }
 
-load_config :: (file_path: string, create_if_doesnt_exist := false) -> Config, success: bool, error_msg: string /* tmp */ {
+// NOTE: I don't like how the config is currently loaded, passing stuff from function to function,
+//       this code should probably be simplified at some point
+load_config :: (file_path: string, hash: *u64) -> Config, success: bool, changed: bool, error_msg: string /* tmp */ {
     empty: Config;
 
-    if !file_exists(file_path) {
-        if !create_if_doesnt_exist return empty, true, "";  // no error message because it's not an error
-
-        // Create one with default contents
-        success := write_entire_file(file_path, DEFAULT_CONFIG_FILE_DATA);
-        if !success return empty, false, tprint("Couldn't create a new config file '%'.\nIs the directory writable?", file_path);
-    }
-
     file_data, success_read := read_entire_file(file_path);
-    if !success_read return empty, false, tprint("Couldn't read the config file file '%'", file_path);
+    // NOTE: we're not freeing because the config will take ownership of it
+    // (and if you reload it'll leak the old data, which we should fix at some point!)
+    if !success_read return empty, false, false, tprint("Couldn't read the config file file '%'", file_path);
 
     config, success_parse, error_msg := parse_config("Global Config", file_path, file_data);
-    if !success_parse return empty, false, tprint("Error when loading config file '%'.\n%", file_path, error_msg);
+    if !success_parse return empty, false, false, tprint("Error when loading config file '%'.\n%", file_path, error_msg);
 
-    return config, true, "";
+    new_hash := calculate_meow_hash(file_data);
+    changed := new_hash != <<hash;
+    if changed then <<hash = new_hash;
+
+    return config, true, changed, "";
 }
 
 merge_configs :: (dst: *Config, src: Config) {
@@ -234,7 +242,9 @@ load_font_by_name :: (name: string) -> font_data: string, success: bool {
 #scope_export
 
 global_config_path:  string;
+global_config_hash:  u64;
 project_config_path: string;
+project_config_hash: u64;
 current_project_name: string;
 
 config: Config = DEFAULT_CONFIG;
@@ -335,7 +345,7 @@ Color_Values :: struct {
     UI_NEUTRAL              := Color.{ r = 0.3, g = 0.3, b = 0.3, a = 1.0 };
     UI_WARNING              := Color.{ r = 0.85, g = 0.68, b = 0.33, a = 1.0 };
     UI_WARNING_DIM          := Color.{ r = 0.59, g = 0.37, b = 0.19, a = 1.0 };
-    UI_ERROR                := Color.{ r = 0.80, g = 0.00, b = 0.00, a = 1.0 };
+    UI_ERROR                := Color.{ r = 0.46, g = 0.13, b = 0.13, a = 1.0 };
     UI_ERROR_BRIGHT         := Color.{ r = 1.00, g = 0.00, b = 0.00, a = 1.0 };
     UI_SUCCESS              := Color.{ r = 0.00, g = 0.80, b = 0.00, a = 1.0 };
 

@@ -20,7 +20,7 @@ main :: () {
     if !make_directory_if_it_does_not_exist(temp_dir)     then panic_messagebox("Couldn't create folder % for temporary files. Is the directory writable?", temp_dir);
     if !projects_dir_existed then write_entire_file(tprint("%/Example Project.focus-config", projects_dir), DEFAULT_CONFIG_FILE_DATA);
 
-    load_global_config();
+    load_global_config(create_if_doesnt_exist = !DEBUG);
     init_workspace();
     init_buffers();
 
