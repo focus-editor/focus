@@ -2062,7 +2062,7 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
     if mouse.left.just_released || !mouse.left.is_down then mouse_selection_mode = false;
 
     // @Speed: we currently don't limit the text size, so if it's too big we'll do a lot of work here every frame
-    cursor_pos_x     := Simp.get_text_width(font, slice_chars(input_text, 0, cursor.pos));
+    cursor_pos_x     := Simp.get_text_width(font, slice(input_text, 0, cursor.pos));
     total_text_width := Simp.get_text_width(font, input_text);
 
     scroll_x_target := scroll_anim.target;
@@ -2084,7 +2084,7 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
     cursor_rect.x = x + cursor_pos_x;
 
     if cursor.pos != cursor.sel {
-        cursor_sel_x := Simp.get_text_width(font, slice_chars(input_text, 0, cursor.sel));
+        cursor_sel_x := Simp.get_text_width(font, slice(input_text, 0, cursor.sel));
         left  := min(cursor_pos_x, cursor_sel_x);
         right := max(cursor_pos_x, cursor_sel_x);
         selection_rect := cursor_rect;
