@@ -217,7 +217,7 @@ main :: () {
             }
         }
 
-        if should_quit && unsaved_buffers_exist() {
+        if should_quit && unsaved_buffers_exist() && !force_quit {
             show_unsaved_buffers_dialog();
             should_quit = false;
         }
@@ -460,6 +460,7 @@ dpi_scale := 1.0;
 
 redraw_requested        := true;  // set to true to render the first frame
 should_quit             := false;
+force_quit              := false;
 should_reload_workspace := false;
 
 frame_time: Time;                 // ever-increasing time since start in seconds

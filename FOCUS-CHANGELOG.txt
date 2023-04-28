@@ -1,6 +1,7 @@
 # ROUGH ROADMAP
 
 - Line wrap
+- Navigate to file dialog improvements
 - Optional line numbers
 - Proper highlighting of C/C++
 - Config files for directories (i.e. adding a .focus-config file to your directory and have Focus load it)
@@ -28,6 +29,7 @@
 # Main Git Branch
 
 + Fixed a bug with the file watcher being used while uninitialized.
++ Added some shortcuts to the unsaved files dialog (Y/S to save, N to not save, C to cancel)
 
 
 # RELEASES ==================================================================

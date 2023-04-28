@@ -1671,15 +1671,7 @@ draw_unsaved_buffers_dialog :: () {
 
         save_label := ifx unsaved_buffers.count == 1 then "    Save    " else "  Save All  ";
         activated, width = draw_button(font_ui, save_label, Colors.UI_WARNING, Colors.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
-        if activated {
-            errors_when_saving := false;
-            for buffer_id : unsaved_buffers {
-                buffer := *open_buffers[buffer_id];
-                saved := save_buffer_to_disk(buffer, buffer_id);
-                if buffer.error_when_saving || !saved then errors_when_saving = true;
-            }
-            if !errors_when_saving unsaved_buffers_dialog_proceed();
-        }
+        if activated unsaved_buffers_save_all();
     }
 
     if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
