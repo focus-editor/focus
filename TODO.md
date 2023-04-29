@@ -83,8 +83,6 @@
 
 - Log time with the session logger
 
-- Either limit the number of bytes in text input, or improve the handling of cursor (currently calculating the length every frame)
-
 - Try using File_Async when scanning project folders and measure how long it takes
 
 - Save editor state on editor operations:
