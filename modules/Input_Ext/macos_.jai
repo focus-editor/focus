@@ -1,5 +1,4 @@
 #import "Objective_C";
-#import "Objective_C/AppKit";
 
 window_minimized := false; // @@ Hack.
 
@@ -305,7 +304,7 @@ update_cocoa_window_events :: () {
                 event.ctrl_pressed  = ctrl_state;
                 event.alt_pressed   = alt_state;
                 event.repeat = (repeat != NO);
-
+                
                 input_button_states[event.key_code] |= (DOWN | START);
 
                 array_add(*events_this_frame, event);
@@ -327,7 +326,7 @@ update_cocoa_window_events :: () {
 
                         // skip Private Use Area U+F700 (this contains values for NS function keys)
                         if (event.utf32 & 0xFF00) == 0xF700 then continue;
-
+                        
                         array_add(*events_this_frame, event);
                     }
                 }
@@ -352,7 +351,7 @@ update_cocoa_window_events :: () {
                 event.alt_pressed   = alt_state;
 
                 input_button_states[event.key_code] = Key_Current_State.END;  // Because we shadowed that by Key_Code.END.
-
+                
                 array_add(*events_this_frame, event);
 
                 // continue;
@@ -452,7 +451,7 @@ update_window_events :: () {
         init_input_system();
         input_vk_table_initialized = true;
     }
-
+    
     update_cocoa_window_events();
 }
 

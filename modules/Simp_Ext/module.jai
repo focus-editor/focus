@@ -16,6 +16,7 @@ Render_API :: enum {
     #import "X11";
 } else #if OS == .MACOS {
     #import "Objective_C";
+    #import "Objective_C/AppKit";
 }
 
 #if render_api == .OPENGL {
