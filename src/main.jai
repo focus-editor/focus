@@ -642,8 +642,8 @@ cpu_info: Cpu_X86;
 
 File_Async :: #import "File_Async";
 
-Simp  :: #import "Simp_Ext";
-Input :: #import "Input_Ext";
+Simp  :: #import "Simp";
+Input :: #import "Input";
 
 DEBUG :: #run get_build_options().math_bounds_check == .FATAL;  // this is a sloppy way of checking whether we're in debug mode!
 
