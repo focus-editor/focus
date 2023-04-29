@@ -29,14 +29,19 @@
 
 # Main Git Branch
 
+- ...
+
+
+# RELEASES ==================================================================
+
+
+# Version 0.1.3, 30 April 2023
+
 + Fixed a bug with the file watcher being used while uninitialized.
 + Added some shortcuts to the unsaved files dialog (Y/S to save, N to not save, C to cancel)
 + Fixed a bug with the biggest monitor being incorrectly determined on Windows (thanks to @jlami)
 + Zooming no longer offsets the viewport
 + Editing the same file side-by-side will not cause the viewport to jump around
-
-
-# RELEASES ==================================================================
 
 
 # Version 0.1.2, 29 April 2023
