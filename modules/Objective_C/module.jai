@@ -1298,6 +1298,10 @@ NSScreen :: struct {
     mainScreen :: () -> *NSScreen {
         return xx objc_msgSend(class(NSScreen), _sel.mainScreen);
     }
+    
+    screens :: () -> *NSArray(*NSScreen) {
+        return xx objc_msgSend(class(NSScreen), _sel.screens);
+    }
 
     frame :: NSView.frame;
 }
@@ -1318,6 +1322,9 @@ NSCursor :: struct {
 
     arrowCursor :: () -> *NSCursor {
         return xx objc_msgSend(class(NSCursor), _sel.arrowCursor);
+    }
+    IBeamCursor :: () -> *NSCursor {
+        return xx objc_msgSend(class(NSCursor), _sel.IBeamCursor);
     }
     pointingHandCursor :: () -> *NSCursor {
         return xx objc_msgSend(class(NSCursor), _sel.pointingHandCursor);
@@ -2203,10 +2210,12 @@ _Generated_Selectors :: struct #type_info_no_size_complaint {
     convertPointFromBacking_: Selector;
     setWantsBestResolutionOpenGLSurface_: Selector;
     mainScreen: Selector;
+    screens: Selector;
     hide: Selector;
     unhide: Selector;
     set: Selector;
     arrowCursor: Selector;
+    IBeamCursor: Selector;
     pointingHandCursor: Selector;
     openHandCursor: Selector;
     closedHandCursor: Selector;
