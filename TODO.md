@@ -11,7 +11,7 @@
 
 - Line wrap:
     - Implement wrapping for buffer
-        - Point line_starts to real_line_starts unless in the line wrap mod
+        - Point line_starts to real_line_starts unless in the line wrap mode
     - Have a toggle command
     - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
     - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
