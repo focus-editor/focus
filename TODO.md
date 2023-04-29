@@ -10,13 +10,6 @@
 ===========================
 
 - Line wrap:
-    - Sticky viewport
-        + Remember line number and offset_within_line after finishing scrolling (or when dragging the scrollbar)
-        + Calculate viewport.top from it before drawing
-        - Move the glue point:
-            - Reacting to edit notifications
-            - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
-        - Remove the KNOWN BUG for zooming
     - Implement wrapping for buffer
         - Point line_starts to real_line_starts unless in the line wrap mod
     - Have a toggle command
@@ -140,6 +133,10 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Sticky viewport
+    + Remember line number and offset_within_line after finishing scrolling (or when dragging the scrollbar)
+    + Calculate viewport.top from it before drawing
+    + Move the glue point
 + Remove the "config saved" messages when they don't apply
 + UI_ERROR_BRIGHT
 + Debug label

@@ -24,6 +24,7 @@
 # KNOWN BUGS
 
 - Changing some keymap bindings requires a restart to take effect
+- When editing with multiple cursors, some of which are outside the viewport, the screen may jerk
 
 
 # Main Git Branch
@@ -32,6 +33,7 @@
 + Added some shortcuts to the unsaved files dialog (Y/S to save, N to not save, C to cancel)
 + Fixed a bug with the biggest monitor being incorrectly determined on Windows (thanks to @jlami)
 + Zooming no longer offsets the viewport
++ Editing the same file side-by-side will not cause the viewport to jump around
 
 
 # RELEASES ==================================================================

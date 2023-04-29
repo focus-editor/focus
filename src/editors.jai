@@ -329,10 +329,14 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
 adjust_cursors_and_viewport :: (editor: *Editor, buffer: Buffer, current_editor_id: s64) {
     // When edits are made in another editor for the same buffer, this editor's cursors
     // need to be adjusted. The viewport glue point also needs to move.
-
     for edit : buffer.edit_notifications {
-        if edit.editor_id == current_editor_id continue;  // this editor knows about this edit
+        if edit.editor_id == current_editor_id continue;  // this editor's cursors have already moved
+
+        // Adjust viewport
         using edit;
+        using editor.viewport.glue_point;
+        if buffer_pos >= offset then buffer_pos = max(buffer_pos + delta, offset);
+
         for * cursor : editor.cursors {
             if cursor.pos >= offset then cursor.pos = max(cursor.pos + delta, offset);
             if cursor.sel >= offset then cursor.sel = max(cursor.sel + delta, offset);
