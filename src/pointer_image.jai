@@ -72,10 +72,10 @@ Pointer_Image :: enum u16 {
         pointers[LOCKED]                = NSCursor.operationNotAllowedCursor();
         pointers[DRAGGING_HORIZONTAL]   = NSCursor.resizeLeftRightCursor();
         pointers[DRAGGING_VERTICAL]     = NSCursor.resizeUpDownCursor();
-        pointers[DRAGGING_FREE]         = NSCursor.openHandCursor(); // @Hack: There are no publicly available cursors for this.
-        pointers[DRAGGING_NW_SE]        = NSCursor.openHandCursor(); // @Hack: There are no publicly available cursors for this.
-        pointers[DRAGGING_NE_SW]        = NSCursor.openHandCursor(); // @Hack: There are no publicly available cursors for this.
-        pointers[TEXT_SELECT]           = NSCursor.arrowCursor(); // @Hack: There are no publicly available cursors for this.
+        pointers[DRAGGING_FREE]         = NSCursor.openHandCursor();
+        pointers[DRAGGING_NW_SE]        = NSCursor.openHandCursor();
+        pointers[DRAGGING_NE_SW]        = NSCursor.openHandCursor();
+        pointers[TEXT_SELECT]           = NSCursor.IBeamCursor();
     }
 
     pointers: [NUM_POINTERS] *NSCursor;
