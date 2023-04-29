@@ -465,6 +465,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             // Jump immediately to the scroll point when dragging or clicking scrollbar
             viewport.top = new_scroll_target;
             viewport.scroll_y.target = new_scroll_target;
+            viewport_remember_glue_point(*viewport, buffer);
             redraw_requested = true;
         }
 
@@ -479,10 +480,12 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             redraw_requested = true;
         }
 
-        // Vertical scrolling
-        if viewport.top != viewport.scroll_y.target {
+        if !is_animating(viewport.scroll_y) && viewport.top == viewport.scroll_y.target {
+            viewport_glue_to_point(*viewport, buffer);
+        } else {
             redraw_requested = true;
             viewport.top = get_animation_value(viewport.scroll_y);
+            viewport_remember_glue_point(*viewport, buffer);
         }
 
         // Horizontal scrolling
@@ -1671,15 +1674,7 @@ draw_unsaved_buffers_dialog :: () {
 
         save_label := ifx unsaved_buffers.count == 1 then "    Save    " else "  Save All  ";
         activated, width = draw_button(font_ui, save_label, Colors.UI_WARNING, Colors.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
-        if activated {
-            errors_when_saving := false;
-            for buffer_id : unsaved_buffers {
-                buffer := *open_buffers[buffer_id];
-                saved := save_buffer_to_disk(buffer, buffer_id);
-                if buffer.error_when_saving || !saved then errors_when_saving = true;
-            }
-            if !errors_when_saving unsaved_buffers_dialog_proceed();
-        }
+        if activated unsaved_buffers_save_all();
     }
 
     if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
@@ -2062,7 +2057,7 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
     if mouse.left.just_released || !mouse.left.is_down then mouse_selection_mode = false;
 
     // @Speed: we currently don't limit the text size, so if it's too big we'll do a lot of work here every frame
-    cursor_pos_x     := Simp.get_text_width(font, slice_chars(input_text, 0, cursor.pos));
+    cursor_pos_x     := Simp.get_text_width(font, slice(input_text, 0, cursor.pos));
     total_text_width := Simp.get_text_width(font, input_text);
 
     scroll_x_target := scroll_anim.target;
@@ -2084,7 +2079,7 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
     cursor_rect.x = x + cursor_pos_x;
 
     if cursor.pos != cursor.sel {
-        cursor_sel_x := Simp.get_text_width(font, slice_chars(input_text, 0, cursor.sel));
+        cursor_sel_x := Simp.get_text_width(font, slice(input_text, 0, cursor.sel));
         left  := min(cursor_pos_x, cursor_sel_x);
         right := max(cursor_pos_x, cursor_sel_x);
         selection_rect := cursor_rect;

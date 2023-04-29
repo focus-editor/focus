@@ -55,24 +55,6 @@ arrays_concat :: (array1: [] $T, array2: [] T) -> [] T {
     return result;
 }
 
-decode_utf8_string_to_temp_chars :: (str: string, max_char: s64) -> [] u32 {
-    chars: [..] u32;
-    chars.allocator = temp;
-    if !str return chars;
-
-    array_reserve(*chars, str.count);  // should be enough to store chars with some buffer
-
-    s := str;
-    for 0 .. max_char {
-        char, result := utf8_next_character(*s);
-        assert(result != .SOURCE_ILLEGAL);
-        array_add(*chars, char);
-        if result == .SOURCE_EXHAUSTED break;
-    }
-
-    return chars;
-}
-
 decode_utf8_string_to_temp_char_substrings :: (str: string) -> [] string {
     substrings: [..] string;
     substrings.allocator = temp;
@@ -316,6 +298,11 @@ get_animation_value :: (using anim: Tween_Animation($T)) -> T {
         case .lerp;       return start + cast(T) (cast(float)(target - start) * t);
         case .smoothstep; return start + cast(T) (cast(float)(target - start) * t * t * (3.0 - 2.0 * t));
     }
+}
+
+is_animating :: (using anim: Tween_Animation($T)) -> bool {
+    t := cast(float) ((frame_time - started_at) / speed);
+    return 0 <= t && t < 1;
 }
 
 get_identifier_name :: (name: Code) -> string {

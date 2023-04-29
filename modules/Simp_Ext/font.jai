@@ -548,11 +548,11 @@ get_cursor_pos_for_width :: (font: *Dynamic_Font, s: string, requested_width: s6
         width_in_pixels += glyph_width;
         if width_in_pixels >= requested_width {
             // If we're closer to the next glyph position, return the next position
-            if (width_in_pixels - requested_width) <= (glyph_width / 2) then current_pos += 1;
+            if (width_in_pixels - requested_width) <= (glyph_width / 2) then current_pos = xx (t - s.data);
             break;
         }
         
-        current_pos += 1;
+        current_pos = xx (t - s.data);
     }
 
     return current_pos;

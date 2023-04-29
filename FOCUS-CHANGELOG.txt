@@ -1,6 +1,7 @@
 # ROUGH ROADMAP
 
 - Line wrap
+- Navigate to file dialog improvements
 - Optional line numbers
 - Proper highlighting of C/C++
 - Config files for directories (i.e. adding a .focus-config file to your directory and have Focus load it)
@@ -8,6 +9,7 @@
 - Shortcut for adding cursors above/below
 - Case-sensitive search
 - Global search improvements (the ability to filter additionally by filename)
+- Backup unsaved changes
 - Highlight other languages
 - Improve smooth scrolling for fancy mice
 - Undo/redo for UI
@@ -22,18 +24,27 @@
 # KNOWN BUGS
 
 - Changing some keymap bindings requires a restart to take effect
-- Zooming offsets the viewport
 
 
 # Main Git Branch
 
-+ Made file errors more bright
-+ Fixed the bugs caused by the change of DEFAULT_SPACES in Jai 0.1.062
-+ Fixed the window title erroneously saying you're in debug mode
-+ Made editing with multiple cursors less surprising when performing mass deletes using Ctrl-Backspace etc.
++ Fixed a bug with the file watcher being used while uninitialized.
++ Added some shortcuts to the unsaved files dialog (Y/S to save, N to not save, C to cancel)
++ Fixed a bug with the biggest monitor being incorrectly determined on Windows (thanks to @jlami)
++ Zooming no longer offsets the viewport
 
 
 # RELEASES ==================================================================
+
+
+# Version 0.1.2, 29 April 2023
+
++ Added the move-by-words functionality to text inputs (thanks to @aang521)
++ Fixed the bugs caused by the change of DEFAULT_SPACES in Jai 0.1.062
++ Fixed the config file being reloaded when files are added to the same directory
++ Fixed the window title erroneously saying you're in debug mode
++ Made editing with multiple cursors less surprising when performing mass deletes using Ctrl-Backspace etc.
++ File errors are not too dim any more
 
 
 # Version 0.1.1, 28 April 2023

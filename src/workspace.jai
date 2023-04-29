@@ -144,12 +144,14 @@ hard_reload_workspace :: () {
 
     deinit_finder();
     deinit_open_file_dialog();
+    deinit_file_watcher();
 
     // Remove all editors and buffers (safe to do now without any threads)
     remove_all_editors();
     remove_all_buffers();
 
     // Start again
+    init_file_watcher();
     array_reset_keeping_memory(*project_dirs);
     init_workspace();
     init_buffers();
@@ -178,6 +180,23 @@ file_is_watched :: (file_path: string) -> bool {
         if equal_nocase(it, file_path) return true;
     }
     return false;
+}
+
+init_file_watcher :: () {
+    assert(!file_watcher_initted);
+    file_watcher = File_Watcher.{};
+    if !init(*file_watcher, file_change_callback) {
+        add_user_error("Could not initialize the workspace file watcher. Files won't be reloaded. This is likely a bug.");
+        file_watcher_initted = false;
+    } else {
+        file_watcher_initted = true;
+    }
+}
+
+deinit_file_watcher :: () {
+    if !file_watcher_initted return;
+    deinit(file_watcher);
+    file_watcher_initted = false;
 }
 
 #scope_file
@@ -222,9 +241,8 @@ directory_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void
 }
 
 start_file_watcher :: () {
-    if !init(*file_watcher, file_change_callback) {
-        log_error("Could not initialize the workspace file watcher");
-        // TODO: add the error to the error log when we have it
+    if !file_watcher_initted {
+        log_error("Trying to start the file watcher, but it's not initialized. This is a bug.\n");
         return;
     }
 
@@ -313,6 +331,8 @@ get_scan_pool_allocator :: () -> Allocator {
 }
 
 file_watcher: File_Watcher;
+file_watcher_initted := false;
+
 dirs_to_rescan: [..] string;    // will use temporary storage
 watcher_file_modified: string;  // will contain the path of a file if if was modified and it was the only event in a group,
                                 // otherwise it won't be used and a scan will be done instead

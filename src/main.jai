@@ -1,5 +1,5 @@
-VERSION      :: "0.1.1";
-RELEASE_DATE :: "28 April 2023";
+VERSION      :: "0.1.2";
+RELEASE_DATE :: "29 April 2023";
 
 main :: () {
     cpu_info = get_cpu_info();
@@ -20,7 +20,8 @@ main :: () {
     if !make_directory_if_it_does_not_exist(temp_dir)     then panic_messagebox("Couldn't create folder % for temporary files. Is the directory writable?", temp_dir);
     if !projects_dir_existed then write_entire_file(tprint("%/Example Project.focus-config", projects_dir), DEFAULT_CONFIG_FILE_DATA);
 
-    load_global_config();
+    init_file_watcher();
+    load_global_config(create_if_doesnt_exist = !DEBUG);
     init_workspace();
     init_buffers();
 
@@ -216,7 +217,7 @@ main :: () {
             }
         }
 
-        if should_quit && unsaved_buffers_exist() {
+        if should_quit && unsaved_buffers_exist() && !force_quit {
             show_unsaved_buffers_dialog();
             should_quit = false;
         }
@@ -459,6 +460,7 @@ dpi_scale := 1.0;
 
 redraw_requested        := true;  // set to true to render the first frame
 should_quit             := false;
+force_quit              := false;
 should_reload_workspace := false;
 
 frame_time: Time;                 // ever-increasing time since start in seconds
