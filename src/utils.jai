@@ -300,6 +300,11 @@ get_animation_value :: (using anim: Tween_Animation($T)) -> T {
     }
 }
 
+is_animating :: (using anim: Tween_Animation($T)) -> bool {
+    t := cast(float) ((frame_time - started_at) / speed);
+    return 0 <= t && t < 1;
+}
+
 get_identifier_name :: (name: Code) -> string {
     node := compiler_get_nodes(name);
     if node.kind != .IDENT {

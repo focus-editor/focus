@@ -9,6 +9,7 @@
 - Shortcut for adding cursors above/below
 - Case-sensitive search
 - Global search improvements (the ability to filter additionally by filename)
+- Backup unsaved changes
 - Highlight other languages
 - Improve smooth scrolling for fancy mice
 - Undo/redo for UI
@@ -23,13 +24,14 @@
 # KNOWN BUGS
 
 - Changing some keymap bindings requires a restart to take effect
-- Zooming offsets the viewport
 
 
 # Main Git Branch
 
 + Fixed a bug with the file watcher being used while uninitialized.
 + Added some shortcuts to the unsaved files dialog (Y/S to save, N to not save, C to cancel)
++ Fixed a bug with the biggest monitor being incorrectly determined on Windows (thanks to @jlami)
++ Zooming no longer offsets the viewport
 
 
 # RELEASES ==================================================================

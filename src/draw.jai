@@ -465,6 +465,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             // Jump immediately to the scroll point when dragging or clicking scrollbar
             viewport.top = new_scroll_target;
             viewport.scroll_y.target = new_scroll_target;
+            viewport_remember_glue_point(*viewport, buffer);
             redraw_requested = true;
         }
 
@@ -479,10 +480,12 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             redraw_requested = true;
         }
 
-        // Vertical scrolling
-        if viewport.top != viewport.scroll_y.target {
+        if !is_animating(viewport.scroll_y) && viewport.top == viewport.scroll_y.target {
+            viewport_glue_to_point(*viewport, buffer);
+        } else {
             redraw_requested = true;
             viewport.top = get_animation_value(viewport.scroll_y);
+            viewport_remember_glue_point(*viewport, buffer);
         }
 
         // Horizontal scrolling

@@ -966,6 +966,19 @@ remove_all_editors :: () {
     array_reset_keeping_memory(*open_editors);
 }
 
+viewport_remember_glue_point :: (using viewport: *Viewport, buffer: Buffer) {
+    glue_point.buffer_pos = get_line_start_offset(buffer, top / cast(s32) line_height);
+    glue_point.offset_within_line = top % cast(s32) line_height;
+}
+
+viewport_glue_to_point :: (using viewport: *Viewport, buffer: Buffer) -> changed: bool {
+    old_top := top;
+    line := offset_to_line(buffer, glue_point.buffer_pos);
+    top = line * cast(s32) line_height + glue_point.offset_within_line;
+    scroll_y.target = top;
+    return top != old_top;
+}
+
 #scope_file
 
 select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) -> whole_words: bool {
@@ -2243,8 +2256,11 @@ Editor :: struct {
 Viewport :: struct {
     top:  s32;
     left: s32;
+    glue_point: Glue_Point;
     scroll_y := #run Tween_Animation(s32).{ speed = xx 0.1, func = .lerp };
     scroll_x := #run Tween_Animation(s32).{ speed = xx 0.1, func = .lerp };
+
+    Glue_Point :: struct { buffer_pos: s32; offset_within_line: s32; }
 }
 
 Search_Bar :: struct {

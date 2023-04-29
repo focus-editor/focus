@@ -9,21 +9,27 @@
 
 ===========================
 
-- See if panic behaviour can be improved in release builds
-
 - Line wrap:
     - Sticky viewport
-        - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
+        + Remember line number and offset_within_line after finishing scrolling (or when dragging the scrollbar)
+        + Calculate viewport.top from it before drawing
+        - Move the glue point:
+            - Reacting to edit notifications
+            - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
+        - Remove the KNOWN BUG for zooming
     - Implement wrapping for buffer
+        - Point line_starts to real_line_starts unless in the line wrap mod
+    - Have a toggle command
     - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
     - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
 
+- See if panic behaviour can be improved in release builds
+- Keymap changing without having to reload - investigate a bug
 - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
 
 - Show default config (readonly)
 
 - Highlight C/C++
-
 
 - Use keyboard in the confirmation dialog
 - Drop a folder into the editor to add it to workspace
