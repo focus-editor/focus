@@ -9,6 +9,13 @@ MIME_TYPE_TEXT        :: "text/plain;charset=utf-8";
 MIME_TYPE_TEXT_NOLOOP :: "text/x-plain-do-not-loop-on-self;charset=utf-8";
 MIME_TYPE_FILE_LIST   :: "text/uri-list";
 
+WLTimer :: struct {
+    fd: s32 = -1;
+    display: *WLDisplay;
+    user_data: *void;
+    cb: #type (self: *WLTimer);
+}
+
 WLDisplay :: struct {
     handle: *wl_display;
 
@@ -22,6 +29,10 @@ WLDisplay :: struct {
     pointer: *wl_pointer;
     keyboard: *wl_keyboard;
     input_serial: u32;
+    key_repeat_delay: u32 = 100;
+    key_repeat_rate: u32 = 20;
+    key_repeat_timer: *WLTimer;
+    key_to_repeat: u32;
 
     pointer_axis_multiplier: [2]s32 = .[-1, -1];
     pointer_axis_accumulator: [2]s32 = .[0, 0];
@@ -53,6 +64,64 @@ WLDisplay :: struct {
     mod_idx_caps_lock : u32;
     mod_idx_super     : u32;
     mod_idx_alt_gr    : u32;
+
+    epfd: s32 = -1;
+    timers: [..]WLTimer;
+}
+
+wl_timer_create :: (display: *WLDisplay, cb: type_of(WLTimer.cb), initial_tick: u32 = 0, repeat: u32 = 0) -> *WLTimer {
+    TFD_TIMER_ABSTIME : s32 : 1;
+
+    ret: *WLTimer;
+    for * t : display.timers {
+        if t.fd < 0 {
+            ret = t;
+            break;
+        }
+    }
+
+    if !ret ret = array_add(*display.timers);
+
+    ret.fd = timerfd_create(xx CLOCK_MONOTONIC, O_CLOEXEC);
+
+    if initial_tick || repeat wl_timer_start(ret, initial_tick, repeat);
+
+    ev := epoll_event.{
+        events =  EPOLLIN,
+        data.fd = ret.fd,
+    };
+    epoll_ctl(display.epfd, EPOLL_CTL_ADD, ret.fd, *ev);
+
+    ret.cb = cb;
+    ret.display = display;
+
+    return ret;
+}
+
+wl_timer_destroy :: (display: *WLDisplay, timer: *WLTimer) {
+    assert(timer >= display.timers.data && timer < display.timers.data + display.timers.count);
+    close(timer.fd);
+    <<timer = .{};
+}
+
+wl_timer_start :: (timer: *WLTimer, initial_tick: u32, repeat: u32 = 0) {
+    assert(initial_tick != 0 || repeat != 0);
+
+    spec: itimerspec;
+    spec.it_value.tv_nsec  = (initial_tick * 1_000_000);
+    spec.it_value.tv_sec  += (spec.it_value.tv_nsec / 1_000_000_000);
+    spec.it_value.tv_nsec  = (spec.it_value.tv_nsec % 1_000_000_000);
+    if repeat {
+        spec.it_interval.tv_nsec = repeat * 1_000_000;
+        spec.it_interval.tv_sec  = (spec.it_interval.tv_nsec / 1_000_000_000);
+        spec.it_interval.tv_nsec = (spec.it_interval.tv_nsec % 1_000_000_000);
+    }
+    timerfd_settime(timer.fd, 0, *spec, null);
+}
+
+wl_timer_stop :: (timer: *WLTimer) {
+    spec: itimerspec;
+    timerfd_settime(timer.fd, 0, *spec, null);
 }
 
 WLDesiredPreconfigureState :: enum {
@@ -349,6 +418,11 @@ wl_init_display :: (display: LDDisplay) -> bool {
 
     init_string_builder(*d.current_text_selection);
 
+    d.epfd = epoll_create1(EPOLL_CLOEXEC);
+    assert(d.epfd >= 0);
+
+    d.key_repeat_timer = wl_timer_create(d, wl_key_repeat_cb);
+
     return true;
 }
 
@@ -442,11 +516,6 @@ frame_listener :: wl_callback_listener.{
         w.callback = wl_surface.frame(w.handle);
         wl_callback.add_listener(w.callback, *frame_listener, w);
         wl_surface.commit(w.handle);
-
-        ctx: Context;
-        push_context ctx {
-            print("FRAME\n");
-        }
     }
 };
 

@@ -30,7 +30,12 @@ keyboard_listenter :: wl_keyboard_listener.{
     },
 
     leave = (data: *void, self: *wl_keyboard, serial: u32, surface: *wl_surface) -> void #c_call {
+        d : *WLDisplay = wl_proxy.get_user_data(self);
         input_application_has_focus = false;
+        ctx: Context;
+        push_context ctx {
+            wl_timer_stop(d.key_repeat_timer);
+        }
     },
 
     key = (data: *void, self: *wl_keyboard, serial: u32, time: u32, key: u32, state: u32) -> void #c_call {
@@ -39,37 +44,16 @@ keyboard_listenter :: wl_keyboard_listener.{
             d : *WLDisplay = wl_proxy.get_user_data(self);
             if !d.kb_state return;
 
-            buf: [16]u8;
-            keycode: xkb_keycode_t = key + 8;
-
-            keysym     := xkb_state_key_get_one_sym(d.kb_state, keycode);
-            utf32      := keysym_to_utf32(keysym);
-            translated := x11_translate_key_code(keysym);
-
-            event: Event;
-            event.type = .KEYBOARD;
-            event.key_code = translated;
-            event.shift_pressed = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_shift, .XKB_STATE_MODS_DEPRESSED) == 1;
-            event.ctrl_pressed  = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_ctrl, .XKB_STATE_MODS_DEPRESSED) == 1;
-            event.alt_pressed   = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_alt, .XKB_STATE_MODS_DEPRESSED) == 1;
-
             if state == wl_keyboard.key_state_pressed {
-                event.key_pressed = 1;
-                input_button_states[event.key_code] = (Key_Current_State.START | Key_Current_State.DOWN);
-                if event.ctrl_pressed d.input_serial = serial;
+                d.key_to_repeat = key;
+                rate := 1000 / d.key_repeat_rate;
+                wl_timer_start(d.key_repeat_timer, d.key_repeat_delay, rate);
             } else {
-                event.key_pressed = 0;
-                input_button_states[event.key_code] = Key_Current_State.END;
+                d.key_to_repeat = 0;
+                wl_timer_stop(d.key_repeat_timer);
             }
 
-            array_add(*events_this_frame, event);
-
-            if event.key_pressed && !event.ctrl_pressed && !event.alt_pressed && utf32 {
-                char_event: Event;
-                char_event.type = .TEXT_INPUT;
-                char_event.utf32 = utf32;
-                array_add(*events_this_frame, char_event);
-            }
+            handle_key_event(d, serial, key, state);
         }
     },
 
@@ -84,8 +68,57 @@ keyboard_listenter :: wl_keyboard_listener.{
     },
 
     repeat_info = (data: *void, self: *wl_keyboard, rate: s32, delay: s32) -> void #c_call {
+        d : *WLDisplay = wl_proxy.get_user_data(self);
+        d.key_repeat_delay = xx delay;
+        d.key_repeat_rate  = xx rate;
     }
 };
+
+wl_key_repeat_cb :: (timer: *WLTimer) {
+    d := timer.display;
+    key := d.key_to_repeat;
+
+    if !key {
+        wl_timer_stop(d.key_repeat_timer);
+        return;
+    }
+
+    handle_key_event(d, d.input_serial, d.key_to_repeat, wl_keyboard.key_state_pressed);
+}
+
+handle_key_event :: (d: *WLDisplay, serial: u32, key: u32, state: u32) {
+    buf: [16]u8;
+    keycode: xkb_keycode_t = key + 8;
+
+    keysym     := xkb_state_key_get_one_sym(d.kb_state, keycode);
+    utf32      := keysym_to_utf32(keysym);
+    translated := x11_translate_key_code(keysym);
+
+    event: Event;
+    event.type = .KEYBOARD;
+    event.key_code = translated;
+    event.shift_pressed = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_shift, .XKB_STATE_MODS_DEPRESSED) == 1;
+    event.ctrl_pressed  = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_ctrl, .XKB_STATE_MODS_DEPRESSED) == 1;
+    event.alt_pressed   = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_alt, .XKB_STATE_MODS_DEPRESSED) == 1;
+
+    if state == wl_keyboard.key_state_pressed {
+        event.key_pressed = 1;
+        input_button_states[event.key_code] = (Key_Current_State.START | Key_Current_State.DOWN);
+        if event.ctrl_pressed d.input_serial = serial;
+    } else {
+        event.key_pressed = 0;
+        input_button_states[event.key_code] = Key_Current_State.END;
+    }
+
+    array_add(*events_this_frame, event);
+
+    if event.key_pressed && !event.ctrl_pressed && !event.alt_pressed && utf32 {
+        char_event: Event;
+        char_event.type = .TEXT_INPUT;
+        char_event.utf32 = utf32;
+        array_add(*events_this_frame, char_event);
+    }
+}
 
 /* These are taken from <linux/input-event-codes.h> */
 BTN_LEFT   : u32 : 0x110;
@@ -171,8 +204,89 @@ pointer_listener :: wl_pointer_listener.{
     },
 };
 
+wl_display_poll :: (display: *wl_display, events: s16) -> s32 {
+    wld: *WLDisplay = wl_proxy.get_user_data(display);
+
+	pfd: [2]pollfd;
+	pfd[0].fd = wl_display.get_fd(display);
+	pfd[0].events = events;
+    pfd[1].fd = wld.epfd;
+    pfd[1].events = POLLIN;
+
+    ret: s32;
+	while true {
+		ret = poll(pfd.data, 2, -1);
+        if ret < 0 {
+            if errno() == EINTR continue;
+            break;
+        }
+        break;
+	}
+    if ret <= 0 return ret;
+
+    has_wayland_events := false;
+    for 0..1 {
+        if !pfd[it].revents {
+            continue;
+        }
+        if pfd[it].fd == wl_display.get_fd(display) {
+            has_wayland_events = true;
+            continue;
+        }
+
+        assert(pfd[it].fd == wld.epfd);
+        ev: epoll_event;
+        count := epoll_wait(wld.epfd, *ev, 1, -1);
+        assert(count == 1);
+
+        for * wld.timers {
+            if it.fd != ev.data.fd continue;
+            num: u64;
+            read(it.fd, *num, size_of(u64));
+            if it.cb it.cb(it);
+        }
+    }
+
+    if has_wayland_events return 1;
+    set_errno(EAGAIN);
+	return -1;
+}
+
 wl_update_window_events :: (display: *WLDisplay) {
-    wl_display.dispatch(display.handle);
+	if (wl_display.prepare_read(display.handle) < 0) {
+        if wl_display_poll(display.handle, POLLOUT) > 0 {
+            wl_display.dispatch_pending(display.handle);
+        }
+        return;
+    }
+
+    ret: s32;
+	while (true) {
+		ret = wl_display.flush(display.handle);
+
+		if (ret != -1 || errno() != EAGAIN)
+			break;
+
+		if (wl_display_poll(display.handle, POLLOUT) < 0) {
+			wl_display.cancel_read(display.handle);
+			return;
+		}
+	}
+
+	if (ret < 0 && errno() != EPIPE) {
+		wl_display.cancel_read(display.handle);
+		return;
+	}
+
+	if (wl_display_poll(display.handle, POLLIN) < 0) {
+		wl_display.cancel_read(display.handle);
+		return;
+	}
+
+	if (wl_display.read_events(display.handle) < 0)
+		return;
+
+	wl_display.dispatch_pending(display.handle);
 }
 
 wl_get_mouse_pointer_position :: (win: *WLWindow, right_handed: bool) -> x: int, y: int, success: bool {
