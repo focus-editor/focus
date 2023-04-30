@@ -125,11 +125,26 @@ BTN_LEFT   : u32 : 0x110;
 BTN_RIGHT  : u32 : 0x111;
 BTN_MIDDLE : u32 : 0x112;
 
+refresh_cursor :: (w: *WLWindow) {
+    wl_pointer.set_cursor(
+        w.display.pointer,
+        w.enter_serial,
+        w.cursor.surfaces[0],
+        xx w.cursor.native.images[0].hotspot_x,
+        xx w.cursor.native.images[0].hotspot_y);
+}
+
 pointer_listener :: wl_pointer_listener.{
     enter = (data: *void, self: *wl_pointer, serial: u32, surface: *wl_surface,
         surface_x: wl_fixed_t, surface_y: wl_fixed_t) -> void #c_call
     {
-        current_hovered_window = wl_surface.get_user_data(surface);
+        ctx: Context;
+        push_context ctx {
+            w := isa(get_by_native_handle(surface), WLWindow);
+            current_hovered_window = wl_surface.get_user_data(surface);
+            w.enter_serial = serial;
+            refresh_cursor(w);
+        }
     },
 
     leave = (data: *void, self: *wl_pointer, serial: u32, surface: *wl_surface) -> void #c_call {},
@@ -239,12 +254,7 @@ wl_display_poll :: (display: *wl_display, events: s16) -> s32 {
         count := epoll_wait(wld.epfd, *ev, 1, -1);
         assert(count == 1);
 
-        for * wld.timers {
-            if it.fd != ev.data.fd continue;
-            num: u64;
-            read(it.fd, *num, size_of(u64));
-            if it.cb it.cb(it);
-        }
+        if wl_tick_timers(wld, ev.data.fd) continue;
     }
 
     if has_wayland_events return 1;

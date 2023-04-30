@@ -80,17 +80,20 @@ Pointer_Image :: enum u16 {
 
     pointers: [NUM_POINTERS] *NSCursor;
 } else {
+    LD :: #import "Linux_Display";
+
     set_pointer_image :: (image: Pointer_Image) {
-        if !initted_pointers  init_pointers();
-
-        // unimplemented();
-    }
-
-    init_pointers :: () {
-        initted_pointers = true;
-
-        using Pointer_Image;
-        // unimplemented();
+        if image == {
+            case .NORMAL; LD.set_cursor_from_theme(window, "default");
+            case .PRESSABLE; LD.set_cursor_from_theme(window, "pointer");
+            case .LOCKED; LD.set_cursor_from_theme(window, "not-allowed");
+            case .DRAGGING_HORIZONTAL; LD.set_cursor_from_theme(window, "col-resize");
+            case .DRAGGING_VERTICAL; LD.set_cursor_from_theme(window, "row-resize");
+            case .DRAGGING_FREE; LD.set_cursor_from_theme(window, "all-scroll");
+            case .DRAGGING_NW_SE; LD.set_cursor_from_theme(window, "nw-resize");
+            case .DRAGGING_NE_SW; LD.set_cursor_from_theme(window, "se-resize");
+            case .TEXT_SELECT; LD.set_cursor_from_theme(window, "text");
+        }
     }
 }
 

@@ -16,18 +16,27 @@ WLTimer :: struct {
     cb: #type (self: *WLTimer);
 }
 
+WLCursor :: struct {
+    name: string;
+    surfaces: [..]*wl_surface;
+    native: *wl_cursor;
+}
+
 WLDisplay :: struct {
     handle: *wl_display;
 
     registry: *wl_registry;
     compositor: *wl_compositor;
     wm_base: *xdg_wm_base;
+    shm: *wl_shm;
 
     decoration_manager: *zxdg_decoration_manager_v1;
 
     seat: *wl_seat;
+
     pointer: *wl_pointer;
-    keyboard: *wl_keyboard;
+    cursor_theme: *wl_cursor_theme;
+    cursors: Table(string, WLCursor);
     input_serial: u32;
     key_repeat_delay: u32 = 100;
     key_repeat_rate: u32 = 20;
@@ -36,6 +45,17 @@ WLDisplay :: struct {
 
     pointer_axis_multiplier: [2]s32 = .[-1, -1];
     pointer_axis_accumulator: [2]s32 = .[0, 0];
+
+    keyboard: *wl_keyboard;
+    kb_context: *xkb_context;
+    kb_keymap : *xkb_keymap;
+    kb_state  : *xkb_state;
+    mod_idx_shift     : u32;
+    mod_idx_ctrl      : u32;
+    mod_idx_alt       : u32;
+    mod_idx_caps_lock : u32;
+    mod_idx_super     : u32;
+    mod_idx_alt_gr    : u32;
 
     data_device_manager: *wl_data_device_manager;
     data_device: *wl_data_device;
@@ -54,16 +74,6 @@ WLDisplay :: struct {
     egl_dpy: EGLDisplay;
     egl_ctx: EGLContext;
     egl_cnf: EGLConfig;
-
-    kb_context: *xkb_context;
-    kb_keymap : *xkb_keymap;
-    kb_state  : *xkb_state;
-    mod_idx_shift     : u32;
-    mod_idx_ctrl      : u32;
-    mod_idx_alt       : u32;
-    mod_idx_caps_lock : u32;
-    mod_idx_super     : u32;
-    mod_idx_alt_gr    : u32;
 
     epfd: s32 = -1;
     timers: [..]WLTimer;
@@ -124,6 +134,17 @@ wl_timer_stop :: (timer: *WLTimer) {
     timerfd_settime(timer.fd, 0, *spec, null);
 }
 
+wl_tick_timers :: (display: *WLDisplay, fd: s32) -> bool {
+    for * timer : display.timers {
+        if timer.fd != fd continue;
+        num: u64;
+        read(timer.fd, *num, size_of(u64));
+        if timer.cb timer.cb(timer);
+        return true;
+    }
+    return false;
+}
+
 WLDesiredPreconfigureState :: enum {
     NONE;
     FULLSCREEN;
@@ -153,6 +174,7 @@ WLWindow :: struct {
     width: s32;
     height: s32;
 
+    cursor: WLCursor;
     mouse_x: s32;
     mouse_y: s32;
 
@@ -164,6 +186,8 @@ WLWindow :: struct {
 
     egl_native: *wl_egl_window;
     egl_surface: EGLSurface;
+
+    enter_serial: u32;
 
     // dumb stuff
     pre_configure_desired_state: WLDesiredPreconfigureState;
@@ -190,6 +214,9 @@ registry_listener :: wl_registry_listener.{
         if to_string(intf) == {
             case "wl_compositor"; {
                 wl_jext_bind(*d.compositor, registry, id, version);
+            }
+            case "wl_shm"; {
+                wl_jext_bind(*d.shm, registry, id, version);
             }
             case "xdg_wm_base"; {
                 wl_jext_bind(*d.wm_base, registry, id, version);
@@ -418,9 +445,30 @@ wl_init_display :: (display: LDDisplay) -> bool {
 
     init_string_builder(*d.current_text_selection);
 
+    cursor_theme_name := getenv("XCURSOR_THEME");
+    init(*d.cursors);
+    d.cursor_theme = wl_cursor_theme.load(cursor_theme_name, 24, d.shm);
+    for 0..d.cursor_theme.cursor_count - 1 {
+        native := d.cursor_theme.cursors[it];
+        cursor := WLCursor.{
+            name = to_string(native.name),
+            native = native,
+        };
+        array_reserve(*cursor.surfaces, native.image_count);
+        for 0..native.image_count - 1 {
+            surface := wl_compositor.create_surface(d.compositor);
+            image := native.images[it];
+            buffer := wl_cursor_image.get_buffer(image);
+            wl_surface.attach(surface, buffer, 0, 0);
+            wl_surface.damage(surface, 0, 0, xx image.width, xx image.height);
+            wl_surface.commit(surface);
+            array_add(*cursor.surfaces, surface);
+        }
+        table_add(*d.cursors, cursor.name, cursor);
+    }
+
     d.epfd = epoll_create1(EPOLL_CLOEXEC);
     assert(d.epfd >= 0);
-
     d.key_repeat_timer = wl_timer_create(d, wl_key_repeat_cb);
 
     return true;
@@ -485,6 +533,15 @@ wl_create_window :: (d: *WLDisplay, ld_win: LDWindow, width: int, height: int, w
     w.width = xx width;
     w.height = xx height;
 
+    cursor, found := table_find(*d.cursors, "default");
+    if !found {
+        for d.cursors {
+            cursor = it;
+            break;
+        }
+    }
+    w.cursor = cursor;
+
     w.handle = wl_compositor.create_surface(d.compositor);
     wl_proxy.set_user_data(w.handle, w);
 
@@ -507,6 +564,14 @@ wl_create_window :: (d: *WLDisplay, ld_win: LDWindow, width: int, height: int, w
     wl_surface.commit(w.handle);
 
     return true;
+}
+
+wl_set_cursor_from_theme :: (w: *WLWindow, name: string) {
+    cursor, found := table_find(*w.display.cursors, name);
+    if found {
+        w.cursor = cursor;
+        refresh_cursor(w);
+    }
 }
 
 frame_listener :: wl_callback_listener.{
@@ -563,8 +628,6 @@ wl_set_window_title :: (w: *WLWindow, title: string) {
 }
 
 #scope_file
-
-#import "String";
 
 DATA_OFFER_READ_SIZE :: 2048;
 

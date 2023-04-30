@@ -157,6 +157,13 @@ maximize_window :: (win: LDWindow) {
     }
 }
 
+set_cursor_from_theme :: (win: LDWindow, name: string) {
+    if win.tag == {
+        case X11Window;
+        case WLWindow; wl_set_cursor_from_theme(isa(win, WLWindow), name);
+    }
+}
+
 /*
  * Input functions
  */
@@ -196,6 +203,9 @@ clipboard_set_text :: (text: string) {
 }
 
 #scope_module;
+
+#import "String";
+#import "Hash_Table";
 
 #import "X11";
 #import "EGL";
