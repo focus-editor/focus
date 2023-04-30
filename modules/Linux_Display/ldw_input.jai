@@ -316,5 +316,3 @@ wl_get_mouse_pointer_position :: (right_handed: bool) -> x: int, y: int, success
 #import "libxkbcommon";
 
 current_hovered_window: *WLWindow;
-
-WHEEL_DELTA : s32 : 120;

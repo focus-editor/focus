@@ -186,10 +186,23 @@ x11_update_window_events :: (x11_display: *X11Display) {
             array_add(*events_this_frame, event);
         case ButtonPress;
             event: Event;
-            event.type = .KEYBOARD;
-
-            event.key_pressed = 1;
             button := xev.xbutton.button;
+
+            if button >= 4 {
+                // Buttons 4 and above are 'synthetic' events for scroll wheels:
+                //  - 4/5 will be used for the forward/backward direction of the first scroll wheel
+                //  - 6/7 will be used for the forward/backward direction of the second scroll wheel
+                //  ... so on ...
+                event.type = .MOUSE_WHEEL;
+                event.typical_wheel_delta = WHEEL_DELTA;
+                event.wheel_delta = WHEEL_DELTA * (ifx (button & 0x01) then cast(s32) -1 else 1);
+                array_add(*events_this_frame, event);
+                mouse_delta_z += event.wheel_delta;
+                continue;
+            }
+
+            event.type = .KEYBOARD;
+            event.key_pressed = 1;
             if button == Button1 {
                 event.key_code = MOUSE_BUTTON_LEFT;
             } else if button == Button2 {
@@ -204,10 +217,13 @@ x11_update_window_events :: (x11_display: *X11Display) {
         case ButtonRelease;
             // it seems that mouse input doesnt generate repeat events so we dont have to peek the queue
             event: Event;
-            event.type = .KEYBOARD;
-
-            event.key_pressed = 0;
             button := xev.xbutton.button;
+
+            // Buttons above 4 are scroll wheel events, we don't care about release events for them
+            if button >= 4 continue;
+
+            event.type = .KEYBOARD;
+            event.key_pressed = 0;
             if button == Button1 {
                 event.key_code = MOUSE_BUTTON_LEFT;
             } else if button == Button2 {

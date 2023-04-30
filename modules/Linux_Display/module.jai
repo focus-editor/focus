@@ -228,3 +228,5 @@ _INVALID_WINDOW : LDWindow;
 
 _global_display: _Display;
 global_windows: [..] _Window;
+
+WHEEL_DELTA : s32 : 120;
