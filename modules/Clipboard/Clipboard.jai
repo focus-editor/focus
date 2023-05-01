@@ -185,6 +185,7 @@
     // @Cleanup: Don't export these?!
     #import "Basic";
     #import "Objective_C";
+    #import "Objective_C/AppKit";
 
     os_clipboard_get_text :: () -> string {
         general := NSPasteboard.generalPasteboard();

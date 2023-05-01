@@ -16,7 +16,7 @@
     INVALID_WINDOW :: LD.INVALID_WINDOW;
 } else #if OS == .MACOS {
     #scope_module;
-    ObjC :: #import "Objective_C";
+    ObjC :: #import "Objective_C/AppKit";
     #scope_export;
     Window_Type :: *ObjC.NSWindow;
     INVALID_WINDOW : Window_Type : null;
