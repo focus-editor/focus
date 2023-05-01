@@ -9,7 +9,6 @@
 
 ===========================
 
-- Fix the large path crash
 - Reopen up to 2 open editors after workspace reload
 
 - Improve the scoring for fuzzy search (maybe after the fact even) - score matches closer together higher
@@ -157,6 +156,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Fix the large path crash
 + Don't ignore your own config
 + Fix smooth scrolling
 + See if panic behaviour can be improved in release builds

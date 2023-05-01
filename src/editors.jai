@@ -354,6 +354,11 @@ editors_open_file :: (path: string, placement: Editor_Placement = .in_place) {
         log_error("Can't find file %", full_path);
     }
     buffer_id := find_or_create_buffer(full_path);
+    if buffer_id < 0 && full_path.count > 248 {
+        log_error("Couldn't open file because path is too long for Windows: %\n", full_path);
+        add_user_error("Couldn't open file. Path is too long.");
+        return;
+    }
 
     if !file_is_watched(full_path) start_watching_file(full_path);
 

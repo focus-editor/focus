@@ -33,6 +33,7 @@
 + Added crash reports on failed asserts and violated array bounds
 + Smooth scrolling is fixed
 + Config hot reload should work even if it's within one of the ignored dirs
++ On Windows files with path longer than 248 bytes will be ignored to avoid a crash (probably a temporary solution)
 
 
 # RELEASES ==================================================================

@@ -478,6 +478,9 @@ find_or_create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
 }
 
 find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
+    #if OS == .WINDOWS {
+        if path.count > 248 return -1, false;  // Windows bad
+    }
     lock(*open_buffers_lock);
 
     buffer_id, found_buffer := table_find(*buffers_table, path);
@@ -525,6 +528,10 @@ refresh_buffer_from_disk :: (path: string) {
 
     buffer_id, created := find_or_create_buffer(path);
     if created return;
+    if buffer_id < 0 {
+        log_error("Couldn't open file because path is too long for Windows: %\n", path);
+        return;
+    }
 
     buffer := *open_buffers[buffer_id];
 
