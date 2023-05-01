@@ -164,6 +164,14 @@ set_cursor_from_theme :: (win: LDWindow, name: string) {
     }
 }
 
+get_dpi_scaling_factor :: (win: LDWindow) -> float {
+    if win.tag == {
+        case X11Window; return x11_get_dpi_scaling_factor(isa(win, X11Window));
+        case WLWindow; // DPI-based scaling is not a thing on Wayland, we (will) handle scaling via the 'fractional_scale' protocol
+    }
+    return 1.0;
+}
+
 /*
  * Input functions
  */

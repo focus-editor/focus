@@ -288,3 +288,10 @@ x11_set_window_title :: (w: *X11Window, title: string) {
     XStoreName(w.display.handle, w.handle, win_title);
     free(win_title);
 }
+
+x11_get_dpi_scaling_factor :: (w: *X11Window) -> float {
+    screen := XScreenOfDisplay(w.display.handle, 0);
+    sw := XWidthOfScreen(screen);
+    swmm := XWidthMMOfScreen(screen);
+    return (cast(float) sw / (cast(float) swmm / 25.4)) / 96.0;
+}

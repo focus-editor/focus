@@ -20,7 +20,7 @@ platform_enable_drag_and_drop :: (window: Window_Type) {
 }
 
 platform_get_dpi_scale :: (window: Window_Type) -> float {
-    return 1.0;
+    return LD.get_dpi_scaling_factor(window);
 }
 
 platform_set_window_title :: (title: string) {
