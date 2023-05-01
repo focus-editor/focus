@@ -21,15 +21,14 @@ zwp_idle_inhibit_manager_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_idle_inhibit_manager_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_IDLE_INHIBIT_MANAGER_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_IDLE_INHIBIT_MANAGER_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     create_inhibitor :: inline (self: *zwp_idle_inhibit_manager_v1, surface: *wl_surface) -> *zwp_idle_inhibitor_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_IDLE_INHIBIT_MANAGER_V1_CREATE_INHIBITOR,
-            *zwp_idle_inhibitor_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_idle_inhibitor_v1_interface, wl_proxy.get_version(self),
             null, surface);
         return cast(*zwp_idle_inhibitor_v1) ret;
     }
@@ -58,9 +57,8 @@ zwp_idle_inhibitor_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_idle_inhibitor_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_IDLE_INHIBITOR_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_IDLE_INHIBITOR_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 }
 

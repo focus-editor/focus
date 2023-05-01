@@ -21,31 +21,30 @@ zwp_input_timestamps_manager_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_input_timestamps_manager_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_INPUT_TIMESTAMPS_MANAGER_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_INPUT_TIMESTAMPS_MANAGER_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     get_keyboard_timestamps :: inline (self: *zwp_input_timestamps_manager_v1, keyboard: *wl_keyboard) -> *zwp_input_timestamps_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_INPUT_TIMESTAMPS_MANAGER_V1_GET_KEYBOARD_TIMESTAMPS,
-            *zwp_input_timestamps_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_input_timestamps_v1_interface, wl_proxy.get_version(self),
             null, keyboard);
         return cast(*zwp_input_timestamps_v1) ret;
     }
 
     get_pointer_timestamps :: inline (self: *zwp_input_timestamps_manager_v1, pointer: *wl_pointer) -> *zwp_input_timestamps_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_INPUT_TIMESTAMPS_MANAGER_V1_GET_POINTER_TIMESTAMPS,
-            *zwp_input_timestamps_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_input_timestamps_v1_interface, wl_proxy.get_version(self),
             null, pointer);
         return cast(*zwp_input_timestamps_v1) ret;
     }
 
     get_touch_timestamps :: inline (self: *zwp_input_timestamps_manager_v1, touch: *wl_touch) -> *zwp_input_timestamps_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_INPUT_TIMESTAMPS_MANAGER_V1_GET_TOUCH_TIMESTAMPS,
-            *zwp_input_timestamps_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_input_timestamps_v1_interface, wl_proxy.get_version(self),
             null, touch);
         return cast(*zwp_input_timestamps_v1) ret;
     }
@@ -78,9 +77,8 @@ zwp_input_timestamps_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_input_timestamps_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_INPUT_TIMESTAMPS_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_INPUT_TIMESTAMPS_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *zwp_input_timestamps_v1, listener: *zwp_input_timestamps_v1_listener, data: *void) -> s32 #c_call {

@@ -21,15 +21,14 @@ zxdg_output_manager_v1 :: struct {
     }
 
     destroy :: inline (self: *zxdg_output_manager_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZXDG_OUTPUT_MANAGER_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZXDG_OUTPUT_MANAGER_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     get_xdg_output :: inline (self: *zxdg_output_manager_v1, output: *wl_output) -> *zxdg_output_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZXDG_OUTPUT_MANAGER_V1_GET_XDG_OUTPUT,
-            *zxdg_output_v1_interface, wl_proxy.get_version(self), 0,
+            *zxdg_output_v1_interface, wl_proxy.get_version(self),
             null, output);
         return cast(*zxdg_output_v1) ret;
     }
@@ -58,9 +57,8 @@ zxdg_output_v1 :: struct {
     }
 
     destroy :: inline (self: *zxdg_output_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZXDG_OUTPUT_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZXDG_OUTPUT_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *zxdg_output_v1, listener: *zxdg_output_v1_listener, data: *void) -> s32 #c_call {

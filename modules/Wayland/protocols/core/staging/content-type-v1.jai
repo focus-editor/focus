@@ -24,15 +24,14 @@ wp_content_type_manager_v1 :: struct {
     }
 
     destroy :: inline (self: *wp_content_type_manager_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, WP_CONTENT_TYPE_MANAGER_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WP_CONTENT_TYPE_MANAGER_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     get_surface_content_type :: inline (self: *wp_content_type_manager_v1, surface: *wl_surface) -> *wp_content_type_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WP_CONTENT_TYPE_MANAGER_V1_GET_SURFACE_CONTENT_TYPE,
-            *wp_content_type_v1_interface, wl_proxy.get_version(self), 0,
+            *wp_content_type_v1_interface, wl_proxy.get_version(self),
             null, surface);
         return cast(*wp_content_type_v1) ret;
     }
@@ -67,15 +66,12 @@ wp_content_type_v1 :: struct {
     }
 
     destroy :: inline (self: *wp_content_type_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, WP_CONTENT_TYPE_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WP_CONTENT_TYPE_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     set_content_type :: inline (self: *wp_content_type_v1, content_type: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WP_CONTENT_TYPE_V1_SET_CONTENT_TYPE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WP_CONTENT_TYPE_V1_SET_CONTENT_TYPE,
             content_type);
     }
 }

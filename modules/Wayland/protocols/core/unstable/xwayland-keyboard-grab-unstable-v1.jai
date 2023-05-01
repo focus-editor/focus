@@ -21,15 +21,14 @@ zwp_xwayland_keyboard_grab_manager_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_xwayland_keyboard_grab_manager_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_XWAYLAND_KEYBOARD_GRAB_MANAGER_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_XWAYLAND_KEYBOARD_GRAB_MANAGER_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     grab_keyboard :: inline (self: *zwp_xwayland_keyboard_grab_manager_v1, surface: *wl_surface, seat: *wl_seat) -> *zwp_xwayland_keyboard_grab_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_XWAYLAND_KEYBOARD_GRAB_MANAGER_V1_GRAB_KEYBOARD,
-            *zwp_xwayland_keyboard_grab_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_xwayland_keyboard_grab_v1_interface, wl_proxy.get_version(self),
             null, surface, seat);
         return cast(*zwp_xwayland_keyboard_grab_v1) ret;
     }
@@ -58,9 +57,8 @@ zwp_xwayland_keyboard_grab_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_xwayland_keyboard_grab_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_XWAYLAND_KEYBOARD_GRAB_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_XWAYLAND_KEYBOARD_GRAB_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 }
 

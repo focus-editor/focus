@@ -24,15 +24,14 @@ zwp_linux_explicit_synchronization_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_linux_explicit_synchronization_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_LINUX_EXPLICIT_SYNCHRONIZATION_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_LINUX_EXPLICIT_SYNCHRONIZATION_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     get_synchronization :: inline (self: *zwp_linux_explicit_synchronization_v1, surface: *wl_surface) -> *zwp_linux_surface_synchronization_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_LINUX_EXPLICIT_SYNCHRONIZATION_V1_GET_SYNCHRONIZATION,
-            *zwp_linux_surface_synchronization_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_linux_surface_synchronization_v1_interface, wl_proxy.get_version(self),
             null, surface);
         return cast(*zwp_linux_surface_synchronization_v1) ret;
     }
@@ -69,22 +68,19 @@ zwp_linux_surface_synchronization_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_linux_surface_synchronization_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_LINUX_SURFACE_SYNCHRONIZATION_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_LINUX_SURFACE_SYNCHRONIZATION_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     set_acquire_fence :: inline (self: *zwp_linux_surface_synchronization_v1, fd: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_LINUX_SURFACE_SYNCHRONIZATION_V1_SET_ACQUIRE_FENCE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_LINUX_SURFACE_SYNCHRONIZATION_V1_SET_ACQUIRE_FENCE,
             fd);
     }
 
     get_release :: inline (self: *zwp_linux_surface_synchronization_v1) -> *zwp_linux_buffer_release_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_LINUX_SURFACE_SYNCHRONIZATION_V1_GET_RELEASE,
-            *zwp_linux_buffer_release_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_linux_buffer_release_v1_interface, wl_proxy.get_version(self),
             null);
         return cast(*zwp_linux_buffer_release_v1) ret;
     }

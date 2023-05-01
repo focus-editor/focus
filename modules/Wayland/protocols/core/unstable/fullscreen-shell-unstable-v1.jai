@@ -40,22 +40,19 @@ zwp_fullscreen_shell_v1 :: struct {
     }
 
     release :: inline (self: *zwp_fullscreen_shell_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_FULLSCREEN_SHELL_V1_RELEASE,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_FULLSCREEN_SHELL_V1_RELEASE);
+        wl_proxy.destroy(self);
     }
 
     present_surface :: inline (self: *zwp_fullscreen_shell_v1, surface: *wl_surface, method: u32, output: *wl_output) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_FULLSCREEN_SHELL_V1_PRESENT_SURFACE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_FULLSCREEN_SHELL_V1_PRESENT_SURFACE,
             surface, method, output);
     }
 
     present_surface_for_mode :: inline (self: *zwp_fullscreen_shell_v1, surface: *wl_surface, output: *wl_output, framerate: s32) -> *zwp_fullscreen_shell_mode_feedback_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_FULLSCREEN_SHELL_V1_PRESENT_SURFACE_FOR_MODE,
-            *zwp_fullscreen_shell_mode_feedback_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_fullscreen_shell_mode_feedback_v1_interface, wl_proxy.get_version(self),
             surface, output, framerate, null);
         return cast(*zwp_fullscreen_shell_mode_feedback_v1) ret;
     }

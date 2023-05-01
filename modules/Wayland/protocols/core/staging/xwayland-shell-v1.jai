@@ -24,15 +24,14 @@ xwayland_shell_v1 :: struct {
     }
 
     destroy :: inline (self: *xwayland_shell_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, XWAYLAND_SHELL_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, XWAYLAND_SHELL_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     get_xwayland_surface :: inline (self: *xwayland_shell_v1, surface: *wl_surface) -> *xwayland_surface_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, XWAYLAND_SHELL_V1_GET_XWAYLAND_SURFACE,
-            *xwayland_surface_v1_interface, wl_proxy.get_version(self), 0,
+            *xwayland_surface_v1_interface, wl_proxy.get_version(self),
             null, surface);
         return cast(*xwayland_surface_v1) ret;
     }
@@ -65,16 +64,13 @@ xwayland_surface_v1 :: struct {
     }
 
     set_serial :: inline (self: *xwayland_surface_v1, serial_lo: u32, serial_hi: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, XWAYLAND_SURFACE_V1_SET_SERIAL,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XWAYLAND_SURFACE_V1_SET_SERIAL,
             serial_lo, serial_hi);
     }
 
     destroy :: inline (self: *xwayland_surface_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, XWAYLAND_SURFACE_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, XWAYLAND_SURFACE_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 }
 

@@ -25,17 +25,15 @@ wp_drm_lease_device_v1 :: struct {
     }
 
     create_lease_request :: inline (self: *wp_drm_lease_device_v1) -> *wp_drm_lease_request_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WP_DRM_LEASE_DEVICE_V1_CREATE_LEASE_REQUEST,
-            *wp_drm_lease_request_v1_interface, wl_proxy.get_version(self), 0,
+            *wp_drm_lease_request_v1_interface, wl_proxy.get_version(self),
             null);
         return cast(*wp_drm_lease_request_v1) ret;
     }
 
     release :: inline (self: *wp_drm_lease_device_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, WP_DRM_LEASE_DEVICE_V1_RELEASE,
-            null, wl_proxy.get_version(self), 0);
+        wl_proxy.marshal(self, WP_DRM_LEASE_DEVICE_V1_RELEASE);
     }
 
     add_listener :: inline (self: *wp_drm_lease_device_v1, listener: *wp_drm_lease_device_v1_listener, data: *void) -> s32 #c_call {
@@ -90,9 +88,8 @@ wp_drm_lease_connector_v1 :: struct {
     }
 
     destroy :: inline (self: *wp_drm_lease_connector_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, WP_DRM_LEASE_CONNECTOR_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WP_DRM_LEASE_CONNECTOR_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *wp_drm_lease_connector_v1, listener: *wp_drm_lease_connector_v1_listener, data: *void) -> s32 #c_call {
@@ -159,18 +156,16 @@ wp_drm_lease_request_v1 :: struct {
     }
 
     request_connector :: inline (self: *wp_drm_lease_request_v1, connector: *wp_drm_lease_connector_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, WP_DRM_LEASE_REQUEST_V1_REQUEST_CONNECTOR,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WP_DRM_LEASE_REQUEST_V1_REQUEST_CONNECTOR,
             connector);
     }
 
     submit :: inline (self: *wp_drm_lease_request_v1) -> *wp_drm_lease_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WP_DRM_LEASE_REQUEST_V1_SUBMIT,
-            *wp_drm_lease_v1_interface, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY,
+            *wp_drm_lease_v1_interface, wl_proxy.get_version(self),
             null);
-        return cast(*wp_drm_lease_v1) ret;
+        wl_proxy.destroy(self);
     }
 }
 
@@ -197,9 +192,8 @@ wp_drm_lease_v1 :: struct {
     }
 
     destroy :: inline (self: *wp_drm_lease_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, WP_DRM_LEASE_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WP_DRM_LEASE_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *wp_drm_lease_v1, listener: *wp_drm_lease_v1_listener, data: *void) -> s32 #c_call {

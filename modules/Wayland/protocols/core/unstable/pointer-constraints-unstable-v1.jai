@@ -28,23 +28,22 @@ zwp_pointer_constraints_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_pointer_constraints_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_POINTER_CONSTRAINTS_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_POINTER_CONSTRAINTS_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     lock_pointer :: inline (self: *zwp_pointer_constraints_v1, surface: *wl_surface, pointer: *wl_pointer, region: *wl_region, lifetime: u32) -> *zwp_locked_pointer_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_POINTER_CONSTRAINTS_V1_LOCK_POINTER,
-            *zwp_locked_pointer_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_locked_pointer_v1_interface, wl_proxy.get_version(self),
             null, surface, pointer, region, lifetime);
         return cast(*zwp_locked_pointer_v1) ret;
     }
 
     confine_pointer :: inline (self: *zwp_pointer_constraints_v1, surface: *wl_surface, pointer: *wl_pointer, region: *wl_region, lifetime: u32) -> *zwp_confined_pointer_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_POINTER_CONSTRAINTS_V1_CONFINE_POINTER,
-            *zwp_confined_pointer_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_confined_pointer_v1_interface, wl_proxy.get_version(self),
             null, surface, pointer, region, lifetime);
         return cast(*zwp_confined_pointer_v1) ret;
     }
@@ -75,22 +74,17 @@ zwp_locked_pointer_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_locked_pointer_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_LOCKED_POINTER_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_LOCKED_POINTER_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     set_cursor_position_hint :: inline (self: *zwp_locked_pointer_v1, surface_x: wl_fixed_t, surface_y: wl_fixed_t) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_LOCKED_POINTER_V1_SET_CURSOR_POSITION_HINT,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_LOCKED_POINTER_V1_SET_CURSOR_POSITION_HINT,
             surface_x, surface_y);
     }
 
     set_region :: inline (self: *zwp_locked_pointer_v1, region: *wl_region) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_LOCKED_POINTER_V1_SET_REGION,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_LOCKED_POINTER_V1_SET_REGION,
             region);
     }
 
@@ -138,15 +132,12 @@ zwp_confined_pointer_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_confined_pointer_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_CONFINED_POINTER_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_CONFINED_POINTER_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     set_region :: inline (self: *zwp_confined_pointer_v1, region: *wl_region) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_CONFINED_POINTER_V1_SET_REGION,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_CONFINED_POINTER_V1_SET_REGION,
             region);
     }
 

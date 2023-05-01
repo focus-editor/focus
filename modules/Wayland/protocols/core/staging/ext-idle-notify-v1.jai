@@ -21,15 +21,14 @@ ext_idle_notifier_v1 :: struct {
     }
 
     destroy :: inline (self: *ext_idle_notifier_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, EXT_IDLE_NOTIFIER_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, EXT_IDLE_NOTIFIER_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     get_idle_notification :: inline (self: *ext_idle_notifier_v1, timeout: u32, seat: *wl_seat) -> *ext_idle_notification_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, EXT_IDLE_NOTIFIER_V1_GET_IDLE_NOTIFICATION,
-            *ext_idle_notification_v1_interface, wl_proxy.get_version(self), 0,
+            *ext_idle_notification_v1_interface, wl_proxy.get_version(self),
             null, timeout, seat);
         return cast(*ext_idle_notification_v1) ret;
     }
@@ -58,9 +57,8 @@ ext_idle_notification_v1 :: struct {
     }
 
     destroy :: inline (self: *ext_idle_notification_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, EXT_IDLE_NOTIFICATION_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, EXT_IDLE_NOTIFICATION_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *ext_idle_notification_v1, listener: *ext_idle_notification_v1_listener, data: *void) -> s32 #c_call {

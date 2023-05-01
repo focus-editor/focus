@@ -21,15 +21,14 @@ zxdg_exporter_v1 :: struct {
     }
 
     destroy :: inline (self: *zxdg_exporter_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZXDG_EXPORTER_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZXDG_EXPORTER_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     export :: inline (self: *zxdg_exporter_v1, surface: *wl_surface) -> *zxdg_exported_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZXDG_EXPORTER_V1_EXPORT,
-            *zxdg_exported_v1_interface, wl_proxy.get_version(self), 0,
+            *zxdg_exported_v1_interface, wl_proxy.get_version(self),
             null, surface);
         return cast(*zxdg_exported_v1) ret;
     }
@@ -58,15 +57,14 @@ zxdg_importer_v1 :: struct {
     }
 
     destroy :: inline (self: *zxdg_importer_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZXDG_IMPORTER_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZXDG_IMPORTER_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     import :: inline (self: *zxdg_importer_v1, handle: *u8) -> *zxdg_imported_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZXDG_IMPORTER_V1_IMPORT,
-            *zxdg_imported_v1_interface, wl_proxy.get_version(self), 0,
+            *zxdg_imported_v1_interface, wl_proxy.get_version(self),
             null, handle);
         return cast(*zxdg_imported_v1) ret;
     }
@@ -95,9 +93,8 @@ zxdg_exported_v1 :: struct {
     }
 
     destroy :: inline (self: *zxdg_exported_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZXDG_EXPORTED_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZXDG_EXPORTED_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *zxdg_exported_v1, listener: *zxdg_exported_v1_listener, data: *void) -> s32 #c_call {
@@ -137,15 +134,12 @@ zxdg_imported_v1 :: struct {
     }
 
     destroy :: inline (self: *zxdg_imported_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZXDG_IMPORTED_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZXDG_IMPORTED_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     set_parent_of :: inline (self: *zxdg_imported_v1, surface: *wl_surface) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZXDG_IMPORTED_V1_SET_PARENT_OF,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZXDG_IMPORTED_V1_SET_PARENT_OF,
             surface);
     }
 

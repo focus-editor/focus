@@ -24,15 +24,14 @@ wp_fractional_scale_manager_v1 :: struct {
     }
 
     destroy :: inline (self: *wp_fractional_scale_manager_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, WP_FRACTIONAL_SCALE_MANAGER_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WP_FRACTIONAL_SCALE_MANAGER_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     get_fractional_scale :: inline (self: *wp_fractional_scale_manager_v1, surface: *wl_surface) -> *wp_fractional_scale_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WP_FRACTIONAL_SCALE_MANAGER_V1_GET_FRACTIONAL_SCALE,
-            *wp_fractional_scale_v1_interface, wl_proxy.get_version(self), 0,
+            *wp_fractional_scale_v1_interface, wl_proxy.get_version(self),
             null, surface);
         return cast(*wp_fractional_scale_v1) ret;
     }
@@ -61,9 +60,8 @@ wp_fractional_scale_v1 :: struct {
     }
 
     destroy :: inline (self: *wp_fractional_scale_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, WP_FRACTIONAL_SCALE_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WP_FRACTIONAL_SCALE_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *wp_fractional_scale_v1, listener: *wp_fractional_scale_v1_listener, data: *void) -> s32 #c_call {

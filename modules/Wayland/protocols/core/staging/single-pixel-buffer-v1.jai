@@ -21,15 +21,14 @@ wp_single_pixel_buffer_manager_v1 :: struct {
     }
 
     destroy :: inline (self: *wp_single_pixel_buffer_manager_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, WP_SINGLE_PIXEL_BUFFER_MANAGER_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WP_SINGLE_PIXEL_BUFFER_MANAGER_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     create_u32_rgba_buffer :: inline (self: *wp_single_pixel_buffer_manager_v1, r: u32, g: u32, b: u32, a: u32) -> *wl_buffer #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WP_SINGLE_PIXEL_BUFFER_MANAGER_V1_CREATE_U32_RGBA_BUFFER,
-            *wl_buffer_interface, wl_proxy.get_version(self), 0,
+            *wl_buffer_interface, wl_proxy.get_version(self),
             null, r, g, b, a);
         return cast(*wl_buffer) ret;
     }

@@ -21,23 +21,20 @@ xdg_activation_v1 :: struct {
     }
 
     destroy :: inline (self: *xdg_activation_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_ACTIVATION_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, XDG_ACTIVATION_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     get_activation_token :: inline (self: *xdg_activation_v1) -> *xdg_activation_token_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, XDG_ACTIVATION_V1_GET_ACTIVATION_TOKEN,
-            *xdg_activation_token_v1_interface, wl_proxy.get_version(self), 0,
+            *xdg_activation_token_v1_interface, wl_proxy.get_version(self),
             null);
         return cast(*xdg_activation_token_v1) ret;
     }
 
     activate :: inline (self: *xdg_activation_v1, token: *u8, surface: *wl_surface) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_ACTIVATION_V1_ACTIVATE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_ACTIVATION_V1_ACTIVATE,
             token, surface);
     }
 }
@@ -70,36 +67,27 @@ xdg_activation_token_v1 :: struct {
     }
 
     set_serial :: inline (self: *xdg_activation_token_v1, serial: u32, seat: *wl_seat) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_ACTIVATION_TOKEN_V1_SET_SERIAL,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_ACTIVATION_TOKEN_V1_SET_SERIAL,
             serial, seat);
     }
 
     set_app_id :: inline (self: *xdg_activation_token_v1, app_id: *u8) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_ACTIVATION_TOKEN_V1_SET_APP_ID,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_ACTIVATION_TOKEN_V1_SET_APP_ID,
             app_id);
     }
 
     set_surface :: inline (self: *xdg_activation_token_v1, surface: *wl_surface) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_ACTIVATION_TOKEN_V1_SET_SURFACE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_ACTIVATION_TOKEN_V1_SET_SURFACE,
             surface);
     }
 
     commit :: inline (self: *xdg_activation_token_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_ACTIVATION_TOKEN_V1_COMMIT,
-            null, wl_proxy.get_version(self), 0);
+        wl_proxy.marshal(self, XDG_ACTIVATION_TOKEN_V1_COMMIT);
     }
 
     destroy :: inline (self: *xdg_activation_token_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_ACTIVATION_TOKEN_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, XDG_ACTIVATION_TOKEN_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *xdg_activation_token_v1, listener: *xdg_activation_token_v1_listener, data: *void) -> s32 #c_call {

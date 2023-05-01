@@ -25,31 +25,30 @@ zwp_pointer_gestures_v1 :: struct {
     }
 
     get_swipe_gesture :: inline (self: *zwp_pointer_gestures_v1, pointer: *wl_pointer) -> *zwp_pointer_gesture_swipe_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_POINTER_GESTURES_V1_GET_SWIPE_GESTURE,
-            *zwp_pointer_gesture_swipe_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_pointer_gesture_swipe_v1_interface, wl_proxy.get_version(self),
             null, pointer);
         return cast(*zwp_pointer_gesture_swipe_v1) ret;
     }
 
     get_pinch_gesture :: inline (self: *zwp_pointer_gestures_v1, pointer: *wl_pointer) -> *zwp_pointer_gesture_pinch_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_POINTER_GESTURES_V1_GET_PINCH_GESTURE,
-            *zwp_pointer_gesture_pinch_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_pointer_gesture_pinch_v1_interface, wl_proxy.get_version(self),
             null, pointer);
         return cast(*zwp_pointer_gesture_pinch_v1) ret;
     }
 
     release :: inline (self: *zwp_pointer_gestures_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_POINTER_GESTURES_V1_RELEASE,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_POINTER_GESTURES_V1_RELEASE);
+        wl_proxy.destroy(self);
     }
 
     get_hold_gesture :: inline (self: *zwp_pointer_gestures_v1, pointer: *wl_pointer) -> *zwp_pointer_gesture_hold_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_POINTER_GESTURES_V1_GET_HOLD_GESTURE,
-            *zwp_pointer_gesture_hold_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_pointer_gesture_hold_v1_interface, wl_proxy.get_version(self),
             null, pointer);
         return cast(*zwp_pointer_gesture_hold_v1) ret;
     }
@@ -82,9 +81,8 @@ zwp_pointer_gesture_swipe_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_pointer_gesture_swipe_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_POINTER_GESTURE_SWIPE_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_POINTER_GESTURE_SWIPE_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *zwp_pointer_gesture_swipe_v1, listener: *zwp_pointer_gesture_swipe_v1_listener, data: *void) -> s32 #c_call {
@@ -141,9 +139,8 @@ zwp_pointer_gesture_pinch_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_pointer_gesture_pinch_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_POINTER_GESTURE_PINCH_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_POINTER_GESTURE_PINCH_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *zwp_pointer_gesture_pinch_v1, listener: *zwp_pointer_gesture_pinch_v1_listener, data: *void) -> s32 #c_call {
@@ -202,9 +199,8 @@ zwp_pointer_gesture_hold_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_pointer_gesture_hold_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_POINTER_GESTURE_HOLD_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_POINTER_GESTURE_HOLD_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *zwp_pointer_gesture_hold_v1, listener: *zwp_pointer_gesture_hold_v1_listener, data: *void) -> s32 #c_call {

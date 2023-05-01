@@ -21,100 +21,75 @@ zwp_input_method_context_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_input_method_context_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_INPUT_METHOD_CONTEXT_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_INPUT_METHOD_CONTEXT_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     commit_string :: inline (self: *zwp_input_method_context_v1, serial: u32, text: *u8) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_INPUT_METHOD_CONTEXT_V1_COMMIT_STRING,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_INPUT_METHOD_CONTEXT_V1_COMMIT_STRING,
             serial, text);
     }
 
     preedit_string :: inline (self: *zwp_input_method_context_v1, serial: u32, text: *u8, commit: *u8) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_INPUT_METHOD_CONTEXT_V1_PREEDIT_STRING,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_INPUT_METHOD_CONTEXT_V1_PREEDIT_STRING,
             serial, text, commit);
     }
 
     preedit_styling :: inline (self: *zwp_input_method_context_v1, index: u32, length: u32, style: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_INPUT_METHOD_CONTEXT_V1_PREEDIT_STYLING,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_INPUT_METHOD_CONTEXT_V1_PREEDIT_STYLING,
             index, length, style);
     }
 
     preedit_cursor :: inline (self: *zwp_input_method_context_v1, index: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_INPUT_METHOD_CONTEXT_V1_PREEDIT_CURSOR,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_INPUT_METHOD_CONTEXT_V1_PREEDIT_CURSOR,
             index);
     }
 
     delete_surrounding_text :: inline (self: *zwp_input_method_context_v1, index: s32, length: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_INPUT_METHOD_CONTEXT_V1_DELETE_SURROUNDING_TEXT,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_INPUT_METHOD_CONTEXT_V1_DELETE_SURROUNDING_TEXT,
             index, length);
     }
 
     cursor_position :: inline (self: *zwp_input_method_context_v1, index: s32, anchor: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_INPUT_METHOD_CONTEXT_V1_CURSOR_POSITION,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_INPUT_METHOD_CONTEXT_V1_CURSOR_POSITION,
             index, anchor);
     }
 
     modifiers_map :: inline (self: *zwp_input_method_context_v1, map: *wl_array) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_INPUT_METHOD_CONTEXT_V1_MODIFIERS_MAP,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_INPUT_METHOD_CONTEXT_V1_MODIFIERS_MAP,
             map);
     }
 
     keysym :: inline (self: *zwp_input_method_context_v1, serial: u32, time: u32, sym: u32, state: u32, modifiers: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_INPUT_METHOD_CONTEXT_V1_KEYSYM,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_INPUT_METHOD_CONTEXT_V1_KEYSYM,
             serial, time, sym, state, modifiers);
     }
 
     grab_keyboard :: inline (self: *zwp_input_method_context_v1) -> *wl_keyboard #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_INPUT_METHOD_CONTEXT_V1_GRAB_KEYBOARD,
-            *wl_keyboard_interface, wl_proxy.get_version(self), 0,
+            *wl_keyboard_interface, wl_proxy.get_version(self),
             null);
         return cast(*wl_keyboard) ret;
     }
 
     key :: inline (self: *zwp_input_method_context_v1, serial: u32, time: u32, key: u32, state: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_INPUT_METHOD_CONTEXT_V1_KEY,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_INPUT_METHOD_CONTEXT_V1_KEY,
             serial, time, key, state);
     }
 
     modifiers :: inline (self: *zwp_input_method_context_v1, serial: u32, mods_depressed: u32, mods_latched: u32, mods_locked: u32, group: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_INPUT_METHOD_CONTEXT_V1_MODIFIERS,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_INPUT_METHOD_CONTEXT_V1_MODIFIERS,
             serial, mods_depressed, mods_latched, mods_locked, group);
     }
 
     language :: inline (self: *zwp_input_method_context_v1, serial: u32, language: *u8) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_INPUT_METHOD_CONTEXT_V1_LANGUAGE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_INPUT_METHOD_CONTEXT_V1_LANGUAGE,
             serial, language);
     }
 
     text_direction :: inline (self: *zwp_input_method_context_v1, serial: u32, direction: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_INPUT_METHOD_CONTEXT_V1_TEXT_DIRECTION,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_INPUT_METHOD_CONTEXT_V1_TEXT_DIRECTION,
             serial, direction);
     }
 
@@ -256,9 +231,9 @@ zwp_input_panel_v1 :: struct {
     }
 
     get_input_panel_surface :: inline (self: *zwp_input_panel_v1, surface: *wl_surface) -> *zwp_input_panel_surface_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_INPUT_PANEL_V1_GET_INPUT_PANEL_SURFACE,
-            *zwp_input_panel_surface_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_input_panel_surface_v1_interface, wl_proxy.get_version(self),
             null, surface);
         return cast(*zwp_input_panel_surface_v1) ret;
     }
@@ -292,16 +267,12 @@ zwp_input_panel_surface_v1 :: struct {
     }
 
     set_toplevel :: inline (self: *zwp_input_panel_surface_v1, output: *wl_output, position: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_INPUT_PANEL_SURFACE_V1_SET_TOPLEVEL,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_INPUT_PANEL_SURFACE_V1_SET_TOPLEVEL,
             output, position);
     }
 
     set_overlay_panel :: inline (self: *zwp_input_panel_surface_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_INPUT_PANEL_SURFACE_V1_SET_OVERLAY_PANEL,
-            null, wl_proxy.get_version(self), 0);
+        wl_proxy.marshal(self, ZWP_INPUT_PANEL_SURFACE_V1_SET_OVERLAY_PANEL);
     }
 }
 

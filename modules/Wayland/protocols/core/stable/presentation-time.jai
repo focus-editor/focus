@@ -25,15 +25,14 @@ wp_presentation :: struct {
     }
 
     destroy :: inline (self: *wp_presentation) #c_call {
-        wl_proxy.marshal_flags(
-            self, WP_PRESENTATION_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WP_PRESENTATION_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     feedback :: inline (self: *wp_presentation, surface: *wl_surface) -> *wp_presentation_feedback #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WP_PRESENTATION_FEEDBACK,
-            *wp_presentation_feedback_interface, wl_proxy.get_version(self), 0,
+            *wp_presentation_feedback_interface, wl_proxy.get_version(self),
             surface, null);
         return cast(*wp_presentation_feedback) ret;
     }

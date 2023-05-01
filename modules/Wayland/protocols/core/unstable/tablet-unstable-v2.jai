@@ -21,17 +21,16 @@ zwp_tablet_manager_v2 :: struct {
     }
 
     get_tablet_seat :: inline (self: *zwp_tablet_manager_v2, seat: *wl_seat) -> *zwp_tablet_seat_v2 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_TABLET_MANAGER_V2_GET_TABLET_SEAT,
-            *zwp_tablet_seat_v2_interface, wl_proxy.get_version(self), 0,
+            *zwp_tablet_seat_v2_interface, wl_proxy.get_version(self),
             null, seat);
         return cast(*zwp_tablet_seat_v2) ret;
     }
 
     destroy :: inline (self: *zwp_tablet_manager_v2) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_TABLET_MANAGER_V2_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_TABLET_MANAGER_V2_DESTROY);
+        wl_proxy.destroy(self);
     }
 }
 
@@ -58,9 +57,8 @@ zwp_tablet_seat_v2 :: struct {
     }
 
     destroy :: inline (self: *zwp_tablet_seat_v2) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_TABLET_SEAT_V2_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_TABLET_SEAT_V2_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *zwp_tablet_seat_v2, listener: *zwp_tablet_seat_v2_listener, data: *void) -> s32 #c_call {
@@ -135,16 +133,13 @@ zwp_tablet_tool_v2 :: struct {
     }
 
     set_cursor :: inline (self: *zwp_tablet_tool_v2, serial: u32, surface: *wl_surface, hotspot_x: s32, hotspot_y: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_TABLET_TOOL_V2_SET_CURSOR,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_TABLET_TOOL_V2_SET_CURSOR,
             serial, surface, hotspot_x, hotspot_y);
     }
 
     destroy :: inline (self: *zwp_tablet_tool_v2) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_TABLET_TOOL_V2_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_TABLET_TOOL_V2_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *zwp_tablet_tool_v2, listener: *zwp_tablet_tool_v2_listener, data: *void) -> s32 #c_call {
@@ -281,9 +276,8 @@ zwp_tablet_v2 :: struct {
     }
 
     destroy :: inline (self: *zwp_tablet_v2) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_TABLET_V2_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_TABLET_V2_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *zwp_tablet_v2, listener: *zwp_tablet_v2_listener, data: *void) -> s32 #c_call {
@@ -345,16 +339,13 @@ zwp_tablet_pad_ring_v2 :: struct {
     }
 
     set_feedback :: inline (self: *zwp_tablet_pad_ring_v2, description: *u8, serial: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_TABLET_PAD_RING_V2_SET_FEEDBACK,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_TABLET_PAD_RING_V2_SET_FEEDBACK,
             description, serial);
     }
 
     destroy :: inline (self: *zwp_tablet_pad_ring_v2) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_TABLET_PAD_RING_V2_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_TABLET_PAD_RING_V2_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *zwp_tablet_pad_ring_v2, listener: *zwp_tablet_pad_ring_v2_listener, data: *void) -> s32 #c_call {
@@ -413,16 +404,13 @@ zwp_tablet_pad_strip_v2 :: struct {
     }
 
     set_feedback :: inline (self: *zwp_tablet_pad_strip_v2, description: *u8, serial: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_TABLET_PAD_STRIP_V2_SET_FEEDBACK,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_TABLET_PAD_STRIP_V2_SET_FEEDBACK,
             description, serial);
     }
 
     destroy :: inline (self: *zwp_tablet_pad_strip_v2) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_TABLET_PAD_STRIP_V2_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_TABLET_PAD_STRIP_V2_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *zwp_tablet_pad_strip_v2, listener: *zwp_tablet_pad_strip_v2_listener, data: *void) -> s32 #c_call {
@@ -478,9 +466,8 @@ zwp_tablet_pad_group_v2 :: struct {
     }
 
     destroy :: inline (self: *zwp_tablet_pad_group_v2) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_TABLET_PAD_GROUP_V2_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_TABLET_PAD_GROUP_V2_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *zwp_tablet_pad_group_v2, listener: *zwp_tablet_pad_group_v2_listener, data: *void) -> s32 #c_call {
@@ -550,16 +537,13 @@ zwp_tablet_pad_v2 :: struct {
     }
 
     set_feedback :: inline (self: *zwp_tablet_pad_v2, button: u32, description: *u8, serial: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_TABLET_PAD_V2_SET_FEEDBACK,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_TABLET_PAD_V2_SET_FEEDBACK,
             button, description, serial);
     }
 
     destroy :: inline (self: *zwp_tablet_pad_v2) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_TABLET_PAD_V2_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_TABLET_PAD_V2_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *zwp_tablet_pad_v2, listener: *zwp_tablet_pad_v2_listener, data: *void) -> s32 #c_call {

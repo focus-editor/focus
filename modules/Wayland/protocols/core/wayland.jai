@@ -46,17 +46,17 @@ wl_display :: struct {
     }
 
     sync :: inline (self: *wl_display) -> *wl_callback #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WL_DISPLAY_SYNC,
-            *wl_callback_interface, wl_proxy.get_version(self), 0,
+            *wl_callback_interface, wl_proxy.get_version(self),
             null);
         return cast(*wl_callback) ret;
     }
 
     get_registry :: inline (self: *wl_display) -> *wl_registry #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WL_DISPLAY_GET_REGISTRY,
-            *wl_registry_interface, wl_proxy.get_version(self), 0,
+            *wl_registry_interface, wl_proxy.get_version(self),
             null);
         return cast(*wl_registry) ret;
     }
@@ -111,9 +111,9 @@ wl_registry :: struct {
     }
 
     bind :: inline (self: *wl_registry, name: u32, intf: *wl_interface, version: u32) -> *void #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WL_REGISTRY_BIND,
-            intf, version, 0,
+            intf, version,
             name, intf.name, version, null);
         return cast(*void) ret;
     }
@@ -204,17 +204,17 @@ wl_compositor :: struct {
     }
 
     create_surface :: inline (self: *wl_compositor) -> *wl_surface #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WL_COMPOSITOR_CREATE_SURFACE,
-            *wl_surface_interface, wl_proxy.get_version(self), 0,
+            *wl_surface_interface, wl_proxy.get_version(self),
             null);
         return cast(*wl_surface) ret;
     }
 
     create_region :: inline (self: *wl_compositor) -> *wl_region #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WL_COMPOSITOR_CREATE_REGION,
-            *wl_region_interface, wl_proxy.get_version(self), 0,
+            *wl_region_interface, wl_proxy.get_version(self),
             null);
         return cast(*wl_region) ret;
     }
@@ -243,23 +243,20 @@ wl_shm_pool :: struct {
     }
 
     create_buffer :: inline (self: *wl_shm_pool, offset: s32, width: s32, height: s32, stride: s32, format: u32) -> *wl_buffer #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WL_SHM_POOL_CREATE_BUFFER,
-            *wl_buffer_interface, wl_proxy.get_version(self), 0,
+            *wl_buffer_interface, wl_proxy.get_version(self),
             null, offset, width, height, stride, format);
         return cast(*wl_buffer) ret;
     }
 
     destroy :: inline (self: *wl_shm_pool) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SHM_POOL_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WL_SHM_POOL_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     resize :: inline (self: *wl_shm_pool, size: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SHM_POOL_RESIZE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SHM_POOL_RESIZE,
             size);
     }
 }
@@ -408,9 +405,9 @@ wl_shm :: struct {
     }
 
     create_pool :: inline (self: *wl_shm, fd: s32, size: s32) -> *wl_shm_pool #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WL_SHM_CREATE_POOL,
-            *wl_shm_pool_interface, wl_proxy.get_version(self), 0,
+            *wl_shm_pool_interface, wl_proxy.get_version(self),
             null, fd, size);
         return cast(*wl_shm_pool) ret;
     }
@@ -452,9 +449,8 @@ wl_buffer :: struct {
     }
 
     destroy :: inline (self: *wl_buffer) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_BUFFER_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WL_BUFFER_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *wl_buffer, listener: *wl_buffer_listener, data: *void) -> s32 #c_call {
@@ -499,35 +495,26 @@ wl_data_offer :: struct {
     }
 
     accept :: inline (self: *wl_data_offer, serial: u32, mime_type: *u8) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_DATA_OFFER_ACCEPT,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_DATA_OFFER_ACCEPT,
             serial, mime_type);
     }
 
     receive :: inline (self: *wl_data_offer, mime_type: *u8, fd: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_DATA_OFFER_RECEIVE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_DATA_OFFER_RECEIVE,
             mime_type, fd);
     }
 
     destroy :: inline (self: *wl_data_offer) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_DATA_OFFER_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WL_DATA_OFFER_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     finish :: inline (self: *wl_data_offer) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_DATA_OFFER_FINISH,
-            null, wl_proxy.get_version(self), 0);
+        wl_proxy.marshal(self, WL_DATA_OFFER_FINISH);
     }
 
     set_actions :: inline (self: *wl_data_offer, dnd_actions: u32, preferred_action: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_DATA_OFFER_SET_ACTIONS,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_DATA_OFFER_SET_ACTIONS,
             dnd_actions, preferred_action);
     }
 
@@ -590,22 +577,17 @@ wl_data_source :: struct {
     }
 
     offer :: inline (self: *wl_data_source, mime_type: *u8) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_DATA_SOURCE_OFFER,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_DATA_SOURCE_OFFER,
             mime_type);
     }
 
     destroy :: inline (self: *wl_data_source) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_DATA_SOURCE_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WL_DATA_SOURCE_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     set_actions :: inline (self: *wl_data_source, dnd_actions: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_DATA_SOURCE_SET_ACTIONS,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_DATA_SOURCE_SET_ACTIONS,
             dnd_actions);
     }
 
@@ -680,23 +662,18 @@ wl_data_device :: struct {
     }
 
     start_drag :: inline (self: *wl_data_device, source: *wl_data_source, origin: *wl_surface, icon: *wl_surface, serial: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_DATA_DEVICE_START_DRAG,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_DATA_DEVICE_START_DRAG,
             source, origin, icon, serial);
     }
 
     set_selection :: inline (self: *wl_data_device, source: *wl_data_source, serial: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_DATA_DEVICE_SET_SELECTION,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_DATA_DEVICE_SET_SELECTION,
             source, serial);
     }
 
     release :: inline (self: *wl_data_device) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_DATA_DEVICE_RELEASE,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WL_DATA_DEVICE_RELEASE);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *wl_data_device, listener: *wl_data_device_listener, data: *void) -> s32 #c_call {
@@ -779,17 +756,17 @@ wl_data_device_manager :: struct {
     }
 
     create_data_source :: inline (self: *wl_data_device_manager) -> *wl_data_source #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WL_DATA_DEVICE_MANAGER_CREATE_DATA_SOURCE,
-            *wl_data_source_interface, wl_proxy.get_version(self), 0,
+            *wl_data_source_interface, wl_proxy.get_version(self),
             null);
         return cast(*wl_data_source) ret;
     }
 
     get_data_device :: inline (self: *wl_data_device_manager, seat: *wl_seat) -> *wl_data_device #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WL_DATA_DEVICE_MANAGER_GET_DATA_DEVICE,
-            *wl_data_device_interface, wl_proxy.get_version(self), 0,
+            *wl_data_device_interface, wl_proxy.get_version(self),
             null, seat);
         return cast(*wl_data_device) ret;
     }
@@ -825,9 +802,9 @@ wl_shell :: struct {
     }
 
     get_shell_surface :: inline (self: *wl_shell, surface: *wl_surface) -> *wl_shell_surface #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WL_SHELL_GET_SHELL_SURFACE,
-            *wl_shell_surface_interface, wl_proxy.get_version(self), 0,
+            *wl_shell_surface_interface, wl_proxy.get_version(self),
             null, surface);
         return cast(*wl_shell_surface) ret;
     }
@@ -878,71 +855,51 @@ wl_shell_surface :: struct {
     }
 
     pong :: inline (self: *wl_shell_surface, serial: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SHELL_SURFACE_PONG,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SHELL_SURFACE_PONG,
             serial);
     }
 
     move :: inline (self: *wl_shell_surface, seat: *wl_seat, serial: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SHELL_SURFACE_MOVE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SHELL_SURFACE_MOVE,
             seat, serial);
     }
 
     resize :: inline (self: *wl_shell_surface, seat: *wl_seat, serial: u32, edges: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SHELL_SURFACE_RESIZE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SHELL_SURFACE_RESIZE,
             seat, serial, edges);
     }
 
     set_toplevel :: inline (self: *wl_shell_surface) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SHELL_SURFACE_SET_TOPLEVEL,
-            null, wl_proxy.get_version(self), 0);
+        wl_proxy.marshal(self, WL_SHELL_SURFACE_SET_TOPLEVEL);
     }
 
     set_transient :: inline (self: *wl_shell_surface, parent: *wl_surface, x: s32, y: s32, flags: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SHELL_SURFACE_SET_TRANSIENT,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SHELL_SURFACE_SET_TRANSIENT,
             parent, x, y, flags);
     }
 
     set_fullscreen :: inline (self: *wl_shell_surface, method: u32, framerate: u32, output: *wl_output) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SHELL_SURFACE_SET_FULLSCREEN,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SHELL_SURFACE_SET_FULLSCREEN,
             method, framerate, output);
     }
 
     set_popup :: inline (self: *wl_shell_surface, seat: *wl_seat, serial: u32, parent: *wl_surface, x: s32, y: s32, flags: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SHELL_SURFACE_SET_POPUP,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SHELL_SURFACE_SET_POPUP,
             seat, serial, parent, x, y, flags);
     }
 
     set_maximized :: inline (self: *wl_shell_surface, output: *wl_output) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SHELL_SURFACE_SET_MAXIMIZED,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SHELL_SURFACE_SET_MAXIMIZED,
             output);
     }
 
     set_title :: inline (self: *wl_shell_surface, title: *u8) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SHELL_SURFACE_SET_TITLE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SHELL_SURFACE_SET_TITLE,
             title);
     }
 
     set_class :: inline (self: *wl_shell_surface, class_: *u8) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SHELL_SURFACE_SET_CLASS,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SHELL_SURFACE_SET_CLASS,
             class_);
     }
 
@@ -1019,78 +976,59 @@ wl_surface :: struct {
     }
 
     destroy :: inline (self: *wl_surface) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SURFACE_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WL_SURFACE_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     attach :: inline (self: *wl_surface, buffer: *wl_buffer, x: s32, y: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SURFACE_ATTACH,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SURFACE_ATTACH,
             buffer, x, y);
     }
 
     damage :: inline (self: *wl_surface, x: s32, y: s32, width: s32, height: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SURFACE_DAMAGE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SURFACE_DAMAGE,
             x, y, width, height);
     }
 
     frame :: inline (self: *wl_surface) -> *wl_callback #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WL_SURFACE_FRAME,
-            *wl_callback_interface, wl_proxy.get_version(self), 0,
+            *wl_callback_interface, wl_proxy.get_version(self),
             null);
         return cast(*wl_callback) ret;
     }
 
     set_opaque_region :: inline (self: *wl_surface, region: *wl_region) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SURFACE_SET_OPAQUE_REGION,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SURFACE_SET_OPAQUE_REGION,
             region);
     }
 
     set_input_region :: inline (self: *wl_surface, region: *wl_region) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SURFACE_SET_INPUT_REGION,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SURFACE_SET_INPUT_REGION,
             region);
     }
 
     commit :: inline (self: *wl_surface) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SURFACE_COMMIT,
-            null, wl_proxy.get_version(self), 0);
+        wl_proxy.marshal(self, WL_SURFACE_COMMIT);
     }
 
     set_buffer_transform :: inline (self: *wl_surface, transform: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SURFACE_SET_BUFFER_TRANSFORM,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SURFACE_SET_BUFFER_TRANSFORM,
             transform);
     }
 
     set_buffer_scale :: inline (self: *wl_surface, scale: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SURFACE_SET_BUFFER_SCALE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SURFACE_SET_BUFFER_SCALE,
             scale);
     }
 
     damage_buffer :: inline (self: *wl_surface, x: s32, y: s32, width: s32, height: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SURFACE_DAMAGE_BUFFER,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SURFACE_DAMAGE_BUFFER,
             x, y, width, height);
     }
 
     offset :: inline (self: *wl_surface, x: s32, y: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SURFACE_OFFSET,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SURFACE_OFFSET,
             x, y);
     }
 
@@ -1178,33 +1116,32 @@ wl_seat :: struct {
     }
 
     get_pointer :: inline (self: *wl_seat) -> *wl_pointer #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WL_SEAT_GET_POINTER,
-            *wl_pointer_interface, wl_proxy.get_version(self), 0,
+            *wl_pointer_interface, wl_proxy.get_version(self),
             null);
         return cast(*wl_pointer) ret;
     }
 
     get_keyboard :: inline (self: *wl_seat) -> *wl_keyboard #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WL_SEAT_GET_KEYBOARD,
-            *wl_keyboard_interface, wl_proxy.get_version(self), 0,
+            *wl_keyboard_interface, wl_proxy.get_version(self),
             null);
         return cast(*wl_keyboard) ret;
     }
 
     get_touch :: inline (self: *wl_seat) -> *wl_touch #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WL_SEAT_GET_TOUCH,
-            *wl_touch_interface, wl_proxy.get_version(self), 0,
+            *wl_touch_interface, wl_proxy.get_version(self),
             null);
         return cast(*wl_touch) ret;
     }
 
     release :: inline (self: *wl_seat) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SEAT_RELEASE,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WL_SEAT_RELEASE);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *wl_seat, listener: *wl_seat_listener, data: *void) -> s32 #c_call {
@@ -1280,16 +1217,13 @@ wl_pointer :: struct {
     }
 
     set_cursor :: inline (self: *wl_pointer, serial: u32, surface: *wl_surface, hotspot_x: s32, hotspot_y: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_POINTER_SET_CURSOR,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_POINTER_SET_CURSOR,
             serial, surface, hotspot_x, hotspot_y);
     }
 
     release :: inline (self: *wl_pointer) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_POINTER_RELEASE,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WL_POINTER_RELEASE);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *wl_pointer, listener: *wl_pointer_listener, data: *void) -> s32 #c_call {
@@ -1407,9 +1341,8 @@ wl_keyboard :: struct {
     }
 
     release :: inline (self: *wl_keyboard) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_KEYBOARD_RELEASE,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WL_KEYBOARD_RELEASE);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *wl_keyboard, listener: *wl_keyboard_listener, data: *void) -> s32 #c_call {
@@ -1491,9 +1424,8 @@ wl_touch :: struct {
     }
 
     release :: inline (self: *wl_touch) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_TOUCH_RELEASE,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WL_TOUCH_RELEASE);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *wl_touch, listener: *wl_touch_listener, data: *void) -> s32 #c_call {
@@ -1600,9 +1532,8 @@ wl_output :: struct {
     }
 
     release :: inline (self: *wl_output) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_OUTPUT_RELEASE,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WL_OUTPUT_RELEASE);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *wl_output, listener: *wl_output_listener, data: *void) -> s32 #c_call {
@@ -1676,22 +1607,17 @@ wl_region :: struct {
     }
 
     destroy :: inline (self: *wl_region) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_REGION_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WL_REGION_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add :: inline (self: *wl_region, x: s32, y: s32, width: s32, height: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_REGION_ADD,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_REGION_ADD,
             x, y, width, height);
     }
 
     subtract :: inline (self: *wl_region, x: s32, y: s32, width: s32, height: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_REGION_SUBTRACT,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_REGION_SUBTRACT,
             x, y, width, height);
     }
 }
@@ -1725,15 +1651,14 @@ wl_subcompositor :: struct {
     }
 
     destroy :: inline (self: *wl_subcompositor) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SUBCOMPOSITOR_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WL_SUBCOMPOSITOR_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     get_subsurface :: inline (self: *wl_subcompositor, surface: *wl_surface, parent: *wl_surface) -> *wl_subsurface #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, WL_SUBCOMPOSITOR_GET_SUBSURFACE,
-            *wl_subsurface_interface, wl_proxy.get_version(self), 0,
+            *wl_subsurface_interface, wl_proxy.get_version(self),
             null, surface, parent);
         return cast(*wl_subsurface) ret;
     }
@@ -1765,42 +1690,31 @@ wl_subsurface :: struct {
     }
 
     destroy :: inline (self: *wl_subsurface) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SUBSURFACE_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, WL_SUBSURFACE_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     set_position :: inline (self: *wl_subsurface, x: s32, y: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SUBSURFACE_SET_POSITION,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SUBSURFACE_SET_POSITION,
             x, y);
     }
 
     place_above :: inline (self: *wl_subsurface, sibling: *wl_surface) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SUBSURFACE_PLACE_ABOVE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SUBSURFACE_PLACE_ABOVE,
             sibling);
     }
 
     place_below :: inline (self: *wl_subsurface, sibling: *wl_surface) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SUBSURFACE_PLACE_BELOW,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, WL_SUBSURFACE_PLACE_BELOW,
             sibling);
     }
 
     set_sync :: inline (self: *wl_subsurface) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SUBSURFACE_SET_SYNC,
-            null, wl_proxy.get_version(self), 0);
+        wl_proxy.marshal(self, WL_SUBSURFACE_SET_SYNC);
     }
 
     set_desync :: inline (self: *wl_subsurface) #c_call {
-        wl_proxy.marshal_flags(
-            self, WL_SUBSURFACE_SET_DESYNC,
-            null, wl_proxy.get_version(self), 0);
+        wl_proxy.marshal(self, WL_SUBSURFACE_SET_DESYNC);
     }
 }
 

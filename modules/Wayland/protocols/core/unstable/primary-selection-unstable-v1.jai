@@ -21,25 +21,24 @@ zwp_primary_selection_device_manager_v1 :: struct {
     }
 
     create_source :: inline (self: *zwp_primary_selection_device_manager_v1) -> *zwp_primary_selection_source_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_PRIMARY_SELECTION_DEVICE_MANAGER_V1_CREATE_SOURCE,
-            *zwp_primary_selection_source_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_primary_selection_source_v1_interface, wl_proxy.get_version(self),
             null);
         return cast(*zwp_primary_selection_source_v1) ret;
     }
 
     get_device :: inline (self: *zwp_primary_selection_device_manager_v1, seat: *wl_seat) -> *zwp_primary_selection_device_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_PRIMARY_SELECTION_DEVICE_MANAGER_V1_GET_DEVICE,
-            *zwp_primary_selection_device_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_primary_selection_device_v1_interface, wl_proxy.get_version(self),
             null, seat);
         return cast(*zwp_primary_selection_device_v1) ret;
     }
 
     destroy :: inline (self: *zwp_primary_selection_device_manager_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_PRIMARY_SELECTION_DEVICE_MANAGER_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_PRIMARY_SELECTION_DEVICE_MANAGER_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 }
 
@@ -68,16 +67,13 @@ zwp_primary_selection_device_v1 :: struct {
     }
 
     set_selection :: inline (self: *zwp_primary_selection_device_v1, source: *zwp_primary_selection_source_v1, serial: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_PRIMARY_SELECTION_DEVICE_V1_SET_SELECTION,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_PRIMARY_SELECTION_DEVICE_V1_SET_SELECTION,
             source, serial);
     }
 
     destroy :: inline (self: *zwp_primary_selection_device_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_PRIMARY_SELECTION_DEVICE_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_PRIMARY_SELECTION_DEVICE_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *zwp_primary_selection_device_v1, listener: *zwp_primary_selection_device_v1_listener, data: *void) -> s32 #c_call {
@@ -124,16 +120,13 @@ zwp_primary_selection_offer_v1 :: struct {
     }
 
     receive :: inline (self: *zwp_primary_selection_offer_v1, mime_type: *u8, fd: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_PRIMARY_SELECTION_OFFER_V1_RECEIVE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_PRIMARY_SELECTION_OFFER_V1_RECEIVE,
             mime_type, fd);
     }
 
     destroy :: inline (self: *zwp_primary_selection_offer_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_PRIMARY_SELECTION_OFFER_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_PRIMARY_SELECTION_OFFER_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *zwp_primary_selection_offer_v1, listener: *zwp_primary_selection_offer_v1_listener, data: *void) -> s32 #c_call {
@@ -175,16 +168,13 @@ zwp_primary_selection_source_v1 :: struct {
     }
 
     offer :: inline (self: *zwp_primary_selection_source_v1, mime_type: *u8) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_PRIMARY_SELECTION_SOURCE_V1_OFFER,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_PRIMARY_SELECTION_SOURCE_V1_OFFER,
             mime_type);
     }
 
     destroy :: inline (self: *zwp_primary_selection_source_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_PRIMARY_SELECTION_SOURCE_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_PRIMARY_SELECTION_SOURCE_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *zwp_primary_selection_source_v1, listener: *zwp_primary_selection_source_v1_listener, data: *void) -> s32 #c_call {

@@ -21,31 +21,30 @@ zwp_linux_dmabuf_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_linux_dmabuf_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_LINUX_DMABUF_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_LINUX_DMABUF_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     create_params :: inline (self: *zwp_linux_dmabuf_v1) -> *zwp_linux_buffer_params_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_LINUX_DMABUF_V1_CREATE_PARAMS,
-            *zwp_linux_buffer_params_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_linux_buffer_params_v1_interface, wl_proxy.get_version(self),
             null);
         return cast(*zwp_linux_buffer_params_v1) ret;
     }
 
     get_default_feedback :: inline (self: *zwp_linux_dmabuf_v1) -> *zwp_linux_dmabuf_feedback_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_LINUX_DMABUF_V1_GET_DEFAULT_FEEDBACK,
-            *zwp_linux_dmabuf_feedback_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_linux_dmabuf_feedback_v1_interface, wl_proxy.get_version(self),
             null);
         return cast(*zwp_linux_dmabuf_feedback_v1) ret;
     }
 
     get_surface_feedback :: inline (self: *zwp_linux_dmabuf_v1, surface: *wl_surface) -> *zwp_linux_dmabuf_feedback_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_LINUX_DMABUF_V1_GET_SURFACE_FEEDBACK,
-            *zwp_linux_dmabuf_feedback_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_linux_dmabuf_feedback_v1_interface, wl_proxy.get_version(self),
             null, surface);
         return cast(*zwp_linux_dmabuf_feedback_v1) ret;
     }
@@ -115,29 +114,24 @@ zwp_linux_buffer_params_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_linux_buffer_params_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_LINUX_BUFFER_PARAMS_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_LINUX_BUFFER_PARAMS_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add :: inline (self: *zwp_linux_buffer_params_v1, fd: s32, plane_idx: u32, offset: u32, stride: u32, modifier_hi: u32, modifier_lo: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_LINUX_BUFFER_PARAMS_V1_ADD,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_LINUX_BUFFER_PARAMS_V1_ADD,
             fd, plane_idx, offset, stride, modifier_hi, modifier_lo);
     }
 
     create :: inline (self: *zwp_linux_buffer_params_v1, width: s32, height: s32, format: u32, flags: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_LINUX_BUFFER_PARAMS_V1_CREATE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZWP_LINUX_BUFFER_PARAMS_V1_CREATE,
             width, height, format, flags);
     }
 
     create_immed :: inline (self: *zwp_linux_buffer_params_v1, width: s32, height: s32, format: u32, flags: u32) -> *wl_buffer #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_LINUX_BUFFER_PARAMS_V1_CREATE_IMMED,
-            *wl_buffer_interface, wl_proxy.get_version(self), 0,
+            *wl_buffer_interface, wl_proxy.get_version(self),
             null, width, height, format, flags);
         return cast(*wl_buffer) ret;
     }
@@ -192,9 +186,8 @@ zwp_linux_dmabuf_feedback_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_linux_dmabuf_feedback_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_LINUX_DMABUF_FEEDBACK_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_LINUX_DMABUF_FEEDBACK_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *zwp_linux_dmabuf_feedback_v1, listener: *zwp_linux_dmabuf_feedback_v1_listener, data: *void) -> s32 #c_call {

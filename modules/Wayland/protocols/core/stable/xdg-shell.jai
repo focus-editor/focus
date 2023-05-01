@@ -30,31 +30,28 @@ xdg_wm_base :: struct {
     }
 
     destroy :: inline (self: *xdg_wm_base) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_WM_BASE_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, XDG_WM_BASE_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     create_positioner :: inline (self: *xdg_wm_base) -> *xdg_positioner #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, XDG_WM_BASE_CREATE_POSITIONER,
-            *xdg_positioner_interface, wl_proxy.get_version(self), 0,
+            *xdg_positioner_interface, wl_proxy.get_version(self),
             null);
         return cast(*xdg_positioner) ret;
     }
 
     get_xdg_surface :: inline (self: *xdg_wm_base, surface: *wl_surface) -> *xdg_surface #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, XDG_WM_BASE_GET_XDG_SURFACE,
-            *xdg_surface_interface, wl_proxy.get_version(self), 0,
+            *xdg_surface_interface, wl_proxy.get_version(self),
             null, surface);
         return cast(*xdg_surface) ret;
     }
 
     pong :: inline (self: *xdg_wm_base, serial: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_WM_BASE_PONG,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_WM_BASE_PONG,
             serial);
     }
 
@@ -135,70 +132,51 @@ xdg_positioner :: struct {
     }
 
     destroy :: inline (self: *xdg_positioner) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_POSITIONER_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, XDG_POSITIONER_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     set_size :: inline (self: *xdg_positioner, width: s32, height: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_POSITIONER_SET_SIZE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_POSITIONER_SET_SIZE,
             width, height);
     }
 
     set_anchor_rect :: inline (self: *xdg_positioner, x: s32, y: s32, width: s32, height: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_POSITIONER_SET_ANCHOR_RECT,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_POSITIONER_SET_ANCHOR_RECT,
             x, y, width, height);
     }
 
     set_anchor :: inline (self: *xdg_positioner, anchor: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_POSITIONER_SET_ANCHOR,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_POSITIONER_SET_ANCHOR,
             anchor);
     }
 
     set_gravity :: inline (self: *xdg_positioner, gravity: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_POSITIONER_SET_GRAVITY,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_POSITIONER_SET_GRAVITY,
             gravity);
     }
 
     set_constraint_adjustment :: inline (self: *xdg_positioner, constraint_adjustment: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_POSITIONER_SET_CONSTRAINT_ADJUSTMENT,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_POSITIONER_SET_CONSTRAINT_ADJUSTMENT,
             constraint_adjustment);
     }
 
     set_offset :: inline (self: *xdg_positioner, x: s32, y: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_POSITIONER_SET_OFFSET,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_POSITIONER_SET_OFFSET,
             x, y);
     }
 
     set_reactive :: inline (self: *xdg_positioner) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_POSITIONER_SET_REACTIVE,
-            null, wl_proxy.get_version(self), 0);
+        wl_proxy.marshal(self, XDG_POSITIONER_SET_REACTIVE);
     }
 
     set_parent_size :: inline (self: *xdg_positioner, parent_width: s32, parent_height: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_POSITIONER_SET_PARENT_SIZE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_POSITIONER_SET_PARENT_SIZE,
             parent_width, parent_height);
     }
 
     set_parent_configure :: inline (self: *xdg_positioner, serial: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_POSITIONER_SET_PARENT_CONFIGURE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_POSITIONER_SET_PARENT_CONFIGURE,
             serial);
     }
 }
@@ -250,38 +228,33 @@ xdg_surface :: struct {
     }
 
     destroy :: inline (self: *xdg_surface) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_SURFACE_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, XDG_SURFACE_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     get_toplevel :: inline (self: *xdg_surface) -> *xdg_toplevel #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, XDG_SURFACE_GET_TOPLEVEL,
-            *xdg_toplevel_interface, wl_proxy.get_version(self), 0,
+            *xdg_toplevel_interface, wl_proxy.get_version(self),
             null);
         return cast(*xdg_toplevel) ret;
     }
 
     get_popup :: inline (self: *xdg_surface, parent: *xdg_surface, positioner: *xdg_positioner) -> *xdg_popup #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, XDG_SURFACE_GET_POPUP,
-            *xdg_popup_interface, wl_proxy.get_version(self), 0,
+            *xdg_popup_interface, wl_proxy.get_version(self),
             null, parent, positioner);
         return cast(*xdg_popup) ret;
     }
 
     set_window_geometry :: inline (self: *xdg_surface, x: s32, y: s32, width: s32, height: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_SURFACE_SET_WINDOW_GEOMETRY,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_SURFACE_SET_WINDOW_GEOMETRY,
             x, y, width, height);
     }
 
     ack_configure :: inline (self: *xdg_surface, serial: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_SURFACE_ACK_CONFIGURE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_SURFACE_ACK_CONFIGURE,
             serial);
     }
 
@@ -362,96 +335,69 @@ xdg_toplevel :: struct {
     }
 
     destroy :: inline (self: *xdg_toplevel) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_TOPLEVEL_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, XDG_TOPLEVEL_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     set_parent :: inline (self: *xdg_toplevel, parent: *xdg_toplevel) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_TOPLEVEL_SET_PARENT,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_TOPLEVEL_SET_PARENT,
             parent);
     }
 
     set_title :: inline (self: *xdg_toplevel, title: *u8) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_TOPLEVEL_SET_TITLE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_TOPLEVEL_SET_TITLE,
             title);
     }
 
     set_app_id :: inline (self: *xdg_toplevel, app_id: *u8) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_TOPLEVEL_SET_APP_ID,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_TOPLEVEL_SET_APP_ID,
             app_id);
     }
 
     show_window_menu :: inline (self: *xdg_toplevel, seat: *wl_seat, serial: u32, x: s32, y: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_TOPLEVEL_SHOW_WINDOW_MENU,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_TOPLEVEL_SHOW_WINDOW_MENU,
             seat, serial, x, y);
     }
 
     move :: inline (self: *xdg_toplevel, seat: *wl_seat, serial: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_TOPLEVEL_MOVE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_TOPLEVEL_MOVE,
             seat, serial);
     }
 
     resize :: inline (self: *xdg_toplevel, seat: *wl_seat, serial: u32, edges: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_TOPLEVEL_RESIZE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_TOPLEVEL_RESIZE,
             seat, serial, edges);
     }
 
     set_max_size :: inline (self: *xdg_toplevel, width: s32, height: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_TOPLEVEL_SET_MAX_SIZE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_TOPLEVEL_SET_MAX_SIZE,
             width, height);
     }
 
     set_min_size :: inline (self: *xdg_toplevel, width: s32, height: s32) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_TOPLEVEL_SET_MIN_SIZE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_TOPLEVEL_SET_MIN_SIZE,
             width, height);
     }
 
     set_maximized :: inline (self: *xdg_toplevel) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_TOPLEVEL_SET_MAXIMIZED,
-            null, wl_proxy.get_version(self), 0);
+        wl_proxy.marshal(self, XDG_TOPLEVEL_SET_MAXIMIZED);
     }
 
     unset_maximized :: inline (self: *xdg_toplevel) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_TOPLEVEL_UNSET_MAXIMIZED,
-            null, wl_proxy.get_version(self), 0);
+        wl_proxy.marshal(self, XDG_TOPLEVEL_UNSET_MAXIMIZED);
     }
 
     set_fullscreen :: inline (self: *xdg_toplevel, output: *wl_output) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_TOPLEVEL_SET_FULLSCREEN,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_TOPLEVEL_SET_FULLSCREEN,
             output);
     }
 
     unset_fullscreen :: inline (self: *xdg_toplevel) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_TOPLEVEL_UNSET_FULLSCREEN,
-            null, wl_proxy.get_version(self), 0);
+        wl_proxy.marshal(self, XDG_TOPLEVEL_UNSET_FULLSCREEN);
     }
 
     set_minimized :: inline (self: *xdg_toplevel) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_TOPLEVEL_SET_MINIMIZED,
-            null, wl_proxy.get_version(self), 0);
+        wl_proxy.marshal(self, XDG_TOPLEVEL_SET_MINIMIZED);
     }
 
     add_listener :: inline (self: *xdg_toplevel, listener: *xdg_toplevel_listener, data: *void) -> s32 #c_call {
@@ -537,22 +483,17 @@ xdg_popup :: struct {
     }
 
     destroy :: inline (self: *xdg_popup) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_POPUP_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, XDG_POPUP_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     grab :: inline (self: *xdg_popup, seat: *wl_seat, serial: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_POPUP_GRAB,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_POPUP_GRAB,
             seat, serial);
     }
 
     reposition :: inline (self: *xdg_popup, positioner: *xdg_positioner, token: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, XDG_POPUP_REPOSITION,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, XDG_POPUP_REPOSITION,
             positioner, token);
     }
 

@@ -21,15 +21,14 @@ zxdg_decoration_manager_v1 :: struct {
     }
 
     destroy :: inline (self: *zxdg_decoration_manager_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZXDG_DECORATION_MANAGER_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZXDG_DECORATION_MANAGER_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     get_toplevel_decoration :: inline (self: *zxdg_decoration_manager_v1, toplevel: *xdg_toplevel) -> *zxdg_toplevel_decoration_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZXDG_DECORATION_MANAGER_V1_GET_TOPLEVEL_DECORATION,
-            *zxdg_toplevel_decoration_v1_interface, wl_proxy.get_version(self), 0,
+            *zxdg_toplevel_decoration_v1_interface, wl_proxy.get_version(self),
             null, toplevel);
         return cast(*zxdg_toplevel_decoration_v1) ret;
     }
@@ -67,22 +66,17 @@ zxdg_toplevel_decoration_v1 :: struct {
     }
 
     destroy :: inline (self: *zxdg_toplevel_decoration_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZXDG_TOPLEVEL_DECORATION_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZXDG_TOPLEVEL_DECORATION_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     set_mode :: inline (self: *zxdg_toplevel_decoration_v1, mode: u32) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZXDG_TOPLEVEL_DECORATION_V1_SET_MODE,
-            null, wl_proxy.get_version(self), 0,
+        wl_proxy.marshal(self, ZXDG_TOPLEVEL_DECORATION_V1_SET_MODE,
             mode);
     }
 
     unset_mode :: inline (self: *zxdg_toplevel_decoration_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZXDG_TOPLEVEL_DECORATION_V1_UNSET_MODE,
-            null, wl_proxy.get_version(self), 0);
+        wl_proxy.marshal(self, ZXDG_TOPLEVEL_DECORATION_V1_UNSET_MODE);
     }
 
     add_listener :: inline (self: *zxdg_toplevel_decoration_v1, listener: *zxdg_toplevel_decoration_v1_listener, data: *void) -> s32 #c_call {

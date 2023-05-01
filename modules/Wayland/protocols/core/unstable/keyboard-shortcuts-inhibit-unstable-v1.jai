@@ -24,15 +24,14 @@ zwp_keyboard_shortcuts_inhibit_manager_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_keyboard_shortcuts_inhibit_manager_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_KEYBOARD_SHORTCUTS_INHIBIT_MANAGER_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_KEYBOARD_SHORTCUTS_INHIBIT_MANAGER_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     inhibit_shortcuts :: inline (self: *zwp_keyboard_shortcuts_inhibit_manager_v1, surface: *wl_surface, seat: *wl_seat) -> *zwp_keyboard_shortcuts_inhibitor_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_flags(
+        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
             self, ZWP_KEYBOARD_SHORTCUTS_INHIBIT_MANAGER_V1_INHIBIT_SHORTCUTS,
-            *zwp_keyboard_shortcuts_inhibitor_v1_interface, wl_proxy.get_version(self), 0,
+            *zwp_keyboard_shortcuts_inhibitor_v1_interface, wl_proxy.get_version(self),
             null, surface, seat);
         return cast(*zwp_keyboard_shortcuts_inhibitor_v1) ret;
     }
@@ -61,9 +60,8 @@ zwp_keyboard_shortcuts_inhibitor_v1 :: struct {
     }
 
     destroy :: inline (self: *zwp_keyboard_shortcuts_inhibitor_v1) #c_call {
-        wl_proxy.marshal_flags(
-            self, ZWP_KEYBOARD_SHORTCUTS_INHIBITOR_V1_DESTROY,
-            null, wl_proxy.get_version(self), WL_MARSHAL_FLAG_DESTROY);
+        wl_proxy.marshal(self, ZWP_KEYBOARD_SHORTCUTS_INHIBITOR_V1_DESTROY);
+        wl_proxy.destroy(self);
     }
 
     add_listener :: inline (self: *zwp_keyboard_shortcuts_inhibitor_v1, listener: *zwp_keyboard_shortcuts_inhibitor_v1_listener, data: *void) -> s32 #c_call {
