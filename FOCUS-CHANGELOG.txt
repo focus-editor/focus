@@ -25,12 +25,13 @@
 
 - (IMPORTANT) Sometimes when pulling changes via Git, the editor won't notice the files changing
 - Changing some keymap bindings requires a restart to take effect
-- When editing with multiple cursors, some of which are outside the viewport, the screen may jerk
+- Smooth scrolling by keyboard is temporarily broken by the sticky viewport change
 
 
 # Main Git Branch
 
-- ...
++ Basic Linux Support (thanks to @ileonte)
++ Added crash reports on failed asserts and violated array bounds
 
 
 # RELEASES ==================================================================

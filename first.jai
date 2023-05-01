@@ -23,6 +23,8 @@ build :: () {
             set_optimization(*options, .VERY_OPTIMIZED);
             options.llvm_options.enable_split_modules = false;
             options.output_executable_name = "focus";
+            options.array_bounds_check = .ON;
+            options.null_pointer_check = .ON;
           case "debug";
           case;
             compiler_report(tprint("Command-line argument #%, '%', is invalid. Valid options are: 'debug', 'release'.\n", it_index+1, arg));
@@ -35,7 +37,7 @@ build :: () {
         // Disable runtime console
         if optimized {
             set_build_options_dc(.{append_linker_arguments=.["/SUBSYSTEM:windows", "/ENTRY:mainCRTStartup"]}, w);
-            
+
             // For tracing release builds use this:
             // set_build_options_dc(.{append_linker_arguments=.["/SUBSYSTEM:windows", "/ENTRY:mainCRTStartup", "ws2_32.lib", "msvcprtd.lib"]}, w);
         } else {

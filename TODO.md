@@ -9,6 +9,35 @@
 
 ===========================
 
+- See if panic behaviour can be improved in release builds
+- Fix the editor not noticing changes on git pull
+
+- Fix smooth scrolling
+    - Remove the known bug
+- Remove bin
+- Don't ignore your own config
+    - Can't seem to open files from ignored folders
+- Fix the large path crash
+- Reopen up to 2 open editors after workspace reload
+
+- Remove the unused get_range_as_string or get_string_from_range
+- Show project name in the window title
+- Investigate a bug reported on Github
+
+- Ctrl-K and other shortcuts should work in text inputs
+- Derive font_ui size from the provided font size (comparing it to the baked in default)
+
+- Open config commands should respect ctrl
+- Shortcut for centering on current line
+- Strip down the example project file
+- Colors per programming language
+- Project dir disambiguation
+- When switching to another editor, jump to cursor
+- Fix the keyboard scrolling not working
+- Autoindent region
+- Notify about duplicate bindings and highlight that in the config file
+- Search returns extra results: Runtime_Support, report_bounds_check_error_more_visibly
+
 - Line wrap:
     - Implement wrapping for buffer
         - Point line_starts to real_line_starts unless in the line wrap mode
@@ -16,9 +45,10 @@
     - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
     - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
 
-- See if panic behaviour can be improved in release builds
 - Keymap changing without having to reload - investigate a bug
 - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
+
+- Fix glyphs https://discord.com/channels/661732390355337246/784843664651190273/1102388810865721384
 
 - Show default config (readonly)
 
@@ -80,6 +110,8 @@
             - Which buffer file corresponds to this editor
         - Editor layout (none/single/double)
         - Which editor was open on which side
+
+- Consider the move_viewport_to_cursor_top action suggested by poyepolomix on Discord
 
 - Log time with the session logger
 
