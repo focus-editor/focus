@@ -219,84 +219,52 @@ pointer_listener :: wl_pointer_listener.{
     },
 };
 
-wl_display_poll :: (display: *wl_display, events: s16) -> s32 {
-    wld: *WLDisplay = wl_proxy.get_user_data(display);
-
-	pfd: [2]pollfd;
-	pfd[0].fd = wl_display.get_fd(display);
-	pfd[0].events = events;
-    pfd[1].fd = wld.epfd;
-    pfd[1].events = POLLIN;
-
-    ret: s32;
-	while true {
-		ret = poll(pfd.data, 2, -1);
-        if ret < 0 {
-            if errno() == EINTR continue;
-            break;
-        }
-        break;
-	}
-    if ret <= 0 return ret;
-
-    has_wayland_events := false;
-    for 0..1 {
-        if !pfd[it].revents {
-            continue;
-        }
-        if pfd[it].fd == wl_display.get_fd(display) {
-            has_wayland_events = true;
-            continue;
-        }
-
-        assert(pfd[it].fd == wld.epfd);
-        ev: epoll_event;
-        count := epoll_wait(wld.epfd, *ev, 1, -1);
-        assert(count == 1);
-
-        if wl_tick_timers(wld, ev.data.fd) continue;
-    }
-
-    if has_wayland_events return 1;
-    set_errno(EAGAIN);
-	return -1;
-}
-
 wl_update_window_events :: (display: *WLDisplay) {
-	if (wl_display.prepare_read(display.handle) < 0) {
-        if wl_display_poll(display.handle, POLLOUT) > 0 {
-            wl_display.dispatch_pending(display.handle);
+    display_poll :: (display: *WLDisplay) -> s32 {
+        wlfd := wl_display.get_fd(display.handle);
+
+        pfd: [2]pollfd;
+        pfd[0].fd = wlfd;
+        pfd[0].events = POLLIN;
+        pfd[1].fd = display.epfd;
+        pfd[1].events = POLLIN;
+
+        ret := poll(pfd.data, 2, 5);
+        if ret <= 0 return ret;
+
+        has_wayland_events := false;
+        for 0..1 {
+            if !pfd[it].revents {
+                continue;
+            }
+            if pfd[it].fd == wlfd {
+                has_wayland_events = true;
+                continue;
+            }
+
+            assert(pfd[it].fd == display.epfd);
+            ev: epoll_event;
+            count := epoll_wait(display.epfd, *ev, 1, -1);
+            assert(count == 1);
+
+            if wl_tick_timers(display, ev.data.fd) continue;
         }
-        return;
+
+        return ifx has_wayland_events then cast(s32) 1 else 0;
     }
 
-    ret: s32;
-	while (true) {
-		ret = wl_display.flush(display.handle);
-
-		if (ret != -1 || errno() != EAGAIN)
-			break;
-
-		if (wl_display_poll(display.handle, POLLOUT) < 0) {
-			wl_display.cancel_read(display.handle);
-			return;
-		}
-	}
-
-	if (ret < 0 && errno() != EPIPE) {
-		wl_display.cancel_read(display.handle);
-		return;
-	}
-
-	if (wl_display_poll(display.handle, POLLIN) < 0) {
-		wl_display.cancel_read(display.handle);
-		return;
-	}
-
-	if (wl_display.read_events(display.handle) < 0)
-		return;
-
-	wl_display.dispatch_pending(display.handle);
+    wl_display.flush(display.handle);
+    if wl_display.prepare_read(display.handle) == 0 {
+        err := display_poll(display);
+        if err > 0 {
+            wl_display.read_events(display.handle);
+            wl_display.dispatch_pending(display.handle);
+        } else {
+            wl_display.cancel_read(display.handle);
+        }
+    } else {
+        wl_display.dispatch_pending(display.handle);
+    }
 }
 
 wl_get_mouse_pointer_position :: (win: *WLWindow, right_handed: bool) -> x: int, y: int, success: bool {
