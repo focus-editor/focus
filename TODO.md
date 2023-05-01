@@ -9,16 +9,12 @@
 
 ===========================
 
-- See if panic behaviour can be improved in release builds
-- Fix the editor not noticing changes on git pull
-
-- Fix smooth scrolling
-    - Remove the known bug
-- Remove bin
 - Don't ignore your own config
     - Can't seem to open files from ignored folders
 - Fix the large path crash
 - Reopen up to 2 open editors after workspace reload
+
+- Improve the scoring for fuzzy search (maybe after the fact even) - score matches closer together higher
 
 - Remove the unused get_range_as_string or get_string_from_range
 - Show project name in the window title
@@ -26,6 +22,8 @@
 
 - Ctrl-K and other shortcuts should work in text inputs
 - Derive font_ui size from the provided font size (comparing it to the baked in default)
+
+- Fix the editor not noticing changes on git pull
 
 - Open config commands should respect ctrl
 - Shortcut for centering on current line
@@ -131,8 +129,6 @@
     - Have an extra input for filtering by file path
     - Case-sensitive search
 
-
-
 - Jump to function definition:
     - Tokenizer: support broken down identifiers
     - Scan all jai files in a project (possibly in a separate thread) and build a lookup table for functions and structs
@@ -163,6 +159,8 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Fix smooth scrolling
++ See if panic behaviour can be improved in release builds
 + Sticky viewport
     + Remember line number and offset_within_line after finishing scrolling (or when dragging the scrollbar)
     + Calculate viewport.top from it before drawing
