@@ -1,8 +1,5 @@
 #import "Objective_C";
-<<<<<<< HEAD
 #import "Objective_C/AppKit";
-=======
->>>>>>> a1598ec (modules: remove '_Ext' suffix from Input and Simp)
 
 window_minimized := false; // @@ Hack.
 
@@ -308,11 +305,7 @@ update_cocoa_window_events :: () {
                 event.ctrl_pressed  = ctrl_state;
                 event.alt_pressed   = alt_state;
                 event.repeat = (repeat != NO);
-<<<<<<< HEAD
 
-=======
-                
->>>>>>> a1598ec (modules: remove '_Ext' suffix from Input and Simp)
                 input_button_states[event.key_code] |= (DOWN | START);
 
                 array_add(*events_this_frame, event);
@@ -334,11 +327,7 @@ update_cocoa_window_events :: () {
 
                         // skip Private Use Area U+F700 (this contains values for NS function keys)
                         if (event.utf32 & 0xFF00) == 0xF700 then continue;
-<<<<<<< HEAD
 
-=======
-                        
->>>>>>> a1598ec (modules: remove '_Ext' suffix from Input and Simp)
                         array_add(*events_this_frame, event);
                     }
                 }
@@ -363,11 +352,7 @@ update_cocoa_window_events :: () {
                 event.alt_pressed   = alt_state;
 
                 input_button_states[event.key_code] = Key_Current_State.END;  // Because we shadowed that by Key_Code.END.
-<<<<<<< HEAD
 
-=======
-                
->>>>>>> a1598ec (modules: remove '_Ext' suffix from Input and Simp)
                 array_add(*events_this_frame, event);
 
                 // continue;
@@ -467,11 +452,7 @@ update_window_events :: () {
         init_input_system();
         input_vk_table_initialized = true;
     }
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> a1598ec (modules: remove '_Ext' suffix from Input and Simp)
     update_cocoa_window_events();
 }
 

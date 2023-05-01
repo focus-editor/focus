@@ -47,6 +47,8 @@
 
 - Show default config (readonly)
 
+- Be able to change the width of the filename area in finder (and remember it somewhere)
+
 - Highlight C/C++
 
 - Use keyboard in the confirmation dialog
