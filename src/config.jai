@@ -29,6 +29,8 @@ load_project_config :: (project: string = "") -> success: bool, changed: bool {
 }
 
 maybe_refresh_config :: (path: string) {
+    if !is_our_config_file(path) return;
+
     old_workspace_dirs := array_copy_tmp(config.workspace.workspace_dirs);
 
     if path == global_config_path {
@@ -47,8 +49,6 @@ maybe_refresh_config :: (path: string) {
             clear_user_messages();
             add_success_message(tprint("Config changes for project '%' have been applied", current_project_name), dismiss_in_seconds = 3);
         }
-    } else {
-        return;
     }
 
     // Detect changes in workspace dirs
@@ -75,6 +75,10 @@ maybe_refresh_config :: (path: string) {
             should_reload_workspace = false;
         }
     }
+}
+
+is_our_config_file :: (path: string) -> bool {
+    return path != "" && (path == global_config_path || path == project_config_path);
 }
 
 find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp */ {

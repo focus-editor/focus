@@ -32,6 +32,7 @@
 + Basic Linux Support (thanks to @ileonte)
 + Added crash reports on failed asserts and violated array bounds
 + Smooth scrolling is fixed
++ Config hot reload should work even if it's within one of the ignored dirs
 
 
 # RELEASES ==================================================================

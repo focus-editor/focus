@@ -9,8 +9,6 @@
 
 ===========================
 
-- Don't ignore your own config
-    - Can't seem to open files from ignored folders
 - Fix the large path crash
 - Reopen up to 2 open editors after workspace reload
 
@@ -159,6 +157,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Don't ignore your own config
 + Fix smooth scrolling
 + See if panic behaviour can be improved in release builds
 + Sticky viewport
