@@ -71,12 +71,16 @@ WLDisplay :: struct {
     clipboard_source: *wl_data_source;
     clipboard_send_data: string;
 
+    viewporter: *wp_viewporter;
+    fractional_scale_manager: *wp_fractional_scale_manager_v1;
+
     egl_dpy: EGLDisplay;
     egl_ctx: EGLContext;
     egl_cnf: EGLConfig;
 
     epfd: s32 = -1;
     timers: [..]WLTimer;
+
 }
 
 wl_timer_create :: (display: *WLDisplay, cb: type_of(WLTimer.cb), initial_tick: u32 = 0, repeat: u32 = 0) -> *WLTimer {
@@ -161,7 +165,6 @@ WLWindow :: struct {
     title: string;
 
     background_color_buffer: *wl_buffer;
-    viewport: *wp_viewport;
 
     x_surface: *xdg_surface;
     x_toplevel: *xdg_toplevel;
@@ -171,8 +174,11 @@ WLWindow :: struct {
     creation_width: s32;
     creation_height: s32;
 
-    width: s32;
-    height: s32;
+    window_width: s32;
+    window_height: s32;
+
+    buffer_width: s32;
+    buffer_height: s32;
 
     cursor: WLCursor;
     mouse_x: s32;
@@ -189,8 +195,32 @@ WLWindow :: struct {
 
     enter_serial: u32;
 
+    fractional_scale_proxy: *wp_fractional_scale_v1;
+    fractional_scale: s32 = 120;
+    viewport: *wp_viewport;
+
     // dumb stuff
     pre_configure_desired_state: WLDesiredPreconfigureState;
+}
+
+window_scale_coords :: inline (w: *WLWindow, x: s32, y: s32) -> (s32, s32) {
+    scaled_x : s32 = x * w.fractional_scale;
+    ret_x : s32 = scaled_x / 120 + ifx (scaled_x % 120) < 60 then cast(s32) 0 else 1;
+
+    scaled_y : s32 = y * w.fractional_scale;
+    ret_y : s32 = scaled_y / 120 + ifx (scaled_y % 120) < 60 then cast(s32) 0 else 1;
+
+    return ret_x, ret_y;
+}
+
+window_calculate_buffer_size :: inline (w: *WLWindow) {
+    w.buffer_width, w.buffer_height = window_scale_coords(w, w.window_width, w.window_height);
+}
+
+wl_window_resize_viewport :: (w: *WLWindow) {
+    f0 :: #run wl_fixed_from_int(0);
+    wp_viewport.set_source(w.viewport, f0, f0, wl_fixed_from_int(w.buffer_width), wl_fixed_from_int(w.buffer_height));
+    wp_viewport.set_destination(w.viewport, w.window_width, w.window_height);
 }
 
 wm_base_listener :: xdg_wm_base_listener.{
@@ -241,6 +271,12 @@ registry_listener :: wl_registry_listener.{
             case "wl_data_device_manager"; {
                 wl_jext_bind(*d.data_device_manager, registry, id, version);
                 maybe_init_data_device(d);
+            }
+            case "wp_viewporter"; {
+                wl_jext_bind(*d.viewporter, registry, id, version);
+            }
+            case "wp_fractional_scale_manager_v1"; {
+                wl_jext_bind(*d.fractional_scale_manager, registry, id, version);
             }
         }
     },
@@ -499,11 +535,8 @@ x_toplevel_listener :: xdg_toplevel_listener.{
                 return;
             }
 
-            w.width  = ifx !width then w.creation_width else width;
-            w.height = ifx !height then w.creation_height else height;
+            window_handle_resize(w, width, height);
 
-            if w.egl_native  wl_egl_window.resize(w.egl_native, w.width, w.height, 0, 0);
-            add_resize_record(xx w.wrapper, xx w.width, xx w.height);
         }
     },
     close = (data: *void, toplevel: *xdg_toplevel) -> void #c_call {
@@ -514,6 +547,32 @@ x_toplevel_listener :: xdg_toplevel_listener.{
             array_add(*events_this_frame, event);
         }
     },
+};
+
+window_handle_resize :: (w: *WLWindow, width: s32, height: s32) {
+    w.window_width  = ifx !width then w.creation_width else width;
+    w.window_height = ifx !height then w.creation_height else height;
+
+    window_calculate_buffer_size(w);
+    wl_window_resize_viewport(w);
+
+    if w.egl_native  wl_egl_window.resize(w.egl_native, w.buffer_width, w.buffer_height, 0, 0);
+
+    wl_surface.damage(w.handle, 0, 0, w.window_width, w.window_height);
+    wl_surface.commit(w.handle);
+
+    add_resize_record(xx w.wrapper, xx w.buffer_width, xx w.buffer_height);
+}
+
+fractional_scale_listener :: wp_fractional_scale_v1_listener.{
+    preferred_scale = (data: *void, self: *wp_fractional_scale_v1, scale: u32) -> void #c_call {
+        ctx: Context;
+        push_context ctx {
+            w : *WLWindow = data;
+            w.fractional_scale = xx scale;
+            window_handle_resize(w, w.window_width, w.window_height);
+        }
+    }
 };
 
 wl_create_window :: (d: *WLDisplay, ld_win: LDWindow, width: int, height: int, window_name: string,
@@ -530,8 +589,9 @@ wl_create_window :: (d: *WLDisplay, ld_win: LDWindow, width: int, height: int, w
     w.creation_width = xx width;
     w.creation_height = xx height;
 
-    w.width = xx width;
-    w.height = xx height;
+    w.window_width = xx width;
+    w.window_height = xx height;
+    window_calculate_buffer_size(w);
 
     cursor, found := table_find(*d.cursors, "default");
     if !found {
@@ -560,7 +620,16 @@ wl_create_window :: (d: *WLDisplay, ld_win: LDWindow, width: int, height: int, w
         zxdg_toplevel_decoration_v1.set_mode(w.decoration, zxdg_toplevel_decoration_v1.mode_server_side);
     }
 
-    wl_surface.damage(w.handle, 0, 0, w.width, w.height);
+    w.viewport = wp_viewporter.get_viewport(d.viewporter, w.handle);
+    if d.fractional_scale_manager {
+        w.fractional_scale_proxy = wp_fractional_scale_manager_v1.get_fractional_scale(
+            d.fractional_scale_manager, w.handle);
+        wp_fractional_scale_v1.add_listener(w.fractional_scale_proxy, *fractional_scale_listener, w);
+    }
+
+    wl_window_resize_viewport(w);
+
+    wl_surface.damage(w.handle, 0, 0, w.window_width, w.window_height);
     wl_surface.commit(w.handle);
 
     return true;
@@ -596,18 +665,22 @@ wl_has_native_handle :: (w: *WLWindow, native_handle: *wl_surface) -> bool {
 }
 
 wl_get_dimensions :: (w: *WLWindow, right_handed: bool) -> (x: s32, y: s32, width: s32, height: s32, success := true) {
-    return 0, 0, w.width, w.height, true;
+    return 0, 0, w.window_width, w.window_height, true;
+}
+
+wl_get_render_dimensions :: (w: *WLWindow) -> s32, s32 {
+    return w.buffer_width, w.buffer_height;
 }
 
 wl_toggle_fullscreen :: (w: *WLWindow, desire_fullscreen: bool, _unused: *void) -> bool, s32, s32 {
     if !w.x_toplevel_configured {
         w.pre_configure_desired_state = .FULLSCREEN;
-        return false, w.width, w.height;;
+        return false, w.window_width, w.window_height;
     }
     if desire_fullscreen xdg_toplevel.set_fullscreen(w.x_toplevel, null);
     else xdg_toplevel.unset_fullscreen(w.x_toplevel);
     wl_display.roundtrip(w.display.handle);
-    return true, w.width, w.height;
+    return true, w.window_width, w.window_height;
 }
 
 wl_maximize_window :: (w: *WLWindow) {

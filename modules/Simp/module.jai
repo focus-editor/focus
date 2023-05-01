@@ -146,9 +146,8 @@ get_render_dimensions :: (window: Window_Type) -> (width: s32, height: s32) {
 
         return cast(s32)(c.right - c.left), cast(s32)(c.bottom - c.top);
     } else #if OS == .LINUX {
-        x, y, w, h, s := LD.get_dimensions(window, false);
-        if s return w, h;
-        return 0, 0;
+        w, h := LD.get_render_dimensions(window);
+        return w, h;
     } else #if OS == .MACOS {
         view := NSWindow.contentView(window);
         frame := NSView.frame(view);

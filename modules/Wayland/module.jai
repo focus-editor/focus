@@ -8,6 +8,7 @@
 #load "protocols/core/staging/single-pixel-buffer-v1.jai";
 
 #load "protocols/core/staging/tearing-control-v1.jai";
+#load "protocols/core/staging/fractional-scale-v1.jai";
 #load "protocols/core/unstable/fullscreen-shell-unstable-v1.jai";
 #load "protocols/core/unstable/xdg-decoration-unstable-v1.jai";
 
@@ -22,6 +23,7 @@ wl_global_init :: () {
     single_pixel_buffer_v1_protocol_init();
 
     tearing_control_v1_protocol_init();
+    fractional_scale_v1_protocol_init();
     fullscreen_shell_unstable_v1_protocol_init();
     xdg_decoration_unstable_v1_protocol_init();
 }
