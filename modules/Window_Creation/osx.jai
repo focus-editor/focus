@@ -1,5 +1,7 @@
 
 #import "Objective_C";
+#import "Objective_C/AppKit";
+#import "Objective_C/LightweightRenderingView";
 
 #scope_file
 
@@ -40,7 +42,7 @@ App_Delegate :: struct {
             NSApplication.activateIgnoringOtherApps(NSApp, YES);
             NSApp.stop(NSApp, null);
         }
-    }    
+    }
 
     doNothing :: (using self: *App_Delegate, sel: Selector, obj: id) #c_call {
 
@@ -48,7 +50,7 @@ App_Delegate :: struct {
 }
 
 Window_Delegate :: struct {
-    using nsobject: NSObject;
+    using #as nsobject: NSObject;
 
     windowWillClose :: (using self: *Window_Delegate, _sel: Selector, notification: *NSNotification) #c_call {
         jai_context: Context;
@@ -103,6 +105,8 @@ init_mac_app :: () {
     if application_initialized return;
 
     init_objective_c();
+    init_app_kit();
+    init_lightweight_rendering_view();
 
     {
         ad_class := objc_create_class(App_Delegate, NSObject);
@@ -162,13 +166,14 @@ init_mac_app :: () {
 
     app_menu_item.setSubmenu(app_menu_item, app_menu);
 
-    NSApplication.setAppleMenu(NSApp, app_menu);    
+    NSApplication.setAppleMenu(NSApp, app_menu);
     NSApplication.finishLaunching(NSApp);
 
     application_initialized = true;
 }
 
-create_window :: (width: int, height: int, window_name: string, window_x := 0, window_y := 0, parent: *NSWindow = null) -> *NSWindow {
+// background_color_rgb is not used on macOS, it just exists for API compatibility with the Windows & Linux versions.
+create_window :: (width: int, height: int, window_name: string, window_x := 0, window_y := 0, parent: Window_Type = null, background_color_rgb := DEFAULT_WINDOW_CREATION_COLOR) -> *NSWindow {
     if !application_initialized init_mac_app();
 
     window := NSWindow.initWithContentRect(objc_alloc(NSWindow), NSMakeRect(xx window_x, xx window_y, cast(CGFloat) width, cast(CGFloat) height),
@@ -228,52 +233,52 @@ Saved_Window_Info :: struct {
 
 
 toggle_fullscreen :: (win: *NSWindow, desire_fullscreen: bool, saved: *Saved_Window_Info) -> success: bool, width: s32, height: s32 {
-    #if #run AVAILABLE_MACOS(MACOS_10_7) {
-        view := NSWindow.contentView(win);
-        frame := NSView.frame(view);
+    // @Cleanup: Why does the new code not use "saved"?
+    view := NSWindow.contentView(win);
+    frame := NSView.frame(view);
 
-        mask := NSWindow.styleMask(win);
-        if ((mask & NSWindowStyleMaskFullScreen) == NSWindowStyleMaskFullScreen) && desire_fullscreen return true, cast(s32) frame.size.width, cast(s32) frame.size.height;
+    mask := NSWindow.styleMask(win);
+    if ((mask & NSWindowStyleMaskFullScreen) == NSWindowStyleMaskFullScreen) && desire_fullscreen return true, cast(s32) frame.size.width, cast(s32) frame.size.height;
 
-        NSWindow.toggleFullScreen(win, win);
+    NSWindow.toggleFullScreen(win, win);
 
-        if desire_fullscreen {
-            // maybe preserve the current presentation options ?
-            // pres := NSApp.presentationOptions(NSApp);
-            NSApp.setPresentationOptions(NSApp, NSApplicationPresentationHideDock | NSApplicationPresentationHideMenuBar);
-        } else {
-            NSApp.setPresentationOptions(NSApp, NSApplicationPresentationDefault);
-        }
-
-        mask2 := NSWindow.styleMask(win);
-        frame = NSView.frame(view);
-        return (mask2 & NSWindowStyleMaskFullScreen) != (mask & NSWindowStyleMaskFullScreen), cast(s32) frame.size.width, cast(s32) frame.size.height;
+    if desire_fullscreen {
+        // maybe preserve the current presentation options ?
+        // pres := NSApp.presentationOptions(NSApp);
+        NSApp.setPresentationOptions(NSApp, NSApplicationPresentationHideDock | NSApplicationPresentationHideMenuBar);
     } else {
-        if desire_fullscreen {
-            saved.mask = NSWindow.styleMask(win);
-            saved.window_frame = NSWindow.frame(win);
-
-            NSWindow.setStyleMask(win, NSWindowStyleMaskBorderless);
-
-            pt: NSPoint;
-            NSWindow.setFrameOrigin(win, pt);
-
-            screen := NSScreen.mainScreen();
-            frame := NSScreen.frame(screen);
-            NSWindow.setContentSize(win, frame.size);
-            NSWindow.setLevel(win, kCGMainMenuWindowLevel+1);
-            
-            frame = NSView.frame(NSWindow.contentView(win));
-            return true, cast(s32) frame.size.width, cast(s32) frame.size.height;
-        } else {
-            NSWindow.setStyleMask(win, saved.mask);
-            NSWindow.setFrame(win, saved.window_frame, YES);
-            NSWindow.setLevel(win, kCGNormalWindowLevel);
-
-            frame := NSView.frame(NSWindow.contentView(win));
-            return true, cast(s32) frame.size.width, cast(s32) frame.size.height;
-        }
+        NSApp.setPresentationOptions(NSApp, NSApplicationPresentationDefault);
     }
+
+    mask2 := NSWindow.styleMask(win);
+    frame = NSView.frame(view);
+    return (mask2 & NSWindowStyleMaskFullScreen) != (mask & NSWindowStyleMaskFullScreen), cast(s32) frame.size.width, cast(s32) frame.size.height;
+
+    // Old code for pre OS 10.7:
+    // if desire_fullscreen {
+    //     saved.mask = NSWindow.styleMask(win);
+    //     saved.window_frame = NSWindow.frame(win);
+
+    //     NSWindow.setStyleMask(win, NSWindowStyleMaskBorderless);
+
+    //     pt: NSPoint;
+    //     NSWindow.setFrameOrigin(win, pt);
+
+    //     screen := NSScreen.mainScreen();
+    //     frame := NSScreen.frame(screen);
+    //     NSWindow.setContentSize(win, frame.size);
+    //     NSWindow.setLevel(win, kCGMainMenuWindowLevel+1);
+
+    //     frame = NSView.frame(NSWindow.contentView(win));
+    //     return true, cast(s32) frame.size.width, cast(s32) frame.size.height;
+    // } else {
+    //     NSWindow.setStyleMask(win, saved.mask);
+    //     NSWindow.setFrame(win, saved.window_frame, YES);
+    //     NSWindow.setLevel(win, kCGNormalWindowLevel);
+
+    //     frame := NSView.frame(NSWindow.contentView(win));
+    //     return true, cast(s32) frame.size.width, cast(s32) frame.size.height;
+    // }
 }
 
 get_mouse_pointer_position :: (window: *NSWindow, right_handed: bool) -> x: int, y: int, success: bool {
@@ -281,7 +286,7 @@ get_mouse_pointer_position :: (window: *NSWindow, right_handed: bool) -> x: int,
 
     view := NSWindow.contentView(window);
     backing_pt := NSView.convertPointToBacking(view, pt); // :MacHighResDisplays
-    
+
     if !right_handed {
         frame := NSView.frame(view);
         fb := NSView.convertRectToBacking(view, frame); // :MacHighResDisplays
