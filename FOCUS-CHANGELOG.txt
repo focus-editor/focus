@@ -29,7 +29,9 @@
 
 # Main Git Branch
 
-- When a file is created in the editor, its saving and hot-reloading should now work properly
++ When a file is created in the editor, its saving and hot-reloading should now work properly
++ The example config file has been stripped down to avoid confusion
+
 
 # RELEASES ==================================================================
 

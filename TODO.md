@@ -9,6 +9,7 @@
 
 ===========================
 
+
 - Reopen up to 2 open editors after workspace reload
 
 - Improve the scoring for fuzzy search (maybe after the fact even) - score matches closer together higher
@@ -24,7 +25,6 @@
 
 - Open config commands should respect ctrl
 - Shortcut for centering on current line
-- Strip down the example project file
 - Colors per programming language
 - Project dir disambiguation
 - When switching to another editor, jump to cursor
@@ -158,6 +158,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Strip down the example project file
 + Fix the new file saving bugs
 + Fix the large path crash
 + Don't ignore your own config

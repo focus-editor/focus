@@ -877,7 +877,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                         start = line_start + xx byte_offset,
                         end   = min(line_range.end, line_start + xx byte_offset + 4 * max_code_chars),  // max 4 bytes per char
                     };
-                    line_str := get_string_from_range(buffer, visible_range);
+                    line_str := get_range_as_string(buffer, visible_range);
                     if line_str.count > 0 {
                         colors   := array_view(buffer.colors, visible_range.start, line_str.count);
                         code_lines: [1] Simp.Code_Line;
@@ -1905,7 +1905,7 @@ draw_finder :: () {
                     start = line_start + xx byte_offset,
                     end   = min(line_range.end, line_start + xx byte_offset + 4 * max_code_chars),  // max 4 bytes per char
                 };
-                line_str := get_string_from_range(buffer, visible_range);
+                line_str := get_range_as_string(buffer, visible_range);
                 if line_str.count > 0 {
                     colors   := array_view(buffer.colors, visible_range.start, line_str.count);
                     code_lines: [1] Simp.Code_Line;

@@ -211,14 +211,7 @@ get_selection_coords :: (buffer: Buffer, using cursor: Cursor) -> Coords_Range {
 
 get_selected_string :: (cursor: Cursor, buffer: Buffer) -> string {
     if !has_selection(cursor) return "";
-    return get_string_from_range(buffer, get_selection(cursor));
-}
-
-get_string_from_range :: (buffer: Buffer, range: Offset_Range) -> string {
-    result: string = ---;
-    result.data  = buffer.bytes.data + range.start;
-    result.count = range.end - range.start;
-    return result;
+    return get_range_as_string(buffer, get_selection(cursor));
 }
 
 remove_crlf_in_place :: (bytes: *[] u8) {
@@ -682,6 +675,8 @@ find_col_by_scanning_left :: (using buffer: *Buffer, offset: s32) -> col: s32 {
 
 get_range_as_string :: (buffer: Buffer, range: Offset_Range) -> string {
     result: string = ---;
+
+    assert(range.start >= 0, "Tried to get a buffer range as string before the buffer bytes begin");
 
     result.data  = buffer.bytes.data + range.start;
     result.count =  max(range.end - range.start, 0);
