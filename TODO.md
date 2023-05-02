@@ -4,7 +4,7 @@
     - Windows64 only on release
     - Not designed for large files
     - CRLF?
-    - Multi-byte Unicode symbols are not supported
+    - Multi-codepoint Unicode symbols are not supported
     - Currently only RGB monitor panels
 
 ===========================
@@ -18,7 +18,7 @@
 - Investigate a bug reported on Github
 
 - Ctrl-K and other shortcuts should work in text inputs
-- Derive font_ui size from the provided font size (comparing it to the baked in default)
+- Have a font_ui config setting
 
 - Fix the editor not noticing changes on git pull
 
@@ -158,6 +158,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Fix the new file saving bugs
 + Fix the large path crash
 + Don't ignore your own config
 + Fix smooth scrolling

@@ -29,7 +29,7 @@
 
 # Main Git Branch
 
-- ...
+- When a file is created in the editor, its saving and hot-reloading should now work properly
 
 # RELEASES ==================================================================
 

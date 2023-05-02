@@ -332,6 +332,34 @@ save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64) -> saved: bool {
             needs_coloring = true;
             redraw_requested = true;
 
+            lock(*open_buffers_lock);
+            existing_buffer_id, found_existing := table_find(*buffers_table, file_path);
+            if found_existing && buffer_id != existing_buffer_id {
+                // The user chose to save the new buffer into an existing file. OK.
+                // Mark the old buffer as deleted and use the new one
+                removed := table_remove(*buffers_table, file_path);
+                assert(removed, "For some reason table_remove failed. This is a very unexpected bug.");
+                existing_buffer := *open_buffers[existing_buffer_id];
+                existing_buffer.deleted  = true;
+                existing_buffer.modified = false;
+                existing_buffer.modified_on_disk = false;
+
+                // Reroute all editors which use it to the new buffer id
+                for * editor : open_editors {
+                    if editor.buffer_id == existing_buffer_id {
+                        editor.buffer_id = buffer_id;
+                        editor.scroll_to_cursor = .yes;
+                        for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
+                        organise_cursors(editor);
+                    }
+                }
+            } else if found_existing && buffer_id == existing_buffer_id {
+                assert(false, "Buffer without a file somehow got into the buffers hash table. This is a bug.");
+            }
+
+            table_add(*buffers_table, copy_string(file_path), buffer_id);
+            unlock(*open_buffers_lock);
+
             if !file_is_watched(file_path) start_watching_file(file_path);
         } else {
             return false;
