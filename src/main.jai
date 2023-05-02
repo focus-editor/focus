@@ -80,6 +80,7 @@ main :: () {
 
     dpi_scale = platform_get_dpi_scale(window);
     init_fonts_and_dependent_things();
+    old_line_height = line_height;
 
     window_has_focus := true;
     window_resized   := false;
@@ -100,6 +101,7 @@ main :: () {
         frame_dt   = min(current_time - frame_time, MAX_FRAME_DT);
         frame_time = current_time;
 
+        old_line_height = line_height;
         for Input.get_window_resizes() {
             Simp.update_window(it.window);
             if (it.window == window) {
@@ -140,6 +142,17 @@ main :: () {
 
         maybe_update_workspace_buffers();
         finder_update();
+
+        for * editor : open_editors {
+            using editor;
+            cursor_moved = false;
+            if old_line_height != line_height {
+                // Adjust viewport position
+                lines_scrolled := viewport.top / old_line_height;
+                viewport.scroll_y.target = xx (lines_scrolled * line_height);
+                viewport.top = viewport.scroll_y.target;
+            }
+        }
 
         for event : Input.events_this_frame {
             // General events
@@ -303,6 +316,7 @@ init_fonts_and_dependent_things :: () {
 
     // Things that depend on char size
     char_size       = cast(float) font.em_width;
+    old_line_height = line_height;
     line_height     = floor(cast(float) font.default_line_spacing * LINE_HEIGHT_SCALE);
     scrollbar_size  = floor(1.5 * char_size);
     rounding_radius = floor(char_size / 2);
@@ -527,6 +541,7 @@ font_icons_small_size   := DEFAULT_FONT_ICONS_SMALL_SIZE;
 // Depend on font size
 char_size:                  float;
 line_height:                float;
+old_line_height:            float;  // to track font changes
 font_ui_line_height:        float;
 font_ui_big_line_height:    float;
 font_ui_medium_line_height: float;
