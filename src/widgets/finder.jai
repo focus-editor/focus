@@ -13,7 +13,7 @@ init_finder :: () {
 }
 
 deinit_finder :: () {
-    shutdown(*thread_group);
+    if finder.initted shutdown(*thread_group);
     finder.initted = false;
 }
 
