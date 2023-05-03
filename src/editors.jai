@@ -988,6 +988,19 @@ viewport_glue_to_point :: (using viewport: *Viewport, buffer: Buffer) -> changed
     return top != old_top;
 }
 
+restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor.State) {
+    if cursor_state.count == 0 return;  // the first undo doesn't have any remembered cursors
+
+    array_resize(*cursors, cursor_state.count);
+    for * cursor, i : cursors {
+        cursor.state = cursor_state[i];
+        cursor.col_wanted = -1;
+        cursor.clipboard.start = 0;
+        cursor.clipboard.count = cast(s32)editor.clipboard.count;
+    }
+    if main_cursor >= cursors.count then main_cursor = cursors.count - 1;  // maybe we should remember it too
+}
+
 #scope_file
 
 select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) -> whole_words: bool {
@@ -1226,20 +1239,6 @@ redo :: (editor: *Editor, buffer: *Buffer) {
     array_free(edit_group.cursors);
 
     editor.cursor_moved = true;
-}
-
-restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor.State) {
-    if cursor_state.count == 0 return;  // the first undo doesn't have any remembered cursors
-
-    // for * cursors maybe_free_and_clear(*it.clipboard);
-    array_resize(*cursors, cursor_state.count);
-    for * cursor, i : cursors {
-        cursor.state = cursor_state[i];
-        cursor.col_wanted = -1;
-        cursor.clipboard.start = 0;
-        cursor.clipboard.count = cast(s32)editor.clipboard.count;
-    }
-    if main_cursor >= cursors.count then main_cursor = cursors.count - 1;  // maybe we should remember it too
 }
 
 new_edit_group_required_for_action :: (action: Action_Editors, cursor: Cursor) -> bool {
