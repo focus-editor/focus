@@ -94,6 +94,20 @@ get_dimensions :: (win: LDWindow, right_handed: bool) -> (x: s32, y: s32, width:
     return x, y, w, h, ok;
 }
 
+get_render_dimensions :: (win: LDWindow) -> (width: s32, height: s32) {
+    if win.tag == {
+        case X11Window; {
+            x, y, w, h, ok := x11_get_dimensions(isa(win, X11Window), false);
+            return w, h;
+        }
+        case WLWindow; {
+            w, h := wl_get_render_dimensions(isa(win, WLWindow));
+            return w, h;
+        }
+    }
+    return 1, 1;
+}
+
 get_mouse_pointer_position :: (display: LDDisplay, win: LDWindow, right_handed: bool) -> x: int, y: int, success: bool {
     x, y: int;
     ok := false;

@@ -76,12 +76,12 @@ create_gl_surface :: (win: LDWindow) {
         }
         case WLWindow; {
             w := isa(win, WLWindow);
-            w.egl_native = wl_egl_window.create(w.handle, w.width, w.height);
+            w.egl_native = wl_egl_window.create(w.handle, w.buffer_width, w.buffer_height);
             w.egl_surface = eglCreateWindowSurface(w.display.egl_dpy, w.display.egl_cnf, w.egl_native, null);
             eglMakeCurrent(w.display.egl_dpy, w.egl_surface, w.egl_surface, w.display.egl_ctx);
-            wl_surface.damage(w.handle, 0, 0, w.width, w.height);
+            wl_window_resize_viewport(w);
+            wl_surface.damage(w.handle, 0, 0, w.window_width, w.window_height);
             wl_surface.commit(w.handle);
-            // wl_setup_frame_updates(w);
         }
     }
 }

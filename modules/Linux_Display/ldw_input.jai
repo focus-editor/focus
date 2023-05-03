@@ -150,9 +150,13 @@ pointer_listener :: wl_pointer_listener.{
     leave = (data: *void, self: *wl_pointer, serial: u32, surface: *wl_surface) -> void #c_call {},
 
     motion = (data: *void, self: *wl_pointer, time: u32, fx: wl_fixed_t, fy: wl_fixed_t) -> void #c_call {
-        if current_hovered_window != null {
-            current_hovered_window.mouse_x = wl_fixed_to_int(fx);
-            current_hovered_window.mouse_y = wl_fixed_to_int(fy);
+        ctx: Context;
+        push_context ctx {
+            if current_hovered_window != null {
+                m_x := wl_fixed_to_int(fx);
+                m_y := wl_fixed_to_int(fy);
+                current_hovered_window.mouse_x, current_hovered_window.mouse_y = window_scale_coords(current_hovered_window, m_x, m_y);
+            }
         }
     },
 
@@ -269,7 +273,7 @@ wl_update_window_events :: (display: *WLDisplay) {
 
 wl_get_mouse_pointer_position :: (win: *WLWindow, right_handed: bool) -> x: int, y: int, success: bool {
     if right_handed {
-        return win.mouse_x, win.height - win.mouse_y, true;
+        return win.mouse_x, win.buffer_height - win.mouse_y, true;
     }
     return win.mouse_x, win.mouse_y, true;
 }
