@@ -1,12 +1,12 @@
 # TODO
 
 - Fix horizontal spacing
+- Line height scale
 - Derive path chunks in the file open dialog from the current buffer
 
 - Open config commands should respect ctrl and ctrl+1/2
 - Limit editor width
 
-- Improve the scoring for fuzzy search (maybe after the fact even) - score matches closer together higher
 
 - Show project name in the window title
 
@@ -25,10 +25,12 @@
 - Search returns extra results: Runtime_Support, report_bounds_check_error_more_visibly
 - Investigate a bug reported on Github
 
-- Line height multiplier in the config
+- Improve the scoring for fuzzy search (maybe after the fact even) - score matches closer together higher
+
 - Fix the multi-line copying and pasting - https://discord.com/channels/661732390355337246/1100701456950099978/1103153377237540874
 
 - Line wrap:
+    - Have line_starts for editor
     - Implement wrapping for buffer
         - Point line_starts to real_line_starts unless in the line wrap mode
     - Have a toggle command
@@ -41,6 +43,7 @@
 - Fix glyphs https://discord.com/channels/661732390355337246/784843664651190273/1102388810865721384
 
 - Ctrl-double click should create a new cursor and select a word
+- Ctrl-click to remove a cursor
 - Duplicating an editor should duplicate the viewport as well
 - Show default config (readonly)
 

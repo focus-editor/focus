@@ -317,6 +317,7 @@ init_fonts_and_dependent_things :: () {
 
     // Things that depend on char size
     char_size       = cast(float) font.em_width;
+    char_x_advance  = cast(float) font.x_advance;
     old_line_height = line_height;
     line_height     = floor(cast(float) font.default_line_spacing * LINE_HEIGHT_SCALE);
     scrollbar_size  = floor(1.5 * char_size);
@@ -541,6 +542,7 @@ font_icons_small_size   := DEFAULT_FONT_ICONS_SMALL_SIZE;
 
 // Depend on font size
 char_size:                  float;
+char_x_advance:              float;
 line_height:                float;
 old_line_height:            float;  // to track font changes
 font_ui_line_height:        float;

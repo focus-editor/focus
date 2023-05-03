@@ -35,6 +35,7 @@
 + When the workspace is reloaded, the visible files should no longer disappear
 + Shortcuts for project-related commands should work now (while no other popups are open only for now)
 + Opening a file from the command line on Linux should no longer segfault
++ Font horizontal spacing has been fixed
 
 
 # RELEASES ==================================================================
