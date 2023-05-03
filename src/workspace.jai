@@ -110,7 +110,7 @@ maybe_update_workspace_buffers :: () {
 
     files_changed := process_changes(*file_watcher);
     if files_changed {
-        if watcher_file_modified.count > 0 && !should_ignore_file(watcher_file_modified) {
+        if watcher_file_modified.count > 0 && (!should_ignore_file(watcher_file_modified) || is_our_config_file(watcher_file_modified)) {
             refresh_buffer_from_disk(path = watcher_file_modified);
         }
         // @Speed: it should be ok to rescan everything recursively, because
@@ -128,7 +128,7 @@ maybe_update_workspace_buffers :: () {
         }
         if file.is_symlink return;
 
-        if should_ignore_file(file.full_name) return;
+        if should_ignore_file(file.full_name) && !is_our_config_file(file.full_name) return;
 
         refresh_buffer_from_disk(path = file.full_name);
     }
@@ -261,7 +261,7 @@ start_file_watcher :: () {
 
 file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, user_data: *void) {
     // If the change is in one of the ignored dirs, ignore it
-    if should_ignore_dir(change.full_path) return;
+    if should_ignore_dir(change.full_path) && !is_our_config_file(change.full_path) return;
 
     // If the change is caused by watching a dir containing a standalone file, ignore it
     parent_dir := get_parent_dir_path(change.full_path);

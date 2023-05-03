@@ -1,0 +1,29 @@
+[1]  # Version number. Do not delete.
+
+[[workspace]]
+
+[workspace dirs]
+# These directories will be scanned when a workspace is opened so that search etc. works.
+# Example:
+# C:/projects/my-project
+# C:/jai
+
+
+# IMPORTANT:
+# You can override any section from the global config in your project and it will be used when your project is active.
+# Please note that some of the sections will completely replace the ones in the global config, while other sections
+# will try to merge with the global config. E.g. the workspace sections such as [ignore dirs] will completely
+# override the global [ignore dirs], which allows you to "unignore" some dirs just for your project!
+# Empty sections are ignored.
+
+[ignore dirs]
+
+
+[allow file extensions]
+
+
+[ignore file extensions]
+
+
+
+

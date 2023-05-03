@@ -29,6 +29,8 @@ load_project_config :: (project: string = "") -> success: bool, changed: bool {
 }
 
 maybe_refresh_config :: (path: string) {
+    if !is_our_config_file(path) return;
+
     old_workspace_dirs := array_copy_tmp(config.workspace.workspace_dirs);
 
     if path == global_config_path {
@@ -47,8 +49,6 @@ maybe_refresh_config :: (path: string) {
             clear_user_messages();
             add_success_message(tprint("Config changes for project '%' have been applied", current_project_name), dismiss_in_seconds = 3);
         }
-    } else {
-        return;
     }
 
     // Detect changes in workspace dirs
@@ -75,6 +75,10 @@ maybe_refresh_config :: (path: string) {
             should_reload_workspace = false;
         }
     }
+}
+
+is_our_config_file :: (path: string) -> bool {
+    return path != "" && (path == global_config_path || path == project_config_path);
 }
 
 find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp */ {
@@ -436,11 +440,13 @@ SETTINGS :: Setting.[
     .{ "tab_size",                            .integer },
 ];
 
-DEFAULT_CONFIG_FILE_DATA :: #run read_entire_file(DEFAULT_CONFIG_NAME);
+DEFAULT_CONFIG_FILE_DATA  :: #run read_entire_file(DEFAULT_CONFIG_NAME);
+EXAMPLE_PROJECT_FILE_DATA :: #run read_entire_file(EXAMPLE_PROJECT_CONFIG_NAME);
 
 #scope_file
 
-DEFAULT_CONFIG_NAME :: "default.focus-config";  // in the focus project folder
+DEFAULT_CONFIG_NAME         :: "default.focus-config";  // in the focus project folder
+EXAMPLE_PROJECT_CONFIG_NAME :: "example-project.focus-config";
 
 
 DEFAULT_CONFIG :: #run -> Config {
@@ -448,5 +454,11 @@ DEFAULT_CONFIG :: #run -> Config {
     assert(success, "Couldn't parse the default config file '%'", DEFAULT_CONFIG_NAME);
     return config;
 };
+
+// Validate the example project config
+#run {
+    _, success := parse_config("Example Project Config", EXAMPLE_PROJECT_CONFIG_NAME, EXAMPLE_PROJECT_FILE_DATA);
+    assert(success, "Couldn't parse the example project config file '%'", EXAMPLE_PROJECT_CONFIG_NAME);
+}
 
 #load "config_parser.jai";

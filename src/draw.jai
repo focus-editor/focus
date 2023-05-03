@@ -384,6 +384,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             } else {
                 scroll_y.target = new_target;
                 top = new_target;
+                viewport_remember_glue_point(*viewport, buffer);
             }
         } else if cursor_moved {
             // Detect if cursor is off screen and start scrolling to it
@@ -477,10 +478,11 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             new_scroll_pos := editor_smooth_scroll.start_y + time_elapsed * speed * (ifx editor_smooth_scroll.up then -1 else 1);
             viewport.top = clamp(cast(s32) new_scroll_pos, 0, max_y_scroll);
             viewport.scroll_y.target = viewport.top;
+            viewport_remember_glue_point(*viewport, buffer);
             redraw_requested = true;
         }
 
-        if !is_animating(viewport.scroll_y) && viewport.top == viewport.scroll_y.target {
+        if viewport.top == viewport.scroll_y.target {
             viewport_glue_to_point(*viewport, buffer);
         } else {
             redraw_requested = true;
@@ -875,7 +877,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                         start = line_start + xx byte_offset,
                         end   = min(line_range.end, line_start + xx byte_offset + 4 * max_code_chars),  // max 4 bytes per char
                     };
-                    line_str := get_string_from_range(buffer, visible_range);
+                    line_str := get_range_as_string(buffer, visible_range);
                     if line_str.count > 0 {
                         colors   := array_view(buffer.colors, visible_range.start, line_str.count);
                         code_lines: [1] Simp.Code_Line;
@@ -1903,7 +1905,7 @@ draw_finder :: () {
                     start = line_start + xx byte_offset,
                     end   = min(line_range.end, line_start + xx byte_offset + 4 * max_code_chars),  // max 4 bytes per char
                 };
-                line_str := get_string_from_range(buffer, visible_range);
+                line_str := get_range_as_string(buffer, visible_range);
                 if line_str.count > 0 {
                     colors   := array_view(buffer.colors, visible_range.start, line_str.count);
                     code_lines: [1] Simp.Code_Line;

@@ -211,14 +211,7 @@ get_selection_coords :: (buffer: Buffer, using cursor: Cursor) -> Coords_Range {
 
 get_selected_string :: (cursor: Cursor, buffer: Buffer) -> string {
     if !has_selection(cursor) return "";
-    return get_string_from_range(buffer, get_selection(cursor));
-}
-
-get_string_from_range :: (buffer: Buffer, range: Offset_Range) -> string {
-    result: string = ---;
-    result.data  = buffer.bytes.data + range.start;
-    result.count = range.end - range.start;
-    return result;
+    return get_range_as_string(buffer, get_selection(cursor));
 }
 
 remove_crlf_in_place :: (bytes: *[] u8) {
@@ -332,6 +325,34 @@ save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64) -> saved: bool {
             set_lang_from_path(buffer, file_path);
             needs_coloring = true;
             redraw_requested = true;
+
+            lock(*open_buffers_lock);
+            existing_buffer_id, found_existing := table_find(*buffers_table, file_path);
+            if found_existing && buffer_id != existing_buffer_id {
+                // The user chose to save the new buffer into an existing file. OK.
+                // Mark the old buffer as deleted and use the new one
+                removed := table_remove(*buffers_table, file_path);
+                assert(removed, "For some reason table_remove failed. This is a very unexpected bug.");
+                existing_buffer := *open_buffers[existing_buffer_id];
+                existing_buffer.deleted  = true;
+                existing_buffer.modified = false;
+                existing_buffer.modified_on_disk = false;
+
+                // Reroute all editors which use it to the new buffer id
+                for * editor : open_editors {
+                    if editor.buffer_id == existing_buffer_id {
+                        editor.buffer_id = buffer_id;
+                        editor.scroll_to_cursor = .yes;
+                        for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
+                        organise_cursors(editor);
+                    }
+                }
+            } else if found_existing && buffer_id == existing_buffer_id {
+                assert(false, "Buffer without a file somehow got into the buffers hash table. This is a bug.");
+            }
+
+            table_add(*buffers_table, copy_string(file_path), buffer_id);
+            unlock(*open_buffers_lock);
 
             if !file_is_watched(file_path) start_watching_file(file_path);
         } else {
@@ -479,6 +500,9 @@ find_or_create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
 }
 
 find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
+    #if OS == .WINDOWS {
+        if path.count > 248 return -1, false;  // Windows bad
+    }
     lock(*open_buffers_lock);
 
     buffer_id, found_buffer := table_find(*buffers_table, path);
@@ -526,6 +550,10 @@ refresh_buffer_from_disk :: (path: string) {
 
     buffer_id, created := find_or_create_buffer(path);
     if created return;
+    if buffer_id < 0 {
+        log_error("Couldn't open file because path is too long for Windows: %\n", path);
+        return;
+    }
 
     buffer := *open_buffers[buffer_id];
 
@@ -648,6 +676,8 @@ find_col_by_scanning_left :: (using buffer: *Buffer, offset: s32) -> col: s32 {
 
 get_range_as_string :: (buffer: Buffer, range: Offset_Range) -> string {
     result: string = ---;
+
+    assert(range.start >= 0, "Tried to get a buffer range as string before the buffer bytes begin");
 
     result.data  = buffer.bytes.data + range.start;
     result.count =  max(range.end - range.start, 0);

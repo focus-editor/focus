@@ -74,7 +74,7 @@ platform_enumerate_logical_drives :: () -> [] string {
     return drives;
 }
 
-platform_get_save_file_name :: (name := "") -> string, success: bool {
+platform_get_save_file_name :: (name := "") -> string /* temp */, success: bool {
     buffer: [512] u16;
 
     ofn: OPENFILENAMEW;

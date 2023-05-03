@@ -13,9 +13,10 @@ Render_API :: enum {
     // Maybe we should clean this up and not pull all of Windows into the namespace.
     #import "Windows";
 } else #if OS == .LINUX {
-    #import "X11";
+    LD :: #import "Linux_Display";
 } else #if OS == .MACOS {
     #import "Objective_C";
+    #import "Objective_C/AppKit";
 }
 
 #if render_api == .OPENGL {
@@ -145,13 +146,8 @@ get_render_dimensions :: (window: Window_Type) -> (width: s32, height: s32) {
 
         return cast(s32)(c.right - c.left), cast(s32)(c.bottom - c.top);
     } else #if OS == .LINUX {
-        root: Window;
-        x, y: s32;
-        width, height: u32;
-        border_width, depth_return: u32;
-
-        status := XGetGeometry(x_global_display, window, *root, *x, *y, *width, *height, *border_width, *depth_return);
-        return cast(s32) width, cast(s32) height;
+        w, h := LD.get_render_dimensions(window);
+        return w, h;
     } else #if OS == .MACOS {
         view := NSWindow.contentView(window);
         frame := NSView.frame(view);

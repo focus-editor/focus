@@ -1,24 +1,28 @@
-platform_setup :: () {
+platform_setup :: inline () {
 
 }
 
-platform_get_biggest_monitor_pos :: () -> s32, s32 {
+platform_get_biggest_monitor_pos :: inline () -> s32, s32 {
+    // On macOS, we do not do this.
+    // By default, macOS already positions the window within the monitor in which
+    // the user performed the action to launch it. This makes sense when we are
+    // not maximizing the window on launch anyway. (See platform_maximize_window)
+    
     return -1, -1;
-    // unimplemented();
 }
 
-platform_create_window :: () {
+platform_create_window :: inline () {
     window = create_window(window_width, window_height, window_generic_title, window_x, window_y);
 }
 
-platform_maximize_window :: (window: Window_Type) {
-    // To be honest, I wouldn't do this on macOS. Feels strange to fullscreen or maximize a document window on launch.
-    // Leaving it blank for now.
-    // There is probably a way to do it though if you want it. -Don
+platform_maximize_window :: inline (window: Window_Type) {
+    // On macOS, we do not do this.
+    // Maximized (fullscreen) text editor windows on launch would feel jarring
+    // and out of place. It also comes with a cumbersome fullscreening animation.
 }
 
-platform_enable_drag_and_drop :: (window: Window_Type) {
-    // @Todo We may have to wait for the jai compiler to ship something for this. -Don
+platform_enable_drag_and_drop :: inline (window: Window_Type) {
+
 }
 
 platform_get_dpi_scale :: (window: Window_Type) -> float {
@@ -34,27 +38,26 @@ platform_wait_message :: inline () {
 }
 
 platform_set_refresh_timer :: (window: Window_Type) {
-    // unimplemented();
+
 }
 
 platform_kill_refresh_timer :: (window: Window_Type) {
-    // unimplemented();
+
 }
 
 platform_enumerate_logical_drives :: inline () -> [] string {
-    return string.["/"]; // On macOS, root ("/") gives us access to all external volumes through /Volumes/.
+    return .["/"];
 }
 
-platform_get_save_file_name :: (name := "") -> string, bool {
-    // unimplemented();
+platform_get_save_file_name :: inline (name := "") -> string, bool {
     return "", false;
 }
 
-platform_get_fonts_dir :: () -> string {
+platform_get_fonts_dir :: inline () -> string {
     return "/Library/Fonts";
 }
 
-platform_open_in_explorer :: (dir: string) {
+platform_open_in_explorer :: inline (dir: string) {
     // unimplemented();
 }
 
@@ -70,3 +73,4 @@ Monitor :: struct {
 monitors : [..] Monitor;
 
 #import "Objective_C";
+#import "Objective_C/AppKit";

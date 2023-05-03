@@ -182,13 +182,6 @@ init_logger :: () {
 
     context.logger      = session_logger;
     context.logger_data = logger_data;
-
-    #if !DEBUG context.assertion_failed = release_assertion_handler;
-}
-
-release_assertion_handler :: (loc: Source_Code_Location, message: string) {
-    log_error("Assertion failed at %. %\n", loc, message);
-    Context.default_assertion_failed(loc, message);
 }
 
 deinit_logger :: () {

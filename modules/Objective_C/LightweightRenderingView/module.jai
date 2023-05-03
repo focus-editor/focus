@@ -77,6 +77,7 @@ Example Usage (Metal)
  */
 
 #import "Objective_C";
+#import "Objective_C/AppKit";
 
 LightweightRenderingView :: struct {
     #as using nsview: NSView;
@@ -102,29 +103,32 @@ LightweightMetalView :: struct {
     using lightweightrenderingview: LightweightRenderingView;
 }
 
-init_objective_c_lightweight_rendering_view :: () {
+init_lightweight_rendering_view :: () {
     if _sel.swapBuffers return;
     init_objective_c_selector_struct(*_sel);
 
     // @Hack use the class symbol for the OpenGL view so that the linker
-    // allows this library to be statically linked correctly.
-    __ensure_static_archive_of_library_is_fully_linked := __view_class_object;
-    nothing := tprint("%", __view_class_object); // @Hack <- This is the line that rluba figured out to stop LLVM+Release from optimizing this class out of existence. -Don
-    #import "Basic";
+    // allows this library to be statically linked correctly. :ObjectiveCClassSymbol:
+    // Extra-@Hack: Make sure this symbol reference isn’t stripped in release builds!
+    nothing := Basic.tprint("%", __view_class_object);
 }
 
 #scope_file
 
-Selector_Struct :: struct {
-    swapBuffers: Selector   = ---;
-    setGlContext_: Selector = ---;
-    glContext    : Selector = ---;
+_sel: struct {
+    swapBuffers:   Selector;
+    setGlContext_: Selector;
+    glContext:     Selector;
 }
 
-_sel: Selector_Struct;
-
-__view_class_object :: () #foreign library "OBJC_CLASS_$_LightweightOpenGLView";
+// Reference the symbol for the LightweightOpenGLView Objective-C class from the library.
+// @Stability: This only works on DEBUG builds! The compiler will still strip this in release builds unless we use it for something.
+// :ObjectiveCClassSymbol:
+//  -rluba, 2023-04-24
+__view_class_object: *void #elsewhere library "OBJC_CLASS_$_LightweightOpenGLView";
 
 QuartzCore :: #system_library "QuartzCore"; // For CAMetalLayer
 
 library :: #library "libLightweightRenderingView";
+
+Basic :: #import "Basic"; // Only the :ObjectiveCClassSymbol: hack

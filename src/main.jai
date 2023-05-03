@@ -1,5 +1,5 @@
-VERSION      :: "0.1.2";
-RELEASE_DATE :: "29 April 2023";
+VERSION      :: "0.1.4";
+RELEASE_DATE :: "1 May 2023";
 
 main :: () {
     cpu_info = get_cpu_info();
@@ -18,7 +18,7 @@ main :: () {
 
     if !make_directory_if_it_does_not_exist(projects_dir) then panic_messagebox("Couldn't create folder %. Is the directory writable?", projects_dir);
     if !make_directory_if_it_does_not_exist(temp_dir)     then panic_messagebox("Couldn't create folder % for temporary files. Is the directory writable?", temp_dir);
-    if !projects_dir_existed then write_entire_file(tprint("%/Example Project.focus-config", projects_dir), DEFAULT_CONFIG_FILE_DATA);
+    if !projects_dir_existed then write_entire_file(tprint("%/Example Project.focus-config", projects_dir), EXAMPLE_PROJECT_FILE_DATA);
 
     init_file_watcher();
     load_global_config(create_if_doesnt_exist = !DEBUG);
@@ -399,7 +399,7 @@ panic_messagebox :: (format_string: string, args: .. Any) {
 } @PrintLike
 
 unimplemented :: (loc := #caller_location) {
-    print("!!!! Unimplemented at %", loc);
+    print("!!!! Unimplemented at %\n", loc);
 }
 
 nothing_pressed :: inline (mods: Mods) -> bool {
@@ -643,8 +643,8 @@ cpu_info: Cpu_X86;
 
 File_Async :: #import "File_Async";
 
-Simp  :: #import "Simp_Ext";
-Input :: #import "Input_Ext";
+Simp  :: #import "Simp";
+Input :: #import "Input";
 
 DEBUG :: #run get_build_options().math_bounds_check == .FATAL;  // this is a sloppy way of checking whether we're in debug mode!
 

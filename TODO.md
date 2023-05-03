@@ -4,30 +4,50 @@
     - Windows64 only on release
     - Not designed for large files
     - CRLF?
-    - Multi-byte Unicode symbols are not supported
+    - Multi-codepoint Unicode symbols are not supported
     - Currently only RGB monitor panels
 
 ===========================
 
+
+- Reopen up to 2 open editors after workspace reload
+
+- Improve the scoring for fuzzy search (maybe after the fact even) - score matches closer together higher
+
+- Remove the unused get_range_as_string or get_string_from_range
+- Show project name in the window title
+- Investigate a bug reported on Github
+
+- Ctrl-K and other shortcuts should work in text inputs
+- Have a font_ui config setting
+
+- Fix the editor not noticing changes on git pull
+
+- Open config commands should respect ctrl
+- Shortcut for centering on current line
+- Colors per programming language
+- Project dir disambiguation
+- When switching to another editor, jump to cursor
+- Fix the keyboard scrolling not working
+- Autoindent region
+- Notify about duplicate bindings and highlight that in the config file
+- Search returns extra results: Runtime_Support, report_bounds_check_error_more_visibly
+
 - Line wrap:
-    - Sticky viewport
-        + Remember line number and offset_within_line after finishing scrolling (or when dragging the scrollbar)
-        + Calculate viewport.top from it before drawing
-        - Move the glue point:
-            - Reacting to edit notifications
-            - When editing with multiple cursors it makes sense to adjust the glue point even for the current buffer
-        - Remove the KNOWN BUG for zooming
     - Implement wrapping for buffer
-        - Point line_starts to real_line_starts unless in the line wrap mod
+        - Point line_starts to real_line_starts unless in the line wrap mode
     - Have a toggle command
     - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
     - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
 
-- See if panic behaviour can be improved in release builds
 - Keymap changing without having to reload - investigate a bug
 - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
 
+- Fix glyphs https://discord.com/channels/661732390355337246/784843664651190273/1102388810865721384
+
 - Show default config (readonly)
+
+- Be able to change the width of the filename area in finder (and remember it somewhere)
 
 - Highlight C/C++
 
@@ -88,9 +108,9 @@
         - Editor layout (none/single/double)
         - Which editor was open on which side
 
-- Log time with the session logger
+- Consider the move_viewport_to_cursor_top action suggested by poyepolomix on Discord
 
-- Either limit the number of bytes in text input, or improve the handling of cursor (currently calculating the length every frame)
+- Log time with the session logger
 
 - Try using File_Async when scanning project folders and measure how long it takes
 
@@ -107,8 +127,6 @@
 - Finder improvements:
     - Have an extra input for filtering by file path
     - Case-sensitive search
-
-
 
 - Jump to function definition:
     - Tokenizer: support broken down identifiers
@@ -140,6 +158,16 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Strip down the example project file
++ Fix the new file saving bugs
++ Fix the large path crash
++ Don't ignore your own config
++ Fix smooth scrolling
++ See if panic behaviour can be improved in release builds
++ Sticky viewport
+    + Remember line number and offset_within_line after finishing scrolling (or when dragging the scrollbar)
+    + Calculate viewport.top from it before drawing
+    + Move the glue point
 + Remove the "config saved" messages when they don't apply
 + UI_ERROR_BRIGHT
 + Debug label

@@ -23,18 +23,34 @@
 
 # KNOWN BUGS
 
+- (IMPORTANT) Sometimes when pulling changes via Git, the editor won't notice the files changing
 - Changing some keymap bindings requires a restart to take effect
 
 
 # Main Git Branch
 
++ When a file is created in the editor, its saving and hot-reloading should now work properly
++ The example config file has been stripped down to avoid confusion
+
+
+# RELEASES ==================================================================
+
+# Version 0.1.4, 1 May 2023
+
++ Basic Linux Support (thanks to @ileonte)
++ Added crash reports on failed asserts and violated array bounds
++ Smooth scrolling is fixed
++ Config hot reload should work even if it's within one of the ignored dirs
++ On Windows files with path longer than 248 bytes will be ignored to avoid a crash (probably a temporary solution)
+
+
+# Version 0.1.3, 30 April 2023
+
 + Fixed a bug with the file watcher being used while uninitialized.
 + Added some shortcuts to the unsaved files dialog (Y/S to save, N to not save, C to cancel)
 + Fixed a bug with the biggest monitor being incorrectly determined on Windows (thanks to @jlami)
 + Zooming no longer offsets the viewport
-
-
-# RELEASES ==================================================================
++ Editing the same file side-by-side will not cause the viewport to jump around
 
 
 # Version 0.1.2, 29 April 2023

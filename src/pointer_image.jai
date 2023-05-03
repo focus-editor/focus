@@ -72,25 +72,28 @@ Pointer_Image :: enum u16 {
         pointers[LOCKED]                = NSCursor.operationNotAllowedCursor();
         pointers[DRAGGING_HORIZONTAL]   = NSCursor.resizeLeftRightCursor();
         pointers[DRAGGING_VERTICAL]     = NSCursor.resizeUpDownCursor();
-        pointers[DRAGGING_FREE]         = NSCursor.openHandCursor(); // @Hack: There are no publicly available cursors for this.
-        pointers[DRAGGING_NW_SE]        = NSCursor.openHandCursor(); // @Hack: There are no publicly available cursors for this.
-        pointers[DRAGGING_NE_SW]        = NSCursor.openHandCursor(); // @Hack: There are no publicly available cursors for this.
-        pointers[TEXT_SELECT]           = NSCursor.arrowCursor(); // @Hack: There are no publicly available cursors for this.
+        pointers[DRAGGING_FREE]         = NSCursor.openHandCursor();
+        pointers[DRAGGING_NW_SE]        = NSCursor.openHandCursor();
+        pointers[DRAGGING_NE_SW]        = NSCursor.openHandCursor();
+        pointers[TEXT_SELECT]           = NSCursor.IBeamCursor();
     }
 
     pointers: [NUM_POINTERS] *NSCursor;
 } else {
+    LD :: #import "Linux_Display";
+
     set_pointer_image :: (image: Pointer_Image) {
-        if !initted_pointers  init_pointers();
-
-        unimplemented();
-    }
-
-    init_pointers :: () {
-        initted_pointers = true;
-
-        using Pointer_Image;
-        unimplemented();
+        if image == {
+            case .NORMAL; LD.set_cursor_from_theme(window, "default");
+            case .PRESSABLE; LD.set_cursor_from_theme(window, "pointer");
+            case .LOCKED; LD.set_cursor_from_theme(window, "not-allowed");
+            case .DRAGGING_HORIZONTAL; LD.set_cursor_from_theme(window, "col-resize");
+            case .DRAGGING_VERTICAL; LD.set_cursor_from_theme(window, "row-resize");
+            case .DRAGGING_FREE; LD.set_cursor_from_theme(window, "all-scroll");
+            case .DRAGGING_NW_SE; LD.set_cursor_from_theme(window, "nw-resize");
+            case .DRAGGING_NE_SW; LD.set_cursor_from_theme(window, "se-resize");
+            case .TEXT_SELECT; LD.set_cursor_from_theme(window, "text");
+        }
     }
 }
 
@@ -106,10 +109,8 @@ pointer_end_frame :: () {
     } else {
         #if OS == .WINDOWS {
             Windows.SetCursor(pointers[current_pointer_image]);
-        } else if OS == .MACOS {
+        } else #if OS == .MACOS {
             NSCursor.set(pointers[current_pointer_image]);
-        } else {
-            unimplemented();
         }
     }
 
