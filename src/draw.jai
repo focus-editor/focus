@@ -1471,7 +1471,7 @@ draw_open_project_dialog :: () {
     input_rect = shrink(input_rect, margin);
     input_id := get_ui_id_from_loc(parent_id = ui_id);
 
-    label := ifx filtered then " Select project to open" else tprint(" No projects found in %", projects_dir);
+    label := ifx filtered then " Select project to switch to" else tprint(" No projects found in %", projects_dir);
     draw_text_input(*open_project_dialog.input, input_rect, ui_id = input_id, active = true, label = label);
 
     _pad: Rect = ---;  // allow some space at the bottom so that we don't cover up the rounded corners with the cursor

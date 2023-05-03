@@ -34,10 +34,22 @@ activate_editors :: () {
 }
 
 editors_handle_action :: (event: Input.Event, action: Action_Editors) {
+    // TODO: refactor this so that the common actions work for every active global widget
+
     // Actions that do not require an active editor
     if action == {
         case .search_in_project;                                finder_open_from_editor(); return;
         case .go_to_line;                                       show_go_to_line_dialog();  return;
+
+        case .open_project;                                     show_open_project_dialog();
+        case .open_projects_directory;                          platform_open_in_explorer(projects_dir);
+        case .open_global_config;                               editors_open_file(global_config_path);
+        case .open_project_config;
+            if project_config_path {
+                editors_open_file(project_config_path);
+            } else {
+                add_user_warning("No project is active. Please open a project first.", dismiss_in_seconds = 5);
+            }
 
         case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
         case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);

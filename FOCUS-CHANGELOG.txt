@@ -25,12 +25,15 @@
 
 - (IMPORTANT) Sometimes when pulling changes via Git, the editor won't notice the files changing
 - Changing some keymap bindings requires a restart to take effect
+- [Current file watcher limitation] If you open a file in a large folder, the file watcher might scan the whole folder in order to watch for the changes to the file.
 
 
 # Main Git Branch
 
 + When a file is created in the editor, its saving and hot-reloading should now work properly
 + The example config file has been stripped down to avoid confusion
++ When the workspace is reloaded, the visible files should no longer disappear
++ Shortcuts for project-related commands should work now (while no other popups are open only for now)
 
 
 # RELEASES ==================================================================
