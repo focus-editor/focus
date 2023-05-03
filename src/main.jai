@@ -25,6 +25,14 @@ main :: () {
     init_workspace();
     init_buffers();
 
+    if config.settings.open_on_the_biggest_monitor {
+        window_x, window_y = platform_get_biggest_monitor_pos();
+    }
+
+    window_generic_title = ifx DEBUG then "Focus (debug mode)" else "Focus";
+    platform_create_window();
+    if config.settings.maximize_on_start then platform_maximize_window(window);
+
     init_session_with_no_guidance :: () #expand {
         session = maybe_load_previous_session();
         if session.project {
@@ -54,14 +62,7 @@ main :: () {
 
     CODE_COLOR_MAP = refresh_code_color_map();
 
-    if config.settings.open_on_the_biggest_monitor {
-        window_x, window_y = platform_get_biggest_monitor_pos();
-    }
 
-    window_generic_title = ifx DEBUG then "Focus (debug mode)" else "Focus";
-    platform_create_window();
-
-    if config.settings.maximize_on_start then platform_maximize_window(window);
 
     platform_enable_drag_and_drop(window);
 
