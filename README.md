@@ -1,6 +1,7 @@
 # Focus
 
-A simple editor that tries to not stand in your way.
+A simple editor whose goal is to get out of your way and let you do work.
+This editor is for people who value simplicity, are sensitive to input latency and do not require heavy language support in their editor.
 
 ## Quick start
 
@@ -20,6 +21,13 @@ The editor is in beta. This means you may encounter some bugs here and there, an
 
 You can see the full list of shortcuts and redefine keys in the global config file.
 
+## Limitations
+
+- Only 64-bit systems are supported, Windows 8+, Linux (WIP), macOS (WIP).
+- This editor is not designed for editing very large files.
+- CRLF will be converted to LF on save. It's time to move on.
+- Multi-codepoint Unicode symbols are not supported.
+- Currently only RGB monitor panels are supported. If your text looks funny or blurry, please open an issue.
 
 ## Acknowledgements
 

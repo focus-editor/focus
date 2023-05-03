@@ -1,20 +1,10 @@
 # TODO
 
-- Limitations:
-    - Windows64 only on release
-    - Not designed for large files
-    - CRLF?
-    - Multi-codepoint Unicode symbols are not supported
-    - Currently only RGB monitor panels
-
-===========================
-
+- Fix horizontal spacing
 - Derive path chunks in the file open dialog from the current buffer
 
 - Open config commands should respect ctrl and ctrl+1/2
 - Limit editor width
-
-- Thread crash when switching to project
 
 - Improve the scoring for fuzzy search (maybe after the fact even) - score matches closer together higher
 
