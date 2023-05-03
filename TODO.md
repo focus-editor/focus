@@ -1,7 +1,5 @@
 # TODO
 
-- Fix horizontal spacing
-- Line height scale
 - Derive path chunks in the file open dialog from the current buffer
 
 - Open config commands should respect ctrl and ctrl+1/2
@@ -158,6 +156,8 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Line height scale
++ Fix horizontal spacing
 + Reopen up to 2 open editors after workspace reload
 + Remove the unused get_range_as_string or get_string_from_range
 + Strip down the example project file

@@ -319,7 +319,7 @@ init_fonts_and_dependent_things :: () {
     char_size       = cast(float) font.em_width;
     char_x_advance  = cast(float) font.x_advance;
     old_line_height = line_height;
-    line_height     = floor(cast(float) font.default_line_spacing * LINE_HEIGHT_SCALE);
+    line_height     = floor(cast(float) font.default_line_spacing * cast(float)config.settings.line_height_scale_percent / 100.0);
     scrollbar_size  = floor(1.5 * char_size);
     rounding_radius = floor(char_size / 2);
     rounding_radius_large = floor(char_size / 1.5);
@@ -499,8 +499,6 @@ Mouse_Button_State :: struct {
     last_down_time: Time;
     last_double_click_time: Time;
 }
-
-LINE_HEIGHT_SCALE :: 1.2;
 
 WHEEL_SENSITIVITY :: 1.0;
 

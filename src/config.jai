@@ -284,6 +284,7 @@ Settings :: struct {
     insert_spaces_when_pressing_tab     := true;
     strip_trailing_whitespace_on_save   := false;
     smooth_scrolling                    := true;
+    line_height_scale_percent           := 120;
 
     // TODO
     // convert_tabs_to_spaces_on_load:     false
@@ -438,6 +439,7 @@ SETTINGS :: Setting.[
 
     .{ "max_entries_in_open_file_dialog",     .integer },
     .{ "tab_size",                            .integer },
+    .{ "line_height_scale_percent",           .integer },
 ];
 
 DEFAULT_CONFIG_FILE_DATA  :: #run read_entire_file(DEFAULT_CONFIG_NAME);

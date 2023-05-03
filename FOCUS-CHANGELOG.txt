@@ -36,6 +36,7 @@
 + Shortcuts for project-related commands should work now (while no other popups are open only for now)
 + Opening a file from the command line on Linux should no longer segfault
 + Font horizontal spacing has been fixed
++ It is now possible to configure line height scale in the config. Just add `line_height_scale_percent:  <number>`. Default: 120
 
 
 # RELEASES ==================================================================

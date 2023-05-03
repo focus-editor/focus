@@ -37,18 +37,19 @@ __pycache__
 [[settings]]
 # NOTE: please copy the whole block when overriding settings, otherwise defaults will be used
 #       for any settings you haven't listed here explicitly
-maximize_on_start:                   true
-open_on_the_biggest_monitor:         true
-cursor_as_block:                     true
-highlight_selection_occurrences:     true
-disable_that_annoying_paste_effect:  false
-disable_file_open_close_animations:  false
-insert_spaces_when_pressing_tab:     true
-strip_trailing_whitespace_on_save:   false
-smooth_scrolling:                    true
-double_shift_to_search_in_workspace: false
-max_entries_in_open_file_dialog:     2000
-tab_size:                            4
+maximize_on_start:                      true
+open_on_the_biggest_monitor:            true
+cursor_as_block:                        true
+highlight_selection_occurrences:        true
+disable_that_annoying_paste_effect:     false
+disable_file_open_close_animations:     false
+insert_spaces_when_pressing_tab:        true
+strip_trailing_whitespace_on_save:      false
+smooth_scrolling:                       true
+double_shift_to_search_in_workspace:    false
+max_entries_in_open_file_dialog:        2000
+tab_size:                               4
+line_height_scale_percent:              120
 
 
 [[keymap]]
@@ -58,7 +59,7 @@ tab_size:                            4
 # - You can override the keys partially - the default combinations will be used for the actions you didn't specify
 # - If you want to disable a particular combination, use a do_nothing action for it
 
-[editors]   # <- context
+[editors]   # <- this means that the following key combos will apply only when editing text
 
 # Key combination           Action
 
@@ -156,6 +157,7 @@ Ctrl-1                      open_entry_on_the_left
 Ctrl-2                      open_entry_on_the_right
 
 Shift-Enter                 move_up  # an alternative way to move
+
 
 [common]
 
