@@ -1,13 +1,14 @@
-unsaved_buffers_dialog_handle_event :: (event: Input.Event) {
+unsaved_buffers_dialog_handle_event :: (event: Input.Event) -> bool {
     if event.type == .KEYBOARD && event.key_pressed {
         if event.key_code == {
             case .ESCAPE;       #through;
-            case #char "C";     close_unsaved_buffers_dialog();     return;
+            case #char "C";     close_unsaved_buffers_dialog();     return true;
             case #char "Y";     #through;
-            case #char "S";     unsaved_buffers_save_all();         return;
-            case #char "N";     unsaved_buffers_dialog_proceed();   return;
+            case #char "S";     unsaved_buffers_save_all();         return true;
+            case #char "N";     unsaved_buffers_dialog_proceed();   return true;
         }
     }
+    return false;
 }
 
 show_unsaved_buffers_dialog :: (requested_mode: Mode = .exit_program) {

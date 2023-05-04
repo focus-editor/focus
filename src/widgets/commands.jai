@@ -1,22 +1,22 @@
-commands_dialog_handle_event :: (event: Input.Event) {
+commands_dialog_handle_event :: (event: Input.Event) -> bool {
     using commands_dialog;
 
     if event.type == .KEYBOARD && event.key_pressed {
-        action := map_event_to_action(event, Action_Open_File_Dialog);
+        action, mapping, found := map_event_to_action(event, Action_Open_File_Dialog);
         if action == {
-            case .close_dialog;             hide_commands_dialog(); return;
-            case .open_entry_in_place;      commands_execute_selected(); return;
-            case .open_entry_on_the_side;   commands_execute_selected(); return;
+            case .close_dialog;             hide_commands_dialog(); return true;
+            case .open_entry_in_place;      commands_execute_selected(); return true;
+            case .open_entry_on_the_side;   commands_execute_selected(); return true;
 
-            case .move_up;              move_cursor(-1, wrap = true);   return;
-            case .move_down;            move_cursor( 1, wrap = true);   return;
-            case .move_up_fast;         move_cursor(-5);                return;
-            case .move_down_fast;       move_cursor( 5);                return;
-            case .move_up_one_page;     move_cursor(-per_page); return;
-            case .move_down_one_page;   move_cursor( per_page); return;
+            case .move_up;              move_cursor(-1, wrap = true);   return true;
+            case .move_down;            move_cursor( 1, wrap = true);   return true;
+            case .move_up_fast;         move_cursor(-5);                return true;
+            case .move_down_fast;       move_cursor( 5);                return true;
+            case .move_up_one_page;     move_cursor(-per_page); return true;
+            case .move_down_one_page;   move_cursor( per_page); return true;
 
-            case .search_in_buffer;     return;  // TODO: handle when the widget is rewritten
-            case .search_in_project;    finder_open();                  return;
+            case .search_in_buffer;     return true;  // TODO: handle when the widget is rewritten
+            case .search_in_project;    finder_open();                  return true;
 
             case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
             case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
@@ -24,17 +24,19 @@ commands_dialog_handle_event :: (event: Input.Event) {
         }
 
         handled := maybe_handle_text_input_event(*input, event);
-        if handled return;
+        return found || handled;
 
     } else if event.type == .TEXT_INPUT {
         char := event.utf32;
-        if char == 127 return;  // there seems to be a bug in the Input module
+        if char == 127 return true;  // there seems to be a bug in the Input module
                                 // which generates a TEXT_INPUT event for DEL
                                 // when Ctrl+Backspace is pressed
 
         text_input_type_char(*commands_dialog.input, char);
         refresh_entries();
+        return true;
     }
+    return false;
 }
 
 show_commands_dialog :: () {
