@@ -41,9 +41,10 @@ map_key_release_to_hold_actions :: (event: Input.Event, $Action: Type) -> [] Act
         if it.action_type != Action continue;
         combo := it.matched_mapping.combo;
         if combo.key_code == cast(u32) event.key_code ||
-          (event.key_code == .SHIFT && combo.mods.shift_pressed && !combo.ignore.shift_pressed) ||
-          (event.key_code == .CTRL  && combo.mods.ctrl_pressed  && !combo.ignore.ctrl_pressed)  ||
-          (event.key_code == .ALT   && combo.mods.alt_pressed   && !combo.ignore.alt_pressed)
+          (event.key_code == .SHIFT && combo.mods.shift_pressed    && !combo.ignore.shift_pressed)    ||
+          (event.key_code == .CTRL  && combo.mods.ctrl_pressed     && !combo.ignore.ctrl_pressed)     ||
+          (event.key_code == .ALT   && combo.mods.alt_pressed      && !combo.ignore.alt_pressed)      ||
+          (event.key_code == .CMD   && combo.mods.cmd_meta_pressed && !combo.ignore.cmd_meta_pressed)
         {
             // We have released a button that's part of the key combo which activated this action
             array_add(*actions, cast(Action) it.matched_mapping.action);
@@ -70,11 +71,19 @@ get_first_matching_key_combo_from_action :: (action: $T) -> [] string /* temp */
 
     keys: [..] string;
     keys.allocator = temp;
-    array_reserve(*keys, 4);  // modifiers + key
+    array_reserve(*keys, 5);  // modifiers + key
 
+
+    #if OS == .LINUX {
+        if combo.mods.cmd_meta_pressed then array_add(*keys, "Meta");
+    }
     if combo.mods.ctrl_pressed  then array_add(*keys, "Ctrl");
     if combo.mods.alt_pressed   then array_add(*keys, "Alt");
     if combo.mods.shift_pressed then array_add(*keys, "Shift");
+    #if OS == .MACOS {
+        if combo.mods.cmd_meta_pressed then array_add(*keys, "Cmd");
+    }
+
 
     key_name := keymap_map_key_code_to_string(combo.key_code);
     array_add(*keys, key_name);

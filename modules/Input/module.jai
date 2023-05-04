@@ -70,8 +70,10 @@ Key_Code :: enum u32 {
     ALT;
     CTRL;
     SHIFT;
-    
-    F1;         
+    CMD;
+    META :: CMD;
+
+    F1;
     F2;
     F3;
     F4;
@@ -138,25 +140,25 @@ Event :: struct {
 
         struct {
             // @@ This is confusing. Below key_pressed means the key was just pressed, here _pressed means the key is held down.
-            shift_pressed := false;   // Only set for Event_Type.KEYBOARD.
-            ctrl_pressed  := false;   // Only set for Event_Type.KEYBOARD.
-            alt_pressed   := false;
-            dummy         := false;
+            shift_pressed    := false;
+            ctrl_pressed     := false;
+            alt_pressed      := false;
+            cmd_meta_pressed := false; // Cmd on macOS, Meta on Linux
         }
-        
         packed: u32 = 0;
     }
     
-    type : Event_Type = Event_Type.UNINITIALIZED;
+    type: Event_Type = Event_Type.UNINITIALIZED;
 
     // If keyboard event:
-    key_pressed : u32 = 0;  // If not pressed, it's a key release.
-    key_code : Key_Code = Key_Code.UNKNOWN;
+    key_pressed: u32;  // If not pressed, it's a key release.
+    key_code: Key_Code = Key_Code.UNKNOWN;
 
-    using modifier_flags: Modifier_Flags;
+    using modifier_flags: Modifier_Flags; // Only set for Event_Type.KEYBOARD.
 
-    utf32 : u32 = 0;  // If TEXT_INPUT.
+    utf32: u32;  // If TEXT_INPUT.
     repeat := false;  // If KEYBOARD event.
+    text_input_count: u16; // If KEYBOARD event that also generated TEXT_INPUT events, this will tell you how many TEXT_INPUT events after this KEYBOARD event were generated.
     
     typical_wheel_delta: s32;  // Used only for mouse events.
     wheel_delta: s32;          // Used only for mouse events.
