@@ -571,6 +571,36 @@ Keyword :: enum u16 {
     kwt__Bool;
     kwt__Imaginary;
     kwt__Complex;
+    
+    // stdint types
+    kwt_int8_t;
+    kwt_int16_t;
+    kwt_int32_t;
+    kwt_int64_t;
+    kwt_uint8_t;
+    kwt_uint16_t;
+    kwt_uint32_t;
+    kwt_uint64_t;
+    kwt_int_least8_t;
+    kwt_int_least16_t;
+    kwt_int_least32_t;
+    kwt_int_least64_t;
+    kwt_uint_least8_t;
+    kwt_uint_least16_t;
+    kwt_uint_least32_t;
+    kwt_uint_least64_t;
+    kwt_int_fast8_t;
+    kwt_int_fast16_t;
+    kwt_int_fast32_t;
+    kwt_int_fast64_t;
+    kwt_uint_fast8_t;
+    kwt_uint_fast16_t;
+    kwt_uint_fast32_t;
+    kwt_uint_fast64_t;
+    kwt_intptr_t;
+    kwt_uintptr_t;
+    kwt_intmax_t;
+    kwt_untmax_t;
 }
 
 Operation :: enum u16 {
