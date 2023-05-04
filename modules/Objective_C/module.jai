@@ -223,7 +223,7 @@ create_objc_class_member_stub :: (class_name: string) -> string {
     super := superclass(class);
     assert(super != null, "Couldn’t get Objective-C superclass of \"%\"", class_name);
     super_size := cast(s64) class_getInstanceSize(super);
-    log("%: % super: %", class_name, instance_size, super_size);
+    // log("%: % super: %", class_name, instance_size, super_size);
     return sprint("_%_data: [%] u8; // size of % minus size of parent class", to_lower_copy(class_name), instance_size - super_size, class_name);
 }
 

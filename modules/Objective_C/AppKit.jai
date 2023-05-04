@@ -507,7 +507,7 @@ NSWindow :: struct {
     convertPointFromScreen :: (self: *NSWindow, point: NSPoint) -> NSPoint {
         func: (*void, Selector, NSPoint) -> NSPoint #foreign;
         func = xx objc_msgSend;
-        return func(class(NSEvent), _sel.convertPointFromScreen_, point);
+        return func(self, _sel.convertPointFromScreen_, point);
     }
 
     orderOut :: (self: *NSWindow, sender: id) {
@@ -655,6 +655,14 @@ NSMenuItem :: struct {
 
     setSubmenu :: (self: *NSMenuItem, sub: *NSMenu) {
         objc_msgSend(self, _sel.setSubmenu_, sub);
+    }
+
+    setKeyEquivalentModifierMask :: (self: *NSMenuItem, value: NSEventModifierFlags) {
+        objc_msgSend(self, _sel.setKeyEquivalentModifierMask_, value);
+    }
+
+    keyEquivalentModifierMask :: (self: *NSMenuItem) -> NSEventModifierFlags {
+        return xx objc_msgSend(self, _sel.keyEquivalentModifierMask);
     }
 }
 
@@ -1182,6 +1190,8 @@ _sel: struct #type_info_no_size_complaint {
     addItem_: Selector;
     initWithTitle_action_keyEquivalent_: Selector;
     setSubmenu_: Selector;
+    keyEquivalentModifierMask: Selector;
+    setKeyEquivalentModifierMask_: Selector;
     terminate_: Selector;
     addItemWithTitle_action_keyEquivalent_: Selector;
     setAppleMenu_: Selector;

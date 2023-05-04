@@ -122,6 +122,10 @@ NSString :: struct {
         return xx objc_msgSend(self, _sel.stringByExpandingTildeInPath);
     }
 
+    length :: (self: *NSString) -> NSUInteger {
+        return xx objc_msgSend(self, _sel.length);
+    }
+
     // helper functions
     initWithString :: (self: *NSString, str: string) -> *NSString {
         return initWithBytes(self, str.data, cast(u64) str.count, NSUTF8StringEncoding);
