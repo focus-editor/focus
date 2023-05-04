@@ -146,6 +146,8 @@ hard_reload_workspace :: () {
     deinit_open_file_dialog();
     deinit_file_watcher();
 
+    old_editor_state := remember_visible_editors_and_buffers();
+
     // Remove all editors and buffers (safe to do now without any threads)
     remove_all_editors();
     remove_all_buffers();
@@ -155,10 +157,99 @@ hard_reload_workspace :: () {
     array_reset_keeping_memory(*project_dirs);
     init_workspace();
     init_buffers();
+    reopen_visible_editors(old_editor_state);
     start_initial_workspace_scan();
 
     clear_user_messages();
     add_success_message("Workspace has been reloaded", dismiss_in_seconds=3);
+}
+
+remember_visible_editors_and_buffers :: () -> Visible_Editor_State {
+    using state: Visible_Editor_State;
+
+    layout = editors.layout;
+
+    if editors.layout == {
+        case .None;     // nothing to do
+        case .Single;
+            editor := *open_editors[editors.active];
+            buffer := *open_buffers[editor.buffer_id];
+            if buffer.has_file && !buffer.modified {
+                save_editor_state(*left, editor, buffer);
+            } else {
+                layout = .None;  // we don't reopen unmodified buffers, at least for now
+            }
+        case .Double;
+            left_editor  := *open_editors[editors.left];
+            left_buffer  := *open_buffers[left_editor.buffer_id];
+
+            right_editor := *open_editors[editors.right];
+            right_buffer := *open_buffers[right_editor.buffer_id];
+
+            if left_buffer.has_file && !left_buffer.modified && right_buffer.has_file && !right_buffer.modified {
+                save_editor_state(*left,  left_editor, left_buffer);
+                save_editor_state(*right, right_editor, right_buffer);
+            } else if left_buffer.has_file && !left_buffer.modified {
+                save_editor_state(*left, left_editor, left_buffer);
+                layout = .Single;
+            } else if right_buffer.has_file && !right_buffer.modified {
+                save_editor_state(*left, right_editor, right_buffer);
+                layout = .Single;
+            } else {
+                layout = .None;
+            }
+
+            state.left_active = editors.active == editors.left;
+    }
+
+    save_editor_state :: (state: *Visible_Editor_State.State, editor: *Editor, buffer: *Buffer) {
+        state.file_path = copy_temporary_string(buffer.file.full_path);
+        state.cursors = NewArray(editor.cursors.count, Cursor.State, initialized = false);
+        for * cursor, i : state.cursors { <<cursor = editor.cursors[i].state; }
+        state.main_cursor = editor.main_cursor;
+        state.viewport = editor.viewport;
+    }
+
+    return state;
+}
+
+reopen_visible_editors :: (using old_state: Visible_Editor_State) {
+    editors = Editor_State.{};
+    editors.layout = layout;
+
+    if layout == {
+        case .None; return;
+        case .Single;
+            restore_editor_state(left, .in_place);
+        case .Double;
+            restore_editor_state(left,  .left);
+            restore_editor_state(right, .right);
+            if left_active then editors.active = editors.left;
+    }
+    redraw_requested = true;
+
+    restore_editor_state :: (state: Visible_Editor_State.State, placement: Editor_Placement) {
+        editors_open_file(state.file_path, placement);
+        editor := *open_editors[editors.active];
+        restore_cursor_state(editor, state.cursors);
+        editor.main_cursor = state.main_cursor;
+        editor.viewport = state.viewport;
+        if !file_is_watched(state.file_path) then start_watching_file(state.file_path);
+    }
+}
+
+Visible_Editor_State :: struct {
+    layout: Editor_State.Layout;
+    left_active: bool;
+    left: State;
+    right: State;
+
+    State :: struct {
+        file_path: string;
+        cursors: [] Cursor.State;
+        main_cursor: s64;
+        viewport: Viewport;
+    }
 }
 
 start_watching_file :: (file_path: string) {
@@ -196,6 +287,7 @@ init_file_watcher :: () {
 deinit_file_watcher :: () {
     if !file_watcher_initted return;
     deinit(file_watcher);
+    array_reset_keeping_memory(*watch_files);
     file_watcher_initted = false;
 }
 

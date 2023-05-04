@@ -1,29 +1,17 @@
 # TODO
 
-- Limitations:
-    - Windows64 only on release
-    - Not designed for large files
-    - CRLF?
-    - Multi-codepoint Unicode symbols are not supported
-    - Currently only RGB monitor panels
+- Derive path chunks in the file open dialog from the current buffer
 
-===========================
+- Open config commands should respect ctrl and ctrl+1/2
+- Limit editor width
 
-
-- Reopen up to 2 open editors after workspace reload
-
-- Improve the scoring for fuzzy search (maybe after the fact even) - score matches closer together higher
-
-- Remove the unused get_range_as_string or get_string_from_range
 - Show project name in the window title
-- Investigate a bug reported on Github
 
 - Ctrl-K and other shortcuts should work in text inputs
 - Have a font_ui config setting
 
 - Fix the editor not noticing changes on git pull
 
-- Open config commands should respect ctrl
 - Shortcut for centering on current line
 - Colors per programming language
 - Project dir disambiguation
@@ -32,8 +20,14 @@
 - Autoindent region
 - Notify about duplicate bindings and highlight that in the config file
 - Search returns extra results: Runtime_Support, report_bounds_check_error_more_visibly
+- Investigate a bug reported on Github
+
+- Improve the scoring for fuzzy search (maybe after the fact even) - score matches closer together higher
+
+- Fix the multi-line copying and pasting - https://discord.com/channels/661732390355337246/1100701456950099978/1103153377237540874
 
 - Line wrap:
+    - Have line_starts for editor
     - Implement wrapping for buffer
         - Point line_starts to real_line_starts unless in the line wrap mode
     - Have a toggle command
@@ -45,6 +39,9 @@
 
 - Fix glyphs https://discord.com/channels/661732390355337246/784843664651190273/1102388810865721384
 
+- Ctrl-double click should create a new cursor and select a word
+- Ctrl-click to remove a cursor
+- Duplicating an editor should duplicate the viewport as well
 - Show default config (readonly)
 
 - Be able to change the width of the filename area in finder (and remember it somewhere)
@@ -158,6 +155,10 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Line height scale
++ Fix horizontal spacing
++ Reopen up to 2 open editors after workspace reload
++ Remove the unused get_range_as_string or get_string_from_range
 + Strip down the example project file
 + Fix the new file saving bugs
 + Fix the large path crash

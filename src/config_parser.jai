@@ -62,7 +62,8 @@ parse_config :: (name: string, filename: string, file_data: string) -> Config, s
     result.keymap.open_file_dialog = parser.data.keymap_open_file_dialog;
     result.keymap.search_dialog    = parser.data.keymap_search_dialog;
 
-    // Copy settings as is
+    // Copy settings
+    parser.parsed.settings.line_height_scale_percent = clamp(parser.parsed.settings.line_height_scale_percent, 50, 1000);
     result.settings = parser.parsed.settings;
 
     // Style

@@ -1,6 +1,9 @@
 # Focus
 
-A simple editor that tries to not stand in your way.
+A simple editor whose goal is to get out of your way and let you do work.
+This editor is for people who value simplicity, are sensitive to input latency and do not require heavy language support in their editor.
+
+![focus](https://user-images.githubusercontent.com/119373822/236081314-45d53952-7a6c-4d6b-8773-e5b49d1dbdab.gif)
 
 ## Quick start
 
@@ -8,9 +11,20 @@ https://www.youtube.com/watch?v=iwW_UfxJMiE
 
 ## How to compile
 
-$ jai first.jai - release
+`$ jai first.jai - release`
 
-Required Jai version: 0.1.062
+Required Jai version: `0.1.062`
+
+**On MacOS:**
+
+1. Full XCode must be installed
+
+2. To avoid multiple security warnings like [in these screenshots](https://github.com/focus-editor/focus/issues/6#issuecomment-1531240978):
+> "freetype.dylib" cannot be opened because the developer cannot be verified. macOS cannot verify that this app is free from malware.
+
+... run the following command:
+
+`xattr -d -r com.apple.quarantine /path/to/your/jai/distribution`
 
 ## Disclaimer
 
@@ -20,6 +34,13 @@ The editor is in beta. This means you may encounter some bugs here and there, an
 
 You can see the full list of shortcuts and redefine keys in the global config file.
 
+## Limitations
+
+- Only 64-bit systems are supported, Windows 8+, Linux (WIP), macOS (WIP).
+- This editor is not designed for editing very large files.
+- CRLF will be converted to LF on save. It's time to move on.
+- Multi-codepoint Unicode symbols are not supported.
+- Currently only RGB monitor panels are supported. If your text looks funny or blurry, please open an issue.
 
 ## Acknowledgements
 

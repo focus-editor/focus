@@ -25,15 +25,24 @@
 
 - (IMPORTANT) Sometimes when pulling changes via Git, the editor won't notice the files changing
 - Changing some keymap bindings requires a restart to take effect
+- [Current file watcher limitation] If you open a file in a large folder, the file watcher might scan the whole folder in order to watch for the changes to the file.
 
 
 # Main Git Branch
 
-+ When a file is created in the editor, its saving and hot-reloading should now work properly
-+ The example config file has been stripped down to avoid confusion
-
++ ...
 
 # RELEASES ==================================================================
+
+# Version 0.1.5, 4 May 2023
+
++ When a file is created in the editor, its saving and hot-reloading should now work properly
++ The example config file has been stripped down to avoid confusion
++ When the workspace is reloaded, the visible files should no longer disappear
++ Shortcuts for project-related commands should work now (while no other popups are open only for now)
++ Opening a file from the command line on Linux should no longer segfault
++ Font horizontal spacing has been fixed
++ It is now possible to configure line height scale in the config. Just add `line_height_scale_percent:  <number>`. Default: 120
 
 # Version 0.1.4, 1 May 2023
 

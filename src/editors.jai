@@ -34,10 +34,22 @@ activate_editors :: () {
 }
 
 editors_handle_action :: (event: Input.Event, action: Action_Editors) {
+    // TODO: refactor this so that the common actions work for every active global widget
+
     // Actions that do not require an active editor
     if action == {
         case .search_in_project;                                finder_open_from_editor(); return;
         case .go_to_line;                                       show_go_to_line_dialog();  return;
+
+        case .open_project;                                     show_open_project_dialog();
+        case .open_projects_directory;                          platform_open_in_explorer(projects_dir);
+        case .open_global_config;                               editors_open_file(global_config_path);
+        case .open_project_config;
+            if project_config_path {
+                editors_open_file(project_config_path);
+            } else {
+                add_user_warning("No project is active. Please open a project first.", dismiss_in_seconds = 5);
+            }
 
         case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
         case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
@@ -989,6 +1001,19 @@ viewport_glue_to_point :: (using viewport: *Viewport, buffer: Buffer) -> changed
     return top != old_top;
 }
 
+restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor.State) {
+    if cursor_state.count == 0 return;  // the first undo doesn't have any remembered cursors
+
+    array_resize(*cursors, cursor_state.count);
+    for * cursor, i : cursors {
+        cursor.state = cursor_state[i];
+        cursor.col_wanted = -1;
+        cursor.clipboard.start = 0;
+        cursor.clipboard.count = cast(s32)editor.clipboard.count;
+    }
+    if main_cursor >= cursors.count then main_cursor = cursors.count - 1;  // maybe we should remember it too
+}
+
 #scope_file
 
 select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) -> whole_words: bool {
@@ -1227,20 +1252,6 @@ redo :: (editor: *Editor, buffer: *Buffer) {
     array_free(edit_group.cursors);
 
     editor.cursor_moved = true;
-}
-
-restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor.State) {
-    if cursor_state.count == 0 return;  // the first undo doesn't have any remembered cursors
-
-    // for * cursors maybe_free_and_clear(*it.clipboard);
-    array_resize(*cursors, cursor_state.count);
-    for * cursor, i : cursors {
-        cursor.state = cursor_state[i];
-        cursor.col_wanted = -1;
-        cursor.clipboard.start = 0;
-        cursor.clipboard.count = cast(s32)editor.clipboard.count;
-    }
-    if main_cursor >= cursors.count then main_cursor = cursors.count - 1;  // maybe we should remember it too
 }
 
 new_edit_group_required_for_action :: (action: Action_Editors, cursor: Cursor) -> bool {

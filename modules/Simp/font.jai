@@ -32,6 +32,7 @@ Dynamic_Font :: struct {
     typical_ascender:       int;
     typical_descender:      int;
     em_width:               int;
+    x_advance:              int;
 
     y_offset_for_centering: int;
 
@@ -143,7 +144,7 @@ convert_to_temporary_glyphs :: (font: *Dynamic_Font, s: string) -> width_in_pixe
     return width_in_pixels;
 }
 
-draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height: float, visible_lines: [] Code_Line, color_map: [] Vector4, tab_size: s64 = 4) {
+draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_x_advance: float, line_height: float, visible_lines: [] Code_Line, color_map: [] Vector4, tab_size: s64 = 4) {
     // Setup OpenGL stuff. We do it all in one place because it's easier and there will be only one backend - GL.
     // Otherwise we would have to create temporary glyphs and pass them on to the backend draw function.
     CheckInit();
@@ -163,7 +164,7 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height
         line   := it.line;
         colors := it.colors;
 
-        sx  := cast(float) (x + it.tab_spaces * char_size);
+        sx  := cast(float) (x + it.tab_spaces * char_x_advance);
         col := 0;
 
         // Draw one line
@@ -220,12 +221,12 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height
 
                 color := color_map[colors[t - line.data]];
                 if utf32 != #char "\t" {
-                    sx  += char_size;
+                    sx  += char_x_advance;
                     col += 1;
                 } else {
-                    // Draw tabs wide 
+                    // Draw tabs wide
                     chars_to_tabstop := tab_size - col % tab_size;
-                    sx  += chars_to_tabstop * char_size;
+                    sx  += chars_to_tabstop * char_x_advance;
                     col += chars_to_tabstop;
                     color.w = 0.1;  // don't make it too bright
                 }
@@ -247,7 +248,7 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_size: float, line_height
 // We represent highlights as an array of bools, which is wasteful but we don't care
 draw_text_with_highlights :: (font: *Dynamic_Font, x: s64, y: s64, text: string, highlights: [] bool, color: Vector4, highlight_color: Vector4) -> width: s64 {
     if !text return 0;
-    
+
     assert(text.count == highlights.count, "In Simp.draw_text_with_highlights, the text length doesn't match the highlight length");
 
     CheckInit();
@@ -257,7 +258,7 @@ draw_text_with_highlights :: (font: *Dynamic_Font, x: s64, y: s64, text: string,
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 0);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    
+
     use_kerning := FT_HAS_KERNING(font.face);
     prev_glyph: u32 = 0;
     width_in_pixels := 0;
@@ -302,9 +303,9 @@ draw_text_with_highlights :: (font: *Dynamic_Font, x: s64, y: s64, text: string,
             y1 := y2 - cast(float) glyph.height;
 
             sx += cast(float) glyph.advance;
-            
+
             width_in_pixels += glyph.advance;
-            
+
             if use_kerning && prev_glyph {
                 delta: FT_Vector = ---;
                 error := FT_Get_Kerning(font.face, prev_glyph, glyph.glyph_index_within_font, xx FT_Kerning_Mode.DEFAULT, *delta);
@@ -341,7 +342,7 @@ draw_text_with_highlights :: (font: *Dynamic_Font, x: s64, y: s64, text: string,
     immediate_flush();
 
     glDisable(GL_BLEND);
-    
+
     return width_in_pixels;
 }
 
@@ -380,7 +381,8 @@ load_font_part_2 :: (result: *Dynamic_Font, pixel_height: int) {
     glyph_index  = FT_Get_Char_Index(face, #char "M");
     if glyph_index {
         FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT);
-        result.em_width = FT_ROUND(face.glyph.metrics.width);
+        result.em_width  = FT_ROUND(face.glyph.metrics.width);
+        result.x_advance = FT_ROUND(face.glyph.metrics.horiAdvance);
     }
 
     glyph_index  = FT_Get_Char_Index(face, #char "T");
@@ -420,7 +422,7 @@ get_font_at_size :: (name: string, font_data: string, pixel_height: int) -> *Dyn
 
         return it;
     }
-    
+
     // Create a new font face for Dynamic_Font rather than sharing one between fonts.
     // The reason is because we don't want to keep changing the size every time we want to
     // do anything and worry whether another Dynamic_Font has changed the size
@@ -440,7 +442,7 @@ get_font_at_size :: (name: string, font_data: string, pixel_height: int) -> *Dyn
     result.face = face;
     load_font_part_2(result, pixel_height);
     return result;
-    
+
     // TODO(ivan): finish this loading part, use float metrics if possible
 
     // face := loaded.face;
@@ -529,7 +531,7 @@ get_cursor_pos_for_width :: (font: *Dynamic_Font, s: string, requested_width: s6
     while t < s.data + s.count {
         utf32 := character_utf8_to_utf32(t, s.data + s.count - t);
         glyph := find_or_create_glyph(font, utf32);
-        
+
         glyph_width := 0;
 
         if glyph {
@@ -541,7 +543,7 @@ get_cursor_pos_for_width :: (font: *Dynamic_Font, s: string, requested_width: s6
                 if !error then glyph_width += (delta.x >> 6);
             }
         }
-        
+
         t = unicode_next_character(t);
         prev_glyph = glyph.glyph_index_within_font;
 
@@ -551,7 +553,7 @@ get_cursor_pos_for_width :: (font: *Dynamic_Font, s: string, requested_width: s6
             if (width_in_pixels - requested_width) <= (glyph_width / 2) then current_pos = xx (t - s.data);
             break;
         }
-        
+
         current_pos = xx (t - s.data);
     }
 
@@ -735,10 +737,10 @@ find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32) -> *Glyph_Data {
 
     data, success := table_find(*font.glyph_lookup, hash_key);
     if success  return data;
-    
+
     if utf32 == #char "\t" then utf32 = #char "→";  // draw tabs as arrows
     if utf32 == #char "\n" then utf32 = #char "¶";  // draw newlines as paragraph symbols
-    
+
     glyph_index := FT_Get_Char_Index(face, utf32);
     if !glyph_index {
         log_error("Unable to find a glyph in font '%' for utf32 character %.\n", name, utf32);
@@ -748,7 +750,7 @@ find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32) -> *Glyph_Data {
     error := FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT);
     assert(!error);
     FT_Render_Glyph(face.glyph, .FT_RENDER_MODE_LCD);
- 
+
     data = cast(*Glyph_Data) get(*glyph_and_line_pool, size_of(Glyph_Data));
     data.utf32 = utf32;
     data.glyph_index_within_font = glyph_index;

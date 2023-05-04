@@ -58,23 +58,11 @@ commands_execute_selected :: () {
     command := filtered[selected].command;
     for * commands { if command.action == it.action { it.num_times_used += 1; break; } }
 
-    if command.action == {
-        case .do_nothing;   return;
+    if command.action == .do_nothing return;
 
-        case .open_project;             show_open_project_dialog();
-        case .open_projects_directory;  platform_open_in_explorer(projects_dir);
-        case .open_global_config;       editors_open_file(global_config_path);
-        case .open_project_config;
-            if project_config_path {
-                editors_open_file(project_config_path);
-            } else {
-                add_user_warning("No project is active. Please open a project first.", dismiss_in_seconds = 5);
-            }
-        case;
-            dummy_event: Input.Event;  // TODO: refactor so that this event is not needed
-                                       // (need to put the search bar into its own widget for this)
-            editors_handle_action(dummy_event, command.action);
-    }
+    dummy_event: Input.Event;  // TODO: refactor so that this event is not needed
+                               // (need to put the search bar into its own widget for this)
+    editors_handle_action(dummy_event, command.action);
 }
 
 #scope_file
