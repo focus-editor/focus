@@ -11,9 +11,20 @@ https://www.youtube.com/watch?v=iwW_UfxJMiE
 
 ## How to compile
 
-$ jai first.jai - release
+`$ jai first.jai - release`
 
-Required Jai version: 0.1.062
+Required Jai version: `0.1.062`
+
+**On MacOS:**
+
+1. Full XCode must be installed
+
+2. To avoid multiple security warnings like [in these screenshots](https://github.com/focus-editor/focus/issues/6#issuecomment-1531240978):
+> "freetype.dylib" cannot be opened because the developer cannot be verified. macOS cannot verify that this app is free from malware.
+
+... run the following command:
+
+`xattr -d -r com.apple.quarantine /path/to/your/jai/distribution`
 
 ## Disclaimer
 
