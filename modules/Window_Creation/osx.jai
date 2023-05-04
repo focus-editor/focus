@@ -161,7 +161,12 @@ init_mac_app :: () {
 
     // @TODO we should probably override toggleFullScreen: in NSApplication in order to also set presentation options
     // like we do in toggle_fullscreen
-    app_menu.addItemWithTitle(app_menu, S("Enter Full Screen"), selector("toggleFullScreen:"), S("f"));
+    fullscreen_item := app_menu.addItemWithTitle(app_menu, S("Enter Full Screen"), selector("toggleFullScreen:"), S("f"));
+    old_mask := NSMenuItem.keyEquivalentModifierMask(fullscreen_item);
+    new_mask := NSEventModifierFlagControl | NSEventModifierFlagCommand;
+    log("Changing % to %", old_mask, new_mask);
+    NSMenuItem.setKeyEquivalentModifierMask(fullscreen_item, new_mask);
+
     app_menu.addItemWithTitle(app_menu, S(tprint("Quit")), selector("terminate:"), S("q"));
 
     app_menu_item.setSubmenu(app_menu_item, app_menu);
