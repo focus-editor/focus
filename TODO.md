@@ -5,7 +5,6 @@
 - Open config commands should respect ctrl and ctrl+1/2
 - Limit editor width
 
-
 - Show project name in the window title
 
 - Ctrl-K and other shortcuts should work in text inputs

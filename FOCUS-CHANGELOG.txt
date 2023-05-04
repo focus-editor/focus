@@ -30,6 +30,12 @@
 
 # Main Git Branch
 
++ ...
+
+# RELEASES ==================================================================
+
+# Version 0.1.5, 4 May 2023
+
 + When a file is created in the editor, its saving and hot-reloading should now work properly
 + The example config file has been stripped down to avoid confusion
 + When the workspace is reloaded, the visible files should no longer disappear
@@ -37,9 +43,6 @@
 + Opening a file from the command line on Linux should no longer segfault
 + Font horizontal spacing has been fixed
 + It is now possible to configure line height scale in the config. Just add `line_height_scale_percent:  <number>`. Default: 120
-
-
-# RELEASES ==================================================================
 
 # Version 0.1.4, 1 May 2023
 
