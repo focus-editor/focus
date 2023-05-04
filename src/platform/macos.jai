@@ -69,7 +69,7 @@ platform_get_fonts_dir :: inline () -> string {
 }
 
 platform_open_in_explorer :: inline (dir: string) {
-    // unimplemented();
+    run_command("open", dir);
 }
 
 #scope_file
@@ -85,3 +85,4 @@ monitors : [..] Monitor;
 
 #import "Objective_C";
 #import "Objective_C/AppKit";
+#import "Process";
