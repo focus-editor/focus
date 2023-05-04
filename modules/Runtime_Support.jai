@@ -521,36 +521,37 @@ synch_initted: s32 = 0;
 report_bounds_check_error_more_visibly :: (index: s64, limit: s64, line_number: s64, filename: *u8) #no_context {
     ctx: Context;
     push_context ctx {
-        message := sprint("Array bounds check failed in file % at line number %: \nProvided index: %, maximum index: %\n", to_string(filename), line_number, index, limit);
-        report_error_in_yer_face(message);
+        report_error_in_yer_face("Array bounds check failed in file % at line number %: \nProvided index: %, maximum index: %\n", to_string(filename), line_number, index, limit);
     }
 }
 
 report_null_pointer_error_more_visibly :: (index: s64, line_number: s64, filename: *u8) #no_context {
     ctx: Context;
     push_context ctx {
-        message: string;
         if index {
             // This is a procedure argument.
-            message = sprint("Null pointer check failed in file % at line number %: \nArgument % is undergoing an automatic dereference, but the pointer is null.", to_string(filename), line_number, index);
+            report_error_in_yer_face("Null pointer check failed in file % at line number %: \nArgument % is undergoing an automatic dereference, but the pointer is null.", to_string(filename), line_number, index);
         } else {
             // It was a dereference that happened in some other way.
-            message = sprint("Null pointer check failed in file % at line number %: \nA pointer is undergoing an automatic dereference, but the pointer is null.", to_string(filename), line_number);
+            report_error_in_yer_face("Null pointer check failed in file % at line number %: \nA pointer is undergoing an automatic dereference, but the pointer is null.", to_string(filename), line_number);
         }
-        report_error_in_yer_face(message);
     }
 }
 
 report_failed_assertion_more_visibly :: (loc: Source_Code_Location, msg: string) {
-    message := sprint("Assertion failed in file % at line %, char %: \n%", loc.fully_pathed_filename, loc.line_number, loc.character_number, msg);
-    report_error_in_yer_face(message);
+    report_error_in_yer_face("Assertion failed in file % at line %, char %: \n%", loc.fully_pathed_filename, loc.line_number, loc.character_number, msg);
 }
 
-report_error_in_yer_face :: (message: string) {
+report_error_in_yer_face :: (message: string, args: .. Any) {
+    System :: #import "System";
+    String :: #import "String";
+    Basic :: #import "Basic";
+    File :: #import "File";
     // Log it in a crash report file next to the exe
-    exe_dir := path_strip_filename(get_path_of_running_executable());
-    crash_report_file_path := sprint("%/focus-crash-report.txt", exe_dir);
-    write_entire_file(crash_report_file_path, message);
+    exe_dir := String.path_strip_filename(System.get_path_of_running_executable());
+    crash_report_file_path := Basic.sprint("%/focus-crash-report.txt", exe_dir);
+    formatted_message := Basic.sprint(message, ..args);
+    File.write_entire_file(crash_report_file_path, formatted_message);
 
     // Show a Windows message box
     #if OS == .WINDOWS {
@@ -561,11 +562,7 @@ report_error_in_yer_face :: (message: string) {
 }
 
 
-// For the error reporting above
-#import "String";
-#import "Basic";
-#import "System";
-#import "File";
+// // For the error reporting above
 
 // END of the functions we've added
 
