@@ -454,7 +454,11 @@ EXAMPLE_PROJECT_FILE_DATA :: #run read_entire_file(EXAMPLE_PROJECT_CONFIG_NAME);
 
 #scope_file
 
-DEFAULT_CONFIG_NAME         :: "default.focus-config";  // in the focus project folder
+#if OS == .MACOS {
+    DEFAULT_CONFIG_NAME         :: "default_macos.focus-config";  // in the focus project folder
+} else {
+    DEFAULT_CONFIG_NAME         :: "default.focus-config";  // in the focus project folder
+}
 EXAMPLE_PROJECT_CONFIG_NAME :: "example-project.focus-config";
 
 

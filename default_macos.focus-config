@@ -1,0 +1,282 @@
+[1]  # Version number. Do not delete.
+
+[[workspace]]
+
+[workspace dirs]
+# These directories will be scanned when a workspace is opened so that search etc. works.
+# Example:
+# C:/projects/my-project
+# C:/jai
+
+[ignore dirs]
+# The workspace scanner will not descend into the dirs that match these names.
+.svn
+.git
+temp
+__pycache__
+
+[allow file extensions]
+# These files are explicitly allowed so that the editor doesn't waste time figuring out
+# whether it should ignore these or not (if a file is not explicitly allowed or ignored,
+# it will be read to determine if it's binary or not).
+.jai .c .cpp .h .hpp .cc .txt .md .focus-* .ini .csv .log .sql .py .m .html .xml .js .ts .yml .yaml .toml
+
+[ignore file extensions]
+# Files with the following extensions will not appear in the file open dialog and won't be indexed.
+# It makes sense to add all known binary file extensions here.
+.exe .pdb .ttf .otf .eot .woff *woff? .dll .lib .dylib .so *so.* .a .o .pdf
+.jpg .png .gif .jpeg .ico .tif .tiff .tga .bmp .webp  # maybe someday we'll support opening images
+.mp3 .wav .ogg .wma
+.blend .obj .fbx .dae .3ds .dat
+.mpg .mpeg .psd .codex .webm .wma
+.zip .rar .7z
+.bin .sys .iso
+.nib .exp .plist
+.pyc .rpyc
+
+[[settings]]
+# NOTE: please copy the whole block when overriding settings, otherwise defaults will be used
+#       for any settings you haven't listed here explicitly
+maximize_on_start:                      false
+open_on_the_biggest_monitor:            false
+cursor_as_block:                        true
+highlight_selection_occurrences:        true
+disable_that_annoying_paste_effect:     false
+disable_file_open_close_animations:     false
+insert_spaces_when_pressing_tab:        true
+strip_trailing_whitespace_on_save:      false
+smooth_scrolling:                       true
+double_shift_to_search_in_workspace:    false
+max_entries_in_open_file_dialog:        2000
+tab_size:                               4
+line_height_scale_percent:              120
+
+
+[[keymap]]
+
+# - The first matching combination will be used, so order matters
+# - E.g. [open file dialog] means the keys in this section will only be used when the open file dialog is open
+# - You can override the keys partially - the default combinations will be used for the actions you didn't specify
+# - If you want to disable a particular combination, use a do_nothing action for it
+
+[editors]   # <- this means that the following key combos will apply only when editing text
+
+# Key combination           Action
+
+Cmd-D                      select_word_or_create_another_cursor
+
+Cmd-Shift-D                duplicate_lines
+
+# These shortcuts can be annoying to accidentally use, so they are commented out by default
+# Shift-Backspace             delete_line_and_go_up
+# Shift-Delete                delete_line
+
+Cmd-K                      delete_to_end_of_line
+Cmd-Shift-Delete           delete_to_end_of_line
+Cmd-Shift-Backspace        delete_to_start_of_line
+
+Cmd-Shift-ArrowUp           move_selected_lines_up
+Cmd-Shift-ArrowDown         move_selected_lines_down
+
+Cmd-J                      join_lines
+Cmd-Shift-J                join_lines_no_spaces_in_between
+
+Tab                         indent_or_go_to_next_tabstop
+Shift-Tab                   unindent
+
+Cmd-]                      indent
+Cmd-[                      unindent
+
+Cmd-S                      save
+
+Cmd-/                      toggle_comment
+Cmd-L                      select_line
+
+Cmd-K                       scroll_viewport_up
+Cmd-E                       scroll_viewport_up_fast  # for some reason Cmd-U didn't reach the window at all, so using Cmd-E instead
+Cmd-PageUp                  scroll_viewport_up_fast
+Cmd-J                       scroll_viewport_down
+Cmd-D                       scroll_viewport_down_fast
+Cmd-PageDown                scroll_viewport_down_fast
+Cmd-H                       scroll_viewport_left
+Cmd-L                       scroll_viewport_right
+
+Ctrl-Cmd-ArrowUp            scroll_viewport_up
+Ctrl-Cmd-ArrowDown          scroll_viewport_down
+Ctrl-Cmd-ArrowLeft          scroll_viewport_left
+Ctrl-Cmd-ArrowRight         scroll_viewport_right
+
+Cmd-C                       move_cursor_to_viewport_center
+
+{Shift}-Ctrl-ArrowUp        move_up_to_empty_line
+{Shift}-Ctrl-ArrowDown      move_down_to_empty_line
+{Shift}-Cmd-ArrowUp         move_up_fast
+{Shift}-Cmd-ArrowDown       move_down_fast
+
+Escape                      remove_additional_cursors
+
+Enter                       break_line
+Ctrl-Enter                  new_line_below_without_breaking
+Ctrl-Shift-Enter            new_line_above_without_breaking
+
+Cmd-1                      switch_to_left_editor
+Cmd-2                      switch_to_right_editor
+Cmd-,                      switch_to_other_editor
+Cmd-Shift-,                duplicate_editor
+
+Ctrl-Cmd-Shift-ArrowLeft    move_editor_to_the_left
+Ctrl-Cmd-Shift-ArrowRight   move_editor_to_the_right
+
+Cmd-N                      create_new_file
+Cmd-Shift-N                create_new_file_on_the_side
+
+
+[open file dialog]
+
+Escape                      close_dialog
+
+Enter                       open_entry_in_place
+Cmd-Enter                  open_entry_on_the_side
+Cmd-1                      open_entry_on_the_left
+Cmd-2                      open_entry_on_the_right
+
+Tab                         open_directory
+/                           open_directory
+\                           open_directory
+
+Backspace                   pop_directory
+
+
+[search dialog]
+
+Escape                      close_dialog
+
+Enter                       open_entry_in_place
+Cmd-Enter                  open_entry_on_the_side
+Cmd-1                      open_entry_on_the_left
+Cmd-2                      open_entry_on_the_right
+
+Shift-Enter                 move_up  # an Cmdernative way to move
+
+
+[common]
+
+# Common key combos may be used as a fallback if they are not defined in more specific sections.
+# For example, if "move_up" is not defined in [editors], the one in the [common] section will be matched.
+
+Cmd-X                       show_commands
+Cmd-Shift-P                show_commands
+
+Cmd-F                      search_in_buffer
+Cmd-Alt-F                   search_in_buffer_dropdown_mode
+Cmd-Shift-F                search_in_project
+
+Cmd-P                      show_open_file_dialog_in_search_mode
+Cmd-O                      show_open_file_dialog_in_navigate_mode
+Cmd-Shift-O                show_open_file_dialog_in_navigate_mode_from_root
+
+Cmd-G                      go_to_line
+
+Cmd-C                      copy
+Cmd-X                      cut
+Cmd-V                      paste
+
+Cmd-Z                      undo
+Cmd-Shift-Z                redo
+
+Cmd-D                      select_word
+Cmd-A                      select_all
+
+Cmd-W                      close_current_editor
+Cmd-Shift-W                close_other_editor
+
+Cmd-Shift-L                toggle_expand
+
+# {Shift}- means shift is optional, the key combination will still be matched.
+{Shift}-ArrowUp             move_up
+{Shift}-Cmd-ArrowUp        move_up_fast
+{Shift}-PageUp              move_up_one_page
+
+{Shift}-ArrowDown           move_down
+{Shift}-Cmd-ArrowDown      move_down_fast
+{Shift}-PageDown            move_down_one_page
+
+{Shift}-ArrowLeft           move_left
+{Shift}-Cmd-ArrowLeft       move_left_by_word
+{Shift}-Cmd-ArrowLeft      move_left_by_word_ends
+
+{Shift}-ArrowRight          move_right
+{Shift}-Cmd-ArrowRight      move_right_by_word
+{Shift}-Cmd-ArrowRight     move_right_by_word_ends
+
+{Shift}-Home                jump_to_line_start
+{Shift}-End                 jump_to_line_end
+{Shift}-Cmd-Home           jump_to_file_start
+{Shift}-Cmd-End            jump_to_file_end
+
+{Shift}-Backspace           delete_left_char
+{Shift}-Delete              delete_right_char
+{Shift}-Cmd-Backspace       delete_word_left_no_underscore
+{Shift}-Cmd-Delete          delete_word_right_no_underscore
+{Shift}-Ctrl-Backspace      delete_word_left
+{Shift}-Ctrl-Delete         delete_word_right
+
+Cmd-Plus                   increase_font_size
+Cmd-Minus                  decrease_font_size
+Cmd-0                      reset_font_size_to_default
+Cmd-MouseMiddle            reset_font_size_to_default
+
+
+[[style]]
+
+[user interface]
+font:       default
+font_size:  14
+
+[colors]
+background:                     15212AFF
+background_dark:                10191FFF
+background_highlight:           18262FFF
+background_light:               1A2831FF
+background_bright:              21333FFF
+selection_active:               1C4449FF
+selection_inactive:             1C44497F
+selection_highlight:            FCEDFC26
+search_result_active:           8E772EFF
+search_result_inactive:         FCEDFC26
+scrollbar:                      33CCCC19
+scrollbar_hover:                33CCCC4C
+scrollbar_background:           10191F4C
+cursor:                         26B2B2FF
+cursor_inactive:                196666FF
+paste_animation:                1C4449FF
+splitter:                       21333FFF
+splitter_hover:                 1C4449FF
+letter_highlight:               599999FF
+list_cursor_lite:               33CCCC19
+list_cursor:                    33CCCC4C
+shadow_dark:                    0E161C7F
+shadow_transparent:             0E161C00
+text_input_label:               3B4450FF
+
+ui_default:                     BFC9DBFF
+ui_dim:                         87919DFF
+ui_neutral:                     4C4C4CFF
+ui_warning:                     F8AD34FF
+ui_warning_dim:                 986032FF
+ui_error:                       772222FF
+ui_error_bright:                FF0000FF
+ui_success:                     227722FF
+
+code_default:                   BFC9DBFF
+code_comment:                   87919DFF
+code_type:                      82AAA3FF
+code_function:                  D0C5A9FF
+code_punctuation:               BFC9DBFF
+code_operation:                 E0AD82FF
+code_string:                    D4BC7DFF
+code_value:                     D699B5FF
+code_highlight:                 D89B75FF
+code_error:                     FF0000FF
+code_keyword:                   E67D74FF
+
