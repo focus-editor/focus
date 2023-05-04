@@ -310,7 +310,10 @@ update_cocoa_window_events :: () {
 
                 array_add(*events_this_frame, event);
 
-                if characters {
+                // Length will be 0 if this was a dead key.
+                // @Incomplete: How do we handle diacritics entered via dead keys?
+                // For example for "¨ + a => ä", if we ignore the dead key for ¨ here and then only handle the "a", people won’t be able to assemble the "ä".
+                if characters && NSString.length(characters) {
                     utf32_data := NSString.dataUsingEncoding(characters, NSUTF32LittleEndianStringEncoding);
                     // defer release(utf32_data);
                     utf32 := cast(*u32) NSData.bytes(utf32_data);
