@@ -600,7 +600,13 @@ Keyword :: enum u16 {
     kwt_intptr_t;
     kwt_uintptr_t;
     kwt_intmax_t;
-    kwt_untmax_t;
+    kwt_uintmax_t;
+    kwt_wchar_t;
+    kwt_wint_t;
+    kwt_size_t;
+    kwt_wint_t;
+    kwt_ptrdiff_t;
+    kwt_sig_atomic_t;
 }
 
 Operation :: enum u16 {
