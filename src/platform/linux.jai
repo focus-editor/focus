@@ -2,8 +2,8 @@ platform_setup :: () {
 
 }
 
-platform_get_biggest_monitor_pos :: () -> s32, s32 {
-    return 0, 0;
+platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, s32, s32 {
+    return 0, 0, 1920, 1080;
 }
 
 platform_create_window :: () {
