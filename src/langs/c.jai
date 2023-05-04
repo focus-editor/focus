@@ -11,16 +11,15 @@ highlight_c_syntax :: (using buffer: *Buffer) {
         using tokenizer;
         // Maybe retroactively highlight a function
         if token.type == .punctuation && token.punctuation == .l_paren {
-            // Handle "func :: ("
-            before_prev, prev := last_tokens[0], last_tokens[1];
+            // Handle "func("
+            prev := last_tokens[0];
             if prev.type == .identifier {
                 memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
             }
         }
 
-        // Remember last 2 tokens
-        last_tokens[0] = last_tokens[1];
-        last_tokens[1] = token;
+        // Remember last tokens
+        last_tokens[0] = token;
 
 
         color := COLOR_MAP[token.type];
@@ -49,24 +48,26 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     } else if is_digit(char) {
         parse_number(tokenizer, *token);
     } else if char == {
-        case #char ":";  parse_colon             (tokenizer, *token);
-        case #char "?";  parse_question          (tokenizer, *token);
-        case #char "=";  parse_equal             (tokenizer, *token);
-        case #char "-";  parse_minus             (tokenizer, *token);
-        case #char "+";  parse_plus              (tokenizer, *token);
-        case #char "*";  parse_asterisk          (tokenizer, *token);
-        case #char "<";  parse_less_than         (tokenizer, *token);
-        case #char ">";  parse_greater_than      (tokenizer, *token);
-        case #char "!";  parse_bang              (tokenizer, *token);
-        case #char "#";  parse_compiler_directive(tokenizer, *token);
-        case #char "\""; parse_string_literal    (tokenizer, *token);
-        case #char "/";  parse_slash_or_comment  (tokenizer, *token);
-        case #char "&";  parse_ampersand         (tokenizer, *token);
-        case #char "|";  parse_pipe              (tokenizer, *token);
-        case #char "%";  parse_percent           (tokenizer, *token);
-        case #char "^";  parse_caret             (tokenizer, *token);
+        case #char ":";  parse_colon                 (tokenizer, *token);
+        case #char "?";  parse_question              (tokenizer, *token);
+        case #char "=";  parse_equal                 (tokenizer, *token);
+        case #char "-";  parse_minus                 (tokenizer, *token);
+        case #char "+";  parse_plus                  (tokenizer, *token);
+        case #char "*";  parse_asterisk              (tokenizer, *token);
+        case #char "<";  parse_less_than             (tokenizer, *token);
+        case #char ">";  parse_greater_than          (tokenizer, *token);
+        case #char "!";  parse_bang                  (tokenizer, *token);
+        case #char "#";  parse_preprocessor_directive(tokenizer, *token);
+        case #char "\""; parse_string_literal        (tokenizer, *token);
+        case #char "'";  parse_char_literal          (tokenizer, *token);
+        case #char "/";  parse_slash_or_comment      (tokenizer, *token);
+        case #char "&";  parse_ampersand             (tokenizer, *token);
+        case #char "|";  parse_pipe                  (tokenizer, *token);
+        case #char "%";  parse_percent               (tokenizer, *token);
+        case #char "^";  parse_caret                 (tokenizer, *token);
 
         case #char ";";  token.type = .punctuation; token.punctuation = .semicolon; t += 1;
+        case #char "\\"; token.type = .punctuation; token.punctuation = .backslash; t += 1;
         case #char ",";  token.type = .punctuation; token.punctuation = .comma;     t += 1;
         case #char ".";  token.type = .punctuation; token.punctuation = .period;    t += 1;
         case #char "{";  token.type = .punctuation; token.punctuation = .l_brace;   t += 1;
@@ -91,10 +92,10 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
 parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
     
-    mark := get_temporary_storage_mark();
-    defer   set_temporary_storage_mark(mark);
+    // mark := get_temporary_storage_mark();
+    // defer   set_temporary_storage_mark(mark);
     
-    identifier_str := read_identifier_string_tmp(tokenizer);
+    identifier_str := read_identifier_string(tokenizer);
 
     // Maybe it's a keyword
     if identifier_str.count <= MAX_KEYWORD_LENGTH {
@@ -120,7 +121,55 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
             }
             t += 1;
         }
-    } else if << t == #char "x" || << t == #char "h" {
+        if t >= max_t return;
+        // t += 1;
+        // if t >= max_t return;
+        
+        // exponent
+        if << t == #char "e" || << t == #char "E" {
+            t += 1;
+            if t >= max_t return;
+            
+            if << t == #char "+" || << t == #char "-" {
+              t += 1;
+              if t >= max_t return;
+            }
+            
+            while t < max_t && is_digit(<< t) {
+                t += 1;
+            }
+            if t >= max_t return;
+        }
+        
+        // suffixes
+        if seen_decimal_point {
+            if << t == #char "f" || << t == #char "F" || << t == #char "d" || << t == #char "D" {
+              t += 1;
+            }
+        } else {
+          
+          // This is getting kindof hard to follow...
+          if << t == #char "l" || << t == #char "L" {             // l
+              t += 1;
+              if t >= max_t return;
+              
+              if << t == #char "l" || << t == #char "L" {         // ll
+                  t += 1;
+                  if t >= max_t return;
+  
+                  if << t == #char "u" || << t == #char "U" {     // llu
+                    t += 1;
+                  }
+              } else if << t == #char "u" || << t == #char "U" {  // lu
+                t += 1;
+              }
+          } else if  << t == #char "u" || << t == #char "U" {     // u
+              t += 1;
+          }
+          
+        }
+        
+    } else if << t == #char "x" || << t == #char "X" {
         // Hex
         t += 1;
         while t < max_t && (is_hex(<< t)) t += 1;
@@ -128,7 +177,7 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
         is_hex :: inline (c: u8) -> bool {
             return is_digit(c) || (c >= #char "a" && c <= #char "f") || (c >= #char "A" && c <= #char "F");
         }
-    } else if << t == #char "b" {
+    } else if << t == #char "b" || << t == #char "B" {
         // Binary
         t += 1;
         while t < max_t && (<< t == #char "1" || << t == #char "0") t += 1;
@@ -257,27 +306,27 @@ parse_bang :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_compiler_directive :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_preprocessor_directive :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
 
     t += 1;
     t = eat_white_space(t, max_t);  // there may be spaces between the # and the name
     if !is_alpha(<<t) return;
 
-    mark := get_temporary_storage_mark();
-    defer   set_temporary_storage_mark(mark);
+    // mark := get_temporary_storage_mark();
+    // defer   set_temporary_storage_mark(mark);
 
-    directive_str := read_identifier_string_tmp(tokenizer);
+    directive_str := read_identifier_string(tokenizer);
 
     while t < max_t && is_alnum(<< t) t += 1;
     if t >= max_t return;
 
     // Check if it's one of the existing directives
     if directive_str.count > MAX_DIRECTIVE_LENGTH return;
-    directive, ok := table_find(*COMPILER_DIRECTIVES_MAP, directive_str);
+    directive, ok := table_find(*PREPROCESSOR_DIRECTIVES_MAP, directive_str);
     if ok {
-        token.type = .compiler_directive;
-        token.compiler_directive = directive;
+        token.type = .preprocessor_directive;
+        token.preprocessor_directive = directive;
     }
 }
 
@@ -295,6 +344,33 @@ parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     if t >= max_t return;
 
     t += 1;
+}
+
+parse_char_literal :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .char_literal;
+
+    escape_seen := false;
+
+    t += 1; //
+    if t >= max_t || << t == #char "\n" return;
+    
+    if << t == #char "\\" {
+      escape_seen = true;
+      t += 1;
+      if t >= max_t || << t == #char "\n" return;
+    }
+    
+    if << t == #char "'" && !escape_seen {
+      // not escaped single quote without a character
+      token.type = .invalid;
+      t += 1; // the invalid '
+      return;
+    }
+    
+    t += 1; // the char
+    if t >= max_t || << t == #char "\n" return;
+
+    t += 1; // ending '
 }
 
 parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
@@ -395,7 +471,7 @@ Tokenizer :: struct {
     start_t: *u8;  // cursor when starting parsing new token
     t:       *u8;  // cursor
     
-    last_tokens: [2] Token;  // to retroactively highlight functions
+    last_tokens: [1] Token;  // to retroactively highlight functions
 }
 
 Token :: struct {
@@ -406,7 +482,7 @@ Token :: struct {
         keyword:            Keyword;
         punctuation:        Punctuation;
         operation:          Operation;
-        compiler_directive: Directive;
+        preprocessor_directive: Directive;
     }
     
     Type :: enum u16 {
@@ -414,6 +490,7 @@ Token :: struct {
 
         identifier;
         string_literal;
+        char_literal;
         number;
         comment;
         multiline_comment;
@@ -423,7 +500,7 @@ Token :: struct {
         keyword;
         type_keyword;
         value_keyword;
-        compiler_directive;
+        preprocessor_directive;
         invalid;
     }
 }
@@ -433,6 +510,7 @@ COLOR_MAP :: Code_Color.[
     .COMMENT,       // eof - obviously not used
     .DEFAULT,       // identifier
     .STRING,        // string_literal
+    .STRING,        // char_literal
     .VALUE,         // number
     .COMMENT,       // comment
     .COMMENT,       // multiline_comment
@@ -442,7 +520,7 @@ COLOR_MAP :: Code_Color.[
     .KEYWORD,       // modifier_keyword
     .TYPE,          // type_keyword
     .VALUE_KEYWORD, // value_keyword
-    .KEYWORD,       // compiler_directive
+    .KEYWORD,       // preprocessor_directive
     .ERROR,         // invalid
 ];
 
@@ -467,6 +545,13 @@ Keyword :: enum u16 {
     kw_typedef;
     kw_union;
     kw_while;
+    kw__Alignas;
+    kw__Alignof;
+    kw__Atomic;
+    kw__Generic;
+    kw__Noreturn;
+    kw__Static_assert;
+    kw__Thread_local;
     kwv_true;
     kwv_false;
     kwm_extern;
@@ -475,12 +560,17 @@ Keyword :: enum u16 {
     kwm_unsigned;
     kwm_volatile;
     kwm_const;
+    kwm_inline;
+    kwm_restrict;
     kwt_double;
     kwt_char;
     kwt_int;
     kwt_long;
     kwt_float;
     kwt_void;
+    kwt__Bool;
+    kwt__Imaginary;
+    kwt__Complex;
 }
 
 Operation :: enum u16 {
@@ -523,6 +613,7 @@ Operation :: enum u16 {
 
 Punctuation :: enum u16 {
     semicolon;
+    backslash;
     l_paren;
     r_paren;
     l_brace;
@@ -603,7 +694,7 @@ MAX_KEYWORD_LENGTH :: #run -> s32 {
     return xx max_len;
 }
 
-COMPILER_DIRECTIVES_MAP :: #run -> Table(string, Directive) {
+PREPROCESSOR_DIRECTIVES_MAP :: #run -> Table(string, Directive) {
     table: Table(string, Directive);
     temp, keywords_count := enum_range(Keyword);
     size := 2 * (keywords_count);
@@ -632,23 +723,19 @@ MAX_DIRECTIVE_LENGTH :: #run -> s32 {
 }
 
 
-// I guess this should just not exist anymore
-read_identifier_string_tmp :: (using tokenizer: *Tokenizer) -> string /* temp */ {
-    identifier: [..] u8;
-    identifier.allocator = temp;
-
-    array_add(*identifier, <<t);
-
-    t += 1;
-  
+read_identifier_string :: (using tokenizer: *Tokenizer) -> string {
+    ret: string;
+    ret.data = t;
+    
     while t < max_t {
         c := <<t;
-        if is_alnum(c) { t += 1; array_add(*identifier, c); continue; }
+        if is_alnum(c) { t += 1; continue; }
         break;
     }
     if t >= max_t then t = max_t;
+    ret.count = xx (t - ret.data);
     
-    return to_string(identifier);
+    return ret;
 }
 
 eat_white_space :: inline (start: *u8, max_t: *u8) -> *u8 {

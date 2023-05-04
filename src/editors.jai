@@ -852,14 +852,13 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
             case "focus-config";   buffer.lang = .Focus_Config;
 
             case "c";   #through;
-            case "h";
-                buffer.lang = .C;
+            case "h";   #through;
             case "cpp"; #through;
             case "cxx"; #through;
             case "c++"; #through;
             case "hpp"; #through;
             case "cc";
-                buffer.lang = .Jai;  // TODO: C/C++
+                buffer.lang = .C;
         }
     }
 
