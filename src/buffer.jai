@@ -478,15 +478,15 @@ get_line_as_string :: (using buffer: Buffer, line_num: s32) -> string {
 }
 
 find_or_create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
+    lock(*open_buffers_lock); // We need the lock while searching because we might find an "empty" buffer while someone else is creating a new buffer
+    defer unlock(*open_buffers_lock);
+
     for * buffer, buffer_id : open_buffers {
         // Return the first empty standalone buffer to avoid creating a million new buffers
         if !buffer.has_file && !trim(to_string(buffer.bytes)) return buffer_id, false;
     }
 
     // Create a new buffer
-    lock(*open_buffers_lock);
-    defer unlock(*open_buffers_lock);
-
     buffer_id := open_buffers.count;
     buffer := bucket_array_add(*open_buffers);
     init_buffer(buffer);
@@ -503,6 +503,7 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
         if path.count > 248 return -1, false;  // Windows bad
     }
     lock(*open_buffers_lock);
+    defer unlock(*open_buffers_lock);  // We need the lock potentially through setting the file data, because creating a new buffer will look for an "empty" buffer
 
     buffer_id, found_buffer := table_find(*buffers_table, path);
     buffer: *Buffer = ---;
@@ -514,7 +515,6 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
         table_add(*buffers_table, copy_string(path), buffer_id);  // It should be ok to leak some memory here when we no longer need a buffer
     }
 
-    unlock(*open_buffers_lock);  // only hold the lock when it's critical
 
     if found_buffer return buffer_id, false;
 
@@ -626,6 +626,11 @@ refresh_buffer_from_disk :: (path: string) {
 }
 
 maybe_mark_buffer_as_deleted :: (path: string) {
+    // Someone could be writing to the buffers_table while we are searching for our buffer
+    // But do we care? The only place someone would add is not the place we are looking, unless the table grows?
+    lock(*open_buffers_lock);
+    defer unlock(*open_buffers_lock);
+
     buffer_id, found_buffer := table_find(*buffers_table, path);
     if !found_buffer return;  // no buffer for this path
     maybe_mark_buffer_as_deleted(buffer_id);
