@@ -1,9 +1,9 @@
-map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mapping {
+map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mapping, found: bool {
     invalid_action  := cast(Action) 0xFFFF;
     invalid_mapping := Key_Mapping.{};
 
-    if event.type != .KEYBOARD return invalid_action, invalid_mapping;
-    if !event.key_pressed return invalid_action, invalid_mapping;
+    if event.type != .KEYBOARD return invalid_action, invalid_mapping, false;
+    if !event.key_pressed return invalid_action, invalid_mapping, false;
 
     keymap := get_keymap_for_action_type(Action);
 
@@ -11,10 +11,10 @@ map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mappin
 
     for keymap {
         if it.combo.key_code == event_key_code && it.combo.mods.packed == (event.modifier_flags.packed | it.combo.ignore.packed) {
-            return cast(Action) it.action, it;
+            return cast(Action) it.action, it, true;
         }
     }
-    return invalid_action, invalid_mapping;
+    return invalid_action, invalid_mapping, false;
 }
 
 activate_hold_action :: (action: $Action_Type, event: Input.Event) {

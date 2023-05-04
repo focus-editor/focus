@@ -1,30 +1,34 @@
 #add_context current_editor_id := -1;
 
-editors_handle_event :: (event: Input.Event) {
+editors_handle_event :: (event: Input.Event) -> bool {
     mods := event.modifier_flags;
 
     context.current_editor_id = editors.active;
     defer context.current_editor_id = -1;
 
-    if event.type == .KEYBOARD && event.key_pressed {
-        action := map_event_to_action(event, Action_Editors);
-
-        editors_handle_action(event, action);
-
-    } else if event.type == .KEYBOARD && !event.key_pressed {
-        hold_actions_to_be_stopped := map_key_release_to_hold_actions(event, Action_Editors);
-        for hold_actions_to_be_stopped {
-            if it == {
-                case .scroll_viewport_up;           if  editor_smooth_scroll.up then editor_smooth_scroll.active = false;
-                case .scroll_viewport_up_fast;      if  editor_smooth_scroll.up then editor_smooth_scroll.active = false;
-                case .scroll_viewport_down;         if !editor_smooth_scroll.up then editor_smooth_scroll.active = false;
-                case .scroll_viewport_down_fast;    if !editor_smooth_scroll.up then editor_smooth_scroll.active = false;
-                // case .scroll_viewport_left;
-                // case .scroll_viewport_right;
+    if event.type == {
+        case .KEYBOARD;
+            if event.key_pressed {
+                action, mapping, found := map_event_to_action(event, Action_Editors);
+                editors_handle_action(event, action);
+                return found;
+            } else {
+                hold_actions_to_be_stopped := map_key_release_to_hold_actions(event, Action_Editors);
+                for hold_actions_to_be_stopped {
+                    if it == {
+                        case .scroll_viewport_up;           if  editor_smooth_scroll.up then editor_smooth_scroll.active = false;
+                        case .scroll_viewport_up_fast;      if  editor_smooth_scroll.up then editor_smooth_scroll.active = false;
+                        case .scroll_viewport_down;         if !editor_smooth_scroll.up then editor_smooth_scroll.active = false;
+                        case .scroll_viewport_down_fast;    if !editor_smooth_scroll.up then editor_smooth_scroll.active = false;
+                        // case .scroll_viewport_left;
+                        // case .scroll_viewport_right;
+                    }
+                }
+                // @Incomplete: Does stopping hold actions actually count as handling an event in the sense that it should suppress other event handlers?
+                return hold_actions_to_be_stopped.count > 0;
             }
-        }
-    } else if event.type == .TEXT_INPUT {
-        active_editor_type_char(event.utf32);
+        case .TEXT_INPUT; active_editor_type_char(event.utf32); return true;
+        case; return false;
     }
 }
 

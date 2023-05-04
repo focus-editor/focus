@@ -21,7 +21,7 @@ main :: () {
     if !projects_dir_existed then write_entire_file(tprint("%/Example Project.focus-config", projects_dir), EXAMPLE_PROJECT_FILE_DATA);
 
     init_file_watcher();
-    load_global_config(create_if_doesnt_exist = !DEBUG);
+    load_global_config(create_if_doesnt_exist = !DEBUG); // Don’t create global config in debug mode because it’s annoying if we want to test changes to the default config.
     init_workspace();
     init_buffers();
 
@@ -155,6 +155,7 @@ main :: () {
             }
         }
 
+        num_text_input_events_to_ignore := 0;
         for event : Input.events_this_frame {
             // General events
             if event.type == {
@@ -184,13 +185,19 @@ main :: () {
                         if event.key_pressed then last_press = frame_time;
                     }
 
-                    action := map_event_to_action(event, Action_Common);
+                    // #import "Debug";
+                    // if event.text_input_count > 0 breakpoint();
+
+                    action, mapping, found := map_event_to_action(event, Action_Common);
+                    if found num_text_input_events_to_ignore = event.text_input_count;
+
                     if action == {
                         case .increase_font_size;           increase_font_size();
                         case .decrease_font_size;           decrease_font_size();
                         case .reset_font_size_to_default;   reset_font_size_to_default();
                     }
                 case .MOUSE_WHEEL;
+                    // @ToDo: Make this die on macOS!
                     if ctrl_pressed() {
                         if event.wheel_delta < 0  {
                             decrease_font_size();
@@ -202,19 +209,28 @@ main :: () {
                     }
                 case .DRAG_AND_DROP_FILES;
                     editors_handle_file_drop(event.files);
+                case .TEXT_INPUT;
+                    if num_text_input_events_to_ignore {
+                        num_text_input_events_to_ignore -= 1;
+                        continue;
+                    }
             }
 
             // Pass events to the active widget.
             // Note that the active widget may change during the frame, so the following events
             // will be sent to the new widget, that's why we check global widget for each event.
+            handled := false;
             if #complete active_global_widget == {
-                case .editors;                  editors_handle_event(event);
-                case .finder;                   finder_handle_event(event);
-                case .open_file_dialog;         open_file_dialog_handle_event(event);
-                case .go_to_line_dialog;        go_to_line_dialog_handle_event(event);
-                case .unsaved_buffers_dialog;   unsaved_buffers_dialog_handle_event(event);
-                case .commands_dialog;          commands_dialog_handle_event(event);
-                case .open_project_dialog;      open_project_dialog_handle_event(event);
+                case .editors;                  handled = editors_handle_event(event);
+                case .finder;                   handled = finder_handle_event(event);
+                case .open_file_dialog;         handled = open_file_dialog_handle_event(event);
+                case .go_to_line_dialog;        handled = go_to_line_dialog_handle_event(event);
+                case .unsaved_buffers_dialog;   handled = unsaved_buffers_dialog_handle_event(event);
+                case .commands_dialog;          handled = commands_dialog_handle_event(event);
+                case .open_project_dialog;      handled = open_project_dialog_handle_event(event);
+            }
+            if handled && event.type == .KEYBOARD {
+                num_text_input_events_to_ignore = event.text_input_count;
             }
         }
 

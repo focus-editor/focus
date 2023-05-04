@@ -1,8 +1,8 @@
-go_to_line_dialog_handle_event :: (event: Input.Event) {
+go_to_line_dialog_handle_event :: (event: Input.Event) -> bool {
     using go_to_line_dialog;
 
     if event.type == .KEYBOARD && event.key_pressed {
-        action := map_event_to_action(event, Action_Search_Dialog);
+        action, mapping, found := map_event_to_action(event, Action_Search_Dialog);
         if action == {
             case .close_dialog;             close_go_to_line_dialog(jump_to_original_cursor = true);
             case .open_entry_in_place;      close_go_to_line_dialog();
@@ -38,9 +38,10 @@ go_to_line_dialog_handle_event :: (event: Input.Event) {
 
         if old_text != to_string(input.text) then jump_to_line();
 
+        return found || handled;
     } else if event.type == .TEXT_INPUT {
         char := event.utf32;
-        if char == 127 return;  // there seems to be a bug in the Input module
+        if char == 127 return true;  // there seems to be a bug in the Input module
                                 // which generates a TEXT_INPUT event for DEL
                                 // when Ctrl+Backspace is pressed
 
@@ -48,7 +49,9 @@ go_to_line_dialog_handle_event :: (event: Input.Event) {
             text_input_type_char(*input, char);
             jump_to_line();
         }
+        return true;
     }
+    return false;
 }
 
 show_go_to_line_dialog :: () {
