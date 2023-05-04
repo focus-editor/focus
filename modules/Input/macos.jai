@@ -196,7 +196,7 @@ init_input_system :: () {
     input_vk_translation_table[OSX_VK_FWD_SLASH] = xx #char "/";
     input_vk_translation_table[OSX_VK_CONTROL]  = CTRL;
     input_vk_translation_table[OSX_VK_OPTION]   = ALT;
-    // input_vk_translation_table[OSX_VK_COMMAND]  = UNKNOWN;
+    input_vk_translation_table[OSX_VK_COMMAND]  = CMD;
     input_vk_translation_table[OSX_VK_SPACEBAR]  = xx #char " ";
     input_vk_translation_table[OSX_VK_INSERT]    = INSERT;
     input_vk_translation_table[OSX_VK_HOME]      = HOME;
@@ -257,6 +257,7 @@ update_cocoa_window_events :: () {
                 shift_state := (modifiers & NSEventModifierFlagShift) != 0;
                 ctrl_state  := (modifiers & NSEventModifierFlagControl) != 0;
                 alt_state   := (modifiers & NSEventModifierFlagOption) != 0;
+                cmd_state   := (modifiers & NSEventModifierFlagCommand) != 0;
 
                 repeat := NO;
 
@@ -265,21 +266,21 @@ update_cocoa_window_events :: () {
                 event.key_code = get_key_code(keycode);
 
                 button_state_flags := (DOWN | START);
-                if event.key_code == Key_Code.SHIFT {
-                    if !shift_state then button_state_flags = Key_Current_State.END;
-                } else if event.key_code == Key_Code.ALT {
-                    if !alt_state then button_state_flags = Key_Current_State.END;
-                } else if event.key_code == Key_Code.CTRL {
-                    if !ctrl_state then button_state_flags = Key_Current_State.END;
+                if event.key_code == {
+                    case Key_Code.SHIFT;  if !shift_state then button_state_flags = Key_Current_State.END;
+                    case Key_Code.ALT;    if !alt_state   then button_state_flags = Key_Current_State.END;
+                    case Key_Code.CTRL;   if !ctrl_state  then button_state_flags = Key_Current_State.END;
+                    case Key_Code.CMD;    if !cmd_state   then button_state_flags = Key_Current_State.END;
                 }
 
                 event.key_pressed = 0;
                 if button_state_flags & DOWN then event.key_pressed = 1;
 
                 event.packed = 0;
-                event.shift_pressed = shift_state;
-                event.ctrl_pressed  = ctrl_state;
-                event.alt_pressed   = alt_state;
+                event.shift_pressed    = shift_state;
+                event.ctrl_pressed     = ctrl_state;
+                event.alt_pressed      = alt_state;
+                event.cmd_meta_pressed = cmd_state;
                 event.repeat = (repeat != NO);
 
                 input_button_states[event.key_code] |= button_state_flags;
@@ -293,6 +294,7 @@ update_cocoa_window_events :: () {
                 shift_state := (modifiers & NSEventModifierFlagShift) != 0;
                 ctrl_state  := (modifiers & NSEventModifierFlagControl) != 0;
                 alt_state   := (modifiers & NSEventModifierFlagOption) != 0;
+                cmd_state   := (modifiers & NSEventModifierFlagCommand) != 0;
 
                 repeat := NSEvent.isARepeat(nsevent);
 
@@ -301,14 +303,13 @@ update_cocoa_window_events :: () {
                 event.key_pressed = 1;
                 event.key_code = get_key_code(keycode);
                 event.packed = 0;
-                event.shift_pressed = shift_state;
-                event.ctrl_pressed  = ctrl_state;
-                event.alt_pressed   = alt_state;
+                event.shift_pressed    = shift_state;
+                event.ctrl_pressed     = ctrl_state;
+                event.alt_pressed      = alt_state;
+                event.cmd_meta_pressed = cmd_state;
                 event.repeat = (repeat != NO);
 
                 input_button_states[event.key_code] |= (DOWN | START);
-
-                array_add(*events_this_frame, event);
 
                 // Length will be 0 if this was a dead key.
                 // @Incomplete: How do we handle diacritics entered via dead keys?
@@ -318,6 +319,9 @@ update_cocoa_window_events :: () {
                     // defer release(utf32_data);
                     utf32 := cast(*u32) NSData.bytes(utf32_data);
                     count := NSData.length(utf32_data) / size_of(u32);
+
+                    event.text_input_count = xx count;
+                    array_add(*events_this_frame, event);
 
                     for 0..count-1 {
                         event: Event;
@@ -333,6 +337,8 @@ update_cocoa_window_events :: () {
 
                         array_add(*events_this_frame, event);
                     }
+                } else {
+                    array_add(*events_this_frame, event);
                 }
 
                 // continue;
@@ -344,15 +350,17 @@ update_cocoa_window_events :: () {
                 shift_state := (modifiers & NSEventModifierFlagShift) != 0;
                 ctrl_state  := (modifiers & NSEventModifierFlagControl) != 0;
                 alt_state   := (modifiers & NSEventModifierFlagOption) != 0;
+                cmd_state   := (modifiers & NSEventModifierFlagCommand) != 0;
 
                 event: Event;
                 event.type = .KEYBOARD;
                 event.key_pressed = 0;
                 event.key_code = get_key_code(keycode);
                 event.packed = 0;  // @Temporary: Unions not currently initialized.
-                event.shift_pressed = shift_state;
-                event.ctrl_pressed = ctrl_state;
-                event.alt_pressed   = alt_state;
+                event.shift_pressed    = shift_state;
+                event.ctrl_pressed     = ctrl_state;
+                event.alt_pressed      = alt_state;
+                event.cmd_meta_pressed = cmd_state;
 
                 input_button_states[event.key_code] = Key_Current_State.END;  // Because we shadowed that by Key_Code.END.
 
@@ -477,3 +485,4 @@ add_resize_record :: (hwnd: Window_Type, width: s32, height: s32) {
     record.width = width;
     record.height = height;
 }
+
