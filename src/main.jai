@@ -25,9 +25,7 @@ main :: () {
     init_workspace();
     init_buffers();
 
-    if config.settings.open_on_the_biggest_monitor {
-        window_x, window_y = platform_get_biggest_monitor_pos();
-    }
+    window_x, window_y, window_width, window_height = platform_get_centered_window_dimensions(config.settings.open_on_the_biggest_monitor);
 
     window_generic_title = ifx DEBUG then "Focus (debug mode)" else "Focus";
     platform_create_window();
@@ -454,8 +452,8 @@ projects_dir: string;
 
 window: Window_Type;
 window_generic_title: string = ---;
-window_width  := 1920;
-window_height := 1080;
+window_width  := 0;
+window_height := 0;
 window_x  := -1;
 window_y  := -1;
 dpi_scale := 1.0;

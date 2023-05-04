@@ -2,13 +2,13 @@ platform_setup :: inline () {
 
 }
 
-platform_get_biggest_monitor_pos :: inline () -> s32, s32 {
-    // On macOS, we do not do this.
+platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, s32, s32 {
+    // On macOS, we do not need to set x & y from open_on_biggest.
     // By default, macOS already positions the window within the monitor in which
     // the user performed the action to launch it. This makes sense when we are
     // not maximizing the window on launch anyway. (See platform_maximize_window)
-    
-    return -1, -1;
+
+    return -1, -1, 1920, 1080;
 }
 
 platform_create_window :: inline () {

@@ -2,22 +2,34 @@ platform_setup :: () {
     if timeBeginPeriod(1) != TIMERR_NOERROR then log_error("Couldn't set minimum timer resolution");
 }
 
-platform_get_biggest_monitor_pos :: () -> s32, s32 {
+platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, s32, s32 {
     if !EnumDisplayMonitors(null, null, monitor_enum_proc, 0) then panic("Couldn't enumerate monitors");
     assert(monitors.count > 0, "Unexpectedly no monitors found. This is a bug.");
 
-    biggest := monitors[0];
-    max_area := 0;
-    for monitors {
-        width  := it.right  - it.left;
-        height := it.bottom - it.top;
-        area   := width * height;
-        if max_area < area {
-            biggest = it;
-            max_area = area;
+    monitor := monitors[0];
+
+    if open_on_biggest {
+        max_area := 0;
+        for monitors {
+            width  := it.right  - it.left;
+            height := it.bottom - it.top;
+            area   := width * height;
+            if max_area < area {
+                monitor  = it;
+                max_area = area;
+            }
         }
     }
-    return cast(s32) biggest.left, cast(s32) biggest.top;
+
+    monitor_width  := monitor.right  - monitor.left;
+    monitor_height := monitor.bottom - monitor.top;
+
+    w := cast(s32) (monitor_width  / 1.5);
+    h := cast(s32) (monitor_height / 1.5);
+    x := cast(s32) (monitor.left + monitor_width  / 2 - w / 2);
+    y := cast(s32) (monitor.top  + monitor_height / 2 - h / 2);
+
+    return x, y, w, h;
 }
 
 platform_create_window :: () {
