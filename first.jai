@@ -2,6 +2,7 @@
 
 build :: () {
     options := get_build_options();
+    options.minimum_macos_version = .{12, 0};
     args := options.compile_time_command_line;
 
     import_path: [..] string;
