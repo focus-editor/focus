@@ -1,3 +1,15 @@
+PLATFORM_CONFIG_SECTION :: "[[windows]]";
+PLATFORM_SUBSECTION_ENUM :: enum {}
+PLATFORM_SUBSECTION_NAMES :: string.[];
+platform_config :: struct {}
+
+platform_parse_config_line :: (config: *platform_config, section: PLATFORM_SUBSECTION_ENUM, line: string) -> success: bool, error_msg: string {
+    return true, "";
+}
+
+platform_apply_config :: (config: *platform_config) {
+}
+
 platform_setup :: () {
     if timeBeginPeriod(1) != TIMERR_NOERROR then log_error("Couldn't set minimum timer resolution");
 }

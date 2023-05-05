@@ -40,6 +40,9 @@ parse_config :: (name: string, filename: string, file_data: string) -> Config, s
                 success, error_msg := parse_style_line(*parser, line);
                 if !success return result, false, error_msg;
 
+            case .platform;
+                success, error_msg := platform_parse_config_line(*parser, line);
+                if !success return result, false, error_msg;
         }
     }
 
@@ -70,6 +73,8 @@ parse_config :: (name: string, filename: string, file_data: string) -> Config, s
     result.style.font           = parser.data.font;
     result.style.font_size      = parser.data.font_size;
     result.style.parsed_colors  = parser.data.parsed_colors;  // @leak
+
+    result.platform = parser.parsed.platform;
 
     return result, true, "";
 }
@@ -172,6 +177,11 @@ log_parser_error :: (handler: Text_File_Handler, format: string, args: .. Any, f
     return message;
 } @PrintLike
 
+log_parser_error :: (full_path: string, line_number: int, message: string, flags := Log_Flags.NONE, loc := #caller_location) {
+    new_message := tprint("Line % of '%': %", line_number, full_path, message);
+    log(new_message, flags=Log_Flags.ERROR|flags, loc=loc);
+}
+
 Str_Code :: struct { str: string; code: Input.Key_Code; }
 using Input.Key_Code;
 STRING_TO_CODE_MAP :: Str_Code.[
@@ -257,6 +267,14 @@ switch_top_section :: (using parser: *Config_Parser, line: string) -> error: boo
                 return true, error_msg;
             }
             seen_top_sections |= .style;
+
+        case PLATFORM_CONFIG_SECTION;
+            top_section = .platform;
+            if seen_top_sections & .platform {
+                error_msg := log_parser_error(handler, "The section '%' is defined twice. This is an error.", PLATFORM_CONFIG_SECTION);
+                return true, error_msg;
+            }
+            seen_top_sections |= .platform;
 
         case;
             error_msg := log_parser_error(handler, "Expected one of the following top-level sections: [[workspace]], [[settings]], [[keymap]], [[style]], but found '%'", line);
@@ -565,6 +583,19 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo
     return result, true, "";
 }
 
+platform_parse_config_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string {
+    if begins_with(line, "[") {
+        for PLATFORM_SUBSECTION_NAMES {
+            if line == it { platform_subsection = xx it_index; return true, ""; }
+        }
+        error_msg := log_parser_error(handler, "Unknown platform subsection '%'.\nAvailable options are: %.", line, join(..PLATFORM_SUBSECTION_NAMES, ", ", allocator = temp));
+        return false, error_msg;
+    }
+    success, error_msg := platform_parse_config_line(*parsed.platform, platform_subsection, line);
+    if !success log_parser_error(handler.full_path, handler.line_number, error_msg);
+    return success, error_msg;
+}
+
 #scope_file
 
 Config_Parser :: struct {
@@ -578,6 +609,7 @@ Config_Parser :: struct {
         keymap;
         settings;
         style;
+        platform;
     } = .none;
 
     seen_top_sections: enum_flags {
@@ -585,6 +617,7 @@ Config_Parser :: struct {
         keymap;
         settings;
         style;
+        platform;
     };
 
     workspace_subsection: enum {
@@ -624,6 +657,8 @@ Config_Parser :: struct {
         "[open file dialog]",
         "[search dialog]",
     ];
+
+    platform_subsection: PLATFORM_SUBSECTION_ENUM;
 
     // Will be filled during parsing
     data: struct {

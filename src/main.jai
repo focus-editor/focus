@@ -61,6 +61,11 @@ main :: () {
     CODE_COLOR_MAP = refresh_code_color_map();
 
 
+    // This may generate window resize events if DPI/scaling settings need to be
+    // applied, so make sure to only call it after the window is created.
+    platform_apply_config(*config.platform);
+
+    if config.settings.maximize_on_start then platform_maximize_window(window);
 
     platform_enable_drag_and_drop(window);
 
@@ -104,13 +109,14 @@ main :: () {
         for Input.get_window_resizes() {
             Simp.update_window(it.window);
             if (it.window == window) {
-                should_reinit := (it.width != window_width) || (it.height != window_height);
+                should_reinit := dont_ignore_next_window_resize || ((it.width != window_width) || (it.height != window_height));
                 window_width = it.width;
                 window_height = it.height;
                 if should_reinit {
                     screen    = make_rect(0, 0, window_width, window_height);
                     dpi_scale = platform_get_dpi_scale(window);
                     init_fonts_and_dependent_things();
+                    dont_ignore_next_window_resize = false;
                 }
                 window_resized = true;
             }
@@ -234,6 +240,7 @@ main :: () {
             hard_reload_workspace();
             should_reload_workspace = false;
             redraw_requested = true;
+            platform_apply_config(*config.platform);
         }
 
         reset_temporary_storage();
@@ -576,6 +583,12 @@ Project_Dir :: struct {
 just_dropped_file := "";
 
 cpu_info: Cpu_X86;
+
+// This will be set to `true` in `maybe_refresh_config()` to signal that the
+// next window resize event should be handled even if the window doesn't actually
+// change size. This is needed when changing DPI/scaling options which require
+// a full repaint.
+dont_ignore_next_window_resize := false;
 
 
 #load "layout.jai";

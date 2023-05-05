@@ -75,6 +75,9 @@ maybe_refresh_config :: (path: string) {
             should_reload_workspace = false;
         }
     }
+
+    dont_ignore_next_window_resize = true;
+    platform_apply_config(*config.platform);
 }
 
 is_our_config_file :: (path: string) -> bool {
@@ -229,6 +232,9 @@ merge_configs :: (dst: *Config, src: Config) {
         }
     }
     CODE_COLOR_MAP = refresh_code_color_map();
+
+    // Platform config
+    dst.platform = src.platform;
 }
 
 load_font_by_name :: (name: string) -> font_data: string, success: bool {
@@ -258,6 +264,7 @@ Config :: struct {
     keymap: Keymap;
     settings: Settings;
     style: Style;
+    platform: platform_config;
 }
 
 Workspace :: struct {
