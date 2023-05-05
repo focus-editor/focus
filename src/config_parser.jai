@@ -537,10 +537,14 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo
         else if equal_nocase(mod_key, "shift")      result.mods.shift_pressed      = true;
         else if equal_nocase(mod_key, "alt")        result.mods.alt_pressed        = true;
         else if equal_nocase(mod_key, "cmd")        result.mods.cmd_meta_pressed   = true;
+        else if equal_nocase(mod_key, "meta")       result.mods.cmd_meta_pressed   = true;
+        else if equal_nocase(mod_key, "super")      result.mods.cmd_meta_pressed   = true;
         else if equal_nocase(mod_key, "{ctrl}")     result.ignore.ctrl_pressed     = true;
         else if equal_nocase(mod_key, "{shift}")    result.ignore.shift_pressed    = true;
         else if equal_nocase(mod_key, "{alt}")      result.ignore.alt_pressed      = true;
         else if equal_nocase(mod_key, "{cmd}")      result.ignore.cmd_meta_pressed = true;
+        else if equal_nocase(mod_key, "{meta}")     result.ignore.cmd_meta_pressed = true;
+        else if equal_nocase(mod_key, "{super}")    result.ignore.cmd_meta_pressed = true;
         else {
             error_msg := log_parser_error(handler, "Unknown modifier key '%'", mod_key);
             return result, false, error_msg;
