@@ -30,15 +30,23 @@
 
 # Main Git Branch
 
++ ...
+
+
+# RELEASES ==================================================================
+
+
+# Version 0.1.6, 6 May 2023
+
 + The editor will no longer open on the biggest monitor and maximized by default
 + Fix setting UTF8 window titles on Linux/X11
 + Linux: added the ability to set a fixed scaling factor
 + Basic C highlighting (currently applied to C++ as well)
 + Fix the race condition when creating new files while the workspace is being scanned (thanks to @StevenSavold)
-+ The macOS version now has Cmd key support
-+ Logging in threads is now supported. Thanks @ostef
++ The macOS version now has Cmd key support and a separate config file - thanks to @rluba
++ Logging in threads is now supported - thanks to @ostef
++ On Linux the Meta or Super keys can now be used in keymaps
 
-# RELEASES ==================================================================
 
 # Version 0.1.5, 4 May 2023
 
@@ -49,6 +57,7 @@
 + Opening a file from the command line on Linux should no longer segfault
 + Font horizontal spacing has been fixed
 + It is now possible to configure line height scale in the config. Just add `line_height_scale_percent:  <number>`. Default: 120
+
 
 # Version 0.1.4, 1 May 2023
 
