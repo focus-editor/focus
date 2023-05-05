@@ -604,7 +604,6 @@ Keyword :: enum u16 {
     kwt_wchar_t;
     kwt_wint_t;
     kwt_size_t;
-    kwt_wint_t;
     kwt_ptrdiff_t;
     kwt_sig_atomic_t;
 }
