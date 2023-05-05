@@ -570,6 +570,12 @@ wl_window_handle_resize :: (w: *WLWindow, width: s32, height: s32) {
     add_resize_record(xx w.wrapper, xx w.buffer_width, xx w.buffer_height);
 }
 
+wl_get_dpi_scaling_factor :: (w: *WLWindow) -> float {
+    fractional_scale := ifx w.display.fixed_scaling then w.display.scale_factor_override else w.fractional_scale;
+    ret := cast(float) fractional_scale / 120.0;
+    return ret;
+}
+
 fractional_scale_listener :: wp_fractional_scale_v1_listener.{
     preferred_scale = (data: *void, self: *wp_fractional_scale_v1, scale: u32) -> void #c_call {
         ctx: Context;
