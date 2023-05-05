@@ -479,16 +479,14 @@ get_line_as_string :: (using buffer: Buffer, line_num: s32) -> string {
 }
 
 find_or_create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
-    // NOTE: this code was disabled because it caused conflicts with the workspace scanner
-    //      (if you tried to create an empty buffer while the workspace is being scanned,
-    //       you would randomly find a new empty buffer the scanner hasn't had a chance to
-    //       fill in yet, which resulted in weird behaviour and crashes.)
-    //       So for now we will just allow the user to create a million empty buffers. Sigh.
-
-    // for * buffer, buffer_id : open_buffers {
-    //     // Return the first empty standalone buffer to avoid creating a million new buffers
-    //     if !buffer.has_file && !trim(to_string(buffer.bytes)) return buffer_id, false;
-    // }
+    if workspace_scan_complete {
+        // Return the first empty standalone buffer to avoid creating a million new buffers.
+        // We have to only do this if the workspace scan is complete, otherwise we'll be in for
+        // many surprising thread-related bugs
+        for * buffer, buffer_id : open_buffers {
+            if !buffer.has_file && !trim(to_string(buffer.bytes)) return buffer_id, false;
+        }
+    }
 
     // Create a new buffer
     lock(*open_buffers_lock);

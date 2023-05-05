@@ -34,7 +34,7 @@ add_directory_to_workspace :: (path: string, index := -1) {
 
 start_initial_workspace_scan :: () {
     file_list_ready = false;
-    initial_scan_complete = false;
+    workspace_scan_complete = false;
     array_reset(*files_to_scan);
 
     // Get the list of all files in the project asynchronously (depending on the size it can cause a startup delay otherwise)
@@ -52,7 +52,7 @@ get_workspace_scan_progress :: () -> float {
 }
 
 maybe_update_workspace_buffers :: () {
-    if !initial_scan_complete {
+    if !workspace_scan_complete {
         if !file_list_ready {
             results := get_completed_work(*file_list_thread_group);
             if results {
@@ -96,7 +96,7 @@ maybe_update_workspace_buffers :: () {
 
         num_jobs_completed += results.count;
         if num_jobs_completed >= num_jobs_to_complete {
-            initial_scan_complete = true;
+            workspace_scan_complete = true;
             shutdown(*scanner_thread_group);
 
             reset(*scan_memory_pool);
@@ -139,8 +139,8 @@ maybe_update_workspace_buffers :: () {
 
 hard_reload_workspace :: () {
     // Make sure no threads are running
-    if !file_list_ready         shutdown(*file_list_thread_group);
-    if !initial_scan_complete   shutdown(*scanner_thread_group);
+    if !file_list_ready           shutdown(*file_list_thread_group);
+    if !workspace_scan_complete   shutdown(*scanner_thread_group);
 
     deinit_finder();
     deinit_open_file_dialog();
@@ -439,10 +439,15 @@ scan_memory_pool: Flat_Pool;
 files_to_scan: [..] string;
 
 file_list_ready       := false;
-initial_scan_complete := false;
 num_jobs_to_complete  := 0;
 num_jobs_completed    := 0;
 
 MAX_FILES_PER_JOB :: 500;  // we don't want to give huge jobs to threads because then it's more likely
                            // that some threads will finish faster than others and will sit around twiddling
                            // their thumbs while they could be doing work if the work pieces were smaller
+
+
+#scope_export
+
+// Other modules might want to know whether the scan is complete
+workspace_scan_complete := false;
