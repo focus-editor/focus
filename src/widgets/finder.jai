@@ -17,42 +17,37 @@ deinit_finder :: () {
     finder.initted = false;
 }
 
-finder_handle_event :: (event: Input.Event) -> bool {
+finder_handle_event :: (event: Input.Event) -> handled: bool {
     using finder;
 
     if event.type == .KEYBOARD && event.key_pressed {
         handled := text_input_handle_event(*input, event);
         if handled { start_new_search(); return true; }
 
-        action, mapping, found := map_event_to_action(event, Action_Search_Dialog);
+        action, mapping := map_event_to_action(event, Action_Search_Dialog);
         if action == {
-            case .toggle_expand;        toggle_expand();                return true;
-            case .move_up;              move_cursor(-1, wrap = true);   return true;
-            case .move_down;            move_cursor( 1, wrap = true);   return true;
-            case .move_up_fast;         move_cursor(-5);                return true;
-            case .move_down_fast;       move_cursor( 5);                return true;
-            case .move_up_one_page;     move_cursor(-per_page);         return true;
-            case .move_down_one_page;   move_cursor( per_page);         return true;
+            case .toggle_expand;            toggle_expand();                                        return true;
 
-            case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
-            case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
-            case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);
+            case .move_up;                  move_cursor(-1, wrap = true);                           return true;
+            case .move_down;                move_cursor( 1, wrap = true);                           return true;
+            case .move_up_fast;             move_cursor(-5);                                        return true;
+            case .move_down_fast;           move_cursor( 5);                                        return true;
+            case .move_up_one_page;         move_cursor(-per_page);                                 return true;
+            case .move_down_one_page;       move_cursor( per_page);                                 return true;
 
-            case .show_commands;                                    show_commands_dialog();
-
-            case .close_dialog;             finder_close();     return true;
-            case .open_entry_in_place;      finder_open_selected_result(selected, .in_place);     return true;
-            case .open_entry_on_the_side;   finder_open_selected_result(selected, .on_the_side);  return true;
-            case .open_entry_on_the_left;   finder_open_selected_result(selected, .left);         return true;
-            case .open_entry_on_the_right;  finder_open_selected_result(selected, .right);        return true;
+            case .close_dialog;             finder_close();                                         return true;
+            case .open_entry_in_place;      finder_open_selected_result(selected, .in_place);       return true;
+            case .open_entry_on_the_side;   finder_open_selected_result(selected, .on_the_side);    return true;
+            case .open_entry_on_the_left;   finder_open_selected_result(selected, .left);           return true;
+            case .open_entry_on_the_right;  finder_open_selected_result(selected, .right);          return true;
         }
-        return found;
+        return false;
 
     } else if event.type == .TEXT_INPUT {
         char := event.utf32;
         if char == 127 return true;  // there seems to be a bug in the Input module
-                                // which generates a TEXT_INPUT event for DEL
-                                // when Ctrl+Backspace is pressed
+                                     // which generates a TEXT_INPUT event for DEL
+                                     // when Ctrl+Backspace is pressed
 
         text_input_type_char(*finder.input, char);
         start_new_search();

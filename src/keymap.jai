@@ -1,9 +1,9 @@
-map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mapping, found: bool {
+map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mapping {
     invalid_action  := cast(Action) 0xFFFF;
     invalid_mapping := Key_Mapping.{};
 
-    if event.type != .KEYBOARD return invalid_action, invalid_mapping, false;
-    if !event.key_pressed return invalid_action, invalid_mapping, false;
+    if event.type != .KEYBOARD return invalid_action, invalid_mapping;
+    if !event.key_pressed return invalid_action, invalid_mapping;
 
     keymap := get_keymap_for_action_type(Action);
 
@@ -11,10 +11,10 @@ map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mappin
 
     for keymap {
         if it.combo.key_code == event_key_code && it.combo.mods.packed == (event.modifier_flags.packed | it.combo.ignore.packed) {
-            return cast(Action) it.action, it, true;
+            return cast(Action) it.action, it;
         }
     }
-    return invalid_action, invalid_mapping, false;
+    return invalid_action, invalid_mapping;
 }
 
 activate_hold_action :: (action: $Action_Type, event: Input.Event) {
@@ -83,7 +83,6 @@ get_first_matching_key_combo_from_action :: (action: $T) -> [] string /* temp */
     #if OS == .MACOS {
         if combo.mods.cmd_meta_pressed then array_add(*keys, "Cmd");
     }
-
 
     key_name := keymap_map_key_code_to_string(combo.key_code);
     array_add(*keys, key_name);

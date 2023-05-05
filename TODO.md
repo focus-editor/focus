@@ -1,6 +1,7 @@
 # TODO
 
 - Merge the macOS misc PR and cleanup
+- Fix the thread logging
 
 - Derive path chunks in the file open dialog from the current buffer
 

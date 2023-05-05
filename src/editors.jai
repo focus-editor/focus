@@ -1,6 +1,6 @@
 #add_context current_editor_id := -1;
 
-editors_handle_event :: (event: Input.Event) -> bool {
+editors_handle_event :: (event: Input.Event) -> handled: bool {
     mods := event.modifier_flags;
 
     context.current_editor_id = editors.active;
@@ -9,9 +9,8 @@ editors_handle_event :: (event: Input.Event) -> bool {
     if event.type == {
         case .KEYBOARD;
             if event.key_pressed {
-                action, mapping, found := map_event_to_action(event, Action_Editors);
-                editors_handle_action(event, action);
-                return found;
+                action, mapping := map_event_to_action(event, Action_Editors);
+                return active_editor_handle_event(event, action);
             } else {
                 hold_actions_to_be_stopped := map_key_release_to_hold_actions(event, Action_Editors);
                 for hold_actions_to_be_stopped {
@@ -27,46 +26,18 @@ editors_handle_event :: (event: Input.Event) -> bool {
                 // @Incomplete: Does stopping hold actions actually count as handling an event in the sense that it should suppress other event handlers?
                 return hold_actions_to_be_stopped.count > 0;
             }
-        case .TEXT_INPUT; active_editor_type_char(event.utf32); return true;
-        case; return false;
+
+        case .TEXT_INPUT;
+            active_editor_type_char(event.utf32);
+            return true;
     }
+
+    return false;
 }
 
 activate_editors :: () {
     active_global_widget = .editors;
     cursors_start_blinking();
-}
-
-editors_handle_action :: (event: Input.Event, action: Action_Editors) {
-    // TODO: refactor this so that the common actions work for every active global widget
-
-    // Actions that do not require an active editor
-    if action == {
-        case .search_in_project;                                finder_open_from_editor(); return;
-        case .go_to_line;                                       show_go_to_line_dialog();  return;
-
-        case .open_project;                                     show_open_project_dialog();
-        case .open_projects_directory;                          platform_open_in_explorer(projects_dir);
-        case .open_global_config;                               editors_open_file(global_config_path);
-        case .open_project_config;
-            if project_config_path {
-                editors_open_file(project_config_path);
-            } else {
-                add_user_warning("No project is active. Please open a project first.", dismiss_in_seconds = 5);
-            }
-
-        case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
-        case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
-        case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);
-
-        case .show_commands;                                    show_commands_dialog();
-
-        case .create_new_file;                                  editors_create_new_file();             return;
-        case .create_new_file_on_the_side;                      editors_create_new_file(.on_the_side); return;
-    }
-
-    // Let the active editor handle the event
-    active_editor_handle_event(event, action);
 }
 
 editors_handle_file_drop :: (files: [] string) {
@@ -88,9 +59,9 @@ editors_handle_file_drop :: (files: [] string) {
     }
 }
 
-active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
+active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> handled: bool {
     editor, buffer := get_active_editor_and_buffer();
-    if !editor return;
+    if !editor return false;
 
     shift_pressed := event.modifier_flags.shift_pressed;
     ctrl_pressed  := event.modifier_flags.ctrl_pressed;
@@ -136,7 +107,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
                 case .open_entry_on_the_right;      search_bar_open_selected_result(editor, buffer, .right);
             }
         }
-        return;
+        return true;
     }
 
     cursors := editor.cursors;
@@ -237,7 +208,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
         case .delete_to_start_of_line;          delete_to_start_of_line             (editor, buffer);
         case .delete_to_end_of_line;            delete_to_end_of_line               (editor, buffer);
 
-        case;                                   return;  // not handled
+        case;                                   return false;
     }
 
     if new_group then new_edit_group(buffer, editor);  // do it after action
@@ -258,6 +229,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) {
     if editor.cursor_moved && !enabled_whole_words then editor.search_whole_words = false;
     if editor.cursor_moved then editor.refresh_highlights = true;  // update or remove highlights
     if editor.cursor_moved then cursors_start_blinking();
+
+    return true;
 }
 
 active_editor_type_char :: (char: u32) {
@@ -379,6 +352,14 @@ editors_open_file :: (path: string, placement: Editor_Placement = .in_place) {
     if !file_is_watched(full_path) start_watching_file(full_path);
 
     editors_open_buffer(buffer_id, placement);
+}
+
+editors_open_project_config :: () {
+    if project_config_path {
+        editors_open_file(project_config_path);
+    } else {
+        add_user_warning("No project is active. Please open a project first.", dismiss_in_seconds = 5);
+    }
 }
 
 editors_create_new_file :: (placement: Editor_Placement = .in_place) {
@@ -859,6 +840,7 @@ select_lines :: (editor: *Editor, buffer: Buffer) {
         cursor.sel = get_line_start_offset(buffer, start_line);
         cursor.pos = get_line_start_offset(buffer, end_line+1);
     }
+    editor.cursor_moved = true;
 }
 
 scan_through_similar_chars_on_the_left :: (using buffer: Buffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true) -> offset: s32 {

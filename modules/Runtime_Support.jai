@@ -561,34 +561,4 @@ report_error_in_yer_face :: (message: string, args: .. Any) {
     }
 }
 
-
-// // For the error reporting above
-
 // END of the functions we've added
-
-
-/*
-memcpy :: (dest: *void, source: *void, count: s64) #no_context {
-    if (dest < source + count) && (dest >= source - count) {
-        #asm { int3; }
-    }
-
-    // Super-dumb memcpy for now.
-
-    // @Incomplete: Generating stuff for fixed-size counts,
-    // @Incomplete: qwords then bytes afterward for long variable counts,
-    //                 or whatever that sse3 data copying thing is.
-    // @Incomplete: We should probably do an overlappable copy by default,
-    //              and call that memcpy or maybe something less C-like,
-    //              and have fast-non-overlappable be a thing that people do
-    //              when they know they can.
-
-    #asm {
-        dest   = di;
-        source = si;
-        count  = c;
-        rep_movs.b dest, source, count;
-    }
-}
-*/
-

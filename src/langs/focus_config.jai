@@ -114,7 +114,9 @@ parse_keymap_line :: (using tokenizer: *Tokenizer, token: *Token) {
     str.data  = old_t;
     str.count = t - old_t;
 
-    if equal_nocase(str, "Shift") || equal_nocase(str, "Alt") || equal_nocase(str, "Ctrl") {
+    MODIFIER_KEYS :: string.["shift", "alt", "ctrl", "cmd", "meta", "super"];
+
+    if array_find(MODIFIER_KEYS, to_lower_copy(str)) {
         token.type = .modifier_key;
     } else {
         _, found_action := table_find(*Keymap_Action_Strings, str);

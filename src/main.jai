@@ -21,7 +21,7 @@ main :: () {
     if !projects_dir_existed then write_entire_file(tprint("%/Example Project.focus-config", projects_dir), EXAMPLE_PROJECT_FILE_DATA);
 
     init_file_watcher();
-    load_global_config(create_if_doesnt_exist = !DEBUG); // Don’t create global config in debug mode because it’s annoying if we want to test changes to the default config.
+    load_global_config(create_if_doesnt_exist = !DEBUG);  // don’t create global config in debug mode because it’s annoying if we want to test changes to the default config
     init_workspace();
     init_buffers();
 
@@ -71,8 +71,6 @@ main :: () {
     window_width, window_height = Simp.get_render_dimensions(window);
     screen = make_rect(0, 0, window_width, window_height);
     Simp.set_render_target(window);
-
-    // editors_open_file("W:/focus/src/main.jai");
 
     // Init logger after we know the session dir and the config
     init_logger();
@@ -158,7 +156,10 @@ main :: () {
             }
         }
 
+        // Keyboard and text input events may be generated for the same keypress.
+        // If we handle it as a keyboard event we will need to ignore its text input duplicates
         num_text_input_events_to_ignore := 0;
+
         for event : Input.events_this_frame {
             // General events
             if event.type == {
@@ -188,17 +189,6 @@ main :: () {
                         if event.key_pressed then last_press = frame_time;
                     }
 
-                    // #import "Debug";
-                    // if event.text_input_count > 0 breakpoint();
-
-                    action, mapping, found := map_event_to_action(event, Action_Common);
-                    if found num_text_input_events_to_ignore = event.text_input_count;
-
-                    if action == {
-                        case .increase_font_size;           increase_font_size();
-                        case .decrease_font_size;           decrease_font_size();
-                        case .reset_font_size_to_default;   reset_font_size_to_default();
-                    }
                 case .MOUSE_WHEEL;
                     // @ToDo: Make this die on macOS!
                     if ctrl_pressed() {
@@ -219,22 +209,27 @@ main :: () {
                     }
             }
 
-            // Pass events to the active widget.
-            // Note that the active widget may change during the frame, so the following events
-            // will be sent to the new widget, that's why we check global widget for each event.
+            // Maybe handle a common action that applies to all widgets
             handled := false;
-            if #complete active_global_widget == {
-                case .editors;                  handled = editors_handle_event(event);
-                case .finder;                   handled = finder_handle_event(event);
-                case .open_file_dialog;         handled = open_file_dialog_handle_event(event);
-                case .go_to_line_dialog;        handled = go_to_line_dialog_handle_event(event);
-                case .unsaved_buffers_dialog;   handled = unsaved_buffers_dialog_handle_event(event);
-                case .commands_dialog;          handled = commands_dialog_handle_event(event);
-                case .open_project_dialog;      handled = open_project_dialog_handle_event(event);
+            action := map_event_to_action(event, Action_Editors);
+            handled = handle_common_editor_action(action);
+
+            if !handled {
+                // Pass events to the active widget.
+                // Note that the active widget may change during the frame, so the following events
+                // will be sent to the new widget, that's why we check global widget for each event.
+                if #complete active_global_widget == {
+                    case .editors;                  handled = editors_handle_event(event);
+                    case .finder;                   handled = finder_handle_event(event);
+                    case .open_file_dialog;         handled = open_file_dialog_handle_event(event);
+                    case .go_to_line_dialog;        handled = go_to_line_dialog_handle_event(event);
+                    case .unsaved_buffers_dialog;   handled = unsaved_buffers_dialog_handle_event(event);
+                    case .commands_dialog;          handled = commands_dialog_handle_event(event);
+                    case .open_project_dialog;      handled = open_project_dialog_handle_event(event);
+                }
             }
-            if handled && event.type == .KEYBOARD {
-                num_text_input_events_to_ignore = event.text_input_count;
-            }
+
+            if handled && event.type == .KEYBOARD then num_text_input_events_to_ignore = event.text_input_count;
         }
 
         if should_quit && unsaved_buffers_exist() && !force_quit {
@@ -271,6 +266,35 @@ main :: () {
 
     // report := make_leak_report();
     // log_leak_report(report);
+}
+
+handle_common_editor_action :: (action: Action_Editors) -> handled: bool {
+    if action == {
+        case .increase_font_size;                               increase_font_size();                               return true;
+        case .decrease_font_size;                               decrease_font_size();                               return true;
+        case .reset_font_size_to_default;                       reset_font_size_to_default();                       return true;
+
+        case .open_project;                                     show_open_project_dialog();                         return true;
+        case .open_projects_directory;                          platform_open_in_explorer(projects_dir);            return true;
+        case .open_global_config;                               editors_open_file(global_config_path);              return true;
+        case .open_project_config;                              editors_open_project_config();                      return true;
+
+        case .go_to_line;                                       show_go_to_line_dialog();                           return true;
+        case .create_new_file;                                  editors_create_new_file();                          return true;
+        case .create_new_file_on_the_side;                      editors_create_new_file(.on_the_side);              return true;
+
+        case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);                     return true;
+        case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);                   return true;
+        case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true); return true;
+
+        case .show_commands;                                    show_commands_dialog();                             return true;
+
+        // TODO: search_in_buffer
+        case .search_in_project;
+            if active_global_widget == .editors then finder_open_from_editor(); else finder_open();
+            return true;
+    }
+    return false;
 }
 
 init_fonts_and_dependent_things :: () {

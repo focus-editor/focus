@@ -1,32 +1,23 @@
-open_project_dialog_handle_event :: (event: Input.Event) -> bool {
+open_project_dialog_handle_event :: (event: Input.Event) -> handled: bool {
     using open_project_dialog;
 
     if event.type == .KEYBOARD && event.key_pressed {
-        action, mapping, found := map_event_to_action(event, Action_Open_File_Dialog);
+        action, mapping := map_event_to_action(event, Action_Open_File_Dialog);
         if action == {
-            case .close_dialog;             hide_open_project_dialog(); return true;
-            case .open_entry_in_place;      open_selected_project(); return true;
-            case .open_entry_on_the_side;   open_selected_project(); return true;
+            case .close_dialog;             hide_open_project_dialog();     return true;
+            case .open_entry_in_place;      open_selected_project();        return true;
+            case .open_entry_on_the_side;   open_selected_project();        return true;
 
-            case .move_up;              move_cursor(-1, wrap = true);   return true;
-            case .move_down;            move_cursor( 1, wrap = true);   return true;
-            case .move_up_fast;         move_cursor(-5);                return true;
-            case .move_down_fast;       move_cursor( 5);                return true;
-            case .move_up_one_page;     move_cursor(-per_page); return true;
-            case .move_down_one_page;   move_cursor( per_page); return true;
-
-            case .search_in_buffer;     return true;  // TODO: handle when the widget is rewritten
-            case .search_in_project;    finder_open();                  return true;
-
-            case .show_commands;        show_commands_dialog();         return true;
-
-            case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
-            case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
-            case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);
+            case .move_up;                  move_cursor(-1, wrap = true);   return true;
+            case .move_down;                move_cursor( 1, wrap = true);   return true;
+            case .move_up_fast;             move_cursor(-5);                return true;
+            case .move_down_fast;           move_cursor( 5);                return true;
+            case .move_up_one_page;         move_cursor(-per_page);         return true;
+            case .move_down_one_page;       move_cursor( per_page);         return true;
         }
 
         handled := maybe_handle_text_input_event(*input, event);
-        return found || handled;
+        return handled;
 
     } else if event.type == .TEXT_INPUT {
         char := event.utf32;

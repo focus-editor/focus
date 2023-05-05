@@ -1,21 +1,12 @@
-go_to_line_dialog_handle_event :: (event: Input.Event) -> bool {
+go_to_line_dialog_handle_event :: (event: Input.Event) -> handled: bool {
     using go_to_line_dialog;
 
     if event.type == .KEYBOARD && event.key_pressed {
-        action, mapping, found := map_event_to_action(event, Action_Search_Dialog);
+        action, mapping := map_event_to_action(event, Action_Search_Dialog);
         if action == {
-            case .close_dialog;             close_go_to_line_dialog(jump_to_original_cursor = true);
-            case .open_entry_in_place;      close_go_to_line_dialog();
-            case .open_entry_on_the_side;   close_go_to_line_dialog();
-
-            case .search_in_buffer;      // TODO
-            case .search_in_project;    finder_open();
-
-            case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
-            case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
-            case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);
-
-            case .show_commands;                                    show_commands_dialog();
+            case .close_dialog;             close_go_to_line_dialog(jump_to_original_cursor = true);    return true;
+            case .open_entry_in_place;      close_go_to_line_dialog();                                  return true;
+            case .open_entry_on_the_side;   close_go_to_line_dialog();                                  return true;
         }
 
         old_text := copy_temporary_string(to_string(input.text));
@@ -38,7 +29,8 @@ go_to_line_dialog_handle_event :: (event: Input.Event) -> bool {
 
         if old_text != to_string(input.text) then jump_to_line();
 
-        return found || handled;
+        return handled;
+
     } else if event.type == .TEXT_INPUT {
         char := event.utf32;
         if char == 127 return true;  // there seems to be a bug in the Input module

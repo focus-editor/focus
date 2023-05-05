@@ -922,7 +922,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         );
 
         // Draw file name and path
-        width, pen = draw_file_info(buffer, width, padding, pen, draw_crlf_warning = true);
+        width, pen = draw_file_info(buffer, width, padding, pen, draw_crlf_warning = true, draw_config_warning = true);
 
         // Draw line and column numbers
         {
@@ -949,7 +949,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
 }
 
-draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, bold := true, draw_crlf_warning := false) -> new_width: float, new_pen: Vector2 {
+draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, bold := true, draw_crlf_warning := false, draw_config_warning := false) -> new_width: float, new_pen: Vector2 {
     file_name_color := Colors.UI_DEFAULT;
     if buffer.modified then file_name_color = Colors.UI_WARNING;
 
@@ -1000,6 +1000,20 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui, "[CRLF will be replaced with LF on save]");
         Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = Colors.UI_WARNING);
+    }
+
+    if draw_config_warning && buffer.has_file {
+        label: string;
+        if buffer.file.full_path == global_config_path {
+            label = "[current global config]";
+        } else if buffer.file.full_path == project_config_path {
+            label = "[current project config]";
+        }
+        if label {
+            pen.x += width + padding;
+            width = xx Simp.prepare_text(font_ui, label);
+            Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = Colors.UI_WARNING);
+        }
     }
 
     if buffer.has_file {

@@ -12,7 +12,6 @@
 # The workspace scanner will not descend into the dirs that match these names.
 .svn
 .git
-temp
 __pycache__
 
 [allow file extensions]
@@ -63,34 +62,34 @@ line_height_scale_percent:              120
 
 # Key combination           Action
 
-Cmd-D                      select_word_or_create_another_cursor
+Cmd-D                       select_word_or_create_another_cursor
 
-Cmd-Shift-D                duplicate_lines
+Cmd-Shift-D                 duplicate_lines
 
 # These shortcuts can be annoying to accidentally use, so they are commented out by default
 # Shift-Backspace             delete_line_and_go_up
 # Shift-Delete                delete_line
 
-Cmd-K                      delete_to_end_of_line
-Cmd-Shift-Delete           delete_to_end_of_line
-Cmd-Shift-Backspace        delete_to_start_of_line
+Cmd-K                       delete_to_end_of_line
+Cmd-Shift-Delete            delete_to_end_of_line
+Cmd-Shift-Backspace         delete_to_start_of_line
 
 Cmd-Shift-ArrowUp           move_selected_lines_up
 Cmd-Shift-ArrowDown         move_selected_lines_down
 
-Cmd-J                      join_lines
-Cmd-Shift-J                join_lines_no_spaces_in_between
+Cmd-J                       join_lines
+Cmd-Shift-J                 join_lines_no_spaces_in_between
 
 Tab                         indent_or_go_to_next_tabstop
 Shift-Tab                   unindent
 
-Cmd-]                      indent
-Cmd-[                      unindent
+Cmd-]                       indent
+Cmd-[                       unindent
 
-Cmd-S                      save
+Cmd-S                       save
 
-Cmd-/                      toggle_comment
-Cmd-L                      select_line
+Cmd-/                       toggle_comment
+Cmd-L                       select_line
 
 Cmd-K                       scroll_viewport_up
 Cmd-E                       scroll_viewport_up_fast  # for some reason Cmd-U didn't reach the window at all, so using Cmd-E instead
@@ -119,16 +118,16 @@ Enter                       break_line
 Ctrl-Enter                  new_line_below_without_breaking
 Ctrl-Shift-Enter            new_line_above_without_breaking
 
-Cmd-1                      switch_to_left_editor
-Cmd-2                      switch_to_right_editor
-Cmd-,                      switch_to_other_editor
-Cmd-Shift-,                duplicate_editor
+Cmd-1                       switch_to_left_editor
+Cmd-2                       switch_to_right_editor
+Cmd-,                       switch_to_other_editor
+Cmd-Shift-,                 duplicate_editor
 
 Ctrl-Cmd-Shift-ArrowLeft    move_editor_to_the_left
 Ctrl-Cmd-Shift-ArrowRight   move_editor_to_the_right
 
-Cmd-N                      create_new_file
-Cmd-Shift-N                create_new_file_on_the_side
+Cmd-N                       create_new_file
+Cmd-Shift-N                 create_new_file_on_the_side
 
 
 [open file dialog]
@@ -136,9 +135,9 @@ Cmd-Shift-N                create_new_file_on_the_side
 Escape                      close_dialog
 
 Enter                       open_entry_in_place
-Cmd-Enter                  open_entry_on_the_side
-Cmd-1                      open_entry_on_the_left
-Cmd-2                      open_entry_on_the_right
+Cmd-Enter                   open_entry_on_the_side
+Cmd-1                       open_entry_on_the_left
+Cmd-2                       open_entry_on_the_right
 
 Tab                         open_directory
 /                           open_directory
@@ -152,9 +151,9 @@ Backspace                   pop_directory
 Escape                      close_dialog
 
 Enter                       open_entry_in_place
-Cmd-Enter                  open_entry_on_the_side
-Cmd-1                      open_entry_on_the_left
-Cmd-2                      open_entry_on_the_right
+Cmd-Enter                   open_entry_on_the_side
+Cmd-1                       open_entry_on_the_left
+Cmd-2                       open_entry_on_the_right
 
 Shift-Enter                 move_up  # an Cmdernative way to move
 
@@ -164,55 +163,54 @@ Shift-Enter                 move_up  # an Cmdernative way to move
 # Common key combos may be used as a fallback if they are not defined in more specific sections.
 # For example, if "move_up" is not defined in [editors], the one in the [common] section will be matched.
 
-Cmd-X                       show_commands
-Cmd-Shift-P                show_commands
+Cmd-Shift-P                 show_commands
 
-Cmd-F                      search_in_buffer
+Cmd-F                       search_in_buffer
 Cmd-Alt-F                   search_in_buffer_dropdown_mode
-Cmd-Shift-F                search_in_project
+Cmd-Shift-F                 search_in_project
 
-Cmd-P                      show_open_file_dialog_in_search_mode
-Cmd-O                      show_open_file_dialog_in_navigate_mode
-Cmd-Shift-O                show_open_file_dialog_in_navigate_mode_from_root
+Cmd-P                       show_open_file_dialog_in_search_mode
+Cmd-O                       show_open_file_dialog_in_navigate_mode
+Cmd-Shift-O                 show_open_file_dialog_in_navigate_mode_from_root
 
-Cmd-G                      go_to_line
+Cmd-G                       go_to_line
 
-Cmd-C                      copy
-Cmd-X                      cut
-Cmd-V                      paste
+Cmd-C                       copy
+Cmd-X                       cut
+Cmd-V                       paste
 
-Cmd-Z                      undo
-Cmd-Shift-Z                redo
+Cmd-Z                       undo
+Cmd-Shift-Z                 redo
 
-Cmd-D                      select_word
-Cmd-A                      select_all
+Cmd-D                       select_word
+Cmd-A                       select_all
 
-Cmd-W                      close_current_editor
-Cmd-Shift-W                close_other_editor
+Cmd-W                       close_current_editor
+Cmd-Shift-W                 close_other_editor
 
-Cmd-Shift-L                toggle_expand
+Cmd-Shift-L                 toggle_expand
 
 # {Shift}- means shift is optional, the key combination will still be matched.
 {Shift}-ArrowUp             move_up
-{Shift}-Cmd-ArrowUp        move_up_fast
+{Shift}-Cmd-ArrowUp         move_up_fast
 {Shift}-PageUp              move_up_one_page
 
 {Shift}-ArrowDown           move_down
-{Shift}-Cmd-ArrowDown      move_down_fast
+{Shift}-Cmd-ArrowDown       move_down_fast
 {Shift}-PageDown            move_down_one_page
 
 {Shift}-ArrowLeft           move_left
 {Shift}-Cmd-ArrowLeft       move_left_by_word
-{Shift}-Cmd-ArrowLeft      move_left_by_word_ends
+{Shift}-Cmd-ArrowLeft       move_left_by_word_ends
 
 {Shift}-ArrowRight          move_right
 {Shift}-Cmd-ArrowRight      move_right_by_word
-{Shift}-Cmd-ArrowRight     move_right_by_word_ends
+{Shift}-Cmd-ArrowRight      move_right_by_word_ends
 
 {Shift}-Home                jump_to_line_start
 {Shift}-End                 jump_to_line_end
-{Shift}-Cmd-Home           jump_to_file_start
-{Shift}-Cmd-End            jump_to_file_end
+{Shift}-Cmd-Home            jump_to_file_start
+{Shift}-Cmd-End             jump_to_file_end
 
 {Shift}-Backspace           delete_left_char
 {Shift}-Delete              delete_right_char
@@ -221,10 +219,10 @@ Cmd-Shift-L                toggle_expand
 {Shift}-Ctrl-Backspace      delete_word_left
 {Shift}-Ctrl-Delete         delete_word_right
 
-Cmd-Plus                   increase_font_size
-Cmd-Minus                  decrease_font_size
-Cmd-0                      reset_font_size_to_default
-Cmd-MouseMiddle            reset_font_size_to_default
+Cmd-Plus                    increase_font_size
+Cmd-Minus                   decrease_font_size
+Cmd-0                       reset_font_size_to_default
+Cmd-MouseMiddle             reset_font_size_to_default
 
 
 [[style]]

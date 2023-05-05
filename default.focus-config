@@ -12,7 +12,6 @@
 # The workspace scanner will not descend into the dirs that match these names.
 .svn
 .git
-temp
 __pycache__
 
 [allow file extensions]
