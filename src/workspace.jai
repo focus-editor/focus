@@ -40,8 +40,9 @@ start_initial_workspace_scan :: () {
     // Get the list of all files in the project asynchronously (depending on the size it can cause a startup delay otherwise)
     file_list_thread_group = Thread_Group.{};  // if we don't do this it can't be reused
     init(*file_list_thread_group, num_threads = 1, group_proc = file_list_threadproc);
-    file_list_thread_group.name = "Async workspace file list builder";
-    file_list_thread_group.logging = false;
+    file_list_thread_group.name    = "Async workspace file list builder";
+    file_list_thread_group.logging = DEBUG;
+    for * file_list_thread_group.worker_info { it.thread.starting_context.logger_data = context.logger_data; }
 
     start(*file_list_thread_group);
     add_work(*file_list_thread_group, cast(*void) 0);  // a dummy piece of work
@@ -67,8 +68,9 @@ maybe_update_workspace_buffers :: () {
 
                 scanner_thread_group = Thread_Group.{};  // if we don't do this it can't be reused
                 init(*scanner_thread_group, num_threads = num_threads, group_proc = directory_scan_threadproc);
-                scanner_thread_group.name = "Workspace Scanner";
-                scanner_thread_group.logging = false;
+                scanner_thread_group.name    = "Workspace Scanner";
+                scanner_thread_group.logging = DEBUG;
+                for * scanner_thread_group.worker_info { it.thread.starting_context.logger_data = context.logger_data; }
 
                 start(*scanner_thread_group);
 
@@ -88,6 +90,7 @@ maybe_update_workspace_buffers :: () {
                     num_jobs_to_complete += 1;
                 }
             }
+            redraw_requested = true;  // make sure we start scanning as soon as possible
 
             return;
         }

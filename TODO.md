@@ -1,8 +1,5 @@
 # TODO
 
-- Merge the macOS misc PR and cleanup
-- Fix the thread logging
-
 - Derive path chunks in the file open dialog from the current buffer
 
 - Open config commands should respect ctrl and ctrl+1/2
@@ -158,6 +155,8 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Fix the thread logging crash
++ Merge the macOS misc PR and cleanup
 + Fix the race condition and reject the PR
 + Line height scale
 + Fix horizontal spacing

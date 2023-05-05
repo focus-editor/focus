@@ -35,7 +35,8 @@
 + Linux: added the ability to set a fixed scaling factor
 + Basic C highlighting (currently applied to C++ as well)
 + Fix the race condition when creating new files while the workspace is being scanned (thanks to @StevenSavold)
-
++ The macOS version now has Cmd key support
++ Logging in threads is now supported. Thanks @ostef
 
 # RELEASES ==================================================================
 
