@@ -3,9 +3,15 @@ X11Display :: struct {
 
     glx_ctx: GLXContext;
     glx_cnf: GLXFBConfig;
+
+    fixed_scaling: bool;
+    dpi_override: s32;
 }
 
 X11Window :: struct {
+    // we would really like this to be LDWindow but we get a circular dependency if we declare it like that
+    wrapper: *void;
+
     handle: Window;
     display: *X11Display;
 
@@ -217,6 +223,7 @@ x11_create_window :: (x11_display: *X11Display, ld_win: LDWindow, width: int, he
 
     XUnlockDisplay(d);
     set(ld_win, X11Window.{
+        wrapper = ld_win,
         handle = win,
         display = x11_display,
     });
@@ -294,8 +301,28 @@ x11_set_window_title :: (w: *X11Window, title: string) {
 }
 
 x11_get_dpi_scaling_factor :: (w: *X11Window) -> float {
+    if w.display.fixed_scaling return cast(float) w.display.dpi_override / 96.0;
+
     screen := XScreenOfDisplay(w.display.handle, 0);
     sw := XWidthOfScreen(screen);
     swmm := XWidthMMOfScreen(screen);
     return (cast(float) sw / (cast(float) swmm / 25.4)) / 96.0;
+}
+
+x11_generate_resize :: (w: *X11Window) {
+    xwa: XWindowAttributes;
+    XGetWindowAttributes(w.display.handle, w.handle, *xwa);
+    add_resize_record(w.wrapper, xwa.width, xwa.height);
+}
+
+x11_set_fixed_scaling :: (d: *X11Display, factor: float) {
+    fixed_scaling := (factor != 0.0);
+    new_dpi: s32 = xx (factor * 96.0);
+    if ((fixed_scaling != d.fixed_scaling) || (fixed_scaling && (new_dpi != d.dpi_override))) && (factor >= 0.0) {
+        d.fixed_scaling = fixed_scaling;
+        if fixed_scaling d.dpi_override = new_dpi;
+        for global_windows {
+            x11_generate_resize(isa(it, X11Window));
+        }
+    }
 }

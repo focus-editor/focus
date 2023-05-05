@@ -186,6 +186,17 @@ get_dpi_scaling_factor :: (win: LDWindow) -> float {
     return 1.0;
 }
 
+set_fixed_scaling :: (display: LDDisplay, factor: float) {
+    if display.tag == {
+        case X11Display; x11_set_fixed_scaling(isa(display, X11Display), factor);
+        case WLDisplay; wl_set_fixed_scaling(isa(display, WLDisplay), factor);
+    }
+}
+
+set_fixed_scaling :: (factor: float) {
+    set_fixed_scaling(global_display, factor);
+}
+
 /*
  * Input functions
  */

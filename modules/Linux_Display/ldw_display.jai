@@ -81,6 +81,8 @@ WLDisplay :: struct {
     epfd: s32 = -1;
     timers: [..]WLTimer;
 
+    fixed_scaling: bool;
+    scale_factor_override: s32;
 }
 
 wl_timer_create :: (display: *WLDisplay, cb: type_of(WLTimer.cb), initial_tick: u32 = 0, repeat: u32 = 0) -> *WLTimer {
@@ -204,10 +206,12 @@ WLWindow :: struct {
 }
 
 window_scale_coords :: inline (w: *WLWindow, x: s32, y: s32) -> (s32, s32) {
-    scaled_x : s32 = x * w.fractional_scale;
+    fractional_scale := ifx w.display.fixed_scaling then w.display.scale_factor_override else w.fractional_scale;
+
+    scaled_x : s32 = x * fractional_scale;
     ret_x : s32 = scaled_x / 120 + ifx (scaled_x % 120) < 60 then cast(s32) 0 else 1;
 
-    scaled_y : s32 = y * w.fractional_scale;
+    scaled_y : s32 = y * fractional_scale;
     ret_y : s32 = scaled_y / 120 + ifx (scaled_y % 120) < 60 then cast(s32) 0 else 1;
 
     return ret_x, ret_y;
@@ -535,7 +539,7 @@ x_toplevel_listener :: xdg_toplevel_listener.{
                 return;
             }
 
-            window_handle_resize(w, width, height);
+            wl_window_handle_resize(w, width, height);
 
         }
     },
@@ -549,7 +553,7 @@ x_toplevel_listener :: xdg_toplevel_listener.{
     },
 };
 
-window_handle_resize :: (w: *WLWindow, width: s32, height: s32) {
+wl_window_handle_resize :: (w: *WLWindow, width: s32, height: s32) {
     w.window_width  = ifx !width then w.creation_width else width;
     w.window_height = ifx !height then w.creation_height else height;
 
@@ -570,7 +574,7 @@ fractional_scale_listener :: wp_fractional_scale_v1_listener.{
         push_context ctx {
             w : *WLWindow = data;
             w.fractional_scale = xx scale;
-            window_handle_resize(w, w.window_width, w.window_height);
+            wl_window_handle_resize(w, w.window_width, w.window_height);
         }
     }
 };
@@ -698,6 +702,20 @@ wl_set_window_title :: (w: *WLWindow, title: string) {
     win_title := to_c_string(title);
     xdg_toplevel.set_title(w.x_toplevel, win_title);
     free(win_title);
+}
+
+wl_set_fixed_scaling :: (d: *WLDisplay, factor: float) {
+    fixed_scaling := (factor != 0.0);
+    new_value: s32 = xx (factor * 120.0);
+
+    if ((fixed_scaling != d.fixed_scaling) || (fixed_scaling && (new_value != d.scale_factor_override))) && (factor >= 0.0) {
+        d.fixed_scaling = fixed_scaling;
+        if fixed_scaling d.scale_factor_override = new_value;
+        for global_windows {
+            w := isa(it, WLWindow);
+            wl_window_handle_resize(w, w.window_width, w.window_height);
+        }
+    }
 }
 
 #scope_file
