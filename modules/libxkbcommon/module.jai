@@ -88,6 +88,36 @@ xkb_state_update_mask :: (
     locked_layout: xkb_layout_index_t) -> xkb_state_component #foreign libxkb;
 xkb_state_mod_index_is_active :: (state: *xkb_state, idx: xkb_mod_index_t, type: xkb_state_component) -> s32 #foreign libxkb;
 
+xkb_compose_table :: struct {}
+xkb_compose_state :: struct {}
+
+xkb_compose_compile_flags :: enum {
+    XKB_COMPOSE_COMPILE_NO_FLAGS :: 0;
+}
+
+xkb_compose_state_flags :: enum {
+    XKB_COMPOSE_STATE_NO_FLAGS :: 0;
+}
+
+xkb_compose_status :: enum {
+    XKB_COMPOSE_NOTHING;
+    XKB_COMPOSE_COMPOSING;
+    XKB_COMPOSE_COMPOSED;
+    XKB_COMPOSE_CANCELLED;
+}
+
+xkb_compose_feed_result :: enum {
+    XKB_COMPOSE_FEED_IGNORED;
+    XKB_COMPOSE_FEED_ACCEPTED;
+}
+
+xkb_compose_table_new_from_locale :: (ctx: *xkb_context, locale: *u8, flags: xkb_compose_compile_flags) -> *xkb_compose_table #foreign libxkb;
+xkb_compose_state_new :: (table: *xkb_compose_table, flags: xkb_compose_state_flags) -> *xkb_compose_state #foreign libxkb;
+xkb_compose_state_feed :: (state: *xkb_compose_state, keysym: xkb_keysym_t) -> xkb_compose_feed_result #foreign libxkb;
+xkb_compose_state_reset :: (state: *xkb_compose_state) #foreign libxkb;
+xkb_compose_state_get_status :: (state: *xkb_compose_state) -> xkb_compose_status #foreign libxkb;
+xkb_compose_state_get_one_sym :: (state: *xkb_compose_state) -> xkb_keysym_t #foreign libxkb;
+
 #scope_module
 
 libxkb :: #system_library "libxkbcommon";
