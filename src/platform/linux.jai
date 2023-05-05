@@ -1,5 +1,49 @@
-platform_setup :: () {
+PLATFORM_CONFIG_SECTION :: "[[linux]]";
+PLATFORM_SUBSECTION_ENUM :: enum {}
+PLATFORM_SUBSECTION_NAMES :: string.[];
 
+platform_config :: struct {
+    scaling_factor: float = 0.0;
+}
+
+platform_parse_config_line :: (config: *platform_config, section: PLATFORM_SUBSECTION_ENUM, line: string) -> success: bool, error_msg: string {
+    if trim(line) == "" return true, "";  // ???
+
+    setting, value := break_by_spaces(line);
+    setting = trim_right(setting, ":");
+
+    config.scaling_factor = 0.0;
+
+    if setting == {
+        case "scaling_factor"; {
+            f_val, success := parse_float(*value);
+            if !success {
+                error_msg := tprint("Couldn't parse '%' - expected a valid float, got '%'", setting, value);
+                return false, error_msg;
+            }
+            // @TODO: scaling factors under 1.0 break the editor widget on Wayland,
+            //        investigate why this happens
+            lower_limit := ifx DEBUG then 0.5 else 1.0;
+            if (f_val != 0.0) && (f_val < lower_limit || f_val > 5.0) {
+                error_msg := tprint("Couldn't parse '%' - value out of the expected range ([% ... 5.0])", lower_limit, setting);
+                return false, error_msg;
+            }
+            config.scaling_factor = f_val;
+        }
+        case; {
+            error_msg := tprint("Unknown setting '%' in section '%'", setting, PLATFORM_CONFIG_SECTION);
+            return false, error_msg;
+        }
+    }
+
+    return true, "";
+}
+
+platform_apply_config :: (config: *platform_config) {
+    LD.set_fixed_scaling(config.scaling_factor);
+}
+
+platform_setup :: () {
 }
 
 platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, s32, s32 {
@@ -65,3 +109,4 @@ Monitor :: struct {
 monitors : [..] Monitor;
 
 LD :: #import "Linux_Display";
+#import "Math";

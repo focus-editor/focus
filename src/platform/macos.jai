@@ -1,5 +1,16 @@
-platform_setup :: inline () {
+PLATFORM_CONFIG_SECTION :: "[[macos]]";
+PLATFORM_SUBSECTION_ENUM :: enum {}
+PLATFORM_SUBSECTION_NAMES :: string.[];
+platform_config :: struct {}
 
+platform_parse_config_line :: (config: *platform_config, section: PLATFORM_SUBSECTION_ENUM, line: string) -> success: bool, error_msg: string {
+    return true, "";
+}
+
+platform_apply_config :: (config: *platform_config) {
+}
+
+platform_setup :: inline () {
 }
 
 platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, s32, s32 {
