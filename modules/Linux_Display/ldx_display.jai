@@ -284,9 +284,13 @@ x11_enable_dnd :: (win: *X11Window, typelist: []string) {
 }
 
 x11_set_window_title :: (w: *X11Window, title: string) {
-    win_title := to_c_string(title);
-    XStoreName(w.display.handle, w.handle, win_title);
-    free(win_title);
+    prop := XTextProperty.{
+        value = title.data,
+        encoding = x_global_xa_utf8,
+        format = 8,
+        nitems = xx title.count,
+    };
+    XSetWMName(w.display.handle, w.handle, *prop);
 }
 
 x11_get_dpi_scaling_factor :: (w: *X11Window) -> float {
