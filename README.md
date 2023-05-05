@@ -1,13 +1,26 @@
 # Focus
 
 A simple editor whose goal is to get out of your way and let you do work.
+
 This editor is for people who value simplicity, are sensitive to input latency and do not require heavy language support in their editor.
 
 ![focus](https://user-images.githubusercontent.com/119373822/236081314-45d53952-7a6c-4d6b-8773-e5b49d1dbdab.gif)
 
+
 ## Quick start
 
-https://www.youtube.com/watch?v=iwW_UfxJMiE
+1. Download the executable and put it somewhere where it will live.
+
+2. Launch the executable. It will create a `global.focus-config` file and the `projects` folder next to itself.
+
+3. Open the global config file by using the command `Open Global Config` - you can find the shortcut to show commands on the welcome screen.
+
+4. This editor expects that you tell it what folders it should add to the workspace. You do it by either editing the global config file for your default workspace, or by creating a project (see below)
+
+5. A project in this editor is just a config file that lives in `<folder with the executable>/projects/Project Name.focus-config`. There's an example project config file provided. You just edit the file and then activate the project by using the `Switch To Project` command.
+
+Basic tips and tricks: https://www.youtube.com/watch?v=UZQpQ1wgXCY
+
 
 ## How to compile
 
@@ -26,13 +39,11 @@ Required Jai version: `0.1.062`
 
 `xattr -d -r com.apple.quarantine /path/to/your/jai/distribution`
 
+
 ## Disclaimer
 
 The editor is in beta. This means you may encounter some bugs here and there, and not all wrinkles have been ironed out yet.
 
-## Shortcuts
-
-You can see the full list of shortcuts and redefine keys in the global config file.
 
 ## Limitations
 
@@ -41,6 +52,7 @@ You can see the full list of shortcuts and redefine keys in the global config fi
 - CRLF will be converted to LF on save. It's time to move on.
 - Multi-codepoint Unicode symbols are not supported.
 - Currently only RGB monitor panels are supported. If your text looks funny or blurry, please open an issue.
+
 
 ## Acknowledgements
 
