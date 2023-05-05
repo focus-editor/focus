@@ -479,10 +479,16 @@ get_line_as_string :: (using buffer: Buffer, line_num: s32) -> string {
 }
 
 find_or_create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
-    for * buffer, buffer_id : open_buffers {
-        // Return the first empty standalone buffer to avoid creating a million new buffers
-        if !buffer.has_file && !trim(to_string(buffer.bytes)) return buffer_id, false;
-    }
+    // NOTE: this code was disabled because it caused conflicts with the workspace scanner
+    //      (if you tried to create an empty buffer while the workspace is being scanned,
+    //       you would randomly find a new empty buffer the scanner hasn't had a chance to
+    //       fill in yet, which resulted in weird behaviour and crashes.)
+    //       So for now we will just allow the user to create a million empty buffers. Sigh.
+
+    // for * buffer, buffer_id : open_buffers {
+    //     // Return the first empty standalone buffer to avoid creating a million new buffers
+    //     if !buffer.has_file && !trim(to_string(buffer.bytes)) return buffer_id, false;
+    // }
 
     // Create a new buffer
     lock(*open_buffers_lock);
@@ -529,7 +535,25 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
         buffer.binary   = true;
     }
 
-    fill_in_buffer_from_file_data(buffer, path, file_data);
+    // Fill in buffer data
+    buffer.file = get_file_info_from_full_path(path);
+    buffer.has_file = true;
+    remember_last_modtime_and_size(buffer);
+
+    lock(*buffer.content_lock);
+    buffer.bytes = resizable(to_bytes(file_data));
+    old_size := buffer.bytes.count;
+    remove_crlf_in_place(*buffer.bytes);
+    unlock(*buffer.content_lock);
+
+    buffer.crlf = buffer.bytes.count != old_size;
+
+    buffer.meow_hash = calculate_meow_hash(buffer.bytes);
+
+    set_lang_from_path(buffer, path);
+
+    rescan_for_lines(buffer);
+    recalculate_colors(buffer);
 
     return buffer_id, true;
 }
@@ -627,6 +651,9 @@ refresh_buffer_from_disk :: (path: string) {
 }
 
 maybe_mark_buffer_as_deleted :: (path: string) {
+    lock(*open_buffers_lock);
+    defer unlock(*open_buffers_lock);
+
     buffer_id, found_buffer := table_find(*buffers_table, path);
     if !found_buffer return;  // no buffer for this path
     maybe_mark_buffer_as_deleted(buffer_id);

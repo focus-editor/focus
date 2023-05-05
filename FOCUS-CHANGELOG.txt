@@ -3,7 +3,6 @@
 - Line wrap
 - Navigate to file dialog improvements
 - Optional line numbers
-- Proper highlighting of C/C++
 - Config files for directories (i.e. adding a .focus-config file to your directory and have Focus load it)
 - Config option to limit the width of an editor
 - Shortcut for adding cursors above/below
@@ -18,6 +17,7 @@
 - A little bit of semantic highlighting for Jai
 - Settings per file type
 - Custom title bar
+- Proper highlighting for C++
 - ...
 
 
@@ -30,7 +30,12 @@
 
 # Main Git Branch
 
-+ ...
++ The editor will no longer open on the biggest monitor and maximized by default
++ Fix setting UTF8 window titles on Linux/X11
++ Linux: added the ability to set a fixed scaling factor
++ Basic C highlighting (currently applied to C++ as well)
++ Fix the race condition when creating new files while the workspace is being scanned (thanks to @StevenSavold)
+
 
 # RELEASES ==================================================================
 

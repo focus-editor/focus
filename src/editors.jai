@@ -822,28 +822,6 @@ init_buffers :: () {
     init(*open_buffers_lock);
 }
 
-fill_in_buffer_from_file_data :: (buffer: *Buffer, path: string, file_data: string) {
-    buffer.file = get_file_info_from_full_path(path);
-    buffer.has_file = true;
-    remember_last_modtime_and_size(buffer);
-
-
-    lock(*buffer.content_lock);
-    buffer.bytes = resizable(to_bytes(file_data));
-    old_size := buffer.bytes.count;
-    remove_crlf_in_place(*buffer.bytes);
-    unlock(*buffer.content_lock);
-
-    buffer.crlf = buffer.bytes.count != old_size;
-
-    buffer.meow_hash = calculate_meow_hash(buffer.bytes);
-
-    set_lang_from_path(buffer, path);
-
-    rescan_for_lines(buffer);
-    recalculate_colors(buffer);
-}
-
 set_lang_from_path :: (buffer: *Buffer, path: string) {
     extension, found_extension := get_lowercase_extension(path, greedy = false);
     if found_extension {

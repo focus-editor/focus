@@ -37,8 +37,8 @@ __pycache__
 [[settings]]
 # NOTE: please copy the whole block when overriding settings, otherwise defaults will be used
 #       for any settings you haven't listed here explicitly
-maximize_on_start:                      true
-open_on_the_biggest_monitor:            true
+maximize_on_start:                      false
+open_on_the_biggest_monitor:            false
 cursor_as_block:                        true
 highlight_selection_occurrences:        true
 disable_that_annoying_paste_effect:     false
