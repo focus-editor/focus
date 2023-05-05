@@ -4,6 +4,8 @@ X11Display :: struct {
     glx_ctx: GLXContext;
     glx_cnf: GLXFBConfig;
 
+    im: XIM;
+
     fixed_scaling: bool;
     dpi_override: s32;
 }
@@ -15,13 +17,46 @@ X11Window :: struct {
     handle: Window;
     display: *X11Display;
 
+    ic: XIC;
+
     glx_win: GLXWindow;
 }
 
 x11_init_display :: (display: LDDisplay) -> bool {
+    current_locale := setlocale(LC_ALL, null);
+    current_xmods  := XSetLocaleModifiers(null);
+
+    old_locale: string;
+    if current_locale old_locale = copy_string(to_string(current_locale));
+
+    old_xmods: string;
+    if current_xmods old_xmods = copy_string(to_string(current_xmods));
+
+    defer {
+        if current_locale {
+            setlocale(LC_ALL, old_locale.data);
+            free(old_locale);
+        }
+        if current_xmods {
+            XSetLocaleModifiers(old_xmods.data);
+            free(old_xmods);
+        }
+    }
+
+    setlocale(LC_ALL, "");
+
     init_global_display();
+
+    XSetLocaleModifiers("");
+    im := XOpenIM(x_global_display, null, null, null);
+    if !im {
+        XSetLocaleModifiers("@im=none");
+        im = XOpenIM(x_global_display, null, null, null);
+    }
+
     set(display, X11Display.{
         handle = x_global_display,
+        im = im,
     });
     return ifx x_global_display then true else false;
 }
@@ -219,6 +254,12 @@ x11_create_window :: (x11_display: *X11Display, ld_win: LDWindow, width: int, he
 
     XSetWMProtocols(d, win, *x_global_wm_delete_window, 1);
 
+    ic := XCreateIC(x11_display.im,
+        XNClientWindow, win,
+        XNFocusWindow, win,
+        XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
+        null);
+
     array_add(*x_global_windows, win);
 
     XUnlockDisplay(d);
@@ -226,6 +267,7 @@ x11_create_window :: (x11_display: *X11Display, ld_win: LDWindow, width: int, he
         wrapper = ld_win,
         handle = win,
         display = x11_display,
+        ic = ic,
     });
     return true;
 }

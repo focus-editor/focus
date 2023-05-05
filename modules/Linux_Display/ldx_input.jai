@@ -85,6 +85,12 @@ x11_update_window_events :: (x11_display: *X11Display) {
         xev: XEvent;
         XNextEvent(display, *xev);
 
+        if XFilterEvent(*xev, None) continue;
+
+        ld_win := get_by_native_handle(xx xev.xany.window);
+        if ld_win == INVALID_WINDOW continue;
+        win := isa(ld_win, X11Window);
+
         if xev.type == {
         case ClientMessage;
             message_type := xev.xclient.message_type;
@@ -106,43 +112,48 @@ x11_update_window_events :: (x11_display: *X11Display) {
                     array_add(*events_this_frame, event);
                 }
             }
+
         case KeyPress;
             event: Event;
+            status: Status;
+            keysym: KeySym;
+            text: [16]u32;   // surely enough for everybody
+            count := XwcLookupString(win.ic, *xev.xkey, text.data, xx text.count, *keysym, *status);
 
-            shift: u32;
-            if xev.xkey.state & ShiftMask
-                shift = 1;
-            if xev.xkey.state & ControlMask
-                event.ctrl_pressed = true;
-            if xev.xkey.state & Mod1Mask
-                event.alt_pressed = true;
+            has_keysym := (status == XLookupKeySym || status == XLookupBoth);
+            has_text := (status == XLookupChars || status == XLookupBoth);
 
-            shift_level: u32 = 0;
-            if (xev.xkey.state & (ShiftMask | Mod5Mask)) == (ShiftMask | Mod5Mask) shift_level = 3;
-            else if xev.xkey.state & Mod5Mask shift_level = 2;
-            else if xev.xkey.state & ShiftMask shift_level = 1;
-
-            keysym := XkbKeycodeToKeysym(display, xx xev.xkey.keycode, 0, shift_level);
-            translated := x11_translate_key_code(keysym);
-
-            event.type = .KEYBOARD;
-            event.key_pressed = 1;
-            event.key_code = translated;
-            event.shift_pressed = cast(bool) shift;
-            array_add(*events_this_frame, event);
-
-            input_button_states[event.key_code] = (Key_Current_State.START | Key_Current_State.DOWN);
-
-            /*
-             * @FIXME: keypad handling is broken (NumLock state doesn't seem to matter, we always get keysyms as if NumLock was off)
+            /* @TODO: count valid chars in `text` and set the number of generated `.TEXT_INPUT`
+             *        events in the `.KEYBOARD` event
              */
-            utf32 := keysym_to_utf32(xx keysym);
-            if (utf32 != 0) && !event.ctrl_pressed && !event.alt_pressed {
-                char_event: Event;
-                char_event.type = .TEXT_INPUT;
-                char_event.utf32 = utf32;
-                array_add(*events_this_frame, char_event);
+
+            if has_keysym {
+                assert(keysym != 0);
+
+                if xev.xkey.state & ShiftMask   event.shift_pressed = true;
+                if xev.xkey.state & ControlMask event.ctrl_pressed = true;
+                if xev.xkey.state & Mod1Mask    event.alt_pressed = true;
+
+                event.type = .KEYBOARD;
+                event.key_pressed = 1;
+                event.key_code = x11_translate_key_code(keysym);
+                array_add(*events_this_frame, event);
+
+                input_button_states[event.key_code] = (Key_Current_State.START | Key_Current_State.DOWN);
             }
+
+            if has_text {
+                assert(count > 0);
+
+                event.type = .TEXT_INPUT;
+                for 1..count {
+                    utf32 := text[it - 1];
+                    if utf32 < 32 || utf32 == 127 continue;
+                    event.utf32 = text[it - 1];
+                    array_add(*events_this_frame, event);
+                }
+            }
+
         case KeyRelease;
             // For some odd reason X11 generates KeyRelease followed by a near identical KeyPress to simulate repeat events so we have to filter that out
             if XEventsQueued(display, QueuedAfterReading) {
@@ -159,31 +170,22 @@ x11_update_window_events :: (x11_display: *X11Display) {
             }
 
             event: Event;
+            keysym := XLookupKeysym(*xev.xkey, 0);
+            if keysym != NoSymbol {
+                assert(keysym != 0);
 
-            shift: u32;
-            if xev.xkey.state & ShiftMask
-                shift = 1;
-            if xev.xkey.state & ControlMask
-                event.ctrl_pressed = true;
-            if xev.xkey.state & Mod1Mask
-                event.alt_pressed = true;
+                if xev.xkey.state & ShiftMask   event.shift_pressed = true;
+                if xev.xkey.state & ControlMask event.ctrl_pressed = true;
+                if xev.xkey.state & Mod1Mask    event.alt_pressed = true;
 
-            shift_level: u32 = 0;
-            if (xev.xkey.state & (ShiftMask | Mod5Mask)) == (ShiftMask | Mod5Mask) shift_level = 3;
-            else if xev.xkey.state & Mod5Mask shift_level = 2;
-            else if xev.xkey.state & ShiftMask shift_level = 1;
+                event.type = .KEYBOARD;
+                event.key_pressed = 0;
+                event.key_code = x11_translate_key_code(keysym);
+                array_add(*events_this_frame, event);
 
-            keysym := XkbKeycodeToKeysym(display, xx xev.xkey.keycode, 0, shift_level);
-            translated := x11_translate_key_code(keysym);
+                input_button_states[event.key_code] = Key_Current_State.END;
+            }
 
-            event.type = .KEYBOARD;
-            event.key_pressed = 0;
-            event.shift_pressed = cast(bool) shift;
-            event.key_code = translated;
-
-            input_button_states[event.key_code] = Key_Current_State.END;
-
-            array_add(*events_this_frame, event);
         case ButtonPress;
             event: Event;
             button := xev.xbutton.button;
@@ -214,6 +216,7 @@ x11_update_window_events :: (x11_display: *X11Display) {
             input_button_states[event.key_code] = (Key_Current_State.START | Key_Current_State.DOWN);
 
             array_add(*events_this_frame, event);
+
         case ButtonRelease;
             // it seems that mouse input doesnt generate repeat events so we dont have to peek the queue
             event: Event;
@@ -235,6 +238,7 @@ x11_update_window_events :: (x11_display: *X11Display) {
             input_button_states[event.key_code] = Key_Current_State.END;
 
             array_add(*events_this_frame, event);
+
         case SelectionRequest;
             selreq := cast(*XSelectionRequestEvent) *xev;
 
@@ -314,8 +318,10 @@ x11_update_window_events :: (x11_display: *X11Display) {
             if ld_win add_resize_record(ld_win, config.width, config.height);
         case FocusIn;
             input_application_has_focus = true;
+            XSetICFocus(win.ic);
         case FocusOut;
             input_application_has_focus = false;
+            XUnsetICFocus(win.ic);
         }
     }
     XUnlockDisplay(display);

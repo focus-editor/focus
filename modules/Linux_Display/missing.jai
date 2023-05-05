@@ -1,4 +1,4 @@
-// A bunch of stuff that's missing from the X11 module
+// A bunch of stuff that's missing from the standard modules
 
 XK_Insert :: 0xff63;
 
@@ -39,3 +39,33 @@ XK_KP_6         :: 0xffb6;
 XK_KP_7         :: 0xffb7;
 XK_KP_8         :: 0xffb8;
 XK_KP_9         :: 0xffb9;
+
+XIMPreeditArea      : u64 : 0x0001;
+XIMPreeditCallbacks : u64 : 0x0002;
+XIMPreeditPosition  : u64 : 0x0004;
+XIMPreeditNothing   : u64 : 0x0008;
+XIMPreeditNone      : u64 : 0x0010;
+XIMStatusArea       : u64 : 0x0100;
+XIMStatusCallbacks  : u64 : 0x0200;
+XIMStatusNothing    : u64 : 0x0400;
+XIMStatusNone       : u64 : 0x0800;
+
+XNClientWindow :: "clientWindow".data;
+XNFocusWindow :: "focusWindow".data;
+XNInputStyle :: "inputStyle".data;
+
+XBufferOverflow : Status = -1;
+XLookupNone     : Status =  1;
+XLookupChars    : Status =  2;
+XLookupKeySym   : Status =  3;
+XLookupBoth     : Status =  4;
+
+XwcLookupString :: (ic: XIC, event: *XKeyEvent, buffer: *u32, buffer_size: s32, keysym: *KeySym, status: *Status) -> s32 #foreign libx11;
+
+LC_ALL : s32 : 6;
+setlocale :: (what: s32, loc: *u8) -> *u8 #foreign libc;
+
+#scope_file
+
+libx11 :: #system_library "libX11";
+libc :: #system_library "libc";

@@ -50,6 +50,8 @@ WLDisplay :: struct {
     kb_context: *xkb_context;
     kb_keymap : *xkb_keymap;
     kb_state  : *xkb_state;
+    kb_compose_table: *xkb_compose_table;
+    kb_compose_state: *xkb_compose_state;
     mod_idx_shift     : u32;
     mod_idx_ctrl      : u32;
     mod_idx_alt       : u32;

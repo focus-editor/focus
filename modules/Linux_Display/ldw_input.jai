@@ -18,6 +18,9 @@ keyboard_listenter :: wl_keyboard_listener.{
                 d.mod_idx_caps_lock = xkb_keymap_mod_get_index(d.kb_keymap, XKB_MOD_NAME_CAPS.data);
                 d.mod_idx_super     = xkb_keymap_mod_get_index(d.kb_keymap, XKB_MOD_NAME_LOGO.data);
                 d.mod_idx_alt_gr    = xkb_keymap_mod_get_index(d.kb_keymap, XKB_MOD_NAME_ALT_GR.data);
+
+                d.kb_compose_table = xkb_compose_table_new_from_locale(d.kb_context, setlocale(LC_ALL, null), .XKB_COMPOSE_COMPILE_NO_FLAGS);
+                d.kb_compose_state = xkb_compose_state_new(d.kb_compose_table, .XKB_COMPOSE_STATE_NO_FLAGS);
             } else {
                 log_error("Received unsupported keymap from compositor!\n");
                 assert(false);
@@ -87,32 +90,46 @@ wl_key_repeat_cb :: (timer: *WLTimer) {
 }
 
 handle_key_event :: (d: *WLDisplay, serial: u32, key: u32, state: u32) {
-    buf: [16]u8;
+    utf32: u32;
     keycode: xkb_keycode_t = key + 8;
-
-    keysym     := xkb_state_key_get_one_sym(d.kb_state, keycode);
-    utf32      := keysym_to_utf32(keysym);
-    translated := x11_translate_key_code(keysym);
+    keysym := xkb_state_key_get_one_sym(d.kb_state, keycode);
 
     event: Event;
     event.type = .KEYBOARD;
-    event.key_code = translated;
     event.shift_pressed = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_shift, .XKB_STATE_MODS_DEPRESSED) == 1;
     event.ctrl_pressed  = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_ctrl, .XKB_STATE_MODS_DEPRESSED) == 1;
     event.alt_pressed   = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_alt, .XKB_STATE_MODS_DEPRESSED) == 1;
 
     if state == wl_keyboard.key_state_pressed {
+        xkb_compose_state_feed(d.kb_compose_state, keysym);
+
+        status := xkb_compose_state_get_status(d.kb_compose_state);
+        if status != .XKB_COMPOSE_COMPOSED && status != .XKB_COMPOSE_NOTHING {
+            if status != .XKB_COMPOSE_COMPOSING xkb_compose_state_reset(d.kb_compose_state);
+            return;
+        }
+
+        if status == .XKB_COMPOSE_COMPOSED keysym = xkb_compose_state_get_one_sym(d.kb_compose_state);
+        xkb_compose_state_reset(d.kb_compose_state);
+
+        utf32 = xkb_keysym_to_utf32(keysym);
+
+        // @TODO: set the number of generated `.TEXT_INPUT` events in the `.KEYBOARD` event
+
         event.key_pressed = 1;
+        event.key_code = x11_translate_key_code(keysym);
         input_button_states[event.key_code] = (Key_Current_State.START | Key_Current_State.DOWN);
         if event.ctrl_pressed d.input_serial = serial;
     } else {
         event.key_pressed = 0;
+        event.key_code = x11_translate_key_code(keysym);
         input_button_states[event.key_code] = Key_Current_State.END;
     }
 
     array_add(*events_this_frame, event);
 
-    if event.key_pressed && !event.ctrl_pressed && !event.alt_pressed && utf32 {
+    is_printable := ((utf32 >= 32) && (utf32 != 127));
+    if event.key_pressed && !event.ctrl_pressed && !event.alt_pressed && is_printable {
         char_event: Event;
         char_event.type = .TEXT_INPUT;
         char_event.utf32 = utf32;
