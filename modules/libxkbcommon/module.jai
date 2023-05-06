@@ -71,6 +71,11 @@ xkb_key_direction :: enum u32 {
     XKB_KEY_DOWN;
 }
 
+xkb_consumed_mode :: enum {
+    XKB_CONSUMED_MODE_XKB;
+    XKB_CONSUMED_MODE_GTK;
+}
+
 xkb_state_new :: (keymap: *xkb_keymap) -> *xkb_state #foreign libxkb;
 xkb_state_ref :: (state: *xkb_state) -> *xkb_state #foreign libxkb;
 xkb_state_unref :: (state: *xkb_state) #foreign libxkb;
@@ -87,6 +92,8 @@ xkb_state_update_mask :: (
     latched_layout: xkb_layout_index_t,
     locked_layout: xkb_layout_index_t) -> xkb_state_component #foreign libxkb;
 xkb_state_mod_index_is_active :: (state: *xkb_state, idx: xkb_mod_index_t, type: xkb_state_component) -> s32 #foreign libxkb;
+xkb_state_key_get_consumed_mods2 :: (state: *xkb_state, key: xkb_keycode_t, mode: xkb_consumed_mode) -> xkb_mod_mask_t #foreign libxkb;
+xkb_state_mod_index_is_consumed :: (state: *xkb_state, key: xkb_keycode_t, idx: xkb_mod_index_t) -> s32 #foreign libxkb;
 
 xkb_compose_table :: struct {}
 xkb_compose_state :: struct {}
