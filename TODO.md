@@ -1,6 +1,5 @@
 # TODO
 
-- Numpad shortcuts
 - Derive path chunks in the file open dialog from the current buffer
 
 - Open config commands should respect ctrl and ctrl+1/2
@@ -35,6 +34,31 @@
     - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
     - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
 
+- Feedback from nafonso:
+    requests:
+        - go to symbol
+        - be able to create cursors adjacent to each other (e.g. alt+up would keep the current cursor in the line that it is, but move me to the line above and I'd have 2 cursors. Kind of like the behaviour of ctrl+d but to select adjacent lines)
+        - line numbers
+        - way to toggle here strings to show as strings or be rendered as normal code (helpful when doing strings for meta programming to get the language coloring syntax)
+        - someway to visualize colors in the config file (ie if you define a background color you can see either that line text in that color, or a square after it, prob with color picker integrated would be cherry on top)
+
+    general comments:
+        - switch project should have a shortcut by default
+        - load previous project on launch
+        - I'd recommend having a "select folder" to add new projects, instead of having to go to the projects folder, duplicating config, and setting that path in the config
+        - https://ark-vcs.com/images/client_new.png
+
+    bugs:
+        - switching to tab_size 4 doesn't update the tabs, repro:
+            - switch tab_size in the project config to 3 (it updated)
+            - switch back to 4 (it didn't)
+            - switch to 5 (it updated)
+            - switch back to 4 (it didn't)
+        - after switching back to project, ctrl+p wouldn't show all files, repro:
+            - open UE project, do ctrl+p to see all files
+            - switch to the other project, did ctrl+p there
+            - switch back to UE project, ctrl+p didn't find all the files
+
 - Keymap changing without having to reload - investigate a bug
 - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
 
@@ -57,6 +81,7 @@
 - F12 to search by current identifier
 - Generalise TODO highlighting
 - Implement general language highlighting with a set of common keywords etc
+- Numpad shortcuts
 
 - Mark modified buffers in the navigate dialog
 - Mark deleted buffers in the open file dialog
@@ -76,6 +101,8 @@
 
 - Add horizontal scrollbar
     - Alt-HL smooth scroll
+
+- Multi-cursor pasting not as in vscode https://discord.com/channels/661732390355337246/1100701456950099978/1104408405180956752
 
 - Hot refresh workspace (not having to restart the editor)
 

@@ -2375,6 +2375,7 @@ is_child :: (ui_id: Ui_Id, parent_id: Ui_Id) -> bool {
 }
 
 maybe_set_hot_or_active :: (ui_id: Ui_Id, rect: Rect, pointer_image: Pointer_Image) -> became_active: bool {
+    if !Input.input_application_has_focus return false;
     if !is_valid(rect) || !mouse_pointer_is_within(rect) return false;
 
     ui.hot = ui_id;
