@@ -123,20 +123,21 @@ x11_update_window_events :: (x11_display: *X11Display) {
             has_keysym := (status == XLookupKeySym || status == XLookupBoth);
             has_text := (status == XLookupChars || status == XLookupBoth);
 
-            /* @TODO: count valid chars in `text` and set the number of generated `.TEXT_INPUT`
-             *        events in the `.KEYBOARD` event
-             */
-
             if has_keysym {
                 assert(keysym != 0);
 
                 if xev.xkey.state & ShiftMask   event.shift_pressed = true;
                 if xev.xkey.state & ControlMask event.ctrl_pressed = true;
                 if xev.xkey.state & Mod1Mask    event.alt_pressed = true;
+                if xev.xkey.state & Mod4Mask    event.cmd_meta_pressed = true;
 
                 event.type = .KEYBOARD;
                 event.key_pressed = 1;
                 event.key_code = x11_translate_key_code(keysym);
+                for 0..count - 1 {
+                    utf32 := text[it];
+                    if utf32 >= 32 && utf32 != 127 event.text_input_count += 1;
+                }
                 array_add(*events_this_frame, event);
 
                 input_button_states[event.key_code] = (Key_Current_State.START | Key_Current_State.DOWN);
@@ -145,12 +146,16 @@ x11_update_window_events :: (x11_display: *X11Display) {
             if has_text {
                 assert(count > 0);
 
-                event.type = .TEXT_INPUT;
-                for 1..count {
-                    utf32 := text[it - 1];
+                for 0..count - 1 {
+                    utf32 := text[it];
                     if utf32 < 32 || utf32 == 127 continue;
-                    event.utf32 = text[it - 1];
-                    array_add(*events_this_frame, event);
+
+                    text_event: Event;
+                    text_event.type = .TEXT_INPUT;
+                    text_event.key_pressed = 1;
+                    text_event.key_code = x11_translate_key_code(keysym);
+                    text_event.utf32 = utf32;
+                    array_add(*events_this_frame, text_event);
                 }
             }
 

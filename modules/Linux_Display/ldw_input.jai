@@ -91,14 +91,16 @@ wl_key_repeat_cb :: (timer: *WLTimer) {
 
 handle_key_event :: (d: *WLDisplay, serial: u32, key: u32, state: u32) {
     utf32: u32;
+    is_printable: bool;
     keycode: xkb_keycode_t = key + 8;
     keysym := xkb_state_key_get_one_sym(d.kb_state, keycode);
 
     event: Event;
     event.type = .KEYBOARD;
-    event.shift_pressed = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_shift, .XKB_STATE_MODS_EFFECTIVE) == 1;
-    event.ctrl_pressed  = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_ctrl,  .XKB_STATE_MODS_EFFECTIVE) == 1;
-    event.alt_pressed   = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_alt,   .XKB_STATE_MODS_EFFECTIVE) == 1;
+    event.shift_pressed    = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_shift, .XKB_STATE_MODS_EFFECTIVE) == 1;
+    event.ctrl_pressed     = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_ctrl,  .XKB_STATE_MODS_EFFECTIVE) == 1;
+    event.alt_pressed      = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_alt,   .XKB_STATE_MODS_EFFECTIVE) == 1;
+    event.cmd_meta_pressed = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_super, .XKB_STATE_MODS_EFFECTIVE) == 1;
 
     if state == wl_keyboard.key_state_pressed {
         xkb_compose_state_feed(d.kb_compose_state, keysym);
@@ -110,11 +112,11 @@ handle_key_event :: (d: *WLDisplay, serial: u32, key: u32, state: u32) {
         }
 
         utf32 = xkb_keysym_to_utf32(keysym);
-
-        // @TODO: set the number of generated `.TEXT_INPUT` events in the `.KEYBOARD` event
+        is_printable = ((utf32 >= 32) && (utf32 != 127));
 
         event.key_pressed = 1;
         event.key_code = x11_translate_key_code(keysym);
+        event.text_input_count = xx is_printable;
         input_button_states[event.key_code] = (Key_Current_State.START | Key_Current_State.DOWN);
         if event.ctrl_pressed d.input_serial = serial;
     } else {
@@ -125,12 +127,13 @@ handle_key_event :: (d: *WLDisplay, serial: u32, key: u32, state: u32) {
 
     array_add(*events_this_frame, event);
 
-    is_printable := ((utf32 >= 32) && (utf32 != 127));
-    if event.key_pressed && !event.ctrl_pressed && !event.alt_pressed && is_printable {
-        char_event: Event;
-        char_event.type = .TEXT_INPUT;
-        char_event.utf32 = utf32;
-        array_add(*events_this_frame, char_event);
+    if event.key_pressed && is_printable {
+        text_event: Event;
+        text_event.type = .TEXT_INPUT;
+        text_event.key_pressed = 1;
+        text_event.key_code = x11_translate_key_code(keysym);
+        text_event.utf32 = utf32;
+        array_add(*events_this_frame, text_event);
     }
 }
 
