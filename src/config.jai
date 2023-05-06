@@ -114,7 +114,7 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
         array_add(*tried_paths, font_path);
     }
 
-    error_msg := tprint("Couldn't find font '%'. Tried the following locations:\n - %", name, join(..tried_paths, "\n - ", allocator = temp));
+    error_msg := tprint("Couldn't find font '%'.\n\nTried the following locations:\n - %\n\nPlease note that you can specify a full path to the desired font file.", name, join(..tried_paths, "\n - ", allocator = temp));
     return "", error_msg;
 }
 

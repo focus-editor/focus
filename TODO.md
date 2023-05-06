@@ -1,5 +1,6 @@
 # TODO
 
+- Numpad shortcuts
 - Derive path chunks in the file open dialog from the current buffer
 
 - Open config commands should respect ctrl and ctrl+1/2
