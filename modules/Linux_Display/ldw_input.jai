@@ -96,21 +96,18 @@ handle_key_event :: (d: *WLDisplay, serial: u32, key: u32, state: u32) {
 
     event: Event;
     event.type = .KEYBOARD;
-    event.shift_pressed = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_shift, .XKB_STATE_MODS_DEPRESSED) == 1;
-    event.ctrl_pressed  = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_ctrl, .XKB_STATE_MODS_DEPRESSED) == 1;
-    event.alt_pressed   = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_alt, .XKB_STATE_MODS_DEPRESSED) == 1;
+    event.shift_pressed = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_shift, .XKB_STATE_MODS_EFFECTIVE) == 1;
+    event.ctrl_pressed  = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_ctrl,  .XKB_STATE_MODS_EFFECTIVE) == 1;
+    event.alt_pressed   = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_alt,   .XKB_STATE_MODS_EFFECTIVE) == 1;
 
     if state == wl_keyboard.key_state_pressed {
         xkb_compose_state_feed(d.kb_compose_state, keysym);
 
         status := xkb_compose_state_get_status(d.kb_compose_state);
-        if status != .XKB_COMPOSE_COMPOSED && status != .XKB_COMPOSE_NOTHING {
-            if status != .XKB_COMPOSE_COMPOSING xkb_compose_state_reset(d.kb_compose_state);
-            return;
+        if status == .XKB_COMPOSE_COMPOSED || status == .XKB_COMPOSE_CANCELLED {
+            keysym = xkb_compose_state_get_one_sym(d.kb_compose_state);
+            xkb_compose_state_reset(d.kb_compose_state);
         }
-
-        if status == .XKB_COMPOSE_COMPOSED keysym = xkb_compose_state_get_one_sym(d.kb_compose_state);
-        xkb_compose_state_reset(d.kb_compose_state);
 
         utf32 = xkb_keysym_to_utf32(keysym);
 
