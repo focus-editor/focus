@@ -5,8 +5,8 @@
 [workspace dirs]
 # These directories will be scanned when a workspace is opened so that search etc. works.
 # Example:
-# C:/projects/my-project
-# C:/jai
+# /Users/my_name/projects/my_project
+# /Users/my_name/jai
 
 [ignore dirs]
 # The workspace scanner will not descend into the dirs that match these names.
