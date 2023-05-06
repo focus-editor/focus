@@ -562,7 +562,7 @@ font_icons:         *Simp.Dynamic_Font;
 font_icons_small:   *Simp.Dynamic_Font;
 
 DEFAULT_FONT_SIZE               :: 14;
-DEFAULT_FONT_UI_SIZE            :: 16;
+DEFAULT_FONT_UI_SIZE            :: 15;
 DEFAULT_FONT_UI_BIG_SIZE        :: 28;
 DEFAULT_FONT_UI_MEDIUM_SIZE     :: 18;
 DEFAULT_FONT_UI_SMALL_SIZE      :: 15;
@@ -584,7 +584,7 @@ font_icons_small_size   := DEFAULT_FONT_ICONS_SMALL_SIZE;
 
 // Depend on font size
 char_size:                  float;
-char_x_advance:              float;
+char_x_advance:             float;
 line_height:                float;
 old_line_height:            float;  // to track font changes
 font_ui_line_height:        float;
@@ -722,8 +722,8 @@ DOUBLE_CLICK_TOLERANCE :: 2;    // how many pixels between the click locations a
 
 // Embed default fonts
 FONT         :: #run load_font("FiraCode-Retina.ttf");
-FONT_UI      :: #run load_font("SEGOEUI.TTF");
-FONT_UI_BOLD :: #run load_font("SEGUISB.TTF");
+FONT_UI      :: #run load_font("OpenSans-Regular.ttf");
+FONT_UI_BOLD :: #run load_font("OpenSans-SemiBold.ttf");
 FONT_ICONS   :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
 
 MIN_FONT_SIZE :: 4;
