@@ -237,7 +237,7 @@ draw_user_messages :: (main_area: Rect, footer_height: float) {
 
         maybe_set_hot_or_active(ui_id, message_rect, .PRESSABLE);
 
-        is_hovering := mouse_pointer_is_within(message_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id);
+        is_hovering := mouse_pointer_is_within(message_rect) && is_hovering_over(ui_id);
         if is_hovering && mouse.left.just_pressed {
             it.dismissed = true;
             redraw_requested = true;
@@ -770,7 +770,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
                 // Mouse scrolling
                 if (ui.hot_last_frame == results_id || ui.hot_last_frame == search_scrollbar_id) && mouse_pointer_is_within(results_rect) {
-                    if ui.hot_last_frame == results_id && ui.active == .none then set_pointer_image(.PRESSABLE);
+                    if is_hovering_over(results_id) then set_pointer_image(.PRESSABLE);
                     if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
                         target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
                         if mouse.smooth_scroll {
@@ -810,7 +810,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 entry_index := visible_start + i;
                 entry_rect.y = results_rect.y + results_rect.h - (entry_index + 1) * entry_height + scroll_y;
 
-                if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == results_id && (ui.active == .none || ui.active == results_id) {
+                if mouse_pointer_is_within(entry_rect) && is_hovering_over(results_id) {
                     if mouse.left.just_pressed {
                         selected_result = entry_index;
                         jump_to_search_result(editor, buffer);
@@ -1042,7 +1042,7 @@ draw_splitter :: (splitter_rect: Rect, split_x: float, ui_id: Ui_Id) {
 
     maybe_set_hot_or_active(ui_id, rect_fat, .DRAGGING_HORIZONTAL);
 
-    if (ui.hot_last_frame == ui_id && ui.active == .none) || ui.active == ui_id {
+    if is_hovering_over(ui_id) {
         if ui.active == ui_id then color = Colors.SPLITTER_HOVER;
         rect = expand(rect, 2);
     }
@@ -1187,7 +1187,7 @@ draw_open_file_dialog :: () {
 
             // Mouse scrolling
             if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(files_rect) {
-                if ui.hot_last_frame == ui_id && ui.active == .none then set_pointer_image(.PRESSABLE);
+                if is_hovering_over(ui_id) then set_pointer_image(.PRESSABLE);
                 if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
                     target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
                     if mouse.smooth_scroll {
@@ -1223,7 +1223,7 @@ draw_open_file_dialog :: () {
             entry_rect.y = files_rect.y + files_rect.h - (entry_index + 1) * entry_height + scroll_y;
 
             if entry.type != .nothing {
-                if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
+                if mouse_pointer_is_within(entry_rect) && is_hovering_over(ui_id) {
                     if mouse.left.just_pressed then entries.selected_by_mouse = entry_index;
                     if entries.selected_by_mouse == -1 then draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
                     placement := ifx ctrl_pressed() then Editor_Placement.on_the_side else .in_place;
@@ -1371,7 +1371,7 @@ draw_commands_dialog :: () {
 
             // Mouse scrolling
             if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(entries_rect) {
-                if ui.hot_last_frame == ui_id && ui.active == .none then set_pointer_image(.PRESSABLE);
+                if is_hovering_over(ui_id) then set_pointer_image(.PRESSABLE);
                 if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
                     target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
                     if mouse.smooth_scroll {
@@ -1407,7 +1407,7 @@ draw_commands_dialog :: () {
             entry_rect.y = entries_rect.y + entries_rect.h - (entry_index + 1) * entry_height + scroll_y;
 
 
-            if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
+            if mouse_pointer_is_within(entry_rect) && is_hovering_over(ui_id) {
                 if mouse.left.just_pressed then selected_by_mouse = entry_index;
                 if selected_by_mouse == -1 then draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
                 draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
@@ -1541,7 +1541,7 @@ draw_open_project_dialog :: () {
 
             // Mouse scrolling
             if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(entries_rect) {
-                if ui.hot_last_frame == ui_id && ui.active == .none then set_pointer_image(.PRESSABLE);
+                if is_hovering_over(ui_id) then set_pointer_image(.PRESSABLE);
                 if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
                     target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
                     if mouse.smooth_scroll {
@@ -1577,7 +1577,7 @@ draw_open_project_dialog :: () {
             entry_rect.y = entries_rect.y + entries_rect.h - (entry_index + 1) * entry_height + scroll_y;
 
 
-            if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
+            if mouse_pointer_is_within(entry_rect) && is_hovering_over(ui_id) {
                 if mouse.left.just_pressed then selected_by_mouse = entry_index;
                 if selected_by_mouse == -1 then draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
                 draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
@@ -1804,7 +1804,7 @@ draw_finder :: () {
 
             // Mouse scrolling
             if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(files_rect) {
-                if ui.hot_last_frame == ui_id && ui.active == .none then set_pointer_image(.PRESSABLE);
+                if is_hovering_over(ui_id) then set_pointer_image(.PRESSABLE);
                 if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
                     target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
                     if mouse.smooth_scroll {
@@ -1848,7 +1848,7 @@ draw_finder :: () {
             entry_index := visible_start + i;
             entry_rect.y = files_rect.y + files_rect.h - (entry_index + 1) * entry_height + scroll_y;
 
-            if mouse_pointer_is_within(entry_rect) && ui.hot_last_frame == ui_id && (ui.active == .none || ui.active == ui_id) {
+            if mouse_pointer_is_within(entry_rect) && is_hovering_over(ui_id) {
                 if mouse.left.just_pressed then selected_by_mouse = entry_index;
                 if selected_by_mouse == -1 then draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
                 placement := ifx ctrl_pressed() then Editor_Placement.on_the_side else .in_place;
@@ -2281,7 +2281,7 @@ draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll:
     // Draw
     color := Colors.SCROLLBAR;
 
-    if ui.active == ui_id || (ui.hot_last_frame == ui_id && ui.active == .none) {
+    if is_hovering_over(ui_id) {
         #if draw draw_rounded_rect(area, Colors.SCROLLBAR_BACKGROUND, radius = rounding_radius_small);
         color = Colors.SCROLLBAR_HOVER;
     }
@@ -2384,7 +2384,6 @@ is_child :: (ui_id: Ui_Id, parent_id: Ui_Id) -> bool {
 }
 
 maybe_set_hot_or_active :: (ui_id: Ui_Id, rect: Rect, pointer_image: Pointer_Image) -> became_active: bool {
-    if !Input.input_application_has_focus return false;
     if !is_valid(rect) || !mouse_pointer_is_within(rect) return false;
 
     ui.hot = ui_id;
@@ -2398,7 +2397,7 @@ maybe_set_hot_or_active :: (ui_id: Ui_Id, rect: Rect, pointer_image: Pointer_Ima
 }
 
 is_hovering_over :: (ui_id: Ui_Id) -> bool {
-    return ui.hot_last_frame == ui_id && ui.active == .none || ui.active == ui_id;
+    return (ui.hot_last_frame == ui_id && ui.active == .none) || ui.active == ui_id;
 }
 
 ui: struct {

@@ -1,6 +1,6 @@
 # TODO
 
-- Find a different solution for the occluded hover reaction
+- Don't crash when the config doesn't find the version number at the top
 
 - Fix multi-cursor copy-paste bugs
 - Create_or_delete_cursor_at_mouse_position
@@ -23,6 +23,7 @@
 - Notify about duplicate bindings and highlight that in the config file
 - Search returns extra results: Runtime_Support, report_bounds_check_error_more_visibly
 - Limit editor width
+
 
 - Improve the scoring for fuzzy search (maybe after the fact even) - score matches closer together higher
 
