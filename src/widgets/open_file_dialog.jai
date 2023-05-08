@@ -1,32 +1,24 @@
-open_file_dialog_handle_event :: (event: Input.Event) -> bool {
+open_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
     using open_file_dialog;
 
     if event.type == .KEYBOARD && event.key_pressed {
         action := map_event_to_action(event, Action_Open_File_Dialog);
         if action == {
-            case .close_dialog;             hide_open_file_dialog(); return true;
-            case .open_entry_in_place;      open_file_dialog_open_entry(entries.selected, .in_place);    return true;
-            case .open_entry_on_the_side;   open_file_dialog_open_entry(entries.selected, .on_the_side); return true;
-            case .open_entry_on_the_left;   open_file_dialog_open_entry(entries.selected, .left);        return true;
-            case .open_entry_on_the_right;  open_file_dialog_open_entry(entries.selected, .right);       return true;
-            case .open_directory;           open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true); return true;
+            case .close_dialog;             hide_open_file_dialog();                                                        return true;
+            case .open_entry_in_place;      open_file_dialog_open_entry(entries.selected, .in_place);                       return true;
+            case .open_entry_on_the_side;   open_file_dialog_open_entry(entries.selected, .on_the_side);                    return true;
+            case .open_entry_on_the_left;   open_file_dialog_open_entry(entries.selected, .left);                           return true;
+            case .open_entry_on_the_right;  open_file_dialog_open_entry(entries.selected, .right);                          return true;
+            case .open_directory;           open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true);   return true;
             case .pop_directory;            if pop_directory() return true;
 
-            case .search_in_buffer;     return true;  // TODO: handle when the widget is rewritten
-            case .search_in_project;    finder_open();                  return true;
-            case .toggle_expand;        toggle_expand();                return true;
-            case .move_up;              move_cursor(-1, wrap = true);   return true;
-            case .move_down;            move_cursor( 1, wrap = true);   return true;
-            case .move_up_fast;         move_cursor(-5);                return true;
-            case .move_down_fast;       move_cursor( 5);                return true;
-            case .move_up_one_page;     move_cursor(-entries.per_page); return true;
-            case .move_down_one_page;   move_cursor( entries.per_page); return true;
-
-            case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);
-            case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);
-            case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true);
-
-            case .show_commands;                                    show_commands_dialog();
+            case .toggle_expand;            toggle_expand();                    return true;
+            case .move_up;                  move_cursor(-1, wrap = true);       return true;
+            case .move_down;                move_cursor( 1, wrap = true);       return true;
+            case .move_up_fast;             move_cursor(-5);                    return true;
+            case .move_down_fast;           move_cursor( 5);                    return true;
+            case .move_up_one_page;         move_cursor(-entries.per_page);     return true;
+            case .move_down_one_page;       move_cursor( entries.per_page);     return true;
         }
 
         handled := maybe_handle_text_input_event(*input, event);
@@ -40,7 +32,7 @@ open_file_dialog_handle_event :: (event: Input.Event) -> bool {
                                 // when Ctrl+Backspace is pressed
 
         text_input_type_char(*open_file_dialog.input, char);
-        refresh_entries();
+        refresh_entries(clear_input = false);
         return true;
     }
     return false;
@@ -69,12 +61,18 @@ deinit_open_file_dialog :: () {
 }
 
 show_open_file_dialog :: (mode: Open_File_Dialog.Mode, from_root := false) {
+    if !from_root {
+        // Derive the path chunks from the current open file
+        editor, buffer := get_active_editor_and_buffer();
+        if active_global_widget == .editors && buffer && buffer.has_file then set_path_chunks_from_file(buffer.file.full_path);
+    } else {
+        clear_path_chunks();
+    }
+
     active_global_widget = .open_file_dialog;
-
     open_file_dialog.mode = mode;
-    if from_root then clear_path_chunks();
 
-    refresh_entries(scan_folder = true);
+    refresh_entries();
 }
 
 hide_open_file_dialog :: () {
@@ -106,17 +104,17 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
             entry_name := copy_string(entry.name);
             array_add(*path_chunks, entry_name);
             root_dir = entry_name;
-            refresh_entries(scan_folder = true);
+            refresh_entries();
 
         case .project_dir;
             clear_path_chunks();
             array_add(*path_chunks, copy_string(entry.name));
             root_dir = entry.full_path;
-            refresh_entries(scan_folder = true);
+            refresh_entries();
 
         case .folder;
             array_add(*path_chunks, copy_string(entry.name));
-            refresh_entries(scan_folder = true);
+            refresh_entries();
     }
 }
 
@@ -130,7 +128,7 @@ open_file_dialog_truncate_path_chunks :: (chunk_index: s64) {
     }
     path_chunks.count = chunk_index + 1;
 
-    refresh_entries(scan_folder = true);
+    refresh_entries();
 }
 
 
@@ -140,7 +138,7 @@ maybe_handle_text_input_event :: (using input: *Text_Input, event: Input.Event) 
     input_text := copy_temporary_string(to_string(text));
     handled := text_input_handle_event(input, event);
     if handled {
-        if input_text != to_string(input.text) then refresh_entries();
+        if input_text != to_string(input.text) then refresh_entries(clear_input = false);
         return true;
     }
     return false;
@@ -168,9 +166,34 @@ pop_directory :: () -> handled: bool {
     last := pop(*path_chunks);
     free(last);
 
-    refresh_entries(scan_folder = true);
+    refresh_entries();
 
     return true;
+}
+
+set_path_chunks_from_file :: (file_path: string) {
+    using open_file_dialog;
+
+    clear_path_chunks();
+
+    parent_dir := get_parent_dir_path(file_path);
+
+    is_project_dir, project_dir_path, project_dir_name := dir_is_within_project(parent_dir);
+    if is_project_dir {
+        root_dir = copy_string(project_dir_path);  // leak
+        array_add(*path_chunks, copy_string(project_dir_name));
+    } else {
+        #if OS != .WINDOWS then array_add(*path_chunks, copy_string("/"));
+        root_dir = "";
+    }
+
+    advance(*parent_dir, project_dir_path.count);
+
+    for chunk : split(parent_dir, cast(u8) #char "/") {
+        trimmed := trim(chunk);
+        if !trimmed continue;
+        array_add(*path_chunks, copy_string(trimmed));
+    }
 }
 
 clear_path_chunks :: () {
@@ -178,20 +201,20 @@ clear_path_chunks :: () {
     array_reset(*open_file_dialog.path_chunks);
 }
 
-refresh_entries :: (scan_folder := false) {
+refresh_entries :: (clear_input := true) {
     using open_file_dialog;
 
-    if scan_folder {
-        // Do it before pushing the pool allocator because the input and the folder scan results
-        // use the global heap
-        text_input_fully_clear(*input);
-        scan_current_folder();
-    }
+    // Do it before pushing the pool allocator because the input uses use the global heap
+    if clear_input then text_input_fully_clear(*input);
 
     pool_allocator := get_pool_allocator();
     push_allocator(pool_allocator);
 
     reset(*memory_pool);  // to avoid having to free each string
+
+    // Scan folder on every keystroke, that should be ok because we don't do it recursively.
+    // It also means we will always have the most recent contents of the dir and can use the memory pool
+    scan_current_folder();
 
     scroll_to_cursor = .snap;
     entries.scroll_y = 0;
@@ -345,7 +368,6 @@ scan_current_folder :: () {
     dir_path := sprint("%/%", root_dir, join(..path_chunks_trimmed, separator = "/"));
 
     // Reset current files
-    for current_files free(it.full_path);
     array_reset(*current_files);
 
     // Scan the current folder
@@ -359,7 +381,7 @@ scan_current_folder :: () {
             if should_ignore_file(file.full_name) return;
         }
 
-        full_path := copy_string(file.full_name);  // one allocation, the rest are views into it
+        full_path := copy_string(file.full_name);  // one allocation in the pool, the rest are views into it
         path, basename, extension, name := path_decomp(full_path);
 
         entry := array_add(*open_file_dialog.current_files);
@@ -400,6 +422,8 @@ memory_pool: Flat_Pool;
 
 open_file_dialog: Open_File_Dialog;
 
+#scope_file
+
 Open_File_Dialog :: struct {
     initted := false;
 
@@ -432,8 +456,6 @@ Open_File_Dialog :: struct {
         navigate;
     }
 }
-
-#scope_file
 
 Entry :: struct {
     buffer_id := -1;  // not all entries have buffers

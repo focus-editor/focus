@@ -1,9 +1,14 @@
 # TODO
 
-- Derive path chunks in the file open dialog from the current buffer
++ Derive path chunks in the file open dialog from the current buffer
+- Auto-enlarge when path chunks don't fit
+- Truncate path chunks when don't fit even when enlarged
+
+- Fix multi-cursor copy-paste bugs
+- Create_or_delete_cursor_at_mouse_position
 
 - Open config commands should respect ctrl and ctrl+1/2
-- Limit editor width
+- Create new cursors above/below (what's the common shortcut for it)
 
 - Show project name in the window title
 
@@ -16,11 +21,10 @@
 - Colors per programming language
 - Project dir disambiguation
 - When switching to another editor, jump to cursor
-- Fix the keyboard scrolling not working
 - Autoindent region
 - Notify about duplicate bindings and highlight that in the config file
 - Search returns extra results: Runtime_Support, report_bounds_check_error_more_visibly
-- Investigate a bug reported on Github
+- Limit editor width
 
 - Improve the scoring for fuzzy search (maybe after the fact even) - score matches closer together higher
 
@@ -85,7 +89,6 @@
 
 - Mark modified buffers in the navigate dialog
 - Mark deleted buffers in the open file dialog
-- Create new cursors above/below by ctrl+alt+shift+arrows
 - Display the number of cursors in the footer
 - Rollback creating another cursor (ctrl+alt+D?)
 

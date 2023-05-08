@@ -20,7 +20,7 @@ get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> Fil
         }
     }
     if proj_prefix_len > 0 then info.path = advance(info.path, proj_prefix_len);
-    
+
     info.icon = get_file_icon(name, extension);
 
     return info;
@@ -28,7 +28,7 @@ get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> Fil
 
 get_file_icon :: (name: string, extension: string) -> File_Icon {
     icon := File_Icon.unknown;
-    
+
     if extension == {
         case "jai";
             icon = .jai;
@@ -49,7 +49,7 @@ get_file_icon :: (name: string, extension: string) -> File_Icon {
         case "gif";
             icon = .image;
         case "bat";   #through;
-        case "sh";    #through;  
+        case "sh";    #through;
         case "bash";  #through;
         case "zsh";
             icon = .shell;
@@ -77,7 +77,7 @@ get_file_icon :: (name: string, extension: string) -> File_Icon {
             icon = .git;
         }
     }
-    
+
     return icon;
 }
 
@@ -96,7 +96,7 @@ get_lowercase_extension :: (path: string, greedy := true) -> string /* temp */, 
     if index < 0 return "", false;
     extension := advance(basename_with_extension, index + 1);
     if !extension return "", false;
-    
+
     return to_lower_copy(extension), true;
 }
 
@@ -110,7 +110,7 @@ is_file_binary :: (file_data: string) -> bool {
 
 should_ignore_file :: (path: string) -> bool {
     extension, found_extension := get_lowercase_extension(path);
-    
+
     if found_extension {
         // Allow known text file extensions since they are the most common
         for config.workspace.allow_file_extensions {
@@ -119,7 +119,7 @@ should_ignore_file :: (path: string) -> bool {
         for config.workspace.allow_file_extension_wildcards {
             if wildcard_match(extension, it) return false;
         }
-        
+
         // Then check for common known binary file extensions
         for config.workspace.ignore_file_extensions {
             if ends_with_nocase(path, it) return true;
@@ -129,7 +129,7 @@ should_ignore_file :: (path: string) -> bool {
         }
     }
     if begins_with_nocase(path, temp_dir) return true;  // explicitly ignore our own temp dir
-    
+
     return false;
 }
 
@@ -150,11 +150,11 @@ should_ignore_dir :: (path: string) -> bool {
     return false;
 }
 
-dir_is_within_project :: (dir_path: string) -> bool, project_dir: string {
+dir_is_within_project :: (dir_path: string) -> bool, project_dir: string, project_dir_name: string {
     for project_dirs {
-        if equal_nocase(dir_path, it.path) || contains_nocase(dir_path, tprint("%/", it.path)) return true, it.path;
+        if equal_nocase(dir_path, it.path) || contains_nocase(dir_path, tprint("%/", it.path)) return true, it.path, advance(it.path, it.path_prefix_len);
     }
-    return false, "";
+    return false, "", "";
 }
 
 get_parent_dir_path :: (file_path: string) -> string {
@@ -188,6 +188,6 @@ File_Icon :: enum u16 {
     drive   :: 0xf0a0;
     js      :: 0xf2fe;
     shell   :: 0xf2d0;
-    
+
     dots    :: 0xf141;
 }

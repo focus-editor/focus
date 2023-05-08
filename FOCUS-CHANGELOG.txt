@@ -30,7 +30,8 @@
 
 # Main Git Branch
 
-+ ...
++ Linux improvements
++ Navigate To File dialog now opens relative to the current open file
 
 
 # RELEASES ==================================================================

@@ -1098,7 +1098,7 @@ draw_open_file_dialog :: () {
         scan_progress := get_workspace_scan_progress();
         if scan_progress < 1.0 {
             progress_bar_rect := shrink(input_rect, 1);
-            progress_bar_rect.w *= scan_progress;;
+            progress_bar_rect.w *= scan_progress;
             draw_rect(progress_bar_rect, Colors.LIST_CURSOR_LITE);
         }
     } else {
