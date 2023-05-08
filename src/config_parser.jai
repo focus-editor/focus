@@ -5,8 +5,9 @@ parse_config :: (name: string, filename: string, file_data: string) -> Config, s
     result: Config;
 
     // NOTE: we don't free on purpose, because some of the parsed data will point into the file data
-    start_from_memory(*parser.handler, name, filename, file_data);
-    if parser.handler.failed return Config.{}, false, tprint("Parser couldn't read file '%'", filename);
+    trimmed_data := trim_left(file_data, " \t\n\r");  // skip empty lines, otherwise the handler will crash!
+    start_from_memory(*parser.handler, name, filename, trimmed_data);
+    if parser.handler.failed return Config.{}, false, tprint("The text file handler couldn't parse file '%'.\nPlease check that the version number is specified at the top, otherwise check the error log.", filename);
 
     while true {
         line, found := consume_next_line(*parser.handler);

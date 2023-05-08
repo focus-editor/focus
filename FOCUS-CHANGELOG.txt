@@ -31,7 +31,8 @@
 
 + Linux improvements
 + Navigate To File dialog now opens relative to the current open file
-+ Th folder list in the Navigate dialog should now react to the width of the popup
++ The Navigate dialog will now expand if the list of open folders doesn't fit
++ The editor will no longer crash if there are empty lines before the version number in the config file
 
 
 # RELEASES ==================================================================

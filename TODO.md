@@ -1,7 +1,5 @@
 # TODO
 
-- Don't crash when the config doesn't find the version number at the top
-
 - Fix multi-cursor copy-paste bugs
 - Create_or_delete_cursor_at_mouse_position
 
@@ -185,6 +183,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Don't crash when the config doesn't find the version number at the top
 + Derive path chunks in the file open dialog from the current buffer
 + Auto-enlarge when path chunks don't fit
 + Truncate path chunks when don't fit even when enlarged
