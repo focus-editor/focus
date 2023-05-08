@@ -1106,9 +1106,17 @@ draw_open_file_dialog :: () {
 
         half_padding := floor(padding / 2);
 
+        min_cursor_area_width := cast(float)font_ui.em_width * 5;  // leave enough space to type text
+
         // Figure out how much to pad on the left (if only there were a Javascript library for that…)
-        margin_left := 0.0;
+        margin_left  := 0.0;
         for path_chunks { margin_left += cast(float) Simp.get_text_width(font_ui, it) + padding * 2 + half_padding * 3; }
+
+        margin_delta := margin_left + min_cursor_area_width - input_rect.w;
+        if margin_delta > 0 {
+            open_file_dialog_maybe_expand();
+            margin_left -= margin_delta;
+        }
 
         draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = label, margin_left = margin_left);
 
@@ -1116,6 +1124,7 @@ draw_open_file_dialog :: () {
         defer pop_scissor();
 
         dir_rect := shrink(input_rect, padding);
+        if margin_delta > 0 then dir_rect.x -= margin_delta;
         text_y := dir_rect.y + floor((dir_rect.h - cast(float)font_ui.em_width) / 2);
         for path_chunks {
             width := cast(float) Simp.prepare_text(font_ui, it);

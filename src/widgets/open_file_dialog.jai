@@ -131,6 +131,12 @@ open_file_dialog_truncate_path_chunks :: (chunk_index: s64) {
     refresh_entries();
 }
 
+open_file_dialog_maybe_expand :: () {
+    using open_file_dialog;
+    if width_percentage < WIDTH_EXPANDED then toggle_expand();
+    redraw_requested = true;
+}
+
 
 #scope_file
 

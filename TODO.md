@@ -1,8 +1,6 @@
 # TODO
 
-+ Derive path chunks in the file open dialog from the current buffer
-- Auto-enlarge when path chunks don't fit
-- Truncate path chunks when don't fit even when enlarged
+- Find a different solution for the occluded hover reaction
 
 - Fix multi-cursor copy-paste bugs
 - Create_or_delete_cursor_at_mouse_position
@@ -186,6 +184,9 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Derive path chunks in the file open dialog from the current buffer
++ Auto-enlarge when path chunks don't fit
++ Truncate path chunks when don't fit even when enlarged
 + Fix the thread logging crash
 + Merge the macOS misc PR and cleanup
 + Fix the race condition and reject the PR

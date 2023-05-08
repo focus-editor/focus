@@ -1,7 +1,6 @@
 # ROUGH ROADMAP
 
 - Line wrap
-- Navigate to file dialog improvements
 - Optional line numbers
 - Config files for directories (i.e. adding a .focus-config file to your directory and have Focus load it)
 - Config option to limit the width of an editor
@@ -32,6 +31,7 @@
 
 + Linux improvements
 + Navigate To File dialog now opens relative to the current open file
++ Th folder list in the Navigate dialog should now react to the width of the popup
 
 
 # RELEASES ==================================================================
