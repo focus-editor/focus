@@ -75,6 +75,12 @@ build :: () {
         if !success {
             log_error("ERROR: Couldn't add manifest to executable '%'\n", exe_name);
         }
+    } else #if OS == .MACOS {
+        if !optimized return; // When debugging, use the Unix program directly.
+        
+        dir, resources_path := create_app_bundle("Focus", options.output_executable_name, "images/focus.png", "", true, true);
+        
+        #import "MacOS_Bundler";
     }
 }
 
