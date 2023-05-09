@@ -269,7 +269,7 @@ main :: () {
     // log_leak_report(report);
 }
 
-handle_common_editor_action :: (action: Action_Editors) -> handled: bool {
+handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placement = .in_place) -> handled: bool {
     if action == {
         case .increase_font_size;                               increase_font_size();                               return true;
         case .decrease_font_size;                               decrease_font_size();                               return true;
@@ -277,11 +277,11 @@ handle_common_editor_action :: (action: Action_Editors) -> handled: bool {
 
         case .open_project;                                     show_open_project_dialog();                         return true;
         case .open_projects_directory;                          platform_open_in_explorer(projects_dir);            return true;
-        case .open_global_config;                               editors_open_file(global_config_path);              return true;
-        case .open_project_config;                              editors_open_project_config();                      return true;
+        case .open_global_config;                               editors_open_global_config(placement);              return true;
+        case .open_project_config;                              editors_open_project_config(placement);             return true;
 
         case .go_to_line;                                       show_go_to_line_dialog();                           return true;
-        case .create_new_file;                                  editors_create_new_file();                          return true;
+        case .create_new_file;                                  editors_create_new_file(placement);                 return true;
         case .create_new_file_on_the_side;                      editors_create_new_file(.on_the_side);              return true;
 
         case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);                     return true;

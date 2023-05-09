@@ -357,9 +357,13 @@ editors_open_file :: (path: string, placement: Editor_Placement = .in_place) {
     editors_open_buffer(buffer_id, placement);
 }
 
-editors_open_project_config :: () {
+editors_open_global_config :: (placement: Editor_Placement) {
+    editors_open_file(global_config_path, placement);
+}
+
+editors_open_project_config :: (placement: Editor_Placement) {
     if project_config_path {
-        editors_open_file(project_config_path);
+        editors_open_file(project_config_path, placement);
     } else {
         add_user_warning("No project is active. Please open a project first.", dismiss_in_seconds = 5);
     }

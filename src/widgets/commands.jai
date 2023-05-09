@@ -4,16 +4,18 @@ commands_dialog_handle_event :: (event: Input.Event) -> handled: bool {
     if event.type == .KEYBOARD && event.key_pressed {
         action, mapping := map_event_to_action(event, Action_Open_File_Dialog);
         if action == {
-            case .close_dialog;             hide_commands_dialog();         return true;
-            case .open_entry_in_place;      commands_execute_selected();    return true;
-            case .open_entry_on_the_side;   commands_execute_selected();    return true;
+            case .close_dialog;             hide_commands_dialog();                     return true;
+            case .open_entry_in_place;      commands_execute_selected(.in_place);       return true;
+            case .open_entry_on_the_side;   commands_execute_selected(.on_the_side);    return true;
+            case .open_entry_on_the_left;   commands_execute_selected(.left);           return true;
+            case .open_entry_on_the_right;  commands_execute_selected(.right);          return true;
 
-            case .move_up;                  move_cursor(-1, wrap = true);   return true;
-            case .move_down;                move_cursor( 1, wrap = true);   return true;
-            case .move_up_fast;             move_cursor(-5);                return true;
-            case .move_down_fast;           move_cursor( 5);                return true;
-            case .move_up_one_page;         move_cursor(-per_page);         return true;
-            case .move_down_one_page;       move_cursor( per_page);         return true;
+            case .move_up;                  move_cursor(-1, wrap = true);               return true;
+            case .move_down;                move_cursor( 1, wrap = true);               return true;
+            case .move_up_fast;             move_cursor(-5);                            return true;
+            case .move_down_fast;           move_cursor( 5);                            return true;
+            case .move_up_one_page;         move_cursor(-per_page);                     return true;
+            case .move_down_one_page;       move_cursor( per_page);                     return true;
         }
 
         handled := maybe_handle_text_input_event(*input, event);
@@ -44,7 +46,7 @@ hide_commands_dialog :: () {
     activate_editors();
 }
 
-commands_execute_selected :: () {
+commands_execute_selected :: (placement: Editor_Placement = .in_place) {
     hide_commands_dialog();
 
     using commands_dialog;
@@ -55,7 +57,7 @@ commands_execute_selected :: () {
 
     if command.action == .do_nothing return;
 
-    handle_common_editor_action(command.action);
+    handle_common_editor_action(command.action, placement);
 }
 
 #scope_file

@@ -1,7 +1,5 @@
 # TODO
 
-- Open config commands should respect ctrl and ctrl+1/2
-
 - Create_or_delete_cursor_at_mouse_position
     - Make it built-in
     - Ctrl or cmd should be accepted on mac
@@ -192,6 +190,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Open config commands should respect ctrl, ctrl-1/2
 + Don't crash when the config doesn't find the version number at the top
 + Derive path chunks in the file open dialog from the current buffer
 + Auto-enlarge when path chunks don't fit
