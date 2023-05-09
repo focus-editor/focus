@@ -190,14 +190,15 @@ main :: () {
                     }
 
                 case .MOUSE_WHEEL;
-                    // @ToDo: Make this die on macOS!
-                    if ctrl_pressed() {
-                        if event.wheel_delta < 0  {
-                            decrease_font_size();
-                            dont_scroll_this_frame = true;
-                        } else if event.wheel_delta > 0 {
-                            increase_font_size();
-                            dont_scroll_this_frame = true;
+                    #if OS != .MACOS {
+                        if ctrl_or_cmd_pressed() {
+                            if event.wheel_delta < 0  {
+                                decrease_font_size();
+                                dont_scroll_this_frame = true;
+                            } else if event.wheel_delta > 0 {
+                                increase_font_size();
+                                dont_scroll_this_frame = true;
+                            }
                         }
                     }
                 case .DRAG_AND_DROP_FILES;
@@ -448,37 +449,6 @@ unimplemented :: (loc := #caller_location) {
     print("!!!! Unimplemented at %\n", loc);
 }
 
-nothing_pressed :: inline (mods: Mods) -> bool {
-    return mods.packed == MODS_NONE;
-}
-
-only_ctrl_pressed :: inline (mods: Mods) -> bool {
-    return mods.packed == MODS_CTRL;
-}
-
-only_alt_pressed :: inline (mods: Mods) -> bool {
-    return mods.packed == MODS_ALT;
-}
-
-only_shift_pressed :: inline (mods: Mods) -> bool {
-    return mods.packed == MODS_SHIFT;
-}
-
-only_alt_shift_pressed :: inline (mods: Mods) -> bool {
-    return mods.packed == MODS_ALT_SHIFT;
-}
-
-only_ctrl_shift_pressed :: inline (mods: Mods) -> bool {
-    return mods.packed == MODS_CTRL_SHIFT;
-}
-
-only_ctrl_alt_pressed :: inline (mods: Mods) -> bool {
-    return mods.packed == MODS_CTRL_ALT;
-}
-only_ctrl_alt_shift_pressed :: inline (mods: Mods) -> bool {
-    return mods.packed == MODS_CTRL_ALT_SHIFT;
-}
-
 key_state :: inline (key: Input.Key_Code) -> Input.Key_Current_State {
     return Input.input_button_states[key];
 }
@@ -487,8 +457,16 @@ shift_pressed :: inline () -> bool {
     return key_state(.SHIFT) & .DOWN != 0;
 }
 
-ctrl_pressed :: inline () -> bool {
-    return key_state(.CTRL) & .DOWN != 0;
+only_shift_pressed :: inline (mods: Mods) -> bool {
+    return mods.packed == MODS_SHIFT;
+}
+
+ctrl_or_cmd_pressed :: inline () -> bool {
+    #if OS != .MACOS {
+        return key_state(.CTRL) & .DOWN != 0;
+    } else {
+        return key_state(.CMD) & .DOWN != 0;
+    }
 }
 
 // Important directories

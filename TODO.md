@@ -1,12 +1,17 @@
 # TODO
 
-- Fix multi-cursor copy-paste bugs
-- Create_or_delete_cursor_at_mouse_position
-
 - Open config commands should respect ctrl and ctrl+1/2
-- Create new cursors above/below (what's the common shortcut for it)
 
+- Create_or_delete_cursor_at_mouse_position
+    - Make it built-in
+    - Ctrl or cmd should be accepted on mac
+    - Ctrl-double click to select word
+    - Ctrl-drag to select things using the newly created cursor
+
+- Create new cursors above/below (what's the common shortcut for it)
 - Show project name in the window title
+
+- Fix multi-cursor copy-paste bugs
 
 - Ctrl-K and other shortcuts should work in text inputs
 - Have a font_ui config setting
@@ -21,7 +26,6 @@
 - Notify about duplicate bindings and highlight that in the config file
 - Search returns extra results: Runtime_Support, report_bounds_check_error_more_visibly
 - Limit editor width
-
 
 - Improve the scoring for fuzzy search (maybe after the fact even) - score matches closer together higher
 
@@ -158,6 +162,11 @@
     - Scan all jai files in a project (possibly in a separate thread) and build a lookup table for functions and structs
       (Do without scopes for now, later if we find we have to limit potential results we can do it)
     - Update the lookup table on file/buffer changes (buffers always take precedence over what's in files)
+
+- Custom commands (maybe)
+    - Modify the metaprogram to load files from some folder (maybe a file per action type)
+    - Have handlers for them separate from the normal ones
+    - Insert new commands into the lists so that the config knows about them
 
 - If a buffer is modified on disk, ask for confirmation before saving (use the function and not the flag)
 

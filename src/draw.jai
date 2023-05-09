@@ -294,7 +294,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         cursors_stop_blinking();
 
-        if !mouse.left.is_dragging && ctrl_pressed() {
+        if !mouse.left.is_dragging && ctrl_or_cmd_pressed() {
             same_clipboard, clipboard := cursors_have_the_same_clipboard(editor);
 
             // Create new cursor
@@ -306,7 +306,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             main_cursor = cursors.count - 1;
             organise_cursors(editor);
 
-        } else if !ctrl_pressed() {
+        } else if !ctrl_or_cmd_pressed() {
             // Maybe change cursor position
             cursor := leave_only_original_cursor(editor);
             cursor.pos = coords_to_offset(buffer, coords);
@@ -1226,7 +1226,7 @@ draw_open_file_dialog :: () {
                 if mouse_pointer_is_within(entry_rect) && is_hovering_over(ui_id) {
                     if mouse.left.just_pressed then entries.selected_by_mouse = entry_index;
                     if entries.selected_by_mouse == -1 then draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
-                    placement := ifx ctrl_pressed() then Editor_Placement.on_the_side else .in_place;
+                    placement := ifx ctrl_or_cmd_pressed() then Editor_Placement.on_the_side else .in_place;
                     if entries.selected_by_mouse == entry_index && mouse.left.just_released {
                         open_file_dialog_open_entry(entry_index, placement);
                         redraw_requested = true;
@@ -1851,7 +1851,7 @@ draw_finder :: () {
             if mouse_pointer_is_within(entry_rect) && is_hovering_over(ui_id) {
                 if mouse.left.just_pressed then selected_by_mouse = entry_index;
                 if selected_by_mouse == -1 then draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
-                placement := ifx ctrl_pressed() then Editor_Placement.on_the_side else .in_place;
+                placement := ifx ctrl_or_cmd_pressed() then Editor_Placement.on_the_side else .in_place;
                 if selected_by_mouse == entry_index && mouse.left.just_released then finder_open_selected_result(entry_index, placement);
             }
             if selected_by_mouse == entry_index then draw_rect(entry_rect, Colors.LIST_CURSOR);

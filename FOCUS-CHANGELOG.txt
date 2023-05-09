@@ -33,6 +33,7 @@
 + Navigate To File dialog now opens relative to the current open file
 + The Navigate dialog will now expand if the list of open folders doesn't fit
 + The editor will no longer crash if there are empty lines before the version number in the config file
++ Now Cmd is used instead of Ctrl on macOS when deciding whether to open a file on the side etc.
 
 
 # RELEASES ==================================================================
