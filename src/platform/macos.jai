@@ -11,6 +11,14 @@ platform_apply_config :: (config: *platform_config) {
 }
 
 platform_setup :: inline () {
+    init_mac_app();
+}
+
+platform_data_dir :: () -> string {
+    application_support := NSFileManager.URLForDirectory(NSFileManager.defaultManager(), NSApplicationSupportDirectory, NSUserDomainMask, null, YES, null);
+    config_dir := sprint("%/dev.focus-editor", to_string(NSURL.path(application_support)));
+    make_directory_if_it_does_not_exist(config_dir);
+    return config_dir;
 }
 
 platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, s32, s32 {
