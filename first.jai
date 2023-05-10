@@ -100,7 +100,7 @@ STRING, VERSION, RELEASE_DATE), w);
         
         // Generate Focus.app inside our temporary directory
         set_working_directory(DMG_DIR);
-        create_app_bundle("Focus", tprint("../%", options.output_executable_name), "../images/focus.png", "", true, true);
+        create_app_bundle("Focus", tprint("../%", options.output_executable_name), "../images/mac.png", "", true, true);
         write_entire_file("Focus.app/Contents/Info.plist", tprint(INFO_PLIST_CONTENTS, VERSION, VERSION));
         set_working_directory(#filepath);
         
