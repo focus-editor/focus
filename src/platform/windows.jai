@@ -18,6 +18,10 @@ platform_data_dir :: () -> string {
     return copy_string(path_strip_filename(get_path_of_running_executable()));
 }
 
+platform_config_dir :: () -> string {
+    return platform_data_dir();
+}
+
 platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, s32, s32 {
     if !EnumDisplayMonitors(null, null, monitor_enum_proc, 0) then panic("Couldn't enumerate monitors");
     assert(monitors.count > 0, "Unexpectedly no monitors found. This is a bug.");

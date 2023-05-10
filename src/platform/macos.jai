@@ -21,6 +21,10 @@ platform_data_dir :: () -> string {
     return config_dir;
 }
 
+platform_config_dir :: () -> string {
+    return platform_data_dir();
+}
+
 platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, s32, s32 {
     // On macOS, we do not need to set x & y from open_on_biggest.
     // By default, macOS already positions the window within the monitor in which

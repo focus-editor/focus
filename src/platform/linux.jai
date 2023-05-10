@@ -47,7 +47,15 @@ platform_setup :: () {
 }
 
 platform_data_dir :: () -> string {
-    return copy_string(path_strip_filename(get_path_of_running_executable()));
+    data_dir := sprint("%/focus-editor", get_xdg_path(.DATA_HOME));
+    make_directory_if_it_does_not_exist(data_dir);
+    return data_dir;
+}
+
+platform_config_dir :: () -> string {
+    config_dir := sprint("%/focus-editor", get_xdg_path(.CONFIG_HOME));
+    make_directory_if_it_does_not_exist(config_dir);
+    return config_dir;
 }
 
 platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, s32, s32 {
@@ -103,6 +111,47 @@ platform_open_in_explorer :: (dir: string) {
 
 #scope_file
 
+XDG_Dir :: enum {
+    DATA_HOME;
+    CONFIG_HOME;
+    STATE_HOME;
+}
+
+/*
+ * @TODO: add a proper XDG path module
+ * ref: https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+ */
+get_xdg_path :: (dir: XDG_Dir) -> string {
+    env_var: string;
+    if #complete dir == {
+        case .DATA_HOME;   env_var = "XDG_DATA_HOME";
+        case .CONFIG_HOME; env_var = "XDG_CONFIG_HOME";
+        case .STATE_HOME;  env_var = "XDG_STATE_HOME";
+    }
+    env_path := getenv(env_var.data);
+    if env_path {
+        ret := to_string(env_path);
+        if starts_with(ret, "/") {
+            if ends_with(ret, "/") && ret != "/" ret.count -= 1;
+            return ret;
+        }
+    }
+
+    pw := getpwuid(getuid());
+    if pw {
+        home := to_string(pw.pw_dir);
+        if ends_with(home, "/") && home != "/" home.count -= 1;
+        if #complete dir == {
+            case .DATA_HOME;   return tprint("%/.local/share", home);
+            case .CONFIG_HOME; return tprint("%/.config", home);
+            case .STATE_HOME;  return tprint("%/.local/state", home);
+        }
+    }
+
+    /* just fall back to executable directory */
+    return path_strip_filename(get_path_of_running_executable());
+}
+
 Monitor :: struct {
     left   : int;
     top    : int;
@@ -114,3 +163,4 @@ monitors : [..] Monitor;
 
 LD :: #import "Linux_Display";
 #import "Math";
+#import "POSIX";

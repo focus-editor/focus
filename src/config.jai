@@ -1,5 +1,5 @@
 load_global_config :: (create_if_doesnt_exist := false) -> success: bool, changed: bool {
-    global_config_path = sprint("%/global.focus-config", data_dir);
+    global_config_path = sprint("%/global.focus-config", config_dir);
 
     if create_if_doesnt_exist && !file_exists(global_config_path) {
         // Create one with default contents

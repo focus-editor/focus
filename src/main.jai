@@ -7,12 +7,13 @@ main :: () {
     platform_setup();
 
     // Remember important directories
+    config_dir = platform_config_dir();
     data_dir = platform_data_dir();
     if ends_with(data_dir, "/") data_dir.count -= 1;
     assert(data_dir.count > 0);
-    
+
     temp_dir     = sprint("%/temp",     data_dir);
-    projects_dir = sprint("%/projects", data_dir);
+    projects_dir = sprint("%/projects", config_dir);
 
     projects_dir_existed := file_exists(projects_dir);
 
@@ -470,6 +471,7 @@ ctrl_or_cmd_pressed :: inline () -> bool {
 }
 
 // Important directories
+config_dir:   string;
 data_dir:     string;
 temp_dir:     string;
 projects_dir: string;
