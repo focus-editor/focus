@@ -1,9 +1,6 @@
 #placeholder VERSION;
 #placeholder RELEASE_DATE;
 
-// VERSION      :: "0.1.6";
-// RELEASE_DATE :: "6 May 2023";
-
 main :: () {
     cpu_info = get_cpu_info();
 
@@ -696,10 +693,11 @@ MODS_CTRL_ALT_SHIFT :: #run Mods.{ ctrl_pressed = true, alt_pressed   = true, sh
 MIN_WINDOW_WIDTH  :: 50;
 MIN_WINDOW_HEIGHT :: 50;
 
-DOUBLE_CLICK_SPEED     :: 0.3;  // how many seconds between clicks to consider it a double click
-DOUBLE_CLICK_TOLERANCE :: 2;    // how many pixels between the click locations are allowed
 
 #scope_export
+
+DOUBLE_CLICK_SPEED     :: 0.3;  // how many seconds between clicks to consider it a double click
+DOUBLE_CLICK_TOLERANCE :: 2;    // how many pixels between the click locations are allowed
 
 // Embed default fonts
 FONT         :: #run load_font("FiraCode-Retina.ttf");

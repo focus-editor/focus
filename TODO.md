@@ -1,18 +1,9 @@
 # TODO
 
-- Create_or_delete_cursor_at_mouse_position
-    - Make it built-in
-    - Ctrl or cmd should be accepted on mac
-    - Ctrl-double click to select word
-    - Ctrl-drag to select things using the newly created cursor
-
 - Create new cursors above/below (what's the common shortcut for it)
 - Show project name in the window title
 
 - Fix multi-cursor copy-paste bugs
-
-- Ctrl-K and other shortcuts should work in text inputs
-- Have a font_ui config setting
 
 - Fix the editor not noticing changes on git pull
 
@@ -21,11 +12,19 @@
 - Project dir disambiguation
 - When switching to another editor, jump to cursor
 - Autoindent region
+- Ctrl-K should copy whatever was deleted
+- Ctrl-K and other shortcuts should work in text inputs
 - Notify about duplicate bindings and highlight that in the config file
 - Search returns extra results: Runtime_Support, report_bounds_check_error_more_visibly
 - Limit editor width
 
+- A config option to disable subpixel font rendering
+
 - Improve the scoring for fuzzy search (maybe after the fact even) - score matches closer together higher
+
+- Ignore files and dirs during search - have a bunch of wildcards
+
+- Have a font_ui config setting
 
 - Fix the multi-line copying and pasting - https://discord.com/channels/661732390355337246/1100701456950099978/1103153377237540874
 
@@ -190,6 +189,8 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Ctrl-double click to select word
++ Ctrl-drag to select things using the newly created cursor
 + Open config commands should respect ctrl, ctrl-1/2
 + Don't crash when the config doesn't find the version number at the top
 + Derive path chunks in the file open dialog from the current buffer

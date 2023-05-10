@@ -468,7 +468,7 @@ leave_only_original_cursor :: (using editor: *Editor) -> *Cursor {
     return *cursors[0];
 }
 
-organise_cursors :: (using editor: *Editor) {
+organise_cursors :: (using editor: *Editor, selection_mode: *Selection_Mode = xx 0) {
     compare_cursors :: (c1: Cursor, c2: Cursor) -> s64 {
         return min(c1.pos, c1.sel) - min(c2.pos, c2.sel);
     }
@@ -518,6 +518,7 @@ organise_cursors :: (using editor: *Editor) {
             } else {
                 reset_clipboard = true;
             }
+            if selection_mode && (main_cursor == i || main_cursor == i+1) then selection_mode.min_range = get_selection(cursor);  // preserve the selection when dragging
             array_ordered_remove_by_index(*cursors, i+1);
             if main_cursor     > i then main_cursor -= 1;
             if original_cursor > i then original_cursor -= 1;
@@ -840,14 +841,16 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
 }
 
 select_lines :: (editor: *Editor, buffer: Buffer) {
-    for * cursor : editor.cursors {
-        selection  := get_selection(cursor);
-        start_line := offset_to_line(buffer, selection.start);
-        end\ _line := ifx selection.start != selection.end then offset_to_line(buffer, selection.end) else start_line;
-        cursor.sel = get_line_start_offset(buffer, start_line);
-        cursor.pos = get_line_start_offset(buffer, end_line+1);
-    }
+    for * cursor : editor.cursors select_line(cursor, buffer);
     editor.cursor_moved = true;
+}
+
+select_line :: (cursor: *Cursor, buffer: Buffer) {
+    selection  := get_selection(cursor);
+    start_line := offset_to_line(buffer, selection.start);
+    end\ _line := ifx selection.start != selection.end then offset_to_line(buffer, selection.end) else start_line;
+    cursor.sel = get_line_start_offset(buffer, start_line);
+    cursor.pos = get_line_start_offset(buffer, end_line+1);
 }
 
 scan_through_similar_chars_on_the_left :: (using buffer: Buffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true) -> offset: s32 {
@@ -2232,6 +2235,9 @@ Editor :: struct {
     search_whole_words := false;  // used when creating new cursors
     cursor_moved       := false;  // this may trigger a scroll so that the cursor is within acceptable bounds
 
+    new_cursor_just_created_using_mouse := false;  // useful to know in order to handle select-by-drag and select-word with the new cursor
+    last_cursor_created_using_mouse_at: Time;
+
     scroll_to_cursor: enum u8 { no; yes; yes_new_editor; }  // trigger a scroll so that the cursor is in the center vertically
 
     highlights: [..] Text_Highlight;
@@ -2279,6 +2285,13 @@ Search_Bar :: struct {
     scroll_y: s32;
 
     Mode :: enum { classic; dropdown; }
+}
+
+// What to select when dragging
+Selection_Mode :: struct {
+    type: enum { chars; words; lines; } = .chars;
+    range:     Offset_Range;
+    min_range: Offset_Range;
 }
 
 Scroll_Mode :: enum { no; yes; snap; };
@@ -2329,7 +2342,7 @@ open_buffers_lock: Mutex;  // must hold while adding a new buffer
 
 editors: Editor_State;
 
-// Triggered by alt + up/down
+// Keyboard smooth scrolling
 editor_smooth_scroll: struct {
     active: bool;
     up:     bool;  // if not up, then down

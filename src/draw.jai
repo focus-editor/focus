@@ -294,21 +294,49 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         cursors_stop_blinking();
 
-        if !mouse.left.is_dragging && ctrl_or_cmd_pressed() {
-            same_clipboard, clipboard := cursors_have_the_same_clipboard(editor);
+        if ctrl_or_cmd_pressed() && !(mouse.left.is_dragging || mouse.left.just_double_clicked || mouse.left.just_triple_clicked) {
+            click_offset := coords_to_offset(buffer, coords);
 
-            // Create new cursor
-            new_cursor := array_add(*cursors);
-            new_cursor.pos = coords_to_offset(buffer, coords);
-            new_cursor.sel = new_cursor.pos;
-            if same_clipboard then new_cursor.clipboard = clipboard;
+            // Maybe delete a cursor if we clicked on an existing one
+            deleted_cursor := false;
+            if cursors.count > 1 {
+                for cursor, i : cursors {
+                    if cursor.pos == click_offset {
+                        array_unordered_remove_by_index(*cursors, i);
+                        if main_cursor >= i     then main_cursor -= 1;
+                        if original_cursor >= i then original_cursor -= 1;
+                        main_cursor     = clamp(main_cursor,     0, cursors.count - 1);
+                        original_cursor = clamp(original_cursor, 0, cursors.count - 1);
+                        deleted_cursor = true;
+                        break;
+                    }
+                }
+            }
 
-            main_cursor = cursors.count - 1;
-            organise_cursors(editor);
+            if !deleted_cursor {
+                // Create new cursor
+                same_clipboard, clipboard := cursors_have_the_same_clipboard(editor);
+                new_cursor := array_add(*cursors);
+                new_cursor.pos = click_offset;
+                new_cursor.sel = new_cursor.pos;
+                if same_clipboard then new_cursor.clipboard = clipboard;
 
-        } else if !ctrl_or_cmd_pressed() {
-            // Maybe change cursor position
-            cursor := leave_only_original_cursor(editor);
+                main_cursor = cursors.count - 1;
+                new_cursor_just_created_using_mouse = true;
+                last_cursor_created_using_mouse_at = frame_time;
+            }
+
+            organise_cursors(editor, *selection_mode);
+        } else {
+            cursor: *Cursor;
+            if ctrl_or_cmd_pressed() && new_cursor_just_created_using_mouse {
+                // Clicked or is dragging with ctrl pressed - select using the most recently added cursor
+                cursor = *cursors[main_cursor];
+            } else {
+                // Either just clicked or is dragging without ctrl pressed
+                cursor = leave_only_original_cursor(editor);
+            }
+
             cursor.pos = coords_to_offset(buffer, coords);
             cursor.col_wanted = -1;
 
@@ -329,12 +357,24 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
                 case .lines;
                     cursor.sel = selection_mode.range.start;
-                    select_lines(editor, buffer);
+                    select_line(cursor, buffer);
                     if cursor.sel < selection_mode.range.start {
                         pos := cursor.pos - 1;  // don't select the last \n
                         cursor.pos = cursor.sel;
                         cursor.sel = pos;
                     }
+            }
+
+            // A special case when merging cursors - we want to preserve the combined selection
+            if selection_mode.min_range.start != selection_mode.min_range.end {
+                if cursor.pos <= selection_mode.min_range.start    then cursor.sel = selection_mode.min_range.end;
+                else if cursor.pos >= selection_mode.min_range.end then cursor.sel = selection_mode.min_range.start;
+                else {
+                    using selection_mode;
+                    mid_point := (min_range.end - min_range.start) / 2;
+                    cursor.sel = ifx cursor.pos < mid_point then min_range.end   else min_range.start;
+                    cursor.pos = ifx cursor.pos < mid_point then min_range.start else min_range.end;
+                }
             }
 
             // We mark cursor as moved to trigger auto-scroll if we drag outside the editor
@@ -348,10 +388,12 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 selection_mode.range = get_selection(cursor);
             }
             if mouse.left.just_triple_clicked {
-                select_lines(editor, buffer);
+                select_line(cursor, buffer);
                 selection_mode.type  = .lines;
                 selection_mode.range = get_selection(cursor);
             }
+
+            organise_cursors(editor, *selection_mode);
         }
 
         editor.refresh_highlights = true;
@@ -360,7 +402,12 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         editors.active = editor_id;
         if mouse.left.just_pressed then redraw_requested = true;  // so that we don't draw 2 active editors
     }
-    if !mouse.left.is_down || mouse.left.just_released then selection_mode.type = .chars;
+    if !mouse.left.is_down || mouse.left.just_released {
+        selection_mode.type = .chars;
+        selection_mode.min_range.start = 0;
+        selection_mode.min_range.end   = 0;
+        if editor.new_cursor_just_created_using_mouse && (frame_time - editor.last_cursor_created_using_mouse_at) >= cast(Time) (2 * DOUBLE_CLICK_SPEED) then editor.new_cursor_just_created_using_mouse = false;
+    }
 
     // Get the coordinates of all cursors
     // @Speed: instead of doing it every frame we could do it when cursors change only - but probably it's ok
@@ -2433,10 +2480,7 @@ Ui_Id :: enum s64 {
 scrollbar_grab_point: float;
 
 // What to select when dragging
-selection_mode: struct {
-    type: enum { chars; words; lines; } = .chars;
-    range: Offset_Range;
-}
+selection_mode: Selection_Mode;
 
 scissor_stack: [..] Rect;
 
