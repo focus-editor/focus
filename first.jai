@@ -1,3 +1,6 @@
+VERSION      :: "0.1.6";
+RELEASE_DATE :: "6 May 2023";
+
 #run build();
 
 build :: () {
@@ -49,17 +52,30 @@ build :: () {
     compiler_begin_intercept(w);
 
     add_build_file("src/main.jai", w);
+    
+    inserted_code := false;
 
     while true {
         message := compiler_wait_for_message();
         if message.workspace != w continue;
+        
+        if message.kind == {
+        case .PHASE;
+            phase := cast(*Message_Phase) message;
+            if phase.phase == .TYPECHECKED_ALL_WE_CAN && !inserted_code {
+                add_build_string(tprint(#string STRING
+VERSION      :: "%";
+RELEASE_DATE :: "%";
+STRING, VERSION, RELEASE_DATE), w);
+                inserted_code = true;
+            }
+        case .COMPLETE;
+            break;
+        }
         if message.kind == .COMPLETE break;
     }
 
     compiler_end_intercept(w);
-
-    // NOTE: currently we're intercepting compiler messages only to know when the executable
-    // has been written so that we can set icon and manifest
 
     #if OS == .WINDOWS {
         exe_name := tprint("%.exe", options.output_executable_name);
@@ -76,11 +92,30 @@ build :: () {
             log_error("ERROR: Couldn't add manifest to executable '%'\n", exe_name);
         }
     } else #if OS == .MACOS {
-        if !optimized return; // When debugging, use the Unix program directly.
+        if !optimized return; // When debugging, use the Unix program directly. This saves us compile time.
         
-        dir, resources_path := create_app_bundle("Focus", options.output_executable_name, "images/focus.png", "", true, true);
+        // Set up our temporary directory to turn into a .DMG disk image
+        DMG_DIR :: "DMG";
+        run_command("mkdir", DMG_DIR);
+        
+        // Generate Focus.app inside our temporary directory
+        set_working_directory(DMG_DIR);
+        create_app_bundle("Focus", tprint("../%", options.output_executable_name), "../images/focus.png", "", true, true);
+        write_entire_file("Focus.app/Contents/Info.plist", tprint(INFO_PLIST_CONTENTS, VERSION, VERSION));
+        set_working_directory(#filepath);
+        
+        // Create a symbolic link to /Applications (what all the cool kids do)
+        run_command("ln", "-s", "/Applications", DMG_DIR);
+        
+        // Generate a .DMG using Disk Utility
+        run_command("hdiutil", "create", "-volname", tprint("Focus %", VERSION), "-srcfolder", DMG_DIR, "-ov", "-format", "UDZO", tprint("Focus-%-Intel.dmg", VERSION));
+        
+        // Remove our temporary directory when we're done
+        run_command("rm", "-r", DMG_DIR);
         
         #import "MacOS_Bundler";
+        #import "Process";
+        #import "File";
     }
 }
 
@@ -90,4 +125,45 @@ build :: () {
 #if OS == .WINDOWS {
     #import "Ico_File";
     #import "Windows_Resources";
+} else #if OS == .MACOS {
+INFO_PLIST_CONTENTS :: #string STRING
+<?xml version="1.0" ?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist>
+    <dict>
+        <key>CFBundleDevelopmentRegion</key>
+        <string>en-US</string>
+        
+        <key>CFBundleDisplayName</key>
+        <string>Focus</string>
+        
+        <key>CFBundleExecutable</key>
+        <string>Focus</string>
+        
+        <key>CFBundleIconFile</key>
+        <string>icon_data.icns</string>
+        
+        <key>CFBundleIdentifier</key>
+        <string>dev.focus-editor</string>
+        
+        <key>CFBundleInfoDictionaryVersion</key>
+        <string>6.0</string>
+        
+        <key>CFBundleName</key>
+        <string>Focus</string>
+        
+        <key>CFBundlePackageType</key>
+        <string>APPL</string>
+        
+        <key>CFBundleShortVersionString</key>
+        <string>%</string>
+        
+        <key>CFBundleVersion</key>
+        <string>%</string>
+        
+        <key>NSHumanReadableCopyright</key>
+        <string>© 2023 Ivan Ivanov</string>
+    </dict>
+</plist>
+STRING
 }

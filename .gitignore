@@ -3,11 +3,11 @@
 *.exe
 *.rdbg
 *.dSYM/
+*.dmg
 .DS_Store
 
 projects/
 temp/
-Focus.app/
 
 focus
 focus_debug
