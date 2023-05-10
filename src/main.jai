@@ -11,8 +11,6 @@ main :: () {
     if ends_with(data_dir, "/") data_dir.count -= 1;
     assert(data_dir.count > 0);
     
-    context.error_report_dir = data_dir;
-    
     temp_dir     = sprint("%/temp",     data_dir);
     projects_dir = sprint("%/projects", data_dir);
 

@@ -513,10 +513,10 @@ runtime_support_default_allocator_proc :: Default_Allocator.allocator_proc;
 
 synch_initted: s32 = 0;
 
-// Below are the things we've added.
-#add_context error_report_dir: string;
 
 #scope_file
+
+// Below are the functions we've added.
 
 report_bounds_check_error_more_visibly :: (index: s64, limit: s64, line_number: s64, filename: *u8) #no_context {
     ctx: Context;
@@ -547,8 +547,9 @@ report_error_in_yer_face :: (message: string, args: .. Any) {
     String :: #import "String";
     Basic :: #import "Basic";
     File :: #import "File";
-    // Log it in a crash report file in the config directory
-    crash_report_file_path := Basic.sprint("%/focus-crash-report.txt", context.error_report_dir);
+    // Log it in a crash report file next to the exe
+    exe_dir := String.path_strip_filename(System.get_path_of_running_executable());
+    crash_report_file_path := Basic.sprint("%/focus-crash-report.txt", exe_dir);
     formatted_message := Basic.sprint(message, ..args);
     File.write_entire_file(crash_report_file_path, formatted_message);
 
