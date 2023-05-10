@@ -7,12 +7,14 @@ main :: () {
     platform_setup();
 
     // Remember important directories
-    exe_dir = copy_string(path_strip_filename(get_path_of_running_executable()));
-    if ends_with(exe_dir, "/") exe_dir.count -= 1;
-    assert(exe_dir.count > 0);
-
-    temp_dir     = sprint("%/temp",     exe_dir);
-    projects_dir = sprint("%/projects", exe_dir);
+    data_dir = platform_data_dir();
+    if ends_with(data_dir, "/") data_dir.count -= 1;
+    assert(data_dir.count > 0);
+    
+    context.error_report_dir = data_dir;
+    
+    temp_dir     = sprint("%/temp",     data_dir);
+    projects_dir = sprint("%/projects", data_dir);
 
     projects_dir_existed := file_exists(projects_dir);
 
@@ -470,7 +472,7 @@ ctrl_or_cmd_pressed :: inline () -> bool {
 }
 
 // Important directories
-exe_dir:      string;
+data_dir:     string;
 temp_dir:     string;
 projects_dir: string;
 

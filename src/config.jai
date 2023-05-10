@@ -1,5 +1,5 @@
 load_global_config :: (create_if_doesnt_exist := false) -> success: bool, changed: bool {
-    global_config_path = sprint("%/global.focus-config", exe_dir);
+    global_config_path = sprint("%/global.focus-config", data_dir);
 
     if create_if_doesnt_exist && !file_exists(global_config_path) {
         // Create one with default contents
@@ -94,10 +94,10 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
 
     try_path(name);
 
-    try_path(tprint("%/%", exe_dir, name));
+    try_path(tprint("%/%", data_dir, name));
     if !has_extension {
-        try_path(tprint("%/%.ttf", exe_dir, name));
-        try_path(tprint("%/%.otf", exe_dir, name));
+        try_path(tprint("%/%.ttf", data_dir, name));
+        try_path(tprint("%/%.otf", data_dir, name));
     }
 
     // Try to look it up in system fonts
