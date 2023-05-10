@@ -29,7 +29,15 @@
 
 # Main Git Branch
 
-+ Linux improvements
++ ...
+
+
+# RELEASES ==================================================================
+
+
+# Version 0.1.7, 11 May 2023
+
++ Various Linux version improvements
 + Navigate To File dialog now opens relative to the current open file
 + The Navigate dialog will now expand if the list of open folders doesn't fit
 + The editor will no longer crash if there are empty lines before the version number in the config file
@@ -37,9 +45,7 @@
 + It is now possible to choose a side where to open a file when executing commands that open files, like you would with the open file dialog
 + Ctrl-double/triple clicking and dragging now behaves as expected in terms of creating multiple cursors
 + Ctrl-click on a cursor will remove it
-
-
-# RELEASES ==================================================================
++ New icon for macOS
 
 
 # Version 0.1.6, 6 May 2023
