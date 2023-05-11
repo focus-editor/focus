@@ -9,7 +9,7 @@ This editor is for people who value simplicity, are sensitive to input latency a
 
 ## Quick start
 
-1. Download the executable and put it somewhere where it will live.
+1. [Download the executable](https://github.com/focus-editor/focus/releases) and put it somewhere where it will live.
 
 2. Launch the executable. It will create a `global.focus-config` file and the `projects` folder next to itself.
 
