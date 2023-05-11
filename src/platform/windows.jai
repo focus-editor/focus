@@ -7,7 +7,8 @@ platform_parse_config_line :: (config: *platform_config, section: PLATFORM_SUBSE
     return true, "";
 }
 
-platform_apply_config :: (config: *platform_config) {
+platform_apply_config :: inline (config: *platform_config) {
+
 }
 
 platform_setup :: () {
@@ -20,7 +21,7 @@ platform_data_dir :: () -> string {
     return dir;
 }
 
-platform_config_dir :: () -> string {
+platform_config_dir :: inline () -> string {
     return platform_data_dir();
 }
 

@@ -7,7 +7,7 @@ platform_parse_config_line :: (config: *platform_config, section: PLATFORM_SUBSE
     return true, "";
 }
 
-platform_apply_config :: (config: *platform_config) {
+platform_apply_config :: inline (config: *platform_config) {
 }
 
 platform_setup :: inline () {
@@ -21,7 +21,7 @@ platform_data_dir :: () -> string {
     return config_dir;
 }
 
-platform_config_dir :: () -> string {
+platform_config_dir :: inline () -> string {
     return platform_data_dir();
 }
 
@@ -60,11 +60,11 @@ platform_wait_message :: inline () {
 
 }
 
-platform_set_refresh_timer :: (window: Window_Type) {
+platform_set_refresh_timer :: inline (window: Window_Type) {
 
 }
 
-platform_kill_refresh_timer :: (window: Window_Type) {
+platform_kill_refresh_timer :: inline (window: Window_Type) {
 
 }
 
