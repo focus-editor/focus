@@ -1,13 +1,16 @@
 // Adapted code from modules/Keymap
 
-parse_config :: (name: string, filename: string, file_data: string) -> Config, success: bool, error_msg: string /* temp */ {
+parse_config :: (name: string, filename: string, file_data: string) -> Config, success: bool, error_msg: string /* temp */, warnings: [] string /* temp */ {
     parser: Config_Parser;
     result: Config;
 
     // NOTE: we don't free on purpose, because some of the parsed data will point into the file data
     trimmed_data := trim_left(file_data, " \t\n\r");  // skip empty lines, otherwise the handler will crash!
     start_from_memory(*parser.handler, name, filename, trimmed_data);
-    if parser.handler.failed return Config.{}, false, tprint("The text file handler couldn't parse file '%'.\nPlease check that the version number is specified at the top, otherwise check the error log.", filename);
+    if parser.handler.failed return Config.{}, false, tprint("The text file handler couldn't parse file '%'.\nPlease check that the version number is specified at the top, otherwise check the error log.", filename), .[];
+
+    warnings: [..] string;
+    warnings.allocator = temp;
 
     while true {
         line, found := consume_next_line(*parser.handler);
@@ -16,35 +19,26 @@ parse_config :: (name: string, filename: string, file_data: string) -> Config, s
         // Maybe switch to a different top section
         if begins_with(line, "[[") {
             error, error_msg := switch_top_section(*parser, line);
-            if error return Config.{}, false, error_msg;
+            if error return Config.{}, false, error_msg, .[];
             continue;
         }
 
+        success:   bool;
+        error_msg: string;
+
         if #complete parser.top_section == {
+            case .workspace;    success, error_msg = parse_workspace_line(*parser, line);
+            case .settings;     success, error_msg = parse_settings_line(*parser, line);
+            case .keymap;       success, error_msg = parse_keymap_line(*parser, line);
+            case .style;        success, error_msg = parse_style_line(*parser, line);
+            case .platform;     success, error_msg = platform_parse_config_line(*parser, line);
             case .none;
                 error_msg := log_parser_error(parser.handler, "Expected a top-level section definition, got '%'", line);
-                return result, false, error_msg;
-
-            case .workspace;
-                success, error_msg := parse_workspace_line(*parser, line);
-                if !success return result, false, error_msg;
-
-            case .settings;
-                success, error_msg := parse_settings_line(*parser, line);
-                if !success return result, false, error_msg;
-
-            case .keymap;
-                success, error_msg := parse_keymap_line(*parser, line);
-                if !success return result, false, error_msg;
-
-            case .style;
-                success, error_msg := parse_style_line(*parser, line);
-                if !success return result, false, error_msg;
-
-            case .platform;
-                success, error_msg := platform_parse_config_line(*parser, line);
-                if !success return result, false, error_msg;
+                return result, false, error_msg, .[];
         }
+
+        if !success return result, false, error_msg, warnings;
+        if success && error_msg then array_add(*warnings, error_msg);
     }
 
     // Cast away the extendable arrays into array views
@@ -77,7 +71,7 @@ parse_config :: (name: string, filename: string, file_data: string) -> Config, s
 
     result.platform = parser.parsed.platform;
 
-    return result, true, "";
+    return result, true, "", warnings;
 }
 
 keymap_map_key_string :: (key_string: string) -> u32 {
@@ -295,14 +289,14 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
     }
     if #complete workspace_subsection == {
         case .workspace_dirs;
-            dir_path := line;
-            dir_path = copy_string(get_absolute_path(dir_path));
+            dir_path, success := get_absolute_path(line);
+            dir_path = ifx success then copy_string(dir_path) else copy_string(line);
             path_overwrite_separators(dir_path, #char "/");
-            if file_exists(dir_path) {
+            if success && file_exists(dir_path) {
                 array_add(*data.workspace_dirs, dir_path);
             } else {
                 error_msg := log_parser_error(handler, "Directory '%' doesn't exist.", dir_path);
-                return false, error_msg;
+                return true, error_msg;
             }
         case .ignore_dirs;
             dirs := split(line, cast(u8) #char " ");

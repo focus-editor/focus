@@ -162,8 +162,7 @@ hard_reload_workspace :: () {
     init_buffers();
     reopen_visible_editors(old_editor_state);
     start_initial_workspace_scan();
-
-    clear_user_messages();
+;
     add_success_message("Workspace has been reloaded", dismiss_in_seconds=3);
 }
 

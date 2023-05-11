@@ -1,8 +1,5 @@
 # TODO
 
-- Don't fail to load config when a dir doesn't exist
-    - Check for return value https://github.com/focus-editor/focus/blob/main/src/config_parser.jai#L299
-
 - Create new cursors above/below (what's the common shortcut for it)
 
 - Update window title when clicking on a pane

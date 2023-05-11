@@ -32,6 +32,7 @@
 + Windows: Fixed config hot-reloading, which broke in 0.1.7
 + Windows: Fixed crash report messages
 + switch_to_project now has a default binding - Ctrl-Alt-P
++ Configs will now load with warnings if workspace dirs specified do not exist
 
 
 # RELEASES ==================================================================
