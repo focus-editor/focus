@@ -43,7 +43,7 @@ platform_apply_config :: (config: *platform_config) {
     LD.set_fixed_scaling(config.scaling_factor);
 }
 
-platform_setup :: () {
+platform_setup :: inline () {
 }
 
 platform_data_dir :: () -> string {
