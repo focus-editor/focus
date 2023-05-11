@@ -9,8 +9,10 @@ main :: () {
     // Remember important directories
     config_dir = platform_config_dir();
     data_dir   = platform_data_dir();
-    if ends_with(data_dir, "/") data_dir.count -= 1;
-    assert(data_dir.count > 0);
+    assert(config_dir.count > 0, "Empty config dir");
+    assert(!ends_with(config_dir, "/"), "Config dir '%' ends with a '/'. This is a bug.", config_dir);
+    assert(data_dir.count > 0, "Empty data dir");
+    assert(!ends_with(data_dir, "/"), "Data dir '%' ends with a '/'. This is a bug.", data_dir);
 
     temp_dir     = sprint("%/temp",     data_dir);
     projects_dir = sprint("%/projects", config_dir);

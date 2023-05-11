@@ -29,6 +29,8 @@
 
 # Main Git Branch
 
++ Windows: Fixed config hot-reloading, which broke in 0.1.7
++ Windows: Fixed crash report messages
 + switch_to_project now has a default binding - Ctrl-Alt-P
 
 
@@ -37,15 +39,18 @@
 
 # Version 0.1.7, 11 May 2023
 
-+ Various Linux version improvements
 + Navigate To File dialog now opens relative to the current open file
 + The Navigate dialog will now expand if the list of open folders doesn't fit
 + The editor will no longer crash if there are empty lines before the version number in the config file
 + Now Cmd is used instead of Ctrl on macOS when deciding whether to open a file on the side etc.
-+ It is now possible to choose a side where to open a file when executing commands that open files, like you would with the open file dialog
++ It is now possible to choose a side where to open a file when executing commands that open files (e.g. `Open Global Config`), like you would with the open file dialog
 + Ctrl-double/triple clicking and dragging now behaves as expected in terms of creating multiple cursors
 + Ctrl-click on a cursor will remove it
++ Mac Config (Global + Projects) are now stored in the current user's Application Support directory. To transfer your old configs, run the new Focus app once, then replace the newly-generated configs in `/Users/YOURNAME/Application Support/dev.focus-editor`
 + New icon for macOS
++ Now shipping .dmg disk images for Mac. To install Focus, drag Focus.app into your Applications directory. Then just double-click it like any other app.
++ [Linux] The editor now looks for the global and per-project configuration files under `$XDG_CONFIG_HOME/focus-editor` (usually `$HOME/.config/focus-editor`). When upgrading from an older version you will need to manually move/copy your existing `global.focus-config` file and `projects/` directory to the new location
++ [Linux] Logs and session data are now saved under `$XDG_DATA_HOME/focus-editor` (usually `$HOME/.local/share/focus-editor`)
 
 
 # Version 0.1.6, 6 May 2023

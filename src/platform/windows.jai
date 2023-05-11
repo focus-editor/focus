@@ -15,7 +15,9 @@ platform_setup :: () {
 }
 
 platform_data_dir :: () -> string {
-    return copy_string(path_strip_filename(get_path_of_running_executable()));
+    dir := copy_string(path_strip_filename(get_path_of_running_executable()));
+    while ends_with(dir, "/") dir.count -= 1;
+    return dir;
 }
 
 platform_config_dir :: () -> string {
