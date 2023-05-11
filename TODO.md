@@ -45,7 +45,7 @@
         - someway to visualize colors in the config file (ie if you define a background color you can see either that line text in that color, or a square after it, prob with color picker integrated would be cherry on top)
 
     general comments:
-        - switch project should have a shortcut by default
+        + switch project should have a shortcut by default
         - load previous project on launch
         - I'd recommend having a "select folder" to add new projects, instead of having to go to the projects folder, duplicating config, and setting that path in the config
         - https://ark-vcs.com/images/client_new.png

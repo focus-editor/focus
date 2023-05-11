@@ -156,6 +156,7 @@ ACTIONS_COMMON :: string.[
     "do_nothing",   // to disable key combinations
 
     "open_project",
+    "switch_to_project",  // same as open_project, renaming for consistency
     "open_projects_directory",
     "open_global_config",
     "open_project_config",

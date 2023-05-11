@@ -29,7 +29,7 @@
 
 # Main Git Branch
 
-+ ...
++ switch_to_project now has a default binding - Ctrl-Alt-P
 
 
 # RELEASES ==================================================================

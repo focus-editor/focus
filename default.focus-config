@@ -166,6 +166,8 @@ Shift-Enter                 move_up  # an alternative way to move
 Alt-X                       show_commands
 Ctrl-Shift-P                show_commands
 
+Ctrl-Alt-P                  switch_to_project
+
 Ctrl-F                      search_in_buffer
 Alt-F                       search_in_buffer_dropdown_mode
 Ctrl-Shift-F                search_in_project

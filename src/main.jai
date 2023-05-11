@@ -276,7 +276,8 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .decrease_font_size;                               decrease_font_size();                               return true;
         case .reset_font_size_to_default;                       reset_font_size_to_default();                       return true;
 
-        case .open_project;                                     show_open_project_dialog();                         return true;
+        case .open_project; /* deprecated */                    show_open_project_dialog();                         return true;
+        case .switch_to_project;                                show_open_project_dialog();                         return true;
         case .open_projects_directory;                          platform_open_in_explorer(projects_dir);            return true;
         case .open_global_config;                               editors_open_global_config(placement);              return true;
         case .open_project_config;                              editors_open_project_config(placement);             return true;

@@ -169,6 +169,8 @@ Cmd-F                       search_in_buffer
 Cmd-Alt-F                   search_in_buffer_dropdown_mode
 Cmd-Shift-F                 search_in_project
 
+Cmd-Alt-P                   switch_to_project
+
 Cmd-P                       show_open_file_dialog_in_search_mode
 Cmd-O                       show_open_file_dialog_in_navigate_mode
 Cmd-Shift-O                 show_open_file_dialog_in_navigate_mode_from_root
