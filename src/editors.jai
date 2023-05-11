@@ -1148,12 +1148,13 @@ vertical_smooth_scroll :: (editor: Editor, up: bool, fast := false) {
 
 update_window_title :: (buffer_id: s64 = -1) {
     title := window_generic_title;
+    if current_project_name then title = tprint("% - %", current_project_name, title);
     if buffer_id >= 0 {
         buffer := open_buffers[buffer_id];
         if buffer.has_file {
-            title = tprint("% • % • %", buffer.file.name, buffer.file.path, window_generic_title);
+            title = tprint("% • % • %", buffer.file.name, buffer.file.path, title);
         } else {
-            title = tprint("% • %", get_buffer_name(buffer), window_generic_title);
+            title = tprint("% • %", get_buffer_name(buffer), title);
         }
     }
     platform_set_window_title(title);

@@ -8,7 +8,7 @@ main :: () {
 
     // Remember important directories
     config_dir = platform_config_dir();
-    data_dir = platform_data_dir();
+    data_dir   = platform_data_dir();
     if ends_with(data_dir, "/") data_dir.count -= 1;
     assert(data_dir.count > 0);
 

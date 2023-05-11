@@ -1,7 +1,8 @@
 # TODO
 
 - Create new cursors above/below (what's the common shortcut for it)
-- Show project name in the window title
+
+- Update window title when clicking on a pane
 
 - Fix multi-cursor copy-paste bugs
 
@@ -189,6 +190,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Show project name in the window title
 + Ctrl-double click to select word
 + Ctrl-drag to select things using the newly created cursor
 + Open config commands should respect ctrl, ctrl-1/2
