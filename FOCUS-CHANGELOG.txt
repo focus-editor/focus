@@ -4,7 +4,6 @@
 - Optional line numbers
 - Config files for directories (i.e. adding a .focus-config file to your directory and have Focus load it)
 - Config option to limit the width of an editor
-- Shortcut for adding cursors above/below
 - Case-sensitive search
 - Global search improvements (the ability to filter additionally by filename)
 - Backup unsaved changes
@@ -29,7 +28,8 @@
 
 # Main Git Branch
 
-+ ...
++ Windows: the save file dialog is now modal
++ Window title is now properly updated when activating panes by clicking
 
 
 # RELEASES ==================================================================

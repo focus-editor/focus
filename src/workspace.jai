@@ -226,7 +226,7 @@ reopen_visible_editors :: (using old_state: Visible_Editor_State) {
         case .Double;
             restore_editor_state(left,  .left);
             restore_editor_state(right, .right);
-            if left_active then editors.active = editors.left;
+            if left_active then make_editor_active(editors.left);;
     }
     redraw_requested = true;
 

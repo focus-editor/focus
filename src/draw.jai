@@ -399,7 +399,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         editor.refresh_highlights = true;
 
         // Activate editor
-        editors.active = editor_id;
+        make_editor_active(editor_id);
         if mouse.left.just_pressed then redraw_requested = true;  // so that we don't draw 2 active editors
     }
     if !mouse.left.is_down || mouse.left.just_released {
@@ -943,7 +943,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
         if ui.active == input_id {
             active = true;  // activate on click
-            editors.active = editor_id;  // make sure the editor is also activated
+            make_editor_active(editor_id);  // make sure the editor is also activated
             redraw_requested = true;
         }
 

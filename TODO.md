@@ -1,7 +1,5 @@
 # TODO
 
-- Update window title when clicking on a pane
-
 - Fix multi-cursor copy-paste bugs
 
 - Fix the editor not noticing changes on git pull
@@ -39,8 +37,8 @@
 
 - Feedback from nafonso:
     requests:
+        + be able to create cursors adjacent to each other (e.g. alt+up would keep the current cursor in the line that it is, but move me to the line above and I'd have 2 cursors. Kind of like the behaviour of ctrl+d but to select adjacent lines)
         - go to symbol
-        - be able to create cursors adjacent to each other (e.g. alt+up would keep the current cursor in the line that it is, but move me to the line above and I'd have 2 cursors. Kind of like the behaviour of ctrl+d but to select adjacent lines)
         - line numbers
         - way to toggle here strings to show as strings or be rendered as normal code (helpful when doing strings for meta programming to get the language coloring syntax)
         - someway to visualize colors in the config file (ie if you define a background color you can see either that line text in that color, or a square after it, prob with color picker integrated would be cherry on top)
@@ -190,6 +188,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Update window title when clicking on a pane
 + Create new cursors above/below
 + Show project name in the window title
 + Ctrl-double click to select word

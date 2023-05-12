@@ -604,14 +604,12 @@ close_current_editor :: () {
             // Start the animation (the layout will change when the animation is finished)
             if editors.active == editors.left {
                 editors_start_moving_splitter(0.0);  // close left
-                editors.active = editors.right;
+                make_editor_active(editors.right);
             } else {
                 editors_start_moving_splitter(1.0);  // close right
-                editors.active = editors.left;
+                make_editor_active(editors.left);
             }
             editors.closing = true;
-
-            update_window_title(open_editors[editors.active].buffer_id);
     }
 }
 
@@ -988,6 +986,12 @@ restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor.State) {
         cursor.clipboard.count = cast(s32)editor.clipboard.count;
     }
     if main_cursor >= cursors.count then main_cursor = cursors.count - 1;  // maybe we should remember it too
+}
+
+make_editor_active :: (editor_id: s64) {
+    assert(editor_id < open_editors.count, "Trying to activate editor %, but the last available one is %", editor_id, open_editors.count - 1);
+    editors.active = editor_id;
+    update_window_title(open_editors[editor_id].buffer_id);
 }
 
 #scope_file
