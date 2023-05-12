@@ -114,6 +114,7 @@ platform_get_save_file_name :: (name := "") -> string /* temp */, success: bool 
 
     ofn: OPENFILENAMEW;
     ofn.lStructSize = size_of(OPENFILENAMEW);
+    ofn.hwndOwner   = window;
     ofn.lpstrFile   = buffer.data;
     ofn.nMaxFile    = buffer.count;
     ofn.lpstrTitle  = utf8_to_wide(tprint("Choose where to save '%'", name));
