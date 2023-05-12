@@ -74,8 +74,8 @@ Ctrl-K                      delete_to_end_of_line
 Ctrl-Shift-Delete           delete_to_end_of_line
 Ctrl-Shift-Backspace        delete_to_start_of_line
 
-Alt-Shift-ArrowUp           move_selected_lines_up
-Alt-Shift-ArrowDown         move_selected_lines_down
+Alt-ArrowUp                 move_selected_lines_up
+Alt-ArrowDown               move_selected_lines_down
 
 Ctrl-J                      join_lines
 Ctrl-Shift-J                join_lines_no_spaces_in_between
@@ -109,8 +109,6 @@ Alt-C                       move_cursor_to_viewport_center
 
 {Shift}-Ctrl-ArrowUp        move_up_to_empty_line
 {Shift}-Ctrl-ArrowDown      move_down_to_empty_line
-{Shift}-Alt-ArrowUp         move_up_fast
-{Shift}-Alt-ArrowDown       move_down_fast
 
 Escape                      remove_additional_cursors
 
@@ -128,6 +126,9 @@ Ctrl-Alt-Shift-ArrowRight   move_editor_to_the_right
 
 Ctrl-N                      create_new_file
 Ctrl-Shift-N                create_new_file_on_the_side
+
+Alt-Shift-ArrowUp           create_cursor_above
+Alt-Shift-ArrowDown         create_cursor_below
 
 
 [open file dialog]

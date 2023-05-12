@@ -155,6 +155,9 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .undo;                             undo                                (editor, buffer); keep_selection = true;
         case .redo;                             redo                                (editor, buffer); keep_selection = true;
         case .select_all;                       select_all                          (editor, buffer); keep_selection = true;
+        case .create_cursor_above;              create_cursor                       (editor, buffer, .above); keep_selection = true;
+        case .create_cursor_below;              create_cursor                       (editor, buffer, .below); keep_selection = true;
+
         case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
 
         // Actions that do something per cursor
@@ -988,6 +991,39 @@ restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor.State) {
 }
 
 #scope_file
+
+create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; below; }) {
+    organise_cursors(editor);
+
+    edge_cursor := ifx where == .above then cursors[0] else cursors[cursors.count-1];
+    original    := cursors[original_cursor];
+    original_pos_coords := offset_to_coords(buffer, original.pos);
+    original_sel_coords := offset_to_coords(buffer, original.sel);
+
+    cursor := array_add(*cursors);
+    << cursor  = edge_cursor;
+
+    pos_coords := offset_to_coords(buffer, cursor.pos);
+    if where == .above then pos_coords.line -= 1; else pos_coords.line += 1;
+    pos_coords.col = original_pos_coords.col;
+
+    cursor.pos = coords_to_offset(buffer, pos_coords);
+    cursor.col_wanted = original_pos_coords.col;
+
+    if has_selection(original) {
+        sel_coords := pos_coords;
+        sel_coords.line += original_sel_coords.line - original_pos_coords.line;
+        sel_coords.col  += original_sel_coords.col  - original_pos_coords.col;
+        cursor.sel = coords_to_offset(buffer, sel_coords);
+    } else {
+        cursor.sel = cursor.pos;
+    }
+    main_cursor = cursors.count - 1;
+
+    organise_cursors(editor);
+
+    cursor_moved = true;
+}
 
 select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) -> whole_words: bool {
     editor.cursor_moved = true;

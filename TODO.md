@@ -1,7 +1,5 @@
 # TODO
 
-- Create new cursors above/below (what's the common shortcut for it)
-
 - Update window title when clicking on a pane
 
 - Fix multi-cursor copy-paste bugs
@@ -36,6 +34,8 @@
     - Have a toggle command
     - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
     - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
+
+- Pass a path to global config as a parameter
 
 - Feedback from nafonso:
     requests:
@@ -190,6 +190,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Create new cursors above/below
 + Show project name in the window title
 + Ctrl-double click to select word
 + Ctrl-drag to select things using the newly created cursor

@@ -74,8 +74,8 @@ Cmd-K                       delete_to_end_of_line
 Cmd-Shift-Delete            delete_to_end_of_line
 Cmd-Shift-Backspace         delete_to_start_of_line
 
-Cmd-Shift-ArrowUp           move_selected_lines_up
-Cmd-Shift-ArrowDown         move_selected_lines_down
+Alt-ArrowUp                 move_selected_lines_up
+Alt-ArrowDown               move_selected_lines_down
 
 Cmd-J                       join_lines
 Cmd-Shift-J                 join_lines_no_spaces_in_between
@@ -128,6 +128,9 @@ Ctrl-Cmd-Shift-ArrowRight   move_editor_to_the_right
 
 Cmd-N                       create_new_file
 Cmd-Shift-N                 create_new_file_on_the_side
+
+Alt-Shift-ArrowUp           create_cursor_above
+Alt-Shift-ArrowDown         create_cursor_below
 
 
 [open file dialog]

@@ -29,9 +29,10 @@
 
 # Main Git Branch
 
++ New actions: create_cursor_above and create_cursor_below. By default bound to Alt-Shift-ArrowUp/ArrowDown - your current bindings may conflict with the default one
++ switch_to_project now has a default binding - Ctrl-Alt-P
 + Windows: Fixed config hot-reloading, which broke in 0.1.7
 + Windows: Fixed crash report messages
-+ switch_to_project now has a default binding - Ctrl-Alt-P
 + Configs will now load with warnings if workspace dirs specified do not exist
 
 

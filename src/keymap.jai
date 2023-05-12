@@ -209,6 +209,8 @@ ACTIONS_COMMON :: string.[
 
 ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "select_word_or_create_another_cursor",
+    "create_cursor_above",
+    "create_cursor_below",
     "duplicate_lines",
     "delete_line_and_go_up",
     "delete_line",
