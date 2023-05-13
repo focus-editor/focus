@@ -721,19 +721,19 @@ search_bar_open_selected_result :: (editor: Editor, buffer: Buffer, placement: E
     editors_open_buffer(editor.buffer_id, placement);
 
     // Select the search result
-    editor, buffer := get_active_editor_and_buffer();
-    match_start := min(result.offset,                    xx buffer.bytes.count);  // buffer could've changed, so offset may not be valid any more
-    match_end   := min(result.offset + input.text.count, xx buffer.bytes.count);
-    cursor := leave_only_original_cursor(editor);
+    active_editor, active_buffer := get_active_editor_and_buffer();
+    match_start := min(result.offset,                    xx active_buffer.bytes.count);  // buffer could've changed, so offset may not be valid any more
+    match_end   := min(result.offset + input.text.count, xx active_buffer.bytes.count);
+    cursor := leave_only_original_cursor(active_editor);
     cursor.sel = xx match_start;
     cursor.pos = xx match_end;
 
-    editor.scroll_to_cursor = .yes;
+    active_editor.scroll_to_cursor = .yes;
     if old_layout == .Single && editors.layout == .Double {
         // We've just opened a new editor, so need to let it know it's being opened,
         // so that it can use the target rect width for its scroll calculations
         // (otherwise it'll be too small and the scroll will not animate where expected)
-        editor.scroll_to_cursor = .yes_new_editor;
+        active_editor.scroll_to_cursor = .yes_new_editor;
     }
 }
 
