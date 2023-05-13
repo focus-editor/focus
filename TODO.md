@@ -1,11 +1,8 @@
 # TODO
 
-- Fix multi-cursor copy-paste bugs
-
 - Fix the editor not noticing changes on git pull
 
 - Shortcut for centering on current line
-- Colors per programming language
 - Project dir disambiguation
 - When switching to another editor, jump to cursor
 - Autoindent region
@@ -14,8 +11,15 @@
 - Notify about duplicate bindings and highlight that in the config file
 - Search returns extra results: Runtime_Support, report_bounds_check_error_more_visibly
 - Limit editor width
+- Colors per programming language
+    - Get the list of available colors
 
 - A config option to disable subpixel font rendering
+
+- Improve multi-cursor behaviour:
+    - When undoing/redoing, don't trash the clipboard unless the number of cursors change?
+    - Or maybe detect clipboard changes in undos and only reset after that?
+    - Think about it some more
 
 - Improve the scoring for fuzzy search (maybe after the fact even) - score matches closer together higher
 

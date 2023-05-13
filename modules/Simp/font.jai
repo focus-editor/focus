@@ -577,7 +577,6 @@ generate_quads_for_prepared_text :: (font: *Dynamic_Font, x: s64, y: s64) {
     // @Speed!
     for info: font.temporary_glyphs {
         if !info.page continue;
-        map := *info.page.texture;
 
         if use_kerning && prev_glyph {
             delta: FT_Vector = ---;
@@ -606,10 +605,13 @@ generate_quads_for_prepared_text :: (font: *Dynamic_Font, x: s64, y: s64) {
         quad.p2.y  = sy2;
         quad.p3.y  = sy2;
 
-        quad.u0 = info.x0 / cast(float) map.width;
-        quad.u1 = (cast(float) info.x0 + info.width) / map.width;
-        quad.v0 = info.y0 / cast(float) map.height;
-        quad.v1 = (cast(float) info.y0 + info.height) / map.height;
+        width  := info.page.bitmap_data.width;  // *Not* map.width, as map may be dirty.
+        height := info.page.bitmap_data.height; // Ibid.
+
+        quad.u0 = info.x0 / cast(float) width;
+        quad.u1 = (cast(float) info.x0 + info.width) / width;
+        quad.v0 = info.y0 / cast(float) height;
+        quad.v1 = (cast(float) info.y0 + info.height) / height;
 
         array_add(*font.current_quads, quad);
         sx += cast(float) info.advance;
