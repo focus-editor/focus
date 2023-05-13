@@ -1,9 +1,9 @@
 # TODO
 
-- Fix the editor not noticing changes on git pull
+- Project dir disambiguation
+- Fix command execution via the popup
 
 - Shortcut for centering on current line
-- Project dir disambiguation
 - When switching to another editor, jump to cursor
 - Autoindent region
 - Ctrl-K should copy whatever was deleted
@@ -66,8 +66,6 @@
 
 - Keymap changing without having to reload - investigate a bug
 - Make sure behaviour is consistent when selecting by cursor or by mouse (either with ctrl+D or with ctrl+arrows)
-
-- Fix glyphs https://discord.com/channels/661732390355337246/784843664651190273/1102388810865721384
 
 - Ctrl-double click should create a new cursor and select a word
 - Ctrl-click to remove a cursor

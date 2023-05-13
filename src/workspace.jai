@@ -5,11 +5,12 @@ init_workspace :: () {
 }
 
 add_directory_to_workspace :: (path: string, index := -1) {
-    full_path := copy_string(get_absolute_path(path));
+    full_path, success := get_absolute_path(path);
+    full_path = copy_string(full_path);
     path_overwrite_separators(full_path, #char "/");
 
-    if !is_directory(full_path) {
-        error_msg := tprint("Couldn't add % to workspace. Directory doesn't exist or is invalid.", full_path);
+    if !is_directory(full_path) || !success {
+        error_msg := tprint("Couldn't add % to workspace. Directory doesn't exist or is invalid.", path);
         add_user_error(error_msg, dismiss_in_seconds = 10);
         log_error(error_msg);
         return;
@@ -261,7 +262,12 @@ start_watching_file :: (file_path: string) {
         array_add(*watch_dirs, parent_dir);
         add_directories(*file_watcher, parent_dir);
     }
-    full_path := copy_string(get_absolute_path(file_path));
+    full_path, success := get_absolute_path(file_path);
+    if !success {
+        log_error("Couldn't start watching file % because it's not found", file_path);
+        return;
+    }
+    full_path = copy_string(full_path);
     path_overwrite_separators(full_path, #char "/");
     array_add_if_unique(*watch_files, full_path);
 }

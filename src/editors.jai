@@ -343,15 +343,17 @@ adjust_cursors_and_viewport :: (editor: *Editor, buffer: Buffer, current_editor_
 }
 
 editors_open_file :: (path: string, placement: Editor_Placement = .in_place) {
-    full_path := get_absolute_path(path);  // returns temporary storage
+    full_path, success := get_absolute_path(path);  // returns temporary storage
     path_overwrite_separators(full_path, separator = #char "/");
-    if !file_exists(full_path) {
-        log_error("Can't find file %", full_path);
+    if !file_exists(full_path) || !success {
+        log_error("Couldn't open file %", path);
+        add_user_error(tprint("Couldn't open file %", path), dismiss_in_seconds = 60);
+        return;
     }
     buffer_id := find_or_create_buffer(full_path);
     if buffer_id < 0 && full_path.count > 248 {
         log_error("Couldn't open file because path is too long for Windows: %\n", full_path);
-        add_user_error("Couldn't open file. Path is too long.");
+        add_user_error("Couldn't open file. Path is too long.");  // not including full path for obvious reasons
         return;
     }
 
