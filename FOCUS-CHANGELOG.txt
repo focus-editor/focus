@@ -30,6 +30,7 @@
 
 + Windows: the save file dialog is now modal
 + Window title is now properly updated when activating panes by clicking
++ Project names with a dot will now be displayed correctly
 
 
 # RELEASES ==================================================================

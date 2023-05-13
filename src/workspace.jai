@@ -18,7 +18,7 @@ add_directory_to_workspace :: (path: string, index := -1) {
 
     dir: Project_Dir;
     dir.path = trim_right(full_path, "/");
-    dir.path_prefix_len = find_index_of_any_from_right(dir.path, "./") + 1;
+    dir.path_prefix_len = find_index_from_right(dir.path, #char "/") + 1;
 
     in_project, parent_dir := dir_is_within_project(dir.path);
     if in_project {
