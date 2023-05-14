@@ -221,8 +221,8 @@ Cmd-Shift-L                 toggle_expand
 
 {Shift}-Backspace           delete_left_char
 {Shift}-Delete              delete_right_char
-{Shift}-Cmd-Backspace       delete_word_left_no_underscore
-{Shift}-Cmd-Delete          delete_word_right_no_underscore
+{Shift}-Alt-Backspace       delete_word_left_no_underscore
+{Shift}-Alt-Delete          delete_word_right_no_underscore
 {Shift}-Ctrl-Backspace      delete_word_left
 {Shift}-Ctrl-Delete         delete_word_right
 
