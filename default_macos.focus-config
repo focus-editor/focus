@@ -105,7 +105,7 @@ Ctrl-Cmd-ArrowDown          scroll_viewport_down
 Ctrl-Cmd-ArrowLeft          scroll_viewport_left
 Ctrl-Cmd-ArrowRight         scroll_viewport_right
 
-Cmd-C                       move_cursor_to_viewport_center
+Cmd-Shift-C                 move_cursor_to_viewport_center
 
 {Shift}-Ctrl-ArrowUp        move_up_to_empty_line
 {Shift}-Ctrl-ArrowDown      move_down_to_empty_line
