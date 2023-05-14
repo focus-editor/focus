@@ -4,12 +4,12 @@ open_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
     if event.type == .KEYBOARD && event.key_pressed {
         action := map_event_to_action(event, Action_Open_File_Dialog);
         if action == {
-            case .close_dialog;             hide_open_file_dialog();                                                        return true;
-            case .open_entry_in_place;      open_file_dialog_open_entry(entries.selected, .in_place);                       return true;
-            case .open_entry_on_the_side;   open_file_dialog_open_entry(entries.selected, .on_the_side);                    return true;
-            case .open_entry_on_the_left;   open_file_dialog_open_entry(entries.selected, .left);                           return true;
-            case .open_entry_on_the_right;  open_file_dialog_open_entry(entries.selected, .right);                          return true;
-            case .open_directory;           open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true);   return true;
+            case .close_dialog;             hide_open_file_dialog();                                                                                                             return true;
+            case .open_entry_in_place;      open_file_dialog_open_entry(entries.selected, .in_place);                                                                            return true;
+            case .open_entry_on_the_side;   open_file_dialog_open_entry(entries.selected, .on_the_side);                                                                         return true;
+            case .open_entry_on_the_left;   open_file_dialog_open_entry(entries.selected, .left);                                                                                return true;
+            case .open_entry_on_the_right;  open_file_dialog_open_entry(entries.selected, .right);                                                                               return true;
+            case .open_directory;           open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true, maybe_open_root_dir = event.key_code == #char "/");     return true;
             case .pop_directory;            if pop_directory() return true;
 
             case .toggle_expand;            toggle_expand();                    return true;
@@ -79,11 +79,23 @@ hide_open_file_dialog :: () {
     activate_editors();
 }
 
-open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, folder_only := false) {
+open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, folder_only := false, maybe_open_root_dir := false) {
     using open_file_dialog;
     if selected >= entries.filtered.count return;
 
     entry := entries.filtered[selected];
+    
+    if path_chunks.count == 0 && maybe_open_root_dir {
+        // We are selecting our first chunk and we just pushed the "/" key.
+        // In this special case, we will open "/" if it is in the list.
+        
+        for entries.filtered {
+            if it.entry_name == "/" {
+                entry = it;
+                break;
+            }
+        }
+    }
 
     if entry.type == {
         case .nothing;
@@ -252,12 +264,7 @@ refresh_entries :: (clear_input := true) {
                     score_part:  u64 = (cast,trunc(u64) score)                        << 16;
                     entry.sort_key = dir_id_part | score_part;
                 }
-                #if OS == .WINDOWS {
-                    drives := platform_enumerate_logical_drives();
-                } else {
-                    drives := string.["/"];
-                }
-                for drives {
+                for platform_enumerate_logical_drives() {
                     name := copy_string(it);
 
                     score, name_highlights := fuzzy_match(name, filter_chars);

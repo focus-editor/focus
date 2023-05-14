@@ -143,8 +143,6 @@ Cmd-1                       open_entry_on_the_left
 Cmd-2                       open_entry_on_the_right
 
 Tab                         open_directory
-/                           open_directory
-\                           open_directory
 
 Backspace                   pop_directory
 
