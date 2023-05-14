@@ -30,7 +30,8 @@
 
 + Windows: the save file dialog is now modal
 + Window title is now properly updated when activating panes by clicking
-+ Project names with a dot will now be displayed correctly
++ Workspace dir names with a dot will now be displayed correctly
++ Workspace dirs with similar names should now be disambiguated
 
 
 # RELEASES ==================================================================

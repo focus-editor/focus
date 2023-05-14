@@ -548,7 +548,7 @@ DEFAULT_FONT_SIZE               :: 14;
 DEFAULT_FONT_UI_SIZE            :: 15;
 DEFAULT_FONT_UI_BIG_SIZE        :: 28;
 DEFAULT_FONT_UI_MEDIUM_SIZE     :: 18;
-DEFAULT_FONT_UI_SMALL_SIZE      :: 15;
+DEFAULT_FONT_UI_SMALL_SIZE      :: 14;
 DEFAULT_FONT_ICONS_SIZE         :: 16;
 DEFAULT_FONT_ICONS_SMALL_SIZE   :: 8;
 
@@ -599,6 +599,7 @@ active_global_widget: enum {
 Project_Dir :: struct {
     path: string;          // e.g. "C:/projects/focus"
     path_prefix_len: s64;  // in this case the length of "C:/projects/"
+    name: string;          // a view into path
 }
 
 // A string which contains the path to a file which was just drag-and-dropped into the editor (for the draw code to use)

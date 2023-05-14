@@ -184,16 +184,16 @@ set_path_chunks_from_file :: (file_path: string) {
 
     parent_dir := get_parent_dir_path(file_path);
 
-    is_project_dir, project_dir_path, project_dir_name := dir_is_within_project(parent_dir);
+    is_project_dir, project_dir := dir_is_within_project(parent_dir);
     if is_project_dir {
-        root_dir = copy_string(project_dir_path);  // leak
-        array_add(*path_chunks, copy_string(project_dir_name));
+        root_dir = copy_string(project_dir.path);  // leak
+        array_add(*path_chunks, copy_string(project_dir.name));
     } else {
         #if OS != .WINDOWS then array_add(*path_chunks, copy_string("/"));
         root_dir = "";
     }
 
-    advance(*parent_dir, project_dir_path.count);
+    advance(*parent_dir, project_dir.path.count);
 
     for chunk : split(parent_dir, cast(u8) #char "/") {
         trimmed := trim(chunk);
@@ -234,16 +234,14 @@ refresh_entries :: (clear_input := true) {
             if !path_chunks {
                 // Display project dirs and drives
                 for project_dirs {
-                    name := advance(it.path, it.path_prefix_len);
-
-                    score, name_highlights := fuzzy_match(name, filter_chars);
+                    score, name_highlights := fuzzy_match(it.name, filter_chars);
                     if score < 0 continue;
 
                     entry := array_add(*entries.filtered);
                     entry.type = .project_dir;
                     entry.full_path = it.path;
-                    entry.name = name;
-                    entry.entry_name = name;
+                    entry.name = it.name;
+                    entry.entry_name = it.name;
                     entry.path = it.path;
                     entry.icon = .folder;
                     entry.project_dir_id = xx (it_index + 1);

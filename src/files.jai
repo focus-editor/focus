@@ -12,10 +12,9 @@ get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> Fil
 
     if proj_prefix_len <= 0 {
         for project_dirs {
-            if begins_with_nocase(path, it.path) {
+            if begins_with_nocase(path, it.path) && it.path_prefix_len > proj_prefix_len {
                 proj_prefix_len = it.path_prefix_len;
                 info.project_dir_id = xx (it_index + 1);
-                break;
             }
         }
     }
@@ -150,11 +149,11 @@ should_ignore_dir :: (path: string) -> bool {
     return false;
 }
 
-dir_is_within_project :: (dir_path: string) -> bool, project_dir: string, project_dir_name: string {
+dir_is_within_project :: (dir_path: string) -> bool, Project_Dir {
     for project_dirs {
-        if equal_nocase(dir_path, it.path) || contains_nocase(dir_path, tprint("%/", it.path)) return true, it.path, advance(it.path, it.path_prefix_len);
+        if equal_nocase(dir_path, it.path) || contains_nocase(dir_path, tprint("%/", it.path)) return true, it;
     }
-    return false, "", "";
+    return false, Project_Dir.{};
 }
 
 get_parent_dir_path :: (file_path: string) -> string {

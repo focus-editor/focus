@@ -19,11 +19,31 @@ add_directory_to_workspace :: (path: string, index := -1) {
     dir: Project_Dir;
     dir.path = trim_right(full_path, "/");
     dir.path_prefix_len = find_index_from_right(dir.path, #char "/") + 1;
+    dir.name = advance(dir.path, dir.path_prefix_len);
 
-    in_project, parent_dir := dir_is_within_project(dir.path);
+    in_project, project_dir := dir_is_within_project(dir.path);
     if in_project {
-        log_error("Directory % is already in the project: %", dir.path, parent_dir);
+        error_msg := tprint("Directory % is already in the project. Found existing directory %", dir.path, project_dir.path);
+        log_error(error_msg);
+        add_user_warning(error_msg, dismiss_in_seconds = 10);
         return;
+    }
+
+    // Disambiguate project names
+    // E.g. C:/projects/project1/src/code and C:/projects/project2/src/code should
+    // get the names project1/src/code and project2/src/code, not 'code' or 'src/code'
+    for i : 0..10 {   // paranoid about infinite looping
+        is_ambiguous := false;
+        for * project_dirs {
+            if it.name == dir.name {
+                is_ambiguous = true;
+                it.path_prefix_len = find_index_from_right(trim_right(slice(it.path, 0, it.path_prefix_len), "/"), #char "/") + 1;
+                it.name = advance(it.path, it.path_prefix_len);
+            }
+        }
+        if !is_ambiguous break;
+        dir.path_prefix_len = find_index_from_right(trim_right(slice(dir.path, 0, dir.path_prefix_len), "/"), #char "/") + 1;
+        dir.name = advance(dir.path, dir.path_prefix_len);
     }
 
     if index < 0 {

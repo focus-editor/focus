@@ -27,7 +27,7 @@ Official Discord server - https://discord.gg/RtvHee2S
 
 `$ jai first.jai - release`
 
-Required Jai version: `0.1.062`
+Required Jai version: `0.1.063`
 
 **On MacOS:**
 

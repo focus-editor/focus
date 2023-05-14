@@ -1,10 +1,9 @@
 # TODO
 
-- Project dir disambiguation
 - Fix command execution via the popup
 
 - Shortcut for centering on current line
-- When switching to another editor, jump to cursor
+- When switching to another editor, jump to cursor (unless multiple)
 - Autoindent region
 - Ctrl-K should copy whatever was deleted
 - Ctrl-K and other shortcuts should work in text inputs
@@ -190,6 +189,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Project dir disambiguation
 + Update window title when clicking on a pane
 + Create new cursors above/below
 + Show project name in the window title
