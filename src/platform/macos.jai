@@ -26,12 +26,16 @@ platform_config_dir :: inline () -> string {
 }
 
 platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, s32, s32 {
-    // On macOS, we do not need to set x & y from open_on_biggest.
-    // By default, macOS already positions the window within the monitor in which
-    // the user performed the action to launch it. This makes sense when we are
-    // not maximizing the window on launch anyway. (See platform_maximize_window)
-
-    return -1, -1, 1920, 1080;
+    // On macOS, we ignore open_on_biggest for now.
+    
+    screen_size := NSScreen.frame(NSScreen.mainScreen()).size;
+    
+    w := cast(s32) (screen_size.width  / 1.5);
+    h := cast(s32) (screen_size.height / 1.5);
+    x := cast(s32) (screen_size.width  / 2 - w / 2);
+    y := cast(s32) (screen_size.height / 2 - h / 2);
+    
+    return x, y, w, h;
 }
 
 platform_create_window :: inline () {
