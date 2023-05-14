@@ -30,8 +30,9 @@ __pycache__
 .mpg .mpeg .psd .codex .webm .wma
 .zip .rar .7z
 .bin .sys .iso
-.nib .exp .plist
+.nib .exp
 .pyc .rpyc
+.DS_Store
 
 [[settings]]
 # NOTE: please copy the whole block when overriding settings, otherwise defaults will be used
@@ -109,8 +110,6 @@ Cmd-Shift-C                 move_cursor_to_viewport_center
 
 {Shift}-Ctrl-ArrowUp        move_up_to_empty_line
 {Shift}-Ctrl-ArrowDown      move_down_to_empty_line
-{Shift}-Cmd-ArrowUp         move_up_fast
-{Shift}-Cmd-ArrowDown       move_down_fast
 
 Escape                      remove_additional_cursors
 
@@ -195,20 +194,25 @@ Cmd-Shift-L                 toggle_expand
 
 # {Shift}- means shift is optional, the key combination will still be matched.
 {Shift}-ArrowUp             move_up
-{Shift}-Cmd-ArrowUp         move_up_fast
+{Shift}-Alt-Cmd-ArrowUp     move_up_fast
 {Shift}-PageUp              move_up_one_page
 
 {Shift}-ArrowDown           move_down
-{Shift}-Cmd-ArrowDown       move_down_fast
+{Shift}-Alt-Cmd-ArrowDown   move_down_fast
 {Shift}-PageDown            move_down_one_page
 
 {Shift}-ArrowLeft           move_left
-{Shift}-Cmd-ArrowLeft       move_left_by_word
-{Shift}-Cmd-ArrowLeft       move_left_by_word_ends
+{Shift}-Alt-ArrowLeft       move_left_by_word
+{Shift}-Alt-Cmd-ArrowLeft   move_left_by_word_ends
+{Shift}-Cmd-ArrowLeft       jump_to_line_start
 
 {Shift}-ArrowRight          move_right
-{Shift}-Cmd-ArrowRight      move_right_by_word
-{Shift}-Cmd-ArrowRight      move_right_by_word_ends
+{Shift}-Alt-ArrowRight      move_right_by_word
+{Shift}-Alt-Cmd-ArrowRight  move_right_by_word_ends
+{Shift}-Cmd-ArrowRight      jump_to_line_end
+
+{Shift}-Cmd-ArrowUp         jump_to_file_start
+{Shift}-Cmd-ArrowDown       jump_to_file_end
 
 {Shift}-Home                jump_to_line_start
 {Shift}-End                 jump_to_line_end
@@ -280,4 +284,3 @@ code_value:                     D699B5FF
 code_highlight:                 D89B75FF
 code_error:                     FF0000FF
 code_keyword:                   E67D74FF
-
