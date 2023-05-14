@@ -30,8 +30,9 @@ __pycache__
 .mpg .mpeg .psd .codex .webm .wma
 .zip .rar .7z
 .bin .sys .iso
-.nib .exp .plist
+.nib .exp
 .pyc .rpyc
+.DS_Store
 
 [[settings]]
 # NOTE: please copy the whole block when overriding settings, otherwise defaults will be used

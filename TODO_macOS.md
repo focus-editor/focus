@@ -3,11 +3,10 @@ In order of priority:
 
 1. Keyboard Input
     - Cmd+Tab out of the window, then back into the window causes us to be in cursor-creation mode until we hit Cmd one more time.
-    - Cmd+C to copy does not currently work. It actually does an unrelated behavior. Cmd+V and Cmd+X work though.
-    - Cmd+Arrow or Option+Arrow should do the correct platform-specific action. Currently we mimic Windows Ctrl+Arrow behavior.
 
 2. Visual Glitches
     - IBeam cursor does not reset to Normal when hovering over the window title bar or bottom filename/line/col bar
+    - Window seems to receive mouse-move events even when not the active window (Workaround: Minimize when not in use)
 
 3. Would Be Nice Eventually
     - Smooth Mac-style inertia scrolling
