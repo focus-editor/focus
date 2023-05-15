@@ -376,6 +376,8 @@ save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64) -> saved: bool {
         error_when_saving = true;
     }
     remember_last_modtime_and_size(buffer);
+    
+    update_window_title(open_editors[editors.active].buffer_id);
 
     return !error_when_saving;
 }

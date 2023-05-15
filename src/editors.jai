@@ -996,6 +996,20 @@ make_editor_active :: (editor_id: s64) {
     update_window_title(open_editors[editor_id].buffer_id);
 }
 
+update_window_title :: (buffer_id: s64 = -1) {
+    title := window_generic_title;
+    if current_project_name then title = tprint("% - %", current_project_name, title);
+    if buffer_id >= 0 {
+        buffer := open_buffers[buffer_id];
+        if buffer.has_file {
+            title = tprint("% • % • %", buffer.file.name, buffer.file.path, title);
+        } else {
+            title = tprint("% • %", get_buffer_name(buffer), title);
+        }
+    }
+    platform_set_window_title(title);
+}
+
 #scope_file
 
 create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; below; }) {
@@ -1186,20 +1200,6 @@ vertical_smooth_scroll :: (editor: Editor, up: bool, fast := false) {
         editor_smooth_scroll.up         = up;
         editor_smooth_scroll.fast       = fast;
     }
-}
-
-update_window_title :: (buffer_id: s64 = -1) {
-    title := window_generic_title;
-    if current_project_name then title = tprint("% - %", current_project_name, title);
-    if buffer_id >= 0 {
-        buffer := open_buffers[buffer_id];
-        if buffer.has_file {
-            title = tprint("% • % • %", buffer.file.name, buffer.file.path, title);
-        } else {
-            title = tprint("% • %", get_buffer_name(buffer), title);
-        }
-    }
-    platform_set_window_title(title);
 }
 
 find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_id: s64, created: bool {
