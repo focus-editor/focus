@@ -187,6 +187,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Reset max line pixel width
 + Fix command execution via the popup
 + Project dir disambiguation
 + Update window title when clicking on a pane

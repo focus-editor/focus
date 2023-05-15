@@ -525,9 +525,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
 
         // Keyboard smooth scrolling - vertical
-        // As mentioned above, we can properly peform horizontal scrolling only once vertical
+        // As mentioned above, we can properly perform horizontal scrolling only once vertical
         // scrolling is done, allowing us to determine the longest visible line.
-        if editor_smooth_scroll.direction != .none && editor_id == editors.active {
+        if (editor_smooth_scroll.direction == .up || editor_smooth_scroll.direction == .down) && editor_id == editors.active {
             speed := 60 * line_height;  // pixels per second
             if editor_smooth_scroll.fast then speed *= 2;
             time_elapsed := cast(float) (frame_time - editor_smooth_scroll.started_at);
@@ -567,6 +567,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             start = get_line_start_offset(buffer, visible_lines_start),
             end   = get_line_start_offset(buffer, visible_lines_end + 1),
         };
+        viewport.max_line_pixel_width = 0;
         for line_num : visible_lines_start .. visible_lines_end {
             line_start := get_line_start_offset(buffer, line_num);
             length := get_line_start_offset(buffer, line_num+1) - line_start;
@@ -593,7 +594,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             }
         }
         // Keyboard smooth scrolling - horizontal
-        if editor_smooth_scroll.direction != .none && editor_id == editors.active {
+        if (editor_smooth_scroll.direction == .left || editor_smooth_scroll.direction == .right) && editor_id == editors.active {
             speed := 60 * char_x_advance;
             if editor_smooth_scroll.fast then speed *= 2;
             time_elapsed := cast(float) (frame_time - editor_smooth_scroll.started_at);
@@ -602,7 +603,12 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 case .left;  new_scroll_x -= time_elapsed * speed;
                 case .right; new_scroll_x += time_elapsed * speed;
             }
-            viewport.left = clamp(cast(s32) new_scroll_x, 0, max_x_scroll);
+            if viewport.left <= max_x_scroll {
+                viewport.left = clamp(cast(s32) new_scroll_x, 0, max_x_scroll);
+            } else if editor_smooth_scroll.direction == .left {
+                viewport.left = cast(s32) new_scroll_x;
+                if viewport.left < 0 then viewport.left = 0;
+            }
             viewport.scroll_x.target = viewport.left;
             viewport_remember_glue_point(*viewport, buffer);
             redraw_requested = true;
