@@ -580,7 +580,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         // Now that we can compute max_x_scroll we can handle horizontal scrolling.
         // We handle both scrollwheel and keyboard smooth scrolling below.
-        // Mousewheel scrolling - vertical
+        // Mousewheel scrolling - horizontal
         if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_x_delta != 0 && !dont_scroll_this_frame {
             using editor.viewport;
             new_target := clamp(scroll_x.target - mouse.scroll_x_delta, 0, max_x_scroll);
