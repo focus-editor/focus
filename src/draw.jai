@@ -280,11 +280,6 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
     editor_is_active := editor_id == editors.active && Input.input_application_has_focus;
 
-    if editor.viewport.rect != rect {
-        editor.viewport.rect = rect;
-        editor.viewport.max_line_pixel_width = 0;
-    }
-
     // Calculate text origin in screen coordinates
     text_offset := make_vector2(char_x_advance, -char_x_advance);
     text_origin := top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
@@ -431,6 +426,11 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         max_y_scroll := max(cast(s32)((buffer.line_starts.count - 2) * line_height), 0);
 
         if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
+            // Mousewheel scrolling - vertical
+            // We only handle vertical scrolling here because horizontal scrolling depends on the
+            // length of the longest visible line, which we can only determine once we determine
+            // the first visible line. Thus we need to "resolve" vertical scrolling before we can
+            // properly handle horizontal scrolling.
             using editor.viewport;
             new_target := clamp(scroll_y.target - mouse.scroll_y_delta, 0, max_y_scroll);
             if mouse.smooth_scroll {
@@ -524,15 +524,17 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             redraw_requested = true;
         }
 
-        // Smooth scrolling - vertical
-        if editor_smooth_scroll.direction != .NONE && editor_id == editors.active {
+        // Keyboard smooth scrolling - vertical
+        // As mentioned above, we can properly peform horizontal scrolling only once vertical
+        // scrolling is done, allowing us to determine the longest visible line.
+        if editor_smooth_scroll.direction != .none && editor_id == editors.active {
             speed := 60 * line_height;  // pixels per second
             if editor_smooth_scroll.fast then speed *= 2;
             time_elapsed := cast(float) (frame_time - editor_smooth_scroll.started_at);
             new_scroll_y := cast(float) editor_smooth_scroll.start_y;
             if editor_smooth_scroll.direction == {
-                case .UP;    new_scroll_y -= time_elapsed * speed;
-                case .DOWN;  new_scroll_y += time_elapsed * speed;
+                case .up;    new_scroll_y -= time_elapsed * speed;
+                case .down;  new_scroll_y += time_elapsed * speed;
             }
             viewport.top = clamp(cast(s32) new_scroll_y, 0, max_y_scroll);
             viewport.scroll_y.target = viewport.top;
@@ -574,9 +576,11 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
         viewport_width := cast(s32) rect.w;
         max_x_scroll := cast(s32) 0;
-        if viewport.max_line_pixel_width > viewport_width
-            max_x_scroll = viewport.max_line_pixel_width - viewport_width;
+        if viewport.max_line_pixel_width > viewport_width then max_x_scroll = viewport.max_line_pixel_width - viewport_width;
 
+        // Now that we can compute max_x_scroll we can handle horizontal scrolling.
+        // We handle both scrollwheel and keyboard smooth scrolling below.
+        // Mousewheel scrolling - vertical
         if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_x_delta != 0 && !dont_scroll_this_frame {
             using editor.viewport;
             new_target := clamp(scroll_x.target - mouse.scroll_x_delta, 0, max_x_scroll);
@@ -588,15 +592,15 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 viewport_remember_glue_point(*viewport, buffer);
             }
         }
-        // Smooth scrolling - horizontal
-        if editor_smooth_scroll.direction != .NONE && editor_id == editors.active {
+        // Keyboard smooth scrolling - horizontal
+        if editor_smooth_scroll.direction != .none && editor_id == editors.active {
             speed := 60 * char_x_advance;
             if editor_smooth_scroll.fast then speed *= 2;
             time_elapsed := cast(float) (frame_time - editor_smooth_scroll.started_at);
             new_scroll_x := cast(float) editor_smooth_scroll.start_x;
             if editor_smooth_scroll.direction == {
-                case .LEFT;  new_scroll_x -= time_elapsed * speed;
-                case .RIGHT; new_scroll_x += time_elapsed * speed;
+                case .left;  new_scroll_x -= time_elapsed * speed;
+                case .right; new_scroll_x += time_elapsed * speed;
             }
             viewport.left = clamp(cast(s32) new_scroll_x, 0, max_x_scroll);
             viewport.scroll_x.target = viewport.left;
