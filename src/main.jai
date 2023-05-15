@@ -380,7 +380,11 @@ update_mouse_state :: () {
     mouse.pointer.x = xx x;
     mouse.pointer.y = xx (window_height - y);
 
-    mouse.scroll_y_delta = cast(s32) (cast(float) Input.mouse_delta_z * WHEEL_SENSITIVITY);
+    if shift_pressed() {
+        mouse.scroll_x_delta = cast(s32) (cast(float) Input.mouse_delta_z * WHEEL_SENSITIVITY);
+    } else {
+        mouse.scroll_y_delta = cast(s32) (cast(float) Input.mouse_delta_z * WHEEL_SENSITIVITY);
+    }
     mouse.smooth_scroll = (mouse.scroll_y_delta % 120) == 0;  // @Robustness: hard-coded typical delta, but it really should be ok for now
     if !config.settings.smooth_scrolling then mouse.smooth_scroll = false;
 
@@ -506,6 +510,7 @@ mouse: Mouse_State;
 
 Mouse_State :: struct {
     pointer: Vector2;
+    scroll_x_delta: s32;
     scroll_y_delta: s32;
     smooth_scroll: bool;
 

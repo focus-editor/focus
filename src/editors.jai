@@ -15,12 +15,14 @@ editors_handle_event :: (event: Input.Event) -> handled: bool {
                 hold_actions_to_be_stopped := map_key_release_to_hold_actions(event, Action_Editors);
                 for hold_actions_to_be_stopped {
                     if it == {
-                        case .scroll_viewport_up;           if  editor_smooth_scroll.up then editor_smooth_scroll.active = false;
-                        case .scroll_viewport_up_fast;      if  editor_smooth_scroll.up then editor_smooth_scroll.active = false;
-                        case .scroll_viewport_down;         if !editor_smooth_scroll.up then editor_smooth_scroll.active = false;
-                        case .scroll_viewport_down_fast;    if !editor_smooth_scroll.up then editor_smooth_scroll.active = false;
-                        // case .scroll_viewport_left;
-                        // case .scroll_viewport_right;
+                        case .scroll_viewport_up;           #through;
+                        case .scroll_viewport_up_fast;      if editor_smooth_scroll.direction == .UP then editor_smooth_scroll.direction = .NONE;
+
+                        case .scroll_viewport_down;         #through;
+                        case .scroll_viewport_down_fast;    if editor_smooth_scroll.direction == .DOWN then editor_smooth_scroll.direction = .NONE;
+
+                        case .scroll_viewport_left;         if editor_smooth_scroll.direction == .LEFT then editor_smooth_scroll.direction = .NONE;
+                        case .scroll_viewport_right;        if editor_smooth_scroll.direction == .RIGHT then editor_smooth_scroll.direction = .NONE;
                     }
                 }
                 // @Incomplete: Does stopping hold actions actually count as handling an event in the sense that it should suppress other event handlers?
@@ -146,12 +148,12 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .move_editor_to_the_right;         if editors.active == editors.left  then swap_panes();
         case .move_cursor_to_viewport_center;   move_cursor_to_viewport_center      (editor, buffer);
         case .remove_additional_cursors;        remove_additional_cursors           (editor);
-        case .scroll_viewport_up;               vertical_smooth_scroll              (editor, up = true);               activate_hold_action(action, event);
-        case .scroll_viewport_up_fast;          vertical_smooth_scroll              (editor, up = true, fast = true);  activate_hold_action(action, event);
-        case .scroll_viewport_down;             vertical_smooth_scroll              (editor, up = false);              activate_hold_action(action, event);
-        case .scroll_viewport_down_fast;        vertical_smooth_scroll              (editor, up = false, fast = true); activate_hold_action(action, event);
-        case .scroll_viewport_left;             // print("scroll_viewport_left - not implemented\n");
-        case .scroll_viewport_right;            // print("scroll_viewport_right - not implemented\n");
+        case .scroll_viewport_up;               smooth_scroll(editor, direction = .UP);                activate_hold_action(action, event);
+        case .scroll_viewport_up_fast;          smooth_scroll(editor, direction = .UP, fast = true);   activate_hold_action(action, event);
+        case .scroll_viewport_down;             smooth_scroll(editor, direction = .DOWN);              activate_hold_action(action, event);
+        case .scroll_viewport_down_fast;        smooth_scroll(editor, direction = .DOWN, fast = true); activate_hold_action(action, event);
+        case .scroll_viewport_left;             smooth_scroll(editor, direction = .LEFT);              activate_hold_action(action, event);
+        case .scroll_viewport_right;            smooth_scroll(editor, direction = .RIGHT);             activate_hold_action(action, event);
         case .undo;                             undo                                (editor, buffer); keep_selection = true;
         case .redo;                             redo                                (editor, buffer); keep_selection = true;
         case .select_all;                       select_all                          (editor, buffer); keep_selection = true;
@@ -1177,13 +1179,12 @@ toggle_expand :: () {
     }
 }
 
-vertical_smooth_scroll :: (editor: Editor, up: bool, fast := false) {
-    if !editor_smooth_scroll.active {
-        // Start smooth scrolling
-        editor_smooth_scroll.active     = true;
+smooth_scroll :: (editor: Editor, direction: Smooth_Scroll_Direction, fast := false) {
+    editor_smooth_scroll.direction = direction;
+    if editor_smooth_scroll.direction != .NONE {
         editor_smooth_scroll.started_at = frame_time;
+        editor_smooth_scroll.start_x    = editor.viewport.left;
         editor_smooth_scroll.start_y    = editor.viewport.top;
-        editor_smooth_scroll.up         = up;
         editor_smooth_scroll.fast       = fast;
     }
 }
@@ -2301,6 +2302,9 @@ Viewport :: struct {
     scroll_y := #run Tween_Animation(s32).{ speed = xx 0.1, func = .lerp };
     scroll_x := #run Tween_Animation(s32).{ speed = xx 0.1, func = .lerp };
 
+    rect: Rect;
+    max_line_pixel_width: s32;
+
     Glue_Point :: struct { buffer_pos: s32; offset_within_line: s32; }
 }
 
@@ -2386,11 +2390,18 @@ open_buffers_lock: Mutex;  // must hold while adding a new buffer
 editors: Editor_State;
 
 // Keyboard smooth scrolling
+Smooth_Scroll_Direction :: enum {
+    NONE;
+    UP;
+    DOWN;
+    LEFT;
+    RIGHT;
+}
 editor_smooth_scroll: struct {
-    active: bool;
-    up:     bool;  // if not up, then down
-    fast:   bool;
+    direction: Smooth_Scroll_Direction;  // if not up, then down
+    fast: bool;
     started_at: Time;
+    start_x: s32;
     start_y: s32;
 };
 

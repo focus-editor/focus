@@ -280,6 +280,11 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
     editor_is_active := editor_id == editors.active && Input.input_application_has_focus;
 
+    if editor.viewport.rect != rect {
+        editor.viewport.rect = rect;
+        editor.viewport.max_line_pixel_width = 0;
+    }
+
     // Calculate text origin in screen coordinates
     text_offset := make_vector2(char_x_advance, -char_x_advance);
     text_origin := top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
@@ -416,6 +421,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
     // Draw editor
     {
+        min_visible_chars :: 5;
+
         push_scissor(rect);
         defer pop_scissor();
 
@@ -435,8 +442,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             }
         } else if cursor_moved {
             // Detect if cursor is off screen and start scrolling to it
-            bounds := shrink_x(rect, text_offset.x + char_x_advance * 5);
-            bounds  = shrink_y(bounds, -text_offset.y + line_height * 5);
+            bounds := shrink_x(rect, text_offset.x + char_x_advance * min_visible_chars);
+            bounds  = shrink_y(bounds, -text_offset.y + line_height * min_visible_chars);
             bounds.h += 2;
             bounds.y -= line_height + 2;
             if bounds.w < 0 || bounds.h < 0 then bounds = rect;  // fall back
@@ -517,13 +524,17 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             redraw_requested = true;
         }
 
-        // Smooth keyboard scrolling
-        if editor_smooth_scroll.active && editor_id == editors.active {
+        // Smooth scrolling - vertical
+        if editor_smooth_scroll.direction != .NONE && editor_id == editors.active {
             speed := 60 * line_height;  // pixels per second
             if editor_smooth_scroll.fast then speed *= 2;
             time_elapsed := cast(float) (frame_time - editor_smooth_scroll.started_at);
-            new_scroll_pos := editor_smooth_scroll.start_y + time_elapsed * speed * (ifx editor_smooth_scroll.up then -1 else 1);
-            viewport.top = clamp(cast(s32) new_scroll_pos, 0, max_y_scroll);
+            new_scroll_y := cast(float) editor_smooth_scroll.start_y;
+            if editor_smooth_scroll.direction == {
+                case .UP;    new_scroll_y -= time_elapsed * speed;
+                case .DOWN;  new_scroll_y += time_elapsed * speed;
+            }
+            viewport.top = clamp(cast(s32) new_scroll_y, 0, max_y_scroll);
             viewport.scroll_y.target = viewport.top;
             viewport_remember_glue_point(*viewport, buffer);
             redraw_requested = true;
@@ -554,6 +565,44 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             start = get_line_start_offset(buffer, visible_lines_start),
             end   = get_line_start_offset(buffer, visible_lines_end + 1),
         };
+        for line_num : visible_lines_start .. visible_lines_end {
+            line_start := get_line_start_offset(buffer, line_num);
+            length := get_line_start_offset(buffer, line_num+1) - line_start;
+            line := array_view(buffer.bytes, line_start, length);
+            line_pixel_width := cast(s32) ((get_num_chars(line) + min_visible_chars) * char_x_advance);
+            viewport.max_line_pixel_width = max(viewport.max_line_pixel_width, line_pixel_width);
+        }
+        viewport_width := cast(s32) rect.w;
+        max_x_scroll := cast(s32) 0;
+        if viewport.max_line_pixel_width > viewport_width
+            max_x_scroll = viewport.max_line_pixel_width - viewport_width;
+
+        if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_x_delta != 0 && !dont_scroll_this_frame {
+            using editor.viewport;
+            new_target := clamp(scroll_x.target - mouse.scroll_x_delta, 0, max_x_scroll);
+            if mouse.smooth_scroll {
+                start_animation(*scroll_x, left, new_target);
+            } else {
+                scroll_x.target = new_target;
+                left = new_target;
+                viewport_remember_glue_point(*viewport, buffer);
+            }
+        }
+        // Smooth scrolling - horizontal
+        if editor_smooth_scroll.direction != .NONE && editor_id == editors.active {
+            speed := 60 * char_x_advance;
+            if editor_smooth_scroll.fast then speed *= 2;
+            time_elapsed := cast(float) (frame_time - editor_smooth_scroll.started_at);
+            new_scroll_x := cast(float) editor_smooth_scroll.start_x;
+            if editor_smooth_scroll.direction == {
+                case .LEFT;  new_scroll_x -= time_elapsed * speed;
+                case .RIGHT; new_scroll_x += time_elapsed * speed;
+            }
+            viewport.left = clamp(cast(s32) new_scroll_x, 0, max_x_scroll);
+            viewport.scroll_x.target = viewport.left;
+            viewport_remember_glue_point(*viewport, buffer);
+            redraw_requested = true;
+        }
 
         // Draw scrollbar marks
         {
