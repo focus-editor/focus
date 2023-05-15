@@ -10,7 +10,6 @@
 - Highlight other languages
 - Improve smooth scrolling for fancy mice
 - Undo/redo for UI
-- Horizontal scrolling
 - Identifier search
 - A little bit of semantic highlighting for Jai
 - Settings per file type
@@ -24,10 +23,13 @@
 - (IMPORTANT) Sometimes when pulling changes via Git, the editor won't notice the files changing (NOTE: if you have a repro please send it to us!)
 - Changing some keymap bindings requires a restart to take effect
 - [Current file watcher limitation] If you open a file in a large folder, the file watcher might scan the whole folder in order to watch for the changes to the file.
+- Linux and macOS: the editor runs hot on the CPU
 
 
 # Main Git Branch
 
++ Horizontal scrolling is now supported either with keyboard (default shortcuts - Alt-H/L) or with Shift-Mousewheel. Note that a horizontal scrollbar is not planned
++ Default keybinds on macOS have been revised to be more natural - your current bindings may conflict with the new ones
 + Windows: the save file dialog is now modal
 + Window title is now properly updated when activating panes by clicking
 + Workspace dir names with a dot will now be displayed correctly

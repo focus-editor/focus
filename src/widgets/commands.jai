@@ -158,8 +158,6 @@ commands := #run Command.[
     .{ .save,                                               "Save",                               0, .Single },
     .{ .save_all,                                           "Save All",                           0, .Single },
 
-    .{ .toggle_comment,                                     "Toggle Code Comments",               0, .Single },
-
     .{ .join_lines,                                         "Join Lines",                         0, .Single },
     .{ .join_lines_no_spaces_in_between,                    "Join Lines (no spaces in between)",  0, .Single },
 

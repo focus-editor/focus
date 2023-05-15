@@ -2,6 +2,14 @@
 
 - Fix command execution via the popup
 
+- Line wrap:
+    - Have line_starts for editor
+    - Implement wrapping for buffer
+        - Point line_starts to real_line_starts unless in the line wrap mode
+    - Have a toggle command
+    - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
+    - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
+
 - Shortcut for centering on current line
 - When switching to another editor, jump to cursor (unless multiple)
 - Autoindent region
@@ -27,14 +35,6 @@
 - Have a font_ui config setting
 
 - Fix the multi-line copying and pasting - https://discord.com/channels/661732390355337246/1100701456950099978/1103153377237540874
-
-- Line wrap:
-    - Have line_starts for editor
-    - Implement wrapping for buffer
-        - Point line_starts to real_line_starts unless in the line wrap mode
-    - Have a toggle command
-    - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
-    - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
 
 - Pass a path to global config as a parameter
 
