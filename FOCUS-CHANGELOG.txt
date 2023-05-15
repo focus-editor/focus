@@ -34,6 +34,7 @@
 + Window title is now properly updated when activating panes by clicking
 + Workspace dir names with a dot will now be displayed correctly
 + Workspace dirs with similar names should now be disambiguated
++ Fixed editor commands executed using the command popup
 
 
 # RELEASES ==================================================================

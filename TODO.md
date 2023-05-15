@@ -1,7 +1,5 @@
 # TODO
 
-- Fix command execution via the popup
-
 - Line wrap:
     - Have line_starts for editor
     - Implement wrapping for buffer
@@ -189,6 +187,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Fix command execution via the popup
 + Project dir disambiguation
 + Update window title when clicking on a pane
 + Create new cursors above/below
