@@ -11,7 +11,9 @@ This editor is for people who value simplicity, are sensitive to input latency a
 
 1. [Download the executable](https://github.com/focus-editor/focus/releases) and put it somewhere where it will live.
 
-2. Launch the executable. On Windows, it will create a `global.focus-config` file and a `projects` folder next to itself. On Mac, these files will be found in `/Users/YOURNAME/Library/Application Support/dev.focus-editor/`.
+2. Launch the executable. Once launched, it will generate its configuration files.
+    * On **Windows**, it will create a `global.focus-config` file and a `projects` folder next to itself.
+    * On **Mac**, these files will be found in `/Users/YOURNAME/Library/Application Support/dev.focus-editor/`.
 
 3. Open the global config file by using the command `Open Global Config` - you can find the shortcut to show commands on the welcome screen.
 
