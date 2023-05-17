@@ -6,18 +6,28 @@ global_display : LDDisplay : *_global_display;
 LDWindow  :: *_Window;
 INVALID_WINDOW : LDWindow : null;
 
-init_display :: () -> bool {
-    prefer_x11 := (getenv("LD_PREFER_X11") != null);
-    if global_display.tag != X11Display && global_display.tag != WLDisplay {
-        if prefer_x11 {
-            if x11_init_display(global_display) return true;
-            if wl_init_display(global_display) return true;
-        } else {
+BACKEND :: enum {
+    AUTO_PREFER_WAYLAND;
+    AUTO_PREFER_X11;
+    FORCE_WAYLAND;
+    FORCE_X11;
+}
+
+init_display :: (backend: BACKEND) -> bool {
+    if global_display.tag == X11Display || global_display.tag == WLDisplay return true;
+    if #complete backend == {
+        case .AUTO_PREFER_WAYLAND; {
             if wl_init_display(global_display) return true;
             if x11_init_display(global_display) return true;
         }
+        case .AUTO_PREFER_X11; {
+            if x11_init_display(global_display) return true;
+            if wl_init_display(global_display) return true;
+        }
+        case .FORCE_WAYLAND; if wl_init_display(global_display) return true;
+        case .FORCE_X11; if x11_init_display(global_display) return true;
     }
-    return true;
+    return false;
 }
 
 /*
@@ -26,7 +36,6 @@ init_display :: () -> bool {
 create_window :: (width: int, height: int, window_name: string, window_x := 0, window_y := 0,
     parent: LDWindow = INVALID_WINDOW, background_color_rgb: [3]float) -> LDWindow
 {
-    if (!init_display()) return INVALID_WINDOW;
     if global_display.tag == {
         case X11Display; {
             if parent != INVALID_WINDOW assert(parent.tag == X11Window);
