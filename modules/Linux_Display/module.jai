@@ -182,7 +182,7 @@ maximize_window :: (win: LDWindow) {
 
 set_cursor_from_theme :: (win: LDWindow, name: string) {
     if win.tag == {
-        case X11Window;
+        case X11Window; x11_set_cursor_from_theme(isa(win, X11Window), name);
         case WLWindow; wl_set_cursor_from_theme(isa(win, WLWindow), name);
     }
 }

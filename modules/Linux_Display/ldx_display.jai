@@ -54,6 +54,14 @@ x11_init_display :: (display: LDDisplay) -> bool {
         im = XOpenIM(x_global_display, null, null, null);
     }
 
+    if !xcursor_initialized {
+        lib := dlopen("libXcursor.so.1", RTLD_NOW);
+        if lib != null {
+            XcursorLibraryLoadCursor = xx dlsym(lib, "XcursorLibraryLoadCursor");
+            xcursor_initialized = (XcursorLibraryLoadCursor != null);
+        }
+    }
+
     set(display, X11Display.{
         handle = x_global_display,
         im = im,
@@ -272,6 +280,13 @@ x11_create_window :: (x11_display: *X11Display, ld_win: LDWindow, width: int, he
     return true;
 }
 
+x11_set_cursor_from_theme :: (win: *X11Window, name: string) {
+    if xcursor_initialized {
+        cursor := XcursorLibraryLoadCursor(win.display.handle, name.data);
+        XDefineCursor(win.display.handle, win.handle, cursor);
+    }
+}
+
 x11_has_native_handle :: (win: *X11Window, native_handle: Window) -> bool {
     return win.handle == native_handle;
 }
@@ -368,3 +383,8 @@ x11_set_fixed_scaling :: (d: *X11Display, factor: float) {
         }
     }
 }
+
+#scope_file
+
+xcursor_initialized := false;
+XcursorLibraryLoadCursor : #type (dpy: *Display, name: *u8) -> Cursor #c_call;
