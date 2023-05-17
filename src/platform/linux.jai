@@ -44,6 +44,9 @@ platform_apply_config :: (config: *platform_config) {
 }
 
 platform_setup :: inline () {
+    backend := LD.BACKEND.AUTO_PREFER_X11;
+    if getenv("FOCUS_LD_PREFER_WAYLAND") != null then backend = .AUTO_PREFER_WAYLAND;
+    LD.init_display(backend);
 }
 
 platform_data_dir :: () -> string {
