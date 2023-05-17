@@ -65,7 +65,20 @@ XwcLookupString :: (ic: XIC, event: *XKeyEvent, buffer: *u32, buffer_size: s32, 
 LC_ALL : s32 : 6;
 setlocale :: (what: s32, loc: *u8) -> *u8 #foreign libc;
 
+SIGEV_SIGNAL    : s32 : 0;
+SIGEV_NONE      : s32 : 1;
+SIGEV_THREAD    : s32 : 2;
+SIGEV_THREAD_ID : s32 : 4;
+
+timer_t :: *void;
+timer_create :: (clockid: clockid_t, sevp: *sigevent, timerid: *timer_t) -> s32 #foreign librt;
+timer_gettime :: (timerid: timer_t, curr_value: *itimerspec) -> s32 #foreign librt;
+timer_settime :: (timerid: timer_t, flags: s32, new_value: *itimerspec, curr_value: *itimerspec) -> s32 #foreign librt;
+timer_delete :: (timer: timer_t) -> s32 #foreign librt;
+
+
 #scope_file
 
 libx11 :: #system_library "libX11";
 libc :: #system_library "libc";
+librt :: #system_library "librt";

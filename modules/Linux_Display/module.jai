@@ -6,6 +6,9 @@ global_display : LDDisplay : *_global_display;
 LDWindow  :: *_Window;
 INVALID_WINDOW : LDWindow : null;
 
+Timer :: *_Timer;
+Timer_Cb :: #type (timer: Timer);
+
 BACKEND :: enum {
     AUTO_PREFER_WAYLAND;
     AUTO_PREFER_X11;
@@ -244,6 +247,74 @@ clipboard_set_text :: (text: string) {
     }
 }
 
+// Timers
+timer_create :: (cb: Timer_Cb, user_data: *void = null, initial_tick: u32 = 0, repeat: u32 = 0) -> Timer {
+    pthread_mutex_lock(*timers_mutex);
+    defer pthread_mutex_unlock(*timers_mutex);
+
+    ret: Timer;
+    ret_id: s32;
+    for * t : global_timers {
+        if t.id == null {
+            ret = t;
+            ret_id = xx it_index;
+            break;
+        }
+    }
+
+    if !ret {
+        ret = array_add(*global_timers);
+        ret_id = xx (global_timers.count - 1);
+    }
+
+    sev: sigevent;
+    sev.sigev_notify = SIGEV_THREAD;
+    sev.sigev_value.sival_int = ret_id;
+    sev.sigev_notify_function = timer_callback;
+
+    timer_create(.CLOCK_MONOTONIC, *sev, *ret.id);
+    if !ret.id {
+        timer_destroy(ret);
+        return null;
+    }
+
+    ret.cb = cb;
+    ret.user_data = user_data;
+
+    if initial_tick || repeat timer_start(ret, initial_tick, repeat);
+
+    return ret;
+}
+
+timer_start :: (timer: Timer, initial_tick: u32, repeat: u32 = 0) {
+    assert(initial_tick != 0 || repeat != 0);
+
+    spec: itimerspec;
+    spec.it_value.tv_nsec = initial_tick * 1_000_000;
+    spec.it_value.tv_sec  = spec.it_value.tv_nsec / 1_000_000_000;
+    spec.it_value.tv_nsec = spec.it_value.tv_nsec % 1_000_000_000;
+    if repeat {
+        spec.it_interval.tv_nsec = repeat * 1_000_000;
+        spec.it_interval.tv_sec  = spec.it_interval.tv_nsec / 1_000_000_000;
+        spec.it_interval.tv_nsec = spec.it_interval.tv_nsec % 1_000_000_000;
+    }
+    timer_settime(timer.id, 0, *spec, null);
+}
+
+timer_stop :: (timer: Timer) {
+    spec: itimerspec;
+    timer_settime(timer.id, 0, *spec, null);
+}
+
+timer_destroy :: (timer: Timer) {
+    pthread_mutex_lock(*timers_mutex);
+    defer pthread_mutex_unlock(*timers_mutex);
+
+    assert(timer >= global_timers.data && timer < global_timers.data + global_timers.count);
+    if timer.id timer_delete(timer.id);
+    <<timer = .{};
+}
+
 #scope_module;
 
 #import "String";
@@ -270,5 +341,23 @@ _INVALID_WINDOW : LDWindow;
 
 _global_display: _Display;
 global_windows: [..] _Window;
+
+timers_mutex: pthread_mutex_t;
+_Timer :: struct {
+    id: timer_t;
+    user_data: *void;
+    cb: Timer_Cb;
+}
+global_timers : [..] _Timer;
+
+timer_callback :: (val: sigval_t) #c_call {
+    timer : Timer = *global_timers[val.sival_int];
+    if timer.cb {
+        ctx: Context;
+        push_context ctx {
+            timer.cb(timer);
+        }
+    }
+}
 
 WHEEL_DELTA : s32 : 120;
