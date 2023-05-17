@@ -10,8 +10,9 @@ Timer :: *_Timer;
 Timer_Cb :: #type (timer: Timer);
 
 BACKEND :: enum {
-    AUTO_PREFER_WAYLAND;
-    AUTO_PREFER_X11;
+    PREFER_BEST_USER_EXPERIENCE;
+    PREFER_WAYLAND;
+    PREFER_X11;
     FORCE_WAYLAND;
     FORCE_X11;
 }
@@ -19,16 +20,36 @@ BACKEND :: enum {
 init_display :: (backend: BACKEND) -> bool {
     if global_display.tag == X11Display || global_display.tag == WLDisplay return true;
     if #complete backend == {
-        case .AUTO_PREFER_WAYLAND; {
-            if wl_init_display(global_display) return true;
-            if x11_init_display(global_display) return true;
+        case .PREFER_BEST_USER_EXPERIENCE; {
+            /*
+             * This is the same as PREFER_WAYLAND plus some checks to ensure
+             * the best user experience possible. We do this by initializing
+             * a Wayland display and checking that certain protocols are
+             * supported. We fall back to X11 if we don't like the way the
+             * Wayland display looks.
+             */
+            if wl_init_display(global_display) {
+                wld := isa(global_display, WLDisplay);
+                if !wld.decoration_manager {
+                    wl_uninit_display(global_display);
+                    <<global_display = .{};
+                    return x11_init_display(global_display);
+                }
+                return true;
+            }
+
+            return x11_init_display(global_display);
         }
-        case .AUTO_PREFER_X11; {
-            if x11_init_display(global_display) return true;
+        case .PREFER_WAYLAND; {
             if wl_init_display(global_display) return true;
+            return x11_init_display(global_display);
         }
-        case .FORCE_WAYLAND; if wl_init_display(global_display) return true;
-        case .FORCE_X11; if x11_init_display(global_display) return true;
+        case .PREFER_X11; {
+            if x11_init_display(global_display) return true;
+            return wl_init_display(global_display);
+        }
+        case .FORCE_WAYLAND; return wl_init_display(global_display);
+        case .FORCE_X11; return x11_init_display(global_display);
     }
     return false;
 }

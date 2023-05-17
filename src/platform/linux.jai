@@ -44,8 +44,13 @@ platform_apply_config :: (config: *platform_config) {
 }
 
 platform_setup :: inline () {
-    backend := LD.BACKEND.AUTO_PREFER_X11;
-    if getenv("FOCUS_LD_PREFER_WAYLAND") != null then backend = .AUTO_PREFER_WAYLAND;
+    backend := LD.BACKEND.PREFER_BEST_USER_EXPERIENCE;
+    cstr := getenv("FOCUS_LD_BACKEND");
+    backend_s := ifx cstr then to_string(cstr) else "";
+    if equal_nocase(backend_s, "prefer-wayland") then backend = .PREFER_WAYLAND;
+    if equal_nocase(backend_s, "prefer-x11") then backend = .PREFER_X11;
+    if equal_nocase(backend_s, "wayland") then backend = .FORCE_WAYLAND;
+    if equal_nocase(backend_s, "x11") then backend = .FORCE_X11;
     LD.init_display(backend);
 }
 

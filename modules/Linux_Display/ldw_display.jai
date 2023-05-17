@@ -516,6 +516,15 @@ wl_init_display :: (display: LDDisplay) -> bool {
     return true;
 }
 
+wl_uninit_display :: (display: LDDisplay) {
+    d := isa(display, WLDisplay);
+    if d.handle {
+        // @TODO: more thorough cleanup here
+        wl_display.disconnect(d.handle);
+        <<d = .{};
+    }
+}
+
 x_window_listener :: xdg_surface_listener.{
     configure = (data: *void, surface: *xdg_surface, serial: u32) -> void #c_call {
         w: *WLWindow = wl_proxy.get_user_data(surface);
