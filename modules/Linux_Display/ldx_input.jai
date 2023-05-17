@@ -76,27 +76,33 @@ x11_translate_key_code :: (key: KeySym) -> Key_Code {
 }
 
 x11_update_window_events :: (x11_display: *X11Display) {
-    using Key_Code;
-
     display := x11_display.handle;
     XLockDisplay(display);
 
+    xev: XEvent;
     while XPending(display) {
-        xev: XEvent;
         XNextEvent(display, *xev);
+        x11_handle_event(display, *xev);
+    }
 
-        if XFilterEvent(*xev, None) continue;
+    XUnlockDisplay(display);
+}
 
-        ld_win := get_by_native_handle(xx xev.xany.window);
-        if ld_win == INVALID_WINDOW continue;
-        win := isa(ld_win, X11Window);
+x11_handle_event :: (display: *Display, xev: *XEvent) {
+    using Key_Code;
 
-        if xev.type == {
+    if XFilterEvent(xev, None) return;
+
+    ld_win := get_by_native_handle(xx xev.xany.window);
+    if ld_win == INVALID_WINDOW return;
+    win := isa(ld_win, X11Window);
+
+    if xev.type == {
         case ClientMessage;
             message_type := xev.xclient.message_type;
             if message_type == XdndEnter {
-                drop_handled := maybe_handle_xdnd_drop_events(display, *xev, *drop_info);
-                if drop_handled  continue;
+                drop_handled := maybe_handle_xdnd_drop_events(display, xev, *drop_info);
+                if drop_handled  return;
             } else if message_type == x_global_wm_protocols {
                 message0 := cast(Atom) xev.xclient.data.l[0];
 
@@ -170,7 +176,7 @@ x11_update_window_events :: (x11_display: *X11Display) {
                     && nev.xkey.keycode == xev.xkey.keycode {
 
                     // This is a repeat, so we ignore the KeyRelease.
-                    continue;
+                    return;
                 }
             }
 
@@ -205,7 +211,7 @@ x11_update_window_events :: (x11_display: *X11Display) {
                 event.wheel_delta = WHEEL_DELTA * (ifx (button & 0x01) then cast(s32) -1 else 1);
                 array_add(*events_this_frame, event);
                 mouse_delta_z += event.wheel_delta;
-                continue;
+                return;
             }
 
             event.type = .KEYBOARD;
@@ -228,7 +234,7 @@ x11_update_window_events :: (x11_display: *X11Display) {
             button := xev.xbutton.button;
 
             // Buttons above 4 are scroll wheel events, we don't care about release events for them
-            if button >= 4 continue;
+            if button >= 4 return;
 
             event.type = .KEYBOARD;
             event.key_pressed = 0;
@@ -327,10 +333,9 @@ x11_update_window_events :: (x11_display: *X11Display) {
         case FocusOut;
             input_application_has_focus = false;
             XUnsetICFocus(win.ic);
-        }
     }
-    XUnlockDisplay(display);
 }
+
 
 x11_clipboard_get_text :: (win: Window) -> string {  // Allocated via alloc; should be manually freed.
     text: string;
