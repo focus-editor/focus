@@ -24,7 +24,7 @@ This editor is for people who value simplicity, are sensitive to input latency a
 
 Basic tips and tricks: https://www.youtube.com/watch?v=UZQpQ1wgXCY
 
-Official Discord server - https://discord.gg/RtvHee2S
+Official Discord server - https://discord.gg/eSXquAzTmW
 
 ## How to compile
 
