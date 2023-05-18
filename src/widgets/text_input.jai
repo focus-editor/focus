@@ -7,9 +7,9 @@ text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> han
     if frame_time - last_edit_time >= EDIT_GROUP_TIMEOUT then new_edit_group(input);
 
     action := map_event_to_action(event, Action_Common);
-    
+
     extend_selection := event.shift_pressed;
-    
+
     if action == {
         case .copy;                     copy(input);
         case .cut;                      cut(input);
@@ -34,13 +34,15 @@ text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> han
         case .delete_word_right;        delete_word_right(input);
         case;                           return false;
     }
-    
+
     if old_text != to_string(text) then last_edit_time = frame_time;
 
     return true;
 }
 
 text_input_type_char :: (using input: *Text_Input, char: u32) {
+    if key_combo_input_state.key_combo_in_progress  return;
+
     if edits.count == 0 {
         // Always remember cursor before any edits
         cursor_before_edits = cursor;
@@ -51,7 +53,7 @@ text_input_type_char :: (using input: *Text_Input, char: u32) {
 
     cursor.pos = clamp(cursor.pos, 0, xx text.count);  // make sure cursor is in the correct position
     cursor.sel = clamp(cursor.sel, 0, xx text.count);
-    
+
     utf8_char := convert_utf32_to_utf8(char);
     if !has_selection(cursor) {
         // No selection
@@ -65,7 +67,7 @@ text_input_type_char :: (using input: *Text_Input, char: u32) {
     }
     cursor.pos = min(cursor.pos, cursor.sel) + utf8_char.count;
     cursor.sel = cursor.pos;
-    
+
     last_edit_time = frame_time;
 }
 
@@ -159,7 +161,7 @@ paste :: (using input: *Text_Input) {
 
 undo :: (using input: *Text_Input) {
     new_edit_group(input);
-    
+
     if undos.count == 0 return;
     edit_group := pop(*undos);
     // Revert edits in the backwards order
@@ -283,12 +285,12 @@ delete_right_char :: inline (using input: *Text_Input) {
     delete_selection(input);
 }
 
-delete_word_left :: inline (using input: *Text_Input) {    
+delete_word_left :: inline (using input: *Text_Input) {
     if !has_selection(cursor) then cursor.pos = scan_through_similar_chars_on_the_left(input, cursor.pos);
     delete_left_char(input);
 }
 
-delete_word_right :: inline (using input: *Text_Input) {    
+delete_word_right :: inline (using input: *Text_Input) {
     if !has_selection(cursor) then cursor.pos = scan_through_similar_chars_on_the_right(input, cursor.pos);
     delete_right_char(input);
 }
@@ -307,7 +309,7 @@ new_edit_group :: (using input: *Text_Input) {
     new_group := array_add(*undos);
     new_group.edits = to_owned_array(*edits);
     new_group.cursor = cursor_before_edits;
-    
+
     cursor_before_edits = cursor;
 }
 
@@ -319,9 +321,9 @@ insert_string_at_offset :: (using input: *Text_Input, offset: s64, new_str: stri
 replace_range :: (using input: *Text_Input, start: s64, end: s64, new_str: string) {
     old_str := to_string(array_view(text, start, end - start));
     if new_str == old_str return;
-    
+
     new_replace_edit(input, xx start, xx end, old_str, new_str);
-    replace_range_raw(input, start, end, new_str); 
+    replace_range_raw(input, start, end, new_str);
 }
 
 delete_range :: (using input: *Text_Input, start: s64, end: s64) {
@@ -499,27 +501,27 @@ get_char_at_offset_as_string :: (using input: Text_Input, offset: s32) -> string
 Text_Input :: struct {
     text: [..] u8;
     cursor: Cursor;
-    
+
     undos: [..] Edit_Group;
     redos: [..] Edit_Group;
     edits: [..] Edit;
     cursor_before_edits: Cursor;
     last_edit_time: Time;
-    
+
     scroll_x: s32;
     scroll_anim: Tween_Animation(s32);
-    
+
     mouse_selection_mode: bool;  // to indicate the mouse is being dragged to select text
 
     Cursor :: struct {
         pos, sel: s32;  // cursor position (in chars, not bytes)
     }
-    
+
     Edit_Group :: struct {
         edits: [] Edit;
         cursor: Cursor;
     }
-    
+
     // Some copypasta from buffer, but it's ok
     Edit :: struct {
         type: enum { insert; insert_char; replace; delete; };
@@ -544,7 +546,7 @@ Text_Input :: struct {
             };
         }
     }
-    
+
     Offset_Range :: struct {
         start, end: s32;  // we won't open large files anyway
     }

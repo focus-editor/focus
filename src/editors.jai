@@ -30,8 +30,10 @@ editors_handle_event :: (event: Input.Event) -> handled: bool {
             }
 
         case .TEXT_INPUT;
-            active_editor_type_char(event.utf32);
-            return true;
+            if !key_combo_input_state.key_combo_in_progress {
+                active_editor_type_char(event.utf32);
+                return true;
+            }
     }
 
     return false;

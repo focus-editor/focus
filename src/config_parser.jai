@@ -480,18 +480,37 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
         return false, error_msg;
     }
 
-    key_name, action_name := break_by_spaces(line);
-    if !action_name {
-        error_msg := log_parser_error(handler, "Expected a space after the key combo, found '%'", key_name);
+    // Parse key combo parts and action
+    key_combo_parts: [..] Key_Combo_Part;
+    key_combo_error_msg: string;
+    action_name: string;
+    item: string;
+    rest_of_line := line;
+
+    while true {
+        // The last item we encounter will be interpreted as the action name, all parts before it will be parsed as key combinations.
+        item, rest_of_line = break_by_spaces(rest_of_line);
+        if !rest_of_line {
+            action_name = item;
+            break;
+        }
+
+        key_combo_part, key_ok, msg := parse_key_combo_part(parser, item);
+        if !key_ok {
+            key_combo_error_msg = msg;
+            break;
+        }
+
+        array_add(*key_combo_parts, key_combo_part);
+    }
+
+    if key_combo_parts.count == 0 || !action_name {
+        error_msg := tprint("Invalid key combo: '%'.\n%", line, key_combo_error_msg);
         return false, error_msg;
     }
 
-    // Parse key combo
-    key_combo, key_ok, msg := parse_key_combo(parser, key_name);
-    if !key_ok {
-        error_msg := tprint("Invalid key combo: '%'.\n%\nNote that spaces aren't allowed in key combos.", line, msg);
-        return false, error_msg;
-    }
+    key_combo: Key_Combo;
+    key_combo.parts = key_combo_parts;
 
     // Parse actions
     map_action :: (name: string, combo: Key_Combo, available_actions: [] string, target_keymap: *[..] Key_Mapping, subsection: string) #expand {
@@ -519,8 +538,8 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
     return true, "";
 }
 
-parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo, success: bool, error_msg: string /* temp */ {
-    result: Key_Combo;
+parse_key_combo_part :: (using parser: *Config_Parser, key_name: string) -> Key_Combo_Part, success: bool, error_msg: string /* temp */ {
+    result: Key_Combo_Part;
 
     // Parse modifier flags
     modifier_string := key_name;
