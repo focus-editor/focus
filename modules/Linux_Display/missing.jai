@@ -76,9 +76,12 @@ timer_gettime :: (timerid: timer_t, curr_value: *itimerspec) -> s32 #foreign lib
 timer_settime :: (timerid: timer_t, flags: s32, new_value: *itimerspec, curr_value: *itimerspec) -> s32 #foreign librt;
 timer_delete :: (timer: timer_t) -> s32 #foreign librt;
 
+glXQueryExtension :: (dpy: *Display, error_base: *s32, event_base: *s32) -> Bool #foreign libGLX;
+
 
 #scope_file
 
 libx11 :: #system_library "libX11";
+libGLX :: #system_library "libGLX";
 libc :: #system_library "libc";
 librt :: #system_library "librt";

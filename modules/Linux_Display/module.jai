@@ -268,6 +268,12 @@ clipboard_set_text :: (text: string) {
     }
 }
 
+// Fonts
+find_font :: (name: string, allocator := temp) -> bool, string {
+    ok, path := fc_find_font(name, allocator);
+    return ok, path;
+}
+
 // Timers
 timer_create :: (cb: Timer_Cb, user_data: *void = null, initial_tick: u32 = 0, repeat: u32 = 0) -> Timer {
     pthread_mutex_lock(*timers_mutex);
@@ -350,6 +356,7 @@ timer_destroy :: (timer: Timer) {
 #import "Basic";
 
 #load "missing.jai";
+#load "fontconfig.jai";
 #load "ldx_display.jai";
 #load "ldx_input.jai";
 #load "ldw_display.jai";
