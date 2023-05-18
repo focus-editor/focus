@@ -139,6 +139,10 @@ platform_get_save_file_name :: (name := "") -> string /* temp */, success: bool 
     return "", false;
 }
 
+platform_find_font_by_name :: (name: string, allocator := temp) -> bool, string {
+    return false, "";
+}
+
 platform_get_fonts_dir :: () -> string {
     return "C:/Windows/Fonts";
 }

@@ -110,6 +110,11 @@ platform_get_save_file_name :: (name := "") -> string, bool {
     // return name;
 }
 
+platform_find_font_by_name :: (name: string, allocator := temp) -> bool, string {
+    found, path := LD.find_font(name, allocator);
+    return found, path;
+}
+
 platform_get_fonts_dir :: () -> string {
     return "/usr/share/fonts";
 }
