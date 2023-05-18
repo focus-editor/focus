@@ -1,20 +1,39 @@
 map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mapping {
-    invalid_action  := cast(Action) 0xFFFF;
+    using key_combo_input_state;
+
+    invalid_action := cast(Action) 0xFFFF;
     invalid_mapping := Key_Mapping.{};
 
     if event.type != .KEYBOARD return invalid_action, invalid_mapping;
-    if !event.key_pressed return invalid_action, invalid_mapping;
+    if !event.key_pressed      return invalid_action, invalid_mapping;
 
-    keymap := get_keymap_for_action_type(Action);
+    // Check for modifier keys being pressed by themselves; this shouldn't reset an active combo.
+    key_combo_input_this_frame = event.key_code != .ALT && event.key_code != .CTRL && event.key_code != .SHIFT && event.key_code != .CMD && event.key_code != .META;
+
+    keys_to_search := get_keymap_for_action_type(Action);
+    if key_combo_candidates.count > 0  keys_to_search = key_combo_candidates;
 
     event_key_code := cast(u32) event.key_code;
 
-    for keymap {
-        if it.combo.key_code == event_key_code && it.combo.mods.packed == (event.modifier_flags.packed | it.combo.ignore.packed) {
-            return cast(Action) it.action, it;
+    for key_mapping: keys_to_search {
+        if current_key_combo_length >= key_mapping.combo.parts.count  continue;
+        if minimum_key_combo_length > 0 && key_mapping.combo.parts.count < minimum_key_combo_length  continue;
+
+        combo := key_mapping.combo;
+        part := key_mapping.combo.parts[current_key_combo_length];
+
+        if part.key_code == event_key_code && part.mods.packed == (event.modifier_flags.packed | part.ignore.packed) {
+            if combo.parts.count == current_key_combo_length + 1 {
+                found_match = true;
+                return cast(Action) key_mapping.action, key_mapping;
+            } else {
+                array_add(*new_key_combo_candidates, key_mapping);
+                minimum_key_combo_length = key_mapping.combo.parts.count;
+                key_combo_in_progress = true;
+            }
         }
     }
-    
+
     #if Action == Action_Open_File_Dialog {
         // Hard-coded case: When the Open File dialog is active, "/" or "\" opens a directory.
         if event.key_code == {
@@ -22,12 +41,15 @@ map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mappin
             case #char "\\"; return .open_directory, invalid_mapping;
         }
     }
-    
+
     return invalid_action, invalid_mapping;
 }
 
 activate_hold_action :: (action: $Action_Type, event: Input.Event) {
     _, matched_mapping := map_event_to_action(event, Action_Type);  // we map it here again to avoid passing it in through multiple functions
+
+    if matched_mapping.combo.parts.count != 1  return; // Don't support hold actions for multipart key combos.
+
     hold_action := Hold_Action.{ action_type = Action_Type, matched_mapping = matched_mapping };
 
     // NOTE: array_add_if_unique didn't work because it couldn't find the operator == for Hold_Actions.
@@ -48,7 +70,8 @@ map_key_release_to_hold_actions :: (event: Input.Event, $Action: Type) -> [] Act
 
     for active_hold_actions {
         if it.action_type != Action continue;
-        combo := it.matched_mapping.combo;
+        combo := it.matched_mapping.combo.parts[0];
+
         if combo.key_code == cast(u32) event.key_code ||
           (event.key_code == .SHIFT && combo.mods.shift_pressed    && !combo.ignore.shift_pressed)    ||
           (event.key_code == .CTRL  && combo.mods.ctrl_pressed     && !combo.ignore.ctrl_pressed)     ||
@@ -63,7 +86,7 @@ map_key_release_to_hold_actions :: (event: Input.Event, $Action: Type) -> [] Act
     return actions;
 }
 
-get_first_matching_key_combo_from_action :: (action: $T) -> [] string /* temp */ {
+get_first_matching_key_combo_from_action :: (action: $T) -> [][] string /* temp */ {
     keymap := get_keymap_for_action_type(type_of(action));
     combo: Key_Combo = ---;
     found := false;
@@ -78,24 +101,29 @@ get_first_matching_key_combo_from_action :: (action: $T) -> [] string /* temp */
     }
     if !found return .[];
 
+    key_parts: [..][] string;
+    key_parts.allocator = temp;
+    for combo.parts  array_add(*key_parts, key_combo_part_strings(it));
+    return key_parts;
+}
+
+key_combo_part_strings :: (combo_part: Key_Combo_Part) -> [] string {
     keys: [..] string;
     keys.allocator = temp;
     array_reserve(*keys, 5);  // modifiers + key
 
-
     #if OS == .LINUX {
-        if combo.mods.cmd_meta_pressed then array_add(*keys, "Meta");
+        if combo_part.mods.cmd_meta_pressed then array_add(*keys, "Meta");
     }
-    if combo.mods.ctrl_pressed  then array_add(*keys, "Ctrl");
-    if combo.mods.alt_pressed   then array_add(*keys, "Alt");
-    if combo.mods.shift_pressed then array_add(*keys, "Shift");
+    if combo_part.mods.ctrl_pressed  then array_add(*keys, "Ctrl");
+    if combo_part.mods.alt_pressed   then array_add(*keys, "Alt");
+    if combo_part.mods.shift_pressed then array_add(*keys, "Shift");
     #if OS == .MACOS {
-        if combo.mods.cmd_meta_pressed then array_add(*keys, "Cmd");
+        if combo_part.mods.cmd_meta_pressed then array_add(*keys, "Cmd");
     }
 
-    key_name := keymap_map_key_code_to_string(combo.key_code);
+    key_name := keymap_map_key_code_to_string(combo_part.key_code);
     array_add(*keys, key_name);
-
     return keys;
 }
 
@@ -129,7 +157,47 @@ operator == :: (a: Hold_Action, b: Hold_Action) -> bool {
     return memcmp(*a, *b, size_of(Hold_Action)) == 0;
 }
 
+reset_key_combo :: () {
+    using key_combo_input_state;
+    array_reset_keeping_memory(*key_combo_candidates);
+    minimum_key_combo_length = 0;
+    current_key_combo_length = 0;
+    key_combo_in_progress = false;
+}
+
 #scope_export
+
+start_key_combo_handling :: () {
+    using key_combo_input_state;
+    key_combo_input_this_frame = false;
+    found_match = false;
+    array_reset_keeping_memory(*new_key_combo_candidates);
+}
+
+end_key_combo_handling :: () {
+    using key_combo_input_state;
+    if new_key_combo_candidates.count > 0 { // Input occurred this frame, and we have a new list of key combo candidates.
+        current_key_combo_length += 1;
+        array_reset_keeping_memory(*key_combo_candidates);
+        array_add(*key_combo_candidates, ..new_key_combo_candidates);
+    } else if key_combo_input_this_frame { // Input occurred this frame, but no candidates are left; reset the active key combo.
+        reset_key_combo();
+    }
+
+    if found_match  reset_key_combo();
+}
+
+key_combo_input_state: Key_Combo_Input_State;
+
+Key_Combo_Input_State :: struct {
+    key_combo_candidates: [..] Key_Mapping;
+    new_key_combo_candidates: [..] Key_Mapping;
+    current_key_combo_length: int;
+    minimum_key_combo_length: int;
+    key_combo_input_this_frame: bool;
+    key_combo_in_progress: bool;
+    found_match: bool;
+}
 
 Key_Mapping :: struct {
     combo:  Key_Combo;
@@ -137,10 +205,14 @@ Key_Mapping :: struct {
 }
 
 Key_Combo :: struct {
+    parts: [] Key_Combo_Part;
+}
+
+Key_Combo_Part :: struct {
     key_code: u32;
     mods: Mods;
     ignore: Mods;
-} #no_padding;
+}
 
 // Generate action enums from the corresponding arrays below
 #insert -> string {

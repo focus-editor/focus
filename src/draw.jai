@@ -168,32 +168,45 @@ draw_welcome_screen :: (main_area: Rect) {
             // Figure out combo width for aligning right
             combo_width := 0.0;
             plus_width  := cast(float) Simp.get_text_width(font_ui, "+");
-            for combo {
-                combo_width += xx Simp.get_text_width(font_ui, it) + 2 * padding_h;
+            padding_between_parts := plus_width + 2 * padding_h;
+
+            for combo_part: combo {
+                for combo_part {
+                    combo_width += xx Simp.get_text_width(font_ui, it) + 2 * padding_h;
+                    if it_index < combo_part.count - 1 {
+                        combo_width += plus_width + 2 * padding_h;
+                    }
+                }
+
                 if it_index < combo.count - 1 {
-                    combo_width += plus_width + 2 * padding_h;
+                    combo_width += padding_between_parts;
                 }
             }
 
             x = right_area.x + align_x - combo_width;
             text_y := y + padding_v * 1.5;
 
-            key_rect := Rect.{ x = x, y = y, w = 0, h = key_height };
-            for combo {
-                key_rect.x = x;
-                key_rect.w = xx Simp.prepare_text(font_ui, it) + 2 * padding_h;
-                key_rect = align_to_grid(key_rect);
-                shadow_rect := expand(key_rect, 1);
-                shadow_rect.y -= 2;
-                draw_rounded_rect(shadow_rect, Colors.BACKGROUND_DARK);
-                draw_rounded_rect(key_rect, Colors.SELECTION_ACTIVE);
-                Simp.draw_prepared_text(font_ui, xx (x + padding_h), xx text_y, Colors.UI_DEFAULT);
-                x += key_rect.w;
-                if it_index < combo.count - 1 {
-                    Simp.draw_text(font_ui, xx (x + padding_h), xx text_y, "+", Colors.UI_DEFAULT);
-                    x += plus_width + 2 * padding_h;
+            for combo_part: combo {
+                key_rect := Rect.{ x = x, y = y, w = 0, h = key_height };
+                for combo_part {
+                    key_rect.x = x;
+                    key_rect.w = xx Simp.prepare_text(font_ui, it) + 2 * padding_h;
+                    key_rect = align_to_grid(key_rect);
+                    shadow_rect := expand(key_rect, 1);
+                    shadow_rect.y -= 2;
+                    draw_rounded_rect(shadow_rect, Colors.BACKGROUND_DARK);
+                    draw_rounded_rect(key_rect, Colors.SELECTION_ACTIVE);
+                    Simp.draw_prepared_text(font_ui, xx (x + padding_h), xx text_y, Colors.UI_DEFAULT);
+                    x += key_rect.w;
+                    if it_index < combo_part.count - 1 {
+                        Simp.draw_text(font_ui, xx (x + padding_h), xx text_y, "+", Colors.UI_DEFAULT);
+                        x += plus_width + 2 * padding_h;
+                    }
                 }
+
+                x += padding_between_parts;
             }
+
             Simp.draw_text(font_ui, xx (x + padding_h * 10), xx text_y, shortcut.description, Colors.UI_DEFAULT);
 
             y -= line_height;
@@ -1132,7 +1145,33 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_small, buffer.file.path);
         Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
+    }
 
+    if key_combo_input_state.key_combo_in_progress {
+        // Draw separator
+        pen.x += width + padding;
+        width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
+        Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
+
+        // Draw key combo
+        builder: String_Builder;
+        builder.allocator = temp;
+
+        for part_index: 0..key_combo_input_state.current_key_combo_length - 1 {
+            combo_part := key_combo_part_strings(key_combo_input_state.key_combo_candidates[0].combo.parts[part_index]);
+            for combo_part {
+                print_to_builder(*builder, "%", it);
+                if it_index < combo_part.count - 1  print_to_builder(*builder, "+");
+            }
+
+            print_to_builder(*builder, " ");
+        }
+
+        print_to_builder(*builder, "...");
+
+        pen.x += width + padding;
+        width = xx Simp.prepare_text(font_ui_small, builder_to_string(*builder));
+        Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
     }
 
     pen.x += width;
@@ -1548,8 +1587,19 @@ draw_commands_dialog :: () {
                 combo_rect.x += width;
                 combo_rect.w -= width + padding;
 
-                combo_str := join(..combo, " + ", allocator = temp);
-                combo_width := cast(float) Simp.prepare_text(font_ui_small, combo_str);
+                builder: String_Builder;
+                builder.allocator = temp;
+
+                for combo_part: combo {
+                    for combo_part {
+                        print_to_builder(*builder, "%", it);
+                        if it_index < combo_part.count - 1  print_to_builder(*builder, " + ");
+                    }
+
+                    if it_index < combo.count - 1  print_to_builder(*builder, "  ");
+                }
+
+                combo_width := cast(float) Simp.prepare_text(font_ui_small, builder_to_string(*builder));
 
                 if is_valid(combo_rect) && combo_width < combo_rect.w {
                     pen.x = combo_rect.x + combo_rect.w - combo_width;

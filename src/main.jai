@@ -163,6 +163,8 @@ main :: () {
         // If we handle it as a keyboard event we will need to ignore its text input duplicates
         num_text_input_events_to_ignore := 0;
 
+        start_key_combo_handling();
+
         for event : Input.events_this_frame {
             // General events
             if event.type == {
@@ -235,6 +237,8 @@ main :: () {
 
             if handled && event.type == .KEYBOARD then num_text_input_events_to_ignore = event.text_input_count;
         }
+
+        end_key_combo_handling();
 
         if should_quit && unsaved_buffers_exist() && !force_quit {
             show_unsaved_buffers_dialog();
