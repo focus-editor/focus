@@ -191,10 +191,10 @@ fuzzy_match :: (str: string, chars: [] string) -> score: s32, highlights: [] boo
     return score, highlights;
 }
 
-bmh_prepare_skip_table :: (needle: string, $case_sensitive := false) -> [256] s32 {
+bmh_prepare_skip_table :: (needle: string, case_sensitive: bool) -> [256] s32 {
     skip_table: [256] s32 = ---;
     for * skip_table { << it = cast,no_check(s32) needle.count; }
-    #if case_sensitive {
+    if case_sensitive {
         for i : 0 .. needle.count - 2 { skip_table[needle[i]]           = cast,no_check(s32) (needle.count - 1 - i); }
     } else {
         for i : 0 .. needle.count - 2 { skip_table[to_lower(needle[i])] = cast,no_check(s32) (needle.count - 1 - i); }
@@ -202,12 +202,12 @@ bmh_prepare_skip_table :: (needle: string, $case_sensitive := false) -> [256] s3
     return skip_table;
 }
 
-bmh_find_index_from_left :: (s: string, needle: string, start_index := 0, skip_table: [] s32, $case_sensitive := false) -> s64 {
+bmh_find_index_from_left :: (s: string, needle: string, start_index := 0, skip_table: [] s32, case_sensitive: bool) -> s64 {
     i := start_index;
     last_i := s.count - needle.count;
     while i <= last_i {
         current := to_string(s.data + i, needle.count);
-        #if case_sensitive {
+        if case_sensitive {
             if current == needle return i;
             i += skip_table[s[i + needle.count - 1]];
         } else {
@@ -229,6 +229,20 @@ find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) 
     return -1;
 }
 
+match_whole_word :: (s: string, offset: int, count: int) -> bool {
+    before := <<cast(*u8) (s.data + offset - 1);
+    after  := <<cast(*u8) (s.data + offset + count);
+    first  := <<cast(*u8) (s.data + offset);
+    last   := <<cast(*u8) (s.data + offset + count - 1);
+
+    b := (inline is_whitespace_char(before)) || (inline is_separator_char(before)) || offset - 1 < 0;
+    a := (inline is_whitespace_char(after))  || (inline is_separator_char(after))  || offset + count > s.count - 1;
+    f := (inline is_whitespace_char(first))  || (inline is_separator_char(first));
+    l := (inline is_whitespace_char(last))   || (inline is_separator_char(last));
+
+    return (f && l) || (f && !l && a) || (!f && l && b) || (!f && !l && b && a);
+}
+
 #add_context underscore_is_part_of_word := true;
 
 is_word_char :: (ch: u32) -> bool {
@@ -248,6 +262,20 @@ is_non_word_char :: inline (ch: u32) -> bool {
 
 is_space_char :: inline (ch: u32) -> bool {
     return ch == #char " " || (!context.underscore_is_part_of_word && ch == #char "_");
+}
+
+is_whitespace_char :: inline (ch: u8) -> bool {
+    return ch == #char " " || ch == #char "\t" || ch == #char "\n" || ch == #char "\r";
+}
+
+is_separator_char :: inline (ch: u8) -> bool {
+    return 
+        ch == #char "`" || ch == #char "~" || ch == #char "!" || ch == #char "@" || ch == #char "#" || 
+        ch == #char "%" || ch == #char "^" || ch == #char "&" || ch == #char "*" || ch == #char "(" ||
+        ch == #char ")" || ch == #char "-" || ch == #char "=" || ch == #char "+" || ch == #char "[" ||
+        ch == #char "{" || ch == #char "]" || ch == #char "}" || ch == #char "$" || ch == #char "|" ||
+        ch == #char ";" || ch == #char ":" || ch == #char "'" || ch == #char "?" || ch == #char "," ||
+        ch == #char "." || ch == #char "<" || ch == #char ">" || ch == #char "/" || ch == #char "\"" || ch == #char "\\";
 }
 
 get_char_type :: (ch: u32) -> Char_Type {

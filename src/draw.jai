@@ -832,7 +832,49 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         Simp.draw_prepared_text(font_ui_small, xx (numbers_rect.x + padding), xx (numbers_rect.y + (numbers_rect.h - font_ui_small.character_height) / 2.0), color = Colors.UI_DEFAULT);
         input_active := editor_is_active && search_bar.active && active_global_widget == .editors;
-        draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id, label = "Find in buffer");
+        draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id, label = "Find in buffer", margin_right = input_rect.h * 2);
+
+        // case sensitive button
+        {
+            btn: Rect = ---;
+            btn.x = input_rect.x + input_rect.w - input_rect.h * 2;
+            btn.y = input_rect.y;
+            btn.w = input_rect.h;
+            btn.h = input_rect.h;
+            btn = shrink(btn, 2);
+
+            draw_rounded_rect(btn           , ifx case_sensitive then Colors.CURSOR_INACTIVE  else Colors.BACKGROUND);
+            draw_rounded_rect(shrink(btn, 1), ifx case_sensitive then Colors.BACKGROUND_LIGHT else Colors.BACKGROUND);
+
+            text_w := xx Simp.prepare_text(font_ui_very_small, "Aa");
+            text_h := font_ui_very_small.character_height;
+            text_x := btn.x + btn.w / 2 - text_w / 2;
+            text_y := btn.y + btn.h / 2 - text_h / 2;
+            text_color := ifx case_sensitive then Colors.UI_DEFAULT else Colors.UI_DIM;
+    
+            Simp.draw_prepared_text(font_ui_very_small, xx text_x, xx text_y, text_color);
+        }
+
+        // whole word button
+        {
+            btn: Rect = ---;
+            btn.x = input_rect.x + input_rect.w - input_rect.h;
+            btn.y = input_rect.y;
+            btn.w = input_rect.h;
+            btn.h = input_rect.h;
+            btn = shrink(btn, 2);
+
+            draw_rounded_rect(btn           , ifx whole_word then Colors.CURSOR_INACTIVE  else Colors.BACKGROUND);
+            draw_rounded_rect(shrink(btn, 1), ifx whole_word then Colors.BACKGROUND_LIGHT else Colors.BACKGROUND);
+
+            text_w := xx Simp.prepare_text(font_ui_very_small, "[ab]");
+            text_h := font_ui_very_small.character_height;
+            text_x := btn.x + btn.w / 2 - text_w / 2;
+            text_y := btn.y + btn.h / 2 - text_h / 2;
+            text_color := ifx whole_word then Colors.UI_DEFAULT else Colors.UI_DIM;
+
+            Simp.draw_prepared_text(font_ui_very_small, xx text_x, xx text_y, text_color);
+        }
 
         // Draw search results
         if results && mode == .dropdown {
@@ -1856,7 +1898,49 @@ draw_finder :: () {
     input_rect = shrink(input_rect, margin);
     input_id := get_ui_id_from_loc(parent_id = ui_id);
     label := ifx initted then "Type to search in workspace" else "Still scanning the workspace. Please wait...";
-    draw_text_input(*finder.input, input_rect, ui_id = input_id, active = true, label = label);
+    draw_text_input(*finder.input, input_rect, ui_id = input_id, active = true, label = label, margin_right = input_rect.h * 2);
+
+    // case sensitive button
+    {
+        btn: Rect = ---;
+        btn.x = input_rect.x + input_rect.w - input_rect.h * 2;
+        btn.y = input_rect.y;
+        btn.w = input_rect.h;
+        btn.h = input_rect.h;
+        btn = shrink(btn, 2);
+
+        draw_rounded_rect(btn           , ifx case_sensitive then Colors.CURSOR_INACTIVE  else Colors.BACKGROUND);
+        draw_rounded_rect(shrink(btn, 1), ifx case_sensitive then Colors.BACKGROUND_LIGHT else Colors.BACKGROUND);
+
+        text_w := xx Simp.prepare_text(font_ui_very_small, "Aa");
+        text_h := font_ui_very_small.character_height;
+        text_x := btn.x + btn.w / 2 - text_w / 2;
+        text_y := btn.y + btn.h / 2 - text_h / 2;
+        text_color := ifx case_sensitive then Colors.UI_DEFAULT else Colors.UI_DIM;
+    
+        Simp.draw_prepared_text(font_ui_very_small, xx text_x, xx text_y, text_color);
+    }
+
+    // whole word button
+    {
+        btn: Rect = ---;
+        btn.x = input_rect.x + input_rect.w - input_rect.h;
+        btn.y = input_rect.y;
+        btn.w = input_rect.h;
+        btn.h = input_rect.h;
+        btn = shrink(btn, 2);
+
+        draw_rounded_rect(btn           , ifx whole_word then Colors.CURSOR_INACTIVE  else Colors.BACKGROUND);
+        draw_rounded_rect(shrink(btn, 1), ifx whole_word then Colors.BACKGROUND_LIGHT else Colors.BACKGROUND);
+
+        text_w := xx Simp.prepare_text(font_ui_very_small, "[ab]");
+        text_h := font_ui_very_small.character_height;
+        text_x := btn.x + btn.w / 2 - text_w / 2;
+        text_y := btn.y + btn.h / 2 - text_h / 2;
+        text_color := ifx whole_word then Colors.UI_DEFAULT else Colors.UI_DIM;
+    
+        Simp.draw_prepared_text(font_ui_very_small, xx text_x, xx text_y, text_color);
+    }
 
     scan_progress := get_workspace_scan_progress();
     if scan_progress < 1.0 {

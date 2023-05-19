@@ -81,10 +81,12 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
 
         if action == {
             case .toggle_expand;                    search_bar_toggle_expand(editor);                                             return true;
-
+            case .toggle_case_sensitive;            search_bar_toggle_case_sensitive(editor, buffer);                             return true;
+            case .toggle_whole_word;                search_bar_toggle_whole_word(editor, buffer);                                 return true;
+            
             case .search_in_buffer;                 open_search_bar(editor, buffer, remember_cursor_position = false);            return true;
             case .search_in_buffer_dropdown_mode;   open_search_bar(editor, buffer, .dropdown, remember_cursor_position = false); return true;
-
+            
             case .move_up;                          search_bar_move_cursor(editor, buffer, -1, wrap = true);                      return true;
             case .move_down;                        search_bar_move_cursor(editor, buffer,  1, wrap = true);                      return true;
             case .move_up_fast;                     search_bar_move_cursor(editor, buffer, -5);                                   return true;
@@ -696,6 +698,22 @@ search_bar_toggle_expand :: (using editor: *Editor) {
     }
 }
 
+search_bar_toggle_whole_word :: (using editor: *Editor, buffer: Buffer) {
+    using search_bar;
+
+    if !active return;
+    whole_word = !whole_word;
+    search_and_update_results(editor, buffer);
+}
+
+search_bar_toggle_case_sensitive :: (using editor: *Editor, buffer: Buffer) {
+    using search_bar;
+
+    if !active return;
+    case_sensitive = !case_sensitive;
+    search_and_update_results(editor, buffer);
+}
+
 search_bar_move_cursor :: (using editor: *Editor, buffer: Buffer, delta: s64, wrap := false, snap := true) {
     using search_bar;
 
@@ -751,20 +769,21 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
     buffer_str := to_string(buffer.bytes);
 
     assert(buffer_str.count < S32_MAX && needle.count < S32_MAX);
-    skip_table := bmh_prepare_skip_table(needle, case_sensitive = false);
+    skip_table := bmh_prepare_skip_table(needle, case_sensitive);
     offset := 0;
     i := 0;
     while true {
-        offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = false);
+        offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive);
         if offset < 0 break;
 
-        result := array_add(*results);
-        result.offset = offset;
-        result.line = offset_to_line(buffer, offset);
-        if selected_result < 0 && result.offset >= search_point_offset then selected_result = i;
-
+        if !whole_word || (whole_word && match_whole_word(buffer_str, offset, needle.count)) {
+            result := array_add(*results);
+            result.offset = offset;
+            result.line = offset_to_line(buffer, offset);
+            if selected_result < 0 && result.offset >= search_point_offset then selected_result = i;
+            i += 1;
+        }
         offset += needle.count;
-        i += 1;
     }
 
     if selected_result < 0 && i > 0 then selected_result = i - 1;  // all results are before cursor, select the closest one
@@ -2321,6 +2340,8 @@ Search_Bar :: struct {
     results: [..] Text_Highlight;
     selected_result: s64 = -1;
     search_point_offset: s32;  // the point used to determine the next search result. Fixed so that we can set cursor without jumping around
+    case_sensitive: bool;
+    whole_word: bool;
 
     original_cursor_position: Cursor.State;  // remember main cursor position so we can go back to it on Esc
     jumped := false;

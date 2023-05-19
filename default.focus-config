@@ -106,7 +106,7 @@ Ctrl-Alt-ArrowDown          scroll_viewport_down
 Ctrl-Alt-ArrowLeft          scroll_viewport_left
 Ctrl-Alt-ArrowRight         scroll_viewport_right
 
-Alt-C                       move_cursor_to_viewport_center
+Alt-V                       move_cursor_to_viewport_center
 
 {Shift}-Ctrl-ArrowUp        move_up_to_empty_line
 {Shift}-Ctrl-ArrowDown      move_down_to_empty_line
@@ -157,6 +157,8 @@ Ctrl-2                      open_entry_on_the_right
 
 Shift-Enter                 move_up  # an alternative way to move
 
+Alt-C                       toggle_case_sensitive
+Alt-W                       toggle_whole_word
 
 [common]
 

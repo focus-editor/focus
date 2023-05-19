@@ -28,6 +28,8 @@ finder_handle_event :: (event: Input.Event) -> handled: bool {
         action, mapping := map_event_to_action(event, Action_Search_Dialog);
         if action == {
             case .toggle_expand;            toggle_expand();                                        return true;
+            case .toggle_case_sensitive;    toggle_case_sensitive();                                return true;
+            case .toggle_whole_word;        toggle_whole_word();                                    return true;
 
             case .move_up;                  move_cursor(-1, wrap = true);                           return true;
             case .move_down;                move_cursor( 1, wrap = true);                           return true;
@@ -209,6 +211,9 @@ start_new_search :: (force := false) {
     reset_search_request(*request, new_needle = to_string(input.text));
     request.in_progress = true;
 
+    request.case_sensitive = case_sensitive;
+    request.whole_word     = whole_word;
+
     num_threads := thread_group.worker_info.count;
     assert(num_threads > 0);
 
@@ -222,6 +227,8 @@ start_new_search :: (force := false) {
         task.skip_table = array_copy(request.skip_table);
         task.buffer_start_index = cast(s32) buffer_start_index;
         task.buffer_end_index   = cast(s32) min(buffer_start_index + buffers_per_thread - 1, open_buffers.count - 1);
+        task.case_sensitive = request.case_sensitive;
+        task.whole_word = request.whole_word;
 
         add_work(*thread_group, task, needle);
         request.num_tasks_left += 1;  // only modified in the main thread so no atomics needed
@@ -252,18 +259,20 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
         file_end := contents.data + contents.count;
         offset := 0;
         while true {
-            offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table, case_sensitive = false);
+            offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table, case_sensitive);
             if offset < 0 break;
 
-            result := *results[num_results];
-            result.buffer_id = buffer_id;
-            result.match_offset = xx offset;
+            if !whole_word || (whole_word && match_whole_word(contents, offset, needle.count)) {
+                result := *results[num_results];
+                result.buffer_id    = buffer_id;
+                result.match_offset = xx offset;
 
-            offset_part:    u64 = (cast,trunc(u64) offset)                           <<  0;
-            result.sort_key = dir_id_part | buffer_id_part | offset_part;
+                offset_part: u64 = (cast,trunc(u64) offset) << 0;
+                result.sort_key = dir_id_part | buffer_id_part | offset_part;
 
-            num_results += 1;
-            if num_results >= MAX_RESULTS_PER_WORKER break buffer_id;
+                num_results += 1;
+                if num_results >= MAX_RESULTS_PER_WORKER break buffer_id;
+            }
 
             offset += needle.count;
         }
@@ -272,13 +281,13 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
     return .CONTINUE;  // we want to reuse this thread for future searches
 }
 
-reset_search_request :: (using request: *Search_Request, new_needle: string) {
+reset_search_request :: (using request: *Search_Request, new_needle: string) { //@nocheckin: add whole_word / case sensitive parameters
     id += 1;
     for completed_tasks free_task(it);
     array_reset_keeping_memory(*completed_tasks);
     if needle then free(needle);
     needle = copy_string(new_needle);
-    skip_table = inline bmh_prepare_skip_table(needle, case_sensitive = false);
+    skip_table = bmh_prepare_skip_table(needle, case_sensitive); 
     num_tasks_left = 0;
     in_progress = false;
 }
@@ -309,6 +318,20 @@ toggle_expand :: () {
     }
 }
 
+toggle_whole_word :: () {
+    using finder;
+
+    whole_word = !whole_word;
+    start_new_search(force = true);
+}
+
+toggle_case_sensitive :: () {
+    using finder;
+
+    case_sensitive = !case_sensitive;
+    start_new_search(force = true);
+}
+
 #scope_export
 
 finder: Finder;
@@ -321,6 +344,9 @@ Finder :: struct {
     request: Search_Request;
     needle: string;  // to remember what search string the results below correspond to
     results: [..] Search_Result;
+
+    case_sensitive: bool;
+    whole_word: bool;
 
     selected: s64;
     selected_by_mouse: s64 = -1;  // to remember which entry the left mouse button went down on. Do we need it?
@@ -358,6 +384,8 @@ Search_Request :: struct {
     needle: string;
     skip_table: [256] s32;
     in_progress: bool;
+    case_sensitive: bool;
+    whole_word: bool;
 }
 
 // A task received by a worker thread
@@ -373,6 +401,9 @@ Search_Task :: struct {
     // To be filled by the worker thread
     num_results: s64;
     results: [MAX_RESULTS_PER_WORKER] Search_Result;
+
+    case_sensitive: bool;
+    whole_word: bool;
 }
 
 thread_group: Thread_Group;
