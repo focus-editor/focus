@@ -140,6 +140,42 @@ platform_get_save_file_name :: (name := "") -> string /* temp */, success: bool 
 }
 
 platform_find_font_by_name :: (name: string, allocator := temp) -> bool, string {
+    // We would like to use `EnumFontFamiliesExA()` so we can filter out fonts that are
+    // not monospace. However it only enumerates fonts that have been loaded in GDI via
+    // `AddFontResourceEx()` which doesn't include fonts installed in the user specific
+    // location (`%LocalAppData\Microsoft\Windows\Fonts`) by default.
+    //
+    // Instead of spamming `AddFontResourceEx()` calls we just take file names straight
+    // from he registry.
+
+    hkeys  : []HKEY   = .[HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE];
+    styles : []string = .[" Regular", ""];
+    types  : []string = .[" (TrueType)", ""];
+    key    : string   = "Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts\0";  // Needs '\0' at the end so we can pass it to RegGetValueA()
+    for hkey : hkeys {
+        for style : styles {
+            for type : types {
+                buff: [1024]u8;
+                size: DWORD = buff.count - 1;
+                
+                value := sprint("%1%2%3\0", name, style, type);  // Needs '\0' at the end so we can pass it to RegGetValueA()
+                defer free(value);
+                
+                ret := RegGetValueA(hkey, key.data, value.data, RRF_RT_REG_SZ, null, buff.data, *size);
+                if ret != 0 continue;
+                
+                path := to_string(buff.data, size);
+                if !is_absolute_path(path) {
+                    sb: String_Builder;
+                    init_string_builder(*sb);
+                    print_to_builder(*sb, "%/%", platform_get_fonts_dir(), path);
+                    return true, builder_to_string(*sb, allocator);
+                }
+                return true, copy_string(path, allocator);
+            }
+        }
+    }
+
     return false, "";
 }
 
@@ -212,4 +248,58 @@ ShellExecuteW :: (hwnd: HWND, lpOperation: *u16, lpFile: *u16, lpParameters: *u1
 SHGetKnownFolderPath :: (nFolder: REFGUID, dwFlags: DWORD, hToken: HANDLE, pszPath: **u16) -> HRESULT #foreign shell32; 
 CoTaskMemFree :: (pv: *void) #foreign ole32;
 
+LOGFONTA:: struct {
+    lfHeight: s32;
+    lfWidth: s32;
+    lfEscapement: s32;
+    lfOrientation: s32;
+    lfWeight: s32;
+    lfItalic: u8;
+    lfUnderline: u8;
+    lfStrikeOut: u8;
+    lfCharSet: u8;
+    lfOutPrecision: u8;
+    lfClipPrecision: u8;
+    lfQuality: u8;
+    lfPitchAndFamily: u8;
+    lfFaceName: [32]u8;
+}
+
+ENUMLOGFONTEXA :: struct {
+    elfLogFont: LOGFONTA;
+    elfFullName: [64]u8;
+    elfStyle: [64]u8;
+    elfScript: [64]u8;
+}
+    
+TEXTMETRICA:: struct {
+    tmHeight: s32;
+    tmAscent: s32;
+    tmDescent: s32;
+    tmInternalLeading: s32;
+    tmExternalLeading: s32;
+    tmAveCharWidth: s32;
+    tmMaxCharWidth: s32;
+    tmWeight: s32;
+    tmOverhang: s32;
+    tmDigitizedAspectX: s32;
+    tmDigitizedAspectY: s32;
+    tmFirstChar: u8;
+    tmLastChar: u8;
+    tmDefaultChar: u8;
+    tmBreakChar: u8;
+    tmItalic: u8;
+    tmUnderlined: u8;
+    tmStruckOut: u8;
+    tmPitchAndFamily: u8;
+    tmCharSet: u8;
+}
+
+DEFAULT_CHARSET :: 1;
+FIXED_PITCH :: 1;
+
+FONTENUMPROCA :: #type (elfe: *ENUMLOGFONTEXA, me: *TEXTMETRICA, FontType: DWORD, lParam: LPARAM) -> s32 #c_call;
+EnumFontFamiliesExA :: (hdc: HDC, lf: *LOGFONTA, proc: FONTENUMPROCA, lParam: LPARAM, dwFlags: DWORD) -> s32 #foreign gdi;
+
 #import "Windows";
+#import "Windows_Registry";
