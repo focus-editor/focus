@@ -480,9 +480,9 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
         return false, error_msg;
     }
 
-    // Parse key combo parts and action
-    key_combo_parts: [..] Key_Combo_Part;
-    key_combo_error_msg: string;
+    // Parse key sequence and action
+    key_sequence: [..] Key_Combo;
+    key_sequence_error_message: string;
     action_name: string;
     item: string;
     rest_of_line := line;
@@ -495,29 +495,26 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
             break;
         }
 
-        key_combo_part, key_ok, msg := parse_key_combo_part(parser, item);
+        key_combo, key_ok, msg := parse_key_combo(parser, item);
         if !key_ok {
-            key_combo_error_msg = msg;
+            key_sequence_error_message = msg;
             break;
         }
 
-        array_add(*key_combo_parts, key_combo_part);
+        array_add(*key_sequence, key_combo);
     }
 
-    if key_combo_parts.count == 0 || !action_name {
-        error_msg := tprint("Invalid key combo: '%'.\n%", line, key_combo_error_msg);
+    if key_sequence.count == 0 || !action_name {
+        error_msg := tprint("Invalid key sequence: '%'.\n%", line, key_sequence_error_message);
         return false, error_msg;
     }
 
-    key_combo: Key_Combo;
-    key_combo.parts = key_combo_parts;
-
     // Parse actions
-    map_action :: (name: string, combo: Key_Combo, available_actions: [] string, target_keymap: *[..] Key_Mapping, subsection: string) #expand {
+    map_action :: (name: string, key_sequence: [] Key_Combo, available_actions: [] string, target_keymap: *[..] Key_Mapping, subsection: string) #expand {
         found := false;
         for available_actions {
             if name == it {
-                array_add(target_keymap, Key_Mapping.{ combo = combo, action = cast(u32) it_index });
+                array_add(target_keymap, Key_Mapping.{ key_sequence = key_sequence, action = cast(u32) it_index });
                 found = true;
                 break;
             }
@@ -529,17 +526,17 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
     }
 
     if #complete keymap_subsection == {
-        case .common;           map_action(action_name, key_combo, ACTIONS_COMMON,           *data.keymap_common,           "[common]");
-        case .editors;          map_action(action_name, key_combo, ACTIONS_EDITORS,          *data.keymap_editors,          "[editors]");
-        case .open_file_dialog; map_action(action_name, key_combo, ACTIONS_OPEN_FILE_DIALOG, *data.keymap_open_file_dialog, "[open file dialog]");
-        case .search_dialog;    map_action(action_name, key_combo, ACTIONS_SEARCH_DIALOG,    *data.keymap_search_dialog,    "[search dialog]");
+        case .common;           map_action(action_name, key_sequence, ACTIONS_COMMON,           *data.keymap_common,           "[common]");
+        case .editors;          map_action(action_name, key_sequence, ACTIONS_EDITORS,          *data.keymap_editors,          "[editors]");
+        case .open_file_dialog; map_action(action_name, key_sequence, ACTIONS_OPEN_FILE_DIALOG, *data.keymap_open_file_dialog, "[open file dialog]");
+        case .search_dialog;    map_action(action_name, key_sequence, ACTIONS_SEARCH_DIALOG,    *data.keymap_search_dialog,    "[search dialog]");
     }
 
     return true, "";
 }
 
-parse_key_combo_part :: (using parser: *Config_Parser, key_name: string) -> Key_Combo_Part, success: bool, error_msg: string /* temp */ {
-    result: Key_Combo_Part;
+parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo, success: bool, error_msg: string /* temp */ {
+    result: Key_Combo;
 
     // Parse modifier flags
     modifier_string := key_name;

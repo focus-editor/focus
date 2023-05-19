@@ -163,32 +163,32 @@ draw_welcome_screen :: (main_area: Rect) {
         y := logo_rect.y + logo_rect.h - key_height - (logo_rect.h - total_height) / 2;
 
         for shortcut : SHORTCUTS_TO_DISPLAY {
-            combo := get_first_matching_key_combo_from_action(shortcut.action);
+            key_sequence_strings := get_first_matching_key_sequence_from_action(shortcut.action);
 
-            // Figure out combo width for aligning right
-            combo_width := 0.0;
+            // Figure out key sequence width for aligning right
+            key_sequence_width := 0.0;
             plus_width  := cast(float) Simp.get_text_width(font_ui, "+");
             padding_between_parts := plus_width + 2 * padding_h;
 
-            for combo_part: combo {
-                for combo_part {
-                    combo_width += xx Simp.get_text_width(font_ui, it) + 2 * padding_h;
-                    if it_index < combo_part.count - 1 {
-                        combo_width += plus_width + 2 * padding_h;
+            for combo_strings: key_sequence_strings {
+                for combo_strings {
+                    key_sequence_width += xx Simp.get_text_width(font_ui, it) + 2 * padding_h;
+                    if it_index < combo_strings.count - 1 {
+                        key_sequence_width += plus_width + 2 * padding_h;
                     }
                 }
 
-                if it_index < combo.count - 1 {
-                    combo_width += padding_between_parts;
+                if it_index < key_sequence_strings.count - 1 {
+                    key_sequence_width += padding_between_parts;
                 }
             }
 
-            x = right_area.x + align_x - combo_width;
+            x = right_area.x + align_x - key_sequence_width;
             text_y := y + padding_v * 1.5;
 
-            for combo_part: combo {
+            for combo_strings: key_sequence_strings {
                 key_rect := Rect.{ x = x, y = y, w = 0, h = key_height };
-                for combo_part {
+                for combo_strings {
                     key_rect.x = x;
                     key_rect.w = xx Simp.prepare_text(font_ui, it) + 2 * padding_h;
                     key_rect = align_to_grid(key_rect);
@@ -198,7 +198,7 @@ draw_welcome_screen :: (main_area: Rect) {
                     draw_rounded_rect(key_rect, Colors.SELECTION_ACTIVE);
                     Simp.draw_prepared_text(font_ui, xx (x + padding_h), xx text_y, Colors.UI_DEFAULT);
                     x += key_rect.w;
-                    if it_index < combo_part.count - 1 {
+                    if it_index < combo_strings.count - 1 {
                         Simp.draw_text(font_ui, xx (x + padding_h), xx text_y, "+", Colors.UI_DEFAULT);
                         x += plus_width + 2 * padding_h;
                     }
@@ -1147,21 +1147,23 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
         Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
     }
 
-    if key_combo_input_state.key_combo_in_progress {
+    if key_sequence_input_state.key_sequence_in_progress {
+        using key_sequence_input_state;
+
         // Draw separator
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
         Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
 
-        // Draw key combo
+        // Draw key sequence
         builder: String_Builder;
         builder.allocator = temp;
 
-        for part_index: 0..key_combo_input_state.current_key_combo_length - 1 {
-            combo_part := key_combo_part_strings(key_combo_input_state.key_combo_candidates[0].combo.parts[part_index]);
-            for combo_part {
+        for combo_index: 0..current_key_sequence_length - 1 {
+            combo_strings := key_combo_strings(matches_for_current_key_sequence[0].key_sequence[combo_index]);
+            for combo_strings {
                 print_to_builder(*builder, "%", it);
-                if it_index < combo_part.count - 1  print_to_builder(*builder, "+");
+                if it_index < combo_strings.count - 1  print_to_builder(*builder, "+");
             }
 
             print_to_builder(*builder, " ");
@@ -1581,28 +1583,28 @@ draw_commands_dialog :: () {
             // width = xx Simp.prepare_text(font_ui_small, tprint("%", formatInt(entry.sort_key, base=16)));
             // Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
 
-            combo := get_first_matching_key_combo_from_action(entry.action);
-            if combo {
-                combo_rect := shrink_x(entry_rect, margin);
-                combo_rect.x += width;
-                combo_rect.w -= width + padding;
+            key_sequence := get_first_matching_key_sequence_from_action(entry.action);
+            if key_sequence {
+                key_sequence_rect := shrink_x(entry_rect, margin);
+                key_sequence_rect.x += width;
+                key_sequence_rect.w -= width + padding;
 
                 builder: String_Builder;
                 builder.allocator = temp;
 
-                for combo_part: combo {
-                    for combo_part {
+                for combo: key_sequence {
+                    for combo {
                         print_to_builder(*builder, "%", it);
-                        if it_index < combo_part.count - 1  print_to_builder(*builder, " + ");
+                        if it_index < combo.count - 1  print_to_builder(*builder, " + ");
                     }
 
-                    if it_index < combo.count - 1  print_to_builder(*builder, "  ");
+                    if it_index < key_sequence.count - 1  print_to_builder(*builder, "  ");
                 }
 
-                combo_width := cast(float) Simp.prepare_text(font_ui_small, builder_to_string(*builder));
+                key_sequence_width := cast(float) Simp.prepare_text(font_ui_small, builder_to_string(*builder));
 
-                if is_valid(combo_rect) && combo_width < combo_rect.w {
-                    pen.x = combo_rect.x + combo_rect.w - combo_width;
+                if is_valid(key_sequence_rect) && key_sequence_width < key_sequence_rect.w {
+                    pen.x = key_sequence_rect.x + key_sequence_rect.w - key_sequence_width;
                     Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, Colors.UI_DIM);
                 }
             }
