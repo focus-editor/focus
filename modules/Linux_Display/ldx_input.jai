@@ -251,7 +251,7 @@ x11_handle_event :: (display: *Display, xev: *XEvent) {
             array_add(*events_this_frame, event);
 
         case SelectionRequest;
-            selreq := cast(*XSelectionRequestEvent) *xev;
+            selreq := cast(*XSelectionRequestEvent) xev;
 
             out: XEvent;
             selnot := cast(*XSelectionEvent) *out;
@@ -324,7 +324,7 @@ x11_handle_event :: (display: *Display, xev: *XEvent) {
 
             XSendEvent(selreq.display, selreq.requestor, True, 0, *out);
         case ConfigureNotify;
-            config := cast(*XConfigureEvent) *xev;
+            config := cast(*XConfigureEvent) xev;
             ld_win := get_by_native_handle(xx config.window);
             if ld_win add_resize_record(ld_win, config.width, config.height);
         case FocusIn;

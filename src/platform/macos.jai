@@ -27,14 +27,14 @@ platform_config_dir :: inline () -> string {
 
 platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, s32, s32 {
     // On macOS, we ignore open_on_biggest for now.
-    
+
     screen_size := NSScreen.frame(NSScreen.mainScreen()).size;
-    
+
     w := cast(s32) (screen_size.width  / 1.5);
     h := cast(s32) (screen_size.height / 1.5);
     x := cast(s32) (screen_size.width  / 2 - w / 2);
     y := cast(s32) (screen_size.height / 2 - h / 2);
-    
+
     return x, y, w, h;
 }
 
@@ -78,6 +78,10 @@ platform_enumerate_logical_drives :: inline () -> [] string {
 
 platform_get_save_file_name :: inline (name := "") -> string, bool {
     return "", false;
+}
+
+platform_find_font_by_name :: (name: string, allocator := temp) -> bool, string {
+    return false, "";
 }
 
 platform_get_fonts_dir :: inline () -> string {
