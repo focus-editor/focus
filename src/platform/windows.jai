@@ -229,7 +229,6 @@ REFRESH_TIMER_ID :: 0;
 user32   :: #system_library "user32";
 kernel32 :: #system_library "kernel32";
 shell32  :: #system_library "shell32";
-gdi      :: #system_library "gdi32";
 ole32    :: #system_library "ole32";
 
 KF_FLAG_CREATE :: 0x00008000;                                       // https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/ne-shlobj_core-known_folder_flag
@@ -243,59 +242,6 @@ GetLogicalDriveStringsW :: (nBufferLength: DWORD, lpBuffer: *u16) -> DWORD #fore
 ShellExecuteW :: (hwnd: HWND, lpOperation: *u16, lpFile: *u16, lpParameters: *u16, lpDirectory: *u16, nShowCmd: int) -> s32 #foreign shell32;
 SHGetKnownFolderPath :: (nFolder: REFGUID, dwFlags: DWORD, hToken: HANDLE, pszPath: **u16) -> HRESULT #foreign shell32; 
 CoTaskMemFree :: (pv: *void) #foreign ole32;
-
-LOGFONTA:: struct {
-    lfHeight: s32;
-    lfWidth: s32;
-    lfEscapement: s32;
-    lfOrientation: s32;
-    lfWeight: s32;
-    lfItalic: u8;
-    lfUnderline: u8;
-    lfStrikeOut: u8;
-    lfCharSet: u8;
-    lfOutPrecision: u8;
-    lfClipPrecision: u8;
-    lfQuality: u8;
-    lfPitchAndFamily: u8;
-    lfFaceName: [32]u8;
-}
-
-ENUMLOGFONTEXA :: struct {
-    elfLogFont: LOGFONTA;
-    elfFullName: [64]u8;
-    elfStyle: [64]u8;
-    elfScript: [64]u8;
-}
-    
-TEXTMETRICA:: struct {
-    tmHeight: s32;
-    tmAscent: s32;
-    tmDescent: s32;
-    tmInternalLeading: s32;
-    tmExternalLeading: s32;
-    tmAveCharWidth: s32;
-    tmMaxCharWidth: s32;
-    tmWeight: s32;
-    tmOverhang: s32;
-    tmDigitizedAspectX: s32;
-    tmDigitizedAspectY: s32;
-    tmFirstChar: u8;
-    tmLastChar: u8;
-    tmDefaultChar: u8;
-    tmBreakChar: u8;
-    tmItalic: u8;
-    tmUnderlined: u8;
-    tmStruckOut: u8;
-    tmPitchAndFamily: u8;
-    tmCharSet: u8;
-}
-
-DEFAULT_CHARSET :: 1;
-FIXED_PITCH :: 1;
-
-FONTENUMPROCA :: #type (elfe: *ENUMLOGFONTEXA, me: *TEXTMETRICA, FontType: DWORD, lParam: LPARAM) -> s32 #c_call;
-EnumFontFamiliesExA :: (hdc: HDC, lf: *LOGFONTA, proc: FONTENUMPROCA, lParam: LPARAM, dwFlags: DWORD) -> s32 #foreign gdi;
 
 #import "Windows";
 #import "Windows_Registry";
