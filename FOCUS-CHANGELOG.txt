@@ -35,6 +35,7 @@
 + Workspace dir names with a dot will now be displayed correctly
 + Workspace dirs with similar names should now be disambiguated
 + Fixed editor commands executed using the command popup
++ Windows/Linux: you can now specify the name of any TrueType/OpenType font face that you have installed on the system and the editor will try to automatically find the correct font file for it (for example, if you have `font: courier new` in your config on a Windows system, the editor will automatically load `C:\Windows\Fonts\cour.ttf`). On Linux we use `libfontconfig` to match font face names to font files that are installed in the system. Please note that this auto-detection logic is just an addition to the existing behavior of the `font` config option (meaning that you can still specify paths to specific font files just as before). MacOS implementation will come in a future release.
 
 
 # RELEASES ==================================================================
