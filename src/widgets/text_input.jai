@@ -41,7 +41,7 @@ text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> han
 }
 
 text_input_type_char :: (using input: *Text_Input, char: u32) {
-    if key_combo_input_state.key_combo_in_progress  return;
+    if key_sequence_input_state.key_sequence_in_progress  return;
 
     if edits.count == 0 {
         // Always remember cursor before any edits
