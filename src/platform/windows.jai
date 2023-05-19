@@ -166,10 +166,8 @@ platform_find_font_by_name :: (name: string, allocator := temp) -> bool, string 
                 
                 path := to_string(buff.data, size);
                 if !is_absolute_path(path) {
-                    sb: String_Builder;
-                    init_string_builder(*sb);
-                    print_to_builder(*sb, "%/%", platform_get_fonts_dir(), path);
-                    return true, builder_to_string(*sb, allocator);
+                    full_path := tprint("%/%", platform_get_fonts_dir(), path);
+                    return true, copy_string(full_path, allocator);
                 }
                 return true, copy_string(path, allocator);
             }
@@ -186,9 +184,7 @@ platform_get_fonts_dir :: () -> string {
         defer CoTaskMemFree(path_utf16);
         if SUCCEEDED(ret) {
             fonts_dir = copy_string(wide_to_utf8(path_utf16));
-            for 0..fonts_dir.count - 1 {
-                if fonts_dir[it] == #char "\\" then fonts_dir[it] = #char "/";
-            }
+            path_overwrite_separators(fonts_dir, #char "/");
         } else {
             fonts_dir = "C:/Windows/Fonts";
         }
