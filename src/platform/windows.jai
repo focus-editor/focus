@@ -144,7 +144,20 @@ platform_find_font_by_name :: (name: string, allocator := temp) -> bool, string 
 }
 
 platform_get_fonts_dir :: () -> string {
-    return "C:/Windows/Fonts";
+    if !fonts_dir {
+        path_utf16: *u16;
+        ret := SHGetKnownFolderPath(*FOLDERID_Fonts, KF_FLAG_CREATE, null, *path_utf16);
+        defer CoTaskMemFree(path_utf16);
+        if SUCCEEDED(ret) {
+            fonts_dir = copy_string(wide_to_utf8(path_utf16));
+            for 0..fonts_dir.count - 1 {
+                if fonts_dir[it] == #char "\\" then fonts_dir[it] = #char "/";
+            }
+        } else {
+            fonts_dir = "C:/Windows/Fonts";
+        }
+    }
+    return fonts_dir;
 }
 
 platform_open_in_explorer :: (dir: string) {
@@ -152,6 +165,8 @@ platform_open_in_explorer :: (dir: string) {
 }
 
 #scope_file
+
+fonts_dir: string;
 
 monitor_enum_proc :: (hMonitor: HMONITOR, hdc: HDC, rect: *RECT, data: LPARAM) -> BOOL #c_call {
     monitor : Monitor = ---;
@@ -182,6 +197,11 @@ REFRESH_TIMER_ID :: 0;
 user32   :: #system_library "user32";
 kernel32 :: #system_library "kernel32";
 shell32  :: #system_library "shell32";
+gdi      :: #system_library "gdi32";
+ole32    :: #system_library "ole32";
+
+KF_FLAG_CREATE :: 0x00008000;                                       // https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/ne-shlobj_core-known_folder_flag
+FOLDERID_Fonts :: #run uid("FD228CB7-AE11-4AE3-864C-16F3910AB8FE"); // https://learn.microsoft.com/en-us/windows/win32/shell/knownfolderid
 
 WaitMessage :: () -> s32 #foreign user32;
 SetTimer  :: (hWnd: HWND, nIDEvent: u64, uElapse: u32, lpTimerFunc: *void) -> s32 #foreign user32;
@@ -189,5 +209,7 @@ KillTimer :: (hWnd: HWND, nIDEvent: u64) -> bool #foreign user32;
 GetDpiForWindow :: (hWnd: HWND) -> u32 #foreign user32;
 GetLogicalDriveStringsW :: (nBufferLength: DWORD, lpBuffer: *u16) -> DWORD #foreign kernel32;
 ShellExecuteW :: (hwnd: HWND, lpOperation: *u16, lpFile: *u16, lpParameters: *u16, lpDirectory: *u16, nShowCmd: int) -> s32 #foreign shell32;
+SHGetKnownFolderPath :: (nFolder: REFGUID, dwFlags: DWORD, hToken: HANDLE, pszPath: **u16) -> HRESULT #foreign shell32; 
+CoTaskMemFree :: (pv: *void) #foreign ole32;
 
 #import "Windows";
