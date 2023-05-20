@@ -95,6 +95,11 @@ main :: () {
         press_count := 0;
     };
 
+    #if OS == .LINUX {
+        // We need one full redraw on Linux/Wayland, otherwise the window doesn't show up
+        // as no buffer is attached.
+        draw_frame();
+    }
     while !should_quit {
         if !redraw_requested platform_wait_message();
 
@@ -129,6 +134,14 @@ main :: () {
 
         screen_with_title_bar := screen;
         screen_with_title_bar.h += 200;  // should be enough to include the title bar
+
+        #if OS != .WINDOWS {
+            // Try to avoid hot-looping on Linux/macOS
+            if !redraw_requested && !Input.events_this_frame.count && !mouse.moved_this_frame {
+                sleep_milliseconds(1);
+                continue;
+            }
+        }
 
         // NOTE: this optimisation has caused some problems, so commenting it out for now
         // // Don't redraw if we're mousing around outside the window
@@ -379,6 +392,8 @@ update_mouse_state :: () {
     x, y := get_mouse_pointer_position(window, false);
     mouse.pointer.x = xx x;
     mouse.pointer.y = xx (window_height - y);
+    mouse.moved_this_frame = (mouse.pointer != mouse.previous_position);
+    mouse.previous_position = mouse.pointer;
 
     if shift_pressed() {
         mouse.scroll_x_delta = cast(s32) (cast(float) Input.mouse_delta_z * WHEEL_SENSITIVITY);
@@ -510,6 +525,8 @@ mouse: Mouse_State;
 
 Mouse_State :: struct {
     pointer: Vector2;
+    previous_position: Vector2;
+    moved_this_frame: bool;
     scroll_x_delta: s32;
     scroll_y_delta: s32;
     smooth_scroll: bool;
