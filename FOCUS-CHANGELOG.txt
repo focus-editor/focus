@@ -23,10 +23,17 @@
 - (IMPORTANT) Sometimes when pulling changes via Git, the editor won't notice the files changing (NOTE: if you have a repro please send it to us!)
 - Changing some keymap bindings requires a restart to take effect
 - [Current file watcher limitation] If you open a file in a large folder, the file watcher might scan the whole folder in order to watch for the changes to the file.
-- Linux and macOS: the editor runs hot on the CPU
 
 
 # Main Git Branch
+
++ ...
+
+
+# RELEASES ==================================================================
+
+
+# Version 0.1.9, 21 May 2023
 
 + Horizontal scrolling is now supported either with keyboard (default shortcuts - Alt-H/L) or with Shift-Mousewheel. Note that a horizontal scrollbar is not planned
 + Default keybinds on macOS have been revised to be more natural - your current bindings may conflict with the new ones
@@ -36,9 +43,8 @@
 + Workspace dirs with similar names should now be disambiguated
 + Fixed editor commands executed using the command popup
 + Windows/Linux: you can now specify the name of any TrueType/OpenType font face that you have installed on the system and the editor will try to automatically find the correct font file for it (for example, if you have `font: courier new` in your config on a Windows system, the editor will automatically load `C:\Windows\Fonts\cour.ttf`). On Linux we use `libfontconfig` to match font face names to font files that are installed in the system. Please note that this auto-detection logic is just an addition to the existing behavior of the `font` config option (meaning that you can still specify paths to specific font files just as before). MacOS implementation will come in a future release.
-
-
-# RELEASES ==================================================================
++ Linux/Mac: the editor should no longer constantly redraw while idle
++ "quit" is now a bindable action, bound to Alt-F4 by default
 
 
 # Version 0.1.8, 12 May 2023
