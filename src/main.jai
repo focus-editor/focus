@@ -95,11 +95,6 @@ main :: () {
         press_count := 0;
     };
 
-    #if OS == .LINUX {
-        // We need one full redraw on Linux/Wayland, otherwise the window doesn't show up
-        // as no buffer is attached.
-        draw_frame();
-    }
     while !should_quit {
         if !redraw_requested platform_wait_message();
 
