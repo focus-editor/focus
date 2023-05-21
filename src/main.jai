@@ -178,11 +178,6 @@ main :: () {
                     should_quit = true;
 
                 case .KEYBOARD;
-                    #if OS != .MACOS {
-                        // Alt + F4
-                        if event.key_pressed && event.key_code == .F4 && event.alt_pressed then should_quit = true;
-                    }
-
                     // Double shift click
                     if config.settings.double_shift_to_search_in_workspace && event.key_code == .SHIFT {
                         using shift_key;
@@ -282,6 +277,8 @@ main :: () {
 
 handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placement = .in_place) -> handled: bool {
     if action == {
+        case .quit;                                             should_quit = true;                                 return true;
+
         case .increase_font_size;                               increase_font_size();                               return true;
         case .decrease_font_size;                               decrease_font_size();                               return true;
         case .reset_font_size_to_default;                       reset_font_size_to_default();                       return true;

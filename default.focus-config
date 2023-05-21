@@ -62,6 +62,7 @@ line_height_scale_percent:              120
 [editors]   # <- this means that the following key combos will apply only when editing text
 
 # Key combination           Action
+Alt-F4                      quit
 
 Ctrl-D                      select_word_or_create_another_cursor
 

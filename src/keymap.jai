@@ -14,7 +14,7 @@ map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mappin
             return cast(Action) it.action, it;
         }
     }
-    
+
     #if Action == Action_Open_File_Dialog {
         // Hard-coded case: When the Open File dialog is active, "/" or "\" opens a directory.
         if event.key_code == {
@@ -22,7 +22,7 @@ map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mappin
             case #char "\\"; return .open_directory, invalid_mapping;
         }
     }
-    
+
     return invalid_action, invalid_mapping;
 }
 
@@ -163,6 +163,8 @@ Key_Combo :: struct {
 
 ACTIONS_COMMON :: string.[
     "do_nothing",   // to disable key combinations
+
+    "quit",
 
     "open_project",
     "switch_to_project",  // same as open_project, renaming for consistency
