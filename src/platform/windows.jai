@@ -193,8 +193,11 @@ platform_get_fonts_dir :: () -> string {
 }
 
 platform_open_in_explorer :: (path: string, reveal := false) {
-    // TODO: Support reveal for files? -Don Swet 22-May-2023
-    ShellExecuteW(window, utf8_to_wide("explore"), utf8_to_wide(path), xx 0, xx 0, SW_NORMAL);
+    path_backslashes := copy_string(path, allocator = temp);
+    path_overwrite_separators(path_backslashes, #char "\\");
+    
+    if reveal run_command("explorer", "/select,", path_backslashes);
+    else      run_command("explorer", path_backslashes);
 }
 
 #scope_file
@@ -246,3 +249,4 @@ CoTaskMemFree :: (pv: *void) #foreign ole32;
 
 #import "Windows";
 #import "Windows_Registry";
+#import "Process";
