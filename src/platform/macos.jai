@@ -49,7 +49,8 @@ platform_maximize_window :: inline (window: Window_Type) {
 }
 
 platform_enable_drag_and_drop :: inline (window: Window_Type) {
-
+    types := NSArray(NSPasteboardType).arrayWithObject(NSPasteboardTypeFileURL);
+    NSView.registerForDraggedTypes(window, types);
 }
 
 platform_get_dpi_scale :: (window: Window_Type) -> float {
