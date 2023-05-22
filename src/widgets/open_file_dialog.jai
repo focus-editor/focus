@@ -137,7 +137,26 @@ open_file_dialog_open_entry_in_explorer :: (selected: s64) {
     using open_file_dialog;
     if selected >= entries.filtered.count return;
     entry := entries.filtered[selected];
-    platform_open_in_explorer(ifx entry.name == "/" then "/" else entry.full_path, reveal = entry.type == .file);
+    
+    path: string = ---;
+    #if OS == .WINDOWS {
+        if ends_with(entry.name, ":") {
+            // Drive letter. We need to add a slash.
+            b: String_Builder;
+            append(*b, entry.name);
+            append(*b, #char "/");
+            path = builder_to_string(*b, allocator = temp);
+        } else {
+            // Not a drive letter.
+            path = entry.full_path;
+        }
+    } else {
+        path = ifx entry.name == "/" then "/" else entry.full_path;
+    }
+    
+    print("Opening %\n", path);
+    
+    platform_open_in_explorer(path, reveal = entry.type == .file);
 }
 
 open_file_dialog_truncate_path_chunks :: (chunk_index: s64) {

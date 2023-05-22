@@ -1283,13 +1283,10 @@ draw_open_file_dialog :: () {
                 if mouse.left.just_pressed {
                     if shift_pressed() {
                         // Shift + Click = Open dir in explorer
-                        
                         path_chunks_trimmed := array_view(path_chunks, 1, it_index);
                         dir_path: string = ---;
                         if path_chunks_trimmed.count == 0 dir_path = root_dir;
                         else dir_path = tprint("%/%", root_dir, join(..path_chunks_trimmed, separator = "/"));
-                        
-                        print("Opening %\n", dir_path);
                         platform_open_in_explorer(dir_path);
                     } else {
                         // Regular Click = Trim chunks past this dir
