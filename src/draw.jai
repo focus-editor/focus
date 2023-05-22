@@ -1280,7 +1280,23 @@ draw_open_file_dialog :: () {
             if ui.hot_last_frame == input_id && mouse_pointer_is_within(dir_rect) {
                 color = Colors.LIST_CURSOR;
                 set_pointer_image(.PRESSABLE);
-                if mouse.left.just_pressed { open_file_dialog_truncate_path_chunks(it_index); redraw_requested = true; }
+                if mouse.left.just_pressed {
+                    if shift_pressed() {
+                        // Shift + Click = Open dir in explorer
+                        
+                        path_chunks_trimmed := array_view(path_chunks, 1, it_index);
+                        dir_path: string = ---;
+                        if path_chunks_trimmed.count == 0 dir_path = root_dir;
+                        else dir_path = tprint("%/%", root_dir, join(..path_chunks_trimmed, separator = "/"));
+                        
+                        print("Opening %\n", dir_path);
+                        platform_open_in_explorer(dir_path);
+                    } else {
+                        // Regular Click = Trim chunks past this dir
+                        open_file_dialog_truncate_path_chunks(it_index);
+                        redraw_requested = true;
+                    }
+                }
             }
             draw_rounded_rect(dir_rect, color);
             Simp.draw_prepared_text(font_ui, xx (dir_rect.x + padding + half_padding), xx text_y, Colors.UI_DEFAULT);
