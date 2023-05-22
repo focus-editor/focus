@@ -8,7 +8,7 @@
 #if OS == .WINDOWS {
     #load "windows.jai";
 } else #if OS == .LINUX {
-    #load "linux.jai";
+    #load "x11.jai";
 } else #if OS == .MACOS {
     #load "macos.jai";
 }
@@ -48,7 +48,7 @@ Key_Code :: enum u32 {
 
     // The letters A-Z live in here as well and may be returned
     // by keyboard events.
-    
+
     DELETE      :: 127;
 
     ARROW_UP    :: 128;
@@ -66,7 +66,7 @@ Key_Code :: enum u32 {
 
     PAUSE       :: 137;
     SCROLL_LOCK :: 138;
-    
+
     ALT;
     CTRL;
     SHIFT;
@@ -147,7 +147,7 @@ Event :: struct {
         }
         packed: u32 = 0;
     }
-    
+
     type: Event_Type = Event_Type.UNINITIALIZED;
 
     // If keyboard event:
@@ -159,11 +159,11 @@ Event :: struct {
     utf32: u32;  // If TEXT_INPUT.
     repeat := false;  // If KEYBOARD event.
     text_input_count: u16; // If KEYBOARD event that also generated TEXT_INPUT events, this will tell you how many TEXT_INPUT events after this KEYBOARD event were generated.
-    
+
     typical_wheel_delta: s32;  // Used only for mouse events.
     wheel_delta: s32;          // Used only for mouse events.
 
-    files: [] string;  // Used only for drag and drop events. Heap-allocated, lives until events are reset for the next frame.
+    files: [] string;  // Used only for drag and drop events. Both the array and its contents are heap-allocated, lives until events are reset for the next frame.
 }
 
 // Per-frame mouse deltas:
@@ -194,14 +194,14 @@ get_window_resizes :: () -> [] Window_Resize_Record {
     // The return value here will stick around in memory until the next call
     // to get_window_resizes (from any thread. Actually this whole module does
     // not deal with threading, so don't do that!)
-    
+
     if resizes_to_free  array_reset(*resizes_to_free);
-    
+
     if !pending_resizes return .[];
 
     array_copy(*resizes_to_free, pending_resizes);
     this_allocation_is_not_a_leak(resizes_to_free.data);
-    
+
     pending_resizes.count = 0;
     return resizes_to_free;
 }
@@ -219,8 +219,15 @@ get_window_moves :: () -> [] Window_Move_Record {
 
 input_per_frame_event_and_flag_update :: () {
     // Called once per frame, probably.
+
+    for events_this_frame {
+        for file: it.files {
+            free(file);
+        }
+        array_free(it.files);
+    }
     array_reset(*events_this_frame);
-    
+
     mask     := ~Key_Current_State.START;
     end_mask := ~(Key_Current_State.END | .DOWN | .START);
     // @Speed: Could just keep a list of who is not currently set.

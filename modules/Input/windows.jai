@@ -336,7 +336,10 @@ MyWindowProc :: (hwnd: HWND, message: u32,
  	  	    drop := cast(HDROP) wParam;
  	 	    // If "0xFFFFFFFF" as the second parameter: return the count of files dropped.
  	 	    file_paths_count := DragQueryFileW(drop, 0xFFFFFFFF, null, 0);
+            assert(file_paths_count > 0);
+
             files: [..] string;
+            array_reserve(*files, file_paths_count);
 
  	 	    for i: 0..file_paths_count-1 {
  	 	        // If nulll as the third parameter: return the length of the path, not counting the trailing '\0'.

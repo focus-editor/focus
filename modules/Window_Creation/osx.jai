@@ -3,99 +3,6 @@
 #import "Objective_C/AppKit";
 #import "Objective_C/LightweightRenderingView";
 
-#scope_file
-
-Input :: #import "Input";
-
-window_minimized := false; // @@ Hack.
-
-App_Delegate :: struct {
-    #as using delegate: NSApplicationDelegate;
-
-    applicationShouldTerminate :: (using self: *App_Delegate, _sel: Selector, sender: id) -> NSApplicationTerminateReply #c_call {
-        jai_context: Context;
-        push_context jai_context {
-            event: Input.Event;
-            event.type = .QUIT;
-            array_add(*Input.osx_externally_generated_events, event);
-        }
-        return NSTerminateCancel;
-    } @selector(applicationShouldTerminate:)
-
-    applicationWillTerminate :: (self: *App_Delegate, _sel: Selector, notification: *NSNotification) #c_call {
-        // NSAutoreleasePool.drain(self.application_autorelease_pool);
-        // release(self.application_autorelease_pool);
-    } @selector(applicationWillTerminate:)
-
-    applicationDidResignActive :: (using self: *App_Delegate, _sel: Selector, notification: *NSNotification) #c_call {
-        Input.input_application_has_focus = false;
-    } @selector(applicationDidResignActive:)
-
-    applicationDidBecomeActive :: (using self: *App_Delegate, _sel: Selector, notification: *NSNotification) #c_call {
-        Input.input_application_has_focus = true;
-    } @selector(applicationDidBecomeActive:)
-
-    applicationDidFinishLaunching :: (self: *App_Delegate, _sel: Selector, app: *NSApplication) #c_call {
-        ctx: Context;
-        push_context ctx {
-            NSApplication.setActivationPolicy(NSApp, NSApplicationActivationPolicyRegular);
-            NSApplication.activateIgnoringOtherApps(NSApp, YES);
-            NSApp.stop(NSApp, null);
-        }
-    }
-
-    doNothing :: (using self: *App_Delegate, sel: Selector, obj: id) #c_call {
-
-    } @selector(doNothing:)
-}
-
-Window_Delegate :: struct {
-    using #as nsobject: NSObject;
-
-    windowWillClose :: (using self: *Window_Delegate, _sel: Selector, notification: *NSNotification) #c_call {
-        jai_context: Context;
-        push_context jai_context {
-            // win := NSNotification.object(notification);
-
-            event: Input.Event;
-            event.type = .QUIT;
-            array_add(*Input.osx_externally_generated_events, event);
-        }
-    } @selector(windowWillClose:)
-
-    windowDidMiniaturize :: (using self: *Window_Delegate, _sel: Selector, notification: *NSNotification) #c_call {
-        // win := cast(*NSWindow) NSNotification.object(notification);
-        window_minimized = true;
-    } @selector(windowDidMiniaturize:)
-
-    windowDidDeminiaturize :: (using self: *Window_Delegate, _sel: Selector, notification: *NSNotification) #c_call {
-        // win := cast(*NSWindow) NSNotification.object(notification);
-        window_minimized = false;
-    } @selector(windowDidDeminiaturize:)
-
-    /*
-    windowWillResize :: (using self: *Window_Delegate, _sel: Selector, sender: *NSWindow, toSize: NSSize) -> NSSize #c_call {
-        push_context jai_context {
-            Input.add_resize_record(sender, cast(s32) toSize.width, cast(s32) toSize.height);
-            return toSize;
-        }
-    } @selector(windowDidResize:toSize:)
-    */
-
-    windowDidResize :: (using self: *Window_Delegate, _sel: Selector, notification: *NSNotification) #c_call {
-        jai_context: Context;
-        push_context jai_context {
-            my_window := cast(*NSWindow) notification.object(notification);
-            view := NSWindow.contentView(my_window);
-            frame := NSView.frame(view);
-            fb := NSView.convertRectToBacking(view, frame); // :MacHighResDisplays
-            Input.add_resize_record(my_window, cast(s32) fb.size.width, cast(s32) fb.size.height);
-
-            view.drawRect(view, frame);
-        }
-    } @selector(windowDidResize:)
-}
-
 #scope_export
 
 application_initialized := false;
@@ -108,44 +15,15 @@ init_mac_app :: () {
     init_app_kit();
     init_lightweight_rendering_view();
 
-    {
-        ad_class := objc_create_class(App_Delegate, NSObject);
-        // DO NOT ADD NSApplicationDelegate AS A PROTOCOL HERE!!!!!
-        // For whatever reason, on TouchBar macs and for whatever reason
-        // only when the program is in a .app bundle, NSApplicationDelegate
-        // doesn't exist and thus, this protocol is null.
-        // prot := objc_getProtocol("NSApplicationDelegate");
-        // class_addProtocol(ad_class, prot);
-        objc_add_instance_method(ad_class, App_Delegate.applicationShouldTerminate, "applicationShouldTerminate:");
-        objc_add_instance_method(ad_class, App_Delegate.applicationWillTerminate, "applicationWillTerminate:");
-        objc_add_instance_method(ad_class, App_Delegate.applicationDidResignActive, "applicationDidResignActive:");
-        objc_add_instance_method(ad_class, App_Delegate.applicationDidBecomeActive, "applicationDidBecomeActive:");
-        objc_add_instance_method(ad_class, App_Delegate.applicationDidFinishLaunching, "applicationDidFinishLaunching:");
-        objc_add_instance_method(ad_class, App_Delegate.doNothing, "doNothing:");
-        objc_finalize_class(ad_class);
-    }
-
-    {
-        wd_class := objc_create_class(Window_Delegate, NSObject);
-        objc_add_instance_method(wd_class, Window_Delegate.windowWillClose, "windowWillClose:");
-        // objc_add_instance_method(wd_class, Window_Delegate.windowWillResize, "windowWillResize:toSize:");
-        objc_add_instance_method(wd_class, Window_Delegate.windowDidResize, "windowDidResize:");
-        objc_add_instance_method(wd_class, Window_Delegate.windowDidMiniaturize, "windowDidMiniaturize:");
-        objc_add_instance_method(wd_class, Window_Delegate.windowDidDeminiaturize, "windowDidDeminiaturize:");
-        objc_finalize_class(wd_class);
-    }
-
-    dg := objc_init(objc_alloc(App_Delegate));
-    autorelease(dg);
-
-    NSThread.detachNewThreadSelector(selector("doNothing:"), dg, null);
-
     NSApplication.sharedApplication();
 
     // pool := objc_init(objc_alloc(NSAutoreleasePool));
     // dg.application_autorelease_pool = pool;
 
-    NSApplication.setDelegate(NSApp, dg);
+    #if #run macos_create_app_delegate_exists() { // :DecoupleWindowCreationAndInput:
+        dg := context._macos_create_app_delegate();
+        NSApplication.setDelegate(NSApp, dg);
+    }
 
     menu_bar := objc_init(objc_alloc(NSMenu));
     autorelease(menu_bar);
@@ -162,9 +40,9 @@ init_mac_app :: () {
     // @TODO we should probably override toggleFullScreen: in NSApplication in order to also set presentation options
     // like we do in toggle_fullscreen
     fullscreen_item := app_menu.addItemWithTitle(app_menu, S("Enter Full Screen"), selector("toggleFullScreen:"), S("f"));
-    old_mask := NSMenuItem.keyEquivalentModifierMask(fullscreen_item);
+
+    // Change keyboard shortcut for fullscreen to the standard Ctrl-Cmd-F (instead of the default Cmd-F)
     new_mask := NSEventModifierFlagControl | NSEventModifierFlagCommand;
-    log("Changing % to %", old_mask, new_mask);
     NSMenuItem.setKeyEquivalentModifierMask(fullscreen_item, new_mask);
 
     app_menu.addItemWithTitle(app_menu, S(tprint("Quit")), selector("terminate:"), S("q"));
@@ -177,7 +55,7 @@ init_mac_app :: () {
     application_initialized = true;
 }
 
-// background_color_rgb is not used on macOS, it just exists for API compatibility with the Windows & Linux versions.
+// parent and background_color_rgb are not used on macOS, they just exists for API compatibility with the Windows & Linux versions.
 create_window :: (width: int, height: int, window_name: string, window_x := 0, window_y := 0, parent: Window_Type = null, background_color_rgb := DEFAULT_WINDOW_CREATION_COLOR) -> *NSWindow {
     if !application_initialized init_mac_app();
 
@@ -190,10 +68,11 @@ create_window :: (width: int, height: int, window_name: string, window_x := 0, w
 
     NSWindow.setTitle(window, window_name);
 
-    wd := objc_init(objc_alloc(Window_Delegate));
-    autorelease(wd);
+    #if #run macos_create_window_delegate_exists() { // :DecoupleWindowCreationAndInput:
+        wd := context._macos_create_window_delegate();
+        NSWindow.setDelegate(window, wd);
+    }
 
-    NSWindow.setDelegate(window, wd);
     NSWindow.setCollectionBehavior(window, NSWindowCollectionBehaviorFullScreenPrimary | NSWindowCollectionBehaviorManaged);
     NSWindow.makeKeyAndOrderFront(window, null);
 
@@ -310,4 +189,28 @@ get_mouse_pointer_position :: inline (right_handed := false) -> x: int, y: int, 
 
     x, y, success := get_mouse_pointer_position(win, right_handed);
     return x, y, success;
+}
+
+#scope_file
+
+macos_create_app_delegate_exists :: () -> bool { // :DecoupleWindowCreationAndInput:
+    info := type_info(Context);
+    for info.members {
+        if it.name == "_macos_create_app_delegate" {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+macos_create_window_delegate_exists :: () -> bool { // :DecoupleWindowCreationAndInput:
+    info := type_info(Context);
+    for info.members {
+        if it.name == "_macos_create_window_delegate" {
+            return true;
+        }
+    }
+
+    return false;
 }
