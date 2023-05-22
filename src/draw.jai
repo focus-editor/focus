@@ -1373,11 +1373,17 @@ draw_open_file_dialog :: () {
                 if mouse_pointer_is_within(entry_rect) && is_hovering_over(ui_id) {
                     if mouse.left.just_pressed then entries.selected_by_mouse = entry_index;
                     if entries.selected_by_mouse == -1 then draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
-                    placement := ifx ctrl_or_cmd_pressed() then Editor_Placement.on_the_side else .in_place;
                     if entries.selected_by_mouse == entry_index && mouse.left.just_released {
-                        open_file_dialog_open_entry(entry_index, placement);
-                        redraw_requested = true;
-                        break;  // don't finish drawing entries because the entries will likely change
+                        if shift_pressed() {
+                            // Shift + Click = open entry in explorer
+                            open_file_dialog_open_entry_in_explorer(entry_index);
+                        } else {
+                            // Regular click = open entry in editor
+                            placement := ifx ctrl_or_cmd_pressed() then Editor_Placement.on_the_side else .in_place;
+                            open_file_dialog_open_entry(entry_index, placement);
+                            redraw_requested = true;
+                            break;  // don't finish drawing entries because the entries will likely change
+                        }
                     }
                 }
                 if entries.selected_by_mouse == entry_index then draw_rect(entry_rect, Colors.LIST_CURSOR);

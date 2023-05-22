@@ -9,6 +9,7 @@ open_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
             case .open_entry_on_the_side;   open_file_dialog_open_entry(entries.selected, .on_the_side);                                                                         return true;
             case .open_entry_on_the_left;   open_file_dialog_open_entry(entries.selected, .left);                                                                                return true;
             case .open_entry_on_the_right;  open_file_dialog_open_entry(entries.selected, .right);                                                                               return true;
+            case .open_entry_in_explorer;   open_file_dialog_open_entry_in_explorer(entries.selected);                                                                           return true;
             case .open_directory;           open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true, maybe_open_root_dir = event.key_code == #char "/");     return true;
             case .pop_directory;            if pop_directory() return true;
 
@@ -96,6 +97,8 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
             }
         }
     }
+    
+                        if ctrl_or_cmd_pressed() print("cmd\n");
 
     if entry.type == {
         case .nothing;
@@ -128,6 +131,13 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
             array_add(*path_chunks, copy_string(entry.name));
             refresh_entries();
     }
+}
+
+open_file_dialog_open_entry_in_explorer :: (selected: s64) {
+    using open_file_dialog;
+    if selected >= entries.filtered.count return;
+    entry := entries.filtered[selected];
+    platform_open_in_explorer(ifx entry.name == "/" then "/" else entry.full_path, reveal = entry.type == .file);
 }
 
 open_file_dialog_truncate_path_chunks :: (chunk_index: s64) {

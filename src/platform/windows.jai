@@ -192,8 +192,9 @@ platform_get_fonts_dir :: () -> string {
     return fonts_dir;
 }
 
-platform_open_in_explorer :: (dir: string) {
-    ShellExecuteW(window, utf8_to_wide("explore"), utf8_to_wide(dir), xx 0, xx 0, SW_NORMAL);
+platform_open_in_explorer :: (path: string, reveal := false) {
+    // TODO: Support reveal for files? -Don Swet 22-May-2023
+    ShellExecuteW(window, utf8_to_wide("explore"), utf8_to_wide(path), xx 0, xx 0, SW_NORMAL);
 }
 
 #scope_file

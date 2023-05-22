@@ -141,6 +141,7 @@ Enter                       open_entry_in_place
 Ctrl-Enter                  open_entry_on_the_side
 Ctrl-1                      open_entry_on_the_left
 Ctrl-2                      open_entry_on_the_right
+Shift-Enter                 open_entry_in_explorer
 
 Tab                         open_directory
 
