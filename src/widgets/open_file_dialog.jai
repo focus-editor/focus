@@ -97,8 +97,6 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
             }
         }
     }
-    
-                        if ctrl_or_cmd_pressed() print("cmd\n");
 
     if entry.type == {
         case .nothing;
