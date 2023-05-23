@@ -152,8 +152,6 @@ open_file_dialog_open_entry_in_explorer :: (selected: s64) {
         path = ifx entry.name == "/" then "/" else entry.full_path;
     }
     
-    print("Opening %\n", path);
-    
     platform_open_in_explorer(path, reveal = entry.type == .file);
 }
 
