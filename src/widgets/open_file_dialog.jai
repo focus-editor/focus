@@ -9,6 +9,7 @@ open_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
             case .open_entry_on_the_side;   open_file_dialog_open_entry(entries.selected, .on_the_side);                                                                         return true;
             case .open_entry_on_the_left;   open_file_dialog_open_entry(entries.selected, .left);                                                                                return true;
             case .open_entry_on_the_right;  open_file_dialog_open_entry(entries.selected, .right);                                                                               return true;
+            case .open_entry_in_explorer;   open_file_dialog_open_entry_in_explorer(entries.selected);                                                                           return true;
             case .open_directory;           open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true, maybe_open_root_dir = event.key_code == #char "/");     return true;
             case .pop_directory;            if pop_directory() return true;
 
@@ -128,6 +129,22 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
             array_add(*path_chunks, copy_string(entry.name));
             refresh_entries();
     }
+}
+
+open_file_dialog_open_entry_in_explorer :: (selected: s64) {
+    using open_file_dialog;
+    if selected >= entries.filtered.count return;
+    entry := entries.filtered[selected];
+    
+    path: string = ---;
+    #if OS == .WINDOWS {
+        if ends_with(entry.name, ":") path = tprint("%/", entry.name); // Drive letter. We need to add a slash.
+        else                          path = entry.full_path;          // Not a drive letter.
+    } else {
+        path = ifx entry.name == "/" then "/" else entry.full_path;
+    }
+    
+    platform_open_in_explorer(path, reveal = entry.type == .file);
 }
 
 open_file_dialog_truncate_path_chunks :: (chunk_index: s64) {
@@ -392,7 +409,28 @@ scan_current_folder :: () {
             if should_ignore_file(file.full_name) return;
         }
 
-        full_path := copy_string(file.full_name);  // one allocation in the pool, the rest are views into it
+        full_path: string = ---;   // one allocation in the pool, the rest are views into it
+        #if OS == .WINDOWS {
+            // Fix an extra slash in Windows (ugh)
+            b: String_Builder;
+            previous_char_was_slash := false;
+            for 0..file.full_name.count - 1 {
+                c := file.full_name.data[it];
+                if c == #char "/" {
+                    if previous_char_was_slash continue; // Ignore double slashes
+                    previous_char_was_slash = true;
+                } else {
+                    previous_char_was_slash = false;
+                }
+                
+                append(*b, c);
+            }
+            
+            full_path = builder_to_string(*b);
+        } else {
+            full_path = copy_string(file.full_name);
+        }
+        
         path, basename, extension, name := path_decomp(full_path);
 
         entry := array_add(*open_file_dialog.current_files);

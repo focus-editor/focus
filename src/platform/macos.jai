@@ -89,8 +89,9 @@ platform_get_fonts_dir :: inline () -> string {
     return "/Library/Fonts";
 }
 
-platform_open_in_explorer :: inline (dir: string) {
-    run_command("open", dir);
+platform_open_in_explorer :: (path: string, reveal := false) {
+    if reveal run_command("open", "-R", path);
+    else      run_command("open", path);
 }
 
 #scope_file

@@ -140,6 +140,7 @@ Enter                       open_entry_in_place
 Cmd-Enter                   open_entry_on_the_side
 Cmd-1                       open_entry_on_the_left
 Cmd-2                       open_entry_on_the_right
+Shift-Enter                 open_entry_in_explorer
 
 Tab                         open_directory
 
@@ -155,7 +156,7 @@ Cmd-Enter                   open_entry_on_the_side
 Cmd-1                       open_entry_on_the_left
 Cmd-2                       open_entry_on_the_right
 
-Shift-Enter                 move_up  # an Cmdernative way to move
+Shift-Enter                 move_up  # an alternative way to move
 
 
 [common]
