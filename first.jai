@@ -94,8 +94,8 @@ STRING, VERSION, RELEASE_DATE), w);
     } else #if OS == .MACOS {
         if !optimized return; // When debugging, use the Unix program directly. This saves us compile time.
 
-        // Set up our temporary directory to turn into a .DMG disk image
-        DMG_DIR :: "DMG";
+        // Set up our temporary directory to turn into a .dmg disk image
+        DMG_DIR :: "dmg";
         run_command("mkdir", DMG_DIR);
 
         // Generate Focus.app inside our temporary directory
