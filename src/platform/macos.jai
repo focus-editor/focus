@@ -57,7 +57,7 @@ platform_get_dpi_scale :: (window: Window_Type) -> float {
     return xx NSView.convertPointToBacking(NSWindow.contentView(window), .{1, 0}).x;
 }
 
-platform_set_window_title :: (title: string) {
+platform_set_window_title :: inline (title: string) {
     NSWindow.setTitle(window, title);
 }
 
