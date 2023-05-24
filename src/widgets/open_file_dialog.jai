@@ -138,16 +138,8 @@ open_file_dialog_open_entry_in_explorer :: (selected: s64) {
     
     path: string = ---;
     #if OS == .WINDOWS {
-        if ends_with(entry.name, ":") {
-            // Drive letter. We need to add a slash.
-            b: String_Builder;
-            append(*b, entry.name);
-            append(*b, #char "/");
-            path = builder_to_string(*b, allocator = temp);
-        } else {
-            // Not a drive letter.
-            path = entry.full_path;
-        }
+        if ends_with(entry.name, ":") path = tprint("%/", entry.name); // Drive letter. We need to add a slash.
+        else                          path = entry.full_path;          // Not a drive letter.
     } else {
         path = ifx entry.name == "/" then "/" else entry.full_path;
     }
