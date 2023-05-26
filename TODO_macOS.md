@@ -1,8 +1,12 @@
 # TODO macOS
 In order of priority:
 
-1. Keyboard Input
+1. Data Security & Stability
+    - Closing Focus with unsaved files will (a) not ask you if you'd like to save them and (b) put the app in a state that requires a Force Quit.
+
+1. Behavior
     - Cmd+Tab out of the window, then back into the window causes us to be in cursor-creation mode until we hit Cmd one more time.
+    - Resizing the window on the right edge will assume the mouse is still held down, resulting in the scrollbar being dragged even when using other windows.
 
 2. Visual Glitches
     - IBeam cursor does not reset to Normal when hovering over the window title bar or bottom filename/line/col bar
