@@ -72,8 +72,8 @@ Cmd-Shift-D                 duplicate_lines
 # Shift-Delete                delete_line
 
 Cmd-K                       delete_to_end_of_line
-Cmd-Shift-Delete            delete_to_end_of_line
-Cmd-Shift-Backspace         delete_to_start_of_line
+Cmd-Delete                  delete_to_end_of_line
+Cmd-Backspace               delete_to_start_of_line
 
 Alt-ArrowUp                 move_selected_lines_up
 Alt-ArrowDown               move_selected_lines_down
