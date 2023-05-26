@@ -33,6 +33,15 @@
 # RELEASES ==================================================================
 
 
+# Version 0.1.10 (Unreleased)
+
++ New keyboard shortcut commands: `toggle_case_sensitive` & `toggle_whole_word`. These will work inside of a search. The default shortcuts are Alt+C/Alt+W on Windows/Linux and Cmd+Opt+C/Cmd+Opt+W on Mac. (Thanks hfr4!)
++ Windows/Mac: You can now shift+click files/folders in dialog boxes to reveal them in Explorer. (Finder on Mac)
++ Windows/Mac: New keyboard shortcut command: `open_entry_in_explorer`. This will, like the previous item, open a file selected in a dialog box in Explorer/Finder. The default shortcut is Shift+Enter.
++ Mac: Keyboard shortcuts for editing text now match other applications even more by default.
++ Mac: The app's icon was brightened.
+
+
 # Version 0.1.9, 21 May 2023
 
 + Horizontal scrolling is now supported either with keyboard (default shortcuts - Alt-H/L) or with Shift-Mousewheel. Note that a horizontal scrollbar is not planned
