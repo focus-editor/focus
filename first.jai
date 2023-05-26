@@ -52,26 +52,14 @@ build :: () {
     compiler_begin_intercept(w);
 
     add_build_file("src/main.jai", w);
-
-    inserted_code := false;
+    add_build_string(tprint(#string STRING
+VERSION      :: "%";
+RELEASE_DATE :: "%";
+STRING, VERSION, RELEASE_DATE), w);
 
     while true {
         message := compiler_wait_for_message();
         if message.workspace != w continue;
-
-        if message.kind == {
-        case .PHASE;
-            phase := cast(*Message_Phase) message;
-            if phase.phase == .TYPECHECKED_ALL_WE_CAN && !inserted_code {
-                add_build_string(tprint(#string STRING
-VERSION      :: "%";
-RELEASE_DATE :: "%";
-STRING, VERSION, RELEASE_DATE), w);
-                inserted_code = true;
-            }
-        case .COMPLETE;
-            break;
-        }
         if message.kind == .COMPLETE break;
     }
 

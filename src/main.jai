@@ -1,6 +1,3 @@
-#placeholder VERSION;
-#placeholder RELEASE_DATE;
-
 main :: () {
     cpu_info = get_cpu_info();
 
