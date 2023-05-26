@@ -224,8 +224,8 @@ Cmd-Shift-L                 toggle_expand
 {Shift}-Delete              delete_right_char
 {Shift}-Alt-Backspace       delete_word_left_no_underscore
 {Shift}-Alt-Delete          delete_word_right_no_underscore
-{Shift}-Ctrl-Backspace      delete_word_left
-{Shift}-Ctrl-Delete         delete_word_right
+{Shift}-Alt-Cmd-Backspace   delete_word_left
+{Shift}-Alt-Cmd-Delete      delete_word_right
 
 Cmd-Plus                    increase_font_size
 Cmd-Minus                   decrease_font_size
