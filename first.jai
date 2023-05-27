@@ -18,7 +18,6 @@ build :: () {
 
     optimized := false;
     options.output_executable_name = "focus_debug";
-    options.backend = .X64;
     set_optimization(*options, .DEBUG);
 
     for arg: args {
@@ -30,7 +29,6 @@ build :: () {
             options.output_executable_name = "focus";
             options.array_bounds_check = .ON;
             options.null_pointer_check = .ON;
-            options.backend = .LLVM;
           case "debug";
           case;
             compiler_report(tprint("Command-line argument #%, '%', is invalid. Valid options are: 'debug', 'release'.\n", it_index+1, arg));
