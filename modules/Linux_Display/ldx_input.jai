@@ -362,13 +362,18 @@ x11_clipboard_get_text :: (win: Window) -> string {  // Allocated via alloc; sho
         format: s32;
         data: *u8;
         type: Atom;
-        if XGetWindowProperty(display, win, property, 0, 32, True, AnyPropertyType, *type, *format, *nitems, *rem, *data) == 0 {
-            temp: string;
-            temp.data = data;
-            temp.count = xx nitems;
-            text = copy_string(temp);
-            XFree(data);
-            return text;
+        if XGetWindowProperty(display, win, property, 0, ~0, True, AnyPropertyType, *type, *format, *nitems, *rem, *data) == 0 {
+            assert(rem == 0); // to be sure we get all the bytes and there are no remaining bytes
+            if (type == x_global_xa_utf8 && format == 8) {
+                temp: string;
+                temp.data = data;
+                temp.count = xx nitems;
+                text = copy_string(temp);
+                XFree(data);
+                return text;
+            } else {
+                // @Incomplete: megabytes of text are sent in a different format which is not supported yet
+            }
         }
     }
 
