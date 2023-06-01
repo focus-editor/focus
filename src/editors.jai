@@ -85,10 +85,10 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
             case .toggle_expand;                    search_bar_toggle_expand(editor);                                             return true;
             case .toggle_case_sensitive;            search_bar_toggle_case_sensitive(editor, buffer);                             return true;
             case .toggle_whole_word;                search_bar_toggle_whole_word(editor, buffer);                                 return true;
-            
+
             case .search_in_buffer;                 open_search_bar(editor, buffer, remember_cursor_position = false);            return true;
             case .search_in_buffer_dropdown_mode;   open_search_bar(editor, buffer, .dropdown, remember_cursor_position = false); return true;
-            
+
             case .move_up;                          search_bar_move_cursor(editor, buffer, -1, wrap = true);                      return true;
             case .move_down;                        search_bar_move_cursor(editor, buffer,  1, wrap = true);                      return true;
             case .move_up_fast;                     search_bar_move_cursor(editor, buffer, -5);                                   return true;
@@ -164,6 +164,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .create_cursor_above;              create_cursor                       (editor, buffer, .above); keep_selection = true;
         case .create_cursor_below;              create_cursor                       (editor, buffer, .below); keep_selection = true;
 
+        case .select_word;                      select_word(editor, buffer); keep_selection = true;
         case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
 
         // Actions that do something per cursor
@@ -1068,6 +1069,17 @@ create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; be
 
     cursor_moved = true;
 }
+
+
+select_word :: (using editor: *Editor, buffer: Buffer) {
+    editor.cursor_moved = true;
+    for * editor.cursors {
+        if has_selection(it) continue;
+        select_word(buffer, it);
+        editor.search_whole_words = true;
+    }
+}
+
 
 select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) -> whole_words: bool {
     editor.cursor_moved = true;
