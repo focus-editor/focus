@@ -461,13 +461,6 @@ move_viewport :: (editor: *Editor, dir: enum { left; up; right; down; }) {
 
 
 center_viewport_on_cursor :: (using editor: *Editor, buffer: Buffer) {
-    //line_num = clamp(line_num - 1, 0, buffer.line_starts.count - 2);
-    //line_start := get_line_start_offset(buffer, cast(s32)line_num);
-    //line_end   := get_line_end_offset  (buffer, cast(s32)line_num);
-    //cursor := cursors[main_cursor];
-    //cursor.pos = line_start + count_whitespace(buffer.bytes, line_start, line_end);
-    //cursor.sel = line_end;  // to make the line visible
-    //add_paste_animation(editor, get_selection(cursor));
     editor.scroll_to_cursor = .yes;
 }
 
