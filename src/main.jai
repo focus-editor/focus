@@ -300,6 +300,8 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
 
         case .show_commands;                                    show_commands_dialog();                             return true;
 
+        case .dump_key_mappings;                                dump_key_mappings ();                               return true;
+
         // TODO: search_in_buffer
         case .search_in_project;
             if active_global_widget == .editors then finder_open_from_editor(); else finder_open();

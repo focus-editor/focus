@@ -150,6 +150,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .duplicate_editor;                 switch_to_editor(.other, duplicate_current = true);
         case .move_editor_to_the_left;          if editors.active == editors.right then swap_panes();
         case .move_editor_to_the_right;         if editors.active == editors.left  then swap_panes();
+        case .center_viewport_on_cursor;        center_viewport_on_cursor           (editor, buffer);
         case .move_cursor_to_viewport_center;   move_cursor_to_viewport_center      (editor, buffer);
         case .remove_additional_cursors;        remove_additional_cursors           (editor);
         case .scroll_viewport_up;               smooth_scroll(editor, direction = .up);                 activate_hold_action(action, event);
@@ -458,6 +459,19 @@ move_viewport :: (editor: *Editor, dir: enum { left; up; right; down; }) {
     }
 }
 
+
+center_viewport_on_cursor :: (using editor: *Editor, buffer: Buffer) {
+    //line_num = clamp(line_num - 1, 0, buffer.line_starts.count - 2);
+    //line_start := get_line_start_offset(buffer, cast(s32)line_num);
+    //line_end   := get_line_end_offset  (buffer, cast(s32)line_num);
+    //cursor := cursors[main_cursor];
+    //cursor.pos = line_start + count_whitespace(buffer.bytes, line_start, line_end);
+    //cursor.sel = line_end;  // to make the line visible
+    //add_paste_animation(editor, get_selection(cursor));
+    editor.scroll_to_cursor = .yes;
+}
+
+
 move_cursor_to_viewport_center :: (editor: *Editor, buffer: Buffer) {
     cursor := leave_only_original_cursor(editor);
     // We assume that editors always take up most of the screen vertically.
@@ -468,6 +482,8 @@ move_cursor_to_viewport_center :: (editor: *Editor, buffer: Buffer) {
     cursor.sel = cursor.pos;
     editor.cursor_moved = true;
 }
+
+
 
 leave_only_original_cursor :: (using editor: *Editor) -> *Cursor {
     // Remove all cursors except the original one
