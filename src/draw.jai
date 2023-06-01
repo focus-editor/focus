@@ -283,6 +283,11 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
 
     footer_rect, rect := cut_bottom(main_area, footer_height);
+    max_width := cast(float) config.settings.max_editor_width * dpi_scale;
+    if max_width > 0 && rect.w > max_width {
+        rect.x += (rect.w - max_width) / 2;
+        rect.w = max_width;
+    }
     if !is_valid(rect) return;
 
     became_active := maybe_set_hot_or_active(ui_id, rect, .TEXT_SELECT);
@@ -864,7 +869,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             text_x := btn.x + btn.w / 2 - text_w / 2;
             text_y := btn.y + btn.h / 2 - text_h / 2;
             text_color := ifx case_sensitive then Colors.UI_DEFAULT else Colors.UI_DIM;
-    
+
             Simp.draw_prepared_text(font_ui_very_small, xx text_x, xx text_y, text_color);
         }
 
@@ -1988,7 +1993,7 @@ draw_finder :: () {
         text_x := btn.x + btn.w / 2 - text_w / 2;
         text_y := btn.y + btn.h / 2 - text_h / 2;
         text_color := ifx case_sensitive then Colors.UI_DEFAULT else Colors.UI_DIM;
-    
+
         Simp.draw_prepared_text(font_ui_very_small, xx text_x, xx text_y, text_color);
     }
 
@@ -2009,7 +2014,7 @@ draw_finder :: () {
         text_x := btn.x + btn.w / 2 - text_w / 2;
         text_y := btn.y + btn.h / 2 - text_h / 2;
         text_color := ifx whole_word then Colors.UI_DEFAULT else Colors.UI_DIM;
-    
+
         Simp.draw_prepared_text(font_ui_very_small, xx text_x, xx text_y, text_color);
     }
 

@@ -304,6 +304,7 @@ Settings :: struct {
     strip_trailing_whitespace_on_save   := false;
     smooth_scrolling                    := true;
     line_height_scale_percent           := 120;
+    max_editor_width                    := -1;
 
     // TODO
     // convert_tabs_to_spaces_on_load:     false
@@ -459,6 +460,7 @@ SETTINGS :: Setting.[
     .{ "max_entries_in_open_file_dialog",     .integer },
     .{ "tab_size",                            .integer },
     .{ "line_height_scale_percent",           .integer },
+    .{ "max_editor_width",                    .integer },
 ];
 
 DEFAULT_CONFIG_FILE_DATA  :: #run read_entire_file(DEFAULT_CONFIG_NAME);
