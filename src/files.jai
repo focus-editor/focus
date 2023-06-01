@@ -36,6 +36,8 @@ get_file_icon :: (name: string, extension: string) -> File_Icon {
         case "h";    #through;
         case "c";
             icon = .cpp;
+        case "cs";
+            icon = .cs;
         case "ini";  #through;
         case "conf"; #through;
         case "focus-config";
@@ -176,6 +178,7 @@ File_Icon :: enum u16 {
     text    :: 0xf15c;
     jai     :: 0xf574;
     cpp     :: 0xf1c9;
+    cs      :: 0xf1c9;
     worklog :: 0xf46d;
     git     :: 0xf387;
     image   :: 0xf1c5;

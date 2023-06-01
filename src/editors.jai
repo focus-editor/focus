@@ -847,6 +847,7 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
         if extension == {
             case "jai";            buffer.lang = .Jai;
             case "focus-config";   buffer.lang = .Focus_Config;
+            case "cs";             buffer.lang = .CSharp;
 
             case "c";   #through;
             case "h";   #through;
@@ -2190,6 +2191,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
 
     if buffer.lang == {
         case .C;            comment_without_space = "//";
+        case .CSharp;       comment_without_space = "//";
         case .Jai;          comment_without_space = "//";
         case .Focus_Config; comment_without_space = "#";
         case;               return;
