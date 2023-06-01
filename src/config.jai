@@ -305,6 +305,7 @@ Settings :: struct {
     smooth_scrolling                    := true;
     line_height_scale_percent           := 120;
     max_editor_width                    := -1;
+    can_cancel_go_to_line               := true;
 
     // TODO
     // convert_tabs_to_spaces_on_load:     false
@@ -456,6 +457,7 @@ SETTINGS :: Setting.[
     .{ "insert_spaces_when_pressing_tab",     .boolean },
     .{ "strip_trailing_whitespace_on_save",   .boolean },
     .{ "smooth_scrolling",                    .boolean },
+    .{ "can_cancel_go_to_line",               .boolean },
 
     .{ "max_entries_in_open_file_dialog",     .integer },
     .{ "tab_size",                            .integer },
