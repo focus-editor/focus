@@ -1,3 +1,3 @@
 @echo off
 
-jai first.jai
+jai -quiet first.jai
