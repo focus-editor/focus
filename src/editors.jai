@@ -39,6 +39,8 @@ editors_handle_event :: (event: Input.Event) -> handled: bool {
     return false;
 }
 
+
+
 activate_editors :: () {
     active_global_widget = .editors;
     cursors_start_blinking();
@@ -164,6 +166,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .select_all;                       select_all                          (editor, buffer); keep_selection = true;
         case .create_cursor_above;              create_cursor                       (editor, buffer, .above); keep_selection = true;
         case .create_cursor_below;              create_cursor                       (editor, buffer, .below); keep_selection = true;
+        case .move_to_previous_editor_history;  move_to_previous_editor_history     ();
+        case .move_to_next_editor_history;      move_to_next_editor_history         ();
 
         case .select_word;                      select_word(editor, buffer); keep_selection = true;
         case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
@@ -1215,6 +1219,25 @@ switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := fa
     cursors_start_blinking();
 }
 
+set_editor_panes :: (left_editor_id: s64, right_editor_id: s64, active_editor_id: s64 = -1) {
+    if left_editor_id < 0  return;
+
+    if right_editor_id >= 0 {
+        editors.left   = left_editor_id;
+        editors.right  = right_editor_id;
+
+        if editors.layout != .Double {
+            editors_start_moving_splitter(0.5, start = 1.0);
+            editors.layout = .Double;
+        }
+    }
+    else {
+        editors.layout = .Single;
+    }
+
+    make_editor_active(ifx active_editor_id > -1 else left_editor_id);
+}
+
 swap_panes :: () {
     if editors.layout != .Double return;
     tmp := editors.left;
@@ -1246,11 +1269,12 @@ smooth_scroll :: (editor: Editor, direction: Smooth_Scroll_Direction, fast := fa
     }
 }
 
-find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_id: s64, created: bool {
+find_or_create_editor :: (buffer_id: s64, unwanted_existing_editor: s64 = -1) -> editor_id: s64, created: bool {
     assert(buffer_id >= 0 && buffer_id < open_buffers.count, "Attempt to create editor for nonexistent buffer");
-    for open_editors {
-        if it.buffer_id == buffer_id && it_index != existing_editor return it_index, false;
-    }
+    for open_editors
+        if it.buffer_id == buffer_id && it_index != unwanted_existing_editor
+            return it_index, false;
+
     editor_id := open_editors.count;
     editor := array_add(*open_editors);
     editor.buffer_id = buffer_id;
@@ -2327,6 +2351,7 @@ Editor :: struct {
     last_cursor_created_using_mouse_at: Time;
 
     scroll_to_cursor: enum u8 { no; yes; yes_new_editor; }  // trigger a scroll so that the cursor is in the center vertically
+    pane_location: enum u8 { single; left; right; }
 
     highlights: [..] Text_Highlight;
     refresh_highlights: bool;
@@ -2433,6 +2458,7 @@ buffers_table: Table(string, s64);  // a map from full buffer path to buffer id 
 open_buffers_lock: Mutex;  // must hold while adding a new buffer
 
 editors: Editor_State;
+editor_history: Editor_History;
 
 // Keyboard smooth scrolling
 Smooth_Scroll_Direction :: enum {
@@ -2452,6 +2478,109 @@ editor_smooth_scroll: struct {
 
 splitter_pos:  float = 0.5;  // 0.5 means it's in the middle
 splitter_anim: Tween_Animation(float);
+
+
+Editor_History :: struct {
+    frames : [..] Editor_History_Frame;
+    head : int;
+    tail : int;
+    current : int;
+}
+
+Editor_History_Frame :: struct {
+    active_editor_id: s64;
+    left_editor_id: s64;
+    right_editor_id: s64;
+    pos: s32;
+}
+
+operator== :: (a: Editor_History_Frame, b: Editor_History_Frame) -> bool {
+    return a.active_editor_id == b.active_editor_id
+        && a.left_editor_id   == b.left_editor_id
+        && a.right_editor_id  == b.right_editor_id
+        && a.pos == b.pos;
+}
+
+maybe_save_editor_history :: () -> saved: bool {
+    if editors.layout == .None  return false;
+
+    editor := *open_editors[editors.active];
+    frame := Editor_History_Frame.{
+        active_editor_id = editors.active,
+        left_editor_id = ifx editors.layout == .None then -1
+                         else ifx editors.layout == .Single then editors.active
+                         else editors.left,
+        right_editor_id = ifx editors.layout == .Double then editors.right else -1,
+        pos = editor.cursors[editor.main_cursor].pos,
+    };
+
+    return maybe_add_to_editor_history(*editor_history, frame);
+}
+
+maybe_add_to_editor_history :: (using history: *Editor_History, frame: Editor_History_Frame) -> added: bool {
+    if frames.count == 0 {
+        array_add(*frames, frame);
+        head, tail, current = 0;
+        return true;
+    }
+
+    if frames[current] == frame  return false;
+
+    previous_frame := frames[current];
+    current = (current + 1) % config.settings.editor_history_size;
+    if current == tail
+        tail = (tail + 1) % config.settings.editor_history_size;
+
+    // When a pane closes it may result in two updates: the cursor moving over to the
+    // other pane and then the pane being closed.  In these cases we should overwrite the
+    // former with the latter so it is stored as a single step.
+    if frame.right_editor_id == -1 && previous_frame.right_editor_id != -1
+    && frame.active_editor_id == previous_frame.active_editor_id
+    && frame.pos == previous_frame.pos
+    && (frame.left_editor_id == previous_frame.left_editor_id || frame.left_editor_id == previous_frame.right_editor_id) {
+        frames[head] = frame;
+        current = head;
+    }
+    else {
+        if current < frames.count
+            frames[current] = frame;
+        else
+            array_add(*frames, frame);
+        head = current;
+    }
+
+    return true;
+}
+
+move_to_previous_editor_history :: () {
+    using editor_history;
+    if frames.count == 0 || current == tail
+        return;
+
+    current -= 1;
+    if current < 0
+        current = config.settings.editor_history_size - 1;
+    move_to_editor_history_frame(frames[current]);
+}
+
+move_to_next_editor_history :: () {
+    using editor_history;
+    if frames.count == 0 || current == head
+        return;
+
+    current = (current + 1) % config.settings.editor_history_size;
+    move_to_editor_history_frame(frames[current]);
+}
+
+move_to_editor_history_frame :: (frame: Editor_History_Frame) {
+    set_editor_panes(frame.left_editor_id, frame.right_editor_id, frame.active_editor_id);
+    editor := *open_editors[editors.active];
+    cursor := leave_only_original_cursor(editor);
+    cursor.pos = frame.pos;
+    cursor.sel = cursor.pos;
+    add_paste_animation(editor, get_selection(cursor));
+    editor.scroll_to_cursor = .yes;
+}
 
 
 #scope_file

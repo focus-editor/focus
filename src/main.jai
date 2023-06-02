@@ -253,6 +253,7 @@ main :: () {
 
         // TODO:
         // maybe_save_editor_state_into_session();
+        maybe_save_editor_history();
 
         if should_reload_workspace {
             hard_reload_workspace();

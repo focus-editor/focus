@@ -306,6 +306,7 @@ Settings :: struct {
     line_height_scale_percent           := 120;
     max_editor_width                    := -1;
     can_cancel_go_to_line               := true;
+    editor_history_size                 := 128;
 
     // TODO
     // convert_tabs_to_spaces_on_load:     false
@@ -463,6 +464,7 @@ SETTINGS :: Setting.[
     .{ "tab_size",                            .integer },
     .{ "line_height_scale_percent",           .integer },
     .{ "max_editor_width",                    .integer },
+    .{ "editor_history_size",                 .integer },
 ];
 
 DEFAULT_CONFIG_FILE_DATA  :: #run read_entire_file(DEFAULT_CONFIG_NAME);

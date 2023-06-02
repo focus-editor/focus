@@ -346,6 +346,8 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "move_editor_to_the_right",
     "create_new_file",
     "create_new_file_on_the_side",
+    "move_to_previous_editor_history",
+    "move_to_next_editor_history",
 ]);
 
 ACTIONS_OPEN_FILE_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[
