@@ -301,7 +301,8 @@ ACTIONS_COMMON :: string.[
     "close_current_editor",
     "close_other_editor",
 
-    "dump_key_mappings",
+    //"dump_key_mappings",
+    //"dump_editor_history",
 ];
 
 ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[

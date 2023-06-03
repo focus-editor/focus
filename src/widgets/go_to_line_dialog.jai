@@ -81,6 +81,7 @@ close_go_to_line_dialog :: (jump_to_original_cursor := false) {
         cursor := leave_only_original_cursor(editor);
         add_paste_animation(editor, get_selection(cursor));
         cursor.sel = cursor.pos;
+        editor.cursor_moved = .jumped;
         editor.scroll_to_cursor = .yes;
     }
 }
@@ -114,6 +115,7 @@ jump_to_line :: () {
     cursor.pos = line_start + count_whitespace(buffer.bytes, line_start, line_end);
     cursor.sel = line_end;  // to make the line visible
     add_paste_animation(editor, get_selection(cursor));
+    editor.cursor_moved = .jumped;
     editor.scroll_to_cursor = .yes;
 }
 
