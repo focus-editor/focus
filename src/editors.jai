@@ -2586,7 +2586,6 @@ maybe_add_to_editor_history :: (using history: *Editor_History, frame: Editor_Hi
     && (frame.left_editor_id == previous_frame.left_editor_id || frame.left_editor_id == previous_frame.right_editor_id);
 
     if should_merge_frame {
-        frames[previous_index] = frame;
         current = previous_index;
     }
     else {
@@ -2601,9 +2600,9 @@ maybe_add_to_editor_history :: (using history: *Editor_History, frame: Editor_Hi
         else {
             head = current;
         }
-
-        set_history_frame(current, frame);
     }
+
+    set_history_frame(current, frame);
 
     return true;
 }
