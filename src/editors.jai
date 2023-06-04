@@ -2475,6 +2475,7 @@ open_buffers_lock: Mutex;  // must hold while adding a new buffer
 
 editors: Editor_State;
 editor_history: Editor_History;
+current_editor_history_size := -1;
 
 // Keyboard smooth scrolling
 Smooth_Scroll_Direction :: enum {
@@ -2568,7 +2569,7 @@ maybe_add_to_editor_history :: (using history: *Editor_History, frame: Editor_Hi
 
     should_merge_frame := false;
     previous_frame := frames[previous_index];
-    if frames_are_mergable(frame, previous_frame) {
+    if frames_are_mergable(frame, previous_frame) && frames.count > 2 {
         // We want to keep the first frame of a move type, and then keep overwriting the second frame
         // of that type. So, check if this is the third frame of that type.
         previous_previous_frame := frames[previous_history_index(previous_index)];
@@ -2633,9 +2634,7 @@ move_to_previous_editor_history :: () {
     if frames.count == 0 || current == tail
         return;
 
-    current -= 1;
-    if current < 0
-        current = config.settings.editor_history_size - 1;
+    current = previous_history_index(current);
     move_to_editor_history_frame(frames[current]);
 }
 
@@ -2644,7 +2643,7 @@ move_to_next_editor_history :: () {
     if frames.count == 0 || current == head
         return;
 
-    current = (current + 1) % config.settings.editor_history_size;
+    current = next_history_index(current);
     move_to_editor_history_frame(frames[current]);
 }
 

@@ -81,6 +81,13 @@ maybe_refresh_config :: (path: string) {
 
     dont_ignore_next_window_resize = true;
     platform_apply_config(*config.platform);
+
+    if current_editor_history_size < config.settings.editor_history_size && editor_history.head < editor_history.tail {
+         editor_history.head    = 0;
+         editor_history.tail    = 0;
+         editor_history.current = 0;
+         current_editor_history_size = config.settings.editor_history_size;
+    }
 }
 
 is_our_config_file :: (path: string) -> bool {
@@ -91,7 +98,7 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
     if name == "default" return "default", "";
 
     has_extension := ends_with_nocase(name, ".ttf") || ends_with_nocase(name, ".otf");
-    
+
     try_path :: (font_path: string) #expand {
         if file_exists(font_path) `return font_path, "";
         array_add(*tried_paths, font_path);
