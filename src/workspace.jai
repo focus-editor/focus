@@ -137,24 +137,25 @@ maybe_update_workspace_buffers :: () {
         if watcher_file_modified.count > 0 && (!should_ignore_file(watcher_file_modified) || is_our_config_file(watcher_file_modified)) {
             refresh_buffer_from_disk(path = watcher_file_modified);
         }
+
+        visitor_func :: (file: *File_Visit_Info, userdata: *void) {
+            if file.is_directory {
+                if should_ignore_dir(file.full_name) {
+                    file.descend_into_directory = false;
+                    return;
+                }
+                return;
+            }
+            if file.is_symlink return;
+    
+            if should_ignore_file(file.full_name) && !is_our_config_file(file.full_name) return;
+    
+            refresh_buffer_from_disk(path = file.full_name);
+        }
+        
         // @Speed: it should be ok to rescan everything recursively, because
         // most of the files will already be loaded and they won't refresh if unchanged
         for dirs_to_rescan visit_files(it, recursive = true, null, visitor_func, visit_directories = true);
-    }
-
-    visitor_func :: (file: *File_Visit_Info, userdata: *void) {
-        if file.is_directory {
-            if should_ignore_dir(file.full_name) {
-                file.descend_into_directory = false;
-                return;
-            }
-            return;
-        }
-        if file.is_symlink return;
-
-        if should_ignore_file(file.full_name) && !is_our_config_file(file.full_name) return;
-
-        refresh_buffer_from_disk(path = file.full_name);
     }
 
     array_reset(*dirs_to_rescan);
@@ -188,6 +189,14 @@ hard_reload_workspace :: () {
 }
 
 remember_visible_editors_and_buffers :: () -> Visible_Editor_State {
+    save_editor_state :: (state: *Visible_Editor_State.State, editor: *Editor, buffer: *Buffer) {
+        state.file_path = copy_temporary_string(buffer.file.full_path);
+        state.cursors = NewArray(editor.cursors.count, Cursor.State, initialized = false);
+        for * cursor, i : state.cursors { <<cursor = editor.cursors[i].state; }
+        state.main_cursor = editor.main_cursor;
+        state.viewport = editor.viewport;
+    }
+    
     using state: Visible_Editor_State;
 
     layout = editors.layout;
@@ -225,18 +234,19 @@ remember_visible_editors_and_buffers :: () -> Visible_Editor_State {
             state.left_active = editors.active == editors.left;
     }
 
-    save_editor_state :: (state: *Visible_Editor_State.State, editor: *Editor, buffer: *Buffer) {
-        state.file_path = copy_temporary_string(buffer.file.full_path);
-        state.cursors = NewArray(editor.cursors.count, Cursor.State, initialized = false);
-        for * cursor, i : state.cursors { <<cursor = editor.cursors[i].state; }
-        state.main_cursor = editor.main_cursor;
-        state.viewport = editor.viewport;
-    }
-
     return state;
 }
 
 reopen_visible_editors :: (using old_state: Visible_Editor_State) {
+    restore_editor_state :: (state: Visible_Editor_State.State, placement: Editor_Placement) {
+        editors_open_file(state.file_path, placement);
+        editor := *open_editors[editors.active];
+        restore_cursor_state(editor, state.cursors);
+        editor.main_cursor = state.main_cursor;
+        editor.viewport = state.viewport;
+        if !file_is_watched(state.file_path) then start_watching_file(state.file_path);
+    }
+
     editors = Editor_State.{};
     editors.layout = layout;
 
@@ -250,15 +260,6 @@ reopen_visible_editors :: (using old_state: Visible_Editor_State) {
             if left_active then make_editor_active(editors.left);;
     }
     redraw_requested = true;
-
-    restore_editor_state :: (state: Visible_Editor_State.State, placement: Editor_Placement) {
-        editors_open_file(state.file_path, placement);
-        editor := *open_editors[editors.active];
-        restore_cursor_state(editor, state.cursors);
-        editor.main_cursor = state.main_cursor;
-        editor.viewport = state.viewport;
-        if !file_is_watched(state.file_path) then start_watching_file(state.file_path);
-    }
 }
 
 Visible_Editor_State :: struct {
@@ -326,8 +327,6 @@ file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> 
     scan_pool_allocator := get_scan_pool_allocator();
     push_allocator(scan_pool_allocator);
 
-    for project_dirs visit_files(it.path, recursive = true, null, maybe_add_file_to_scan_list, visit_directories = true);
-
     maybe_add_file_to_scan_list :: (file: *File_Visit_Info, userdata: *void) {
         if file.is_directory {
             if should_ignore_dir(file.full_name) {
@@ -344,6 +343,8 @@ file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> 
         // zeroes in the file then the file data will be in cache ready to use)
         array_add(*files_to_scan, copy_string(file.full_name));
     }
+
+    for project_dirs visit_files(it.path, recursive = true, null, maybe_add_file_to_scan_list, visit_directories = true);
 
     return .STOP;  // don't need you no mo
 }
@@ -387,6 +388,18 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
     parent_dir := get_parent_dir_path(change.full_path);
     if !dir_is_within_project(parent_dir) && !file_is_watched(change.full_path) return;
 
+    maybe_add_to_queue :: (dir: string) {
+        add_to_queue := true;
+        for dirs_to_rescan {
+            if begins_with_nocase(dir, it) {
+                add_to_queue = false;  // parent or itself is already in the queue
+                break;
+            }
+            if begins_with_nocase(it, dir) remove it;  // we're adding a parent of this dir
+        }
+        if add_to_queue array_add(*dirs_to_rescan, dir);
+    }
+
     // Most commonly we will receive only a single MODIFIED event for a single file (after saving a buffer)
     // In this case we don't want to rescan anything, but only if no other events were received in the same frame
     if change.events == .MODIFIED && watcher_file_modified.count == 0 {
@@ -407,18 +420,6 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
             dir = get_parent_dir_path(change.full_path);
         }
         maybe_add_to_queue(dir);
-    }
-
-    maybe_add_to_queue :: (dir: string) {
-        add_to_queue := true;
-        for dirs_to_rescan {
-            if begins_with_nocase(dir, it) {
-                add_to_queue = false;  // parent or itself is already in the queue
-                break;
-            }
-            if begins_with_nocase(it, dir) remove it;  // we're adding a parent of this dir
-        }
-        if add_to_queue array_add(*dirs_to_rescan, dir);
     }
 
     // NOTE: Instead of processing individual events and using the flags we're simply

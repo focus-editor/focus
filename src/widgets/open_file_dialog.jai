@@ -365,6 +365,12 @@ refresh_entries :: (clear_input := true) {
             }
     }
 
+    compare_entries :: (e1: Entry, e2: Entry) -> s64 {
+        key_diff := cast,no_check(s64) e2.sort_key - cast,no_check(s64) e1.sort_key;
+        if key_diff != 0 return key_diff;
+        return memcmp(e1.name.data, e2.name.data, min(e1.name.count, e2.name.count));
+    }
+
     quick_sort(entries.filtered, compare_entries);
 
     if !entries.filtered {
@@ -380,12 +386,6 @@ refresh_entries :: (clear_input := true) {
             path_highlights = .[],
         });
     }
-
-    compare_entries :: (e1: Entry, e2: Entry) -> s64 {
-        key_diff := cast,no_check(s64) e2.sort_key - cast,no_check(s64) e1.sort_key;
-        if key_diff != 0 return key_diff;
-        return memcmp(e1.name.data, e2.name.data, min(e1.name.count, e2.name.count));
-    }
 }
 
 scan_current_folder :: () {
@@ -397,9 +397,6 @@ scan_current_folder :: () {
 
     // Reset current files
     array_reset(*current_files);
-
-    // Scan the current folder
-    visit_files(dir_path, recursive = false, null, visitor_func, visit_directories = true);
 
     visitor_func :: (file: *File_Visit_Info, userdata: *void) {
         if file.had_error || file.is_symlink return;
@@ -446,6 +443,9 @@ scan_current_folder :: () {
             entry.type = .file;
         }
     }
+
+    // Scan the current folder
+    visit_files(dir_path, recursive = false, null, visitor_func, visit_directories = true);
 }
 
 toggle_expand :: () {

@@ -145,12 +145,12 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
         }
     } else if << t == #char "x" || << t == #char "h" {
         // Hex
-        t += 1;
-        while t < max_t && (is_hex(<< t) || << t == #char "_") t += 1;
-
         is_hex :: inline (c: u8) -> bool {
             return is_digit(c) || (c >= #char "a" && c <= #char "f") || (c >= #char "A" && c <= #char "F");
         }
+        
+        t += 1;
+        while t < max_t && (is_hex(<< t) || << t == #char "_") t += 1;
     } else if << t == #char "b" {
         // Binary
         t += 1;

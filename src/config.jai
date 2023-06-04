@@ -91,6 +91,11 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
     if name == "default" return "default", "";
 
     has_extension := ends_with_nocase(name, ".ttf") || ends_with_nocase(name, ".otf");
+    
+    try_path :: (font_path: string) #expand {
+        if file_exists(font_path) `return font_path, "";
+        array_add(*tried_paths, font_path);
+    }
 
     tried_paths: [..] string;
     tried_paths.allocator = temp;
@@ -110,11 +115,6 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
     if !has_extension {
         try_path(tprint("%/%.ttf", fonts_dir, name));
         try_path(tprint("%/%.otf", fonts_dir, name));
-    }
-
-    try_path :: (font_path: string) #expand {
-        if file_exists(font_path) `return font_path, "";
-        array_add(*tried_paths, font_path);
     }
 
     if ! #compile_time {

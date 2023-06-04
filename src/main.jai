@@ -404,10 +404,6 @@ update_mouse_state :: () {
     mouse.smooth_scroll = (mouse.scroll_y_delta % 120) == 0;  // @Robustness: hard-coded typical delta, but it really should be ok for now
     if !config.settings.smooth_scrolling then mouse.smooth_scroll = false;
 
-    update_button(*mouse.left,   .MOUSE_BUTTON_LEFT);
-    update_button(*mouse.right,  .MOUSE_BUTTON_RIGHT);
-    update_button(*mouse.middle, .MOUSE_BUTTON_MIDDLE);
-
     update_button :: (button: *Mouse_Button_State, key: Input.Key_Code) {
         button.is_down       = key_state(key) & .DOWN  != 0;  // NOTE: this doesn't include just_pressed!
         button.just_pressed  = key_state(key) & .START != 0;
@@ -433,6 +429,10 @@ update_mouse_state :: () {
 
         button.is_dragging = button.is_down && mouse.pointer != button.last_down_pos;
     }
+
+    update_button(*mouse.left,   .MOUSE_BUTTON_LEFT);
+    update_button(*mouse.right,  .MOUSE_BUTTON_RIGHT);
+    update_button(*mouse.middle, .MOUSE_BUTTON_MIDDLE);
 }
 
 increase_font_size :: () {

@@ -127,13 +127,14 @@ finder_update :: () {
                 memcpy(results.data + i, it.results.data, it.num_results * size_of(Search_Result));
                 i += it.num_results;
             }
-            quick_sort(results, compare_search_results);
-
-            needle = copy_string(request.needle);
 
             compare_search_results :: (r1: Search_Result, r2: Search_Result) -> s64 {
                 return cast,no_check(s64) r1.sort_key - cast,no_check(s64) r2.sort_key;
             }
+            
+            quick_sort(results, compare_search_results);
+
+            needle = copy_string(request.needle);
 
             // Clean up task data
             for request.completed_tasks free_task(it);

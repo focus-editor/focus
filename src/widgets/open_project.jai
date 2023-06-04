@@ -108,13 +108,13 @@ refresh_entries :: () {
         entry.sort_key = cast(u64) score;
     }
 
-    quick_sort(filtered, compare_entries);
-
     compare_entries :: (e1: Entry, e2: Entry) -> s64 {
         key_diff := cast,no_check(s64) e2.sort_key - cast,no_check(s64) e1.sort_key;
         if key_diff != 0 return key_diff;
         return memcmp(e1.name.data, e2.name.data, min(e1.name.count, e2.name.count));
     }
+
+    quick_sort(filtered, compare_entries);
 }
 
 move_cursor :: (delta: s64, wrap := false, snap := true) {

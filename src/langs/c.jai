@@ -171,12 +171,13 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
         
     } else if << t == #char "x" || << t == #char "X" {
         // Hex
-        t += 1;
-        while t < max_t && (is_hex(<< t)) t += 1;
-
         is_hex :: inline (c: u8) -> bool {
             return is_digit(c) || (c >= #char "a" && c <= #char "f") || (c >= #char "A" && c <= #char "F");
         }
+        
+        t += 1;
+        while t < max_t && (is_hex(<< t)) t += 1;
+
     } else if << t == #char "b" || << t == #char "B" {
         // Binary
         t += 1;
