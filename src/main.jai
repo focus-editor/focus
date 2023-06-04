@@ -155,7 +155,7 @@ main :: () {
 
         for * editor : open_editors {
             using editor;
-            cursor_moved = false;
+            cursor_moved = .has_not_moved;
             if old_line_height != line_height {
                 // Adjust viewport position
                 lines_scrolled := viewport.top / old_line_height;
@@ -253,6 +253,7 @@ main :: () {
 
         // TODO:
         // maybe_save_editor_state_into_session();
+        maybe_save_editor_history();
 
         if should_reload_workspace {
             hard_reload_workspace();
@@ -299,6 +300,9 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true); return true;
 
         case .show_commands;                                    show_commands_dialog();                             return true;
+
+        case .dump_key_mappings;                                dump_key_mappings();                                return true;
+        case .dump_editor_history;                              dump_editor_history();                              return true;
 
         // TODO: search_in_buffer
         case .search_in_project;

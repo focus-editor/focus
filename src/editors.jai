@@ -39,6 +39,8 @@ editors_handle_event :: (event: Input.Event) -> handled: bool {
     return false;
 }
 
+
+
 activate_editors :: () {
     active_global_widget = .editors;
     cursors_start_blinking();
@@ -85,10 +87,10 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
             case .toggle_expand;                    search_bar_toggle_expand(editor);                                             return true;
             case .toggle_case_sensitive;            search_bar_toggle_case_sensitive(editor, buffer);                             return true;
             case .toggle_whole_word;                search_bar_toggle_whole_word(editor, buffer);                                 return true;
-            
+
             case .search_in_buffer;                 open_search_bar(editor, buffer, remember_cursor_position = false);            return true;
             case .search_in_buffer_dropdown_mode;   open_search_bar(editor, buffer, .dropdown, remember_cursor_position = false); return true;
-            
+
             case .move_up;                          search_bar_move_cursor(editor, buffer, -1, wrap = true);                      return true;
             case .move_down;                        search_bar_move_cursor(editor, buffer,  1, wrap = true);                      return true;
             case .move_up_fast;                     search_bar_move_cursor(editor, buffer, -5);                                   return true;
@@ -150,6 +152,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .duplicate_editor;                 switch_to_editor(.other, duplicate_current = true);
         case .move_editor_to_the_left;          if editors.active == editors.right then swap_panes();
         case .move_editor_to_the_right;         if editors.active == editors.left  then swap_panes();
+        case .center_viewport_on_cursor;        center_viewport_on_cursor           (editor, buffer);
         case .move_cursor_to_viewport_center;   move_cursor_to_viewport_center      (editor, buffer);
         case .remove_additional_cursors;        remove_additional_cursors           (editor);
         case .scroll_viewport_up;               smooth_scroll(editor, direction = .up);                 activate_hold_action(action, event);
@@ -163,7 +166,10 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .select_all;                       select_all                          (editor, buffer); keep_selection = true;
         case .create_cursor_above;              create_cursor                       (editor, buffer, .above); keep_selection = true;
         case .create_cursor_below;              create_cursor                       (editor, buffer, .below); keep_selection = true;
+        case .move_to_previous_editor_history;  move_to_previous_editor_history     ();
+        case .move_to_next_editor_history;      move_to_next_editor_history         ();
 
+        case .select_word;                      select_word(editor, buffer); keep_selection = true;
         case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
 
         // Actions that do something per cursor
@@ -304,7 +310,7 @@ active_editor_type_char :: (char: u32) {
     for * cursor : editor.cursors  cursor.col_wanted = -1;
 
     buffer.last_edit_time = frame_time;
-    editor.cursor_moved = true;
+    editor.cursor_moved = .unimportant;
     cursors_start_blinking();
 }
 
@@ -457,6 +463,12 @@ move_viewport :: (editor: *Editor, dir: enum { left; up; right; down; }) {
     }
 }
 
+
+center_viewport_on_cursor :: (using editor: *Editor, buffer: Buffer) {
+    editor.scroll_to_cursor = .yes;
+}
+
+
 move_cursor_to_viewport_center :: (editor: *Editor, buffer: Buffer) {
     cursor := leave_only_original_cursor(editor);
     // We assume that editors always take up most of the screen vertically.
@@ -465,8 +477,10 @@ move_cursor_to_viewport_center :: (editor: *Editor, buffer: Buffer) {
     coords := Coords.{ line = xx (cursor_px_pos / line_height), col = 0 };
     cursor.pos = coords_to_offset(buffer, coords);
     cursor.sel = cursor.pos;
-    editor.cursor_moved = true;
+    editor.cursor_moved = .refresh_only;
 }
+
+
 
 leave_only_original_cursor :: (using editor: *Editor) -> *Cursor {
     // Remove all cursors except the original one
@@ -869,7 +883,7 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
 
 select_lines :: (editor: *Editor, buffer: Buffer) {
     for * cursor : editor.cursors select_line(cursor, buffer);
-    editor.cursor_moved = true;
+    editor.cursor_moved = .selection;
 }
 
 select_line :: (cursor: *Cursor, buffer: Buffer) {
@@ -1066,11 +1080,22 @@ create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; be
 
     organise_cursors(editor);
 
-    cursor_moved = true;
+    cursor_moved = .refresh_only;
 }
 
+
+select_word :: (using editor: *Editor, buffer: Buffer) {
+    editor.cursor_moved = .unimportant;
+    for * editor.cursors {
+        if has_selection(it) continue;
+        select_word(buffer, it);
+        editor.search_whole_words = true;
+    }
+}
+
+
 select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) -> whole_words: bool {
-    editor.cursor_moved = true;
+    editor.cursor_moved = .selection;
 
     selected_text := get_selected_text_all_cursors(editor, buffer);
     if selected_text {
@@ -1194,6 +1219,25 @@ switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := fa
     cursors_start_blinking();
 }
 
+set_editor_panes :: (left_editor_id: s64, right_editor_id: s64, active_editor_id: s64 = -1) {
+    if left_editor_id < 0  return;
+
+    if right_editor_id >= 0 {
+        editors.left   = left_editor_id;
+        editors.right  = right_editor_id;
+
+        if editors.layout != .Double {
+            editors_start_moving_splitter(0.5, start = 1.0);
+            editors.layout = .Double;
+        }
+    }
+    else {
+        editors.layout = .Single;
+    }
+
+    make_editor_active(ifx active_editor_id > -1 else left_editor_id);
+}
+
 swap_panes :: () {
     if editors.layout != .Double return;
     tmp := editors.left;
@@ -1225,11 +1269,12 @@ smooth_scroll :: (editor: Editor, direction: Smooth_Scroll_Direction, fast := fa
     }
 }
 
-find_or_create_editor :: (buffer_id: s64, existing_editor: s64 = -1) -> editor_id: s64, created: bool {
+find_or_create_editor :: (buffer_id: s64, unwanted_existing_editor: s64 = -1) -> editor_id: s64, created: bool {
     assert(buffer_id >= 0 && buffer_id < open_buffers.count, "Attempt to create editor for nonexistent buffer");
-    for open_editors {
-        if it.buffer_id == buffer_id && it_index != existing_editor return it_index, false;
-    }
+    for open_editors
+        if it.buffer_id == buffer_id && it_index != unwanted_existing_editor
+            return it_index, false;
+
     editor_id := open_editors.count;
     editor := array_add(*open_editors);
     editor.buffer_id = buffer_id;
@@ -1265,7 +1310,7 @@ undo :: (editor: *Editor, buffer: *Buffer) {
     restore_cursor_state(editor, edit_group.cursors);
     array_free(edit_group.cursors);
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .large_edit;
 }
 
 redo :: (editor: *Editor, buffer: *Buffer) {
@@ -1290,7 +1335,7 @@ redo :: (editor: *Editor, buffer: *Buffer) {
     restore_cursor_state(editor, edit_group.cursors);
     array_free(edit_group.cursors);
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .large_edit;
 }
 
 new_edit_group_required_for_action :: (action: Action_Editors, cursor: Cursor) -> bool {
@@ -1367,7 +1412,7 @@ move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: enum { char; w
         }
         cursor.col_wanted = -1;
     }
-    editor.cursor_moved = true;
+    editor.cursor_moved = .unimportant;
 }
 
 move_cursors_right :: (editor: *Editor, using buffer: *Buffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
@@ -1397,7 +1442,7 @@ move_cursors_right :: (editor: *Editor, using buffer: *Buffer, by: enum { char; 
         cursor.col_wanted = -1;
     }
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .unimportant;
 }
 
 move_cursors_vertically :: (editor: *Editor, using buffer: Buffer, delta: s32, extend_selection: bool) {
@@ -1419,7 +1464,8 @@ move_cursors_vertically :: (editor: *Editor, using buffer: Buffer, delta: s32, e
         cursor.pos = coords_to_offset(buffer, coords);
     }
 
-    editor.cursor_moved = true;
+    if delta < 0  editor.cursor_moved = .moved_up;
+    else          editor.cursor_moved = .moved_down;
 }
 
 move_cursors_to_empty_line :: (editor: *Editor, buffer: Buffer, dir: enum { up; down; }) {
@@ -1439,7 +1485,8 @@ move_cursors_to_empty_line :: (editor: *Editor, buffer: Buffer, dir: enum { up; 
         cursor.pos = coords_to_offset(buffer, Coords.{ line = line, col = cursor.col_wanted });
     }
 
-    editor.cursor_moved = true;
+    if dir == .up  editor.cursor_moved = .moved_up;
+    else           editor.cursor_moved = .moved_down;
 }
 
 move_cursors_by_page :: (editor: *Editor, buffer: Buffer, dir: enum { up; down; }) {
@@ -1455,7 +1502,8 @@ move_cursors_by_page :: (editor: *Editor, buffer: Buffer, dir: enum { up; down; 
         cursor.pos = coords_to_offset(buffer, Coords.{ line = line, col = cursor.col_wanted });
     }
 
-    editor.cursor_moved = true;
+    if dir == .up  editor.cursor_moved = .moved_up;
+    else           editor.cursor_moved = .moved_down;
 }
 
 move_cursors_home :: (editor: *Editor, buffer: Buffer) {
@@ -1475,7 +1523,7 @@ move_cursors_home :: (editor: *Editor, buffer: Buffer) {
         cursor.col_wanted = -1;
     }
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .unimportant;
 }
 
 move_cursors_end :: (editor: *Editor, buffer: Buffer) {
@@ -1485,21 +1533,21 @@ move_cursors_end :: (editor: *Editor, buffer: Buffer) {
         cursor.col_wanted = -1;
     }
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .unimportant;
 }
 
 move_to_file_start :: (editor: *Editor, buffer: Buffer) {
     cursor := leave_only_original_cursor(editor);
     cursor.pos = 0;
     cursor.col_wanted = 0;
-    editor.cursor_moved = true;
+    editor.cursor_moved = .jumped;
 }
 
 move_to_file_end :: (editor: *Editor, buffer: Buffer) {
     cursor := leave_only_original_cursor(editor);
     cursor.pos = cast(s32) buffer.bytes.count;
     cursor.col_wanted = -1;
-    editor.cursor_moved = true;
+    editor.cursor_moved = .jumped;
 }
 
 break_line :: (editor: *Editor, buffer: *Buffer) {
@@ -1536,7 +1584,7 @@ break_line :: (editor: *Editor, buffer: *Buffer) {
         cursor.col_wanted = -1;
     }
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .unimportant;
 }
 
 new_line_below :: (editor: *Editor, buffer: *Buffer) {
@@ -1567,7 +1615,7 @@ new_line_below :: (editor: *Editor, buffer: *Buffer) {
         cursor.col_wanted = -1;
     }
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .unimportant;
 }
 
 new_line_above :: (editor: *Editor, buffer: *Buffer) {
@@ -1598,7 +1646,7 @@ new_line_above :: (editor: *Editor, buffer: *Buffer) {
         cursor.col_wanted = -1;
     }
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .unimportant;
 }
 
 delete_word_left :: (editor: *Editor, buffer: *Buffer) {
@@ -1677,7 +1725,7 @@ delete_left_char :: (editor: *Editor, buffer: *Buffer) {
         offset_delta += (range.end - range.start);
     }
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .unimportant;
 }
 
 delete_right_char :: (editor: *Editor, buffer: *Buffer) {
@@ -1707,7 +1755,7 @@ delete_right_char :: (editor: *Editor, buffer: *Buffer) {
         }
     }
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .unimportant;
 }
 
 get_tmp_spaces :: (num: s64) -> string {
@@ -1765,7 +1813,7 @@ insert_tab_at_each_cursor :: (editor: *Editor, buffer: *Buffer) {
         cursor.col_wanted = -1;
     }
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .unimportant;
 }
 
 get_line_starts_for_lines_with_cursors_tmp :: (editor: *Editor, buffer: *Buffer) -> [..] s64 /* tmp */, last_line_end_offset: s64 {
@@ -1821,7 +1869,7 @@ indent_lines :: (editor: *Editor, buffer: *Buffer) {
     range := Offset_Range.{ start = xx line_starts[0], end = xx last_line_end_offset };
     replace_range(buffer, range, new_str);
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .unimportant;
 }
 
 unindent_lines :: (editor: *Editor, buffer: *Buffer) {
@@ -1863,13 +1911,13 @@ unindent_lines :: (editor: *Editor, buffer: *Buffer) {
 
     for * cursor : editor.cursors { cursor.col_wanted = -1; }
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .unimportant;
 }
 
 remove_additional_cursors :: (editor: *Editor) {
     cursor := leave_only_original_cursor(editor);
     cursor.sel = cursor.pos;
-    editor.cursor_moved = true;
+    editor.cursor_moved = .refresh_only;
 }
 
 select_all :: (editor: *Editor, buffer: Buffer) {
@@ -1942,7 +1990,7 @@ duplicate_lines :: (editor: *Editor, buffer: *Buffer) {
         offset_delta += str.count;
     }
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .large_edit;
 }
 
 move_lines_up :: (editor: *Editor, buffer: *Buffer) {
@@ -1965,7 +2013,7 @@ move_lines_up :: (editor: *Editor, buffer: *Buffer) {
         insert_string_at_offset(buffer, line.range.end - prev_str.count, ifx line.is_last then tprint("\n%", prev_str) else prev_str);
     }
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .moved_up_with_edit;
 }
 
 move_lines_down :: (editor: *Editor, buffer: *Buffer) {
@@ -1988,7 +2036,7 @@ move_lines_down :: (editor: *Editor, buffer: *Buffer) {
         }
     }
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .moved_down_with_edit;
 }
 
 
@@ -2053,7 +2101,7 @@ join_lines :: (editor: *Editor, buffer: *Buffer, in_between := " ") {
         }
     }
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .large_edit;
 }
 
 delete_line :: (editor: *Editor, buffer: *Buffer, go_up := false) {
@@ -2082,7 +2130,7 @@ delete_line :: (editor: *Editor, buffer: *Buffer, go_up := false) {
         offset_delta += str.count;
     }
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .unimportant;
 }
 
 delete_to_start_of_line :: (editor: *Editor, buffer: *Buffer) {
@@ -2152,7 +2200,7 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) 
             cursor.pos = selection.start;
             offset_delta += selection.end - selection.start;
         }
-        editor.cursor_moved = true;
+        editor.cursor_moved = .refresh_only;
     }
 }
 
@@ -2182,7 +2230,7 @@ paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
         add_paste_animation(editor, Offset_Range.{ start = selection.start, end = selection.start + cast(s32) str.count });
     }
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .large_edit;
 }
 
 toggle_comment :: (editor: *Editor, buffer: *Buffer) {
@@ -2277,7 +2325,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
 
     for * cursor : editor.cursors { cursor.col_wanted = -1; }
 
-    editor.cursor_moved = true;
+    editor.cursor_moved = .unimportant;
 }
 
 free_editor :: (using editor: *Editor) {
@@ -2300,7 +2348,7 @@ Editor :: struct {
     clipboard: string;
 
     search_whole_words := false;  // used when creating new cursors
-    cursor_moved       := false;  // this may trigger a scroll so that the cursor is within acceptable bounds
+    cursor_moved := Cursor_Movement.has_not_moved; // this may trigger a scroll so that the cursor is within acceptable bounds
 
     new_cursor_just_created_using_mouse := false;  // useful to know in order to handle select-by-drag and select-word with the new cursor
     last_cursor_created_using_mouse_at: Time;
@@ -2316,6 +2364,20 @@ Editor :: struct {
     viewport: Viewport;
 
     paste_animations: [..] Paste_Animation;
+}
+
+Cursor_Movement :: enum u8 {
+    has_not_moved;
+    unimportant;
+    moved_up;
+    moved_down;
+    moved_up_with_edit;
+    moved_down_with_edit;
+    // movements above here can be merged in history
+    jumped;
+    large_edit;
+    selection;
+    refresh_only;
 }
 
 Viewport :: struct {
@@ -2412,6 +2474,7 @@ buffers_table: Table(string, s64);  // a map from full buffer path to buffer id 
 open_buffers_lock: Mutex;  // must hold while adding a new buffer
 
 editors: Editor_State;
+editor_history: Editor_History;
 
 // Keyboard smooth scrolling
 Smooth_Scroll_Direction :: enum {
@@ -2431,6 +2494,170 @@ editor_smooth_scroll: struct {
 
 splitter_pos:  float = 0.5;  // 0.5 means it's in the middle
 splitter_anim: Tween_Animation(float);
+
+
+Editor_History :: struct {
+    frames : [..] Editor_History_Frame;
+    head : int;
+    tail : int;
+    current : int;
+}
+
+Editor_History_Frame :: struct {
+    active_editor_id: s64;
+    left_editor_id: s64;
+    right_editor_id: s64;
+    pos: s32;
+    cursor_movement : Cursor_Movement;
+}
+
+operator== :: (a: Editor_History_Frame, b: Editor_History_Frame) -> bool {
+    return a.active_editor_id == b.active_editor_id
+        && a.left_editor_id   == b.left_editor_id
+        && a.right_editor_id  == b.right_editor_id
+        && a.pos == b.pos;
+}
+
+next_history_index :: (f: s64) -> s64 {
+    return (f + 1) % config.settings.editor_history_size;
+}
+
+previous_history_index :: (f: s64) -> s64 {
+    if f == 0  return config.settings.editor_history_size - 1;
+    else       return f - 1;
+}
+
+maybe_save_editor_history :: () -> saved: bool {
+    if editors.layout == .None  return false;
+
+    editor := *open_editors[editors.active];
+    if editor.cursor_moved == .refresh_only  return false;
+
+    frame := Editor_History_Frame.{
+        active_editor_id = editors.active,
+        left_editor_id = ifx editors.layout == .None then -1
+                         else ifx editors.layout == .Single then editors.active
+                         else editors.left,
+        right_editor_id = ifx editors.layout == .Double then editors.right else -1,
+        pos = editor.cursors[editor.main_cursor].pos,
+        cursor_movement = editor.cursor_moved,
+    };
+
+    return maybe_add_to_editor_history(*editor_history, frame);
+}
+
+maybe_add_to_editor_history :: (using history: *Editor_History, frame: Editor_History_Frame) -> added: bool {
+    if frames.count == 0 {
+        array_add(*frames, frame);
+        head, tail, current = 0;
+        return true;
+    }
+
+    if frames[current] == frame  return false;
+
+    previous_index := current;
+    current = next_history_index(current);
+    if current == tail
+        tail = next_history_index(tail);
+
+    frames_are_mergable :: (a: Editor_History_Frame, b: Editor_History_Frame) -> bool #expand {
+        return a.cursor_movement < .jumped
+            && a.cursor_movement == b.cursor_movement
+            && a.active_editor_id == b.active_editor_id;
+    }
+
+    should_merge_frame := false;
+    previous_frame := frames[previous_index];
+    if frames_are_mergable(frame, previous_frame) {
+        // We want to keep the first frame of a move type, and then keep overwriting the second frame
+        // of that type. So, check if this is the third frame of that type.
+        previous_previous_frame := frames[previous_history_index(previous_index)];
+        if frames_are_mergable(previous_previous_frame, previous_frame)
+            should_merge_frame = true;
+    }
+
+    // When a pane closes it may result in two updates: the cursor moving over to the
+    // other pane and then the pane being closed.  In these cases we should overwrite the
+    // former with the latter so it is stored as a single step.
+    should_merge_frame |=
+       frame.right_editor_id == -1 && previous_frame.right_editor_id != -1
+    && frame.active_editor_id == previous_frame.active_editor_id
+    && frame.pos == previous_frame.pos
+    && (frame.left_editor_id == previous_frame.left_editor_id || frame.left_editor_id == previous_frame.right_editor_id);
+
+    if should_merge_frame {
+        current = previous_index;
+    }
+    else {
+        if head != previous_index {
+            // We're not at the head of the history; we're going to ditch all the history ahead of where we are,
+            // but we'll keep the head frame intact ahead of us, allowing the user to jump back to "the present".
+            new_head := next_history_index(current);
+            if new_head == tail  tail = next_history_index(tail);
+            set_history_frame(new_head, frames[head]);
+            head = new_head;
+        }
+        else {
+            head = current;
+        }
+    }
+
+    set_history_frame(current, frame);
+
+    return true;
+}
+
+set_history_frame :: (index: s64, frame: Editor_History_Frame) {
+    using editor_history;
+    if index < frames.count
+        frames[index] = frame;
+    else
+        array_add(*frames, frame);
+}
+
+dump_editor_history :: () {
+    using editor_history;
+    if frames.count == 0  return;
+
+    print("Editor History:\n");
+    i := tail;
+    last_index := next_history_index(head);
+    while i != last_index {
+        print("%\n", frames[i]);
+        i = next_history_index(i);
+    }
+}
+
+move_to_previous_editor_history :: () {
+    using editor_history;
+    if frames.count == 0 || current == tail
+        return;
+
+    current -= 1;
+    if current < 0
+        current = config.settings.editor_history_size - 1;
+    move_to_editor_history_frame(frames[current]);
+}
+
+move_to_next_editor_history :: () {
+    using editor_history;
+    if frames.count == 0 || current == head
+        return;
+
+    current = (current + 1) % config.settings.editor_history_size;
+    move_to_editor_history_frame(frames[current]);
+}
+
+move_to_editor_history_frame :: (frame: Editor_History_Frame) {
+    set_editor_panes(frame.left_editor_id, frame.right_editor_id, frame.active_editor_id);
+    editor := *open_editors[editors.active];
+    cursor := leave_only_original_cursor(editor);
+    cursor.pos = frame.pos;
+    cursor.sel = cursor.pos;
+    put_cursor_in_valid_spot(cursor, open_buffers[editor.buffer_id]);
+    add_paste_animation(editor, get_selection(cursor));
+    editor.scroll_to_cursor = .yes;
+}
 
 
 #scope_file

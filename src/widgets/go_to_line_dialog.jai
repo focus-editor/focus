@@ -4,9 +4,10 @@ go_to_line_dialog_handle_event :: (event: Input.Event) -> handled: bool {
     if event.type == .KEYBOARD && event.key_pressed {
         action, mapping := map_event_to_action(event, Action_Search_Dialog);
         if action == {
-            case .close_dialog;             close_go_to_line_dialog(jump_to_original_cursor = true);    return true;
-            case .open_entry_in_place;      close_go_to_line_dialog();                                  return true;
-            case .open_entry_on_the_side;   close_go_to_line_dialog();                                  return true;
+            case .close_dialog;             close_go_to_line_dialog(jump_to_original_cursor = config.settings.can_cancel_go_to_line);
+                                            return true;
+            case .open_entry_in_place;      close_go_to_line_dialog(); return true;
+            case .open_entry_on_the_side;   close_go_to_line_dialog(); return true;
         }
 
         old_text := copy_temporary_string(to_string(input.text));
@@ -80,6 +81,7 @@ close_go_to_line_dialog :: (jump_to_original_cursor := false) {
         cursor := leave_only_original_cursor(editor);
         add_paste_animation(editor, get_selection(cursor));
         cursor.sel = cursor.pos;
+        editor.cursor_moved = .jumped;
         editor.scroll_to_cursor = .yes;
     }
 }
@@ -113,6 +115,7 @@ jump_to_line :: () {
     cursor.pos = line_start + count_whitespace(buffer.bytes, line_start, line_end);
     cursor.sel = line_end;  // to make the line visible
     add_paste_animation(editor, get_selection(cursor));
+    editor.cursor_moved = .jumped;
     editor.scroll_to_cursor = .yes;
 }
 
