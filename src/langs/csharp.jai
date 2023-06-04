@@ -104,6 +104,16 @@ is_hex :: inline (c: u8) -> bool {
 parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .number;
 
+    is_floating_point_suffix :: (c: u8) -> bool {
+        return c == #char "f" || c == #char "F" || c == #char "d" || c == #char "D" || c == #char "m" || c == #char "M";
+    }
+
+    // Consecutive underscores are allowed in numbers but they can't end in one.
+    is_valid_underscore :: (t: *u8, max_t: *u8, allowed: (u8) -> bool) -> bool {
+        next := t + 1;
+        return <<t == #char "_" && (next < max_t && (allowed(<<next) || <<next == #char "_"));
+    }
+
     t += 1;
     if t >= max_t return;
 
@@ -180,16 +190,6 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
                 }
             }
         }
-    }
-
-    is_floating_point_suffix :: (c: u8) -> bool {
-        return c == #char "f" || c == #char "F" || c == #char "d" || c == #char "D" || c == #char "m" || c == #char "M";
-    }
-
-    // Consecutive underscores are allowed in numbers but they can't end in one.
-    is_valid_underscore :: (t: *u8, max_t: *u8, allowed: (u8) -> bool) -> bool {
-        next := t + 1;
-        return <<t == #char "_" && (next < max_t && (allowed(<<next) || <<next == #char "_"));
     }
 }
 
