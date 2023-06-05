@@ -93,6 +93,9 @@ Ctrl-[                      unindent
 
 Ctrl-S                      save
 
+Alt-Minus                   move_to_previous_editor_history
+Alt-Plus                    move_to_next_editor_history
+
 Ctrl-/                      toggle_comment
 Ctrl-L                      select_line
 
