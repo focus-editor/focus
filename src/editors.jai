@@ -1177,17 +1177,29 @@ switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := fa
 
         case .Single;
             current_editor := *open_editors[editors.active];
-            new_editor := find_or_create_editor(current_editor.buffer_id, editors.active);
+            new_editor_id  := find_or_create_editor(current_editor.buffer_id, editors.active);
+            new_editor     := *open_editors[new_editor_id];
+
+            // Duplicate cursors
+            array_reset(*new_editor.cursors);
+            for current_editor.cursors { array_add(*new_editor.cursors, it); } 
+            new_editor.main_cursor     = current_editor.main_cursor;
+            new_editor.original_cursor = current_editor.original_cursor;
+
+            // Move viewport
+            new_editor.viewport.scroll_x = current_editor.viewport.scroll_x;
+            new_editor.viewport.scroll_y = current_editor.viewport.scroll_y;
+
             if side == {
                 case .left;
-                    editors.left   = new_editor;
+                    editors.left   = new_editor_id;
                     editors.right  = editors.active;
                     editors.active = editors.left;
                     editors_start_moving_splitter(0.5, start = 0.0);
                 case .right; #through;
                 case .other;
                     editors.left   = editors.active;
-                    editors.right  = new_editor;
+                    editors.right  = new_editor_id;
                     editors.active = editors.right;
                     editors_start_moving_splitter(0.5, start = 1.0);
             }
@@ -1199,15 +1211,27 @@ switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := fa
             }
             if duplicate_current {
                 current_editor := *open_editors[editors.active];
-                new_editor := find_or_create_editor(current_editor.buffer_id, editors.active);
+                new_editor_id  := find_or_create_editor(current_editor.buffer_id, editors.active);
+                new_editor     := *open_editors[new_editor_id];
+
+                // Duplicate cursors
+                array_reset(*new_editor.cursors);
+                for current_editor.cursors { array_add(*new_editor.cursors, it); } 
+                new_editor.main_cursor     = current_editor.main_cursor;
+                new_editor.original_cursor = current_editor.original_cursor;
+
+                // Move viewport
+                new_editor.viewport.scroll_x = current_editor.viewport.scroll_x;
+                new_editor.viewport.scroll_y = current_editor.viewport.scroll_y;
+
                 if side == .left {
-                    editors.left   = new_editor;
+                    editors.left   = new_editor_id;
                     editors.right  = editors.active;
                 } else {
-                    editors.right  = new_editor;
+                    editors.right  = new_editor_id;
                     editors.left   = editors.active;
                 }
-                editors.active = new_editor;
+                editors.active = new_editor_id;
             }
             editors.active = ifx side == .left then editors.left else editors.right;
     }
