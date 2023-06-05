@@ -8,7 +8,6 @@
     - Have a maximum allowed line length (then force a line wrap, but with a possibility to disable and face the consequences)
     - Inspect all places where we use line_starts and consider using real_line_starts (with a switch?)
 
-- Shortcut for centering on current line
 - When switching to another editor, jump to cursor (unless multiple)
 - Autoindent region
 - Ctrl-K should copy whatever was deleted
