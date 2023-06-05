@@ -1176,30 +1176,18 @@ switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := fa
         case .None; return;
 
         case .Single;
-            current_editor := *open_editors[editors.active];
-            new_editor_id  := find_or_create_editor(current_editor.buffer_id, editors.active);
-            new_editor     := *open_editors[new_editor_id];
-
-            // Duplicate cursors
-            array_reset(*new_editor.cursors);
-            for current_editor.cursors { array_add(*new_editor.cursors, it); } 
-            new_editor.main_cursor     = current_editor.main_cursor;
-            new_editor.original_cursor = current_editor.original_cursor;
-
-            // Move viewport
-            new_editor.viewport.scroll_x = current_editor.viewport.scroll_x;
-            new_editor.viewport.scroll_y = current_editor.viewport.scroll_y;
+            duplicated_editor := duplicate_active_editor();
 
             if side == {
                 case .left;
-                    editors.left   = new_editor_id;
+                    editors.left   = duplicated_editor;
                     editors.right  = editors.active;
                     editors.active = editors.left;
                     editors_start_moving_splitter(0.5, start = 0.0);
                 case .right; #through;
                 case .other;
                     editors.left   = editors.active;
-                    editors.right  = new_editor_id;
+                    editors.right  = duplicated_editor;
                     editors.active = editors.right;
                     editors_start_moving_splitter(0.5, start = 1.0);
             }
@@ -1210,28 +1198,16 @@ switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := fa
                 if editors.active == editors.left then side = .right; else side = .left;
             }
             if duplicate_current {
-                current_editor := *open_editors[editors.active];
-                new_editor_id  := find_or_create_editor(current_editor.buffer_id, editors.active);
-                new_editor     := *open_editors[new_editor_id];
-
-                // Duplicate cursors
-                array_reset(*new_editor.cursors);
-                for current_editor.cursors { array_add(*new_editor.cursors, it); } 
-                new_editor.main_cursor     = current_editor.main_cursor;
-                new_editor.original_cursor = current_editor.original_cursor;
-
-                // Move viewport
-                new_editor.viewport.scroll_x = current_editor.viewport.scroll_x;
-                new_editor.viewport.scroll_y = current_editor.viewport.scroll_y;
-
+                duplicated_editor := duplicate_active_editor();
+                
                 if side == .left {
-                    editors.left   = new_editor_id;
+                    editors.left   = duplicated_editor;
                     editors.right  = editors.active;
                 } else {
-                    editors.right  = new_editor_id;
+                    editors.right  = duplicated_editor;
                     editors.left   = editors.active;
                 }
-                editors.active = new_editor_id;
+                editors.active = duplicated_editor;
             }
             editors.active = ifx side == .left then editors.left else editors.right;
     }
@@ -1241,6 +1217,28 @@ switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := fa
 
     update_window_title(open_editors[editors.active].buffer_id);
     cursors_start_blinking();
+}
+
+duplicate_active_editor :: () -> s64 {
+    current_editor       := *open_editors[editors.active];
+    duplicated_editor_id := find_or_create_editor(current_editor.buffer_id, editors.active);
+    duplicated_editor    := *open_editors[duplicated_editor_id];
+
+    // Duplicate cursors
+    if duplicated_editor.cursors then array_reset(*duplicated_editor.cursors);
+    for current_editor.cursors { array_add(*duplicated_editor.cursors, it); } 
+    duplicated_editor.main_cursor     = current_editor.main_cursor;
+    duplicated_editor.original_cursor = current_editor.original_cursor;
+
+    // Copy clipboard
+    if duplicated_editor.clipboard then free(duplicated_editor.clipboard);
+    duplicated_editor.clipboard = copy_string(current_editor.clipboard);
+
+    // Move viewport
+    duplicated_editor.viewport.scroll_x = current_editor.viewport.scroll_x;
+    duplicated_editor.viewport.scroll_y = current_editor.viewport.scroll_y;
+
+    return duplicated_editor_id;
 }
 
 set_editor_panes :: (left_editor_id: s64, right_editor_id: s64, active_editor_id: s64 = -1) {
