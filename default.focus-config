@@ -53,6 +53,7 @@ tab_size:                               4
 line_height_scale_percent:              120
 max_editor_width:                       -1
 editor_history_size:                    128
+scroll_to_cursor_line_offset            1
 
 
 [[keymap]]
