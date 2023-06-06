@@ -838,61 +838,48 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         maybe_set_hot_or_active(input_id,   bar_rect, .NORMAL);
         maybe_set_hot_or_active(results_id, bar_rect, .NORMAL);
 
-        numbers_label: string;
+        numbers_width := cast(float) Simp.prepare_text(font_ui_small, " No results ");
         if results {
-            numbers_label = tprint("% of %", selected_result + 1, results.count);
-        } else {
-            numbers_label = "No results";
+            width := cast(float) Simp.prepare_text(font_ui_small, tprint(" % of % ", selected_result + 1, results.count));
+            if width > numbers_width then numbers_width = width;
         }
-        numbers_width := cast(float) Simp.prepare_text(font_ui_small, numbers_label);
+
         top_rect = shrink(top_rect, margin);
         numbers_rect, input_rect := cut_right(top_rect, numbers_width + padding);
 
         Simp.draw_prepared_text(font_ui_small, xx (numbers_rect.x + padding), xx (numbers_rect.y + (numbers_rect.h - font_ui_small.character_height) / 2.0), color = Colors.UI_DEFAULT);
         input_active := editor_is_active && search_bar.active && active_global_widget == .editors;
-        draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id, label = "Find in buffer", margin_right = input_rect.h * 2);
+        draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id, label = " Find in buffer", margin_right = input_rect.h * 2);
 
-        // case sensitive button
-        {
-            btn: Rect = ---;
-            btn.x = input_rect.x + input_rect.w - input_rect.h * 2;
-            btn.y = input_rect.y;
-            btn.w = input_rect.h;
-            btn.h = input_rect.h;
-            btn = shrink(btn, 2);
+        button_width := input_rect.h;
+        pressed, hover_match_case, hover_match_word := false, false, false;
 
-            draw_rounded_rect(btn           , ifx case_sensitive then Colors.CURSOR_INACTIVE  else Colors.BACKGROUND);
-            draw_rounded_rect(shrink(btn, 1), ifx case_sensitive then Colors.BACKGROUND_LIGHT else Colors.BACKGROUND);
-
-            text_w := xx Simp.prepare_text(font_ui_very_small, "Aa");
-            text_h := font_ui_very_small.character_height;
-            text_x := btn.x + btn.w / 2 - text_w / 2;
-            text_y := btn.y + btn.h / 2 - text_h / 2;
-            text_color := ifx case_sensitive then Colors.UI_DEFAULT else Colors.UI_DIM;
-
-            Simp.draw_prepared_text(font_ui_very_small, xx text_x, xx text_y, text_color);
+        pressed, hover_match_case = draw_text_input_modifier_button(input_id, input_rect, button_width, case_sensitive, CASE_SENSITIVE_ICON);
+        if pressed {
+            search_bar_toggle_case_sensitive(editor, buffer);
+            redraw_requested = true;
         }
 
-        // whole word button
-        {
-            btn: Rect = ---;
-            btn.x = input_rect.x + input_rect.w - input_rect.h;
-            btn.y = input_rect.y;
-            btn.w = input_rect.h;
-            btn.h = input_rect.h;
-            btn = shrink(btn, 2);
+        input_rect.w -= button_width - 4 * dpi_scale;
 
-            draw_rounded_rect(btn           , ifx whole_word then Colors.CURSOR_INACTIVE  else Colors.BACKGROUND);
-            draw_rounded_rect(shrink(btn, 1), ifx whole_word then Colors.BACKGROUND_LIGHT else Colors.BACKGROUND);
-
-            text_w := xx Simp.prepare_text(font_ui_very_small, "[ab]");
-            text_h := font_ui_very_small.character_height;
-            text_x := btn.x + btn.w / 2 - text_w / 2;
-            text_y := btn.y + btn.h / 2 - text_h / 2;
-            text_color := ifx whole_word then Colors.UI_DEFAULT else Colors.UI_DIM;
-
-            Simp.draw_prepared_text(font_ui_very_small, xx text_x, xx text_y, text_color);
+        pressed, hover_match_word = draw_text_input_modifier_button(input_id, input_rect, button_width, whole_word, WHOLE_WORD_ICON);
+        if pressed {
+            search_bar_toggle_whole_word(editor, buffer);
+            redraw_requested = true;
         }
+
+        // Draw tooltips last
+        tooltip := "";
+        if hover_match_case {
+            tooltip = "Match Case";
+            combo := key_sequence_for_action_as_string(Action_Search_Dialog.toggle_case_sensitive);
+            if combo then tooltip = tprint("% (%)", tooltip, combo);
+        } else if hover_match_word {
+            tooltip = "Match Whole Word";
+            combo := key_sequence_for_action_as_string(Action_Search_Dialog.toggle_whole_word);
+            if combo then tooltip = tprint("% (%)", tooltip, combo);
+        }
+        if tooltip then draw_tooltip_bottom_left(tooltip, Vector2.{ x = mouse.pointer.x - input_rect.h / 2, y = input_rect.y + input_rect.h / 3 });
 
         // Draw search results
         if results && mode == .dropdown {
@@ -1056,7 +1043,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             if scroll_y != 0 then draw_top_down_shadow(cut_top(results_rect, char_x_advance));
         }
 
-        if ui.active != .none && ui.active != input_id && ui.active != results_id && ui.active != scrollbar_id && ui.active != search_scrollbar_id {
+        if ui.active != .none && ui.active != input_id && ui.active != results_id && !is_child(ui.active, input_id) && ui.active != scrollbar_id && ui.active != search_scrollbar_id {
             active = false;  // deactivate on clicks elsewhere (except scrollbar)
             redraw_requested = true;
         }
@@ -1136,9 +1123,9 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
 
     if buffer.modified {
         pen.x += width + padding;
-        width = xx Simp.prepare_text(font_icons_small, PEN_CHAR);
-        y_padding := (font_icons.character_height - font_icons_small.character_height) / 4.0;
-        Simp.draw_prepared_text(font_icons_small, xx pen.x, xx (pen.y + y_padding), color = file_name_color);
+        width = xx Simp.prepare_text(font_icons_tiny, PEN_ICON);
+        y_padding := (font_icons.character_height - font_icons_tiny.character_height) / 4.0;
+        Simp.draw_prepared_text(font_icons_tiny, xx pen.x, xx (pen.y + y_padding), color = file_name_color);
     }
 
     // Maybe warnings
@@ -1185,7 +1172,7 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
     if buffer.has_file {
         // Draw separator
         pen.x += width + padding;
-        width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
+        width = xx Simp.prepare_text(font_ui_small, BULLET_ICON);
         Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
 
         // Draw file path
@@ -1199,7 +1186,7 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
 
         // Draw separator
         pen.x += width + padding;
-        width = xx Simp.prepare_text(font_ui_small, BULLET_CHAR);
+        width = xx Simp.prepare_text(font_ui_small, BULLET_ICON);
         Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
 
         // Draw key sequence
@@ -1649,25 +1636,13 @@ draw_commands_dialog :: () {
             // width = xx Simp.prepare_text(font_ui_small, tprint("%", formatInt(entry.sort_key, base=16)));
             // Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
 
-            key_sequence := get_first_matching_key_sequence_from_action(entry.action);
+            key_sequence := key_sequence_for_action_as_string(entry.action);
             if key_sequence {
                 key_sequence_rect := shrink_x(entry_rect, margin);
                 key_sequence_rect.x += width;
                 key_sequence_rect.w -= width + padding;
 
-                builder: String_Builder;
-                builder.allocator = temp;
-
-                for combo: key_sequence {
-                    for combo {
-                        print_to_builder(*builder, "%", it);
-                        if it_index < combo.count - 1  print_to_builder(*builder, " + ");
-                    }
-
-                    if it_index < key_sequence.count - 1  print_to_builder(*builder, "  ");
-                }
-
-                key_sequence_width := cast(float) Simp.prepare_text(font_ui_small, builder_to_string(*builder));
+                key_sequence_width := cast(float) Simp.prepare_text(font_ui_small, key_sequence);
 
                 if is_valid(key_sequence_rect) && key_sequence_width < key_sequence_rect.w {
                     pen.x = key_sequence_rect.x + key_sequence_rect.w - key_sequence_width;
@@ -1939,11 +1914,6 @@ draw_finder :: () {
     ui_id := Ui_Id.finder;
     scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
 
-    if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
-        finder_close();
-        return;
-    }
-
     margin  := floor(12 * dpi_scale);
     padding := floor( 4 * dpi_scale);
     input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
@@ -1976,47 +1946,35 @@ draw_finder :: () {
     label := ifx initted then "Type to search in workspace" else "Still scanning the workspace. Please wait...";
     draw_text_input(*finder.input, input_rect, ui_id = input_id, active = true, label = label, margin_right = input_rect.h * 2);
 
-    // case sensitive button
-    {
-        btn: Rect = ---;
-        btn.x = input_rect.x + input_rect.w - input_rect.h * 2;
-        btn.y = input_rect.y;
-        btn.w = input_rect.h;
-        btn.h = input_rect.h;
-        btn = shrink(btn, 2);
+    button_width := input_rect.h;
+    pressed, hover_match_case, hover_match_word := false, false, false;
 
-        draw_rounded_rect(btn           , ifx case_sensitive then Colors.CURSOR_INACTIVE  else Colors.BACKGROUND);
-        draw_rounded_rect(shrink(btn, 1), ifx case_sensitive then Colors.BACKGROUND_LIGHT else Colors.BACKGROUND);
-
-        text_w := xx Simp.prepare_text(font_ui_very_small, "Aa");
-        text_h := font_ui_very_small.character_height;
-        text_x := btn.x + btn.w / 2 - text_w / 2;
-        text_y := btn.y + btn.h / 2 - text_h / 2;
-        text_color := ifx case_sensitive then Colors.UI_DEFAULT else Colors.UI_DIM;
-
-        Simp.draw_prepared_text(font_ui_very_small, xx text_x, xx text_y, text_color);
+    pressed, hover_match_case = draw_text_input_modifier_button(input_id, input_rect, button_width, case_sensitive, CASE_SENSITIVE_ICON);
+    if pressed {
+        finder_toggle_case_sensitive();
+        redraw_requested = true;
     }
 
-    // whole word button
-    {
-        btn: Rect = ---;
-        btn.x = input_rect.x + input_rect.w - input_rect.h;
-        btn.y = input_rect.y;
-        btn.w = input_rect.h;
-        btn.h = input_rect.h;
-        btn = shrink(btn, 2);
+    input_rect.w -= button_width - 4 * dpi_scale;
 
-        draw_rounded_rect(btn           , ifx whole_word then Colors.CURSOR_INACTIVE  else Colors.BACKGROUND);
-        draw_rounded_rect(shrink(btn, 1), ifx whole_word then Colors.BACKGROUND_LIGHT else Colors.BACKGROUND);
-
-        text_w := xx Simp.prepare_text(font_ui_very_small, "[ab]");
-        text_h := font_ui_very_small.character_height;
-        text_x := btn.x + btn.w / 2 - text_w / 2;
-        text_y := btn.y + btn.h / 2 - text_h / 2;
-        text_color := ifx whole_word then Colors.UI_DEFAULT else Colors.UI_DIM;
-
-        Simp.draw_prepared_text(font_ui_very_small, xx text_x, xx text_y, text_color);
+    pressed, hover_match_word = draw_text_input_modifier_button(input_id, input_rect, button_width, whole_word, WHOLE_WORD_ICON);
+    if pressed {
+        finder_toggle_whole_word();
+        redraw_requested = true;
     }
+
+    // Draw tooltips last
+    tooltip := "";
+    if hover_match_case {
+        tooltip = "Match Case";
+        combo := key_sequence_for_action_as_string(Action_Search_Dialog.toggle_case_sensitive);
+        if combo then tooltip = tprint("% (%)", tooltip, combo);
+    } else if hover_match_word {
+        tooltip = "Match Whole Word";
+        combo := key_sequence_for_action_as_string(Action_Search_Dialog.toggle_whole_word);
+        if combo then tooltip = tprint("% (%)", tooltip, combo);
+    }
+    if tooltip then draw_tooltip_bottom_left(tooltip, Vector2.{ x = mouse.pointer.x - input_rect.h / 2, y = input_rect.y + input_rect.h / 3 });
 
     scan_progress := get_workspace_scan_progress();
     if scan_progress < 1.0 {
@@ -2209,6 +2167,11 @@ draw_finder :: () {
 
         if scroll_y != 0 then draw_top_down_shadow(cut_top(files_rect, char_x_advance));
     }
+
+    if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) && !is_child(ui.active, input_id) {
+        finder_close();
+        return;
+    }
 }
 
 draw_go_to_line_dialog :: (active_editor_rect: Rect) {
@@ -2384,6 +2347,50 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
     if !input_text then Simp.draw_text(font, xx x, xx y, label, color = Colors.TEXT_INPUT_LABEL);
     draw_rect(cursor_rect, ifx active then Colors.CURSOR else Colors.CURSOR_INACTIVE);
     Simp.draw_text(font, xx x, xx y, input_text, color = color);
+}
+
+draw_text_input_modifier_button :: (input_id: Ui_Id, input_rect: Rect, width: float, enabled: bool, icon: string, loc := #caller_location) -> pressed: bool, hover: bool {
+    ui_id := get_ui_id_from_loc(loc, parent_id = input_id);
+
+    btn := cut_right(input_rect, width);
+    btn = shrink(btn, 2 * dpi_scale);
+    btn = align_to_grid(btn);
+
+    maybe_set_hot_or_active(ui_id, btn, .PRESSABLE);
+
+    hover := is_hovering_over(ui_id);
+    bg_color := ifx hover then Colors.BACKGROUND_BRIGHT else Colors.BACKGROUND_LIGHT;
+
+    if hover then draw_rounded_rect(shrink(btn, 1), bg_color);
+
+    if enabled {
+        draw_rounded_rect(shrink(btn, 1), Colors.CURSOR_INACTIVE);
+        draw_rounded_rect(shrink(btn, 2), bg_color);
+    }
+
+    text_w := cast(float) Simp.prepare_text(font_icons_small, icon);
+    text_h := font_icons_small.character_height;
+    text_x := btn.x + btn.w / 2 - text_w / 2 + 1;
+    text_y := btn.y + btn.h / 2 - text_h / 2 + 1;
+    text_color := ifx enabled then Colors.UI_DEFAULT else Colors.UI_DIM;
+
+    Simp.draw_prepared_text(font_icons_small, xx text_x, xx text_y, text_color);
+
+    return hover && mouse.left.just_pressed, hover;
+}
+
+draw_tooltip_bottom_left :: (text: string, pos: Vector2) {
+    padding := 4 * dpi_scale;
+
+    width := cast(float) Simp.prepare_text(font_ui_very_small, text);
+    rect := Rect.{ x = pos.x, y = pos.y };
+    rect.w = width + 2 * padding;
+    rect.x -= rect.w;
+    rect.h = 2 * padding + font_ui_very_small.character_height;
+    rect.y -= rect.h;
+
+    draw_rounded_rect_with_shadow(rect, Colors.BACKGROUND_LIGHT);
+    Simp.draw_prepared_text(font_ui_very_small, xx (rect.x + padding), xx (rect.y + (rect.h - font_ui_very_small.character_height) / 2) + 1, Colors.UI_DEFAULT);
 }
 
 Corner_Rounding :: enum { none; in; out; }

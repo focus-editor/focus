@@ -143,6 +143,24 @@ key_combo_strings :: (combo: Key_Combo) -> [] string /* temp */ {
     return keys;
 }
 
+key_sequence_for_action_as_string :: (action: $T) -> string /* temp */ {
+    key_sequence := get_first_matching_key_sequence_from_action(action);
+    if !key_sequence return "";
+
+    b: String_Builder;
+    b.allocator = temp;
+
+    for combo: key_sequence {
+        for combo {
+            print_to_builder(*b, "%", it);
+            if it_index < combo.count - 1  print_to_builder(*b, " + ");
+        }
+        if it_index < key_sequence.count - 1  print_to_builder(*b, "  ");
+    }
+
+    return builder_to_string(*b);
+}
+
 #scope_file
 
 get_keymap_for_action_type :: ($Action: Type) -> [] Key_Mapping #expand {

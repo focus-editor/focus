@@ -65,7 +65,6 @@
 
 - Ctrl-double click should create a new cursor and select a word
 - Ctrl-click to remove a cursor
-- Duplicating an editor should duplicate the viewport as well
 - Show default config (readonly)
 
 - Be able to change the width of the filename area in finder (and remember it somewhere)

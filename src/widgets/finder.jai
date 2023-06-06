@@ -28,8 +28,8 @@ finder_handle_event :: (event: Input.Event) -> handled: bool {
         action, mapping := map_event_to_action(event, Action_Search_Dialog);
         if action == {
             case .toggle_expand;            toggle_expand();                                        return true;
-            case .toggle_case_sensitive;    toggle_case_sensitive();                                return true;
-            case .toggle_whole_word;        toggle_whole_word();                                    return true;
+            case .toggle_case_sensitive;    finder_toggle_case_sensitive();                         return true;
+            case .toggle_whole_word;        finder_toggle_whole_word();                             return true;
 
             case .move_up;                  move_cursor(-1, wrap = true);                           return true;
             case .move_down;                move_cursor( 1, wrap = true);                           return true;
@@ -131,7 +131,7 @@ finder_update :: () {
             compare_search_results :: (r1: Search_Result, r2: Search_Result) -> s64 {
                 return cast,no_check(s64) r1.sort_key - cast,no_check(s64) r2.sort_key;
             }
-            
+
             quick_sort(results, compare_search_results);
 
             needle = copy_string(request.needle);
@@ -178,6 +178,20 @@ finder_open_selected_result :: (selected_num := -1, placement: Editor_Placement)
         // (otherwise it'll be too small and the scroll will not animate where expected)
         editor.scroll_to_cursor = .yes_new_editor;
     }
+}
+
+finder_toggle_whole_word :: () {
+    using finder;
+
+    whole_word = !whole_word;
+    start_new_search(force = true);
+}
+
+finder_toggle_case_sensitive :: () {
+    using finder;
+
+    case_sensitive = !case_sensitive;
+    start_new_search(force = true);
 }
 
 #scope_file
@@ -288,7 +302,7 @@ reset_search_request :: (using request: *Search_Request, new_needle: string) { /
     array_reset_keeping_memory(*completed_tasks);
     if needle then free(needle);
     needle = copy_string(new_needle);
-    skip_table = bmh_prepare_skip_table(needle, case_sensitive); 
+    skip_table = bmh_prepare_skip_table(needle, case_sensitive);
     num_tasks_left = 0;
     in_progress = false;
 }
@@ -317,20 +331,6 @@ toggle_expand :: () {
     } else {
         start_animation(*width_anim, width_percentage, WIDTH_NORMAL, snappy = true);
     }
-}
-
-toggle_whole_word :: () {
-    using finder;
-
-    whole_word = !whole_word;
-    start_new_search(force = true);
-}
-
-toggle_case_sensitive :: () {
-    using finder;
-
-    case_sensitive = !case_sensitive;
-    start_new_search(force = true);
 }
 
 #scope_export

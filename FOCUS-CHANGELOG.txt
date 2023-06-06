@@ -38,6 +38,7 @@
 + Basic C# syntax highlighing (thanks @audV)
 + New shortcut to center viewport on cursor: `center_viewport_on_cursor` (thanks @onelivesleft)
 + Basic editor history (thanks @onelivesleft). Use commands `move_to_previous_editor_history`/`move_to_next_editor_history` to go back to previous/next cursor position (Alt-Minus, Alt-Plus by default)
++ Duplicating an editor on the side will now duplicate cursors and viewport position (thanks @hfr4)
 
 
 # Version 0.1.9, 21 May 2023
