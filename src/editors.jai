@@ -1233,6 +1233,7 @@ duplicate_active_editor :: () -> s64 {
     // Copy clipboard
     if duplicated_editor.clipboard then free(duplicated_editor.clipboard);
     duplicated_editor.clipboard = copy_string(current_editor.clipboard);
+    duplicated_editor.clipboard_copied_line_without_selection = current_editor.clipboard_copied_line_without_selection;
 
     // Move viewport
     duplicated_editor.viewport.scroll_x = current_editor.viewport.scroll_x;
