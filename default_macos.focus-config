@@ -48,6 +48,7 @@ strip_trailing_whitespace_on_save:      false
 smooth_scrolling:                       true
 double_shift_to_search_in_workspace:    false
 can_cancel_go_to_line:                  true
+copy_line_without_selection:            false
 max_entries_in_open_file_dialog:        2000
 tab_size:                               4
 line_height_scale_percent:              120

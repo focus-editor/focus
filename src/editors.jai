@@ -203,7 +203,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .new_line_above_without_breaking;  new_line_above                      (editor, buffer);
 
         case .copy;                             copy_selection_to_clipboard         (editor, buffer);
-        case .cut;                              copy_selection_to_clipboard         (editor, buffer, cut = true);
+        case .cut;                              cut_selection_to_clipboard          (editor, buffer);
         case .paste;                            paste_from_clipboard                (editor, buffer);
 
         case .delete_left_char;                 delete_left_char                    (editor, buffer);
@@ -2175,11 +2175,52 @@ delete_to_end_of_line :: (editor: *Editor, buffer: *Buffer) {
     delete_right_char(editor, buffer);
 }
 
-copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) {
+copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer) {
     any_selection := false;
     for cursor : editor.cursors { if has_selection(cursor) { any_selection = true; break; } }
 
-    if cut && !any_selection {
+    editor.clipboard_copied_line_without_selection = false;
+
+    if any_selection {
+        b: String_Builder;
+        offset := 0;
+        for * cursor : editor.cursors {
+            str := get_selected_string(cursor, buffer);
+            append(*b, str);
+            if it_index < editor.cursors.count -1 then append(*b, "\n");
+            cursor.clipboard = .{ start = xx offset, count = xx str.count };
+            offset += str.count + 1;
+        }
+
+        combined_str := builder_to_string(*b);
+        if combined_str {
+            os_clipboard_set_text(combined_str);
+            if editor.clipboard then free(editor.clipboard);
+            editor.clipboard = combined_str;  // now it owns it
+        }
+    } else if config.settings.copy_line_without_selection && editor.cursors.count == 1 {
+        first_cursor := *editor.cursors[0];
+        line_num     := offset_to_line(buffer, first_cursor.pos);
+        line_str     := get_line_as_string(buffer, line_num);
+
+        b: String_Builder;
+        append(*b, line_str);
+
+        str := builder_to_string(*b);
+        if str {
+            os_clipboard_set_text(str);
+            if editor.clipboard then free(editor.clipboard);
+            editor.clipboard = str;  // now it owns it
+            editor.clipboard_copied_line_without_selection = true;
+        }
+    }
+}
+
+cut_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer) {
+    any_selection := false;
+    for cursor : editor.cursors { if has_selection(cursor) { any_selection = true; break; } }
+
+    if !any_selection {
         // If no cursors have a selection, then pressing cut will cut whole lines
         for * cursor : editor.cursors {
             // Select the whole line
@@ -2189,9 +2230,6 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) 
             cursor.col_wanted = -1;
         }
         organise_cursors(editor);  // resolve overlapping selections
-    } else if !cut && !any_selection {
-        // TODO: have a config option to copy line where there's no selection for those who want it
-        return;  // don't want to trash the clipboard when you accidentally press Ctrl+C
     }
 
     b: String_Builder;
@@ -2211,19 +2249,17 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) 
         editor.clipboard = combined_str;  // now it owns it
     }
 
-    if cut {
-        offset_delta := 0;
-        for * cursor : editor.cursors {
-            cursor.pos -= xx offset_delta;
-            cursor.sel -= xx offset_delta;
-            selection := get_selection(cursor);
-            delete_range(buffer, selection);
-            cursor.col_wanted = -1;
-            cursor.pos = selection.start;
-            offset_delta += selection.end - selection.start;
-        }
-        editor.cursor_moved = .refresh_only;
+    offset_delta := 0;
+    for * cursor : editor.cursors {
+        cursor.pos -= xx offset_delta;
+        cursor.sel -= xx offset_delta;
+        selection := get_selection(cursor);
+        delete_range(buffer, selection);
+        cursor.col_wanted = -1;
+        cursor.pos = selection.start;
+        offset_delta += selection.end - selection.start;
     }
+    editor.cursor_moved = .refresh_only;
 }
 
 paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
@@ -2234,22 +2270,37 @@ paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
         if editor.clipboard free(editor.clipboard);
         editor.clipboard = system_clipboard_text;
         for * cursor : editor.cursors { cursor.clipboard = .{ start = 0, count = xx editor.clipboard.count }; }
+        editor.clipboard_copied_line_without_selection = false;
     } else {
         free(system_clipboard_text);
     }
+    
+    first_cursor := *editor.cursors[0];
+    if config.settings.copy_line_without_selection && editor.clipboard_copied_line_without_selection && editor.cursors.count == 1 && !has_selection(first_cursor) {
+        line_num   := offset_to_line(buffer, first_cursor.pos);
+        line_start := get_line_start_offset(buffer, line_num);
+        
+        insert_string_at_offset(buffer, line_start, editor.clipboard);
 
-    offset_delta := 0;
-    for * cursor : editor.cursors {
-        cursor.pos += xx offset_delta;
-        cursor.sel += xx offset_delta;
-        selection := get_selection(cursor);
-        str := get_clipboard_string(editor, cursor);
-        replace_range(buffer, selection, str);
-        cursor.pos = xx (selection.start + str.count);
-        cursor.col_wanted = -1;
-        offset_delta += str.count - (selection.end - selection.start);
+        // Move cursor to the next line
+        first_cursor.pos += xx editor.clipboard.count;
+        first_cursor.sel += xx editor.clipboard.count;
 
-        add_paste_animation(editor, Offset_Range.{ start = selection.start, end = selection.start + cast(s32) str.count });
+        add_paste_animation(editor, .{ start = line_start, end = line_start + cast(s32) editor.clipboard.count });
+    } else {
+        offset_delta := 0;
+        for * cursor : editor.cursors {
+            cursor.pos += xx offset_delta;
+            cursor.sel += xx offset_delta;
+            selection := get_selection(cursor);
+            str := get_clipboard_string(editor, cursor);
+            replace_range(buffer, selection, str);
+            cursor.pos = xx (selection.start + str.count);
+            cursor.col_wanted = -1;
+            offset_delta += str.count - (selection.end - selection.start);
+
+            add_paste_animation(editor, Offset_Range.{ start = selection.start, end = selection.start + cast(s32) str.count });
+        }
     }
 
     editor.cursor_moved = .large_edit;
@@ -2368,6 +2419,7 @@ Editor :: struct {
     original_cursor: s64;  // we remember the original cursor when first creating multiple cursors (and go back to it on escape)
 
     clipboard: string;
+    clipboard_copied_line_without_selection: bool;
 
     search_whole_words := false;  // used when creating new cursors
     cursor_moved := Cursor_Movement.has_not_moved; // this may trigger a scroll so that the cursor is within acceptable bounds
