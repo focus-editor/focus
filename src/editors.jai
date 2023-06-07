@@ -2532,10 +2532,6 @@ Editor_State :: struct {
     }
 }
 
-Clipboard_State :: struct {
-    try_copying_single_line_without_selection: bool;
-}
-
 // When opening a new editor, we can specify where in the layout it should go
 Editor_Placement :: enum {
     in_place;
