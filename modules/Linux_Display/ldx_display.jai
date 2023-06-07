@@ -182,6 +182,14 @@ x11_toggle_fullscreen :: (x11_win: *X11Window, desire_fullscreen: bool, saved: *
 x11_create_window :: (x11_display: *X11Display, ld_win: LDWindow, width: int, height: int, window_name: string,
     window_x: int, window_y: int, x11_parent: *X11Window, background_color_rgb: [3]float) -> bool
 {
+    to_u16 :: (f: float) -> u16 {
+        u := cast(s32)(f * 65535);
+        if u < 0      u = 0;
+        if u > 65535  u = 65535;
+
+        return cast(u16) u;
+    }
+
     d := x11_display.handle;
 
     XLockDisplay(d);
@@ -232,14 +240,6 @@ x11_create_window :: (x11_display: *X11Display, ld_win: LDWindow, width: int, he
         InputOutput, vi.visual,
         cast(u64) (CWColormap | CWEventMask),
         *swa);
-
-    to_u16 :: (f: float) -> u16 {
-        u := cast(s32)(f * 65535);
-        if u < 0      u = 0;
-        if u > 65535  u = 65535;
-
-        return cast(u16) u;
-    }
 
     win_name := temp_c_string(window_name);
     if window_name then XStoreName(d, win, win_name);
