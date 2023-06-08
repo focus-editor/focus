@@ -21,7 +21,7 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
             // Handle "func :: ("
             before_prev, prev := last_tokens[0], last_tokens[1];
             if prev.type == .identifier {
-                memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
+                memset(colors.data + prev.start, xx Code_Color.FUNCTION_CALL, prev.len);
             } else if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
                 memset(colors.data + before_prev.start, xx Code_Color.FUNCTION, before_prev.len);
             }
@@ -30,6 +30,11 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
             before_prev, prev := last_tokens[0], last_tokens[1];
             if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
                 memset(colors.data + before_prev.start, xx Code_Color.FUNCTION, before_prev.len);
+            }
+        } else if token.type == .keyword && (token.keyword == .kw_struct || token.keyword == .kw_enum || token.keyword == .kw_union) {
+            before_prev, prev := last_tokens[0], last_tokens[1];
+            if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
+                memset(colors.data + before_prev.start, xx Code_Color.TYPE_NAME, before_prev.len);
             }
         }
 

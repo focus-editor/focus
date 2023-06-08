@@ -140,7 +140,9 @@ map_color_name_to_color_struct :: (color_name: string) -> *Color, found: bool {
         case "code_default";                    color = *Colors.CODE_DEFAULT;
         case "code_comment";                    color = *Colors.CODE_COMMENT;
         case "code_type";                       color = *Colors.CODE_TYPE;
+        case "code_type_name";                  color = *Colors.CODE_TYPE_NAME;
         case "code_function";                   color = *Colors.CODE_FUNCTION;
+        case "code_function_call";              color = *Colors.CODE_FUNCTION_CALL;
         case "code_punctuation";                color = *Colors.CODE_PUNCTUATION;
         case "code_operation";                  color = *Colors.CODE_OPERATION;
         case "code_string";                     color = *Colors.CODE_STRING;
