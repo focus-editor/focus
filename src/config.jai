@@ -373,7 +373,7 @@ Color_Values :: struct {
     LIST_CURSOR             := Color.{ r = 0.20, g = 0.80, b = 0.80, a = 0.3 };
     SHADOW_DARK             := Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0.5 };
     SHADOW_TRANSPARENT      := Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0 };  // for interpolation
-    TEXT_INPUT_LABEL     := Color.{ r = 0.233, g = 0.269, b = 0.316, a = 1.0 };
+    TEXT_INPUT_LABEL        := Color.{ r = 0.233, g = 0.269, b = 0.316, a = 1.0 };
 
     UI_DEFAULT              := Color.{ r = 0.75, g = 0.79, b = 0.86, a = 1.0 };
     UI_DIM                  := Color.{ r = 0.533, g = 0.569, b = 0.616, a = 1.0 };
@@ -387,7 +387,9 @@ Color_Values :: struct {
     CODE_DEFAULT            := Color.{ r = 0.75, g = 0.79, b = 0.86, a = 1.0 };
     CODE_COMMENT            := Color.{ r = 0.533, g = 0.569, b = 0.616, a = 1.0 };
     CODE_TYPE               := Color.{ r = 0.51, g = 0.67, b = 0.64, a = 1.0 };
+    CODE_TYPE_NAME          := Color.{ r = 0.75, g = 0.79, b = 0.86, a = 1.0 };
     CODE_FUNCTION           := Color.{ r = 0.816, g = 0.776, b = 0.663, a = 1.0 };
+    CODE_FUNCTION_CALL      := Color.{ r = 0.816, g = 0.776, b = 0.663, a = 1.0 };
     CODE_PUNCTUATION        := Color.{ r = 0.75, g = 0.79, b = 0.86, a = 1.0 };
     CODE_OPERATION          := Color.{ r = 0.88, g = 0.68, b = 0.51, a = 1.0 };
     CODE_STRING             := Color.{ r = 0.835, g = 0.74, b = 0.494, a = 1.0 };
@@ -403,10 +405,12 @@ Code_Color :: enum u8 {
     DEFAULT;
     COMMENT;
     TYPE;
+    TYPE_NAME;
     KEYWORD;
     VALUE_KEYWORD;
     VALUE;
     FUNCTION;
+    FUNCTION_CALL;
     PUNCTUATION;
     STRING;
     ERROR;
@@ -425,7 +429,9 @@ refresh_code_color_map :: () -> [Code_Color.NUM_COLORS] Vector4 {
     result[DEFAULT]         = Colors.CODE_DEFAULT;
     result[COMMENT]         = Colors.CODE_COMMENT;
     result[TYPE]            = Colors.CODE_TYPE;
+    result[TYPE_NAME]       = Colors.CODE_TYPE_NAME;
     result[FUNCTION]        = Colors.CODE_FUNCTION;
+    result[FUNCTION_CALL]   = Colors.CODE_FUNCTION_CALL;
     result[PUNCTUATION]     = Colors.CODE_PUNCTUATION;
     result[STRING]          = Colors.CODE_STRING;
     result[VALUE]           = Colors.CODE_VALUE;

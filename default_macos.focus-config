@@ -286,7 +286,9 @@ ui_success:                     227722FF
 code_default:                   BFC9DBFF
 code_comment:                   87919DFF
 code_type:                      82AAA3FF
+code_type_name:                 BFC9DBFF
 code_function:                  D0C5A9FF
+code_function_call:             D0C5A9FF
 code_punctuation:               BFC9DBFF
 code_operation:                 E0AD82FF
 code_string:                    D4BC7DFF
