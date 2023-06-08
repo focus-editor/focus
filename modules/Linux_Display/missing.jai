@@ -60,7 +60,7 @@ XLookupChars    : Status =  2;
 XLookupKeySym   : Status =  3;
 XLookupBoth     : Status =  4;
 
-XwcLookupString :: (ic: XIC, event: *XKeyEvent, buffer: *u32, buffer_size: s32, keysym: *KeySym, status: *Status) -> s32 #foreign libx11;
+XwcLookupString :: (ic: XIC, event: *XKeyEvent, buffer: *u32, buffer_size: s32, keysym: *KeySym, status: *Status) -> s32 #foreign libX11;
 
 LC_ALL : s32 : 6;
 setlocale :: (what: s32, loc: *u8) -> *u8 #foreign libc;
@@ -78,10 +78,9 @@ timer_delete :: (timer: timer_t) -> s32 #foreign librt;
 
 glXQueryExtension :: (dpy: *Display, error_base: *s32, event_base: *s32) -> Bool #foreign libGLX;
 
-
 #scope_file
 
-libx11 :: #system_library "libX11";
+libX11 :: #system_library "libX11";
 libGLX :: #system_library "libGLX";
 libc :: #system_library "libc";
 librt :: #system_library "librt";

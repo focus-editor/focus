@@ -9,7 +9,7 @@ INVALID_WINDOW : LDWindow : null;
 Timer :: *_Timer;
 Timer_Cb :: #type (timer: Timer);
 
-BACKEND :: enum {
+BACKEND_CHOICE :: enum {
     PREFER_BEST_USER_EXPERIENCE;
     PREFER_WAYLAND;
     PREFER_X11;
@@ -17,8 +17,16 @@ BACKEND :: enum {
     FORCE_X11;
 }
 
-init_display :: (backend: BACKEND) -> bool {
+ACTIVE_BACKEND :: enum {
+    UNINITIALIZED;
+    WAYLAND;
+    X11;
+}
+
+init :: (backend: BACKEND_CHOICE, app_id := "com.jai.application") -> bool {
     if global_display.tag == X11Display || global_display.tag == WLDisplay return true;
+    if global_app_id free(global_app_id);
+    global_app_id = copy_string(app_id);
     if #complete backend == {
         case .PREFER_BEST_USER_EXPERIENCE; {
             /*
@@ -54,6 +62,14 @@ init_display :: (backend: BACKEND) -> bool {
     return false;
 }
 
+active_backend :: () -> ACTIVE_BACKEND {
+    if global_display.tag == {
+        case WLDisplay; return .WAYLAND;
+        case X11Display; return .X11;
+        case; return .UNINITIALIZED;
+    }
+}
+
 /*
  * LDWindow functions
  */
@@ -86,6 +102,13 @@ create_window :: (width: int, height: int, window_name: string, window_x := 0, w
             return ret;
         }
         case; return INVALID_WINDOW;
+    }
+}
+
+// Assumes the buffer is in ARGB format
+set_icon_from_raw_data :: (win: LDWindow, data: *void, w: s32, h: s32) {
+    if win.tag == {
+        case X11Window; x11_set_icon_from_raw_data(isa(win, X11Window), data, xx w, xx h);
     }
 }
 
@@ -389,3 +412,5 @@ timer_callback :: (val: sigval_t) #c_call {
 }
 
 WHEEL_DELTA : s32 : 120;
+
+global_app_id: string;

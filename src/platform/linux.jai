@@ -44,24 +44,78 @@ platform_apply_config :: (config: *platform_config) {
 }
 
 platform_setup :: inline () {
-    backend := LD.BACKEND.PREFER_BEST_USER_EXPERIENCE;
+    app_id     :: "dev.focus-editor.focus";  // needs to be lower-case as (some?) Wayland compositors seem to lower-case app ids anyway and we need the desktop entry file name to match the app id
+    app_ver_id :: 1;   // ID that we can increment if we need to change the desktop entry in any way
+    ver_id     :: #run sprint("%-%", app_id, app_ver_id);
+    ver_id_key :: #run sprint("X-Focus-Ver-Id=%", ver_id);
+
+    data_dir := platform_data_dir();
+    defer free(data_dir);
+
+    make_directory_if_it_does_not_exist(data_dir);
+
+    icon_path := sprint("%/%.png", data_dir, ver_id);
+    defer free(icon_path);
+    if !file_exists(icon_path) write_entire_file(icon_path, icon_data.png_data);
+
+    // The name of the desktop entry file must match the app id
+    desktop_entry_path := sprint("%/applications/%.desktop", XDG.get_path(.DATA_HOME), app_id);
+    defer free(desktop_entry_path);
+
+    needs_new_desktop_entry := false;
+    data, success := read_entire_file(desktop_entry_path);
+    if success {
+        pos := find_index_from_left(data, ver_id_key);
+        if pos < 0 {
+            needs_new_desktop_entry = true;
+        } else {
+            pos += ver_id_key.count;
+            s := slice(data, pos, data.count - pos);
+            needs_new_desktop_entry = (s.count == 0) || ((s.count > 0) && (s[0] != #char "\n"));
+        }
+    } else {
+        needs_new_desktop_entry = true;
+    }
+
+    if needs_new_desktop_entry {
+        desktop_entry_fmt := #string DONE
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Focus editor (application icon entry)
+Terminal=false
+NoDisplay=true
+DBusActivatable=false
+Exec=focus-linux
+Icon=%
+%
+DONE;
+        desktop_entry_data := sprint(desktop_entry_fmt, icon_path, ver_id_key);
+        write_entire_file(desktop_entry_path, desktop_entry_data);
+        free(desktop_entry_data);
+    }
+
+    backend := LD.BACKEND_CHOICE.PREFER_BEST_USER_EXPERIENCE;
     cstr := getenv("FOCUS_LD_BACKEND");
     backend_s := ifx cstr then to_string(cstr) else "";
     if equal_nocase(backend_s, "prefer-wayland") then backend = .PREFER_WAYLAND;
     if equal_nocase(backend_s, "prefer-x11") then backend = .PREFER_X11;
     if equal_nocase(backend_s, "wayland") then backend = .FORCE_WAYLAND;
     if equal_nocase(backend_s, "x11") then backend = .FORCE_X11;
-    LD.init_display(backend);
+    LD.init(backend, app_id);
+
+    active_backend := LD.active_backend();
+    assert(active_backend != .UNINITIALIZED);
 }
 
 platform_data_dir :: () -> string {
-    data_dir := sprint("%/focus-editor", get_xdg_path(.DATA_HOME));
+    data_dir := sprint("%/focus-editor", XDG.get_path(.DATA_HOME));
     make_directory_if_it_does_not_exist(data_dir);
     return data_dir;
 }
 
 platform_config_dir :: () -> string {
-    config_dir := sprint("%/focus-editor", get_xdg_path(.CONFIG_HOME));
+    config_dir := sprint("%/focus-editor", XDG.get_path(.CONFIG_HOME));
     make_directory_if_it_does_not_exist(config_dir);
     return config_dir;
 }
@@ -71,7 +125,13 @@ platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, 
 }
 
 platform_create_window :: () {
-    window = create_window(window_width, window_height, window_generic_title, window_x, window_y, background_color_rgb = as_3_floats(Colors.BACKGROUND));
+    window = LD.create_window(
+        window_width, window_height,
+        window_generic_title,
+        window_x, window_y,
+        background_color_rgb = as_3_floats(Colors.BACKGROUND));
+
+    LD.set_icon_from_raw_data(window, icon_data.raw_pixels.data, icon_data.width, icon_data.height);
 }
 
 platform_maximize_window :: (window: Window_Type) {
@@ -79,7 +139,7 @@ platform_maximize_window :: (window: Window_Type) {
 }
 
 platform_enable_drag_and_drop :: (window: Window_Type) {
-    typelist := string.["url/url", "text/uri-list", "text/plain", "application/octet-stream"];  // @Incomplete: test this on Linux
+    typelist := string.["url/url", "text/uri-list", "text/plain", "application/octet-stream"];
     LD.enable_dnd(window, typelist);
 }
 
@@ -107,7 +167,6 @@ platform_enumerate_logical_drives :: () -> [] string {
 platform_get_save_file_name :: (name := "") -> string, bool {
     print("name = '%'\n", name);
     return "", false;
-    // return name;
 }
 
 platform_find_font_by_name :: (name: string, allocator := temp) -> bool, string {
@@ -120,60 +179,55 @@ platform_get_fonts_dir :: () -> string {
 }
 
 platform_open_in_explorer :: (path: string, reveal := false) {
+    XDG.open(path, reveal);
 }
 
 #scope_file
 
-XDG_Dir :: enum {
-    DATA_HOME;
-    CONFIG_HOME;
-    STATE_HOME;
-}
+LD  :: #import "Linux_Display";
+XDG :: #import "XDG";
 
-/*
- * @TODO: add a proper XDG path module
- * ref: https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
- */
-get_xdg_path :: (dir: XDG_Dir) -> string {
-    env_var: string;
-    if #complete dir == {
-        case .DATA_HOME;   env_var = "XDG_DATA_HOME";
-        case .CONFIG_HOME; env_var = "XDG_CONFIG_HOME";
-        case .STATE_HOME;  env_var = "XDG_STATE_HOME";
-    }
-    env_path := getenv(env_var.data);
-    if env_path {
-        ret := to_string(env_path);
-        if starts_with(ret, "/") {
-            if ends_with(ret, "/") && ret != "/" ret.count -= 1;
-            return ret;
-        }
-    }
+#import "POSIX";
+#import "Process";
+#import "File";
+#import "File_Utilities";
 
-    pw := getpwuid(getuid());
-    if pw {
-        home := to_string(pw.pw_dir);
-        if ends_with(home, "/") && home != "/" home.count -= 1;
-        if #complete dir == {
-            case .DATA_HOME;   return tprint("%/.local/share", home);
-            case .CONFIG_HOME; return tprint("%/.config", home);
-            case .STATE_HOME;  return tprint("%/.local/state", home);
-        }
+
+// Application icon
+icon_data :: #run -> Linux_Icon {
+    #import "stb_image";
+
+
+    data, success := read_entire_file("images/linux-icon.png");
+    assert(success, "Failed to read Linux icon!");
+
+    icon: Linux_Icon;
+    raw_pixels := stbi_load_from_memory(data.data, xx data.count, *icon.width, *icon.height, *icon.n_chan, 4);
+    assert(raw_pixels != null, "Failed to parse PNG data!");
+    assert(icon.n_chan == 4, "Expected 4 channels per pixel, got %!", icon.n_chan);
+
+    size := icon.width * icon.height;
+    pixels: [..]u32;
+    array_resize(*pixels, size);
+    memcpy(pixels.data, raw_pixels, xx (size * 4));
+
+    for * pixels {
+        v := <<it;
+        <<it = (v & 0xff000000) | ((v & 0x00ff0000) >> 16) | (v & 0x0000ff00) | ((v & 0x000000ff) << 16);
     }
 
-    /* just fall back to executable directory */
-    return path_strip_filename(get_path_of_running_executable());
-}
+    icon.png_data = data;
+    icon.raw_pixels = pixels;
 
-Monitor :: struct {
-    left   : int;
-    top    : int;
-    right  : int;
-    bottom : int;
+    stbi_image_free(raw_pixels);
+
+    return icon;
 };
 
-monitors : [..] Monitor;
-
-LD :: #import "Linux_Display";
-#import "Math";
-#import "POSIX";
+Linux_Icon :: struct {
+    width: s32;
+    height: s32;
+    n_chan: s32;
+    png_data: string;
+    raw_pixels: []u32;
+}

@@ -633,7 +633,7 @@ wl_create_window :: (d: *WLDisplay, ld_win: LDWindow, width: int, height: int, w
     w.x_toplevel = xdg_surface.get_toplevel(w.x_surface);
     xdg_toplevel.add_listener(w.x_toplevel, *x_toplevel_listener, w);
     xdg_toplevel.set_title(w.x_toplevel, window_name.data);
-    xdg_toplevel.set_app_id(w.x_toplevel, "com.ileonte.jai.wayland-1");  // @TODO: get this from the user somehow
+    xdg_toplevel.set_app_id(w.x_toplevel, temp_c_string(global_app_id));
     wl_proxy.set_user_data(w.x_toplevel, w);
 
     if d.decoration_manager {
