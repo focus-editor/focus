@@ -26,7 +26,15 @@
 
 # Version 0.1.11 (UNRELEASED)
 
-+ ...
++ Linux: the "Open Projects Directory" command as well as shift-clicking files/directories in the "open file" dialogs (Ctrl+O, Ctrl+Shift+O, Ctrl+P) should now work.
+  By default the editor will try to auto-detect the prefered file manager using the XDG utilities.
+  In case the auto-detection fails you can manually set the commands to run via the "explorer_command" and "explorer_reveal_command" options in the "[[linux]]" section of the config file.
+  Example:
+
+    [[linux]]
+    # '%s' is replaced with the path of the file/directory to open
+    explorer_command:         konsole -e mc "%s"      # this command is used when opening a directory
+    explorer_reveal_command:  nautilus --select "%s"  # this command is used when highlighting a specific file in a directory
 
 
 # Version 0.1.10
