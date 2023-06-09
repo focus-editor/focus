@@ -4,6 +4,8 @@ PLATFORM_SUBSECTION_NAMES :: string.[];
 
 platform_config :: struct {
     scaling_factor: float = 0.0;
+    explorer_command: string;
+    explorer_reveal_command: string;
 }
 
 platform_parse_config_line :: (config: *platform_config, section: PLATFORM_SUBSECTION_ENUM, line: string) -> success: bool, error_msg: string {
@@ -30,6 +32,12 @@ platform_parse_config_line :: (config: *platform_config, section: PLATFORM_SUBSE
             }
             config.scaling_factor = f_val;
         }
+        case "explorer_command"; {
+            config.explorer_command = copy_string(trim(value));
+        }
+        case "explorer_reveal_command"; {
+            config.explorer_reveal_command = copy_string(trim(value));
+        }
         case; {
             error_msg := tprint("Unknown setting '%' in section '%'", setting, PLATFORM_CONFIG_SECTION);
             return false, error_msg;
@@ -41,6 +49,13 @@ platform_parse_config_line :: (config: *platform_config, section: PLATFORM_SUBSE
 
 platform_apply_config :: (config: *platform_config) {
     LD.set_fixed_scaling(config.scaling_factor);
+}
+
+platform_copy_config :: (src: *platform_config, dst: *platform_config) {
+    free(dst.explorer_command);
+    free(dst.explorer_reveal_command);
+    dst.* = src.*;
+    src.* = .{};
 }
 
 platform_setup :: inline () {
@@ -195,6 +210,28 @@ platform_get_fonts_dir :: () -> string {
 }
 
 platform_open_in_explorer :: (path: string, reveal := false) {
+    local_run := (reveal && (config.platform.explorer_reveal_command.count > 0)) || (!reveal && (config.platform.explorer_command.count > 0));
+    if local_run {
+        args: [..]string;
+        cmd_s: string;
+
+        defer free(cmd_s);
+        defer array_reset(*args);
+
+        if !reveal && config.platform.explorer_command.count > 0 {
+            cmd_s = replace(config.platform.explorer_command, "%s", path);
+        }
+        if reveal && config.platform.explorer_reveal_command.count > 0 {
+            cmd_s = replace(config.platform.explorer_reveal_command, "%s", path);
+        }
+
+        if cmd_s.count > 0 {
+            args = break_command_into_strings(cmd_s);
+            process: Process;
+            create_process(*process, ..args);
+            return;
+        }
+    }
     XDG.open(path, reveal);
 }
 

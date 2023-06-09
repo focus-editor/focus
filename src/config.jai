@@ -253,7 +253,7 @@ merge_configs :: (dst: *Config, src: Config) {
     CODE_COLOR_MAP = refresh_code_color_map();
 
     // Platform config
-    dst.platform = src.platform;
+    platform_copy_config(*src.platform, *dst.platform);
 }
 
 load_font_by_name :: (name: string) -> font_data: string, success: bool {

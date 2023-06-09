@@ -8,7 +8,9 @@ platform_parse_config_line :: (config: *platform_config, section: PLATFORM_SUBSE
 }
 
 platform_apply_config :: inline (config: *platform_config) {
+}
 
+platform_copy_config :: (src: *platform_config, dst: *platform_config) {
 }
 
 platform_setup :: () {
@@ -157,13 +159,13 @@ platform_find_font_by_name :: (name: string, allocator := temp) -> bool, string 
             for type : types {
                 buff: [1024]u8;
                 size: DWORD = buff.count - 1;
-                
+
                 value := sprint("%1%2%3\0", name, style, type);  // Needs '\0' at the end so we can pass it to RegGetValueA()
                 defer free(value);
-                
+
                 ret := RegGetValueA(hkey, key.data, value.data, RRF_RT_REG_SZ, null, buff.data, *size);
                 if ret != 0 continue;
-                
+
                 path := to_string(buff.data, size);
                 if !is_absolute_path(path) {
                     full_path := tprint("%/%", platform_get_fonts_dir(), path);
@@ -195,7 +197,7 @@ platform_get_fonts_dir :: () -> string {
 platform_open_in_explorer :: (path: string, reveal := false) {
     path_backslashes := copy_string(path, allocator = temp);
     path_overwrite_separators(path_backslashes, #char "\\");
-    
+
     if reveal run_command("explorer", "/select,", path_backslashes);
     else      run_command("explorer", path_backslashes);
 }
@@ -244,7 +246,7 @@ KillTimer :: (hWnd: HWND, nIDEvent: u64) -> bool #foreign user32;
 GetDpiForWindow :: (hWnd: HWND) -> u32 #foreign user32;
 GetLogicalDriveStringsW :: (nBufferLength: DWORD, lpBuffer: *u16) -> DWORD #foreign kernel32;
 ShellExecuteW :: (hwnd: HWND, lpOperation: *u16, lpFile: *u16, lpParameters: *u16, lpDirectory: *u16, nShowCmd: int) -> s32 #foreign shell32;
-SHGetKnownFolderPath :: (nFolder: REFGUID, dwFlags: DWORD, hToken: HANDLE, pszPath: **u16) -> HRESULT #foreign shell32; 
+SHGetKnownFolderPath :: (nFolder: REFGUID, dwFlags: DWORD, hToken: HANDLE, pszPath: **u16) -> HRESULT #foreign shell32;
 CoTaskMemFree :: (pv: *void) #foreign ole32;
 
 #import "Windows";

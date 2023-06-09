@@ -10,6 +10,9 @@ platform_parse_config_line :: (config: *platform_config, section: PLATFORM_SUBSE
 platform_apply_config :: inline (config: *platform_config) {
 }
 
+platform_copy_config :: (src: *platform_config, dst: *platform_config) {
+}
+
 platform_setup :: inline () {
     init_mac_app();
 }
