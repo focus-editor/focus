@@ -51,14 +51,101 @@ get_path :: (dir: KnownDirectory, allocator := context.allocator) -> string {
 /*
  * Utils
  */
-open :: (path: string, reveal_in_explorer := false) {
-    status, explorer_desktop_file := run_command(
-        "xdg-mime", "query", "default", "inode/directory",
-        capture_and_return_output = true);
-    print("explorer_desktop_file=%\n", trim(explorer_desktop_file));
+open :: (path: string, reveal_in_explorer := false) -> bool {
+    started_ok :: (status: Process_Result) -> bool {
+        if #complete status.type == {
+            case .UNSTARTED; #through;
+            case .FAILED_TO_LAUNCH; #through;
+            case .SIGNALED; return false;
+            case .STILL_RUNNING; return true;
+            case .EXITED; return status.exit_code == 0;
+        }
+    }
 
-    // args : [2]string = .["xdg-open", path];
-    run_command("xdg-open", path);
+    extract_name_of_explorer :: (desktop_file: string) -> success: bool, exec: string {
+        exec_key :: "Exec=";
+
+        full_path: string;
+        if find_index_from_left(desktop_file, "/") >= 0 full_path = copy_string(desktop_file);
+        else full_path = sprint("/usr/share/applications/%", desktop_file);
+        defer free(full_path);
+
+        data, loaded := read_entire_file(full_path);
+        if !loaded return false, "";
+        defer free(data);
+
+        pos := find_index_from_left(data, exec_key);
+        if pos < 0 return false, "";
+        while (pos > 0) && (data[pos - 1] != #char "\n") {
+            pos = find_index_from_left(data, exec_key, pos + 1);
+        }
+        if pos < 0 return false, "";
+
+        pos += exec_key.count;
+        s := slice(data, pos, data.count - pos);
+        pos = find_index_from_left(s, "\n");
+        if pos >= 0 s = slice(s, 0, pos);
+
+        pieces := break_command_into_strings(s);
+        assert(pieces.count > 0);
+
+        return true, copy_string(pieces[0]);
+    }
+
+    get_file_name :: (path: string) -> string {
+        pos := find_index_from_right(path, "/");
+        return ifx pos < 0 then path else slice(path, pos + 1, path.count - (pos + 1));
+    }
+
+    // We expect children to be reaped externally since some of the things we run here
+    // may be long-running (like file managers). Thus we need a version of `run_command()`
+    // that does not kill/reap the child itself.
+    //
+    // @TODO: This version is extremely dumb/simple. We need a better way to track/reap
+    //        children that doesn't depend on external help.
+    run :: (arg: ..string) -> result: Process_Result, output: string {
+        result: Process_Result;
+        process: Process;
+        if !create_process(*process, ..arg, capture_and_return_output = true) return result, "";
+
+        result.type = .STILL_RUNNING;
+        output: [512]u8;
+        error: [512]u8;
+        success, out_bytes, err_bytes := read_from_process(*process, output, error);
+        if !success {
+            result.type = .EXITED;
+            result.exit_code = 126;
+            return result, "";
+        }
+
+        return result, copy_string(to_string(output.data, out_bytes));
+    }
+
+    if !reveal_in_explorer {
+        process: Process;
+        return create_process(*process, "xdg-open", path);
+    }
+
+    status, output := run("xdg-mime", "query", "default", "inode/directory");
+    if !started_ok(status) return false;
+    defer free(output);
+    explorer_desktop_file := trim(output);
+    if !ends_with(explorer_desktop_file, ".desktop") return false;
+
+    found, exec := extract_name_of_explorer(explorer_desktop_file);
+    if !found return false;
+    defer free(exec);
+
+    file_name := get_file_name(exec);
+    if file_name == {
+        case "dolphin"; #through;
+        case "nautilus"; {
+            process: Process;
+            return create_process(*process, exec, "--select", path);
+        }
+    }
+
+    return false;
 }
 
 #scope_module
@@ -67,3 +154,4 @@ open :: (path: string, reveal_in_explorer := false) {
 #import "System";
 #import "POSIX";
 #import "Process";
+#import "File";
