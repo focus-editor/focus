@@ -87,6 +87,7 @@ open :: (path: string, reveal_in_explorer := false) -> bool {
         if pos >= 0 s = slice(s, 0, pos);
 
         pieces := break_command_into_strings(s);
+        defer array_reset(*pieces);
         assert(pieces.count > 0);
 
         return true, copy_string(pieces[0]);
