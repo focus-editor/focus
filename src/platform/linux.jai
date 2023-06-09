@@ -69,9 +69,16 @@ platform_setup :: inline () {
         if pos < 0 {
             needs_new_desktop_entry = true;
         } else {
-            pos += ver_id_key.count;
-            s := slice(data, pos, data.count - pos);
-            needs_new_desktop_entry = (s.count == 0) || ((s.count > 0) && (s[0] != #char "\n"));
+            while (pos > 0) && (data[pos - 1] != #char "\n") {
+                pos = find_index_from_left(data, ver_id_key, pos + 1);
+            }
+            if pos >= 0 {
+                pos += ver_id_key.count;
+                s := slice(data, pos, data.count - pos);
+                needs_new_desktop_entry = (s.count == 0) || ((s.count > 0) && (s[0] != #char "\n"));
+            } else {
+                needs_new_desktop_entry = true;
+            }
         }
     } else {
         needs_new_desktop_entry = true;
