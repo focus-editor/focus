@@ -85,11 +85,11 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
     if selected >= entries.filtered.count return;
 
     entry := entries.filtered[selected];
-    
+
     if path_chunks.count == 0 && maybe_open_root_dir {
         // We are selecting our first chunk and we just pushed the "/" key.
         // In this special case, we will open "/" if it is in the list.
-        
+
         for entries.filtered {
             if it.entry_name == "/" {
                 entry = it;
@@ -135,7 +135,7 @@ open_file_dialog_open_entry_in_explorer :: (selected: s64) {
     using open_file_dialog;
     if selected >= entries.filtered.count return;
     entry := entries.filtered[selected];
-    
+
     path: string = ---;
     #if OS == .WINDOWS {
         if ends_with(entry.name, ":") path = tprint("%/", entry.name); // Drive letter. We need to add a slash.
@@ -143,7 +143,7 @@ open_file_dialog_open_entry_in_explorer :: (selected: s64) {
     } else {
         path = ifx entry.name == "/" then "/" else entry.full_path;
     }
-    
+
     platform_open_in_explorer(path, reveal = entry.type == .file);
 }
 
@@ -392,8 +392,13 @@ scan_current_folder :: () {
     using open_file_dialog;
     if mode != .navigate || !path_chunks return;
 
-    path_chunks_trimmed := array_view(path_chunks, 1, path_chunks.count - 1);
-    dir_path := sprint("%/%", root_dir, join(..path_chunks_trimmed, separator = "/"));
+    dir_path: string;
+    if root_dir {
+        path_chunks_trimmed := array_view(path_chunks, 1, path_chunks.count - 1);
+        dir_path = sprint("%/%", root_dir, join(..path_chunks_trimmed, separator = "/"));
+    } else {
+        dir_path = join(..path_chunks, separator = "/");
+    }
 
     // Reset current files
     array_reset(*current_files);
@@ -419,15 +424,15 @@ scan_current_folder :: () {
                 } else {
                     previous_char_was_slash = false;
                 }
-                
+
                 append(*b, c);
             }
-            
+
             full_path = builder_to_string(*b);
         } else {
             full_path = copy_string(file.full_name);
         }
-        
+
         path, basename, extension, name := path_decomp(full_path);
 
         entry := array_add(*open_file_dialog.current_files);
