@@ -319,12 +319,16 @@ parse_preprocessor_directive :: (using tokenizer: *Tokenizer, token: *Token) {
 
     directive_str := read_identifier_string(tokenizer);
 
-    while t < max_t && is_alnum(<< t) t += 1;
-    if t >= max_t return;
-
     // Check if it's one of the existing directives
     if directive_str.count > MAX_DIRECTIVE_LENGTH return;
     directive, ok := table_find(*PREPROCESSOR_DIRECTIVES_MAP, directive_str);
+
+    if directive != .di_else && directive != .di_endif {
+        // Highlight, if directive has argument(s)
+        while t < max_t && is_alnum(<< t) t += 1;    
+        if t >= max_t return;
+    }
+    
     if ok {
         token.type = .preprocessor_directive;
         token.preprocessor_directive = directive;
@@ -665,6 +669,7 @@ Directive :: enum u16 {
     di_include;
     di_undef;
     di_if;
+    di_ifdef;
     di_else;
     di_elif;
     di_endif;
@@ -740,7 +745,7 @@ PREPROCESSOR_DIRECTIVES_MAP :: #run -> Table(string, Directive) {
         b: String_Builder;
         init_string_builder(*b);
         for enum_names(Directive) {
-            print_to_builder(*b, "table_add(*table, \"%\", .%);\n",
+            print_to_builder(*b, "table_add(*table, \"%\", .%);\n", 
                             slice(it, 3, it.count - 3), it);
         }
         return builder_to_string(*b);
