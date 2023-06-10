@@ -37,6 +37,7 @@
     explorer_reveal_command:  nautilus --select "%s"  # this command is used when highlighting a specific file in a directory
 
 + Mac: Focus no longer collects window events when another window is active. This eliminates several bugs (Cmd+Tab spawning cursors, I-Beam cursor when using other apps) at the cost of no longer being able to vertically scroll unless Focus is active. For now.
++ `copy` will now copy whole lines to clipboard if the config option `copy_whole_line_without_selection` is enabled in config
 
 
 # Version 0.1.10

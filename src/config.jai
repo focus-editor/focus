@@ -313,6 +313,7 @@ Settings :: struct {
     line_height_scale_percent           := 120;
     max_editor_width                    := -1;
     can_cancel_go_to_line               := true;
+    copy_whole_line_without_selection   := false;
     editor_history_size                 := 128;
 
     // TODO
@@ -466,6 +467,7 @@ SETTINGS :: Setting.[
     .{ "strip_trailing_whitespace_on_save",   .boolean },
     .{ "smooth_scrolling",                    .boolean },
     .{ "can_cancel_go_to_line",               .boolean },
+    .{ "copy_whole_line_without_selection",   .boolean },
 
     .{ "max_entries_in_open_file_dialog",     .integer },
     .{ "tab_size",                            .integer },
