@@ -76,7 +76,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char ")";  token.type = .punctuation; token.punctuation = .r_paren;   t += 1;
         case #char "[";  token.type = .punctuation; token.punctuation = .l_bracket; t += 1;
         case #char "]";  token.type = .punctuation; token.punctuation = .r_bracket; t += 1;
-        
+
         case #char "~";  token.type = .operation;   token.operation   = .tilde;     t += 1;
         case #char "`";  token.type = .operation;   token.operation   = .backtick;  t += 1;
 
@@ -91,10 +91,10 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
 
 parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
-    
+
     // mark := get_temporary_storage_mark();
     // defer   set_temporary_storage_mark(mark);
-    
+
     identifier_str := read_identifier_string(tokenizer);
 
     // Maybe it's a keyword
@@ -124,39 +124,39 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
         if t >= max_t return;
         // t += 1;
         // if t >= max_t return;
-        
+
         // exponent
         if << t == #char "e" || << t == #char "E" {
             t += 1;
             if t >= max_t return;
-            
+
             if << t == #char "+" || << t == #char "-" {
               t += 1;
               if t >= max_t return;
             }
-            
+
             while t < max_t && is_digit(<< t) {
                 t += 1;
             }
             if t >= max_t return;
         }
-        
+
         // suffixes
         if seen_decimal_point {
             if << t == #char "f" || << t == #char "F" || << t == #char "d" || << t == #char "D" {
               t += 1;
             }
         } else {
-          
+
           // This is getting kindof hard to follow...
           if << t == #char "l" || << t == #char "L" {             // l
               t += 1;
               if t >= max_t return;
-              
+
               if << t == #char "l" || << t == #char "L" {         // ll
                   t += 1;
                   if t >= max_t return;
-  
+
                   if << t == #char "u" || << t == #char "U" {     // llu
                     t += 1;
                   }
@@ -166,15 +166,15 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
           } else if  << t == #char "u" || << t == #char "U" {     // u
               t += 1;
           }
-          
+
         }
-        
+
     } else if << t == #char "x" || << t == #char "X" {
         // Hex
         is_hex :: inline (c: u8) -> bool {
             return is_digit(c) || (c >= #char "a" && c <= #char "f") || (c >= #char "A" && c <= #char "F");
         }
-        
+
         t += 1;
         while t < max_t && (is_hex(<< t)) t += 1;
 
@@ -354,20 +354,20 @@ parse_char_literal :: (using tokenizer: *Tokenizer, token: *Token) {
 
     t += 1; //
     if t >= max_t || << t == #char "\n" return;
-    
+
     if << t == #char "\\" {
       escape_seen = true;
       t += 1;
       if t >= max_t || << t == #char "\n" return;
     }
-    
+
     if << t == #char "'" && !escape_seen {
       // not escaped single quote without a character
       token.type = .invalid;
       t += 1; // the invalid '
       return;
     }
-    
+
     t += 1; // the char
     if t >= max_t || << t == #char "\n" return;
 
@@ -393,7 +393,7 @@ parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
             token.type = .multiline_comment;
             t += 1;
             while t + 1 < max_t {
-                if << t == #char "*" && << (t + 1) == #char "/" { 
+                if << t == #char "*" && << (t + 1) == #char "/" {
                   t += 2;
                   break;
                 }
@@ -471,21 +471,21 @@ Tokenizer :: struct {
     max_t:   *u8;
     start_t: *u8;  // cursor when starting parsing new token
     t:       *u8;  // cursor
-    
+
     last_tokens: [1] Token;  // to retroactively highlight functions
 }
 
 Token :: struct {
     start, len: s32;
     type: Type;
-    
+
     union {
         keyword:            Keyword;
         punctuation:        Punctuation;
         operation:          Operation;
         preprocessor_directive: Directive;
     }
-    
+
     Type :: enum u16 {
         eof;
 
@@ -572,7 +572,7 @@ Keyword :: enum u16 {
     kwt__Bool;
     kwt__Imaginary;
     kwt__Complex;
-    
+
     // stdint types
     kwt_int8_t;
     kwt_int16_t;
@@ -665,6 +665,8 @@ Directive :: enum u16 {
     di_include;
     di_undef;
     di_if;
+    di_ifdef;
+    di_ifndef;
     di_else;
     di_elif;
     di_endif;
@@ -723,7 +725,7 @@ MAX_KEYWORD_LENGTH :: #run -> s32 {
         else if starts_with(it, "kwm") curr_slice_count = 4;
         else if starts_with(it, "kwv") curr_slice_count = 4;
         else curr_slice_count = 3;
-        
+
         actual := slice(it, curr_slice_count, it.count - curr_slice_count);
         if actual.count > max_len max_len = actual.count;
     }
@@ -762,7 +764,7 @@ MAX_DIRECTIVE_LENGTH :: #run -> s32 {
 read_identifier_string :: (using tokenizer: *Tokenizer) -> string {
     ret: string;
     ret.data = t;
-    
+
     while t < max_t {
         c := <<t;
         if is_alnum(c) { t += 1; continue; }
@@ -770,7 +772,7 @@ read_identifier_string :: (using tokenizer: *Tokenizer) -> string {
     }
     if t >= max_t then t = max_t;
     ret.count = xx (t - ret.data);
-    
+
     return ret;
 }
 
