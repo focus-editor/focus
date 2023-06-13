@@ -23,7 +23,7 @@ main :: () {
     if !projects_dir_existed then write_entire_file(tprint("%/Example Project.focus-config", projects_dir), EXAMPLE_PROJECT_FILE_DATA);
 
     init_file_watcher();
-    load_global_config(create_if_doesnt_exist = !DEBUG);  // don’t create global config in debug mode because it’s annoying if we want to test changes to the default config
+    load_global_config();
     init_workspace();
     init_buffers();
 

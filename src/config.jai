@@ -1,7 +1,7 @@
-load_global_config :: (create_if_doesnt_exist := false) -> success: bool, changed: bool, there_were_warnings: bool {
+load_global_config :: () -> success: bool, changed: bool, there_were_warnings: bool {
     global_config_path = sprint("%/global.focus-config", config_dir);
 
-    if create_if_doesnt_exist && !file_exists(global_config_path) {
+    if !file_exists(global_config_path) {
         // Create one with default contents
         success := write_entire_file(global_config_path, DEFAULT_CONFIG_FILE_DATA);
         if !success panic_messagebox("Couldn't create a new config file '%'.\nIs the directory writable?", global_config_path);

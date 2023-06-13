@@ -1,13 +1,5 @@
 # TODO
 
-- Bug with git pull
-    + Add logging everywhere (remove before next release)
-    - ? When an editor is focused, compare its hash with the one from disk
-    - ? If it's different, do a full project folder rescan
-
-- Check key chords for issues
-
-- Create global config always
 - Don't merge into default config
 
 - Line wrap:
@@ -196,6 +188,7 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Create global config always
 + Case-sensitive / whole word search:
     + Make the icons nice
     + Tooltips and hover
