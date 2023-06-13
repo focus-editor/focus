@@ -29,9 +29,7 @@ load_project_config :: (project: string = "") -> success: bool, changed: bool, t
     return success, changed, there_were_warnings;
 }
 
-maybe_refresh_config :: (path: string) {
-    if !is_our_config_file(path) return;
-
+refresh_config :: (path: string) {
     old_workspace_dirs := array_copy_tmp(config.workspace.workspace_dirs);
 
     if path == global_config_path {
@@ -52,21 +50,22 @@ maybe_refresh_config :: (path: string) {
             clear_user_messages();
             add_success_message(tprint("Config changes for project '%' have been applied", current_project_name), dismiss_in_seconds = 3);
         }
+    } else {
+        log_error("Attempted to refresh config from file %, but it is not a global config or a current project config", path);
+        return;
     }
 
     // Detect changes in workspace dirs
-    dirs_added: [..] string;
-    dirs_added.allocator = temp;
-    dirs_removed: [..] string;
-    dirs_removed.allocator = temp;
+    dirs_added   := false;
+    dirs_removed := false;
 
     for new_dir : config.workspace.workspace_dirs {
         exists := array_find(old_workspace_dirs, new_dir);
-        if !exists array_add(*dirs_added, new_dir);
+        if !exists { dirs_added = true; break; }
     }
     for old_dir : old_workspace_dirs {
         exists := array_find(config.workspace.workspace_dirs, old_dir);
-        if !exists array_add(*dirs_removed, old_dir);
+        if !exists { dirs_removed = true; break; }
     }
 
     if dirs_added || dirs_removed {

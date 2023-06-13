@@ -1,6 +1,7 @@
 # TODO
 
 - Don't merge into default config
+- Config migration
 
 - Line wrap:
     - Have line_starts for editor
@@ -16,7 +17,6 @@
 - Ctrl-K and other shortcuts should work in text inputs
 - Notify about duplicate bindings and highlight that in the config file
 - Search returns extra results: Runtime_Support, report_bounds_check_error_more_visibly
-- Limit editor width
 - Colors per programming language
     - Get the list of available colors
 

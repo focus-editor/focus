@@ -571,7 +571,7 @@ get_buffer_name :: (buffer: Buffer) -> string {
 }
 
 refresh_buffer_from_disk :: (path: string) {
-    maybe_refresh_config(path);
+    if is_our_config_file(path) refresh_config(path);
 
     buffer_id, created := find_or_create_buffer(path);
     if created return;

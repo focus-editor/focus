@@ -653,7 +653,7 @@ just_dropped_file := "";
 
 cpu_info: Cpu_X86;
 
-// This will be set to `true` in `maybe_refresh_config()` to signal that the
+// This will be set to `true` in `refresh_config()` to signal that the
 // next window resize event should be handled even if the window doesn't actually
 // change size. This is needed when changing DPI/scaling options which require
 // a full repaint.
