@@ -9,13 +9,13 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
     while true {
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
-        
+
         // if token.type == .invalid && buffer.has_file {
         //     log_error("Invalid token in file: %", file.full_path);
         // }
 
         using tokenizer;
-        
+
         // Maybe retroactively highlight a function
         if token.type == .punctuation && token.punctuation == .l_paren {
             // Handle "func :: ("
@@ -91,7 +91,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "[";  token.type = .punctuation; token.punctuation = .l_bracket; t += 1;
         case #char "]";  token.type = .punctuation; token.punctuation = .r_bracket; t += 1;
         case #char "$";  token.type = .punctuation; token.punctuation = .dollar;    t += 1;
-        
+
         case #char "~";  token.type = .operation;   token.operation   = .tilde;     t += 1;
         case #char "`";  token.type = .operation;   token.operation   = .backtick;  t += 1;
 
@@ -105,10 +105,10 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
 
 parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
-    
+
     mark := get_temporary_storage_mark();
     defer   set_temporary_storage_mark(mark);
-    
+
     identifier_str := read_identifier_string_tmp(tokenizer);
 
     // Maybe it's a keyword
@@ -148,7 +148,7 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
         is_hex :: inline (c: u8) -> bool {
             return is_digit(c) || (c >= #char "a" && c <= #char "f") || (c >= #char "A" && c <= #char "F");
         }
-        
+
         t += 1;
         while t < max_t && (is_hex(<< t) || << t == #char "_") t += 1;
     } else if << t == #char "b" {
@@ -164,12 +164,12 @@ parse_compiler_directive :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     t = eat_white_space(t, max_t);  // there may be spaces between the # and the name
     if !is_alpha(<<t) return;
-    
+
     mark := get_temporary_storage_mark();
     defer   set_temporary_storage_mark(mark);
-    
+
     directive_str := read_identifier_string_tmp(tokenizer);
-    
+
     while t < max_t && is_alnum(<< t) t += 1;
     if t >= max_t return;
 
@@ -424,7 +424,7 @@ parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .string_literal;
 
     escape_seen := false;
-    
+
     t += 1;
     while t < max_t && << t != #char "\n" {
         if <<t == #char "\"" && !escape_seen break;
@@ -439,12 +439,12 @@ parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
 read_identifier_string_tmp :: (using tokenizer: *Tokenizer) -> string /* temp */ {
     identifier: [..] u8;
     identifier.allocator = temp;
-    
+
     array_add(*identifier, <<t);
 
     t += 1;
     slash_mode := false;
-    
+
     while t < max_t {
         c := <<t;
         if is_alnum(c)      { t += 1; slash_mode = false; array_add(*identifier, c); continue; }
@@ -453,7 +453,7 @@ read_identifier_string_tmp :: (using tokenizer: *Tokenizer) -> string /* temp */
         break;
     }
     if t >= max_t then t = max_t;
-    
+
     return to_string(identifier);
 }
 
@@ -518,13 +518,13 @@ COLOR_MAP :: Code_Color.[
 ];
 
 PUNCTUATION :: string.[
-    "dollar", "semicolon", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", 
+    "dollar", "semicolon", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket",
     "period", "comma", "note",
 ];
 
 OPERATIONS :: string.[
-    "arrow", "bang", "backtick", "pipe", "double_pipe", "pipe_equal", "equal", "equal_equal", "bang_equal", 
-    "percent", "percent_equal", "less_than", "double_less_than", "less_than_equal", "greater_than", "greater_than_equal", 
+    "arrow", "bang", "backtick", "pipe", "double_pipe", "pipe_equal", "equal", "equal_equal", "bang_equal",
+    "percent", "percent_equal", "less_than", "double_less_than", "less_than_equal", "greater_than", "greater_than_equal",
     "minus", "minus_equal", "triple_dash", "asterisk", "asterisk_equal", "colon", "colon_equal", "double_colon", "slash",
     "plus", "plus_equal", "slash_equal", "ampersand", "double_ampersand", "ampersand_equal", "tilde", "unknown",
     "caret", "caret_equal",
@@ -554,6 +554,7 @@ COMPILER_DIRECTIVES :: string.[
     "place", "placeholder", "poke_name", "procedure_of_call", "program_export", "run", "runtime_support",
     "scope_export", "scope_file", "scope_module", "specified", "string", "symmetric", "this", "through", "type",
     "type_info_no_size_complaint", "type_info_none", "type_info_procedures_are_void_pointers",
+    "compile_time", "no_debug",
 ];
 
 // TODO: implement

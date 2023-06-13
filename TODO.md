@@ -5,8 +5,6 @@
     - ? When an editor is focused, compare its hash with the one from disk
     - ? If it's different, do a full project folder rescan
 
-- https://github.com/focus-editor/focus/pull/64
-
 - Case-sensitive / whole word search:
     + Make the icons nice
     + Tooltips and hover
