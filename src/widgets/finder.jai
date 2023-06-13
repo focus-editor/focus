@@ -398,6 +398,8 @@ Search_Task :: struct {
     request_id:  s64;
     needle: string;
     skip_table: [] s32;
+    case_sensitive: bool;
+    whole_word: bool;
 
     // Will search in these buffers
     buffer_start_index: s32;
@@ -406,9 +408,6 @@ Search_Task :: struct {
     // To be filled by the worker thread
     num_results: s64;
     results: [MAX_RESULTS_PER_WORKER] Search_Result;
-
-    case_sensitive: bool;
-    whole_word: bool;
 }
 
 thread_group: Thread_Group;

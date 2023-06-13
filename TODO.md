@@ -5,13 +5,6 @@
     - ? When an editor is focused, compare its hash with the one from disk
     - ? If it's different, do a full project folder rescan
 
-- Case-sensitive / whole word search:
-    + Make the icons nice
-    + Tooltips and hover
-    + No global search flags
-    + Compile-time flags
-    - Have a warning if no matches when matches were filtered
-
 - Check key chords for issues
 
 - Create global config always
@@ -43,6 +36,7 @@
     - Think about it some more
 
 - Improve the scoring for fuzzy search (maybe after the fact even) - score matches closer together higher
+    - When a capital letter is present, score matching case higher?
 
 - Ignore files and dirs during search - have a bunch of wildcards
 
@@ -202,6 +196,11 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Case-sensitive / whole word search:
+    + Make the icons nice
+    + Tooltips and hover
+    + No global search flags
+    + Compile-time flags
 + Reset max line pixel width
 + Fix command execution via the popup
 + Project dir disambiguation

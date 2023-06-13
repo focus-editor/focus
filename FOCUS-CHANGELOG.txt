@@ -42,6 +42,7 @@
 + Added #ifdef/#ifndef highlighting to C/C++
 + Added #compile_time/#no_debug highlighting to Jai
 + Multi-cursor line cuts will no longer include extra newlines
++ Added a notification about match case or match whole word toggles active when no search results found
 
 
 # Version 0.1.10

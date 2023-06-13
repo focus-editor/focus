@@ -1929,9 +1929,11 @@ draw_finder :: () {
         width := screen.w * width_percentage;
         if width < 700 * dpi_scale then width = 700 * dpi_scale;
 
-        height := clamp(input_rect_height + entry_height * results.count + padding, 0, screen.h / 1.2);
+        num_results := max(results.count, 1);
+        height := clamp(input_rect_height + entry_height * num_results + padding, 0, screen.h / 1.2);
+
         x := (screen.w - width) / 2;
-        y := clamp(100 * dpi_scale, 0, (screen.h - height) / 2);
+        y := 100 * dpi_scale;
         box_rect = make_rect(x, screen.h - height - y, width, height);
         if !is_valid(box_rect) return;
     }
@@ -2160,6 +2162,27 @@ draw_finder :: () {
                     Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);
                 }
             }
+        }
+
+        if finder.input.text && !results {
+            label := "Searching...";
+            if !finder.request.in_progress {
+                label = "No results found.";
+                if case_sensitive {
+                    combo := key_sequence_for_action_as_string(Action_Search_Dialog.toggle_case_sensitive);
+                    label = tprint("%   Match case is active (% to toggle).", label, combo);
+                }
+                if whole_word {
+                    combo := key_sequence_for_action_as_string(Action_Search_Dialog.toggle_whole_word);
+                    label = tprint("%   Match whole word is active (% to toggle).", label, combo);
+                }
+            }
+            entry_rect := cut_top(files_rect, entry_height);
+            pen := make_vector2(
+                entry_rect.x + margin + padding,
+                entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+            );
+            Simp.draw_text(font_ui_small, xx pen.x, xx pen.y, label, Colors.UI_DIM);
         }
 
         // Deselect any previously clicked entry
