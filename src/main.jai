@@ -1,3 +1,5 @@
+DEBUG_FILE_REFRESH :: true;
+
 main :: () {
     cpu_info = get_cpu_info();
 

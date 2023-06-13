@@ -394,9 +394,12 @@ dump_buffer_state :: (buffer_id: s64) -> [] u8 #must {
     return cast([] u8) str;
 }
 
-session_logger :: (message: string, data: *void, info: Log_Info) {
+session_logger :: (raw_msg: string, data: *void, info: Log_Info) {
     d := cast(*Session_Logger_Data) data;
     file := ifx (info.common_flags & .ERROR) != 0 then *d.log_error_file else *d.log_file;
+
+    calendar_time := to_calendar(current_time_consensus(), .LOCAL);
+    message := tprint("%: %", calendar_to_string(calendar_time), raw_msg);
 
     lock(*logger_mutex);
     file_write(file, message);

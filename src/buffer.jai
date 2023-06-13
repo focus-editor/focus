@@ -377,7 +377,7 @@ save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64) -> saved: bool {
         error_when_saving = true;
     }
     remember_last_modtime_and_size(buffer);
-    
+
     update_window_title(open_editors[editors.active].buffer_id);
 
     return !error_when_saving;
@@ -576,6 +576,7 @@ refresh_buffer_from_disk :: (path: string) {
     buffer_id, created := find_or_create_buffer(path);
     if created return;
     if buffer_id < 0 {
+        #if DEBUG_FILE_REFRESH log("ERROR: can't open file - path too long");
         log_error("Couldn't open file because path is too long for Windows: %\n", path);
         return;
     }
@@ -585,10 +586,14 @@ refresh_buffer_from_disk :: (path: string) {
     if !file_exists(path) {
         buffer.deleted = true;
         finder.need_to_refresh_results = true;
+        #if DEBUG_FILE_REFRESH log("File % doesn't exist", path);
         return;
     }
 
-    if !buffer_file_has_changed_on_disk(buffer) return;
+    if !buffer_file_has_changed_on_disk(buffer) {
+        #if DEBUG_FILE_REFRESH log("File % supposedly hasn't changed on disk", path);
+        return;
+    }
 
     finder.need_to_refresh_results = true;
 
@@ -603,7 +608,7 @@ refresh_buffer_from_disk :: (path: string) {
         buffer.readonly = true;
     }
 
-    if !success { log_error("Couldn't read file '%'\n", path); return; }
+    if !success { log_error("Couldn't read file '%'\n", path); #if DEBUG_FILE_REFRESH log("Couldn't read file"); return; }
     defer free(file_contents_str);
 
     file_contents := cast([] u8) file_contents_str;
@@ -613,7 +618,10 @@ refresh_buffer_from_disk :: (path: string) {
     file_contents_str = to_string(file_contents);
 
     file_hash := calculate_meow_hash(file_contents);
-    if buffer.meow_hash == file_hash return;  // file hasn't actually changed
+    if buffer.meow_hash == file_hash {
+        #if DEBUG_FILE_REFRESH log("Meow hash hasn't changed for %", path);
+        return;  // file hasn't actually changed
+    }
 
     buffer.meow_hash = file_hash;
     buffer.deleted = false;
@@ -649,6 +657,7 @@ refresh_buffer_from_disk :: (path: string) {
     }
 
     refresh_all_editors_for_buffer(buffer_id);
+    #if DEBUG_FILE_REFRESH log("Refreshed %", path);
 }
 
 maybe_mark_buffer_as_deleted :: (path: string) {

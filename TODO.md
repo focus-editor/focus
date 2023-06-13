@@ -1,5 +1,24 @@
 # TODO
 
+- Bug with git pull
+    - Add logging everywhere (remove before next release)
+    - ? When an editor is focused, compare its hash with the one from disk
+    - ? If it's different, do a full project folder rescan
+
+- https://github.com/focus-editor/focus/pull/64
+
+- Case-sensitive / whole word search:
+    + Make the icons nice
+    + Tooltips and hover
+    + No global search flags
+    - Compile-time flags
+    - Have a warning if no matches when matches were filtered
+
+- Check key chords for issues
+
+- Create global config always
+- Don't merge into default config
+
 - Line wrap:
     - Have line_starts for editor
     - Implement wrapping for buffer
