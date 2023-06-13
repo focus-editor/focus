@@ -9,7 +9,7 @@
     + Make the icons nice
     + Tooltips and hover
     + No global search flags
-    - Compile-time flags
+    + Compile-time flags
     - Have a warning if no matches when matches were filtered
 
 - Check key chords for issues

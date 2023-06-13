@@ -41,6 +41,7 @@
 + Fixed a bug with the Navigate to file dialog being empty
 + Added #ifdef/#ifndef highlighting to C/C++
 + Added #compile_time/#no_debug highlighting to Jai
++ Multi-cursor line cuts will no longer include extra newlines
 
 
 # Version 0.1.10

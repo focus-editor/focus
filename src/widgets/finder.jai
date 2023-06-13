@@ -274,7 +274,11 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
         file_end := contents.data + contents.count;
         offset := 0;
         while true {
-            offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table, case_sensitive);
+            if case_sensitive {
+                offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table, case_sensitive = true);
+            } else {
+                offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table, case_sensitive = false);
+            }
             if offset < 0 break;
 
             if !whole_word || (whole_word && match_whole_word(contents, offset, needle.count)) {

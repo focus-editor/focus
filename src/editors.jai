@@ -789,7 +789,11 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
     offset := 0;
     i := 0;
     while true {
-        offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive);
+        if case_sensitive {
+            offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = true);
+        } else {
+            offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = false);
+        }
         if offset < 0 break;
 
         if !whole_word || (whole_word && match_whole_word(buffer_str, offset, needle.count)) {

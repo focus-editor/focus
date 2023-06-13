@@ -202,12 +202,12 @@ bmh_prepare_skip_table :: (needle: string, case_sensitive: bool) -> [256] s32 {
     return skip_table;
 }
 
-bmh_find_index_from_left :: (s: string, needle: string, start_index := 0, skip_table: [] s32, case_sensitive: bool) -> s64 {
+bmh_find_index_from_left :: (s: string, needle: string, start_index := 0, skip_table: [] s32, $case_sensitive: bool) -> s64 {
     i := start_index;
     last_i := s.count - needle.count;
     while i <= last_i {
         current := to_string(s.data + i, needle.count);
-        if case_sensitive {
+        #if case_sensitive {
             if current == needle return i;
             i += skip_table[s[i + needle.count - 1]];
         } else {
@@ -269,8 +269,8 @@ is_whitespace_char :: inline (ch: u8) -> bool {
 }
 
 is_separator_char :: inline (ch: u8) -> bool {
-    return 
-        ch == #char "`" || ch == #char "~" || ch == #char "!" || ch == #char "@" || ch == #char "#" || 
+    return
+        ch == #char "`" || ch == #char "~" || ch == #char "!" || ch == #char "@" || ch == #char "#" ||
         ch == #char "%" || ch == #char "^" || ch == #char "&" || ch == #char "*" || ch == #char "(" ||
         ch == #char ")" || ch == #char "-" || ch == #char "=" || ch == #char "+" || ch == #char "[" ||
         ch == #char "{" || ch == #char "]" || ch == #char "}" || ch == #char "$" || ch == #char "|" ||
