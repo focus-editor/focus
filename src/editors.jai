@@ -2199,7 +2199,7 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) 
     for * cursor : editor.cursors {
         str := get_selected_string(cursor, buffer);
         append(*b, str);
-        if it_index < editor.cursors.count -1 then append(*b, "\n");
+        if it_index < editor.cursors.count-1 && str && str[str.count-1] != #char "\n" then append(*b, "\n");
         cursor.clipboard = .{ start = xx offset, count = xx str.count };
         offset += str.count + 1;
     }

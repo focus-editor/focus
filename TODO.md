@@ -1,7 +1,7 @@
 # TODO
 
 - Bug with git pull
-    - Add logging everywhere (remove before next release)
+    + Add logging everywhere (remove before next release)
     - ? When an editor is focused, compare its hash with the one from disk
     - ? If it's different, do a full project folder rescan
 
