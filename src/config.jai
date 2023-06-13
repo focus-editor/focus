@@ -7,7 +7,7 @@ load_global_config :: () -> success: bool, changed: bool, there_were_warnings: b
         if !success panic_messagebox("Couldn't create a new config file '%'.\nIs the directory writable?", global_config_path);
     }
 
-    success, changed, there_were_warnings := load_and_merge_config(global_config_path, hash = *global_config_hash);
+    success, changed, there_were_warnings := load_and_merge_config(global_config_path, into = Config.{}, hash = *global_config_hash);
 
     return success, changed, there_were_warnings;
 }
@@ -134,7 +134,7 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
 
 #scope_file
 
-load_and_merge_config :: (file_path: string, into: Config = DEFAULT_CONFIG, hash: *u64) -> success: bool, changed: bool, there_were_warnings: bool {
+load_and_merge_config :: (file_path: string, into: Config, hash: *u64) -> success: bool, changed: bool, there_were_warnings: bool {
     new_config, success, changed, error_msg, warnings := load_config(file_path, hash);
     if !success {
         if !error_msg assert(false, "No error message on a config error. This is a bug.");
@@ -275,14 +275,14 @@ project_config_path: string;
 project_config_hash: u64;
 current_project_name: string;
 
-config: Config = DEFAULT_CONFIG;
+config: Config;
 
 Config :: struct {
     workspace: Workspace;
-    keymap: Keymap;
-    settings: Settings;
-    style: Style;
-    platform: platform_config;
+    keymap:    Keymap;
+    settings:  Settings;
+    style:     Style;
+    platform:  Platform_Config;
 }
 
 Workspace :: struct {
@@ -295,9 +295,7 @@ Workspace :: struct {
 }
 
 Settings :: struct {
-    // NOTE: for various reasons this must match the settings in default.focus-config.
-    // Otherwise there will be confusion
-    maximize_on_start                   := true;
+    maximize_on_start                   := false;
     open_on_the_biggest_monitor         := true;
     cursor_as_block                     := true;
     highlight_selection_occurrences     := true;
@@ -372,7 +370,7 @@ Color_Values :: struct {
     LIST_CURSOR             := Color.{ r = 0.20, g = 0.80, b = 0.80, a = 0.3 };
     SHADOW_DARK             := Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0.5 };
     SHADOW_TRANSPARENT      := Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0 };  // for interpolation
-    TEXT_INPUT_LABEL     := Color.{ r = 0.233, g = 0.269, b = 0.316, a = 1.0 };
+    TEXT_INPUT_LABEL        := Color.{ r = 0.233, g = 0.269, b = 0.316, a = 1.0 };
 
     UI_DEFAULT              := Color.{ r = 0.75, g = 0.79, b = 0.86, a = 1.0 };
     UI_DIM                  := Color.{ r = 0.533, g = 0.569, b = 0.616, a = 1.0 };

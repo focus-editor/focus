@@ -1,6 +1,5 @@
 # TODO
 
-- Don't merge into default config
 - Config migration
 
 - Line wrap:
@@ -33,8 +32,6 @@
 - Ignore files and dirs during search - have a bunch of wildcards
 
 - Have a font_ui config setting
-
-- Fix the multi-line copying and pasting - https://discord.com/channels/661732390355337246/1100701456950099978/1103153377237540874
 
 - Pass a path to global config as a parameter
 
@@ -188,6 +185,8 @@
 - Investigate a crash when font size is too large - copy glyph to buffer segfaults
 
 # DONE
++ Don't merge into default config
++ Fix the multi-line copying and pasting - https://discord.com/channels/661732390355337246/1100701456950099978/1103153377237540874
 + Create global config always
 + Case-sensitive / whole word search:
     + Make the icons nice

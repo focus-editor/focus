@@ -31,7 +31,6 @@ main :: () {
 
     window_generic_title = ifx DEBUG then "Focus (debug mode)" else "Focus";
     platform_create_window();
-    if config.settings.maximize_on_start then platform_maximize_window(window);
 
     init_session_with_no_guidance :: () #expand {
         session = maybe_load_previous_session();

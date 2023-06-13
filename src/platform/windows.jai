@@ -1,16 +1,16 @@
 PLATFORM_CONFIG_SECTION :: "[[windows]]";
 PLATFORM_SUBSECTION_ENUM :: enum {}
 PLATFORM_SUBSECTION_NAMES :: string.[];
-platform_config :: struct {}
+Platform_Config :: struct {}
 
-platform_parse_config_line :: (config: *platform_config, section: PLATFORM_SUBSECTION_ENUM, line: string) -> success: bool, error_msg: string {
+platform_parse_config_line :: (config: *Platform_Config, section: PLATFORM_SUBSECTION_ENUM, line: string) -> success: bool, error_msg: string {
     return true, "";
 }
 
-platform_apply_config :: inline (config: *platform_config) {
+platform_apply_config :: inline (config: *Platform_Config) {
 }
 
-platform_copy_config :: (src: *platform_config, dst: *platform_config) {
+platform_copy_config :: (src: *Platform_Config, dst: *Platform_Config) {
 }
 
 platform_setup :: () {

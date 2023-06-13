@@ -2,13 +2,13 @@ PLATFORM_CONFIG_SECTION :: "[[linux]]";
 PLATFORM_SUBSECTION_ENUM :: enum {}
 PLATFORM_SUBSECTION_NAMES :: string.[];
 
-platform_config :: struct {
+Platform_Config :: struct {
     scaling_factor: float = 0.0;
     explorer_command: string;
     explorer_reveal_command: string;
 }
 
-platform_parse_config_line :: (config: *platform_config, section: PLATFORM_SUBSECTION_ENUM, line: string) -> success: bool, error_msg: string {
+platform_parse_config_line :: (config: *Platform_Config, section: PLATFORM_SUBSECTION_ENUM, line: string) -> success: bool, error_msg: string {
     if trim(line) == "" return true, "";  // ???
 
     setting, value := break_by_spaces(line);
@@ -47,11 +47,11 @@ platform_parse_config_line :: (config: *platform_config, section: PLATFORM_SUBSE
     return true, "";
 }
 
-platform_apply_config :: (config: *platform_config) {
+platform_apply_config :: (config: *Platform_Config) {
     LD.set_fixed_scaling(config.scaling_factor);
 }
 
-platform_copy_config :: (src: *platform_config, dst: *platform_config) {
+platform_copy_config :: (src: *Platform_Config, dst: *Platform_Config) {
     free(dst.explorer_command);
     free(dst.explorer_reveal_command);
     dst.* = src.*;

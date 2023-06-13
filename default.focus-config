@@ -21,7 +21,7 @@ __pycache__
 .jai .c .cpp .h .hpp .cc .cs .txt .md .focus-* .ini .csv .log .sql .py .m .html .xml .plist .js .ts .yml .yaml .toml
 
 [ignore file extensions]
-# Files with the following extensions will not appear in the file open dialog and won't be indexed.
+# Files with the following extensions will not appear in the file open dialog and won't be loaded into memory.
 # It makes sense to add all known binary file extensions here.
 .exe .pdb .ttf .otf .eot .woff *woff? .dll .lib .dylib .so *so.* .a .o .pdf
 .jpg .png .gif .jpeg .ico .tif .tiff .tga .bmp .webp  # maybe someday we'll support opening images
@@ -34,25 +34,25 @@ __pycache__
 .pyc .rpyc
 .DS_Store .dmg
 
+
 [[settings]]
-# NOTE: please copy the whole block when overriding settings, otherwise defaults will be used
-#       for any settings you haven't listed here explicitly
+
 maximize_on_start:                      false
-open_on_the_biggest_monitor:            false
+open_on_the_biggest_monitor:            true
 cursor_as_block:                        true
 highlight_selection_occurrences:        true
 disable_that_annoying_paste_effect:     false
 disable_file_open_close_animations:     false
+double_shift_to_search_in_workspace:    false
+max_entries_in_open_file_dialog:        2000
+tab_size:                               4
 insert_spaces_when_pressing_tab:        true
 strip_trailing_whitespace_on_save:      false
 smooth_scrolling:                       true
-double_shift_to_search_in_workspace:    false
-can_cancel_go_to_line:                  true
-copy_whole_line_without_selection:      false
-max_entries_in_open_file_dialog:        2000
-tab_size:                               4
 line_height_scale_percent:              120
 max_editor_width:                       -1
+can_cancel_go_to_line:                  true
+copy_whole_line_without_selection:      false
 editor_history_size:                    128
 
 

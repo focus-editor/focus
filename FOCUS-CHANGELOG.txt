@@ -43,6 +43,7 @@
 + Added #compile_time/#no_debug highlighting to Jai
 + Multi-cursor line cuts will no longer include extra newlines
 + Added a notification about match case or match whole word toggles active when no search results found
++ BREAKING: default config is no longer used as a fallback for missing keymaps, so anything you haven't listed explicitly in the global config won't be included
 
 
 # Version 0.1.10
