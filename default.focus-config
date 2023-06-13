@@ -59,9 +59,6 @@ editor_history_size:                    128
 [[keymap]]
 
 # - The first matching combination will be used, so order matters
-# - E.g. [open file dialog] means the keys in this section will only be used when the open file dialog is open
-# - You can override the keys partially - the default combinations will be used for the actions you didn't specify
-# - If you want to disable a particular combination, use a do_nothing action for it
 
 [editors]   # <- this means that the following key combos will apply only when editing text
 
