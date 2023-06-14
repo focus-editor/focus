@@ -485,7 +485,7 @@ move_cursor_to_viewport_center :: (editor: *Editor, buffer: Buffer) {
 leave_only_original_cursor :: (using editor: *Editor) -> *Cursor {
     // Remove all cursors except the original one
     cursor := cursors[min(original_cursor, cursors.count-1)];
-    cursor.clipboard = .{ start = 0, count = xx max(clipboard.count, 0) };
+    cursor.clipboard = .{ start = 0, count = xx max(global_clipboard.count, 0) };
     cursors.count = 1;
     original_cursor = 0;
     main_cursor = 0;
@@ -554,7 +554,7 @@ organise_cursors :: (using editor: *Editor, selection_mode: *Selection_Mode = xx
 
     if reset_clipboard {
         // Cursors have mixed beyond repair
-        cursors[main_cursor].clipboard = .{ start = 0, count = xx max(clipboard.count, 0) };
+        cursors[main_cursor].clipboard = .{ start = 0, count = xx max(global_clipboard.count, 0) };
     }
 }
 
@@ -982,10 +982,10 @@ should_draw_cursors :: inline () -> bool {
 
 cursors_have_the_same_clipboard :: (using editor: Editor) -> bool, clipboard: Cursor.Clipboard {
     same_clipboard := true;
-    first_str := get_clipboard_string(editor, cursors[0]);
+    first_str := get_clipboard_string(cursors[0]);
 
     for cursor : cursors {
-        if first_str != get_clipboard_string(editor, cursor) {
+        if first_str != get_clipboard_string(cursor) {
             same_clipboard = false;
             break;
         }
@@ -994,10 +994,10 @@ cursors_have_the_same_clipboard :: (using editor: Editor) -> bool, clipboard: Cu
     return same_clipboard, cursors[0].clipboard;
 }
 
-get_clipboard_string :: (editor: Editor, cursor: Cursor) -> string {
-    start := clamp(cursor.clipboard.start, 0, cast(s32) editor.clipboard.count - 1);
-    count := clamp(cursor.clipboard.count, 0, cast(s32) editor.clipboard.count - start);
-    return slice(editor.clipboard, max(start, 0), count);
+get_clipboard_string :: (cursor: Cursor) -> string {
+    start := clamp(cursor.clipboard.start, 0, cast(s32) global_clipboard.count - 1);
+    count := clamp(cursor.clipboard.count, 0, cast(s32) global_clipboard.count - start);
+    return slice(global_clipboard, max(start, 0), count);
 }
 
 remove_all_editors :: () {
@@ -1027,7 +1027,7 @@ restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor.State) {
         cursor.state = cursor_state[i];
         cursor.col_wanted = -1;
         cursor.clipboard.start = 0;
-        cursor.clipboard.count = cast(s32)editor.clipboard.count;
+        cursor.clipboard.count = cast(s32)global_clipboard.count;
     }
     if main_cursor >= cursors.count then main_cursor = cursors.count - 1;  // maybe we should remember it too
 }
@@ -1233,10 +1233,6 @@ duplicate_active_editor :: () -> s64 {
     for current_editor.cursors { array_add(*duplicated_editor.cursors, it); }
     duplicated_editor.main_cursor     = current_editor.main_cursor;
     duplicated_editor.original_cursor = current_editor.original_cursor;
-
-    // Copy clipboard
-    if duplicated_editor.clipboard then free(duplicated_editor.clipboard);
-    duplicated_editor.clipboard = copy_string(current_editor.clipboard);
 
     // Move viewport
     duplicated_editor.viewport.scroll_x = current_editor.viewport.scroll_x;
@@ -2211,8 +2207,8 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) 
     combined_str := builder_to_string(*b);
     if combined_str {
         os_clipboard_set_text(combined_str);
-        if editor.clipboard then free(editor.clipboard);
-        editor.clipboard = combined_str;  // now it owns it
+        if global_clipboard then free(global_clipboard);
+        global_clipboard = combined_str;  // now it owns it
     }
 
     if cut {
@@ -2233,11 +2229,11 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) 
 paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
     system_clipboard_text := os_clipboard_get_text();
 
-    if system_clipboard_text != editor.clipboard {
+    if system_clipboard_text != global_clipboard {
         // Editor clipboard and system clipboard are out of sync - drop the editor one
-        if editor.clipboard free(editor.clipboard);
-        editor.clipboard = system_clipboard_text;
-        for * cursor : editor.cursors { cursor.clipboard = .{ start = 0, count = xx editor.clipboard.count }; }
+        if global_clipboard free(global_clipboard);
+        global_clipboard = system_clipboard_text;
+        for * cursor : editor.cursors { cursor.clipboard = .{ start = 0, count = xx global_clipboard.count }; }
     } else {
         free(system_clipboard_text);
     }
@@ -2247,7 +2243,7 @@ paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
         cursor.pos += xx offset_delta;
         cursor.sel += xx offset_delta;
         selection := get_selection(cursor);
-        str := get_clipboard_string(editor, cursor);
+        str := get_clipboard_string(cursor);
         replace_range(buffer, selection, str);
         cursor.pos = xx (selection.start + str.count);
         cursor.col_wanted = -1;
@@ -2356,7 +2352,6 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
 
 free_editor :: (using editor: *Editor) {
     array_reset(*cursors);
-    if clipboard free(clipboard);
     array_reset(*paste_animations);
     array_reset(*highlights);
     array_reset(*search_bar.results);
@@ -2370,8 +2365,6 @@ Editor :: struct {
     cursors: [..] Cursor;
     main_cursor: s64;      // newly added cursors become main so that we jump to them
     original_cursor: s64;  // we remember the original cursor when first creating multiple cursors (and go back to it on escape)
-
-    clipboard: string;
 
     search_whole_words := false;  // used when creating new cursors
     cursor_moved := Cursor_Movement.has_not_moved; // this may trigger a scroll so that the cursor is within acceptable bounds
@@ -2502,6 +2495,8 @@ open_buffers_lock: Mutex;  // must hold while adding a new buffer
 editors: Editor_State;
 editor_history: Editor_History;
 current_editor_history_size := -1;
+
+global_clipboard: string;
 
 // Keyboard smooth scrolling
 Smooth_Scroll_Direction :: enum {
