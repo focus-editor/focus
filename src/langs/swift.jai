@@ -3,12 +3,12 @@ highlight_swift_syntax :: (using buffer: *Buffer) {
     lexer.contents = to_string(bytes);
     tokenize(*lexer);
 
-    print("%\n", lexer.tokens.count);
-
     for token: lexer.tokens {
-        if token.start != 0 && token.end != 0 {
+        if !(token.start == 0 && token.end == 0) {
             color := color_for_token_type(token.type);
             memset(colors.data + token.start, xx color, token.end - token.start);
+        } else {
+            print("Warning: This token does not have correct cursor information: %\n", token);
         }
     }
 }
@@ -20,7 +20,11 @@ color_for_token_type :: (type: Token_Type) -> Code_Color {
     case .IDENTIFIER;
         return .DEFAULT;    
     case .ATTRIBUTE;
-        return .KEYWORD;
+        return .TYPE;
+    case .BINDING;  
+        return .TYPE;
+    case .INOUT;
+        return .VALUE_KEYWORD;
     case .NUMBER;
         return .VALUE;
     case .STRING;
@@ -29,7 +33,10 @@ color_for_token_type :: (type: Token_Type) -> Code_Color {
         return .COMMENT;
     }
 
-    if type > 200 && type < 250 {
+    // TODO: sort operators to detect punctuators/operators
+    if type < 200 {
+        return .PUNCTUATION;
+    } else if type > 200 && type < 250 {
         return .OPERATION;
     } else {
         return .KEYWORD;
