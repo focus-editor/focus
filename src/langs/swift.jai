@@ -21,6 +21,8 @@ color_for_token_type :: (type: Token_Type) -> Code_Color {
         return .DEFAULT;    
     case .ATTRIBUTE;
         return .TYPE;
+    case .DIRECTIVE;
+        return .KEYWORD;
     case .BINDING;  
         return .TYPE;
     case .INOUT;
@@ -38,7 +40,7 @@ color_for_token_type :: (type: Token_Type) -> Code_Color {
         return .PUNCTUATION;
     } else if type > 200 && type < 250 {
         return .OPERATION;
-    } else {
+    } else { // keywords
         return .KEYWORD;
     }
 
