@@ -312,6 +312,7 @@ recalculate_colors :: (buffer: *Buffer) {
         case .CSharp;       highlight_csharp_syntax(buffer);
         case .Focus_Config; highlight_focus_config_syntax(buffer);
         case .Worklog;      highlight_worklog(buffer);
+        case .Swift;        highlight_swift_syntax(buffer);
     }
 }
 
@@ -863,6 +864,7 @@ Buffer :: struct {
         Jai;
         C;
         CSharp;
+        Swift;
         Focus_Config;
         Worklog;
     } = .Plain_Text;

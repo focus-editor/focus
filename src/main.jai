@@ -685,6 +685,7 @@ dont_ignore_next_window_resize := false;
 #load "langs/jai.jai";
 #load "langs/c.jai";
 #load "langs/csharp.jai";
+#load "langs/swift.jai";
 #load "langs/focus_config.jai";
 #load "langs/worklog.jai";
 
