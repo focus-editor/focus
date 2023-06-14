@@ -340,11 +340,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
             if !deleted_cursor {
                 // Create new cursor
-                same_clipboard, clipboard := cursors_have_the_same_clipboard(editor);
                 new_cursor := array_add(*cursors);
                 new_cursor.pos = click_offset;
                 new_cursor.sel = new_cursor.pos;
-                if same_clipboard then new_cursor.clipboard = clipboard;
 
                 main_cursor = cursors.count - 1;
                 new_cursor_just_created_using_mouse = true;
