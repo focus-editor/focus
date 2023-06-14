@@ -2157,8 +2157,7 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) 
         return;  // don't want to trash the clipboard when you accidentally press Ctrl+C
     }
 
-    // We are copying something so dump the previous clipboard slices
-    array_reset(*global_clipboard_slices);
+    array_reset(*global_clipboard_slices); // We are copying something so dump the previous clipboard slices
 
     b: String_Builder;
     offset := 0;
@@ -2166,8 +2165,7 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) 
         str := get_selected_string(cursor, buffer);
         append(*b, str);
         if it_index < editor.cursors.count-1 && str && str[str.count-1] != #char "\n" then append(*b, "\n");
-        // Add one global clipboard view for each current editor cursor
-        array_add(*global_clipboard_slices, .{ start = xx offset, count = xx str.count });
+        array_add(*global_clipboard_slices, .{ start = xx offset, count = xx str.count }); // Add a clipboard slice for each cursor
         offset += str.count + 1;
     }
 
@@ -2214,8 +2212,8 @@ paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
         // Paste one slice per cursor if they have the same number of entries
         // else paste the entire clipboard for each cursor 
         str:= ifx editor.cursors.count == global_clipboard_slices.count {
-            clipboard_view := global_clipboard_slices[it_index];
-            slice(global_clipboard, clipboard_view.start, clipboard_view.count); 
+            clipboard_slice := global_clipboard_slices[it_index];
+            slice(global_clipboard, clipboard_slice.start, clipboard_slice.count); 
         } else {
             global_clipboard;
         }
