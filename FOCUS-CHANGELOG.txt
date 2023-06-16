@@ -18,7 +18,6 @@
 # KNOWN BUGS
 
 - (IMPORTANT) Sometimes when pulling changes via Git, the editor won't notice the files changing (NOTE: if you have a repro please send it to us!)
-- Changing some keymap bindings requires a restart to take effect
 - [Current file watcher limitation] If you open a file in a large folder, the file watcher might scan the whole folder in order to watch for the changes to the file.
 
 
