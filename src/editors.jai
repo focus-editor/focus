@@ -2145,7 +2145,7 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) 
     if !any_selection && !cut && !config.settings.copy_whole_line_without_selection return;
 
     // We are sure to copying something, dump all the previous clipboard slices
-    array_reset(*global_clipboard_slices); 
+    array_reset(*clipboard.slices); 
 
     // Fill the internal clipboard and the slices from the current editor cursors
     b: String_Builder;
@@ -2164,7 +2164,7 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) 
         append(*b, str);
 
         // Add a new clipboard slice for each cursor
-        array_add(*global_clipboard_slices, .{ xx offset, xx str.count, has_selection(cursor) });
+        array_add(*clipboard.slices, .{ xx offset, xx str.count, has_selection(cursor) });
  
         offset += str.count;
     }
@@ -2172,8 +2172,8 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) 
     combined_str := builder_to_string(*b);
     if combined_str {
         os_clipboard_set_text(combined_str);
-        if global_clipboard then free(global_clipboard);
-        global_clipboard = combined_str;  // now it owns it
+        if clipboard.text then free(clipboard.text);
+        clipboard.text = combined_str;  // now it owns it
     }
 
     if cut delete_line(editor, buffer);
@@ -2182,11 +2182,11 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) 
 paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
     system_clipboard_text := os_clipboard_get_text();
 
-    if system_clipboard_text != global_clipboard {
+    if system_clipboard_text != clipboard.text {
         // Editor clipboard and system clipboard are out of sync - drop the editor one
-        if global_clipboard free(global_clipboard);
-        global_clipboard = system_clipboard_text;
-        array_reset(*global_clipboard_slices);
+        if clipboard.text free(clipboard.text);
+        clipboard.text = system_clipboard_text;
+        array_reset(*clipboard.slices);
     } else {
         free(system_clipboard_text);
     }
@@ -2198,10 +2198,10 @@ paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
         cursor.col_wanted = -1;
 
         // If there is only one slice without selection, insert slice at cursor line
-        if !has_selection(cursor) && global_clipboard_slices.count == 1 && !global_clipboard_slices[0].was_selected {
+        if !has_selection(cursor) && clipboard.slices.count == 1 && !clipboard.slices[0].was_selected {
             line_num   := offset_to_line(buffer, cursor.pos); 
             line_start := get_line_start_offset(buffer, line_num);
-            str        := global_clipboard;
+            str        := clipboard.text;
             
             // insert_string_at_offset() make the buffer dirty
             // we rescan to clean it else we can't call offset_to_line for the next cursors
@@ -2213,12 +2213,12 @@ paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
             add_paste_animation(editor, .{ line_start, line_start + cast(s32) str.count });
         } 
         // If they have the same number of entries paste one slice per cursor
-        else if editor.cursors.count == global_clipboard_slices.count {
-            clipboard_slice := global_clipboard_slices[it_index];
+        else if editor.cursors.count == clipboard.slices.count {
+            clipboard_slice := clipboard.slices[it_index];
             selection       := get_selection(cursor);
             count           := clipboard_slice.count - 1; // Don't paste the last newline of the slice
-            if it_index == global_clipboard_slices.count - 1 && clipboard_slice.was_selected then clipboard_slice.count += 1; // If the last slice was selected, it didn't have newline
-            str             := slice(global_clipboard, clipboard_slice.start, count); 
+            if it_index == clipboard.slices.count - 1 && clipboard_slice.was_selected then clipboard_slice.count += 1; // If the last slice was selected, it didn't have newline
+            str             := slice(clipboard.text, clipboard_slice.start, count); 
 
             replace_range(buffer, selection, str);
 
@@ -2229,7 +2229,7 @@ paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
         // Paste the entire clipboard for each cursor
         else {
             selection := get_selection(cursor);
-            str       := global_clipboard;
+            str       := clipboard.text;
 
             replace_range(buffer, selection, str);
 
@@ -2483,8 +2483,10 @@ editors: Editor_State;
 editor_history: Editor_History;
 current_editor_history_size := -1;
 
-global_clipboard: string;
-global_clipboard_slices: [..] Clipboard_Slice;
+clipboard: struct {
+    text: string;
+    slices: [..] Clipboard_Slice;
+}
 
 Clipboard_Slice :: struct {
     start: s32; 
