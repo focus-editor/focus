@@ -51,11 +51,6 @@
         - https://ark-vcs.com/images/client_new.png
 
     bugs:
-        - switching to tab_size 4 doesn't update the tabs, repro:
-            - switch tab_size in the project config to 3 (it updated)
-            - switch back to 4 (it didn't)
-            - switch to 5 (it updated)
-            - switch back to 4 (it didn't)
         - after switching back to project, ctrl+p wouldn't show all files, repro:
             - open UE project, do ctrl+p to see all files
             - switch to the other project, did ctrl+p there
