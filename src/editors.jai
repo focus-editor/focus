@@ -337,11 +337,11 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
 }
 
 go_to_next_prev_buffer :: (prev: bool = false) -> bool {
-    if open_buffers.count == 1 then return true;
+    if open_buffers.count <= 1 then return true;
 
     current_editor, current_buffer := get_active_editor_and_buffer();
-    for open_buffers {
-        if it.meow_hash == current_buffer.meow_hash {
+    for * open_buffers {
+        if it == current_buffer {
             buffer_id := it_index;
             if prev {
                 buffer_id -= 1;
