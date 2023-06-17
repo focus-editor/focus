@@ -202,6 +202,9 @@ Ctrl-Shift-W                close_other_editor
 
 Ctrl-Shift-L                toggle_expand
 
+Ctrl-PageUp                 next_buffer
+Ctrl-PageDown               prev_buffer
+
 # {Shift}- means shift is optional, the key combination will still be matched.
 {Shift}-ArrowUp             move_up
 {Shift}-Ctrl-ArrowUp        move_up_fast

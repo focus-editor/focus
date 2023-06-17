@@ -226,6 +226,9 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .delete_to_start_of_line;          delete_to_start_of_line             (editor, buffer);
         case .delete_to_end_of_line;            delete_to_end_of_line               (editor, buffer);
 
+        case .next_buffer;                      go_to_next_prev_buffer              ();
+        case .prev_buffer;                      go_to_next_prev_buffer              (prev = true);
+
         case;                                   return false;
     }
 
@@ -331,6 +334,28 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
         if search_bar_is_open(editor) search_and_update_results(editor, buffer);
     }
     array_reset_keeping_memory(*buffer.edit_notifications);
+}
+
+go_to_next_prev_buffer :: (prev: bool = false) -> bool {
+    if open_buffers.count == 1 then return true;
+
+    current_editor, current_buffer := get_active_editor_and_buffer();
+    for open_buffers {
+        if it.meow_hash == current_buffer.meow_hash {
+            buffer_id := it_index;
+            if prev {
+                buffer_id -= 1;
+                if buffer_id < 0 then buffer_id = open_buffers.count-1;
+            } else {
+                buffer_id = (buffer_id + 1) % open_buffers.count;
+            }
+
+            editors_open_buffer(buffer_id, .in_place);
+            return true;
+        }
+    }
+    
+    return false;
 }
 
 adjust_cursors_and_viewport :: (editor: *Editor, buffer: Buffer, current_editor_id: s64) {

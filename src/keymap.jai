@@ -318,6 +318,9 @@ ACTIONS_COMMON :: string.[
     "close_current_editor",
     "close_other_editor",
 
+    "next_buffer",
+    "prev_buffer",
+        
     "dump_key_mappings",
     "dump_editor_history",
 ];

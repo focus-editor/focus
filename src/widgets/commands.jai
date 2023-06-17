@@ -190,6 +190,9 @@ commands := #run Command.[
     .{ .move_editor_to_the_left,                            "Move Pane To The Left",              0, .Double },
     .{ .move_editor_to_the_right,                           "Move Pane To The Right",             0, .Double },
 
+    .{ .next_buffer,                                        "Next buffer",                        0, .None },
+    .{ .prev_buffer,                                        "Prev buffer",                        0, .None },
+
     // @TODO You can't put a #if inside the array declaration.  You can decide how you want to handle debug stuff like this:
     //       To keep it without exposing to users you'd need to either duplicate this entire block, change the array into a [..],
     //       change the struct to include a `debug` bool (or enum w/e), or could prefix the name string with "DEBUG: " and not show
