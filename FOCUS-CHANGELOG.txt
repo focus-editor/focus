@@ -45,6 +45,7 @@
 + BREAKING: default config is no longer used as a fallback for missing keymaps, so anything you haven't listed explicitly in the global config won't be included
 + When editor width is limited in settings, the non-editor part of the window will be colored using the `background_dark` color
 + Fixed a bug with global search not finding everything when case sensitive or whole word toggles are just turned on
++ Global search will now try to preserve search results and cursor position when searching using the same query
 
 
 # Version 0.1.10

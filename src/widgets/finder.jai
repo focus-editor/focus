@@ -81,10 +81,10 @@ finder_open_from_editor :: () {
     if editor && editor.cursors.count == 1 {
         cursor := editor.cursors[0];
         selected_text := get_selected_string(cursor, buffer);
-        if selected_text && offset_to_line(buffer, cursor.pos) == offset_to_line(buffer, cursor.sel) {
+        if selected_text && selected_text != to_string(finder.input.text) && offset_to_line(buffer, cursor.pos) == offset_to_line(buffer, cursor.sel) {
             replace_text(*finder.input, selected_text);
             reset_results();
-            start_new_search(force = true);
+            start_new_search();
         }
     }
 
