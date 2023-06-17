@@ -223,11 +223,11 @@ start_new_search :: (force := false) {
     }
     if request.needle == to_string(input.text) && !force return;  // needle hasn't changed, no need to repeat
 
-    reset_search_request(*request, new_needle = to_string(input.text));
-    request.in_progress = true;
-
     request.case_sensitive = case_sensitive;
     request.whole_word     = whole_word;
+
+    reset_search_request(*request, new_needle = to_string(input.text));
+    request.in_progress = true;
 
     num_threads := thread_group.worker_info.count;
     assert(num_threads > 0);
