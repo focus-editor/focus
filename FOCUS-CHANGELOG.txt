@@ -18,7 +18,6 @@
 # KNOWN BUGS
 
 - (IMPORTANT) Sometimes when pulling changes via Git, the editor won't notice the files changing (NOTE: if you have a repro please send it to us!)
-- Changing some keymap bindings requires a restart to take effect
 - [Current file watcher limitation] If you open a file in a large folder, the file watcher might scan the whole folder in order to watch for the changes to the file.
 
 
@@ -44,6 +43,8 @@
 + Multi-cursor line cuts will no longer include extra newlines
 + Added a notification about match case or match whole word toggles active when no search results found
 + BREAKING: default config is no longer used as a fallback for missing keymaps, so anything you haven't listed explicitly in the global config won't be included
++ When editor width is limited in settings, the non-editor part of the window will be colored using the `background_dark` color
++ Fixed a bug with global search not finding everything when case sensitive or whole word toggles are just turned on
 
 
 # Version 0.1.10

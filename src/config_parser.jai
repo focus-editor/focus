@@ -1,77 +1,49 @@
-// Adapted code from modules/Keymap
-
-parse_config :: (name: string, filename: string, file_data: string) -> Config, success: bool, error_msg: string /* temp */, warnings: [] string /* temp */ {
-    parser: Config_Parser;
-    result: Config;
+parse_config :: (name: string, filename: string, file_data: string) -> Parsed_Config, success: bool, error_msg: string /* temp */, warnings: [] string /* temp */ {
+    using parser: Config_Parser;
 
     // NOTE: we don't free on purpose, because some of the parsed data will point into the file data
     trimmed_data := trim_left(file_data, " \t\n\r");  // skip empty lines, otherwise the handler will crash!
     start_from_memory(*parser.handler, name, filename, trimmed_data);
-    if parser.handler.failed return Config.{}, false, tprint("The text file handler couldn't parse file '%'.\nPlease check that the version number is specified at the top, otherwise check the error log.", filename), .[];
+    if parser.handler.failed return Parsed_Config.{}, false, tprint("Couldn't parse file '%'.\nPlease check that the version number is specified at the top in brackets, otherwise check the error log.", filename), .[];
 
     warnings: [..] string;
     warnings.allocator = temp;
 
     while true {
-        line, found := consume_next_line(*parser.handler);
+        line, found := consume_next_line(*handler);
         if !found break;
 
         // Maybe switch to a different top section
         if begins_with(line, "[[") {
             error, error_msg := switch_top_section(*parser, line);
-            if error return Config.{}, false, error_msg, .[];
+            if error return Parsed_Config.{}, false, error_msg, .[];
             continue;
         }
 
         success:   bool;
         error_msg: string;
 
-        if #complete parser.top_section == {
+        if #complete top_section == {
             case .workspace;    success, error_msg = parse_workspace_line(*parser, line);
             case .settings;     success, error_msg = parse_settings_line(*parser, line);
             case .keymap;       success, error_msg = parse_keymap_line(*parser, line);
             case .style;        success, error_msg = parse_style_line(*parser, line);
             case .platform;     success, error_msg = platform_parse_config_line(*parser, line);
             case .none;
-                error_msg := log_parser_error(parser.handler, "Expected a top-level section definition, got '%'", line);
-                return result, false, error_msg, .[];
+                error_msg := log_parser_error(handler, "Expected a top-level section definition, got '%'", line);
+                return Parsed_Config.{}, false, error_msg, .[];
         }
 
-        if !success return result, false, error_msg, warnings;
+        if !success return Parsed_Config.{}, false, error_msg, warnings;
         if success && error_msg then array_add(*warnings, error_msg);
     }
 
-    // Cast away the extendable arrays into array views
-    result.workspace.workspace_dirs                   = parser.data.workspace_dirs;
-    result.workspace.ignore_dirs                      = parser.data.ignore_dirs;
-    result.workspace.allow_file_extensions            = parser.data.allow_file_extensions;
-    result.workspace.allow_file_extension_wildcards   = parser.data.allow_file_extension_wildcards;
-    result.workspace.ignore_file_extensions           = parser.data.ignore_file_extensions;
-    result.workspace.ignore_file_extension_wildcards  = parser.data.ignore_file_extension_wildcards;
+    // Mix the common key mappings into every keymap to support common actions
+    array_extend(*parsed_config.keymap_editors,          parsed_config.keymap_common);
+    array_extend(*parsed_config.keymap_open_file_dialog, parsed_config.keymap_common);
+    array_extend(*parsed_config.keymap_search_dialog,    parsed_config.keymap_common);
 
-    // Merge and store keymaps in the config
-    // (keys defined in the common section need to be present in the other sections unless overridden there)
-    array_extend(*parser.data.keymap_editors,          parser.data.keymap_common);
-    array_extend(*parser.data.keymap_open_file_dialog, parser.data.keymap_common);
-    array_extend(*parser.data.keymap_search_dialog,    parser.data.keymap_common);
-
-    result.keymap.common           = parser.data.keymap_common;
-    result.keymap.editors          = parser.data.keymap_editors;
-    result.keymap.open_file_dialog = parser.data.keymap_open_file_dialog;
-    result.keymap.search_dialog    = parser.data.keymap_search_dialog;
-
-    // Copy settings
-    parser.parsed.settings.line_height_scale_percent = clamp(parser.parsed.settings.line_height_scale_percent, 50, 1000);
-    result.settings = parser.parsed.settings;
-
-    // Style
-    result.style.font           = parser.data.font;
-    result.style.font_size      = parser.data.font_size;
-    result.style.parsed_colors  = parser.data.parsed_colors;  // @leak
-
-    result.platform = parser.parsed.platform;
-
-    return result, true, "", warnings;
+    return parsed_config, true, "", warnings;
 }
 
 keymap_map_key_string :: (key_string: string) -> u32 {
@@ -99,65 +71,56 @@ keymap_map_key_code_to_string :: (key_code: u32) -> string /* temp */ {
     return "??";
 }
 
-map_color_name_to_color_struct :: (color_name: string) -> *Color, found: bool {
-    color: *Color;
-
+map_color_name_to_color_struct :: (config: *Config, color_name: string) -> *Color {
     if color_name == {
-        case "background";                      color = *Colors.BACKGROUND;
-        case "background_dark";                 color = *Colors.BACKGROUND_DARK;
-        case "background_highlight";            color = *Colors.BACKGROUND_HIGHLIGHT;
-        case "background_light";                color = *Colors.BACKGROUND_LIGHT;
-        case "background_bright";               color = *Colors.BACKGROUND_BRIGHT;
-        case "selection_active";                color = *Colors.SELECTION_ACTIVE;
-        case "selection_inactive";              color = *Colors.SELECTION_INACTIVE;
-        case "selection_highlight";             color = *Colors.SELECTION_HIGHLIGHT;
-        case "search_result_active";            color = *Colors.SEARCH_RESULT_ACTIVE;
-        case "search_result_inactive";          color = *Colors.SEARCH_RESULT_INACTIVE;
-        case "scrollbar";                       color = *Colors.SCROLLBAR;
-        case "scrollbar_hover";                 color = *Colors.SCROLLBAR_HOVER;
-        case "scrollbar_background";            color = *Colors.SCROLLBAR_BACKGROUND;
-        case "cursor";                          color = *Colors.CURSOR;
-        case "cursor_inactive";                 color = *Colors.CURSOR_INACTIVE;
-        case "paste_animation";                 color = *Colors.PASTE_ANIMATION;
-        case "splitter";                        color = *Colors.SPLITTER;
-        case "splitter_hover";                  color = *Colors.SPLITTER_HOVER;
-        case "letter_highlight";                color = *Colors.LETTER_HIGHLIGHT;
-        case "list_cursor_lite";                color = *Colors.LIST_CURSOR_LITE;
-        case "list_cursor";                     color = *Colors.LIST_CURSOR;
-        case "shadow_dark";                     color = *Colors.SHADOW_DARK;
-        case "shadow_transparent";              color = *Colors.SHADOW_TRANSPARENT;
-        case "text_input_label";                color = *Colors.TEXT_INPUT_LABEL;
+        case "background";                      return *config.colors.BACKGROUND;
+        case "background_dark";                 return *config.colors.BACKGROUND_DARK;
+        case "background_highlight";            return *config.colors.BACKGROUND_HIGHLIGHT;
+        case "background_light";                return *config.colors.BACKGROUND_LIGHT;
+        case "background_bright";               return *config.colors.BACKGROUND_BRIGHT;
+        case "selection_active";                return *config.colors.SELECTION_ACTIVE;
+        case "selection_inactive";              return *config.colors.SELECTION_INACTIVE;
+        case "selection_highlight";             return *config.colors.SELECTION_HIGHLIGHT;
+        case "search_result_active";            return *config.colors.SEARCH_RESULT_ACTIVE;
+        case "search_result_inactive";          return *config.colors.SEARCH_RESULT_INACTIVE;
+        case "scrollbar";                       return *config.colors.SCROLLBAR;
+        case "scrollbar_hover";                 return *config.colors.SCROLLBAR_HOVER;
+        case "scrollbar_background";            return *config.colors.SCROLLBAR_BACKGROUND;
+        case "cursor";                          return *config.colors.CURSOR;
+        case "cursor_inactive";                 return *config.colors.CURSOR_INACTIVE;
+        case "paste_animation";                 return *config.colors.PASTE_ANIMATION;
+        case "splitter";                        return *config.colors.SPLITTER;
+        case "splitter_hover";                  return *config.colors.SPLITTER_HOVER;
+        case "letter_highlight";                return *config.colors.LETTER_HIGHLIGHT;
+        case "list_cursor_lite";                return *config.colors.LIST_CURSOR_LITE;
+        case "list_cursor";                     return *config.colors.LIST_CURSOR;
+        case "shadow_dark";                     return *config.colors.SHADOW_DARK;
+        case "shadow_transparent";              return *config.colors.SHADOW_TRANSPARENT;
+        case "text_input_label";                return *config.colors.TEXT_INPUT_LABEL;
 
-        case "ui_default";                      color = *Colors.UI_DEFAULT;
-        case "ui_dim";                          color = *Colors.UI_DIM;
-        case "ui_neutral";                      color = *Colors.UI_NEUTRAL;
-        case "ui_warning";                      color = *Colors.UI_WARNING;
-        case "ui_warning_dim";                  color = *Colors.UI_WARNING_DIM;
-        case "ui_error";                        color = *Colors.UI_ERROR;
-        case "ui_error_bright";                 color = *Colors.UI_ERROR_BRIGHT;
-        case "ui_success";                      color = *Colors.UI_SUCCESS;
+        case "ui_default";                      return *config.colors.UI_DEFAULT;
+        case "ui_dim";                          return *config.colors.UI_DIM;
+        case "ui_neutral";                      return *config.colors.UI_NEUTRAL;
+        case "ui_warning";                      return *config.colors.UI_WARNING;
+        case "ui_warning_dim";                  return *config.colors.UI_WARNING_DIM;
+        case "ui_error";                        return *config.colors.UI_ERROR;
+        case "ui_error_bright";                 return *config.colors.UI_ERROR_BRIGHT;
+        case "ui_success";                      return *config.colors.UI_SUCCESS;
 
-        case "code_default";                    color = *Colors.CODE_DEFAULT;
-        case "code_comment";                    color = *Colors.CODE_COMMENT;
-        case "code_type";                       color = *Colors.CODE_TYPE;
-        case "code_function";                   color = *Colors.CODE_FUNCTION;
-        case "code_punctuation";                color = *Colors.CODE_PUNCTUATION;
-        case "code_operation";                  color = *Colors.CODE_OPERATION;
-        case "code_string";                     color = *Colors.CODE_STRING;
-        case "code_value";                      color = *Colors.CODE_VALUE;
-        case "code_highlight";                  color = *Colors.CODE_HIGHLIGHT;
-        case "code_error";                      color = *Colors.CODE_ERROR;
-        case "code_keyword";                    color = *Colors.CODE_KEYWORD;
-
-        case; return xx 0, false;
+        case "code_default";                    return *config.colors.CODE_DEFAULT;
+        case "code_comment";                    return *config.colors.CODE_COMMENT;
+        case "code_type";                       return *config.colors.CODE_TYPE;
+        case "code_function";                   return *config.colors.CODE_FUNCTION;
+        case "code_punctuation";                return *config.colors.CODE_PUNCTUATION;
+        case "code_operation";                  return *config.colors.CODE_OPERATION;
+        case "code_string";                     return *config.colors.CODE_STRING;
+        case "code_value";                      return *config.colors.CODE_VALUE;
+        case "code_highlight";                  return *config.colors.CODE_HIGHLIGHT;
+        case "code_error";                      return *config.colors.CODE_ERROR;
+        case "code_keyword";                    return *config.colors.CODE_KEYWORD;
     }
 
-    return color, true;
-}
-
-Parsed_Color :: struct {
-    color_name: string;
-    color: Color;
+    return xx 0;
 }
 
 
@@ -293,7 +256,7 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
             dir_path = ifx success then copy_string(dir_path) else copy_string(line);
             path_overwrite_separators(dir_path, #char "/");
             if success && file_exists(dir_path) {
-                array_add(*data.workspace_dirs, dir_path);
+                array_add(*parsed_config.workspace_dirs, dir_path);
             } else {
                 error_msg := log_parser_error(handler, "Directory '%' doesn't exist.", dir_path);
                 return true, error_msg;
@@ -303,16 +266,16 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
             for dir : dirs {
                 if !dir continue;
                 path_overwrite_separators(dir, #char "/");
-                array_add(*data.ignore_dirs, dir);
+                array_add(*parsed_config.ignore_dirs, dir);
             }
         case .allow_file_extensions;
             extensions := split(line, cast(u8) #char " ");
             for extensions {
                 if !it continue;
                 if contains_any_character(it, "*?") {
-                    array_add(*data.allow_file_extension_wildcards, trim_left(it, ".\t "));
+                    array_add(*parsed_config.allow_file_extension_wildcards, trim_left(it, ".\t "));
                 } else {
-                    array_add(*data.allow_file_extensions, trim_left(it, "\t "));
+                    array_add(*parsed_config.allow_file_extensions, trim_left(it, "\t "));
                 }
             }
         case .ignore_file_extensions;
@@ -320,9 +283,9 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
             for extensions {
                 if !it continue;
                 if contains_any_character(it, "*?") {
-                    array_add(*data.ignore_file_extension_wildcards, trim_left(it, ".\t "));
+                    array_add(*parsed_config.ignore_file_extension_wildcards, trim_left(it, ".\t "));
                 } else {
-                    array_add(*data.ignore_file_extensions, trim_left(it, "\t "));
+                    array_add(*parsed_config.ignore_file_extensions, trim_left(it, "\t "));
                 }
             }
     }
@@ -345,7 +308,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                 case "font";
                     found, error := find_font_by_name(value);
                     if found {
-                        data.font = value;
+                        parsed_config.font = value;
                     } else {
                         error_msg := log_parser_error(handler, error);
                         return false, error_msg;
@@ -354,7 +317,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                     value_copy := value;
                     int_val, success := parse_int(*value_copy);
                     if success {
-                        data.font_size = int_val;
+                        parsed_config.font_size = int_val;
                     } else {
                         error_msg := log_parser_error(handler, "Couldn't parse '%' - expected a valid integer, got '%'", setting, value);
                         return false, error_msg;
@@ -363,8 +326,8 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
         case .colors;
             color_name, value := break_by_spaces(line);
             color_name = trim_right(color_name, ":");
-            color_ptr, found := map_color_name_to_color_struct(color_name);
-            if !found {
+            color_ptr := map_color_name_to_color_struct(*Config.{}, color_name);
+            if !color_ptr {
                 error_msg := log_parser_error(handler, "Unknown color '%'", color_name);
                 return false, error_msg;
             }
@@ -373,7 +336,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                 error_msg := log_parser_error(handler, "Couldn't parse '%'. Expected a color in the form RRGGBB or RRGGBBAA, got '%'", color_name, value);
                 return false, error_msg;
             }
-            array_add(*data.parsed_colors, Parsed_Color.{ color_name, color });
+            array_add(*parsed_config.colors, Parsed_Color.{ color_name, color });
     }
 
     return true, "";
@@ -404,7 +367,7 @@ hex_to_color :: (src_hex: string) -> Color, success: bool {
             if #char "A" <= char && char <= #char "F" return 10 + char - #char "A";
             return -1;
         }
-        
+
         d1, d0 := cast(float)hex_digit_to_int(byte_str[0]), cast(float) hex_digit_to_int(byte_str[1]);
         if d1 < 0 || d0 < 0 return -1;
 
@@ -427,14 +390,14 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
 
         append(*b, "if setting_name == {\n");
 
-        for setting : SETTINGS {
+        for setting : type_info(Settings).members {
             print_to_builder(*b, "    case \"%\";\n", setting.name);
-            if setting.type == {
-                case .boolean;
+            if setting.type.type == {
+                case .BOOL;
                     code := #string END
                         bool_val, success := parse_bool(*value);
                         if success {
-                            parsed.settings.%1 = bool_val;
+                            parsed_config.settings.%1 = bool_val;
                         } else {
                             error_msg := log_parser_error(handler, "Couldn't parse '%1' - expected 'true' or 'false', got '%%'", setting_value);
                             return false, error_msg;
@@ -442,11 +405,11 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
                     END;
                     print_to_builder(*b, code, setting.name);
 
-                case .integer;
+                case .INTEGER;
                     code := #string END
                         int_val, success := parse_int(*value);
                         if success {
-                            parsed.settings.%1 = int_val;
+                            parsed_config.settings.%1 = int_val;
                         } else {
                             error_msg := log_parser_error(handler, "Couldn't parse '%1' - expected a valid integer, got '%%'", setting_value);
                             return false, error_msg;
@@ -467,6 +430,8 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
 
         return builder_to_string(*b);
     }
+
+    array_add_if_unique(*parsed_config.set_settings, setting_name);
 
     return true, "";
 }
@@ -526,10 +491,10 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
     }
 
     if #complete keymap_subsection == {
-        case .common;           map_action(action_name, key_sequence, ACTIONS_COMMON,           *data.keymap_common,           "[common]");
-        case .editors;          map_action(action_name, key_sequence, ACTIONS_EDITORS,          *data.keymap_editors,          "[editors]");
-        case .open_file_dialog; map_action(action_name, key_sequence, ACTIONS_OPEN_FILE_DIALOG, *data.keymap_open_file_dialog, "[open file dialog]");
-        case .search_dialog;    map_action(action_name, key_sequence, ACTIONS_SEARCH_DIALOG,    *data.keymap_search_dialog,    "[search dialog]");
+        case .common;           map_action(action_name, key_sequence, ACTIONS_COMMON,           *parsed_config.keymap_common,           "[common]");
+        case .editors;          map_action(action_name, key_sequence, ACTIONS_EDITORS,          *parsed_config.keymap_editors,          "[editors]");
+        case .open_file_dialog; map_action(action_name, key_sequence, ACTIONS_OPEN_FILE_DIALOG, *parsed_config.keymap_open_file_dialog, "[open file dialog]");
+        case .search_dialog;    map_action(action_name, key_sequence, ACTIONS_SEARCH_DIALOG,    *parsed_config.keymap_search_dialog,    "[search dialog]");
     }
 
     return true, "";
@@ -608,9 +573,45 @@ platform_parse_config_line :: (using parser: *Config_Parser, line: string) -> su
         error_msg := log_parser_error(handler, "Unknown platform subsection '%'.\nAvailable options are: %.", line, join(..PLATFORM_SUBSECTION_NAMES, ", ", allocator = temp));
         return false, error_msg;
     }
-    success, error_msg := platform_parse_config_line(*parsed.platform, platform_subsection, line);
+    success, error_msg := platform_parse_config_line(*parsed_config.platform, platform_subsection, line);
     if !success log_parser_error(handler.full_path, handler.line_number, error_msg);
     return success, error_msg;
+}
+
+#scope_export
+
+// A struct to represent the raw parsed config, where not everything might be present
+// (we need to know what's missing so that we can properly merge the global config with the project config, for example)
+Parsed_Config :: struct {
+    // Workspace
+    workspace_dirs:         [..] string;
+    ignore_dirs:            [..] string;
+    allow_file_extensions:  [..] string;
+    allow_file_extension_wildcards:  [..] string;
+    ignore_file_extensions: [..] string;
+    ignore_file_extension_wildcards: [..] string;
+
+    // Keymap
+    keymap_common:           [..] Key_Mapping;
+    keymap_editors:          [..] Key_Mapping;
+    keymap_open_file_dialog: [..] Key_Mapping;
+    keymap_search_dialog:    [..] Key_Mapping;
+
+    // Settings
+    settings: Settings;
+    set_settings: [..] string;  // so that we know which options were included in the config, and only touch those when merging
+
+    // Style
+    font:      string;
+    font_size: int;
+    colors:    [..] Parsed_Color;
+
+    platform: Platform_Config;
+};
+
+Parsed_Color :: struct {
+    color_name: string;
+    color: Color;
 }
 
 #scope_file
@@ -618,7 +619,7 @@ platform_parse_config_line :: (using parser: *Config_Parser, line: string) -> su
 Config_Parser :: struct {
     handler: Text_File_Handler;
 
-    parsed: Config;
+    parsed_config: Parsed_Config;  // will be filled during parsing
 
     top_section: enum {
         none;
@@ -676,30 +677,7 @@ Config_Parser :: struct {
     ];
 
     platform_subsection: PLATFORM_SUBSECTION_ENUM;
-
-    // Will be filled during parsing
-    data: struct {
-        // Workspace
-        workspace_dirs:         [..] string;
-        ignore_dirs:            [..] string;
-        allow_file_extensions:  [..] string;
-        allow_file_extension_wildcards:  [..] string;
-        ignore_file_extensions: [..] string;
-        ignore_file_extension_wildcards: [..] string;
-
-        // Keymap
-        keymap_common:           [..] Key_Mapping;
-        keymap_editors:          [..] Key_Mapping;
-        keymap_open_file_dialog: [..] Key_Mapping;
-        keymap_search_dialog:    [..] Key_Mapping;
-
-        // Style
-        font:           string;
-        font_size:      int;
-        parsed_colors:  [..] Parsed_Color;  // not putting in a struct so that we can override only a few colors if needed
-    };
 }
-
 
 
 #import "Text_File_Handler";

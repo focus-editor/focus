@@ -669,6 +669,7 @@ dont_ignore_next_window_resize := false;
 #load "files.jai";
 #load "workspace.jai";
 #load "config.jai";
+#load "colors.jai";
 #load "keymap.jai";
 #load "session.jai";
 #load "meow_hash.jai";

@@ -1,8 +1,10 @@
 draw_frame :: () {
     {
-        using Colors.BACKGROUND;
+        using Colors.BACKGROUND_DARK;
         Simp.clear_render_target(r, g, b, a);
     }
+
+    maybe_set_hot_or_active(.none, screen, .NORMAL);
 
     // Check whether we need to deactivate elements before drawing
     if !mouse.left.is_down || mouse.left.just_released then ui.active = .none;
@@ -135,6 +137,8 @@ draw_welcome_screen :: (main_area: Rect) {
 
     // Draw the right part
     {
+        draw_rect(right_area, Colors.BACKGROUND);
+
         Shortcut :: struct { action: Action_Common; description: string; }
 
         SHORTCUTS_TO_DISPLAY :: Shortcut.[
@@ -288,7 +292,10 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         rect.x += (rect.w - max_width) / 2;
         rect.w = max_width;
     }
+    rect = align_to_grid(rect);
     if !is_valid(rect) return;
+
+    draw_rect(rect, Colors.BACKGROUND);
 
     became_active := maybe_set_hot_or_active(ui_id, rect, .TEXT_SELECT);
     if became_active then activate_editors();
