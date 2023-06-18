@@ -311,9 +311,6 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
 
         case .show_commands;                                    show_commands_dialog();                             return true;
     
-        case .next_buffer;                                      go_to_next_prev_buffer();                           return true;
-        case .prev_buffer;                                      go_to_next_prev_buffer(prev = true);                return true;
-
         case .dump_key_mappings;                                dump_key_mappings();                                return true;
         case .dump_editor_history;                              dump_editor_history();                              return true;
 

@@ -336,26 +336,22 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
     array_reset_keeping_memory(*buffer.edit_notifications);
 }
 
-go_to_next_prev_buffer :: (prev: bool = false) -> bool {
-    if open_buffers.count <= 1 then return true;
-
-    current_editor, current_buffer := get_active_editor_and_buffer();
-    for * open_buffers {
-        if it == current_buffer {
-            buffer_id := it_index;
-            if prev {
-                buffer_id -= 1;
-                if buffer_id < 0 then buffer_id = open_buffers.count-1;
-            } else {
-                buffer_id = (buffer_id + 1) % open_buffers.count;
-            }
-
-            editors_open_buffer(buffer_id, .in_place);
-            return true;
+go_to_next_prev_buffer :: (prev: bool = false) {
+    editor, current_buffer := get_active_editor_and_buffer();
+    
+    buffer_id := editor.buffer_id;
+    for buffer_history {
+        if it == editor.buffer_id {
+            history_index := it_index;
+            if prev && history_index-1 > -1 then history_index -= 1;
+            else if !prev && history_index+1 < buffer_history.count then history_index += 1;
+            
+            buffer_id = buffer_history[history_index];
+            break;
         }
     }
     
-    return false;
+    editors_open_buffer(buffer_id, .in_place, false);
 }
 
 adjust_cursors_and_viewport :: (editor: *Editor, buffer: Buffer, current_editor_id: s64) {
@@ -417,7 +413,13 @@ editors_create_new_file :: (placement: Editor_Placement = .in_place) {
     editors_open_buffer(buffer_id, placement);
 }
 
-editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place) {
+editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place, add_to_history: bool = true) {
+    current_buffer_id := -1;
+    {
+        editor, buffer := get_active_editor_and_buffer();
+        if editor then current_buffer_id = editor.buffer_id;
+    }
+
     if #complete editors.layout == {
         case .None;
             editors.active = find_or_create_editor(buffer_id);
@@ -463,6 +465,15 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
     buffer := *open_buffers[buffer_id];
     if buffer.num_times_opened < 255 then buffer.num_times_opened += 1;
 
+    if add_to_history {
+        found, index := array_find(buffer_history, current_buffer_id);
+        if found then buffer_history.count = index+1;
+
+        found, index = array_find(buffer_history, buffer_id);
+        if found then array_ordered_remove_by_value(*buffer_history, buffer_id);
+        array_add(*buffer_history, buffer_id);
+    }
+    
     update_window_title(buffer_id);
     maybe_mark_buffer_as_deleted(buffer_id);  // check in case we missed that it's deleted
     session_notify_modified_buffer(buffer_id);
@@ -2391,6 +2402,7 @@ free_editor :: (using editor: *Editor) {
 
 Editor :: struct {
     buffer_id: s64;
+    buffer_history: [..] s64;
 
     cursors: [..] Cursor;
     main_cursor: s64;      // newly added cursors become main so that we jump to them
@@ -2521,6 +2533,7 @@ Editor_Placement :: enum {
 open_buffers: Simple_Bucket_Array(Buffer, items_per_bucket = 1024, max_buckets = 1024);  // 8 Kb for pointer array, ~1 million buffers is the maximum
 open_editors: [..] Editor;
 buffers_table: Table(string, s64);  // a map from full buffer path to buffer id (only for the open buffers, obviously)
+buffer_history: [..] s64;
 
 open_buffers_lock: Mutex;  // must hold while adding a new buffer
 
