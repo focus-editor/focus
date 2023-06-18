@@ -477,10 +477,9 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place,
             found, index := array_find(<< history, prev_buffer_id);
             if found then history.count = index+1;
         }
-        
-        found, index := array_find(<< history, buffer_id);
-        if found then array_ordered_remove_by_value(history, buffer_id);
 
+        // If is in the history, then we'll remove it and put it to the end of the array
+        array_ordered_remove_by_value(history, buffer_id);
         array_add(history, buffer_id);
     }
     
