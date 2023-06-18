@@ -2402,7 +2402,6 @@ free_editor :: (using editor: *Editor) {
 
 Editor :: struct {
     buffer_id: s64;
-    buffer_history: [..] s64;
 
     cursors: [..] Cursor;
     main_cursor: s64;      // newly added cursors become main so that we jump to them
