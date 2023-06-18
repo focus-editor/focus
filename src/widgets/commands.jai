@@ -155,6 +155,8 @@ commands := #run Command.[
 
     .{ .close_current_editor,                               "Close File",                         0, .Single },
     .{ .close_other_editor,                                 "Close Other File",                   0, .Double },
+    .{ .close_left_editor,                                  "Close Left File",                    0, .Double },
+    .{ .close_right_editor,                                 "Close Right File",                   0, .Double },
 
     .{ .save,                                               "Save",                               0, .Single },
     .{ .save_all,                                           "Save All",                           0, .Single },
@@ -186,6 +188,8 @@ commands := #run Command.[
     .{ .switch_to_other_editor,                             "Switch To Other Pane",               0, .Double },
 
     .{ .duplicate_editor,                                   "Duplicate File On The Side",         0, .Single },
+    .{ .duplicate_editor_to_the_left,                       "Duplicate File To The Left",         0, .Single },
+    .{ .duplicate_editor_to_the_right,                      "Duplicate File To The Right",        0, .Single },
 
     .{ .move_editor_to_the_left,                            "Move Pane To The Left",              0, .Double },
     .{ .move_editor_to_the_right,                           "Move Pane To The Right",             0, .Double },

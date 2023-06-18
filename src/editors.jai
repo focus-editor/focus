@@ -96,8 +96,10 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
             case .move_up_fast;                     search_bar_move_cursor(editor, buffer, -5);                                   return true;
             case .move_down_fast;                   search_bar_move_cursor(editor, buffer,  5);                                   return true;
 
-            case .close_current_editor;             close_search_bar(editor); close_current_editor();                             return true;
-            case .close_other_editor;               close_other_editor();                                                         return true;
+            case .close_current_editor;             close_search_bar(editor); close_editor(.current);                                  return true;
+            case .close_other_editor;               close_editor(.other);                                                              return true;
+            case .close_left_editor;                if editors.active == editors.left  close_search_bar(editor); close_editor(.left);  return true;
+            case .close_right_editor;               if editors.active == editors.right close_search_bar(editor); close_editor(.right); return true;
         }
 
         if mode == .classic {
@@ -142,14 +144,18 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .toggle_expand;                    toggle_expand();
         case .search_in_buffer;                 open_search_bar(editor, buffer);
         case .search_in_buffer_dropdown_mode;   open_search_bar(editor, buffer, .dropdown);
-        case .close_current_editor;             close_current_editor();
-        case .close_other_editor;               close_other_editor();
+        case .close_current_editor;             close_editor(.current);
+        case .close_other_editor;               close_editor(.other);
+        case .close_left_editor;                close_editor(.left);
+        case .close_right_editor;               close_editor(.right);
         case .save;                             save_buffer(editor, buffer);
         case .save_all;                         save_all   (editor, buffer);
         case .switch_to_left_editor;            switch_to_editor(.left);
         case .switch_to_right_editor;           switch_to_editor(.right);
         case .switch_to_other_editor;           switch_to_editor(.other);
         case .duplicate_editor;                 switch_to_editor(.other, duplicate_current = true);
+        case .duplicate_editor_to_the_left;     switch_to_editor(.left, duplicate_current = true);
+        case .duplicate_editor_to_the_right;    switch_to_editor(.right, duplicate_current = true);
         case .move_editor_to_the_left;          if editors.active == editors.right then swap_panes();
         case .move_editor_to_the_right;         if editors.active == editors.left  then swap_panes();
         case .center_viewport_on_cursor;        center_viewport_on_cursor           (editor, buffer);
@@ -615,6 +621,15 @@ new_edit_group :: (buffer: *Buffer, editor: *Editor) {
     for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
 }
 
+close_editor :: (position: enum { current; other; left; right; }) {
+    if position == {
+        case .current; close_current_editor();
+        case .other;   close_other_editor();
+        case .left;    if editors.active == editors.left  close_current_editor(); else if editors.active == editors.right close_other_editor();
+        case .right;   if editors.active == editors.right close_current_editor(); else if editors.active == editors.left  close_other_editor();
+    }
+}
+
 close_current_editor :: () {
     if editors.layout == {
         case .None;     return;
@@ -634,7 +649,6 @@ close_current_editor :: () {
             editors.closing = true;
     }
 }
-
 
 close_other_editor :: () {
     if editors.layout == {
@@ -1198,8 +1212,10 @@ switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := fa
             editors.layout = .Double;
 
         case .Double;
-            if side == .other {
-                if editors.active == editors.left then side = .right; else side = .left;
+            if side == {
+                case .left;  if editors.active == editors.left  then return;
+                case .right; if editors.active == editors.right then return;
+                case .other; if editors.active == editors.left  then side = .right; else side = .left;
             }
             if duplicate_current {
                 duplicated_editor := duplicate_active_editor();
