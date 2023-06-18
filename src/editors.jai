@@ -414,8 +414,11 @@ editors_create_new_file :: (placement: Editor_Placement = .in_place) {
 }
 
 editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place, add_to_history: bool = true) {
+    
     current_buffer_id := -1;
-    {
+    add_to_history = add_to_history && editors.active != -1;
+
+    if add_to_history {
         editor, buffer := get_active_editor_and_buffer();
         if editor then current_buffer_id = editor.buffer_id;
     }
