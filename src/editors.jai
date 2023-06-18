@@ -338,20 +338,22 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
 
 go_to_next_prev_buffer :: (prev: bool = false) {
     editor, current_buffer := get_active_editor_and_buffer();
+    next_buffer_id := editor.buffer_id;
     
-    buffer_id := editor.buffer_id;
-    for buffer_history {
+    left_or_right := cast(u8)(editors.layout == .Double && editors.right == editors.active);
+    history := buffer_history[left_or_right];
+    for history {
         if it == editor.buffer_id {
             history_index := it_index;
             if prev && history_index-1 > -1 then history_index -= 1;
-            else if !prev && history_index+1 < buffer_history.count then history_index += 1;
+            else if !prev && history_index+1 < history.count then history_index += 1;
             
-            buffer_id = buffer_history[history_index];
+            next_buffer_id = history[history_index];
             break;
         }
     }
     
-    editors_open_buffer(buffer_id, .in_place, false);
+    editors_open_buffer(next_buffer_id, .in_place, false);
 }
 
 adjust_cursors_and_viewport :: (editor: *Editor, buffer: Buffer, current_editor_id: s64) {
@@ -415,12 +417,10 @@ editors_create_new_file :: (placement: Editor_Placement = .in_place) {
 
 editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place, add_to_history: bool = true) {
     
-    current_buffer_id := -1;
-    add_to_history = add_to_history && editors.active != -1;
-
-    if add_to_history {
+    prev_buffer_id := -1;
+    if add_to_history && editors.active != -1 {
         editor, buffer := get_active_editor_and_buffer();
-        if editor then current_buffer_id = editor.buffer_id;
+        prev_buffer_id = editor.buffer_id;
     }
 
     if #complete editors.layout == {
@@ -465,16 +465,23 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place,
                 editors.active = editors.left;
             }
     }
+    
     buffer := *open_buffers[buffer_id];
     if buffer.num_times_opened < 255 then buffer.num_times_opened += 1;
 
     if add_to_history {
-        found, index := array_find(buffer_history, current_buffer_id);
-        if found then buffer_history.count = index+1;
+        left_or_right := cast(u8)(editors.layout == .Double && editors.right == editors.active);
+        history := *buffer_history[left_or_right];
+        
+        if prev_buffer_id != -1 {
+            found, index := array_find(<< history, prev_buffer_id);
+            if found then history.count = index+1;
+        }
+        
+        found, index := array_find(<< history, buffer_id);
+        if found then array_ordered_remove_by_value(history, buffer_id);
 
-        found, index = array_find(buffer_history, buffer_id);
-        if found then array_ordered_remove_by_value(*buffer_history, buffer_id);
-        array_add(*buffer_history, buffer_id);
+        array_add(history, buffer_id);
     }
     
     update_window_title(buffer_id);
@@ -1280,6 +1287,12 @@ duplicate_active_editor :: () -> s64 {
     // Move viewport
     duplicated_editor.viewport.scroll_x = current_editor.viewport.scroll_x;
     duplicated_editor.viewport.scroll_y = current_editor.viewport.scroll_y;
+
+    // Copy buffer history
+    from_index := cast(u8)(editors.layout == .Double && editors.right == editors.active);
+    to_index   := cast(u8)!from_index;
+    array_reset(*buffer_history[to_index]);
+    for buffer_history[from_index] { array_add(*buffer_history[to_index], it); }
 
     return duplicated_editor_id;
 }
@@ -2535,7 +2548,7 @@ Editor_Placement :: enum {
 open_buffers: Simple_Bucket_Array(Buffer, items_per_bucket = 1024, max_buckets = 1024);  // 8 Kb for pointer array, ~1 million buffers is the maximum
 open_editors: [..] Editor;
 buffers_table: Table(string, s64);  // a map from full buffer path to buffer id (only for the open buffers, obviously)
-buffer_history: [..] s64;
+buffer_history: [2] [..] s64; // for left and right editor
 
 open_buffers_lock: Mutex;  // must hold while adding a new buffer
 
