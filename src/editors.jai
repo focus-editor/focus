@@ -2217,7 +2217,7 @@ paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
             clipboard_slice := clipboard.slices[it_index];
             selection       := get_selection(cursor);
             count           := clipboard_slice.count - 1; // Don't paste the last newline of the slice
-            if it_index == clipboard.slices.count - 1 && clipboard_slice.was_selected then clipboard_slice.count += 1; // If the last slice was selected, it didn't have newline
+            if it_index == clipboard.slices.count - 1 && clipboard_slice.was_selected then count += 1; // If the last slice was selected, it didn't have newline
             str             := slice(clipboard.text, clipboard_slice.start, count); 
 
             replace_range(buffer, selection, str);
