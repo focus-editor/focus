@@ -114,7 +114,7 @@ STRING, VERSION, RELEASE_DATE), w);
     #import "Ico_File";
     #import "Windows_Resources";
 } else #if OS == .MACOS {
-INFO_PLIST_CONTENTS :: #string STRING
+    INFO_PLIST_CONTENTS :: #string STRING
 <?xml version="1.0" ?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist>
