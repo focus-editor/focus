@@ -15,6 +15,9 @@ platform_copy_config :: (src: *Platform_Config, dst: *Platform_Config) {
 
 platform_setup :: () {
     if timeBeginPeriod(1) != TIMERR_NOERROR then log_error("Couldn't set minimum timer resolution");
+    Input.windows_draw_frame = draw_frame;
+    Input.windows_update_window_size = update_window_size;
+    Input.windows_main_context = *context;
 }
 
 platform_data_dir :: () -> string {
@@ -219,6 +222,13 @@ monitor_enum_proc :: (hMonitor: HMONITOR, hdc: HDC, rect: *RECT, data: LPARAM) -
     }
 
     return xx true;
+}
+
+update_window_size :: (w: s64, h: s64) {
+    window_width  = w;
+    window_height = h;
+    Simp.update_window(window);
+    screen = make_rect(0, 0, window_width, window_height);
 }
 
 Monitor :: struct {
