@@ -29,7 +29,7 @@ platform_config_dir :: inline () -> string {
     return platform_data_dir();
 }
 
-platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, s32, s32 {
+platform_get_centered_window_dimensions :: (open_on_biggest: bool, open_on_primary: bool) -> s32, s32, s32, s32 {
     if !EnumDisplayMonitors(null, null, monitor_enum_proc, 0) then panic("Couldn't enumerate monitors");
     assert(monitors.count > 0, "Unexpectedly no monitors found. This is a bug.");
 
@@ -44,6 +44,12 @@ platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, 
             if max_area < area {
                 monitor  = it;
                 max_area = area;
+            }
+        }
+    } else if open_on_primary {
+        for monitors {
+            if it.primary {
+                monitor = it;
             }
         }
     }
@@ -216,6 +222,12 @@ monitor_enum_proc :: (hMonitor: HMONITOR, hdc: HDC, rect: *RECT, data: LPARAM) -
     monitor.right  = rect.right;
     monitor.bottom = rect.bottom;
 
+    monitorInfo: MONITORINFO;
+    monitorInfo.cbSize = size_of(MONITORINFO);
+
+    GetMonitorInfoW(hMonitor, *monitorInfo);
+    monitor.primary = !!(monitorInfo.dwFlags & 0x1);
+
     new_context : Context;
     push_context new_context {
         array_add(*monitors, monitor);
@@ -236,6 +248,7 @@ Monitor :: struct {
     top    : int;
     right  : int;
     bottom : int;
+    primary: bool;
 };
 
 monitors : [..] Monitor;
