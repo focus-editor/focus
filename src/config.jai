@@ -1,4 +1,4 @@
-load_global_config :: () -> success: bool, changed: bool, there_were_warnings: bool {
+load_global_config :: (first_load := false) -> success: bool, changed: bool, there_were_warnings: bool {
     global_config_path = sprint("%/global.focus-config", config_dir);
 
     if !file_exists(global_config_path) {
@@ -7,7 +7,7 @@ load_global_config :: () -> success: bool, changed: bool, there_were_warnings: b
         if !success panic_messagebox("Couldn't create a new config file '%'.\nIs the directory writable?", global_config_path);
     }
 
-    success, changed, there_were_warnings := load_and_merge_config(global_config_path, into = Config.{}, hash = *global_config_hash);
+    success, changed, there_were_warnings := load_and_merge_config(global_config_path, into = Config.{}, hash = *global_config_hash, first_load = first_load);
     if success then saved_global_config = config;
 
     return success, changed, there_were_warnings;
@@ -135,7 +135,7 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
 
 #scope_file
 
-load_and_merge_config :: (file_path: string, into: Config, hash: *u64) -> success: bool, changed: bool, there_were_warnings: bool {
+load_and_merge_config :: (file_path: string, into: Config, hash: *u64, first_load := false) -> success: bool, changed: bool, there_were_warnings: bool {
 
     file_data, success_read := read_entire_file(file_path);
     // NOTE: we're not freeing because the config will take ownership of it (and if you reload it'll leak the old data, which we should probably fix at some point)
@@ -146,7 +146,7 @@ load_and_merge_config :: (file_path: string, into: Config, hash: *u64) -> succes
         return false, false, false;
     }
 
-    parsed_config, success_parse, error_msg, warnings := parse_config(file_path, file_path, file_data);
+    parsed_config, success_parse, error_msg, warnings := parse_config(file_path, file_path, file_data, first_load = first_load);
     if !success_parse {
         if !error_msg assert(false, "No error message on a config error. This is a bug.");
         log_error(error_msg);

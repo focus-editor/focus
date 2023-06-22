@@ -1,4 +1,4 @@
-parse_config :: (name: string, filename: string, file_data: string) -> Parsed_Config, success: bool, error_msg: string /* temp */, warnings: [] string /* temp */ {
+parse_config :: (name: string, filename: string, file_data: string, first_load := false) -> Parsed_Config, success: bool, error_msg: string /* temp */, warnings: [] string /* temp */ {
     using parser: Config_Parser;
 
     // NOTE: we don't free on purpose, because some of the parsed data will point into the file data
@@ -34,7 +34,10 @@ parse_config :: (name: string, filename: string, file_data: string) -> Parsed_Co
                 return Parsed_Config.{}, false, error_msg, .[];
         }
 
-        if !success return Parsed_Config.{}, false, error_msg, warnings;
+        if !success {
+            if !first_load return Parsed_Config.{}, false, error_msg, warnings;
+            array_add(*warnings, error_msg);
+        }
         if success && error_msg then array_add(*warnings, error_msg);
     }
 
