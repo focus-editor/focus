@@ -168,6 +168,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .create_cursor_below;              create_cursor                       (editor, buffer, .below); keep_selection = true;
         case .move_to_previous_editor_history;  move_to_previous_editor_history     ();
         case .move_to_next_editor_history;      move_to_next_editor_history         ();
+        case .move_to_previous_buffer;          move_to_next_prev_buffer            (prev = true);
+        case .move_to_next_buffer;              move_to_next_prev_buffer            ();
 
         case .select_word;                      select_word(editor, buffer); keep_selection = true;
         case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
@@ -333,6 +335,23 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
     array_reset_keeping_memory(*buffer.edit_notifications);
 }
 
+move_to_next_prev_buffer :: (prev: bool = false) {
+    editor, current_buffer := get_active_editor_and_buffer();
+    next_buffer_id := editor.buffer_id;
+    
+    left_or_right := cast(u8)(editors.right == editors.active);
+    history := *buffer_history[left_or_right];
+    
+    found, index := array_find(<< history, editor.buffer_id);
+    if !found then return;
+    
+    if prev && index-1 > -1 then index -= 1;
+    else if !prev && index+1 < history.count then index += 1;
+    next_buffer_id = (<<history)[index];
+
+    editors_open_buffer(next_buffer_id, .in_place, false);
+}
+
 adjust_cursors_and_viewport :: (editor: *Editor, buffer: Buffer, current_editor_id: s64) {
     // When edits are made in another editor for the same buffer, this editor's cursors
     // need to be adjusted. The viewport glue point also needs to move.
@@ -392,7 +411,14 @@ editors_create_new_file :: (placement: Editor_Placement = .in_place) {
     editors_open_buffer(buffer_id, placement);
 }
 
-editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place) {
+editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place, add_to_history: bool = true) {
+
+    buffer_id_before := -1;
+    if add_to_history && editors.active != -1 {
+        editor, buffer := get_active_editor_and_buffer();
+        buffer_id_before = editor.buffer_id;
+    }
+
     if #complete editors.layout == {
         case .None;
             editors.active = find_or_create_editor(buffer_id);
@@ -435,8 +461,24 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
                 editors.active = editors.left;
             }
     }
+    
     buffer := *open_buffers[buffer_id];
     if buffer.num_times_opened < 255 then buffer.num_times_opened += 1;
+
+    if add_to_history {
+        left_or_right := cast(u8)(editors.right == editors.active);
+        history := *buffer_history[left_or_right];
+
+        if buffer_id_before != -1 {
+            // "cut" the remained history
+            found, index := array_find(<< history, buffer_id_before);
+            if found then history.count = index+1;
+        }
+
+        // If is in the history, then we'll remove it and put it to the end of the history list
+        array_ordered_remove_by_value(history, buffer_id);
+        array_add(history, buffer_id);
+    }
 
     update_window_title(buffer_id);
     maybe_mark_buffer_as_deleted(buffer_id);  // check in case we missed that it's deleted
@@ -1241,6 +1283,12 @@ duplicate_active_editor :: () -> s64 {
     // Move viewport
     duplicated_editor.viewport.scroll_x = current_editor.viewport.scroll_x;
     duplicated_editor.viewport.scroll_y = current_editor.viewport.scroll_y;
+
+    // Copy buffer history
+    from_index := cast(u8)(editors.right == editors.active);
+    to_index   := cast(u8)!from_index;
+    array_reset(*buffer_history[to_index]);
+    for buffer_history[from_index] { array_add(*buffer_history[to_index], it); }
 
     return duplicated_editor_id;
 }
@@ -2354,6 +2402,8 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
     editor.cursor_moved = .unimportant;
 }
 
+
+
 free_editor :: (using editor: *Editor) {
     array_reset(*cursors);
     if clipboard free(clipboard);
@@ -2496,6 +2546,7 @@ Editor_Placement :: enum {
 open_buffers: Simple_Bucket_Array(Buffer, items_per_bucket = 1024, max_buckets = 1024);  // 8 Kb for pointer array, ~1 million buffers is the maximum
 open_editors: [..] Editor;
 buffers_table: Table(string, s64);  // a map from full buffer path to buffer id (only for the open buffers, obviously)
+buffer_history: [2] [..] s64; // for left and right editor
 
 open_buffers_lock: Mutex;  // must hold while adding a new buffer
 

@@ -740,6 +740,8 @@ remove_all_buffers :: () {
     deinit(*buffers_table);
     for * open_buffers free_buffer(it);
     bucket_array_reset(*open_buffers);
+    array_reset_keeping_memory(*buffer_history[0]);
+    array_reset_keeping_memory(*buffer_history[1]);
 }
 
 #scope_file

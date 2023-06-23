@@ -91,6 +91,9 @@ Ctrl-[                      unindent
 
 Ctrl-S                      save
 
+Ctrl-PageUp                 move_to_previous_buffer
+Ctrl-PageDown               move_to_next_buffer
+
 Alt-Minus                   move_to_previous_editor_history
 Alt-Plus                    move_to_next_editor_history
 
