@@ -196,6 +196,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .indent;                           indent_lines                        (editor, buffer); keep_selection = true;
         case .unindent;                         unindent_lines                      (editor, buffer); keep_selection = true;
         case .toggle_comment;                   toggle_comment                      (editor, buffer); keep_selection = true;
+        case .toggle_block_comment;             toggle_block_comment                (editor, buffer); keep_selection = true;
         case .select_line;                      select_lines                        (editor, buffer); keep_selection = true;
 
         case .break_line;                       break_line                          (editor, buffer);
@@ -1375,6 +1376,7 @@ new_edit_group_required_for_action :: (action: Action_Editors, cursor: Cursor) -
         case .cut;                              return true;
         case .paste;                            return true;
         case .toggle_comment;                   return true;
+        case .toggle_block_comment;             return true;
         case .indent_or_go_to_next_tabstop;     return true;
         case .indent;                           return true;
         case .unindent;                         return true;
@@ -2350,6 +2352,101 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
     replace_range(buffer, range, new_str);
 
     for * cursor : editor.cursors { cursor.col_wanted = -1; }
+
+    editor.cursor_moved = .unimportant;
+}
+
+toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
+    comment_start: string;
+    comment_end:   string;
+
+    if buffer.lang == {
+        case .C;            comment_start = "/*"; comment_end = "*/";
+        case .CSharp;       comment_start = "/*"; comment_end = "*/";
+        case .Jai;          comment_start = "/*"; comment_end = "*/";
+        case .Focus_Config; toggle_comment(editor, buffer); // The config doesn't have block comments, fall back to toggle_comment.
+        case;               return;
+    }
+
+    remove_comment := true;
+
+    indices: [..] s64;
+
+    indices.allocator = temp;
+
+    for cursor : editor.cursors {
+        selection := get_selection(cursor);
+
+        split_left := buffer.bytes;
+        split_left.count = selection.start;
+
+        split_right := buffer.bytes;
+        split_right.data += selection.end;
+        split_right.count -= selection.end;
+
+        start_search_index := find_index_from_right(cast(string)split_left, comment_start);
+        end\ _search_index := find_index_from_left(cast(string)split_right, comment_end);
+
+        if start_search_index == -1 || end_search_index == -1 {
+            remove_comment = false;
+            break;
+        }
+
+        end_search_index += selection.end;
+
+        array_add(*indices, start_search_index);
+        array_add(*indices, end\ _search_index);
+
+        for color_index : start_search_index..end_search_index {
+            remove_comment &= buffer.colors[color_index] == xx Code_Color.COMMENT;
+            if !remove_comment then break cursor;
+        }
+    }
+
+    if remove_comment {
+        quick_sort(indices, (a, b) => (a - b));
+
+        for < index: indices {
+            bytes_from_index: string;
+            bytes_from_index.data = buffer.bytes.data + index;
+            bytes_from_index.count = buffer.bytes.count - index;
+
+            count_removed := 0;
+
+            if starts_with(bytes_from_index, comment_start) {
+                delete_range(buffer, .{xx index, xx (index + comment_start.count)});
+                count_removed = comment_start.count;
+            } else if starts_with(bytes_from_index, comment_end) {
+                delete_range(buffer, .{xx index, xx (index + comment_end.count)});
+                count_removed = comment_end.count;
+            }
+
+            if count_removed {
+                for * cursor : editor.cursors {
+                    if cursor.pos > index {
+                        cursor.pos -= xx count_removed;
+                    }
+                    if cursor.sel > index {
+                        cursor.sel -= xx count_removed;
+                    }
+                }
+            }
+        }
+    } else {
+        comment_total_length := cast(s32)(comment_start.count + comment_end.count);
+
+        for * cursor : editor.cursors {
+            move_count := cast(s32)it_index * comment_total_length;
+
+            start_pos := min(cursor.pos, cursor.sel) + move_count;
+            end_pos := max(cursor.pos, cursor.sel) + move_count + 2;
+
+            insert_string_at_offset(buffer, start_pos, comment_start);
+            insert_string_at_offset(buffer, end_pos,   comment_end);
+            cursor.pos += 2 + move_count;
+            cursor.sel += 2 + move_count;
+        }
+    }
 
     editor.cursor_moved = .unimportant;
 }
