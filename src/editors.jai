@@ -335,20 +335,23 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
     array_reset_keeping_memory(*buffer.edit_notifications);
 }
 
+get_current_buffer_history :: inline () -> *[..] s64 {
+    left_or_right := cast(u8)(editors.right == editors.active);
+    return *buffer_history[left_or_right];
+}
+
 move_to_next_prev_buffer :: (prev: bool = false) {
     editor, current_buffer := get_active_editor_and_buffer();
     next_buffer_id := editor.buffer_id;
     
-    left_or_right := cast(u8)(editors.right == editors.active);
-    history := *buffer_history[left_or_right];
-    
+    history := get_current_buffer_history();
     found, index := array_find(<< history, editor.buffer_id);
     if !found then return;
     
-    if prev && index-1 > -1 then index -= 1;
-    else if !prev && index+1 < history.count then index += 1;
+    if       prev && index - 1 > -1            then index -= 1;
+    else if !prev && index + 1 < history.count then index += 1;
+    
     next_buffer_id = (<<history)[index];
-
     editors_open_buffer(next_buffer_id, .in_place, false);
 }
 
@@ -466,9 +469,7 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place,
     if buffer.num_times_opened < 255 then buffer.num_times_opened += 1;
 
     if add_to_history {
-        left_or_right := cast(u8)(editors.right == editors.active);
-        history := *buffer_history[left_or_right];
-
+        history := get_current_buffer_history();
         if buffer_id_before != -1 {
             // "cut" the remained history
             found, index := array_find(<< history, buffer_id_before);
