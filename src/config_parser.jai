@@ -30,8 +30,13 @@ parse_config :: (name: string, filename: string, file_data: string, first_load :
             case .style;        success, error_msg = parse_style_line(*parser, line);
             case .platform;     success, error_msg = platform_parse_config_line(*parser, line);
             case .none;
-                error_msg := log_parser_error(handler, "Expected a top-level section definition, got '%'", line);
-                return Parsed_Config.{}, false, error_msg, .[];
+                if first_load {
+                    // On first load we want at least the keymap to be present, so that you can at least fix the errors in the config.
+                    success, error_msg = parse_keymap_line(*parser, line);
+                } else {
+                    error_msg := log_parser_error(handler, "Expected a top-level section definition, got '%'", line);
+                    return Parsed_Config.{}, false, error_msg, .[];
+                }
         }
 
         if !success {
