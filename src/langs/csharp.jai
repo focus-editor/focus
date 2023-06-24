@@ -69,7 +69,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char ",";  token.type = .punctuation; token.punctuation = .comma;     t += 1;
         case #char ".";  token.type = .punctuation; token.punctuation = .period;    t += 1;
         case #char "{";  token.type = .punctuation; token.punctuation = .l_brace;   t += 1;
-        case #char "}";  token.type = .punctuation; token.punctuation = .l_brace;   t += 1;
+        case #char "}";  token.type = .punctuation; token.punctuation = .r_brace;   t += 1;
         case #char "(";  token.type = .punctuation; token.punctuation = .l_paren;   t += 1;
         case #char ")";  token.type = .punctuation; token.punctuation = .r_paren;   t += 1;
         case #char "[";  token.type = .punctuation; token.punctuation = .l_bracket; t += 1;
