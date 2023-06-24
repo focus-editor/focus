@@ -2439,12 +2439,12 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
             move_count := cast(s32)it_index * comment_total_length;
 
             start_pos := min(cursor.pos, cursor.sel) + move_count;
-            end_pos := max(cursor.pos, cursor.sel) + move_count + 2;
+            end_pos := max(cursor.pos, cursor.sel) + move_count + comment_start.count;
 
             insert_string_at_offset(buffer, start_pos, comment_start);
             insert_string_at_offset(buffer, end_pos,   comment_end);
-            cursor.pos += 2 + move_count;
-            cursor.sel += 2 + move_count;
+            cursor.pos += cast(s32)comment_start.count + move_count;
+            cursor.sel += cast(s32)comment_start.count + move_count;
         }
     }
 
