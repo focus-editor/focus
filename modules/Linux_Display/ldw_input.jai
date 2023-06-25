@@ -203,7 +203,16 @@ pointer_listener :: wl_pointer_listener.{
         d.input_serial = serial;
     },
 
-    axis = (data: *void, self: *wl_pointer, time: u32, axis: u32, value: wl_fixed_t) -> void #c_call {},
+    axis = (data: *void, self: *wl_pointer, time: u32, axis: u32, value: wl_fixed_t) -> void #c_call {
+        ctx: Context;
+        push_context ctx {
+            d: *WLDisplay = wl_proxy.get_user_data(self);
+            sign := ifx (wl_fixed_to_int(value) < 0) then cast(s32)-1 else 1;
+            delta := (WHEEL_DELTA / 2); // @TODO: this is set on a "feels good on my machine" basis, should be calculated some other way (perhaps based on the height of a line?)
+            d.pointer_axis_accumulator[axis] += d.pointer_axis_multiplier[axis] * sign * delta;
+        }
+    },
+
     frame = (data: *void, self: *wl_pointer) -> void #c_call {
         ctx: Context;
         push_context ctx {
@@ -220,9 +229,11 @@ pointer_listener :: wl_pointer_listener.{
             }
         }
     },
+
     axis_source = (data: *void, self: *wl_pointer, axis_source: u32) -> void #c_call {},
     axis_stop = (data: *void, self: *wl_pointer, time: u32, axis: u32) -> void #c_call {},
     axis_discrete = (data: *void, self: *wl_pointer, axis: u32, discrete: s32) -> void #c_call {},
+
     axis_value120 = (data: *void, self: *wl_pointer, axis: u32, value120: s32) -> void #c_call {
         ctx: Context;
         push_context ctx {
@@ -230,6 +241,7 @@ pointer_listener :: wl_pointer_listener.{
             d.pointer_axis_accumulator[axis] += d.pointer_axis_multiplier[axis] * value120;
         }
     },
+
     axis_relative_direction = (data: *void, self: *wl_pointer, axis: u32, direction: u32) -> void #c_call {
         d: *WLDisplay = wl_proxy.get_user_data(self);
         if direction == wl_pointer.axis_relative_direction_identical {
