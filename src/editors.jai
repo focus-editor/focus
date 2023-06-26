@@ -2384,9 +2384,23 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
         split_right.count -= selection.end;
 
         start_search_index := find_index_from_right(cast(string)split_left, comment_start);
-        end\ _search_index := find_index_from_left(cast(string)split_right, comment_end);
+        start_search_index_limit := find_index_from_right(cast(string)split_left, comment_end);
+
+        end_search_index := find_index_from_left(cast(string)split_right, comment_end);
+        end_search_index_limit := find_index_from_left(cast(string)split_right, comment_start);
+
+        if end_search_index_limit == -1 {
+            end_search_index_limit = S64_MAX;
+        }
+
+        if start_search_index < start_search_index_limit && end_search_index > end_search_index_limit {
+            // We are between two comments, don't remove them...
+            remove_comment = false;
+            break;
+        }
 
         if start_search_index == -1 || end_search_index == -1 {
+            // There is either no comment start or comment end in the file, add new comment.
             remove_comment = false;
             break;
         }
@@ -2395,11 +2409,6 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
 
         array_add(*indices, start_search_index);
         array_add(*indices, end\ _search_index);
-
-        for color_index : start_search_index..end_search_index {
-            remove_comment &= buffer.colors[color_index] == xx Code_Color.COMMENT;
-            if !remove_comment then break cursor;
-        }
     }
 
     if remove_comment {
