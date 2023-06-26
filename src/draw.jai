@@ -656,7 +656,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             highlight_mark_rect := shrink_x(marks_rect, marks_rect.w / 3);
             highlight_mark_rect.h = floor(4 * dpi_scale);
 
-            if search_bar_is_open(editor) && search_bar.results {
+            if search_bar_is_maximized(editor) && search_bar.results {
                 // Search results
                 for search_bar.results {
                     highlight_mark_rect.y = marks_rect_top - it.line * mark_line_height - highlight_mark_rect.h;
@@ -664,7 +664,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 }
             }
 
-            if !search_bar_is_open(editor) {
+            if !search_bar_is_maximized(editor) {
                 // Selection highlights
                 for highlights {
                     highlight_mark_rect.y = marks_rect_top - it.line * mark_line_height - highlight_mark_rect.h;
@@ -689,7 +689,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
 
         // Draw selection highlights
-        if !search_bar_is_open(editor) {
+        if !search_bar_is_maximized(editor) {
             for highlights {
                 if it.line < visible_lines_start continue;
                 if it.line > visible_lines_end   break;
@@ -704,7 +704,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         cursors_active := editor_is_active && active_global_widget == .editors;
 
         // Draw selections
-        if !search_bar_is_open(editor) {
+        if !search_bar_is_maximized(editor) {
             Simp.set_shader_for_rects();
             for cursor : cursors {
                 if has_selection(cursor) {
@@ -718,7 +718,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
 
         // Draw search results
-        if search_bar_is_open(editor) {
+        if search_bar_is_maximized(editor) {
             for search_bar.results {
                 if it.line < visible_lines_start continue;
                 if it.line > visible_lines_end   break;
@@ -751,7 +751,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         if editor.paste_animations.count > 0 then redraw_requested = true;
 
         // Draw inactive cursors before text
-        if !cursors_active && !search_bar_is_open(editor) && config.settings.cursor_as_block {
+        if !cursors_active && !search_bar_is_maximized(editor) && config.settings.cursor_as_block {
             Simp.set_shader_for_rects();
             for cursor : cursors {
                 if cursor.pos < visible_offset_range.start || cursor.pos > visible_offset_range.end continue;
@@ -790,7 +790,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // Draw cursors when they are active
         cursor_width := ifx config.settings.cursor_as_block then char_x_advance else 2 * dpi_scale;
 
-        if cursors_active && should_draw_cursors() && !search_bar_is_open(editor) {
+        if cursors_active && should_draw_cursors() && !search_bar_is_maximized(editor) {
             Simp.set_shader_for_rects();
             for cursor : cursors {
                 if cursor.pos < visible_offset_range.start || cursor.pos > visible_offset_range.end continue;
@@ -813,7 +813,52 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     // Draw search bar
     if active_global_widget != .editors then search_bar.active = false;
 
-    if search_bar_is_open(editor) {
+    if search_bar_is_minimized(editor) {
+        using search_bar;
+
+        margin  := floor(8 * dpi_scale);
+        padding := floor(4 * dpi_scale);
+
+        bar_rect_h := font_ui_line_height + 2 * padding + 2 * margin + 2;
+        bar_rect_w := bar_rect_h * 2;
+        bar_rect_x := main_area.x + main_area.w - bar_rect_w - 2 * char_x_advance;
+        bar_rect_y := main_area.h - bar_rect_h;
+        bar_rect := Rect.{ bar_rect_x, bar_rect_y, bar_rect_w, bar_rect_h };
+
+        draw_rounded_rect_with_shadow(bar_rect, Colors.BACKGROUND_LIGHT);
+
+        button_width := bar_rect_h;
+
+        input_id := get_ui_id_from_loc(parent_id = ui_id);
+        pressed, hover_match_case, hover_match_word := false, false, false;
+
+        pressed, hover_match_case = draw_text_input_modifier_button(input_id, bar_rect, button_width, case_sensitive, CASE_SENSITIVE_ICON);
+        if pressed {
+            search_bar_toggle_case_sensitive(editor, buffer);
+            redraw_requested = true;
+        }
+
+        bar_rect.w -= button_width;
+
+        pressed, hover_match_word = draw_text_input_modifier_button(input_id, bar_rect, button_width, whole_word, WHOLE_WORD_ICON);
+        if pressed {
+            search_bar_toggle_whole_word(editor, buffer);
+            redraw_requested = true;
+        }
+
+        // Draw tooltips last
+        tooltip := "";
+        if hover_match_case {
+            tooltip = "Match Case";
+            combo := key_sequence_for_action_as_string(Action_Search_Dialog.toggle_case_sensitive);
+            if combo then tooltip = tprint("% (%)", tooltip, combo);
+        } else if hover_match_word {
+            tooltip = "Match Whole Word";
+            combo := key_sequence_for_action_as_string(Action_Search_Dialog.toggle_whole_word);
+            if combo then tooltip = tprint("% (%)", tooltip, combo);
+        }
+        if tooltip then draw_tooltip_bottom_left(tooltip, Vector2.{ x = mouse.pointer.x - bar_rect.h / 2, y = bar_rect.y + bar_rect.h / 3 });
+    } else if search_bar_is_maximized(editor) {
         using search_bar;
 
         input_id            := get_ui_id_from_loc(parent_id = ui_id);
@@ -859,7 +904,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         numbers_rect, input_rect := cut_right(top_rect, numbers_width + padding);
 
         Simp.draw_prepared_text(font_ui_small, xx (numbers_rect.x + padding), xx (numbers_rect.y + (numbers_rect.h - font_ui_small.character_height) / 2.0), color = Colors.UI_DEFAULT);
-        input_active := editor_is_active && search_bar.active && active_global_widget == .editors;
+        input_active := editor_is_active && active_global_widget == .editors;
         draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id, label = " Find in buffer", margin_right = input_rect.h * 2);
 
         button_width := input_rect.h;
