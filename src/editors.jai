@@ -142,6 +142,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .toggle_expand;                    toggle_expand();
         case .search_in_buffer;                 open_search_bar(editor, buffer);
         case .search_in_buffer_dropdown_mode;   open_search_bar(editor, buffer, .dropdown);
+        case .toggle_case_sensitive;            search_bar_toggle_case_sensitive(editor, buffer);
+        case .toggle_whole_word;                search_bar_toggle_whole_word(editor, buffer);
         case .close_current_editor;             close_current_editor();
         case .close_other_editor;               close_other_editor();
         case .save;                             save_buffer(editor, buffer);
@@ -703,17 +705,17 @@ search_bar_toggle_expand :: (using editor: *Editor) {
 search_bar_toggle_whole_word :: (using editor: *Editor, buffer: Buffer) {
     using search_bar;
 
-    if !active return;
     whole_word = !whole_word;
-    search_and_update_results(editor, buffer);
+    if active search_and_update_results(editor, buffer);
+    refresh_highlights = true;
 }
 
 search_bar_toggle_case_sensitive :: (using editor: *Editor, buffer: Buffer) {
     using search_bar;
 
-    if !active return;
     case_sensitive = !case_sensitive;
-    search_and_update_results(editor, buffer);
+    if active search_and_update_results(editor, buffer);
+    refresh_highlights = true;
 }
 
 search_bar_move_cursor :: (using editor: *Editor, buffer: Buffer, delta: s64, wrap := false, snap := true) {

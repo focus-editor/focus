@@ -160,9 +160,6 @@ Cmd-2                       open_entry_on_the_right
 
 Shift-Enter                 move_up  # an alternative way to move
 
-Cmd-Alt-C                   toggle_case_sensitive
-Cmd-Alt-W                   toggle_whole_word
-
 [common]
 
 # Common key combos may be used as a fallback if they are not defined in more specific sections.
@@ -173,6 +170,9 @@ Cmd-Shift-P                 show_commands
 Cmd-F                       search_in_buffer
 Cmd-Alt-F                   search_in_buffer_dropdown_mode
 Cmd-Shift-F                 search_in_project
+
+Cmd-Alt-C                   toggle_case_sensitive
+Cmd-Alt-W                   toggle_whole_word
 
 Cmd-Alt-P                   switch_to_project
 

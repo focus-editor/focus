@@ -278,6 +278,8 @@ ACTIONS_COMMON :: string.[
     "search_in_buffer",
     "search_in_buffer_dropdown_mode",
     "search_in_project",
+    "toggle_case_sensitive",
+    "toggle_whole_word",
     "go_to_line",
     "show_open_file_dialog_in_search_mode",
     "show_open_file_dialog_in_navigate_mode",
@@ -385,8 +387,6 @@ ACTIONS_SEARCH_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[
     "open_entry_on_the_side",
     "open_entry_on_the_left",
     "open_entry_on_the_right",
-    "toggle_case_sensitive",
-    "toggle_whole_word",
 ]);
 
 // Used for testing strings in parser

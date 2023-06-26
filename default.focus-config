@@ -163,10 +163,6 @@ Ctrl-2                      open_entry_on_the_right
 
 Shift-Enter                 move_up  # an alternative way to move
 
-Alt-C                       toggle_case_sensitive
-Alt-W                       toggle_whole_word
-
-
 [common]
 
 # Common key combos may be used as a fallback if they are not defined in more specific sections.
@@ -180,6 +176,9 @@ Ctrl-Alt-P                  switch_to_project
 Ctrl-F                      search_in_buffer
 Alt-F                       search_in_buffer_dropdown_mode
 Ctrl-Shift-F                search_in_project
+
+Alt-C                       toggle_case_sensitive
+Alt-W                       toggle_whole_word
 
 Ctrl-P                      show_open_file_dialog_in_search_mode
 Ctrl-O                      show_open_file_dialog_in_navigate_mode
