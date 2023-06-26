@@ -366,7 +366,7 @@ refresh_entries :: (clear_input := true) {
                     path_score, path_highlights = fuzzy_match(buffer.file.path, path_part);
 
                     score = 200 * name_score + path_score;
-                    if score < 0 continue; // Now we can skip this buffer.
+                    if name_score < 0 || path_score < 0 continue; // Now we can skip this buffer.
                 }
 
                 entry := array_add(*entries.filtered);
