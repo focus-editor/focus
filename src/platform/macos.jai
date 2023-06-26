@@ -28,7 +28,7 @@ platform_config_dir :: inline () -> string {
     return platform_data_dir();
 }
 
-platform_get_centered_window_dimensions :: (open_on_biggest: bool, open_on_primary: bool) -> s32, s32, s32, s32 {
+platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, s32, s32 {
     // On macOS, we ignore open_on_biggest for now.
 
     screen_size := NSScreen.frame(NSScreen.mainScreen()).size;

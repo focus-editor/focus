@@ -151,7 +151,7 @@ platform_config_dir :: () -> string {
     return config_dir;
 }
 
-platform_get_centered_window_dimensions :: (open_on_biggest: bool, open_on_primary: bool) -> s32, s32, s32, s32 {
+platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, s32, s32 {
     return 0, 0, 1920, 1080;
 }
 

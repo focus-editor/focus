@@ -297,7 +297,6 @@ Workspace :: struct {
 Settings :: struct {
     maximize_on_start                   := false;
     open_on_the_biggest_monitor         := true;
-    open_on_primary_monitor             := false;
     cursor_as_block                     := true;
     highlight_selection_occurrences     := true;
     disable_that_annoying_paste_effect  := false;
