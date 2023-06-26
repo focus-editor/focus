@@ -29,7 +29,7 @@ platform_config_dir :: inline () -> string {
     return platform_data_dir();
 }
 
-platform_get_centered_window_dimensions :: (open_on_biggest: bool, open_on_primary: bool) -> s32, s32, s32, s32 {
+platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, s32, s32 {
     if !EnumDisplayMonitors(null, null, monitor_enum_proc, 0) then panic("Couldn't enumerate monitors");
     assert(monitors.count > 0, "Unexpectedly no monitors found. This is a bug.");
 
@@ -46,7 +46,7 @@ platform_get_centered_window_dimensions :: (open_on_biggest: bool, open_on_prima
                 max_area = area;
             }
         }
-    } else if open_on_primary {
+    } else {
         for monitors {
             if it.primary {
                 monitor = it;
