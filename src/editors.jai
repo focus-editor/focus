@@ -2364,8 +2364,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
         case .C;            comment_start = "/*"; comment_end = "*/";
         case .CSharp;       comment_start = "/*"; comment_end = "*/";
         case .Jai;          comment_start = "/*"; comment_end = "*/";
-        case .Focus_Config; toggle_comment(editor, buffer); // The config doesn't have block comments, fall back to toggle_comment.
-        case;               return;
+        case; toggle_comment(editor, buffer); // Fallback to toggle_comment for the rest.
     }
 
     remove_comment := true;
