@@ -364,9 +364,6 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             cursor.col_wanted = -1;
 
             if selection_mode.type == {
-                case .chars;
-                    search_whole_words = false;
-
                 case .words;
                     char_type := get_char_type(get_char_at_offset(buffer, cursor.pos));
 
@@ -510,13 +507,22 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         // Maybe update selection highlights
         if editor.refresh_highlights && buffer.bytes.count <= MAX_BUFFER_SIZE_FOR_HIGHLIGHTS && config.settings.highlight_selection_occurrences {
+            using editor.search_bar;
+    
             editor.refresh_highlights = false;
             array_reset_keeping_memory(*editor.highlights);
 
-            selected_text := get_selected_text_all_cursors(editor, buffer);
-            if selected_text.count > 2 && selected_text.count < 1000 && !is_all_whitespace(selected_text) {
+            selected_text := get_selected_string(editor.cursors[editor.main_cursor], buffer);
+
+            if all_cursors_have_the_same_selected_text(editor, buffer, case_sensitive) && 
+               selected_text.count > 2 && selected_text.count < 1000 && !is_all_whitespace(selected_text) {
+
                 search_func: (s: string, substring: string, start_index := 0) -> s64;
-                search_func = ifx editor.search_whole_words then find_index_from_left_whole_word else find_index_from_left;
+                if       whole_word &&  case_sensitive  search_func = find_index_from_left_whole_word;
+                else if  whole_word && !case_sensitive  search_func = find_index_from_left_whole_word_nocase;
+                else if !whole_word &&  case_sensitive  search_func = find_index_from_left;
+                else                                    search_func = find_index_from_left_nocase;
+                
                 buffer_str := to_string(buffer.bytes);
                 offset := 0;
                 while true {

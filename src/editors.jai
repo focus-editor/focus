@@ -170,7 +170,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .move_to_next_editor_history;      move_to_next_editor_history         ();
 
         case .select_word;                      select_word(editor, buffer); keep_selection = true;
-        case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
+        case .select_word_or_create_another_cursor; select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
 
         // Actions that do something per cursor
         case .move_left;                        move_cursors_left                   (editor, buffer, by = .char,      shift_pressed);
@@ -244,7 +244,6 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
     for * cursors put_cursor_in_valid_spot(it, buffer);
     if cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
 
-    if editor.cursor_moved && !enabled_whole_words then editor.search_whole_words = false;
     if editor.cursor_moved then editor.refresh_highlights = true;  // update or remove highlights
     if editor.cursor_moved then cursors_start_blinking();
 
@@ -577,18 +576,17 @@ select_word :: (buffer: Buffer, cursor: *Cursor) {
     cursor.sel = scan_through_similar_chars_on_the_left (buffer, pos, char_type, skip_one_space = false);
 }
 
-get_selected_text_all_cursors :: (using editor: Editor, buffer: Buffer) -> string {  // returns view into buffer
-    // Returns a selected string only if all cursors have the same text selected.
-    // Otherwise returns an empty string.
-
+all_cursors_have_the_same_selected_text :: (using editor: Editor, buffer: Buffer, case_sensitive : bool) -> bool {
     text := get_selected_string(cursors[main_cursor], buffer);
-    if text.count == 0 return "";
+    if text.count == 0 return false;
 
-    for cursor : cursors {
-        if text != get_selected_string(cursor, buffer) return "";
+    if case_sensitive {
+        for cursors { if text != get_selected_string(it, buffer) return false; }
+    } else {
+        for cursors { if !equal_nocase(text, get_selected_string(it, buffer)) return false; }
     }
 
-    return text;
+    return true;
 }
 
 new_edit_group :: (buffer: *Buffer, editor: *Editor) {
@@ -1059,21 +1057,24 @@ select_word :: (using editor: *Editor, buffer: Buffer) {
     for * editor.cursors {
         if has_selection(it) continue;
         select_word(buffer, it);
-        editor.search_whole_words = true;
     }
 }
 
+select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) {
+    using search_bar;
 
-select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) -> whole_words: bool {
     editor.cursor_moved = .selection;
 
-    selected_text := get_selected_text_all_cursors(editor, buffer);
-    if selected_text {
+    if all_cursors_have_the_same_selected_text(editor, buffer, case_sensitive) {
         // Cursors have the same text selected - attempt to create another cursor
+        selected_text := get_selected_string(cursors[main_cursor], buffer);
         buffer_str := to_string(buffer.bytes);
 
         search_func: (s: string, substring: string, start_index := 0) -> s64;
-        search_func = ifx search_whole_words then find_index_from_left_whole_word else find_index_from_left;
+        if       whole_word &&  case_sensitive  search_func = find_index_from_left_whole_word;
+        else if  whole_word && !case_sensitive  search_func = find_index_from_left_whole_word_nocase;
+        else if !whole_word &&  case_sensitive  search_func = find_index_from_left;
+        else                                    search_func = find_index_from_left_nocase;
 
         // Search from the main cursor downwards, possibly with a wraparound
         start_offset := get_selection(cursors[main_cursor]).end;
@@ -1098,7 +1099,7 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) 
             if main_cursor != original_cursor {
                 main_cursor = original_cursor;  // go back to original and stop
             }
-            return editor.search_whole_words;  // found no matches
+            return;
         }
 
         new_cursor := array_add(*cursors);
@@ -1112,11 +1113,8 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) 
         for * editor.cursors {
             if has_selection(it) continue;
             select_word(buffer, it);
-            editor.search_whole_words = true;
         }
     }
-
-    return editor.search_whole_words;
 }
 
 save_buffer :: (editor: *Editor, buffer: *Buffer) {
@@ -2353,7 +2351,6 @@ Editor :: struct {
     main_cursor: s64;      // newly added cursors become main so that we jump to them
     original_cursor: s64;  // we remember the original cursor when first creating multiple cursors (and go back to it on escape)
 
-    search_whole_words := false;  // used when creating new cursors
     cursor_moved := Cursor_Movement.has_not_moved; // this may trigger a scroll so that the cursor is within acceptable bounds
 
     new_cursor_just_created_using_mouse := false;  // useful to know in order to handle select-by-drag and select-word with the new cursor
@@ -2363,7 +2360,7 @@ Editor :: struct {
 
     highlights: [..] Text_Highlight;
     refresh_highlights: bool;
-    selected_text_length: s64;
+    selected_text_length: s64; 
 
     search_bar: Search_Bar;
 
