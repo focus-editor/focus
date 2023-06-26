@@ -2163,18 +2163,18 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) 
     if !any_selection && !cut && !config.settings.copy_whole_line_without_selection return;
 
     // We are sure to copying something, dump all the previous clipboard slices
-    array_reset(*clipboard.slices); 
+    array_reset(*clipboard.slices);
 
     // Fill the internal clipboard and the slices from the current editor cursors
     b: String_Builder;
     offset := 0;
     for * cursor : editor.cursors {
         if !has_selection(cursor) && !cut && !config.settings.copy_whole_line_without_selection continue;
-        
-        // Get string from the cursor and format it if necessary 
+
+        // Get string from the cursor and format it if necessary
         str := ifx has_selection(cursor) {
             selected_str := get_selected_string(cursor, buffer);
-            ifx it_index != editor.cursors.count - 1 then join(selected_str, "\n") else selected_str; 
+            ifx it_index != editor.cursors.count - 1 then join(selected_str, "\n") else selected_str;
         } else {
             line_num := offset_to_line(buffer, cursor.pos);
             get_line_as_string(buffer, line_num);
@@ -2183,7 +2183,7 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) 
 
         // Add a new clipboard slice for each cursor
         array_add(*clipboard.slices, .{ xx offset, xx str.count, has_selection(cursor) });
- 
+
         offset += str.count;
     }
 
@@ -2217,10 +2217,10 @@ paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
 
         // If there is only one slice without selection, insert slice at cursor line
         if !has_selection(cursor) && clipboard.slices.count == 1 && !clipboard.slices[0].was_selected {
-            line_num   := offset_to_line(buffer, cursor.pos); 
+            line_num   := offset_to_line(buffer, cursor.pos);
             line_start := get_line_start_offset(buffer, line_num);
             str        := clipboard.text;
-            
+
             // insert_string_at_offset() make the buffer dirty
             // we rescan to clean it else we can't call offset_to_line for the next cursors
             insert_string_at_offset(buffer, line_start, str);
@@ -2229,21 +2229,21 @@ paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
             cursor.pos   += xx str.count;
             offset_delta += str.count;
             add_paste_animation(editor, .{ line_start, line_start + cast(s32) str.count });
-        } 
+        }
         // If they have the same number of entries paste one slice per cursor
         else if editor.cursors.count == clipboard.slices.count {
             clipboard_slice := clipboard.slices[it_index];
             selection       := get_selection(cursor);
             count           := clipboard_slice.count - 1; // Don't paste the last newline of the slice
             if it_index == clipboard.slices.count - 1 && clipboard_slice.was_selected then count += 1; // If the last slice was selected, it didn't have newline
-            str             := slice(clipboard.text, clipboard_slice.start, count); 
+            str             := slice(clipboard.text, clipboard_slice.start, count);
 
             replace_range(buffer, selection, str);
 
             cursor.pos    = xx (selection.start + str.count);
             offset_delta += str.count - (selection.end - selection.start);
             add_paste_animation(editor, .{ selection.start, selection.start + cast(s32) str.count });
-        } 
+        }
         // Paste the entire clipboard for each cursor
         else {
             selection := get_selection(cursor);
@@ -2363,7 +2363,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
         case .C;            comment_start = "/*"; comment_end = "*/";
         case .CSharp;       comment_start = "/*"; comment_end = "*/";
         case .Jai;          comment_start = "/*"; comment_end = "*/";
-        case; toggle_comment(editor, buffer); // Fallback to toggle_comment for the rest.
+        case;               toggle_comment(editor, buffer); return;  // fallback to toggle_comment for the rest.
     }
 
     remove_comment := true;
@@ -2375,22 +2375,20 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
     for cursor : editor.cursors {
         selection := get_selection(cursor);
 
-        split_left := buffer.bytes;
+        split_left := to_string(buffer.bytes);
         split_left.count = selection.start;
 
-        split_right := buffer.bytes;
-        split_right.data += selection.end;
+        split_right := to_string(buffer.bytes);
+        split_right.data  += selection.end;
         split_right.count -= selection.end;
 
-        start_search_index := find_index_from_right(cast(string)split_left, comment_start);
-        start_search_index_limit := find_index_from_right(cast(string)split_left, comment_end);
+        start_search_index       := find_index_from_right(split_left, comment_start);
+        start_search_index_limit := find_index_from_right(split_left, comment_end);
 
-        end_search_index := find_index_from_left(cast(string)split_right, comment_end);
-        end_search_index_limit := find_index_from_left(cast(string)split_right, comment_start);
+        end_search_index         := find_index_from_left(split_right, comment_end);
+        end_search_index_limit   := find_index_from_left(split_right, comment_start);
 
-        if end_search_index_limit == -1 {
-            end_search_index_limit = S64_MAX;
-        }
+        if end_search_index_limit == -1 then end_search_index_limit = S64_MAX;
 
         if start_search_index < start_search_index_limit && end_search_index > end_search_index_limit {
             // We are between two comments, don't remove them...
@@ -2411,9 +2409,9 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
     }
 
     if remove_comment {
-        quick_sort(indices, (a, b) => (a - b));
+        quick_sort(indices, (a, b) => (b - a));
 
-        for < index: indices {
+        for index : indices {
             bytes_from_index: string;
             bytes_from_index.data = buffer.bytes.data + index;
             bytes_from_index.count = buffer.bytes.count - index;
@@ -2446,7 +2444,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
             move_count := cast(s32)it_index * comment_total_length;
 
             start_pos := min(cursor.pos, cursor.sel) + move_count;
-            end_pos := max(cursor.pos, cursor.sel) + move_count + comment_start.count;
+            end_pos   := max(cursor.pos, cursor.sel) + move_count + comment_start.count;
 
             insert_string_at_offset(buffer, start_pos, comment_start);
             insert_string_at_offset(buffer, end_pos,   comment_end);
@@ -2610,7 +2608,7 @@ clipboard: struct {
 }
 
 Clipboard_Slice :: struct {
-    start: s32; 
+    start: s32;
     count: s32;
     was_selected: bool;
 }
