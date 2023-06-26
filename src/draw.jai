@@ -416,6 +416,11 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             organise_cursors(editor, *selection_mode);
         }
 
+        if !editor_is_active {
+            previous_editor := *open_editors[editors.active];
+            if search_bar_is_minimized(previous_editor) close_search_bar(previous_editor);
+        }
+
         editor.refresh_highlights = true;
 
         // Activate editor
