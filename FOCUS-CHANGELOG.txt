@@ -21,9 +21,7 @@
 - [Current file watcher limitation] If you open a file in a large folder, the file watcher might scan the whole folder in order to watch for the changes to the file.
 
 
-# RELEASES ==================================================================
-
-# Version 0.1.11 (UNRELEASED)
+# Main Git Branch
 
 + Linux: The "Open Projects Directory" command as well as shift-clicking files/directories in the "open file" dialogs (Ctrl+O, Ctrl+Shift+O, Ctrl+P) should now work.
   By default the editor will try to auto-detect the prefered file manager using the XDG utilities.
@@ -47,7 +45,10 @@
 + When editor width is limited in settings, the non-editor part of the window will be colored using the `background_dark` color
 + Fixed a bug with global search not finding everything when case sensitive or whole word toggles are just turned on
 + Global search will now try to preserve search results and cursor position when searching using the same query
++ It is now possible to paste whatever was copied with N cursors into another file as long as the number of cursors there is also N (thanks @hfr4)
 
+
+# RELEASES ==================================================================
 
 # Version 0.1.10
 

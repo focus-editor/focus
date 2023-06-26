@@ -23,7 +23,7 @@ main :: () {
     if !projects_dir_existed then write_entire_file(tprint("%/Example Project.focus-config", projects_dir), EXAMPLE_PROJECT_FILE_DATA);
 
     init_file_watcher();
-    load_global_config();
+    load_global_config(fallback_to_default_on_failure = true);
     init_workspace();
     init_buffers();
 

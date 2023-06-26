@@ -1,4 +1,4 @@
-load_global_config :: () -> success: bool, changed: bool, there_were_warnings: bool {
+load_global_config :: (fallback_to_default_on_failure := false) -> success: bool, changed: bool, there_were_warnings: bool {
     global_config_path = sprint("%/global.focus-config", config_dir);
 
     if !file_exists(global_config_path) {
@@ -8,6 +8,10 @@ load_global_config :: () -> success: bool, changed: bool, there_were_warnings: b
     }
 
     success, changed, there_were_warnings := load_and_merge_config(global_config_path, into = Config.{}, hash = *global_config_hash);
+    if !success && fallback_to_default_on_failure {
+        config = DEFAULT_CONFIG;
+        saved_global_config = config;
+    }
     if success then saved_global_config = config;
 
     return success, changed, there_were_warnings;
@@ -349,6 +353,8 @@ EXAMPLE_PROJECT_FILE_DATA :: #run read_entire_file(EXAMPLE_PROJECT_CONFIG_NAME);
 }
 EXAMPLE_PROJECT_CONFIG_NAME :: "example-project.focus-config";
 
+
+#scope_export
 
 DEFAULT_CONFIG :: #run -> Config {
     parsed_config, success := parse_config("Default Config", DEFAULT_CONFIG_NAME, DEFAULT_CONFIG_FILE_DATA);
