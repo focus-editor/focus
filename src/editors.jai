@@ -1076,7 +1076,6 @@ create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; be
     cursor_moved = .refresh_only;
 }
 
-
 select_word :: (using editor: *Editor, buffer: Buffer) {
     editor.cursor_moved = .unimportant;
     for * editor.cursors {
@@ -1085,7 +1084,6 @@ select_word :: (using editor: *Editor, buffer: Buffer) {
         editor.search_whole_words = true;
     }
 }
-
 
 select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) -> whole_words: bool {
     editor.cursor_moved = .selection;
@@ -2151,6 +2149,13 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) 
     for editor.cursors { if has_selection(it) { any_selection = true; break; } }
     if !any_selection && !cut && !config.settings.copy_whole_line_without_selection return;
 
+    if cut {
+        // When cutting, cut whole lines for cursors which don't have selection.
+        // The easiest thing to do is to pre-select lines before removing anything
+        for * editor.cursors { if !has_selection(it) select_line(it, buffer); }
+        organise_cursors(editor);
+    }
+
     // We are sure to copying something, dump all the previous clipboard slices
     array_reset(*clipboard.slices);
 
@@ -2183,7 +2188,19 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) 
         clipboard.text = combined_str;  // now it owns it
     }
 
-    if cut delete_line(editor, buffer);
+    if cut {
+        offset_delta := 0;
+        for * cursor : editor.cursors {
+            cursor.pos -= xx offset_delta;
+            cursor.sel -= xx offset_delta;
+            selection := get_selection(cursor);
+            delete_range(buffer, selection);
+            cursor.col_wanted = -1;
+            cursor.pos = selection.start;
+            offset_delta += selection.end - selection.start;
+        }
+        editor.cursor_moved = .refresh_only;
+    }
 }
 
 paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
