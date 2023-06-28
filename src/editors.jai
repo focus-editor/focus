@@ -2736,7 +2736,7 @@ maybe_save_editor_history :: () {
 frames_are_mergeable :: (a: Editor_History_Frame, b: Editor_History_Frame) -> bool {
     return a.cursor_movement <= .unimportant
         && a.cursor_movement == b.cursor_movement
-        && a.active == b.active;
+        && a.editor_state == b.editor_state;
 }
 
 move_to_previous_editor_history :: () {
@@ -2763,7 +2763,7 @@ move_to_next_editor_history :: () {
 
 move_to_editor_history_frame :: (frame: Editor_History_Frame, old_frame: Editor_History_Frame) {
     editors = frame.editor_state;
-    if editors.active < 0 {
+    if editors.active < 0 || editors.layout == .None {
         update_window_title();  // reset
         return;
     }
