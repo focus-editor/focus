@@ -9,6 +9,3 @@ In order of priority:
 
 3. Would Be Nice Eventually
     - Smooth Mac-style inertia scrolling
-
-4. Out of our hands for now (unless we want to rewrite the Jai modules or something)
-    - Resizing the window squishes the interface (Jai's Input module needs an update or rewrite)

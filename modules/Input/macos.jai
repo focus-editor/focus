@@ -13,6 +13,10 @@ set_custom_cursor_handling :: (is_custom: bool) {
      // Use this if you are doing immediate-mode API stuff that sets cursors and want to prevent cursors from flickering. Windows is annoying to interface with.
 }
 
+macos_draw_frame: () -> ();
+macos_update_window_size: (s64, s64) -> ();
+macos_main_context: *Context;
+
 #scope_file
 
 OSX_VK_ESCAPE        :: 53;
@@ -623,8 +627,7 @@ Window_Delegate :: struct {
     */
 
     windowDidResize :: (using self: *Window_Delegate, _sel: Selector, notification: *NSNotification) #c_call {
-        jai_context: Context;
-        push_context jai_context {
+        push_context macos_main_context {
             my_window := cast(*NSWindow) notification.object(notification);
             view := NSWindow.contentView(my_window);
             frame := NSView.frame(view);
@@ -632,6 +635,8 @@ Window_Delegate :: struct {
             add_resize_record(my_window, cast(s32) fb.size.width, cast(s32) fb.size.height);
 
             view.drawRect(view, frame);
+            macos_update_window_size(xx fb.size.width, xx fb.size.height);
+            macos_draw_frame();
         }
     } @selector(windowDidResize:)
 

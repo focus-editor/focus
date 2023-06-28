@@ -236,13 +236,6 @@ monitor_enum_proc :: (hMonitor: HMONITOR, hdc: HDC, rect: *RECT, data: LPARAM) -
     return xx true;
 }
 
-update_window_size :: (w: s64, h: s64) {
-    window_width  = w;
-    window_height = h;
-    Simp.update_window(window);
-    screen = make_rect(0, 0, window_width, window_height);
-}
-
 Monitor :: struct {
     left   : int;
     top    : int;

@@ -15,6 +15,9 @@ platform_copy_config :: (src: *Platform_Config, dst: *Platform_Config) {
 
 platform_setup :: inline () {
     init_mac_app();
+    Input.macos_draw_frame = draw_frame;
+    Input.macos_update_window_size = update_window_size;
+    Input.macos_main_context = *context;
 }
 
 platform_data_dir :: () -> string {
