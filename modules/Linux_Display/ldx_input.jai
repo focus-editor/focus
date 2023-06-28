@@ -436,6 +436,13 @@ x11_clipboard_set_bitmap :: (width: s32, height: s32, rgb: *u8) {
     x11_clipboard_set_bitmap(win, width, height, rgb);
 }
 
+x11_wait_message :: (x11_display: *X11Display) {
+    handle := x11_display.handle;
+    while !XEventsQueued(handle, QueuedAfterReading){
+      sleep_milliseconds(10);
+    }
+}
+
 #scope_file
 // Xdnd support by Jens Frederich. Send questions his way. Licensed under the MIT license; see copyright at the end
 // of the file.

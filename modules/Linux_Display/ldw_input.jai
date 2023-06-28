@@ -253,39 +253,6 @@ pointer_listener :: wl_pointer_listener.{
 };
 
 wl_update_window_events :: (display: *WLDisplay) {
-    display_poll :: (display: *WLDisplay) -> s32 {
-        wlfd := wl_display.get_fd(display.handle);
-
-        pfd: [2]pollfd;
-        pfd[0].fd = wlfd;
-        pfd[0].events = POLLIN;
-        pfd[1].fd = display.epfd;
-        pfd[1].events = POLLIN;
-
-        ret := poll(pfd.data, 2, 5);
-        if ret <= 0 return ret;
-
-        has_wayland_events := false;
-        for 0..1 {
-            if !pfd[it].revents {
-                continue;
-            }
-            if pfd[it].fd == wlfd {
-                has_wayland_events = true;
-                continue;
-            }
-
-            assert(pfd[it].fd == display.epfd);
-            ev: epoll_event;
-            count := epoll_wait(display.epfd, *ev, 1, -1);
-            assert(count == 1);
-
-            if wl_tick_timers(display, ev.data.fd) continue;
-        }
-
-        return ifx has_wayland_events then cast(s32) 1 else 0;
-    }
-
     wl_display.flush(display.handle);
     if wl_display.prepare_read(display.handle) == 0 {
         err := display_poll(display);
@@ -312,8 +279,48 @@ wl_get_mouse_pointer_position :: (right_handed: bool) -> x: int, y: int, success
     return 0, 0, false;
 }
 
+wl_wait_message :: (wl_display: *WLDisplay) {
+    while !display_poll(wl_display) {
+        sleep_milliseconds(10);
+    }
+}
+
+
 #scope_file
 #import "POSIX";
 #import "libxkbcommon";
 
 current_hovered_window: *WLWindow;
+
+display_poll :: (display: *WLDisplay) -> s32 {
+    wlfd := wl_display.get_fd(display.handle);
+
+    pfd: [2]pollfd;
+    pfd[0].fd = wlfd;
+    pfd[0].events = POLLIN;
+    pfd[1].fd = display.epfd;
+    pfd[1].events = POLLIN;
+
+    ret := poll(pfd.data, 2, 5);
+    if ret <= 0 return ret;
+
+    has_wayland_events := false;
+    for 0..1 {
+        if !pfd[it].revents {
+            continue;
+        }
+        if pfd[it].fd == wlfd {
+            has_wayland_events = true;
+            continue;
+        }
+
+        assert(pfd[it].fd == display.epfd);
+        ev: epoll_event;
+        count := epoll_wait(display.epfd, *ev, 1, -1);
+        assert(count == 1);
+
+        if wl_tick_timers(display, ev.data.fd) continue;
+    }
+
+    return ifx has_wayland_events then cast(s32) 1 else 0;
+}

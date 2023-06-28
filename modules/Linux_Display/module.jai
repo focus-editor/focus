@@ -291,6 +291,15 @@ clipboard_set_text :: (text: string) {
     }
 }
 
+wait_message :: () {
+    if global_display.tag == {
+        case X11Display; x11_wait_message(isa(global_display, X11Display));
+        case WLDisplay; wl_wait_message(isa(global_display, WLDisplay));
+        case;
+    }
+}
+
+
 // Fonts
 find_font :: (name: string, allocator := temp) -> bool, string {
     ok, path := fc_find_font(name, allocator);
