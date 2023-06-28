@@ -72,7 +72,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
     shift_pressed := event.modifier_flags.shift_pressed;
     ctrl_pressed  := event.modifier_flags.ctrl_pressed;
 
-    if editor.search_bar.active {
+    if search_bar_is_maximized(editor) {
         using editor.search_bar;
         old_search_str := copy_temporary_string(to_string(input.text));
         handled := text_input_handle_event(*input, event);
@@ -150,12 +150,12 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .close_right_editor;               close_editor(.right);
         case .save;                             save_buffer(editor, buffer);
         case .save_all;                         save_all   (editor, buffer);
-        case .switch_to_left_editor;            switch_to_editor(.left);
-        case .switch_to_right_editor;           switch_to_editor(.right);
-        case .switch_to_other_editor;           switch_to_editor(.other);
-        case .duplicate_editor;                 switch_to_editor(.other, duplicate_current = true);
-        case .duplicate_editor_to_the_left;     switch_to_editor(.left, duplicate_current = true);
-        case .duplicate_editor_to_the_right;    switch_to_editor(.right, duplicate_current = true);
+        case .switch_to_left_editor;            switch_to_editor(editor, .left);
+        case .switch_to_right_editor;           switch_to_editor(editor, .right);
+        case .switch_to_other_editor;           switch_to_editor(editor, .other);
+        case .duplicate_editor;                 switch_to_editor(editor, .other, duplicate_current = true);
+        case .duplicate_editor_to_the_left;     switch_to_editor(editor, .left, duplicate_current = true);
+        case .duplicate_editor_to_the_right;    switch_to_editor(editor, .right, duplicate_current = true);
         case .move_editor_to_the_left;          if editors.active == editors.right then swap_panes();
         case .move_editor_to_the_right;         if editors.active == editors.left  then swap_panes();
         case .center_viewport_on_cursor;        center_viewport_on_cursor           (editor, buffer);
@@ -173,8 +173,11 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .create_cursor_above;              create_cursor                       (editor, buffer, .above); keep_selection = true;
         case .create_cursor_below;              create_cursor                       (editor, buffer, .below); keep_selection = true;
 
+        case .toggle_case_sensitive;            search_bar_toggle_case_sensitive(editor, buffer); keep_selection = true;
+        case .toggle_whole_word;                search_bar_toggle_whole_word(editor, buffer);     keep_selection = true;
+    
         case .select_word;                      select_word(editor, buffer); keep_selection = true;
-        case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
+        case .select_word_or_create_another_cursor; select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
 
         // Actions that do something per cursor
         case .move_left;                        move_cursors_left                   (editor, buffer, by = .char,      shift_pressed);
@@ -240,6 +243,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
 
     if editor.cursor_moved && !keep_selection {
         for * cursors { it.sel = it.pos; }  // remove selection
+        if search_bar_is_minimized(editor) close_search_bar(editor);
     }
 
     // NOTE: even though we also do it in refresh_open_buffers, we do it here
@@ -249,7 +253,6 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
     for * cursors put_cursor_in_valid_spot(it, buffer);
     if cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
 
-    if editor.cursor_moved && !enabled_whole_words then editor.search_whole_words = false;
     if editor.cursor_moved then editor.refresh_highlights = true;  // update or remove highlights
     if editor.cursor_moved then cursors_start_blinking();
 
@@ -264,7 +267,7 @@ active_editor_type_char :: (char: u32) {
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
 
-    if editor.search_bar.active {
+    if search_bar_is_maximized(editor) {
         text_input_type_char(*editor.search_bar.input, char);
         search_and_update_results(editor, buffer, jump = true);
         editor.search_bar.scroll_to_selected = .snap;
@@ -333,7 +336,7 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
 
         adjust_cursors_and_viewport(editor, buffer, editor_id);
         editor.refresh_highlights = true;
-        if search_bar_is_open(editor) search_and_update_results(editor, buffer);
+        if search_bar_is_maximized(editor) search_and_update_results(editor, buffer);
     }
     array_reset_keeping_memory(*buffer.edit_notifications);
 }
@@ -486,6 +489,8 @@ move_cursor_to_viewport_center :: (editor: *Editor, buffer: Buffer) {
 }
 
 leave_only_original_cursor :: (using editor: *Editor) -> *Cursor {
+    if search_bar_is_minimized(editor) close_search_bar(editor);
+
     // Remove all cursors except the original one
     cursor := cursors[min(original_cursor, cursors.count-1)];
     cursors.count = 1;
@@ -580,18 +585,17 @@ select_word :: (buffer: Buffer, cursor: *Cursor) {
     cursor.sel = scan_through_similar_chars_on_the_left (buffer, pos, char_type, skip_one_space = false);
 }
 
-get_selected_text_all_cursors :: (using editor: Editor, buffer: Buffer) -> string {  // returns view into buffer
-    // Returns a selected string only if all cursors have the same text selected.
-    // Otherwise returns an empty string.
-
+all_cursors_have_the_same_selected_text :: (using editor: Editor, buffer: Buffer, case_sensitive : bool) -> bool {
     text := get_selected_string(cursors[main_cursor], buffer);
-    if text.count == 0 return "";
+    if !text return false;
 
-    for cursor : cursors {
-        if text != get_selected_string(cursor, buffer) return "";
+    if case_sensitive {
+        for cursors { if text != get_selected_string(it, buffer) return false; }
+    } else {
+        for cursors { if !equal_nocase(text, get_selected_string(it, buffer)) return false; }
     }
 
-    return text;
+    return true;
 }
 
 new_edit_group :: (buffer: *Buffer, editor: *Editor) {
@@ -667,14 +671,21 @@ finish_closing_editor :: () {
     editor_closing = false;
 }
 
-search_bar_is_open :: inline (using editor: *Editor) -> bool {
-    return search_bar.active;  // used to be more stuff in here
+search_bar_is_maximized :: inline (using editor: *Editor) -> bool {
+    return search_bar.active && (search_bar.mode == .classic || search_bar.mode == .dropdown);
+}
+
+search_bar_is_minimized :: inline (using editor: *Editor) -> bool {
+    return search_bar.active && search_bar.mode == .minimized;
 }
 
 open_search_bar :: (using editor: *Editor, buffer: Buffer, requested_mode: Search_Bar.Mode = .classic, remember_cursor_position := true) {
     using editor.search_bar;
     active = true;
     mode = requested_mode;
+
+    // Minimized mode don't require searching for results
+    if requested_mode == .minimized return;
 
     // If there was some text selected that doesn't span more than one line, use it for search
     if cursors.count == 1 {
@@ -705,6 +716,8 @@ close_search_bar :: inline (editor: *Editor, jump_to_original_cursor := false) {
     using editor.search_bar;
     active = false;  // stop receiving input immediately
 
+    if mode == .minimized return;
+
     if jump_to_original_cursor && jumped {
         cursor := leave_only_original_cursor(editor);
         cursor.state = original_cursor_position;
@@ -728,17 +741,29 @@ search_bar_toggle_expand :: (using editor: *Editor) {
 search_bar_toggle_whole_word :: (using editor: *Editor, buffer: Buffer) {
     using search_bar;
 
-    if !active return;
     whole_word = !whole_word;
-    search_and_update_results(editor, buffer);
+
+    if !active {
+        open_search_bar(editor, buffer, .minimized); 
+    } else if search_bar_is_maximized(editor) {
+        search_and_update_results(editor, buffer);
+    }
+
+    refresh_highlights = true;
 }
 
 search_bar_toggle_case_sensitive :: (using editor: *Editor, buffer: Buffer) {
     using search_bar;
 
-    if !active return;
     case_sensitive = !case_sensitive;
-    search_and_update_results(editor, buffer);
+
+    if !active {
+        open_search_bar(editor, buffer, .minimized); 
+    } else if search_bar_is_maximized(editor) {
+        search_and_update_results(editor, buffer);
+    }
+
+    refresh_highlights = true;
 }
 
 search_bar_move_cursor :: (using editor: *Editor, buffer: Buffer, delta: s64, wrap := false, snap := true) {
@@ -1082,21 +1107,26 @@ select_word :: (using editor: *Editor, buffer: Buffer) {
     for * editor.cursors {
         if has_selection(it) continue;
         select_word(buffer, it);
-        editor.search_whole_words = true;
     }
 }
 
+select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) {
+    using search_bar;
 
-select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) -> whole_words: bool {
     editor.cursor_moved = .selection;
 
-    selected_text := get_selected_text_all_cursors(editor, buffer);
-    if selected_text {
+    if all_cursors_have_the_same_selected_text(editor, buffer, case_sensitive) {
+        open_search_bar(editor, buffer, .minimized); 
+
         // Cursors have the same text selected - attempt to create another cursor
+        selected_text := get_selected_string(cursors[main_cursor], buffer);
         buffer_str := to_string(buffer.bytes);
 
         search_func: (s: string, substring: string, start_index := 0) -> s64;
-        search_func = ifx search_whole_words then find_index_from_left_whole_word else find_index_from_left;
+        if       whole_word &&  case_sensitive  search_func = find_index_from_left_whole_word;
+        else if  whole_word && !case_sensitive  search_func = find_index_from_left_whole_word_nocase;
+        else if !whole_word &&  case_sensitive  search_func = find_index_from_left;
+        else                                    search_func = find_index_from_left_nocase;
 
         // Search from the main cursor downwards, possibly with a wraparound
         start_offset := get_selection(cursors[main_cursor]).end;
@@ -1121,7 +1151,7 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) 
             if main_cursor != original_cursor {
                 main_cursor = original_cursor;  // go back to original and stop
             }
-            return editor.search_whole_words;  // found no matches
+            return;
         }
 
         new_cursor := array_add(*cursors);
@@ -1131,15 +1161,14 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) 
         main_cursor = cursors.count - 1;
 
     } else {
+        if editor.cursors.count == 1 then open_search_bar(editor, buffer, .minimized);
+
         // Cursors either don't have anything selected, or the selected text is different
         for * editor.cursors {
             if has_selection(it) continue;
             select_word(buffer, it);
-            editor.search_whole_words = true;
         }
     }
-
-    return editor.search_whole_words;
 }
 
 save_buffer :: (editor: *Editor, buffer: *Buffer) {
@@ -1161,7 +1190,9 @@ save_all :: (editor: *Editor, buffer: *Buffer) {
     }
 }
 
-switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := false) {
+switch_to_editor :: (editor: *Editor, side: enum { left; right; other; }, duplicate_current := false) {
+    if search_bar_is_minimized(editor) close_search_bar(editor);
+
     if editors.layout == {
         case .None; return;
 
@@ -1204,8 +1235,8 @@ switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := fa
             editors.active = ifx side == .left then editors.left else editors.right;
     }
 
-    editor := *open_editors[editors.active];
-    maybe_mark_buffer_as_deleted(editor.buffer_id);  // check in case we missed that it's deleted
+    active_editor := *open_editors[editors.active];
+    maybe_mark_buffer_as_deleted(active_editor.buffer_id);  // check in case we missed that it's deleted
 
     update_window_title(open_editors[editors.active].buffer_id);
     cursors_start_blinking();
@@ -2461,7 +2492,6 @@ Editor :: struct {
     main_cursor: s64;      // newly added cursors become main so that we jump to them
     original_cursor: s64;  // we remember the original cursor when first creating multiple cursors (and go back to it on escape)
 
-    search_whole_words := false;  // used when creating new cursors
     cursor_moved := Cursor_Movement.has_not_moved; // this may trigger a scroll so that the cursor is within acceptable bounds
 
     new_cursor_just_created_using_mouse := false;  // useful to know in order to handle select-by-drag and select-word with the new cursor
@@ -2532,7 +2562,7 @@ Search_Bar :: struct {
     scroll_anim := #run Tween_Animation(s32).{ speed = xx 0.1, func = .lerp };
     scroll_y: s32;
 
-    Mode :: enum { classic; dropdown; }
+    Mode :: enum { classic; dropdown; minimized; }
 }
 
 // What to select when dragging
