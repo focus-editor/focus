@@ -261,6 +261,7 @@ main :: () {
 
         // TODO:
         // maybe_save_editor_state_into_session();
+
         maybe_save_editor_history();
 
         if should_reload_workspace {
@@ -276,7 +277,6 @@ main :: () {
 
         if cast(Time) get_time() - frame_time <= QUICK_FRAME_DT {
             // It should be ok to sleep a bit after a quick frame to avoid pegging the core.
-            // NOTE: I tried vsync but for some reason it felt super bad - didn't figure out exactly why
             sleep_milliseconds(2);
         }
     }
@@ -310,7 +310,9 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .show_commands;                                    show_commands_dialog();                             return true;
 
         case .dump_key_mappings;                                dump_key_mappings();                                return true;
-        case .dump_editor_history;                              dump_editor_history();                              return true;
+
+        case .move_to_previous_editor_history;                  move_to_previous_editor_history();                  return true;
+        case .move_to_next_editor_history;                      move_to_next_editor_history();                      return true;
 
         // TODO: search_in_buffer
         case .search_in_project;

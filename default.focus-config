@@ -53,7 +53,7 @@ line_height_scale_percent:              120
 max_editor_width:                       -1
 can_cancel_go_to_line:                  true
 copy_whole_line_without_selection:      false
-editor_history_size:                    128
+editor_history_size:                    1024
 
 
 [[keymap]]

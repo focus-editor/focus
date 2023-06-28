@@ -65,9 +65,16 @@ finder_is_open :: () -> bool {
 
 finder_open :: () {
     active_global_widget = .finder;
+
     using finder;
     input.cursor.sel = 0;
     input.cursor.pos = xx input.text.count;
+
+    if need_to_refresh_results {
+        need_to_refresh_results = false;
+        reset_results();
+        start_new_search(force = true);
+    }
 }
 
 finder_close :: () {
@@ -95,14 +102,11 @@ finder_update :: () {
     using finder;
     if !initted return;
 
-    if need_to_refresh_results {
-        // A buffer has been modified
+    // If a buffer has changed while we have the finder window open, we have to refresh
+    if finder_is_open() && need_to_refresh_results {
         need_to_refresh_results = false;
-
-        if results {
-            reset_results();
-            start_new_search(force = true);
-        }
+        reset_results();
+        start_new_search(force = true);
     }
 
     tasks := get_completed_work(*thread_group);

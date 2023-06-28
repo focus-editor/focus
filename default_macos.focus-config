@@ -51,7 +51,7 @@ max_entries_in_open_file_dialog:        2000
 tab_size:                               4
 line_height_scale_percent:              120
 max_editor_width:                       -1
-editor_history_size:                    128
+editor_history_size:                    1024
 
 
 [[keymap]]
