@@ -314,6 +314,9 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .move_to_previous_editor_history;                  move_to_previous_editor_history();                  return true;
         case .move_to_next_editor_history;                      move_to_next_editor_history();                      return true;
 
+        case .move_to_previous_buffer;                          move_to_previous_editor_history(by_buffer = true);  return true;
+        case .move_to_next_buffer;                              move_to_next_editor_history    (by_buffer = true);  return true;
+
         // TODO: search_in_buffer
         case .search_in_project;
             if active_global_widget == .editors then finder_open_from_editor(); else finder_open();

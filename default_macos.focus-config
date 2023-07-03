@@ -91,6 +91,9 @@ Cmd-S                       save
 Cmd-Alt-Minus               move_to_previous_editor_history
 Cmd-Alt-Plus                move_to_next_editor_history
 
+Cmd-Shift-Minus             move_to_previous_buffer
+Cmd-Shift-Plus              move_to_next_buffer
+
 Cmd-/                       toggle_comment
 Cmd-L                       select_line
 
