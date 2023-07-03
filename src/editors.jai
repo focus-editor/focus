@@ -231,6 +231,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .delete_to_start_of_line;          delete_to_start_of_line             (editor, buffer);
         case .delete_to_end_of_line;            delete_to_end_of_line               (editor, buffer);
 
+        case .toggle_line_wrap;                 toggle_line_wrap                    (editor, buffer);
+
         case;                                   return false;
     }
 
@@ -2462,11 +2464,16 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
     editor.cursor_moved = .unimportant;
 }
 
+toggle_line_wrap :: (editor: *Editor, buffer: Buffer) {
+
+}
+
 free_editor :: (using editor: *Editor) {
     array_reset(*cursors);
     array_reset(*paste_animations);
     array_reset(*highlights);
     array_reset(*search_bar.results);
+    array_reset(*line_wrapped_line_starts);
 }
 
 #scope_export
@@ -2493,6 +2500,9 @@ Editor :: struct {
     search_bar: Search_Bar;
 
     viewport: Viewport;
+
+    line_starts: [] s32;  // either points to the real buffer line starts, or to the editor ones when line wrap is on
+    line_wrapped_line_starts: [..] s32;  // empty when line wrap is off
 
     paste_animations: [..] Paste_Animation;
 }

@@ -682,7 +682,6 @@ free_buffer :: (using buffer: *Buffer) {
     // We don't do it often so it's ok to be slow here
     array_free(bytes);
     array_free(line_starts);
-    array_free(real_line_starts);
     array_free(colors);
 
     for * undos deinit(it);
@@ -828,15 +827,13 @@ Buffer :: struct {
     last_modtime: Apollo_Time;  // for detecting whether a file has changed
     last_size: s64;             // --
 
-    bytes:  [..] u8;
-    line_starts: [..] s32;       // may not correspond to actual line breaks in the buffer
-    real_line_starts: [..] s32;  // for displaying the line/column numbers
+    bytes: [..] u8;
+    line_starts: [..] s32;       // real offsets of newlines in the bytes array
 
-    colors: [..] u8;             // we color each byte (even for multi-byte chars)
-                                 // @Space: we could use a u4 instead
+    colors: [..] u8;             // we color each byte (even for multi-byte chars). TODO: change this to range-based coloring
 
     // TODO: put into enum_flags
-    has_file := false;  // false for freestanding buffers. TODO: make freestanding buffers separate?
+    has_file               := false;  // a buffer might not have a corresponding file
     dirty                  := false;
     was_dirty_during_frame := false;
     modified               := false;
