@@ -753,11 +753,11 @@ MODS_CTRL_SHIFT     :: #run Mods.{ ctrl_pressed = true, shift_pressed = true }.p
 MODS_CTRL_ALT       :: #run Mods.{ ctrl_pressed = true, alt_pressed   = true }.packed;
 MODS_CTRL_ALT_SHIFT :: #run Mods.{ ctrl_pressed = true, alt_pressed   = true, shift_pressed = true }.packed;
 
-MIN_WINDOW_WIDTH  :: 50;
-MIN_WINDOW_HEIGHT :: 50;
-
 
 #scope_export
+
+MIN_WINDOW_WIDTH  :: 100;
+MIN_WINDOW_HEIGHT :: 100;
 
 DOUBLE_CLICK_SPEED     :: 0.3;  // how many seconds between clicks to consider it a double click
 DOUBLE_CLICK_TOLERANCE :: 2;    // how many pixels between the click locations are allowed

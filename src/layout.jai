@@ -163,7 +163,7 @@ get_rect_sides :: (using rect: Rect) -> (left: float, top: float, right: float, 
 }
 
 point_within :: (p: Vector2, using rect: Rect) -> bool {
-    assert(w >= 0 && h >= 0);
+    if w < 0 || h < 0 return false;
     return x <= p.x && p.x < x + w && y <= p.y && p.y < y + h;
 }
 

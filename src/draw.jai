@@ -3,8 +3,10 @@ draw_frame :: () {
         using Colors.BACKGROUND_DARK;
         Simp.clear_render_target(r, g, b, a);
     }
+    if !is_valid(screen) || screen.w < MIN_WINDOW_WIDTH || screen.h < MIN_WINDOW_HEIGHT return;
 
     maybe_set_hot_or_active(.none, screen, .NORMAL);
+
 
     // Check whether we need to deactivate elements before drawing
     if !mouse.left.is_down || mouse.left.just_released then ui.active = .none;
