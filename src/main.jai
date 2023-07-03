@@ -111,6 +111,7 @@ main :: () {
                 window_width = it.width;
                 window_height = it.height;
                 if should_reinit {
+                    // Cleanup: revisit this code, it's been touched by multiple people and needs simplification
                     screen    = make_rect(0, 0, window_width, window_height);
                     dpi_scale = platform_get_dpi_scale(window);
                     init_fonts_and_dependent_things();
@@ -515,6 +516,11 @@ update_window_size :: (w: s64, h: s64) {
     window_height = h;
     Simp.update_window(window);
     screen = make_rect(0, 0, window_width, window_height);
+    new_dpi_scale := platform_get_dpi_scale(window);
+    if new_dpi_scale != dpi_scale {
+        dpi_scale = new_dpi_scale;
+        init_fonts_and_dependent_things();
+    }
 }
 
 // Important directories
