@@ -135,15 +135,17 @@ main :: () {
         screen_with_title_bar.h += 200;  // should be enough to include the title bar
 
         #if OS != .WINDOWS {
-            if !Input.input_application_has_focus {
-                // Avoid changing the cursor when the window is not in Focus.
-                // This also fixes the Cmd+Tab cursor-spawning issue where the window still thinks Cmd is held down.
+            nothing_to_do_this_frame := !redraw_requested && !Input.events_this_frame.count && !mouse.moved_this_frame;
+
+            if !Input.input_application_has_focus && nothing_to_do_this_frame {
+                // Avoid changing the cursor when the window is not in Focus, but only when we don't have anything else to
+                // do this frame. This also fixes the Cmd+Tab cursor-spawning issue where the window still thinks Cmd is held down.
                 sleep_milliseconds(1);
                 continue;
             }
 
             // Try to avoid hot-looping on Linux/macOS
-            if !redraw_requested && !Input.events_this_frame.count && !mouse.moved_this_frame {
+            if nothing_to_do_this_frame {
                 sleep_milliseconds(1);
                 continue;
             }
