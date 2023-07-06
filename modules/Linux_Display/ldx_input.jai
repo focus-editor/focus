@@ -327,12 +327,19 @@ x11_handle_event :: (display: *Display, xev: *XEvent) {
             config := cast(*XConfigureEvent) xev;
             ld_win := get_by_native_handle(xx config.window);
             if ld_win add_resize_record(ld_win, config.width, config.height);
+        // Adding a dummy event to the queue, forcing a redraw when window's focus
+        // changes or it gets exposed (e.g. it's being asked to render itself but without
+        // it getting focus)
         case FocusIn;
             input_application_has_focus = true;
             XSetICFocus(win.ic);
+            array_add(*events_this_frame, .{type=.WINDOW});
         case FocusOut;
             input_application_has_focus = false;
             XUnsetICFocus(win.ic);
+            array_add(*events_this_frame, .{type=.WINDOW});
+        case Expose;
+            array_add(*events_this_frame, .{type=.WINDOW});
     }
 }
 
