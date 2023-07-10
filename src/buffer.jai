@@ -221,6 +221,7 @@ _get_offset_by_coords :: (buffer: Buffer, line_starts: [] s32, coords: Coords) -
     if offset >= buffer.bytes.count return xx buffer.bytes.count;
 
     max_offset := line_starts[line+1];
+    if max_offset > 0 && max_offset-1 < buffer.bytes.count && buffer.bytes[max_offset-1] == #char "\n" then max_offset -= 1;
 
     col := 0;
     while true {

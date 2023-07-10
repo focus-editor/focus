@@ -607,7 +607,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         viewport.max_line_pixel_width = 0;
         for line_num : visible_lines_start .. visible_lines_end {
             line_start := get_line_start_offset(editor, buffer, line_num);
-            length     := get_line_end_offset  (editor, buffer, line_num) - line_start;
+            length     := get_line_start_offset(editor, buffer, line_num+1) - line_start;
             line := array_view(buffer.bytes, line_start, length);
             line_pixel_width := cast(s32) ((get_num_chars(line) + min_visible_chars) * char_x_advance);
             viewport.max_line_pixel_width = max(viewport.max_line_pixel_width, line_pixel_width);
@@ -784,7 +784,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         code_lines := NewArray(num_visible_lines, Simp.Code_Line, initialized = false, allocator = temp);
         for line_num : visible_lines_start .. visible_lines_end {
             line_start := get_line_start_offset(editor, buffer, line_num);
-            length     := get_line_end_offset  (editor, buffer, line_num) - line_start;
+            length     := get_line_start_offset(editor, buffer, line_num+1) - line_start;
             line := to_string(array_view(buffer.bytes, line_start, length));
             tab_spaces := 0;
             line, tab_spaces = advance_by_chars  (line, hidden_chars_on_the_left);
@@ -1105,6 +1105,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             defer pop_scissor();
 
             coords := cursor_coords[main_cursor].pos;
+            if line_wrap_is_active(editor) then coords = get_real_cursor_coords(buffer, editor.cursors[main_cursor]).pos;
+
             width = xx Simp.prepare_text(font_ui_bold, tprint("Line: %  Col: %", coords.line + 1, coords.col + 1));
             line_col_start_x := footer_rect.x + footer_rect.w - width;
             Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = Colors.UI_DIM);
