@@ -11,6 +11,7 @@ Color :: struct {
 Color_Values :: struct {
     NONE :: Color.{ r = -1, g = -1, b = -1, a = -1 };  // an invalid color to denote no color
 
+
     BACKGROUND              := Color.{ r = 0.086, g = 0.133, b = 0.165 };
     BACKGROUND_DARK         := Color.{ r = 0.065, g = 0.101, b = 0.125 };
     BACKGROUND_HIGHLIGHT    := Color.{ r = 0.097, g = 0.15, b = 0.185 };

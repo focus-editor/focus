@@ -1,6 +1,5 @@
 # ROUGH ROADMAP
 
-- Line wrap
 - Optional line numbers
 - Config files for directories (i.e. adding a .focus-config file to your directory and have Focus load it)
 - Global search improvements (the ability to filter additionally by filename)
@@ -51,6 +50,7 @@
 + New command: toggle_block_comment (for the supported languages)
 + Fixed several issues in the editor history
 + New commands: move_to_previous_buffer, move_to_next_buffer. They work like normal editor history, but skip the cursor movements and jump right to the next buffer or layout change
++ Line wrap is now supported (use the toggle_line_wrap command)
 
 
 # RELEASES ==================================================================

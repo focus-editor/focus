@@ -311,6 +311,13 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     text_offset := make_vector2(char_x_advance, -char_x_advance);
     text_origin := top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
 
+    width_in_chars := cast(s32) ((rect.w - 1.5 * text_offset.x)  / char_x_advance);
+    if width_in_chars != editor.last_width_in_chars {
+        editor.last_width_in_chars = width_in_chars;
+        if editor.line_wrap == .on then rescan_for_wrapped_lines(editor, buffer);
+        redraw_requested = true;
+    }
+
     if ui.active == ui_id && (mouse.left.just_pressed || mouse.left.is_dragging) {
         // Calculate the position of the mouse
         pointer := snap_to_rect(mouse.pointer, rect);  // when we drag outside the editor we still want to interact
@@ -322,7 +329,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         cursors_stop_blinking();
 
         if ctrl_or_cmd_pressed() && !(mouse.left.is_dragging || mouse.left.just_double_clicked || mouse.left.just_triple_clicked) {
-            click_offset := coords_to_offset(buffer, coords);
+            click_offset := coords_to_offset(editor, buffer, coords);
 
             // Maybe delete a cursor if we clicked on an existing one
             deleted_cursor := false;
@@ -362,7 +369,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 cursor = leave_only_original_cursor(editor);
             }
 
-            cursor.pos = coords_to_offset(buffer, coords);
+            cursor.pos = coords_to_offset(editor, buffer, coords);
             cursor.col_wanted = -1;
 
             if selection_mode.type == {
@@ -437,7 +444,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     // Get the coordinates of all cursors
     // @Speed: instead of doing it every frame we could do it when cursors change only - but probably it's ok
     cursor_coords := NewArray(cursors.count, Cursor_Coords, initialized = false, allocator = temp);
-    for cursors cursor_coords[it_index] = get_cursor_coords(buffer, it);
+    for cursors cursor_coords[it_index] = get_cursor_coords(editor, buffer, it);
 
     // Draw editor
     {
@@ -447,8 +454,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         defer pop_scissor();
 
         // Handle editor scrolling here because we only know the layout at this point.
-        assert(!buffer.dirty);
-        max_y_scroll := max(cast(s32)((buffer.line_starts.count - 2) * line_height), 0);
+        max_y_scroll := max(cast(s32)(get_max_line_num(editor, buffer) * line_height), 0);
 
         if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
             // Mousewheel scrolling - vertical
@@ -463,7 +469,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             } else {
                 scroll_y.target = new_target;
                 top = new_target;
-                viewport_remember_glue_point(*viewport, buffer);
+                viewport_remember_glue_point(editor, buffer);
             }
         } else if cursor_moved {
             // Detect if cursor is off screen and start scrolling to it
@@ -510,6 +516,12 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             cursors_start_blinking();
         }
 
+        // With line wrap enabled we never want to scroll horizontally, so just snap to left always
+        if line_wrap_is_active(editor) {
+            viewport.scroll_x.target = 0;
+            viewport.left   = 0;
+        }
+
         // Maybe update selection highlights
         if editor.refresh_highlights && buffer.bytes.count <= MAX_BUFFER_SIZE_FOR_HIGHLIGHTS && config.settings.highlight_selection_occurrences {
             editor.refresh_highlights = false;
@@ -527,7 +539,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
                     highlight := array_add(*editor.highlights);
                     highlight.offset = offset;
-                    highlight.line   = offset_to_line(buffer, offset);
+                    highlight.line   = offset_to_line(editor, buffer, offset);
 
                     offset += selected_text.count;
                 }
@@ -545,7 +557,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             // Jump immediately to the scroll point when dragging or clicking scrollbar
             viewport.top = new_scroll_target;
             viewport.scroll_y.target = new_scroll_target;
-            viewport_remember_glue_point(*viewport, buffer);
+            viewport_remember_glue_point(editor, buffer);
             redraw_requested = true;
         }
 
@@ -563,16 +575,16 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             }
             viewport.top = clamp(cast(s32) new_scroll_y, 0, max_y_scroll);
             viewport.scroll_y.target = viewport.top;
-            viewport_remember_glue_point(*viewport, buffer);
+            viewport_remember_glue_point(editor, buffer);
             redraw_requested = true;
         }
 
         if viewport.top == viewport.scroll_y.target {
-            viewport_glue_to_point(*viewport, buffer);
+            viewport_glue_to_point(editor, buffer);
         } else {
             redraw_requested = true;
             viewport.top = get_animation_value(viewport.scroll_y);
-            viewport_remember_glue_point(*viewport, buffer);
+            viewport_remember_glue_point(editor, buffer);
         }
 
         // Horizontal scrolling
@@ -584,18 +596,18 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // Need to update after updating scrolling to reduce latency
         text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
 
-        max_lines := cast(s32) buffer.line_starts.count - 2;
+        max_lines := get_max_line_num(editor, buffer);
         visible_lines_start := clamp(cast(s32) (viewport.top / line_height) - 1, 0, max_lines);
         visible_lines_end   := clamp(visible_lines_start + cast(s32) (rect.h / line_height) + 1, 0, max_lines);
         num_visible_lines   := visible_lines_end - visible_lines_start + 1;
         visible_offset_range := Offset_Range.{
-            start = get_line_start_offset(buffer, visible_lines_start),
-            end   = get_line_start_offset(buffer, visible_lines_end + 1),
+            start = get_line_start_offset(editor, buffer, visible_lines_start),
+            end   = get_line_end_offset  (editor, buffer, visible_lines_end),
         };
         viewport.max_line_pixel_width = 0;
         for line_num : visible_lines_start .. visible_lines_end {
-            line_start := get_line_start_offset(buffer, line_num);
-            length := get_line_start_offset(buffer, line_num+1) - line_start;
+            line_start := get_line_start_offset(editor, buffer, line_num);
+            length     := get_line_end_offset  (editor, buffer, line_num) - line_start;
             line := array_view(buffer.bytes, line_start, length);
             line_pixel_width := cast(s32) ((get_num_chars(line) + min_visible_chars) * char_x_advance);
             viewport.max_line_pixel_width = max(viewport.max_line_pixel_width, line_pixel_width);
@@ -615,7 +627,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             } else {
                 scroll_x.target = new_target;
                 left = new_target;
-                viewport_remember_glue_point(*viewport, buffer);
+                viewport_remember_glue_point(editor, buffer);
             }
         }
         // Keyboard smooth scrolling - horizontal
@@ -635,7 +647,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 if viewport.left < 0 then viewport.left = 0;
             }
             viewport.scroll_x.target = viewport.left;
-            viewport_remember_glue_point(*viewport, buffer);
+            viewport_remember_glue_point(editor, buffer);
             redraw_requested = true;
         }
 
@@ -691,9 +703,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 if it.line > visible_lines_end   break;
 
                 range: Coords_Range = ---;
-                range.start = offset_to_coords(buffer, it.offset);
-                range.end   = offset_to_coords(buffer, it.offset + selected_text_length);
-                draw_range(range, buffer, visible_lines_start, visible_lines_end, text_origin, Colors.SELECTION_HIGHLIGHT);
+                range.start = offset_to_coords(editor, buffer, it.offset);
+                range.end   = offset_to_coords(editor, buffer, it.offset + selected_text_length);
+                draw_range(range, editor, buffer, visible_lines_start, visible_lines_end, text_origin, Colors.SELECTION_HIGHLIGHT);
             }
         }
 
@@ -708,7 +720,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                     selection := ifx cursor.pos < cursor.sel then Coords_Range.{ start = coords.pos, end = coords.sel } else .{ start = coords.sel, end = coords.pos };
                     if selection.end.line < visible_lines_start || selection.start.line > visible_lines_end continue;
                     color := ifx cursors_active then Colors.SELECTION_ACTIVE else Colors.SELECTION_INACTIVE;
-                    draw_range(selection, buffer, visible_lines_start, visible_lines_end, text_origin, color);
+                    draw_range(selection, editor, buffer, visible_lines_start, visible_lines_end, text_origin, color);
                 }
             }
         }
@@ -720,10 +732,10 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 if it.line > visible_lines_end   break;
 
                 range: Coords_Range = ---;
-                range.start = offset_to_coords(buffer, it.offset);
-                range.end   = offset_to_coords(buffer, it.offset + search_bar.input.text.count);
+                range.start = offset_to_coords(editor, buffer, it.offset);
+                range.end   = offset_to_coords(editor, buffer, it.offset + search_bar.input.text.count);
                 color := ifx search_bar.selected_result == it_index then Colors.SEARCH_RESULT_ACTIVE else Colors.SEARCH_RESULT_INACTIVE;
-                draw_range(range, buffer, visible_lines_start, visible_lines_end, text_origin, color);
+                draw_range(range, editor, buffer, visible_lines_start, visible_lines_end, text_origin, color);
             }
         }
 
@@ -732,14 +744,14 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             if !anim.initted {
                 // We can't calculate coords when we're adding the animation, so have to defer to right before drawing
                 anim.initted = true;
-                anim.coords_range.start = offset_to_coords(buffer, anim.range.start);
-                anim.coords_range.end   = offset_to_coords(buffer, anim.range.end);
+                anim.coords_range.start = offset_to_coords(editor, buffer, anim.range.start);
+                anim.coords_range.end   = offset_to_coords(editor, buffer, anim.range.end);
             }
             t := (frame_time - anim.started_at) / Paste_Animation.SPEED;
             if t < 1 {
                 color := Colors.PASTE_ANIMATION;
                 color.a = xx (1 - t);
-                draw_range(anim.coords_range, buffer, visible_lines_start, visible_lines_end, text_origin, color);
+                draw_range(anim.coords_range, editor, buffer, visible_lines_start, visible_lines_end, text_origin, color);
             } else {
                 remove anim;
             }
@@ -771,8 +783,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         code_lines := NewArray(num_visible_lines, Simp.Code_Line, initialized = false, allocator = temp);
         for line_num : visible_lines_start .. visible_lines_end {
-            line_start := get_line_start_offset(buffer, line_num);
-            length := get_line_start_offset(buffer, line_num+1) - line_start;
+            line_start := get_line_start_offset(editor, buffer, line_num);
+            length     := get_line_end_offset  (editor, buffer, line_num) - line_start;
             line := to_string(array_view(buffer.bytes, line_start, length));
             tab_spaces := 0;
             line, tab_spaces = advance_by_chars  (line, hidden_chars_on_the_left);
@@ -986,7 +998,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 );
                 width: float;
 
-                line_range := Offset_Range.{ start = get_line_start_offset(buffer, entry.line), end = get_line_end_offset(buffer, entry.line) };
+                line_range := Offset_Range.{ start = get_real_line_start_offset(buffer, entry.line), end = get_real_line_end_offset(buffer, entry.line) };
                 text_start := line_range.start + count_whitespace(buffer.bytes, line_range.start, line_range.end);
 
                 // Line number
@@ -2100,8 +2112,8 @@ draw_finder :: () {
             // or do it once when searching, but for every resuls (and bloat the search result size).
             // Chose the first option at least for now.
             buffer := *open_buffers[entry.buffer_id];
-            line_num := offset_to_line(buffer, min(entry.match_offset, xx buffer.bytes.count));
-            line_range := Offset_Range.{ start = get_line_start_offset(buffer, line_num), end = get_line_end_offset(buffer, line_num) };
+            line_num := offset_to_real_line(buffer, min(entry.match_offset, xx buffer.bytes.count));
+            line_range := Offset_Range.{ start = get_real_line_start_offset(buffer, line_num), end = get_real_line_end_offset(buffer, line_num) };
             text_start := line_range.start + count_whitespace(buffer.bytes, line_range.start, line_range.end);
 
             // Draw file info
@@ -2240,7 +2252,7 @@ get_cursor_screen_pos :: (text_origin: Vector2, coords: Coords) -> Vector2 {
     );
 }
 
-draw_range :: (range: Coords_Range, buffer: Buffer, visible_start: s32, visible_end: s32, text_origin: Vector2, color: Color) {
+draw_range :: (range: Coords_Range, editor: Editor, buffer: Buffer, visible_start: s32, visible_end: s32, text_origin: Vector2, color: Color) {
     // Scan the visible range and add the number of chars on each line
     range_chars: [..] s32;
     range_chars.allocator = temp;
@@ -2250,7 +2262,7 @@ draw_range :: (range: Coords_Range, buffer: Buffer, visible_start: s32, visible_
     end   := min(range.end.line,   visible_end);
 
     for start..end {
-        s := get_line_as_string(buffer, xx it);
+        s := get_line_as_string(editor, buffer, xx it);
         array_add(*range_chars, num_chars_in_string(s));  // we need to refer to prev/next line, so storing it in an array
     }
 

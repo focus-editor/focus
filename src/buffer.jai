@@ -1,6 +1,12 @@
 refresh_open_buffers :: () {
-    for *editor : open_editors {
+    for * editor : open_editors {
         buffer := *open_buffers[editor.buffer_id];
+
+        if editor.line_wrap == {
+            case .to_disable;   array_reset_keeping_memory(*editor.wrapped_line_starts); editor.line_wrap = .off;
+            case .to_enable;    rescan_for_wrapped_lines(editor, buffer);                editor.line_wrap = .on;
+        }
+
         if !buffer.dirty && !buffer.was_dirty_during_frame continue;
 
         if buffer.dirty rescan_for_lines(buffer);
@@ -102,35 +108,77 @@ get_char_at_offset_as_string :: (using buffer: Buffer, offset: s32) -> string {
     return char;
 }
 
-offset_to_coords :: (using buffer: Buffer, offset: s64) -> Coords {
-    coords := Coords.{ line = offset_to_line(buffer, offset), col = 0 };
+get_line_starts :: (editor: Editor, buffer: Buffer) -> [] s32 {
+    if line_wrap_is_active(editor) {
+        return editor.wrapped_line_starts;
+    } else {
+        return buffer.line_starts;
+    }
+}
 
-    // Find col by scanning the line
-    i := line_starts[coords.line];
+offset_to_coords :: (editor: Editor, buffer: Buffer, offset: s64) -> Coords {
+    line := offset_to_line(editor, buffer, offset);
+    col  := _find_col_by_scanning_line(buffer, line, offset, get_line_starts(editor, buffer));
+
+    return Coords.{ line = line, col = col };
+}
+
+offset_to_real_coords :: (buffer: Buffer, offset: s64) -> Coords {
+    line := offset_to_real_line(buffer, offset);
+    col  := _find_col_by_scanning_line(buffer, line, offset, buffer.line_starts);
+
+    return Coords.{ line = line, col = col };
+}
+
+_find_col_by_scanning_line :: (buffer: Buffer, line_num: s32, offset: s64, line_starts: [] s32) -> col: s32 {
+    col: s32 = 0;
+
+    i := line_starts[line_num];
     while i < offset {
-        byte := bytes[i];
+        byte := buffer.bytes[i];
         if byte != #char "\t" {  // I hate tabs
-            coords.col += 1;
-            i += 1 + trailingBytesForUTF8[bytes[i]];
+            col += 1;
+            i += 1 + trailingBytesForUTF8[byte];
         } else {
-            coords.col += TAB_SIZE - coords.col % TAB_SIZE;
+            col += TAB_SIZE - col % TAB_SIZE;
             i += 1;
         }
     }
 
-    return coords;
+    return col;
 }
 
-get_cursor_coords :: (buffer: Buffer, using cursor: Cursor) -> Cursor_Coords {
-    pos_coords := offset_to_coords(buffer, pos);
-    sel_coords := ifx pos != sel then offset_to_coords(buffer, sel) else pos_coords;
+get_cursor_coords :: (editor: Editor, buffer: Buffer, using cursor: Cursor) -> Cursor_Coords {
+    pos_coords := offset_to_coords(editor, buffer, pos);
+    sel_coords := ifx pos != sel then offset_to_coords(editor, buffer, sel) else pos_coords;
     return Cursor_Coords.{ pos = pos_coords, sel = sel_coords };
 }
 
-offset_to_line :: (using buffer: Buffer, offset: s64) -> line_num: s32 {
+get_real_cursor_coords :: (buffer: Buffer, using cursor: Cursor) -> Cursor_Coords {
+    pos_coords := offset_to_real_coords(buffer, pos);
+    sel_coords := ifx pos != sel then offset_to_real_coords(buffer, sel) else pos_coords;
+    return Cursor_Coords.{ pos = pos_coords, sel = sel_coords };
+}
+
+offset_to_line :: (editor: Editor, buffer: Buffer, offset: s64) -> line_num: s32 {
+    assert(!buffer.dirty, "buffer is dirty, can't calculate line from offset");
+    assert(offset <= buffer.bytes.count, "offset exceeds buffer size, can't calculate line");
+
+    if line_wrap_is_active(editor) {
+        return search_line_num_by_offset(editor.wrapped_line_starts, offset);
+    } else {
+        return search_line_num_by_offset(buffer.line_starts, offset);
+    }
+}
+
+offset_to_real_line :: (using buffer: Buffer, offset: s64) -> line_num: s32 {
     assert(!dirty, "buffer is dirty, can't calculate line from offset");
     assert(offset <= bytes.count, "offset exceeds buffer size, can't calculate line");
 
+    return search_line_num_by_offset(line_starts, offset);
+}
+
+search_line_num_by_offset :: (line_starts: [] s32, offset: s64) -> line_num: s32 {
     if line_starts.count < 2 return 0;
 
     line_num := 0;
@@ -155,18 +203,28 @@ offset_to_line :: (using buffer: Buffer, offset: s64) -> line_num: s32 {
     return cast(s32) line_num;
 }
 
-coords_to_offset :: (using buffer: Buffer, coords: Coords) -> s32 {
+coords_to_offset :: (editor: Editor, buffer: Buffer, coords: Coords) -> s32 {
     assert(!buffer.dirty);
 
+    return _get_offset_by_coords(buffer, get_line_starts(editor, buffer), coords);
+}
+
+real_coords_to_offset :: (using buffer: Buffer, coords: Coords) -> s32 {
+    assert(!buffer.dirty);
+
+    return _get_offset_by_coords(buffer, buffer.line_starts, coords);
+}
+
+_get_offset_by_coords :: (buffer: Buffer, line_starts: [] s32, coords: Coords) -> offset: s32 {
     line := clamp(coords.line, 0, cast(s32)line_starts.count - 2);
     offset := line_starts[line];
-    if offset >= bytes.count return xx bytes.count;
+    if offset >= buffer.bytes.count return xx buffer.bytes.count;
 
-    max_offset := get_line_end_offset(buffer, line);
+    max_offset := line_starts[line+1];
 
     col := 0;
     while true {
-        byte := bytes[offset];
+        byte := buffer.bytes[offset];
         if byte != #char "\t" then col += 1; else col += TAB_SIZE - col % TAB_SIZE;
         if col > coords.col break;
         next_offset := offset + 1 + trailingBytesForUTF8[byte];
@@ -183,13 +241,27 @@ is_last_line :: (using buffer: Buffer, line: s32) -> bool {
     return line >= line_starts.count - 2;
 }
 
-get_line_start_offset :: inline (using buffer: Buffer, line: s32) -> s32 {
+get_real_line_start_offset :: inline (using buffer: Buffer, line: s32) -> s32 {
     return line_starts[clamp(line, 0, cast(s32) line_starts.count - 1)];
 }
 
-get_line_end_offset :: (using buffer: Buffer, line: s32) -> s32 {
-    offset := get_line_start_offset(buffer, line + 1);
+get_real_line_end_offset :: (using buffer: Buffer, line: s32) -> s32 {
+    offset := get_real_line_start_offset(buffer, line + 1);
+
     if !is_last_line(buffer, line) then offset -= 1;
+    return offset;
+}
+
+get_line_start_offset :: inline (editor: Editor, buffer: Buffer, line: s32) -> s32 {
+    max_line := get_max_line_num(editor, buffer);
+    line_starts := get_line_starts(editor, buffer);
+    return line_starts[clamp(line, 0, max_line)];
+}
+
+get_line_end_offset :: (editor: Editor, buffer: Buffer, line: s32) -> s32 {
+    offset := get_line_start_offset(editor, buffer, line + 1);
+    if offset > 0 && offset-1 < buffer.bytes.count && buffer.bytes[offset-1] == #char "\n" then offset -= 1;
+
     return offset;
 }
 
@@ -199,14 +271,6 @@ has_selection :: inline (using cursor: Cursor) -> bool {
 
 get_selection :: (using cursor: Cursor) -> Offset_Range {
     return .{ start = min(pos, sel), end = max(pos, sel) };
-}
-
-get_selection_coords :: (buffer: Buffer, using cursor: Cursor) -> Coords_Range {
-    selection := inline get_selection(cursor);
-    return .{
-        start = offset_to_coords(buffer, selection.start),
-        end   = offset_to_coords(buffer, selection.end),
-    };
 }
 
 get_selected_string :: (cursor: Cursor, buffer: Buffer) -> string {
@@ -287,6 +351,7 @@ rescan_for_lines :: (using buffer: *Buffer) {
     }
 
     processed_with_simd := s.data - bytes.data;
+
     start_index := 0;
     while true {
         index := inline find_index_from_left(s, 0xA, start_index);
@@ -299,6 +364,49 @@ rescan_for_lines :: (using buffer: *Buffer) {
     }
 
     array_add(*line_starts, cast(s32) bytes.count);  // last line
+}
+
+rescan_for_wrapped_lines :: (editor: *Editor, buffer: Buffer) {
+    array_reset_keeping_memory(*editor.wrapped_line_starts);
+    array_reserve(*editor.wrapped_line_starts, buffer.line_starts.count);  // can't be less than that
+
+    array_add(*editor.wrapped_line_starts, 0);  // first line
+
+    max_width_in_chars := ifx editor.last_width_in_chars > 0 then editor.last_width_in_chars else S32_MAX;
+    current_line_width := 0;
+    wrapped_due_to_width := false;
+
+    i: s32 = 0;
+
+    // @Speed: This runs for each character. Ugh
+    while i < buffer.bytes.count {
+        byte := buffer.bytes[i];
+
+        if byte == #char "\t" {  // I hate tabs
+            current_line_width += TAB_SIZE - current_line_width % TAB_SIZE;
+            i += 1;
+        } else {
+            current_line_width += 1;
+            i += 1 + trailingBytesForUTF8[byte];
+        }
+
+        if current_line_width >= max_width_in_chars {
+            array_add(*editor.wrapped_line_starts, i);
+            current_line_width = 0;
+            wrapped_due_to_width = true;
+        } else if byte == #char "\n" {
+            if wrapped_due_to_width && current_line_width == 1 {
+                // Don't wrap when we've just wrapped due to width and the next char is a newline
+                editor.wrapped_line_starts[editor.wrapped_line_starts.count-1] += 1;  // move the line start to the newline
+            } else {
+                array_add(*editor.wrapped_line_starts, i);
+            }
+            wrapped_due_to_width = false;
+            current_line_width = 0;
+        }
+    }
+
+    array_add(*editor.wrapped_line_starts, cast(s32) buffer.bytes.count);  // last line
 }
 
 recalculate_colors :: (buffer: *Buffer) {
@@ -408,7 +516,7 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
         editor.refresh_highlights = true;
 
         for cursor, cursor_id : editor.cursors {
-            array_add(*cursor_states, Editor_Cursor_State.{ editor_id, cursor_id, get_cursor_coords(buffer, cursor) });
+            array_add(*cursor_states, Editor_Cursor_State.{ editor_id, cursor_id, get_real_cursor_coords(buffer, cursor) });
         }
     }
 
@@ -422,6 +530,11 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
 
     rescan_for_lines(buffer);
 
+    for * editor, editor_id : open_editors {
+        if editor.buffer_id != buffer_id continue;
+        if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
+    }
+
     // Put cursors into valid places
     max_line := cast(s32) buffer.line_starts.count - 2;
     for state : cursor_states {
@@ -430,13 +543,13 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
 
         pos, sel := coords.pos, coords.sel;
         pos.line = clamp(pos.line, 0, max_line);
-        pos.col  = clamp(pos.col,  0, num_chars_in_string(get_line_as_string(buffer, pos.line)));
+        pos.col  = clamp(pos.col,  0, num_chars_in_string(get_real_line_as_string(buffer, pos.line)));
         sel.line = clamp(sel.line, 0, max_line);
-        sel.col  = clamp(sel.col,  0, num_chars_in_string(get_line_as_string(buffer, sel.line)));
+        sel.col  = clamp(sel.col,  0, num_chars_in_string(get_real_line_as_string(buffer, sel.line)));
 
         cursor := *editor.cursors[cursor_id];
-        cursor.pos = coords_to_offset(buffer, pos);
-        cursor.sel = coords_to_offset(buffer, sel);
+        cursor.pos = real_coords_to_offset(buffer, pos);
+        cursor.sel = real_coords_to_offset(buffer, sel);
     }
 }
 
@@ -463,19 +576,28 @@ buffer_file_has_changed_on_disk :: (using buffer: *Buffer) -> changed: bool {
 }
 
 is_empty :: (using buffer: Buffer, line_num: s32) -> bool {
-    s := get_line_as_string(buffer, line_num);
+    s := get_real_line_as_string(buffer, line_num);
     return is_all_whitespace(s);
 }
 
-get_line_as_string :: (using buffer: Buffer, line_num: s32) -> string {
+get_real_line_as_string :: (using buffer: Buffer, line_num: s32) -> string {
     assert(!buffer.dirty);
-    if line_num < 0 || line_num >= buffer.line_starts.count - 1 return "";
+    return _get_line_as_string(buffer, buffer.line_starts, line_num);
+}
+
+get_line_as_string :: (editor: Editor, buffer: Buffer, line_num: s32) -> string {
+    assert(!buffer.dirty);
+    return _get_line_as_string(buffer, get_line_starts(editor, buffer), line_num);
+}
+
+_get_line_as_string :: (buffer: Buffer, line_starts: [] s32, line_num: s32) -> string {
+    if line_num < 0 || line_num >= line_starts.count - 1 return "";
 
     start := line_starts[line_num];
     end   := line_starts[line_num + 1];
 
     result: string = ---;
-    result.data  = bytes.data + start;
+    result.data  = buffer.bytes.data + start;
     result.count = end - start;
 
     return result;
@@ -563,7 +685,7 @@ get_buffer_name :: (buffer: Buffer) -> string {
     if buffer.has_file return buffer.file.name;
 
     for 0..buffer.line_starts.count-2 {
-        line := trim(get_line_as_string(buffer, xx it), "\t \r\n");
+        line := trim(get_real_line_as_string(buffer, xx it), "\t \r\n");
         if line return take_first_n_chars(line, min(50, line.count));
     }
 
@@ -653,6 +775,7 @@ refresh_buffer_from_disk :: (path: string) {
             new_edit_group(buffer, editor);
             for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
             organise_cursors(editor);
+            if editor.line_wrap == .on then rescan_for_wrapped_lines(editor, buffer);
         }
     }
 
