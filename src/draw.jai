@@ -311,7 +311,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     text_offset := make_vector2(char_x_advance, -char_x_advance);
     text_origin := top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
 
-    width_in_chars := cast(s32) ((rect.w - 1.5 * text_offset.x)  / char_x_advance);
+    width_in_chars := clamp(cast(s32) ((rect.w - 1.5 * text_offset.x)  / char_x_advance), 1, S32_MAX);
     if width_in_chars != editor.last_width_in_chars {
         editor.last_width_in_chars = width_in_chars;
         if editor.line_wrap == .on then rescan_for_wrapped_lines(editor, buffer);
@@ -539,7 +539,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
                     highlight := array_add(*editor.highlights);
                     highlight.offset = offset;
-                    highlight.line   = offset_to_line(editor, buffer, offset);
+                    highlight.line   = offset_to_real_line(buffer, offset);
 
                     offset += selected_text.count;
                 }
@@ -659,15 +659,17 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             marks_rect =  cut_top(marks_rect, rect.h * max_y_scroll / (rect.h + xx max_y_scroll));  // account for the non-text area at the bottom
             marks_rect_top := marks_rect.y + marks_rect.h;
             assert(buffer.line_starts.count > 0);
-            mark_line_height := marks_rect.h / cast(float) buffer.line_starts.count;  // the height of the rect which corresponds to one line
 
             highlight_mark_rect := shrink_x(marks_rect, marks_rect.w / 3);
             highlight_mark_rect.h = floor(4 * dpi_scale);
 
+            total_scrollable_lines := cast(float) get_max_real_line_num(buffer) + rect.h / line_height;
+
             if search_bar_is_open(editor) && search_bar.results {
                 // Search results
                 for search_bar.results {
-                    highlight_mark_rect.y = marks_rect_top - it.line * mark_line_height - highlight_mark_rect.h;
+                    pos_from_top := rect.h * cast(float) it.line / total_scrollable_lines;  // approximate when line_wrap is on
+                    highlight_mark_rect.y = marks_rect_top - pos_from_top - highlight_mark_rect.h;
                     draw_rect_raw(highlight_mark_rect, ifx it_index == search_bar.selected_result then Colors.SEARCH_RESULT_ACTIVE else Colors.SEARCH_RESULT_INACTIVE);
                 }
             }
@@ -675,7 +677,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             if !search_bar_is_open(editor) {
                 // Selection highlights
                 for highlights {
-                    highlight_mark_rect.y = marks_rect_top - it.line * mark_line_height - highlight_mark_rect.h;
+                    pos_from_top := rect.h * cast(float) it.line / total_scrollable_lines;  // approximate when line_wrap is on
+                    highlight_mark_rect.y = marks_rect_top - pos_from_top - highlight_mark_rect.h;
                     draw_rect_raw(highlight_mark_rect, Colors.SELECTION_HIGHLIGHT);
                 }
             }
@@ -684,12 +687,17 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             cursor_mark_rect := marks_rect;
             cursor_mark_rect.h = 2 * dpi_scale;
             selection_mark_rect := cut_left(marks_rect, marks_rect.w / 3);
+
             for cursor : cursors {
                 coords := cursor_coords[it_index];
-                cursor_mark_rect.y = marks_rect_top - coords.pos.line * mark_line_height - cursor_mark_rect.h;
+                pos_from_top := rect.h * cast(float) coords.pos.line / total_scrollable_lines;  // approximate when line_wrap is on
+                cursor_mark_rect.y = marks_rect_top - pos_from_top - cursor_mark_rect.h;
                 if has_selection(cursor) {
-                    selection_mark_rect.y = marks_rect_top - coords.sel.line * mark_line_height - cursor_mark_rect.h;
-                    selection_mark_rect.h = (coords.sel.line - coords.pos.line + 1) * mark_line_height;
+                    sel_from_top := rect.h * cast(float) coords.sel.line / total_scrollable_lines;
+                    min_pos := min(pos_from_top, sel_from_top);
+                    max_pos := max(pos_from_top, sel_from_top);
+                    selection_mark_rect.y = marks_rect_top - max_pos - cursor_mark_rect.h;
+                    selection_mark_rect.h = max_pos - min_pos + cursor_mark_rect.h;
                     draw_rect_raw(selection_mark_rect, Colors.SELECTION_INACTIVE);
                 }
                 draw_rect_raw(cursor_mark_rect, Colors.CURSOR);
@@ -699,12 +707,13 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // Draw selection highlights
         if !search_bar_is_open(editor) {
             for highlights {
-                if it.line < visible_lines_start continue;
-                if it.line > visible_lines_end   break;
+                start, end := it.offset, it.offset + selected_text_length;
+                if end   < visible_offset_range.start continue;
+                if start > visible_offset_range.end   break;
 
                 range: Coords_Range = ---;
-                range.start = offset_to_coords(editor, buffer, it.offset);
-                range.end   = offset_to_coords(editor, buffer, it.offset + selected_text_length);
+                range.start = offset_to_coords(editor, buffer, start);
+                range.end   = offset_to_coords(editor, buffer, end);
                 draw_range(range, editor, buffer, visible_lines_start, visible_lines_end, text_origin, Colors.SELECTION_HIGHLIGHT);
             }
         }
@@ -716,9 +725,12 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             Simp.set_shader_for_rects();
             for cursor : cursors {
                 if has_selection(cursor) {
+                    range := get_selection(cursor);
+                    if range.end   < visible_offset_range.start continue;
+                    if range.start > visible_offset_range.end   break;
+
                     coords := cursor_coords[it_index];
                     selection := ifx cursor.pos < cursor.sel then Coords_Range.{ start = coords.pos, end = coords.sel } else .{ start = coords.sel, end = coords.pos };
-                    if selection.end.line < visible_lines_start || selection.start.line > visible_lines_end continue;
                     color := ifx cursors_active then Colors.SELECTION_ACTIVE else Colors.SELECTION_INACTIVE;
                     draw_range(selection, editor, buffer, visible_lines_start, visible_lines_end, text_origin, color);
                 }
@@ -728,8 +740,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // Draw search results
         if search_bar_is_open(editor) {
             for search_bar.results {
-                if it.line < visible_lines_start continue;
-                if it.line > visible_lines_end   break;
+                start, end := it.offset, it.offset + search_bar.input.text.count;
+                if end   < visible_offset_range.start continue;
+                if start > visible_offset_range.end   break;
 
                 range: Coords_Range = ---;
                 range.start = offset_to_coords(editor, buffer, it.offset);

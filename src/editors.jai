@@ -828,7 +828,7 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
         if !whole_word || (whole_word && match_whole_word(buffer_str, offset, needle.count)) {
             result := array_add(*results);
             result.offset = offset;
-            result.line = offset_to_line(editor, buffer, offset);
+            result.line = offset_to_real_line(buffer, offset);
             if selected_result < 0 && result.offset >= search_point_offset then selected_result = i;
             i += 1;
         }
