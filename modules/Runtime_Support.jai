@@ -272,6 +272,37 @@ __null_pointer_check_fail :: (index: s64, line_number: s64, filename: *u8) #no_c
     my_panic();
 }
 
+__arithmetic_overflow :: (left: s64, right: s64, type_code: u16, line_number: s64, filename: *u8) #no_context #no_aoc {
+    // We have some free bits in type_code...!
+    fatal  := (type_code & 0x8000);
+    signed := (type_code & 0x4000);
+    operator_index := (type_code >> 7) & 0x3;
+    size := (cast(u64)(type_code & 0x000f))*8;
+
+    signed_string := ifx signed then "s" else "u";
+    operator_string := " / ";
+    
+    if      operator_index == 1 then operator_string = " + ";
+    else if operator_index == 2 then operator_string = " - ";
+    else if operator_index == 3 then operator_string = " * ";
+    
+    write_string("Arithmetic overflow. We tried to compute:\n    ", to_standard_error = true);
+
+    if signed  write_number(left, to_standard_error = true);
+    else       write_nonnegative_number(cast,no_check(u64)left, to_standard_error = true);
+
+    write_string(operator_string, to_standard_error = true);
+    
+    if signed  write_number(right, to_standard_error = true);
+    else       write_nonnegative_number(cast,no_check(u64)right, to_standard_error = true);
+    
+    write_strings("\nThe operand type is ", signed_string, to_standard_error = true);
+    write_nonnegative_number(size, to_standard_error = true);
+    write_string(", but the result does not fit into this type.\n", to_standard_error = true);
+    
+    if fatal my_panic();
+}
+
 __relative_pointer_bounds_check_fail :: (delta: s64, size: u8, line_number: s64, filename: *u8) #no_context {
     // @Volatile: It is a good idea for these to match the error reports in constant-expression evaluation inside the compiler.
     upper_limit := (1 << (size * 8 - 1)) - 1;
