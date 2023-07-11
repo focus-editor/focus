@@ -30,6 +30,7 @@ build :: () {
             options.array_bounds_check = .ON;
             options.null_pointer_check = .ON;
           case "debug";
+            options.arithmetic_overflow_check = .FATAL;
           case;
             compiler_report(tprint("Command-line argument #%, '%', is invalid. Valid options are: 'debug', 'release'.\n", it_index+1, arg));
         }
