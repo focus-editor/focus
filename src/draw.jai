@@ -654,7 +654,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
 
         // Draw scrollbar marks
-        {
+        if !line_wrap_is_active(editor) {
             Simp.set_shader_for_color(enable_blend = true);
 
             marks_rect := cut_right(rect, scrollbar_size);
@@ -670,7 +670,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             if search_bar_is_open(editor) && search_bar.results {
                 // Search results
                 for search_bar.results {
-                    pos_from_top := rect.h * cast(float) it.line / total_scrollable_lines;  // approximate when line_wrap is on
+                    pos_from_top := rect.h * cast(float) it.line / total_scrollable_lines;
                     highlight_mark_rect.y = marks_rect_top - pos_from_top - highlight_mark_rect.h;
                     draw_rect_raw(highlight_mark_rect, ifx it_index == search_bar.selected_result then Colors.SEARCH_RESULT_ACTIVE else Colors.SEARCH_RESULT_INACTIVE);
                 }
@@ -679,7 +679,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             if !search_bar_is_open(editor) {
                 // Selection highlights
                 for highlights {
-                    pos_from_top := rect.h * cast(float) it.line / total_scrollable_lines;  // approximate when line_wrap is on
+                    pos_from_top := rect.h * cast(float) it.line / total_scrollable_lines;
                     highlight_mark_rect.y = marks_rect_top - pos_from_top - highlight_mark_rect.h;
                     draw_rect_raw(highlight_mark_rect, Colors.SELECTION_HIGHLIGHT);
                 }
@@ -692,7 +692,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
             for cursor : cursors {
                 coords := cursor_coords[it_index];
-                pos_from_top := rect.h * cast(float) coords.pos.line / total_scrollable_lines;  // approximate when line_wrap is on
+                pos_from_top := rect.h * cast(float) coords.pos.line / total_scrollable_lines;
                 cursor_mark_rect.y = marks_rect_top - pos_from_top - cursor_mark_rect.h;
                 if has_selection(cursor) {
                     sel_from_top := rect.h * cast(float) coords.sel.line / total_scrollable_lines;
