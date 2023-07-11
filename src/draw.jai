@@ -596,14 +596,16 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // Need to update after updating scrolling to reduce latency
         text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
 
-        max_lines := get_max_line_num(editor, buffer);
+        max_lines := get_max_line_num(editor, buffer) + 1;
         visible_lines_start := clamp(cast(s32) (viewport.top / line_height) - 1, 0, max_lines);
         visible_lines_end   := clamp(visible_lines_start + cast(s32) (rect.h / line_height) + 1, 0, max_lines);
         num_visible_lines   := visible_lines_end - visible_lines_start + 1;
+
         visible_offset_range := Offset_Range.{
             start = get_line_start_offset(editor, buffer, visible_lines_start),
-            end   = get_line_end_offset  (editor, buffer, visible_lines_end),
+            end   = get_line_start_offset(editor, buffer, visible_lines_end + 1),
         };
+
         viewport.max_line_pixel_width = 0;
         for line_num : visible_lines_start .. visible_lines_end {
             line_start := get_line_start_offset(editor, buffer, line_num);

@@ -254,9 +254,8 @@ get_real_line_end_offset :: (using buffer: Buffer, line: s32) -> s32 {
 }
 
 get_line_start_offset :: inline (editor: Editor, buffer: Buffer, line: s32) -> s32 {
-    max_line := get_max_line_num(editor, buffer);
     line_starts := get_line_starts(editor, buffer);
-    return line_starts[clamp(line, 0, max_line)];
+    return line_starts[clamp(line, 0, cast(s32)line_starts.count - 1)];
 }
 
 get_line_end_offset :: (editor: Editor, buffer: Buffer, line: s32) -> s32 {
