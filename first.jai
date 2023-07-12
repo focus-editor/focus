@@ -19,7 +19,7 @@ build :: () {
     optimized := false;
     options.output_executable_name = "focus_debug";
     set_optimization(*options, .DEBUG);
-    options.arithmetic_overflow_check = .FATAL;
+    // options.arithmetic_overflow_check = .FATAL; Try uncommenting this line in 0.1.072. Doesn't work correctly on 0.1.071.
 
     for arg: args {
         if arg == {
