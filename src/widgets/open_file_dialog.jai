@@ -328,6 +328,24 @@ refresh_entries :: (clear_input := true) {
             // This bit will be set when we want to make sure an entry appears on top
             top_priority_bit: u64 = 1 << 62;  // NOT the topmost bit because we'll be converting to s64 later
 
+            path_part: [] string;
+            name_part: [] string;
+
+            slash_index := -1;
+
+            for < char, char_index: filter_chars {
+                if char == "/" {
+                    slash_index = char_index;
+                    break;
+                }
+            }
+
+            path_part.data = filter_chars.data;
+            path_part.count = slash_index;
+
+            name_part.data = filter_chars.data + path_part.count + 1; // Skip the slash
+            name_part.count = filter_chars.count - path_part.count - 1;
+
             for buffer, buffer_id : open_buffers {
                 if buffer.deleted && !buffer.modified continue;  // NOTE: we might still want to see externally deleted buffers.
                                                                  // Maybe use 'deleted' and 'modified_on_disk' to distingiush the buffers
@@ -339,7 +357,17 @@ refresh_entries :: (clear_input := true) {
                 name_score, name_highlights := fuzzy_match(buffer_name, filter_chars);
                 path_score, path_highlights := fuzzy_match(buffer.file.path, filter_chars);
                 score := 200 * name_score + path_score;  // name score is much more important
-                if score < 0 continue;
+
+                if score < 0 {
+                    // Try to match the whole path with name.
+                    if slash_index == -1 continue; // There was no slash in filter_chars.
+
+                    name_score, name_highlights = fuzzy_match(buffer_name, name_part);
+                    path_score, path_highlights = fuzzy_match(buffer.file.path, path_part);
+
+                    score = 200 * name_score + path_score;
+                    if name_score < 0 || path_score < 0 continue; // Now we can skip this buffer.
+                }
 
                 entry := array_add(*entries.filtered);
                 entry.buffer_id = buffer_id;
