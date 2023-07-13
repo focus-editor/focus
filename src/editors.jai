@@ -1612,7 +1612,7 @@ new_line_below :: (editor: *Editor, buffer: *Buffer) {
         start := get_real_line_start_offset(buffer, last_line);
         end   := get_real_line_start_offset(buffer, last_line+1);
         whitespace_bytes := count_whitespace(buffer.bytes, start, end);
-        line_info_per_cursor[it_index] = .{ end = end, space = .{ start = start, count = whitespace_bytes, original_start = start }, last_line = is_last_line(buffer, last_line) };
+        line_info_per_cursor[it_index] = .{ end = end, space = .{ start = start, count = whitespace_bytes, original_start = start }, last_line = is_last_real_line(buffer, last_line) };
     }
 
     offset_delta := 0;
@@ -1966,16 +1966,16 @@ get_whole_line_ranges_for_cursors :: (editor: Editor, buffer: Buffer, merge_adja
                 // Extend last line range
                 line_ranges[line_ranges.count-1].range.end = get_real_line_start_offset(buffer, end_line+1);
                 line_ranges[line_ranges.count-1].next_line_end = next_line_end;
-                line_ranges[line_ranges.count-1].is_last = is_last_line(buffer, end_line);
-                line_ranges[line_ranges.count-1].is_last = !is_last_line(buffer, end_line) && is_last_line(buffer, end_line + 1);
+                line_ranges[line_ranges.count-1].is_last = is_last_real_line(buffer, end_line);
+                line_ranges[line_ranges.count-1].is_last = !is_last_real_line(buffer, end_line) && is_last_real_line(buffer, end_line + 1);
             } else {
                 // Add a new line range
                 array_add(*line_ranges, Line_Range.{
                     prev_line_start   = get_real_line_start_offset(buffer, start_line-1),
                     next_line_end     = next_line_end,
                     range             = .{ start = get_real_line_start_offset(buffer, start_line), end = get_real_line_start_offset(buffer, end_line+1) },
-                    is_last           = is_last_line(buffer, end_line),
-                    next_line_is_last = !is_last_line(buffer, end_line) && is_last_line(buffer, end_line + 1),
+                    is_last           = is_last_real_line(buffer, end_line),
+                    next_line_is_last = !is_last_real_line(buffer, end_line) && is_last_real_line(buffer, end_line + 1),
                 });
             }
             last_end_line = end_line;

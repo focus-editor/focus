@@ -50,6 +50,7 @@ set_shader_for_rects :: () {
     }
 }
 
+// Not working
 set_shader_for_circles :: () {
     CheckInit();
     if state.current_shader != *shader_circle {

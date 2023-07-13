@@ -238,7 +238,11 @@ _get_offset_by_coords :: (buffer: Buffer, line_starts: [] s32, coords: Coords) -
     return offset;
 }
 
-is_last_line :: (using buffer: Buffer, line: s32) -> bool {
+is_last_line :: (editor: Editor, buffer: Buffer, line: s32) -> bool {
+    return line >= get_line_starts(editor, buffer).count - 2;
+}
+
+is_last_real_line :: (using buffer: Buffer, line: s32) -> bool {
     return line >= line_starts.count - 2;
 }
 
@@ -249,7 +253,7 @@ get_real_line_start_offset :: inline (using buffer: Buffer, line: s32) -> s32 {
 get_real_line_end_offset :: (using buffer: Buffer, line: s32) -> s32 {
     offset := get_real_line_start_offset(buffer, line + 1);
 
-    if !is_last_line(buffer, line) then offset -= 1;
+    if !is_last_real_line(buffer, line) then offset -= 1;
     return offset;
 }
 

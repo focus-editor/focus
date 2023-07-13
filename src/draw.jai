@@ -810,6 +810,25 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
         Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);
 
+        // Draw continuation markers for wrapped lines
+        if line_wrap_is_active(editor) {
+            Simp.set_shader_for_rects();
+
+            radius   := char_x_advance / 4;
+            y_offset := (font.character_height - char_x_advance / 2) / 2;
+
+            for line_num : visible_lines_start .. visible_lines_end {
+                end_offset := get_line_end_offset(editor, buffer, line_num);
+                if end_offset < buffer.bytes.count && buffer.bytes[end_offset] != #char "\n" && !is_last_line(editor, buffer, line_num) {
+                    y := pen.y - line_height * (line_num - visible_lines_start) + y_offset;
+                    right_mark := align_to_grid(expand(Rect.{ rect.x + rect.w + 1, y, 0, 0 }, radius));
+                    draw_rounded_rect(right_mark, Colors.CODE_DEFAULT, radius, set_shader = false);
+                    left_mark := align_to_grid(expand(Rect.{ rect.x + 1, y - line_height, 0, 0 }, radius));
+                    draw_rounded_rect(left_mark, Colors.CODE_DEFAULT, radius, set_shader = false);
+                }
+            }
+        }
+
         // Draw cursors when they are active
         cursor_width := ifx config.settings.cursor_as_block then char_x_advance else 2 * dpi_scale;
 
@@ -2555,8 +2574,7 @@ draw_rounded_rect_with_shadow :: (rect: Rect, color: Color, radius := 0.0, shado
     draw_rounded_rect(rect, color, radius = radius, set_shader = false);
 }
 
-draw_circle :: (center: Vector2, color: Color, radius: float, softness := 1.0, $set_shader := true) {
-    #if set_shader then Simp.set_shader_for_circles();
+draw_circle :: (center: Vector2, color: Color, radius: float, softness := 1.0) {
     if radius <= 0 then radius = rounding_radius;
 
     rect := Rect.{ x = center.x - radius, y = center.y - radius, w = radius * 2, h = radius * 2 };
