@@ -24,13 +24,16 @@ This editor is for people who value simplicity, are sensitive to input latency a
 
 Basic tips and tricks: https://www.youtube.com/watch?v=UZQpQ1wgXCY
 
-Official Discord server - https://discord.gg/eSXquAzTmW
+## Official Discord server
+
+https://discord.gg/eSXquAzTmW
+
 
 ## How to compile
 
 `$ jai first.jai - release`
 
-Required Jai version: `0.1.063`
+Required Jai version: `0.1.071`
 
 **On MacOS:**
 
