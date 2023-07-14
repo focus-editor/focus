@@ -751,8 +751,6 @@ File_Async :: #import "File_Async";
 Simp  :: #import "Simp";
 Input :: #import "Input";
 
-DEBUG :: #run get_build_options().arithmetic_overflow_check == .FATAL;  // this is a sloppy way of checking whether we're in debug mode!
-
 MAX_BUFFER_SIZE_FOR_HIGHLIGHTS :: 5 * 1024 * 1024;
 
 #scope_file

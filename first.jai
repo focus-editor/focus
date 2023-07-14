@@ -59,6 +59,13 @@ VERSION      :: "%";
 RELEASE_DATE :: "%";
 STRING, VERSION, RELEASE_DATE), w);
 
+    // Add a debug marker
+    if optimized {
+        add_build_string("DEBUG :: false;\n", w);
+    } else {
+        add_build_string("DEBUG :: true;\n", w);
+    }
+
     while true {
         message := compiler_wait_for_message();
         if message.workspace != w continue;
