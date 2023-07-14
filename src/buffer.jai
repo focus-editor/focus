@@ -378,34 +378,27 @@ rescan_for_wrapped_lines :: (editor: *Editor, buffer: Buffer) {
 
     max_width_in_chars := ifx editor.last_width_in_chars > 0 then editor.last_width_in_chars else S32_MAX;
     current_line_width := 0;
-    wrapped_due_to_width := false;
 
     i: s32 = 0;
 
     // @Speed: This runs for each character. Ugh
     while i < buffer.bytes.count {
         byte := buffer.bytes[i];
+        this_char_index := i;
 
         if byte == #char "\t" {  // I hate tabs
             current_line_width += TAB_SIZE - current_line_width % TAB_SIZE;
             i += 1;
         } else {
-            current_line_width += 1;
+            if byte != #char "\n" current_line_width += 1;  // don't count newlines towards the width to avoid wrapping them
             i += 1 + trailingBytesForUTF8[byte];
         }
 
-        if current_line_width >= max_width_in_chars {
-            array_add(*editor.wrapped_line_starts, i);
-            current_line_width = 0;
-            wrapped_due_to_width = true;
+        if current_line_width > max_width_in_chars {
+            array_add(*editor.wrapped_line_starts, this_char_index);
+            current_line_width = 1;
         } else if byte == #char "\n" {
-            if wrapped_due_to_width && current_line_width == 1 {
-                // Don't wrap when we've just wrapped due to width and the next char is a newline
-                editor.wrapped_line_starts[editor.wrapped_line_starts.count-1] += 1;  // move the line start to the newline
-            } else {
-                array_add(*editor.wrapped_line_starts, i);
-            }
-            wrapped_due_to_width = false;
+            array_add(*editor.wrapped_line_starts, i);
             current_line_width = 0;
         }
     }
