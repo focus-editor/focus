@@ -80,6 +80,7 @@ maybe_update_workspace_buffers :: () {
             if results {
                 file_list_ready = true;
                 shutdown(*file_list_thread_group);
+                file_list_thread_group = Thread_Group.{};
 
                 // Start the actual scanning of the workspace
                 num_jobs_to_complete = 0;
@@ -122,6 +123,7 @@ maybe_update_workspace_buffers :: () {
         if num_jobs_completed >= num_jobs_to_complete {
             workspace_scan_complete = true;
             shutdown(*scanner_thread_group);
+            scanner_thread_group = Thread_Group.{};
 
             reset(*scan_memory_pool);
 
@@ -183,8 +185,8 @@ maybe_update_workspace_buffers :: () {
 
 hard_reload_workspace :: () {
     // Make sure no threads are running
-    if !file_list_ready           shutdown(*file_list_thread_group);
-    if !workspace_scan_complete   shutdown(*scanner_thread_group);
+    if file_list_thread_group.initted then shutdown(*file_list_thread_group);
+    if scanner_thread_group.initted   then shutdown(*scanner_thread_group);
 
     deinit_finder();
     deinit_open_file_dialog();
