@@ -1294,6 +1294,11 @@ find_or_create_editor :: (buffer_id: s64, unwanted_existing_editor: s64 = -1) ->
     editor.buffer_id = buffer_id;
     array_add(*editor.cursors, Cursor.{});
 
+    if config.settings.line_wrap_is_on_by_default {
+        editor.line_wrap = .to_enable;
+        redraw_requested = true;
+    }
+
     open_buffers[buffer_id].num_editors_open += 1;
     assert(open_buffers[buffer_id].num_editors_open <= 2);
 
