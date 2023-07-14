@@ -171,10 +171,18 @@ load_and_merge_config :: (file_path: string, into: Config, hash: *u64) -> succes
     // Make sure the values are within the acceptable range
     clamp_warnings := false;
 
+    old_tab_size := TAB_SIZE;
     TAB_SIZE = clamp(cast(s32) config.settings.tab_size, 1, 100);  // be reasonable (though 100 is unreasonable)
     if config.settings.tab_size != TAB_SIZE {
         add_user_warning(tprint("Tab size clamped to %", TAB_SIZE));
         clamp_warnings = true;
+    }
+    if old_tab_size != TAB_SIZE {
+        // Refresh all editors which have line wrap on
+        for * editor : open_editors {
+            buffer := *open_buffers[editor.buffer_id];
+            if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
+        }
     }
 
     line_height_scale := config.settings.line_height_scale_percent;
