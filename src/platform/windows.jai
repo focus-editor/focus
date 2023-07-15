@@ -211,6 +211,10 @@ platform_open_in_explorer :: (path: string, reveal := false) {
     else      run_command("explorer", path_backslashes);
 }
 
+platform_path_equals :: (path_a: string, path_b: string) -> bool {
+    return equal_nocase(path_a, path_b);
+}
+
 #scope_file
 
 fonts_dir: string;

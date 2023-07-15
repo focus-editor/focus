@@ -100,6 +100,10 @@ platform_open_in_explorer :: (path: string, reveal := false) {
     else      run_command("open", path);
 }
 
+platform_path_equals :: (path_a: string, path_b: string) -> bool {
+    return path_a == path_b;
+}
+
 #scope_file
 
 Monitor :: struct {

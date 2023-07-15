@@ -235,6 +235,10 @@ platform_open_in_explorer :: (path: string, reveal := false) {
     XDG.open(path, reveal);
 }
 
+platform_path_equals :: (path_a: string, path_b: string) -> bool {
+    return path_a == path_b;
+}
+
 #scope_file
 
 LD  :: #import "Linux_Display";

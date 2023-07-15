@@ -37,7 +37,7 @@ load_project_config :: (project: string = "") -> success: bool, changed: bool, t
 refresh_config :: (path: string) {
     old_workspace_dirs := array_copy_tmp(config.workspace.workspace_dirs);
 
-    if path == global_config_path {
+    if platform_path_equals(path, global_config_path) {
         success, changed, there_were_warnings := load_global_config();
         if success && changed && !there_were_warnings {
             clear_user_messages();
@@ -49,7 +49,7 @@ refresh_config :: (path: string) {
                 add_success_message(tprint("Config changes for project '%' have been applied", current_project_name), dismiss_in_seconds = 3);
             }
         }
-    } else if path == project_config_path {
+    } else if platform_path_equals(path, project_config_path) {
         success, changed, there_were_warnings := load_project_config();
         if success && changed && !there_were_warnings {
             clear_user_messages();
@@ -88,7 +88,7 @@ refresh_config :: (path: string) {
 }
 
 is_our_config_file :: (path: string) -> bool {
-    return path != "" && (path == global_config_path || path == project_config_path);
+    return path != "" && (platform_path_equals(path, global_config_path) || platform_path_equals(path, project_config_path));
 }
 
 find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp */ {

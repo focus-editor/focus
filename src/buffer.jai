@@ -717,7 +717,7 @@ refresh_buffer_from_disk :: (path: string) {
     finder.need_to_refresh_results = true;
 
     // Buffer may have changed on disk - reload and compare hashes to be sure
-    assert(path == buffer.file.full_path);
+    assert(platform_path_equals(path, buffer.file.full_path));
 
     // Reload buffer from disk
     file_contents_str, success := read_entire_file(path);
