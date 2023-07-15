@@ -729,7 +729,10 @@ close_search_bar :: inline (editor: *Editor, jump_to_original_cursor := false, j
         editor.scroll_to_cursor = .yes;
     }
 
-    if jump_to_selected_result {
+    if jump_to_selected_result && results {
+        cursor := leave_only_original_cursor(editor);
+        cursor.sel = xx results[selected_result].offset;
+        cursor.pos = xx (cursor.sel + input.text.count);
         editor.scroll_to_cursor = .yes;
     }
 
