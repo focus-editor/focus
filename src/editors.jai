@@ -2174,7 +2174,7 @@ delete_to_end_of_line :: (editor: *Editor, buffer: *Buffer) {
         cursor.pos = get_real_line_end_offset(buffer, offset_to_real_line(buffer, selection.end));
     }
     organise_cursors(editor);  // resolve overlapping selections
-    delete_right_char(editor, buffer);
+    copy_selection_to_clipboard(editor, buffer, cut = true);
 }
 
 copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) {
