@@ -2167,7 +2167,7 @@ delete_to_start_of_line :: (editor: *Editor, buffer: *Buffer) {
         cursor.pos = get_real_line_start_offset(buffer, offset_to_real_line(buffer, selection.start));
     }
     organise_cursors(editor);  // resolve overlapping selections
-    delete_left_char(editor, buffer);
+    copy_selection_to_clipboard(editor, buffer, cut = true, cut_lines_without_selection = false);
 }
 
 delete_to_end_of_line :: (editor: *Editor, buffer: *Buffer) {
@@ -2177,16 +2177,16 @@ delete_to_end_of_line :: (editor: *Editor, buffer: *Buffer) {
         cursor.pos = get_real_line_end_offset(buffer, offset_to_real_line(buffer, selection.end));
     }
     organise_cursors(editor);  // resolve overlapping selections
-    copy_selection_to_clipboard(editor, buffer, cut = true);
+    copy_selection_to_clipboard(editor, buffer, cut = true, cut_lines_without_selection = false);
 }
 
-copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false) {
+copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false, cut_lines_without_selection := true) {
     // Check if there's anything to copy else we exit early so we don't trash the clipboard
     any_selection := false;
     for editor.cursors { if has_selection(it) { any_selection = true; break; } }
     if !any_selection && !cut && !config.settings.copy_whole_line_without_selection return;
 
-    if cut {
+    if cut && cut_lines_without_selection {
         // When cutting, cut whole lines for cursors which don't have selection.
         // The easiest thing to do is to pre-select lines before removing anything
         for * editor.cursors { if !has_selection(it) select_line(it, buffer); }
