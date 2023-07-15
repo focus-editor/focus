@@ -16,7 +16,6 @@
 
 # KNOWN BUGS
 
-- (IMPORTANT) Sometimes when pulling changes via Git, the editor won't notice the files changing (NOTE: if you have a repro please send it to us!)
 - [Current file watcher limitation] If you open a file in a large folder, the file watcher might scan the whole folder in order to watch for the changes to the file.
 
 
@@ -50,7 +49,9 @@
 + New command: toggle_block_comment (for the supported languages)
 + Fixed several issues in the editor history
 + New commands: move_to_previous_buffer, move_to_next_buffer. They work like normal editor history, but skip the cursor movements and jump right to the next buffer or layout change
-+ Line wrap is now supported (use the toggle_line_wrap command)
++ Line wrap is now supported (use the toggle_line_wrap command).
++ If you want line wrap to be on by default, use `line_wrap_is_on_by_default: true`
++ Delete-to-start/end-of-line commands now copy whatever was deleted
 
 
 # RELEASES ==================================================================
