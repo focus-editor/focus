@@ -114,7 +114,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
                 case .move_up_one_page;             search_bar_move_cursor(editor, buffer, -per_page);             return true;
                 case .move_down_one_page;           search_bar_move_cursor(editor, buffer,  per_page);             return true;
 
-                case .open_entry_in_place;          close_search_bar(editor);                                      return true;
+                case .open_entry_in_place;          close_search_bar(editor, jump_to_selected_result = true);      return true;
                 case .open_entry_on_the_side;       search_bar_open_selected_result(editor, buffer, .on_the_side); return true;
                 case .open_entry_on_the_left;       search_bar_open_selected_result(editor, buffer, .left);        return true;
                 case .open_entry_on_the_right;      search_bar_open_selected_result(editor, buffer, .right);       return true;
@@ -719,13 +719,17 @@ open_search_bar :: (using editor: *Editor, buffer: Buffer, requested_mode: Searc
     scroll_to_selected = .snap;
 }
 
-close_search_bar :: inline (editor: *Editor, jump_to_original_cursor := false) {
+close_search_bar :: inline (editor: *Editor, jump_to_original_cursor := false, jump_to_selected_result := false) {
     using editor.search_bar;
     active = false;  // stop receiving input immediately
 
     if jump_to_original_cursor && jumped {
         cursor := leave_only_original_cursor(editor);
         cursor.state = original_cursor_position;
+        editor.scroll_to_cursor = .yes;
+    }
+
+    if jump_to_selected_result {
         editor.scroll_to_cursor = .yes;
     }
 
