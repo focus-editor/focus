@@ -12,7 +12,7 @@ text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> han
 
     if action == {
         case .copy;                     copy(input);
-        case .cut;                      cut(input);
+        case .cut;                      delete_selection(input, copy_to_clipboard = true);
         case .paste;                    paste(input);
         case .undo;                     undo(input);
         case .redo;                     redo(input);
@@ -32,6 +32,8 @@ text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> han
         case .delete_right_char;        delete_right_char(input);
         case .delete_word_left;         delete_word_left(input);
         case .delete_word_right;        delete_word_right(input);
+        case .delete_to_start_of_line;  delete_to_start_of_line(input);
+        case .delete_to_end_of_line;    delete_to_end_of_line(input);
         case;                           return false;
     }
 
@@ -132,15 +134,6 @@ copy :: (using input: Text_Input) {
     if !has_selection(cursor) return;
     left, right := get_selected_offsets(cursor);
     os_clipboard_set_text(slice(to_string(text), left, right - left));
-}
-
-cut :: (using input: *Text_Input) {
-    if !has_selection(cursor) return;
-    left, right := get_selected_offsets(cursor);
-    os_clipboard_set_text(slice(to_string(text), left, right - left));
-    if right > left then delete_range(input, left, right);
-    cursor.pos = min(cursor.sel, cursor.pos);
-    cursor.sel = cursor.pos;
 }
 
 paste :: (using input: *Text_Input) {
@@ -295,9 +288,22 @@ delete_word_right :: inline (using input: *Text_Input) {
     delete_right_char(input);
 }
 
-delete_selection :: inline (using input: *Text_Input) {
+delete_to_start_of_line :: inline (using input: *Text_Input) {
+    cursor.sel = 0;
+    delete_selection(input, copy_to_clipboard = true);
+}
+
+delete_to_end_of_line :: inline (using input: *Text_Input) {
+    cursor.sel = xx text.count;
+    delete_selection(input, copy_to_clipboard = true);
+}
+
+delete_selection :: inline (using input: *Text_Input, copy_to_clipboard := false) {
     left, right := get_selected_offsets(cursor);
-    if right > left then delete_range(input, left, right);
+    if right > left {
+        if copy_to_clipboard then os_clipboard_set_text(slice(to_string(text), left, right - left));
+        delete_range(input, left, right);
+    }
 
     cursor.pos = min(cursor.sel, cursor.pos);
     cursor.sel = cursor.pos;
