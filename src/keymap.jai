@@ -157,7 +157,7 @@ key_sequence_for_action_as_string :: (action: $T) -> string /* temp */ {
         if it_index < key_sequence.count - 1  print_to_builder(*b, "  ");
     }
 
-    return builder_to_string(*b);
+    return builder_to_string(*b, allocator = temp);
 }
 
 #scope_file

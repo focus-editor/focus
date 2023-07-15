@@ -1261,7 +1261,7 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
         print_to_builder(*builder, "...");
 
         pen.x += width + padding;
-        width = xx Simp.prepare_text(font_ui_small, builder_to_string(*builder));
+        width = xx Simp.prepare_text(font_ui_small, builder_to_string(*builder, allocator = temp));
         Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
     }
 

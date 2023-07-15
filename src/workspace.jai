@@ -406,7 +406,7 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
         b: String_Builder;
         b.allocator = temp;
         print_to_builder(*b, "%", <<change);
-        defer log("File change: %\n", builder_to_string(*b));
+        defer log("File change: %\n", builder_to_string(*b, allocator = temp));
     }
 
     // If the change is in one of the ignored dirs, ignore it

@@ -2109,7 +2109,7 @@ join_lines :: (editor: *Editor, buffer: *Buffer, in_between := " ") {
         append(*b, "\n");
         add_deletion(-1);
 
-        new_str := builder_to_string(*b, do_reset = true);
+        new_str := builder_to_string(*b, allocator = temp);
         replace_range(buffer, range.range, new_str);
         add_paste_animation(editor, .{ start = range.range.start + cast(s32)first_line.count, end = range.range.start + cast(s32)new_str.count });
 
