@@ -1,5 +1,3 @@
-DEBUG_FILE_REFRESH :: false;
-
 main :: () {
     cpu_info = get_cpu_info();
 
@@ -795,3 +793,5 @@ Embedded_Font :: struct {
     name: string;
     data: string;
 }
+
+DEBUG_FILE_REFRESH :: false;  // TODO: remove when done debugging

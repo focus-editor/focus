@@ -232,6 +232,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .delete_to_end_of_line;            delete_to_end_of_line               (editor, buffer);
 
         case .toggle_line_wrap;                 toggle_line_wrap                    (editor);
+        case .toggle_line_numbers;              toggle_line_numbers                 ();
 
         case;                                   return false;
     }
@@ -2509,6 +2510,11 @@ toggle_line_wrap :: (editor: *Editor) {
     redraw_requested = true;
 }
 
+toggle_line_numbers :: () {
+    config.settings.show_line_numbers = !config.settings.show_line_numbers;
+    redraw_requested = true;
+}
+
 free_editor :: (using editor: *Editor) {
     array_reset(*cursors);
     array_reset(*paste_animations);
@@ -2571,8 +2577,6 @@ Viewport :: struct {
     glue_point: Glue_Point;
     scroll_y := #run Tween_Animation(s32).{ speed = xx 0.1, func = .lerp };
     scroll_x := #run Tween_Animation(s32).{ speed = xx 0.1, func = .lerp };
-
-    max_line_pixel_width: s32;
 
     Glue_Point :: struct { buffer_pos: s32; offset_within_line: s32; }
 }

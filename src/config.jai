@@ -337,6 +337,7 @@ Settings :: struct {
     copy_whole_line_without_selection   := false;
     editor_history_size                 := 128;
     line_wrap_is_on_by_default          := false;
+    show_line_numbers                   := false;
 
     // TODO
     // convert_tabs_to_spaces_on_load:     false

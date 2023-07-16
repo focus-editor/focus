@@ -196,6 +196,7 @@ commands := #run Command.[
     .{ .move_editor_to_the_right,                           "Move Pane To The Right",             0, .Double },
 
     .{ .toggle_line_wrap,                                   "Toggle Line Wrap",                   0, .Single },
+    .{ .toggle_line_numbers,                                "Toggle Line Numbers",                0, .Single },
 ];
 
 Command :: struct {

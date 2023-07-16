@@ -294,6 +294,18 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         rect.x += (rect.w - max_width) / 2;
         rect.w = max_width;
     }
+
+    using editor := *open_editors[editor_id];
+    buffer := *open_buffers[buffer_id];
+
+    line_number_panel: Rect;
+    if config.settings.show_line_numbers {
+        max_lines  := get_max_line_num(editor, buffer) + 1;
+        num_digits := tprint("%", max_lines).count;
+        panel_width := (num_digits + 2) * char_x_advance;
+        if rect.w > panel_width then line_number_panel, rect = cut_left(rect, panel_width);
+    }
+
     rect = align_to_grid(rect);
     if !is_valid(rect) return;
 
@@ -301,9 +313,6 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
     became_active := maybe_set_hot_or_active(ui_id, rect, .TEXT_SELECT);
     if became_active then activate_editors();
-
-    using editor := *open_editors[editor_id];
-    buffer := *open_buffers[buffer_id];
 
     editor_is_active := editor_id == editors.active && Input.input_application_has_focus;
 
@@ -445,6 +454,10 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     // @Speed: instead of doing it every frame we could do it when cursors change only - but probably it's ok
     cursor_coords := NewArray(cursors.count, Cursor_Coords, initialized = false, allocator = temp);
     for cursors cursor_coords[it_index] = get_cursor_coords(editor, buffer, it);
+
+    visible_lines_start: s32;
+    visible_lines_end:   s32;
+    visible_offset_range: Offset_Range;
 
     // Draw editor
     {
@@ -596,27 +609,28 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // Need to update after updating scrolling to reduce latency
         text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
 
-        max_lines := get_max_line_num(editor, buffer) + 1;
-        visible_lines_start := clamp(cast(s32) (viewport.top / line_height) - 1, 0, max_lines);
-        visible_lines_end   := clamp(visible_lines_start + cast(s32) (rect.h / line_height) + 1, 0, max_lines);
+        max_lines := get_max_line_num(editor, buffer);
+        visible_lines_start = clamp(cast(s32) (viewport.top / line_height) - 1, 0, max_lines);
+        visible_lines_end   = clamp(visible_lines_start + cast(s32) (rect.h / line_height) + 1, 0, max_lines);
         num_visible_lines   := visible_lines_end - visible_lines_start + 1;
 
-        visible_offset_range := Offset_Range.{
+        visible_offset_range = Offset_Range.{
             start = get_line_start_offset(editor, buffer, visible_lines_start),
             end   = get_line_start_offset(editor, buffer, visible_lines_end + 1),
         };
 
-        viewport.max_line_pixel_width = 0;
+        // Calculate max horizontal scroll in pixels
+        max_line_pixel_width: s32 = 0;
         for line_num : visible_lines_start .. visible_lines_end {
             line_start := get_line_start_offset(editor, buffer, line_num);
             length     := get_line_start_offset(editor, buffer, line_num+1) - line_start;
             line := array_view(buffer.bytes, line_start, length);
             line_pixel_width := cast(s32) ((get_num_chars(line) + min_visible_chars) * char_x_advance);
-            viewport.max_line_pixel_width = max(viewport.max_line_pixel_width, line_pixel_width);
+            max_line_pixel_width = max(max_line_pixel_width, line_pixel_width);
         }
         viewport_width := cast(s32) rect.w;
-        max_x_scroll := cast(s32) 0;
-        if viewport.max_line_pixel_width > viewport_width then max_x_scroll = viewport.max_line_pixel_width - viewport_width;
+        max_x_scroll: s32 = 0;
+        if max_line_pixel_width > viewport_width then max_x_scroll = max_line_pixel_width - viewport_width;
 
         // Now that we can compute max_x_scroll we can handle horizontal scrolling.
         // We handle both scrollwheel and keyboard smooth scrolling below.
@@ -811,7 +825,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);
 
         // Draw continuation markers for wrapped lines
-        if line_wrap_is_active(editor) {
+        if line_wrap_is_active(editor) && !config.settings.show_line_numbers {
             Simp.set_shader_for_rects();
 
             radius   := char_x_advance / 4;
@@ -848,6 +862,53 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                         Simp.draw_text(font, xx rect.x, xx (rect.y + (line_height - char_x_advance) / 2), letter);
                     }
                 }
+            }
+        }
+    }
+
+    // Draw line numbers
+    if line_number_panel.w > 0 {
+        push_scissor(line_number_panel);
+        defer pop_scissor();
+
+        draw_rect(line_number_panel, Colors.BACKGROUND);
+
+        // Get the visible lines which have cursors on them (for highlighting)
+        active_lines: [..] s32;
+        active_lines.allocator = temp;
+        for cursor : editor.cursors {
+            if cursor.pos < visible_offset_range.start continue;
+            if cursor.pos > visible_offset_range.end   break;  // assuming the cursors are sorted
+
+            line_num := offset_to_real_line(buffer, cursor.pos);
+            array_add(*active_lines, line_num);
+        }
+
+        y := text_origin.y + (line_height - char_x_advance) / 2 - visible_lines_start * line_height;
+        x := line_number_panel.x + line_number_panel.w - char_x_advance;
+
+        if line_wrap_is_active(editor) {
+            last_line_num := -1;
+
+            for line_num : visible_lines_start .. visible_lines_end {
+                line_start := get_line_start_offset(editor, buffer, line_num);
+                real_line_num := offset_to_real_line(buffer, line_start);
+
+                if real_line_num != last_line_num {
+                    active := array_find(active_lines, real_line_num);
+                    width := Simp.prepare_text(font, tprint("%", real_line_num + 1));
+                    Simp.draw_prepared_text(font, xx (x - width), xx y, color = ifx active then Colors.UI_DEFAULT else Colors.UI_DIM);
+                    last_line_num = real_line_num;
+                }
+
+                y -= line_height;
+            }
+        } else {
+            for line_num : visible_lines_start .. visible_lines_end {
+                active := array_find(active_lines, line_num);
+                width := Simp.prepare_text(font, tprint("%", line_num + 1));
+                Simp.draw_prepared_text(font, xx (x - width), xx y, color = ifx active then Colors.UI_DEFAULT else Colors.UI_DIM);
+                y -= line_height;
             }
         }
     }
@@ -1079,13 +1140,13 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                     draw_rect(shrink_y(highlight_rect, padding), Colors.SEARCH_RESULT_INACTIVE);
 
                     // Draw line
-                    visible_range := Offset_Range.{
+                    visible_offset_range = Offset_Range.{
                         start = line_start + xx byte_offset,
                         end   = min(line_range.end, line_start + xx byte_offset + 4 * max_code_chars),  // max 4 bytes per char
                     };
-                    line_str := get_range_as_string(buffer, visible_range);
+                    line_str := get_range_as_string(buffer, visible_offset_range);
                     if line_str.count > 0 {
-                        colors   := array_view(buffer.colors, visible_range.start, line_str.count);
+                        colors   := array_view(buffer.colors, visible_offset_range.start, line_str.count);
                         code_lines: [1] Simp.Code_Line;
                         code_lines[0] = .{ line = line_str, tab_spaces = 0, colors = colors };
                         Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);

@@ -141,6 +141,7 @@ Alt-Shift-ArrowUp           create_cursor_above
 Alt-Shift-ArrowDown         create_cursor_below
 
 Alt-Z                       toggle_line_wrap
+Alt-Shift-L                 toggle_line_numbers
 
 
 [open file dialog]
