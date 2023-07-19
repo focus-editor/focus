@@ -31,10 +31,17 @@ get_file_icon :: (name: string, extension: string) -> File_Icon {
     if extension == {
         case "jai";
             icon = .jai;
-        case "cpp";  #through;
-        case "hpp";  #through;
-        case "h";    #through;
-        case "c";
+        case "c";   #through;
+        case "h";   #through;
+        case "inl"; #through;
+        case "cpp"; #through;
+        case "cxx"; #through;
+        case "c++"; #through;
+        case "hpp"; #through;
+        case "ipp"; #through;
+        case "cc";  #through;
+        case "m";   #through;
+        case "mm";
             icon = .cpp;
         case "cs";
             icon = .cs;
