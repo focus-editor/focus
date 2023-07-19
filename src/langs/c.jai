@@ -526,52 +526,122 @@ COLOR_MAP :: Code_Color.[
 ];
 
 Keyword :: enum u16 {
+    kw_alignas;
+    kw_alignof;
+    kw_and;
+    kw_and_eq;
+    kw_asm;
+    kw_auto;
+    kw_bitand;
+    kw_bitor;
     kw_break;
     kw_case;
+    kw_catch;
+    kw_class;
+    kw_compl;
+    kw_concept;
+    kw_const_cast;
     kw_continue;
+    kw_co_await;
+    kw_co_return;
+    kw_co_yield;
+    kw_decltype;
     kw_default;
     kw_defined;
+    kw_delete;
     kw_do;
+    kw_dynamic_cast;
     kw_else;
     kw_enum;
+    kw_explicit;
+    kw_export;
     kw_for;
+    kw_friend;
     kw_goto;
     kw_if;
-    kw_register;
+    kw_namespace;
+    kw_new;
+    kw_not;
+    kw_not_eq;
+    kw_operator;
+    kw_or;
+    kw_or_eq;
+    kw_private;
+    kw_protected;
+    kw_public;
+    kw_reinterpret_cast;
+    kw_requires;
     kw_return;
-    kw_short;
     kw_sizeof;
+    kw_static_assert;
+    kw_static_cast;
     kw_struct;
     kw_switch;
+    kw_template;
+    kw_throw;
+    kw_try;
     kw_typedef;
+    kw_typeid;
+    kw_typename;
     kw_union;
+    kw_using;
     kw_while;
+    kw_xor;
+    kw_xor_eq;
     kw__Alignas;
     kw__Alignof;
     kw__Atomic;
     kw__Generic;
     kw__Noreturn;
     kw__Static_assert;
-    kw__Thread_local;
-    kwv_true;
+    kw___asm;
+    kw___asm__;
+    kw___except;
+    kw___finally;
+    kw___leave;
+    kw___try;
+
     kwv_false;
+    kwv_nullptr;
+    kwv_this;
+    kwv_true;
+
+    kwm_const;
+    kwm_consteval;
+    kwm_constexpr;
+    kwm_constinit;
     kwm_extern;
+    kwm_final;
+    kwm_inline;
+    kwm_mutable;
+    kwm_noexcept;
+    kwm_override;
+    kwm_register;
+    kwm_restrict;
     kwm_signed;
     kwm_static;
+    kwm_thread_local;
     kwm_unsigned;
+    kwm_virtual;
     kwm_volatile;
-    kwm_const;
-    kwm_inline;
-    kwm_restrict;
-    kwt_double;
+    kwm__Thread_local;
+
+    // built-in types
+    kwt_bool;
     kwt_char;
+    kwt_char8_t;
+    kwt_char16_t;
+    kwt_char32_t;
+    kwt_double;
+    kwt_float;
     kwt_int;
     kwt_long;
-    kwt_float;
+    kwt_short;
     kwt_void;
+    kwt_wchar_t;
     kwt__Bool;
-    kwt__Imaginary;
     kwt__Complex;
+    kwt__Imaginary;
 
     // stdint types
     kwt_int8_t;
@@ -602,11 +672,24 @@ Keyword :: enum u16 {
     kwt_uintptr_t;
     kwt_intmax_t;
     kwt_uintmax_t;
-    kwt_wchar_t;
     kwt_wint_t;
     kwt_size_t;
     kwt_ptrdiff_t;
     kwt_sig_atomic_t;
+
+    // some STL types
+    kwt_vector;
+    kwt_atomic;
+    kwt_atomic_flag;
+    kwt_array;
+    kwt_map;
+    kwt_unordered_map;
+    kwt_set;
+    kwt_unordered_set;
+    kwt_queue;
+    kwt_deque;
+    kwt_tree;
+    kwt_thread;
 }
 
 Operation :: enum u16 {
@@ -662,17 +745,20 @@ Punctuation :: enum u16 {
 
 Directive :: enum u16 {
     di_define;
-    di_include;
-    di_undef;
+    di_elif;
+    di_elifdef;
+    di_elifndef;
+    di_else;
+    di_end;
+    di_endif;
+    di_error;
     di_if;
     di_ifdef;
     di_ifndef;
-    di_else;
-    di_elif;
-    di_endif;
-    di_pragma;
+    di_include;
     di_line;
-    di_error;
+    di_pragma;
+    di_undef;
     di_warning;
 }
 
