@@ -906,11 +906,15 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
 
             case "c";   #through;
             case "h";   #through;
+            case "inl"; #through;
             case "cpp"; #through;
             case "cxx"; #through;
             case "c++"; #through;
             case "hpp"; #through;
-            case "cc";
+            case "ipp"; #through;
+            case "cc";  #through;
+            case "m";   #through;
+            case "mm";
                 buffer.lang = .C;
         }
     }
