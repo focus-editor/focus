@@ -59,7 +59,12 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     char := << t;
 
     if is_alpha(char) || char == #char "_" {
-        parse_identifier(tokenizer, *token);
+        if is_type_def(tokenizer) {
+            parse_identifier(tokenizer, *token);
+            token.type = .type_keyword;
+        } else {
+            parse_identifier(tokenizer, *token);
+        }
     } else if is_digit(char) {
         parse_number(tokenizer, *token);
     } else if char == {
@@ -80,10 +85,10 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "%";  parse_percent           (tokenizer, *token);
         case #char "@";  parse_note              (tokenizer, *token);
         case #char "^";  parse_caret             (tokenizer, *token);
+        case #char ".";  parse_period            (tokenizer, *token);
 
         case #char ";";  token.type = .punctuation; token.punctuation = .semicolon; t += 1;
         case #char ",";  token.type = .punctuation; token.punctuation = .comma;     t += 1;
-        case #char ".";  token.type = .punctuation; token.punctuation = .period;    t += 1;
         case #char "{";  token.type = .punctuation; token.punctuation = .l_brace;   t += 1;
         case #char "}";  token.type = .punctuation; token.punctuation = .r_brace;   t += 1;
         case #char "(";  token.type = .punctuation; token.punctuation = .l_paren;   t += 1;
@@ -101,6 +106,32 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     if t >= max_t then t = max_t;
     token.len = cast(s32) (t - start_t);
     return token;
+}
+
+is_type_def :: (using tokenizer: *Tokenizer) -> bool #expand {
+    before_prev, prev := last_tokens[0], last_tokens[1];
+    if prev.type == .operation && prev.operation == .asterisk {
+        // : *T
+        // -> *T
+        // ] *T
+        return (before_prev.type == .operation   && before_prev.operation   == .colon) ||
+               (before_prev.type == .operation   && before_prev.operation   == .arrow) ||
+               (before_prev.type == .punctuation && before_prev.punctuation == .r_bracket);
+    }
+    if prev.type == .operation && prev.operation == .colon {
+        // thing: T
+        return before_prev.type == .identifier;
+    }
+    if prev.type == .operation && prev.operation == .arrow {
+        // ) -> T
+        return before_prev.type == .punctuation && before_prev.punctuation == .r_paren;
+    }
+    if prev.type == .punctuation && prev.punctuation == .r_bracket {
+        // [..] T
+        // [N] T
+        return before_prev.type == .number || (before_prev.type == .operation && before_prev.operation == .period_range);
+    }
+    return false;
 }
 
 parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
@@ -300,6 +331,21 @@ parse_caret :: (using tokenizer: *Tokenizer, token: *Token) {
     if << t == {
         case #char "=";
             token.operation = .caret_equal;
+            t += 1;
+    }
+}
+
+parse_period :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .punctuation;
+    token.punctuation = .period;
+
+    t += 1;
+    if t >= max_t return;
+
+    if << t == {
+        case #char ".";
+            token.type = .operation;
+            token.operation = .period_range;
             t += 1;
     }
 }
@@ -527,7 +573,7 @@ OPERATIONS :: string.[
     "percent", "percent_equal", "less_than", "double_less_than", "less_than_equal", "greater_than", "greater_than_equal",
     "minus", "minus_equal", "triple_dash", "asterisk", "asterisk_equal", "colon", "colon_equal", "double_colon", "slash",
     "plus", "plus_equal", "slash_equal", "ampersand", "double_ampersand", "ampersand_equal", "tilde", "unknown",
-    "caret", "caret_equal",
+    "caret", "caret_equal", "period_range",
 ];
 
 KEYWORDS :: string.[
