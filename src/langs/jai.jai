@@ -19,7 +19,7 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
         // Maybe retroactively highlight a function
         if token.type == .punctuation && token.punctuation == .l_paren {
             // Handle "func :: ("
-            before_prev, prev := last_tokens[0], last_tokens[1];
+            before_prev, prev := last_tokens[2], last_tokens[3];
             if prev.type == .identifier {
                 memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
             } else if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
@@ -27,15 +27,25 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
             }
         } else if token.type == .keyword && token.keyword == .kw_inline {
             // Handle "func :: inline"
-            before_prev, prev := last_tokens[0], last_tokens[1];
+            before_prev, prev := last_tokens[2], last_tokens[3];
             if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
                 memset(colors.data + before_prev.start, xx Code_Color.FUNCTION, before_prev.len);
             }
+        } else if token.type == .operation && token.operation == .colon {
+            // Handle ") -> named: s64 {"
+            before_prev, prev := last_tokens[2], last_tokens[3];
+            if before_prev.type == .operation && before_prev.operation == .arrow && prev.type == .type_keyword {
+                memset(colors.data + prev.start, xx COLOR_MAP[Token.Type.identifier], prev.len);
+            }
+        } else if token.type == .identifier && is_type_def(*tokenizer, token) {
+            token.type = .type_keyword;
         }
 
-        // Remember last 2 tokens
+        // Remember last 4 tokens
         last_tokens[0] = last_tokens[1];
-        last_tokens[1] = token;
+        last_tokens[1] = last_tokens[2];
+        last_tokens[2] = last_tokens[3];
+        last_tokens[3] = token;
 
         color := COLOR_MAP[token.type];
         memset(colors.data + token.start, xx color, token.len);
@@ -59,12 +69,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     char := << t;
 
     if is_alpha(char) || char == #char "_" {
-        if is_type_def(tokenizer) {
-            parse_identifier(tokenizer, *token);
-            token.type = .type_keyword;
-        } else {
-            parse_identifier(tokenizer, *token);
-        }
+        parse_identifier(tokenizer, *token);
     } else if is_digit(char) {
         parse_number(tokenizer, *token);
     } else if char == {
@@ -108,12 +113,17 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     return token;
 }
 
-is_type_def :: (using tokenizer: *Tokenizer) -> bool #expand {
-    before_prev, prev := last_tokens[0], last_tokens[1];
+is_type_def :: (using tokenizer: *Tokenizer, token: Token) -> bool #expand {
+    // Handle these scenarios:
+    // ": T", ": *T", "-> T", "-> *T", "] *T"
+    // "-> thing: T", "-> thing: *T"
+    // ignore for *thing: things {
+
+    is_for_identifier := (last_tokens[0].type == .keyword && last_tokens[0].keyword == .kw_for) || (last_tokens[1].type == .keyword && last_tokens[1].keyword == .kw_for);
+    if is_for_identifier  return false;
+
+    before_prev, prev := last_tokens[2], last_tokens[3];
     if prev.type == .operation && prev.operation == .asterisk {
-        // : *T
-        // -> *T
-        // ] *T
         return (before_prev.type == .operation   && before_prev.operation   == .colon) ||
                (before_prev.type == .operation   && before_prev.operation   == .arrow) ||
                (before_prev.type == .punctuation && before_prev.punctuation == .r_bracket);
@@ -509,7 +519,7 @@ Tokenizer :: struct {
     start_t: *u8;  // cursor when starting parsing new token
     t:       *u8;  // cursor
 
-    last_tokens: [2] Token;  // to retroactively highlight functions
+    last_tokens: [4] Token;  // to retroactively highlight functions
 }
 
 Token :: struct {
