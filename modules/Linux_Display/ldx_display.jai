@@ -22,6 +22,12 @@ X11Window :: struct {
     glx_win: GLXWindow;
 }
 
+x_cursors: Table(string, Cursor);
+preloaded_x_cursors :: string.[
+    "default", "pointer", "not-allowed", "col-resize", "row-resize",
+    "all-scroll", "nw-resize", "se-resize", "text",
+];
+
 x11_init_display :: (display: LDDisplay) -> bool {
     current_locale := setlocale(LC_ALL, null);
     current_xmods  := XSetLocaleModifiers(null);
@@ -59,6 +65,12 @@ x11_init_display :: (display: LDDisplay) -> bool {
         if lib != null {
             XcursorLibraryLoadCursor = xx dlsym(lib, "XcursorLibraryLoadCursor");
             xcursor_initialized = (XcursorLibraryLoadCursor != null);
+            if xcursor_initialized {
+                init(*x_cursors);
+                for preloaded_x_cursors {
+                    table_add(*x_cursors, it, XcursorLibraryLoadCursor(x_global_display, it.data));
+                }
+            }
         }
     }
 
@@ -297,8 +309,10 @@ x11_set_icon_from_raw_data :: (win: X11Window, data: *u8, width: u32, height: u3
 
 x11_set_cursor_from_theme :: (win: *X11Window, name: string) {
     if xcursor_initialized {
-        cursor := XcursorLibraryLoadCursor(win.display.handle, name.data);
-        XDefineCursor(win.display.handle, win.handle, cursor);
+        cursor, found := table_find(*x_cursors, name);
+        if found {
+            XDefineCursor(win.display.handle, win.handle, cursor);
+        }
     }
 }
 
