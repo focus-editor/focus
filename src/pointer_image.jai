@@ -79,20 +79,16 @@ Pointer_Image :: enum u16 {
     }
 
     pointers: [NUM_POINTERS] *NSCursor;
-} else {
+} else #if OS == .LINUX {
     LD :: #import "Linux_Display";
 
     set_pointer_image :: (image: Pointer_Image) {
-        if image == {
-            case .NORMAL; LD.set_cursor_from_theme(window, "default");
-            case .PRESSABLE; LD.set_cursor_from_theme(window, "pointer");
-            case .LOCKED; LD.set_cursor_from_theme(window, "not-allowed");
-            case .DRAGGING_HORIZONTAL; LD.set_cursor_from_theme(window, "col-resize");
-            case .DRAGGING_VERTICAL; LD.set_cursor_from_theme(window, "row-resize");
-            case .DRAGGING_FREE; LD.set_cursor_from_theme(window, "all-scroll");
-            case .DRAGGING_NW_SE; LD.set_cursor_from_theme(window, "nw-resize");
-            case .DRAGGING_NE_SW; LD.set_cursor_from_theme(window, "se-resize");
-            case .TEXT_SELECT; LD.set_cursor_from_theme(window, "text");
+        if (image >= 0) && (image <= cast(Pointer_Image) NUM_POINTERS) {
+            current_pointer_image = image;
+            pointer_image_was_set_this_frame = true;
+            already_reset_pointer_image = (image == .NORMAL);  // No need to reset the image if it was set to NORMAL.
+        } else {
+            log_error("Invalid pointer index %\n", image);
         }
     }
 }
@@ -111,6 +107,18 @@ pointer_end_frame :: () {
             Windows.SetCursor(pointers[current_pointer_image]);
         } else #if OS == .MACOS {
             NSCursor.set(pointers[current_pointer_image]);
+        } else #if OS == .LINUX {
+            if current_pointer_image == {
+                case .NORMAL; LD.set_cursor_from_theme(window, "default");
+                case .PRESSABLE; LD.set_cursor_from_theme(window, "pointer");
+                case .LOCKED; LD.set_cursor_from_theme(window, "not-allowed");
+                case .DRAGGING_HORIZONTAL; LD.set_cursor_from_theme(window, "col-resize");
+                case .DRAGGING_VERTICAL; LD.set_cursor_from_theme(window, "row-resize");
+                case .DRAGGING_FREE; LD.set_cursor_from_theme(window, "all-scroll");
+                case .DRAGGING_NW_SE; LD.set_cursor_from_theme(window, "nw-resize");
+                case .DRAGGING_NE_SW; LD.set_cursor_from_theme(window, "se-resize");
+                case .TEXT_SELECT; LD.set_cursor_from_theme(window, "text");
+            }
         }
     }
 
