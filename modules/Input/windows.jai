@@ -1,14 +1,15 @@
 #import "Windows";
 #import "Windows_Utf8";
 #import "Hash_Table";
+#import "Simp";
 
 
 #scope_export
 
 // Procedure pointers that allow us to draw frames during resize/move events.
-windows_draw_frame: () -> ();
-windows_update_window_size: (s64, s64) -> ();
-windows_main_context: *Context;
+draw_frame: () -> ();
+update_window_size: (s64, s64) -> ();
+simp: **Immediate_State;
 
 
 #scope_module
@@ -173,7 +174,12 @@ get_vk :: (key: Key_Code) -> VK: u64 {
 
 MyWindowProc :: (hwnd: HWND, message: u32,
                  wParam: WPARAM, lParam: LPARAM) -> s64 #c_call {
-    push_context windows_main_context {
+    new_context: Context;
+    new_context.allocator = Context.default_allocator;
+    new_context.logger    = Context.default_logger;
+    if simp != null new_context.simp = simp.*;
+
+    push_context new_context {
         using Key_Code;
 
         if message == {
@@ -249,7 +255,10 @@ MyWindowProc :: (hwnd: HWND, message: u32,
             input_application_has_focus = false;
           case WM_PAINT;
             ValidateRect(hwnd, null);
-            windows_draw_frame();
+            
+            // We draw a frame if Simp has been initialized.
+            if context.simp != null draw_frame();
+            
             return DefWindowProcW(hwnd, message, wParam, lParam);
           case WM_LBUTTONDOWN; #through;
           case WM_LBUTTONUP;
@@ -312,7 +321,7 @@ MyWindowProc :: (hwnd: HWND, message: u32,
           case WM_SIZE;
             client_rect: RECT;
             GetClientRect(hwnd, *client_rect);
-            windows_update_window_size(client_rect.right, client_rect.bottom);
+            update_window_size(client_rect.right, client_rect.bottom);
             if wParam == {
               case SIZE_MAXIMIZED;
                 window_minimized = false;
