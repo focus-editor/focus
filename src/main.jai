@@ -708,6 +708,7 @@ dont_ignore_next_window_resize := false;
 #load "langs/c.jai";
 #load "langs/csharp.jai";
 #load "langs/focus_config.jai";
+#load "langs/glsl.jai";
 #load "langs/worklog.jai";
 
 #if OS == .WINDOWS {

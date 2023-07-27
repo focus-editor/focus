@@ -904,6 +904,9 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
             case "focus-config";   buffer.lang = .Focus_Config;
             case "cs";             buffer.lang = .CSharp;
 
+            // @Todo: more common extensions?
+            case "glsl";           buffer.lang = .Glsl;
+
             case "c";   #through;
             case "h";   #through;
             case "inl"; #through;
