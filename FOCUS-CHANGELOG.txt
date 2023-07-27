@@ -42,6 +42,7 @@
     + Fixed a bug with the Navigate to file dialog being empty
     + Fixed a bug with global search not finding everything when case sensitive or whole word toggles are just turned on
     + Fixed several issues in the editor history
+    + Linux: fixed a bug related to mouse cursor handling which caused slowdowns and cursor flickering on X11 (thanks @valignatev)
 
 + Other changes:
     + BREAKING: default config is no longer used as a fallback for missing keymaps, so anything you haven't listed explicitly in the global config won't be included
