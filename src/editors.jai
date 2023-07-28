@@ -904,8 +904,12 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
             case "focus-config";   buffer.lang = .Focus_Config;
             case "cs";             buffer.lang = .CSharp;
 
-            // @Todo: more common extensions?
-            case "glsl";           buffer.lang = .Glsl;
+            case "vert"; #through; // NOTE: Vertex shader extension
+            case "frag"; #through; // NOTE: Fragment shader extension
+            case "geom"; #through; // NOTE: Geometry shader extension
+            case "tess"; #through; // NOTE: Tesselation shader extension (TODO: differentiate between tess control and tess eval? Not sure that's valuable though...)
+            case "glsl";
+                buffer.lang = .Glsl;
 
             case "c";   #through;
             case "h";   #through;
