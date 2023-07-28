@@ -149,6 +149,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .close_left_editor;                close_editor(.left);
         case .close_right_editor;               close_editor(.right);
         case .save;                             save_buffer(editor, buffer);
+        case .save_as;                          save_buffer(editor, buffer, save_new_file = true);
         case .save_all;                         save_all   (editor, buffer);
         case .switch_to_left_editor;            switch_to_editor(.left);
         case .switch_to_right_editor;           switch_to_editor(.right);
@@ -1184,14 +1185,14 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) 
     return editor.search_whole_words;
 }
 
-save_buffer :: (editor: *Editor, buffer: *Buffer) {
+save_buffer :: (editor: *Editor, buffer: *Buffer, save_new_file := false) {
     new_edit_group(buffer, editor);
 
     if buffer.has_file {
         maybe_mark_buffer_as_deleted(editor.buffer_id);  // check in case we missed that it's deleted
         session_notify_modified_buffer(editor.buffer_id);
     }
-    save_buffer_to_disk(buffer, editor.buffer_id);
+    save_buffer_to_disk(buffer, editor.buffer_id, save_new_file);
 }
 
 save_all :: (editor: *Editor, buffer: *Buffer) {
