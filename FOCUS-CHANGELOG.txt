@@ -27,6 +27,7 @@
     + New command: toggle_block_comment (for the supported languages)
     + New commands: move_to_previous_buffer, move_to_next_buffer. They work like normal editor history, but skip the cursor movements and jump right to the next buffer or layout change
     + It is now possible to paste whatever was copied with N cursors into another file as long as the number of cursors there is also N (thanks @hfr4)
+    + Syntax highlighting for GLSL (thanks @SentientCoffee)
     + Linux: The "Open Projects Directory" command as well as shift-clicking files/directories in the "open file" dialogs (Ctrl+O, Ctrl+Shift+O, Ctrl+P) should now work.
       By default the editor will try to auto-detect the prefered file manager using the XDG utilities.
       In case the auto-detection fails you can manually set the commands to run via the "explorer_command" and "explorer_reveal_command" options in the "[[linux]]" section of the config file.
