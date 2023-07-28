@@ -421,10 +421,10 @@ recalculate_colors :: (buffer: *Buffer) {
     }
 }
 
-save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64) -> saved: bool {
+save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64, save_new_file := false) -> saved: bool {
     if readonly return false;
 
-    if !has_file {
+    if save_new_file || !has_file {
         file_path, success := platform_get_save_file_name(get_buffer_name(buffer));
         if success && file_path {
             has_file = true;

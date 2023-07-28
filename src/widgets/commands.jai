@@ -159,6 +159,7 @@ commands := #run Command.[
     .{ .close_right_editor,                                 "Close Right File",                   0, .Double },
 
     .{ .save,                                               "Save",                               0, .Single },
+    .{ .save_as,                                            "Save As",                            0, .Single },
     .{ .save_all,                                           "Save All",                           0, .Single },
 
     .{ .join_lines,                                         "Join Lines",                         0, .Single },

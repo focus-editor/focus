@@ -340,6 +340,7 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "unindent",
     "indent",
     "save",
+    "save_as",
     "save_all",
     "toggle_comment",
     "toggle_block_comment",
