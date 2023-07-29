@@ -61,11 +61,12 @@ draw_frame :: () {
 
     if active_global_widget == {
         case .open_file_dialog;         draw_open_file_dialog();
+        case .delete_file_dialog;       draw_delete_file_dialog();
         case .finder;                   draw_finder();
         case .go_to_line_dialog;        draw_go_to_line_dialog(active_pane_rect);
+        case .open_project_dialog;      draw_open_project_dialog();
         case .unsaved_buffers_dialog;   draw_unsaved_buffers_dialog();
         case .commands_dialog;          draw_commands_dialog();
-        case .open_project_dialog;      draw_open_project_dialog();
     }
 
     draw_user_messages(screen, footer_height);
@@ -1773,6 +1774,91 @@ draw_commands_dialog :: () {
     }
 }
 
+draw_delete_file_dialog :: () {
+    ui_id := Ui_Id.delete_file_dialog;
+
+    margin  := floor(12 * dpi_scale);
+    padding := floor( 4 * dpi_scale);
+    entry_height  := font_ui_line_height + padding * 2;
+    button_height := font_ui_medium_line_height + 2 * padding;
+    header_height := font_ui_medium_line_height + 2 * margin + 4 * dpi_scale;
+
+    box_rect := Rect.{
+        w = floor(clamp(screen.w * 0.3, 600 * dpi_scale, 1500 * dpi_scale)),
+        h = header_height + (entry_height + margin / 2) + margin + padding + button_height + margin,
+    };
+    box_rect.x = floor((screen.w - box_rect.w) / 2);
+    box_rect.y = screen.h - box_rect.h - floor(clamp(100 * dpi_scale, 0, (screen.h - box_rect.h) / 2));
+
+    maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
+
+    draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT);
+
+    header_rect, buffers_rect := cut_top(box_rect, header_height);
+    buffers_rect = shrink(buffers_rect, margin);
+
+     // Header
+    {
+        push_scissor(header_rect);
+        defer pop_scissor();
+
+        draw_rounded_rect_with_corners(header_rect, Colors.BACKGROUND_BRIGHT, tl = .in, tr = .in, br = .none, bl = .none);
+
+        pen_x := cast(s32) (header_rect.x + 2 * margin);
+        pen_y := cast(s32) (header_rect.y + (header_rect.h - font_ui_medium.character_height) / 2 + 2);
+        header_text := "Are you sure you want to delete this file?";
+        Simp.draw_text(font_ui_medium, pen_x, pen_y, header_text, Colors.UI_DEFAULT);
+
+        hr := cut_bottom(header_rect, 1);
+        draw_rect(hr, Colors.BACKGROUND_DARK);
+    }
+
+    // File to delete
+    {
+        push_scissor(buffers_rect);
+        defer pop_scissor();
+
+        buffer := get_buffer_to_delete();
+
+        entry_rect := cut_top(buffers_rect, entry_height);
+        {
+            push_scissor(entry_rect);
+            defer pop_scissor();
+
+            pen := Vector2.{
+                x = entry_rect.x + margin,
+                y = entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+            };
+            width: float;
+
+            width, _ = draw_file_info(buffer, width, padding, pen);
+        }
+
+        entry_rect.y -= entry_rect.h + margin / 2;
+    }
+
+    // Buttons
+    {
+        buttons_row_rect := cut_bottom(buffers_rect, button_height);
+
+        cancel_button, delete_button: Rect;
+
+        activated, width := draw_button(font_ui, "Cancel", Colors.UI_NEUTRAL, Colors.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
+        if activated close_delete_file_dialog();
+
+        buttons_row_rect.w -= width + margin;
+
+        activated, width = draw_button(font_ui, "Delete", Colors.UI_ERROR, Colors.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
+        if activated delete_buffer_file_and_update_editor();
+    }
+
+    if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
+        // Close the dialog on clicks elsewhere
+        close_delete_file_dialog();
+        return;
+    }
+}
+
 draw_open_project_dialog :: () {
     using open_project_dialog;
 
@@ -1989,7 +2075,7 @@ draw_unsaved_buffers_dialog :: () {
                 };
                 width: float;
 
-                width, pen = draw_file_info(buffer, width, padding, pen);
+                width, _ = draw_file_info(buffer, width, padding, pen);
             }
 
             entry_rect.y -= entry_rect.h + margin / 2;
@@ -2832,6 +2918,7 @@ Ui_Id :: enum s64 {
     unsaved_buffers     :: -10;
     commands_dialog     :: -11;
     open_project_dialog :: -12;
+    delete_file_dialog  :: -13;
 
     // The rest will be derived from loc
 }
