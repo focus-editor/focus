@@ -151,7 +151,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .save;                             save_buffer(editor, buffer);
         case .save_as;                          save_buffer(editor, buffer, save_new_file = true);
         case .save_all;                         save_all   (editor, buffer);
-        case .delete_current_file;              delete_buffer_file(editor, buffer);
+        case .delete_current_file;              show_delete_file_dialog(editor, buffer);
         case .switch_to_left_editor;            switch_to_editor(.left);
         case .switch_to_right_editor;           switch_to_editor(.right);
         case .switch_to_other_editor;           switch_to_editor(.other);
@@ -1196,15 +1196,6 @@ save_buffer :: (editor: *Editor, buffer: *Buffer, save_new_file := false) {
 
     if save_new_file then save_buffer_to_new_file_on_disk(buffer, editor.buffer_id);
     else                  save_buffer_to_disk(buffer, editor.buffer_id);
-}
-
-delete_buffer_file :: (editor: *Editor, buffer: *Buffer) {
-    if !buffer.has_file then return;
-    new_edit_group(buffer, editor);
-
-    _ := delete_buffer_from_disk(buffer);               // TODO: handle delete fail
-    maybe_mark_buffer_as_deleted(editor.buffer_id);     // check in case we missed that it's deleted
-    session_notify_modified_buffer(editor.buffer_id);   // @Cleanup? This doesn't seem to do anything.
 }
 
 save_all :: (editor: *Editor, buffer: *Buffer) {
