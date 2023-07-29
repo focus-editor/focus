@@ -205,7 +205,7 @@ hard_reload_workspace :: () {
     init_buffers();
     reopen_visible_editors(old_editor_state);
     start_initial_workspace_scan();
-;
+
     add_success_message("Workspace has been reloaded", dismiss_in_seconds=3);
 }
 
@@ -312,6 +312,15 @@ start_watching_file :: (file_path: string) {
     full_path = copy_string(full_path);
     path_overwrite_separators(full_path, #char "/");
     array_add_if_unique(*watch_files, full_path);
+}
+
+stop_watching_file :: (file_path: string) {
+    full_path, success := get_absolute_path(file_path);
+    if !success then return;
+    path_overwrite_separators(full_path, #char "/");
+
+    found, index := array_find(watch_files, full_path);
+    if found then array_unordered_remove_by_index(*watch_files, index);
 }
 
 file_is_watched :: (file_path: string) -> bool {

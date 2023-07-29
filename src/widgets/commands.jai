@@ -162,6 +162,8 @@ commands := #run Command.[
     .{ .save_as,                                            "Save As",                            0, .Single },
     .{ .save_all,                                           "Save All",                           0, .Single },
 
+    .{ .delete_current_file,                                "Delete Current File",                0, .Single },
+
     .{ .join_lines,                                         "Join Lines",                         0, .Single },
     .{ .join_lines_no_spaces_in_between,                    "Join Lines (no spaces in between)",  0, .Single },
 

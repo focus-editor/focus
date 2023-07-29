@@ -421,50 +421,88 @@ recalculate_colors :: (buffer: *Buffer) {
     }
 }
 
-save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64, save_new_file := false) -> saved: bool {
+save_buffer_to_new_file_on_disk :: (buffer: *Buffer, buffer_id: s64) -> saved: bool {
+    if buffer.readonly return false;
+
+    file_path, success := platform_get_save_file_name(get_buffer_name(buffer));
+    if !(success && file_path) {
+        return false;
+    }
+
+    // Save the file BEFORE making a new buffer so find_or_create_buffer can find it
+    if config.settings.strip_trailing_whitespace_on_save then strip_trailing_whitespace(buffer, buffer_id);
+
+    success = write_entire_file(file_path, to_string(buffer.bytes));
+    if !success then return false;
+
+    new_id, created := find_or_create_buffer(file_path);
+    redraw_requested = true;
+
+    // Reroute all editors using the old id
+    for * editor : open_editors {
+        if editor.buffer_id == buffer_id {
+            editor.buffer_id = new_id;
+            editor.scroll_to_cursor = .yes;
+            for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
+            organise_cursors(editor);
+        }
+    }
+
+    if !file_is_watched(file_path) then start_watching_file(file_path);
+    update_window_title(open_editors[editors.active].buffer_id);
+
+    return true;
+}
+
+save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64) -> saved: bool {
     if readonly return false;
 
-    if save_new_file || !has_file {
+    if !has_file {
+        // Save new file buffer
         file_path, success := platform_get_save_file_name(get_buffer_name(buffer));
-        if success && file_path {
-            has_file = true;
-            file = get_file_info_from_full_path(file_path);
-            set_lang_from_path(buffer, file_path);
-            needs_coloring = true;
-            redraw_requested = true;
+        if !(success && file_path) {
+            return false;
+        }
 
-            lock(*open_buffers_lock);
+        has_file = true;
+        file = get_file_info_from_full_path(file_path);
+        set_lang_from_path(buffer, file_path);
+        needs_coloring = true;
+        redraw_requested = true;
+
+        lock(*open_buffers_lock);
+        {
             existing_buffer_id, found_existing := table_find(*buffers_table, file_path);
-            if found_existing && buffer_id != existing_buffer_id {
-                // The user chose to save the new buffer into an existing file. OK.
-                // Mark the old buffer as deleted and use the new one
-                removed := table_remove(*buffers_table, file_path);
-                assert(removed, "For some reason table_remove failed. This is a very unexpected bug.");
-                existing_buffer := *open_buffers[existing_buffer_id];
-                existing_buffer.deleted  = true;
-                existing_buffer.modified = false;
-                existing_buffer.modified_on_disk = false;
+            if found_existing {
+                if buffer_id != existing_buffer_id {
+                    // The user chose to save the new buffer into an existing file. OK.
+                    // Mark the old buffer as deleted and use the new one
+                    removed := table_remove(*buffers_table, file_path);
+                    assert(removed, "For some reason table_remove failed. This is a very unexpected bug.");
+                    existing_buffer := *open_buffers[existing_buffer_id];
+                    existing_buffer.deleted  = true;
+                    existing_buffer.modified = false;
+                    existing_buffer.modified_on_disk = false;
 
-                // Reroute all editors which use it to the new buffer id
-                for * editor : open_editors {
-                    if editor.buffer_id == existing_buffer_id {
-                        editor.buffer_id = buffer_id;
-                        editor.scroll_to_cursor = .yes;
-                        for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
-                        organise_cursors(editor);
+                    // Reroute all editors which use it to the new buffer id
+                    for * editor : open_editors {
+                        if editor.buffer_id == existing_buffer_id {
+                            editor.buffer_id = buffer_id;
+                            editor.scroll_to_cursor = .yes;
+                            for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
+                            organise_cursors(editor);
+                        }
                     }
+                } else {
+                    assert(false, "Buffer without a file somehow got into the buffers hash table. This is a bug.");
                 }
-            } else if found_existing && buffer_id == existing_buffer_id {
-                assert(false, "Buffer without a file somehow got into the buffers hash table. This is a bug.");
             }
 
             table_add(*buffers_table, copy_string(file_path), buffer_id);
-            unlock(*open_buffers_lock);
-
-            if !file_is_watched(file_path) start_watching_file(file_path);
-        } else {
-            return false;
         }
+        unlock(*open_buffers_lock);
+
+        if !file_is_watched(file_path) then start_watching_file(file_path);
     }
 
     if config.settings.strip_trailing_whitespace_on_save then strip_trailing_whitespace(buffer, buffer_id);
@@ -483,10 +521,34 @@ save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64, save_new_file := 
         error_when_saving = true;
     }
     remember_last_modtime_and_size(buffer);
-
     update_window_title(open_editors[editors.active].buffer_id);
 
     return !error_when_saving;
+}
+
+delete_buffer_from_disk :: (using buffer: *Buffer) -> deleted: bool {
+    if readonly  return false;
+    if !has_file return false;
+
+    file_path := buffer.file.full_path;
+
+    success := file_delete(file_path);
+    if !success then return false;
+
+    deleted          = true;
+    has_file         = false;
+    modified         = false;
+    modified_on_disk = false;
+
+    lock(*open_buffers_lock);
+    {
+        removed := table_remove(*buffers_table, file_path);
+        assert(removed, "For some reason table_remove failed. This is a very unexpected bug.");
+    }
+    unlock(*open_buffers_lock);
+
+    if file_is_watched(file_path) then stop_watching_file(file_path);
+    return true;
 }
 
 strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
@@ -680,7 +742,9 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
 }
 
 get_buffer_name :: (buffer: Buffer) -> string {
-    if buffer.has_file return buffer.file.name;
+    // NOTE: After deleting using "Delete Current File", `has_file` could be false while buffer.file still exists (because we don't override it).
+    //       So if we fail the `has_file` check, check the `file.full_path` as well to see if there is still a valid name that the buffer can draw.
+    if buffer.has_file || buffer.file.full_path return buffer.file.name;
 
     for 0..buffer.line_starts.count-2 {
         line := trim(get_real_line_as_string(buffer, xx it), "\t \r\n");

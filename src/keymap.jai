@@ -342,6 +342,7 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "save",
     "save_as",
     "save_all",
+    "delete_current_file",
     "toggle_comment",
     "toggle_block_comment",
     "select_line",
