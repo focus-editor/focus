@@ -122,6 +122,12 @@ platform_enumerate_logical_drives :: () -> [] string {
 platform_get_save_file_name :: (name := "") -> string /* temp */, success: bool {
     buffer: [512] u16;
 
+    if name && name != "<new file>" {
+        // Get the name to populate it in the filename box (convenient if we're resaving a deleted file)
+        wide_name, _, length := utf8_to_wide(name); // @Todo: handle error here
+        memcpy(buffer.data, wide_name, length);
+    }
+
     ofn: OPENFILENAMEW;
     ofn.lStructSize = size_of(OPENFILENAMEW);
     ofn.hwndOwner   = window;
