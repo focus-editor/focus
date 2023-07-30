@@ -182,7 +182,8 @@ platform_set_window_title :: (title: string) {
     LD.set_window_title(window, title);
 }
 
-platform_wait_message :: inline () {
+platform_wait_message :: inline (window: Window_Type) {
+    LD.wait_for_events(window);
 }
 
 platform_set_refresh_timer :: (window: Window_Type) {

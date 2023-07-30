@@ -97,7 +97,7 @@ main :: () {
     draw_frame();
 
     while !should_quit {
-        if !redraw_requested platform_wait_message();
+        if !redraw_requested platform_wait_message(window);
 
         Input.update_window_events();
 
@@ -132,7 +132,7 @@ main :: () {
         screen_with_title_bar := screen;
         screen_with_title_bar.h += 200;  // should be enough to include the title bar
 
-        #if OS != .WINDOWS {
+        #if OS == .MACOS {
             nothing_to_do_this_frame := !redraw_requested && !Input.events_this_frame.count && !mouse.moved_this_frame;
 
             if !Input.input_application_has_focus && nothing_to_do_this_frame {

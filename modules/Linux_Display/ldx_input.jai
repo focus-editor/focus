@@ -75,17 +75,81 @@ x11_translate_key_code :: (key: KeySym) -> Key_Code {
     return UNKNOWN;
 }
 
-x11_update_window_events :: (x11_display: *X11Display) {
-    display := x11_display.handle;
-    XLockDisplay(display);
+x11_wait_for_events :: (window: *X11Window) {
+    x11_display := window.display;
 
     xev: XEvent;
-    while XPending(display) {
-        XNextEvent(display, *xev);
-        x11_handle_event(display, *xev);
-    }
+    needs_flush := true;
+    while true {
+        if needs_flush XFlush(x11_display.handle);
 
-    XUnlockDisplay(display);
+        // Example from select(2) and most reference code uses FD_ZERO macro, but jai zeroes structs out by default.
+        fds: fd_set;
+        FD_SET(x11_display.file_descriptor, *fds);
+        result := select(
+            x11_display.file_descriptor + 1,
+            *fds, // file descriptors for read
+            null, // file descriptors for write
+            null, // file descriptors for error detection
+            null, // timeout setup. null means wait indefinitely
+        );
+
+        if result < 0 {
+            error := errno();
+            if error == EINTR {
+                // According to man 7 signal, select always fails with EINTR if
+                // it gets interrupted by a signal, even if then the process gets
+                // restarted, so we just keep going. EINTR can also happen if something
+                // wrong with the timer, but we're not using it
+                continue;
+            }
+            // Returning on other errors. If one of these happens the application
+            // is most likely to crash anyway
+            if error == EBADF || error == EINVAL {
+                log_error(
+                    "Invalid X11 file descriptor on X11 display. Error code is %. See select(2)\n",
+                    ifx error == EBADF then "EBADF" else "EINVAL",
+                );
+            } else if error == ENOMEM {
+                log_error("select(2) failed with ENOMEM - it is unable to allocate memory for its internal use\n");
+            } else {
+                log_error("Unknown error happened while waiting on X11 file descriptor. Error code: %\n", error);
+            }
+            return;
+        }
+
+        if FD_ISSET(x11_display.file_descriptor, *fds) {
+            queue_length := XPending(x11_display.handle);
+
+            if queue_length == 0 {
+                // We don't need to do XFlush at the start of the next wait iteration
+                // because XPending does one if the queue is empty
+                needs_flush = false;
+                continue;
+            }
+            break;
+        }
+        needs_flush = true;
+    }
+}
+
+// Catch all events
+x11_event_predicate :: (display: *Display, event: *XEvent, *void) -> s32 #c_call {
+    return 1;
+}
+
+x11_update_window_events :: (x11_display: *X11Display) {
+    display := x11_display.handle;
+
+    xev: XEvent;
+    while true {
+        result := XCheckIfEvent(display, *xev, x11_event_predicate, null);
+        if result {
+            x11_handle_event(display, *xev);
+        } else {
+            break;
+        }
+    }
 }
 
 x11_handle_event :: (display: *Display, xev: *XEvent) {
@@ -830,4 +894,31 @@ maybe_handle_xdnd_drop_events :: (display: *Display, xevent: *XEvent, drop_info:
 }
 
 #scope_file
+#import "POSIX";
 #import "String";
+
+libc :: #system_library "libc";
+
+fd_set :: struct {
+    // 16 is FD_SET_SIZE (which is hardcoded to 1024 in /usr/include/bits/typesizes.h)
+    // divided by ulong size which is 64 on 64 bit machines and 32 on 32 it machines
+    fds_bits: [16] s64;
+}
+
+// __NFDBITS in /sys/select.h
+// s64 here is array element type in fd_set. So size_of(fd_set.fds_bits[0])
+BITS_PER_FD_SET_MASK :: size_of(s64) * 8;
+
+// FD_SET and FD_ISSET are macros from /usr/include/bits/select.h
+// Casts in those are to be consistent with how macros are implemented in the header
+FD_SET :: inline (fd: s32, set: *fd_set) {
+    set.fds_bits[fd / BITS_PER_FD_SET_MASK] |= (cast(s64)((cast(u64)1) << (fd % BITS_PER_FD_SET_MASK)));
+}
+
+FD_ISSET :: inline (fd: s32, set: *fd_set) -> s32 {
+    is_set := ((set.fds_bits[fd / BITS_PER_FD_SET_MASK]) & cast(s64)((cast(u64)1) << (fd % BITS_PER_FD_SET_MASK))) != 0;
+    if is_set return 1;
+    return 0;
+}
+
+select :: (__nfds: s32, __readfds: *fd_set, __writefds: *fd_set, __exceptfds: *fd_set, __timeout: *timeval) -> s32 #foreign libc;

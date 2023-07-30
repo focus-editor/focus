@@ -365,6 +365,13 @@ timer_destroy :: (timer: Timer) {
     <<timer = .{};
 }
 
+wait_for_events :: (window: LDWindow) {
+    if window.tag == {
+        case X11Window; x11_wait_for_events(isa(window, X11Window));
+        case WLWindow; return;
+    }
+}
+
 #scope_module;
 
 #import "String";
