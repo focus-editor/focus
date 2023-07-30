@@ -1,18 +1,7 @@
 #import "Windows";
 #import "Windows_Utf8";
 #import "Hash_Table";
-#import "Simp";
 
-
-#scope_export
-
-// Procedure pointers that allow us to draw frames during resize/move events.
-draw_frame: () -> ();
-update_window_size: (s64, s64) -> ();
-simp: **Immediate_State;
-
-
-#scope_module
 
 //
 // @Incomplete @Robustness: We should check whichever flags Windows gives us automatically
@@ -177,12 +166,11 @@ MyWindowProc :: (hwnd: HWND, message: u32,
     new_context: Context;
     new_context.allocator = Context.default_allocator;
     new_context.logger    = Context.default_logger;
-    if simp != null new_context.simp = simp.*;
 
     push_context new_context {
         using Key_Code;
 
-        if message == {
+  	    if message == {
 //          case WM_ERASEBKGND; return 1;
           case WM_SYSCOMMAND;
 /*
@@ -194,7 +182,7 @@ MyWindowProc :: (hwnd: HWND, message: u32,
                 return 0;
             }
 */
-            return DefWindowProcW(hwnd, message, wParam, lParam);
+	        return DefWindowProcW(hwnd, message, wParam, lParam);
 
           case WM_ACTIVATEAPP;
             if wParam {  // We are being activated.
@@ -218,7 +206,7 @@ MyWindowProc :: (hwnd: HWND, message: u32,
                     }
                 }
             }
-            return DefWindowProcW(hwnd, message, wParam, lParam);
+	        return DefWindowProcW(hwnd, message, wParam, lParam);
 
           case WM_SYSKEYDOWN; #through;
           case WM_KEYDOWN;
@@ -254,12 +242,9 @@ MyWindowProc :: (hwnd: HWND, message: u32,
           case WM_KILLFOCUS;
             input_application_has_focus = false;
           case WM_PAINT;
-            ValidateRect(hwnd, null);
-            
-            // We draw a frame if Simp has been initialized.
-            if context.simp != null draw_frame();
-            
-            return DefWindowProcW(hwnd, message, wParam, lParam);
+		    ValidateRect(hwnd, null);
+	        return DefWindowProcW(hwnd, message, wParam, lParam);
+
           case WM_LBUTTONDOWN; #through;
           case WM_LBUTTONUP;
             maybe_send_vkey_event(VK_LBUTTON, message == WM_LBUTTONDOWN);
@@ -303,7 +288,7 @@ MyWindowProc :: (hwnd: HWND, message: u32,
             event: Event;
             event.type = .QUIT;
             array_add(*events_this_frame, event);
-         // return DefWindowProcW(hwnd, message, wParam, lParam);
+	        return DefWindowProcW(hwnd, message, wParam, lParam);
 
           case WM_INPUT;
             extra := GetMessageExtraInfo();
@@ -319,9 +304,6 @@ MyWindowProc :: (hwnd: HWND, message: u32,
 
             DefWindowProcW(hwnd, message, wParam, lParam);  // This is required for some reason.    // @@ Why?
           case WM_SIZE;
-            client_rect: RECT;
-            GetClientRect(hwnd, *client_rect);
-            update_window_size(client_rect.right, client_rect.bottom);
             if wParam == {
               case SIZE_MAXIMIZED;
                 window_minimized = false;
@@ -351,42 +333,42 @@ MyWindowProc :: (hwnd: HWND, message: u32,
             SetWindowPos(hwnd, HWND_TOPMOST, rect.left, rect.top, w, h, SWP_NOACTIVATE|SWP_NOZORDER);
             return 0;
           case WM_DROPFILES;
-            drop := cast(HDROP) wParam;
-            // If "0xFFFFFFFF" as the second parameter: return the count of files dropped.
-            file_paths_count := DragQueryFileW(drop, 0xFFFFFFFF, null, 0);
+ 	  	    drop := cast(HDROP) wParam;
+ 	 	    // If "0xFFFFFFFF" as the second parameter: return the count of files dropped.
+ 	 	    file_paths_count := DragQueryFileW(drop, 0xFFFFFFFF, null, 0);
             assert(file_paths_count > 0);
 
             files: [..] string;
             array_reserve(*files, file_paths_count);
 
-            for i: 0..file_paths_count-1 {
-                // If nulll as the third parameter: return the length of the path, not counting the trailing '\0'.
-                file_name_wide_count := DragQueryFileW(drop, i, null, 0) + 2;
-                assert(file_name_wide_count > 0);
+ 	 	    for i: 0..file_paths_count-1 {
+ 	 	        // If null as the third parameter: return the length of the path, not counting the trailing '\0'.
+ 	 	        file_name_wide_count := DragQueryFileW(drop, i, null, 0) + 2;
+ 	 	        assert(file_name_wide_count > 0);
 
-                file_name_wide := cast(*u16) alloc(file_name_wide_count * size_of(u16), __temporary_allocator);
-                ok := DragQueryFileW(drop, i, file_name_wide, file_name_wide_count);
-                assert(ok > 0); // means success
+ 	  	        file_name_wide := cast(*u16) alloc(file_name_wide_count * size_of(u16));
+ 	 	        ok := DragQueryFileW(drop, i, file_name_wide, file_name_wide_count);
+ 	 	        assert(ok > 0); // means success
 
-                file_name := wide_to_utf8(file_name_wide);
-                array_add(*files, file_name);
-            }
+ 	  	        file_name := wide_to_utf8(file_name_wide);
+ 	 	        array_add(*files, file_name);
+ 	 	    }
 
-            DragFinish(drop);
+ 	 	    DragFinish(drop);
 
-            event: Event;
-            event.type  = .DRAG_AND_DROP_FILES;
+ 	  	    event: Event;
+ 	 	    event.type  = .DRAG_AND_DROP_FILES;
             event.files = files;
-            array_add(*events_this_frame, event);
+ 	 	    array_add(*events_this_frame, event);
             return 0;
 
           case WM_SETCURSOR;
             if windows_ignore_setcursor_messages return 0;
-            else return DefWindowProcW(hwnd, message, wParam, lParam);
+	        else return DefWindowProcW(hwnd, message, wParam, lParam);
 
           case;
-            return DefWindowProcW(hwnd, message, wParam, lParam);
-        }
+	        return DefWindowProcW(hwnd, message, wParam, lParam);
+	    }
 
         return 0;
     }
@@ -509,7 +491,7 @@ process_raw_input :: (handle: HRAWINPUT) {
         this_allocation_is_not_a_leak(raw_input_buffer.data); // :ScanGlobalData
     }
 
-    written_bytes := GetRawInputData(handle, RID_INPUT, raw_input_buffer.data, *dwSize, size_of(RAWINPUTHEADER));
+	written_bytes := GetRawInputData(handle, RID_INPUT, raw_input_buffer.data, *dwSize, size_of(RAWINPUTHEADER));
     assert(written_bytes <= dwSize);        // note that GetRawInputData() is allowed to request a buffer size and then write less bytes than the size
 
     raw := cast(*RAWINPUT) raw_input_buffer.data;

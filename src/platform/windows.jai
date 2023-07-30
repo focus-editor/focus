@@ -15,9 +15,6 @@ platform_copy_config :: (src: *Platform_Config, dst: *Platform_Config) {
 
 platform_setup :: () {
     if timeBeginPeriod(1) != TIMERR_NOERROR then log_error("Couldn't set minimum timer resolution");
-    Input.draw_frame = draw_frame;
-    Input.update_window_size = update_window_size;
-    Input.simp = *context.simp;
 }
 
 platform_data_dir :: () -> string {
