@@ -83,42 +83,32 @@ x11_wait_for_events :: () {
     while true {
         if needs_flush XFlush(x11_display.handle);
 
-        // Example from select(2) and most reference code uses FD_ZERO macro, but jai zeroes structs out by default.
-        fds: fd_set;
-        FD_SET(x11_display.file_descriptor, *fds);
-        result := select(
-            x11_display.file_descriptor + 1,
-            *fds, // file descriptors for read
-            null, // file descriptors for write
-            null, // file descriptors for error detection
-            null, // timeout setup. null means wait indefinitely
-        );
+        pfd: [1]pollfd;
+        pfd[0].fd = x11_display.file_descriptor;
+        pfd[0].events = POLLIN;
+        result := poll(pfd.data, 1, -1);
 
         if result < 0 {
             error := errno();
             if error == EINTR {
-                // According to man 7 signal, select always fails with EINTR if
-                // it gets interrupted by a signal, even if then the process gets
-                // restarted, so we just keep going. EINTR can also happen if something
-                // wrong with the timer, but we're not using it
+                // A signal occurred before any event, retry
                 continue;
             }
             // Returning on other errors. If one of these happens the application
             // is most likely to crash anyway
-            if error == EBADF || error == EINVAL {
-                log_error(
-                    "Invalid X11 file descriptor on X11 display. Error code is %. See select(2)\n",
-                    ifx error == EBADF then "EBADF" else "EINVAL",
-                );
+            if error == EINVAL {
+                log_error("Can't poll on X11 file descriptor. Max amount of opened file descriptors (RLIMIT_NOFILE) exceeded.\n");
             } else if error == ENOMEM {
-                log_error("select(2) failed with ENOMEM - it is unable to allocate memory for its internal use\n");
+                log_error("poll(2) failed with ENOMEM - it is unable to allocate memory for its internal use\n");
+            } else if error == EFAULT {
+                log_error("X11 poll is configured incorrectly - file descriptors are outside of the accessible address space\n");
             } else {
                 log_error("Unknown error happened while waiting on X11 file descriptor. Error code: %\n", error);
             }
             return;
         }
 
-        if FD_ISSET(x11_display.file_descriptor, *fds) {
+        if pfd[0].revents & POLLIN {
             queue_length := XPending(x11_display.handle);
 
             if queue_length == 0 {
@@ -896,29 +886,3 @@ maybe_handle_xdnd_drop_events :: (display: *Display, xevent: *XEvent, drop_info:
 #scope_file
 #import "POSIX";
 #import "String";
-
-libc :: #system_library "libc";
-
-fd_set :: struct {
-    // 16 is FD_SET_SIZE (which is hardcoded to 1024 in /usr/include/bits/typesizes.h)
-    // divided by ulong size which is 64 on 64 bit machines and 32 on 32 it machines
-    fds_bits: [16] s64;
-}
-
-// __NFDBITS in /sys/select.h
-// s64 here is array element type in fd_set. So size_of(fd_set.fds_bits[0])
-BITS_PER_FD_SET_MASK :: size_of(s64) * 8;
-
-// FD_SET and FD_ISSET are macros from /usr/include/bits/select.h
-// Casts in those are to be consistent with how macros are implemented in the header
-FD_SET :: inline (fd: s32, set: *fd_set) {
-    set.fds_bits[fd / BITS_PER_FD_SET_MASK] |= (cast(s64)((cast(u64)1) << (fd % BITS_PER_FD_SET_MASK)));
-}
-
-FD_ISSET :: inline (fd: s32, set: *fd_set) -> s32 {
-    is_set := ((set.fds_bits[fd / BITS_PER_FD_SET_MASK]) & cast(s64)((cast(u64)1) << (fd % BITS_PER_FD_SET_MASK))) != 0;
-    if is_set return 1;
-    return 0;
-}
-
-select :: (__nfds: s32, __readfds: *fd_set, __writefds: *fd_set, __exceptfds: *fd_set, __timeout: *timeval) -> s32 #foreign libc;
