@@ -12,34 +12,40 @@ delete_file_dialog_handle_event :: (event: Input.Event) -> bool {
     return false;
 }
 
-show_delete_file_dialog :: (editor: *Editor, buffer: *Buffer) {
+show_delete_file_dialog :: (editor: *Editor) {
+    // Getting a copy of the buffer here (since we're not modifying it) so no need to lock
+    buffer := open_buffers[editor.buffer_id];
     if !buffer.has_file then return;   // Nothing to do if in new buffer
 
-    editor_to_update = editor;
-    buffer_to_delete = buffer;
+    buffer_id_to_delete = editor.buffer_id;
     active_global_widget = .delete_file_dialog;
 }
 
 close_delete_file_dialog :: () {
-    editor_to_update = null;
-    buffer_to_delete = null;
     activate_editors();
 }
 
 delete_buffer_file_and_update_editor :: () {
+    lock(*open_buffers_lock);  // Is this necessary here?
+    defer unlock(*open_buffers_lock);
+
+    buffer_to_delete := *open_buffers[buffer_id_to_delete];
     deleted := delete_buffer_from_disk(buffer_to_delete);
     if !deleted return; // TODO: handle delete fail
 
-    maybe_mark_buffer_as_deleted(editor_to_update.buffer_id);   // check in case we missed that it's deleted
-    session_notify_modified_buffer(editor_to_update.buffer_id); // @Cleanup? This doesn't seem to do anything.
-    close_delete_file_dialog();
+    for e : open_editors {
+        if e.buffer_id != buffer_id_to_delete then continue;
+
+        maybe_mark_buffer_as_deleted(e.buffer_id);   // check in case we missed that it's deleted
+        session_notify_modified_buffer(e.buffer_id);
+        close_delete_file_dialog();
+    }
 }
 
-get_buffer_to_delete :: () -> *Buffer {
-    return buffer_to_delete;
+get_buffer_id_to_delete :: () -> s64 {
+    return buffer_id_to_delete;
 }
 
 #scope_file
 
-editor_to_update: *Editor;
-buffer_to_delete: *Buffer;
+buffer_id_to_delete: s64;

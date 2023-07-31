@@ -122,7 +122,7 @@ platform_get_save_file_name :: (name := "") -> string /* temp */, success: bool 
     if name && name != "<new file>" {
         // Get the name to populate it in the filename box (convenient if we're resaving a deleted file)
         wide_name, _, length := utf8_to_wide(name); // @Todo: handle error here
-        memcpy(buffer.data, wide_name, length);
+        memcpy(buffer.data, wide_name, min(buffer.count, length));
     }
 
     ofn: OPENFILENAMEW;
