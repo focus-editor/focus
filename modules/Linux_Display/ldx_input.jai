@@ -75,8 +75,8 @@ x11_translate_key_code :: (key: KeySym) -> Key_Code {
     return UNKNOWN;
 }
 
-x11_wait_for_events :: (window: *X11Window) {
-    x11_display := window.display;
+x11_wait_for_events :: () {
+    x11_display := isa(global_display, X11Display);
 
     xev: XEvent;
     needs_flush := true;

@@ -64,7 +64,7 @@ platform_set_window_title :: inline (title: string) {
     NSWindow.setTitle(window, title);
 }
 
-platform_wait_message :: inline (window: Window_Type) {
+platform_wait_message :: inline () {
 
 }
 

@@ -365,9 +365,9 @@ timer_destroy :: (timer: Timer) {
     <<timer = .{};
 }
 
-wait_for_events :: (window: LDWindow) {
-    if window.tag == {
-        case X11Window; x11_wait_for_events(isa(window, X11Window));
+wait_for_events :: () {
+    if global_display.tag == {
+        case X11Display; x11_wait_for_events();
         case WLWindow; return;
     }
 }

@@ -97,7 +97,7 @@ main :: () {
     draw_frame();
 
     while !should_quit {
-        if !redraw_requested platform_wait_message(window);
+        if !redraw_requested platform_wait_message();
 
         Input.update_window_events();
 

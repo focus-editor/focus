@@ -84,7 +84,7 @@ platform_set_window_title :: (title: string) {
     SetWindowTextW(window, utf8_to_wide(title));
 }
 
-platform_wait_message :: inline (window: Window_Type) {
+platform_wait_message :: inline () {
     WaitMessage();
 }
 
