@@ -917,7 +917,13 @@ eat_white_space :: inline (start: *u8, max_t: *u8) -> *u8 {
 }
 
 is_white_space :: inline (c: u8) -> bool {
-    return c == #char " " || c == #char "\r" || c == #char "\n";
+    // https://en.cppreference.com/w/cpp/string/byte/isspace
+    return c == #char " "  // space.
+        || c == #char "\t" // horizontal tab.
+        || c == #char "\n" // line feed.
+        || c == #char "\r" // carriage return.
+        || c == 0x0C       // form feed.    Warning: Unknown escape sequence '\f' in string constant!
+        || c == 0x0B;      // vertical tab. Warning: Unknown escape sequence '\v' in string constant!
 }
 
 #run assert(enum_highest_value(Token.Type) == COLOR_MAP.count - 1);
