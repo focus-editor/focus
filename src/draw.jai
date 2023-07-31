@@ -1818,7 +1818,9 @@ draw_delete_file_dialog :: () {
         push_scissor(buffers_rect);
         defer pop_scissor();
 
-        buffer := get_buffer_to_delete();
+        // Not locking here because we're not modifying the buffer
+        buffer_id := get_buffer_id_to_delete();
+        buffer    := open_buffers[buffer_id];
 
         entry_rect := cut_top(buffers_rect, entry_height);
         {
