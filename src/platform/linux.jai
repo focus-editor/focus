@@ -183,6 +183,7 @@ platform_set_window_title :: (title: string) {
 }
 
 platform_wait_message :: inline () {
+    LD.wait_for_events();
 }
 
 platform_set_refresh_timer :: (window: Window_Type) {

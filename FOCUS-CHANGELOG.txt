@@ -54,7 +54,7 @@
     + Multi-cursor line cuts will no longer include extra newlines
     + Added a notification about match case or match whole word toggles active when no search results found
     + When editor width is limited in settings, the non-editor part of the window will be colored using the `background_dark` color
-    + Linux: reduced idle CPU usage
+    + Linux: The editor shoudn't use any CPU while idle on X11. Wayland CPU usage is reduced as well, not by as much though.
     + Global search will now try to preserve search results and cursor position when searching using the same query
     + Windows: The editor window should open on the primary monitor by default
 
