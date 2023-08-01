@@ -206,7 +206,7 @@ x11_handle_event :: (display: *Display, xev: *XEvent) {
                 }
                 array_add(*events_this_frame, event);
 
-                Input.input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
+                input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
             }
 
             if has_text {
@@ -254,7 +254,7 @@ x11_handle_event :: (display: *Display, xev: *XEvent) {
                 event.key_code = x11_translate_key_code(keysym);
                 array_add(*events_this_frame, event);
 
-                Input.input_button_states[event.key_code] = Input.Key_Current_State.END;
+                input_button_states[event.key_code] = Input.Key_Current_State.END;
             }
 
         case ButtonPress;
@@ -284,7 +284,7 @@ x11_handle_event :: (display: *Display, xev: *XEvent) {
                 event.key_code = MOUSE_BUTTON_RIGHT;
             }
 
-            Input.input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
+            input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
 
             array_add(*events_this_frame, event);
 
@@ -306,7 +306,7 @@ x11_handle_event :: (display: *Display, xev: *XEvent) {
                 event.key_code = MOUSE_BUTTON_RIGHT;
             }
 
-            Input.input_button_states[event.key_code] = Input.Key_Current_State.END;
+            input_button_states[event.key_code] = Input.Key_Current_State.END;
 
             array_add(*events_this_frame, event);
 

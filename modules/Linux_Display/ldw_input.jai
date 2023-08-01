@@ -117,12 +117,12 @@ handle_key_event :: (d: *WLDisplay, serial: u32, key: u32, state: u32) {
         event.key_pressed = 1;
         event.key_code = x11_translate_key_code(keysym);
         event.text_input_count = xx is_printable;
-        Input.input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
+        input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
         if event.ctrl_pressed d.input_serial = serial;
     } else {
         event.key_pressed = 0;
         event.key_code = x11_translate_key_code(keysym);
-        Input.input_button_states[event.key_code] = Input.Key_Current_State.END;
+        input_button_states[event.key_code] = Input.Key_Current_State.END;
     }
 
     array_add(*events_this_frame, event);
@@ -189,10 +189,10 @@ pointer_listener :: wl_pointer_listener.{
         }
         if state == wl_pointer.button_state_pressed {
             event.key_pressed = 1;
-            Input.input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
+            input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
         } else {
             event.key_pressed = 0;
-            Input.input_button_states[event.key_code] = Input.Key_Current_State.END;
+            input_button_states[event.key_code] = Input.Key_Current_State.END;
         }
 
         ctx: Context;

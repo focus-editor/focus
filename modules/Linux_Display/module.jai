@@ -290,6 +290,8 @@ update_window_events :: () {
         array_resize(*Input.events_this_frame, events_this_frame.count);
         memcpy(Input.events_this_frame.data, events_this_frame.data, events_this_frame.count * size_of(Input.Event));
         array_reset_keeping_memory(*events_this_frame);
+
+        memcpy(Input.input_button_states.data, input_button_states.data, input_button_states.count * size_of(Input.Key_Current_State));
     }
 }
 
@@ -348,3 +350,4 @@ WHEEL_DELTA : s32 : 120;
 global_app_id: string;
 
 events_this_frame: [..]Input.Event;
+input_button_states: [Input.NUM_BUTTON_STATES] Input.Key_Current_State;
