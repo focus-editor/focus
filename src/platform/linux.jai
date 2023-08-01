@@ -137,6 +137,8 @@ DONE;
 
     active_backend := LD.active_backend();
     assert(active_backend != .UNINITIALIZED);
+
+    timer = LD.timer_create();
 }
 
 platform_data_dir :: () -> string {
@@ -187,9 +189,11 @@ platform_wait_message :: inline () {
 }
 
 platform_set_refresh_timer :: (window: Window_Type) {
+    LD.timer_start(timer, 1, 50);
 }
 
 platform_kill_refresh_timer :: (window: Window_Type) {
+    LD.timer_stop(timer);
 }
 
 platform_enumerate_logical_drives :: () -> [] string {
@@ -287,3 +291,5 @@ Linux_Icon :: struct {
     png_data: string;
     raw_pixels: []u32;
 }
+
+timer: LD.Timer;
