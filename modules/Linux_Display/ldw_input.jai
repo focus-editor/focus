@@ -37,7 +37,7 @@ keyboard_listenter :: wl_keyboard_listener.{
         Input.input_application_has_focus = false;
         ctx: Context;
         push_context ctx {
-            wl_timer_stop(d.key_repeat_timer);
+            timer_stop(d.key_repeat_timer);
         }
     },
 
@@ -50,10 +50,10 @@ keyboard_listenter :: wl_keyboard_listener.{
             if state == wl_keyboard.key_state_pressed {
                 d.key_to_repeat = key;
                 rate := 1000 / d.key_repeat_rate;
-                wl_timer_start(d.key_repeat_timer, d.key_repeat_delay, rate);
+                timer_start(d.key_repeat_timer, d.key_repeat_delay, rate);
             } else {
                 d.key_to_repeat = 0;
-                wl_timer_stop(d.key_repeat_timer);
+                timer_stop(d.key_repeat_timer);
             }
 
             handle_key_event(d, serial, key, state);
@@ -77,12 +77,12 @@ keyboard_listenter :: wl_keyboard_listener.{
     }
 };
 
-wl_key_repeat_cb :: (timer: *WLTimer) {
-    d := timer.display;
+wl_key_repeat_cb :: (tid: Timer, user_data: *void) {
+    d : *WLDisplay = user_data;
     key := d.key_to_repeat;
 
     if !key {
-        wl_timer_stop(d.key_repeat_timer);
+        timer_stop(d.key_repeat_timer);
         return;
     }
 
@@ -258,7 +258,7 @@ wl_display_poll :: (display: *WLDisplay, timeout: s32) -> wayland_events := fals
     pfd: [2]pollfd;
     pfd[0].fd = wlfd;
     pfd[0].events = POLLIN;
-    pfd[1].fd = display.epfd;
+    pfd[1].fd = timers_epfd;
     pfd[1].events = POLLIN;
 
     ret := poll(pfd.data, 2, timeout);
@@ -276,12 +276,9 @@ wl_display_poll :: (display: *WLDisplay, timeout: s32) -> wayland_events := fals
             continue;
         }
 
-        assert(pfd[it].fd == display.epfd);
-        ev: epoll_event;
-        count := epoll_wait(display.epfd, *ev, 1, -1);
-        assert(count == 1);
+        assert(pfd[it].fd == timers_epfd);
+        timers_tick();
         has_timer_events = true;
-        wl_tick_timers(display, ev.data.fd);
     }
 
     return has_wayland_events, has_timer_events;

@@ -1,3 +1,5 @@
+#load "timers.jai";
+
 Saved_Window_Info :: struct {}
 
 LDDisplay :: *_Display;
@@ -21,6 +23,7 @@ ACTIVE_BACKEND :: enum {
 }
 
 init :: (backend: BACKEND_CHOICE, app_id := "com.jai.application") -> bool {
+    timers_init();
     if global_display.tag == X11Display || global_display.tag == WLDisplay return true;
     if global_app_id free(global_app_id);
     global_app_id = copy_string(app_id);
