@@ -189,7 +189,7 @@ platform_wait_message :: inline () {
 }
 
 platform_set_refresh_timer :: (window: Window_Type) {
-    LD.timer_start(timer, 1, 50);
+    LD.timer_start(timer, 0, 50);
 }
 
 platform_kill_refresh_timer :: (window: Window_Type) {

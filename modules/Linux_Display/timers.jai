@@ -43,16 +43,17 @@ timer_destroy :: (tid: Timer) {
 timer_start :: (tid: Timer, initial_tick: u32, repeat: u32 = 0) {
     if initial_tick == 0 && repeat == 0 return;
 
+    T :: type_of(itimerspec.it_value.tv_nsec);
+
     timer := *timers[tid];
     spec: itimerspec;
-    spec.it_value.tv_nsec  = (initial_tick * 1_000_000);
-    spec.it_value.tv_sec  += (spec.it_value.tv_nsec / 1_000_000_000);
-    spec.it_value.tv_nsec  = (spec.it_value.tv_nsec % 1_000_000_000);
-    if repeat {
-        spec.it_interval.tv_nsec = repeat * 1_000_000;
-        spec.it_interval.tv_sec  = (spec.it_interval.tv_nsec / 1_000_000_000);
-        spec.it_interval.tv_nsec = (spec.it_interval.tv_nsec % 1_000_000_000);
-    }
+    spec.it_value.tv_nsec = max(cast(T) 1, (cast(T) initial_tick) * 1_000_000);
+    spec.it_value.tv_sec  = spec.it_value.tv_nsec / 1_000_000_000;
+    spec.it_value.tv_nsec = spec.it_value.tv_nsec % 1_000_000_000;
+    spec.it_interval.tv_nsec += (cast(T) repeat) * 1_000_000;
+    spec.it_interval.tv_sec  += spec.it_interval.tv_nsec / 1_000_000_000;
+    spec.it_interval.tv_nsec  = spec.it_interval.tv_nsec % 1_000_000_000;
+
     timerfd_settime(timer.fd, 0, *spec, null);
 }
 
@@ -84,7 +85,7 @@ timers_tick :: () {
             read(timer.fd, *num, size_of(u64));
             if timer.cb timer.cb(tid, timer.user_data);
         }
-        count = epoll_wait(timers_epfd, epevs.data, xx epevs.count, 1);
+        count = epoll_wait(timers_epfd, epevs.data, xx epevs.count, 0);
     }
 }
 
