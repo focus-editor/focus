@@ -412,7 +412,7 @@ data_device_listener :: wl_data_device_listener.{
                     array_add(*files, file_name);
                 }
 
-                event: Event;
+                event: Input.Event;
                 event.type = .DRAG_AND_DROP_FILES;
                 event.files = files;
                 array_add(*events_this_frame, event);
@@ -557,7 +557,7 @@ x_toplevel_listener :: xdg_toplevel_listener.{
     close = (data: *void, toplevel: *xdg_toplevel) -> void #c_call {
         ctx: Context;
         push_context ctx {
-            event: Event;
+            event: Input.Event;
             event.type = .QUIT;
             array_add(*events_this_frame, event);
         }
@@ -576,7 +576,7 @@ wl_window_handle_resize :: (w: *WLWindow, width: s32, height: s32) {
     wl_surface.damage(w.handle, 0, 0, w.window_width, w.window_height);
     wl_surface.commit(w.handle);
 
-    add_resize_record(xx w.wrapper, xx w.buffer_width, xx w.buffer_height);
+    Input.add_resize_record(xx w.wrapper, xx w.buffer_width, xx w.buffer_height);
 }
 
 wl_get_dpi_scaling_factor :: (w: *WLWindow) -> float {

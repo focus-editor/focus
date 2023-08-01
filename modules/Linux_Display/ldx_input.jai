@@ -1,5 +1,5 @@
-x11_translate_key_code :: (key: KeySym) -> Key_Code {
-    using Key_Code;
+x11_translate_key_code :: (key: KeySym) -> Input.Key_Code {
+    using Input.Key_Code;
 
     if key == 32 || key == XK_KP_Space return SPACEBAR;
 
@@ -69,15 +69,13 @@ x11_translate_key_code :: (key: KeySym) -> Key_Code {
         return PAGE_DOWN;
 
     key = key & 0xFF;
-    if (key >= #char "a") && (key <= #char "z") return cast(Key_Code) (key - 0x20);
-    if key > 32 && key < 127 return cast(Key_Code) key;
+    if (key >= #char "a") && (key <= #char "z") return cast(Input.Key_Code) (key - 0x20);
+    if key > 32 && key < 127 return cast(Input.Key_Code) key;
 
     return UNKNOWN;
 }
 
-x11_wait_for_events :: () {
-    x11_display := isa(global_display, X11Display);
-
+x11_wait_for_events :: (x11_display: *X11Display) {
     xev: XEvent;
     needs_flush := true;
     while true {
@@ -143,7 +141,7 @@ x11_update_window_events :: (x11_display: *X11Display) {
 }
 
 x11_handle_event :: (display: *Display, xev: *XEvent) {
-    using Key_Code;
+    using Input.Key_Code;
 
     if XFilterEvent(xev, None) return;
 
@@ -167,14 +165,14 @@ x11_handle_event :: (display: *Display, xev: *XEvent) {
                 // We'd save startup time...
 
                 if message0 == x_global_wm_delete_window {
-                    event: Event;
+                    event: Input.Event;
                     event.type = .QUIT;
                     array_add(*events_this_frame, event);
                 }
             }
 
         case KeyPress;
-            event: Event;
+            event: Input.Event;
             status: Status;
             keysym: KeySym;
             text: [16]u32;   // surely enough for everybody
@@ -200,7 +198,7 @@ x11_handle_event :: (display: *Display, xev: *XEvent) {
                 }
                 array_add(*events_this_frame, event);
 
-                input_button_states[event.key_code] = (Key_Current_State.START | Key_Current_State.DOWN);
+                Input.input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
             }
 
             if has_text {
@@ -210,7 +208,7 @@ x11_handle_event :: (display: *Display, xev: *XEvent) {
                     utf32 := text[it];
                     if utf32 < 32 || utf32 == 127 continue;
 
-                    text_event: Event;
+                    text_event: Input.Event;
                     text_event.type = .TEXT_INPUT;
                     text_event.key_pressed = 1;
                     text_event.key_code = x11_translate_key_code(keysym);
@@ -234,7 +232,7 @@ x11_handle_event :: (display: *Display, xev: *XEvent) {
                 }
             }
 
-            event: Event;
+            event: Input.Event;
             keysym := XLookupKeysym(*xev.xkey, 0);
             if keysym != NoSymbol {
                 assert(keysym != 0);
@@ -248,11 +246,11 @@ x11_handle_event :: (display: *Display, xev: *XEvent) {
                 event.key_code = x11_translate_key_code(keysym);
                 array_add(*events_this_frame, event);
 
-                input_button_states[event.key_code] = Key_Current_State.END;
+                Input.input_button_states[event.key_code] = Input.Key_Current_State.END;
             }
 
         case ButtonPress;
-            event: Event;
+            event: Input.Event;
             button := xev.xbutton.button;
 
             if button >= 4 {
@@ -264,7 +262,7 @@ x11_handle_event :: (display: *Display, xev: *XEvent) {
                 event.typical_wheel_delta = WHEEL_DELTA;
                 event.wheel_delta = WHEEL_DELTA * (ifx (button & 0x01) then cast(s32) -1 else 1);
                 array_add(*events_this_frame, event);
-                mouse_delta_z += event.wheel_delta;
+                Input.mouse_delta_z += event.wheel_delta;
                 return;
             }
 
@@ -278,13 +276,13 @@ x11_handle_event :: (display: *Display, xev: *XEvent) {
                 event.key_code = MOUSE_BUTTON_RIGHT;
             }
 
-            input_button_states[event.key_code] = (Key_Current_State.START | Key_Current_State.DOWN);
+            Input.input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
 
             array_add(*events_this_frame, event);
 
         case ButtonRelease;
             // it seems that mouse input doesnt generate repeat events so we dont have to peek the queue
-            event: Event;
+            event: Input.Event;
             button := xev.xbutton.button;
 
             // Buttons above 4 are scroll wheel events, we don't care about release events for them
@@ -300,7 +298,7 @@ x11_handle_event :: (display: *Display, xev: *XEvent) {
                 event.key_code = MOUSE_BUTTON_RIGHT;
             }
 
-            input_button_states[event.key_code] = Key_Current_State.END;
+            Input.input_button_states[event.key_code] = Input.Key_Current_State.END;
 
             array_add(*events_this_frame, event);
 
@@ -380,16 +378,16 @@ x11_handle_event :: (display: *Display, xev: *XEvent) {
         case ConfigureNotify;
             config := cast(*XConfigureEvent) xev;
             ld_win := get_by_native_handle(xx config.window);
-            if ld_win add_resize_record(ld_win, config.width, config.height);
+            if ld_win Input.add_resize_record(ld_win, config.width, config.height);
         // Adding a dummy event to the queue, forcing a redraw when window's focus
         // changes or it gets exposed (e.g. it's being asked to render itself but without
         // it getting focus)
         case FocusIn;
-            input_application_has_focus = true;
+            Input.input_application_has_focus = true;
             XSetICFocus(win.ic);
             array_add(*events_this_frame, .{type=.WINDOW});
         case FocusOut;
-            input_application_has_focus = false;
+            Input.input_application_has_focus = false;
             XUnsetICFocus(win.ic);
             array_add(*events_this_frame, .{type=.WINDOW});
         case Expose;
@@ -871,7 +869,7 @@ maybe_handle_xdnd_drop_events :: (display: *Display, xevent: *XEvent, drop_info:
         }
 
 
-        event: Event;
+        event: Input.Event;
         event.type = .DRAG_AND_DROP_FILES;
         event.files = files;
         array_add(*events_this_frame, event);

@@ -29,12 +29,12 @@ keyboard_listenter :: wl_keyboard_listener.{
     },
 
     enter = (data: *void, self: *wl_keyboard, serial: u32, surface: *wl_surface, keys: *wl_array) -> void #c_call {
-        input_application_has_focus = true;
+        Input.input_application_has_focus = true;
     },
 
     leave = (data: *void, self: *wl_keyboard, serial: u32, surface: *wl_surface) -> void #c_call {
         d : *WLDisplay = wl_proxy.get_user_data(self);
-        input_application_has_focus = false;
+        Input.input_application_has_focus = false;
         ctx: Context;
         push_context ctx {
             wl_timer_stop(d.key_repeat_timer);
@@ -95,7 +95,7 @@ handle_key_event :: (d: *WLDisplay, serial: u32, key: u32, state: u32) {
     keycode: xkb_keycode_t = key + 8;
     keysym := xkb_state_key_get_one_sym(d.kb_state, keycode);
 
-    event: Event;
+    event: Input.Event;
     event.type = .KEYBOARD;
     event.shift_pressed    = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_shift, .XKB_STATE_MODS_EFFECTIVE) == 1;
     event.ctrl_pressed     = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_ctrl,  .XKB_STATE_MODS_EFFECTIVE) == 1;
@@ -117,18 +117,18 @@ handle_key_event :: (d: *WLDisplay, serial: u32, key: u32, state: u32) {
         event.key_pressed = 1;
         event.key_code = x11_translate_key_code(keysym);
         event.text_input_count = xx is_printable;
-        input_button_states[event.key_code] = (Key_Current_State.START | Key_Current_State.DOWN);
+        Input.input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
         if event.ctrl_pressed d.input_serial = serial;
     } else {
         event.key_pressed = 0;
         event.key_code = x11_translate_key_code(keysym);
-        input_button_states[event.key_code] = Key_Current_State.END;
+        Input.input_button_states[event.key_code] = Input.Key_Current_State.END;
     }
 
     array_add(*events_this_frame, event);
 
     if event.key_pressed && is_printable {
-        text_event: Event;
+        text_event: Input.Event;
         text_event.type = .TEXT_INPUT;
         text_event.key_pressed = 1;
         text_event.key_code = x11_translate_key_code(keysym);
@@ -180,7 +180,7 @@ pointer_listener :: wl_pointer_listener.{
     button = (data: *void, self: *wl_pointer, serial: u32, time: u32, button: u32, state: u32) -> void #c_call {
         d : *WLDisplay = wl_proxy.get_user_data(self);
 
-        event: Event;
+        event: Input.Event;
         event.type = .KEYBOARD;
         if button == {
             case BTN_LEFT;   event.key_code = .MOUSE_BUTTON_LEFT;
@@ -189,10 +189,10 @@ pointer_listener :: wl_pointer_listener.{
         }
         if state == wl_pointer.button_state_pressed {
             event.key_pressed = 1;
-            input_button_states[event.key_code] = (Key_Current_State.START | Key_Current_State.DOWN);
+            Input.input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
         } else {
             event.key_pressed = 0;
-            input_button_states[event.key_code] = Key_Current_State.END;
+            Input.input_button_states[event.key_code] = Input.Key_Current_State.END;
         }
 
         ctx: Context;
@@ -218,12 +218,12 @@ pointer_listener :: wl_pointer_listener.{
         push_context ctx {
             d: *WLDisplay = wl_proxy.get_user_data(self);
             if d.pointer_axis_accumulator[0] {
-                event: Event;
+                event: Input.Event;
                 event.type = .MOUSE_WHEEL;
                 event.typical_wheel_delta = WHEEL_DELTA;
                 event.wheel_delta = d.pointer_axis_accumulator[0];
                 array_add(*events_this_frame, event);
-                mouse_delta_z += event.wheel_delta;
+                Input.mouse_delta_z += event.wheel_delta;
 
                 d.pointer_axis_accumulator[0] = 0;
             }

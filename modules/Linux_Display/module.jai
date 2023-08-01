@@ -256,7 +256,7 @@ set_fixed_scaling :: (factor: float) {
 /*
  * Input functions
  */
-translate_key_code :: (display: LDDisplay, key: u64) -> Key_Code {
+translate_key_code :: (display: LDDisplay, key: u64) -> Input.Key_Code {
     if display.tag == {
         case X11Display; return x11_translate_key_code(key);
         case WLDisplay;
@@ -264,14 +264,32 @@ translate_key_code :: (display: LDDisplay, key: u64) -> Key_Code {
     return .UNKNOWN;
 }
 
-translate_key_code :: (key: u64) -> Key_Code {
+translate_key_code :: (key: u64) -> Input.Key_Code {
     return translate_key_code(global_display, key);
+}
+
+wait_for_events :: () {
+    if global_display.tag == {
+        case X11Display; x11_wait_for_events(isa(global_display, X11Display));
+        case WLDisplay; wl_wait_for_events(isa(global_display, WLDisplay));
+    }
 }
 
 update_window_events :: () {
     if global_display.tag == {
         case X11Display; x11_update_window_events(isa(global_display, X11Display));
         case WLDisplay; wl_update_window_events(isa(global_display, WLDisplay));
+    }
+    /*
+     * On Wayland, the event loop can push events into `events_this_frame` during the
+     * "wait for events" phase (`wl_display.dispatch_pending()` invokes event callbacks).
+     * Because of this we need to "double buffer" here so that the `Input` module doesn't
+     * discard said events during the "update" phase.
+     */
+    if events_this_frame.count > 0 {
+        array_resize(*Input.events_this_frame, events_this_frame.count);
+        memcpy(Input.events_this_frame.data, events_this_frame.data, events_this_frame.count * size_of(Input.Event));
+        array_reset_keeping_memory(*events_this_frame);
     }
 }
 
@@ -365,13 +383,6 @@ timer_destroy :: (timer: Timer) {
     <<timer = .{};
 }
 
-wait_for_events :: () {
-    if global_display.tag == {
-        case X11Display; x11_wait_for_events();
-        case WLWindow; return;
-    }
-}
-
 #scope_module;
 
 #import "String";
@@ -381,7 +392,7 @@ wait_for_events :: () {
 #import "EGL";
 #import "GL";
 #import "Wayland";
-#import "Input";
+Input :: #import "Input";
 #import "Tagged_Union";
 #import "Basic";
 
@@ -421,3 +432,5 @@ timer_callback :: (val: sigval_t) #c_call {
 WHEEL_DELTA : s32 : 120;
 
 global_app_id: string;
+
+events_this_frame: [..]Input.Event;

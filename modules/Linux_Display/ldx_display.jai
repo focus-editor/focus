@@ -402,7 +402,7 @@ x11_get_dpi_scaling_factor :: (w: *X11Window) -> float {
 x11_generate_resize :: (w: *X11Window) {
     xwa: XWindowAttributes;
     XGetWindowAttributes(w.display.handle, w.handle, *xwa);
-    add_resize_record(w.wrapper, xwa.width, xwa.height);
+    Input.add_resize_record(w.wrapper, xwa.width, xwa.height);
 }
 
 x11_set_fixed_scaling :: (d: *X11Display, factor: float) {
