@@ -13,8 +13,8 @@ delete_file_dialog_handle_event :: (event: Input.Event) -> bool {
 }
 
 show_delete_file_dialog :: (editor: *Editor) {
-    // Getting a copy of the buffer here (since we're not modifying it) so no need to lock
-    buffer := open_buffers[editor.buffer_id];
+    // Not locking here because we're not modifying the buffer
+    buffer := *open_buffers[editor.buffer_id];
     if !buffer.has_file then return;   // Nothing to do if in new buffer
 
     buffer_id_to_delete = editor.buffer_id;
@@ -26,9 +26,6 @@ close_delete_file_dialog :: () {
 }
 
 delete_buffer_file_and_update_editor :: () {
-    lock(*open_buffers_lock);  // Is this necessary here?
-    defer unlock(*open_buffers_lock);
-
     buffer_to_delete := *open_buffers[buffer_id_to_delete];
     deleted := delete_buffer_from_disk(buffer_to_delete);
     if !deleted return; // TODO: handle delete fail
