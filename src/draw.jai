@@ -2194,7 +2194,11 @@ draw_finder :: () {
                 if mouse.left.just_pressed then selected_by_mouse = entry_index;
                 if selected_by_mouse == -1 then draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
                 placement := ifx ctrl_or_cmd_pressed() then Editor_Placement.on_the_side else .in_place;
-                if selected_by_mouse == entry_index && mouse.left.just_released then finder_open_selected_result(entry_index, placement);
+                if selected_by_mouse == entry_index && mouse.left.just_released {
+                    finder_open_selected_result(entry_index, placement);
+                    redraw_requested = true;
+                    break;  // don't finish drawing entries because we're opening selected result
+                }
             }
             if selected_by_mouse == entry_index then draw_rect(entry_rect, Colors.LIST_CURSOR);
             if entry_index == selected then draw_rect(entry_rect, Colors.LIST_CURSOR);
