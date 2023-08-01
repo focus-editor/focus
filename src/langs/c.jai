@@ -870,14 +870,44 @@ eat_white_space :: inline (start: *u8, max_t: *u8) -> *u8 {
     return t;
 }
 
-is_white_space :: inline (c: u8) -> bool {
-    // https://en.cppreference.com/w/cpp/string/byte/isspace
-    return c == #char " "  // space.
-        || c == #char "\t" // horizontal tab.
-        || c == #char "\n" // line feed.
-        || c == #char "\r" // carriage return.
-        || c == 0x0C       // form feed.    Warning: Unknown escape sequence '\f' in string constant!
-        || c == 0x0B;      // vertical tab. Warning: Unknown escape sequence '\v' in string constant!
+is_white_space :: inline (c: u8) -> bool #no_aoc {
+    result : u32;
+
+    // Should be in register, not immediate
+    white_spaces : u64 = (#char " "  <<  0)  // space.
+                       | (#char "\t" <<  8)  // horizontal tab.
+                       | (#char "\n" << 16)  // line feed.
+                       | (#char "\r" << 24)  // carriage return.
+                       | (0x0C       << 32)  // form feed.    Warning: Unknown escape sequence '\f' in string constant!
+                       | (0x0B       << 40); // vertical tab. Warning: Unknown escape sequence '\v' in string constant!
+
+    #asm {
+        mask   : vec;
+        chars  : vec;
+        spaces : vec;
+
+        // Fill chars with c
+        pinsrb chars, c, 0;
+        pxor   mask,  mask;
+        pshufb chars, mask;
+
+        // Fill spaces
+        pxor   spaces, spaces;
+        pinsrq spaces, white_spaces, 0;
+
+        // Compare chars with spaces
+        pcmpeqb chars, spaces;
+
+        // Sum compare result mask into chars[0].d
+        //
+        // Everything is simple: if chars[0].d != 0 c is space, otherwise not.
+        phaddd chars, chars;
+        phaddd chars, chars;
+
+        movd result, chars;
+    }
+
+    return cast,no_check(bool) result;
 }
 
 #run assert(enum_highest_value(Token.Type) == COLOR_MAP.count - 1);
