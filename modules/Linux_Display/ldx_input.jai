@@ -79,6 +79,12 @@ x11_wait_for_events :: (x11_display: *X11Display) {
     xev: XEvent;
     needs_flush := true;
     while true {
+        // If this returns non-zero, we already know for a fact that there are some
+        // events that we need to handle, so just don't bother with a poll
+        if XQLength(x11_display.handle) {
+            break;
+        }
+
         if needs_flush XFlush(x11_display.handle);
 
         pfd: [2]pollfd;
@@ -137,13 +143,11 @@ x11_update_window_events :: (x11_display: *X11Display) {
     display := x11_display.handle;
 
     xev: XEvent;
-    while true {
+    while XPending(display) {
         result := XCheckIfEvent(display, *xev, x11_event_predicate, null);
         if result {
             x11_handle_event(display, *xev);
             timers_tick();
-        } else {
-            break;
         }
     }
 }
