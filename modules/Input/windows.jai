@@ -288,7 +288,10 @@ MyWindowProc :: (hwnd: HWND, message: u32,
             event: Event;
             event.type = .QUIT;
             array_add(*events_this_frame, event);
-	        return DefWindowProcW(hwnd, message, wParam, lParam);
+
+            // NOTE: we're not calling the default proc here because it would just close the window,
+            // while we might want to show a confirmation dialog when there are unsaved files
+            // return DefWindowProcW(hwnd, message, wParam, lParam);
 
           case WM_INPUT;
             extra := GetMessageExtraInfo();
