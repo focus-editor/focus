@@ -265,11 +265,13 @@ x11_handle_event :: (display: *Display, xev: *XEvent) {
             event: Input.Event;
             button := xev.xbutton.button;
 
+            //  - buttons 6/7 will be used for the forward/backward direction of the second scroll wheel
+            // But we don't handle horizontal scroll for now
+            if button > 5 return;
+
             if button >= 4 {
                 // Buttons 4 and above are 'synthetic' events for scroll wheels:
                 //  - 4/5 will be used for the forward/backward direction of the first scroll wheel
-                //  - 6/7 will be used for the forward/backward direction of the second scroll wheel
-                //  ... so on ...
                 event.type = .MOUSE_WHEEL;
                 event.typical_wheel_delta = WHEEL_DELTA;
                 event.wheel_delta = WHEEL_DELTA * (ifx (button & 0x01) then cast(s32) -1 else 1);
