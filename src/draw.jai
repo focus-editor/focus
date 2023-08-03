@@ -61,6 +61,7 @@ draw_frame :: () {
 
     if active_global_widget == {
         case .open_file_dialog;         draw_open_file_dialog();
+        case .save_file_dialog;         draw_save_file_dialog();
         case .delete_file_dialog;       draw_delete_file_dialog();
         case .finder;                   draw_finder();
         case .go_to_line_dialog;        draw_go_to_line_dialog(active_pane_rect);
@@ -1346,6 +1347,45 @@ draw_splitter :: (splitter_rect: Rect, split_x: float, ui_id: Ui_Id) {
     }
 
     draw_rect(rect, color);
+}
+
+draw_save_file_dialog :: () {
+    using save_file_dialog;
+
+    ui_id := Ui_Id.save_file_dialog;
+
+    if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
+        // Close the dialog on clicks elsewhere
+        hide_save_file_dialog();
+        return;
+    }
+
+    margin  := floor(12 * dpi_scale);
+    padding := floor( 4 * dpi_scale);
+    input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
+    entry_height := font_ui_line_height + padding * 2;
+
+    // Figure out the dialog box size
+    box_rect: Rect = ---;
+    {
+        if width_percentage != width_anim.target {
+            width_percentage = get_animation_value(width_anim);
+            redraw_requested = true;
+        }
+        width  := floor(clamp(screen.w * width_percentage, 400 * dpi_scale, 2000 * dpi_scale));
+        height := floor(clamp(input_rect_height + entry_height * 1/*entries.filtered.count*/ + padding, 0, screen.h / 1.5));
+        x := floor((screen.w - width) / 2);
+        y := floor(clamp(100 * dpi_scale, 0, (screen.h - height) / 2));
+        box_rect = make_rect(x, screen.h - height - y, width, height);
+        if !is_valid(box_rect) return;
+    }
+    draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = rounding_radius_large);
+
+    // Draw the filter input
+    input_rect, files_rect := cut_top(box_rect, input_rect_height);
+    input_rect = shrink(input_rect, margin);
+    input_id := get_ui_id_from_loc(parent_id = ui_id);
+    draw_text_input(*save_file_dialog.input, input_rect, ui_id = input_id, active = true, label = "Path");
 }
 
 draw_open_file_dialog :: () {
@@ -2925,6 +2965,7 @@ Ui_Id :: enum s64 {
     commands_dialog     :: -11;
     open_project_dialog :: -12;
     delete_file_dialog  :: -13;
+    save_file_dialog    :: -14;
 
     // The rest will be derived from loc
 }
