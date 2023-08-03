@@ -1,9 +1,3 @@
-
-init_save_file_dialog :: () {
-    // There never was any stuff in here
-    save_file_dialog.initted = true;
-}
-
 save_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
     using save_file_dialog;
 
@@ -133,7 +127,6 @@ save_file_dialog: Save_File_Dialog;
 #scope_file
 
 Save_File_Dialog :: struct {
-    initted := false;
     input: Text_Input;
     width_percentage := WIDTH_NORMAL;  // how much of the screen the popup occupies
     width_anim := #run Tween_Animation(float).{ start = WIDTH_NORMAL, target = WIDTH_NORMAL };
