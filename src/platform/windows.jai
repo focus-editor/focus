@@ -140,7 +140,7 @@ platform_get_save_file_name :: (name := "") -> string /* temp */, success: bool 
         }
     }
 
-    open_success := GetOpenFileNameW(*ofn);
+    open_success := GetSaveFileNameW(*ofn);
 
     if open_success {
         file_path, success := wide_to_utf8(buffer.data);

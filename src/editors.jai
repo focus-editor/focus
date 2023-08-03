@@ -1194,6 +1194,7 @@ save_buffer :: (editor: *Editor, buffer: *Buffer, save_new_file := false) {
         session_notify_modified_buffer(editor.buffer_id);
     }
 
+// @cleanup: revisit and fix code duplication
 #if OS != .WINDOWS {
     if !buffer.readonly {
         if save_new_file {
