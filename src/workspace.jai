@@ -129,6 +129,7 @@ maybe_update_workspace_buffers :: () {
 
             start_file_watcher();
             init_open_file_dialog();
+            init_save_file_dialog();
             init_finder();
         }
         return;
