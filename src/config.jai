@@ -338,6 +338,7 @@ Settings :: struct {
     editor_history_size                 := 128;
     line_wrap_is_on_by_default          := false;
     show_line_numbers                   := false;
+    save_on_edit                        := false;
 
     // TODO
     // convert_tabs_to_spaces_on_load:     false

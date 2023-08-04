@@ -54,6 +54,7 @@ max_editor_width:                       -1
 can_cancel_go_to_line:                  true
 copy_whole_line_without_selection:      false
 editor_history_size:                    1024
+save_on_edit:                           false
 
 
 [[keymap]]

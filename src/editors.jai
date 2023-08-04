@@ -251,6 +251,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
     // so that if more than one event is processed in the same frame, the next one
     // sees the cursors in valid places and up to date
     if buffer.dirty {
+        if config.settings.save_on_edit then save_buffer(editor, buffer);
         rescan_for_lines(buffer);
         if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
     }
@@ -317,6 +318,8 @@ active_editor_type_char :: (char: u32) {
     }
 
     if new_group then new_edit_group(buffer, editor);  // make sure selection operations have a dedicated group
+
+    if buffer.dirty && config.settings.save_on_edit then save_buffer(editor, buffer);
 
     rescan_for_lines(buffer);
     if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
