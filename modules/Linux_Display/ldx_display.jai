@@ -49,16 +49,35 @@ x11_init_display :: (display: LDDisplay) -> bool {
             free(old_xmods);
         }
     }
+    // NOTE: Support XMODIFIERS and XIM_SERVERS?
 
+    // Default locale, which is "C", doesn't support multibyte characters,
+    // so we do this to get system locale which is hopefully set up correctly
     setlocale(LC_ALL, "");
 
+    // We need to check whether current locale is supported by X server. It's not
+    // guaranteed regardless of whether setlocale call is successful or not
+    if !XSupportsLocale() {
+        log_error("Couldn't set locale from environment, falling back to default one: %\n", old_locale);
+        setlocale(LC_ALL, old_locale.data);
+    }
     init_global_display();
 
+    // Try the best we can to get the input method
     XSetLocaleModifiers("");
     im := XOpenIM(x_global_display, null, null, null);
     if !im {
-        XSetLocaleModifiers("@im=none");
+        // local seems like the same thing as none, but more examples use it!
+        XSetLocaleModifiers("@im=local");
         im = XOpenIM(x_global_display, null, null, null);
+        if !im {
+            XSetLocaleModifiers("@im=");
+            im = XOpenIM(x_global_display, null, null, null);
+            // Nothing more we can do
+            if !im {
+                log_error("Could not get X11 Input Method");
+            }
+        }
     }
 
     if !xcursor_initialized {
@@ -280,6 +299,10 @@ x11_create_window :: (x11_display: *X11Display, ld_win: LDWindow, width: int, he
         XNFocusWindow, win,
         XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
         null);
+
+    if !ic {
+        log_error("Could not create X11 input context\n");
+    }
 
     array_add(*x_global_windows, win);
 
