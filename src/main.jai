@@ -1,14 +1,4 @@
 main :: () {
-    // Use rpmalloc
-    rpmalloc.rpmalloc_allocator_proc(.STARTUP, 0, 0, null, null);
-    context.allocator = Allocator.{rpmalloc.rpmalloc_allocator_proc, null};
-
-    // TODO: investigate a crash when creating new cursors while using this allocator
-    // #if DEBUG {
-    //     UA :: #import "Unmapping_Allocator";
-    //     context.allocator = UA.get_unmapping_allocator();
-    // }
-
     cpu_info = get_cpu_info();
 
     platform_setup();
@@ -738,8 +728,9 @@ dont_ignore_next_window_resize := false;
     #assert false, "Unsupported OS";
 }
 
+// #import "Basic"()(MEMORY_DEBUGGER = true);
 #import "Atomics";
-#import "Basic"()(MEMORY_DEBUGGER = DEBUG);
+#import "Basic";
 #import "Math";
 #import "Sloppy_Math";
 #import "File";
@@ -762,7 +753,6 @@ dont_ignore_next_window_resize := false;
 
 File_Async :: #import "File_Async";
 
-rpmalloc :: #import "rpmalloc";
 Simp  :: #import "Simp";
 Input :: #import "Input";
 
