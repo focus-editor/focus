@@ -52,7 +52,7 @@ tab_size:                               4
 line_height_scale_percent:              120
 max_editor_width:                       -1
 editor_history_size:                    1024
-shrink_towards_original_cursor           false
+shrink_towards_original_cursor          false
 
 
 [[keymap]]
