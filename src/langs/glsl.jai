@@ -1142,8 +1142,4 @@ eat_white_space :: inline (start: *u8, max_t: *u8) -> *u8 {
     return t;
 }
 
-is_white_space :: inline (c: u8) -> bool {
-    return c == #char " " || c == #char "\r" || c == #char "\n";
-}
-
 #run assert(enum_highest_value(Token.Type) == COLOR_MAP.count - 1);
