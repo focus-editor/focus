@@ -870,8 +870,8 @@ eat_white_space :: inline (start: *u8, max_t: *u8) -> *u8 {
     return t;
 }
 
-is_white_space :: inline (c: u8) -> bool #no_aoc {
-    result : u32;
+is_white_space :: inline (char : u8) -> bool #no_aoc {
+    result : u32 = ---;
 
     // Should be in register, not immediate
     white_spaces : u64 = (#char " "  <<  0)  // space.
@@ -882,20 +882,21 @@ is_white_space :: inline (c: u8) -> bool #no_aoc {
                        | (0x0B       << 40); // vertical tab. Warning: Unknown escape sequence '\v' in string constant!
 
     #asm {
-        mask   : vec;
-        chars  : vec;
-        spaces : vec;
+        chars  : vec === 0;
+        mask   : vec === 1;
+        spaces : vec === 2;
+        result       === a;
+        white_spaces === b;
+        char         === c;
+
+        movq spaces, white_spaces;
+
+        pxor mask, mask;
 
         // Fill chars with c
-        pinsrb chars, c, 0;
-        pxor   mask,  mask;
+        pinsrb chars, char, 0;
         pshufb chars, mask;
 
-        // Fill spaces
-        pxor   spaces, spaces;
-        pinsrq spaces, white_spaces, 0;
-
-        // Compare chars with spaces
         pcmpeqb chars, spaces;
 
         // Sum compare result mask into chars[0].d
