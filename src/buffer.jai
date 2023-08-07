@@ -310,6 +310,9 @@ remove_crlf_in_place :: (bytes: *[] u8) {
 }
 
 rescan_for_lines :: (using buffer: *Buffer) {
+    lock(*buffer.content_lock);
+    defer unlock(*buffer.content_lock);
+
     if dirty {
         was_dirty_during_frame = true;
         dirty = false;
@@ -371,6 +374,8 @@ rescan_for_lines :: (using buffer: *Buffer) {
 }
 
 rescan_for_wrapped_lines :: (editor: *Editor, buffer: Buffer) {
+    // Not locking here because rescanning for wrapped lines should only happen in the main thread
+
     array_reset_keeping_memory(*editor.wrapped_line_starts);
     array_reserve(*editor.wrapped_line_starts, buffer.line_starts.count);  // can't be less than that
 
@@ -407,6 +412,9 @@ rescan_for_wrapped_lines :: (editor: *Editor, buffer: Buffer) {
 }
 
 recalculate_colors :: (buffer: *Buffer) {
+    lock(*buffer.content_lock);
+    defer unlock(*buffer.content_lock);
+
     assert(!buffer.dirty);
     buffer.needs_coloring = false;
     array_resize(*buffer.colors, buffer.bytes.count);  // this will reset colors to 0
