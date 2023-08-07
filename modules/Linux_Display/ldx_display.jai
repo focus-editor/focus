@@ -44,13 +44,14 @@ x11_init_display :: (display: LDDisplay) -> bool {
 
     // Default locale, which is "C", doesn't support multibyte characters,
     // so we do this to get system locale which is hopefully set up correctly
-    // result will either by a correct locale from the environment,
+
+    // Result of setlocale will either be a correct locale from the environment,
     // or NULL if setlocale fails, or it will be "C" if somebody exported LC_ALL=""
     new_locale := to_string(setlocale(LC_ALL, ""));
 
     // We need to check whether current locale is supported by X server. It's not
     // guaranteed regardless of whether setlocale call is successful or not.
-    // If setting locale didn't work, we try our best to get it from few well-known
+    // If setting locale didn't work, we try our best to get it from a few well-known
     // environment variables in case one of them is set up correctly. glibc's setlocale
     // tries $LC_ALL first, then a category you specify in the first argument to setlocale,
     // and then $LANG env variable. The issue here is that glibc bails out of this sequence
@@ -62,9 +63,9 @@ x11_init_display :: (display: LDDisplay) -> bool {
         // getenv can have two "falsy" outcomes - env variable exists but is an empty string
         // and env variable doesn't exist. In first case we get a pointer to an empty string,
         // in the second case we get NULL as a result. Converting to jai string covers both cases
-        lc_ctype := to_string(getenv("LC_CTYPE"));
+        lc_ctype := trim(to_string(getenv("LC_CTYPE")));
         if !lc_ctype {
-            lang := to_string(getenv("LANG"));
+            lang := trim(to_string(getenv("LANG")));
 
             if !lang {
                 log_error("LANG environment variable is not found, trying to fall back to C.UTF-8\n");
