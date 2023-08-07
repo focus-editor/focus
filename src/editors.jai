@@ -123,17 +123,15 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         return false;
     }
 
-    cursors := editor.cursors;
-
     // We always want to put some actions in a separate edit group (e.g. block indent)
     new_group := false;
-    for cursor : cursors { if new_edit_group_required_for_action(action, cursor) { new_group = true; break; } }
+    for cursor : editor.cursors { if new_edit_group_required_for_action(action, cursor) { new_group = true; break; } }
     if new_group || frame_time - buffer.last_edit_time >= EDIT_GROUP_TIMEOUT then new_edit_group(buffer, editor);  // do it before action
 
     // We want to remember where cursors were before we do any edits
     if buffer.edits.count == 0 {
-        array_resize(*buffer.cursors, cursors.count);
-        for * cursor, i : buffer.cursors { <<cursor = cursors[i].state; }
+        array_resize(*buffer.cursors, editor.cursors.count);
+        for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
     }
 
     keep_selection := false;
@@ -244,7 +242,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
     if is_a_move_action(action) && shift_pressed then keep_selection = true;
 
     if editor.cursor_moved && !keep_selection {
-        for * cursors { it.sel = it.pos; }  // remove selection
+        for * editor.cursors { it.sel = it.pos; }  // remove selection
     }
 
     // NOTE: even though we also do it in refresh_open_buffers, we do it here
@@ -254,8 +252,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         rescan_for_lines(buffer);
         if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
     }
-    for * cursors put_cursor_in_valid_spot(it, buffer);
-    if cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
+    for * editor.cursors put_cursor_in_valid_spot(it, buffer);
+    if editor.cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
 
     if editor.cursor_moved && !enabled_whole_words then editor.search_whole_words = false;
     if editor.cursor_moved then editor.refresh_highlights = true;  // update or remove highlights
@@ -1097,8 +1095,8 @@ create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; be
     original_pos_coords := offset_to_coords(editor, buffer, original.pos);
     original_sel_coords := offset_to_coords(editor, buffer, original.sel);
 
-    cursor := array_add(*cursors);
-    << cursor  = edge_cursor;
+    array_add(*cursors, edge_cursor);
+    cursor := *cursors[cursors.count-1];
 
     pos_coords := offset_to_coords(editor, buffer, cursor.pos);
     if where == .above then pos_coords.line -= 1; else pos_coords.line += 1;

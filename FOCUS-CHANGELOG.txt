@@ -21,7 +21,6 @@
 # Main Git Branch
 
 + New features:
-    + Windows/Mac: Focus will now responsively redraw when you move or resize its window.
     + Line numbers can now be enabled (default shortcut is Alt-Shift-L). To enable permanently, use `show_line_numbers: true` in the config
     + Line wrap is now supported (use the toggle_line_wrap command - default shortcut on Windows is Alt-Z). If you want line wrap to be on by default, use `line_wrap_is_on_by_default: true`
     + New command: toggle_block_comment (for the supported languages)
