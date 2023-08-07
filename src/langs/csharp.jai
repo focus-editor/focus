@@ -578,10 +578,6 @@ eat_white_space :: inline (start: *u8, max_t: *u8) -> *u8 {
     return t;
 }
 
-is_white_space :: (c: u8) -> bool #expand {
-    return c == #char " " || c == #char "\r" || c == #char "\n";
-}
-
 Tokenizer :: struct {
     buf: string;
     max_t:   *u8;

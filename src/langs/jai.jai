@@ -647,9 +647,4 @@ eat_white_space :: inline (start: *u8, max_t: *u8) -> *u8 {
     return t;
 }
 
-is_white_space :: inline (c: u8) -> bool {
-    return c == #char " " || c == #char "\r" || c == #char "\n";
-}
-
-
 #import "Hash_Table";
