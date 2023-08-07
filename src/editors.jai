@@ -199,6 +199,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .indent_or_go_to_next_tabstop;     indent_or_tab                       (editor, buffer); keep_selection = true;
         case .indent;                           indent_lines                        (editor, buffer); keep_selection = true;
         case .unindent;                         unindent_lines                      (editor, buffer); keep_selection = true;
+        case .autoindent_region;                autoindent_region                   (editor, buffer); keep_selection = true;
+
         case .toggle_comment;                   toggle_comment                      (editor, buffer); keep_selection = true;
         case .toggle_block_comment;             toggle_block_comment                (editor, buffer); keep_selection = true;
         case .select_line;                      select_lines                        (editor, buffer); keep_selection = true;
@@ -1834,12 +1836,6 @@ delete_right_char :: (editor: *Editor, buffer: *Buffer) {
     editor.cursor_moved = .unimportant;
 }
 
-get_tmp_spaces :: (num: s64) -> string {
-    spaces := talloc_string(num);
-    memset(spaces.data, cast(u8) #char " ", num);
-    return spaces;
-}
-
 indent_or_tab :: (editor: *Editor, buffer: *Buffer) {
     indent := true;
     for editor.cursors { if !has_selection(it) { indent = false; break; } }
@@ -1988,6 +1984,70 @@ unindent_lines :: (editor: *Editor, buffer: *Buffer) {
     for * cursor : editor.cursors { cursor.col_wanted = -1; }
 
     editor.cursor_moved = .unimportant;
+}
+
+autoindent_region :: (editor: *Editor, buffer: *Buffer) {
+    // We assume that any {, [ or ( left unclosed means that the next line should be indented.
+    // This is not true for Python, for example, we might handle other cases later
+
+    // We tokenize on demand here rather than storing tokens when highlighting to save space (they are needed very rarely).
+    // This will also help us find the line to base the indentation of subsequent lines off of, as lines containing things
+    // such as multiline comments or here-strings can not be used as a base.
+    tokens := tokenize_for_indentation(buffer);
+
+    if !tokens {
+        // Unsupported - fall back to normal indentation
+        indent_lines(editor, buffer);
+        return;
+    }
+
+    lines := get_whole_line_ranges_for_cursors(editor, buffer);
+
+    replacements: [..] string;
+    replacements.allocator = temp;
+
+    for * line : lines {
+        // Determine the base indentation level by looking backwards at the first nonempty line
+        token, token_id := find_closest_indentation_token(tokens, line.range.start);
+        line_num        := offset_to_real_line(buffer, token.start);
+        line_start      := get_real_line_start_offset(buffer, line_num);
+
+        while line_num > 0 && token_id > 0 {
+            token = find_closest_indentation_token(tokens, line_start);
+            if token.type != .maybe_multiline || (token.start + token.len) <= line_start break;
+            line_num   = offset_to_real_line(buffer, token.start);
+            line_start = get_real_line_start_offset(buffer, line_num);
+        }
+
+        base_level, next_level := get_base_indent_from_line(buffer, line_num, tokens);
+        print("Base level: %, next_level: %\n", base_level, next_level);
+        if line.range.start != line_start then base_level = next_level;  // derived the level from a line above, not the first line of the range
+
+        // replacement := get_indented_range_as_temp_string(buffer, line.range, base_level, tokens);
+
+        // array_add(*replacements, replacement);
+    }
+
+    // assert(lines.count == replacements.count);
+
+    // offset_delta := 0;
+
+    // for * line, i : lines {
+    //     line.range.start += xx offset_delta;
+    //     line.range.end   += xx offset_delta;
+
+    //     new_str := replacements[i];
+    //     replace_range(buffer, line.range, new_str);
+
+    //     delta := cast(s32) (new_str.count - (line.range.end - line.range.start));
+    //     offset_delta += delta;
+
+    //     for * cursor : editor.cursors {
+    //         // TODO: handle the case when the cursor is within the range
+    //         if cursor.pos >= line.range.start then cursor.pos = max(cursor.pos + delta, line.range.start);
+    //         if cursor.sel >= line.range.start then cursor.sel = max(cursor.sel + delta, line.range.start);
+    //     }
+    // }
 }
 
 remove_additional_cursors :: (editor: *Editor) {

@@ -52,6 +52,8 @@ tab_size:                               4
 line_height_scale_percent:              120
 max_editor_width:                       -1
 editor_history_size:                    1024
+line_wrap_is_on_by_default:             false
+show_line_numbers:                      false
 
 
 [[keymap]]
@@ -80,6 +82,7 @@ Alt-ArrowDown               move_selected_lines_down
 Cmd-J                       join_lines
 Cmd-Shift-J                 join_lines_no_spaces_in_between
 
+Alt-Tab                     autoindent_region
 Tab                         indent_or_go_to_next_tabstop
 Shift-Tab                   unindent
 

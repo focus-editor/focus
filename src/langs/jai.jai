@@ -1,10 +1,5 @@
 highlight_jai_syntax :: (using buffer: *Buffer) {
-    tokenizer: Tokenizer = ---;
-    tokenizer.buf   = to_string(bytes);
-    tokenizer.max_t = bytes.data + bytes.count;
-    tokenizer.t     = bytes.data;
-
-    color: Code_Color;
+    tokenizer := get_tokenizer(buffer);
 
     while true {
         token := get_next_token(*tokenizer);
@@ -42,7 +37,60 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
     }
 }
 
+jai_tokenize_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /* temp */ {
+    tokens: [..] Indentation_Token;
+    tokens.allocator = temp;
+
+    tokenizer := get_tokenizer(buffer);
+
+    while true {
+        src := get_next_token(*tokenizer);
+
+        tokenizer.last_tokens[0] = tokenizer.last_tokens[1];
+        tokenizer.last_tokens[1] = src;
+
+        token: Indentation_Token = ---;
+        token.start = src.start;
+
+        if src.type == {
+            case .punctuation;
+                if src.punctuation == {
+                    case .l_paren;      token.type = .open;  token.kind = .paren;
+                    case .l_bracket;    token.type = .open;  token.kind = .bracket;
+                    case .l_brace;      token.type = .open;  token.kind = .brace;
+
+                    case .r_paren;      token.type = .close; token.kind = .paren;
+                    case .r_bracket;    token.type = .close; token.kind = .bracket;
+                    case .r_brace;      token.type = .close; token.kind = .brace;
+
+                    case;               continue;
+                }
+
+            case .multiline_comment;    token.type = .maybe_multiline;
+            case .here_string;          token.type = .maybe_multiline;
+            case .eof;                  token.type = .eof;  // to guarantee we always have indentation tokens
+            case;                       token.type = .unimportant;
+        }
+
+        array_add(*tokens, token);
+
+        if src.type == .eof break;
+    }
+
+    return tokens;
+}
+
 #scope_file
+
+get_tokenizer :: (using buffer: Buffer) -> Tokenizer {
+    tokenizer: Tokenizer;
+
+    tokenizer.buf   = to_string(bytes);
+    tokenizer.max_t = bytes.data + bytes.count;
+    tokenizer.t     = bytes.data;
+
+    return tokenizer;
+}
 
 get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     t = eat_white_space(t, max_t);

@@ -429,6 +429,131 @@ recalculate_colors :: (buffer: *Buffer) {
     }
 }
 
+tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */ {
+    // NOTE: all tokenizers here should return temporary storage!
+    if buffer.lang == {
+        case .Jai;          return jai_tokenize_for_indentation(buffer);
+        // !!!!!!!!!!!!!!
+        // case .C;            highlight_c_syntax(buffer);
+        // case .CSharp;       highlight_csharp_syntax(buffer);
+    }
+
+    return .[];
+}
+
+get_base_indent_from_line :: (buffer: Buffer, line_num: s32, tokens: [] Indentation_Token) -> level: int, next_level: int {
+    line := get_real_line_as_string(buffer, line_num);
+    if !line return 0, 0;
+
+    print("Getting the base indent from line:\n%\n", line);
+
+    col := 0;
+
+    for byte, i : to_bytes(line) {
+        if byte == #char " " {
+            col += 1;
+        } else if byte == #char "\t" {
+            col += TAB_SIZE - col % TAB_SIZE;  // tabs are evil
+        } else {
+            advance(*line, i);
+            break;
+        }
+    }
+
+    base_level := (col + TAB_SIZE - 1) / TAB_SIZE;
+
+    // Get the next level
+    start := get_real_line_start_offset(buffer, line_num);
+    end   := get_real_line_end_offset(buffer, line_num);
+    _, next_delta := get_indentation_changes_from_tokens_within_range(tokens, start, end);
+
+    return base_level, max(0, base_level + next_delta);
+}
+
+get_indented_range_as_temp_string :: (buffer: Buffer, range: Offset_Range, base_level: int, tokens: [] Indentation_Token) -> string /* temp */ {
+    b: String_Builder;
+    b.allocator = temp;
+
+    range_str := get_range_as_string(buffer, range);
+    if ends_with(range_str, "\n") then range_str.count -= 1;
+    lines := split(range_str, cast(u8) #char "\n");
+
+    level := base_level;
+
+    for line, i : lines {
+        // Check the line's tokens to see if we need to change the indentation level
+        start := cast(s32)(line.data - buffer.bytes.data);
+        end   := cast(s32)(start + line.count);
+        current_delta, next_delta := get_indentation_changes_from_tokens_within_range(tokens, start, end);
+        level = max(0, level + current_delta);
+
+        // Indent the line
+        indentation := ifx config.settings.insert_spaces_when_pressing_tab then get_tmp_spaces(level * TAB_SIZE) else get_tmp_tabs(level);
+        append(*b, indentation);
+        append(*b, trim(line));
+        append(*b, "\n");
+
+        level = max(0, level + next_delta);
+    }
+
+    return builder_to_string(*b, allocator = temp);
+}
+
+get_indentation_changes_from_tokens_within_range :: (tokens: [] Indentation_Token, start: s32, end: s32) -> current_delta: int, next_delta: int {
+    current_delta := 0;
+    next_delta    := 0;
+
+    NUM_KINDS :: #run enum_highest_value(type_of(Indentation_Token.kind)) + 1;
+    token_kinds: [NUM_KINDS] int;
+
+    _, start_token_id := find_closest_indentation_token(tokens, start);
+    if start_token_id < 0 then start_token_id = 0;
+
+    for token : array_view(tokens, start_token_id, tokens.count - start_token_id) {
+        if token.type != .open || token.type != .close || token.start < start continue;
+        if token.start > end break;
+
+        if token.type == .open {
+            token_kinds[token.kind] += 1;
+        } else {
+            token_kinds[token.kind] -= 1;
+        }
+
+        // If we have at least one unopened token, we should unindent
+        for * kind : token_kinds {
+            if kind.* < 0 { current_delta = -1; kind.* = 0; }
+        }
+    }
+
+    // If we end up with an unclosed token, we should indent
+    for kind : token_kinds {
+        if kind > 0 {
+            next_delta = +1;
+            break;
+        }
+    }
+
+    return current_delta, next_delta;
+}
+
+find_closest_indentation_token :: (tokens: [] Indentation_Token, offset: s32) -> token: Indentation_Token, token_id: s64 {
+    assert(tokens.count > 0, "No indentation tokens found. This is an error.");
+
+    left  := 0;
+    right := tokens.count;
+
+    while (right - left) > 1 {
+        middle := left + (right - left) / 2;
+        if offset > tokens[middle].start {
+            left = middle;
+        } else {
+            right = middle;
+        }
+    }
+
+    return tokens[left], left;
+}
+
 save_buffer_to_new_file_on_disk :: (buffer: *Buffer, buffer_id: s64) -> saved: bool {
     if buffer.readonly return false;
 
@@ -1121,3 +1246,25 @@ Coords_Range :: struct {
     start, end: Coords;
 }
 
+Indentation_Token :: struct {
+    start: s32;
+    len:   s32;
+
+    type: enum u16 {
+        // non-indentation
+        unimportant;
+        maybe_multiline;
+        eof;
+
+        // indentation
+        open;
+        close;
+    };
+
+    kind: enum u16 {
+        // only makes sense for indentation types
+        paren;
+        bracket;
+        brace;
+    };
+}

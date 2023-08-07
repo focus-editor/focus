@@ -306,6 +306,18 @@ count_whitespace :: (bytes: [] u8, start_offset: s64, max_offset: s64, spaces :=
     return cast(s32) (max_offset - start_offset);
 }
 
+get_tmp_spaces :: (num: int) -> string {
+    spaces := talloc_string(num);
+    memset(spaces.data, cast(u8) #char " ", num);
+    return spaces;
+}
+
+get_tmp_tabs :: (num: int) -> string {
+    tabs := talloc_string(num);
+    memset(tabs.data, cast(u8) #char "\t", num);
+    return tabs;
+}
+
 start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: Time = xx 0.0, $snappy := false) {
     anim.start  = start;
     anim.target = target;
