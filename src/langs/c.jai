@@ -945,13 +945,7 @@ is_white_space :: inline (char : u8) -> bool #no_aoc {
 
         pcmpeqb chars, spaces;
 
-        // Sum compare result mask into chars[0].d
-        //
-        // Everything is simple: if chars[0].d != 0 c is space, otherwise not.
-        phaddd chars, chars;
-        phaddd chars, chars;
-
-        movd result, chars;
+        pmovmskb result, chars;
     }
 
     return cast,no_check(bool) result;
