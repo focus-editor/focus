@@ -473,34 +473,34 @@ get_indentation_changes_from_tokens_within_range :: (tokens: [] Indentation_Toke
     next_delta    := 0;
 
     NUM_KINDS :: #run enum_highest_value(type_of(Indentation_Token.kind)) + 1;
-    token_kinds: [NUM_KINDS] int;
+    unclosed: [NUM_KINDS] int;
+    seen_unopened := false;
 
-    _, start_token_id := find_closest_indentation_token(tokens, start);
-    if start_token_id < 0 then start_token_id = 0;
+    first_token, first_token_id := find_next_indentation_token(tokens, start, end);
+    if first_token_id >= 0 && first_token.type == .close {
+        // The first token in this range is a closing token, so we should unindent
+        current_delta = -1;
+    }
+    if first_token_id < 0 then first_token_id = 0;
 
-    for token : array_view(tokens, start_token_id, tokens.count - start_token_id) {
-        if (token.type != .open && token.type != .close) || token.start < start continue;
+    for token : array_view(tokens, first_token_id, tokens.count - first_token_id) {
+        if token.start < start continue;
         if token.start > end break;
+        if token.type != .open && token.type != .close continue;
 
         if token.type == .open {
-            token_kinds[token.kind] += 1;
+            unclosed[token.kind] += 1;
         } else {
-            token_kinds[token.kind] -= 1;
-        }
-
-        // If we have at least one unopened token, we should unindent
-        for * kind : token_kinds {
-            if kind.* < 0 { current_delta = -1; kind.* = 0; }
+            unclosed[token.kind] -= 1;
+            if unclosed[token.kind] < 0 then { unclosed[token.kind] = 0; seen_unopened = true; }
         }
     }
 
     // If we end up with an unclosed token, we should indent
-    for kind : token_kinds {
-        if kind > 0 {
-            next_delta = +1;
-            break;
-        }
-    }
+    for kind : unclosed { if kind > 0 { next_delta = max(next_delta + 1, 1); break; } }
+
+    // If we end up with an opened token, we should indent next line, unless already indented current line
+    if seen_unopened && current_delta == 0 && next_delta == 0 then next_delta = -1;
 
     return current_delta, next_delta;
 }
@@ -521,6 +521,19 @@ find_closest_indentation_token :: (tokens: [] Indentation_Token, offset: s32) ->
     }
 
     return tokens[left], left;
+}
+
+find_next_indentation_token :: (tokens: [] Indentation_Token, offset: s32, limit: s32) -> token: Indentation_Token, token_id: s64 {
+    // Finds the token which starts immediately after or on the offset
+    _, start_token_id := find_closest_indentation_token(tokens, offset);
+
+    for token, i : array_view(tokens, start_token_id, tokens.count - start_token_id) {
+        if token.start < offset continue;
+        if token.start > limit break;
+        return token, start_token_id + i;
+    }
+
+    return .{}, -1;
 }
 
 offset_is_within_multiline_token :: (tokens: [] Indentation_Token, offset: s32) -> bool {

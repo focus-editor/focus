@@ -1663,6 +1663,8 @@ break_line :: (editor: *Editor, buffer: *Buffer) {
     }
 
     editor.cursor_moved = .unimportant;
+
+    maybe_autoindent(editor, buffer);
 }
 
 new_line_below :: (editor: *Editor, buffer: *Buffer) {
@@ -1694,6 +1696,8 @@ new_line_below :: (editor: *Editor, buffer: *Buffer) {
     }
 
     editor.cursor_moved = .unimportant;
+
+    maybe_autoindent(editor, buffer);
 }
 
 new_line_above :: (editor: *Editor, buffer: *Buffer) {
@@ -1725,6 +1729,15 @@ new_line_above :: (editor: *Editor, buffer: *Buffer) {
     }
 
     editor.cursor_moved = .unimportant;
+
+    maybe_autoindent(editor, buffer);
+}
+
+maybe_autoindent :: (editor: *Editor, buffer: *Buffer) {
+    if !config.settings.autoindent_new_lines return;
+
+    rescan_for_lines(buffer);
+    autoindent_region(editor, buffer, fallback = false);
 }
 
 delete_word_left :: (editor: *Editor, buffer: *Buffer) {
@@ -1986,7 +1999,7 @@ unindent_lines :: (editor: *Editor, buffer: *Buffer) {
     editor.cursor_moved = .unimportant;
 }
 
-autoindent_region :: (editor: *Editor, buffer: *Buffer) {
+autoindent_region :: (editor: *Editor, buffer: *Buffer, fallback := true) {
     // We assume that any {, [ or ( left unclosed means that the next line should be indented.
     // This is not true for Python, for example, we might handle other cases later
 
@@ -1997,7 +2010,7 @@ autoindent_region :: (editor: *Editor, buffer: *Buffer) {
 
     if !tokens {
         // Unsupported - fall back to normal indentation
-        indent_lines(editor, buffer);
+        if fallback indent_lines(editor, buffer);
         return;
     }
 
@@ -2022,9 +2035,16 @@ autoindent_region :: (editor: *Editor, buffer: *Buffer) {
             }
 
             level, next_level := get_base_indent_from_line(buffer, line_num, tokens);
-            if line_range.start != line_start then level = next_level;  // derived the level from a line above, not the first line of the range
+            if line_range.start != line_start {
+                base_level = next_level;  // derived the level from a line above, not the first line of the range
+            } else {
+                base_level = level;
+            }
 
-            base_level = level;
+            // #if DEBUG {
+            //     print("BASE LINE FOR INDENT:\n%\n", get_real_line_as_string(buffer, line_num));
+            //     print("base_level: %, next_level: %\n", level, next_level);
+            // }
         }
 
         // Build a replacement string for the whole range.
@@ -2038,15 +2058,20 @@ autoindent_region :: (editor: *Editor, buffer: *Buffer) {
             lines_in_range := split(range_str, cast(u8) #char "\n");
 
             level := base_level;
+            start, end: s32;
+            current_delta, next_delta: int;
 
             for line, i : lines_in_range {
-                if !line { append(*b, "\n"); continue; }
-
-                // Check the line's tokens to see if we need to change the indentation level
-                start := cast(s32)(line.data - buffer.bytes.data);
-                end   := cast(s32)(start + line.count);
-                current_delta, next_delta := get_indentation_changes_from_tokens_within_range(tokens, start, end);
-                level = max(0, level + current_delta);
+                if line {
+                    // Check the line's tokens to see if we need to change the indentation level
+                    start = cast(s32) (line.data - buffer.bytes.data);
+                    end   = cast(s32) (start + line.count);
+                    current_delta, next_delta = get_indentation_changes_from_tokens_within_range(tokens, start, end);
+                    level = max(0, level + current_delta);
+                } else {
+                    start = end + 1;  // can't use pointer arithmetic here
+                    next_delta = 0;
+                }
 
                 if !offset_is_within_multiline_token(tokens, start) {
                     // Indent the line
@@ -2089,6 +2114,8 @@ autoindent_region :: (editor: *Editor, buffer: *Buffer) {
             if cursor.sel >= line.start then cursor.sel = max(cursor.sel + delta, line.start);
         }
     }
+
+    editor.cursor_moved = .unimportant;
 }
 
 remove_additional_cursors :: (editor: *Editor) {
