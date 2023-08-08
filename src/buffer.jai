@@ -470,35 +470,6 @@ get_base_indent_from_line :: (buffer: Buffer, line_num: s32, tokens: [] Indentat
     return base_level, max(0, base_level + next_delta);
 }
 
-get_indented_range_as_temp_string :: (buffer: Buffer, range: Offset_Range, base_level: int, tokens: [] Indentation_Token) -> string /* temp */ {
-    b: String_Builder;
-    b.allocator = temp;
-
-    range_str := get_range_as_string(buffer, range);
-    if ends_with(range_str, "\n") then range_str.count -= 1;
-    lines := split(range_str, cast(u8) #char "\n");
-
-    level := base_level;
-
-    for line, i : lines {
-        // Check the line's tokens to see if we need to change the indentation level
-        start := cast(s32)(line.data - buffer.bytes.data);
-        end   := cast(s32)(start + line.count);
-        current_delta, next_delta := get_indentation_changes_from_tokens_within_range(tokens, start, end);
-        level = max(0, level + current_delta);
-
-        // Indent the line
-        indentation := ifx config.settings.insert_spaces_when_pressing_tab then get_tmp_spaces(level * TAB_SIZE) else get_tmp_tabs(level);
-        append(*b, indentation);
-        append(*b, trim(line));
-        append(*b, "\n");
-
-        level = max(0, level + next_delta);
-    }
-
-    return builder_to_string(*b, allocator = temp);
-}
-
 get_indentation_changes_from_tokens_within_range :: (tokens: [] Indentation_Token, start: s32, end: s32) -> current_delta: int, next_delta: int {
     current_delta := 0;
     next_delta    := 0;
@@ -510,7 +481,7 @@ get_indentation_changes_from_tokens_within_range :: (tokens: [] Indentation_Toke
     if start_token_id < 0 then start_token_id = 0;
 
     for token : array_view(tokens, start_token_id, tokens.count - start_token_id) {
-        if token.type != .open || token.type != .close || token.start < start continue;
+        if (token.type != .open && token.type != .close) || token.start < start continue;
         if token.start > end break;
 
         if token.type == .open {
@@ -552,6 +523,11 @@ find_closest_indentation_token :: (tokens: [] Indentation_Token, offset: s32) ->
     }
 
     return tokens[left], left;
+}
+
+offset_is_within_multiline_token :: (tokens: [] Indentation_Token, offset: s32) -> bool {
+    token := find_closest_indentation_token(tokens, offset);
+    return token.type == .maybe_multiline && (token.start + token.len) >= offset;
 }
 
 save_buffer_to_new_file_on_disk :: (buffer: *Buffer, buffer_id: s64) -> saved: bool {

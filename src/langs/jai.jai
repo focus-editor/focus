@@ -46,11 +46,12 @@ jai_tokenize_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
     while true {
         src := get_next_token(*tokenizer);
 
-        tokenizer.last_tokens[0] = tokenizer.last_tokens[1];
+        tokenizer.last_tokens[0] = tokenizer.last_tokens[1];  // if we don't remember last 2 tokens, here strings won't be detected properly
         tokenizer.last_tokens[1] = src;
 
         token: Indentation_Token = ---;
         token.start = src.start;
+        token.len   = src.len;
 
         if src.type == {
             case .punctuation;
