@@ -2028,7 +2028,6 @@ autoindent_region :: (editor: *Editor, buffer: *Buffer) {
         }
 
         // Build a replacement string for the whole range.
-        // Also, adjust the cursors as we go
         replacement: string;
         {
             b: String_Builder;
@@ -2086,8 +2085,8 @@ autoindent_region :: (editor: *Editor, buffer: *Buffer) {
 
         for * cursor : editor.cursors {
             // TODO: handle the case when the cursor is within the range
-            if cursor.pos >= line.range.start then cursor.pos = max(cursor.pos + delta, line.range.start);
-            if cursor.sel >= line.range.start then cursor.sel = max(cursor.sel + delta, line.range.start);
+            if cursor.pos >= line.start then cursor.pos = max(cursor.pos + delta, line.start);
+            if cursor.sel >= line.start then cursor.sel = max(cursor.sel + delta, line.start);
         }
     }
 }

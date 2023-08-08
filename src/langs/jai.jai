@@ -5,10 +5,6 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
 
-        // if token.type == .invalid && buffer.has_file {
-        //     log_error("Invalid token in file: %", file.full_path);
-        // }
-
         using tokenizer;
 
         // Maybe retroactively highlight a function
@@ -37,7 +33,7 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
     }
 }
 
-jai_tokenize_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_jai_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 

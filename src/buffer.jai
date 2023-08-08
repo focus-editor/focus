@@ -430,12 +430,12 @@ recalculate_colors :: (buffer: *Buffer) {
 }
 
 tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */ {
-    // NOTE: all tokenizers here should return temporary storage!
+    // NOTE: all tokenizers here must return temporary storage!
     if buffer.lang == {
-        case .Jai;          return jai_tokenize_for_indentation(buffer);
-        // !!!!!!!!!!!!!!
-        // case .C;            highlight_c_syntax(buffer);
-        // case .CSharp;       highlight_csharp_syntax(buffer);
+        case .Jai;          return tokenize_jai_for_indentation(buffer);
+        case .C;            return tokenize_c_for_indentation(buffer);
+        case .CSharp;       return tokenize_csharp_for_indentation(buffer);
+        case .Glsl;         return tokenize_glsl_for_indentation(buffer);
     }
 
     return .[];
@@ -444,8 +444,6 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
 get_base_indent_from_line :: (buffer: Buffer, line_num: s32, tokens: [] Indentation_Token) -> level: int, next_level: int {
     line := get_real_line_as_string(buffer, line_num);
     if !line return 0, 0;
-
-    print("Getting the base indent from line:\n%\n", line);
 
     col := 0;
 
