@@ -86,6 +86,8 @@ main :: () {
     init_logger();
     defer deinit_logger();  // closes log file handles
 
+    if !check_feature(cpu_info.feature_leaves, x86_Feature_Flag.AES) then log_error("CPU doesn't support AES instructions. A slower hash function will be used.");
+
     // Requires the session to be created and the configs to be loaded
     start_initial_workspace_scan();
 
