@@ -322,6 +322,15 @@ start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: Time
     anim.start  = start;
     anim.target = target;
     if speed > 0 then anim.speed = speed;
+
+    // Don't restart the animation at the current frame if it's already started.
+    // But still cap it's starting time at just a single frame delta to be conservative.
+    // This lets us start animation smoothly, as in the "else" branch below, but
+    // continue in a snappy way as we scroll.
+    if anim.started_at {
+        anim.started_at = frame_time - MAX_FRAME_DT;
+        return;
+    }
     #if snappy {
         // Pretend the animation started last frame so we start moving right away
         anim.started_at = frame_time - MAX_FRAME_DT;
