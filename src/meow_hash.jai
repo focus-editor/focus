@@ -11,10 +11,6 @@ fallback_hash :: (bytes: [] u8) -> u64 {
     return Hash.get_hash(bytes);
 }
 
-calculate_meow_hash :: inline (s: string) -> u64 {
-    return calculate_meow_hash(to_bytes(s));
-}
-
 #scope_file
 
 #import "meow_hash";

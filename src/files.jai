@@ -72,8 +72,7 @@ get_file_icon :: (name: string, extension: string) -> File_Icon {
         case "otf";
             icon = .font;
         case "js";
-            icon = .js;  // the javascript people probably won't ever use this editor anyway :)
-                         // if they do we'll stop making fun of js
+            icon = .js;
     }
 
     // Special cases
@@ -195,7 +194,7 @@ File_Icon :: enum u16 {
     gear    :: 0xf013;
     folder  :: 0xe185;
     drive   :: 0xf0a0;
-    js      :: 0xf2fe;
+    js      :: 0xf15c;
     shell   :: 0xf2d0;
 
     dots    :: 0xf141;
