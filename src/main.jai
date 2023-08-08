@@ -9,6 +9,9 @@ main :: () {
 
     cpu_info = get_cpu_info();
 
+    // Meow hash relies on AES instruction support, so fall back to a standard hash function
+    if !check_feature(cpu_info.feature_leaves, x86_Feature_Flag.AES) then calculate_hash = fallback_hash;
+
     platform_setup();
 
     // Remember important directories
@@ -537,6 +540,8 @@ update_window_size :: (w: s64, h: s64) {
         init_fonts_and_dependent_things();
     }
 }
+
+calculate_hash: (bytes: [] u8) -> u64 = calculate_meow_hash;
 
 // Important directories
 config_dir:   string;

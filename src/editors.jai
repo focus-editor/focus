@@ -1214,7 +1214,7 @@ save_buffer :: (editor: *Editor, buffer: *Buffer, save_new_file := false) {
                     modified_on_disk = false;
                     deleted = false;
 
-                    meow_hash = calculate_meow_hash(bytes);
+                    meow_hash = calculate_hash(bytes);
 
                     error_when_saving = false;
                     crlf = false;

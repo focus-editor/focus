@@ -38,6 +38,7 @@
         explorer_reveal_command:  nautilus --select "%s"  # this command is used when highlighting a specific file in a directory
 
 + Bug fixes:
+    + Focus will fall back to a slower hash function on CPUs which don't support AES instructions instead of crashing
     + Mac: Focus no longer collects window events when another window is active. This eliminates several bugs (Cmd+Tab spawning cursors, I-Beam cursor when using other apps) at the cost of no longer being able to vertically scroll unless Focus is active. For now.
     + Fixed a bug with the Navigate to file dialog being empty
     + Fixed a bug with global search not finding everything when case sensitive or whole word toggles are just turned on

@@ -156,7 +156,7 @@ load_and_merge_config :: (file_path: string, into: Config, hash: *u64) -> succes
     }
 
     // Maybe update hash if changed
-    new_hash := calculate_meow_hash(file_data);
+    new_hash := calculate_hash(to_bytes(file_data));
     changed := new_hash != <<hash;
     if changed then <<hash = new_hash;
 

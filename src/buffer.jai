@@ -20,7 +20,7 @@ refresh_open_buffers :: () {
         session_notify_modified_buffer(editor.buffer_id);
 
         // Maybe mark buffer as not modified if we've made it match the contents on disk
-        buffer.modified = buffer.meow_hash != calculate_meow_hash(buffer.bytes);
+        buffer.modified = buffer.meow_hash != calculate_hash(buffer.bytes);
         if !buffer.modified then buffer.modified_on_disk = false;  // we've verified that the contents matches that on disk
 
         finder.need_to_refresh_results = true;
@@ -633,7 +633,7 @@ save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64) -> saved: bool {
         modified_on_disk = false;
         deleted = false;
 
-        meow_hash = calculate_meow_hash(bytes);
+        meow_hash = calculate_hash(bytes);
 
         error_when_saving = false;
         crlf = false;
@@ -851,7 +851,7 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
 
     buffer.crlf = buffer.bytes.count != old_size;
 
-    buffer.meow_hash = calculate_meow_hash(buffer.bytes);
+    buffer.meow_hash = calculate_hash(buffer.bytes);
 
     set_lang_from_path(buffer, path);
 
@@ -921,7 +921,7 @@ refresh_buffer_from_disk :: (path: string) {
     unlock(*buffer.content_lock);
     file_contents_str = to_string(file_contents);
 
-    file_hash := calculate_meow_hash(file_contents);
+    file_hash := calculate_hash(file_contents);
     if buffer.meow_hash == file_hash {
         #if DEBUG_FILE_REFRESH log("Meow hash hasn't changed for %", path);
         return;  // file hasn't actually changed
