@@ -58,6 +58,7 @@
     + Linux: The editor shoudn't use any CPU while idle.
     + Linux: timers are now supported. As a result some animations (such as the text cursor blinking) should now actually work as expected.
     + Linux: More robust and resilent mechanism to get user's locale and input method for X11 backend. Fix locale-related segfaults
+    + Linux: Improve smooth scrolling performance.
     + Global search will now try to preserve search results and cursor position when searching using the same query
     + Windows: The editor window should open on the primary monitor by default
 
