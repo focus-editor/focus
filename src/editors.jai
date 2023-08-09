@@ -1695,8 +1695,6 @@ break_line :: (editor: *Editor, buffer: *Buffer) {
     }
 
     editor.cursor_moved = .unimportant;
-
-    maybe_autoindent(editor, buffer);
 }
 
 new_line_below :: (editor: *Editor, buffer: *Buffer) {
@@ -1728,8 +1726,6 @@ new_line_below :: (editor: *Editor, buffer: *Buffer) {
     }
 
     editor.cursor_moved = .unimportant;
-
-    maybe_autoindent(editor, buffer);
 }
 
 new_line_above :: (editor: *Editor, buffer: *Buffer) {
@@ -1761,15 +1757,6 @@ new_line_above :: (editor: *Editor, buffer: *Buffer) {
     }
 
     editor.cursor_moved = .unimportant;
-
-    maybe_autoindent(editor, buffer);
-}
-
-maybe_autoindent :: (editor: *Editor, buffer: *Buffer) {
-    if !config.settings.autoindent_new_lines return;
-
-    rescan_for_lines(buffer);
-    autoindent_region(editor, buffer, fallback = false);
 }
 
 delete_word_left :: (editor: *Editor, buffer: *Buffer) {

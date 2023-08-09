@@ -24,6 +24,7 @@
     + Line numbers can now be enabled (default shortcut is Alt-Shift-L). To enable permanently, use `show_line_numbers: true` in the config
     + Line wrap is now supported (use the toggle_line_wrap command - default shortcut on Windows is Alt-Z). If you want line wrap to be on by default, use `line_wrap_is_on_by_default: true`
     + New command: toggle_block_comment (for the supported languages)
+    + New command: autoindent_region (bound to Ctrl-Tab by default on Windows/Linux, Option-Tab on Mac). Works with the C-like languages we have syntax highlighting for. Should work similarly to Emacs.
     + New commands: move_to_previous_buffer, move_to_next_buffer. They work like normal editor history, but skip the cursor movements and jump right to the next buffer or layout change
     + New config option: cursor_blinking
     + It is now possible to paste whatever was copied with N cursors into another file as long as the number of cursors there is also N (thanks @hfr4)
