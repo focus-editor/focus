@@ -1,5 +1,16 @@
 main :: () {
+    #if DEBUG {
+        UA :: #import "Unmapping_Allocator";
+        context.allocator = UA.get_unmapping_allocator();
+
+        // OA :: #import "Overwriting_Allocator";
+        // context.allocator = OA.get_overwriting_allocator();
+    }
+
     cpu_info = get_cpu_info();
+
+    // Meow hash relies on AES instruction support, so fall back to a standard hash function
+    if !check_feature(cpu_info.feature_leaves, x86_Feature_Flag.AES) then calculate_hash = fallback_hash;
 
     platform_setup();
 
@@ -74,6 +85,8 @@ main :: () {
     // Init logger after we know the session dir and the config
     init_logger();
     defer deinit_logger();  // closes log file handles
+
+    if !check_feature(cpu_info.feature_leaves, x86_Feature_Flag.AES) then log_error("CPU doesn't support AES instructions. A slower hash function will be used.");
 
     // Requires the session to be created and the configs to be loaded
     start_initial_workspace_scan();
@@ -530,6 +543,8 @@ update_window_size :: (w: s64, h: s64) {
     }
 }
 
+calculate_hash: (bytes: [] u8) -> u64 = calculate_meow_hash;
+
 // Important directories
 config_dir:   string;
 data_dir:     string;
@@ -728,9 +743,8 @@ dont_ignore_next_window_resize := false;
     #assert false, "Unsupported OS";
 }
 
-// #import "Basic"()(MEMORY_DEBUGGER = true);
 #import "Atomics";
-#import "Basic";
+#import "Basic"()(MEMORY_DEBUGGER = DEBUG);
 #import "Math";
 #import "Sloppy_Math";
 #import "File";

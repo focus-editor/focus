@@ -30,35 +30,82 @@ preloaded_x_cursors :: string.[
 ];
 
 x11_init_display :: (display: LDDisplay) -> bool {
-    current_locale := setlocale(LC_ALL, null);
-    current_xmods  := XSetLocaleModifiers(null);
-
-    old_locale: string;
-    if current_locale old_locale = copy_string(to_string(current_locale));
-
-    old_xmods: string;
-    if current_xmods old_xmods = copy_string(to_string(current_xmods));
+    old_locale := setlocale(LC_ALL, null);
+    old_xmods  := XSetLocaleModifiers(null);
 
     defer {
-        if current_locale {
-            setlocale(LC_ALL, old_locale.data);
-            free(old_locale);
+        if old_locale {
+            setlocale(LC_ALL, old_locale);
         }
-        if current_xmods {
-            XSetLocaleModifiers(old_xmods.data);
-            free(old_xmods);
+        if old_xmods {
+            XSetLocaleModifiers(old_xmods);
         }
     }
 
-    setlocale(LC_ALL, "");
+    // Default locale, which is "C", doesn't support multibyte characters,
+    // so we do this to get system locale which is hopefully set up correctly
 
+    // Result of setlocale will either be a correct locale from the environment,
+    // or NULL if setlocale fails, or it will be "C" if somebody exported LC_ALL=""
+    new_locale := to_string(setlocale(LC_ALL, ""));
+
+    // We need to check whether current locale is supported by X server. It's not
+    // guaranteed regardless of whether setlocale call is successful or not.
+    // If setting locale didn't work, we try our best to get it from a few well-known
+    // environment variables in case one of them is set up correctly. glibc's setlocale
+    // tries $LC_ALL first, then a category you specify in the first argument to setlocale,
+    // and then $LANG env variable. The issue here is that glibc bails out of this sequence
+    // as soon as it sees that something is set, even if it's set incorrectly. So the call to
+    // setlocale will fail. That's why we try this process manually.
+    // This process vaguely resembles the way musl gets current locale and looks reasonable enough
+    if !new_locale || new_locale == "C" || !XSupportsLocale() {
+
+        // getenv can have two "falsy" outcomes - env variable exists but is an empty string
+        // and env variable doesn't exist. In first case we get a pointer to an empty string,
+        // in the second case we get NULL as a result. Converting to jai string covers both cases
+        lc_ctype := trim(to_string(getenv("LC_CTYPE")));
+        if !lc_ctype {
+            lang := trim(to_string(getenv("LANG")));
+
+            if !lang {
+                log_error("LANG environment variable is not found, trying to fall back to C.UTF-8\n");
+                new_locale = to_string(setlocale(LC_ALL, "C.UTF-8"));
+            } else {
+                new_locale = to_string(setlocale(LC_ALL, temp_c_string(lang)));
+            }
+        } else {
+            new_locale = to_string(setlocale(LC_ALL, temp_c_string(lc_ctype)));
+        }
+
+        if !new_locale || !XSupportsLocale() {
+            error :: #string __error
+Couldn't set unicode-capable locale from environment, falling back to default one: %.
+This is likely an indicator that your locale is set incorrectly.
+Inspect available locales [$ locale -a] and the one you have set up: [$ locale]
+            __error
+            log_error(error, to_string(old_locale));
+            setlocale(LC_ALL, old_locale);
+        }
+
+    }
     init_global_display();
 
+    // NOTE: Should we explicitly support XMODIFIERS and XIM_SERVERS such as dbus and fcitx?
+    // Try the best we can to get the input method
     XSetLocaleModifiers("");
     im := XOpenIM(x_global_display, null, null, null);
     if !im {
-        XSetLocaleModifiers("@im=none");
+        // local seems like the same thing as none, but more examples use it!
+        XSetLocaleModifiers("@im=local");
         im = XOpenIM(x_global_display, null, null, null);
+        if !im {
+            XSetLocaleModifiers("@im=");
+            im = XOpenIM(x_global_display, null, null, null);
+            // Nothing more we can do
+            if !im {
+                log_error("Could not get X11 Input Method");
+            }
+        }
     }
 
     if !xcursor_initialized {
@@ -280,6 +327,10 @@ x11_create_window :: (x11_display: *X11Display, ld_win: LDWindow, width: int, he
         XNFocusWindow, win,
         XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
         null);
+
+    if !ic {
+        log_error("Could not create X11 input context\n");
+    }
 
     array_add(*x_global_windows, win);
 

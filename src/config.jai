@@ -156,7 +156,7 @@ load_and_merge_config :: (file_path: string, into: Config, hash: *u64) -> succes
     }
 
     // Maybe update hash if changed
-    new_hash := calculate_meow_hash(file_data);
+    new_hash := calculate_hash(to_bytes(file_data));
     changed := new_hash != <<hash;
     if changed then <<hash = new_hash;
 
@@ -338,7 +338,8 @@ Settings :: struct {
     editor_history_size                 := 128;
     line_wrap_is_on_by_default          := false;
     show_line_numbers                   := false;
-    shrink_towards_original_cursor      := false;
+    autoindent_new_lines                := false;
+    autoindent_on_closing_brace         := false;
 
     // TODO
     // convert_tabs_to_spaces_on_load:     false

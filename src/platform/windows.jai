@@ -116,13 +116,17 @@ platform_enumerate_logical_drives :: () -> [] string {
     return drives;
 }
 
-platform_get_save_file_name :: (name := "") -> string /* temp */, success: bool {
+platform_get_save_file_name :: (file_name := "") -> string /* temp */, success: bool {
     buffer: [512] u16;
 
+    // Clean the name from chars that Windows won't accept
+    name := copy_temporary_string(file_name);
+    replace_chars(name, "@$%&\\/:*?\"'<>|~`#^+={}[];!", cast(u8) #char "_");
+
+    // Get the name to populate it in the filename box (convenient if we're resaving a deleted file)
     if name && name != "<new file>" {
-        // Get the name to populate it in the filename box (convenient if we're resaving a deleted file)
-        wide_name, _, length := utf8_to_wide(name); // @Todo: handle error here
-        memcpy(buffer.data, wide_name, min(buffer.count, length));
+        wide_name, success, length := utf8_to_wide(name);
+        if success memcpy(buffer.data, wide_name, min(buffer.count, length));
     }
 
     ofn: OPENFILENAMEW;

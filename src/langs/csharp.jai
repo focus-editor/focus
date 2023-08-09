@@ -1,10 +1,5 @@
 highlight_csharp_syntax :: (using buffer: *Buffer) {
-    using tokenizer := Tokenizer.{
-        buf        = to_string(bytes),
-        max_t      = bytes.data + bytes.count,
-        t          = bytes.data,
-        last_token = .{0, 0, .eof}
-    };
+    using tokenizer := get_tokenizer(buffer);
 
     while true {
         token := get_next_token(*tokenizer);
@@ -22,7 +17,58 @@ highlight_csharp_syntax :: (using buffer: *Buffer) {
     }
 }
 
+tokenize_csharp_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /* temp */ {
+    tokens: [..] Indentation_Token;
+    tokens.allocator = temp;
+
+    tokenizer := get_tokenizer(buffer);
+
+    while true {
+        src := get_next_token(*tokenizer);
+
+        token: Indentation_Token = ---;
+        token.start = src.start;
+        token.len   = src.len;
+
+        if src.type == {
+            case .punctuation;
+                if src.punctuation == {
+                    case .l_paren;      token.type = .open;  token.kind = .paren;
+                    case .l_bracket;    token.type = .open;  token.kind = .bracket;
+                    case .l_brace;      token.type = .open;  token.kind = .brace;
+
+                    case .r_paren;      token.type = .close; token.kind = .paren;
+                    case .r_bracket;    token.type = .close; token.kind = .bracket;
+                    case .r_brace;      token.type = .close; token.kind = .brace;
+
+                    case;               continue;
+                }
+
+            case .multiline_comment;    token.type = .maybe_multiline;
+            case .eof;                  token.type = .eof;  // to guarantee we always have indentation tokens
+            case;                       token.type = .unimportant;
+        }
+
+        array_add(*tokens, token);
+
+        if src.type == .eof break;
+    }
+
+    return tokens;
+}
+
 #scope_file
+
+get_tokenizer :: (using buffer: Buffer) -> Tokenizer {
+    tokenizer: Tokenizer;
+
+    tokenizer.buf   = to_string(bytes);
+    tokenizer.max_t = bytes.data + bytes.count;
+    tokenizer.t     = bytes.data;
+    tokenizer.last_token = .{0, 0, .eof};
+
+    return tokenizer;
+}
 
 get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     t = eat_white_space(t, max_t);
@@ -576,10 +622,6 @@ eat_white_space :: inline (start: *u8, max_t: *u8) -> *u8 {
         t += 1;
     }
     return t;
-}
-
-is_white_space :: (c: u8) -> bool #expand {
-    return c == #char " " || c == #char "\r" || c == #char "\n";
 }
 
 Tokenizer :: struct {

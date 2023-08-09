@@ -306,6 +306,18 @@ count_whitespace :: (bytes: [] u8, start_offset: s64, max_offset: s64, spaces :=
     return cast(s32) (max_offset - start_offset);
 }
 
+get_tmp_spaces :: (num: int) -> string {
+    spaces := talloc_string(num);
+    memset(spaces.data, cast(u8) #char " ", num);
+    return spaces;
+}
+
+get_tmp_tabs :: (num: int) -> string {
+    tabs := talloc_string(num);
+    memset(tabs.data, cast(u8) #char "\t", num);
+    return tabs;
+}
+
 start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: Time = xx 0.0, $snappy := false) {
     anim.start  = start;
     anim.target = target;
@@ -366,6 +378,40 @@ get_num_cpus :: () -> s32 {
     return num_cpus;
 }
 
+is_white_space :: inline (char : u8) -> bool #no_aoc {
+    result : u32 = ---;
+
+    // Should be in register, not immediate
+    white_spaces : u64 = (#char " "  <<  0)  // space.
+                       | (#char "\t" <<  8)  // horizontal tab.
+                       | (#char "\n" << 16)  // line feed.
+                       | (#char "\r" << 24)  // carriage return.
+                       | (0x0C       << 32)  // form feed.    Warning: Unknown escape sequence '\f' in string constant!
+                       | (0x0B       << 40); // vertical tab. Warning: Unknown escape sequence '\v' in string constant!
+
+    #asm {
+        chars  : vec === 0;
+        mask   : vec === 1;
+        spaces : vec === 2;
+        result       === a;
+        white_spaces === b;
+        char         === c;
+
+        movq spaces, white_spaces;
+
+        pxor mask, mask;
+
+        // Fill chars with c
+        pinsrb chars, char, 0;
+        pshufb chars, mask;
+
+        pcmpeqb chars, spaces;
+
+        pmovmskb result, chars;
+    }
+
+    return cast,no_check(bool) result;
+}
 
 #scope_export
 

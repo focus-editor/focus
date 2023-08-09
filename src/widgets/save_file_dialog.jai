@@ -84,7 +84,7 @@ save_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
                         modified_on_disk = false;
                         deleted = false;
 
-                        meow_hash = calculate_meow_hash(bytes);
+                        meow_hash = calculate_hash(bytes);
 
                         error_when_saving = false;
                         crlf = false;

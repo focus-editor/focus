@@ -69,7 +69,7 @@ maybe_load_previous_session :: () -> Session {
     //     contents: [] u8 = --- ;
     //     contents.data  = cast(*u8) state_data;
     //     contents.count = size_of(Editor_State);
-    //     hash := calculate_meow_hash(contents);
+    //     hash := calculate_hash(contents);
     //     if hash != state_data.meow_hash {
     //         log_error("Session state file '%' possibly corrupted - hash doesn't match", state_file_path);
     //         return;
@@ -107,7 +107,7 @@ maybe_load_previous_session :: () -> Session {
     //
     //         file_data.count -= size_of(u64);  // cut off the hash at the end
     //         stored_hash := << cast(*u64) (file_data.data + file_data.count);
-    //         if stored_hash != calculate_meow_hash(to_bytes(file_data)) {
+    //         if stored_hash != calculate_hash(to_bytes(file_data)) {
     //             log_error("File '%' may be corrupt - hashes don't match", info.full_name);
     //             return;  // don't process this file
     //         }
@@ -327,7 +327,7 @@ save_editor_state_into_file :: () {
     data.data  = cast(*u8) *session.editors;
     data.count = size_of(type_of(session.editors));
 
-    hash := calculate_meow_hash(to_bytes(data));
+    hash := calculate_hash(to_bytes(data));
 
     append(*builder, data);
     append(*builder, cast(*u8) *hash, size_of(type_of(hash)));
@@ -386,7 +386,7 @@ dump_buffer_state :: (buffer_id: s64) -> [] u8 #must {
 
     // Calculate and append a hash for verification
     hashable_str := builder_to_string(*builder, allocator = temp, do_reset = false);
-    meow_hash := calculate_meow_hash(to_bytes(hashable_str));
+    meow_hash := calculate_hash(to_bytes(hashable_str));
     append(*builder, cast(*u8) *meow_hash, size_of(type_of(meow_hash)));
 
     str := builder_to_string(*builder);

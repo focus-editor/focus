@@ -1,5 +1,5 @@
-VERSION      :: "0.1.10";
-RELEASE_DATE :: "6 June 2023";
+VERSION      :: "0.2.0-rc";
+RELEASE_DATE :: "August 2023";
 
 #run build();
 

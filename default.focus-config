@@ -54,7 +54,8 @@ max_editor_width:                       -1
 can_cancel_go_to_line:                  true
 copy_whole_line_without_selection:      false
 editor_history_size:                    1024
-shrink_towards_original_cursor          false
+line_wrap_is_on_by_default:             false
+show_line_numbers:                      false
 
 
 [[keymap]]
@@ -84,6 +85,7 @@ Alt-ArrowDown               move_selected_lines_down
 Ctrl-J                      join_lines
 Ctrl-Shift-J                join_lines_no_spaces_in_between
 
+Ctrl-Tab                    autoindent_region
 Tab                         indent_or_go_to_next_tabstop
 Shift-Tab                   unindent
 

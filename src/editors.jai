@@ -123,17 +123,15 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         return false;
     }
 
-    cursors := editor.cursors;
-
     // We always want to put some actions in a separate edit group (e.g. block indent)
     new_group := false;
-    for cursor : cursors { if new_edit_group_required_for_action(action, cursor) { new_group = true; break; } }
+    for cursor : editor.cursors { if new_edit_group_required_for_action(action, cursor) { new_group = true; break; } }
     if new_group || frame_time - buffer.last_edit_time >= EDIT_GROUP_TIMEOUT then new_edit_group(buffer, editor);  // do it before action
 
     // We want to remember where cursors were before we do any edits
     if buffer.edits.count == 0 {
-        array_resize(*buffer.cursors, cursors.count);
-        for * cursor, i : buffer.cursors { <<cursor = cursors[i].state; }
+        array_resize(*buffer.cursors, editor.cursors.count);
+        for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
     }
 
     keep_selection := false;
@@ -201,6 +199,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .indent_or_go_to_next_tabstop;     indent_or_tab                       (editor, buffer); keep_selection = true;
         case .indent;                           indent_lines                        (editor, buffer); keep_selection = true;
         case .unindent;                         unindent_lines                      (editor, buffer); keep_selection = true;
+        case .autoindent_region;                autoindent_region                   (editor, buffer); keep_selection = true;
+
         case .toggle_comment;                   toggle_comment                      (editor, buffer); keep_selection = true;
         case .toggle_block_comment;             toggle_block_comment                (editor, buffer); keep_selection = true;
         case .select_line;                      select_lines                        (editor, buffer); keep_selection = true;
@@ -244,7 +244,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
     if is_a_move_action(action) && shift_pressed then keep_selection = true;
 
     if editor.cursor_moved && !keep_selection {
-        for * cursors { it.sel = it.pos; }  // remove selection
+        for * editor.cursors { it.sel = it.pos; }  // remove selection
     }
 
     // NOTE: even though we also do it in refresh_open_buffers, we do it here
@@ -254,8 +254,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         rescan_for_lines(buffer);
         if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
     }
-    for * cursors put_cursor_in_valid_spot(it, buffer);
-    if cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
+    for * editor.cursors put_cursor_in_valid_spot(it, buffer);
+    if editor.cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
 
     if editor.cursor_moved && !enabled_whole_words then editor.search_whole_words = false;
     if editor.cursor_moved then editor.refresh_highlights = true;  // update or remove highlights
@@ -1045,6 +1045,7 @@ viewport_glue_to_point :: (editor: *Editor, buffer: Buffer) -> changed: bool {
     using editor.viewport;
 
     old_top := top;
+    glue_point.buffer_pos = clamp(glue_point.buffer_pos, 0, cast(s32)max(0, buffer.bytes.count-1));
     line := offset_to_line(editor, buffer, glue_point.buffer_pos);
     top = line * cast(s32) line_height + glue_point.offset_within_line;
     scroll_y.target = top;
@@ -1113,8 +1114,8 @@ create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; be
     original_pos_coords := offset_to_coords(editor, buffer, original.pos);
     original_sel_coords := offset_to_coords(editor, buffer, original.sel);
 
-    cursor := array_add(*cursors);
-    << cursor  = edge_cursor;
+    array_add(*cursors, edge_cursor);
+    cursor := *cursors[cursors.count-1];
 
     pos_coords := offset_to_coords(editor, buffer, cursor.pos);
     if where == .above then pos_coords.line -= 1; else pos_coords.line += 1;
@@ -1229,7 +1230,7 @@ save_buffer :: (editor: *Editor, buffer: *Buffer, save_new_file := false) {
                     modified_on_disk = false;
                     deleted = false;
 
-                    meow_hash = calculate_meow_hash(bytes);
+                    meow_hash = calculate_hash(bytes);
 
                     error_when_saving = false;
                     crlf = false;
@@ -1678,6 +1679,8 @@ break_line :: (editor: *Editor, buffer: *Buffer) {
     }
 
     editor.cursor_moved = .unimportant;
+
+    maybe_autoindent(editor, buffer);
 }
 
 new_line_below :: (editor: *Editor, buffer: *Buffer) {
@@ -1709,6 +1712,8 @@ new_line_below :: (editor: *Editor, buffer: *Buffer) {
     }
 
     editor.cursor_moved = .unimportant;
+
+    maybe_autoindent(editor, buffer);
 }
 
 new_line_above :: (editor: *Editor, buffer: *Buffer) {
@@ -1740,6 +1745,15 @@ new_line_above :: (editor: *Editor, buffer: *Buffer) {
     }
 
     editor.cursor_moved = .unimportant;
+
+    maybe_autoindent(editor, buffer);
+}
+
+maybe_autoindent :: (editor: *Editor, buffer: *Buffer) {
+    if !config.settings.autoindent_new_lines return;
+
+    rescan_for_lines(buffer);
+    autoindent_region(editor, buffer, fallback = false);
 }
 
 delete_word_left :: (editor: *Editor, buffer: *Buffer) {
@@ -1851,12 +1865,6 @@ delete_right_char :: (editor: *Editor, buffer: *Buffer) {
     editor.cursor_moved = .unimportant;
 }
 
-get_tmp_spaces :: (num: s64) -> string {
-    spaces := talloc_string(num);
-    memset(spaces.data, cast(u8) #char " ", num);
-    return spaces;
-}
-
 indent_or_tab :: (editor: *Editor, buffer: *Buffer) {
     indent := true;
     for editor.cursors { if !has_selection(it) { indent = false; break; } }
@@ -1940,7 +1948,7 @@ indent_lines :: (editor: *Editor, buffer: *Buffer) {
     for * cursor : editor.cursors {
         pos := cursor.pos;
         sel := cursor.sel;
-        for line_start : line_starts { // @tabs
+        for line_start : line_starts {
             if line_start <= pos then cursor.pos += tab_size;
             if line_start <= sel then cursor.sel += tab_size;
             if line_start > pos && line_start > sel break;
@@ -2007,6 +2015,125 @@ unindent_lines :: (editor: *Editor, buffer: *Buffer) {
     editor.cursor_moved = .unimportant;
 }
 
+autoindent_region :: (editor: *Editor, buffer: *Buffer, fallback := true) {
+    // We assume that any {, [ or ( left unclosed means that the next line should be indented.
+    // This is not true for Python, for example, we might handle other cases later
+
+    // We tokenize on demand here rather than storing tokens when highlighting to save space (they are needed very rarely).
+    // This will also help us find the line to base the indentation of subsequent lines off of, as lines containing things
+    // such as multiline comments or here-strings can not be used as a base.
+    tokens := tokenize_for_indentation(buffer);
+
+    if !tokens {
+        // Unsupported - fall back to normal indentation
+        if fallback indent_lines(editor, buffer);
+        return;
+    }
+
+    line_ranges := get_whole_line_ranges_for_cursors(editor, buffer);
+
+    replacements: [..] string;
+    replacements.allocator = temp;
+
+    for * line_range : line_ranges {
+        // Determine the base indentation level by looking backwards at the first nonempty line
+        base_level: int;
+        {
+            token, token_id := find_closest_indentation_token(tokens, line_range.start);
+            line_num        := offset_to_real_line(buffer, token.start);
+            line_start      := get_real_line_start_offset(buffer, line_num);
+
+            while line_num > 0 && token_id > 0 {
+                token = find_closest_indentation_token(tokens, line_start);
+                if token.type != .maybe_multiline || (token.start + token.len) <= line_start break;
+                line_num   = offset_to_real_line(buffer, token.start);
+                line_start = get_real_line_start_offset(buffer, line_num);
+            }
+
+            level, next_level := get_base_indent_from_line(buffer, line_num, tokens);
+            if line_range.start != line_start {
+                base_level = next_level;  // derived the level from a line above, not the first line of the range
+            } else {
+                base_level = level;
+            }
+
+            // #if DEBUG {
+            //     print("BASE LINE FOR INDENT:\n%\n", get_real_line_as_string(buffer, line_num));
+            //     print("base_level: %, next_level: %\n", level, next_level);
+            // }
+        }
+
+        // Build a replacement string for the whole range.
+        replacement: string;
+        {
+            b: String_Builder;
+            b.allocator = temp;
+
+            range_str := get_range_as_string(buffer, line_range.range);
+            if ends_with(range_str, "\n") then range_str.count -= 1;
+            lines_in_range := split(range_str, cast(u8) #char "\n");
+
+            level := base_level;
+            start, end: s32;
+            current_delta, next_delta: int;
+
+            for line, i : lines_in_range {
+                if line {
+                    // Check the line's tokens to see if we need to change the indentation level
+                    start = cast(s32) (line.data - buffer.bytes.data);
+                    end   = cast(s32) (start + line.count);
+                    current_delta, next_delta = get_indentation_changes_from_tokens_within_range(tokens, start, end);
+                    level = max(0, level + current_delta);
+                } else {
+                    start = end + 1;  // can't use pointer arithmetic here
+                    next_delta = 0;
+                }
+
+                if !offset_is_within_multiline_token(tokens, start) {
+                    // Indent the line
+                    whitespace := ifx config.settings.insert_spaces_when_pressing_tab then get_tmp_spaces(level * TAB_SIZE) else get_tmp_tabs(level);
+                    append(*b, whitespace);
+                    append(*b, trim(line));
+                    append(*b, "\n");
+                } else {
+                    // Don't indent
+                    append(*b, line);
+                    append(*b, "\n");
+                }
+
+                level = max(0, level + next_delta);
+            }
+
+            replacement = builder_to_string(*b, allocator = temp);
+        }
+
+        array_add(*replacements, replacement);
+    }
+
+    assert(line_ranges.count == replacements.count);
+
+    offset_delta := 0;
+
+    for * line, i : line_ranges {
+        line.range.start += xx offset_delta;
+        line.range.end   += xx offset_delta;
+
+        new_str := replacements[i];
+        replace_range(buffer, line.range, new_str);
+
+        delta := cast(s32) (new_str.count - (line.range.end - line.range.start));
+        offset_delta += delta;
+
+        for * cursor : editor.cursors {
+            // TODO: handle the case when the cursor is within the range
+            if cursor.pos >= line.start then cursor.pos = max(cursor.pos + delta, line.start);
+            if cursor.sel >= line.start then cursor.sel = max(cursor.sel + delta, line.start);
+        }
+    }
+
+    editor.cursor_moved = .unimportant;
+}
+
 remove_additional_cursors :: (editor: *Editor) {
     cursor := leave_only_original_cursor(editor);
     cursor.sel = cursor.pos;
@@ -2019,7 +2146,13 @@ select_all :: (editor: *Editor, buffer: Buffer) {
     cursor.pos = cast(s32) buffer.bytes.count;
 }
 
-Line_Range :: struct { prev_line_start: s32; next_line_end: s32; range: Offset_Range; is_last: bool; next_line_is_last: bool; };
+Line_Range :: struct {
+    using range: Offset_Range;
+    prev_line_start: s32;
+    next_line_end: s32;
+    is_last: bool;
+    next_line_is_last: bool;
+};
 
 get_whole_line_ranges_for_cursors :: (editor: Editor, buffer: Buffer, merge_adjacent := true, select_next_for_single_lines := false) -> [] Line_Range /* tmp */ {
     line_ranges: [..] Line_Range;
@@ -2149,8 +2282,8 @@ join_lines :: (editor: *Editor, buffer: *Buffer, in_between := " ") {
     offset_delta := 0;
 
     for * range : ranges {
-        range.range.start += xx offset_delta;
-        range.range.end   += xx offset_delta;
+        range.start += xx offset_delta;
+        range.end   += xx offset_delta;
 
         range_str := get_range_as_string(buffer, range.range);
         individual_lines := split(trim_right(range_str, " \t"), cast(u8) #char "\n");
@@ -2160,7 +2293,7 @@ join_lines :: (editor: *Editor, buffer: *Buffer, in_between := " ") {
         first_line_trimmed := trim_right(first_line, " \t");
         remaining_lines    := array_view(individual_lines, 1, individual_lines.count - 1);
 
-        delete_offset := range.range.start + first_line_trimmed.count;
+        delete_offset := range.start + first_line_trimmed.count;
         add_deletion(first_line.count - first_line_trimmed.count);
 
         append(*b, first_line_trimmed);
@@ -2179,7 +2312,7 @@ join_lines :: (editor: *Editor, buffer: *Buffer, in_between := " ") {
 
         new_str := builder_to_string(*b, allocator = temp);
         replace_range(buffer, range.range, new_str);
-        add_paste_animation(editor, .{ start = range.range.start + cast(s32)first_line.count, end = range.range.start + cast(s32)new_str.count });
+        add_paste_animation(editor, .{ start = range.start + cast(s32)first_line.count, end = range.start + cast(s32)new_str.count });
 
         offset_delta += new_str.count - range_str.count;
     }

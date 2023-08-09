@@ -7,10 +7,12 @@ calculate_meow_hash :: (bytes: [] u8) -> u64 {
     return MeowU64From(hash, 0);
 }
 
-calculate_meow_hash :: inline (s: string) -> u64 {
-    return calculate_meow_hash(to_bytes(s));
+fallback_hash :: (bytes: [] u8) -> u64 {
+    return Hash.get_hash(bytes);
 }
 
 #scope_file
 
 #import "meow_hash";
+
+Hash :: #import "Hash";
