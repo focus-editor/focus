@@ -170,8 +170,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .undo;                             undo                                (editor, buffer); keep_selection = true;
         case .redo;                             redo                                (editor, buffer); keep_selection = true;
         case .select_all;                       select_all                          (editor, buffer); keep_selection = true;
-        case .create_cursor_above;              create_cursor                       (editor, buffer, .above); keep_selection = true;
-        case .create_cursor_below;              create_cursor                       (editor, buffer, .below); keep_selection = true;
+        case .create_cursor_above;              if config.settings.shrink_towards_original_cursor && editor.original_cursor < editor.main_cursor then delete_cursor(editor, buffer, .above); else create_cursor(editor, buffer, .above); keep_selection = true;
+        case .create_cursor_below;              if config.settings.shrink_towards_original_cursor && editor.original_cursor > editor.main_cursor then delete_cursor(editor, buffer, .below); else create_cursor(editor, buffer, .below); keep_selection = true;
 
         case .select_word;                      select_word(editor, buffer); keep_selection = true;
         case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
@@ -1089,6 +1089,22 @@ line_wrap_is_active :: inline (editor: Editor) -> bool {
 }
 
 #scope_file
+
+delete_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; below; }) {
+    organise_cursors(editor);
+    if where == .above { // we shrink upwards
+        main_cursor -= 1;
+    } else { // we shrink downwards
+        new_cursors: []Cursor = cursors;
+        new_cursors.data += 1;
+        new_cursors.count -= 1;
+        for new_cursors cursors[it_index] = it;
+        original_cursor -= 1;
+    }
+    cursors.count -= 1;
+    organise_cursors(editor);
+    cursor_moved = .refresh_only;
+}
 
 create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; below; }) {
     organise_cursors(editor);
