@@ -596,7 +596,6 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         if viewport.top == viewport.scroll_y.target {
             viewport_glue_to_point(editor, buffer);
-            viewport.scroll_y.started_at = 0;
         } else {
             redraw_requested = true;
             viewport.top = get_animation_value(viewport.scroll_y);
