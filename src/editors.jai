@@ -3106,6 +3106,5 @@ cursor_blink_start: Time;
 cursors_blinking := false;
 
 CURSOR_BLINK_SPEED_MS   :: 500;
-CURSOR_BLINK_TIMEOUT_MS :: 5_000;  // when to stop blinking on inaction
 
 #import "Clipboard";
