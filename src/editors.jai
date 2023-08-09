@@ -1009,6 +1009,8 @@ scan_through_similar_chars_on_the_right :: (using buffer: Buffer, offset: s32, o
 }
 
 cursors_start_blinking :: inline () {
+    if !config.settings.cursor_blinking return;
+
     cursor_blink_start = frame_time;
     platform_set_refresh_timer(window);
     cursors_blinking = true;
@@ -1020,7 +1022,7 @@ cursors_stop_blinking :: inline () {
 }
 
 should_draw_cursors :: inline () -> bool {
-    if !cursors_blinking return true;
+    if !cursors_blinking || !config.settings.cursor_blinking return true;
 
     ms_since_start := cast(s64) ((frame_time - cursor_blink_start) * 1000);
     if ms_since_start > CURSOR_BLINK_TIMEOUT_MS {
