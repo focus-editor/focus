@@ -322,6 +322,7 @@ Settings :: struct {
     maximize_on_start                   := false;
     open_on_the_biggest_monitor         := true;
     cursor_as_block                     := true;
+    cursor_blinking                     := true;
     highlight_selection_occurrences     := true;
     disable_that_annoying_paste_effect  := false;
     disable_file_open_close_animations  := false;
