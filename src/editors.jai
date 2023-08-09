@@ -170,8 +170,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .undo;                             undo                                (editor, buffer); keep_selection = true;
         case .redo;                             redo                                (editor, buffer); keep_selection = true;
         case .select_all;                       select_all                          (editor, buffer); keep_selection = true;
-        case .create_cursor_above;              if config.settings.shrink_towards_original_cursor && editor.original_cursor < editor.main_cursor then delete_cursor(editor, buffer, .above); else create_cursor(editor, buffer, .above); keep_selection = true;
-        case .create_cursor_below;              if config.settings.shrink_towards_original_cursor && editor.original_cursor > editor.main_cursor then delete_cursor(editor, buffer, .below); else create_cursor(editor, buffer, .below); keep_selection = true;
+        case .create_cursor_above;              create_cursor                       (editor, buffer, .above); keep_selection = true;
+        case .create_cursor_below;              create_cursor                       (editor, buffer, .below); keep_selection = true;
 
         case .select_word;                      select_word(editor, buffer); keep_selection = true;
         case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
@@ -1109,30 +1109,44 @@ delete_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; be
 create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; below; }) {
     organise_cursors(editor);
 
-    edge_cursor := ifx where == .above then cursors[0] else cursors[cursors.count-1];
-    original    := cursors[original_cursor];
-    original_pos_coords := offset_to_coords(editor, buffer, original.pos);
-    original_sel_coords := offset_to_coords(editor, buffer, original.sel);
-
-    array_add(*cursors, edge_cursor);
-    cursor := *cursors[cursors.count-1];
-
-    pos_coords := offset_to_coords(editor, buffer, cursor.pos);
-    if where == .above then pos_coords.line -= 1; else pos_coords.line += 1;
-    pos_coords.col = original_pos_coords.col;
-
-    cursor.pos = coords_to_offset(editor, buffer, pos_coords);
-    cursor.col_wanted = original_pos_coords.col;
-
-    if has_selection(original) {
-        sel_coords := pos_coords;
-        sel_coords.line += original_sel_coords.line - original_pos_coords.line;
-        sel_coords.col  += original_sel_coords.col  - original_pos_coords.col;
-        cursor.sel = coords_to_offset(editor, buffer, sel_coords);
+    if where == .above && original_cursor < main_cursor {
+        // Should delete the bottom cursor instead
+        assert(cursors.count > 1);
+        cursors.count -= 1;
+        main_cursor = clamp(main_cursor, 0, cursors.count - 1);
+    } else if where == .below && main_cursor < original_cursor {
+        // Should delete the top cursor instead
+        assert(cursors.count > 1);
+        array_ordered_remove_by_index(*cursors, 0);
+        if main_cursor     > 0 then main_cursor -= 1;
+        if original_cursor > 0 then original_cursor -= 1;
     } else {
-        cursor.sel = cursor.pos;
+        // Create cursor
+        edge_cursor := ifx where == .above then cursors[0] else cursors[cursors.count-1];
+        original    := cursors[original_cursor];
+        original_pos_coords := offset_to_coords(editor, buffer, original.pos);
+        original_sel_coords := offset_to_coords(editor, buffer, original.sel);
+
+        array_add(*cursors, edge_cursor);
+        cursor := *cursors[cursors.count-1];
+
+        pos_coords := offset_to_coords(editor, buffer, cursor.pos);
+        if where == .above then pos_coords.line -= 1; else pos_coords.line += 1;
+        pos_coords.col = original_pos_coords.col;
+
+        cursor.pos = coords_to_offset(editor, buffer, pos_coords);
+        cursor.col_wanted = original_pos_coords.col;
+
+        if has_selection(original) {
+            sel_coords := pos_coords;
+            sel_coords.line += original_sel_coords.line - original_pos_coords.line;
+            sel_coords.col  += original_sel_coords.col  - original_pos_coords.col;
+            cursor.sel = coords_to_offset(editor, buffer, sel_coords);
+        } else {
+            cursor.sel = cursor.pos;
+        }
+        main_cursor = cursors.count - 1;
     }
-    main_cursor = cursors.count - 1;
 
     organise_cursors(editor);
 
