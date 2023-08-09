@@ -26,7 +26,7 @@
     + New command: toggle_block_comment (for the supported languages)
     + New command: autoindent_region (bound to Ctrl-Tab by default on Windows/Linux, Option-Tab on Mac). Works with the C-like languages we have syntax highlighting for. Should work similarly to Emacs.
     + New commands: move_to_previous_buffer, move_to_next_buffer. They work like normal editor history, but skip the cursor movements and jump right to the next buffer or layout change
-    + New config option: cursor_blinking
+    + New config option: cursor_blink_time_in_seconds (5 by default). Set to 0 if you don't want the cursors to blink at all.
     + It is now possible to paste whatever was copied with N cursors into another file as long as the number of cursors there is also N (thanks @hfr4)
     + Syntax highlighting for GLSL (thanks @SentientCoffee)
     + Linux: The "Open Projects Directory" command as well as shift-clicking files/directories in the "open file" dialogs (Ctrl+O, Ctrl+Shift+O, Ctrl+P) should now work.
