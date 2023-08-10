@@ -789,6 +789,11 @@ search_bar_move_cursor :: (using editor: *Editor, buffer: Buffer, delta: s64, wr
 
 search_bar_open_selected_result :: (editor: Editor, buffer: Buffer, placement: Editor_Placement) {
     using editor.search_bar;
+    if results.count <= 0 {
+        // Don't do anything because there aren't even any results to open
+        // @Todo: should we deactivate it and move to the other open editor (as if it wasn't open)?
+        return;
+    }
 
     active = false;  // close it immediately
 
