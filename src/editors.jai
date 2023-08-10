@@ -910,6 +910,7 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
             case "jai";            buffer.lang = .Jai;
             case "focus-config";   buffer.lang = .Focus_Config;
             case "cs";             buffer.lang = .CSharp;
+            case "go";         buffer.lang = .Golang;
 
             case "vert"; #through; // NOTE: Vertex shader extension
             case "frag"; #through; // NOTE: Fragment shader extension
@@ -2522,6 +2523,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
     if buffer.lang == {
         case .C;            comment_without_space = "//";
         case .CSharp;       comment_without_space = "//";
+        case .Golang;       comment_without_space = "//";
         case .Jai;          comment_without_space = "//";
         case .Focus_Config; comment_without_space = "#";
         case;               return;
@@ -2617,6 +2619,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
     if buffer.lang == {
         case .C;            comment_start = "/*"; comment_end = "*/";
         case .CSharp;       comment_start = "/*"; comment_end = "*/";
+        case .Golang;       comment_start = "/*"; comment_end = "*/";
         case .Jai;          comment_start = "/*"; comment_end = "*/";
         case;               toggle_comment(editor, buffer); return;  // fallback to toggle_comment for the rest.
     }
