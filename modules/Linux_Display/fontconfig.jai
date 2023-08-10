@@ -19,7 +19,7 @@ fc_find_font :: (name: string, allocator := temp) -> success: bool, path: string
         }
     }
 
-    match_string := sprint("%:spacing=100", to_string(escaped_name.data, escaped_name.count));
+    match_string := sprint("%:spacing=100\0", to_string(escaped_name.data, escaped_name.count));
     defer free(match_string);
 
     pat := FcNameParse(match_string.data); defer FcPatternDestroy(pat);
