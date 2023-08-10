@@ -1,3 +1,5 @@
+CURRENT_CONFIG_VERSION :: 2;
+
 load_global_config :: (fallback_to_default_on_failure := false) -> success: bool, changed: bool, there_were_warnings: bool {
     global_config_path = sprint("%/global.focus-config", config_dir);
 

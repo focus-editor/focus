@@ -3,8 +3,13 @@ parse_config :: (name: string, filename: string, file_data: string) -> Parsed_Co
 
     // NOTE: we don't free on purpose, because some of the parsed data will point into the file data
     trimmed_data := trim_left(file_data, " \t\n\r");  // skip empty lines, otherwise the handler will crash!
-    start_from_memory(*parser.handler, name, filename, trimmed_data);
-    if parser.handler.failed return Parsed_Config.{}, false, tprint("Couldn't parse file '%'.\nPlease check that the version number is specified at the top in brackets, otherwise check the error log.", filename), .[];
+    start_from_memory(*handler, name, filename, trimmed_data);
+    if handler.failed return Parsed_Config.{}, false, tprint("Couldn't parse file '%'.\nPlease check that the version number is specified at the top in brackets, otherwise check the error log.", filename), .[];
+
+    parsed_config.version = handler.version;
+    if parsed_config.version < 1 || parsed_config.version > 2 {
+        return parsed_config, false, tprint("Invalid config version [%] in file '%'. Supported versions are: [1], [2].", parsed_config.version, filename), .[];
+    }
 
     warnings: [..] string;
     warnings.allocator = temp;
@@ -583,6 +588,8 @@ platform_parse_config_line :: (using parser: *Config_Parser, line: string) -> su
 // A struct to represent the raw parsed config, where not everything might be present
 // (we need to know what's missing so that we can properly merge the global config with the project config, for example)
 Parsed_Config :: struct {
+    version: int;
+
     // Workspace
     workspace_dirs:         [..] string;
     ignore_dirs:            [..] string;
