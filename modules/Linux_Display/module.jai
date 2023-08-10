@@ -292,6 +292,14 @@ update_window_events :: () {
         array_reset_keeping_memory(*events_this_frame);
 
         memcpy(Input.input_button_states.data, input_button_states.data, input_button_states.count * size_of(Input.Key_Current_State));
+
+        Input.mouse_delta_x = mouse_delta_x;
+        Input.mouse_delta_y = mouse_delta_y;
+        Input.mouse_delta_z = mouse_delta_z;
+
+        mouse_delta_x = 0;
+        mouse_delta_y = 0;
+        mouse_delta_z = 0;
     }
 }
 
@@ -348,6 +356,10 @@ global_windows: [..] _Window;
 WHEEL_DELTA : s32 : 120;
 
 global_app_id: string;
+
+mouse_delta_x: int;
+mouse_delta_y: int;
+mouse_delta_z: int;
 
 events_this_frame: [..]Input.Event;
 input_button_states: [Input.NUM_BUTTON_STATES] Input.Key_Current_State;

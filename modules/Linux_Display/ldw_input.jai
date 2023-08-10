@@ -223,7 +223,7 @@ pointer_listener :: wl_pointer_listener.{
                 event.typical_wheel_delta = WHEEL_DELTA;
                 event.wheel_delta = d.pointer_axis_accumulator[0];
                 array_add(*events_this_frame, event);
-                Input.mouse_delta_z += event.wheel_delta;
+                mouse_delta_z += event.wheel_delta;
 
                 d.pointer_axis_accumulator[0] = 0;
             }
