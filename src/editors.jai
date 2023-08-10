@@ -910,7 +910,7 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
             case "jai";            buffer.lang = .Jai;
             case "focus-config";   buffer.lang = .Focus_Config;
             case "cs";             buffer.lang = .CSharp;
-            case "go";         buffer.lang = .Golang;
+            case "go";             buffer.lang = .Golang;
 
             case "vert"; #through; // NOTE: Vertex shader extension
             case "frag"; #through; // NOTE: Fragment shader extension

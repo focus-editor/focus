@@ -480,9 +480,9 @@ Token :: struct {
     type: Type;
 
     union {
-        keyword:            Keyword;
-        punctuation:        Punctuation;
-        operation:          Operation;
+        keyword:                Keyword;
+        punctuation:            Punctuation;
+        operation:              Operation;
         preprocessor_directive: Directive;
     }
 
