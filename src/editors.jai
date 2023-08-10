@@ -2449,6 +2449,11 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false, 
 paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
     system_clipboard_text := os_clipboard_get_text();
 
+    // Don't paste CRLF from other editors
+    clipboard_bytes := to_bytes(system_clipboard_text);
+    remove_crlf_in_place(*clipboard_bytes);
+    system_clipboard_text = to_string(clipboard_bytes);
+
     if system_clipboard_text != clipboard.text {
         // Editor clipboard and system clipboard are out of sync - drop the editor one
         if clipboard.text free(clipboard.text);

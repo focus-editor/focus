@@ -6,6 +6,7 @@
 - Open file dialog improvements
 - Workspace search improvements (the ability to filter additionally by filename)
 - Language highlighting config files
+- Add the ability to assign syntax to a buffer
 - Config files for directories (i.e. adding a .focus-config file to your directory and have Focus load it)
 - Improve smooth scrolling for fancy mice
 - Identifier search
@@ -30,6 +31,8 @@
     + Line wrap is now supported (use the toggle_line_wrap command - default shortcut on Windows is Alt-Z). If you want line wrap to be on by default, use `line_wrap_is_on_by_default: true`
     + New command: toggle_block_comment (for the supported languages)
     + New command: autoindent_region (bound to Ctrl-Tab by default on Windows/Linux, Option-Tab on Mac). Works with the C-like languages we have syntax highlighting for. Should work similarly to Emacs.
+    + New command: delete_current_file. Not bound to anything by default, but can be used from the commands dialog (thanks @SentientCoffee)
+    + New command: save_as. Also not bound to any key combination by default (thanks @SentientCoffee)
     + New commands: move_to_previous_buffer, move_to_next_buffer. They work like normal editor history, but skip the cursor movements and jump right to the next buffer or layout change
     + New config option: cursor_blink_time_in_seconds (5 by default). Set to 0 if you don't want the cursors to blink at all.
     + It is now possible to paste whatever was copied with N cursors into another file as long as the number of cursors there is also N (thanks @hfr4)
