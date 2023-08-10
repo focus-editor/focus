@@ -1084,6 +1084,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                         selected_result = entry_index;
                         jump_to_search_result(editor, buffer);
                         close_search_bar(editor);
+                        redraw_requested = true;
+                        break;  // don't finish drawing entries because they are reset
                     }
                     draw_rect(entry_rect, Colors.LIST_CURSOR_LITE);
                 }

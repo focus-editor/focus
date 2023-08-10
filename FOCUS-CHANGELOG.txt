@@ -1,14 +1,18 @@
 # ROUGH ROADMAP
 
+- A simple build system to launch commands from the editor
+- Config highlighting improvements
+- Config migration system to support changes to the config file across versions
+- Open file dialog improvements
+- Workspace search improvements (the ability to filter additionally by filename)
+- Language highlighting config files
 - Config files for directories (i.e. adding a .focus-config file to your directory and have Focus load it)
-- Global search improvements (the ability to filter additionally by filename)
-- Backup unsaved changes
-- Highlight other languages
 - Improve smooth scrolling for fancy mice
 - Identifier search
 - A little bit of semantic highlighting for Jai
 - Settings per file type
 - Custom title bar on Windows
+- Backup unsaved changes
 - Proper highlighting for C++
 - ...
 
@@ -16,6 +20,7 @@
 # KNOWN BUGS
 
 - [Current file watcher limitation] If you open a file in a large folder, the file watcher might scan the whole folder in order to watch for the changes to the file.
+- Sometimes when files are changed externally the editor won't notice the changes. We're trying to hunt the bug down.
 
 
 # Main Git Branch
@@ -46,6 +51,7 @@
     + Fixed a bug with global search not finding everything when case sensitive or whole word toggles are just turned on
     + Fixed several issues in the editor history
     + Linux: fixed a bug related to mouse cursor handling which caused slowdowns and cursor flickering on X11 (thanks @valignatev)
+    + Linux: there's now a VERY basic save file dialog for new files (thanks @rexim)
 
 + Other changes:
     + BREAKING: default config is no longer used as a fallback for missing keymaps, so anything you haven't listed explicitly in the global config won't be included
@@ -54,6 +60,7 @@
     + Added #ifdef/#ifndef highlighting to C/C++
     + Added #compile_time/#no_debug/#no_aoc highlighting to Jai
     + Multi-cursor line cuts will no longer include extra newlines
+    + When adding cursors above/below it's now possible to easily remove the last added cursor by executing the opposite command (thanks @WWilliams741)
     + Added a notification about match case or match whole word toggles active when no search results found
     + When editor width is limited in settings, the non-editor part of the window will be colored using the `background_dark` color
     + Linux: The editor shoudn't use any CPU while idle.
