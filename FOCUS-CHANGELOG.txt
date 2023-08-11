@@ -29,7 +29,7 @@
     + Windows 11+: New config option: `colored_titlebar`. Sets the color of the title bar to the background color (thanks @amasondev)
 
 + Bug fixes:
-    ...
+    + It should now be possible to scroll the viewport by dragging ouside it in all cases (previously it wasn't always possible - see issue #101)
 
 + Other changes:
     ...
