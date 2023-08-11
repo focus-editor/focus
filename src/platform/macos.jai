@@ -105,6 +105,10 @@ platform_path_contains :: inline (path: string, subpath: string) -> bool {
     return contains(path, subpath);
 }
 
+platform_set_border_color :: inline () {
+
+}
+
 #scope_file
 
 Monitor :: struct {
