@@ -57,9 +57,7 @@ copy_whole_line_without_selection:      false
 editor_history_size:                    1024
 line_wrap_is_on_by_default:             false
 show_line_numbers:                      false
-dark_titlebar:                          true
-# Windows 11 compatible only
-colored_titlebar:                       true
+colored_titlebar:                       true   # Windows 11+ only
 
 
 [[keymap]]

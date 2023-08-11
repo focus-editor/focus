@@ -1,5 +1,8 @@
-VERSION      :: "0.2.0";
-RELEASE_DATE :: "11 August 2023";
+VERSION      :: "0.2.0-dev";
+RELEASE_DATE :: #run -> string {
+    current_time := to_calendar(current_time_consensus());
+    return calendar_to_string(current_time);
+}
 
 #run build();
 
