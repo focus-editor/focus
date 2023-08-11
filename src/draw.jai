@@ -421,7 +421,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             }
 
             // We mark cursor as moved to trigger auto-scroll if we drag outside the editor
-            if !mouse_pointer_is_within(rect) then cursor_moved = .refresh_only;
+            if !mouse_pointer_is_within(shrink(rect, char_size)) then cursor_moved = .refresh_only;
 
             if !shift_pressed() && mouse.left.just_pressed then cursor.sel = cursor.pos;
 
