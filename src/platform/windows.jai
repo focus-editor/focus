@@ -229,17 +229,22 @@ platform_path_contains :: inline (path: string, subpath: string) -> bool {
 
 platform_set_border_color :: () {
     using DwmAttribute;
-    background := Colors.BACKGROUND;
-    r : u32 = cast(u32)(background.r * 255.0);
-    g : u32 = cast(u32)(background.g * 255.0);
-    b : u32 = cast(u32)(background.b * 255.0);
-    // COLORREF format is 0x00bbggrr
-    col : u32 = 0x00000000;
-    col |= b << 16;
-    col |= g << 8;
-    col |= r;
-    DwmSetWindowAttribute(window, BORDER_COLOR, *col, size_of(u32));
+    col : u32 = 0xFFFFFFFF;
+    if config.settings.colored_titlebar {
+        background := Colors.BACKGROUND;
+        r : u32 = cast(u32)(background.r * 255.0);
+        g : u32 = cast(u32)(background.g * 255.0);
+        b : u32 = cast(u32)(background.b * 255.0);
+        // COLORREF format is 0x00bbggrr
+        col = 0x00000000;
+        col |= b << 16;
+        col |= g << 8;
+        col |= r;
+    }
     DwmSetWindowAttribute(window, CAPTION_COLOR, *col, size_of(u32));
+
+    darkmode := ifx config.settings.dark_titlebar then 1 else 0;
+    DwmSetWindowAttribute(window, USE_IMMERSIVE_DARK_MODE , *darkmode, size_of(type_of(darkmode)));
 }
 
 #scope_file
