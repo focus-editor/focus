@@ -34,7 +34,7 @@
     + Fixed a bug with multi-cursor copying/pasting when some of the cursors don't have a selection
 
 + Other changes:
-    ...
+    + When the workspace is done scanning, the open file dialog input will no longer be cleared
 
 
 
