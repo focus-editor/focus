@@ -30,6 +30,8 @@
 
 + Bug fixes:
     + It should now be possible to scroll the viewport by dragging ouside it in all cases (previously it wasn't always possible - see issue #101)
+    + Duplicating a line near the end now duplicates a line as expected
+    + Fixed a bug with multi-cursor copying/pasting when some of the cursors don't have a selection
 
 + Other changes:
     ...

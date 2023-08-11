@@ -2401,22 +2401,24 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false, 
         organise_cursors(editor);
     }
 
-    // We are sure to copying something, dump all the previous clipboard slices
+    // We are sure now we're copying something, so dump all the previous clipboard slices
     array_reset(*clipboard.slices);
 
     // Fill the internal clipboard and the slices from the current editor cursors
     b: String_Builder;
     offset := 0;
     for * cursor : editor.cursors {
-        if !has_selection(cursor) && !cut && !config.settings.copy_whole_line_without_selection continue;
-
+        is_last_cursor := it_index == editor.cursors.count - 1;
         // Get string from the cursor and format it if necessary
-        str := ifx has_selection(cursor) {
+        str: string;
+        if has_selection(cursor) {
             selected_str := get_selected_string(cursor, buffer);
-            ifx it_index != editor.cursors.count - 1 then join(selected_str, "\n") else selected_str;
-        } else {
+            str = ifx !is_last_cursor then join(selected_str, "\n") else selected_str;
+        } else if cut || config.settings.copy_whole_line_without_selection {
             line_num := offset_to_real_line(buffer, cursor.pos);
             get_real_line_as_string(buffer, line_num);
+        } else {
+            str = ifx !is_last_cursor then "\n" else "";
         }
         append(*b, str);
 
@@ -2493,7 +2495,7 @@ paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
             selection       := get_selection(cursor);
             count           := clipboard_slice.count - 1; // Don't paste the last newline of the slice
             if it_index == clipboard.slices.count - 1 && clipboard_slice.was_selected then count += 1; // If the last slice was selected, it didn't have newline
-            str             := slice(clipboard.text, clipboard_slice.start, count);
+            str             := slice(clipboard.text, clipboard_slice.start, max(0, count));
 
             replace_range(buffer, selection, str);
 
