@@ -30,7 +30,7 @@ editors_handle_event :: (event: Input.Event) -> handled: bool {
             }
 
         case .TEXT_INPUT;
-            platform_show_cursor(false);
+            if config.settings.hide_mouse_when_typing platform_show_cursor(false);
             if !key_sequence_input_state.key_sequence_in_progress {
                 active_editor_type_char(event.utf32);
                 return true;
