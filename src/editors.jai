@@ -2416,7 +2416,7 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false, 
             str = ifx !is_last_cursor then join(selected_str, "\n") else selected_str;
         } else if cut || config.settings.copy_whole_line_without_selection {
             line_num := offset_to_real_line(buffer, cursor.pos);
-            get_real_line_as_string(buffer, line_num);
+            str = get_real_line_as_string(buffer, line_num);
         } else {
             str = ifx !is_last_cursor then "\n" else "";
         }
