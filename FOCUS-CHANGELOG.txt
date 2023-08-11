@@ -26,7 +26,7 @@
 # Main Git Branch
 
 + New features:
-    ...
+    + Windows 11+: New config option: `colored_titlebar`. Sets the color of the title bar to the background color (thanks @amasondev)
 
 + Bug fixes:
     ...
