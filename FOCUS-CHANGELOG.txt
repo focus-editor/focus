@@ -20,8 +20,7 @@
 
 # KNOWN BUGS
 
-- [Current file watcher limitation] If you open a file in a large folder, the file watcher might scan the whole folder in order to watch for the changes to the file.
-- Sometimes when files are changed externally the editor won't notice the changes. We're trying to hunt the bug down.
+- See https://github.com/focus-editor/focus/issues
 
 
 # Main Git Branch
@@ -37,6 +36,7 @@
     + New config option: cursor_blink_time_in_seconds (5 by default). Set to 0 if you don't want the cursors to blink at all.
     + It is now possible to paste whatever was copied with N cursors into another file as long as the number of cursors there is also N (thanks @hfr4)
     + Syntax highlighting for GLSL (thanks @SentientCoffee)
+    + Syntax highlighting for Golang (thanks @OlyaIvanovs)
     + Linux: The "Open Projects Directory" command as well as shift-clicking files/directories in the "open file" dialogs (Ctrl+O, Ctrl+Shift+O, Ctrl+P) should now work.
       By default the editor will try to auto-detect the preferred file manager using the XDG utilities.
       In case the auto-detection fails you can manually set the commands to run via the "explorer_command" and "explorer_reveal_command" options in the "[[linux]]" section of the config file.
@@ -49,6 +49,7 @@
 
 + Bug fixes:
     + Focus will fall back to a slower hash function on CPUs which don't support AES instructions instead of crashing
+    + When opening a file outside of workspace the editor should no longer scan its parent folder and its subfolders (but tell us if it still does)
     + Mac: Focus no longer collects window events when another window is active. This eliminates several bugs (Cmd+Tab spawning cursors, I-Beam cursor when using other apps) at the cost of no longer being able to vertically scroll unless Focus is active. For now.
     + Fixed a bug with the Navigate to file dialog being empty
     + Fixed a bug with global search not finding everything when case sensitive or whole word toggles are just turned on

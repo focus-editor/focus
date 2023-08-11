@@ -159,7 +159,7 @@ should_ignore_dir :: (path: string) -> bool {
 
 dir_is_within_project :: (dir_path: string) -> bool, Project_Dir {
     for project_dirs {
-        if equal_nocase(dir_path, it.path) || contains_nocase(dir_path, tprint("%/", it.path)) return true, it;
+        if platform_path_equals(dir_path, it.path) || platform_path_contains(dir_path, tprint("%/", it.path)) return true, it;
     }
     return false, Project_Dir.{};
 }

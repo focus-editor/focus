@@ -240,8 +240,12 @@ platform_open_in_explorer :: (path: string, reveal := false) {
     XDG.open(path, reveal);
 }
 
-platform_path_equals :: (path_a: string, path_b: string) -> bool {
+platform_path_equals :: inline (path_a: string, path_b: string) -> bool {
     return path_a == path_b;
+}
+
+platform_path_contains :: inline (path: string, subpath: string) -> bool {
+    return contains(path, subpath);
 }
 
 #scope_file

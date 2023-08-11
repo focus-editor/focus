@@ -327,7 +327,7 @@ file_is_watched :: (file_path: string) -> bool {
     parent_dir := get_parent_dir_path(file_path);
     if dir_is_within_project(parent_dir) return true;  // project dirs are watched
     for watch_files {
-        if equal_nocase(it, file_path) return true;
+        if platform_path_equals(it, file_path) return true;
     }
     return false;
 }
@@ -425,10 +425,12 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
     }
 
     // If the change is caused by watching a dir containing a standalone file, ignore it
-    parent_dir := get_parent_dir_path(change.full_path);
-    if !dir_is_within_project(parent_dir) && !file_is_watched(change.full_path) {
-        #if DEBUG_FILE_REFRESH append(*b, " - ignore because of parent dir");
-        return;
+    if !is_directory(change.full_path) {
+        parent_dir := get_parent_dir_path(change.full_path);
+        if !dir_is_within_project(parent_dir) && !file_is_watched(change.full_path) {
+            #if DEBUG_FILE_REFRESH append(*b, " - ignore because of parent dir");
+            return;
+        }
     }
 
     maybe_add_to_queue :: (dir: string) {
@@ -455,14 +457,13 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
             watcher_file_modified.count = -1;  // to indicate that we have seen and rejected a MODIFIED event this frame already
         }
 
-        // Figure
         dir: string = ---;
         if change.events & .SCAN_CHILDREN {
             dir = copy_temporary_string(change.full_path);
         } else {
             dir = get_parent_dir_path(change.full_path);
         }
-        maybe_add_to_queue(dir);
+        if dir_is_within_project(dir) then maybe_add_to_queue(dir);
     }
 
     #if DEBUG_FILE_REFRESH {
