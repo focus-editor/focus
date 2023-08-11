@@ -64,6 +64,7 @@ platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, 
 
 platform_create_window :: () {
     window = create_window(window_width, window_height, window_generic_title, window_x, window_y, background_color_rgb = as_3_floats(Colors.BACKGROUND));
+    platform_set_border_color();
 }
 
 platform_maximize_window :: (window: Window_Type) {
@@ -226,6 +227,21 @@ platform_path_contains :: inline (path: string, subpath: string) -> bool {
     return contains_nocase(path, subpath);
 }
 
+platform_set_border_color :: () {
+    using DwmAttribute;
+    background := Colors.BACKGROUND;
+    r : u32 = cast(u32)(background.r * 255.0);
+    g : u32 = cast(u32)(background.g * 255.0);
+    b : u32 = cast(u32)(background.b * 255.0);
+    // COLORREF format is 0x00bbggrr
+    col : u32 = 0x00000000;
+    col |= b << 16;
+    col |= g << 8;
+    col |= r;
+    DwmSetWindowAttribute(window, BORDER_COLOR, *col, size_of(u32));
+    DwmSetWindowAttribute(window, CAPTION_COLOR, *col, size_of(u32));
+}
+
 #scope_file
 
 fonts_dir: string;
@@ -283,3 +299,34 @@ CoTaskMemFree :: (pv: *void) #foreign ole32;
 #import "Windows";
 #import "Windows_Registry";
 #import "Process";
+
+Dwmapi :: #system_library "Dwmapi";
+DwmSetWindowAttribute :: (handle: HANDLE, dwAttribute: DwmAttribute, pvAttributde :*void, cbAttribute :DWORD) -> HRESULT #foreign Dwmapi;
+
+DwmAttribute :: enum u32 {
+  NCRENDERING_ENABLED;
+  NCRENDERING_POLICY;
+  TRANSITIONS_FORCEDISABLED;
+  ALLOW_NCPAINT;
+  CAPTION_BUTTON_BOUNDS;
+  NONCLIENT_RTL_LAYOUT;
+  FORCE_ICONIC_REPRESENTATION;
+  FLIP3D_POLICY;
+  EXTENDED_FRAME_BOUNDS;
+  HAS_ICONIC_BITMAP;
+  DISALLOW_PEEK;
+  EXCLUDED_FROM_PEEK;
+  CLOAK;
+  CLOAKED;
+  FREEZE_REPRESENTATION;
+  PASSIVE_UPDATE_MODE;
+  USE_HOSTBACKDROPBRUSH;
+  USE_IMMERSIVE_DARK_MODE :: 20;
+  WINDOW_CORNER_PREFERENCE :: 33;
+  BORDER_COLOR;
+  CAPTION_COLOR;
+  TEXT_COLOR;
+  VISIBLE_FRAME_BORDER_THICKNESS;
+  SYSTEMBACKDROP_TYPE;
+  LAST;
+}

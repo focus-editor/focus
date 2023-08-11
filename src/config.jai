@@ -169,6 +169,7 @@ load_and_merge_config :: (file_path: string, into: Config, hash: *u64) -> succes
     // Apply colors
     Colors = config.colors;
     CODE_COLOR_MAP = refresh_code_color_map();
+    platform_set_border_color();
 
     // Make sure the values are within the acceptable range
     clamp_warnings := false;
