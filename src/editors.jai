@@ -2211,6 +2211,7 @@ duplicate_lines :: (editor: *Editor, buffer: *Buffer) {
         line.range.start += xx offset_delta;
         line.range.end   += xx offset_delta;
         str := copy_temporary_string(get_range_as_string(buffer, line.range));
+        if line.is_last then str = tprint("\n%", str);  // make sure duplication works correctly on the last line of the buffer
         insert_string_at_offset(buffer, line.range.end, str);
         add_paste_animation(editor, .{ start = line.range.end, end = line.range.end + cast(s32)str.count });
 
