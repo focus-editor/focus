@@ -3,11 +3,11 @@ highlight_golang_syntax :: (using buffer: *Buffer) {
     tokenizer.buf   = to_string(bytes);
     tokenizer.max_t = bytes.data + bytes.count;
     tokenizer.t     = bytes.data;
-
+ 
     while true {
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
-
+ 
         using tokenizer;
         // Maybe retroactively highlight a function
         if token.type == .punctuation && token.punctuation == .l_paren {
@@ -17,32 +17,32 @@ highlight_golang_syntax :: (using buffer: *Buffer) {
                 memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
             }
         }
-
+ 
         // Remember last tokens
         last_tokens[0] = token;
-
-
+ 
+ 
         color := COLOR_MAP[token.type];
         memset(colors.data + token.start, xx color, token.len);
     }
 }
-
+ 
 //~
 #scope_file
-
+ 
 get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     t = eat_white_space(t, max_t);
-
+ 
     token: Token;
     token.start = cast(s32) (t - buf.data);
     token.type  = .eof;
     if t >= max_t return token;
-
+ 
     start_t = t;
-
+ 
     // Look at the first char as if it's ASCII (if it isn't, this is just a text line)
     char := << t;
-
+ 
     if is_alpha(char) || char == #char "_" {
         parse_identifier(tokenizer, *token);
     } else if is_digit(char) {
@@ -57,7 +57,6 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "<";  parse_less_than             (tokenizer, *token);
         case #char ">";  parse_greater_than          (tokenizer, *token);
         case #char "!";  parse_bang                  (tokenizer, *token);
-        case #char "#";  parse_preprocessor_directive(tokenizer, *token);
         case #char "\""; parse_string_literal        (tokenizer, *token);
         case #char "'";  parse_char_literal          (tokenizer, *token);
         case #char "/";  parse_slash_or_comment      (tokenizer, *token);
@@ -65,7 +64,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "|";  parse_pipe                  (tokenizer, *token);
         case #char "%";  parse_percent               (tokenizer, *token);
         case #char "^";  parse_caret                 (tokenizer, *token);
-
+ 
         case #char ";";  token.type = .punctuation; token.punctuation = .semicolon; t += 1;
         case #char "\\"; token.type = .punctuation; token.punctuation = .backslash; t += 1;
         case #char ",";  token.type = .punctuation; token.punctuation = .comma;     t += 1;
@@ -76,40 +75,40 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char ")";  token.type = .punctuation; token.punctuation = .r_paren;   t += 1;
         case #char "[";  token.type = .punctuation; token.punctuation = .l_bracket; t += 1;
         case #char "]";  token.type = .punctuation; token.punctuation = .r_bracket; t += 1;
-
+ 
         case #char "~";  token.type = .operation;   token.operation   = .tilde;     t += 1;
         case #char "`";  token.type = .operation;   token.operation   = .backtick;  t += 1;
-
+ 
         case;            token.type = .invalid; t += 1;
     }
-
+ 
     if t >= max_t then t = max_t;
     token.len = cast(s32) (t - start_t);
-
+ 
     return token;
 }
-
+ 
 parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
-
+ 
     // mark := get_temporary_storage_mark();
     // defer   set_temporary_storage_mark(mark);
-
+ 
     identifier_str := read_identifier_string(tokenizer);
-
+ 
     // Maybe it's a keyword
     if identifier_str.count <= MAX_KEYWORD_LENGTH {
         kw_token, ok := table_find(*KEYWORD_MAP, identifier_str);
         if ok { token.type = kw_token.type; token.keyword = kw_token.keyword; return; }
     }
 }
-
+ 
 parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .number;
-
+ 
     t += 1;
     if t >= max_t return;
-
+ 
     if is_digit(<< t) {
         // Decimal
         t += 1;
@@ -124,39 +123,39 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
         if t >= max_t return;
         // t += 1;
         // if t >= max_t return;
-
+ 
         // exponent
         if << t == #char "e" || << t == #char "E" {
             t += 1;
             if t >= max_t return;
-
+ 
             if << t == #char "+" || << t == #char "-" {
               t += 1;
               if t >= max_t return;
             }
-
+ 
             while t < max_t && is_digit(<< t) {
                 t += 1;
             }
             if t >= max_t return;
         }
-
+ 
         // suffixes
         if seen_decimal_point {
             if << t == #char "f" || << t == #char "F" || << t == #char "d" || << t == #char "D" {
               t += 1;
             }
         } else {
-
+ 
           // This is getting kindof hard to follow...
           if << t == #char "l" || << t == #char "L" {             // l
               t += 1;
               if t >= max_t return;
-
+ 
               if << t == #char "l" || << t == #char "L" {         // ll
                   t += 1;
                   if t >= max_t return;
-
+ 
                   if << t == #char "u" || << t == #char "U" {     // llu
                     t += 1;
                   }
@@ -166,56 +165,56 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
           } else if  << t == #char "u" || << t == #char "U" {     // u
               t += 1;
           }
-
+ 
         }
-
+ 
     } else if << t == #char "x" || << t == #char "X" {
         // Hex
         is_hex :: inline (c: u8) -> bool {
             return is_digit(c) || (c >= #char "a" && c <= #char "f") || (c >= #char "A" && c <= #char "F");
         }
-
+ 
         t += 1;
         while t < max_t && (is_hex(<< t)) t += 1;
-
+ 
     } else if << t == #char "b" || << t == #char "B" {
         // Binary
         t += 1;
         while t < max_t && (<< t == #char "1" || << t == #char "0") t += 1;
     }
 }
-
+ 
 parse_colon :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .colon;
     t += 1;
 }
-
+ 
 parse_question :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .question;
     t += 1;
 }
-
+ 
 parse_equal :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .equal;
-
+ 
     t += 1;
     if t >= max_t return;
-
+ 
     if << t == {
         case #char "=";  token.operation = .equal_equal; t += 1;
     }
 }
-
+ 
 parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .minus;
-
+ 
     t += 1;
     if t >= max_t return;
-
+ 
     if << t == {
         case #char "=";
             token.operation = .minus_equal;
@@ -230,14 +229,14 @@ parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
             if is_digit(<< t) parse_number(tokenizer, token);
     }
 }
-
+ 
 parse_plus :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .plus;
-
+ 
     t += 1;
     if t >= max_t return;
-
+ 
     if << t == {
         case #char "=";
             token.operation = .plus_equal;
@@ -247,28 +246,28 @@ parse_plus :: (using tokenizer: *Tokenizer, token: *Token) {
             t += 1;
     }
 }
-
+ 
 parse_asterisk :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .asterisk;
-
+ 
     t += 1;
     if t >= max_t return;
-
+ 
     if << t == {
         case #char "=";
             token.operation = .asterisk_equal;
             t += 1;
     }
 }
-
+ 
 parse_less_than :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .less_than;
-
+ 
     t += 1;
     if t >= max_t return;
-
+ 
     if << t == {
         case #char "=";
             token.operation = .less_than_equal;
@@ -278,64 +277,40 @@ parse_less_than :: (using tokenizer: *Tokenizer, token: *Token) {
             t += 1;
     }
 }
-
+ 
 parse_greater_than :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .greater_than;
-
+ 
     t += 1;
     if t >= max_t return;
-
+ 
     if << t == {
         case #char "=";
             token.operation = .greater_than_equal;
             t += 1;
     }
 }
-
+ 
 parse_bang :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .bang;
-
+ 
     t += 1;
     if t >= max_t return;
-
+ 
     if << t == {
         case #char "=";
             token.operation = .bang_equal;
             t += 1;
     }
 }
-
-parse_preprocessor_directive :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .identifier;
-
-    t += 1;
-    t = eat_white_space(t, max_t);  // there may be spaces between the # and the name
-    if !is_alpha(<<t) return;
-
-    // mark := get_temporary_storage_mark();
-    // defer   set_temporary_storage_mark(mark);
-
-    directive_str := read_identifier_string(tokenizer);
-
-    while t < max_t && is_alnum(<< t) t += 1;
-    if t >= max_t return;
-
-    // Check if it's one of the existing directives
-    if directive_str.count > MAX_DIRECTIVE_LENGTH return;
-    directive, ok := table_find(*PREPROCESSOR_DIRECTIVES_MAP, directive_str);
-    if ok {
-        token.type = .preprocessor_directive;
-        token.preprocessor_directive = directive;
-    }
-}
-
+ 
 parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .string_literal;
-
+ 
     escape_seen := false;
-
+ 
     t += 1;
     while t < max_t && << t != #char "\n" {
         if <<t == #char "\"" && !escape_seen break;
@@ -343,44 +318,44 @@ parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
         t += 1;
     }
     if t >= max_t return;
-
+ 
     t += 1;
 }
-
+ 
 parse_char_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .char_literal;
-
+ 
     escape_seen := false;
-
+ 
     t += 1; //
     if t >= max_t || << t == #char "\n" return;
-
+ 
     if << t == #char "\\" {
       escape_seen = true;
       t += 1;
       if t >= max_t || << t == #char "\n" return;
     }
-
+ 
     if << t == #char "'" && !escape_seen {
       // not escaped single quote without a character
       token.type = .invalid;
       t += 1; // the invalid '
       return;
     }
-
+ 
     t += 1; // the char
     if t >= max_t || << t == #char "\n" return;
-
+ 
     t += 1; // ending '
 }
-
+ 
 parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .slash;
-
+ 
     t += 1;
     if t >= max_t return;
-
+ 
     if << t == {
         case #char "=";
             token.operation = .slash_equal;
@@ -401,14 +376,14 @@ parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
             }
     }
 }
-
+ 
 parse_ampersand :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .ampersand;
-
+ 
     t += 1;
     if t >= max_t return;
-
+ 
     if << t == {
         case #char "=";
             token.operation = .ampersand_equal;
@@ -418,14 +393,14 @@ parse_ampersand :: (using tokenizer: *Tokenizer, token: *Token) {
             t += 1;
     }
 }
-
+ 
 parse_pipe :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .pipe;
-
+ 
     t += 1;
     if t >= max_t return;
-
+ 
     if << t == {
         case #char "=";
             token.operation = .pipe_equal;
@@ -435,60 +410,59 @@ parse_pipe :: (using tokenizer: *Tokenizer, token: *Token) {
             t += 1;
     }
 }
-
+ 
 parse_percent :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .percent;
-
+ 
     t += 1;
     if t >= max_t return;
-
+ 
     if << t == {
         case #char "=";
             token.operation = .percent_equal;
             t += 1;
     }
 }
-
+ 
 parse_caret :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .caret;
-
+ 
     t += 1;
     if t >= max_t return;
-
+ 
     if << t == {
         case #char "=";
             token.operation = .caret_equal;
             t += 1;
     }
 }
-
+ 
 //~
-
+ 
 Tokenizer :: struct {
     buf: string;
     max_t:   *u8;
     start_t: *u8;  // cursor when starting parsing new token
     t:       *u8;  // cursor
-
+ 
     last_tokens: [1] Token;  // to retroactively highlight functions
 }
-
+ 
 Token :: struct {
     start, len: s32;
     type: Type;
-
+ 
     union {
         keyword:                Keyword;
         punctuation:            Punctuation;
         operation:              Operation;
-        preprocessor_directive: Directive;
     }
-
+ 
     Type :: enum u16 {
         eof;
-
+ 
         identifier;
         string_literal;
         char_literal;
@@ -501,11 +475,10 @@ Token :: struct {
         keyword;
         type_keyword;
         value_keyword;
-        preprocessor_directive;
         invalid;
     }
 }
-
+ 
 // Must match the order of the types in the enum above
 COLOR_MAP :: Code_Color.[
     .COMMENT,       // eof - obviously not used
@@ -521,10 +494,9 @@ COLOR_MAP :: Code_Color.[
     .KEYWORD,       // modifier_keyword
     .TYPE,          // type_keyword
     .VALUE_KEYWORD, // value_keyword
-    .KEYWORD,       // preprocessor_directive
     .ERROR,         // invalid
 ];
-
+ 
 Keyword :: enum u16 {
     kw_break;
     kw_case;
@@ -550,13 +522,13 @@ Keyword :: enum u16 {
     kw_switch;
     kw_type;
     kw_var;
-
+ 
     kwv_false;
     kwv_true;
     kwv_nil;
-
+ 
     kwm_const;
-
+ 
     // built-in types
     kwt_bool;
     kwt_string;
@@ -579,7 +551,7 @@ Keyword :: enum u16 {
     kwt_complex128;
     kwt_error;
 }
-
+ 
 Operation :: enum u16 {
     arrow;
     bang;
@@ -617,7 +589,7 @@ Operation :: enum u16 {
     caret;
     caret_equal;
 }
-
+ 
 Punctuation :: enum u16 {
     semicolon;
     backslash;
@@ -630,37 +602,20 @@ Punctuation :: enum u16 {
     period;
     comma;
 }
-
-Directive :: enum u16 {
-    di_define;
-    di_elif;
-    di_elifdef;
-    di_elifndef;
-    di_else;
-    di_end;
-    di_endif;
-    di_error;
-    di_if;
-    di_ifdef;
-    di_ifndef;
-    di_include;
-    di_line;
-    di_pragma;
-    di_undef;
-    di_warning;
-}
-
+ 
 //- Keyword Specifics
 Keyword_Token :: struct {
     type: Token.Type;
     keyword: Keyword;
 }
+// KEYWORD_MAP: Table(string, Keyword_Token);
 KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
     table: Table(string, Keyword_Token);
-    temp, keywords_count := enum_range(Keyword);
+    // _, keywords_count := enum_range(Keyword);
+    keywords_count := 100;
     size := 2 * (keywords_count);
     init(*table, size);
-
+ 
     #insert -> string {
         b: String_Builder;
         init_string_builder(*b);
@@ -680,65 +635,37 @@ KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
                 curr_type = "keyword";
                 curr_slice_count = 3;
             }
-
+ 
             print_to_builder(*b, "table_add(*table, \"%\", Keyword_Token.{type = .%, keyword = .%});\n",
                             slice(it, curr_slice_count, it.count - curr_slice_count), curr_type, it);
         }
         return builder_to_string(*b);
     }
-
+ 
     return table;
 }
+ 
 MAX_KEYWORD_LENGTH :: #run -> s32 {
     max_len := 0;
-
+ 
     curr_slice_count := 3;
-
+ 
     for enum_names(Keyword) {
         if starts_with(it, "kwt") curr_slice_count = 4;
         else if starts_with(it, "kwm") curr_slice_count = 4;
         else if starts_with(it, "kwv") curr_slice_count = 4;
         else curr_slice_count = 3;
-
+ 
         actual := slice(it, curr_slice_count, it.count - curr_slice_count);
         if actual.count > max_len max_len = actual.count;
     }
     return xx max_len;
 }
-
-PREPROCESSOR_DIRECTIVES_MAP :: #run -> Table(string, Directive) {
-    table: Table(string, Directive);
-    temp, keywords_count := enum_range(Keyword);
-    size := 2 * (keywords_count);
-    init(*table, size);
-
-    #insert -> string {
-        b: String_Builder;
-        init_string_builder(*b);
-        for enum_names(Directive) {
-            print_to_builder(*b, "table_add(*table, \"%\", .%);\n",
-                            slice(it, 3, it.count - 3), it);
-        }
-        return builder_to_string(*b);
-    }
-
-    return table;
-}
-MAX_DIRECTIVE_LENGTH :: #run -> s32 {
-    max_len := 0;
-
-    for enum_names(Directive) {
-        actual := slice(it, 3, it.count - 3);
-        if actual.count > max_len max_len = actual.count;
-    }
-    return xx max_len;
-}
-
-
+ 
 read_identifier_string :: (using tokenizer: *Tokenizer) -> string {
     ret: string;
     ret.data = t;
-
+ 
     while t < max_t {
         c := <<t;
         if is_alnum(c) { t += 1; continue; }
@@ -746,10 +673,10 @@ read_identifier_string :: (using tokenizer: *Tokenizer) -> string {
     }
     if t >= max_t then t = max_t;
     ret.count = xx (t - ret.data);
-
+ 
     return ret;
 }
-
+ 
 eat_white_space :: inline (start: *u8, max_t: *u8) -> *u8 {
     t := start;
     while t < max_t && is_white_space(<<t) {
@@ -757,9 +684,9 @@ eat_white_space :: inline (start: *u8, max_t: *u8) -> *u8 {
     }
     return t;
 }
-
+ 
 is_white_space :: inline (c: u8) -> bool {
     return c == #char " " || c == #char "\r" || c == #char "\n";
 }
-
+ 
 #run assert(enum_highest_value(Token.Type) == COLOR_MAP.count - 1);
