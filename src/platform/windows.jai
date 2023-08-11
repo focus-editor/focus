@@ -247,8 +247,20 @@ platform_set_border_color :: () {
     DwmSetWindowAttribute(window, USE_IMMERSIVE_DARK_MODE , *darkmode, size_of(type_of(darkmode)));
 }
 
+platform_show_cursor :: (show: bool) {
+    if show {
+        if cursor_shown <= 0
+            cursor_shown = ShowCursor(1);
+    } else {
+        while cursor_shown >= 0 {
+            cursor_shown = ShowCursor(0);
+        }
+    }
+}
+
 #scope_file
 
+cursor_shown : s32 = 1;
 fonts_dir: string;
 
 monitor_enum_proc :: (hMonitor: HMONITOR, hdc: HDC, rect: *RECT, data: LPARAM) -> BOOL #c_call {
