@@ -111,9 +111,9 @@ platform_set_border_color :: inline () {
 
 platform_show_cursor :: (show: bool) {
     if show
-        NSCursor.hide();
-    else
         NSCursor.unhide();
+    else
+        NSCursor.hide();
 }
 
 #scope_file
