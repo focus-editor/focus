@@ -432,6 +432,9 @@ update_mouse_state :: () {
     mouse.pointer.x = xx x;
     mouse.pointer.y = xx (window_height - y);
     mouse.moved_this_frame = (mouse.pointer != mouse.previous_position);
+    if mouse.moved_this_frame {
+        platform_show_cursor(true);
+    }
     mouse.previous_position = mouse.pointer;
 
     if shift_pressed() {

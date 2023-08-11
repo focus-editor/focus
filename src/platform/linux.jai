@@ -252,6 +252,10 @@ platform_set_border_color :: inline () {
 
 }
 
+platform_show_cursor :: (show: bool) {
+
+}
+
 #scope_file
 
 LD  :: #import "Linux_Display";

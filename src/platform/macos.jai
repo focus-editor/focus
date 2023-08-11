@@ -109,6 +109,13 @@ platform_set_border_color :: inline () {
 
 }
 
+platform_show_cursor :: (show: bool) {
+    if show
+        NSCursor.hide();
+    else
+        NSCursor.unhide();
+}
+
 #scope_file
 
 Monitor :: struct {
