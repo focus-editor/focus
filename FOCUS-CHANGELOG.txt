@@ -26,8 +26,26 @@
 # Main Git Branch
 
 + New features:
+    ...
+
++ Bug fixes:
+    ...
+
++ Other changes:
+    ...
+
+
+
+# RELEASES ==================================================================
+
+
+# Version 0.2.0
+
++ BREAKING CHANGE: the default config is no longer used as a fallback for missing keymaps, so anything you haven't listed explicitly in the global config won't be included. It's best to start with a fresh config if possible to ensure you have all the most recent options. In the future the plan is to have a config migration system which will add new options or rename/remove existing ones
+
++ New features:
     + Line numbers can now be enabled (default shortcut is Alt-Shift-L). To enable permanently, use `show_line_numbers: true` in the config
-    + Line wrap is now supported (use the toggle_line_wrap command - default shortcut on Windows is Alt-Z). If you want line wrap to be on by default, use `line_wrap_is_on_by_default: true`
+    + Line wrap is now supported (use the toggle_line_wrap command - the default shortcut on Windows is Alt-Z). If you want line wrap to be on by default, use `line_wrap_is_on_by_default: true`. There is currently no way to enable line wrap for certain file types only, but that's coming later.
     + New command: toggle_block_comment (for the supported languages)
     + New command: autoindent_region (bound to Ctrl-Tab by default on Windows/Linux, Option-Tab on Mac). Works with the C-like languages we have syntax highlighting for. Should work similarly to Emacs.
     + New command: delete_current_file. Not bound to anything by default, but can be used from the commands dialog (thanks @SentientCoffee)
@@ -58,7 +76,6 @@
     + Linux: there's now a VERY basic save file dialog for new files (thanks @rexim)
 
 + Other changes:
-    + BREAKING: default config is no longer used as a fallback for missing keymaps, so anything you haven't listed explicitly in the global config won't be included
     + `copy` will now copy whole lines to clipboard if the config option `copy_whole_line_without_selection` is enabled in config
     + Delete-to-start/end-of-line commands now copy whatever was deleted
     + Added #ifdef/#ifndef highlighting to C/C++
@@ -74,8 +91,6 @@
     + Global search will now try to preserve search results and cursor position when searching using the same query
     + Windows: The editor window should open on the primary monitor by default
 
-
-# RELEASES ==================================================================
 
 # Version 0.1.10
 
