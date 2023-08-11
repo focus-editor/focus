@@ -276,7 +276,7 @@ x11_handle_event :: (display: *Display, xev: *XEvent) {
                 event.typical_wheel_delta = WHEEL_DELTA;
                 event.wheel_delta = WHEEL_DELTA * (ifx (button & 0x01) then cast(s32) -1 else 1);
                 array_add(*events_this_frame, event);
-                Input.mouse_delta_z += event.wheel_delta;
+                mouse_delta_z += event.wheel_delta;
                 return;
             }
 
