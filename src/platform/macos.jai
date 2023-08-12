@@ -43,6 +43,7 @@ platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, 
 
 platform_create_window :: inline () {
     window = create_window(window_width, window_height, window_generic_title, window_x, window_y);
+    platform_set_border_color();
 }
 
 platform_maximize_window :: inline (window: Window_Type) {
@@ -105,8 +106,19 @@ platform_path_contains :: inline (path: string, subpath: string) -> bool {
     return contains(path, subpath);
 }
 
-platform_set_border_color :: inline () {
-
+platform_set_border_color :: () {
+    nsstring := NSString.initWithString(objc_alloc(NSString), ifx config.settings.dark_titlebar then "NSAppearanceNameDarkAqua" else "NSAppearanceNameAqua");
+    defer release(nsstring);
+    NSWindow.setAppearance(window, NSAppearance.appearanceNamed(nsstring));
+    if config.settings.colored_titlebar {
+        NSWindow.setTitlebarAppearsTransparent(window, YES);
+        background := Colors.BACKGROUND;
+        color := NSColor.colorWithRed(cast(CGFloat) background.r, cast(CGFloat) background.g, cast(CGFloat) background.b, cast(CGFloat) 1.0);
+        defer release(color);
+        NSWindow.setBackgroundColor(window, color);
+    } else {
+        NSWindow.setTitlebarAppearsTransparent(window, NO);
+    }
 }
 
 #scope_file

@@ -342,7 +342,11 @@ Settings :: struct {
     editor_history_size                 := 128;
     line_wrap_is_on_by_default          := false;
     show_line_numbers                   := false;
+    #if OS == .MACOS {
+    dark_titlebar                       := true;
+    } else {
     dark_titlebar                       := false;  // TODO: fix the issues with window resize first
+    }
     colored_titlebar                    := true;
 
     // TODO
