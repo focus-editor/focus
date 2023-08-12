@@ -229,30 +229,19 @@ platform_path_contains :: inline (path: string, subpath: string) -> bool {
 
 platform_set_border_color :: () {
     using DwmAttribute;
-    bgcol   : u32 = 0xFFFFFFFF;
-    textcol : u32 = 0xFFFFFFFF;
+    col : u32 = 0xFFFFFFFF;
     if config.settings.colored_titlebar {
         background := Colors.BACKGROUND;
         r : u32 = cast(u32)(background.r * 255.0);
         g : u32 = cast(u32)(background.g * 255.0);
         b : u32 = cast(u32)(background.b * 255.0);
         // COLORREF format is 0x00bbggrr
-        bgcol = 0x00000000;
-        bgcol |= b << 16;
-        bgcol |= g << 8;
-        bgcol |= r;
-        text := Colors.CODE_DEFAULT;
-        r = cast(u32)(text.r * 255.0);
-        g = cast(u32)(text.g * 255.0);
-        b = cast(u32)(text.b * 255.0);
-        // COLORREF format is 0x00bbggrr
-        textcol = 0x00000000;
-        textcol |= b << 16;
-        textcol |= g << 8;
-        textcol |= r;
+        col = 0x00000000;
+        col |= b << 16;
+        col |= g << 8;
+        col |= r;
     }
-    DwmSetWindowAttribute(window, CAPTION_COLOR, *bgcol, size_of(u32));
-    DwmSetWindowAttribute(window, TEXT_COLOR, *textcol, size_of(u32));
+    DwmSetWindowAttribute(window, CAPTION_COLOR, *col, size_of(u32));
 
     darkmode := ifx config.settings.dark_titlebar then 1 else 0;
     DwmSetWindowAttribute(window, USE_IMMERSIVE_DARK_MODE , *darkmode, size_of(type_of(darkmode)));
