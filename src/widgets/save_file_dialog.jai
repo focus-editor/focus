@@ -101,11 +101,7 @@ save_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
         }
         return text_input_handle_event(*input, event);
     } else if event.type == .TEXT_INPUT {
-        char := event.utf32;
-        if char == 127 return true;  // there seems to be a bug in the Input module
-                                // which generates a TEXT_INPUT event for DEL
-                                // when Ctrl+Backspace is pressed
-        text_input_type_char(*save_file_dialog.input, char);
+        text_input_type_char(*save_file_dialog.input, event.utf32);
     }
 
     return false;

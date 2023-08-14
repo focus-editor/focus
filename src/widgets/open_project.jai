@@ -20,12 +20,7 @@ open_project_dialog_handle_event :: (event: Input.Event) -> handled: bool {
         return handled;
 
     } else if event.type == .TEXT_INPUT {
-        char := event.utf32;
-        if char == 127 return true;  // there seems to be a bug in the Input module
-                                // which generates a TEXT_INPUT event for DEL
-                                // when Ctrl+Backspace is pressed
-
-        text_input_type_char(*open_project_dialog.input, char);
+        text_input_type_char(*open_project_dialog.input, event.utf32);
         refresh_entries();
         return true;
     }

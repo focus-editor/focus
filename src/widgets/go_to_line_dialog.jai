@@ -34,10 +34,6 @@ go_to_line_dialog_handle_event :: (event: Input.Event) -> handled: bool {
 
     } else if event.type == .TEXT_INPUT {
         char := event.utf32;
-        if char == 127 return true;  // there seems to be a bug in the Input module
-                                // which generates a TEXT_INPUT event for DEL
-                                // when Ctrl+Backspace is pressed
-
         if #char "0" <= char && char <= #char "9" {
             text_input_type_char(*input, char);
             jump_to_line();

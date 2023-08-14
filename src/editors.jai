@@ -265,10 +265,6 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
 }
 
 active_editor_type_char :: (char: u32) {
-    if char == 127 return;  // there seems to be a bug in the Input module
-                            // which generates a TEXT_INPUT event for DEL
-                            // when Ctrl+Backspace is pressed
-
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
 

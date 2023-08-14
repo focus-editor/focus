@@ -47,12 +47,7 @@ finder_handle_event :: (event: Input.Event) -> handled: bool {
         return false;
 
     } else if event.type == .TEXT_INPUT {
-        char := event.utf32;
-        if char == 127 return true;  // there seems to be a bug in the Input module
-                                     // which generates a TEXT_INPUT event for DEL
-                                     // when Ctrl+Backspace is pressed
-
-        text_input_type_char(*finder.input, char);
+        text_input_type_char(*finder.input, event.utf32);
         start_new_search();
         return true;
     }
