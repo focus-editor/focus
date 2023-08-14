@@ -325,8 +325,15 @@ wl_get_mouse_pointer_position :: (win: *WLWindow, right_handed: bool) -> x: int,
 }
 
 wl_get_mouse_pointer_position :: (right_handed: bool) -> x: int, y: int, success: bool {
-    if current_hovered_window return wl_get_mouse_pointer_position(current_hovered_window, right_handed);
-    return 0, 0, false;
+    rx: int = 0;
+    ry: int = 0;
+    rs: bool = false;
+
+    if current_hovered_window {
+        rx, ry, rs = wl_get_mouse_pointer_position(current_hovered_window, right_handed);
+    }
+
+    return rx, ry, rs;
 }
 
 #scope_file
