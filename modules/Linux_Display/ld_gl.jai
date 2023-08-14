@@ -12,19 +12,19 @@ get_gl_context :: inline () -> *void {
 
 get_gl_proc_address_function :: (display: LDDisplay) -> GL.GetProcAddressFunction {
     if display.tag == {
-        case X11Display; return glXGetProcAddress;
+        case X11Display; return X11.glXGetProcAddress;
         case WLDisplay; return eglGetProcAddress;
         case; return null;
     }
 }
 
 get_gl_proc_address_function :: inline () -> GL.GetProcAddressFunction {
-    return get_proc_address_function(global_display);
+    return get_gl_proc_address_function(global_display);
 }
 
 get_gl_proc_address_function :: (win: LDWindow) -> GL.GetProcAddressFunction {
     if win.tag == {
-        case X11Window; return glXGetProcAddress;
+        case X11Window; return X11.glXGetProcAddress;
         case WLWindow; return eglGetProcAddress;
         case; return null;
     }
@@ -72,7 +72,7 @@ create_gl_surface :: (win: LDWindow) {
     if win.tag == {
         case X11Window; {
             w := isa(win, X11Window);
-            w.glx_win = glXCreateWindow(w.display.handle, w.display.glx_cnf, w.handle, null);
+            w.glx_win = X11.glXCreateWindow(w.display.handle, w.display.glx_cnf, w.handle, null);
         }
         case WLWindow; {
             w := isa(win, WLWindow);
@@ -90,10 +90,10 @@ make_current :: (win: LDWindow) {
     if win.tag == {
         case X11Window; {
             w := isa(win, X11Window);
-            XLockDisplay(w.display.handle);
-            if !glXMakeCurrent(w.display.handle, w.glx_win, w.display.glx_ctx)
+            X11.XLockDisplay(w.display.handle);
+            if !X11.glXMakeCurrent(w.display.handle, w.glx_win, w.display.glx_ctx)
                 log_error("glxMakeCurrent failed! (glx_window %, context %)\n", w.glx_win, w.display.glx_ctx);
-            XUnlockDisplay(w.display.handle);
+            X11.XUnlockDisplay(w.display.handle);
         }
         case WLWindow; {
             w := isa(win, WLWindow);
@@ -106,7 +106,7 @@ swap_buffers :: (win: LDWindow) {
     if win.tag == {
         case X11Window; {
             w := isa(win, X11Window);
-            glXSwapBuffers(w.display.handle, w.glx_win);
+            X11.glXSwapBuffers(w.display.handle, w.glx_win);
         }
         case WLWindow; {
             w := isa(win, WLWindow);
@@ -125,7 +125,7 @@ gl_initialized :: (display: LDDisplay) -> bool {
 
 gl_initialized :: (win: LDWindow) -> bool {
     if win.tag == {
-        case X11Window; return isa(win, X11Window).glx_win != None;
+        case X11Window; return isa(win, X11Window).glx_win != X11.None;
         case WLWindow; return isa(win, WLWindow).egl_surface != null;
         case; return false;
     }

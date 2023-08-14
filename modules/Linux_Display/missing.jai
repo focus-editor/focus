@@ -54,13 +54,13 @@ XNClientWindow :: "clientWindow".data;
 XNFocusWindow :: "focusWindow".data;
 XNInputStyle :: "inputStyle".data;
 
-XBufferOverflow : Status = -1;
-XLookupNone     : Status =  1;
-XLookupChars    : Status =  2;
-XLookupKeySym   : Status =  3;
-XLookupBoth     : Status =  4;
+XBufferOverflow : X11.Status = -1;
+XLookupNone     : X11.Status =  1;
+XLookupChars    : X11.Status =  2;
+XLookupKeySym   : X11.Status =  3;
+XLookupBoth     : X11.Status =  4;
 
-XwcLookupString :: (ic: XIC, event: *XKeyEvent, buffer: *u32, buffer_size: s32, keysym: *KeySym, status: *Status) -> s32 #foreign libX11;
+XwcLookupString :: (ic: X11.XIC, event: *X11.XKeyEvent, buffer: *u32, buffer_size: s32, keysym: *X11.KeySym, status: *X11.Status) -> s32 #foreign libX11;
 
 LC_ALL : s32 : 6;
 setlocale :: (what: s32, loc: *u8) -> *u8 #foreign libc;
@@ -76,7 +76,7 @@ timer_gettime :: (timerid: timer_t, curr_value: *itimerspec) -> s32 #foreign lib
 timer_settime :: (timerid: timer_t, flags: s32, new_value: *itimerspec, curr_value: *itimerspec) -> s32 #foreign librt;
 timer_delete :: (timer: timer_t) -> s32 #foreign librt;
 
-glXQueryExtension :: (dpy: *Display, error_base: *s32, event_base: *s32) -> Bool #foreign libGLX;
+glXQueryExtension :: (dpy: *X11.Display, error_base: *s32, event_base: *s32) -> X11.Bool #foreign libGLX;
 
 #scope_file
 

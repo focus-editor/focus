@@ -330,7 +330,7 @@ find_font :: (name: string, allocator := temp) -> bool, string {
 #import "String";
 #import "Hash_Table";
 
-#import "X11";
+X11 :: #import "X11";
 #import "EGL";
 #import "GL";
 #import "Wayland";
