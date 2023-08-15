@@ -104,11 +104,6 @@ main :: () {
         press_count := 0;
     };
 
-    // On Wayland and X11 the main window needs to be mapped before we can get input focus.
-    // Thus we force one draw here in order to ensure we start the main loop with the window
-    // in the correct state.
-    draw_frame();
-
     while !should_quit {
         if !redraw_requested platform_wait_message();
 
