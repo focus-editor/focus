@@ -162,6 +162,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .center_viewport_on_cursor;        center_viewport_on_cursor           (editor, buffer);
         case .move_cursor_to_viewport_center;   move_cursor_to_viewport_center      (editor, buffer);
         case .remove_additional_cursors;        remove_additional_cursors           (editor);
+        case .add_cursors_to_line_ends;         add_cursors_to_line_ends            (editor, buffer);
+        case .add_cursors_to_line_starts;       add_cursors_to_line_starts          (editor, buffer);
         case .scroll_viewport_up;               smooth_scroll(editor, direction = .up);                 activate_hold_action(action, event);
         case .scroll_viewport_up_fast;          smooth_scroll(editor, direction = .up, fast = true);    activate_hold_action(action, event);
         case .scroll_viewport_down;             smooth_scroll(editor, direction = .down);               activate_hold_action(action, event);
@@ -2144,6 +2146,32 @@ remove_additional_cursors :: (editor: *Editor) {
     cursor := leave_only_original_cursor(editor);
     cursor.sel = cursor.pos;
     editor.cursor_moved = .refresh_only;
+}
+
+add_cursors_to_line_starts :: (editor: *Editor, buffer: Buffer) {
+    if buffer.bytes.count <= 0 return;
+
+    line_ranges := get_whole_line_ranges_for_cursors(editor, buffer);
+    array_reset_keeping_memory(*editor.cursors);  // reset after getting ranges (obviously)
+
+    for * line_range : line_ranges {
+        line_num := offset_to_line(editor, buffer, line_range.start);
+        while true {
+            pos := buffer.line_starts[line_num];
+            if pos >= line_range.end break;
+            array_add(*editor.cursors, Cursor.{ pos = pos, sel = pos, col_wanted = -1 });
+            line_num += 1;
+        }
+    }
+
+    assert(editor.cursors.count > 0);
+
+    editor.cursor_moved = .unimportant;
+}
+
+add_cursors_to_line_ends :: (editor: *Editor, buffer: Buffer) {
+    add_cursors_to_line_starts(editor, buffer);
+    move_cursors_end(editor, buffer);
 }
 
 select_all :: (editor: *Editor, buffer: Buffer) {

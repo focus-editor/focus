@@ -122,6 +122,8 @@ Cmd-Shift-C                 move_cursor_to_viewport_center
 {Shift}-Ctrl-ArrowDown      move_down_to_empty_line
 
 Escape                      remove_additional_cursors
+Alt-Shift-I                 add_cursors_to_line_ends
+Alt-Shift-Ctrl-I            add_cursors_to_line_starts
 
 Enter                       break_line
 Ctrl-Enter                  new_line_below_without_breaking
