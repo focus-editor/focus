@@ -2552,6 +2552,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
         case .C;            comment_without_space = "//";
         case .CSharp;       comment_without_space = "//";
         case .Golang;       comment_without_space = "//";
+        case .Glsl;         comment_without_space = "//";
         case .Jai;          comment_without_space = "//";
         case .Focus_Config; comment_without_space = "#";
         case;               return;
@@ -2648,6 +2649,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
         case .C;            comment_start = "/*"; comment_end = "*/";
         case .CSharp;       comment_start = "/*"; comment_end = "*/";
         case .Golang;       comment_start = "/*"; comment_end = "*/";
+        case .Glsl;         comment_start = "/*"; comment_end = "*/";
         case .Jai;          comment_start = "/*"; comment_end = "*/";
         case;               toggle_comment(editor, buffer); return;  // fallback to toggle_comment for the rest.
     }
