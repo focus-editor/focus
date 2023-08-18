@@ -347,12 +347,17 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
     return true, "";
 }
 
-color_to_hex :: (using color: Color) -> string /* temp  */ {
+color_to_hex :: (using color: Color, exclude_hash := false) -> string /* temp  */ {
     r_u8 := cast(u8)(255 * r);
     g_u8 := cast(u8)(255 * g);
     b_u8 := cast(u8)(255 * b);
     a_u8 := cast(u8)(255 * a);
-    return tprint("#%1%2%3%4", formatInt(r_u8, 16), formatInt(g_u8, 16), formatInt(b_u8, 16), formatInt(a_u8, 16));
+
+    h :: #bake_arguments formatInt(base=16, minimum_digits=2);
+    format := "#%1%2%3%4";
+    if exclude_hash advance(*format, 1);
+
+    return tprint(format, h(r_u8), h(g_u8), h(b_u8), h(a_u8));
 }
 
 hex_to_color :: (src_hex: string) -> Color, success: bool {
