@@ -26,7 +26,7 @@ __pycache__
 .exe .pdb .ttf .otf .eot .woff *woff? .dll .lib .dylib .so *so.* .a .o .pdf
 .jpg .png .gif .jpeg .ico .tif .tiff .tga .bmp .webp  # maybe someday we'll support opening images
 .mp3 .wav .ogg .wma
-.blend .obj .fbx .dae .3ds .dat .msh2
+.blend .blend1 .obj .fbx .dae .3ds .dat .msh2
 .mpg .mpeg .psd .codex .webm .wma
 .zip .rar .7z
 .bin .sys .iso
