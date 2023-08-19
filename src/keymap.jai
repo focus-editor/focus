@@ -329,6 +329,7 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "select_word_or_create_another_cursor",
     "create_cursor_above",
     "create_cursor_below",
+    "align_cursors",
     "add_cursors_to_line_ends",
     "add_cursors_to_line_starts",
     "duplicate_lines",

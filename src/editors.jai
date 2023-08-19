@@ -175,6 +175,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .select_all;                       select_all                          (editor, buffer); keep_selection = true;
         case .create_cursor_above;              create_cursor                       (editor, buffer, .above); keep_selection = true;
         case .create_cursor_below;              create_cursor                       (editor, buffer, .below); keep_selection = true;
+        case .align_cursors;                    align_cursors                       (editor, buffer);         keep_selection = true;
 
         case .select_word;                      select_word(editor, buffer); keep_selection = true;
         case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
@@ -1158,6 +1159,80 @@ create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; be
     organise_cursors(editor);
 
     cursor_moved = .refresh_only;
+}
+
+align_cursors :: (using editor: *Editor, buffer: *Buffer) {
+    // Don't work if a cursor has a selection larger than one line
+    for editor.cursors {
+        pos_line := offset_to_real_line(buffer, it.pos);
+        sel_line := offset_to_real_line(buffer, it.sel);
+        if pos_line != sel_line return;
+    }
+
+    // Merge cursors if they are on the same line and set positions at the start of selections
+    for * editor.cursors {
+        line  := offset_to_real_line(buffer, it.pos);
+        start := min(it.pos, it.sel);
+        end   := max(it.pos, it.sel);
+
+        for * other: editor.cursors {
+            if it == other continue;
+            other_line := offset_to_real_line(buffer, other.pos);
+            if other_line != line continue;
+
+            start = min(start, other.pos, other.sel);
+            end   = max(end  , other.pos, other.sel);
+        }
+
+        it.pos = start;
+        it.sel = end;
+    }
+    organise_cursors(editor);
+
+    // Compute the values needed to align the cursors
+    rightmost_col, largest_selection: s32;
+    for editor.cursors {
+        coords := get_real_cursor_coords(buffer, it);
+        rightmost_col     = max(rightmost_col, min(coords.pos.col, coords.sel.col));
+        largest_selection = max(largest_selection, abs(it.pos - it.sel));
+    }
+
+    offset_delta := 0;
+    for * editor.cursors {
+        it.pos += xx offset_delta;
+        it.sel += xx offset_delta;
+        it.col_wanted = -1;
+
+        coords              := get_real_cursor_coords(buffer, it);
+        selection_start_col := min(coords.pos.col, coords.sel.col);
+        selection_size      := abs(it.pos - it.sel);
+    
+        // Compute the number of spaces and if we need to insert them before of after the cursor selection
+        spaces_before, spaces_after: s32;
+        if has_selection(it) {
+            spaces_before = rightmost_col - selection_start_col;
+            spaces_after  = ifx selection_size != largest_selection then largest_selection - selection_size;
+        } else {
+            spaces_before = rightmost_col - coords.pos.col + largest_selection;
+        }
+        str_before, str_after := get_tmp_spaces(spaces_before), get_tmp_spaces(spaces_after);
+        
+        insert_string_at_offset(buffer, max(it.pos, it.sel), str_after);
+        insert_string_at_offset(buffer, min(it.pos, it.sel), str_before);
+
+        // insert_string_at_offset() make the buffer dirty
+        // we rescan to clean it else we can't call get_real_cursor_coords for the next cursors
+        rescan_for_lines(buffer);
+        if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
+
+        // Keep selections aligned
+        if it.pos < it.sel Swap(*it.pos, *it.sel); // Shouldn't be necessary since it's already reverted in the merge step
+        it.pos += xx (str_before.count + str_after.count);
+        it.sel = it.pos - largest_selection;
+        offset_delta += str_before.count + str_after.count;
+    }
+
+    editor.cursor_moved = .large_edit;
 }
 
 select_word :: (using editor: *Editor, buffer: Buffer) {
