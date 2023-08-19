@@ -146,6 +146,7 @@ Ctrl-Shift-N                create_new_file_on_the_side
 
 Alt-Shift-ArrowUp           create_cursor_above
 Alt-Shift-ArrowDown         create_cursor_below
+Alt-A                       align_cursors
 
 Alt-Z                       toggle_line_wrap
 Alt-Shift-L                 toggle_line_numbers
