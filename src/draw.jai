@@ -543,18 +543,25 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             array_reset_keeping_memory(*editor.highlights);
 
             selected_text := get_selected_text_all_cursors(editor, buffer);
-            if selected_text.count > 2 && selected_text.count < 1000 && !is_all_whitespace(selected_text) {
+            if selected_text.count > 2 && !is_all_whitespace(selected_text) {
                 search_func: (s: string, substring: string, start_index := 0) -> s64;
                 search_func = ifx editor.search_whole_words then find_index_from_left_whole_word else find_index_from_left;
                 buffer_str := to_string(buffer.bytes);
+
+                cursor_offsets: [..] s32;
+                cursor_offsets.allocator = temp;
+                for editor.cursors  array_add(*cursor_offsets, min(it.pos, it.sel));
+
                 offset := 0;
                 while true {
                     offset = search_func(buffer_str, selected_text, start_index = offset);
                     if offset < 0 break;
 
-                    highlight := array_add(*editor.highlights);
-                    highlight.offset = offset;
-                    highlight.line   = offset_to_real_line(buffer, offset);
+                    if !array_find(cursor_offsets, xx offset) {  // @Speed: slow when many cursors
+                        highlight := array_add(*editor.highlights);
+                        highlight.offset = offset;
+                        highlight.line   = offset_to_real_line(buffer, offset);
+                    }
 
                     offset += selected_text.count;
                 }
