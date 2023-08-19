@@ -299,10 +299,10 @@ active_editor_type_char :: (char: u32) {
         new_len := cast(s32) buffer.bytes.count;
         if new_len != buf_len {
             offset_delta += new_len - buf_len;
-            cursor.pos += offset_delta;
-            cursor.sel += offset_delta;
             buf_len = new_len;
         }
+        cursor.pos += offset_delta;
+        cursor.sel += offset_delta;
 
         if has_selection(cursor) {
             selection := get_selection(cursor);
@@ -1894,10 +1894,10 @@ insert_tab_at_each_cursor :: (editor: *Editor, buffer: *Buffer) {
         new_len := cast(s32) buffer.bytes.count;
         if new_len != buf_len {
             offset_delta += new_len - buf_len;
-            cursor.pos += offset_delta;
-            cursor.sel += offset_delta;
             buf_len = new_len;
         }
+        cursor.pos += offset_delta;
+        cursor.sel += offset_delta;
 
         selection := get_selection(cursor);
 
