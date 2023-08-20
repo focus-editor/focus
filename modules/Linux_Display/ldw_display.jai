@@ -83,6 +83,11 @@ WLDesiredPreconfigureState :: enum {
     MAXIMIZED;
 }
 
+WLNativeWindowState :: enum_flags {
+    xdg_configured;
+    xdg_toplevel_configured;
+}
+
 WLWindow :: struct {
     // we would really like this to be LDWindow but we get a circular dependency if we declare it like that
     wrapper: *void;
@@ -94,9 +99,9 @@ WLWindow :: struct {
 
     background_color_buffer: *wl_buffer;
 
+    native_state: WLNativeWindowState;
     x_surface: *xdg_surface;
     x_toplevel: *xdg_toplevel;
-    x_toplevel_configured: bool;
     decoration: *zxdg_toplevel_decoration_v1;
 
     creation_width: s32;
@@ -451,6 +456,7 @@ x_window_listener :: xdg_surface_listener.{
     configure = (data: *void, surface: *xdg_surface, serial: u32) -> void #c_call {
         w: *WLWindow = wl_proxy.get_user_data(surface);
         xdg_surface.ack_configure(surface, serial);
+        w.native_state |= .xdg_configured;
     }
 };
 
@@ -460,8 +466,8 @@ x_toplevel_listener :: xdg_toplevel_listener.{
         push_context ctx {
             w: *WLWindow = wl_proxy.get_user_data(toplevel);
 
-            if !w.x_toplevel_configured {
-                w.x_toplevel_configured = true;
+            if !(w.native_state & .xdg_toplevel_configured) {
+                w.native_state |= .xdg_toplevel_configured;
 
                 if w.pre_configure_desired_state == {
                     case .FULLSCREEN; wl_toggle_fullscreen(w, true, null);
@@ -575,6 +581,11 @@ wl_create_window :: (d: *WLDisplay, ld_win: LDWindow, width: int, height: int, w
     wl_surface.damage(w.handle, 0, 0, w.window_width, w.window_height);
     wl_surface.commit(w.handle);
 
+    configured :: WLNativeWindowState.xdg_configured | .xdg_toplevel_configured;
+    while !(w.native_state & configured) {
+        wl_display.dispatch(d.handle);
+    }
+
     return true;
 }
 
@@ -616,7 +627,7 @@ wl_get_render_dimensions :: (w: *WLWindow) -> s32, s32 {
 }
 
 wl_toggle_fullscreen :: (w: *WLWindow, desire_fullscreen: bool, _unused: *void) -> bool, s32, s32 {
-    if !w.x_toplevel_configured {
+    if !(w.native_state & .xdg_toplevel_configured) {
         w.pre_configure_desired_state = .FULLSCREEN;
         return false, w.window_width, w.window_height;
     }
@@ -627,7 +638,7 @@ wl_toggle_fullscreen :: (w: *WLWindow, desire_fullscreen: bool, _unused: *void) 
 }
 
 wl_maximize_window :: (w: *WLWindow) {
-    if !w.x_toplevel_configured {
+    if !(w.native_state & .xdg_toplevel_configured) {
         w.pre_configure_desired_state = .MAXIMIZED;
         return;
     }
