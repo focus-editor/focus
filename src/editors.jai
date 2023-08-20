@@ -632,8 +632,8 @@ close_editor :: (position: enum { current; other; left; right; }) {
     if position == {
         case .current; close_current_editor();
         case .other;   close_other_editor();
-        case .left;    if layout == .Double if active == left  close_current_editor(); else if active == right close_other_editor();
-        case .right;   if layout == .Double if active == right close_current_editor(); else if active == left  close_other_editor();
+        case .left;    if layout == .Double { if active == left  close_current_editor(); else if active == right close_other_editor(); }
+        case .right;   if layout == .Double { if active == right close_current_editor(); else if active == left  close_other_editor(); }
     }
 }
 
