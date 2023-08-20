@@ -60,7 +60,7 @@ platform_copy_config :: (src: *Platform_Config, dst: *Platform_Config) {
 
 platform_setup :: inline () {
     app_id     :: "dev.focus-editor.focus";  // needs to be lower-case as (some?) Wayland compositors seem to lower-case app ids anyway and we need the desktop entry file name to match the app id
-    app_ver_id :: 1;   // ID that we can increment if we need to change the desktop entry in any way
+    app_ver_id :: 2;   // ID that we can increment if we need to change the desktop entry in any way
     ver_id     :: #run sprint("%-%", app_id, app_ver_id);
     ver_id_key :: #run sprint("X-Focus-Ver-Id=%", ver_id);
 
@@ -164,7 +164,30 @@ platform_create_window :: () {
         window_x, window_y,
         background_color_rgb = as_3_floats(Colors.BACKGROUND));
 
-    LD.set_icon_from_raw_data(window, icon_data.raw_pixels.data, icon_data.width, icon_data.height);
+    if LD.active_backend() == .X11 {
+        data := icon_data.png_data;
+
+        width: s32;
+        height: s32;
+        n_chan: s32;
+        raw_pixels := stbi_load_from_memory(data.data, xx data.count, *width, *height, *n_chan, 4);
+        assert(raw_pixels != null, "Failed to parse PNG data!");
+        assert(icon_data.width == width && icon_data.height == height && icon_data.n_chan == n_chan,
+               "Missmatch between recorded icon data and PNG load result: (%, %, %) vs (%, %, %)",
+               icon_data.width, icon_data.height, icon_data.n_chan,
+               width, height, n_chan);
+
+        size := width * height;
+        pixels := cast(*u32) raw_pixels;
+        for 0..size - 1 {
+            v := pixels[it];
+            pixels[it] = (v & 0xff000000) | ((v & 0x00ff0000) >> 16) | (v & 0x0000ff00) | ((v & 0x000000ff) << 16);
+        }
+
+        LD.set_icon_from_raw_data(window, raw_pixels, width, height);
+
+        stbi_image_free(raw_pixels);
+    }
 }
 
 platform_maximize_window :: (window: Window_Type) {
@@ -265,12 +288,11 @@ XDG :: #import "XDG";
 #import "Process";
 #import "File";
 #import "File_Utilities";
+#import "stb_image";
 
 // Application icon
 icon_data :: #run -> Linux_Icon {
-    #import "stb_image";
-
-    data, success := read_entire_file("images/linux-icon.png");
+    data, success := read_entire_file("images/focus.png");
     assert(success, "Failed to read Linux icon!");
 
     icon: Linux_Icon;
@@ -278,18 +300,7 @@ icon_data :: #run -> Linux_Icon {
     assert(raw_pixels != null, "Failed to parse PNG data!");
     assert(icon.n_chan == 4, "Expected 4 channels per pixel, got %!", icon.n_chan);
 
-    size := icon.width * icon.height;
-    pixels: [..]u32;
-    array_resize(*pixels, size);
-    memcpy(pixels.data, raw_pixels, xx (size * 4));
-
-    for * pixels {
-        v := <<it;
-        <<it = (v & 0xff000000) | ((v & 0x00ff0000) >> 16) | (v & 0x0000ff00) | ((v & 0x000000ff) << 16);
-    }
-
     icon.png_data = data;
-    icon.raw_pixels = pixels;
 
     stbi_image_free(raw_pixels);
 
@@ -301,7 +312,6 @@ Linux_Icon :: struct {
     height: s32;
     n_chan: s32;
     png_data: string;
-    raw_pixels: []u32;
 }
 
 timer: LD.Timer;
