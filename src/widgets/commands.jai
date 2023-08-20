@@ -179,6 +179,7 @@ commands := #run Command.[
 
     .{ .add_cursors_to_line_ends,                           "Add Cursors To Line Ends",           0, .Single },
     .{ .add_cursors_to_line_starts,                         "Add Cursors To Line Starts",         0, .Single },
+    .{ .align_cursors,                                      "Align Cursors",                      0, .Single },
 
     .{ .move_to_previous_editor_history,                    "Move To Previous Cursor Position",   0, .None },
     .{ .move_to_next_editor_history,                        "Move To Next Cursor Position",       0, .None },

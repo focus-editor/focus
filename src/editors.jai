@@ -1161,6 +1161,8 @@ create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; be
     cursor_moved = .refresh_only;
 }
 
+// @TODO: have another look at the code and at the very least avoid rescanning for each cursor.
+// Also, check potential corner cases.
 align_cursors :: (using editor: *Editor, buffer: *Buffer) {
     // Don't work if a cursor has a selection larger than one line
     for editor.cursors {
@@ -1206,7 +1208,7 @@ align_cursors :: (using editor: *Editor, buffer: *Buffer) {
         coords              := get_real_cursor_coords(buffer, it);
         selection_start_col := min(coords.pos.col, coords.sel.col);
         selection_size      := abs(it.pos - it.sel);
-    
+
         // Compute the number of spaces and if we need to insert them before of after the cursor selection
         spaces_before, spaces_after: s32;
         if has_selection(it) {
@@ -1216,7 +1218,7 @@ align_cursors :: (using editor: *Editor, buffer: *Buffer) {
             spaces_before = rightmost_col - coords.pos.col + largest_selection;
         }
         str_before, str_after := get_tmp_spaces(spaces_before), get_tmp_spaces(spaces_after);
-        
+
         insert_string_at_offset(buffer, max(it.pos, it.sel), str_after);
         insert_string_at_offset(buffer, min(it.pos, it.sel), str_before);
 

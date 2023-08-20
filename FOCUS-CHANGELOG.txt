@@ -29,6 +29,7 @@
     + Windows 11+: New config option: `colored_titlebar`. Sets the color of the title bar to the background color (thanks @amasondev)
     + New option: `hide_mouse_when_typing` (currently Windows/Mac only). Set to `true` to hide the mouse cursor when entering text (thanks @amasondev)
     + New commands: `add_cursors_to_line_ends` (Alt-Shift-I) and `add_cursors_to_line_starts` (Alt-Shift-Ctrl-I)
+    + New command: `align_cursors` (Alt-A). Can be used to align the indentation for multiple cursors (thanks @hfr4)
 
 + Bug fixes:
     + It should now be possible to scroll the viewport by dragging ouside it in all cases (previously it wasn't always possible - see issue #101)
