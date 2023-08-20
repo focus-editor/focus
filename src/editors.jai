@@ -628,11 +628,12 @@ new_edit_group :: (buffer: *Buffer, editor: *Editor) {
 }
 
 close_editor :: (position: enum { current; other; left; right; }) {
+    using editors;
     if position == {
         case .current; close_current_editor();
         case .other;   close_other_editor();
-        case .left;    if editors.active == editors.left  close_current_editor(); else if editors.active == editors.right close_other_editor();
-        case .right;   if editors.active == editors.right close_current_editor(); else if editors.active == editors.left  close_other_editor();
+        case .left;    if layout == .Double if active == left  close_current_editor(); else if active == right close_other_editor();
+        case .right;   if layout == .Double if active == right close_current_editor(); else if active == left  close_other_editor();
     }
 }
 
