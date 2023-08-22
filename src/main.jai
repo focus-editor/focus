@@ -743,6 +743,22 @@ dont_ignore_next_window_resize := false;
     #assert false, "Unsupported OS";
 }
 
+/*
+ * Idealy this would go under `#if OS == .LINUX`. However, that doesn't work at the moment,
+ * compilation fails with the following error:
+ *
+ *   Error: Cannot designate program parameters for the module "Linux_Display" because an import for that module has already been seen, so it's too late.
+ *
+ * This seems to happen because imports placed inside of an `#if` are processed after top-level
+ * imports, and `Linux_Display` is pulled-in by other modules (`Clipboard`, `Input`, `Simp`) that
+ * the editor imports at the top level. Not sure if this is a compiler bug or if it's working as
+ * intended, pretty hard to say considering evaluation order is not guaranteed in any way.
+ *
+ * `Linux_Display` is empty on platforms other than Linux, so importing it should be basically
+ * free on Windows/MacOS.
+ */
+_ :: #import "Linux_Display"()(VALIDATE_USAGE = DEBUG);
+
 #import "Atomics";
 #import "Basic"()(MEMORY_DEBUGGER = DEBUG);
 #import "Math";
