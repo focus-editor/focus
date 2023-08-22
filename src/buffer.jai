@@ -284,7 +284,7 @@ get_selected_string :: (cursor: Cursor, buffer: Buffer) -> string {
 
 // Return the string you would select if you used select_word() on this cursor
 // @Cleanup Factor code with select_word() so there is no inconsistency if 
-//          there's a change in one of the methods
+//          there's a change in one of the procedures
 get_selectable_string :: (cursor: Cursor, buffer: Buffer) -> string {
     pos       := cursor.pos;
     pos_left  := ifx cursor.pos > 0 then prev_char_offset(buffer.bytes, pos) else 0;
