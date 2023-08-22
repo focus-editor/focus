@@ -48,7 +48,7 @@ platform_parse_config_line :: (config: *Platform_Config, section: PLATFORM_SUBSE
 }
 
 platform_apply_config :: (config: *Platform_Config) {
-    LD.set_fixed_scaling(config.scaling_factor);
+    LD.set_fixed_scaling(*display, config.scaling_factor);
 }
 
 platform_copy_config :: (src: *Platform_Config, dst: *Platform_Config) {
@@ -133,10 +133,12 @@ DONE;
     if equal_nocase(backend_s, "prefer-x11") then backend = .PREFER_X11;
     if equal_nocase(backend_s, "wayland") then backend = .FORCE_WAYLAND;
     if equal_nocase(backend_s, "x11") then backend = .FORCE_X11;
-    LD.init(backend, app_id);
+    LD.init_display(*display, backend, app_id);
 
-    active_backend := LD.active_backend();
+    active_backend := LD.active_backend(*display);
     assert(active_backend != .UNINITIALIZED);
+
+    context.active_display = *display;
 
     timer = LD.timer_create();
 }
@@ -159,12 +161,13 @@ platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, 
 
 platform_create_window :: () {
     window = LD.create_window(
+        *display,
         window_width, window_height,
         window_generic_title,
         window_x, window_y,
         background_color_rgb = as_3_floats(Colors.BACKGROUND));
 
-    if LD.active_backend() == .X11 {
+    if LD.active_backend(*display) == .X11 {
         data := icon_data.png_data;
 
         width: s32;
@@ -208,7 +211,7 @@ platform_set_window_title :: (title: string) {
 }
 
 platform_wait_message :: inline () {
-    LD.wait_for_events();
+    LD.wait_for_events(*display);
 }
 
 platform_set_refresh_timer :: (window: Window_Type) {
@@ -314,4 +317,5 @@ Linux_Icon :: struct {
     png_data: string;
 }
 
+display: LD.Display;
 timer: LD.Timer;
