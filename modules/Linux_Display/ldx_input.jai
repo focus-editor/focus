@@ -75,7 +75,10 @@ x11_translate_key_code :: (key: X11.KeySym) -> Input.Key_Code {
     return UNKNOWN;
 }
 
-x11_wait_for_events :: (x11_display: *X11Display) {
+x11_wait_for_events :: (display: *Display) {
+    x11_check_usage(display);
+
+    x11_display: *X11_Display = display;
     xev: X11.XEvent;
     needs_flush := true;
     while true {
@@ -139,33 +142,37 @@ x11_event_predicate :: (display: *X11.Display, event: *X11.XEvent, *void) -> s32
     return 1;
 }
 
-x11_update_window_events :: (x11_display: *X11Display) {
-    display := x11_display.handle;
+x11_update_window_events :: (display: *Display) {
+    x11_check_usage(display);
+
+    x11_display: *X11_Display = display;
 
     xev: X11.XEvent;
-    while X11.XPending(display) {
-        result := X11.XCheckIfEvent(display, *xev, x11_event_predicate, null);
+    while X11.XPending(x11_display.handle) {
+        result := X11.XCheckIfEvent(x11_display.handle, *xev, x11_event_predicate, null);
         if result {
-            x11_handle_event(display, *xev);
+            x11_handle_event(x11_display, *xev);
             timers_tick();
         }
     }
 }
 
-x11_handle_event :: (display: *X11.Display, xev: *X11.XEvent) {
+x11_handle_event :: (x11_display: *X11_Display, xev: *X11.XEvent) {
     using Input.Key_Code;
+
+    display := x11_display.handle;
 
     if X11.XFilterEvent(xev, X11.None) return;
 
-    ld_win := get_by_native_handle(xx xev.xany.window);
+    ld_win := get_by_native_handle(xx x11_display, xx xev.xany.window);
     if ld_win == INVALID_WINDOW return;
-    win := isa(ld_win, X11Window);
+    win: *X11_Window = ld_win;
 
     if xev.type == {
         case X11.ClientMessage;
             message_type := xev.xclient.message_type;
             if message_type == X11.XdndEnter {
-                drop_handled := maybe_handle_xdnd_drop_events(display, xev, *X11.drop_info);
+                drop_handled := maybe_handle_xdnd_drop_events(x11_display, xev, *X11.drop_info);
                 if drop_handled  return;
             } else if message_type == X11.x_global_wm_protocols {
                 message0 := cast(X11.Atom) xev.xclient.data.l[0];
@@ -179,7 +186,7 @@ x11_handle_event :: (display: *X11.Display, xev: *X11.XEvent) {
                 if message0 == X11.x_global_wm_delete_window {
                     event: Input.Event;
                     event.type = .QUIT;
-                    array_add(*events_this_frame, event);
+                    array_add(*x11_display.base.events_this_frame, event);
                 }
             }
 
@@ -208,9 +215,9 @@ x11_handle_event :: (display: *X11.Display, xev: *X11.XEvent) {
                     utf32 := text[it];
                     if utf32 >= 32 && utf32 != 127 event.text_input_count += 1;
                 }
-                array_add(*events_this_frame, event);
+                array_add(*x11_display.base.events_this_frame, event);
 
-                input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
+                x11_display.base.input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
             }
 
             if has_text {
@@ -225,7 +232,7 @@ x11_handle_event :: (display: *X11.Display, xev: *X11.XEvent) {
                     text_event.key_pressed = 1;
                     text_event.key_code = x11_translate_key_code(keysym);
                     text_event.utf32 = utf32;
-                    array_add(*events_this_frame, text_event);
+                    array_add(*x11_display.base.events_this_frame, text_event);
                 }
             }
 
@@ -256,9 +263,9 @@ x11_handle_event :: (display: *X11.Display, xev: *X11.XEvent) {
                 event.type = .KEYBOARD;
                 event.key_pressed = 0;
                 event.key_code = x11_translate_key_code(keysym);
-                array_add(*events_this_frame, event);
+                array_add(*x11_display.base.events_this_frame, event);
 
-                input_button_states[event.key_code] = Input.Key_Current_State.END;
+                x11_display.base.input_button_states[event.key_code] = Input.Key_Current_State.END;
             }
 
         case X11.ButtonPress;
@@ -275,8 +282,8 @@ x11_handle_event :: (display: *X11.Display, xev: *X11.XEvent) {
                 event.type = .MOUSE_WHEEL;
                 event.typical_wheel_delta = WHEEL_DELTA;
                 event.wheel_delta = WHEEL_DELTA * (ifx (button & 0x01) then cast(s32) -1 else 1);
-                array_add(*events_this_frame, event);
-                mouse_delta_z += event.wheel_delta;
+                array_add(*x11_display.base.events_this_frame, event);
+                x11_display.base.mouse_delta_z += event.wheel_delta;
                 return;
             }
 
@@ -290,9 +297,9 @@ x11_handle_event :: (display: *X11.Display, xev: *X11.XEvent) {
                 event.key_code = MOUSE_BUTTON_RIGHT;
             }
 
-            input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
+            x11_display.base.input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
 
-            array_add(*events_this_frame, event);
+            array_add(*x11_display.base.events_this_frame, event);
 
         case X11.ButtonRelease;
             // it seems that mouse input doesnt generate repeat events so we dont have to peek the queue
@@ -312,9 +319,9 @@ x11_handle_event :: (display: *X11.Display, xev: *X11.XEvent) {
                 event.key_code = MOUSE_BUTTON_RIGHT;
             }
 
-            input_button_states[event.key_code] = Input.Key_Current_State.END;
+            x11_display.base.input_button_states[event.key_code] = Input.Key_Current_State.END;
 
-            array_add(*events_this_frame, event);
+            array_add(*x11_display.base.events_this_frame, event);
 
         case X11.SelectionRequest;
             selreq := cast(*X11.XSelectionRequestEvent) xev;
@@ -391,7 +398,7 @@ x11_handle_event :: (display: *X11.Display, xev: *X11.XEvent) {
             X11.XSendEvent(selreq.display, selreq.requestor, X11.True, 0, *out);
         case X11.ConfigureNotify;
             config := cast(*X11.XConfigureEvent) xev;
-            ld_win := get_by_native_handle(xx config.window);
+            ld_win := get_by_native_handle(xx x11_display, xx config.window);
             if ld_win Input.add_resize_record(ld_win, config.width, config.height);
         // Adding a dummy event to the queue, forcing a redraw when window's focus
         // changes or it gets exposed (e.g. it's being asked to render itself but without
@@ -399,16 +406,15 @@ x11_handle_event :: (display: *X11.Display, xev: *X11.XEvent) {
         case X11.FocusIn;
             Input.input_application_has_focus = true;
             X11.XSetICFocus(win.ic);
-            array_add(*events_this_frame, .{type=.WINDOW});
+            array_add(*x11_display.base.events_this_frame, .{type=.WINDOW});
         case X11.FocusOut;
             Input.input_application_has_focus = false;
             X11.XUnsetICFocus(win.ic);
-            array_add(*events_this_frame, .{type=.WINDOW});
+            array_add(*x11_display.base.events_this_frame, .{type=.WINDOW});
         case X11.Expose;
-            array_add(*events_this_frame, .{type=.WINDOW});
+            array_add(*x11_display.base.events_this_frame, .{type=.WINDOW});
     }
 }
-
 
 x11_clipboard_get_text :: (win: X11.Window) -> string {  // Allocated via alloc; should be manually freed.
     text: string;
@@ -453,8 +459,10 @@ x11_clipboard_get_text :: (win: X11.Window) -> string {  // Allocated via alloc;
     return text;
 }
 
-x11_clipboard_get_text :: () -> string {
-    dpy := X11.x_global_display;
+x11_clipboard_get_text :: (display: *Display) -> string {
+    x11_check_usage(display);
+
+    dpy := display.x11.handle;
     if !dpy return "";
     win: X11.Window;
     revert: s32;
@@ -471,8 +479,10 @@ x11_clipboard_set_text :: (win: X11.Window, text: string) {
     X11.x_global_clipboard_buffer.text_data = copy_string(text);
 }
 
-x11_clipboard_set_text :: (text: string) {
-    dpy := X11.x_global_display;
+x11_clipboard_set_text :: (display: *Display, text: string) {
+    x11_check_usage(display);
+
+    dpy := display.x11.handle;
     if !dpy return;
     win: X11.Window;
     revert: s32;
@@ -701,7 +711,8 @@ get_selection :: (display: *X11.Display, from: X11.Window, prop: X11.Atom, inser
     return true;
 }
 
-maybe_handle_xdnd_drop_events :: (display: *X11.Display, xevent: *X11.XEvent, drop_info: *X11.Drop_Info) -> bool {
+maybe_handle_xdnd_drop_events :: (x11_display: *X11_Display, xevent: *X11.XEvent, drop_info: *X11.Drop_Info) -> bool {
+    display := x11_display.handle;
     assert(xevent.type == X11.ClientMessage);
     assert(xevent.xclient.message_type == X11.XdndEnter);
 
@@ -886,7 +897,7 @@ maybe_handle_xdnd_drop_events :: (display: *X11.Display, xevent: *X11.XEvent, dr
         event: Input.Event;
         event.type = .DRAG_AND_DROP_FILES;
         event.files = files;
-        array_add(*events_this_frame, event);
+        array_add(*x11_display.base.events_this_frame, event);
 
         array_reset(*drop_info.data);
         return true;

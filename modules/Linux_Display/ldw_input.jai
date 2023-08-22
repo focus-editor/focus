@@ -1,3 +1,5 @@
+#scope_module
+
 keyboard_listenter :: wl_keyboard_listener.{
     keymap = (data: *void, self: *wl_keyboard, format: u32, fd: s32, size: u32) -> void #c_call {
         ctx: Context;
@@ -6,7 +8,7 @@ keyboard_listenter :: wl_keyboard_listener.{
                 keymap := mmap(null, size, PROT_READ, MAP_PRIVATE, fd, 0);
                 defer munmap(keymap, size);
 
-                d : *WLDisplay = wl_proxy.get_user_data(self);
+                d: *Wayland_Display = wl_proxy.get_user_data(self);
                 d.kb_context = xkb_context_new(.XKB_CONTEXT_NO_FLAGS);
                 d.kb_keymap = xkb_keymap_new_from_string(d.kb_context, keymap,
                     .XKB_KEYMAP_FORMAT_TEXT_V1, .XKB_KEYMAP_COMPILE_NO_FLAGS);
@@ -33,7 +35,7 @@ keyboard_listenter :: wl_keyboard_listener.{
     },
 
     leave = (data: *void, self: *wl_keyboard, serial: u32, surface: *wl_surface) -> void #c_call {
-        d : *WLDisplay = wl_proxy.get_user_data(self);
+        d: *Wayland_Display = wl_proxy.get_user_data(self);
         Input.input_application_has_focus = false;
         ctx: Context;
         push_context ctx {
@@ -44,7 +46,7 @@ keyboard_listenter :: wl_keyboard_listener.{
     key = (data: *void, self: *wl_keyboard, serial: u32, time: u32, key: u32, state: u32) -> void #c_call {
         ctx: Context;
         push_context ctx {
-            d : *WLDisplay = wl_proxy.get_user_data(self);
+            d: *Wayland_Display = wl_proxy.get_user_data(self);
             if !d.kb_state return;
 
             if state == wl_keyboard.key_state_pressed {
@@ -63,7 +65,7 @@ keyboard_listenter :: wl_keyboard_listener.{
     modifiers = (data: *void, self: *wl_keyboard, serial: u32,
         mods_depressed: u32, mods_latched: u32, mods_locked: u32, group: u32) -> void #c_call
     {
-        d : *WLDisplay = wl_proxy.get_user_data(self);
+        d: *Wayland_Display = wl_proxy.get_user_data(self);
         xkb_state_update_mask(
             d.kb_state,
             mods_depressed, mods_latched, mods_locked,
@@ -71,14 +73,14 @@ keyboard_listenter :: wl_keyboard_listener.{
     },
 
     repeat_info = (data: *void, self: *wl_keyboard, rate: s32, delay: s32) -> void #c_call {
-        d : *WLDisplay = wl_proxy.get_user_data(self);
+        d: *Wayland_Display = wl_proxy.get_user_data(self);
         d.key_repeat_delay = xx delay;
         d.key_repeat_rate  = xx rate;
     }
 };
 
 wl_key_repeat_cb :: (tid: Timer, user_data: *void) {
-    d : *WLDisplay = user_data;
+    d: *Wayland_Display = user_data;
     key := d.key_to_repeat;
 
     if !key {
@@ -89,7 +91,7 @@ wl_key_repeat_cb :: (tid: Timer, user_data: *void) {
     handle_key_event(d, d.input_serial, d.key_to_repeat, wl_keyboard.key_state_pressed);
 }
 
-handle_key_event :: (d: *WLDisplay, serial: u32, key: u32, state: u32) {
+handle_key_event :: (d: *Wayland_Display, serial: u32, key: u32, state: u32) {
     utf32: u32;
     is_printable: bool;
     keycode: xkb_keycode_t = key + 8;
@@ -117,15 +119,15 @@ handle_key_event :: (d: *WLDisplay, serial: u32, key: u32, state: u32) {
         event.key_pressed = 1;
         event.key_code = x11_translate_key_code(keysym);
         event.text_input_count = xx is_printable;
-        input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
+        d.base.input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
         if event.ctrl_pressed d.input_serial = serial;
     } else {
         event.key_pressed = 0;
         event.key_code = x11_translate_key_code(keysym);
-        input_button_states[event.key_code] = Input.Key_Current_State.END;
+        d.base.input_button_states[event.key_code] = Input.Key_Current_State.END;
     }
 
-    array_add(*events_this_frame, event);
+    array_add(*d.base.events_this_frame, event);
 
     if event.key_pressed && is_printable {
         text_event: Input.Event;
@@ -133,7 +135,7 @@ handle_key_event :: (d: *WLDisplay, serial: u32, key: u32, state: u32) {
         text_event.key_pressed = 1;
         text_event.key_code = x11_translate_key_code(keysym);
         text_event.utf32 = utf32;
-        array_add(*events_this_frame, text_event);
+        array_add(*d.base.events_this_frame, text_event);
     }
 }
 
@@ -142,7 +144,7 @@ BTN_LEFT   : u32 : 0x110;
 BTN_RIGHT  : u32 : 0x111;
 BTN_MIDDLE : u32 : 0x112;
 
-refresh_cursor :: (w: *WLWindow) {
+refresh_cursor :: (w: *Wayland_Window) {
     wl_pointer.set_cursor(
         w.display.pointer,
         w.enter_serial,
@@ -157,10 +159,10 @@ pointer_listener :: wl_pointer_listener.{
     {
         ctx: Context;
         push_context ctx {
-            w := isa(get_by_native_handle(surface), WLWindow);
-            current_hovered_window = wl_surface.get_user_data(surface);
-            w.enter_serial = serial;
-            refresh_cursor(w);
+            d: *Wayland_Display = wl_proxy.get_user_data(self);
+            d.current_hovered_window = wl_surface.get_user_data(surface);
+            d.current_hovered_window.enter_serial = serial;
+            refresh_cursor(d.current_hovered_window);
         }
     },
 
@@ -169,16 +171,17 @@ pointer_listener :: wl_pointer_listener.{
     motion = (data: *void, self: *wl_pointer, time: u32, fx: wl_fixed_t, fy: wl_fixed_t) -> void #c_call {
         ctx: Context;
         push_context ctx {
-            if current_hovered_window != null {
+            d: *Wayland_Display = wl_proxy.get_user_data(self);
+            if d.current_hovered_window != null {
                 m_x := wl_fixed_to_int(fx);
                 m_y := wl_fixed_to_int(fy);
-                current_hovered_window.mouse_x, current_hovered_window.mouse_y = window_scale_coords(current_hovered_window, m_x, m_y);
+                d.current_hovered_window.mouse_x, d.current_hovered_window.mouse_y = window_scale_coords(d.current_hovered_window, m_x, m_y);
             }
         }
     },
 
     button = (data: *void, self: *wl_pointer, serial: u32, time: u32, button: u32, state: u32) -> void #c_call {
-        d : *WLDisplay = wl_proxy.get_user_data(self);
+        d: *Wayland_Display = wl_proxy.get_user_data(self);
 
         event: Input.Event;
         event.type = .KEYBOARD;
@@ -189,15 +192,15 @@ pointer_listener :: wl_pointer_listener.{
         }
         if state == wl_pointer.button_state_pressed {
             event.key_pressed = 1;
-            input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
+            d.base.input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
         } else {
             event.key_pressed = 0;
-            input_button_states[event.key_code] = Input.Key_Current_State.END;
+            d.base.input_button_states[event.key_code] = Input.Key_Current_State.END;
         }
 
         ctx: Context;
         push_context ctx {
-            array_add(*events_this_frame, event);
+            array_add(*d.base.events_this_frame, event);
         }
 
         d.input_serial = serial;
@@ -206,7 +209,7 @@ pointer_listener :: wl_pointer_listener.{
     axis = (data: *void, self: *wl_pointer, time: u32, axis: u32, value: wl_fixed_t) -> void #c_call {
         ctx: Context;
         push_context ctx {
-            d: *WLDisplay = wl_proxy.get_user_data(self);
+            d: *Wayland_Display = wl_proxy.get_user_data(self);
             sign := ifx (wl_fixed_to_int(value) < 0) then cast(s32)-1 else 1;
             delta := (WHEEL_DELTA / 2); // @TODO: this is set on a "feels good on my machine" basis, should be calculated some other way (perhaps based on the height of a line?)
             d.pointer_axis_accumulator[axis] += d.pointer_axis_multiplier[axis] * sign * delta;
@@ -216,14 +219,14 @@ pointer_listener :: wl_pointer_listener.{
     frame = (data: *void, self: *wl_pointer) -> void #c_call {
         ctx: Context;
         push_context ctx {
-            d: *WLDisplay = wl_proxy.get_user_data(self);
+            d: *Wayland_Display = wl_proxy.get_user_data(self);
             if d.pointer_axis_accumulator[0] {
                 event: Input.Event;
                 event.type = .MOUSE_WHEEL;
                 event.typical_wheel_delta = WHEEL_DELTA;
                 event.wheel_delta = d.pointer_axis_accumulator[0];
-                array_add(*events_this_frame, event);
-                mouse_delta_z += event.wheel_delta;
+                array_add(*d.base.events_this_frame, event);
+                d.base.mouse_delta_z += event.wheel_delta;
 
                 d.pointer_axis_accumulator[0] = 0;
             }
@@ -237,13 +240,13 @@ pointer_listener :: wl_pointer_listener.{
     axis_value120 = (data: *void, self: *wl_pointer, axis: u32, value120: s32) -> void #c_call {
         ctx: Context;
         push_context ctx {
-            d: *WLDisplay = wl_proxy.get_user_data(self);
+            d: *Wayland_Display = wl_proxy.get_user_data(self);
             d.pointer_axis_accumulator[axis] += d.pointer_axis_multiplier[axis] * value120;
         }
     },
 
     axis_relative_direction = (data: *void, self: *wl_pointer, axis: u32, direction: u32) -> void #c_call {
-        d: *WLDisplay = wl_proxy.get_user_data(self);
+        d: *Wayland_Display = wl_proxy.get_user_data(self);
         if direction == wl_pointer.axis_relative_direction_identical {
             d.pointer_axis_multiplier[axis] = 1;
         } else {
@@ -252,7 +255,7 @@ pointer_listener :: wl_pointer_listener.{
     },
 };
 
-wl_display_poll :: (display: *WLDisplay, timeout: s32) -> wayland_events := false, timer_events := false {
+wl_display_poll :: (display: *Wayland_Display, timeout: s32) -> wayland_events := false, timer_events := false {
     wlfd := wl_display.get_fd(display.handle);
 
     pfd: [2]pollfd;
@@ -284,7 +287,7 @@ wl_display_poll :: (display: *WLDisplay, timeout: s32) -> wayland_events := fals
     return has_wayland_events, has_timer_events;
 }
 
-wl_event_loop_step :: (display: *WLDisplay, timeout: s32) -> bool {
+wl_event_loop_step :: (display: *Wayland_Display, timeout: s32) -> bool {
     dpy := display.handle;
     dispatch_count : s32 = 0;
 
@@ -304,33 +307,41 @@ wl_event_loop_step :: (display: *WLDisplay, timeout: s32) -> bool {
         wl_display.cancel_read(dpy);
     }
 
-    return (wlev && ((dispatch_count > 0) || (events_this_frame.count > 0))) || tev;
+    return (wlev && ((dispatch_count > 0) || (display.base.events_this_frame.count > 0))) || tev;
 }
 
-wl_wait_for_events :: (display: *WLDisplay) {
+wl_wait_for_events :: (display: *Display) {
+    wl_check_usage(display);
     while true {
         if wl_event_loop_step(display, -1) return;
     }
 }
 
-wl_update_window_events :: (display: *WLDisplay) {
+wl_update_window_events :: (display: *Display) {
+    wl_check_usage(display);
     wl_event_loop_step(display, 0);
 }
 
-wl_get_mouse_pointer_position :: (win: *WLWindow, right_handed: bool) -> x: int, y: int, success: bool {
+wl_get_mouse_pointer_position :: (window: *Window, right_handed: bool) -> x: int, y: int, success: bool {
+    wl_check_usage(null, window);
+
+    win: *Wayland_Window = window;
     if right_handed {
         return win.mouse_x, win.buffer_height - win.mouse_y, true;
     }
     return win.mouse_x, win.mouse_y, true;
 }
 
-wl_get_mouse_pointer_position :: (right_handed: bool) -> x: int, y: int, success: bool {
+wl_get_mouse_pointer_position :: (display: *Display, right_handed: bool) -> x: int, y: int, success: bool {
+    wl_check_usage(display);
+
+    d: *Wayland_Display = display;
     rx: int = 0;
     ry: int = 0;
     rs: bool = false;
 
-    if current_hovered_window {
-        rx, ry, rs = wl_get_mouse_pointer_position(current_hovered_window, right_handed);
+    if d.current_hovered_window {
+        rx, ry, rs = wl_get_mouse_pointer_position(cast(*Window) d.current_hovered_window, right_handed);
     }
 
     return rx, ry, rs;
@@ -339,5 +350,3 @@ wl_get_mouse_pointer_position :: (right_handed: bool) -> x: int, y: int, success
 #scope_file
 #import "POSIX";
 #import "libxkbcommon";
-
-current_hovered_window: *WLWindow;

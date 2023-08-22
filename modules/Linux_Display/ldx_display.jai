@@ -1,4 +1,8 @@
-X11Display :: struct {
+#scope_module
+
+X11_Display :: struct {
+    #as base: Base_Display;
+
     handle: *X11.Display;
     file_descriptor: s32;
 
@@ -11,12 +15,11 @@ X11Display :: struct {
     dpi_override: s32;
 }
 
-X11Window :: struct {
-    // we would really like this to be LDWindow but we get a circular dependency if we declare it like that
-    wrapper: *void;
+X11_Window :: struct {
+    #as base: Base_Window;
 
     handle: X11.Window;
-    display: *X11Display;
+    display: *X11_Display;
 
     ic: X11.XIC;
 
@@ -29,7 +32,17 @@ preloaded_x_cursors :: string.[
     "all-scroll", "nw-resize", "se-resize", "text",
 ];
 
-x11_init_display :: (display: LDDisplay) -> bool {
+x11_init_display :: (display: *Display) -> bool {
+    if X11.x_global_display {
+        /*
+         * The idea behind this API is that an application could, in theory, create as many
+         * connections to X servers as possible. However, due to the way the Jai X11 module
+         * works right now we can only ever connect to one. As such, we fail here if that
+         * connection has already been established.
+         */
+        return false;
+    }
+
     old_locale := setlocale(LC_ALL, null);
     old_xmods  := X11.XSetLocaleModifiers(null);
 
@@ -89,6 +102,7 @@ Inspect available locales [$ locale -a] and the one you have set up: [$ locale]
 
     }
     X11.init_global_display();
+    if !X11.x_global_display return false;
 
     // NOTE: Should we explicitly support XMODIFIERS and XIM_SERVERS such as dbus and fcitx?
     // Try the best we can to get the input method
@@ -124,12 +138,26 @@ Inspect available locales [$ locale -a] and the one you have set up: [$ locale]
 
     file_descriptor := X11.XConnectionNumber(X11.x_global_display);
 
-    set(display, X11Display.{
+    xd: *X11_Display = display;
+    xd.* = .{
         handle = X11.x_global_display,
         im = im,
         file_descriptor = file_descriptor,
-    });
-    return ifx X11.x_global_display then true else false;
+    };
+
+    bd: *Base_Display = display;
+    bd.type = X11_Display;
+
+    bd.create_window              = x11_create_window;
+    bd.set_fixed_scaling          = x11_set_fixed_scaling;
+    bd.translate_key_code         = x11_translate_key_code;
+    bd.wait_for_events            = x11_wait_for_events;
+    bd.update_window_events       = x11_update_window_events;
+    bd.clipboard_set_text         = x11_clipboard_set_text;
+    bd.clipboard_get_text         = x11_clipboard_get_text;
+    bd.get_mouse_pointer_position = x11_get_mouse_pointer_position;
+
+    return true;
 }
 
 #scope_file
@@ -138,7 +166,10 @@ x_net_wm_state_maximized_horz: X11.Atom;
 
 #scope_export
 
-x11_maximize_window :: (x11_win: *X11Window) {
+x11_maximize_window :: (window: *Window) {
+    x11_check_usage(null, window);
+
+    x11_win: *X11_Window = window;
     win := x11_win.handle;
     display := x11_win.display.handle;
 
@@ -170,9 +201,10 @@ x11_maximize_window :: (x11_win: *X11Window) {
     X11.XSync(display, X11.False);
 }
 
-x11_toggle_fullscreen :: (x11_win: *X11Window, desire_fullscreen: bool, saved: *Saved_Window_Info) ->
-    success: bool, width: s32, height: s32
-{
+x11_toggle_fullscreen :: (window: *Window, desire_fullscreen: bool, saved: *Saved_Window_Info) -> success: bool, width: s32, height: s32 {
+    x11_check_usage(null, window);
+
+    x11_win: *X11_Window = window;
     win := x11_win.handle;
     display := x11_win.display.handle;
 
@@ -242,8 +274,8 @@ x11_toggle_fullscreen :: (x11_win: *X11Window, desire_fullscreen: bool, saved: *
     }
 }
 
-x11_create_window :: (x11_display: *X11Display, ld_win: LDWindow, width: int, height: int, window_name: string,
-    window_x: int, window_y: int, x11_parent: *X11Window, background_color_rgb: [3]float) -> bool
+x11_create_window :: (display: *Display, window: *Window, width: int, height: int, window_name: string,
+    window_x: int, window_y: int, parent: *Window, background_color_rgb: [3]float) -> bool
 {
     to_u16 :: (f: float) -> u16 {
         u := cast(s32)(f * 65535);
@@ -253,11 +285,19 @@ x11_create_window :: (x11_display: *X11Display, ld_win: LDWindow, width: int, he
         return cast(u16) u;
     }
 
+    x11_check_usage(display, parent);
+
+    x11_display: *X11_Display = display;
+    x11_parent: *X11_Window = parent;
+    x11_win: *X11_Window = window;
+
     d := x11_display.handle;
 
     X11.XLockDisplay(d);
-    root := X11.DefaultRootWindow(d);
-    parent := ifx x11_parent then x11_parent.handle else root;
+    defer X11.XUnlockDisplay(d);
+
+    root_handle := X11.DefaultRootWindow(d);
+    parent_handle := ifx x11_parent then x11_parent.handle else root_handle;
 
     // These attributes must match the attibutes we use to create the GL context. :GlContextAttributes
     //        -rluba, 2021-11-30
@@ -272,7 +312,7 @@ x11_create_window :: (x11_display: *X11Display, ld_win: LDWindow, width: int, he
         X11.None
     ];
     vi := X11.glXChooseVisual(d, 0, attr.data);
-    cmap := X11.XCreateColormap(d, parent, vi.visual, X11.AllocNone);
+    cmap := X11.XCreateColormap(d, parent_handle, vi.visual, X11.AllocNone);
 
     background_color: X11.XColor;
     background_color.flags |= X11.DoRed | X11.DoGreen | X11.DoBlue;
@@ -295,7 +335,7 @@ x11_create_window :: (x11_display: *X11Display, ld_win: LDWindow, width: int, he
         X11.LeaveWindowMask |
         X11.PointerMotionMask;
     swa.background_pixel = background_color.pixel;
-    win := X11.XCreateWindow(d, parent,
+    win := X11.XCreateWindow(d, parent_handle,
         xx window_x, xx window_y, xx width, xx height,
         0,
         vi.depth,
@@ -313,7 +353,7 @@ x11_create_window :: (x11_display: *X11Display, ld_win: LDWindow, width: int, he
         } else {
             class_hints.res_name = "jai-application";
         }
-        class_hints.res_class = temp_c_string(global_app_id);
+        class_hints.res_class = temp_c_string(display.base.app_id);
         X11.XSetClassHint(d, win, class_hints);
     }
 
@@ -333,17 +373,34 @@ x11_create_window :: (x11_display: *X11Display, ld_win: LDWindow, width: int, he
 
     array_add(*X11.x_global_windows, win);
 
-    X11.XUnlockDisplay(d);
-    set(ld_win, X11Window.{
-        wrapper = ld_win,
-        handle = win,
-        display = x11_display,
-        ic = ic,
-    });
+    xw: *X11_Window = window;
+    xw.handle  = win;
+    xw.display = x11_display;
+    xw.ic      = ic;
+
+    bw: *Base_Window = window;
+    bw.type    = X11_Window;
+    bw.display = display;
+
+    bw.set_icon_from_raw_data     = x11_set_icon_from_raw_data;
+    bw.toggle_fullscreen          = x11_toggle_fullscreen;
+    bw.has_native_handle          = x11_has_native_handle;
+    bw.get_dimensions             = x11_get_dimensions;
+    bw.get_render_dimensions      = x11_get_render_dimensions;
+    bw.get_mouse_pointer_position = x11_get_mouse_pointer_position;
+    bw.enable_dnd                 = x11_enable_dnd;
+    bw.set_window_title           = x11_set_window_title;
+    bw.maximize_window            = x11_maximize_window;
+    bw.set_cursor_from_theme      = x11_set_cursor_from_theme;
+    bw.get_dpi_scaling_factor     = x11_get_dpi_scaling_factor;
+
     return true;
 }
 
-x11_set_icon_from_raw_data :: (win: X11Window, data: *u8, width: u32, height: u32) {
+x11_set_icon_from_raw_data :: (window: *Window, data: *u8, width: u32, height: u32) {
+    x11_check_usage(null, window);
+
+    win: *X11_Window = window;
     dpy := win.display.handle;
     w := win.handle;
 
@@ -361,7 +418,8 @@ x11_set_icon_from_raw_data :: (win: X11Window, data: *u8, width: u32, height: u3
     X11.XFree(hints);
 }
 
-x11_set_cursor_from_theme :: (win: *X11Window, name: string) {
+x11_set_cursor_from_theme :: (window: *Window, name: string) {
+    win: *X11_Window = window;
     if xcursor_initialized {
         cursor, found := table_find(*x_cursors, name);
         if found {
@@ -370,13 +428,17 @@ x11_set_cursor_from_theme :: (win: *X11Window, name: string) {
     }
 }
 
-x11_has_native_handle :: (win: *X11Window, native_handle: X11.Window) -> bool {
-    return win.handle == native_handle;
+x11_has_native_handle :: (window: *Window, native_handle: *void) -> bool {
+    x11_check_usage(null, window);
+
+    win: *X11_Window = window;
+    return win.handle == xx native_handle;
 }
 
-x11_get_dimensions :: (win: *X11Window, right_handed: bool)
-    -> (x: s32, y: s32, width: s32, height: s32, success := true)
-{
+x11_get_dimensions :: (window: *Window, right_handed: bool) -> (x: s32, y: s32, width: s32, height: s32, success := true) {
+    x11_check_usage(null, window);
+
+    win: *X11_Window = window;
     xwa: X11.XWindowAttributes;
     X11.XGetWindowAttributes(win.display.handle, win.handle, *xwa);
 
@@ -384,9 +446,19 @@ x11_get_dimensions :: (win: *X11Window, right_handed: bool)
     return xwa.x, y, xwa.width, xwa.height;
 }
 
-x11_get_mouse_pointer_position :: (dpy: *X11Display, win: *X11Window, right_handed: bool)
-    -> x: int, y: int, success: bool
-{
+x11_get_render_dimensions :: (window: *Window) -> s32, s32 {
+    x11_check_usage(null, window);
+
+    _, _, w, h, ok := x11_get_dimensions(window, false);
+    if ok return w, h;
+    return 1, 1;
+}
+
+x11_get_mouse_pointer_position :: (display: *Display, window: *Window, right_handed: bool) -> x: int, y: int, success: bool {
+    x11_check_usage(display, window);
+
+    dpy: *X11_Display = display;
+    win: *X11_Window = window;
     root_x, root_y: s32;
     win_x, win_y: s32;
     root, child: X11.Window;
@@ -405,32 +477,37 @@ x11_get_mouse_pointer_position :: (dpy: *X11Display, win: *X11Window, right_hand
     return win_x, win_y, ok == X11.True;
 }
 
-x11_get_mouse_pointer_position :: (win: *X11Window, right_handed: bool) -> x: int, y: int, success: bool {
-    dpy := isa(global_display, X11Display);
-    assert(dpy != null);
-    x, y, success := x11_get_mouse_pointer_position(dpy, win, right_handed);
+x11_get_mouse_pointer_position :: (window: *Window, right_handed: bool) -> x: int, y: int, success: bool {
+    x11_check_usage(null, window);
+
+    win: *X11_Window = window;
+    x, y, success := x11_get_mouse_pointer_position(win.base.display, window, right_handed);
     return x, y, success;
 }
 
-x11_get_mouse_pointer_position :: (right_handed := false) -> x: int, y: int, success: bool {
-    dpy := isa(global_display, X11Display);
-    assert(dpy != null);
+x11_get_mouse_pointer_position :: (display: *Display, right_handed := false) -> x: int, y: int, success: bool {
+    x11_check_usage(display);
 
     hwnd: X11.Window;
     revert: s32;
-    X11.XGetInputFocus(dpy.handle, *hwnd, *revert);
-    win := get_by_native_handle(xx hwnd);
-    if !win || !isa(win, X11Window) return 0, 0, false;
-
-    x, y, success := x11_get_mouse_pointer_position(dpy, isa(win, X11Window), right_handed);
+    X11.XGetInputFocus(display.x11.handle, *hwnd, *revert);
+    window := get_by_native_handle(display, xx hwnd);
+    if !window return 0, 0, false;
+    x, y, success := x11_get_mouse_pointer_position(display, window, right_handed);
     return x, y, success;
 }
 
-x11_enable_dnd :: (win: *X11Window, typelist: []string) {
+x11_enable_dnd :: (window: *Window, typelist: []string) {
+    x11_check_usage(null, window);
+
+    win: *X11_Window = window;
     X11.enable_drag_and_drop(win.handle, typelist);
 }
 
-x11_set_window_title :: (w: *X11Window, title: string) {
+x11_set_window_title :: (window: *Window, title: string) {
+    x11_check_usage(null, window);
+
+    w: *X11_Window = window;
     prop := X11.XTextProperty.{
         value = title.data,
         encoding = X11.x_global_xa_utf8,
@@ -440,7 +517,10 @@ x11_set_window_title :: (w: *X11Window, title: string) {
     X11.XSetWMName(w.display.handle, w.handle, *prop);
 }
 
-x11_get_dpi_scaling_factor :: (w: *X11Window) -> float {
+x11_get_dpi_scaling_factor :: (window: *Window) -> float {
+    x11_check_usage(null, window);
+
+    w: *X11_Window = window;
     if w.display.fixed_scaling return cast(float) w.display.dpi_override / 96.0;
 
     screen := X11.XScreenOfDisplay(w.display.handle, 0);
@@ -449,25 +529,28 @@ x11_get_dpi_scaling_factor :: (w: *X11Window) -> float {
     return (cast(float) sw / (cast(float) swmm / 25.4)) / 96.0;
 }
 
-x11_generate_resize :: (w: *X11Window) {
-    xwa: X11.XWindowAttributes;
-    X11.XGetWindowAttributes(w.display.handle, w.handle, *xwa);
-    Input.add_resize_record(w.wrapper, xwa.width, xwa.height);
-}
+x11_set_fixed_scaling :: (display: *Display, factor: float) {
+    x11_check_usage(display);
 
-x11_set_fixed_scaling :: (d: *X11Display, factor: float) {
+    d: *X11_Display = display;
     fixed_scaling := (factor != 0.0);
     new_dpi: s32 = xx (factor * 96.0);
     if ((fixed_scaling != d.fixed_scaling) || (fixed_scaling && (new_dpi != d.dpi_override))) && (factor >= 0.0) {
         d.fixed_scaling = fixed_scaling;
         if fixed_scaling d.dpi_override = new_dpi;
-        for global_windows {
-            x11_generate_resize(isa(it, X11Window));
+        for * d.base.windows {
+            x11_generate_resize(it);
         }
     }
 }
 
 #scope_file
+
+x11_generate_resize :: (w: *X11_Window) {
+    xwa: X11.XWindowAttributes;
+    X11.XGetWindowAttributes(w.display.handle, w.handle, *xwa);
+    Input.add_resize_record(xx w, xwa.width, xwa.height);
+}
 
 xcursor_initialized := false;
 XcursorLibraryLoadCursor : #type (dpy: *X11.Display, name: *u8) -> X11.Cursor #c_call;
