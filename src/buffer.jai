@@ -282,6 +282,29 @@ get_selected_string :: (cursor: Cursor, buffer: Buffer) -> string {
     return get_range_as_string(buffer, get_selection(cursor));
 }
 
+// Return the string you would select if you used select_word() on this cursor
+// @Cleanup Factor code with select_word() so there is no inconsistency if 
+//          there's a change in one of the methods
+get_selectable_string :: (cursor: Cursor, buffer: Buffer) -> string {
+    pos       := cursor.pos;
+    pos_left  := ifx cursor.pos > 0 then prev_char_offset(buffer.bytes, pos) else 0;
+    char      := get_char_at_offset(buffer, pos);
+    char_left := get_char_at_offset(buffer, pos_left);
+
+    if !is_word_char(char) && is_word_char(char_left) {
+        pos  = pos_left;  // favor the word to the left
+        char = char_left;
+    }
+
+    char_type := get_char_type(char);
+    if char_type == .other return "";
+
+    start := scan_through_similar_chars_on_the_left (buffer, pos, char_type, skip_one_space = false);
+    end   := scan_through_similar_chars_on_the_right(buffer, pos, char_type, skip_one_space = false);
+
+    return get_range_as_string(buffer, Offset_Range.{ start, end });
+}
+
 remove_crlf_in_place :: (bytes: *[] u8) {
     dst := bytes.data;
     src := bytes.data;
