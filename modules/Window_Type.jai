@@ -12,7 +12,7 @@
     #scope_module;
     LD :: #import "Linux_Display";
     #scope_export;
-    Window_Type :: LD.LDWindow;
+    Window_Type :: *LD.Window;
     INVALID_WINDOW :: LD.INVALID_WINDOW;
 } else #if OS == .MACOS {
     #scope_module;

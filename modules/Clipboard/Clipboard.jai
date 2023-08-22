@@ -170,11 +170,11 @@
     #scope_export
 
     os_clipboard_get_text :: () -> string {
-        return LD.clipboard_get_text();
+        return LD.clipboard_get_text(context.active_display);
     }
 
     os_clipboard_set_text :: (text: string) {
-        LD.clipboard_set_text(text);
+        LD.clipboard_set_text(context.active_display, text);
     }
 
     os_clipboard_set_bitmap :: (width: s32, height: s32, rgb: *u8) {
