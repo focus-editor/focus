@@ -14,6 +14,7 @@ Render_API :: enum {
     #import "Windows";
 } else #if OS == .LINUX {
     LD :: #import "Linux_Display";
+    #assert(LD.JAI_STDLIB_INTEROP);
 } else #if OS == .MACOS {
     #import "Objective_C";
     #import "Objective_C/AppKit";

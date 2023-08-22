@@ -1,9 +1,3 @@
-/*
- * This is needed to allow the standard `Clipboard`, `Input` and `Simp` modules to call back
- * into `Linux_Display`.
- */
-#add_context active_display: *Display;
-
 Saved_Window_Info :: struct {}
 
 Display :: union {
@@ -90,7 +84,7 @@ active_backend :: (display: *Display) -> ACTIVE_BACKEND {
 }
 
 /*
- * LDWindow functions
+ * Window functions
  */
 create_window :: inline (display: *Display, width: int, height: int, window_name: string, window_x := 0, window_y := 0,
     parent: *Window = INVALID_WINDOW, background_color_rgb: [3]float) -> *Window
@@ -188,12 +182,12 @@ set_fixed_scaling :: (display: *Display, factor: float) {
 /*
  * Input functions
  */
-translate_key_code :: (display: *Display, key: u64) -> Input.Key_Code {
+translate_key_code :: inline (display: *Display, key: u64) -> Input.Key_Code {
     bd: *Base_Display = display;
     return bd.translate_key_code(key);
 }
 
-wait_for_events :: (display: *Display) {
+wait_for_events :: inline (display: *Display) {
     bd: *Base_Display = display;
     bd.wait_for_events(display);
 }
@@ -225,12 +219,12 @@ update_window_events :: (display: *Display) {
     }
 }
 
-clipboard_get_text :: (display: *Display) -> string {
+clipboard_get_text :: inline (display: *Display) -> string {
     bd: *Base_Display = display;
     return bd.clipboard_get_text(display);
 }
 
-clipboard_set_text :: (display: *Display, text: string) {
+clipboard_set_text :: inline (display: *Display, text: string) {
     bd: *Base_Display = display;
     bd.clipboard_set_text(display, text);
 }
@@ -242,6 +236,9 @@ find_font :: (name: string, allocator := temp) -> bool, string {
 }
 
 #load "timers.jai";
+#if JAI_STDLIB_INTEROP {
+    #load "stdlib_interop.jai";
+}
 
 #scope_module;
 

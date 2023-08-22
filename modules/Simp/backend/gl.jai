@@ -32,8 +32,8 @@ backend_init :: (info: *Window_Info) {
             // if !vsync then log_error("Couldn't enable vsync\n");
         }
         #if OS == .LINUX {
-            LD.create_gl_context(context.active_display, MINIMUM_GL_MAJOR_VERSION, MINIMUM_GL_MINOR_VERSION);
-            the_gl_context = LD.get_gl_context(context.active_display);
+            LD.create_gl_context(MINIMUM_GL_MAJOR_VERSION, MINIMUM_GL_MINOR_VERSION);
+            the_gl_context = LD.get_gl_context();
         }
         #if OS == .MACOS {
             the_gl_context = nsgl_create_context(MINIMUM_GL_MAJOR_VERSION, MINIMUM_GL_MINOR_VERSION);

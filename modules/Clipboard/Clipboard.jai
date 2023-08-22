@@ -166,15 +166,16 @@
 #if OS == .LINUX {
     #scope_file
     LD :: #import "Linux_Display";
+    #assert(LD.JAI_STDLIB_INTEROP);
 
     #scope_export
 
     os_clipboard_get_text :: () -> string {
-        return LD.clipboard_get_text(context.active_display);
+        return LD.clipboard_get_text();
     }
 
     os_clipboard_set_text :: (text: string) {
-        LD.clipboard_set_text(context.active_display, text);
+        LD.clipboard_set_text(text);
     }
 
     os_clipboard_set_bitmap :: (width: s32, height: s32, rgb: *u8) {

@@ -6,7 +6,7 @@ set_custom_cursor_handling :: (is_custom: bool) {
 
 update_window_events :: () {
     input_per_frame_event_and_flag_update();
-    LD.update_window_events(context.active_display);
+    LD.update_window_events();
 }
 
 add_resize_record :: (hwnd: Window_Type, width: s32, height: s32) {
@@ -30,3 +30,4 @@ add_resize_record :: (hwnd: Window_Type, width: s32, height: s32) {
 
 #scope_file
 LD :: #import "Linux_Display";
+#assert(LD.JAI_STDLIB_INTEROP);
