@@ -1,23 +1,70 @@
+GL_Backend_Type :: enum {
+    Uninitialized;
+    GLX;
+    EGL;
+}
+
+GL_Display :: struct {
+    type : GL_Backend_Type = .Uninitialized;
+    union {
+        glx: struct {
+            ctx: X11.GLXContext;
+            cnf: X11.GLXFBConfig;
+        }
+        egl: struct {
+            dpy: EGLDisplay;
+            ctx: EGLContext;
+            cnf: EGLConfig;
+        }
+    }
+}
+
+GL_Window :: struct {
+    type : GL_Backend_Type = .Uninitialized;
+    union {
+        glx: struct {
+            win: X11.GLXWindow;
+        }
+        egl: struct {
+            native: *wl_egl_window;
+            surface: EGLSurface;
+        }
+    }
+}
+
 get_gl_context :: (display: *Display) -> *void {
-    if display.base.type == {
-        case X11_Display; return display.x11.glx_ctx;
-        case Wayland_Display; return display.wld.egl_ctx;
+    bd: *Base_Display = display;
+    if bd.type == {
+        case X11_Display; {
+            if bd.gl.type == {
+                case .GLX; return bd.gl.glx.ctx;
+                case .EGL; return bd.gl.egl.ctx;
+                case; return null;
+            }
+        }
+        case Wayland_Display; {
+            assert(bd.gl.type == .Uninitialized || bd.gl.type == .EGL);
+            if bd.gl.type == .Uninitialized assert(!bd.gl.egl.ctx);
+            return bd.gl.egl.ctx;
+        }
         case; return null;
     }
 }
 
 get_gl_proc_address_function :: (display: *Display) -> GL.GetProcAddressFunction {
-    if display.base.type == {
-        case X11_Display; return X11.glXGetProcAddress;
-        case Wayland_Display; return eglGetProcAddress;
+    bd: *Base_Display = display;
+    if bd.gl.type == {
+        case .GLX; return X11.glXGetProcAddress;
+        case .EGL; return eglGetProcAddress;
         case; return null;
     }
 }
 
-get_gl_proc_address_function :: (win: *Window) -> GL.GetProcAddressFunction {
-    if win.base.type == {
-        case X11_Window; return X11.glXGetProcAddress;
-        case Wayland_Window; return eglGetProcAddress;
+get_gl_proc_address_function :: (window: *Window) -> GL.GetProcAddressFunction {
+    bw: *Base_Window = window;
+    if bw.gl.type == {
+        case .GLX; return X11.glXGetProcAddress;
+        case .EGL; return eglGetProcAddress;
         case; return null;
     }
 }
@@ -28,45 +75,60 @@ create_gl_context :: (display: *Display, major_version := 0, minor_version := 0,
         return;
     }
 
+    bd: *Base_Display = display;
+    gl := *bd.gl;
+
     if display.base.type == {
         case X11_Display; {
-            xd := *display.x11;
-            xd.glx_ctx, xd.glx_cnf = GL.glx_create_context(xx major_version, xx minor_version, compatibility, debug);
+            gl.glx.ctx, gl.glx.cnf = GL.glx_create_context(xx major_version, xx minor_version, compatibility, debug);
+            gl.type = .GLX;
         }
         case Wayland_Display; {
             wld := *display.wld;
-            wld.egl_dpy, wld.egl_ctx, wld.egl_cnf = egl_create_context(
+            gl.egl.dpy, gl.egl.ctx, gl.egl.cnf = egl_create_context(
                 wld.handle, major_version, minor_version, compatibility, debug);
+            gl.type = .EGL;
 
             wls := wl_compositor.create_surface(wld.compositor);
             wln := wl_egl_window.create(wls, 1, 1);
-            egs := eglCreateWindowSurface(wld.egl_dpy, wld.egl_cnf, wln, null);
-            eglMakeCurrent(wld.egl_dpy, egs, egs, wld.egl_ctx);
-            gl_load(*gl, eglGetProcAddress);
-            eglMakeCurrent(wld.egl_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-            eglDestroySurface(wld.egl_dpy, egs);
+            egs := eglCreateWindowSurface(gl.egl.dpy, gl.egl.cnf, wln, null);
+            eglMakeCurrent(gl.egl.dpy, egs, egs, gl.egl.ctx);
+            gl_load(*GL.gl, eglGetProcAddress);
+            eglMakeCurrent(gl.egl.dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+            eglDestroySurface(gl.egl.dpy, egs);
             wl_egl_window.destroy(wln);
             wl_surface.destroy(wls);
         }
     }
 }
 
-create_gl_surface :: (win: *Window) {
-    if gl_initialized(win) {
-        log_error("WARNING: window % already has an associated EGL surface!\n", win);
+create_gl_surface :: (window: *Window) {
+    if gl_initialized(window) {
+        log_error("WARNING: window % already has an associated EGL surface!\n", window);
         return;
     }
 
-    if win.base.type == {
+    bw: *Base_Window = window;
+    gl := *bw.gl;
+
+    if window.base.type == {
         case X11_Window; {
-            w := *win.x11;
-            w.glx_win = X11.glXCreateWindow(w.display.handle, w.display.glx_cnf, w.handle, null);
+            w := *window.x11;
+            gl.glx.win = X11.glXCreateWindow(w.display.handle, w.display.base.gl.glx.cnf, w.handle, null);
+            gl.type = .GLX;
         }
         case Wayland_Window; {
-            w := *win.wld;
-            w.egl_native = wl_egl_window.create(w.handle, w.buffer_width, w.buffer_height);
-            w.egl_surface = eglCreateWindowSurface(w.display.egl_dpy, w.display.egl_cnf, w.egl_native, null);
-            eglMakeCurrent(w.display.egl_dpy, w.egl_surface, w.egl_surface, w.display.egl_ctx);
+            w := *window.wld;
+            gl.egl.native = wl_egl_window.create(w.handle, w.buffer_width, w.buffer_height);
+            gl.egl.surface = eglCreateWindowSurface(
+                w.display.base.gl.egl.dpy,
+                w.display.base.gl.egl.cnf,
+                gl.egl.native, null);
+            gl.type = .EGL;
+            eglMakeCurrent(
+                w.display.base.gl.egl.dpy,
+                gl.egl.surface, gl.egl.surface,
+                w.display.base.gl.egl.ctx);
             wl_window_resize_viewport(w);
             wl_surface.damage(w.handle, 0, 0, w.window_width, w.window_height);
             wl_surface.commit(w.handle);
@@ -79,13 +141,19 @@ make_current :: (win: *Window) {
         case X11_Window; {
             w := *win.x11;
             X11.XLockDisplay(w.display.handle);
-            if !X11.glXMakeCurrent(w.display.handle, w.glx_win, w.display.glx_ctx)
-                log_error("glxMakeCurrent failed! (glx_window %, context %)\n", w.glx_win, w.display.glx_ctx);
+            X11.glXMakeCurrent(
+                w.display.handle,
+                w.base.gl.glx.win,
+                w.display.base.gl.glx.ctx);
             X11.XUnlockDisplay(w.display.handle);
         }
         case Wayland_Window; {
             w := *win.wld;
-            eglMakeCurrent(w.display.egl_dpy, w.egl_surface, w.egl_surface, w.display.egl_ctx);
+            eglMakeCurrent(
+                w.display.base.gl.egl.dpy,
+                w.base.gl.egl.surface,
+                w.base.gl.egl.surface,
+                w.display.base.gl.egl.ctx);
         }
     }
 }
@@ -94,29 +162,21 @@ swap_buffers :: (win: *Window) {
     if win.base.type == {
         case X11_Window; {
             w := *win.x11;
-            X11.glXSwapBuffers(w.display.handle, w.glx_win);
+            X11.glXSwapBuffers(w.display.handle, w.base.gl.glx.win);
         }
         case Wayland_Window; {
             w := *win.wld;
-            eglSwapBuffers(w.display.egl_dpy, w.egl_surface);
+            eglSwapBuffers(w.display.base.gl.egl.dpy, w.base.gl.egl.surface);
         }
     }
 }
 
 gl_initialized :: (display: *Display) -> bool {
-    if display.base.type == {
-        case X11_Display; return display.x11.glx_ctx != null;
-        case Wayland_Display; return display.wld.egl_ctx != null;
-        case; return false;
-    }
+    return display.base.gl.type != .Uninitialized;
 }
 
-gl_initialized :: (win: *Window) -> bool {
-    if win.base.type == {
-        case X11_Window; return win.x11.glx_win != X11.None;
-        case Wayland_Window; return win.wld.egl_surface != null;
-        case; return false;
-    }
+gl_initialized :: (window: *Window) -> bool {
+    return window.base.gl.type != .Uninitialized;
 }
 
 #scope_file

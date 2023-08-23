@@ -6,9 +6,6 @@ X11_Display :: struct {
     handle: *X11.Display;
     file_descriptor: s32;
 
-    glx_ctx: X11.GLXContext;
-    glx_cnf: X11.GLXFBConfig;
-
     im: X11.XIM;
 
     fixed_scaling: bool;
@@ -22,8 +19,6 @@ X11_Window :: struct {
     display: *X11_Display;
 
     ic: X11.XIC;
-
-    glx_win: X11.GLXWindow;
 }
 
 x_cursors: Table(string, X11.Cursor);

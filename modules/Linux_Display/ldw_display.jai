@@ -56,10 +56,6 @@ Wayland_Display :: struct {
     viewporter: *wp_viewporter;
     fractional_scale_manager: *wp_fractional_scale_manager_v1;
 
-    egl_dpy: EGLDisplay;
-    egl_ctx: EGLContext;
-    egl_cnf: EGLConfig;
-
     fixed_scaling: bool;
     scale_factor_override: s32;
 
@@ -99,9 +95,6 @@ Wayland_Window :: struct {
 
     // this is here to "drive" the main loop when OpenGL is initialized
     callback: *wl_callback;
-
-    egl_native: *wl_egl_window;
-    egl_surface: EGLSurface;
 
     enter_serial: u32;
 
@@ -512,7 +505,8 @@ wl_window_handle_resize :: (w: *Wayland_Window, width: s32, height: s32) {
     window_calculate_buffer_size(w);
     wl_window_resize_viewport(w);
 
-    if w.egl_native  wl_egl_window.resize(w.egl_native, w.buffer_width, w.buffer_height, 0, 0);
+    if w.base.gl.egl.native
+        wl_egl_window.resize(w.base.gl.egl.native, w.buffer_width, w.buffer_height, 0, 0);
 
     wl_surface.damage(w.handle, 0, 0, w.window_width, w.window_height);
     wl_surface.commit(w.handle);

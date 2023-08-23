@@ -272,7 +272,7 @@ Base_Display :: struct {
     events_this_frame: [..]Input.Event;
     input_button_states: [Input.NUM_BUTTON_STATES] Input.Key_Current_State;
 
-    /* TODO: add EGL stuff here once we have that for X11 as well */
+    gl: GL_Display;
 
     create_window: (
         display: *Display,
@@ -300,7 +300,7 @@ Base_Window :: struct {
     type: Type = Base_Window;
     display: *Display;
 
-    /* TODO: add EGL stuff here once we have that for X11 as well */
+    gl: GL_Window;
 
     set_icon_from_raw_data: (window: *Window, data: *u8, w: u32, h: u32);
     toggle_fullscreen: (window: *Window, desire_fullscreen: bool, saved: *Saved_Window_Info) -> success: bool, width: s32, height: s32;
