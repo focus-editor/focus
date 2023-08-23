@@ -70,6 +70,7 @@ hide_mouse_when_typing:                 true
 Alt-F4                      quit
 
 Ctrl-D                      select_word_or_create_another_cursor
+Ctrl-Shift-A                select_all_occurences
 
 Ctrl-Shift-D                duplicate_lines
 
