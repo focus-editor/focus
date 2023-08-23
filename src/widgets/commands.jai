@@ -139,6 +139,7 @@ commands := #run Command.[
     .{ .open_projects_directory,                            "Open Projects Directory",            0, .None },
     .{ .open_project_config,                                "Open Config For Project",            0, .None },
     .{ .open_global_config,                                 "Open Global Config",                 0, .None },
+    .{ .show_default_config,                                "Show Default Config (readonly)",     0, .None },
 
     .{ .create_new_file,                                    "Create New File",                    0, .None },
     .{ .create_new_file_on_the_side,                        "Create New File On The Side",        0, .Single },

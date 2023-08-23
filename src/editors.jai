@@ -138,6 +138,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
     keep_selection := false;
     enabled_whole_words := false;
 
+    handled := true;
+
     if action == {
         // General actions (which are not associated with any cursor)
         case .toggle_expand;                    toggle_expand(!editors.expanded);
@@ -150,6 +152,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .save;                             save_buffer(editor, buffer);
         case .save_as;                          save_buffer(editor, buffer, save_new_file = true);
         case .save_all;                         save_all   (editor, buffer);
+        case .toggle_line_wrap;                 toggle_line_wrap                    (editor);
+        case .toggle_line_numbers;              toggle_line_numbers                 ();
         case .delete_current_file;              show_delete_file_dialog(editor);
         case .switch_to_left_editor;            switch_to_editor(.left);
         case .switch_to_right_editor;           switch_to_editor(.right);
@@ -170,12 +174,9 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .scroll_viewport_down_fast;        smooth_scroll(editor, direction = .down, fast = true);  activate_hold_action(action, event);
         case .scroll_viewport_left;             smooth_scroll(editor, direction = .left, fast = true);  activate_hold_action(action, event);
         case .scroll_viewport_right;            smooth_scroll(editor, direction = .right, fast = true); activate_hold_action(action, event);
-        case .undo;                             undo                                (editor, buffer); keep_selection = true;
-        case .redo;                             redo                                (editor, buffer); keep_selection = true;
         case .select_all;                       select_all                          (editor, buffer); keep_selection = true;
         case .create_cursor_above;              create_cursor                       (editor, buffer, .above); keep_selection = true;
         case .create_cursor_below;              create_cursor                       (editor, buffer, .below); keep_selection = true;
-        case .align_cursors;                    align_cursors                       (editor, buffer);         keep_selection = true;
 
         case .select_word;                      select_word(editor, buffer); keep_selection = true;
         case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
@@ -200,47 +201,55 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .jump_to_file_start;               move_to_file_start                  (editor, buffer);
         case .jump_to_file_end;                 move_to_file_end                    (editor, buffer);
 
-        case .indent_or_go_to_next_tabstop;     indent_or_tab                       (editor, buffer); keep_selection = true;
-        case .indent;                           indent_lines                        (editor, buffer); keep_selection = true;
-        case .unindent;                         unindent_lines                      (editor, buffer); keep_selection = true;
-        case .autoindent_region;                autoindent_region                   (editor, buffer); keep_selection = true;
-
-        case .toggle_comment;                   toggle_comment                      (editor, buffer); keep_selection = true;
-        case .toggle_block_comment;             toggle_block_comment                (editor, buffer); keep_selection = true;
         case .select_line;                      select_lines                        (editor, buffer); keep_selection = true;
-
-        case .break_line;                       break_line                          (editor, buffer);
-        case .new_line_below_without_breaking;  new_line_below                      (editor, buffer);
-        case .new_line_above_without_breaking;  new_line_above                      (editor, buffer);
-
         case .copy;                             copy_selection_to_clipboard         (editor, buffer);
-        case .cut;                              copy_selection_to_clipboard         (editor, buffer, cut = true);
-        case .paste;                            paste_from_clipboard                (editor, buffer);
 
-        case .delete_left_char;                 delete_left_char                    (editor, buffer);
-        case .delete_right_char;                delete_right_char                   (editor, buffer);
-        case .delete_word_left;                 delete_word_left                    (editor, buffer);
-        case .delete_word_right;                delete_word_right                   (editor, buffer);
-        case .delete_word_left_no_underscore;   delete_word_left_no_underscore      (editor, buffer);
-        case .delete_word_right_no_underscore;  delete_word_right_no_underscore     (editor, buffer);
+        case;                                   handled = false;
+    }
 
-        case .duplicate_lines;                  duplicate_lines                     (editor, buffer); keep_selection = true;
-        case .move_selected_lines_up;           move_lines_up                       (editor, buffer); keep_selection = true;
-        case .move_selected_lines_down;         move_lines_down                     (editor, buffer); keep_selection = true;
+    if !handled && !buffer.readonly {
+        if action == {
+            case .indent_or_go_to_next_tabstop;     indent_or_tab                       (editor, buffer); keep_selection = true;
+            case .indent;                           indent_lines                        (editor, buffer); keep_selection = true;
+            case .unindent;                         unindent_lines                      (editor, buffer); keep_selection = true;
+            case .autoindent_region;                autoindent_region                   (editor, buffer); keep_selection = true;
 
-        case .join_lines;                       join_lines                          (editor, buffer);                  keep_selection = true;
-        case .join_lines_no_spaces_in_between;  join_lines                          (editor, buffer, in_between = ""); keep_selection = true;
+            case .toggle_comment;                   toggle_comment                      (editor, buffer); keep_selection = true;
+            case .toggle_block_comment;             toggle_block_comment                (editor, buffer); keep_selection = true;
 
-        case .delete_line;                      delete_line                         (editor, buffer);
-        case .delete_line_and_go_up;            delete_line                         (editor, buffer, go_up = true);
+            case .break_line;                       break_line                          (editor, buffer);
+            case .new_line_below_without_breaking;  new_line_below                      (editor, buffer);
+            case .new_line_above_without_breaking;  new_line_above                      (editor, buffer);
 
-        case .delete_to_start_of_line;          delete_to_start_of_line             (editor, buffer);
-        case .delete_to_end_of_line;            delete_to_end_of_line               (editor, buffer);
+            case .cut;                              copy_selection_to_clipboard         (editor, buffer, cut = true);
+            case .paste;                            paste_from_clipboard                (editor, buffer);
 
-        case .toggle_line_wrap;                 toggle_line_wrap                    (editor);
-        case .toggle_line_numbers;              toggle_line_numbers                 ();
+            case .undo;                             undo                                (editor, buffer); keep_selection = true;
+            case .redo;                             redo                                (editor, buffer); keep_selection = true;
+            case .align_cursors;                    align_cursors                       (editor, buffer); keep_selection = true;
 
-        case;                                   return false;
+            case .delete_left_char;                 delete_left_char                    (editor, buffer);
+            case .delete_right_char;                delete_right_char                   (editor, buffer);
+            case .delete_word_left;                 delete_word_left                    (editor, buffer);
+            case .delete_word_right;                delete_word_right                   (editor, buffer);
+            case .delete_word_left_no_underscore;   delete_word_left_no_underscore      (editor, buffer);
+            case .delete_word_right_no_underscore;  delete_word_right_no_underscore     (editor, buffer);
+
+            case .duplicate_lines;                  duplicate_lines                     (editor, buffer); keep_selection = true;
+            case .move_selected_lines_up;           move_lines_up                       (editor, buffer); keep_selection = true;
+            case .move_selected_lines_down;         move_lines_down                     (editor, buffer); keep_selection = true;
+
+            case .join_lines;                       join_lines                          (editor, buffer);                  keep_selection = true;
+            case .join_lines_no_spaces_in_between;  join_lines                          (editor, buffer, in_between = ""); keep_selection = true;
+
+            case .delete_line;                      delete_line                         (editor, buffer);
+            case .delete_line_and_go_up;            delete_line                         (editor, buffer, go_up = true);
+
+            case .delete_to_start_of_line;          delete_to_start_of_line             (editor, buffer);
+            case .delete_to_end_of_line;            delete_to_end_of_line               (editor, buffer);
+
+            case;                                   return false;
+        }
     }
 
     if new_group then new_edit_group(buffer, editor);  // do it after action
@@ -278,6 +287,8 @@ active_editor_type_char :: (char: u32) {
         editor.search_bar.scroll_to_selected = .snap;
         return;
     }
+
+    if buffer.readonly return;
 
     utf8_char := convert_utf32_to_utf8(char);
 
@@ -401,6 +412,22 @@ editors_open_project_config :: (placement: Editor_Placement) {
     } else {
         add_user_warning("No project is active. Please open a project first.", dismiss_in_seconds = 5);
     }
+}
+
+editors_show_default_config :: (placement: Editor_Placement) {
+    if global_config_buffer_id < 0 {
+        global_config_buffer_id = find_or_create_an_empty_buffer();
+        buffer := *open_buffers[global_config_buffer_id];
+        replace_range_raw(buffer, 0, xx buffer.bytes.count, DEFAULT_CONFIG_FILE_DATA);
+        buffer.meow_hash = calculate_hash(buffer.bytes);
+        buffer.readonly = true;
+        buffer.lang = .Focus_Config;
+        buffer.file.name = "Default Focus Config";
+        buffer.file.icon = .gear;
+        rescan_for_lines(buffer);
+    }
+
+    editors_open_buffer(global_config_buffer_id, placement);
 }
 
 editors_create_new_file :: (placement: Editor_Placement = .in_place) {
@@ -3225,6 +3252,8 @@ move_to_editor_history_frame :: (frame: Editor_History_Frame, old_frame: Editor_
 
 cursor_blink_start: Time;
 cursors_blinking := false;
+
+global_config_buffer_id := -1;
 
 CURSOR_BLINK_SPEED_MS   :: 500;
 

@@ -272,7 +272,8 @@ ACTIONS_COMMON :: string.[
     "open_projects_directory",
     "open_global_config",
     "open_project_config",
-    "open_error_log",
+    "show_default_config",
+    // "open_error_log",  // todo
 
     "show_commands",
     "search_in_buffer",

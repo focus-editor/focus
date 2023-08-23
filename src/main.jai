@@ -314,6 +314,7 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .open_projects_directory;                          platform_open_in_explorer(projects_dir);            return true;
         case .open_global_config;                               editors_open_global_config(placement);              return true;
         case .open_project_config;                              editors_open_project_config(placement);             return true;
+        case .show_default_config;                              editors_show_default_config(placement);             return true;
 
         case .go_to_line;                                       show_go_to_line_dialog();                           return true;
         case .create_new_file;                                  editors_create_new_file(placement);                 return true;
