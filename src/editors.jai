@@ -180,6 +180,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
 
         case .select_word;                      select_word(editor, buffer); keep_selection = true;
         case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
+        case .select_all_occurences;                enabled_whole_words = select_all_occurences               (editor, buffer); keep_selection = true;
 
         // Actions that do something per cursor
         case .move_left;                        move_cursors_left                   (editor, buffer, by = .char,      shift_pressed);
@@ -527,6 +528,16 @@ move_cursor_to_viewport_center :: (editor: *Editor, buffer: Buffer) {
 leave_only_original_cursor :: (using editor: *Editor) -> *Cursor {
     // Remove all cursors except the original one
     cursor := cursors[min(original_cursor, cursors.count-1)];
+    cursors.count = 1;
+    original_cursor = 0;
+    main_cursor = 0;
+    cursors[0] = cursor;
+    return *cursors[0];
+}
+
+leave_only_main_cursor :: (using editor: *Editor) -> *Cursor {
+    // Remove all cursors except the main one
+    cursor := cursors[min(main_cursor, cursors.count-1)];
     cursors.count = 1;
     original_cursor = 0;
     main_cursor = 0;
@@ -1324,6 +1335,55 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) 
             select_word(buffer, it);
             editor.search_whole_words = true;
         }
+    }
+
+    return editor.search_whole_words;
+}
+
+select_all_occurences :: (using editor: *Editor, buffer: Buffer) -> whole_words: bool {
+    editor.cursor_moved = .has_not_moved;
+
+    // If main_cursor don't have selection check if it can select a word
+    if !has_selection(cursors[main_cursor]) {
+        copy := cursors[main_cursor];
+        select_word(buffer, *copy);
+        text := get_selected_string(copy, buffer);
+
+        // main_cursor can't select a word, do nothing
+        if is_all_whitespace(text) return editor.search_whole_words;
+        
+        select_word(buffer, *cursors[main_cursor]);
+        editor.search_whole_words = true;
+    }
+
+    // Remove all cursors except the main one
+    leave_only_main_cursor(editor);
+
+    // Begin search from the main cursor downwards with a wraparound
+    buffer_str    := to_string(buffer.bytes);
+    search_func   := ifx search_whole_words then find_index_from_left_whole_word else find_index_from_left;
+    selected_text := get_selected_string(cursors[main_cursor], buffer);
+    initial       := get_selection(cursors[main_cursor]);
+    offset        := cast(s64) initial.end;
+
+    while true {
+        offset = search_func(buffer_str, selected_text, offset);
+
+        if offset == initial.start break; // We found all occurences in the file, exit loop
+
+        if offset == -1 { offset = 0; continue; } // We reached eof, wrap around
+
+        new_cursor := array_add(*cursors);
+        new_cursor.sel = cast(s32) offset;
+        new_cursor.pos = cast(s32) (offset + selected_text.count);
+
+        MAX_CURSORS :: 5000; // @Todo Make it a setting ?
+        if cursors.count >= MAX_CURSORS {
+            add_user_warning(tprint("The maximum number of occurences to be selected at once has been limited to %.", MAX_CURSORS));
+            break;
+        }
+
+        offset += selected_text.count;
     }
 
     return editor.search_whole_words;
