@@ -180,7 +180,6 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .select_word;                      select_word(editor, buffer); keep_selection = true;
         case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
         case .select_all_occurences;                enabled_whole_words = select_all_occurences               (editor, buffer); keep_selection = true;
-        case .select_all_occurences;                enabled_whole_words = select_all_occurences               (editor, buffer); keep_selection = true;
 
         // Actions that do something per cursor
         case .move_left;                        move_cursors_left                   (editor, buffer, by = .char,      shift_pressed);
