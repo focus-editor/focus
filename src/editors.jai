@@ -1361,8 +1361,8 @@ select_all_occurences :: (using editor: *Editor, buffer: Buffer) -> whole_words:
 
     // Begin search from the main cursor downwards with a wraparound
     buffer_str    := to_string(buffer.bytes);
-    search_func   := ifx search_whole_words then find_index_from_left_whole_word else find_index_from_left;
     selected_text := get_selected_string(cursors[main_cursor], buffer);
+    search_func   := ifx search_whole_words && is_all_word_chars(selected_text) then find_index_from_left_whole_word else find_index_from_left;
     initial       := get_selection(cursors[main_cursor]);
     offset        := cast(s64) initial.end;
 
