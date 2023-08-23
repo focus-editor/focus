@@ -1272,7 +1272,7 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
     if buffer.readonly {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_bold, "[readonly]");
-        Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_ERROR_BRIGHT);
+        Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = Colors.UI_WARNING);
     }
     if buffer.error_when_saving {
         pen.x += width + padding;
@@ -2068,11 +2068,7 @@ draw_unsaved_buffers_dialog :: () {
     ui_id := Ui_Id.unsaved_buffers;
 
     unsaved_buffers := get_unsaved_buffer_ids();
-    if !unsaved_buffers {
-        log_error("Unsaved buffers dialog is attempted to be drawn, but no unsaved buffers present. This is a bug. Closing...");
-        close_unsaved_buffers_dialog();
-        return;
-    }
+    if !unsaved_buffers then panic_messagebox("Unsaved buffers dialog is attempted to be drawn, but no unsaved buffers present. This is a bug. Closing...");
 
     margin  := floor(12 * dpi_scale);
     padding := floor( 4 * dpi_scale);

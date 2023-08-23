@@ -293,7 +293,6 @@ x11_create_window :: (x11_display: *X11Display, ld_win: LDWindow, width: int, he
         X11.FocusChangeMask |
         X11.EnterWindowMask |
         X11.LeaveWindowMask |
-        X11.PointerMotionHintMask |
         X11.PointerMotionMask;
     swa.background_pixel = background_color.pixel;
     win := X11.XCreateWindow(d, parent,

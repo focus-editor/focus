@@ -15,7 +15,8 @@ delete_file_dialog_handle_event :: (event: Input.Event) -> bool {
 show_delete_file_dialog :: (editor: *Editor) {
     // Not locking here because we're not modifying the buffer
     buffer := *open_buffers[editor.buffer_id];
-    if !buffer.has_file then return;   // Nothing to do if in new buffer
+    if buffer.readonly  { add_user_warning("Can't delete a readonly buffer"); return; }
+    if !buffer.has_file { add_user_warning("Buffer doesn't have any associated file"); return; }
 
     buffer_id_to_delete = editor.buffer_id;
     active_global_widget = .delete_file_dialog;

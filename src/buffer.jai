@@ -865,7 +865,7 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
 get_buffer_name :: (buffer: Buffer) -> string {
     // NOTE: After deleting using "Delete Current File", `has_file` could be false while buffer.file still exists (because we don't override it).
     //       So if we fail the `has_file` check, check the `file.full_path` as well to see if there is still a valid name that the buffer can draw.
-    if buffer.has_file || buffer.file.full_path return buffer.file.name;
+    if buffer.has_file || buffer.file.full_path || buffer.readonly return buffer.file.name;
 
     for 0..buffer.line_starts.count-2 {
         line := trim(get_real_line_as_string(buffer, xx it), "\t \r\n");
