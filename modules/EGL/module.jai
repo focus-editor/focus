@@ -236,6 +236,58 @@ eglCreatePlatformWindowSurface :: (dpy: EGLDisplay, config: EGLConfig, native_wi
 eglCreatePlatformPixmapSurface :: (dpy: EGLDisplay, config: EGLConfig, native_pixmap: *void, attrib_list: *s64) -> EGLSurface #foreign libEGL;
 eglWaitSync :: (dpy: EGLDisplay, sync: EGLSync, flags: s32) -> s32 #foreign libEGL;
 
+egl_create_context :: (native_display: EGLNativeDisplayType, major_version := 0, minor_version := 0,
+    compatibility := false, debug := false) -> EGLDisplay, EGLContext, EGLConfig
+{
+    n: s32;
+    major: s32;
+    minor: s32;
+
+    egl_dpy := eglGetDisplay(native_display);
+    eglInitialize(egl_dpy, *major, *minor);
+    eglBindAPI(EGL_OPENGL_API);
+
+    config_attribs : []s32 = .[
+        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+        EGL_RED_SIZE, 8,
+        EGL_GREEN_SIZE, 8,
+        EGL_BLUE_SIZE, 8,
+        // EGL_ALPHA_SIZE, 8,                   // this makes the entire window translucent
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
+        EGL_NONE
+    ];
+    egl_cnf: EGLConfig;
+    eglChooseConfig(egl_dpy, config_attribs.data, *egl_cnf, 1, *n);
+
+    context_attribs: [9]s32;
+    attr_count := 0;
+
+    if major_version > 0 {
+        context_attribs[attr_count + 0] = EGL_CONTEXT_MAJOR_VERSION;
+        context_attribs[attr_count + 1] = xx major_version;
+        context_attribs[attr_count + 2] = EGL_CONTEXT_MINOR_VERSION;
+        context_attribs[attr_count + 3] = xx minor_version;
+        attr_count += 4;
+    }
+
+    context_attribs[attr_count + 0] = EGL_CONTEXT_OPENGL_PROFILE_MASK;
+    if compatibility  context_attribs[attr_count + 1] = EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT;
+    else              context_attribs[attr_count + 1] = EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT;
+    attr_count += 2;
+
+    if debug {
+        context_attribs[attr_count + 0] = EGL_CONTEXT_OPENGL_DEBUG;
+        context_attribs[attr_count + 1] = EGL_TRUE;
+        attr_count += 2;
+    }
+
+    context_attribs[attr_count] = EGL_NONE;
+
+    egl_ctx := eglCreateContext(egl_dpy, egl_cnf, EGL_NO_CONTEXT, context_attribs.data);
+
+    return egl_dpy, egl_ctx, egl_cnf;
+}
+
 #scope_file
 _EGLDisplay :: struct {}
 _EGLConfig  :: struct {}

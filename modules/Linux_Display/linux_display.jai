@@ -30,15 +30,20 @@ ACTIVE_BACKEND :: enum {
     X11;
 }
 
-init_display :: (display: *Display, backend: BACKEND_CHOICE, app_id := "com.jai.application") -> bool {
+
+init_display :: (display: *Display, desired_backend := BACKEND_CHOICE.PREFER_BEST_USER_EXPERIENCE, desired_gl_backend := GL_BACKEND_CHOICE.AUTOSELECT, app_id := "com.jai.application") -> bool {
     timers_init();
 
     bd: *Base_Display = display;
     if bd.type != Base_Display return true;
+
     if bd.app_id free(bd.app_id);
     bd.app_id = copy_string(app_id);
 
-    if #complete backend == {
+    display.* = .{};
+    display.base.desired_gl_backend = desired_gl_backend;
+
+    if #complete desired_backend == {
         case .PREFER_BEST_USER_EXPERIENCE; {
             /*
              * This is the same as PREFER_WAYLAND plus some checks to ensure
@@ -246,8 +251,6 @@ find_font :: (name: string, allocator := temp) -> bool, string {
 #import "Hash_Table";
 
 X11 :: #import "X11";
-#import "EGL";
-#import "GL";
 #import "Wayland";
 Input :: #import "Input";
 #import "Basic";
@@ -263,6 +266,9 @@ Input :: #import "Input";
 Base_Display :: struct {
     type: Type = Base_Display;
     app_id: string;
+
+    desired_gl_backend := GL_BACKEND_CHOICE.AUTOSELECT;
+
     windows: [..] Window;
 
     mouse_delta_x: int;

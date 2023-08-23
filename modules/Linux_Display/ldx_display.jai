@@ -133,12 +133,10 @@ Inspect available locales [$ locale -a] and the one you have set up: [$ locale]
 
     file_descriptor := X11.XConnectionNumber(X11.x_global_display);
 
-    xd: *X11_Display = display;
-    xd.* = .{
-        handle = X11.x_global_display,
-        im = im,
-        file_descriptor = file_descriptor,
-    };
+    d: *X11_Display = display;
+    d.handle = X11.x_global_display;
+    d.im = im;
+    d.file_descriptor = file_descriptor;
 
     bd: *Base_Display = display;
     bd.type = X11_Display;
