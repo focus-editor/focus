@@ -290,6 +290,13 @@ get_char_type :: (ch: u32) -> Char_Type {
     }
 }
 
+is_all_word_chars :: (s: string) -> bool {
+    for byte : to_bytes(s) {
+        if !is_word_char(byte) then return false;
+    }
+    return true;
+}
+
 is_all_whitespace :: (s: string) -> bool {
     for byte : to_bytes(s) {
         // Multi-byte whitespace is not included

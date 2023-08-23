@@ -1294,7 +1294,7 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) 
         buffer_str := to_string(buffer.bytes);
 
         search_func: (s: string, substring: string, start_index := 0) -> s64;
-        search_func = ifx search_whole_words then find_index_from_left_whole_word else find_index_from_left;
+        search_func = ifx search_whole_words && is_all_word_chars(selected_text) then find_index_from_left_whole_word else find_index_from_left;
 
         // Search from the main cursor downwards, possibly with a wraparound
         start_offset := get_selection(cursors[main_cursor]).end;
@@ -1353,7 +1353,7 @@ select_all_occurences :: (using editor: *Editor, buffer: Buffer) -> whole_words:
         if is_all_whitespace(text) return editor.search_whole_words;
         
         select_word(buffer, *cursors[main_cursor]);
-        editor.search_whole_words = true;
+        if is_all_word_chars(text) editor.search_whole_words = true;
     }
 
     // Remove all cursors except the main one
