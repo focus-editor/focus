@@ -51,6 +51,11 @@ platform_maximize_window :: inline (window: Window_Type) {
     // and out of place. It also comes with a cumbersome fullscreening animation.
 }
 
+platform_toggle_fullscreen :: () {
+    fullscreen = !fullscreen;
+    toggle_fullscreen(window, fullscreen, *fullscreen_info);
+}
+
 platform_enable_drag_and_drop :: inline (window: Window_Type) {
     types := NSArray(NSPasteboardType).arrayWithObject(NSPasteboardTypeFileURL);
     NSView.registerForDraggedTypes(window, types);
@@ -117,6 +122,9 @@ platform_show_cursor :: (show: bool) {
 }
 
 #scope_file
+
+fullscreen: bool;
+fullscreen_state: Saved_Window_Info;
 
 Monitor :: struct {
     left   : int;

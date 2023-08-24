@@ -67,6 +67,11 @@ platform_create_window :: () {
     platform_set_border_color();
 }
 
+platform_toggle_fullscreen :: () {
+    fullscreen = !fullscreen;
+    toggle_fullscreen(window, fullscreen, *fullscreen_state);
+}
+
 platform_maximize_window :: (window: Window_Type) {
     ShowWindow(window, SW_MAXIMIZE);
 }
@@ -259,6 +264,9 @@ platform_show_cursor :: (show: bool) {
 }
 
 #scope_file
+
+fullscreen: bool;
+fullscreen_state: Saved_Window_Info;
 
 cursor_shown : s32 = 1;
 fonts_dir: string;

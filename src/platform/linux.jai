@@ -197,6 +197,11 @@ platform_create_window :: () {
     }
 }
 
+platform_toggle_fullscreen :: () {
+    fullscreen = !fullscreen;
+    toggle_fullscreen(window, fullscreen, *fullscreen_info);
+}
+
 platform_maximize_window :: (window: Window_Type) {
     LD.maximize_window(window);
 }
@@ -287,6 +292,9 @@ platform_show_cursor :: (show: bool) {
 }
 
 #scope_file
+
+fullscreen: bool;
+fullscreen_state: Saved_Window_Info;
 
 LD  :: #import "Linux_Display";
 XDG :: #import "XDG";
