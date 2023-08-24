@@ -202,6 +202,7 @@ commands := #run Command.[
 
     .{ .toggle_line_wrap,                                   "Toggle Line Wrap",                   0, .Single },
     .{ .toggle_line_numbers,                                "Toggle Line Numbers",                0, .None },
+    .{ .toggle_fullscreen,                                  "Toggle Fullscreen",                  0, .None },
 
     .{ .autoindent_region,                                  "Autoindent Region",                  0, .Single },
 ];

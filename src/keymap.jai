@@ -274,6 +274,7 @@ ACTIONS_COMMON :: string.[
     "open_project_config",
     "show_default_config",
     // "open_error_log",  // todo
+    "toggle_fullscreen",
 
     "show_commands",
     "search_in_buffer",
