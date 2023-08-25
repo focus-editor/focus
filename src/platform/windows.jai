@@ -67,11 +67,6 @@ platform_create_window :: () {
     platform_set_border_color();
 }
 
-platform_toggle_fullscreen :: () {
-    fullscreen = !fullscreen;
-    toggle_fullscreen(window, fullscreen, *fullscreen_state);
-}
-
 platform_maximize_window :: (window: Window_Type) {
     ShowWindow(window, SW_MAXIMIZE);
 }

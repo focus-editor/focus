@@ -325,7 +325,7 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true); return true;
 
         case .show_commands;                                    show_commands_dialog();                             return true;
-        case .toggle_fullscreen;                                toggle_fullscreen();                                return true;
+        case .toggle_fullscreen;                                editor_toggle_fullscreen();                         return true;
 
         case .dump_key_mappings;                                dump_key_mappings();                                return true;
 
@@ -473,8 +473,9 @@ update_mouse_state :: () {
     update_button(*mouse.middle, .MOUSE_BUTTON_MIDDLE);
 }
 
-toggle_fullscreen :: () {
-    platform_toggle_fullscreen();
+editor_toggle_fullscreen :: () {
+    fullscreen = !fullscreen;
+    toggle_fullscreen(window, fullscreen, *fullscreen_state);  // platform-specific
 }
 
 increase_font_size :: () {
@@ -565,7 +566,6 @@ dpi_scale := 1.0;
 
 fullscreen: bool;
 fullscreen_state: Saved_Window_Info;
-
 
 redraw_requested        := true;  // set to true to render the first frame
 should_quit             := false;

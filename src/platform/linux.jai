@@ -197,11 +197,6 @@ platform_create_window :: () {
     }
 }
 
-platform_toggle_fullscreen :: () {
-    fullscreen = !fullscreen;
-    toggle_fullscreen(window, fullscreen, *fullscreen_state);
-}
-
 platform_maximize_window :: (window: Window_Type) {
     LD.maximize_window(window);
 }

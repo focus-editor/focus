@@ -211,6 +211,8 @@ Cmd-Shift-W                 close_other_editor
 
 Cmd-Shift-L                 toggle_expand
 
+F11                         toggle_fullscreen
+
 # {Shift}- means shift is optional, the key combination will still be matched.
 {Shift}-ArrowUp             move_up
 {Shift}-Alt-Cmd-ArrowUp     move_up_fast
