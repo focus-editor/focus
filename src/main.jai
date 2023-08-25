@@ -563,6 +563,10 @@ window_x  := -1;
 window_y  := -1;
 dpi_scale := 1.0;
 
+fullscreen: bool;
+fullscreen_state: Saved_Window_Info;
+
+
 redraw_requested        := true;  // set to true to render the first frame
 should_quit             := false;
 force_quit              := false;

@@ -265,9 +265,6 @@ platform_show_cursor :: (show: bool) {
 
 #scope_file
 
-fullscreen: bool;
-fullscreen_state: Saved_Window_Info;
-
 cursor_shown : s32 = 1;
 fonts_dir: string;
 
