@@ -180,7 +180,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
 
         case .select_word;                      select_word(editor, buffer); keep_selection = true;
         case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
-        case .select_all_occurences;                enabled_whole_words = select_all_occurences               (editor, buffer); keep_selection = true;
+        case .select_all_occurrences;               enabled_whole_words = select_all_occurrences              (editor, buffer); keep_selection = true;
 
         // Actions that do something per cursor
         case .move_left;                        move_cursors_left                   (editor, buffer, by = .char,      shift_pressed);
@@ -1340,7 +1340,7 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) 
     return editor.search_whole_words;
 }
 
-select_all_occurences :: (using editor: *Editor, buffer: Buffer) -> whole_words: bool {
+select_all_occurrences :: (using editor: *Editor, buffer: Buffer) -> whole_words: bool {
     editor.cursor_moved = .has_not_moved;
 
     // If main_cursor don't have selection check if it can select a word
@@ -1351,7 +1351,7 @@ select_all_occurences :: (using editor: *Editor, buffer: Buffer) -> whole_words:
 
         // main_cursor can't select a word, do nothing
         if is_all_whitespace(text) return editor.search_whole_words;
-        
+
         select_word(buffer, *cursors[main_cursor]);
         if is_all_word_chars(text) editor.search_whole_words = true;
     }
@@ -1369,9 +1369,9 @@ select_all_occurences :: (using editor: *Editor, buffer: Buffer) -> whole_words:
     while true {
         offset = search_func(buffer_str, selected_text, offset);
 
-        if offset == initial.start break; // We found all occurences in the file, exit loop
+        if offset == initial.start break;  // We found all occurrences in the file, exit loop
 
-        if offset == -1 { offset = 0; continue; } // We reached eof, wrap around
+        if offset == -1 { offset = 0; continue; }  // We reached eof, wrap around
 
         new_cursor := array_add(*cursors);
         new_cursor.sel = cast(s32) offset;
@@ -1379,7 +1379,7 @@ select_all_occurences :: (using editor: *Editor, buffer: Buffer) -> whole_words:
 
         MAX_CURSORS :: 5000; // @Todo Make it a setting ?
         if cursors.count >= MAX_CURSORS {
-            add_user_warning(tprint("The maximum number of occurences to be selected at once has been limited to %.", MAX_CURSORS));
+            add_user_warning(tprint("The maximum number of occurrences to be selected at once has been limited to %.", MAX_CURSORS));
             break;
         }
 

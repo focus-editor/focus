@@ -148,7 +148,7 @@ commands := #run Command.[
 
     .{ .select_all,                                         "Select All",                         0, .Single },
     .{ .select_line,                                        "Select Line",                        0, .Single },
-    .{ .select_all_occurences,                              "Select All Occurences",              0, .Single },
+    .{ .select_all_occurrences,                             "Select All Occurrences",             0, .Single },
     .{ .go_to_line,                                         "Go To Line",                         0, .Single },
 
     .{ .close_current_editor,                               "Close File",                         0, .Single },
