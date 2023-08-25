@@ -53,7 +53,7 @@ platform_maximize_window :: inline (window: Window_Type) {
 
 platform_toggle_fullscreen :: () {
     fullscreen = !fullscreen;
-    toggle_fullscreen(window, fullscreen, *fullscreen_info);
+    toggle_fullscreen(window, fullscreen, *fullscreen_state);
 }
 
 platform_enable_drag_and_drop :: inline (window: Window_Type) {
@@ -122,9 +122,6 @@ platform_show_cursor :: (show: bool) {
 }
 
 #scope_file
-
-fullscreen: bool;
-fullscreen_state: Saved_Window_Info;
 
 Monitor :: struct {
     left   : int;
