@@ -61,7 +61,7 @@ xkb_keymap_format :: enum {
     XKB_KEYMAP_FORMAT_TEXT_V1 :: 1;
 }
 
-xkb_keymap_new_from_string :: (ctx: *xkb_context, string: *u8, format: xkb_keymap_format, flags: xkb_keymap_compile_flags) -> *xkb_keymap #foreign libxkb;
+xkb_keymap_new_from_string :: (ctx: *xkb_context, str: *u8, format: xkb_keymap_format, flags: xkb_keymap_compile_flags) -> *xkb_keymap #foreign libxkb;
 xkb_keymap_ref :: (keymap: *xkb_keymap) -> *xkb_keymap #foreign libxkb;
 xkb_keymap_unref :: (keymap: *xkb_keymap) #foreign libxkb;
 xkb_keymap_mod_get_index :: (keymap: *xkb_keymap, name: *u8) -> xkb_mod_index_t #foreign libxkb;
