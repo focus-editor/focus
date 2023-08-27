@@ -1,3 +1,5 @@
+Saved_Window_Info :: LD.Saved_Window_Info;
+
 toggle_fullscreen :: (win: Window_Type, desire_fullscreen: bool, saved: *LD.Saved_Window_Info) -> success: bool, width: s32, height: s32 {
     s, w, h := LD.toggle_fullscreen(win, desire_fullscreen, saved);
     return s, w, h;
