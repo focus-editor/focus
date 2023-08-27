@@ -317,15 +317,24 @@ active_editor_type_char :: (char: u32) {
         cursor.pos += offset_delta;
         cursor.sel += offset_delta;
 
-        if has_selection(cursor) {
+        if all_cursors_have_selection(editor) && is_balancable_char(char) {
             selection := get_selection(cursor);
-            delete_range(buffer, selection);
-            cursor.pos = selection.start;
-        }
-        insert_char_at_offset(buffer, cursor.pos, utf8_char);
+            insert_char_at_offset(buffer, selection.end  , convert_utf32_to_utf8(get_balancing_char(char)));
+            insert_char_at_offset(buffer, selection.start, utf8_char);
 
-        cursor.pos = next_char_offset(buffer.bytes, cursor.pos);
-        cursor.sel = cursor.pos;
+            cursor.pos = selection.end   + 1;
+            cursor.sel = selection.start + 1;
+        } else {
+            if has_selection(cursor) {
+                selection := get_selection(cursor);
+                delete_range(buffer, selection);
+                cursor.pos = selection.start;
+            }
+            insert_char_at_offset(buffer, cursor.pos, utf8_char);
+
+            cursor.pos = next_char_offset(buffer.bytes, cursor.pos);
+            cursor.sel = cursor.pos;
+        }
     }
 
     if new_group then new_edit_group(buffer, editor);  // make sure selection operations have a dedicated group
@@ -651,6 +660,11 @@ get_selected_text_all_cursors :: (using editor: Editor, buffer: Buffer) -> strin
     }
 
     return text;
+}
+
+all_cursors_have_selection ::  (using editor: Editor) -> bool {
+    for cursors { if !has_selection(it) return false; }
+    return true;
 }
 
 new_edit_group :: (buffer: *Buffer, editor: *Editor) {
