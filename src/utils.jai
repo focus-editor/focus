@@ -278,6 +278,20 @@ is_separator_char :: inline (ch: u8) -> bool {
         ch == #char "." || ch == #char "<" || ch == #char ">" || ch == #char "/" || ch == #char "\"" || ch == #char "\\";
 }
 
+is_balancable_char :: (ch: u32) -> bool {
+    return ch == #char "{" || ch == #char "(" || ch == #char "[" || ch == #char "\"";
+}
+
+get_balancing_char :: (ch: u32) -> u32 {
+    if ch == {
+        case #char "{";  return #char "}";
+        case #char "(";  return #char ")";
+        case #char "[";  return #char "]";
+        case #char "\""; return #char "\"";
+        case; return 0;
+    }
+}
+
 get_char_type :: (ch: u32) -> Char_Type {
     if is_word_char(ch) {
         return .word;
