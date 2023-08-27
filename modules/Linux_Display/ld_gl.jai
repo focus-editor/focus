@@ -19,9 +19,9 @@ GL_Display :: struct {
             cnf: X11.GLXFBConfig;
         }
         egl: struct {
-            ctx: EGL.EGLContext;
-            cnf: EGL.EGLConfig;
-            dpy: EGL.EGLDisplay;
+            ctx: *void;
+            cnf: *void;
+            dpy: *void;
         }
     }
     ops: GL_Ops;
@@ -35,7 +35,7 @@ GL_Window :: struct {
         }
         egl: struct {
             native: *void;  /* wl_egl_window or X11.Window */
-            surface: EGL.EGLSurface;
+            surface: *void;
         }
     }
 }
@@ -90,8 +90,10 @@ gl_initialized :: (window: *Window) -> bool {
 }
 
 #scope_file
-GL  :: #import "GL";
-EGL :: #import "EGL";
+#import "Basic";
+#import "POSIX";
+
+GL :: #import "GL";
 
 GL_Ops :: struct {
     create_context: (display: *Display, major_version := 0, minor_version := 0, compatibility := false, debug := false);
@@ -112,6 +114,7 @@ X11_GLX_Ops :: GL_Ops.{
         gl.type = .GLX;
         gl.glx.ctx, gl.glx.cnf = GL.glx_create_context(xx major_version, xx minor_version, compatibility, debug);
         gl.ops = X11_GLX_Ops;
+        gl.ops.get_proc_address = X11.glXGetProcAddress;
 
         GL.gl_load(*GL.gl, X11.glXGetProcAddress);
     },
@@ -144,9 +147,7 @@ X11_GLX_Ops :: GL_Ops.{
         dpy     := window.x11.display.handle;
         glx_win := window.base.gl.glx.win;
         X11.glXSwapBuffers(dpy, glx_win);
-    },
-
-    get_proc_address = X11.glXGetProcAddress,
+    }
 };
 
 X11_EGL_Ops :: GL_Ops.{
@@ -155,14 +156,17 @@ X11_EGL_Ops :: GL_Ops.{
 
         if gl_initialized(display) return;
 
+        EGL.init();
+
         gl := *display.base.gl;
         gl.type = .EGL;
-        gl.egl.dpy, gl.egl.ctx, gl.egl.cnf = EGL.egl_create_context(
+        gl.egl.dpy, gl.egl.ctx, gl.egl.cnf = EGL.create_context(
             display.x11.handle, major_version, minor_version, compatibility, debug);
         gl.ops = X11_EGL_Ops;
+        gl.ops.get_proc_address = EGL.GetProcAddress;
 
         // @TODO - do we need to MakeCurrent something before?
-        GL.gl_load(*GL.gl, EGL.eglGetProcAddress);
+        GL.gl_load(*GL.gl, EGL.GetProcAddress);
     },
 
     create_surface = (window: *Window) {
@@ -173,7 +177,7 @@ X11_EGL_Ops :: GL_Ops.{
 
         wgl.type = .EGL;
         wgl.egl.native = xx window.x11.handle;
-        wgl.egl.surface = EGL.eglCreateWindowSurface(dgl.egl.dpy, dgl.egl.cnf, wgl.egl.native, null);
+        wgl.egl.surface = EGL.CreateWindowSurface(dgl.egl.dpy, dgl.egl.cnf, wgl.egl.native, null);
     },
 
     make_current = (window: *Window) {
@@ -182,7 +186,7 @@ X11_EGL_Ops :: GL_Ops.{
         wgl := *window.base.gl.egl;
         dgl := *window.base.display.base.gl.egl;
         X11.XLockDisplay(window.x11.display.handle);
-        EGL.eglMakeCurrent(dgl.dpy, wgl.surface, wgl.surface, dgl.ctx);
+        EGL.MakeCurrent(dgl.dpy, wgl.surface, wgl.surface, dgl.ctx);
         X11.XLockDisplay(window.x11.display.handle);
     },
 
@@ -191,10 +195,8 @@ X11_EGL_Ops :: GL_Ops.{
 
         wgl := *window.base.gl.egl;
         dgl := *window.base.display.base.gl.egl;
-        EGL.eglSwapBuffers(dgl.dpy, wgl.surface);
-    },
-
-    get_proc_address = EGL.eglGetProcAddress,
+        EGL.SwapBuffers(dgl.dpy, wgl.surface);
+    }
 };
 
 Wayland_EGL_Ops :: GL_Ops.{
@@ -203,22 +205,25 @@ Wayland_EGL_Ops :: GL_Ops.{
 
         if gl_initialized(display) return;
 
+        EGL.init();
+
         bd: *Base_Display = display;
         wld := *display.wld;
         gl := *bd.gl;
 
         gl.type = .EGL;
-        gl.egl.dpy, gl.egl.ctx, gl.egl.cnf = EGL.egl_create_context(
+        gl.egl.dpy, gl.egl.ctx, gl.egl.cnf = EGL.create_context(
             display.wld.handle, major_version, minor_version, compatibility, debug);
         gl.ops = Wayland_EGL_Ops;
+        gl.ops.get_proc_address = EGL.GetProcAddress;
 
         wls := wl_compositor.create_surface(wld.compositor);
         wln := wl_egl_window.create(wls, 1, 1);
-        egs := EGL.eglCreateWindowSurface(gl.egl.dpy, gl.egl.cnf, wln, null);
-        EGL.eglMakeCurrent(gl.egl.dpy, egs, egs, gl.egl.ctx);
-        GL.gl_load(*GL.gl, EGL.eglGetProcAddress);
-        EGL.eglMakeCurrent(gl.egl.dpy, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT);
-        EGL.eglDestroySurface(gl.egl.dpy, egs);
+        egs := EGL.CreateWindowSurface(gl.egl.dpy, gl.egl.cnf, wln, null);
+        EGL.MakeCurrent(gl.egl.dpy, egs, egs, gl.egl.ctx);
+        GL.gl_load(*GL.gl, EGL.GetProcAddress);
+        EGL.MakeCurrent(gl.egl.dpy, EGL.NO_SURFACE, EGL.NO_SURFACE, EGL.NO_CONTEXT);
+        EGL.DestroySurface(gl.egl.dpy, egs);
         wl_egl_window.destroy(wln);
         wl_surface.destroy(wls);
     },
@@ -232,8 +237,8 @@ Wayland_EGL_Ops :: GL_Ops.{
 
         wgl.type = .EGL;
         wgl.egl.native = wl_egl_window.create(ww.handle, ww.buffer_width, ww.buffer_height);
-        wgl.egl.surface = EGL.eglCreateWindowSurface(dgl.egl.dpy, dgl.egl.cnf, wgl.egl.native, null);
-        EGL.eglMakeCurrent(dgl.egl.dpy, wgl.egl.surface, wgl.egl.surface, dgl.egl.ctx);
+        wgl.egl.surface = EGL.CreateWindowSurface(dgl.egl.dpy, dgl.egl.cnf, wgl.egl.native, null);
+        EGL.MakeCurrent(dgl.egl.dpy, wgl.egl.surface, wgl.egl.surface, dgl.egl.ctx);
         wl_window_resize_viewport(ww);
         wl_surface.damage(ww.handle, 0, 0, ww.window_width, ww.window_height);
         wl_surface.commit(ww.handle);
@@ -244,7 +249,7 @@ Wayland_EGL_Ops :: GL_Ops.{
 
         wgl := *window.base.gl.egl;
         dgl := *window.base.display.base.gl.egl;
-        EGL.eglMakeCurrent(dgl.dpy, wgl.surface, wgl.surface, dgl.ctx);
+        EGL.MakeCurrent(dgl.dpy, wgl.surface, wgl.surface, dgl.ctx);
     },
 
     swap_buffers = (window: *Window) {
@@ -252,8 +257,137 @@ Wayland_EGL_Ops :: GL_Ops.{
 
         wgl := *window.base.gl.egl;
         dgl := *window.base.display.base.gl.egl;
-        EGL.eglSwapBuffers(dgl.dpy, wgl.surface);
-    },
+        EGL.SwapBuffers(dgl.dpy, wgl.surface);
+    }
+};
 
-    get_proc_address = EGL.eglGetProcAddress,
+EGL : struct {
+    major: s32;
+    minor: s32;
+
+    init :: () -> bool {
+        dlerror();
+        lib := dlopen("libEGL.so", RTLD_NOW);
+        if !lib {
+            log_error("Failed to load libEGL.so: %\n", to_string(dlerror()));
+            return false;
+        }
+
+        #insert #run -> string {
+            tis := cast(*Type_Info_Struct) type_info(type_of(EGL));
+            b: String_Builder;
+            tpl :: #string __end
+                dlerror();
+                EGL.%1 = dlsym(lib, "egl%1");
+                assert(!!EGL.%1, "Failed to resolve function 'egl%1': %%\n", to_string(dlerror()));
+            __end
+
+            for m : tis.members {
+                if m.type.type != .PROCEDURE continue;
+                if m.flags & .CONSTANT continue;
+
+                pi := cast(*Type_Info_Procedure) m.type;
+                if !(pi.procedure_flags & .IS_C_CALL) continue;
+
+                print_to_builder(*b, tpl, m.name);
+            }
+
+            return builder_to_string(*b);
+        };
+
+        return true;
+    }
+
+    create_context :: (native_display: *void, major_version := 0, minor_version := 0, compatibility := false, debug := false) -> *void, *void, *void {
+        using EGL;
+
+        n: s32;
+
+        egl_dpy := GetDisplay(native_display);
+        assert(egl_dpy != NO_DISPLAY, "egl_dpy=%, native_display=%", egl_dpy, native_display);
+
+        if !Initialize(egl_dpy, *major, *minor)
+            assert(false, "Initialize() failed: %", formatInt(GetError(), base=16));
+
+        BindAPI(OPENGL_API);
+
+        config_attribs : []s32 = .[
+            SURFACE_TYPE, WINDOW_BIT,
+            RED_SIZE, 8,
+            GREEN_SIZE, 8,
+            BLUE_SIZE, 8,
+            // ALPHA_SIZE, 8,                   // this makes the entire window translucent
+            RENDERABLE_TYPE, OPENGL_BIT,
+            NONE
+        ];
+        egl_cnf: *void;
+        ChooseConfig(egl_dpy, config_attribs.data, *egl_cnf, 1, *n);
+
+        context_attribs: [9]s32;
+        attr_count := 0;
+
+        if major_version > 0 {
+            context_attribs[attr_count + 0] = CONTEXT_MAJOR_VERSION;
+            context_attribs[attr_count + 1] = xx major_version;
+            context_attribs[attr_count + 2] = CONTEXT_MINOR_VERSION;
+            context_attribs[attr_count + 3] = xx minor_version;
+            attr_count += 4;
+        }
+
+        context_attribs[attr_count + 0] = CONTEXT_OPENGL_PROFILE_MASK;
+        if compatibility  context_attribs[attr_count + 1] = CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT;
+        else              context_attribs[attr_count + 1] = CONTEXT_OPENGL_CORE_PROFILE_BIT;
+        attr_count += 2;
+
+        if debug {
+            context_attribs[attr_count + 0] = CONTEXT_OPENGL_DEBUG;
+            context_attribs[attr_count + 1] = TRUE;
+            attr_count += 2;
+        }
+
+        context_attribs[attr_count] = NONE;
+
+        egl_ctx := CreateContext(egl_dpy, egl_cnf, NO_CONTEXT, context_attribs.data);
+
+        return egl_dpy, egl_ctx, egl_cnf;
+    }
+
+    /*
+     * Minimal EGL subset for editor use
+     */
+    TRUE                                        : s32 : 1;
+    FALSE                                       : s32 : 0;
+    NONE                                        : s32 : 0x3038;
+    ALPHA_SIZE                                  : s32 : 0x3021;
+    RED_SIZE                                    : s32 : 0x3024;
+    GREEN_SIZE                                  : s32 : 0x3023;
+    BLUE_SIZE                                   : s32 : 0x3022;
+    SURFACE_TYPE                                : s32 : 0x3033;
+    WINDOW_BIT                                  : s32 : 0x0004;
+    OPENGL_API                                  : s32 : 0x30A2;
+    OPENGL_BIT                                  : s32 : 0x0008;
+    RENDERABLE_TYPE                             : s32 : 0x3040;
+    CONTEXT_OPENGL_PROFILE_MASK                 : s32 : 0x30FD;
+    CONTEXT_OPENGL_CORE_PROFILE_BIT             : s32 : 0x00000001;
+    CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT    : s32 : 0x00000002;
+    CONTEXT_OPENGL_DEBUG                        : s32 : 0x31B0;
+    CONTEXT_MAJOR_VERSION                       : s32 : 0x3098;
+    CONTEXT_MINOR_VERSION                       : s32 : 0x30FB;
+
+    NO_CONTEXT : *void : null;
+    NO_DISPLAY : *void : null;
+    NO_SURFACE : *void : null;
+
+    GetDisplay          : (display_id: *void) -> *void #c_call;
+    GetProcAddress      : (procname: *u8) -> *void #c_call;
+    GetError            : () -> s32 #c_call;
+    BindAPI             : (api: s32) -> s32 #c_call;
+    Initialize          : (dpy: *void, major: *s32, minor: *s32) -> s32 #c_call;
+    ChooseConfig        : (dpy: *void, attrib_list: *s32, configs: **void, config_size: s32, num_config: *s32) -> s32 #c_call;
+    MakeCurrent         : (dpy: *void, draw: *void, read: *void, ctx: *void) -> s32 #c_call;
+    SwapBuffers         : (dpy: *void, surface: *void) -> s32 #c_call;
+    CreateWindowSurface : (dpy: *void, config: *void, win: *void, attrib_list: *s32) -> *void #c_call;
+    CreateContext       : (dpy: *void, config: *void, share_context: *void, attrib_list: *s32) -> *void #c_call;
+    DestroyContext      : (dpy: *void, ctx: *void) -> s32 #c_call;
+    DestroySurface      : (dpy: *void, surface: *void) -> s32 #c_call;
 };
