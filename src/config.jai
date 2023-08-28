@@ -322,29 +322,30 @@ Workspace :: struct {
 }
 
 Settings :: struct {
-    maximize_on_start                   := false;
-    open_on_the_biggest_monitor         := true;
-    cursor_as_block                     := true;
-    cursor_blink_time_in_seconds        := 5;
-    highlight_selection_occurrences     := true;
-    disable_that_annoying_paste_effect  := false;
-    disable_file_open_close_animations  := false;
-    double_shift_to_search_in_workspace := false;
-    max_entries_in_open_file_dialog     := 2000;
-    tab_size                            := 4;
-    insert_spaces_when_pressing_tab     := true;
-    strip_trailing_whitespace_on_save   := false;
-    smooth_scrolling                    := true;
-    line_height_scale_percent           := 120;
-    max_editor_width                    := -1;
-    can_cancel_go_to_line               := true;
-    copy_whole_line_without_selection   := false;
-    editor_history_size                 := 128;
-    line_wrap_is_on_by_default          := false;
-    show_line_numbers                   := false;
-    dark_titlebar                       := false;  // TODO: fix the issues with window resize first
-    colored_titlebar                    := true;
-    hide_mouse_when_typing              := true;
+    maximize_on_start                      := false;
+    open_on_the_biggest_monitor            := true;
+    cursor_as_block                        := true;
+    cursor_blink_time_in_seconds           := 5;
+    highlight_selection_occurrences        := true;
+    disable_that_annoying_paste_effect     := false;
+    disable_file_open_close_animations     := false;
+    double_shift_to_search_in_workspace    := false;
+    max_entries_in_open_file_dialog        := 2000;
+    tab_size                               := 4;
+    insert_spaces_when_pressing_tab        := true;
+    strip_trailing_whitespace_on_save      := false;
+    smooth_scrolling                       := true;
+    line_height_scale_percent              := 120;
+    max_editor_width                       := -1;
+    can_cancel_go_to_line                  := true;
+    copy_whole_line_without_selection      := false;
+    editor_history_size                    := 128;
+    line_wrap_is_on_by_default             := false;
+    show_line_numbers                      := false;
+    dark_titlebar                          := false;  // TODO: fix the issues with window resize first
+    colored_titlebar                       := true;
+    hide_mouse_when_typing                 := true;
+    auto_surround_with_brackets_and_quotes := false;
 
     // TODO
     // convert_tabs_to_spaces_on_load:     false
