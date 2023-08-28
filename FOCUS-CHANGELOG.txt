@@ -39,6 +39,7 @@
     + Duplicating a line near the end now duplicates a line as expected
     + Fixed a bug with multi-cursor copying/pasting when some of the cursors don't have a selection
     + Fixed a bug with multi-cursor range replace by typing
+    + Linux: fixed selection while scrolling due to "stuck" START and END states of the mouse button presses.
 
 + Other changes:
     + When the workspace is done scanning, the open file dialog input will no longer be cleared
