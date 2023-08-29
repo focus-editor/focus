@@ -308,10 +308,6 @@ active_editor_type_char :: (char: u32) {
 
     offset_delta: s32 = 0;
     buf_len := cast(s32) buffer.bytes.count;
-
-    all_have_selection := all_cursors_have_selection(editor);
-    is_balanceable     := is_balanceable_char(char);
-
     for * cursor : editor.cursors {
         new_len := cast(s32) buffer.bytes.count;
         if new_len != buf_len {
@@ -321,7 +317,7 @@ active_editor_type_char :: (char: u32) {
         cursor.pos += offset_delta;
         cursor.sel += offset_delta;
 
-        if config.settings.auto_surround_with_brackets_and_quotes && all_have_selection && is_balanceable {
+        if all_cursors_have_selection(editor) && is_balancable_char(char) {
             selection := get_selection(cursor);
             insert_char_at_offset(buffer, selection.end  , convert_utf32_to_utf8(get_balancing_char(char)));
             insert_char_at_offset(buffer, selection.start, utf8_char);

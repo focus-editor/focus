@@ -59,7 +59,6 @@ line_wrap_is_on_by_default:             false
 show_line_numbers:                      false
 colored_titlebar:                       true   # Windows 11+ only
 hide_mouse_when_typing:                 true
-auto_surround_with_brackets_and_quotes: false
 
 [[keymap]]
 
