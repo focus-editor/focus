@@ -759,7 +759,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                     color := ifx cursors_active then Colors.SELECTION_ACTIVE else Colors.SELECTION_INACTIVE;
                     draw_range(selection, editor, buffer, visible_lines_start, visible_lines_end, text_origin, color);
                 }
-                else/* if config.settings.highlight_line_with_cursor */{  // TODO
+                else if cursors_active /* && if config.settings.highlight_line_with_cursor */{  // TODO
                     // Draw current line highlight
                     coords := cursor_coords[it_index];
                     line_start_offset := get_line_start_offset(editor, buffer, coords.pos.line);
@@ -768,11 +768,10 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                     line_rect := Rect.{
                         x = text_origin.x + line_start_coords.col * char_x_advance,
                         y = text_origin.y - coords.pos.line * line_height,
-                        w = rect.w,
+                        w = rect.w - scrollbar_size - char_x_advance, // @Note: text_origin.x is 1 char_x_advance in so we need to subtract it here
                         h = line_height,
                     };
-                    color := ifx cursors_active then Colors.BACKGROUND_BRIGHT else Colors.BACKGROUND;
-                    draw_rect(line_rect, color);
+                    draw_rect(line_rect, Colors.BACKGROUND_BRIGHT);
                 }
             }
         }
