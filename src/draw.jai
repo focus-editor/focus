@@ -745,11 +745,11 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         cursors_active := editor_is_active && active_global_widget == .editors;
 
-        // Draw selections
         if !search_bar_is_open(editor) {
             Simp.set_shader_for_rects();
             for cursor : cursors {
                 if has_selection(cursor) {
+                    // Draw selections
                     range := get_selection(cursor);
                     if range.end   < visible_offset_range.start continue;
                     if range.start > visible_offset_range.end   break;
@@ -759,7 +759,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                     color := ifx cursors_active then Colors.SELECTION_ACTIVE else Colors.SELECTION_INACTIVE;
                     draw_range(selection, editor, buffer, visible_lines_start, visible_lines_end, text_origin, color);
                 }
-                else {
+                else/* if config.settings.highlight_line_with_cursor */{  // TODO
+                    // Draw current line highlight
                     coords := cursor_coords[it_index];
                     line_start_offset := get_line_start_offset(editor, buffer, coords.pos.line);
                     line_start_coords := offset_to_coords(editor, buffer, line_start_offset);

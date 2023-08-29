@@ -345,6 +345,7 @@ Settings :: struct {
     dark_titlebar                       := false;  // TODO: fix the issues with window resize first
     colored_titlebar                    := true;
     hide_mouse_when_typing              := true;
+    // highlight_line_with_cursor          := false;  // TODO for cursor line highlighting
 
     // TODO
     // convert_tabs_to_spaces_on_load:     false
