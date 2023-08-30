@@ -765,10 +765,13 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                     line_start_offset := get_line_start_offset(editor, buffer, coords.pos.line);
                     line_start_coords := offset_to_coords(editor, buffer, line_start_offset);
 
+                    // @Note: modified from hidden_chars_on_the_left below, get the x offset if we are scrolled horizontally
+                    x_offset := max((viewport.left / char_x_advance) - 1, 0);
+
                     line_rect := Rect.{
-                        x = text_origin.x + line_start_coords.col * char_x_advance,
+                        x = text_origin.x + (x_offset * char_x_advance),
                         y = text_origin.y - coords.pos.line * line_height,
-                        w = rect.w - scrollbar_size - char_x_advance, // @Note: text_origin.x is 1 char_x_advance in so we need to subtract it here
+                        w = rect.w - scrollbar_size - ifx x_offset == 0 then char_x_advance,   // @Note: text_origin.x is 1 char_x_advance in, so if we can see the beginning of the line, shorten the rect
                         h = line_height,
                     };
                     draw_rect(line_rect, Colors.BACKGROUND_BRIGHT);
@@ -826,8 +829,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // Draw text
         if buffer.needs_coloring || buffer.colors.count != buffer.bytes.count then recalculate_colors(buffer);  // right before drawing
 
-        hidden_chars_on_the_left := cast(s32) max((viewport.left / char_x_advance) - 2, 0);
         max_chars_horizontally   := cast(s32) (rect.w / char_x_advance) + 2;
+        hidden_chars_on_the_left := cast(s32) max((viewport.left / char_x_advance) - 2, 0);
 
         pen := text_origin;
         pen.y += (line_height - char_x_advance) / 2 - visible_lines_start * line_height;
