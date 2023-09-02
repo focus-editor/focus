@@ -162,7 +162,7 @@ x11_update_window_events :: (display: *Display) {
     start_time := get_time();
     elapsed_time := start_time;
 
-    while X11.XPending(x11_display.handle) || (expect_more_events && elapsed_time < 1_000_000) {
+    while X11.XPending(x11_display.handle) || (expect_more_events && elapsed_time < 1.0) {
         result := X11.XCheckIfEvent(x11_display.handle, *xev, x11_event_predicate, null);
         if result {
             expect_more_events = x11_handle_event(x11_display, *xev);
