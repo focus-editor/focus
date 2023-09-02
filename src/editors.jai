@@ -2729,7 +2729,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
         if foo {
             bar();
         }
-^^^^^^^^ <- minimum indent  (visual width is different from character count because there may be tabs)
+^^^^^^^^ <- minimum indent
 
         // if foo {
         //     bar();
@@ -2737,55 +2737,38 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
 ^^^^1^^^   ^^^^3^^^^^
         ^2^
 
-    Notice how the comment preceding bar() is indented at the same level as the other comments even though that line had more whitespace.
-    To do that, we need to take note of the minimum indent, which is determined by the leftmost non-whistespace character in the selection.
+    1. is generated using the user-defined spacing character (tabs or spaces)
+    2. is the comment character(s) plus one whitespace
+    3. is the rest of each line, left completely as-is
 
-    To make this work intuitively and robustly, we have to measure the VISUAL with of the minimum indent.
+    To make this work intuitively and robustly, we have to measure the VISUAL width of the minimum indent.
     Why can't we just count characters? Because there may be tabs. And tabs ruin everything. (I actually prefer tabs, but from a text editor's POV they are hell)
     Tabs vary in size due to weird alignment rules people made up back when typewriters were still a thing.
 
-    After getting the visual width of the minimum indent, construct the commented out lines. Here's a description of the different parts
-    labeled in the example above:
-
-    1. A string built from the user-defined space character. (As wide as minimum indent, here that's 2 tabs or 8 spaces)
-    2. In between, we put the comment symbol + a single space. Usually that's "// ".
-    3. The rest of the line is kept as-is. That includes any whitespace that exceeded the minimum indent. For instance, if the line
-       with bar() on it was made of tabs, then after the "// " there would still be a single tab that did not get replaced by spaces.
-       This is very much on purpose. It keeps any weird alignment the user had (like half indents or whatever) exactly the same.
-       If they wanted us to align it for them then they would've used autoindent_region.
-
     */
 
-    // Helper procs
-
-    add_visual_indent :: inline (indent: int, char: u8, tab_size: int) -> new_indent: int, err := false #must {
+    add_visual_indent :: inline (indent: int, char: u8, tab_size: int, $loc := #caller_location) -> new_indent: int {
         if char == {
             case #char " ";  return indent + 1;
             case #char "\t"; return indent + tab_size - (indent % tab_size); // tab alignment is weird.
-            case;            return 0, err = true;
-            // err_msg := tprint("Unexpected character 0x%, (expected only tabs/spaces)\n", FormatInt.{value=char, base=16});
+            case; assert(false, "Unexpected character 0x%, (expected only tabs/spaces)\n", FormatInt.{value=char, base=16}, loc = loc); return 0;
         }
     }
 
-    whitespace_get_visual_width :: inline (s: string, tab_size: int) -> int, err := false {
+    whitespace_get_visual_width :: inline (whitespace: string, tab_size: int) -> int {
         // Given a string of whitespace, will return the visual width of said whitespace.
         // Example: tab_size=4, "\t  \t " has 5 characters but due to tab alignment it looks like it's 9 wide.
         indent := 0;
-        for char: cast([]u8) s {
-            indent=, err := add_visual_indent(indent, char, tab_size);
-            if err return 0, err;
-        }
+        for cast([]u8) whitespace  indent = add_visual_indent(indent, it, tab_size);
         return indent;
     }
 
-    whitespace_count_chars_in_visual_width :: inline (s: string, visual_width: int, tab_size: int) -> int, err := false #must {
+    whitespace_count_chars_in_visual_width :: inline (whitespace: string, visual_width: int, tab_size: int) -> int {
         // Given whitespace and a visual width, will count the number of characters that fill that visual space.
         // Example: tab_size=4, s="\t\t\t", visual_width=8, will return 2 because the the first 8 spaces are taken up by 2 tab characters
-        char_index := 0;
-        indent     := 0;
+        char_index, indent := 0;
         while indent < visual_width {
-            indent=, err := add_visual_indent(indent, s[char_index], tab_size);
-            if err return 0, err;
+            indent = add_visual_indent(indent, whitespace[char_index], tab_size);
             char_index += 1;
         }
 
@@ -2793,6 +2776,32 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
         return ifx indent > visual_width then char_index - 1 else char_index;
     }
 
+    macro_every_loop :: (i: int) #expand {
+        `start, end := line_starts[i], line_starts[i+1];
+        `str        := cast(string) array_view(buffer.bytes, start, end-start);
+
+        // Note that 'str' may actually be multiple lines! This happens when you have two cursors and they are spaced
+        // multiple lines apart. You get the start offsets of both lines, and with start=[i] and end=[i+1] you are selecting the
+        // whole region in between those lines.
+        // Having multiple lines inside 'str' may seem weird but it's usually not a problem. Since we are using line-comments,
+        // placing or removing a comment from the start of 'str' will only affect the first line, the lines below are unchanged.
+        // And that's exactly what should happen, since we only want to modify the first line and leave the rest unaffected.
+
+        `whitespace, `trimmed_str: string = ---;
+        `is_empty_line := true;
+        for c: cast([]u8) str  if c == {
+          case #char "\t"; #through; case #char " ";  continue c;
+
+          // In this case, this one line is empty, but str contains multiple lines. See the large comment above.
+          case #char "\r"; #through; case #char "\n"; break c;
+
+          case;
+            whitespace    = slice(str, 0, it_index);
+            trimmed_str   = slice(str, it_index, str.count - it_index);
+            is_empty_line = false;
+            break c;
+        }
+    }
 
 
     comment: string = ---;
@@ -2810,33 +2819,22 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
     // Get the affected lines
     line_starts, last_line_end_offset := get_line_starts_for_lines_with_cursors_tmp(editor, buffer);
     last_line := line_starts.count - 1;
-    array_add(*line_starts, last_line_end_offset);
-
-    get_str_or_continue :: (i: int, before_continue: Code = #code {}) #expand {
-        `start, `end  := line_starts[i], line_starts[i+1];
-        `str          := cast(string) array_view(buffer.bytes, start, end-start);
-        `trimmed_str  := trim_left(str, " \t\r\n");
-        // Besides spaces/tabs, we trim newlines because an empty line contains a newline at the end. Required for empty line detection.
-
-        if !trimmed_str { #insert before_continue; continue; }
-
-        `whitespace := to_string(str.data, str.count - trimmed_str.count);
-    }
+    array_add(*line_starts, last_line_end_offset); // So that line_starts[i+1] will always work.
 
     tab_size                := config.settings.tab_size;
     min_indent_visual_width := -1;
     add_comment             := false;
 
     for 0..last_line {
-        get_str_or_continue(it); // start, end, str, whitespace, trimmed_str
+        macro_every_loop(it); //vars: is_empty_line, start, str, whitespace, trimmed_str
+        if is_empty_line continue;
 
-        if !add_comment && !begins_with(trimmed_str, comment) then add_comment = true;
-
-        whitespace_visual_width, err := whitespace_get_visual_width(whitespace, tab_size);
-        if err continue;
+        whitespace_visual_width := whitespace_get_visual_width(whitespace, tab_size);
 
         if min_indent_visual_width < 0 || whitespace_visual_width < min_indent_visual_width
             then min_indent_visual_width = whitespace_visual_width;
+
+        if !add_comment && !begins_with(trimmed_str, comment) then add_comment = true;
     }
 
     if min_indent_visual_width < 0 then min_indent_visual_width = 0;
@@ -2846,23 +2844,21 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
     b: String_Builder;  // not using temp because the string may be too large
 
     if add_comment {
-        // Add comments to nonempty strings
 
-        use_tabs := !config.settings.insert_spaces_when_pressing_tab;
-
-        new_whitespace := ifx use_tabs then {
+        use_spaces := config.settings.insert_spaces_when_pressing_tab;
+        new_whitespace := ifx use_spaces then get_tmp_spaces(min_indent_visual_width) else {
             tab_count := min_indent_visual_width / tab_size; // Aligns the indentation with tab columns because of integer division.
             min_indent_visual_width = tab_count * tab_size;  // Update min_indent too. If you use tabs, your comments will align with tab columns.
             get_tmp_tabs(tab_count);
-        } else get_tmp_spaces(min_indent_visual_width);
+        }
 
         adjustment := 0;
         for 0..last_line {
-            get_str_or_continue(it, before_continue = #code append(*b, str)); // start, end, str, whitespace, trimmed_str
+            macro_every_loop(it); //vars: is_empty_line, start, str, whitespace, trimmed_str
+            if is_empty_line { append(*b, str); continue; }
 
-            old_whitespace_count, err := whitespace_count_chars_in_visual_width(whitespace, min_indent_visual_width, tab_size);
-            if err { append(*b, str); continue; }
-            rest_of_line              := advance(str, old_whitespace_count);
+            old_whitespace_count := whitespace_count_chars_in_visual_width(whitespace, min_indent_visual_width, tab_size);
+            rest_of_line         := advance(str, old_whitespace_count);
 
             append(*b, new_whitespace);
             append(*b, comment);
@@ -2885,16 +2881,18 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
 
             adjustment += line_length_difference;
         }
-    } else {
-        // Remove comments from nonempty strings
+
+    } else { // Remove comments
 
         adjustment := 0;
         for 0..last_line {
-            get_str_or_continue(it, before_continue = #code append(*b, str)); // start, end, str, whitespace, trimmed_str
+            macro_every_loop(it); //vars: is_empty_line, start, str, whitespace, trimmed_str
+            if is_empty_line { append(*b, str); continue; }
 
             // Since we are un-commenting, we know for certain that any non-empty line begins with a comment.
-            len_comment  := comment.count + xx (trimmed_str[comment.count] == #char " "); // Also cut off 1 space if there is one.
-            rest_of_line := advance(trimmed_str, len_comment); // Remove comment
+            // But is there also a space? If so, we remove that too.
+            len_comment  := comment.count + xx (trimmed_str.count > comment.count && trimmed_str[comment.count] == #char " ");
+            rest_of_line := advance(trimmed_str, len_comment);
 
             append(*b, whitespace);
             append(*b, rest_of_line);
