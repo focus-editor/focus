@@ -148,19 +148,34 @@ x11_update_window_events :: (display: *Display) {
     x11_display: *X11_Display = display;
 
     xev: X11.XEvent;
-    while X11.XPending(x11_display.handle) {
+    // Some things in X11 happen across multiple events, and it
+    // doesn't make much sense to draw in-between. For example, clipboard handling.
+    // Other programs can send (and expect) a sequence of events just to pass the clipboard around.
+    // Chromium (and its children) is particularly notorious for initiating a  big series of clipboard
+    // events, and if we draw on every event then pasting into other program from Focus becomes slow.
+    // So instead event handler says that it expects more events to come, so we don't release the
+    // event loop right away and instead wait for more events. We don't want to wait forever though,
+    //so we'll release the loop at most after a second, so some buggy program doesn't hang the editor.
+    expect_more_events := false;
+    start_time := get_time();
+    elapsed_time := start_time;
+
+    while X11.XPending(x11_display.handle) || (expect_more_events && elapsed_time < 1000000) {
+
         result := X11.XCheckIfEvent(x11_display.handle, *xev, x11_event_predicate, null);
         if result {
-            x11_handle_event(x11_display, *xev);
+            expect_more_events = x11_handle_event(x11_display, *xev);
             timers_tick();
         }
+        elapsed_time = get_time() - start_time;
     }
 }
 
-x11_handle_event :: (x11_display: *X11_Display, xev: *X11.XEvent) {
+x11_handle_event :: (x11_display: *X11_Display, xev: *X11.XEvent) -> expect_more_events: bool = false {
     using Input.Key_Code;
 
     display := x11_display.handle;
+    // expect_more_events := false;
 
     if X11.XFilterEvent(xev, X11.None) return;
 
@@ -396,6 +411,8 @@ x11_handle_event :: (x11_display: *X11_Display, xev: *X11.XEvent) {
             }
 
             X11.XSendEvent(selreq.display, selreq.requestor, X11.True, 0, *out);
+            return true;
+
         case X11.ConfigureNotify;
             config := cast(*X11.XConfigureEvent) xev;
             ld_win := get_by_native_handle(xx x11_display, xx config.window);
@@ -414,6 +431,7 @@ x11_handle_event :: (x11_display: *X11_Display, xev: *X11.XEvent) {
         case X11.Expose;
             array_add(*x11_display.base.events_this_frame, .{type=.WINDOW});
     }
+    return;
 }
 
 x11_clipboard_get_text :: (win: X11.Window) -> string {  // Allocated via alloc; should be manually freed.
