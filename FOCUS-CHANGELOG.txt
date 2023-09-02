@@ -40,6 +40,7 @@
     + Fixed a bug with multi-cursor copying/pasting when some of the cursors don't have a selection
     + Fixed a bug with multi-cursor range replace by typing
     + Linux: fixed selection while scrolling due to "stuck" START and END states of the mouse button presses.
+    + Linux: Clipboard handling should become way faster on X11 because we let event loop to handle more requests before drawing.
 
 + Other changes:
     + When the workspace is done scanning, the open file dialog input will no longer be cleared
