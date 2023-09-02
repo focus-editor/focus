@@ -2743,7 +2743,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
 
     whitespace_count_chars_in_visual_width :: inline (whitespace: string, visual_width: int, tab_size: int) -> int {
         // Given whitespace and a visual width, will count the number of characters that fill that visual space.
-        // Example: tab_size=4, s="\t\t\t", visual_width=8, will return 2 because the the first 8 spaces are taken up by 2 tab characters
+        // Example: tab_size=4, whitespace="\t\t\t", visual_width=8, will return 2 because the the first 8 spaces are taken up by 2 tab characters
         char_index, indent := 0;
         while indent < visual_width {
             indent = add_visual_indent(indent, whitespace[char_index], tab_size);
@@ -2758,12 +2758,12 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
         `start, end := line_starts[i], line_starts[i+1];
         `str        := cast(string) array_view(buffer.bytes, start, end-start);
 
-        // Note that 'str' may actually be multiple lines! This happens when you have two cursors and they are spaced
-        // multiple lines apart. You get the start offsets of both lines, and with start=[i] and end=[i+1] you are selecting the
-        // whole region in between those lines.
-        // Having multiple lines inside 'str' may seem weird but it's usually not a problem. Since we are using line-comments,
-        // placing or removing a comment from the start of 'str' will only affect the first line, the lines below are unchanged.
-        // And that's exactly what should happen, since we only want to modify the first line and leave the rest unaffected.
+        // NOTE: 'str' may actually be multiple lines! This happens when you have two cursors and they are spaced multiple lines apart.
+        //       You get the start offsets of both lines, and with start=[i] and end=[i+1] you are selecting the whole region in between
+        //       those lines. Having multiple lines inside 'str' may seem weird but it's usually not a problem. Since we are using
+        //       line-comments, placing or removing a comment from the start of 'str' will only affect the first line, the lines below
+        //       are unchanged. And that's exactly what should happen, since we only want to modify the first line and leave the rest
+        //       unaffected.
 
         `whitespace, `trimmed_str: string = ---;
         `is_empty_line := true;
@@ -2803,27 +2803,27 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
     last_line := line_starts.count - 1;
     array_add(*line_starts, last_line_end_offset); // So that line_starts[i+1] will always work.
 
-    // Before commenting/uncommenting, we loop over the selected lines in order to
-    // A. Determine whether we're adding or removing comments.
-    // B. Find the minimum indent (which is only needed when adding comments, but )
-    // Minimum indent works as follows:
-    /*
-        if foo {
-            bar();
-        }
-^^^^^^^^ <- minimum indent
+    // NOTE: Before commenting/uncommenting, we loop over the selected lines in order to
+    //       A. Determine whether we're adding or removing comments.
+    //       B. Find the minimum indent (which is only for adding comments, but we don't know if we need it until the end of the loop)
+    //       Minimum indent works as follows:
 
-        // if foo {
-        //     bar();
-        // }
-^^^^1^^^   ^^^^3^^^^^
-        ^2^
-    */
-    // 1. is generated using the user-defined spacing character (tabs or spaces)
-    // 2. is the comment character(s) plus one whitespace
-    // 3. is the rest of each line, left completely as-is
-    // To make this work intuitively and robustly, we have to measure the VISUAL width of the minimum indent.
-    // We cannot count the whitespace characters because there may be tabs, and tabs have weird alignment rules.
+    //         if foo {
+    //             bar();
+    //         }
+    // ^^^^^^^^ <- minimum indent
+    //
+    //         // if foo {
+    //         //     bar();
+    //         // }
+    // ^^^^1^^^   ^^^^3^^^^^
+    //         ^2^
+
+    //       1. is generated using the user-defined spacing character (tabs or spaces)
+    //       2. is the comment character(s) plus one whitespace
+    //       3. is the rest of each line, left completely as-is
+    //       To make this work intuitively and robustly, we have to measure the VISUAL width of the minimum indent.
+    //       We cannot count the whitespace characters because there may be tabs, and tabs have weird alignment rules.
 
     tab_size                := config.settings.tab_size;
     min_indent_visual_width := -1;
@@ -2872,7 +2872,6 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
             for * cursor : editor.cursors {
                 if      cursor.pos > adjusted_old_comment_start then cursor.pos += xx line_length_difference;
                 else if cursor.pos >= adjusted_start            then cursor.pos  = xx adjusted_new_comment_start;
-
                 if      cursor.sel > adjusted_old_comment_start then cursor.sel += xx line_length_difference;
                 else if cursor.sel >= adjusted_start            then cursor.sel  = xx adjusted_new_comment_start;
             }
