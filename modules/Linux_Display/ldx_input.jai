@@ -154,14 +154,15 @@ x11_update_window_events :: (display: *Display) {
     // Chromium (and its children) is particularly notorious for initiating a  big series of clipboard
     // events, and if we draw on every event then pasting into other program from Focus becomes slow.
     // So instead event handler says that it expects more events to come, so we don't release the
-    // event loop right away and instead wait for more events. We don't want to wait forever though,
-    //so we'll release the loop at most after a second, so some buggy program doesn't hang the editor.
+    // event loop right away and instead wait for more events.
+    // We don't want to wait forever though, so we'll release the loop either if some other event arrives
+    // that doesn't expect other events, or at most after a second,
+    // so some buggy program doesn't hang the editor while handling our clipboard response.
     expect_more_events := false;
     start_time := get_time();
     elapsed_time := start_time;
 
-    while X11.XPending(x11_display.handle) || (expect_more_events && elapsed_time < 1000000) {
-
+    while X11.XPending(x11_display.handle) || (expect_more_events && elapsed_time < 1_000_000) {
         result := X11.XCheckIfEvent(x11_display.handle, *xev, x11_event_predicate, null);
         if result {
             expect_more_events = x11_handle_event(x11_display, *xev);
