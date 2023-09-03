@@ -2811,7 +2811,6 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
     }
 
     if min_indent < 0 then min_indent = 0;
-    print("min indent is %\n", min_indent);
 
     // Build a replacement string
     b: String_Builder;  // not using temp because the string may be too large
