@@ -2821,6 +2821,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
             str        := cast(string) array_view(buffer.bytes, start, end-start);
             if line_starts[it] & EMPTY_LINE_BIT { append(*b, str); continue; }
 
+            // Count how many characters are in the minimum indent, then cut off those characters since they will be replaced with new_whitespace
             indent, old_whitespace_count := 0;
             while indent < min_indent {
                 c := str[old_whitespace_count];
