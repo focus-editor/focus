@@ -2725,14 +2725,6 @@ paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
 
 toggle_comment :: (editor: *Editor, buffer: *Buffer) {
 
-    add_visual_indent :: inline (indent: int, char: u8, tab_size: int, $loc := #caller_location) -> new_indent: int {
-        if char == {
-            case #char " ";  return indent + 1;
-            case #char "\t"; return indent + tab_size - (indent % tab_size); // tab alignment is weird.
-            case;            assert(false, "Unexpected character 0x%, (expected only tabs/spaces)\n", FormatInt.{value=char, base=16}, loc = loc); return 0;
-        }
-    }
-
     comment: string = ---;
     if buffer.lang == {
         case .C;            comment = "//";
@@ -2788,10 +2780,8 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
         trimmed_str: string = ---;
         for c : cast([]u8) str {
             if c == {
-                case #char "\t"; #through;
-                case #char " ";
-                    indent = add_visual_indent(indent, c, tab_size);
-                    continue c;
+                case #char "\t"; indent += tab_size - (indent % tab_size); continue c;
+                case #char " ";  indent += 1;                              continue c;
 
                 // In this case, this one line is empty, but str contains multiple lines. See the large comment above.
                 case #char "\r"; #through;
@@ -2829,10 +2819,14 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
             str        := cast(string) array_view(buffer.bytes, start, end-start);
             if line_starts[it] & EMPTY_LINE_BIT { append(*b, str); continue; }
 
-            // Count how many characters are in the minimum indent, then cut off those characters since they will be replaced with new_whitespace
-            indent, old_whitespace_count: int = 0;
+            indent, old_whitespace_count := 0;
             while indent < min_indent {
-                indent = add_visual_indent(indent, str[old_whitespace_count], tab_size);
+                c := str[old_whitespace_count];
+                if c == {
+                    case #char " ";  indent += 1;
+                    case #char "\t"; indent += tab_size - (indent % tab_size);
+                    case;            assert(false, "Unexpected character 0x%, (expected only tabs/spaces)\n", formatInt(c, base=16));
+                }
                 old_whitespace_count += 1;
             }
             if indent > min_indent then old_whitespace_count -= 1;
