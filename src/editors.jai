@@ -2387,10 +2387,10 @@ get_whole_line_ranges_for_cursors :: (editor: Editor, buffer: Buffer, merge_adja
 
             if should_extend {
                 // Extend last line range
-                line_ranges[line_ranges.count-1].range.end = get_real_line_start_offset(buffer, end_line+1);
-                line_ranges[line_ranges.count-1].next_line_end = next_line_end;
-                line_ranges[line_ranges.count-1].is_last = is_last_real_line(buffer, end_line);
-                line_ranges[line_ranges.count-1].is_last = !is_last_real_line(buffer, end_line) && is_last_real_line(buffer, end_line + 1);
+                line_ranges[line_ranges.count-1].range.end         = get_real_line_start_offset(buffer, end_line+1);
+                line_ranges[line_ranges.count-1].next_line_end     = next_line_end;
+                line_ranges[line_ranges.count-1].is_last           = is_last_real_line(buffer, end_line);
+                line_ranges[line_ranges.count-1].next_line_is_last = !is_last_real_line(buffer, end_line) && is_last_real_line(buffer, end_line + 1);
             } else {
                 // Add a new line range
                 array_add(*line_ranges, Line_Range.{
@@ -2436,20 +2436,21 @@ move_lines_up :: (editor: *Editor, buffer: *Buffer) {
     lines := get_whole_line_ranges_for_cursors(editor, buffer);
 
     for line : lines {
+        if line.prev_line_start == line.range.start then continue;  // we're at the top
         prev_line_range := Offset_Range.{ start = line.prev_line_start, end = line.range.start };
-        prev_str := copy_temporary_string(get_range_as_string(buffer, prev_line_range));
-        if !prev_str continue;  // we're at the top
+        view     := get_range_as_string(buffer, prev_line_range);
+        prev_str := ifx line.is_last then tprint("\n%", view) else copy_temporary_string(view);
+        length   := view.count;  // this length should *not* include the optional newline character
 
         delete_range(buffer, prev_line_range);
-        // add_paste_animation(editor, .{ start = prev_line_range.start, end = prev_line_range.start + line.range.end - line.range.start });
+        insert_string_at_offset(buffer, line.range.end - length, prev_str);
 
         for * cursor : editor.cursors {
             if line.range.start <= cursor.pos && cursor.pos <= line.range.end {  // no need to check for cursor.sel because we have whole line ranges
-                cursor.pos -= xx prev_str.count;
-                cursor.sel -= xx prev_str.count;
+                cursor.pos -= xx length;
+                cursor.sel -= xx length;
             }
         }
-        insert_string_at_offset(buffer, line.range.end - prev_str.count, ifx line.is_last then tprint("\n%", prev_str) else prev_str);
     }
 
     editor.cursor_moved = .moved_up_with_edit;
@@ -2459,18 +2460,19 @@ move_lines_down :: (editor: *Editor, buffer: *Buffer) {
     lines := get_whole_line_ranges_for_cursors(editor, buffer);
 
     for line : lines {
+        if line.next_line_end == line.range.end then continue;  // we're at the bottom
         next_line_range := Offset_Range.{ start = line.range.end, end = line.next_line_end };
-        if next_line_range.end <= next_line_range.start continue;  // we're at the bottom
-        next_str := copy_temporary_string(get_range_as_string(buffer, next_line_range));
+        view     := get_range_as_string(buffer, next_line_range);
+        next_str := ifx line.next_line_is_last then tprint("%\n", view) else copy_temporary_string(view);
+        length   := next_str.count;  // contrary to move_lines_up, this length *must* include the optional newline character
 
         delete_range(buffer, next_line_range);
-        insert_string_at_offset(buffer, line.range.start, ifx line.next_line_is_last then tprint("%\n", next_str) else next_str);
-        // add_paste_animation(editor, .{ start = line.range.start + cast(s32)next_str.count, end = line.range.end + cast(s32)next_str.count });
+        insert_string_at_offset(buffer, line.range.start, next_str);
 
         for * cursor : editor.cursors {
             if line.range.start <= cursor.pos && cursor.pos <= line.range.end {  // no need to check for cursor.sel because we have whole line ranges
-                cursor.pos += xx next_str.count;
-                cursor.sel += xx next_str.count;
+                cursor.pos += xx length;
+                cursor.sel += xx length;
             }
         }
     }
