@@ -1549,7 +1549,7 @@ toggle_expand :: (expanded: bool) {
 smooth_scroll :: (editor: Editor, direction: Smooth_Scroll_Direction, fast := false) {
     // Only set this if there's a new set of inputs. Since keystrokes will repeat if held down for long,
     // the start_*/started_at values would be reset constantly in the middle of scrolling, causing stutter.
-    if direction != editor_smooth_scroll.direction && fast != editor_smooth_scroll.fast {
+    if direction != editor_smooth_scroll.direction || fast != editor_smooth_scroll.fast {
         editor_smooth_scroll.direction  = direction;
         editor_smooth_scroll.started_at = frame_time;
         editor_smooth_scroll.start_x    = editor.viewport.left;
