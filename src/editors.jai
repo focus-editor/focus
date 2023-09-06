@@ -2763,7 +2763,6 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
     EMPTY_LINE_BIT  :: (cast(s64) 1) >>> 1;
     LINE_START_MASK :: ~EMPTY_LINE_BIT;
 
-    tab_size    := config.settings.tab_size;
     min_indent  := -1;
     add_comment := false;
     for 0..last_line {
@@ -2782,7 +2781,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
         trimmed_str: string = ---;
         for c : cast([]u8) str {
             if c == {
-                case #char "\t"; indent += tab_size - (indent % tab_size); continue c;
+                case #char "\t"; indent += TAB_SIZE - (indent % TAB_SIZE); continue c;
                 case #char " ";  indent += 1;                              continue c;
 
                 // In this case, this one line is empty, but str contains multiple lines. See the large comment above.
@@ -2810,8 +2809,8 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
     if add_comment {
         use_spaces := config.settings.insert_spaces_when_pressing_tab;
         new_whitespace := ifx use_spaces then get_tmp_spaces(min_indent) else {
-            tab_count := min_indent / tab_size; // Aligns the indentation with tab columns because of integer division.
-            min_indent = tab_count * tab_size;  // Update min_indent too. If you use tabs, your comments will align with tab columns.
+            tab_count := min_indent / TAB_SIZE; // Aligns the indentation with tab columns because of integer division.
+            min_indent = tab_count * TAB_SIZE;  // Update min_indent too. If you use tabs, your comments will align with tab columns.
             get_tmp_tabs(tab_count);
         }
 
@@ -2827,7 +2826,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
                 c := str[old_whitespace_count];
                 if c == {
                     case #char " ";  indent += 1;
-                    case #char "\t"; indent += tab_size - (indent % tab_size);
+                    case #char "\t"; indent += TAB_SIZE - (indent % TAB_SIZE);
                     case;            assert(false, "Unexpected character 0x%, (expected only tabs/spaces)\n", formatInt(c, base=16));
                 }
                 old_whitespace_count += 1;
