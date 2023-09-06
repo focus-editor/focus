@@ -145,6 +145,8 @@ platform_get_save_file_name :: (file_name := "") -> string /* temp */, success: 
         }
     }
 
+    // Since the filename box is blocking, the cursor will not update its visibility whilst it is open. Ensure it is visible first.
+    platform_show_cursor(true);
     open_success := GetSaveFileNameW(*ofn);
 
     if open_success {
