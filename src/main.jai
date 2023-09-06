@@ -150,22 +150,12 @@ main :: () {
                 continue;
             }
 
-            // Try to avoid hot-looping on Linux/macOS
+            // Try to avoid hot-looping on macOS
             if nothing_to_do_this_frame {
                 sleep_milliseconds(1);
                 continue;
             }
         }
-
-        // NOTE: this optimisation has caused some problems, so commenting it out for now
-        // // Don't redraw if we're mousing around outside the window
-        // if !redraw_requested
-        //     && !Input.events_this_frame
-        //     && !mouse_pointer_is_within(screen_with_title_bar)
-        //     && window_has_focus == Input.input_application_has_focus
-        //     && !window_resized
-        // then
-        //     continue;
 
         redraw_requested = false;
         window_resized   = false;
