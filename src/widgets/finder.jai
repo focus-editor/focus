@@ -30,6 +30,7 @@ finder_handle_event :: (event: Input.Event) -> handled: bool {
             case .toggle_expand;            toggle_expand();                                        return true;
             case .toggle_case_sensitive;    finder_toggle_case_sensitive();                         return true;
             case .toggle_whole_word;        finder_toggle_whole_word();                             return true;
+            case .toggle_regex_search;      finder_toggle_regex_search();                           return true;
 
             case .move_up;                  move_cursor(-1, wrap = true);                           return true;
             case .move_down;                move_cursor( 1, wrap = true);                           return true;
@@ -164,8 +165,8 @@ finder_open_selected_result :: (selected_num := -1, placement: Editor_Placement)
 
     // Select the search result
     editor, buffer := get_active_editor_and_buffer();
-    match_start := min(result.match_offset,                xx buffer.bytes.count);  // buffer could've changed, so offset may not be valid any more
-    match_end   := min(result.match_offset + needle.count, xx buffer.bytes.count);
+    match_start := min(result.match_offset,                      xx buffer.bytes.count);  // buffer could've changed, so offset may not be valid any more
+    match_end   := min(result.match_offset + result.match_count, xx buffer.bytes.count);
     cursor := leave_only_original_cursor(editor);
     cursor.sel = xx match_start;
     cursor.pos = xx match_end;
@@ -190,6 +191,13 @@ finder_toggle_case_sensitive :: () {
     using finder;
 
     case_sensitive = !case_sensitive;
+    start_new_search(force = true);
+}
+
+finder_toggle_regex_search :: () {
+    using finder;
+
+    regex_search = !regex_search;
     start_new_search(force = true);
 }
 
@@ -221,9 +229,28 @@ start_new_search :: (force := false) {
         return;
     }
     if request.needle == to_string(input.text) && !force return;  // needle hasn't changed, no need to repeat
+    if regex_search {
+        regex: re.Regexp;
+
+        flags := BASE_REGEX_FLAGS;
+        if !case_sensitive flags |= .FoldCase;
+
+        regex, regex_is_valid = re.compile(to_string(input.text), flags);
+        if !regex_is_valid return;  // only search if the regex is valid
+
+        defer re.uninit(*regex);
+
+        matched, captures := re.match("dummy string", regex);
+        if matched && !captures[0].count {
+            // disallow expressions that generate empty results (such as `\s*`)
+            regex_is_valid = false;
+            return;
+        }
+    }
 
     request.case_sensitive = case_sensitive;
     request.whole_word     = whole_word;
+    request.regex_search   = regex_search;
 
     reset_search_request(*request, new_needle = to_string(input.text));
     request.in_progress = true;
@@ -243,16 +270,34 @@ start_new_search :: (force := false) {
         task.buffer_end_index   = cast(s32) min(buffer_start_index + buffers_per_thread - 1, open_buffers.count - 1);
         task.case_sensitive = request.case_sensitive;
         task.whole_word = request.whole_word;
+        task.regex_search = request.regex_search;
 
         add_work(*thread_group, task, needle);
         request.num_tasks_left += 1;  // only modified in the main thread so no atomics needed
 
         buffer_start_index += buffers_per_thread;
     }
+
+    if regex_search && regex_is_valid  reset_results();
 }
 
 search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
     using task := cast(*Search_Task) work;
+
+    regex: re.Regexp;
+    regex_is_valid: bool;
+    defer if regex_search && regex_is_valid re.uninit(*regex);
+
+    if regex_search {
+        re_text := ifx whole_word then sprint("\\w%\\w", needle) else copy_string(needle);
+        defer free(re_text);
+
+        flags := BASE_REGEX_FLAGS;
+        if !case_sensitive flags |= .FoldCase;
+
+        regex, regex_is_valid = re.compile(re_text, flags);
+        assert(regex_is_valid, "Failed to compile regex: '%'", re_text);
+    }
 
     for buffer_id : buffer_start_index .. buffer_end_index {
         // Search in buffer
@@ -270,20 +315,43 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
         buffer_id_part: u64 = (cast,trunc(u64) buffer_id)                        << 32;
         if buffer.modified || buffer.modified_on_disk then dir_id_part = 0;  // make sure modified buffers are on top
 
-        file_end := contents.data + contents.count;
         offset := 0;
+        count := 0;
+        contents_advance := 0;
+        captures: [] string;
         while true {
-            if case_sensitive {
-                offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table, case_sensitive = true);
-            } else {
-                offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table, case_sensitive = false);
-            }
-            if offset < 0 break;
+            if regex_search {
+                // `re.match()` does not take a start index so we need to constantly advance
+                // `contents` and keep track of our 'real' position in the original buffer
+                matched: bool;
+                matched, captures = re.match(contents, regex);
+                if !matched break;
 
-            if !whole_word || (whole_word && match_whole_word(contents, offset, needle.count)) {
+                c := captures[0];
+                local_offset := c.data - contents.data;
+                offset = contents_advance + local_offset;
+                count  = c.count;
+                contents_advance = offset + count;
+
+                advance(*contents, local_offset + count);
+
+                free(captures.data);
+            } else {
+                if case_sensitive {
+                    offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table, case_sensitive = true);
+                } else {
+                    offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table, case_sensitive = false);
+                }
+                if offset < 0 break;
+
+                count = needle.count;
+            }
+
+            if regex_search || !whole_word || (whole_word && match_whole_word(contents, offset, count)) {
                 result := *results[num_results];
                 result.buffer_id    = buffer_id;
                 result.match_offset = xx offset;
+                result.match_count  = xx count;
 
                 offset_part: u64 = (cast,trunc(u64) offset) << 0;
                 result.sort_key = dir_id_part | buffer_id_part | offset_part;
@@ -291,8 +359,6 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
                 num_results += 1;
                 if num_results >= MAX_RESULTS_PER_WORKER break buffer_id;
             }
-
-            offset += needle.count;
         }
     }
 
@@ -351,6 +417,8 @@ Finder :: struct {
 
     case_sensitive: bool;
     whole_word: bool;
+    regex_search: bool;
+    regex_is_valid: bool;
 
     selected: s64;
     selected_by_mouse: s64 = -1;  // to remember which entry the left mouse button went down on. Do we need it?
@@ -376,6 +444,7 @@ Search_Result :: struct {
     // as they require doing an additional search in buffer.
     buffer_id:    s32;
     match_offset: s32;
+    match_count:  s32;
     sort_key:     u64;
 }
 
@@ -390,6 +459,7 @@ Search_Request :: struct {
     in_progress: bool;
     case_sensitive: bool;
     whole_word: bool;
+    regex_search: bool;
 }
 
 // A task received by a worker thread
@@ -399,6 +469,7 @@ Search_Task :: struct {
     skip_table: [] s32;
     case_sensitive: bool;
     whole_word: bool;
+    regex_search: bool;
 
     // Will search in these buffers
     buffer_start_index: s32;

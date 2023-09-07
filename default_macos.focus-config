@@ -178,6 +178,7 @@ Shift-Enter                 move_up  # an alternative way to move
 
 Cmd-Alt-C                   toggle_case_sensitive
 Cmd-Alt-W                   toggle_whole_word
+Cmd-Alt-R                   toggle_regex_search
 
 [common]
 

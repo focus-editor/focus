@@ -605,6 +605,7 @@ WHEEL_SENSITIVITY :: 1.0;
 PEN_ICON            :: #run to_string(*convert_utf32_to_utf8(0xf304));
 CASE_SENSITIVE_ICON :: #run to_string(*convert_utf32_to_utf8(0xf031));
 WHOLE_WORD_ICON     :: #run to_string(*convert_utf32_to_utf8(0xe4ba));
+REGEX_SEARCH_ICON   :: #run to_string(*convert_utf32_to_utf8(0xf621));
 BULLET_ICON         :: #run to_string(*convert_utf32_to_utf8(0x2022));
 XMARK_ICON          :: #run to_string(*convert_utf32_to_utf8(0xf057));
 
@@ -775,6 +776,12 @@ _ :: #import "Linux_Display"()(VALIDATE_USAGE = DEBUG);
 #import "Thread";
 #import "Compiler";
 #import "Machine_X64";
+
+re :: #import "uniform";
+
+// NOTE to future self: remove `.NeverCapture` from `BASE_REGEX_FLAGS` if we ever want to have
+//                      find-and-replace with regex capture support
+BASE_REGEX_FLAGS :: re.ParseFlags.LikePerl & ~.OneLine | .NeverCapture;
 
 // #if DEBUG {
 //     #import "Tracy";
