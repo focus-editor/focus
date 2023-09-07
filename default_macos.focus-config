@@ -56,6 +56,8 @@ max_editor_width:                       -1
 editor_history_size:                    1024
 line_wrap_is_on_by_default:             false
 show_line_numbers:                      false
+hide_mouse_when_typing:                 true
+highlight_line_with_cursor:             false
 
 
 [[keymap]]
