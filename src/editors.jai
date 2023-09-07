@@ -88,6 +88,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
             case .toggle_expand;                    search_bar_toggle_expand(editor);                                             return true;
             case .toggle_case_sensitive;            search_bar_toggle_case_sensitive(editor, buffer);                             return true;
             case .toggle_whole_word;                search_bar_toggle_whole_word(editor, buffer);                                 return true;
+            case .toggle_regex_search;              search_bar_toggle_regex_search(editor, buffer);                               return true;
 
             case .search_in_buffer;                 open_search_bar(editor, buffer, remember_cursor_position = false);            return true;
             case .search_in_buffer_dropdown_mode;   open_search_bar(editor, buffer, .dropdown, remember_cursor_position = false); return true;
@@ -822,6 +823,14 @@ search_bar_toggle_case_sensitive :: (using editor: *Editor, buffer: Buffer) {
     search_and_update_results(editor, buffer);
 }
 
+search_bar_toggle_regex_search :: (using editor: *Editor, buffer: Buffer) {
+    using search_bar;
+
+    if !active return;
+    regex_search = !regex_search;
+    search_and_update_results(editor, buffer);
+}
+
 search_bar_move_cursor :: (using editor: *Editor, buffer: Buffer, delta: s64, wrap := false, snap := true) {
     using search_bar;
 
@@ -879,24 +888,70 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
     needle := to_string(input.text);
     if !needle return;
 
+    regex: re.Regexp;
+    defer  if regex_search && regex_is_valid re.uninit(*regex);
+
+    if regex_search {
+        re_text := ifx whole_word then sprint("\\w%\\w", needle) else copy_string(needle);
+        defer free(re_text);
+
+        flags := BASE_REGEX_FLAGS;
+        if !case_sensitive flags |= .FoldCase;
+
+        regex, regex_is_valid = re.compile(re_text, flags);
+        if !regex_is_valid return;
+
+        matched, captures := re.match("dummy string", regex);
+        if matched && !captures[0].count {
+            // disallow expressions that generate empty results (such as `\s*`)
+            regex_is_valid = false;
+            re.uninit(*regex);
+            return;
+        }
+    }
+
     buffer_str := to_string(buffer.bytes);
 
     assert(buffer_str.count < S32_MAX && needle.count < S32_MAX);
     skip_table := bmh_prepare_skip_table(needle, case_sensitive);
     offset := 0;
+    count := 0;
     i := 0;
+    buffer_advance := 0;
+    captures: [] string;
     while true {
-        if case_sensitive {
-            offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = true);
-        } else {
-            offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = false);
-        }
-        if offset < 0 break;
+        if regex_search {
+            // `re.match()` does not take a start index so we need to constantly advance
+            // `buffer_str` and keep track of our 'real' position in the original buffer
+            matched: bool;
+            matched, captures = re.match(buffer_str, regex);
+            if !matched break;
 
-        if !whole_word || (whole_word && match_whole_word(buffer_str, offset, needle.count)) {
+            c := captures[0];
+            local_offset := c.data - buffer_str.data;
+            offset = buffer_advance + local_offset;
+            count  = c.count;
+            buffer_advance = offset + count;
+
+            advance(*buffer_str, local_offset + count);
+
+            free(captures.data);
+        } else {
+            if case_sensitive {
+                offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = true);
+            } else {
+                offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = false);
+            }
+            if offset < 0 break;
+
+            count = needle.count;
+        }
+
+        if regex_search || !whole_word || (whole_word && match_whole_word(buffer_str, offset, count)) {
             result := array_add(*results);
             result.offset = offset;
-            result.line = offset_to_real_line(buffer, offset);
+            result.count  = count;
+            result.line   = offset_to_real_line(buffer, offset);
             if selected_result < 0 && result.offset >= search_point_offset then selected_result = i;
             i += 1;
         }
@@ -914,7 +969,7 @@ jump_to_search_result :: (using editor: *Editor, buffer: Buffer, move_search_poi
     result := results[selected_result];
     cursor := leave_only_original_cursor(editor);
     cursor.sel = xx result.offset;
-    cursor.pos = xx (result.offset + input.text.count);
+    cursor.pos = xx (result.offset + result.count);
     scroll_to_cursor = .yes;
 
     if move_search_point {
@@ -3090,6 +3145,8 @@ Search_Bar :: struct {
     search_point_offset: s32;  // the point used to determine the next search result. Fixed so that we can set cursor without jumping around
     case_sensitive: bool;
     whole_word: bool;
+    regex_search: bool;
+    regex_is_valid: bool;
 
     original_cursor_position: Cursor.State;  // remember main cursor position so we can go back to it on Esc
     jumped := false;
@@ -3113,6 +3170,7 @@ Scroll_Mode :: enum { no; yes; snap; };
 
 Text_Highlight :: struct {
     offset: s64;    // we'll convert this to position range, but only for the visible highlights
+    count: s64;
     line: s32;      // useful to know line immediately to display in the scrollbar area
 }
 

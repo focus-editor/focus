@@ -182,6 +182,7 @@ Shift-Enter                 move_up  # an alternative way to move
 
 Alt-C                       toggle_case_sensitive
 Alt-W                       toggle_whole_word
+Alt-R                       toggle_regex_search
 
 
 [common]
