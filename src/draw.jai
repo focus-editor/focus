@@ -480,7 +480,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             using editor.viewport;
             new_target := clamp(scroll_y.target - mouse.scroll_y_delta, 0, max_y_scroll);
             if mouse.smooth_scroll {
-                start_animation(*scroll_y, top, new_target);
+                start_animation(*scroll_y, top, new_target, snappy=true);
             } else {
                 scroll_y.target = new_target;
                 top = new_target;
@@ -507,8 +507,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 left_target := max(viewport.left + cast(s32) offset.x, 0);
                 top_target  := clamp(viewport.top - cast(s32) offset.y, 0, max_y_scroll);
 
-                if left_target != viewport.scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target);
-                if top_target  != viewport.scroll_y.target then start_animation(*viewport.scroll_y, viewport.top,  top_target);
+                if left_target != viewport.scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target, snappy = true);
+                if top_target  != viewport.scroll_y.target then start_animation(*viewport.scroll_y, viewport.top,  top_target,  snappy = true);
             }
         } else if scroll_to_cursor != .no {
             using editor.viewport;
