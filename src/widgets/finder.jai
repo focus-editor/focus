@@ -359,8 +359,9 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
                 num_results += 1;
                 if num_results >= MAX_RESULTS_PER_WORKER break buffer_id;
 
-                if !regex_search  offset += count;
             }
+
+            offset += count;
         }
     }
 
