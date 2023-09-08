@@ -781,7 +781,7 @@ re :: #import "uniform";
 
 // NOTE to future self: remove `.NeverCapture` from `BASE_REGEX_FLAGS` if we ever want to have
 //                      find-and-replace with regex capture support
-BASE_REGEX_FLAGS :: re.ParseFlags.LikePerl & ~.OneLine | .NeverCapture;
+BASE_REGEX_FLAGS : re.ParseFlags : (.LikePerl | .NeverCapture) & ~.OneLine;
 
 // #if DEBUG {
 //     #import "Tracy";

@@ -238,14 +238,7 @@ start_new_search :: (force := false) {
         regex, regex_is_valid = re.compile(to_string(input.text), flags);
         if !regex_is_valid return;  // only search if the regex is valid
 
-        defer re.uninit(*regex);
-
-        matched, captures := re.match("dummy string", regex);
-        if matched && !captures[0].count {
-            // disallow expressions that generate empty results (such as `\s*`)
-            regex_is_valid = false;
-            return;
-        }
+        re.uninit(*regex);
     }
 
     request.case_sensitive = case_sensitive;
@@ -320,12 +313,15 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
         contents_advance := 0;
         captures: [] string;
         while true {
+            if !contents break;
+
             if regex_search {
                 // `re.match()` does not take a start index so we need to constantly advance
                 // `contents` and keep track of our 'real' position in the original buffer
                 matched: bool;
                 matched, captures = re.match(contents, regex);
                 if !matched break;
+                defer free(captures.data);
 
                 c := captures[0];
                 local_offset := c.data - contents.data;
@@ -335,7 +331,16 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
 
                 advance(*contents, local_offset + count);
 
-                free(captures.data);
+                empty_capture := (c.count == 0);
+                nl_next := starts_with(contents, #char "\n");
+
+                if empty_capture || nl_next {
+                    advance(*contents, 1);
+                    contents_advance += 1;
+                }
+
+                valid_result := !empty_capture || (empty_capture && nl_next);
+                if !valid_result continue;
             } else {
                 if case_sensitive {
                     offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table, case_sensitive = true);

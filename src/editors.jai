@@ -789,7 +789,7 @@ close_search_bar :: inline (editor: *Editor, jump_to_original_cursor := false, j
     if jump_to_selected_result && results {
         cursor := leave_only_original_cursor(editor);
         cursor.sel = xx results[selected_result].offset;
-        cursor.pos = xx (cursor.sel + input.text.count);
+        cursor.pos = xx (cursor.sel + results[selected_result].count);
         editor.scroll_to_cursor = .yes;
     }
 
@@ -866,8 +866,8 @@ search_bar_open_selected_result :: (editor: Editor, buffer: Buffer, placement: E
 
     // Select the search result
     active_editor, active_buffer := get_active_editor_and_buffer();
-    match_start := min(result.offset,                    xx active_buffer.bytes.count);  // buffer could've changed, so offset may not be valid any more
-    match_end   := min(result.offset + input.text.count, xx active_buffer.bytes.count);
+    match_start := min(result.offset,                xx active_buffer.bytes.count);  // buffer could've changed, so offset may not be valid any more
+    match_end   := min(result.offset + result.count, xx active_buffer.bytes.count);
     cursor := leave_only_original_cursor(active_editor);
     cursor.sel = xx match_start;
     cursor.pos = xx match_end;
@@ -900,14 +900,6 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
 
         regex, regex_is_valid = re.compile(re_text, flags);
         if !regex_is_valid return;
-
-        matched, captures := re.match("dummy string", regex);
-        if matched && !captures[0].count {
-            // disallow expressions that generate empty results (such as `\s*`)
-            regex_is_valid = false;
-            re.uninit(*regex);
-            return;
-        }
     }
 
     buffer_str := to_string(buffer.bytes);
@@ -920,12 +912,15 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
     buffer_advance := 0;
     captures: [] string;
     while true {
+        if !buffer_str break;
+
         if regex_search {
             // `re.match()` does not take a start index so we need to constantly advance
             // `buffer_str` and keep track of our 'real' position in the original buffer
             matched: bool;
             matched, captures = re.match(buffer_str, regex);
             if !matched break;
+            defer free(captures.data);
 
             c := captures[0];
             local_offset := c.data - buffer_str.data;
@@ -935,7 +930,16 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
 
             advance(*buffer_str, local_offset + count);
 
-            free(captures.data);
+            empty_capture := (c.count == 0);
+            nl_next := starts_with(buffer_str, #char "\n");
+
+            if empty_capture || nl_next {
+                advance(*buffer_str, 1);
+                buffer_advance += 1;
+            }
+
+            valid_result := (!empty_capture || (empty_capture && nl_next));
+            if !valid_result continue;
         } else {
             if case_sensitive {
                 offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = true);
@@ -955,6 +959,7 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
             if selected_result < 0 && result.offset >= search_point_offset then selected_result = i;
             i += 1;
         }
+
         offset += needle.count;
     }
 

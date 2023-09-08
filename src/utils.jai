@@ -445,7 +445,9 @@ is_white_space :: inline (char : u8) -> bool #no_aoc {
     return cast,no_check(bool) result;
 }
 
-#scope_export
+starts_with :: inline (s: string, ch: u8) -> bool {
+    return (s.count >= 1) && (s[0] == ch);
+}
 
 Tween_Animation :: struct(T: Type) {
     start, target: T;
