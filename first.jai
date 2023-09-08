@@ -22,6 +22,7 @@ build :: () {
     optimized := false;
     windows7  := false;
     set_optimization(*options, .DEBUG);
+    options.output_executable_name = "focus";
     // options.arithmetic_overflow_check = .FATAL; Try uncommenting this line in 0.1.072. Doesn't work correctly on 0.1.071.
 
     for arg: args {
