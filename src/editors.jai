@@ -501,25 +501,6 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
     cursors_start_blinking();
 }
 
-move_viewport :: (editor: *Editor, dir: enum { left; up; right; down; }) {
-    using editor.viewport;
-    if dir == {
-        case .left; #through;
-        case .right;
-            horiz_delta := cast(s32) (10 * char_size);
-            new_target := ifx dir == .left then scroll_x.target - horiz_delta else scroll_x.target + horiz_delta;
-            if new_target < 0 then new_target = 0;
-            start_animation(*scroll_x, left, new_target, snappy = true);
-
-        case .up; #through;
-        case .down;
-            vert_delta := cast(s32) (10 * line_height);
-            new_target := ifx dir == .up then scroll_y.target - vert_delta else scroll_y.target + vert_delta;
-            new_target = clamp(new_target, 0, get_max_y_scroll(editor, open_buffers[editor.buffer_id]));
-            start_animation(*scroll_y, top, new_target, snappy = true);
-    }
-}
-
 center_viewport_on_cursor :: (using editor: *Editor, buffer: Buffer) {
     editor.scroll_to_cursor = .yes;
 }
@@ -800,11 +781,8 @@ close_search_bar :: inline (editor: *Editor, jump_to_original_cursor := false, j
 search_bar_toggle_expand :: (using editor: *Editor) {
     using search_bar;
 
-    if width_percentage != WIDTH_EXPANDED {
-        start_animation(*width_anim, width_percentage, WIDTH_EXPANDED, snappy = true);
-    } else {
-        start_animation(*width_anim, width_percentage, WIDTH_NORMAL, snappy = true);
-    }
+    target_width := ifx width_percentage != WIDTH_EXPANDED then WIDTH_EXPANDED else WIDTH_NORMAL;
+    start_animation(*width_anim, width_percentage, target_width);
 }
 
 search_bar_toggle_whole_word :: (using editor: *Editor, buffer: Buffer) {
@@ -1000,7 +978,7 @@ editors_snap_splitter :: (pos: float) {
 editors_start_moving_splitter :: (target: float, start := -1.0) {
     if start >= 0 then splitter_pos = start;
     if !config.settings.disable_file_open_close_animations {
-        start_animation(*splitter_anim, splitter_pos, target, snappy = true);
+        start_animation(*splitter_anim, splitter_pos, target);
     } else {
         splitter_anim.target = target;
         splitter_pos = target;

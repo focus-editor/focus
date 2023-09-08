@@ -452,11 +452,8 @@ scan_current_folder :: () {
 toggle_expand :: () {
     using open_file_dialog;
 
-    if width_percentage != WIDTH_EXPANDED {
-        start_animation(*width_anim, width_percentage, WIDTH_EXPANDED, snappy = true);
-    } else {
-        start_animation(*width_anim, width_percentage, WIDTH_NORMAL, snappy = true);
-    }
+    target_width := ifx width_percentage != WIDTH_EXPANDED then WIDTH_EXPANDED else WIDTH_NORMAL;
+    start_animation(*width_anim, width_percentage, target_width);
 }
 
 get_pool_allocator :: () -> Allocator {

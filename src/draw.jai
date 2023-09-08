@@ -480,7 +480,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             using editor.viewport;
             new_target := clamp(scroll_y.target - mouse.scroll_y_delta, 0, max_y_scroll);
             if mouse.smooth_scroll {
-                start_animation(*scroll_y, top, new_target, snappy=true);
+                start_animation(*scroll_y, top, new_target);
             } else {
                 scroll_y.target = new_target;
                 top = new_target;
@@ -504,11 +504,11 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 if right < screen_pos.x  then offset.x = screen_pos.x - right;
                 if top   < screen_pos.y  then offset.y = screen_pos.y - top;
 
-                left_target := max(viewport.left + cast(s32) offset.x, 0);
+                left_target := max(viewport.left  + cast(s32) offset.x, 0);
                 top_target  := clamp(viewport.top - cast(s32) offset.y, 0, max_y_scroll);
 
-                if left_target != viewport.scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target, snappy = true);
-                if top_target  != viewport.scroll_y.target then start_animation(*viewport.scroll_y, viewport.top,  top_target,  snappy = true);
+                if left_target != viewport.scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target);
+                if top_target  != viewport.scroll_y.target then start_animation(*viewport.scroll_y, viewport.top,  top_target);
             }
         } else if scroll_to_cursor != .no {
             using editor.viewport;
@@ -516,15 +516,12 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             // Use the target editor width (not current width) when a new editor is appearing
             editor_width := ifx scroll_to_cursor == .yes_new_editor then total_editor_area.w / 2 else rect.w;
 
-            cursor_pos_from_left := cursor_coords[main_cursor].pos.col * char_x_advance + text_offset.x;
-            left_target := cast(s32)(cursor_pos_from_left - editor_width + char_x_advance * 3);
-            if left_target < 0 then left_target = 0;
+            cursor_pos_from_left := cursor_coords[main_cursor].pos.col  * char_x_advance + text_offset.x;
+            cursor_pos_from_top  := cursor_coords[main_cursor].pos.line * line_height;
+            left_target          := max(0, cast(s32)(cursor_pos_from_left - editor_width + char_x_advance * 3));
+            top_target           := max(0, cast(s32)(cursor_pos_from_top  - rect.h / 2));
             if left_target != scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target);
-
-            cursor_pos_from_top := cursor_coords[main_cursor].pos.line * line_height;
-            top_target := cast(s32)(cursor_pos_from_top - rect.h / 2);
-            if top_target < 0 then top_target = 0;
-            if top_target != scroll_y.target then start_animation(*viewport.scroll_y, viewport.top, top_target);
+            if top_target  != scroll_y.target then start_animation(*viewport.scroll_y, viewport.top,  top_target);
 
             scroll_to_cursor = .no;
 
@@ -2648,7 +2645,7 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
     if total_text_width - scroll_x_target < cast(s32) input_rect.w then {
         scroll_x_target = max(cast(s32) total_text_width - cast(s32) input_rect.w, 0);  // always show as much text as possible
     }
-    if scroll_x_target != scroll_anim.target then start_animation(*scroll_anim, scroll_x, scroll_x_target, snappy = true);
+    if scroll_x_target != scroll_anim.target then start_animation(*scroll_anim, scroll_x, scroll_x_target);
 
     if scroll_x != scroll_anim.target {
         redraw_requested = true;
