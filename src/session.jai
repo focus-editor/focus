@@ -1,6 +1,6 @@
 start_fresh_session :: () -> Session {
     // Create a new folder to store session data
-    now := current_time_consensus();
+    now := current_time_consensus_backwards_compatible();
     current_session_name := tprint("session_%_%", formatInt(now.high, base=16), formatInt(now.low, base=16));
     current_session_dir  := tprint("%/%", temp_dir, current_session_name);
 
@@ -398,7 +398,7 @@ session_logger :: (raw_msg: string, data: *void, info: Log_Info) {
     d := cast(*Session_Logger_Data) data;
     file := ifx (info.common_flags & .ERROR) != 0 then *d.log_error_file else *d.log_file;
 
-    calendar_time := to_calendar(current_time_consensus(), .LOCAL);
+    calendar_time := to_calendar(current_time_consensus_backwards_compatible(), .LOCAL);
     message := tprint("%: %", calendar_to_string(calendar_time), raw_msg);
 
     lock(*logger_mutex);

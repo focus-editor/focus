@@ -20,7 +20,7 @@ build :: () {
     set_working_directory(#filepath);
 
     optimized := false;
-    options.output_executable_name = "focus_debug";
+    windows7  := false;
     set_optimization(*options, .DEBUG);
     // options.arithmetic_overflow_check = .FATAL; Try uncommenting this line in 0.1.072. Doesn't work correctly on 0.1.071.
 
@@ -35,10 +35,15 @@ build :: () {
             options.null_pointer_check = .ON;
             options.arithmetic_overflow_check = .OFF;
           case "debug";
+          case "windows7";
+            windows7 = true;
+            options.output_executable_name = "focus_windows7";
           case;
             compiler_report(tprint("Command-line argument #%, '%', is invalid. Valid options are: 'debug', 'release'.\n", it_index+1, arg));
         }
     }
+
+    if !optimized then options.output_executable_name = sprint("%_debug", options.output_executable_name);
 
     w := compiler_create_workspace(options.output_executable_name);
     set_build_options(options, w);
@@ -57,17 +62,19 @@ build :: () {
     compiler_begin_intercept(w);
 
     add_build_file("src/main.jai", w);
-    add_build_string(tprint(#string STRING
-VERSION      :: "%";
-RELEASE_DATE :: "%";
-STRING, VERSION, RELEASE_DATE), w);
 
-    // Add a debug marker
-    if optimized {
-        add_build_string("DEBUG :: false;\n", w);
-    } else {
-        add_build_string("DEBUG :: true;\n", w);
-    }
+    build_constants := tprint(#string STRING
+            VERSION      :: "%";
+            RELEASE_DATE :: "%";
+            DEBUG        :: %;
+            WINDOWS7     :: %;
+        STRING,
+            VERSION,
+            RELEASE_DATE,
+            ifx optimized then "false" else "true",
+            ifx windows7  then "true"  else "false",
+    );
+    add_build_string(build_constants, w);
 
     while true {
         message := compiler_wait_for_message();

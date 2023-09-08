@@ -538,6 +538,22 @@ update_window_size :: (w: s64, h: s64) {
     }
 }
 
+current_time_consensus_backwards_compatible :: () -> Apollo_Time {
+    #if WINDOWS7 {
+        #assert OS == .WINDOWS;
+        // GetSystemTimePreciseAsFileTime is only supported in Windows 8+
+        // and that's what Apollo_Time uses.
+        // TODO: remove when we drop support for Windows 7
+        ft_now: FILETIME;
+        GetSystemTimeAsFileTime(*ft_now);
+
+        apollo := filetime_to_apollo(ft_now);
+        return apollo;
+    } else {
+        return current_time_consensus();
+    }
+}
+
 calculate_hash: (bytes: [] u8) -> u64 = calculate_meow_hash;
 
 // Important directories

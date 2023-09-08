@@ -76,9 +76,12 @@ platform_enable_drag_and_drop :: (window: Window_Type) {
 }
 
 platform_get_dpi_scale :: (window: Window_Type) -> float {
-    #assert OS == .WINDOWS;
-    dpi := cast(float) GetDpiForWindow(window);
-    return dpi / 96.0;
+    #if WINDOWS7 {
+        return 1.0;  // poor Windows 7 users
+    } else {
+        dpi := cast(float) GetDpiForWindow(window);
+        return dpi / 96.0;
+    }
 }
 
 platform_set_window_title :: (title: string) {
