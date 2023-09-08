@@ -339,18 +339,14 @@ get_tmp_tabs :: (num: int) -> string {
     return tabs;
 }
 
-start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: Time = xx 0.0, $snappy := false) {
+start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: Time = xx 0.0) {
     anim.start  = start;
     anim.target = target;
     if speed > 0 then anim.speed = speed;
 
-    #if snappy {
-        // Pretend the animation started last frame so we start moving right away
-        anim.started_at = frame_time - frame_dt;
-    } else {
-        // The current frame is t=0, therefore things will start moving next frame
-        anim.started_at = frame_time;
-    }
+    // Pretend the animation started last frame so we start moving right away.
+    // If the current frame was t=0, then the movement would simply be delayed one frame.
+    anim.started_at = frame_time - frame_dt;
 }
 
 get_animation_value :: (using anim: Tween_Animation($T)) -> T {
