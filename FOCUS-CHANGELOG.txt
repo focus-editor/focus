@@ -49,6 +49,7 @@
     + Linux: Clipboard handling should become way faster on X11 because we let event loop to handle more requests before drawing.
     + Linux: fix drag-n-drop crash caused by calling Basic.free on the memory allocated with temp allocator
     + Fix for stuck keys when the editor loses window focus (such as alt-tabbing or moving to other workspaces on Linux)
+    + Improved scrolling smoothness (thanks @Sanian-Creations)
 
 + Other changes:
     + When the workspace is done scanning, the open file dialog input will no longer be cleared
