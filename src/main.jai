@@ -747,6 +747,8 @@ dont_ignore_next_window_resize := false;
 #load "langs/focus_config.jai";
 #load "langs/glsl.jai";
 #load "langs/worklog.jai";
+#load "langs/python.jai";
+#load "langs/renpy.jai";
 
 #if OS == .WINDOWS {
     #load "platform/windows.jai";

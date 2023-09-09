@@ -35,6 +35,7 @@
     + New command: `toggle_fullscreen`. Defaults to F11 (thanks @ustance)
     + New option: `highlight_line_with_cursor` (thanks @SentientCoffee)
     + Added support for regular expressions in file/project search
+    + Basic Python syntax highlighting
 
 + Bug fixes:
     + It should now be possible to scroll the viewport by dragging ouside it in all cases (previously it wasn't always possible - see issue #101)

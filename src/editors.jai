@@ -1024,11 +1024,13 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
             case "focus-config";   buffer.lang = .Focus_Config;
             case "cs";             buffer.lang = .CSharp;
             case "go";             buffer.lang = .Golang;
+            case "py";             buffer.lang = .Python;
+            case "rpy";            buffer.lang = .RenPy;
 
-            case "vert"; #through; // NOTE: Vertex shader extension
-            case "frag"; #through; // NOTE: Fragment shader extension
-            case "geom"; #through; // NOTE: Geometry shader extension
-            case "tess"; #through; // NOTE: Tesselation shader extension (TODO: differentiate between tess control and tess eval? Not sure that's valuable though...)
+            case "vert"; #through;
+            case "frag"; #through;
+            case "geom"; #through;
+            case "tess"; #through;
             case "glsl";
                 buffer.lang = .Glsl;
 
@@ -2797,6 +2799,8 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
         case .Glsl;         comment = "//";
         case .Jai;          comment = "//";
         case .Focus_Config; comment = "#";
+        case .Python;       comment = "#";
+        case .RenPy;        comment = "#";
         case;               return;
     }
 
