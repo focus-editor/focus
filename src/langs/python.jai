@@ -60,6 +60,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "<";  parse_less_than         (tokenizer, *token);
         case #char ">";  parse_greater_than      (tokenizer, *token);
         case #char "!";  parse_bang              (tokenizer, *token);
+        case #char "@";  parse_decorator         (tokenizer, *token);
         case #char "/";  parse_slash             (tokenizer, *token);
         case #char "\""; parse_string_literal    (tokenizer, *token);
         case #char "'";  parse_string_literal    (tokenizer, *token, #char "'");
@@ -95,10 +96,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
 parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
 
-    mark := get_temporary_storage_mark();
-    defer   set_temporary_storage_mark(mark);
-
-    identifier_str := read_identifier_string_tmp(tokenizer);
+    identifier_str := read_identifier_string(tokenizer);
 
     // Maybe it's a keyword
     if identifier_str.count <= MAX_KEYWORD_LENGTH {
@@ -231,6 +229,15 @@ parse_bang :: (using tokenizer: *Tokenizer, token: *Token) {
             token.operation = .bang_equal;
             t += 1;
     }
+}
+
+parse_decorator :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .operation;
+    token.operation = .decorator;
+
+    t += 1;
+    t = eat_white_space(t, max_t);
+    read_identifier_string(tokenizer);
 }
 
 parse_percent :: (using tokenizer: *Tokenizer, token: *Token) {
@@ -378,25 +385,19 @@ parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token, quote := #c
     }
 }
 
-read_identifier_string_tmp :: (using tokenizer: *Tokenizer) -> string /* temp */ {
-    identifier: [..] u8;
-    identifier.allocator = temp;
-
-    array_add(*identifier, <<t);
-
-    t += 1;
-    slash_mode := false;
+read_identifier_string :: (using tokenizer: *Tokenizer) -> string {
+    ret: string;
+    ret.data = t;
 
     while t < max_t {
         c := <<t;
-        if is_alnum(c)      { t += 1; slash_mode = false; array_add(*identifier, c); continue; }
-        if c == #char "\\"  { t += 1; slash_mode = true;  continue; }
-        if slash_mode && is_white_space(c) { t += 1; continue; }
+        if is_alnum(c) { t += 1; continue; }
         break;
     }
     if t >= max_t then t = max_t;
+    ret.count = xx (t - ret.data);
 
-    return to_string(identifier);
+    return ret;
 }
 
 Tokenizer :: struct {
@@ -469,7 +470,7 @@ OPERATIONS :: string.[
     "percent", "percent_equal", "less_than", "double_less_than", "less_than_equal", "greater_than", "greater_than_equal",
     "minus", "minus_equal", "triple_dash", "asterisk", "asterisk_equal", "colon", "colon_equal", "double_colon", "slash",
     "plus", "plus_equal", "slash_equal", "ampersand", "double_ampersand", "ampersand_equal", "tilde", "unknown",
-    "caret", "caret_equal",
+    "caret", "caret_equal", "decorator",
 ];
 
 KEYWORDS :: string.[
