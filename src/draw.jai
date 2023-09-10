@@ -2095,8 +2095,14 @@ draw_open_project_dialog :: () {
 draw_unsaved_buffers_dialog :: () {
     ui_id := Ui_Id.unsaved_buffers;
 
-    unsaved_buffers := get_unsaved_buffer_ids();
+    unsaved_buffers := unsaved_buffers_dialog.modified_buffers;
     if !unsaved_buffers then panic_messagebox("Unsaved buffers dialog is attempted to be drawn, but no unsaved buffers present. This is a bug. Closing...");
+
+    // Additional message is assumed to be 1 line only
+    additional_message := "";
+    if unsaved_buffers_dialog.mode == .reload_workspace {
+        additional_message = "Workspace needs to reload. Unsaved files will be lost.";
+    }
 
     margin  := floor(12 * dpi_scale);
     padding := floor( 4 * dpi_scale);
@@ -2108,6 +2114,7 @@ draw_unsaved_buffers_dialog :: () {
         w = floor(clamp(screen.w * 0.3, 600 * dpi_scale, 1500 * dpi_scale)),
         h = header_height + (entry_height + margin / 2) * unsaved_buffers.count + margin + padding + button_height + margin,
     };
+    if additional_message then box_rect.h += entry_height + margin;
     box_rect.x = floor((screen.w - box_rect.w) / 2);
     box_rect.y = screen.h - box_rect.h - floor(clamp(100 * dpi_scale, 0, (screen.h - box_rect.h) / 2));
 
@@ -2141,6 +2148,17 @@ draw_unsaved_buffers_dialog :: () {
         defer pop_scissor();
 
         entry_rect := cut_top(buffers_rect, entry_height);
+
+        if additional_message {
+            Simp.draw_text(
+                font_ui,
+                xx (entry_rect.x + margin),
+                xx (entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale),
+                additional_message,
+                Colors.UI_DEFAULT,
+            );
+            entry_rect.y -= entry_rect.h + margin;
+        }
 
         for unsaved_buffers {
             buffer := *open_buffers[it];

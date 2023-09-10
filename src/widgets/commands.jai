@@ -75,6 +75,7 @@ refresh_entries :: () {
     for command : commands {
         if command.requires_layout == .Single && editors.layout == .None   continue;
         if command.requires_layout == .Double && editors.layout != .Double continue;
+        if !project_config_path && (command.action == .open_project_config || command.action == .close_project) continue;
 
         score, highlights := fuzzy_match(command.name, filter_chars);
         if score < 0 continue;
@@ -136,8 +137,9 @@ commands := #run Command.[
     .{ .show_open_file_dialog_in_navigate_mode_from_root,   "Navigate To File From Root",         0, .None },
 
     .{ .switch_to_project,                                  "Switch To Project",                  0, .None },
-    .{ .open_projects_directory,                            "Open Projects Directory",            0, .None },
-    .{ .open_project_config,                                "Open Config For Project",            0, .None },
+    .{ .close_project,                                      "Close Project",                      0, .None },
+    .{ .open_projects_directory,                            "Open Directory With Project Files",  0, .None },
+    .{ .open_project_config,                                "Open Project Config",                0, .None },
     .{ .open_global_config,                                 "Open Global Config",                 0, .None },
     .{ .show_default_config,                                "Show Default Config (readonly)",     0, .None },
 

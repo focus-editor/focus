@@ -33,6 +33,7 @@
     + New command: `show_default_config`. Can be used to view the default editor config for your reference (readonly)
     + New command: `select_all_occurrences`. Used to create a cursor on each selection occurrence (thanks @hfr4)
     + New command: `toggle_fullscreen`. Defaults to F11 (thanks @ustance)
+    + New command: `close_project`. Can be used to (surprise!) close active project.
     + New option: `highlight_line_with_cursor` (thanks @SentientCoffee)
     + Added support for regular expressions in file/project search
     + Basic Python syntax highlighting

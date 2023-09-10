@@ -93,6 +93,25 @@ is_our_config_file :: (path: string) -> bool {
     return path != "" && (platform_path_equals(path, global_config_path) || platform_path_equals(path, project_config_path));
 }
 
+close_project :: () {
+    if !project_config_path {
+        add_user_warning("No project is currently active.", dismiss_in_seconds = 5);
+        return;
+    }
+
+    success := load_global_config();
+    if success {
+        should_reload_workspace = true;
+        if unsaved_buffers_exist() {
+            show_unsaved_buffers_dialog(.reload_workspace);
+            should_reload_workspace = false;
+        }
+        project_config_path = "";
+    } else {
+        add_user_error("Couldn't close project because the global config failed to load", dismiss_in_seconds = 10);
+    }
+}
+
 find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp */ {
     if name == "default" return "default", "";
 
