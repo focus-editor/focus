@@ -129,8 +129,8 @@ Alt-Shift-I                 add_cursors_to_line_ends
 Alt-Shift-Ctrl-I            add_cursors_to_line_starts
 
 Enter                       break_line
-Ctrl-Enter                  new_line_below_without_breaking
-Ctrl-Shift-Enter            new_line_above_without_breaking
+Cmd-Enter                   new_line_below_without_breaking
+Cmd-Shift-Enter             new_line_above_without_breaking
 
 Cmd-1                       switch_to_left_editor
 Cmd-2                       switch_to_right_editor
