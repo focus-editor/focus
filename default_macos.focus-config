@@ -34,6 +34,7 @@ __pycache__
 .pyc .rpyc
 .DS_Store .dmg
 
+
 [[settings]]
 
 maximize_on_start:                      false
@@ -58,6 +59,7 @@ line_wrap_is_on_by_default:             false
 show_line_numbers:                      false
 hide_mouse_when_typing:                 true
 highlight_line_with_cursor:             false
+draw_indent_guides:                     false
 
 
 [[keymap]]

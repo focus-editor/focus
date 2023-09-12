@@ -327,6 +327,18 @@ count_whitespace :: (bytes: [] u8, start_offset: s64, max_offset: s64, spaces :=
     return cast(s32) (max_offset - start_offset);
 }
 
+get_visual_indent_in_spaces :: (line: string, spaces := " \t") -> indent: int {
+    indent := 0;
+    for byte : to_bytes(trim_right(line)) {
+        if byte == {
+            case #char " ";     indent += 1;
+            case #char "\t";    indent += TAB_SIZE - (indent % TAB_SIZE);
+            case;               break;
+        }
+    }
+    return indent;
+}
+
 get_tmp_spaces :: (num: int) -> string {
     spaces := talloc_string(num);
     memset(spaces.data, cast(u8) #char " ", num);

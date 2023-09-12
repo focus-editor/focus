@@ -60,6 +60,8 @@ show_line_numbers:                      false
 colored_titlebar:                       true   # Windows 11+ only
 hide_mouse_when_typing:                 true
 highlight_line_with_cursor:             false
+draw_indent_guides:                     false
+
 
 [[keymap]]
 

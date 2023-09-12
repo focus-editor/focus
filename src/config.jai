@@ -365,6 +365,7 @@ Settings :: struct {
     colored_titlebar                    := true;
     hide_mouse_when_typing              := true;
     highlight_line_with_cursor          := false;
+    draw_indent_guides                  := false;
 
     // TODO
     // convert_tabs_to_spaces_on_load:     false
