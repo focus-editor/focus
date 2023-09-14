@@ -22,16 +22,17 @@ build :: () {
     optimized := false;
     windows7  := false;
     set_optimization(*options, .DEBUG);
-    options.output_executable_name = "focus";
     // options.arithmetic_overflow_check = .FATAL; Try uncommenting this line in 0.1.072. Doesn't work correctly on 0.1.071.
+    build_dir := "build_debug";
+    options.output_executable_name = "focus";
 
     for arg: args {
         if arg == {
           case "release";
             optimized = true;
+            build_dir = "build_release";
             set_optimization(*options, .VERY_OPTIMIZED);
             options.llvm_options.enable_split_modules = false;
-            options.output_executable_name = "focus";
             options.array_bounds_check = .ON;
             options.null_pointer_check = .ON;
             options.arithmetic_overflow_check = .OFF;
@@ -43,8 +44,9 @@ build :: () {
             compiler_report(tprint("Command-line argument #%, '%', is invalid. Valid options are: 'debug', 'release'.\n", it_index+1, arg));
         }
     }
-
-    if !optimized then options.output_executable_name = sprint("%_debug", options.output_executable_name);
+    
+    options.output_path = build_dir;
+    make_directory_if_it_does_not_exist(build_dir);
 
     w := compiler_create_workspace(options.output_executable_name);
     set_build_options(options, w);
@@ -86,18 +88,18 @@ build :: () {
     compiler_end_intercept(w);
 
     #if OS == .WINDOWS {
-        exe_name := tprint("%.exe", options.output_executable_name);
+        exe_path := tprint("%/%.exe", build_dir, options.output_executable_name);
 
         ico_data := create_ico_file_from_bitmap_filename("images/focus.png");
-        success := set_icon_by_data(exe_name, ico_data);
+        success := set_icon_by_data(exe_path, ico_data);
         if !success {
-            log_error("ERROR: Couldn't set icon for '%'\n", exe_name);
+            log_error("ERROR: Couldn't set icon for '%'\n", exe_path);
         }
 
         manifest_options: Manifest_Options;
-        success = add_manifest_to_executable(exe_name, manifest_options);
+        success = add_manifest_to_executable(exe_path, manifest_options);
         if !success {
-            log_error("ERROR: Couldn't add manifest to executable '%'\n", exe_name);
+            log_error("ERROR: Couldn't add manifest to executable '%'\n", exe_path);
         }
     } else #if OS == .MACOS {
         if !optimized return; // When debugging, use the Unix program directly. This saves us compile time.
@@ -129,6 +131,7 @@ build :: () {
 
 #import "Compiler";
 #import "Basic";
+#import "File";
 
 #if OS == .WINDOWS {
     #import "Ico_File";
