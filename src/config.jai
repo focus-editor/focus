@@ -391,8 +391,8 @@ Setting :: struct {
     type: enum { boolean; integer; };
 }
 
-DEFAULT_CONFIG_FILE_DATA  :: #run read_entire_file(DEFAULT_CONFIG_NAME);
-EXAMPLE_PROJECT_FILE_DATA :: #run read_entire_file(EXAMPLE_PROJECT_CONFIG_NAME);
+DEFAULT_CONFIG_FILE_DATA  :: #run read_entire_file(tprint("config/%", DEFAULT_CONFIG_NAME));
+EXAMPLE_PROJECT_FILE_DATA :: #run read_entire_file(tprint("config/%", EXAMPLE_PROJECT_CONFIG_NAME));
 
 #scope_file
 
