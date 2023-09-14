@@ -278,7 +278,7 @@ is_separator_char :: inline (ch: u8) -> bool {
         ch == #char "." || ch == #char "<" || ch == #char ">" || ch == #char "/" || ch == #char "\"" || ch == #char "\\";
 }
 
-is_balancable_char :: (ch: u32) -> bool {
+is_balanceable_char :: (ch: u32) -> bool {
     return ch == #char "{" || ch == #char "(" || ch == #char "[" || ch == #char "\"";
 }
 
