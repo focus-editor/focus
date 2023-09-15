@@ -62,6 +62,7 @@ highlight_line_with_cursor:             false
 draw_indent_guides:                     false
 auto_surround_with_brackets_and_quotes: false
 
+
 [[keymap]]
 
 # - The first matching combination will be used, so order matters
