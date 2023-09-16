@@ -115,8 +115,6 @@ xkb_load :: (intf: *XKB_Procs = *libxkb_procs) -> bool {
         ppfn := cast(*generic_c_call)((cast(*u8) intf) + m.offset_in_bytes);
         ppfn.* = cast(generic_c_call) dlsym(lib, m.name.data);
         assert(!!(ppfn.*), "Failed to resolve function '%': %", m.name, to_string(dlerror()));
-
-        log_error("(*(%)).%=%", intf, m.name, ppfn.*);
     }
 
     intf._meta.loaded = true;
