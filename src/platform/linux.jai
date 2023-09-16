@@ -227,11 +227,16 @@ platform_kill_refresh_timer :: (window: Window_Type) {
 }
 
 platform_enumerate_logical_drives :: () -> [] string {
-    return .["/"];
+    logical_drives: [..]string;
+
+    pw := getpwuid(getuid());
+    array_add(*logical_drives, "/");
+    array_add(*logical_drives, to_string(pw.pw_dir));
+
+    return logical_drives;
 }
 
 platform_get_save_file_name :: (name := "") -> string, bool {
-    print("name = '%'\n", name);
     return "", false;
 }
 
