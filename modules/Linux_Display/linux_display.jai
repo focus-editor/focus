@@ -56,7 +56,6 @@ init_display :: (display: *Display, desired_backend := BACKEND_CHOICE.PREFER_BES
                 wld := *display.wld;
                 if !wld.decoration_manager {
                     wl_uninit_display(display);
-                    display.* = .{};
                     return x11_init_display(display);
                 }
                 return true;
@@ -203,7 +202,7 @@ update_window_events :: (display: *Display) {
 
     /*
      * On Wayland, the event loop can push events into `events_this_frame` during the
-     * "wait for events" phase (`wl_display.dispatch_pending()` invokes event callbacks).
+     * "wait for events" phase (`wl_display_dispatch_pending()` invokes event callbacks).
      * Because of this we need to "double buffer" here so that the `Input` module doesn't
      * discard said events during the "update" phase.
      */
@@ -265,7 +264,9 @@ find_font :: (name: string, allocator := temp) -> bool, string {
 #import "String";
 #import "Hash_Table";
 
-X11 :: #import "X11";
+#import "libxkbcommon";
+GL :: #import "Linux_Display/GL";   // apparently different from `#import,file "GL.jai"`
+#import,file "X11.jai";
 #import "Wayland";
 Input :: #import "Input";
 #import "Basic";
@@ -277,6 +278,10 @@ Input :: #import "Input";
 #load "ldw_display.jai";
 #load "ldw_input.jai";
 #load "ld_gl.jai";
+
+X11: X11_Lib;
+EGL: GL.EGL_Lib;
+GLX: GL.GLX_Lib;
 
 Base_Display :: struct {
     type: Type = Base_Display;

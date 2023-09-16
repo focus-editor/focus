@@ -107,25 +107,26 @@ Wayland_Window :: struct {
 }
 
 wl_init_display :: (display: *Display) -> bool {
-    wl_global_init();
+    if !xkb_load(*libxkb_procs) return false;
+    if !wl_global_init() return false;
 
     d: *Wayland_Display = display;
 
-    d.handle = wl_display.connect(null);
+    d.handle = wl_display_connect(null);
     if !d.handle return false;
-    wl_proxy.set_user_data(d.handle, d);
+    wl_proxy_set_user_data(d.handle, d);
 
-    d.registry = wl_display.get_registry(d.handle);
+    d.registry = wl_display_get_registry(d.handle);
     wl_registry.add_listener(d.registry, *registry_listener, d);
 
-    wl_display.roundtrip(d.handle);
-    wl_display.roundtrip(d.handle);
+    wl_display_roundtrip(d.handle);
+    wl_display_roundtrip(d.handle);
 
     init_string_builder(*d.current_text_selection);
 
     cursor_theme_name := getenv("XCURSOR_THEME");
     init(*d.cursors);
-    d.cursor_theme = wl_cursor_theme.load(cursor_theme_name, 24, d.shm);
+    d.cursor_theme = wl_cursor_theme_load(cursor_theme_name, 24, d.shm);
     for 0..d.cursor_theme.cursor_count - 1 {
         native := d.cursor_theme.cursors[it];
         cursor := WLCursor.{
@@ -136,7 +137,7 @@ wl_init_display :: (display: *Display) -> bool {
         for 0..native.image_count - 1 {
             surface := wl_compositor.create_surface(d.compositor);
             image := native.images[it];
-            buffer := wl_cursor_image.get_buffer(image);
+            buffer := wl_cursor_image_get_buffer(image);
             wl_surface.attach(surface, buffer, 0, 0);
             wl_surface.damage(surface, 0, 0, xx image.width, xx image.height);
             wl_surface.commit(surface);
@@ -166,7 +167,7 @@ wl_uninit_display :: (display: *Display) {
     wd: *Wayland_Display = display;
     if wd.handle {
         // @TODO: more thorough cleanup here
-        wl_display.disconnect(wd.handle);
+        wl_display_disconnect(wd.handle);
         wd.* = .{};
     }
 }
@@ -224,7 +225,7 @@ registry_listener :: wl_registry_listener.{
             if d.seat && d.data_device_manager && !d.data_device {
                 d.data_device = d.data_device_manager.get_data_device(d.data_device_manager, d.seat);
                 wl_data_device.add_listener(d.data_device, *data_device_listener, null);
-                wl_proxy.set_user_data(d.data_device, d);
+                wl_proxy_set_user_data(d.data_device, d);
             }
         }
 
@@ -243,11 +244,11 @@ registry_listener :: wl_registry_listener.{
                 wl_jext_bind(*d.seat, registry, id, version);
 
                 d.pointer = wl_seat.get_pointer(d.seat);
-                wl_proxy.set_user_data(d.pointer, d);
+                wl_proxy_set_user_data(d.pointer, d);
                 wl_pointer.add_listener(d.pointer, *pointer_listener, d);
 
                 d.keyboard = wl_seat.get_keyboard(d.seat);
-                wl_proxy.set_user_data(d.keyboard, d);
+                wl_proxy_set_user_data(d.keyboard, d);
                 wl_keyboard.add_listener(d.keyboard, *keyboard_listenter, d);
 
                 maybe_init_data_device(d);
@@ -277,7 +278,7 @@ data_offer_listener :: wl_data_offer_listener.{
     offer = (data: *void, self: *wl_data_offer, mime_type: *u8) -> void #c_call {
         ctx: Context;
         push_context ctx {
-            d : *Wayland_Display = wl_proxy.get_user_data(self);
+            d : *Wayland_Display = wl_proxy_get_user_data(self);
             mime_s := to_string(mime_type);
             array_add(*d.data_offer_mime_types, copy_string(mime_s));
         }
@@ -288,7 +289,7 @@ data_device_listener :: wl_data_device_listener.{
     data_offer = (data: *void, self: *wl_data_device, id: *wl_data_offer) -> void #c_call {
         ctx: Context;
         push_context ctx {
-            d : *Wayland_Display = wl_proxy.get_user_data(self);
+            d : *Wayland_Display = wl_proxy_get_user_data(self);
 
             for d.data_offer_mime_types free(it);
             array_reset_keeping_memory(*d.data_offer_mime_types);
@@ -296,7 +297,7 @@ data_device_listener :: wl_data_device_listener.{
             d.data_offer = id;
 
             wl_data_offer.add_listener(id, *data_offer_listener, null);
-            wl_proxy.set_user_data(id, d);
+            wl_proxy_set_user_data(id, d);
         }
     },
 
@@ -305,7 +306,7 @@ data_device_listener :: wl_data_device_listener.{
     {
         ctx: Context;
         push_context ctx {
-            d: *Wayland_Display = wl_proxy.get_user_data(self);
+            d: *Wayland_Display = wl_proxy_get_user_data(self);
             has_file_list := data_offer_has_mime_type(d, MIME_TYPE_FILE_LIST);
 
             if !id return;
@@ -335,7 +336,7 @@ data_device_listener :: wl_data_device_listener.{
     leave = (data: *void, self: *wl_data_device) -> void #c_call {
         ctx: Context;
         push_context ctx {
-            d: *Wayland_Display = wl_proxy.get_user_data(self);
+            d: *Wayland_Display = wl_proxy_get_user_data(self);
             data_offer_reset(d);
         }
     },
@@ -343,7 +344,7 @@ data_device_listener :: wl_data_device_listener.{
     motion = (data: *void, self: *wl_data_device, time: u32, x: wl_fixed_t, y: wl_fixed_t) -> void #c_call {
         ctx: Context;
         push_context ctx {
-            d: *Wayland_Display = wl_proxy.get_user_data(self);
+            d: *Wayland_Display = wl_proxy_get_user_data(self);
 
             if !d.data_offer return;
 
@@ -355,7 +356,7 @@ data_device_listener :: wl_data_device_listener.{
     drop = (data: *void, self: *wl_data_device) -> void #c_call {
         ctx: Context;
         push_context ctx {
-            d: *Wayland_Display = wl_proxy.get_user_data(self);
+            d: *Wayland_Display = wl_proxy_get_user_data(self);
 
             if !d.data_offer return;
 
@@ -363,7 +364,7 @@ data_device_listener :: wl_data_device_listener.{
             data_offer_read_data(d, MIME_TYPE_FILE_LIST, *data);
 
             wl_data_offer.finish(d.data_offer);
-            wl_display.flush(d.handle);
+            wl_display_flush(d.handle);
 
             data_offer_reset(d);
 
@@ -406,7 +407,7 @@ data_device_listener :: wl_data_device_listener.{
     selection = (data: *void, self: *wl_data_device, id: *wl_data_offer) -> void #c_call {
         ctx: Context;
         push_context ctx {
-            d : *Wayland_Display = wl_proxy.get_user_data(self);
+            d : *Wayland_Display = wl_proxy_get_user_data(self);
 
             if !d.data_offer return;
 
@@ -429,7 +430,7 @@ data_source_listener :: wl_data_source_listener.{
         ctx: Context;
         push_context ctx {
             defer close(fd);
-            d: *Wayland_Display = wl_proxy.get_user_data(self);
+            d: *Wayland_Display = wl_proxy_get_user_data(self);
             if MIME_TYPE_TEXT != to_string(mime_type) return;
             write(fd, d.clipboard_send_data.data, xx d.clipboard_send_data.count);
         }
@@ -448,7 +449,7 @@ wl_clipboard_set_text :: (display: *Display, text: string) {
     d.clipboard_send_data = copy_string(text);
     d.clipboard_source = wl_data_device_manager.create_data_source(d.data_device_manager);
     wl_data_source.add_listener(d.clipboard_source, *data_source_listener, null);
-    wl_proxy.set_user_data(d.clipboard_source, d);
+    wl_proxy_set_user_data(d.clipboard_source, d);
 
     wl_data_source.offer(d.clipboard_source, MIME_TYPE_TEXT.data);
     wl_data_source.offer(d.clipboard_source, MIME_TYPE_TEXT_NOLOOP.data);
@@ -458,7 +459,7 @@ wl_clipboard_set_text :: (display: *Display, text: string) {
 
 x_window_listener :: xdg_surface_listener.{
     configure = (data: *void, surface: *xdg_surface, serial: u32) -> void #c_call {
-        w: *Wayland_Window = wl_proxy.get_user_data(surface);
+        w: *Wayland_Window = wl_proxy_get_user_data(surface);
         xdg_surface.ack_configure(surface, serial);
         w.native_state |= .xdg_configured;
     }
@@ -468,7 +469,7 @@ x_toplevel_listener :: xdg_toplevel_listener.{
     configure = (data: *void, toplevel: *xdg_toplevel, width: s32, height: s32, states: *wl_array) -> void #c_call {
         ctx: Context;
         push_context ctx {
-            w: *Wayland_Window = wl_proxy.get_user_data(toplevel);
+            w: *Wayland_Window = wl_proxy_get_user_data(toplevel);
 
             if !(w.native_state & .xdg_toplevel_configured) {
                 w.native_state |= .xdg_toplevel_configured;
@@ -489,7 +490,7 @@ x_toplevel_listener :: xdg_toplevel_listener.{
     close = (data: *void, toplevel: *xdg_toplevel) -> void #c_call {
         ctx: Context;
         push_context ctx {
-            w: *Wayland_Window = wl_proxy.get_user_data(toplevel);
+            w: *Wayland_Window = wl_proxy_get_user_data(toplevel);
             d := w.display;
             event: Input.Event;
             event.type = .QUIT;
@@ -506,7 +507,7 @@ wl_window_handle_resize :: (w: *Wayland_Window, width: s32, height: s32) {
     wl_window_resize_viewport(w);
 
     if w.base.gl.egl.native
-        wl_egl_window.resize(w.base.gl.egl.native, w.buffer_width, w.buffer_height, 0, 0);
+        wl_egl_window_resize(w.base.gl.egl.native, w.buffer_width, w.buffer_height, 0, 0);
 
     wl_surface.damage(w.handle, 0, 0, w.window_width, w.window_height);
     wl_surface.commit(w.handle);
@@ -562,17 +563,17 @@ wl_create_window :: (display: *Display, window: *Window, width: int, height: int
     w.cursor = cursor;
 
     w.handle = wl_compositor.create_surface(d.compositor);
-    wl_proxy.set_user_data(w.handle, w);
+    wl_proxy_set_user_data(w.handle, w);
 
     w.x_surface = xdg_wm_base.get_xdg_surface(d.wm_base, w.handle);
     xdg_surface.add_listener(w.x_surface, *x_window_listener, w);
-    wl_proxy.set_user_data(w.x_surface, w);
+    wl_proxy_set_user_data(w.x_surface, w);
 
     w.x_toplevel = xdg_surface.get_toplevel(w.x_surface);
     xdg_toplevel.add_listener(w.x_toplevel, *x_toplevel_listener, w);
     xdg_toplevel.set_title(w.x_toplevel, window_name.data);
     xdg_toplevel.set_app_id(w.x_toplevel, temp_c_string(display.base.app_id));
-    wl_proxy.set_user_data(w.x_toplevel, w);
+    wl_proxy_set_user_data(w.x_toplevel, w);
 
     if d.decoration_manager {
         w.decoration = zxdg_decoration_manager_v1.get_toplevel_decoration(d.decoration_manager, w.x_toplevel);
@@ -593,7 +594,7 @@ wl_create_window :: (display: *Display, window: *Window, width: int, height: int
 
     configured :: WLNativeWindowState.xdg_configured | .xdg_toplevel_configured;
     while !(w.native_state & configured) {
-        wl_display.dispatch(d.handle);
+        wl_display_dispatch(d.handle);
     }
 
     bw: *Base_Window = window;
@@ -677,7 +678,7 @@ wl_toggle_fullscreen :: (window: *Window, desire_fullscreen: bool, _unused: *Sav
     }
     if desire_fullscreen xdg_toplevel.set_fullscreen(w.x_toplevel, null);
     else xdg_toplevel.unset_fullscreen(w.x_toplevel);
-    wl_display.roundtrip(w.display.handle);
+    wl_display_roundtrip(w.display.handle);
     return true, w.window_width, w.window_height;
 }
 
@@ -758,12 +759,12 @@ data_offer_read_data :: (d: *Wayland_Display, mime_type: string, sb: *String_Bui
 
     /*
      * EXTREMELY important:
-     *    we want to `wl_display.flush()` after `wl_data_offer.receive()` NOT `wl_display.roundtrip()`.
-     *    `wl_display.roundtrip()` invokes callbacks in the middle of other callbacks which totally messes
+     *    we want to `wl_display_flush()` after `wl_data_offer.receive()` NOT `wl_display_roundtrip()`.
+     *    `wl_display_roundtrip()` invokes callbacks in the middle of other callbacks which totally messes
      *    with the expected order of events.
      */
     wl_data_offer.receive(d.data_offer, mime_type.data, pipe[1]);
-    wl_display.flush(d.handle);
+    wl_display_flush(d.handle);
     close(pipe[1]);
 
     ptr := ensure_contiguous_space(sb, DATA_OFFER_READ_SIZE);
@@ -793,12 +794,12 @@ data_offer_read_data :: (d: *Wayland_Display, mime_type: string, dst: *[..]u8) {
 
     /*
      * EXTREMELY important:
-     *    we want to `wl_display.flush()` after `wl_data_offer.receive()` NOT `wl_display.roundtrip()`.
-     *    `wl_display.roundtrip()` invokes callbacks in the middle of other callbacks which totally messes
+     *    we want to `wl_display_flush()` after `wl_data_offer.receive()` NOT `wl_display_roundtrip()`.
+     *    `wl_display_roundtrip()` invokes callbacks in the middle of other callbacks which totally messes
      *    with the expected order of events.
      */
     wl_data_offer.receive(d.data_offer, mime_type.data, pipe[1]);
-    wl_display.flush(d.handle);
+    wl_display_flush(d.handle);
     close(pipe[1]);
 
     buff: [4096]u8;

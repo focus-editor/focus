@@ -70,6 +70,4 @@ gl_initialized :: inline () -> bool {
 }
 
 #scope_file
-GL :: #import "GL";
-
 _global_display: Display;

@@ -10,6 +10,26 @@ X11_Display :: struct {
 
     fixed_scaling: bool;
     dpi_override: s32;
+
+    global_atoms: X11.Global_Atoms;
+
+    clipboard_text: string;
+    drop_info: X11.Drop_Info;
+    xdnd_context: X11.Xdnd_Context;
+
+    color_depth :: 24;
+    glx_visual_attrs :: s32.[
+        GLX.RGBA,
+        GLX.DEPTH_SIZE, 24,
+        GLX.DOUBLEBUFFER, //, 1 ???
+        GLX.RED_SIZE, 8,
+        GLX.GREEN_SIZE, 8,
+        GLX.BLUE_SIZE, 8,
+        GLX.STENCIL_SIZE, 8,
+        X11.None
+    ];
+    visual_info: *X11.XVisualInfo;
+    color_map: X11.Colormap;
 }
 
 X11_Window :: struct {
@@ -28,14 +48,11 @@ preloaded_x_cursors :: string.[
 ];
 
 x11_init_display :: (display: *Display) -> bool {
-    if X11.x_global_display {
-        /*
-         * The idea behind this API is that an application could, in theory, create as many
-         * connections to X servers as possible. However, due to the way the Jai X11 module
-         * works right now we can only ever connect to one. As such, we fail here if that
-         * connection has already been established.
-         */
-        return false;
+    if !xlib_load(*X11) return false;
+    if #complete display.base.desired_gl_backend == {
+        case .AUTOSELECT; #through;
+        case .GLX; if !GL.wsi_load(*GLX) return false;
+        case .EGL; if !GL.wsi_load(*EGL) return false;
     }
 
     old_locale := setlocale(LC_ALL, null);
@@ -96,20 +113,21 @@ Inspect available locales [$ locale -a] and the one you have set up: [$ locale]
         }
 
     }
-    X11.init_global_display();
-    if !X11.x_global_display return false;
+
+    dpy := X11.XOpenDisplay(null);
+    X11.init_global_atoms(*X11, dpy, *display.x11.global_atoms);
 
     // NOTE: Should we explicitly support XMODIFIERS and XIM_SERVERS such as dbus and fcitx?
     // Try the best we can to get the input method
     X11.XSetLocaleModifiers("");
-    im := X11.XOpenIM(X11.x_global_display, null, null, null);
+    im := X11.XOpenIM(dpy, null, null, null);
     if !im {
         // local seems like the same thing as none, but more examples use it!
         X11.XSetLocaleModifiers("@im=local");
-        im = X11.XOpenIM(X11.x_global_display, null, null, null);
+        im = X11.XOpenIM(dpy, null, null, null);
         if !im {
             X11.XSetLocaleModifiers("@im=");
-            im = X11.XOpenIM(X11.x_global_display, null, null, null);
+            im = X11.XOpenIM(dpy, null, null, null);
             // Nothing more we can do
             if !im {
                 log_error("Could not get X11 Input Method");
@@ -125,18 +143,29 @@ Inspect available locales [$ locale -a] and the one you have set up: [$ locale]
             if xcursor_initialized {
                 init(*x_cursors);
                 for preloaded_x_cursors {
-                    table_add(*x_cursors, it, XcursorLibraryLoadCursor(X11.x_global_display, it.data));
+                    table_add(*x_cursors, it, XcursorLibraryLoadCursor(dpy, it.data));
                 }
             }
         }
     }
 
-    file_descriptor := X11.XConnectionNumber(X11.x_global_display);
+    file_descriptor := X11.XConnectionNumber(dpy);
 
     d: *X11_Display = display;
-    d.handle = X11.x_global_display;
+    d.handle = dpy;
     d.im = im;
     d.file_descriptor = file_descriptor;
+    if #complete display.base.desired_gl_backend == {
+        case .AUTOSELECT; #through;
+        case .GLX; d.visual_info = GLX.ChooseVisual(dpy, 0, d.glx_visual_attrs.data);
+        case .EGL; {
+            vi: X11.XVisualInfo;
+            X11.XMatchVisualInfo(dpy, X11.DefaultScreen(dpy), d.color_depth, X11.TrueColor, *vi);
+            d.visual_info = New(X11.XVisualInfo);
+            d.visual_info.* = vi;
+        }
+    }
+    d.color_map = X11.XCreateColormap(dpy, X11.DefaultRootWindow(dpy), d.visual_info.visual, X11.AllocNone);
 
     bd: *Base_Display = display;
     bd.type = X11_Display;
@@ -153,10 +182,6 @@ Inspect available locales [$ locale -a] and the one you have set up: [$ locale]
     return true;
 }
 
-#scope_file
-x_net_wm_state_maximized_vert: X11.Atom;
-x_net_wm_state_maximized_horz: X11.Atom;
-
 #scope_export
 
 x11_maximize_window :: (window: *Window) {
@@ -166,27 +191,23 @@ x11_maximize_window :: (window: *Window) {
     win := x11_win.handle;
     display := x11_win.display.handle;
 
-    if !x_net_wm_state_maximized_horz {
-        x_net_wm_state_maximized_horz = X11.XInternAtom(display, "_NET_WM_STATE_MAXIMIZED_HORZ", X11.True);
-    }
-    if !x_net_wm_state_maximized_vert {
-        x_net_wm_state_maximized_vert = X11.XInternAtom(display, "_NET_WM_STATE_MAXIMIZED_VERT", X11.True);
-    }
-
-    if !X11.x_global_net_wm_state || !x_net_wm_state_maximized_horz || !x_net_wm_state_maximized_vert return;
+    wm_state := x11_win.display.global_atoms._NET_WM_STATE;
+    wm_max_horz := x11_win.display.global_atoms._NET_WM_STATE_MAXIMIZED_HORZ;
+    wm_max_vert := x11_win.display.global_atoms._NET_WM_STATE_MAXIMIZED_VERT;
+    if !wm_state || !wm_max_horz || !wm_max_vert return;
 
     xev: X11.XEvent;
     xev.type = X11.ClientMessage;
     xev.xclient.window = win;
-    xev.xclient.message_type = X11.x_global_net_wm_state;
+    xev.xclient.message_type = wm_state;
     xev.xclient.format = 32;
     xev.xclient.data.l[0] = X11._NET_WM_STATE_ADD;
-    xev.xclient.data.l[1] = cast(s64) x_net_wm_state_maximized_horz;
+    xev.xclient.data.l[1] = cast(s64) wm_max_horz;
 
     X11.XSendEvent(display, X11.DefaultRootWindow(display), X11.False,
         X11.SubstructureRedirectMask | X11.SubstructureNotifyMask, *xev);
 
-    xev.xclient.data.l[1] = cast(s64) x_net_wm_state_maximized_vert;
+    xev.xclient.data.l[1] = cast(s64) wm_max_vert;
 
     X11.XSendEvent(display, X11.DefaultRootWindow(display), X11.False,
         X11.SubstructureRedirectMask | X11.SubstructureNotifyMask, *xev);
@@ -201,69 +222,57 @@ x11_toggle_fullscreen :: (window: *Window, desire_fullscreen: bool, saved: *Save
     win := x11_win.handle;
     display := x11_win.display.handle;
 
+    wm_state := x11_win.display.global_atoms._NET_WM_STATE;
+    wm_fullscreen := x11_win.display.global_atoms._NET_WM_STATE_FULLSCREEN;
+    if !wm_state || !wm_fullscreen  return false, 0, 0;
+
     if desire_fullscreen {
-        if X11.x_global_net_wm_state && X11.x_global_net_wm_state_fullscreen {
-            xev: X11.XEvent;
-            xev.type = X11.ClientMessage;
-            xev.xclient.window = win;
-            xev.xclient.message_type = X11.x_global_net_wm_state;
-            xev.xclient.format = 32;
-            xev.xclient.data.l[0] = X11._NET_WM_STATE_ADD;
-            xev.xclient.data.l[1] = cast(s64) X11.x_global_net_wm_state_fullscreen;
+        xev: X11.XEvent;
+        xev.type = X11.ClientMessage;
+        xev.xclient.window = win;
+        xev.xclient.message_type = wm_state;
+        xev.xclient.format = 32;
+        xev.xclient.data.l[0] = X11._NET_WM_STATE_ADD;
+        xev.xclient.data.l[1] = cast(s64) wm_fullscreen;
 
-            X11.XSendEvent(display, X11.DefaultRootWindow(display), X11.False,
-                X11.SubstructureRedirectMask | X11.SubstructureNotifyMask, *xev);
-            X11.XSync(display, X11.False);
+        X11.XSendEvent(display, X11.DefaultRootWindow(display), X11.False,
+            X11.SubstructureRedirectMask | X11.SubstructureNotifyMask, *xev);
+        X11.XSync(display, X11.False);
 
-            width: u32;
-            height: u32;
+        width: u32;
+        height: u32;
 
-            // for what ever stupid reason, XGetGeometry crashes if you pass null in for any of its return parameters
-            root: X11.Window;
-            x, y: s32;
-            border_width: u32;
-            depth_return: u32;
-            // this will return the window's current dimensions, but it seems the server will imediately send a
-            // ConfigureNotify event with the new size of the fullscreen window
-            X11.XGetGeometry(display, win, *root, *x, *y, *width, *height, *border_width, *depth_return);
-            return true, cast(s32) width, cast(s32) height;
-        } else {
-            // :NoNET_WM_STATE_FULLSCREEN:
-            // @TODO typically the window manager should support NET_WM_STATE and NET_WM_STATE_FULLSCREEN
-            // however, in the event that it does not, we're supposed to change the window's attributes
-            // to enable override_redirect. However, apparently in doing so, this causes the window manager
-            // to ignore the window (the window, in essense, is considered as acting as a temporary window manager
-            // accoring to the ICCM) requiring more work on our part. The ICCM strongly discourages doing this,
-            // but this is the only other way to take control of the screen AFAICT. -josh
-            return false, 0, 0;
-        }
+        // for what ever stupid reason, XGetGeometry crashes if you pass null in for any of its return parameters
+        root: X11.Window;
+        x, y: s32;
+        border_width: u32;
+        depth_return: u32;
+        // this will return the window's current dimensions, but it seems the server will imediately send a
+        // ConfigureNotify event with the new size of the fullscreen window
+        X11.XGetGeometry(display, win, *root, *x, *y, *width, *height, *border_width, *depth_return);
+        return true, cast(s32) width, cast(s32) height;
     } else {
-        if X11.x_global_net_wm_state && X11.x_global_net_wm_state_fullscreen {
-            xev: X11.XEvent;
-            xev.type = X11.ClientMessage;
-            xev.xclient.window = win;
-            xev.xclient.message_type = X11.x_global_net_wm_state;
-            xev.xclient.format = 32;
-            xev.xclient.data.l[0] = X11._NET_WM_STATE_REMOVE;
-            xev.xclient.data.l[1] = cast(s64) X11.x_global_net_wm_state_fullscreen;
+        xev: X11.XEvent;
+        xev.type = X11.ClientMessage;
+        xev.xclient.window = win;
+        xev.xclient.message_type = wm_state;
+        xev.xclient.format = 32;
+        xev.xclient.data.l[0] = X11._NET_WM_STATE_REMOVE;
+        xev.xclient.data.l[1] = cast(s64) wm_fullscreen;
 
-            X11.XSendEvent(display, X11.DefaultRootWindow(display), X11.False,
-                X11.SubstructureRedirectMask | X11.SubstructureNotifyMask, *xev);
+        X11.XSendEvent(display, X11.DefaultRootWindow(display), X11.False,
+            X11.SubstructureRedirectMask | X11.SubstructureNotifyMask, *xev);
 
-            width: u32;
-            height: u32;
+        width: u32;
+        height: u32;
 
-            // for what ever stupid reason, XGetGeometry crashes if you pass null in for any of its return parameters
-            root: X11.Window;
-            x, y: s32;
-            border_width: u32;
-            depth_return: u32;
-            X11.XGetGeometry(display, win, *root, *x, *y, *width, *height, *border_width, *depth_return);
-            return true, cast(s32) width, cast(s32) height;
-        } else {
-            // :NoNET_WM_STATE_FULLSCREEN:
-            return false, 0, 0;
-        }
+        // for what ever stupid reason, XGetGeometry crashes if you pass null in for any of its return parameters
+        root: X11.Window;
+        x, y: s32;
+        border_width: u32;
+        depth_return: u32;
+        X11.XGetGeometry(display, win, *root, *x, *y, *width, *height, *border_width, *depth_return);
+        return true, cast(s32) width, cast(s32) height;
     }
 }
 
@@ -292,30 +301,15 @@ x11_create_window :: (display: *Display, window: *Window, width: int, height: in
     root_handle := X11.DefaultRootWindow(d);
     parent_handle := ifx x11_parent then x11_parent.handle else root_handle;
 
-    // These attributes must match the attibutes we use to create the GL context. :GlContextAttributes
-    //        -rluba, 2021-11-30
-    attr := s32.[
-        X11.GLX_RGBA,
-        X11.GLX_DEPTH_SIZE, 24,
-        X11.GLX_DOUBLEBUFFER,
-        X11.GLX_RED_SIZE, 8,
-        X11.GLX_GREEN_SIZE, 8,
-        X11.GLX_BLUE_SIZE, 8,
-        X11.GLX_STENCIL_SIZE, 8,
-        X11.None
-    ];
-    vi := X11.glXChooseVisual(d, 0, attr.data);
-    cmap := X11.XCreateColormap(d, parent_handle, vi.visual, X11.AllocNone);
-
     background_color: X11.XColor;
     background_color.flags |= X11.DoRed | X11.DoGreen | X11.DoBlue;
     background_color.red     = to_u16(background_color_rgb[0]);
     background_color.green   = to_u16(background_color_rgb[1]);
     background_color.blue    = to_u16(background_color_rgb[2]);
-    X11.XAllocColor(d, cmap, *background_color);
+    X11.XAllocColor(d, x11_display.color_map, *background_color);
 
     swa: X11.XSetWindowAttributes;
-    swa.colormap = cmap;
+    swa.colormap = x11_display.color_map;
     swa.event_mask =
         X11.ExposureMask |
         X11.KeyPressMask |
@@ -331,8 +325,8 @@ x11_create_window :: (display: *Display, window: *Window, width: int, height: in
     win := X11.XCreateWindow(d, parent_handle,
         xx window_x, xx window_y, xx width, xx height,
         0,
-        vi.depth,
-        X11.InputOutput, vi.visual,
+        x11_display.visual_info.depth,
+        X11.InputOutput, x11_display.visual_info.visual,
         cast(u64) (X11.CWColormap | X11.CWEventMask),
         *swa);
 
@@ -352,19 +346,17 @@ x11_create_window :: (display: *Display, window: *Window, width: int, height: in
 
     X11.XMapWindow(d, win);
 
-    X11.XSetWMProtocols(d, win, *X11.x_global_wm_delete_window, 1);
+    X11.XSetWMProtocols(d, win, *x11_display.global_atoms.WM_DELETE_WINDOW, 1);
 
     ic := X11.XCreateIC(x11_display.im,
-        XNClientWindow, win,
-        XNFocusWindow, win,
-        XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
+        X11.XNClientWindow, win,
+        X11.XNFocusWindow, win,
+        X11.XNInputStyle, X11.XIMPreeditNothing | X11.XIMStatusNothing,
         null);
 
     if !ic {
         log_error("Could not create X11 input context\n");
     }
-
-    array_add(*X11.x_global_windows, win);
 
     xw: *X11_Window = window;
     xw.handle  = win;
@@ -493,8 +485,46 @@ x11_get_mouse_pointer_position :: (display: *Display, right_handed := false) -> 
 x11_enable_dnd :: (window: *Window, typelist: []string) {
     x11_check_usage(null, window);
 
-    win: *X11_Window = window;
-    X11.enable_drag_and_drop(win.handle, typelist);
+    enable_dnd :: (x11_display: *X11_Display, win: X11.Window, typelist: []string) {
+        version : s32 = X11.XDND_VERSION;
+
+        dpy := x11_display.handle;
+        drop_info := *x11_display.drop_info;
+
+        X11.XChangeProperty(
+            dpy, win,
+            x11_display.global_atoms.XdndAware,
+            X11.XA_ATOM, 32, X11.PropModeReplace,
+            cast(*u8) *version, 1);
+
+        root_return: X11.Window;
+        parent: X11.Window;
+        child_return: *X11.Window;
+        child_return_count: u32;
+        X11.XQueryTree(dpy, win, *root_return, *parent, *child_return, *child_return_count);
+
+        if child_return  X11.XFree(child_return);
+
+        if parent != root_return  enable_dnd(x11_display, parent, typelist);
+
+        typelist_atoms: [..] X11.Atom;
+        array_reset(*drop_info.user_typelist);
+
+        for typelist {
+            atom := X11.XInternAtom(dpy, it.data, X11.False);
+            array_add(*typelist_atoms, atom);
+            array_add(*drop_info.user_typelist, atom);
+        }
+
+        X11.XChangeProperty(
+            dpy, win,
+            x11_display.global_atoms.XdndTypeList,
+            X11.XA_ATOM, 32, X11.PropModeReplace,
+            cast(*u8) typelist_atoms.data, cast(s32) typelist_atoms.count);
+    }
+
+    x11_window : *X11_Window = window;
+    enable_dnd(x11_window.display, x11_window.handle, typelist);
 }
 
 x11_set_window_title :: (window: *Window, title: string) {
@@ -503,7 +533,7 @@ x11_set_window_title :: (window: *Window, title: string) {
     w: *X11_Window = window;
     prop := X11.XTextProperty.{
         value = title.data,
-        encoding = X11.x_global_xa_utf8,
+        encoding = w.display.global_atoms.UTF8_STRING,
         format = 8,
         nitems = xx title.count,
     };
