@@ -61,8 +61,11 @@ backend_init :: (info: *Window_Info) {
             NSOpenGLContext.makeCurrentContext(the_gl_context);
         }
 
-        gl_load(*gl);
-        gl_enable_debug_output(break_on_error = true);
+        #if OS != .LINUX {
+            // `gl_load` is part of `Linux_Display.create_context()`
+            gl_load(*gl);
+            gl_enable_debug_output(break_on_error = true);
+        }
 
         glGenVertexArrays(1, *opengl_is_stupid_vao);
         glGenBuffers(1, *immediate_vbo);

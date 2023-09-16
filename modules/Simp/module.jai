@@ -21,7 +21,13 @@ Render_API :: enum {
 }
 
 #if render_api == .OPENGL {
-    #import "GL";
+    #if OS != .LINUX {
+        #import "GL";
+    } else {
+        GL :: #import "Linux_Display/GL";
+        using GL.gl_procs;
+        DumpGLErrors :: GL.DumpGLErrors;
+    }
 
     #load "backend/gl.jai";
 }
