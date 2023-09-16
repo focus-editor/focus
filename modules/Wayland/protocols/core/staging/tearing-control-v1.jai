@@ -12,26 +12,26 @@ wp_tearing_control_manager_v1 :: struct {
     error_tearing_control_exists : u32 : 0;
 
     set_user_data :: inline (self: *wp_tearing_control_manager_v1, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *wp_tearing_control_manager_v1) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *wp_tearing_control_manager_v1) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *wp_tearing_control_manager_v1) #c_call {
-        wl_proxy.marshal(self, WP_TEARING_CONTROL_MANAGER_V1_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, WP_TEARING_CONTROL_MANAGER_V1_DESTROY);
+        wl_proxy_destroy(self);
     }
 
     get_tearing_control :: inline (self: *wp_tearing_control_manager_v1, surface: *wl_surface) -> *wp_tearing_control_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
+        ret: *wl_proxy = wl_proxy_marshal_constructor_versioned(
             self, WP_TEARING_CONTROL_MANAGER_V1_GET_TEARING_CONTROL,
-            *wp_tearing_control_v1_interface, wl_proxy.get_version(self),
+            *wp_tearing_control_v1_interface, wl_proxy_get_version(self),
             null, surface);
         return cast(*wp_tearing_control_v1) ret;
     }
@@ -52,25 +52,25 @@ wp_tearing_control_v1 :: struct {
     presentation_hint_async : u32 : 1;
 
     set_user_data :: inline (self: *wp_tearing_control_v1, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *wp_tearing_control_v1) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *wp_tearing_control_v1) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     set_presentation_hint :: inline (self: *wp_tearing_control_v1, hint: u32) #c_call {
-        wl_proxy.marshal(self, WP_TEARING_CONTROL_V1_SET_PRESENTATION_HINT,
+        wl_proxy_marshal(self, WP_TEARING_CONTROL_V1_SET_PRESENTATION_HINT,
             hint);
     }
 
     destroy :: inline (self: *wp_tearing_control_v1) #c_call {
-        wl_proxy.marshal(self, WP_TEARING_CONTROL_V1_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, WP_TEARING_CONTROL_V1_DESTROY);
+        wl_proxy_destroy(self);
     }
 }
 

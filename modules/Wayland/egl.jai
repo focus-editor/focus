@@ -1,13 +1,12 @@
-wl_egl_window :: struct {
-    create :: wl_egl_window_create;
-    destroy :: wl_egl_window_destroy;
-    resize :: wl_egl_window_resize;
-    get_attached_size :: wl_egl_window_get_attached_size;
-}
+wl_egl_window :: struct {}
+
+using wayland_egl_procs: Wayland_Egl_Procs;
 
 #scope_module
 
-wl_egl_window_create :: (surface: *wl_surface, width: s32, height: s32) -> *wl_egl_window #foreign libwayland_egl;
-wl_egl_window_destroy :: (window: *wl_egl_window) -> void #foreign libwayland_egl;
-wl_egl_window_resize :: (window: *wl_egl_window, width: s32, height: s32, dx: s32, dy: s32) -> void #foreign libwayland_egl;
-wl_egl_window_get_attached_size :: (window: *wl_egl_window, width: *s32, height: *s32) -> void #foreign libwayland_egl;
+Wayland_Egl_Procs :: struct @lib(libwayland-egl.so) {
+    wl_egl_window_create : (surface: *wl_surface, width: s32, height: s32) -> *wl_egl_window #c_call;
+    wl_egl_window_destroy : (window: *wl_egl_window) -> void #c_call;
+    wl_egl_window_resize : (window: *wl_egl_window, width: s32, height: s32, dx: s32, dy: s32) -> void #c_call;
+    wl_egl_window_get_attached_size : (window: *wl_egl_window, width: *s32, height: *s32) -> void #c_call;
+}

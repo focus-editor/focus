@@ -9,26 +9,26 @@ zwp_idle_inhibit_manager_v1 :: struct {
     _interface_ :: *zwp_idle_inhibit_manager_v1_interface;
 
     set_user_data :: inline (self: *zwp_idle_inhibit_manager_v1, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *zwp_idle_inhibit_manager_v1) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *zwp_idle_inhibit_manager_v1) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *zwp_idle_inhibit_manager_v1) #c_call {
-        wl_proxy.marshal(self, ZWP_IDLE_INHIBIT_MANAGER_V1_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, ZWP_IDLE_INHIBIT_MANAGER_V1_DESTROY);
+        wl_proxy_destroy(self);
     }
 
     create_inhibitor :: inline (self: *zwp_idle_inhibit_manager_v1, surface: *wl_surface) -> *zwp_idle_inhibitor_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
+        ret: *wl_proxy = wl_proxy_marshal_constructor_versioned(
             self, ZWP_IDLE_INHIBIT_MANAGER_V1_CREATE_INHIBITOR,
-            *zwp_idle_inhibitor_v1_interface, wl_proxy.get_version(self),
+            *zwp_idle_inhibitor_v1_interface, wl_proxy_get_version(self),
             null, surface);
         return cast(*zwp_idle_inhibitor_v1) ret;
     }
@@ -45,20 +45,20 @@ zwp_idle_inhibitor_v1 :: struct {
     _interface_ :: *zwp_idle_inhibitor_v1_interface;
 
     set_user_data :: inline (self: *zwp_idle_inhibitor_v1, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *zwp_idle_inhibitor_v1) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *zwp_idle_inhibitor_v1) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *zwp_idle_inhibitor_v1) #c_call {
-        wl_proxy.marshal(self, ZWP_IDLE_INHIBITOR_V1_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, ZWP_IDLE_INHIBITOR_V1_DESTROY);
+        wl_proxy_destroy(self);
     }
 }
 

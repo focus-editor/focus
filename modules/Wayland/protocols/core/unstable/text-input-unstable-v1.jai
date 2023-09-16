@@ -54,75 +54,75 @@ zwp_text_input_v1 :: struct {
     text_direction_rtl  : u32 : 2;
 
     set_user_data :: inline (self: *zwp_text_input_v1, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *zwp_text_input_v1) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *zwp_text_input_v1) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *zwp_text_input_v1) #c_call {
-        wl_proxy.destroy(self);
+        wl_proxy_destroy(self);
     }
 
     activate :: inline (self: *zwp_text_input_v1, seat: *wl_seat, surface: *wl_surface) #c_call {
-        wl_proxy.marshal(self, ZWP_TEXT_INPUT_V1_ACTIVATE,
+        wl_proxy_marshal(self, ZWP_TEXT_INPUT_V1_ACTIVATE,
             seat, surface);
     }
 
     deactivate :: inline (self: *zwp_text_input_v1, seat: *wl_seat) #c_call {
-        wl_proxy.marshal(self, ZWP_TEXT_INPUT_V1_DEACTIVATE,
+        wl_proxy_marshal(self, ZWP_TEXT_INPUT_V1_DEACTIVATE,
             seat);
     }
 
     show_input_panel :: inline (self: *zwp_text_input_v1) #c_call {
-        wl_proxy.marshal(self, ZWP_TEXT_INPUT_V1_SHOW_INPUT_PANEL);
+        wl_proxy_marshal(self, ZWP_TEXT_INPUT_V1_SHOW_INPUT_PANEL);
     }
 
     hide_input_panel :: inline (self: *zwp_text_input_v1) #c_call {
-        wl_proxy.marshal(self, ZWP_TEXT_INPUT_V1_HIDE_INPUT_PANEL);
+        wl_proxy_marshal(self, ZWP_TEXT_INPUT_V1_HIDE_INPUT_PANEL);
     }
 
     reset :: inline (self: *zwp_text_input_v1) #c_call {
-        wl_proxy.marshal(self, ZWP_TEXT_INPUT_V1_RESET);
+        wl_proxy_marshal(self, ZWP_TEXT_INPUT_V1_RESET);
     }
 
     set_surrounding_text :: inline (self: *zwp_text_input_v1, text: *u8, cursor: u32, anchor: u32) #c_call {
-        wl_proxy.marshal(self, ZWP_TEXT_INPUT_V1_SET_SURROUNDING_TEXT,
+        wl_proxy_marshal(self, ZWP_TEXT_INPUT_V1_SET_SURROUNDING_TEXT,
             text, cursor, anchor);
     }
 
     set_content_type :: inline (self: *zwp_text_input_v1, hint: u32, purpose: u32) #c_call {
-        wl_proxy.marshal(self, ZWP_TEXT_INPUT_V1_SET_CONTENT_TYPE,
+        wl_proxy_marshal(self, ZWP_TEXT_INPUT_V1_SET_CONTENT_TYPE,
             hint, purpose);
     }
 
     set_cursor_rectangle :: inline (self: *zwp_text_input_v1, x: s32, y: s32, width: s32, height: s32) #c_call {
-        wl_proxy.marshal(self, ZWP_TEXT_INPUT_V1_SET_CURSOR_RECTANGLE,
+        wl_proxy_marshal(self, ZWP_TEXT_INPUT_V1_SET_CURSOR_RECTANGLE,
             x, y, width, height);
     }
 
     set_preferred_language :: inline (self: *zwp_text_input_v1, language: *u8) #c_call {
-        wl_proxy.marshal(self, ZWP_TEXT_INPUT_V1_SET_PREFERRED_LANGUAGE,
+        wl_proxy_marshal(self, ZWP_TEXT_INPUT_V1_SET_PREFERRED_LANGUAGE,
             language);
     }
 
     commit_state :: inline (self: *zwp_text_input_v1, serial: u32) #c_call {
-        wl_proxy.marshal(self, ZWP_TEXT_INPUT_V1_COMMIT_STATE,
+        wl_proxy_marshal(self, ZWP_TEXT_INPUT_V1_COMMIT_STATE,
             serial);
     }
 
     invoke_action :: inline (self: *zwp_text_input_v1, button: u32, index: u32) #c_call {
-        wl_proxy.marshal(self, ZWP_TEXT_INPUT_V1_INVOKE_ACTION,
+        wl_proxy_marshal(self, ZWP_TEXT_INPUT_V1_INVOKE_ACTION,
             button, index);
     }
 
     add_listener :: inline (self: *zwp_text_input_v1, listener: *zwp_text_input_v1_listener, data: *void) -> s32 #c_call {
-        return wl_proxy.add_listener(self, cast(*generic_c_call) listener, data);
+        return wl_proxy_add_listener(self, cast(*generic_c_call) listener, data);
     }
 }
 
@@ -238,25 +238,25 @@ zwp_text_input_manager_v1 :: struct {
     _interface_ :: *zwp_text_input_manager_v1_interface;
 
     set_user_data :: inline (self: *zwp_text_input_manager_v1, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *zwp_text_input_manager_v1) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *zwp_text_input_manager_v1) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *zwp_text_input_manager_v1) #c_call {
-        wl_proxy.destroy(self);
+        wl_proxy_destroy(self);
     }
 
     create_text_input :: inline (self: *zwp_text_input_manager_v1) -> *zwp_text_input_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
+        ret: *wl_proxy = wl_proxy_marshal_constructor_versioned(
             self, ZWP_TEXT_INPUT_MANAGER_V1_CREATE_TEXT_INPUT,
-            *zwp_text_input_v1_interface, wl_proxy.get_version(self),
+            *zwp_text_input_v1_interface, wl_proxy_get_version(self),
             null);
         return cast(*zwp_text_input_v1) ret;
     }

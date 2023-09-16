@@ -9,26 +9,26 @@ zwp_xwayland_keyboard_grab_manager_v1 :: struct {
     _interface_ :: *zwp_xwayland_keyboard_grab_manager_v1_interface;
 
     set_user_data :: inline (self: *zwp_xwayland_keyboard_grab_manager_v1, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *zwp_xwayland_keyboard_grab_manager_v1) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *zwp_xwayland_keyboard_grab_manager_v1) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *zwp_xwayland_keyboard_grab_manager_v1) #c_call {
-        wl_proxy.marshal(self, ZWP_XWAYLAND_KEYBOARD_GRAB_MANAGER_V1_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, ZWP_XWAYLAND_KEYBOARD_GRAB_MANAGER_V1_DESTROY);
+        wl_proxy_destroy(self);
     }
 
     grab_keyboard :: inline (self: *zwp_xwayland_keyboard_grab_manager_v1, surface: *wl_surface, seat: *wl_seat) -> *zwp_xwayland_keyboard_grab_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
+        ret: *wl_proxy = wl_proxy_marshal_constructor_versioned(
             self, ZWP_XWAYLAND_KEYBOARD_GRAB_MANAGER_V1_GRAB_KEYBOARD,
-            *zwp_xwayland_keyboard_grab_v1_interface, wl_proxy.get_version(self),
+            *zwp_xwayland_keyboard_grab_v1_interface, wl_proxy_get_version(self),
             null, surface, seat);
         return cast(*zwp_xwayland_keyboard_grab_v1) ret;
     }
@@ -45,20 +45,20 @@ zwp_xwayland_keyboard_grab_v1 :: struct {
     _interface_ :: *zwp_xwayland_keyboard_grab_v1_interface;
 
     set_user_data :: inline (self: *zwp_xwayland_keyboard_grab_v1, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *zwp_xwayland_keyboard_grab_v1) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *zwp_xwayland_keyboard_grab_v1) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *zwp_xwayland_keyboard_grab_v1) #c_call {
-        wl_proxy.marshal(self, ZWP_XWAYLAND_KEYBOARD_GRAB_V1_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, ZWP_XWAYLAND_KEYBOARD_GRAB_V1_DESTROY);
+        wl_proxy_destroy(self);
     }
 }
 

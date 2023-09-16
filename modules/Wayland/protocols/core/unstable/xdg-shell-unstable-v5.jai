@@ -18,50 +18,50 @@ xdg_shell :: struct {
     error_invalid_popup_parent  : u32 : 3;
 
     set_user_data :: inline (self: *xdg_shell, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *xdg_shell) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *xdg_shell) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *xdg_shell) #c_call {
-        wl_proxy.marshal(self, XDG_SHELL_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, XDG_SHELL_DESTROY);
+        wl_proxy_destroy(self);
     }
 
     use_unstable_version :: inline (self: *xdg_shell, version: s32) #c_call {
-        wl_proxy.marshal(self, XDG_SHELL_USE_UNSTABLE_VERSION,
+        wl_proxy_marshal(self, XDG_SHELL_USE_UNSTABLE_VERSION,
             version);
     }
 
     get_xdg_surface :: inline (self: *xdg_shell, surface: *wl_surface) -> *xdg_surface #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
+        ret: *wl_proxy = wl_proxy_marshal_constructor_versioned(
             self, XDG_SHELL_GET_XDG_SURFACE,
-            *xdg_surface_interface, wl_proxy.get_version(self),
+            *xdg_surface_interface, wl_proxy_get_version(self),
             null, surface);
         return cast(*xdg_surface) ret;
     }
 
     get_xdg_popup :: inline (self: *xdg_shell, surface: *wl_surface, parent: *wl_surface, seat: *wl_seat, serial: u32, x: s32, y: s32) -> *xdg_popup #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
+        ret: *wl_proxy = wl_proxy_marshal_constructor_versioned(
             self, XDG_SHELL_GET_XDG_POPUP,
-            *xdg_popup_interface, wl_proxy.get_version(self),
+            *xdg_popup_interface, wl_proxy_get_version(self),
             null, surface, parent, seat, serial, x, y);
         return cast(*xdg_popup) ret;
     }
 
     pong :: inline (self: *xdg_shell, serial: u32) #c_call {
-        wl_proxy.marshal(self, XDG_SHELL_PONG,
+        wl_proxy_marshal(self, XDG_SHELL_PONG,
             serial);
     }
 
     add_listener :: inline (self: *xdg_shell, listener: *xdg_shell_listener, data: *void) -> s32 #c_call {
-        return wl_proxy.add_listener(self, cast(*generic_c_call) listener, data);
+        return wl_proxy_add_listener(self, cast(*generic_c_call) listener, data);
     }
 }
 
@@ -110,85 +110,85 @@ xdg_surface :: struct {
     state_activated  : u32 : 4;
 
     set_user_data :: inline (self: *xdg_surface, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *xdg_surface) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *xdg_surface) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *xdg_surface) #c_call {
-        wl_proxy.marshal(self, XDG_SURFACE_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, XDG_SURFACE_DESTROY);
+        wl_proxy_destroy(self);
     }
 
     set_parent :: inline (self: *xdg_surface, parent: *xdg_surface) #c_call {
-        wl_proxy.marshal(self, XDG_SURFACE_SET_PARENT,
+        wl_proxy_marshal(self, XDG_SURFACE_SET_PARENT,
             parent);
     }
 
     set_title :: inline (self: *xdg_surface, title: *u8) #c_call {
-        wl_proxy.marshal(self, XDG_SURFACE_SET_TITLE,
+        wl_proxy_marshal(self, XDG_SURFACE_SET_TITLE,
             title);
     }
 
     set_app_id :: inline (self: *xdg_surface, app_id: *u8) #c_call {
-        wl_proxy.marshal(self, XDG_SURFACE_SET_APP_ID,
+        wl_proxy_marshal(self, XDG_SURFACE_SET_APP_ID,
             app_id);
     }
 
     show_window_menu :: inline (self: *xdg_surface, seat: *wl_seat, serial: u32, x: s32, y: s32) #c_call {
-        wl_proxy.marshal(self, XDG_SURFACE_SHOW_WINDOW_MENU,
+        wl_proxy_marshal(self, XDG_SURFACE_SHOW_WINDOW_MENU,
             seat, serial, x, y);
     }
 
     move :: inline (self: *xdg_surface, seat: *wl_seat, serial: u32) #c_call {
-        wl_proxy.marshal(self, XDG_SURFACE_MOVE,
+        wl_proxy_marshal(self, XDG_SURFACE_MOVE,
             seat, serial);
     }
 
     resize :: inline (self: *xdg_surface, seat: *wl_seat, serial: u32, edges: u32) #c_call {
-        wl_proxy.marshal(self, XDG_SURFACE_RESIZE,
+        wl_proxy_marshal(self, XDG_SURFACE_RESIZE,
             seat, serial, edges);
     }
 
     ack_configure :: inline (self: *xdg_surface, serial: u32) #c_call {
-        wl_proxy.marshal(self, XDG_SURFACE_ACK_CONFIGURE,
+        wl_proxy_marshal(self, XDG_SURFACE_ACK_CONFIGURE,
             serial);
     }
 
     set_window_geometry :: inline (self: *xdg_surface, x: s32, y: s32, width: s32, height: s32) #c_call {
-        wl_proxy.marshal(self, XDG_SURFACE_SET_WINDOW_GEOMETRY,
+        wl_proxy_marshal(self, XDG_SURFACE_SET_WINDOW_GEOMETRY,
             x, y, width, height);
     }
 
     set_maximized :: inline (self: *xdg_surface) #c_call {
-        wl_proxy.marshal(self, XDG_SURFACE_SET_MAXIMIZED);
+        wl_proxy_marshal(self, XDG_SURFACE_SET_MAXIMIZED);
     }
 
     unset_maximized :: inline (self: *xdg_surface) #c_call {
-        wl_proxy.marshal(self, XDG_SURFACE_UNSET_MAXIMIZED);
+        wl_proxy_marshal(self, XDG_SURFACE_UNSET_MAXIMIZED);
     }
 
     set_fullscreen :: inline (self: *xdg_surface, output: *wl_output) #c_call {
-        wl_proxy.marshal(self, XDG_SURFACE_SET_FULLSCREEN,
+        wl_proxy_marshal(self, XDG_SURFACE_SET_FULLSCREEN,
             output);
     }
 
     unset_fullscreen :: inline (self: *xdg_surface) #c_call {
-        wl_proxy.marshal(self, XDG_SURFACE_UNSET_FULLSCREEN);
+        wl_proxy_marshal(self, XDG_SURFACE_UNSET_FULLSCREEN);
     }
 
     set_minimized :: inline (self: *xdg_surface) #c_call {
-        wl_proxy.marshal(self, XDG_SURFACE_SET_MINIMIZED);
+        wl_proxy_marshal(self, XDG_SURFACE_SET_MINIMIZED);
     }
 
     add_listener :: inline (self: *xdg_surface, listener: *xdg_surface_listener, data: *void) -> s32 #c_call {
-        return wl_proxy.add_listener(self, cast(*generic_c_call) listener, data);
+        return wl_proxy_add_listener(self, cast(*generic_c_call) listener, data);
     }
 }
 
@@ -245,24 +245,24 @@ xdg_popup :: struct {
     _interface_ :: *xdg_popup_interface;
 
     set_user_data :: inline (self: *xdg_popup, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *xdg_popup) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *xdg_popup) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *xdg_popup) #c_call {
-        wl_proxy.marshal(self, XDG_POPUP_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, XDG_POPUP_DESTROY);
+        wl_proxy_destroy(self);
     }
 
     add_listener :: inline (self: *xdg_popup, listener: *xdg_popup_listener, data: *void) -> s32 #c_call {
-        return wl_proxy.add_listener(self, cast(*generic_c_call) listener, data);
+        return wl_proxy_add_listener(self, cast(*generic_c_call) listener, data);
     }
 }
 

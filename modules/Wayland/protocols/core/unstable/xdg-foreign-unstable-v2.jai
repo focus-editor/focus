@@ -12,26 +12,26 @@ zxdg_exporter_v2 :: struct {
     error_invalid_surface : u32 : 0;
 
     set_user_data :: inline (self: *zxdg_exporter_v2, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *zxdg_exporter_v2) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *zxdg_exporter_v2) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *zxdg_exporter_v2) #c_call {
-        wl_proxy.marshal(self, ZXDG_EXPORTER_V2_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, ZXDG_EXPORTER_V2_DESTROY);
+        wl_proxy_destroy(self);
     }
 
     export_toplevel :: inline (self: *zxdg_exporter_v2, surface: *wl_surface) -> *zxdg_exported_v2 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
+        ret: *wl_proxy = wl_proxy_marshal_constructor_versioned(
             self, ZXDG_EXPORTER_V2_EXPORT_TOPLEVEL,
-            *zxdg_exported_v2_interface, wl_proxy.get_version(self),
+            *zxdg_exported_v2_interface, wl_proxy_get_version(self),
             null, surface);
         return cast(*zxdg_exported_v2) ret;
     }
@@ -48,26 +48,26 @@ zxdg_importer_v2 :: struct {
     _interface_ :: *zxdg_importer_v2_interface;
 
     set_user_data :: inline (self: *zxdg_importer_v2, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *zxdg_importer_v2) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *zxdg_importer_v2) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *zxdg_importer_v2) #c_call {
-        wl_proxy.marshal(self, ZXDG_IMPORTER_V2_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, ZXDG_IMPORTER_V2_DESTROY);
+        wl_proxy_destroy(self);
     }
 
     import_toplevel :: inline (self: *zxdg_importer_v2, handle: *u8) -> *zxdg_imported_v2 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
+        ret: *wl_proxy = wl_proxy_marshal_constructor_versioned(
             self, ZXDG_IMPORTER_V2_IMPORT_TOPLEVEL,
-            *zxdg_imported_v2_interface, wl_proxy.get_version(self),
+            *zxdg_imported_v2_interface, wl_proxy_get_version(self),
             null, handle);
         return cast(*zxdg_imported_v2) ret;
     }
@@ -84,24 +84,24 @@ zxdg_exported_v2 :: struct {
     _interface_ :: *zxdg_exported_v2_interface;
 
     set_user_data :: inline (self: *zxdg_exported_v2, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *zxdg_exported_v2) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *zxdg_exported_v2) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *zxdg_exported_v2) #c_call {
-        wl_proxy.marshal(self, ZXDG_EXPORTED_V2_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, ZXDG_EXPORTED_V2_DESTROY);
+        wl_proxy_destroy(self);
     }
 
     add_listener :: inline (self: *zxdg_exported_v2, listener: *zxdg_exported_v2_listener, data: *void) -> s32 #c_call {
-        return wl_proxy.add_listener(self, cast(*generic_c_call) listener, data);
+        return wl_proxy_add_listener(self, cast(*generic_c_call) listener, data);
     }
 }
 
@@ -128,29 +128,29 @@ zxdg_imported_v2 :: struct {
     error_invalid_surface : u32 : 0;
 
     set_user_data :: inline (self: *zxdg_imported_v2, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *zxdg_imported_v2) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *zxdg_imported_v2) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *zxdg_imported_v2) #c_call {
-        wl_proxy.marshal(self, ZXDG_IMPORTED_V2_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, ZXDG_IMPORTED_V2_DESTROY);
+        wl_proxy_destroy(self);
     }
 
     set_parent_of :: inline (self: *zxdg_imported_v2, surface: *wl_surface) #c_call {
-        wl_proxy.marshal(self, ZXDG_IMPORTED_V2_SET_PARENT_OF,
+        wl_proxy_marshal(self, ZXDG_IMPORTED_V2_SET_PARENT_OF,
             surface);
     }
 
     add_listener :: inline (self: *zxdg_imported_v2, listener: *zxdg_imported_v2_listener, data: *void) -> s32 #c_call {
-        return wl_proxy.add_listener(self, cast(*generic_c_call) listener, data);
+        return wl_proxy_add_listener(self, cast(*generic_c_call) listener, data);
     }
 }
 

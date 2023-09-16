@@ -15,20 +15,6 @@ wl_interface :: struct {
     events: *wl_message;
 }
 
-#load "list.jai";
-wl_list_init :: (list: *wl_list) #foreign libwayland_client;
-wl_list_insert :: (list: *wl_list, elm: *wl_list) #foreign libwayland_client;
-wl_list_remove :: (list: *wl_list) #foreign libwayland_client;
-wl_list_length :: (list: *wl_list) -> s32 #foreign libwayland_client;
-wl_list_empty :: (list: *wl_list) -> s32 #foreign libwayland_client;
-wl_list_insert_list :: (list: *wl_list, other: *wl_list) #foreign libwayland_client;
-
-#load "array.jai";
-wl_array_init :: (array: *wl_array) #foreign libwayland_client;
-wl_array_release :: (array: *wl_array) #foreign libwayland_client;
-wl_array_add :: (array: *wl_array, size: size_t) -> *void #foreign libwayland_client;
-wl_array_copy :: (array: *wl_array, source: *wl_array) -> s32 #foreign libwayland_client;
-
 wl_fixed_t :: s32;
 
 wl_fixed_to_double :: inline (f: wl_fixed_t) -> float64 #c_call {
@@ -87,3 +73,6 @@ wl_max :: (a: $T, b: T) -> T #c_call {
     if a > b return a;
     return b;
 }
+
+#load "list.jai";
+#load "array.jai";
