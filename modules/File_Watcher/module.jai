@@ -122,6 +122,22 @@ add_directories :: (using watcher: *$T/File_Watcher, dir_paths: ..string) -> boo
     }
 }
 
+add_single_directory :: (using watcher: *$T/File_Watcher, path: string, recursive := false) -> bool {
+    assert(callback != null, "You must call init() on the File_Watcher before add_directories()!");
+    #if OS == .WINDOWS {
+        return add_directories_windows(watcher, path);
+    } else #if OS == .LINUX {
+        if recursive then return add_directories_linux(watcher, path);
+        else              return add_single_directory_linux(watcher, path);
+    } else #if OS == .MACOS {
+        return add_directories_macos(watcher, path);
+    } else #if OS == .PS5 {
+        return false;
+    } else {
+        assert(false);
+    }
+}
+
 deinit :: (using watcher: $T/File_Watcher) {
     #if OS == .WINDOWS {
         for directories {
