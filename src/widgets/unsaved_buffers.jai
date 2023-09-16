@@ -32,6 +32,15 @@ close_unsaved_buffers_dialog :: () {
 
 unsaved_buffers_save_all :: () {
     errors_when_saving := false;
+
+    /*
+     * When using the built-in save file dialog this loop doesn't make sense - it is written
+     * assuming the save dialog runs synchronously (like it does on Windows at this time).
+     * When it runs asynchronously there's no easy way to "bounce" back-and-forth between
+     * this widget and the save file/confirm overwrite dialogs.
+     *
+     * TODO: Rethink how this works
+     */
     for buffer_id : unsaved_buffers_dialog.modified_buffers {
         buffer := *open_buffers[buffer_id];
         saved := save_buffer_to_disk(buffer, buffer_id);

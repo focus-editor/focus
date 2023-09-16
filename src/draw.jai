@@ -61,12 +61,12 @@ draw_frame :: () {
 
     if active_global_widget == {
         case .open_file_dialog;         draw_open_file_dialog();
-        case .save_file_dialog;         draw_save_file_dialog();
         case .delete_file_dialog;       draw_delete_file_dialog();
         case .finder;                   draw_finder();
         case .go_to_line_dialog;        draw_go_to_line_dialog(active_pane_rect);
         case .open_project_dialog;      draw_open_project_dialog();
         case .unsaved_buffers_dialog;   draw_unsaved_buffers_dialog();
+        case .confirm_overwrite_dialog; draw_confirm_overwrite_dialog();
         case .commands_dialog;          draw_commands_dialog();
     }
 
@@ -1419,45 +1419,6 @@ draw_splitter :: (splitter_rect: Rect, split_x: float, ui_id: Ui_Id) {
     draw_rect(rect, color);
 }
 
-draw_save_file_dialog :: () {
-    using save_file_dialog;
-
-    ui_id := Ui_Id.save_file_dialog;
-
-    if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
-        // Close the dialog on clicks elsewhere
-        hide_save_file_dialog();
-        return;
-    }
-
-    margin  := floor(12 * dpi_scale);
-    padding := floor( 4 * dpi_scale);
-    input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
-    entry_height := font_ui_line_height + padding * 2;
-
-    // Figure out the dialog box size
-    box_rect: Rect = ---;
-    {
-        if width_percentage != width_anim.target {
-            width_percentage = get_animation_value(width_anim);
-            redraw_requested = true;
-        }
-        width  := floor(clamp(screen.w * width_percentage, 400 * dpi_scale, 2000 * dpi_scale));
-        height := floor(clamp(input_rect_height + entry_height * 1/*entries.filtered.count*/ + padding, 0, screen.h / 1.5));
-        x := floor((screen.w - width) / 2);
-        y := floor(clamp(100 * dpi_scale, 0, (screen.h - height) / 2));
-        box_rect = make_rect(x, screen.h - height - y, width, height);
-        if !is_valid(box_rect) return;
-    }
-    draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT, radius = rounding_radius_large);
-
-    // Draw the filter input
-    input_rect, files_rect := cut_top(box_rect, input_rect_height);
-    input_rect = shrink(input_rect, margin);
-    input_id := get_ui_id_from_loc(parent_id = ui_id);
-    draw_text_input(*save_file_dialog.input, input_rect, ui_id = input_id, active = true, label = "Path");
-}
-
 draw_open_file_dialog :: () {
     using open_file_dialog;
 
@@ -2227,6 +2188,99 @@ draw_unsaved_buffers_dialog :: () {
         save_label := ifx unsaved_buffers.count == 1 then "    Save    " else "  Save All  ";
         activated, width = draw_button(font_ui, save_label, Colors.UI_WARNING, Colors.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
         if activated unsaved_buffers_save_all();
+    }
+
+    if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
+        // Close the dialog on clicks elsewhere
+        close_unsaved_buffers_dialog();
+        return;
+    }
+}
+
+draw_confirm_overwrite_dialog :: () {
+    ui_id := Ui_Id.confirm_overwrite;
+
+    additional_message := "Please confirm that you want to overwrite the following file:";
+
+    margin  := floor(12 * dpi_scale);
+    padding := floor( 4 * dpi_scale);
+    entry_height  := font_ui_line_height + padding * 2;
+    button_height := font_ui_medium_line_height + 2 * padding;
+    header_height := font_ui_medium_line_height + 2 * margin + 4 * dpi_scale;
+
+    box_rect := Rect.{
+        w = floor(clamp(screen.w * 0.3, 600 * dpi_scale, 1500 * dpi_scale)),
+        h = header_height + (entry_height + margin / 2) + margin + padding + button_height + margin,
+    };
+    if additional_message then box_rect.h += entry_height + margin;
+    box_rect.x = floor((screen.w - box_rect.w) / 2);
+    box_rect.y = screen.h - box_rect.h - floor(clamp(100 * dpi_scale, 0, (screen.h - box_rect.h) / 2));
+
+    maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
+
+    draw_rounded_rect_with_shadow(box_rect, Colors.BACKGROUND_LIGHT);
+
+    header_rect, buffers_rect := cut_top(box_rect, header_height);
+    buffers_rect = shrink(buffers_rect, margin);
+
+    // Header
+    {
+        push_scissor(header_rect);
+        defer pop_scissor();
+
+        draw_rounded_rect_with_corners(header_rect, Colors.BACKGROUND_BRIGHT, tl = .in, tr = .in, br = .none, bl = .none);
+
+        pen_x := cast(s32) (header_rect.x + 2 * margin);
+        pen_y := cast(s32) (header_rect.y + (header_rect.h - font_ui_medium.character_height) / 2 + 2);
+        header_text := "Overwrite file?";
+        Simp.draw_text(font_ui_medium, pen_x, pen_y, header_text, Colors.UI_DEFAULT);
+
+        hr := cut_bottom(header_rect, 1);
+        draw_rect(hr, Colors.BACKGROUND_DARK);
+    }
+
+    // Message
+    {
+        push_scissor(buffers_rect);
+        defer pop_scissor();
+
+        entry_rect := cut_top(buffers_rect, entry_height);
+
+        if additional_message {
+            Simp.draw_text(
+                font_ui,
+                xx (entry_rect.x + margin),
+                xx (entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale),
+                additional_message,
+                Colors.UI_DEFAULT,
+            );
+            entry_rect.y -= entry_rect.h + margin;
+        }
+
+        // TODO: draw file name
+        // file_name_font := ifx bold then font_ui_bold else font_ui;
+        width := xx Simp.prepare_text(font_ui_bold, confirm_overwrite_dialog.path);
+        Simp.draw_prepared_text(
+            font_ui_bold,
+            xx (entry_rect.x + margin),
+            xx (entry_rect.y + (entry_rect.h + font_ui_bold.character_height) / 2 + 2 * dpi_scale),
+            color = Colors.UI_WARNING);
+    }
+
+    // Buttons
+    {
+        buttons_row_rect := cut_bottom(buffers_rect, button_height);
+
+        cancel_button, dont_save_button, save_all_button: Rect;
+
+        activated, width := draw_button(font_ui, "Cancel", Colors.UI_NEUTRAL, Colors.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
+        if activated close_unsaved_buffers_dialog();
+
+        buttons_row_rect.w -= width + margin;
+
+        save_label := "Overwrite";
+        activated, width = draw_button(font_ui, save_label, Colors.UI_WARNING, Colors.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
+        if activated confirm_overwrite_dialog_proceed();
     }
 
     if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
@@ -3066,7 +3120,7 @@ Ui_Id :: enum s64 {
     commands_dialog     :: -11;
     open_project_dialog :: -12;
     delete_file_dialog  :: -13;
-    save_file_dialog    :: -14;
+    confirm_overwrite   :: -14;
 
     // The rest will be derived from loc
 }
