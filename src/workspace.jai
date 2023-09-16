@@ -302,7 +302,7 @@ start_watching_file :: (file_path: string) {
     if !array_find(watch_dirs, parent_dir) {
         parent_dir = copy_string(parent_dir);
         array_add(*watch_dirs, parent_dir);
-        add_directories(*file_watcher, parent_dir);
+        add_single_directory(*file_watcher, parent_dir);
     }
     full_path, success := get_absolute_path(file_path);
     if !success {
@@ -406,7 +406,7 @@ start_file_watcher :: () {
             remove it;
             continue;
         }
-        add_directories(*file_watcher, it);
+        add_single_directory(*file_watcher, it);
     }
 }
 
