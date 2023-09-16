@@ -240,11 +240,11 @@ main :: () {
                     case .editors;                  handled = editors_handle_event(event);
                     case .finder;                   handled = finder_handle_event(event);
                     case .open_file_dialog;         handled = open_file_dialog_handle_event(event);
-                    case .save_file_dialog;         handled = save_file_dialog_handle_event(event);
                     case .delete_file_dialog;       handled = delete_file_dialog_handle_event(event);
                     case .go_to_line_dialog;        handled = go_to_line_dialog_handle_event(event);
                     case .open_project_dialog;      handled = open_project_dialog_handle_event(event);
                     case .unsaved_buffers_dialog;   handled = unsaved_buffers_dialog_handle_event(event);
+                    case .confirm_overwrite_dialog; handled = confirm_overwrite_dialog_handle_event(event);
                     case .commands_dialog;          handled = commands_dialog_handle_event(event);
                 }
             }
@@ -689,12 +689,12 @@ active_global_widget: enum {
     editors;
     finder;
     open_file_dialog;
-    save_file_dialog;
     delete_file_dialog;
     go_to_line_dialog;
     commands_dialog;
     open_project_dialog;
     unsaved_buffers_dialog;
+    confirm_overwrite_dialog;
 } = .editors;
 
 Project_Dir :: struct {
@@ -733,13 +733,13 @@ dont_ignore_next_window_resize := false;
 
 #load "widgets/text_input.jai";
 #load "widgets/open_file_dialog.jai";
-#load "widgets/save_file_dialog.jai";
 #load "widgets/delete_file_dialog.jai";
 #load "widgets/go_to_line_dialog.jai";
 #load "widgets/finder.jai";
 #load "widgets/unsaved_buffers.jai";
 #load "widgets/commands.jai";
 #load "widgets/open_project.jai";
+#load "widgets/confirm_overwrite.jai";
 
 #load "langs/jai.jai";
 #load "langs/c.jai";

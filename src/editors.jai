@@ -1455,41 +1455,18 @@ save_buffer :: (editor: *Editor, buffer: *Buffer, save_new_file := false) {
         session_notify_modified_buffer(editor.buffer_id);
     }
 
-// @cleanup: revisit and fix code duplication
-#if OS != .WINDOWS {
-    if !buffer.readonly {
+    #if OS != .WINDOWS {
+        if buffer.readonly return;
         if save_new_file {
-            show_save_file_dialog(buffer, editor.buffer_id, save_new_file);
+            show_open_file_dialog(.save_as, buffer, editor.buffer_id);
         } else {
-            if !buffer.has_file {
-                show_save_file_dialog(buffer, editor.buffer_id, save_new_file);
-            } else {
-                using buffer;
-
-                if config.settings.strip_trailing_whitespace_on_save then strip_trailing_whitespace(buffer, editor.buffer_id);
-
-                success := write_entire_file(file.full_path, to_string(bytes));
-                if success {
-                    modified = false;
-                    modified_on_disk = false;
-                    deleted = false;
-
-                    meow_hash = calculate_hash(bytes);
-
-                    error_when_saving = false;
-                    crlf = false;
-                } else {
-                    error_when_saving = true;
-                }
-                remember_last_modtime_and_size(buffer);
-                update_window_title(open_editors[editors.active].buffer_id);
-            }
+            if !buffer.has_file show_open_file_dialog(.save, buffer, editor.buffer_id);
+            else                save_buffer_to_disk(buffer, editor.buffer_id);
         }
+    } else {
+        if save_new_file then save_buffer_to_new_file_on_disk(buffer, editor.buffer_id);
+        else                  save_buffer_to_disk(buffer, editor.buffer_id);
     }
-} else {
-    if save_new_file then save_buffer_to_new_file_on_disk(buffer, editor.buffer_id);
-    else                  save_buffer_to_disk(buffer, editor.buffer_id);
-}
 }
 
 save_all :: (editor: *Editor, buffer: *Buffer) {
