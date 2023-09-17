@@ -1028,6 +1028,18 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
             case "m";   #through;
             case "mm";
                 buffer.lang = .C;
+
+            case "html"; #through;
+            case "htm"; #through;
+            case "xhtml";
+                buffer.lang = .Html;
+
+            case "xml"; #through;
+            case "svg"; #through;
+            case "vcproj"; #through;
+            case "vcxproj"; #through;
+            case "csproj";
+                buffer.lang = .Xml;
         }
     }
 

@@ -429,6 +429,8 @@ recalculate_colors :: (buffer: *Buffer) {
         case .Worklog;      highlight_worklog(buffer);
         case .Python;       highlight_python_syntax(buffer);
         case .RenPy;        highlight_renpy_syntax(buffer);
+        case .Html;         #through;
+        case .Xml;          highlight_xml_syntax(buffer);
     }
 }
 
@@ -439,6 +441,8 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
         case .C;            return tokenize_c_for_indentation(buffer);
         case .CSharp;       return tokenize_csharp_for_indentation(buffer);
         case .Glsl;         return tokenize_glsl_for_indentation(buffer);
+        case .Html;         #through;
+        case .Xml;          return tokenize_xml_for_indentation(buffer);
     }
 
     return .[];
@@ -1174,6 +1178,8 @@ Buffer :: struct {
         Worklog;
         Python;
         RenPy;
+        Xml;
+        Html;
     } = .Plain_Text;
 
     Edit_Group :: struct {
