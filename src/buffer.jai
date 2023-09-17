@@ -551,7 +551,7 @@ save_buffer_to_new_file_on_disk :: (buffer: *Buffer, buffer_id: s64, path := "")
     success: bool;
 
     if !path {
-        file_path, success := platform_get_save_file_name(get_buffer_name(buffer));
+        file_path, success = platform_get_save_file_name(get_buffer_name(buffer));
         if !(success && file_path) {
             return false;
         }
@@ -597,7 +597,7 @@ save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64, path := "") -> sa
         success: bool;
 
         if !path {
-            file_path, success := platform_get_save_file_name(get_buffer_name(buffer));
+            file_path, success = platform_get_save_file_name(get_buffer_name(buffer));
             if !(success && file_path) {
                 return false;
             }
