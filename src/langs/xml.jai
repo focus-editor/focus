@@ -33,11 +33,15 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
             case .tag_delimiter_end; {
                 is_void_element := tokenizer.last_token.type == .tag_delimiter_end_slash;
 
-                if !is_void_element && tokenizer.html_mode {
-                    for element: HTML_VOID_ELEMENTS {
-                        if equal_nocase(tokenizer.parent_tag_name, element) {
-                            is_void_element = true;
-                            break;
+                if tokenizer.html_mode {
+                    if tokenizer.parent_tag_name[0] == #char "!" { // Treat tag names starting with ! (such as !DOCTYPE) as void elements.
+                        is_void_element = true;
+                    } else {
+                        for element: HTML_VOID_ELEMENTS {
+                            if equal_nocase(tokenizer.parent_tag_name, element) {
+                                is_void_element = true;
+                                break;
+                            }
                         }
                     }
                 }
@@ -48,9 +52,21 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
                 }
             }
 
-            case .text;  token.type = .unimportant;
-            case .eof;   token.type = .eof;  // to guarantee we always have indentation tokens
-            case;        token.type = .unimportant;
+            case .xml_declaration_start; #through;
+            case .cdata_start; {
+                token.type = .open;
+                token.kind = .brace;
+            }
+
+            case .xml_declaration_end; #through;
+            case .cdata_end; {
+                token.type = .close;
+                token.kind = .brace;
+            }
+
+            case .comment;  token.type = .maybe_multiline;
+            case .eof;      token.type = .eof;  // to guarantee we always have indentation tokens
+            case;           token.type = .unimportant;
         }
 
         tokenizer.last_token = src;
@@ -95,41 +111,63 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     // Look at the first char as if it's ASCII (if it isn't, this is just a text line)
     char := << t;
 
-    if char == {
-        case #char "<"; {
-            if at_string(tokenizer, "<?") {
-                parse_schema(tokenizer, *token);
-            } else if at_string(tokenizer, "<!--") {
-                parse_comment(tokenizer, *token);
-            } else {
-                token.type = .tag_delimiter_start;
+    if last_token.type == .cdata_start {
+        parse_cdata(tokenizer, *token);
+    } else {
+        if char == {
+            case #char "<"; {
+                if at_string(tokenizer, "<?xml") {
+                    token.type = .xml_declaration_start;
+                    t += 5;
+                } else if at_string(tokenizer, "<!--") {
+                    parse_comment(tokenizer, *token);
+                } else if at_string(tokenizer, "<![CDATA[") {
+                    token.type = .cdata_start;
+                    t += 9;
+                } else {
+                    token.type = .tag_delimiter_start;
+                    t += 1;
+                }
+            }
+
+            case #char ">"; {
+                token.type = .tag_delimiter_end;
                 t += 1;
             }
-        }
 
-        case #char ">"; {
-            token.type = .tag_delimiter_end;
-            t += 1;
-        }
-
-        case #char "/"; {
-            if inside_tag {
-                token.type = .tag_delimiter_end_slash;
-                t += 1;
+            case #char "/"; {
+                if parsing_tag {
+                    token.type = .tag_delimiter_end_slash;
+                    t += 1;
+                }
             }
-        }
 
-        case #char "="; {
-            if inside_tag {
-                token.type = .attribute_equals;
-                t += 1;
+            case #char "="; {
+                if parsing_tag || parsing_xml_declaration {
+                    token.type = .attribute_equals;
+                    t += 1;
+                }
             }
-        }
 
-        // We could have a 'standalone' string value in an element like DOCTYPE.
-        case #char "'"; #through;
-        case #char "\""; {
-            if inside_tag  parse_attribute_value(tokenizer, *token);
+            case #char "?"; {
+                if parsing_xml_declaration && at_string(tokenizer, "?>") {
+                    token.type = .xml_declaration_end;
+                    t += 2;
+                }
+            }
+
+            case #char "]"; {
+                if parsing_cdata && at_string(tokenizer, "]]>") {
+                    token.type = .cdata_end;
+                    t += 3;
+                }
+            }
+
+            // We could have a 'standalone' string value in an element like DOCTYPE.
+            case #char "'"; #through;
+            case #char "\""; {
+                if parsing_tag  parse_attribute_value(tokenizer, *token);
+            }
         }
     }
 
@@ -138,6 +176,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
             case .tag_delimiter_start; #through;
             case .tag_delimiter_end_slash;  parse_tag_name(tokenizer, *token);
 
+            case .xml_declaration_start; #through;
             case .tag_name; #through;
             case .attribute_name; #through;
             case .attribute_value; #through;
@@ -146,7 +185,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
             case .attribute_equals;         parse_attribute_value(tokenizer, *token);
 
             case; {
-                if !inside_tag  parse_text(tokenizer, *token);
+                if !parsing_tag  parse_text(tokenizer, *token);
             }
         }
     }
@@ -155,21 +194,20 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     token.len = cast(s32) (t - start_t);
 
     if token.type == {
-        case .tag_delimiter_start;  inside_tag = true;
-        case .tag_delimiter_end;    inside_tag = false;
+        case .xml_declaration_start; parsing_xml_declaration = true;
+        case .xml_declaration_end;   parsing_xml_declaration = false;
+
+        case .tag_delimiter_start;  parsing_tag = true;
+        case .tag_delimiter_end;    parsing_tag = false;
         case .tag_name; {
             parent_tag_name.data  = buf.data + token.start;
             parent_tag_name.count = token.len;
         }
+        case .cdata_start;          parsing_cdata = true;
+        case .cdata_end;            parsing_cdata = false;
     }
 
     return token;
-}
-
-parse_schema :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .schema;
-    t += 2;
-    if eat_until(tokenizer, "?>")  t += 2;
 }
 
 parse_comment :: (using tokenizer: *Tokenizer, token: *Token) {
@@ -231,6 +269,11 @@ parse_text :: (using tokenizer: *Tokenizer, token: *Token) {
     eat_until(tokenizer, #char "<");
 }
 
+parse_cdata :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .cdata_content;
+    eat_until(tokenizer, "]]>");
+}
+
 at_string :: (using tokenizer: *Tokenizer, s: string) -> bool {
     if t < max_t - s.count + 1 {
         for 0..s.count-1 {
@@ -260,6 +303,7 @@ eat_until :: (using tokenizer: *Tokenizer, s: string) -> bool {
         t += 1;
     }
 
+    t = max_t;
     return false;
 }
 
@@ -282,7 +326,9 @@ Tokenizer :: struct {
     start_t: *u8;  // cursor when starting parsing new token
     t:       *u8;  // cursor
 
-    inside_tag: bool;
+    parsing_tag: bool;
+    parsing_cdata: bool;
+    parsing_xml_declaration: bool;
     parent_tag_name: string;
     last_token: Token;
 
@@ -300,7 +346,8 @@ Token :: struct {
         default;
         comment;
 
-        schema;
+        xml_declaration_start;
+        xml_declaration_end;
         tag_delimiter_start;
         tag_delimiter_end;
         tag_delimiter_end_slash;
@@ -309,6 +356,9 @@ Token :: struct {
         attribute_value;
         attribute_string_value;
         attribute_equals;
+        cdata_start;
+        cdata_end;
+        cdata_content;
         text;
     }
 }
@@ -321,15 +371,19 @@ COLOR_MAP :: Code_Color.[
     .DEFAULT,  // default
     .COMMENT,  // comment
 
-    .COMMENT,  // schema
-    .DEFAULT,  // tag_delimiter_start
-    .DEFAULT,  // tag_delimiter_end
-    .DEFAULT,  // tag_delimiter_end_slash
+    .COMMENT,  // xml_declaration_start
+    .COMMENT,  // xml_declaration_end
+    .FUNCTION, // tag_delimiter_start
+    .FUNCTION, // tag_delimiter_end
+    .FUNCTION, // tag_delimiter_end_slash
     .FUNCTION, // tag_name
-    .TYPE,  // attribute_name
+    .TYPE,     // attribute_name
     .VALUE,    // attribute_value
     .STRING,   // attribute_string_value
     .DEFAULT,  // attribute_equals
+    .KEYWORD,  // cdata_start
+    .KEYWORD,  // cdata_end
+    .VALUE,    // cdata_content
     .DEFAULT   // text
 ];
 
@@ -351,5 +405,4 @@ HTML_VOID_ELEMENTS :: string.[
     "source",
     "track",
     "wbr",
-    "!doctype" // Not officially a void element, but we can treat it as such.
 ];
