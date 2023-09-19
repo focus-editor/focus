@@ -253,17 +253,19 @@ MyWindowProc :: (hwnd: HWND, message: u32,
           case WM_LBUTTONDOWN; #through;
           case WM_LBUTTONUP;
             maybe_send_vkey_event(VK_LBUTTON, message == WM_LBUTTONDOWN);
-
-            if message == WM_LBUTTONDOWN SetCapture(hwnd);
-            else ReleaseCapture();
+            if message == WM_LBUTTONDOWN SetCapture(hwnd); else ReleaseCapture();
 
           case WM_RBUTTONDOWN; #through;
           case WM_RBUTTONUP;
             maybe_send_vkey_event(VK_RBUTTON, message == WM_RBUTTONDOWN);
+            if message == WM_RBUTTONDOWN SetCapture(hwnd); else ReleaseCapture();
+
 
          case WM_MBUTTONDOWN; #through;
          case WM_MBUTTONUP;
             maybe_send_vkey_event(VK_MBUTTON, message == WM_MBUTTONDOWN);
+            if message == WM_MBUTTONDOWN SetCapture(hwnd); else ReleaseCapture();
+
 
           case WM_MOUSEMOVE;
             // We don't have mouse move events yet, but we'll record the delta.
