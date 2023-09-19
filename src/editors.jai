@@ -175,7 +175,8 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .scroll_viewport_down_fast;        smooth_scroll(editor, direction = .down, fast = true);  activate_hold_action(action, event);
         case .scroll_viewport_left;             smooth_scroll(editor, direction = .left, fast = true);  activate_hold_action(action, event);
         case .scroll_viewport_right;            smooth_scroll(editor, direction = .right, fast = true); activate_hold_action(action, event);
-        case .select_all;                       select_all                          (editor, buffer); keep_selection = true;
+        case .swap_selections;                  swap_selections                     (editor, buffer);         keep_selection = true;
+        case .select_all;                       select_all                          (editor, buffer);         keep_selection = true;
         case .create_cursor_above;              create_cursor                       (editor, buffer, .above); keep_selection = true;
         case .create_cursor_below;              create_cursor                       (editor, buffer, .below); keep_selection = true;
 
@@ -2397,6 +2398,33 @@ add_cursors_to_line_starts :: (editor: *Editor, buffer: Buffer) {
 add_cursors_to_line_ends :: (editor: *Editor, buffer: Buffer) {
     add_cursors_to_line_starts(editor, buffer);
     move_cursors_end(editor, buffer);
+}
+
+swap_selections :: (editor: *Editor, buffer: *Buffer) {
+    if editor.cursors.count != 2 return;
+
+    string0     := copy_temporary_string(get_selected_string(editor.cursors[0], buffer));
+    string1     := copy_temporary_string(get_selected_string(editor.cursors[1], buffer));
+
+    string_dif  := string0.count - string1.count;
+
+    selection0  := get_selection(editor.cursors[0]);
+    selection1  := get_selection(editor.cursors[1]);
+
+    pos_offset0 := selection0.start - editor.cursors[0].pos;
+    sel_offset0 := selection0.start - editor.cursors[0].sel;
+
+    pos_offset1 := selection1.start - editor.cursors[1].pos;
+    sel_offset1 := selection1.start - editor.cursors[1].sel;
+    
+    replace_range(buffer, selection1, string0);
+    replace_range(buffer, selection0, string1);
+
+    editor.cursors[0].pos = selection0.start - pos_offset1;
+    editor.cursors[0].sel = selection0.start - sel_offset1;
+
+    editor.cursors[1].pos = selection1.start - pos_offset0 - xx string_dif;
+    editor.cursors[1].sel = selection1.start - sel_offset0 - xx string_dif;
 }
 
 select_all :: (editor: *Editor, buffer: Buffer) {

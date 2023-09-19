@@ -217,6 +217,7 @@ Ctrl-Shift-Z                redo
 
 Ctrl-D                      select_word
 Ctrl-A                      select_all
+Alt-S                       swap_selections
 
 Ctrl-W                      close_current_editor
 Ctrl-Shift-W                close_other_editor
