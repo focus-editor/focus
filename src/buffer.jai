@@ -100,6 +100,17 @@ get_char_at_offset :: (using buffer: Buffer, offset: s32) -> u32 {
     return char;
 }
 
+get_char_at_coords :: (editor: Editor, buffer: Buffer, coords: Coords) -> u32 {
+    closest_offset := coords_to_offset(editor, buffer, coords);
+    closest_coords := offset_to_coords(editor, buffer, closest_offset);
+
+    if coords.line != closest_coords.line  || coords.col != closest_coords.col {
+        return 0;
+    }
+
+    return get_char_at_offset(buffer, closest_offset);
+}
+
 get_char_at_offset_as_string :: (using buffer: Buffer, offset: s32) -> string {
     if offset >= bytes.count return "";
     char: string = ---;

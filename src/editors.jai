@@ -3078,6 +3078,8 @@ Editor :: struct {
     new_cursor_just_created_using_mouse := false;  // useful to know in order to handle select-by-drag and select-word with the new cursor
     last_cursor_created_using_mouse_at: Time;
 
+    initial_middle_mouse_coords: Coords; // used for creating cursors while dragging middle mouse button
+
     scroll_to_cursor: enum u8 { no; yes; yes_new_editor; }  // trigger a scroll so that the cursor is in the center vertically
 
     highlights: [..] Text_Highlight;

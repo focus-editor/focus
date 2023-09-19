@@ -9,7 +9,7 @@ draw_frame :: () {
 
 
     // Check whether we need to deactivate elements before drawing
-    if !mouse.left.is_down || mouse.left.just_released then ui.active = .none;
+    if (!mouse.left.is_down || mouse.left.just_released) && (!mouse.middle.is_down || mouse.middle.just_released) then ui.active = .none;
 
     footer_height := font_ui_line_height * 1.6;
 
@@ -73,7 +73,7 @@ draw_frame :: () {
     draw_user_messages(screen, footer_height);
 
     // Reset UI state after drawing
-    if !mouse.left.is_down || mouse.left.just_released {
+    if (!mouse.left.is_down || mouse.left.just_released) && (!mouse.middle.is_down || mouse.middle.just_released) {
         ui.active = .none;
     } else if ui.active == .none {
         ui.active = .unavailable;  // so that we don't activate anything by dragging on it
@@ -329,18 +329,21 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         redraw_requested = true;
     }
 
-    if ui.active == ui_id && (mouse.left.just_pressed || mouse.left.is_dragging) {
-        // Calculate the position of the mouse
+    coords_from_mouse_position :: () -> Coords #expand {
         pointer := snap_to_rect(mouse.pointer, rect);  // when we drag outside the editor we still want to interact
         mouse_pos := pointer - bottom_left(rect) - text_offset;
         mouse_pos.x += viewport.left;
         mouse_pos.y = rect.h - mouse_pos.y + viewport.top - ifx dpi_scale > 1.0 then 1 else 0;
-        coords := Coords.{ line = xx (mouse_pos.y / line_height), col = xx ((mouse_pos.x / char_x_advance) + 0.5) };
+        return .{ line = xx (mouse_pos.y / line_height), col = xx ((mouse_pos.x / char_x_advance) + 0.5) };
+    }
+
+    if ui.active == ui_id && (mouse.left.just_pressed || mouse.left.is_dragging) {
+        mouse_coords := coords_from_mouse_position();
 
         cursors_stop_blinking();
 
         if ctrl_or_cmd_pressed() && !(mouse.left.is_dragging || mouse.left.just_double_clicked || mouse.left.just_triple_clicked) {
-            click_offset := coords_to_offset(editor, buffer, coords);
+            click_offset := coords_to_offset(editor, buffer, mouse_coords);
 
             // Maybe delete a cursor if we clicked on an existing one
             deleted_cursor := false;
@@ -380,7 +383,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 cursor = leave_only_original_cursor(editor);
             }
 
-            cursor.pos = coords_to_offset(editor, buffer, coords);
+            cursor.pos = coords_to_offset(editor, buffer, mouse_coords);
             cursor.col_wanted = -1;
 
             if selection_mode.type == {
@@ -444,8 +447,85 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // Activate editor
         make_editor_active(editor_id);
         if mouse.left.just_pressed then redraw_requested = true;  // so that we don't draw 2 active editors
+    } else if ui.active == ui_id && (mouse.middle.just_pressed || mouse.middle.is_dragging) && config.settings.create_cursors_with_middle_mouse_button {
+        mouse_coords := coords_from_mouse_position();
+
+        cursors_stop_blinking();
+
+        // Remove all cursors except the main one
+        main_cursor := leave_only_main_cursor(editor);
+
+        if mouse.middle.just_pressed {
+            // Move main cursor to mouse_coords
+            main_cursor.pos = coords_to_offset(editor, buffer, mouse_coords);
+            main_cursor.sel = main_cursor.pos;
+
+            initial_middle_mouse_coords = mouse_coords;
+        } else if mouse.middle.is_dragging {
+            // Move main cursor to initial_middle_mouse_coords
+            main_cursor.pos = coords_to_offset(editor, buffer, initial_middle_mouse_coords);
+            main_cursor.sel = main_cursor.pos;
+
+            // Check if we need to select some lines
+            select_some_lines: bool;
+        
+            min_line_number := min(mouse_coords.line, initial_middle_mouse_coords.line);
+            max_line_number := max(mouse_coords.line, initial_middle_mouse_coords.line);
+    
+            for min_line_number..max_line_number {
+                if get_char_at_coords(editor, buffer, .{ it, min(mouse_coords.col, initial_middle_mouse_coords.col) }) {
+                    select_some_lines = true;
+                    break;
+                }
+            }
+
+            if !select_some_lines {
+                // If there is no line to select we add a cursor at the end of each line
+                for min_line_number..max_line_number {
+                    if it == mouse_coords.line continue;
+                    cursor := array_add(*editor.cursors);
+                    cursor.pos = get_line_end_offset(editor, buffer, it);
+                    cursor.sel = cursor.pos;
+                }
+            } else {
+                main_cursor_already_moved: bool;
+                maybe_create_cursor_or_move_main_cursor_to_this_line :: () #expand {
+                    if !get_char_at_coords(editor, buffer, .{ `it, min(mouse_coords.col, initial_middle_mouse_coords.col) }) return;
+
+                    cursor: Cursor;
+                    cursor.pos = coords_to_offset(editor, buffer, .{ `it, mouse_coords.col });
+                    cursor.sel = coords_to_offset(editor, buffer, .{ `it, initial_middle_mouse_coords.col });
+
+                    if !main_cursor_already_moved {
+                        main_cursor_already_moved = true;
+
+                        // This condition only occur one time before we add any other cursor
+                        // so the main_cursor pointer will not be invalidated by 'array_add' 
+                        // and we can use it to set its new position.
+                        main_cursor.* = cursor;
+                    } else {
+                        array_add(*editor.cursors, cursor);
+                    }
+                }
+
+                if mouse_coords.line >= initial_middle_mouse_coords.line {
+                    for   initial_middle_mouse_coords.line..mouse_coords.line  maybe_create_cursor_or_move_main_cursor_to_this_line();
+                } else {
+                    for < initial_middle_mouse_coords.line..mouse_coords.line  maybe_create_cursor_or_move_main_cursor_to_this_line();
+                }
+            }
+
+            organise_cursors(editor);
+        }
+
+        editor.refresh_highlights = true;
+
+        // Activate editor
+        make_editor_active(editor_id);
+        if mouse.middle.just_pressed then redraw_requested = true; // so that we don't draw 2 active editors
     }
-    if !mouse.left.is_down || mouse.left.just_released {
+
+    if (!mouse.left.is_down || mouse.left.just_released) || (!mouse.middle.is_down || mouse.middle.just_released) {
         selection_mode.type = .chars;
         selection_mode.min_range.start = 0;
         selection_mode.min_range.end   = 0;
@@ -3032,7 +3112,7 @@ maybe_set_hot_or_active :: (ui_id: Ui_Id, rect: Rect, pointer_image: Pointer_Ima
 
     ui.hot = ui_id;
     if ui.hot_last_frame == ui_id && ui.active == .none || ui.active == ui_id then set_pointer_image(pointer_image);
-    if ui.hot_last_frame == ui_id && ui.active == .none && mouse.left.just_pressed {
+    if ui.hot_last_frame == ui_id && ui.active == .none && (mouse.left.just_pressed || mouse.middle.just_pressed) {
         ui.active = ui_id;
         return true;
     }
