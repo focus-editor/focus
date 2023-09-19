@@ -292,6 +292,7 @@ ACTIONS_COMMON :: string.[
     "redo",
     "select_word",
     "select_all",
+    "swap_selections",
     "toggle_expand",
     "move_up",
     "move_up_fast",
