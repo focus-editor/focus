@@ -62,7 +62,6 @@ hide_mouse_when_typing:                  true
 highlight_line_with_cursor:              false
 draw_indent_guides:                      false
 auto_surround_with_brackets_and_quotes:  false
-create_cursors_with_middle_mouse_button: false
 
 
 [[keymap]]
