@@ -6,7 +6,6 @@ highlight_xml_syntax :: (using buffer: *Buffer) {
         if token.type == .eof break;
         color := COLOR_MAP[token.type];
         memset(colors.data + token.start, xx color, token.len);
-        tokenizer.last_token = token;
     }
 }
 
@@ -25,23 +24,19 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
 
         if src.type == {
             case .tag_delimiter_start; {
-                is_end_tag := peek_next_token(*tokenizer).type == .tag_delimiter_end_slash;
+                is_end_tag := peek_next_token(*tokenizer).type == .tag_closing_slash;
                 token.type = ifx is_end_tag then .close else .open;
                 token.kind = .brace;
             }
 
             case .tag_delimiter_end; {
-                is_void_element := tokenizer.last_token.type == .tag_delimiter_end_slash;
+                is_void_element := tokenizer.last_token.type == .tag_closing_slash || tokenizer.current_scope_tag_is_known_void_element;
 
-                if tokenizer.html_mode {
-                    if tokenizer.parent_tag_name[0] == #char "!" { // Treat tag names starting with ! (such as !DOCTYPE) as void elements.
-                        is_void_element = true;
-                    } else {
-                        for element: HTML_VOID_ELEMENTS {
-                            if equal_nocase(tokenizer.parent_tag_name, element) {
-                                is_void_element = true;
-                                break;
-                            }
+                if !is_void_element && tokenizer.html_mode && tokenizer.current_scope_tag_name {
+                    for element: HTML_VOID_ELEMENTS {
+                        if equal_nocase(tokenizer.current_scope_tag_name, element) {
+                            is_void_element = true;
+                            break;
                         }
                     }
                 }
@@ -53,12 +48,16 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
             }
 
             case .xml_declaration_start; #through;
+            case .dtd_parenthesis_open; #through;
+            case .dtd_bracket_open; #through;
             case .cdata_start; {
                 token.type = .open;
                 token.kind = .brace;
             }
 
             case .xml_declaration_end; #through;
+            case .dtd_parenthesis_close; #through;
+            case .dtd_bracket_close; #through;
             case .cdata_end; {
                 token.type = .close;
                 token.kind = .brace;
@@ -68,8 +67,6 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
             case .eof;      token.type = .eof;  // to guarantee we always have indentation tokens
             case;           token.type = .unimportant;
         }
-
-        tokenizer.last_token = src;
 
         array_add(*tokens, token);
 
@@ -81,8 +78,8 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
 
 #scope_file
 
-get_tokenizer :: (using buffer: Buffer) -> Tokenizer {
-    tokenizer: Tokenizer;
+get_tokenizer :: (using buffer: Buffer) -> Xml_Tokenizer {
+    tokenizer: Xml_Tokenizer;
 
     tokenizer.buf       = to_string(bytes);
     tokenizer.max_t     = bytes.data + bytes.count;
@@ -92,16 +89,18 @@ get_tokenizer :: (using buffer: Buffer) -> Tokenizer {
     return tokenizer;
 }
 
-peek_next_token :: (using tokenizer: *Tokenizer) -> Token {
-    tokenizer_copy := <<tokenizer;
+peek_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
+    tokenizer_copy := tokenizer.*;
     token := get_next_token(*tokenizer_copy);
     return token;
 }
 
-get_next_token :: (using tokenizer: *Tokenizer) -> Token {
+get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
     eat_white_space(tokenizer);
 
-    token: Token;
+    last_token = current_token;
+
+    token: Xml_Token;
     token.start = cast(s32) (t - buf.data);
     token.type  = .eof;
     if t >= max_t return token;
@@ -109,14 +108,67 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     start_t = t;
 
     // Look at the first char as if it's ASCII (if it isn't, this is just a text line)
-    char := << t;
+    char := t.*;
 
-    if last_token.type == .cdata_start {
-        parse_cdata(tokenizer, *token);
+    if current_scope == .Tag {
+        if char == {
+            case #char ">"; token.type = .tag_delimiter_end;        t += 1;
+            case #char "/"; token.type = .tag_closing_slash;  t += 1;
+            case #char "="; token.type = .attribute_equals;         t += 1;
+            case #char "["; token.type = .dtd_bracket_open;         t += 1;
+            case #char "("; token.type = .dtd_parenthesis_open;     t += 1;
+            case #char ")"; token.type = .dtd_parenthesis_close;    t += 1;
+            case #char ","; token.type = .dtd_comma;                t += 1;
+            case #char "|"; token.type = .dtd_infix_operator;       t += 1;
+
+            case #char "?"; #through;
+            case #char "*"; #through;
+            case #char "+"; token.type = .dtd_postfix_operator;     t += 1;
+
+            case #char "%"; {
+                if t < max_t - 1 && is_whitespace_char(t[1]) {
+                    token.type = .dtd_percent;
+                    t += 1;
+                }
+            }
+
+            case #char "'"; #through;
+            case #char "\""; {
+                parse_attribute_value(tokenizer, *token);
+            }
+
+            case #char "!"; {
+                if last_token.type == .tag_delimiter_start {
+                    token.type = .tag_exclamation_point;
+                    t += 1;
+                }
+            }
+        }
+    } else if current_scope == .Xml_Declaration {
+        if char == {
+            case #char "="; token.type = .attribute_equals;         t += 1;
+
+            case #char "?"; {
+                if at_string(tokenizer, "?>") {
+                    token.type = .xml_declaration_end;
+                    t += 2;
+                }
+            }
+        }
+    } else if current_scope == .Cdata {
+        if at_string(tokenizer, "]]>") {
+            token.type = .cdata_end;
+            t += 3;
+        } else {
+            parse_cdata_content(tokenizer, *token);
+        }
     } else {
+        current_scope_tag_name = "";
+        current_scope_tag_is_known_void_element = false;
+
         if char == {
             case #char "<"; {
-                if at_string(tokenizer, "<?xml") {
+                if at_string(tokenizer, "<?xml", false) {
                     token.type = .xml_declaration_start;
                     t += 5;
                 } else if at_string(tokenizer, "<!--") {
@@ -130,62 +182,35 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
                 }
             }
 
-            case #char ">"; {
-                token.type = .tag_delimiter_end;
-                t += 1;
-            }
-
-            case #char "/"; {
-                if parsing_tag {
-                    token.type = .tag_delimiter_end_slash;
-                    t += 1;
-                }
-            }
-
-            case #char "="; {
-                if parsing_tag || parsing_xml_declaration {
-                    token.type = .attribute_equals;
-                    t += 1;
-                }
-            }
-
-            case #char "?"; {
-                if parsing_xml_declaration && at_string(tokenizer, "?>") {
-                    token.type = .xml_declaration_end;
-                    t += 2;
-                }
-            }
-
-            case #char "]"; {
-                if parsing_cdata && at_string(tokenizer, "]]>") {
-                    token.type = .cdata_end;
-                    t += 3;
-                }
-            }
-
-            // We could have a 'standalone' string value in an element like DOCTYPE.
-            case #char "'"; #through;
-            case #char "\""; {
-                if parsing_tag  parse_attribute_value(tokenizer, *token);
-            }
+            case #char "]"; token.type = .dtd_bracket_close;        t += 1;
         }
     }
 
     if token.type == .eof { // No token found yet.
         if last_token.type == {
             case .tag_delimiter_start; #through;
-            case .tag_delimiter_end_slash;  parse_tag_name(tokenizer, *token);
+            case .tag_exclamation_point; #through;
+            case .tag_closing_slash;
+                parse_tag_name(tokenizer, *token);
 
             case .xml_declaration_start; #through;
             case .tag_name; #through;
             case .attribute_name; #through;
             case .attribute_value; #through;
-            case .attribute_string_value;   parse_attribute_name(tokenizer, *token);
+            case .attribute_string_value; #through;
+            case .dtd_parenthesis_open; #through;
+            case .dtd_parenthesis_close; #through;
+            case .dtd_infix_operator; #through;
+            case .dtd_comma; #through;
+            case .dtd_percent; #through;
+            case .dtd_parameter_entity;
+                parse_attribute_name(tokenizer, *token);
 
-            case .attribute_equals;         parse_attribute_value(tokenizer, *token);
+            case .attribute_equals;
+                parse_attribute_value(tokenizer, *token);
 
             case; {
-                if !parsing_tag  parse_text(tokenizer, *token);
+                parse_tag_content(tokenizer, *token);
             }
         }
     }
@@ -194,71 +219,87 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     token.len = cast(s32) (t - start_t);
 
     if token.type == {
-        case .xml_declaration_start; parsing_xml_declaration = true;
-        case .xml_declaration_end;   parsing_xml_declaration = false;
+        case .xml_declaration_start; current_scope = .Xml_Declaration;
+        case .xml_declaration_end;   current_scope = .None;
 
-        case .tag_delimiter_start;  parsing_tag = true;
-        case .tag_delimiter_end;    parsing_tag = false;
-        case .tag_name; {
-            parent_tag_name.data  = buf.data + token.start;
-            parent_tag_name.count = token.len;
-        }
-        case .cdata_start;          parsing_cdata = true;
-        case .cdata_end;            parsing_cdata = false;
+        case .tag_delimiter_start;   current_scope = .Tag;
+        case .tag_delimiter_end;     current_scope = .None;
+
+        case .cdata_start;           current_scope = .Cdata;
+        case .cdata_end;             current_scope = .None;
+
+        case .dtd_bracket_open;      current_scope = .None;
+        case .dtd_bracket_close;     current_scope = .Tag;
+
+        case .tag_name;
+            assert(current_scope == .Tag);
+            current_scope_tag_name.data  = buf.data + token.start;
+            current_scope_tag_name.count = token.len;
+            last_parsed_tag_name = current_scope_tag_name;
+
+        case .tag_exclamation_point;
+            assert(current_scope == .Tag);
+            current_scope_tag_is_known_void_element = true;
     }
+
+    current_token = token;
 
     return token;
 }
 
-parse_comment :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_comment :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     token.type = .comment;
     t += 4;
     if eat_until(tokenizer, "-->")  t += 3;
 }
 
-parse_tag_name :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_tag_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     token.type = .tag_name;
     t += 1;
     eat_until_any(tokenizer, " />\t\r\n");
 }
 
-parse_attribute_name :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_attribute_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
+    first_character := t.*;
+
     token.type = .attribute_name;
     t += 1;
-    eat_until_any(tokenizer, " =/>\t\r\n");
+    eat_until_any(tokenizer, " ,+?|*=/>()\t\r\n");
+
+    last_character := (t - 1).*;
+
+    if first_character == #char "%" && last_character == #char ";" {
+        token.type = .dtd_parameter_entity;
+    }
 }
 
-parse_attribute_value :: (using tokenizer: *Tokenizer, token: *Token) {
-    if <<t == #char "\"" {
+parse_attribute_value :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
+    char := t.*;
+    if char == #char "\"" || char == #char "'" {
         token.type = .attribute_string_value;
         t += 1;
-        eat_until(tokenizer, #char "\"");
-        t += 1;
-    } else if <<t == #char "'" {
-        token.type = .attribute_string_value;
-        t += 1;
-        eat_until(tokenizer, #char "'");
+        eat_until(tokenizer, char);
         t += 1;
     } else {
         token.type = .attribute_value;
         t += 1;
-        eat_until_any(tokenizer, " />\t\r\n");
+        eat_until_any(tokenizer, " /<>\t\r\n");
     }
 }
 
-parse_text :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .text;
+parse_tag_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
+    token.type = .tag_content;
     t += 1;
 
     if html_mode {
         // Special case raw text elements ('script' and 'style').
-        in_script := parent_tag_name == "script";
-        in_style  := parent_tag_name == "style";
+        in_script := equal_nocase(last_parsed_tag_name, "script");
+        in_style  := equal_nocase(last_parsed_tag_name, "style");
 
         if in_script || in_style {
             while t < max_t {
                 eat_until(tokenizer, "</");
-                if (in_script && at_string(tokenizer, "</script")) || (in_style && at_string(tokenizer, "</style"))  break;
+                if (in_script && at_string(tokenizer, "</script", false)) || (in_style && at_string(tokenizer, "</style", false))  break;
                 t += 1;
             }
 
@@ -269,28 +310,27 @@ parse_text :: (using tokenizer: *Tokenizer, token: *Token) {
     eat_until(tokenizer, #char "<");
 }
 
-parse_cdata :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_cdata_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     token.type = .cdata_content;
     eat_until(tokenizer, "]]>");
 }
 
-at_string :: (using tokenizer: *Tokenizer, s: string) -> bool {
-    if t < max_t - s.count + 1 {
-        for 0..s.count-1 {
-            if t[it] != s[it]  return false;
-        }
-        return true;
-    }
-    return false;
+at_string :: (using tokenizer: *Xml_Tokenizer, a: string, case_sensitive := true) -> bool {
+    if t + a.count - 1 >= max_t  return false;
+    b: string = ---;
+    b.data = t;
+    b.count = a.count;
+    if case_sensitive  return equal(a, b);
+    return equal_nocase(a, b);
 }
 
-eat_until :: (using tokenizer: *Tokenizer, c: u8) {
-    while t < max_t && <<t != c {
+eat_until :: (using tokenizer: *Xml_Tokenizer, c: u8) {
+    while t < max_t && t.* != c {
         t += 1;
     }
 }
 
-eat_until :: (using tokenizer: *Tokenizer, s: string) -> bool {
+eat_until :: (using tokenizer: *Xml_Tokenizer, s: string) -> bool {
     our_max_t := max_t - s.count + 1;
 
     while t < our_max_t {
@@ -307,35 +347,44 @@ eat_until :: (using tokenizer: *Tokenizer, s: string) -> bool {
     return false;
 }
 
-eat_until_any :: (using tokenizer: *Tokenizer, s: string) {
+eat_until_any :: (using tokenizer: *Xml_Tokenizer, s: string) {
     while t < max_t {
-        for c: 0..s.count-1  if <<t == s[c]  return;
+        for c: 0..s.count-1  if t.* == s[c]  return;
         t += 1;
     }
 }
 
-eat_white_space :: (using tokenizer: *Tokenizer) {
-    while t < max_t && is_space(<< t) {
+eat_white_space :: (using tokenizer: *Xml_Tokenizer) {
+    while t < max_t && is_space(t.*) {
         t += 1;
     }
 }
 
-Tokenizer :: struct {
+Xml_Tokenizer :: struct {
     buf:     string;
     max_t:   *u8;
     start_t: *u8;  // cursor when starting parsing new token
     t:       *u8;  // cursor
 
-    parsing_tag: bool;
-    parsing_cdata: bool;
-    parsing_xml_declaration: bool;
-    parent_tag_name: string;
-    last_token: Token;
+    current_token: Xml_Token;
+    last_token: Xml_Token;
+
+    current_scope: Xml_Tokenizer_Scope;
+    current_scope_tag_name: string;                // Only valid when current_scope == .Tag.
+    current_scope_tag_is_known_void_element: bool; // Only valid when current_scope == .Tag.
+    last_parsed_tag_name: string;
 
     html_mode: bool; // If true, we enable some heuristics to improve HTML parsing.
 }
 
-Token :: struct {
+Xml_Tokenizer_Scope :: enum {
+    None;
+    Tag;
+    Xml_Declaration;
+    Cdata;
+}
+
+Xml_Token :: struct {
     start, len: s32;
     type: Type;
 
@@ -350,8 +399,10 @@ Token :: struct {
         xml_declaration_end;
         tag_delimiter_start;
         tag_delimiter_end;
-        tag_delimiter_end_slash;
+        tag_closing_slash;
+        tag_exclamation_point;
         tag_name;
+        tag_content;
         attribute_name;
         attribute_value;
         attribute_string_value;
@@ -359,32 +410,52 @@ Token :: struct {
         cdata_start;
         cdata_end;
         cdata_content;
-        text;
+
+        dtd_parenthesis_open;
+        dtd_parenthesis_close;
+        dtd_bracket_open;
+        dtd_bracket_close;
+        dtd_infix_operator;
+        dtd_postfix_operator;
+        dtd_percent;
+        dtd_comma;
+        dtd_parameter_entity;
     }
 }
 
 // Must match the order of the types in the enum above
 COLOR_MAP :: Code_Color.[
-    .COMMENT,  // eof - obviously not used
+    .COMMENT,       // eof - obviously not used
 
-    .ERROR,    // error
-    .DEFAULT,  // default
-    .COMMENT,  // comment
+    .ERROR,         // error
+    .DEFAULT,       // default
+    .COMMENT,       // comment
 
-    .COMMENT,  // xml_declaration_start
-    .COMMENT,  // xml_declaration_end
-    .FUNCTION, // tag_delimiter_start
-    .FUNCTION, // tag_delimiter_end
-    .FUNCTION, // tag_delimiter_end_slash
-    .FUNCTION, // tag_name
-    .TYPE,     // attribute_name
-    .VALUE,    // attribute_value
-    .STRING,   // attribute_string_value
-    .DEFAULT,  // attribute_equals
-    .KEYWORD,  // cdata_start
-    .KEYWORD,  // cdata_end
-    .VALUE,    // cdata_content
-    .DEFAULT   // text
+    .COMMENT,       // xml_declaration_start
+    .COMMENT,       // xml_declaration_end
+    .FUNCTION,      // tag_delimiter_start
+    .FUNCTION,      // tag_delimiter_end
+    .FUNCTION,      // tag_closing_slash
+    .FUNCTION,      // tag_exclamation_point
+    .KEYWORD,       // tag_name
+    .DEFAULT,       // tag_content
+    .TYPE,          // attribute_name
+    .VALUE,         // attribute_value
+    .STRING,        // attribute_string_value
+    .DEFAULT,       // attribute_equals
+    .COMMENT,       // cdata_start
+    .COMMENT,       // cdata_end
+    .VALUE,         // cdata_content
+
+    .PUNCTUATION,   // dtd_parenthesis_open
+    .PUNCTUATION,   // dtd_parenthesis_close
+    .PUNCTUATION,   // dtd_bracket_open
+    .PUNCTUATION,   // dtd_bracket_close
+    .OPERATION,     // dtd_infix_operator
+    .OPERATION,     // dtd_postfix_operator
+    .OPERATION,     // dtd_percent
+    .PUNCTUATION,   // dtd_comma
+    .VALUE_KEYWORD, // dtd_parameter_entity
 ];
 
 // HTML elements that should not have a closing tag, and have an *optional* forward slash at the end of the tag.
