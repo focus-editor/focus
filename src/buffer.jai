@@ -587,23 +587,19 @@ save_buffer_to_new_file_on_disk :: (buffer: *Buffer, buffer_id: s64, file_path: 
     return true;
 }
 
-save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64, path := "") -> saved: bool {
+save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64, file_path := "") -> saved: bool {
     if readonly return false;
 
-    if !has_file || (has_file && path) {
+    if !has_file && !file_path {
+        buffer_name := get_buffer_name(buffer);
+        add_user_warning(tprint("Can't save buffer in bulk '%' - please save it individually for now. Sorry.", buffer_name));
+        return false;
+    }
+
+    assert(has_file || file_path);
+
+    if !has_file {
         // Save new file buffer
-        file_path: string;
-        success: bool;
-
-        if !path {
-            file_path, success = platform_get_save_file_name(get_buffer_name(buffer));
-            if !(success && file_path) {
-                return false;
-            }
-        } else {
-            file_path = path;
-        }
-
         has_file = true;
         file = get_file_info_from_full_path(file_path);
         set_lang_from_path(buffer, file_path);
