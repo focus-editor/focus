@@ -1455,17 +1455,22 @@ save_buffer :: (editor: *Editor, buffer: *Buffer, save_new_file := false) {
         session_notify_modified_buffer(editor.buffer_id);
     }
 
-    #if OS != .WINDOWS {
-        if buffer.readonly return;
-        if save_new_file {
-            show_open_file_dialog(.save_as, buffer, editor.buffer_id);
-        } else {
-            if !buffer.has_file show_open_file_dialog(.save, buffer, editor.buffer_id);
-            else                save_buffer_to_disk(buffer, editor.buffer_id);
-        }
+    if buffer.readonly return;
+
+    if !save_new_file && buffer.has_file {
+        // Just save the file normally
+        save_buffer_to_disk(buffer, editor.buffer_id);
+        return;
+    }
+
+    // We have to select a path for the file
+    if config.settings.prefer_system_file_dialogs && OS == .WINDOWS {
+        file_path, success := platform_get_save_file_name(get_buffer_name(buffer));
+        if !file_path || !success return;
+
+        save_buffer_to_new_file_on_disk(buffer, editor.buffer_id, file_path);
     } else {
-        if save_new_file then save_buffer_to_new_file_on_disk(buffer, editor.buffer_id);
-        else                  save_buffer_to_disk(buffer, editor.buffer_id);
+        show_open_file_dialog(.save_as, buffer, editor.buffer_id);
     }
 }
 

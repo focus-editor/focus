@@ -555,26 +555,14 @@ offset_is_within_multiline_token :: (tokens: [] Indentation_Token, offset: s32) 
     return token.type == .maybe_multiline && (token.start + token.len) >= offset;
 }
 
-save_buffer_to_new_file_on_disk :: (buffer: *Buffer, buffer_id: s64, path := "") -> saved: bool {
+save_buffer_to_new_file_on_disk :: (buffer: *Buffer, buffer_id: s64, file_path: string) -> saved: bool {
     if buffer.readonly return false;
-
-    file_path: string;
-    success: bool;
-
-    if !path {
-        file_path, success = platform_get_save_file_name(get_buffer_name(buffer));
-        if !(success && file_path) {
-            return false;
-        }
-    } else {
-        file_path = path;
-    }
 
     // Save the file BEFORE making a new buffer so find_or_create_buffer can find it
     if config.settings.strip_trailing_whitespace_on_save then strip_trailing_whitespace(buffer, buffer_id);
 
-    success = write_entire_file(file_path, to_string(buffer.bytes));
-    if !success then return false;
+    success := write_entire_file(file_path, to_string(buffer.bytes));
+    if !success return false;
 
     new_id, created := find_or_create_buffer(file_path);
     redraw_requested = true;
