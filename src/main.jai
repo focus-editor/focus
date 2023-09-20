@@ -51,19 +51,27 @@ main :: () {
 
     args := get_command_line_arguments();
 
-    if args.count == 2 {
-        // Check if a directory or file was passed in the command line (or by drag/dropping a file/directory onto the executable)
-        if is_directory(args[1]) {
-            // Open directory passed in the command line
-            session = start_fresh_session();
-            add_directory_to_workspace(args[1], index = 0);  // should go first
-        } else if file_exists(args[1]) {
-            // Open file passed in the command line
-            session = start_fresh_session();
-            editors_open_file(args[1]);
-        } else {
-            init_session_with_no_guidance();
+    if args.count >= 2 {
+        session_initialized := false;
+        for < i: args.count - 1..1 {
+            if is_directory(args[i]) {
+                if !session_initialized {
+                    session = start_fresh_session();
+                    session_initialized = true;
+                }
+                add_directory_to_workspace(args[i], index = 0);
+            }
         }
+        for i: 1..args.count - 1 {
+            if file_exists(args[i]) && !is_directory(args[i]) {
+                if !session_initialized {
+                    session = start_fresh_session();
+                    session_initialized = true;
+                }
+                editors_open_file(args[i]);
+            }
+        }
+        if !session_initialized init_session_with_no_guidance();
     } else {
         init_session_with_no_guidance();
     }
