@@ -118,10 +118,9 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
             return;
 
         case .file;
-            if mode == .save || mode == .save_as {
-                if mode == .save_as show_confirm_overwrite_dialog(.save_as, buffer, buffer_id, entry.full_path);
-                else                show_confirm_overwrite_dialog(.save, buffer, buffer_id, entry.full_path);
-                return;
+            if mode == {
+                case .save;     show_confirm_overwrite_dialog(.save,    buffer_id, entry.full_path); return;
+                case .save_as;  show_confirm_overwrite_dialog(.save_as, buffer_id, entry.full_path); return;
             }
 
             if folder_only return;

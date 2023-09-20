@@ -468,10 +468,10 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
             // Check if we need to select some lines
             select_some_lines: bool;
-        
+
             min_line_number := min(mouse_coords.line, initial_middle_mouse_coords.line);
             max_line_number := max(mouse_coords.line, initial_middle_mouse_coords.line);
-    
+
             for min_line_number..max_line_number {
                 if get_char_at_coords(editor, buffer, .{ it, min(mouse_coords.col, initial_middle_mouse_coords.col) }) {
                     select_some_lines = true;
@@ -500,7 +500,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                         main_cursor_already_moved = true;
 
                         // This condition only occur one time before we add any other cursor
-                        // so the main_cursor pointer will not be invalidated by 'array_add' 
+                        // so the main_cursor pointer will not be invalidated by 'array_add'
                         // and we can use it to set its new position.
                         main_cursor.* = cursor;
                     } else {
@@ -1551,7 +1551,12 @@ draw_open_file_dialog :: () {
             draw_rect(progress_bar_rect, Colors.LIST_CURSOR_LITE);
         }
     } else {
-        label := ifx path_chunks then "" else " Navigate to file";
+        label: string;
+        if mode == {
+            case .navigate;     label = ifx !path_chunks then " Navigate to file" else "";
+            case .save;         label = " Choose where to save the file";
+            case .save_as;      label = " Choose where to save the file";
+        }
 
         half_padding := floor(padding / 2);
 
