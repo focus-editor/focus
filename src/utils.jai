@@ -282,12 +282,21 @@ is_balanceable_char :: (ch: u32) -> bool {
     return ch == #char "{" || ch == #char "(" || ch == #char "[" || ch == #char "\"";
 }
 
+is_auto_balanceable_char :: (ch: u32) -> bool {
+    return ch == #char "{" || ch == #char "(" || ch == #char "[";
+}
+
+can_auto_balance_before_this_char :: (ch: u32) -> bool {
+    return is_whitespace_char(xx ch) || (is_non_word_char(ch) && !is_auto_balanceable_char(ch));
+}
+
 get_balancing_char :: (ch: u32) -> u32 {
     if ch == {
         case #char "{";  return #char "}";
         case #char "(";  return #char ")";
         case #char "[";  return #char "]";
         case #char "\""; return #char "\"";
+        case #char "<";  return #char ">";
         case; return 0;
     }
 }

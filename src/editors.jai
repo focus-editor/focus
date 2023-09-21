@@ -311,8 +311,13 @@ active_editor_type_char :: (char: u32) {
     offset_delta: s32 = 0;
     buf_len := cast(s32) buffer.bytes.count;
 
-    all_have_selection := all_cursors_have_selection(editor);
-    is_balanceable     := is_balanceable_char(char);
+    all_have_selection    := all_cursors_have_selection(editor);
+    all_can_auto_balance  := all_cursors_can_auto_balance(editor, buffer);
+    is_balanceable        := is_balanceable_char(char);
+    is_auto_balanceable   := is_auto_balanceable_char(char);
+
+    should_surround_selection := config.settings.auto_surround_with_brackets_and_quotes && all_have_selection && is_balanceable;
+    should_auto_balance       := config.settings.auto_balance_brackets && all_can_auto_balance && is_auto_balanceable;
 
     for * cursor : editor.cursors {
         new_len := cast(s32) buffer.bytes.count;
@@ -323,13 +328,19 @@ active_editor_type_char :: (char: u32) {
         cursor.pos += offset_delta;
         cursor.sel += offset_delta;
 
-        if config.settings.auto_surround_with_brackets_and_quotes && all_have_selection && is_balanceable {
+        if should_surround_selection {
             selection := get_selection(cursor);
             insert_char_at_offset(buffer, selection.end  , convert_utf32_to_utf8(get_balancing_char(char)));
             insert_char_at_offset(buffer, selection.start, utf8_char);
 
             cursor.pos = selection.end   + 1;
             cursor.sel = selection.start + 1;
+        } else if should_auto_balance {
+            insert_char_at_offset(buffer, cursor.pos, convert_utf32_to_utf8(get_balancing_char(char)));
+            insert_char_at_offset(buffer, cursor.pos, utf8_char);
+
+            cursor.pos = next_char_offset(buffer.bytes, cursor.pos);
+            cursor.sel = cursor.pos;
         } else {
             if has_selection(cursor) {
                 selection := get_selection(cursor);
@@ -651,6 +662,15 @@ get_selected_text_all_cursors :: (using editor: Editor, buffer: Buffer) -> strin
 
 all_cursors_have_selection ::  (using editor: Editor) -> bool {
     for cursors { if !has_selection(it) return false; }
+    return true;
+}
+
+all_cursors_can_auto_balance ::  (using editor: Editor, buffer: Buffer) -> bool {
+    for editor.cursors {
+        if has_selection(it) return false;
+        ch := get_char_at_offset(buffer, it.pos);
+        if !can_auto_balance_before_this_char(ch) return false;
+    }
     return true;
 }
 
@@ -3091,6 +3111,7 @@ Editor :: struct {
     last_cursor_created_using_mouse_at: Time;
 
     initial_middle_mouse_coords: Coords; // used for creating cursors while dragging middle mouse button
+
 
     scroll_to_cursor: enum u8 { no; yes; yes_new_editor; }  // trigger a scroll so that the cursor is in the center vertically
 
