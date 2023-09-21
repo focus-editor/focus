@@ -311,13 +311,8 @@ active_editor_type_char :: (char: u32) {
     offset_delta: s32 = 0;
     buf_len := cast(s32) buffer.bytes.count;
 
-    all_have_selection    := all_cursors_have_selection(editor);
-    all_can_auto_balance  := all_cursors_can_auto_balance(editor, buffer);
-    is_balanceable        := is_balanceable_char(char);
-    is_auto_balanceable   := is_auto_balanceable_char(char);
-
-    should_surround_selection := config.settings.auto_surround_with_brackets_and_quotes && all_have_selection && is_balanceable;
-    should_auto_balance       := config.settings.auto_balance_brackets && all_can_auto_balance && is_auto_balanceable;
+    should_surround_selection := config.settings.auto_surround_with_brackets_and_quotes && all_cursors_have_selection(editor) && is_balanceable_char(char);
+    should_close_bracket      := config.settings.auto_close_brackets && all_cursors_can_auto_insert_closing_bracket(editor, buffer) && is_auto_closeable_char(char);
 
     for * cursor : editor.cursors {
         new_len := cast(s32) buffer.bytes.count;
@@ -335,7 +330,7 @@ active_editor_type_char :: (char: u32) {
 
             cursor.pos = selection.end   + 1;
             cursor.sel = selection.start + 1;
-        } else if should_auto_balance {
+        } else if should_close_bracket {
             insert_char_at_offset(buffer, cursor.pos, convert_utf32_to_utf8(get_balancing_char(char)));
             insert_char_at_offset(buffer, cursor.pos, utf8_char);
 
@@ -665,11 +660,32 @@ all_cursors_have_selection ::  (using editor: Editor) -> bool {
     return true;
 }
 
-all_cursors_can_auto_balance ::  (using editor: Editor, buffer: Buffer) -> bool {
+all_cursors_can_auto_insert_closing_bracket :: (using editor: Editor, buffer: Buffer) -> bool {
     for editor.cursors {
         if has_selection(it) return false;
         ch := get_char_at_offset(buffer, it.pos);
-        if !can_auto_balance_before_this_char(ch) return false;
+
+        if !is_whitespace_char(xx ch) && !(is_non_word_char(ch) && !is_auto_closeable_char(ch)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+all_cursors_can_auto_delete_closing_bracket :: (using editor: Editor, buffer: Buffer) -> bool {
+    closing: u32; // Make sure all cursors have the same type of closing bracket
+
+    for editor.cursors {
+        if it.pos - 1 < 0 || has_selection(it) return false;
+
+        ch_prev := get_char_at_offset(buffer, it.pos - 1);
+        ch_curr := get_char_at_offset(buffer, it.pos);
+
+        if !is_auto_closeable_char(ch_prev) return false;
+
+        if !closing then closing = get_balancing_char(ch_prev);
+
+        if ch_curr != closing return false;
     }
     return true;
 }
@@ -2026,12 +2042,16 @@ delete_word_right_no_underscore :: (editor: *Editor, buffer: *Buffer) {
 }
 
 delete_left_char :: (editor: *Editor, buffer: *Buffer) {
+    should_delete_closing_bracket := config.settings.auto_close_brackets && all_cursors_can_auto_delete_closing_bracket(editor, buffer);
+
     // NOTE: we don't have to worry about a cursor with no selection being immediately next
     //       to the non-cursor end of another cursor's selection (thanks to organise_cursors),
     //       so it should be safe to delete at least one character to the left of every cursor if there is one
     range_per_cursor := NewArray(editor.cursors.count, Offset_Range, initialized = false, allocator = temp);
     for cursor : editor.cursors {
-        if has_selection(cursor) {
+        if should_delete_closing_bracket {
+            range_per_cursor[it_index] = .{ start = cursor.pos - 1, end = cursor.pos + 1 };
+        } else if has_selection(cursor) {
             range_per_cursor[it_index] = get_selection(cursor);
         } else if cursor.pos == 0 {
             range_per_cursor[it_index] = Offset_Range.{};

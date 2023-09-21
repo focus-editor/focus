@@ -367,8 +367,8 @@ Settings :: struct {
     highlight_line_with_cursor              := false;
     draw_indent_guides                      := false;
     auto_surround_with_brackets_and_quotes  := false;
+    auto_close_brackets                     := false;
     prefer_system_file_dialogs              := false;
-    auto_balance_brackets                   := false;
 
     // TODO
     // convert_tabs_to_spaces_on_load:     false
