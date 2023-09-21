@@ -16,6 +16,7 @@ focus
 focus_debug
 focus-trace.json
 install.bat
+install_debug.bat
 global.focus-config
 
 focus-crash-report.txt

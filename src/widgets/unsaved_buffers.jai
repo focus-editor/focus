@@ -32,8 +32,10 @@ close_unsaved_buffers_dialog :: () {
 
 unsaved_buffers_save_all :: () {
     errors_when_saving := false;
+
     for buffer_id : unsaved_buffers_dialog.modified_buffers {
         buffer := *open_buffers[buffer_id];
+
         saved := save_buffer_to_disk(buffer, buffer_id);
         if buffer.error_when_saving || !saved then errors_when_saving = true;
     }

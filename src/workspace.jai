@@ -138,11 +138,11 @@ maybe_update_workspace_buffers :: () {
     files_changed := process_changes(*watchers.project_watcher);
     files_changed |= process_changes(*watchers.external_watcher);
     if files_changed {
-        if watchers.project_file_modified && (!should_ignore_file(watchers.project_file_modified) || is_our_config_file(watchers.project_file_modified)) {
+        if watchers.project_file_modified.count > 0 && (!should_ignore_file(watchers.project_file_modified) || is_our_config_file(watchers.project_file_modified)) {
             #if DEBUG_FILE_REFRESH log("Attempting to refresh based on project_file_modified: %\n", watchers.project_file_modified);
             refresh_buffer_from_disk(path = watchers.project_file_modified);
         }
-        if watchers.external_file_modified && (!should_ignore_file(watchers.external_file_modified) || is_our_config_file(watchers.external_file_modified)) {
+        if watchers.external_file_modified.count > 0 && (!should_ignore_file(watchers.external_file_modified) || is_our_config_file(watchers.external_file_modified)) {
             #if DEBUG_FILE_REFRESH log("Attempting to refresh based on external_file_modified: %\n", watchers.external_file_modified);
             refresh_buffer_from_disk(path = watchers.external_file_modified);
         }
@@ -310,7 +310,12 @@ start_watching_file :: (file_path: string) {
     if !array_find(watch_dirs, parent_dir) {
         parent_dir = copy_string(parent_dir);
         array_add(*watch_dirs, parent_dir);
-        add_directories(*watchers.external_watcher, parent_dir);
+        added := add_directories(*watchers.external_watcher, parent_dir);
+        if !added {
+            log_error("Couldn't start watching the directory '%' containing file %", parent_dir, file_path);
+            return;
+        }
+        log("Started watching external directory '%'", parent_dir);
     }
     full_path, success := get_absolute_path(file_path);
     if !success {
@@ -416,7 +421,10 @@ start_file_watcher :: () {
         return;
     }
 
-    for project_dirs add_directories(*watchers.project_watcher, it.path);
+    for project_dirs {
+        added := add_directories(*watchers.project_watcher, it.path);
+        if !added log_error("Couldn't start watching directory '%'", it.path);
+    }
     dirs_to_rescan.allocator = temp;
 
     // Add directories that contain standalone files which we want to watch
@@ -425,7 +433,8 @@ start_file_watcher :: () {
             remove it;
             continue;
         }
-        add_directories(*watchers.external_watcher, it);
+        added := add_directories(*watchers.external_watcher, it);
+        if !added log_error("Couldn't start watching directory '%'", it);
     }
 }
 
@@ -434,8 +443,8 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
         b: String_Builder;
         b.allocator = temp;
         print_to_builder(*b, "%", <<change);
-        change_kind := "Project file change";
-        if watcher == *watchers.external_watcher change_kind = "External file change";
+        change_kind := "Project file";
+        if watcher == *watchers.external_watcher change_kind = "External file";
         defer log("% change: %\n", change_kind, builder_to_string(*b, allocator = temp));
     }
 
@@ -477,7 +486,7 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
             watchers.project_file_modified = copy_temporary_string(change.full_path);
         } else {
             // There are other events - maybe rollback and add dir to the rescan queue
-            if watchers.project_file_modified {
+            if watchers.project_file_modified.count > 0 {  // NOTE: this count comparison is intentional because count can be -1
                 dir := get_parent_dir_path(watchers.project_file_modified);
                 maybe_add_to_queue(dir);
                 watchers.project_file_modified.count = -1;  // to indicate that we have seen and rejected a MODIFIED event this frame already
@@ -494,7 +503,7 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
     }
 
     #if DEBUG_FILE_REFRESH {
-        if watchers.project_file_modified print_to_builder(*b, " | watchers.project_file_modified: %", watchers.project_file_modified);
+        if watchers.project_file_modified  print_to_builder(*b, " | watchers.project_file_modified: %",  watchers.project_file_modified);
         if watchers.external_file_modified print_to_builder(*b, " | watchers.external_file_modified: %", watchers.external_file_modified);
         if dirs_to_rescan append(*b, " | dirs_to_rescan: ");
         else append(*b, " | dirs_to_rescan: none");

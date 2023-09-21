@@ -1456,41 +1456,23 @@ save_buffer :: (editor: *Editor, buffer: *Buffer, save_new_file := false) {
         session_notify_modified_buffer(editor.buffer_id);
     }
 
-// @cleanup: revisit and fix code duplication
-#if OS != .WINDOWS {
-    if !buffer.readonly {
-        if save_new_file {
-            show_save_file_dialog(buffer, editor.buffer_id, save_new_file);
-        } else {
-            if !buffer.has_file {
-                show_save_file_dialog(buffer, editor.buffer_id, save_new_file);
-            } else {
-                using buffer;
+    if buffer.readonly return;
 
-                if config.settings.strip_trailing_whitespace_on_save then strip_trailing_whitespace(buffer, editor.buffer_id);
-
-                success := write_entire_file(file.full_path, to_string(bytes));
-                if success {
-                    modified = false;
-                    modified_on_disk = false;
-                    deleted = false;
-
-                    meow_hash = calculate_hash(bytes);
-
-                    error_when_saving = false;
-                    crlf = false;
-                } else {
-                    error_when_saving = true;
-                }
-                remember_last_modtime_and_size(buffer);
-                update_window_title(open_editors[editors.active].buffer_id);
-            }
-        }
+    if !save_new_file && buffer.has_file {
+        // Just save the file normally
+        save_buffer_to_disk(buffer, editor.buffer_id);
+        return;
     }
-} else {
-    if save_new_file then save_buffer_to_new_file_on_disk(buffer, editor.buffer_id);
-    else                  save_buffer_to_disk(buffer, editor.buffer_id);
-}
+
+    // We have to select a path for the file
+    if config.settings.prefer_system_file_dialogs && OS == .WINDOWS {
+        file_path, success := platform_get_save_file_name(get_buffer_name(buffer));
+        if !file_path || !success return;
+
+        save_buffer_to_new_file_on_disk(buffer, editor.buffer_id, file_path);
+    } else {
+        show_open_file_dialog(.save_as, buffer, editor.buffer_id);
+    }
 }
 
 save_all :: (editor: *Editor, buffer: *Buffer) {
@@ -3105,6 +3087,8 @@ Editor :: struct {
     // TODO: use a global flag rather than per editor?
     new_cursor_just_created_using_mouse := false;  // useful to know in order to handle select-by-drag and select-word with the new cursor
     last_cursor_created_using_mouse_at: Time;
+
+    initial_middle_mouse_coords: Coords; // used for creating cursors while dragging middle mouse button
 
     scroll_to_cursor: enum u8 { no; yes; yes_new_editor; }  // trigger a scroll so that the cursor is in the center vertically
 
