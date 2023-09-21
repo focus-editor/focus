@@ -3132,7 +3132,6 @@ Editor :: struct {
 
     initial_middle_mouse_coords: Coords; // used for creating cursors while dragging middle mouse button
 
-
     scroll_to_cursor: enum u8 { no; yes; yes_new_editor; }  // trigger a scroll so that the cursor is in the center vertically
 
     highlights: [..] Text_Highlight;
