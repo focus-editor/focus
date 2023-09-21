@@ -63,6 +63,7 @@ highlight_line_with_cursor:             false
 draw_indent_guides:                     false
 auto_surround_with_brackets_and_quotes: false
 prefer_system_file_dialogs:             false  # Windows only
+auto_balance_brackets:                  false
 
 
 [[keymap]]
