@@ -22,23 +22,6 @@ set_custom_cursor_handling :: (is_custom: bool) {
 get_key_code :: (wParam: WPARAM) -> Key_Code {
     if (wParam >= 48) && (wParam <= 90) return cast(Key_Code) wParam;
 
-    // Numpad keys
-    if wParam == 96  return xx #char "0";
-    if wParam == 97  return xx #char "1";
-    if wParam == 98  return xx #char "2";
-    if wParam == 99  return xx #char "3";
-    if wParam == 100 return xx #char "4";
-    if wParam == 101 return xx #char "5";
-    if wParam == 102 return xx #char "6";
-    if wParam == 103 return xx #char "7";
-    if wParam == 104 return xx #char "8";
-    if wParam == 105 return xx #char "9";
-    if wParam == 106 return xx #char "*";
-    if wParam == 107 return xx #char "+";
-    if wParam == 109 return xx #char "-";
-    if wParam == 110 return xx #char ".";
-    if wParam == 111 return xx #char "/";
-
     using Key_Code;
 
     if wParam == VK_LBUTTON
@@ -114,6 +97,23 @@ get_key_code :: (wParam: WPARAM) -> Key_Code {
     }
     if wParam == VK_SNAPSHOT
         return PRINT_SCREEN;
+
+    // Numpad keys
+    if wParam == VK_NUMPAD0  return xx #char "0";
+    if wParam == VK_NUMPAD1  return xx #char "1";
+    if wParam == VK_NUMPAD2  return xx #char "2";
+    if wParam == VK_NUMPAD3  return xx #char "3";
+    if wParam == VK_NUMPAD4  return xx #char "4";
+    if wParam == VK_NUMPAD5  return xx #char "5";
+    if wParam == VK_NUMPAD6  return xx #char "6";
+    if wParam == VK_NUMPAD7  return xx #char "7";
+    if wParam == VK_NUMPAD8  return xx #char "8";
+    if wParam == VK_NUMPAD9  return xx #char "9";
+    if wParam == VK_MULTIPLY return xx #char "*";
+    if wParam == VK_ADD      return xx #char "+";
+    if wParam == VK_SUBTRACT return xx #char "-";
+    if wParam == VK_DECIMAL  return xx #char ".";
+    if wParam == VK_DIVIDE   return xx #char "/";
 
     return UNKNOWN;
 }
