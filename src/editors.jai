@@ -311,8 +311,8 @@ active_editor_type_char :: (char: u32) {
     offset_delta: s32 = 0;
     buf_len := cast(s32) buffer.bytes.count;
 
-    should_surround_selection := config.settings.auto_surround_with_brackets_and_quotes && all_cursors_have_selection(editor) && is_balanceable_char(char);
-    should_close_bracket      := config.settings.auto_close_brackets && all_cursors_can_auto_insert_closing_bracket(editor, buffer) && is_auto_closeable_char(char);
+    should_surround_selection     := config.settings.auto_surround_with_brackets_and_quotes && all_cursors_have_selection(editor) && is_balanceable_char(char);
+    should_insert_closing_bracket := config.settings.auto_close_brackets && all_cursors_can_auto_insert_closing_bracket(editor, buffer) && is_auto_closeable_char(char);
 
     for * cursor : editor.cursors {
         new_len := cast(s32) buffer.bytes.count;
@@ -330,7 +330,7 @@ active_editor_type_char :: (char: u32) {
 
             cursor.pos = selection.end   + 1;
             cursor.sel = selection.start + 1;
-        } else if should_close_bracket {
+        } else if should_insert_closing_bracket {
             insert_char_at_offset(buffer, cursor.pos, convert_utf32_to_utf8(get_balancing_char(char)));
             insert_char_at_offset(buffer, cursor.pos, utf8_char);
 
