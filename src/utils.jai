@@ -447,6 +447,10 @@ starts_with :: inline (s: string, ch: u8) -> bool {
     return (s.count >= 1) && (s[0] == ch);
 }
 
+ends_with :: inline (s: string, ch: u8) -> bool {
+    return (s.count >= 1) && (s[s.count - 1] == ch);
+}
+
 Tween_Animation :: struct(T: Type) {
     start, target: T;
     started_at: Time;

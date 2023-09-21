@@ -100,6 +100,17 @@ get_char_at_offset :: (using buffer: Buffer, offset: s32) -> u32 {
     return char;
 }
 
+get_char_at_coords :: (editor: Editor, buffer: Buffer, coords: Coords) -> u32 {
+    closest_offset := coords_to_offset(editor, buffer, coords);
+    closest_coords := offset_to_coords(editor, buffer, closest_offset);
+
+    if coords.line != closest_coords.line  || coords.col != closest_coords.col {
+        return 0;
+    }
+
+    return get_char_at_offset(buffer, closest_offset);
+}
+
 get_char_at_offset_as_string :: (using buffer: Buffer, offset: s32) -> string {
     if offset >= bytes.count return "";
     char: string = ---;
@@ -548,19 +559,14 @@ offset_is_within_multiline_token :: (tokens: [] Indentation_Token, offset: s32) 
     return token.type == .maybe_multiline && (token.start + token.len) >= offset;
 }
 
-save_buffer_to_new_file_on_disk :: (buffer: *Buffer, buffer_id: s64) -> saved: bool {
+save_buffer_to_new_file_on_disk :: (buffer: *Buffer, buffer_id: s64, file_path: string) -> saved: bool {
     if buffer.readonly return false;
-
-    file_path, success := platform_get_save_file_name(get_buffer_name(buffer));
-    if !(success && file_path) {
-        return false;
-    }
 
     // Save the file BEFORE making a new buffer so find_or_create_buffer can find it
     if config.settings.strip_trailing_whitespace_on_save then strip_trailing_whitespace(buffer, buffer_id);
 
-    success = write_entire_file(file_path, to_string(buffer.bytes));
-    if !success then return false;
+    success := write_entire_file(file_path, to_string(buffer.bytes));
+    if !success return false;
 
     new_id, created := find_or_create_buffer(file_path);
     redraw_requested = true;
@@ -570,6 +576,10 @@ save_buffer_to_new_file_on_disk :: (buffer: *Buffer, buffer_id: s64) -> saved: b
         if editor.buffer_id == buffer_id {
             editor.buffer_id = new_id;
             editor.scroll_to_cursor = .yes;
+
+            assert(buffer.num_editors_open >= 1);
+            buffer.num_editors_open -= 1;
+
             for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
             organise_cursors(editor);
         }
@@ -581,16 +591,19 @@ save_buffer_to_new_file_on_disk :: (buffer: *Buffer, buffer_id: s64) -> saved: b
     return true;
 }
 
-save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64) -> saved: bool {
+save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64, file_path := "") -> saved: bool {
     if readonly return false;
+
+    if !has_file && !file_path {
+        buffer_name := get_buffer_name(buffer);
+        add_user_warning(tprint("Can't save buffer in bulk '%' - please save it individually for now. Sorry.", buffer_name));
+        return false;
+    }
+
+    assert(has_file || file_path);
 
     if !has_file {
         // Save new file buffer
-        file_path, success := platform_get_save_file_name(get_buffer_name(buffer));
-        if !(success && file_path) {
-            return false;
-        }
-
         has_file = true;
         file = get_file_info_from_full_path(file_path);
         set_lang_from_path(buffer, file_path);

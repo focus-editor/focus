@@ -51,19 +51,27 @@ main :: () {
 
     args := get_command_line_arguments();
 
-    if args.count == 2 {
-        // Check if a directory or file was passed in the command line (or by drag/dropping a file/directory onto the executable)
-        if is_directory(args[1]) {
-            // Open directory passed in the command line
-            session = start_fresh_session();
-            add_directory_to_workspace(args[1], index = 0);  // should go first
-        } else if file_exists(args[1]) {
-            // Open file passed in the command line
-            session = start_fresh_session();
-            editors_open_file(args[1]);
-        } else {
-            init_session_with_no_guidance();
+    if args.count >= 2 {
+        session_initialized := false;
+        for < i: args.count - 1..1 {
+            if is_directory(args[i]) {
+                if !session_initialized {
+                    session = start_fresh_session();
+                    session_initialized = true;
+                }
+                add_directory_to_workspace(args[i], index = 0);
+            }
         }
+        for i: 1..args.count - 1 {
+            if file_exists(args[i]) && !is_directory(args[i]) {
+                if !session_initialized {
+                    session = start_fresh_session();
+                    session_initialized = true;
+                }
+                editors_open_file(args[i]);
+            }
+        }
+        if !session_initialized init_session_with_no_guidance();
     } else {
         init_session_with_no_guidance();
     }
@@ -240,11 +248,11 @@ main :: () {
                     case .editors;                  handled = editors_handle_event(event);
                     case .finder;                   handled = finder_handle_event(event);
                     case .open_file_dialog;         handled = open_file_dialog_handle_event(event);
-                    case .save_file_dialog;         handled = save_file_dialog_handle_event(event);
                     case .delete_file_dialog;       handled = delete_file_dialog_handle_event(event);
                     case .go_to_line_dialog;        handled = go_to_line_dialog_handle_event(event);
                     case .open_project_dialog;      handled = open_project_dialog_handle_event(event);
                     case .unsaved_buffers_dialog;   handled = unsaved_buffers_dialog_handle_event(event);
+                    case .confirm_overwrite_dialog; handled = confirm_overwrite_dialog_handle_event(event);
                     case .commands_dialog;          handled = commands_dialog_handle_event(event);
                 }
             }
@@ -689,12 +697,12 @@ active_global_widget: enum {
     editors;
     finder;
     open_file_dialog;
-    save_file_dialog;
     delete_file_dialog;
     go_to_line_dialog;
     commands_dialog;
     open_project_dialog;
     unsaved_buffers_dialog;
+    confirm_overwrite_dialog;
 } = .editors;
 
 Project_Dir :: struct {
@@ -733,13 +741,13 @@ dont_ignore_next_window_resize := false;
 
 #load "widgets/text_input.jai";
 #load "widgets/open_file_dialog.jai";
-#load "widgets/save_file_dialog.jai";
 #load "widgets/delete_file_dialog.jai";
 #load "widgets/go_to_line_dialog.jai";
 #load "widgets/finder.jai";
 #load "widgets/unsaved_buffers.jai";
 #load "widgets/commands.jai";
 #load "widgets/open_project.jai";
+#load "widgets/confirm_overwrite.jai";
 
 #load "langs/jai.jai";
 #load "langs/c.jai";
