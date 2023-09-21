@@ -211,7 +211,6 @@ Cmd-Shift-Z                 redo
 
 Cmd-D                       select_word
 Cmd-A                       select_all
-Alt-S                       swap_selections
 
 Cmd-W                       close_current_editor
 Cmd-Shift-W                 close_other_editor

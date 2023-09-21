@@ -2382,31 +2382,33 @@ add_cursors_to_line_ends :: (editor: *Editor, buffer: Buffer) {
     move_cursors_end(editor, buffer);
 }
 
-swap_selections :: (editor: *Editor, buffer: *Buffer) {
-    if editor.cursors.count != 2 return;
+swap_selections :: (using editor: *Editor, buffer: *Buffer) {
+    if cursors.count != 2 return;
 
-    string0     := copy_temporary_string(get_selected_string(editor.cursors[0], buffer));
-    string1     := copy_temporary_string(get_selected_string(editor.cursors[1], buffer));
+    c1, c2 := *cursors[0], *cursors[1];
+
+    string0     := copy_temporary_string(get_selected_string(c1, buffer));
+    string1     := copy_temporary_string(get_selected_string(c2, buffer));
 
     string_dif  := string0.count - string1.count;
 
-    selection0  := get_selection(editor.cursors[0]);
-    selection1  := get_selection(editor.cursors[1]);
+    selection0  := get_selection(c1);
+    selection1  := get_selection(c2);
 
-    pos_offset0 := selection0.start - editor.cursors[0].pos;
-    sel_offset0 := selection0.start - editor.cursors[0].sel;
+    pos_offset0 := selection0.start - c1.pos;
+    sel_offset0 := selection0.start - c1.sel;
 
-    pos_offset1 := selection1.start - editor.cursors[1].pos;
-    sel_offset1 := selection1.start - editor.cursors[1].sel;
-    
+    pos_offset1 := selection1.start - c2.pos;
+    sel_offset1 := selection1.start - c2.sel;
+
     replace_range(buffer, selection1, string0);
     replace_range(buffer, selection0, string1);
 
-    editor.cursors[0].pos = selection0.start - pos_offset1;
-    editor.cursors[0].sel = selection0.start - sel_offset1;
+    c1.pos = selection0.start - pos_offset1;
+    c1.sel = selection0.start - sel_offset1;
 
-    editor.cursors[1].pos = selection1.start - pos_offset0 - xx string_dif;
-    editor.cursors[1].sel = selection1.start - sel_offset0 - xx string_dif;
+    c2.pos = selection1.start - pos_offset0 - xx string_dif;
+    c2.sel = selection1.start - sel_offset0 - xx string_dif;
 }
 
 select_all :: (editor: *Editor, buffer: Buffer) {

@@ -34,6 +34,7 @@
     + New command: `select_all_occurrences`. Used to create a cursor on each selection occurrence (thanks @hfr4)
     + New command: `toggle_fullscreen`. Defaults to F11 (thanks @ustance)
     + New command: `close_project`. Can be used to (surprise!) close the active project
+    + New command: `swap_selections`. Can swap two selected pieces of text (thanks @hfr4)
     + New option: `highlight_line_with_cursor` (thanks @SentientCoffee)
     + New option: `draw_indent_guides`. Set to `true` to draw a vertical guide line at every indent level (determined by tab size)
     + Added support for regular expressions in file/project search
