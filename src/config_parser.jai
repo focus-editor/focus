@@ -318,6 +318,22 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         error_msg := log_parser_error(handler, error);
                         return false, error_msg;
                     }
+                case "font_ui";
+                    found, error := find_font_by_name(value);
+                    if found {
+                        parsed_config.font_ui = value;
+                    } else {
+                        error_msg := log_parser_error(handler, error);
+                        return false, error_msg;
+                    }
+                case "font_ui_bold";
+                    found, error := find_font_by_name(value);
+                    if found {
+                        parsed_config.font_ui_bold = value;
+                    } else {
+                        error_msg := log_parser_error(handler, error);
+                        return false, error_msg;
+                    }
                 case "font_size";
                     value_copy := value;
                     int_val, success := parse_int(*value_copy);
@@ -614,9 +630,11 @@ Parsed_Config :: struct {
     set_settings: [..] string;  // so that we know which options were included in the config, and only touch those when merging
 
     // Style
-    font:      string;
-    font_size: int;
-    colors:    [..] Parsed_Color;
+    font:         string;
+    font_ui:      string;
+    font_ui_bold: string;
+    font_size:    int;
+    colors:       [..] Parsed_Color;
 
     platform: Platform_Config;
 };

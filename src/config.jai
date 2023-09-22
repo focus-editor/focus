@@ -267,13 +267,37 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     if parsed.font {
         dst.style.font = parsed.font;
 
-        loaded_data, success := load_font_by_name(parsed.font);
+        loaded_data, success := load_font_by_name(parsed.font, .font);
         if success {
             main_font_data = loaded_data;
             main_font_name = parsed.font;
         } else {
             // NOTE: this error will be removed by the config success message. Should do something about it
             add_user_error(tprint("Couldn't load font %", parsed.font));
+        }
+    }
+    if parsed.font_ui {
+        dst.style.font_ui = parsed.font_ui;
+
+        loaded_data, success := load_font_by_name(parsed.font_ui, .font_ui);
+        if success {
+            ui_font_data = loaded_data;
+            ui_font_name = parsed.font_ui;
+        } else {
+            // NOTE: this error will be removed by the config success message. Should do something about it
+            add_user_error(tprint("Couldn't load font %", parsed.font_ui));
+        }
+    }
+    if parsed.font_ui_bold {
+        dst.style.font_ui_bold = parsed.font_ui_bold;
+
+        loaded_data, success := load_font_by_name(parsed.font_ui_bold, .font_ui_bold);
+        if success {
+            ui_bold_font_data = loaded_data;
+            ui_bold_font_name = parsed.font_ui_bold;
+        } else {
+            // NOTE: this error will be removed by the config success message. Should do something about it
+            add_user_error(tprint("Couldn't load font %", parsed.font_ui_bold));
         }
     }
     if parsed.font_size > 0 {
@@ -296,8 +320,12 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     platform_copy_config(*parsed.platform, *dst.platform);
 }
 
-load_font_by_name :: (name: string) -> font_data: string, success: bool {
-    if name == "default" return FONT.data, true;
+load_font_by_name :: (name: string, kind: enum { font; font_ui; font_ui_bold; }) -> font_data: string, success: bool {
+    if name == "default" {
+        if      kind == .font         return DEFAULT_FONT.data        , true;
+        else if kind == .font_ui      return DEFAULT_FONT_UI.data     , true;
+        else if kind == .font_ui_bold return DEFAULT_FONT_UI_BOLD.data, true;
+    }
 
     font_path := find_font_by_name(name);
     if font_path {
@@ -383,8 +411,10 @@ Keymap :: struct {
 }
 
 Style :: struct {
-    font      := "";
-    font_size := -1;
+    font         := "";
+    font_ui      := "";
+    font_ui_bold := "";
+    font_size    := -1;
 }
 
 style: Style;

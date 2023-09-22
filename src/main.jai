@@ -357,26 +357,26 @@ init_fonts_and_dependent_things :: () {
     font = Simp.get_font_at_size(main_font_name, main_font_data, cast(int) (font_size * dpi_scale));
     assert(font != null, "Couldn't init main text font\n");
 
-    font_ui = Simp.get_font_at_size(FONT_UI.name, FONT_UI.data, cast(int) (font_ui_size * dpi_scale));
+    font_ui = Simp.get_font_at_size(ui_font_name, ui_font_data, cast(int) (font_ui_size * dpi_scale));
     assert(font_ui != null, "Couldn't init main ui font\n");
     font_ui_line_height = cast(float) font_ui.default_line_spacing;
 
-    font_ui_big = Simp.get_font_at_size(FONT_UI.name, FONT_UI.data, cast(int) (font_ui_big_size * dpi_scale));
+    font_ui_big = Simp.get_font_at_size(ui_font_name, ui_font_data, cast(int) (font_ui_big_size * dpi_scale));
     assert(font_ui_big != null, "Couldn't init big ui font\n");
     font_ui_big_line_height = cast(float) font_ui_big.default_line_spacing;
 
-    font_ui_medium = Simp.get_font_at_size(FONT_UI.name, FONT_UI.data, cast(int) (font_ui_medium_size * dpi_scale));
+    font_ui_medium = Simp.get_font_at_size(ui_font_name, ui_font_data, cast(int) (font_ui_medium_size * dpi_scale));
     assert(font_ui_medium != null, "Couldn't init medium ui font\n");
     font_ui_medium_line_height = cast(float) font_ui_medium.default_line_spacing;
 
-    font_ui_bold = Simp.get_font_at_size(FONT_UI_BOLD.name, FONT_UI_BOLD.data, cast(int) (font_ui_size * dpi_scale));
-    assert(font_ui_bold != null, "Couldn't init bold ui font\n");
-
-    font_ui_small = Simp.get_font_at_size(FONT_UI.name, FONT_UI.data, cast(int) (font_ui_small_size * dpi_scale));
+    font_ui_small = Simp.get_font_at_size(ui_font_name, ui_font_data, cast(int) (font_ui_small_size * dpi_scale));
     assert(font_ui_small != null, "Couldn't init small ui font\n");
 
-    font_ui_very_small = Simp.get_font_at_size(FONT_UI.name, FONT_UI.data, cast(int) (font_ui_very_small_size * dpi_scale));
+    font_ui_very_small = Simp.get_font_at_size(ui_font_name, ui_font_data, cast(int) (font_ui_very_small_size * dpi_scale));
     assert(font_ui_very_small != null, "Couldn't init small ui font\n");
+
+    font_ui_bold = Simp.get_font_at_size(ui_bold_font_name, ui_bold_font_data, cast(int) (font_ui_size * dpi_scale));
+    assert(font_ui_bold != null, "Couldn't init bold ui font\n");
 
     font_icons = Simp.get_font_at_size(FONT_ICONS.name, FONT_ICONS.data, cast(int) (font_icons_size * dpi_scale));
     assert(font_icons != null, "Couldn't init main icon font\n");
@@ -409,7 +409,7 @@ init_fonts_and_dependent_things :: () {
     append(*common_icons, XMARK_ICON);
     icons_string := builder_to_string(*common_icons, allocator = temp);
 
-    Simp.prepare_text(font_icons,       icons_string);
+    Simp.prepare_text(font_icons,      icons_string);
     Simp.prepare_text(font_icons_tiny, icons_string);
 
     // Things that depend on char size
@@ -657,8 +657,14 @@ DEFAULT_FONT_ICONS_SIZE         :: 16;
 DEFAULT_FONT_ICONS_SMALL_SIZE   :: 12;
 DEFAULT_FONT_ICONS_TINY_SIZE    :: 8;
 
-main_font_name := "default";
-main_font_data := #run FONT.data;
+main_font_name    := "default";
+main_font_data    := #run DEFAULT_FONT.data;
+
+ui_font_name      := "default";
+ui_font_data      := #run DEFAULT_FONT_UI.data;
+
+ui_bold_font_name := "default";
+ui_bold_font_data := #run DEFAULT_FONT_UI_BOLD.data;
 
 default_font_size       := DEFAULT_FONT_SIZE;  // can be changed in the config
 
@@ -842,10 +848,10 @@ DOUBLE_CLICK_SPEED     :: 0.3;  // how many seconds between clicks to consider i
 DOUBLE_CLICK_TOLERANCE :: 2;    // how many pixels between the click locations are allowed
 
 // Embed default fonts
-FONT         :: #run load_font("FiraCode-Retina.ttf");
-FONT_UI      :: #run load_font("OpenSans-Regular.ttf");
-FONT_UI_BOLD :: #run load_font("OpenSans-SemiBold.ttf");
-FONT_ICONS   :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
+DEFAULT_FONT         :: #run load_font("FiraCode-Retina.ttf");
+DEFAULT_FONT_UI      :: #run load_font("OpenSans-Regular.ttf");
+DEFAULT_FONT_UI_BOLD :: #run load_font("OpenSans-SemiBold.ttf");
+FONT_ICONS           :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
 
 MIN_FONT_SIZE :: 4;
 MAX_FONT_SIZE :: 30;  // setting a larger size has caused freetype to crash - not sure yet why.
