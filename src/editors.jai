@@ -133,7 +133,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
     // We want to remember where cursors were before we do any edits
     if buffer.edits.count == 0 {
         array_resize(*buffer.cursors, editor.cursors.count);
-        for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
+        for * cursor, i : buffer.cursors { cursor.* = editor.cursors[i]; }
     }
 
     keep_selection := false;
@@ -305,7 +305,7 @@ active_editor_type_char :: (char: u32) {
     if buffer.edits.count == 0 {
         // We want to remember where cursors were before we do any edits
         array_resize(*buffer.cursors, editor.cursors.count);
-        for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
+        for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i]; }
     }
 
     offset_delta: s32 = 0;
@@ -699,7 +699,7 @@ new_edit_group :: (buffer: *Buffer, editor: *Editor) {
 
     // Remember cursor state
     array_resize(*buffer.cursors, editor.cursors.count);
-    for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
+    for * cursor, i : buffer.cursors { cursor.* = editor.cursors[i]; }
 }
 
 close_editor :: (position: enum { current; other; left; right; }) {
@@ -789,7 +789,7 @@ open_search_bar :: (using editor: *Editor, buffer: Buffer, requested_mode: Searc
     search_point_offset = get_selection(cursors[main_cursor]).start;
 
     if remember_cursor_position {
-        original_cursor_position = cursors[main_cursor].state;
+        original_cursor_position = cursors[main_cursor];
         jumped = false;
     }
 
@@ -804,7 +804,7 @@ close_search_bar :: inline (editor: *Editor, jump_to_original_cursor := false, j
 
     if jump_to_original_cursor && jumped {
         cursor := leave_only_original_cursor(editor);
-        cursor.state = original_cursor_position;
+        cursor.* = original_cursor_position;
         editor.scroll_to_cursor = .yes;
     }
 
@@ -1194,12 +1194,12 @@ viewport_glue_to_point :: (editor: *Editor, buffer: Buffer) -> changed: bool {
     return top != old_top;
 }
 
-restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor.State) {
+restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor) {
     if cursor_state.count == 0 return;  // the first undo doesn't have any remembered cursors
 
     array_resize(*cursors, cursor_state.count);
     for * cursor, i : cursors {
-        cursor.state = cursor_state[i];
+        cursor.* = cursor_state[i];
         cursor.col_wanted = -1;
     }
     if main_cursor >= cursors.count then main_cursor = cursors.count - 1;  // maybe we should remember it too
@@ -3193,7 +3193,7 @@ Search_Bar :: struct {
     regex_search: bool;
     regex_is_valid: bool;
 
-    original_cursor_position: Cursor.State;  // remember main cursor position so we can go back to it on Esc
+    original_cursor_position: Cursor;  // remember main cursor position so we can go back to it on Esc
     jumped := false;
 
     per_page := 10;

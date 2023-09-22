@@ -148,7 +148,7 @@ maybe_load_previous_session :: () -> Session {
     //         //     // if created {
     //         //     //     // Recover cursor and viewport position
     //         //     //     editor := *open_editors[editor_id];
-    //         //     //     editor.cursors[0].state = editor_state.main_cursor;
+    //         //     //     editor.cursors[0] = editor_state.main_cursor;
     //         //     //     editor.viewport.top  = editor_state.viewport_top;
     //         //     //     editor.viewport.left = editor_state.viewport_left;
     //         //     // }
@@ -359,7 +359,7 @@ dump_buffer_state :: (buffer_id: s64) -> [] u8 #must {
 
        editor_state := *editor_states[num_editors];
        editor_state.editor_id     = it_index;
-       editor_state.main_cursor   = it.cursors[it.main_cursor].state;
+       editor_state.main_cursor   = it.cursors[it.main_cursor];
        editor_state.viewport_top  = it.viewport.top;
        editor_state.viewport_left = it.viewport.left;
 
@@ -480,7 +480,7 @@ Buffer_State :: struct {
 
     Editor :: struct {
         editor_id: s64;  // for identifying whether this buffer is shown in the saved layout. No use for it otherwise
-        main_cursor: Cursor.State;
+        main_cursor: Cursor;
 
         viewport_top:  s32;
         viewport_left: s32;

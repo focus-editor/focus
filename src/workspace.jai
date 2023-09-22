@@ -218,8 +218,8 @@ hard_reload_workspace :: () {
 remember_visible_editors_and_buffers :: () -> Visible_Editor_State {
     save_editor_state :: (state: *Visible_Editor_State.State, editor: *Editor, buffer: *Buffer) {
         state.file_path = copy_temporary_string(buffer.file.full_path);
-        state.cursors = NewArray(editor.cursors.count, Cursor.State, initialized = false);
-        for * cursor, i : state.cursors { <<cursor = editor.cursors[i].state; }
+        state.cursors = NewArray(editor.cursors.count, Cursor, initialized = false);
+        for * cursor, i : state.cursors { cursor.* = editor.cursors[i]; }
         state.main_cursor = editor.main_cursor;
         state.viewport = editor.viewport;
     }
@@ -297,7 +297,7 @@ Visible_Editor_State :: struct {
 
     State :: struct {
         file_path: string;
-        cursors: [] Cursor.State;
+        cursors: [] Cursor;
         main_cursor: s64;
         viewport: Viewport;
     }
