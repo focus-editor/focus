@@ -385,6 +385,9 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "move_to_next_buffer",
     "toggle_line_wrap",
     "toggle_line_numbers",
+    "word_completion_next",
+    "word_completion_previous",
+    "word_completion_subword"
 ]);
 
 ACTIONS_OPEN_FILE_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[

@@ -139,6 +139,9 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
     keep_selection := false;
     enabled_whole_words := false;
 
+    word_complete.should_abort = true;
+    defer { if word_complete.should_abort && word_complete.active then word_complete_abort(); }
+
     handled := true;
 
     if action == {
@@ -250,6 +253,10 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
 
             case .delete_to_start_of_line;          delete_to_start_of_line             (editor, buffer);
             case .delete_to_end_of_line;            delete_to_end_of_line               (editor, buffer);
+
+            case .word_completion_next;             word_completion();                  
+            case .word_completion_previous;         word_completion(forwards = false);
+            case .word_completion_subword;          word_completion(search_for_subwords = true);
 
             case;                                   return false;
         }
@@ -3114,7 +3121,226 @@ free_editor :: (using editor: *Editor) {
     array_reset(*wrapped_line_starts);
 }
 
+// @CleanUp:
+word_completion :: (forwards := true, search_for_subwords := false) {
+    word_complete.should_abort = false;
+
+    // @Todo: Disabled temporary
+    // context.underscore_is_part_of_word = !word_complete.search_for_subwords;
+    // defer context.underscore_is_part_of_word = true;
+    
+    // if !word_complete.active {
+    //     word_complete.search_for_subwords = search_for_subwords;
+    //     context.underscore_is_part_of_word = !search_for_subwords;
+    // }
+    
+    if !word_complete.active {
+        word_complete.active = true;
+        word_complete_search();
+        
+        if word_complete.results.count == 0 {
+            word_complete.active = false;
+            return;
+        }
+    }
+
+   if forwards word_completion_next();
+   else        word_completion_previous();
+}
+
+word_completion_next :: () {
+    using word_complete;
+        
+    selected_result_index = (selected_result_index + 1) % results.count;
+
+    start := scroll_top;
+    end   := start + WORD_COMPLETION_MAX_RESULTS;
+
+    if selected_result_index+1 > end  {
+        scroll_top += 1;
+    }
+    
+    word_complete_apply();
+}
+
+word_completion_previous :: () {
+    using word_complete;
+
+    if selected_result_index - 1 < 0 {
+        selected_result_index = results.count-1;
+        if selected_result_index - (WORD_COMPLETION_MAX_RESULTS-1) > -1 {
+            scroll_top = selected_result_index - (WORD_COMPLETION_MAX_RESULTS-1);
+        }
+    } else {
+        selected_result_index -= 1;
+        if selected_result_index < scroll_top {
+            scroll_top -= 1;
+        }
+    }
+    
+    word_complete_apply();    
+}
+
+word_complete_abort :: () {
+    word_complete.active = false;
+    word_complete.scroll_top = 0;
+    if !word_complete.results.count return;
+    for word_complete.results { free(it.word); }
+    array_reset(*word_complete.results);
+    word_complete.selected_result_index = -1;
+}
+
+word_complete_search :: () {
+    editor, buffer := get_active_editor_and_buffer();
+
+    cursor := *editor.cursors[0];
+    // right := scan_through_similar_chars_on_the_right(buffer, cursor.pos, Char_Type.word, skip_one_space = false);
+    right := cursor.pos;
+    left  := scan_through_similar_chars_on_the_left(buffer, cursor.pos, Char_Type.word, skip_one_space = false);
+    start_subword := get_range_as_string(buffer, Offset_Range.{left, right});
+    buffer_str := to_string(buffer.bytes);
+    
+    add_new_result_or_update_delta :: inline (new_result: string, cursor_delta_of_result: s64) {
+        for * word_complete.results {
+            // if we use subwords then probably we want to score things by the length too.
+            if it.word == new_result {
+                // we've found a closer one
+                if cursor_delta_of_result < it.cursor_delta then it.cursor_delta = xx cursor_delta_of_result;
+                return;
+            }
+        }
+        
+        result := Word_Result.{word = new_result, cursor_delta = xx cursor_delta_of_result}; 
+        array_add(*word_complete.results, result);
+    }
+
+    match_strictly :: inline (a: string, b: string) -> bool {
+        for 0..min(a.count, b.count)-1 {
+            if is_upper(a[it]) != is_upper(b[it]) then return false;
+        }
+        return true;
+    }
+
+    // @Robustness: Searching left to right and right to left based on the first cursor position because 
+    //  I don't want to search the whole buffer for a few words. So, I used this stupid optimization, and I stuck with it.
+
+    pos := cast(s64)(left - 1);
+    while pos != -1 {
+        if pos == 0 then pos = 1; // if in find_index_from_right_nocase start_index got 0 then it's going to start the searching from the end of the buffer
+        pos = find_index_from_right_nocase(buffer_str, start_subword, pos);
+        if pos == -1 break;
+        
+        defer pos -= 1;
+        if pos-1 >= 0 && is_word_char(buffer_str[pos-1]) then continue;
+
+        for pos..buffer_str.count-1 {
+            c := buffer_str[it];
+            if !is_word_char(c) {                
+                is_subword := c == #char "_";
+                s := advance(buffer_str, pos);
+                s.count = it - pos;
+                cursor_delta := cursor.pos - pos;
+                if !match_strictly(start_subword, s) then cursor_delta += 100000; // case-sensitive penalty
+                add_new_result_or_update_delta(s, cursor_delta);
+                
+                if !is_subword then break;
+            }
+        }
+    }
+
+    pos = cast(s64)(right + 1);
+    while pos != buffer_str.count-1 {
+        pos = find_index_from_left_nocase(buffer_str, start_subword, pos);
+        if pos == -1 break;
+        
+        defer pos += start_subword.count;
+        if is_word_char(buffer_str[pos-1]) then continue;
+        
+        for pos..buffer_str.count-1 {
+            c := buffer_str[it];
+            if !is_word_char(c) {
+                is_subword := c == #char "_";
+                
+                s := advance(buffer_str, pos);
+                if s == start_subword continue;
+                s.count = it - pos;
+                // Now, we're going left to right, so the distance between the word and the cursor will 
+                // always be closer than in right-to-left searching; thus, we need to apply some corrections to it.
+                cursor_delta := it - cursor.pos;
+                if !match_strictly(start_subword, s) then cursor_delta += 100000; // case-sensitive penalty
+                add_new_result_or_update_delta(s, cursor_delta);
+                
+                if !is_subword then break;
+            }
+        }
+        
+    }
+
+    if !word_complete.results.count then return;
+ 
+    bubble_sort(word_complete.results, (a, b) => cast(s64) (a.cursor_delta - b.cursor_delta));
+    
+    // word_complete.results.count = min(word_complete.results.count, WORD_COMPLETION_MAX_RESULTS);
+    
+    add_new_result_or_update_delta(start_subword, cursor_delta_of_result = 0);
+    
+    for * word_complete.results { it.word = copy_string(it.word); }
+
+    return;
+}
+
+word_complete_apply :: () {
+    if !word_complete.results || !open_editors[editors.active].cursors.count return;
+    editor, buffer := get_active_editor_and_buffer();
+
+    result := word_complete.results[word_complete.selected_result_index];
+    word   := result.word;
+
+    for *cursor: editor.cursors { 
+        left  := scan_through_similar_chars_on_the_left(buffer, cursor.pos, Char_Type.word, skip_one_space = false);
+        cursor.sel = cursor.pos;
+        cursor.pos = left;
+        select_word(buffer, cursor); 
+    }
+    
+    offset_delta: s32 = 0;
+    buf_len := cast(s32) buffer.bytes.count;
+    for *cursor: editor.cursors {
+        new_len := cast(s32) buffer.bytes.count;
+        if new_len != buf_len {
+            offset_delta += new_len - buf_len;
+            cursor.pos += offset_delta;
+            cursor.sel += offset_delta;
+            buf_len = new_len;
+        }
+
+        range := get_selection(cursor);
+        add_paste_animation(editor, Offset_Range.{range.start, xx (range.start+word.count)});
+        replace_range(buffer, range, word);
+        cursor.pos = xx (range.start + word.count);
+        cursor.sel = cursor.pos;
+    }
+}
+
 #scope_export
+
+WORD_COMPLETION_MAX_RESULTS :: 15; // @Decide: Config file or a new, scrollable popup
+
+Word_Completion :: struct {
+    active := false;
+    should_abort := false;
+    selected_result_index := -1;
+    // search_for_subwords := true;
+    results: [..] Word_Result;
+    scroll_top := 0;
+}
+
+Word_Result :: struct {
+    word:         string;
+    cursor_delta: s32;
+}
+
+word_complete: Word_Completion;
 
 Editor :: struct {
     buffer_id: s64;
