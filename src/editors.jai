@@ -305,7 +305,7 @@ active_editor_type_char :: (char: u32) {
     if buffer.edits.count == 0 {
         // We want to remember where cursors were before we do any edits
         array_resize(*buffer.cursors, editor.cursors.count);
-        for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i]; }
+        for * cursor, i : buffer.cursors { cursor.* = editor.cursors[i]; }
     }
 
     offset_delta: s32 = 0;
