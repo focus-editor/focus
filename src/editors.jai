@@ -1035,6 +1035,7 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
                 buffer.lang = .Html;
 
             case "xml"; #through;
+            case "dtd"; #through;
             case "svg"; #through;
             case "vcproj"; #through;
             case "vcxproj"; #through;

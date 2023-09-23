@@ -23,18 +23,18 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
         token.len   = src.len;
 
         if src.type == {
-            case .tag_delimiter_start; {
+            case .tag_start; {
                 is_end_tag := peek_next_token(*tokenizer).type == .tag_closing_slash;
                 token.type = ifx is_end_tag then .close else .open;
                 token.kind = .brace;
             }
 
-            case .tag_delimiter_end; {
-                is_void_element := tokenizer.last_token.type == .tag_closing_slash || tokenizer.current_scope_tag_is_known_void_element;
+            case .tag_end; {
+                is_void_element := tokenizer.last_token.type == .tag_closing_slash || tokenizer.current_scope.tag_is_known_void_element;
 
-                if !is_void_element && tokenizer.html_mode && tokenizer.current_scope_tag_name {
+                if !is_void_element && tokenizer.html_mode && tokenizer.current_scope.tag_name {
                     for element: HTML_VOID_ELEMENTS {
-                        if equal_nocase(tokenizer.current_scope_tag_name, element) {
+                        if equal_nocase(tokenizer.current_scope.tag_name, element) {
                             is_void_element = true;
                             break;
                         }
@@ -47,7 +47,7 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
                 }
             }
 
-            case .xml_declaration_start; #through;
+            case .processing_instruction_start; #through;
             case .dtd_parenthesis_open; #through;
             case .dtd_bracket_open; #through;
             case .comment_start; #through;
@@ -56,7 +56,7 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
                 token.kind = .brace;
             }
 
-            case .xml_declaration_end; #through;
+            case .processing_instruction_end; #through;
             case .dtd_parenthesis_close; #through;
             case .dtd_bracket_close; #through;
             case .comment_end; #through;
@@ -64,6 +64,9 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
                 token.type = .close;
                 token.kind = .brace;
             }
+            
+            case .comment_content;
+                token.type = .maybe_multiline;
 
             case .eof;      token.type = .eof;  // to guarantee we always have indentation tokens
             case;           token.type = .unimportant;
@@ -111,10 +114,10 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
     // Look at the first char as if it's ASCII (if it isn't, this is just a text line)
     char := t.*;
 
-    if current_scope == .Tag {
+    if current_scope.type == .Tag {
         if char == {
-            case #char "<"; token.type = .tag_delimiter_start;      t += 1;
-            case #char ">"; token.type = .tag_delimiter_end;        t += 1;
+            case #char "<"; token.type = .tag_start;      t += 1;
+            case #char ">"; token.type = .tag_end;        t += 1;
             case #char "/"; token.type = .tag_closing_slash;        t += 1;
             case #char "="; token.type = .attribute_equals;         t += 1;
             case #char "["; token.type = .dtd_bracket_open;         t += 1;
@@ -139,33 +142,33 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
             }
 
             case #char "!"; {
-                if last_token.type == .tag_delimiter_start {
+                if last_token.type == .tag_start {
                     token.type = .tag_exclamation_point;
                     t += 1;
                 }
             }
             
             case #char "?"; {
-                if last_token.type == .tag_delimiter_start {
-                    token.type = .tag_question_mark;
-                    t += 1;
+                if current_scope.tag_is_processing_instruction && at_string(tokenizer, "?>") {
+                    token.type = .processing_instruction_end;
+                    t += 2;
                 } else {
                     token.type = .dtd_postfix_operator;             t += 1;
                 }
             }
         }
-    } else if current_scope == .Xml_Declaration {
-        if char == {
-            case #char "="; token.type = .attribute_equals;         t += 1;
-
-            case #char "?"; {
-                if at_string(tokenizer, "?>") {
-                    token.type = .xml_declaration_end;
-                    t += 2;
-                }
-            }
+    } else if current_scope.type == .Processing_Instruction {
+        if last_token.type == .processing_instruction_start {
+            parse_tag_name(tokenizer, *token);
+            token.type = .processing_instruction_target;
+        } else if last_token.type == .processing_instruction_target {
+            parse_processing_instruction_content(tokenizer, *token);
+        } else {
+            assert(at_string(tokenizer, "?>"));
+            token.type = .processing_instruction_end;
+            t += 2;
         }
-    } else if current_scope == .Comment {
+    } else if current_scope.type == .Comment {
         if last_token.type == .comment_start {
             parse_comment_content(tokenizer, *token);
         } else {
@@ -173,22 +176,22 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
             token.type = .comment_end;
             t += 3;
         }
-    } else if current_scope == .Cdata {
-        if at_string(tokenizer, "]]>") {
+    } else if current_scope.type == .Cdata {
+        if last_token.type == .cdata_start {
+            parse_cdata_content(tokenizer, *token);
+        } else {
+            assert(at_string(tokenizer, "]]>"));
             token.type = .cdata_end;
             t += 3;
-        } else {
-            parse_cdata_content(tokenizer, *token);
         }
     } else {
-        current_scope_tag_name = "";
-        current_scope_tag_is_known_void_element = false;
+        current_scope = .{};
 
         if char == {
             case #char "<"; {
-                if at_string(tokenizer, "<?xml", false) {
-                    token.type = .xml_declaration_start;
-                    t += 5;
+                if at_string(tokenizer, "<?") {
+                    token.type = .processing_instruction_start;
+                    t += 2;
                 } else if at_string(tokenizer, "<!--") {
                     token.type = .comment_start;
                     t += 4;
@@ -196,7 +199,7 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
                     token.type = .cdata_start;
                     t += 9;
                 } else {
-                    token.type = .tag_delimiter_start;
+                    token.type = .tag_start;
                     t += 1;
                 }
             }
@@ -207,13 +210,12 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
 
     if token.type == .eof { // No token found yet.
         if last_token.type == {
-            case .tag_delimiter_start; #through;
+            case .tag_start; #through;
             case .tag_exclamation_point; #through;
-            case .tag_question_mark; #through;
             case .tag_closing_slash;
                 parse_tag_name(tokenizer, *token);
 
-            case .xml_declaration_start; #through;
+            case .processing_instruction_target; #through;
             case .tag_name; #through;
             case .attribute_name; #through;
             case .attribute_value; #through;
@@ -239,30 +241,30 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
     token.len = cast(s32) (t - start_t);
 
     if token.type == {
-        case .xml_declaration_start; current_scope = .Xml_Declaration;
-        case .xml_declaration_end;   current_scope = .None;
+        case .tag_start;   current_scope.type = .Tag;
+        case .tag_end;     current_scope.type = .None;
 
-        case .tag_delimiter_start;   current_scope = .Tag;
-        case .tag_delimiter_end;     current_scope = .None;
+        case .processing_instruction_start; current_scope.type = .Processing_Instruction;
+        case .processing_instruction_end;   current_scope.type = .None;
 
-        case .comment_start;         current_scope = .Comment;
-        case .comment_end;           current_scope = .None;
+        case .comment_start;         current_scope.type = .Comment;
+        case .comment_end;           current_scope.type = .None;
 
-        case .cdata_start;           current_scope = .Cdata;
-        case .cdata_end;             current_scope = .None;
+        case .cdata_start;           current_scope.type = .Cdata;
+        case .cdata_end;             current_scope.type = .None;
 
-        case .dtd_bracket_open;      current_scope = .None;
-        case .dtd_bracket_close;     current_scope = .Tag;
+        case .dtd_bracket_open;      current_scope.type = .None; in_dtd_brackets = true;
+        case .dtd_bracket_close;     current_scope.type = .Tag;  in_dtd_brackets = false;
 
         case .tag_name;
-            assert(current_scope == .Tag);
-            current_scope_tag_name.data  = buf.data + token.start;
-            current_scope_tag_name.count = token.len;
-            last_parsed_tag_name = current_scope_tag_name;
+            assert(current_scope.type == .Tag);
+            current_scope.tag_name.data  = buf.data + token.start;
+            current_scope.tag_name.count = token.len;
+            last_parsed_tag_name = current_scope.tag_name;
 
         case .tag_exclamation_point;
-            assert(current_scope == .Tag);
-            current_scope_tag_is_known_void_element = true;
+            assert(current_scope.type == .Tag);
+            current_scope.tag_is_known_void_element = true;
     }
     
     assert(token.type != .eof, "Failed to parse a token.");
@@ -275,7 +277,7 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
 parse_tag_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     token.type = .tag_name;
     t += 1;
-    eat_until_any(tokenizer, " /<>!\t\r\n");
+    eat_until_any(tokenizer, " /<>!?\t\r\n");
 }
 
 parse_attribute_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
@@ -326,7 +328,8 @@ parse_tag_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
         }
     }
 
-    eat_until(tokenizer, #char "<");
+    if in_dtd_brackets  eat_until_any(tokenizer, "<]");
+    else                eat_until(tokenizer, #char "<");
 }
 
 parse_comment_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
@@ -347,6 +350,11 @@ parse_comment_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 parse_cdata_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     token.type = .cdata_content;
     eat_until(tokenizer, "]]>");
+}
+
+parse_processing_instruction_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
+    token.type = .processing_instruction_content;
+    eat_until(tokenizer, "?>");
 }
 
 at_string :: (using tokenizer: *Xml_Tokenizer, a: string, case_sensitive := true) -> bool {
@@ -403,20 +411,24 @@ Xml_Tokenizer :: struct {
     current_token: Xml_Token;
     last_token: Xml_Token;
 
-    current_scope: Xml_Tokenizer_Scope;
-    current_scope_tag_name: string;                // Only valid when current_scope == .Tag.
-    current_scope_tag_is_known_void_element: bool; // Only valid when current_scope == .Tag.
-    last_parsed_tag_name: string;
+    current_scope: struct {
+        type: Xml_Tokenizer_Scope;
+        tag_name: string;                // Only valid when current_scope.type == .Tag.
+        tag_is_known_void_element: bool; // Only valid when current_scope.type == .Tag.
+        tag_is_processing_instruction: bool;    // Only valid when current_scope.type == .Tag.
+    }
 
+    in_dtd_brackets: bool;
+    last_parsed_tag_name: string;
     html_mode: bool; // If true, we enable some heuristics to improve HTML parsing.
 }
 
 Xml_Tokenizer_Scope :: enum {
     None;
     Tag;
-    Xml_Declaration;
     Comment;
     Cdata;
+    Processing_Instruction;
 }
 
 Xml_Token :: struct {
@@ -429,13 +441,15 @@ Xml_Token :: struct {
         error;
         default;
 
-        xml_declaration_start;
-        xml_declaration_end;
-        tag_delimiter_start;
-        tag_delimiter_end;
+        processing_instruction_start;
+        processing_instruction_end;
+        processing_instruction_target;
+        processing_instruction_content;
+        
+        tag_start;
+        tag_end;
         tag_closing_slash;
         tag_exclamation_point;
-        tag_question_mark;
         tag_name;
         tag_content;
         attribute_name;
@@ -470,13 +484,15 @@ COLOR_MAP :: Code_Color.[
     .ERROR,         // error
     .DEFAULT,       // default
 
-    .COMMENT,       // xml_declaration_start
-    .COMMENT,       // xml_declaration_end
-    .FUNCTION,      // tag_delimiter_start
-    .FUNCTION,      // tag_delimiter_end
+    .COMMENT,       // processing_instruction_start
+    .COMMENT,       // processing_instruction_end
+    .COMMENT,       // processing_instruction_target
+    .COMMENT,       // processing_instruction_content
+    
+    .FUNCTION,      // tag_start
+    .FUNCTION,      // tag_end
     .FUNCTION,      // tag_closing_slash
     .FUNCTION,      // tag_exclamation_point
-    .FUNCTION,      // tag_question_mark
     .KEYWORD,       // tag_name
     .DEFAULT,       // tag_content
     .TYPE,          // attribute_name
