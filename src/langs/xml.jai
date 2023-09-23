@@ -50,6 +50,7 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
             case .xml_declaration_start; #through;
             case .dtd_parenthesis_open; #through;
             case .dtd_bracket_open; #through;
+            case .comment_start; #through;
             case .cdata_start; {
                 token.type = .open;
                 token.kind = .brace;
@@ -58,12 +59,12 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
             case .xml_declaration_end; #through;
             case .dtd_parenthesis_close; #through;
             case .dtd_bracket_close; #through;
+            case .comment_end; #through;
             case .cdata_end; {
                 token.type = .close;
                 token.kind = .brace;
             }
 
-            case .comment;  token.type = .maybe_multiline;
             case .eof;      token.type = .eof;  // to guarantee we always have indentation tokens
             case;           token.type = .unimportant;
         }
@@ -164,6 +165,14 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
                 }
             }
         }
+    } else if current_scope == .Comment {
+        if last_token.type == .comment_start {
+            parse_comment_content(tokenizer, *token);
+        } else {
+            assert(at_string(tokenizer, "-->"));
+            token.type = .comment_end;
+            t += 3;
+        }
     } else if current_scope == .Cdata {
         if at_string(tokenizer, "]]>") {
             token.type = .cdata_end;
@@ -181,7 +190,8 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
                     token.type = .xml_declaration_start;
                     t += 5;
                 } else if at_string(tokenizer, "<!--") {
-                    parse_comment(tokenizer, *token);
+                    token.type = .comment_start;
+                    t += 4;
                 } else if at_string(tokenizer, "<![CDATA[") {
                     token.type = .cdata_start;
                     t += 9;
@@ -235,6 +245,9 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
         case .tag_delimiter_start;   current_scope = .Tag;
         case .tag_delimiter_end;     current_scope = .None;
 
+        case .comment_start;         current_scope = .Comment;
+        case .comment_end;           current_scope = .None;
+
         case .cdata_start;           current_scope = .Cdata;
         case .cdata_end;             current_scope = .None;
 
@@ -257,25 +270,6 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
     current_token = token;
 
     return token;
-}
-
-parse_comment :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
-    token.type = .comment;
-    t += 4;
-    
-    while true {
-        if eat_until(tokenizer, "-->") {
-            if (t - 1).* != #char "-" { // Comments are not allowed to end in '--->'.
-                t += 3;
-                break;
-            } else {
-                t += 1;
-                continue;
-            }
-        }
-        
-        break;
-    }
 }
 
 parse_tag_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
@@ -333,6 +327,21 @@ parse_tag_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     }
 
     eat_until(tokenizer, #char "<");
+}
+
+parse_comment_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
+    token.type = .comment_content;
+    
+    while true {
+        if eat_until(tokenizer, "-->") {
+            if (t - 1).* == #char "-" { // Comments are not allowed to end in '--->'.
+                t += 1;
+                continue;
+            }
+        }
+        
+        break;
+    }
 }
 
 parse_cdata_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
@@ -406,6 +415,7 @@ Xml_Tokenizer_Scope :: enum {
     None;
     Tag;
     Xml_Declaration;
+    Comment;
     Cdata;
 }
 
@@ -418,7 +428,6 @@ Xml_Token :: struct {
 
         error;
         default;
-        comment;
 
         xml_declaration_start;
         xml_declaration_end;
@@ -433,6 +442,11 @@ Xml_Token :: struct {
         attribute_value;
         attribute_string_value;
         attribute_equals;
+        
+        comment_start;
+        comment_end;
+        comment_content;
+        
         cdata_start;
         cdata_end;
         cdata_content;
@@ -455,7 +469,6 @@ COLOR_MAP :: Code_Color.[
 
     .ERROR,         // error
     .DEFAULT,       // default
-    .COMMENT,       // comment
 
     .COMMENT,       // xml_declaration_start
     .COMMENT,       // xml_declaration_end
@@ -470,6 +483,11 @@ COLOR_MAP :: Code_Color.[
     .VALUE,         // attribute_value
     .STRING,        // attribute_string_value
     .DEFAULT,       // attribute_equals
+
+    .COMMENT,       // comment_start
+    .COMMENT,       // comment_end
+    .COMMENT,       // comment_content
+
     .COMMENT,       // cdata_start
     .COMMENT,       // cdata_end
     .VALUE,         // cdata_content
