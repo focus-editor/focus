@@ -208,8 +208,9 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
                     token.type = .dtd_conditional_section_end;
                     conditional_section_depth -= 1;
                     t += 3;
-                } else if in_dtd_brackets {
-                    token.type = .dtd_bracket_close;        t += 1;
+                } else if in_dtd_internal_subset {
+                    token.type = .dtd_bracket_close;
+                    t += 1;
                 }
             }
         }
@@ -259,8 +260,8 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
         case .cdata_start;                  current_scope.type = .Cdata;
         case .cdata_end;                    current_scope.type = .None;
 
-        case .dtd_bracket_open;             current_scope.type = .None; in_dtd_brackets = true;
-        case .dtd_bracket_close;            current_scope.type = .Tag;  in_dtd_brackets = false;
+        case .dtd_bracket_open;             current_scope.type = .None; in_dtd_internal_subset = true;
+        case .dtd_bracket_close;            current_scope.type = .Tag;  in_dtd_internal_subset = false;
 
         case .tag_name;
             assert(current_scope.type == .Tag);
@@ -334,7 +335,7 @@ parse_tag_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
         }
     }
     
-    if in_dtd_brackets || conditional_section_depth > 0  eat_until_any(tokenizer, "<]");
+    if in_dtd_internal_subset || conditional_section_depth > 0  eat_until_any(tokenizer, "<]");
     else                                                 eat_until(tokenizer, #char "<");
 }
 
@@ -368,7 +369,7 @@ parse_conditional_section_start :: (using tokenizer: *Xml_Tokenizer, token: *Xml
     conditional_section_depth += 1;
     t += 3;
     
-    // Try to find a section start of the form '<![xxx['.
+    // Try to find a section start of the form '<![xxx[', with optional whitespace around 'xxx'.
     tokenizer_copy := tokenizer.*;
     eat_white_space(*tokenizer_copy);
     eat_until_any(*tokenizer_copy, " []</!?\t\r\n");
@@ -435,12 +436,12 @@ Xml_Tokenizer :: struct {
 
     current_scope: struct {
         type: Xml_Tokenizer_Scope;
-        tag_name: string;                // Only valid when current_scope.type == .Tag.
-        tag_is_known_void_element: bool; // Only valid when current_scope.type == .Tag.
-        tag_is_processing_instruction: bool;    // Only valid when current_scope.type == .Tag.
+        tag_name: string;                    // Only valid when current_scope.type == .Tag.
+        tag_is_known_void_element: bool;     // Only valid when current_scope.type == .Tag.
+        tag_is_processing_instruction: bool; // Only valid when current_scope.type == .Tag.
     }
 
-    in_dtd_brackets: bool;
+    in_dtd_internal_subset: bool;
     conditional_section_depth: int;
     last_parsed_tag_name: string;
     html_mode: bool; // If true, we enable some heuristics to improve HTML parsing.
@@ -463,11 +464,6 @@ Xml_Token :: struct {
 
         error;
         default;
-
-        processing_instruction_start;
-        processing_instruction_end;
-        processing_instruction_target;
-        processing_instruction_content;
         
         tag_start;
         tag_end;
@@ -475,6 +471,7 @@ Xml_Token :: struct {
         tag_exclamation_point;
         tag_name;
         tag_content;
+        
         attribute_name;
         attribute_value;
         attribute_string_value;
@@ -483,6 +480,11 @@ Xml_Token :: struct {
         comment_start;
         comment_end;
         comment_content;
+
+        processing_instruction_start;
+        processing_instruction_end;
+        processing_instruction_target;
+        processing_instruction_content;
         
         cdata_start;
         cdata_end;
@@ -497,7 +499,6 @@ Xml_Token :: struct {
         dtd_percent;
         dtd_comma;
         dtd_parameter_entity;
-        
         dtd_conditional_section_start;
         dtd_conditional_section_end;
     }
@@ -510,17 +511,13 @@ COLOR_MAP :: Code_Color.[
     .ERROR,         // error
     .DEFAULT,       // default
 
-    .COMMENT,       // processing_instruction_start
-    .COMMENT,       // processing_instruction_end
-    .COMMENT,       // processing_instruction_target
-    .COMMENT,       // processing_instruction_content
-    
     .FUNCTION,      // tag_start
     .FUNCTION,      // tag_end
     .FUNCTION,      // tag_closing_slash
     .FUNCTION,      // tag_exclamation_point
     .KEYWORD,       // tag_name
     .DEFAULT,       // tag_content
+
     .TYPE,          // attribute_name
     .VALUE,         // attribute_value
     .STRING,        // attribute_string_value
@@ -530,6 +527,11 @@ COLOR_MAP :: Code_Color.[
     .COMMENT,       // comment_end
     .COMMENT,       // comment_content
 
+    .COMMENT,       // processing_instruction_start
+    .COMMENT,       // processing_instruction_end
+    .COMMENT,       // processing_instruction_target
+    .COMMENT,       // processing_instruction_content
+    
     .COMMENT,       // cdata_start
     .COMMENT,       // cdata_end
     .VALUE,         // cdata_content
@@ -543,7 +545,6 @@ COLOR_MAP :: Code_Color.[
     .OPERATION,     // dtd_percent
     .PUNCTUATION,   // dtd_comma
     .VALUE_KEYWORD, // dtd_parameter_entity
-    
     .COMMENT,       // dtd_conditional_section_start
     .COMMENT,       // dtd_conditional_section_end
 ];
