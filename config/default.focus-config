@@ -266,9 +266,15 @@ Ctrl-MouseMiddle            reset_font_size_to_default
 
 [user interface]
 font:         default
-font_size:    14
 font_ui:      default
 font_ui_bold: default
+
+font_size:               14
+font_ui_size:            15
+font_ui_big_size:        28
+font_ui_medium_size:     18
+font_ui_small_size:      14
+font_ui_very_small_size: 12
 
 [colors]
 background:                     15212AFF

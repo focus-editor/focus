@@ -343,6 +343,51 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         error_msg := log_parser_error(handler, "Couldn't parse '%' - expected a valid integer, got '%'", setting, value);
                         return false, error_msg;
                     }
+                case "font_ui_size";
+                    value_copy := value;
+                    int_val, success := parse_int(*value_copy);
+                    if success {
+                        parsed_config.font_ui_size = int_val;
+                    } else {
+                        error_msg := log_parser_error(handler, "Couldn't parse '%' - expected a valid integer, got '%'", setting, value);
+                        return false, error_msg;
+                    }
+                case "font_ui_big_size";
+                    value_copy := value;
+                    int_val, success := parse_int(*value_copy);
+                    if success {
+                        parsed_config.font_ui_big_size = int_val;
+                    } else {
+                        error_msg := log_parser_error(handler, "Couldn't parse '%' - expected a valid integer, got '%'", setting, value);
+                        return false, error_msg;
+                    }
+                case "font_ui_medium_size";
+                    value_copy := value;
+                    int_val, success := parse_int(*value_copy);
+                    if success {
+                        parsed_config.font_ui_medium_size = int_val;
+                    } else {
+                        error_msg := log_parser_error(handler, "Couldn't parse '%' - expected a valid integer, got '%'", setting, value);
+                        return false, error_msg;
+                    }
+                case "font_ui_small_size";
+                    value_copy := value;
+                    int_val, success := parse_int(*value_copy);
+                    if success {
+                        parsed_config.font_ui_small_size = int_val;
+                    } else {
+                        error_msg := log_parser_error(handler, "Couldn't parse '%' - expected a valid integer, got '%'", setting, value);
+                        return false, error_msg;
+                    }
+                case "font_ui_very_small_size";
+                    value_copy := value;
+                    int_val, success := parse_int(*value_copy);
+                    if success {
+                        parsed_config.font_ui_very_small_size = int_val;
+                    } else {
+                        error_msg := log_parser_error(handler, "Couldn't parse '%' - expected a valid integer, got '%'", setting, value);
+                        return false, error_msg;
+                    }
             }
         case .colors;
             color_name, value := break_by_spaces(line);
@@ -630,11 +675,16 @@ Parsed_Config :: struct {
     set_settings: [..] string;  // so that we know which options were included in the config, and only touch those when merging
 
     // Style
-    font:         string;
-    font_ui:      string;
-    font_ui_bold: string;
-    font_size:    int;
-    colors:       [..] Parsed_Color;
+    font:                    string;
+    font_ui:                 string;
+    font_ui_bold:            string;
+    font_size:               int;
+    font_ui_size:            int;
+    font_ui_big_size:        int;
+    font_ui_medium_size:     int;
+    font_ui_small_size:      int;
+    font_ui_very_small_size: int;
+    colors:                  [..] Parsed_Color;
 
     platform: Platform_Config;
 };
