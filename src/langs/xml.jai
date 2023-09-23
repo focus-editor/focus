@@ -81,12 +81,10 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
 
 get_tokenizer :: (using buffer: Buffer) -> Xml_Tokenizer {
     tokenizer: Xml_Tokenizer;
-
     tokenizer.buf       = to_string(bytes);
     tokenizer.max_t     = bytes.data + bytes.count;
     tokenizer.t         = bytes.data;
     tokenizer.html_mode = buffer.lang == .Html;
-
     return tokenizer;
 }
 
@@ -107,8 +105,6 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
     if t >= max_t return token;
 
     start_t = t;
-
-    // Look at the first char as if it's ASCII (if it isn't, this is just a text line)
     char := t.*;
 
     if current_scope.type == .Tag {
@@ -223,7 +219,6 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
             case .tag_closing_slash;
                 parse_tag_name(tokenizer, *token);
 
-            case .processing_instruction_target; #through;
             case .tag_name; #through;
             case .attribute_name; #through;
             case .attribute_value; #through;
@@ -251,11 +246,11 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
         case .tag_start;                    current_scope.type = .Tag;
         case .tag_end;                      current_scope.type = .None;
 
-        case .processing_instruction_start; current_scope.type = .Processing_Instruction;
-        case .processing_instruction_end;   current_scope.type = .None;
-
         case .comment_start;                current_scope.type = .Comment;
         case .comment_end;                  current_scope.type = .None;
+
+        case .processing_instruction_start; current_scope.type = .Processing_Instruction;
+        case .processing_instruction_end;   current_scope.type = .None;
 
         case .cdata_start;                  current_scope.type = .Cdata;
         case .cdata_end;                    current_scope.type = .None;
@@ -320,7 +315,6 @@ parse_tag_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     t += 1;
 
     if html_mode {
-        // Special case raw text elements ('script' and 'style').
         in_script := equal_nocase(last_parsed_tag_name, "script");
         in_style  := equal_nocase(last_parsed_tag_name, "style");
 
@@ -336,7 +330,7 @@ parse_tag_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     }
     
     if in_dtd_internal_subset || conditional_section_depth > 0  eat_until_any(tokenizer, "<]");
-    else                                                 eat_until(tokenizer, #char "<");
+    else                                                        eat_until(tokenizer, #char "<");
 }
 
 parse_comment_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
@@ -380,13 +374,13 @@ parse_conditional_section_start :: (using tokenizer: *Xml_Tokenizer, token: *Xml
     }
 }
 
-at_string :: (using tokenizer: *Xml_Tokenizer, a: string, case_sensitive := true) -> bool {
-    if t + a.count - 1 >= max_t  return false;
+at_string :: (using tokenizer: *Xml_Tokenizer, a: string, $case_sensitive := true) -> bool {
+    if t + a.count > max_t  return false;
     b: string = ---;
     b.data = t;
     b.count = a.count;
-    if case_sensitive  return equal(a, b);
-    return equal_nocase(a, b);
+    #if case_sensitive  return equal(a, b);
+    else                return equal_nocase(a, b);
 }
 
 eat_until :: (using tokenizer: *Xml_Tokenizer, c: u8) {
