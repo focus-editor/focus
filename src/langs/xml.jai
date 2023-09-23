@@ -65,11 +65,8 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
                 token.kind = .brace;
             }
             
-            case .comment_content;
-                token.type = .maybe_multiline;
-
-            case .eof;      token.type = .eof;  // to guarantee we always have indentation tokens
-            case;           token.type = .unimportant;
+            case .eof;  token.type = .eof;  // to guarantee we always have indentation tokens
+            case;       token.type = .unimportant;
         }
 
         array_add(*tokens, token);
@@ -116,8 +113,8 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
 
     if current_scope.type == .Tag {
         if char == {
-            case #char "<"; token.type = .tag_start;      t += 1;
-            case #char ">"; token.type = .tag_end;        t += 1;
+            case #char "<"; token.type = .tag_start;                t += 1;
+            case #char ">"; token.type = .tag_end;                  t += 1;
             case #char "/"; token.type = .tag_closing_slash;        t += 1;
             case #char "="; token.type = .attribute_equals;         t += 1;
             case #char "["; token.type = .dtd_bracket_open;         t += 1;
@@ -125,7 +122,6 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
             case #char ")"; token.type = .dtd_parenthesis_close;    t += 1;
             case #char ","; token.type = .dtd_comma;                t += 1;
             case #char "|"; token.type = .dtd_infix_operator;       t += 1;
-
             case #char "*"; #through;
             case #char "+"; token.type = .dtd_postfix_operator;     t += 1;
 
@@ -153,7 +149,8 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
                     token.type = .processing_instruction_end;
                     t += 2;
                 } else {
-                    token.type = .dtd_postfix_operator;             t += 1;
+                    token.type = .dtd_postfix_operator;
+                    t += 1;
                 }
             }
         }
@@ -198,13 +195,23 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
                 } else if at_string(tokenizer, "<![CDATA[") {
                     token.type = .cdata_start;
                     t += 9;
+                } else if at_string(tokenizer, "<![") {
+                    parse_conditional_section_start(tokenizer, *token);
                 } else {
                     token.type = .tag_start;
                     t += 1;
                 }
             }
 
-            case #char "]"; token.type = .dtd_bracket_close;        t += 1;
+            case #char "]"; {
+                if conditional_section_depth > 0 && at_string(tokenizer, "]]>") {
+                    token.type = .dtd_conditional_section_end;
+                    conditional_section_depth -= 1;
+                    t += 3;
+                } else if in_dtd_brackets {
+                    token.type = .dtd_bracket_close;        t += 1;
+                }
+            }
         }
     }
 
@@ -231,9 +238,8 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
             case .attribute_equals;
                 parse_attribute_value(tokenizer, *token);
 
-            case; {
+            case;
                 parse_tag_content(tokenizer, *token);
-            }
         }
     }
 
@@ -241,20 +247,20 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
     token.len = cast(s32) (t - start_t);
 
     if token.type == {
-        case .tag_start;   current_scope.type = .Tag;
-        case .tag_end;     current_scope.type = .None;
+        case .tag_start;                    current_scope.type = .Tag;
+        case .tag_end;                      current_scope.type = .None;
 
         case .processing_instruction_start; current_scope.type = .Processing_Instruction;
         case .processing_instruction_end;   current_scope.type = .None;
 
-        case .comment_start;         current_scope.type = .Comment;
-        case .comment_end;           current_scope.type = .None;
+        case .comment_start;                current_scope.type = .Comment;
+        case .comment_end;                  current_scope.type = .None;
 
-        case .cdata_start;           current_scope.type = .Cdata;
-        case .cdata_end;             current_scope.type = .None;
+        case .cdata_start;                  current_scope.type = .Cdata;
+        case .cdata_end;                    current_scope.type = .None;
 
-        case .dtd_bracket_open;      current_scope.type = .None; in_dtd_brackets = true;
-        case .dtd_bracket_close;     current_scope.type = .Tag;  in_dtd_brackets = false;
+        case .dtd_bracket_open;             current_scope.type = .None; in_dtd_brackets = true;
+        case .dtd_bracket_close;            current_scope.type = .Tag;  in_dtd_brackets = false;
 
         case .tag_name;
             assert(current_scope.type == .Tag);
@@ -327,9 +333,9 @@ parse_tag_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
             return;
         }
     }
-
-    if in_dtd_brackets  eat_until_any(tokenizer, "<]");
-    else                eat_until(tokenizer, #char "<");
+    
+    if in_dtd_brackets || conditional_section_depth > 0  eat_until_any(tokenizer, "<]");
+    else                                                 eat_until(tokenizer, #char "<");
 }
 
 parse_comment_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
@@ -355,6 +361,22 @@ parse_cdata_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 parse_processing_instruction_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     token.type = .processing_instruction_content;
     eat_until(tokenizer, "?>");
+}
+
+parse_conditional_section_start :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
+    token.type = .dtd_conditional_section_start;
+    conditional_section_depth += 1;
+    t += 3;
+    
+    // Try to find a section start of the form '<![xxx['.
+    tokenizer_copy := tokenizer.*;
+    eat_white_space(*tokenizer_copy);
+    eat_until_any(*tokenizer_copy, " []</!?\t\r\n");
+    eat_white_space(*tokenizer_copy);
+    if tokenizer_copy.t.* == #char "[" {
+        tokenizer_copy.t += 1;
+        tokenizer.t = tokenizer_copy.t;
+    }
 }
 
 at_string :: (using tokenizer: *Xml_Tokenizer, a: string, case_sensitive := true) -> bool {
@@ -419,6 +441,7 @@ Xml_Tokenizer :: struct {
     }
 
     in_dtd_brackets: bool;
+    conditional_section_depth: int;
     last_parsed_tag_name: string;
     html_mode: bool; // If true, we enable some heuristics to improve HTML parsing.
 }
@@ -474,6 +497,9 @@ Xml_Token :: struct {
         dtd_percent;
         dtd_comma;
         dtd_parameter_entity;
+        
+        dtd_conditional_section_start;
+        dtd_conditional_section_end;
     }
 }
 
@@ -517,6 +543,9 @@ COLOR_MAP :: Code_Color.[
     .OPERATION,     // dtd_percent
     .PUNCTUATION,   // dtd_comma
     .VALUE_KEYWORD, // dtd_parameter_entity
+    
+    .COMMENT,       // dtd_conditional_section_start
+    .COMMENT,       // dtd_conditional_section_end
 ];
 
 // HTML elements that should not have a closing tag, and have an *optional* forward slash at the end of the tag.
