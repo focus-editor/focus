@@ -963,7 +963,7 @@ refresh_buffer_from_disk :: (path: string) {
 
             new_edit_group(buffer, editor);
             array_resize(*buffer.cursors, editor.cursors.count);
-            for * cursor, i : buffer.cursors { <<cursor = editor.cursors[i].state; }
+            for * cursor, i : buffer.cursors { cursor.* = editor.cursors[i]; }
         }
 
         // Reload its contents
@@ -1177,7 +1177,7 @@ Buffer :: struct {
     undos: [..] Edit_Group;
     redos: [..] Edit_Group;
     edits: [..] Edit;  // current edits, not in a group yet
-    cursors: [..] Cursor.State;  // cursor state before any current edits were made
+    cursors: [..] Cursor;  // cursor state before any current edits were made
     edit_notifications: [..] Edit_Notification;
 
     lang: enum u8 {
@@ -1197,7 +1197,7 @@ Buffer :: struct {
 
     Edit_Group :: struct {
         edits: [] Edit;
-        cursors: [] Cursor.State;
+        cursors: [] Cursor;
     }
 
     // All strings in this struct are owned
@@ -1235,9 +1235,9 @@ Buffer :: struct {
 }
 
 Cursor :: struct {
-    using state: State;
-
-    State :: struct { pos, sel: s32; col_wanted: s32 = -1; }
+    pos: s32;
+    sel: s32; 
+    col_wanted: s32 = -1;
 }
 
 #assert size_of(Cursor) == (2 + 1) * size_of(s32);  // make sure no padding accidentally gets added

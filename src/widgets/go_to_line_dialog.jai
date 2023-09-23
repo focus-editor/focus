@@ -52,7 +52,7 @@ show_go_to_line_dialog :: () {
     using go_to_line_dialog;
 
     // Remember cursor position
-    original_cursor_position = editor.cursors[editor.main_cursor].state;
+    original_cursor_position = editor.cursors[editor.main_cursor];
     jumped = false;
 
     // Select text when opening
@@ -70,7 +70,7 @@ close_go_to_line_dialog :: (jump_to_original_cursor := false) {
 
     if jump_to_original_cursor && jumped {
         cursor := leave_only_original_cursor(editor);
-        cursor.state = original_cursor_position;
+        cursor.* = original_cursor_position;
         editor.scroll_to_cursor = .yes;
     } else if jumped {
         // We should remove the selection that was only there for demonstration
@@ -134,7 +134,7 @@ go_to_line_dialog: Go_To_Line_Dialog;
 
 Go_To_Line_Dialog :: struct {
     scroll_to_cursor: Scroll_Mode = .no;
-    original_cursor_position: Cursor.State;
+    original_cursor_position: Cursor;
     jumped := false;
 
     input: Text_Input;

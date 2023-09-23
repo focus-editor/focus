@@ -282,6 +282,10 @@ is_balanceable_char :: (ch: u32) -> bool {
     return ch == #char "{" || ch == #char "(" || ch == #char "[" || ch == #char "\"";
 }
 
+is_auto_closeable_char :: (ch: u32) -> bool {
+    return ch == #char "{" || ch == #char "(" || ch == #char "[";
+}
+
 get_balancing_char :: (ch: u32) -> u32 {
     if ch == {
         case #char "{";  return #char "}";

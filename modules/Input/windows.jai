@@ -98,6 +98,23 @@ get_key_code :: (wParam: WPARAM) -> Key_Code {
     if wParam == VK_SNAPSHOT
         return PRINT_SCREEN;
 
+    // Numpad keys
+    if wParam == VK_NUMPAD0  return xx #char "0";
+    if wParam == VK_NUMPAD1  return xx #char "1";
+    if wParam == VK_NUMPAD2  return xx #char "2";
+    if wParam == VK_NUMPAD3  return xx #char "3";
+    if wParam == VK_NUMPAD4  return xx #char "4";
+    if wParam == VK_NUMPAD5  return xx #char "5";
+    if wParam == VK_NUMPAD6  return xx #char "6";
+    if wParam == VK_NUMPAD7  return xx #char "7";
+    if wParam == VK_NUMPAD8  return xx #char "8";
+    if wParam == VK_NUMPAD9  return xx #char "9";
+    if wParam == VK_MULTIPLY return xx #char "*";
+    if wParam == VK_ADD      return xx #char "+";
+    if wParam == VK_SUBTRACT return xx #char "-";
+    if wParam == VK_DECIMAL  return xx #char ".";
+    if wParam == VK_DIVIDE   return xx #char "/";
+
     return UNKNOWN;
 }
 
@@ -227,9 +244,9 @@ MyWindowProc :: (hwnd: HWND, message: u32,
             keycode := wParam;
 
             // @Hack to allow AltGr shortcuts for AZERTY layout...
-            altgr_keycode := keycode == 126 || keycode == 35 || keycode == 123 || keycode == 91 ||
-                             keycode == 124 || keycode == 96 || keycode == 92  || keycode == 94 ||
-                             keycode == 64  || keycode == 93 || keycode == 125;
+            altgr_keycode := keycode == #char "~" || keycode == #char "#" || keycode == #char "{"  || keycode == #char "[" ||
+                             keycode == #char "|" || keycode == #char "`" || keycode == #char "\\" || keycode == #char "^" ||
+                             keycode == #char "@" || keycode == #char "]" || keycode == #char "}";
 
             if (keycode > 31 && keycode < 127 && !(ctrl_state || alt_state)) || (altgr_keycode && alt_state) || keycode > 255 {
                 // Control characters generate key codes < 32, but these are redundant
