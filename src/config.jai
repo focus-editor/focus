@@ -324,6 +324,18 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
         dst.style.font_ui_very_small_size = parsed.font_ui_very_small_size;
         font_ui_very_small_size = parsed.font_ui_very_small_size;
     }
+    if parsed.font_icons_size > 0 {
+        dst.style.font_icons_size = parsed.font_icons_size;
+        font_icons_size = parsed.font_icons_size;
+    }
+    if parsed.font_icons_small_size > 0 {
+        dst.style.font_icons_small_size = parsed.font_icons_small_size;
+        font_icons_small_size = parsed.font_icons_small_size;
+    }
+    if parsed.font_icons_very_small_size > 0 {
+        dst.style.font_icons_very_small_size = parsed.font_icons_very_small_size;
+        font_icons_very_small_size = parsed.font_icons_very_small_size;
+    }
 
     // Colors
     for parsed.colors {
@@ -430,15 +442,18 @@ Keymap :: struct {
 }
 
 Style :: struct {
-    font                    := "";
-    font_ui                 := "";
-    font_ui_bold            := "";
-    font_size               := -1;
-    font_ui_size            := -1;
-    font_ui_big_size        := -1;
-    font_ui_medium_size     := -1;
-    font_ui_small_size      := -1;
-    font_ui_very_small_size := -1;
+    font                       := "";
+    font_ui                    := "";
+    font_ui_bold               := "";
+    font_size                  := -1;
+    font_ui_size               := -1;
+    font_ui_big_size           := -1;
+    font_ui_medium_size        := -1;
+    font_ui_small_size         := -1;
+    font_ui_very_small_size    := -1;
+    font_icons_size            := -1;
+    font_icons_small_size      := -1;
+    font_icons_very_small_size := -1;
 }
 
 style: Style;
