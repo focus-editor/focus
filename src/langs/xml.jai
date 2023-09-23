@@ -112,8 +112,9 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
 
     if current_scope == .Tag {
         if char == {
+            case #char "<"; token.type = .tag_delimiter_start;      t += 1;
             case #char ">"; token.type = .tag_delimiter_end;        t += 1;
-            case #char "/"; token.type = .tag_closing_slash;  t += 1;
+            case #char "/"; token.type = .tag_closing_slash;        t += 1;
             case #char "="; token.type = .attribute_equals;         t += 1;
             case #char "["; token.type = .dtd_bracket_open;         t += 1;
             case #char "("; token.type = .dtd_parenthesis_open;     t += 1;
@@ -121,7 +122,6 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
             case #char ","; token.type = .dtd_comma;                t += 1;
             case #char "|"; token.type = .dtd_infix_operator;       t += 1;
 
-            case #char "?"; #through;
             case #char "*"; #through;
             case #char "+"; token.type = .dtd_postfix_operator;     t += 1;
 
@@ -141,6 +141,15 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
                 if last_token.type == .tag_delimiter_start {
                     token.type = .tag_exclamation_point;
                     t += 1;
+                }
+            }
+            
+            case #char "?"; {
+                if last_token.type == .tag_delimiter_start {
+                    token.type = .tag_question_mark;
+                    t += 1;
+                } else {
+                    token.type = .dtd_postfix_operator;             t += 1;
                 }
             }
         }
@@ -190,6 +199,7 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
         if last_token.type == {
             case .tag_delimiter_start; #through;
             case .tag_exclamation_point; #through;
+            case .tag_question_mark; #through;
             case .tag_closing_slash;
                 parse_tag_name(tokenizer, *token);
 
@@ -241,6 +251,8 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
             assert(current_scope == .Tag);
             current_scope_tag_is_known_void_element = true;
     }
+    
+    assert(token.type != .eof, "Failed to parse a token.");
 
     current_token = token;
 
@@ -250,13 +262,26 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
 parse_comment :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     token.type = .comment;
     t += 4;
-    if eat_until(tokenizer, "-->")  t += 3;
+    
+    while true {
+        if eat_until(tokenizer, "-->") {
+            if (t - 1).* != #char "-" { // Comments are not allowed to end in '--->'.
+                t += 3;
+                break;
+            } else {
+                t += 1;
+                continue;
+            }
+        }
+        
+        break;
+    }
 }
 
 parse_tag_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     token.type = .tag_name;
     t += 1;
-    eat_until_any(tokenizer, " />\t\r\n");
+    eat_until_any(tokenizer, " /<>!\t\r\n");
 }
 
 parse_attribute_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
@@ -264,7 +289,7 @@ parse_attribute_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 
     token.type = .attribute_name;
     t += 1;
-    eat_until_any(tokenizer, " ,+?|*=/>()\t\r\n");
+    eat_until_any(tokenizer, " ,+?|*=/<>!()\t\r\n");
 
     last_character := (t - 1).*;
 
@@ -401,6 +426,7 @@ Xml_Token :: struct {
         tag_delimiter_end;
         tag_closing_slash;
         tag_exclamation_point;
+        tag_question_mark;
         tag_name;
         tag_content;
         attribute_name;
@@ -437,6 +463,7 @@ COLOR_MAP :: Code_Color.[
     .FUNCTION,      // tag_delimiter_end
     .FUNCTION,      // tag_closing_slash
     .FUNCTION,      // tag_exclamation_point
+    .FUNCTION,      // tag_question_mark
     .KEYWORD,       // tag_name
     .DEFAULT,       // tag_content
     .TYPE,          // attribute_name
