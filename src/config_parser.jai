@@ -334,6 +334,14 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         error_msg := log_parser_error(handler, error);
                         return false, error_msg;
                     }
+                case "font_icons";
+                    found, error := find_font_by_name(value);
+                    if found {
+                        parsed_config.font_icons = value;
+                    } else {
+                        error_msg := log_parser_error(handler, error);
+                        return false, error_msg;
+                    }
                 case "font_size";
                     value_copy := value;
                     int_val, success := parse_int(*value_copy);
@@ -705,6 +713,7 @@ Parsed_Config :: struct {
     font:                       string;
     font_ui:                    string;
     font_ui_bold:               string;
+    font_icons:                 string;
     font_size:                  int;
     font_ui_size:               int;
     font_ui_big_size:           int;

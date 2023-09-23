@@ -360,16 +360,16 @@ init_fonts_and_dependent_things :: () {
         return font;
     }
 
-    font                  = init_font(main_font_name         , main_font_data         , current_font_size                 , "main text");
-    font_ui               = init_font(ui_font_name           , ui_font_data           , current_font_ui_size              , "main ui");
-    font_ui_big           = init_font(ui_font_name           , ui_font_data           , current_font_ui_big_size          , "big ui");
-    font_ui_medium        = init_font(ui_font_name           , ui_font_data           , current_font_ui_medium_size       , "medium ui");
-    font_ui_small         = init_font(ui_font_name           , ui_font_data           , current_font_ui_small_size        , "small ui");
-    font_ui_very_small    = init_font(ui_font_name           , ui_font_data           , current_font_ui_very_small_size   , "very small ui");
-    font_ui_bold          = init_font(ui_bold_font_name      , ui_bold_font_data      , current_font_ui_bold_size         , "bold ui");
-    font_icons            = init_font(DEFAULT_FONT_ICONS.name, DEFAULT_FONT_ICONS.data, current_font_icons_size           , "main icon");
-    font_icons_small      = init_font(DEFAULT_FONT_ICONS.name, DEFAULT_FONT_ICONS.data, current_font_icons_small_size     , "small icon");
-    font_icons_very_small = init_font(DEFAULT_FONT_ICONS.name, DEFAULT_FONT_ICONS.data, current_font_icons_very_small_size, "very small icon");
+    font                  = init_font(main_font_name   , main_font_data   , current_font_size                 , "main text");
+    font_ui               = init_font(ui_font_name     , ui_font_data     , current_font_ui_size              , "main ui");
+    font_ui_big           = init_font(ui_font_name     , ui_font_data     , current_font_ui_big_size          , "big ui");
+    font_ui_medium        = init_font(ui_font_name     , ui_font_data     , current_font_ui_medium_size       , "medium ui");
+    font_ui_small         = init_font(ui_font_name     , ui_font_data     , current_font_ui_small_size        , "small ui");
+    font_ui_very_small    = init_font(ui_font_name     , ui_font_data     , current_font_ui_very_small_size   , "very small ui");
+    font_ui_bold          = init_font(ui_bold_font_name, ui_bold_font_data, current_font_ui_bold_size         , "bold ui");
+    font_icons            = init_font(icons_font_name  , icons_font_data  , current_font_icons_size           , "main icon");
+    font_icons_small      = init_font(icons_font_name  , icons_font_data  , current_font_icons_small_size     , "small icon");
+    font_icons_very_small = init_font(icons_font_name  , icons_font_data  , current_font_icons_very_small_size, "very small icon");
 
     font_ui_line_height        = cast(float) font_ui.default_line_spacing;
     font_ui_big_line_height    = cast(float) font_ui_big.default_line_spacing;
@@ -655,6 +655,9 @@ ui_font_data      := #run DEFAULT_FONT_UI.data;
 
 ui_bold_font_name := "default";
 ui_bold_font_data := #run DEFAULT_FONT_UI_BOLD.data;
+
+icons_font_name   := "default";
+icons_font_data   := #run DEFAULT_FONT_ICONS.data;
 
 font_size_delta := 0; // used for increasing/decreasing global font size 
 

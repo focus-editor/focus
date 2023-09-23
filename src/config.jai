@@ -300,6 +300,18 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
             add_user_error(tprint("Couldn't load font %", parsed.font_ui_bold));
         }
     }
+    if parsed.font_icons {
+        dst.style.font_icons = parsed.font_icons;
+
+        loaded_data, success := load_font_by_name(parsed.font_icons, .font_icons);
+        if success {
+            icons_font_data = loaded_data;
+            icons_font_name = parsed.font_icons;
+        } else {
+            // NOTE: this error will be removed by the config success message. Should do something about it
+            add_user_error(tprint("Couldn't load font %", parsed.font_icons));
+        }
+    }
     if parsed.font_size > 0 {
         dst.style.font_size = parsed.font_size;
         font_size = parsed.font_size;
@@ -351,11 +363,12 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     platform_copy_config(*parsed.platform, *dst.platform);
 }
 
-load_font_by_name :: (name: string, kind: enum { font; font_ui; font_ui_bold; }) -> font_data: string, success: bool {
+load_font_by_name :: (name: string, kind: enum { font; font_ui; font_ui_bold; font_icons; }) -> font_data: string, success: bool {
     if name == "default" {
         if      kind == .font         return DEFAULT_FONT.data        , true;
         else if kind == .font_ui      return DEFAULT_FONT_UI.data     , true;
         else if kind == .font_ui_bold return DEFAULT_FONT_UI_BOLD.data, true;
+        else if kind == .font_icons   return DEFAULT_FONT_ICONS.data  , true;
     }
 
     font_path := find_font_by_name(name);
@@ -445,6 +458,7 @@ Style :: struct {
     font                       := "";
     font_ui                    := "";
     font_ui_bold               := "";
+    font_icons                 := "";
     font_size                  := -1;
     font_ui_size               := -1;
     font_ui_big_size           := -1;
