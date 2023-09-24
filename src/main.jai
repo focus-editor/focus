@@ -346,7 +346,7 @@ init_fonts_and_dependent_things :: () {
     // Reload fonts
     #insert -> string {
         b: String_Builder;
-        ti := type_info(Font_Size_Kind);
+        ti := type_info(Font_Size);
         for name : ti.names {
             code := #string END
             {

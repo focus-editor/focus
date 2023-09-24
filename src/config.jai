@@ -266,7 +266,7 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     // Font families
     #insert -> string {
         b: String_Builder;
-        for name : type_info(Font_Family_Kind).names {
+        for name : type_info(Font_Family).names {
             // NOTE: add_user_error will be removed by the config success message. Should do something about it
             code := #string END
                 if parsed.font_styles.%1 {
@@ -289,7 +289,7 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     // Font sizes
     #insert -> string {
         b: String_Builder;
-        for name : type_info(Font_Size_Kind).names {
+        for name : type_info(Font_Size).names {
             code := #string END
                 if parsed.font_styles.%1_size > 0 {
                     dst.font_styles.%1_size = parsed.font_styles.%1_size;
@@ -315,7 +315,7 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     platform_copy_config(*parsed.platform, *dst.platform);
 }
 
-load_font_by_name :: (name: string, kind: Font_Family_Kind) -> font_data: string, success: bool {
+load_font_by_name :: (name: string, kind: Font_Family) -> font_data: string, success: bool {
     if name == "default" {
         if #complete kind == {
             case .font;         return DEFAULT_FONT.data        , true;
@@ -425,7 +425,7 @@ Font_Styles :: struct {
     font_icons_very_small_size := -1;
 }
 
-Font_Size_Kind :: enum {
+Font_Size :: enum {
     font;
     font_ui;
     font_ui_big;
@@ -438,14 +438,14 @@ Font_Size_Kind :: enum {
     font_icons_very_small;
 }
 
-Font_Family_Kind :: enum {
+Font_Family :: enum {
     font; 
     font_ui; 
     font_ui_bold; 
     font_icons;
 }
 
-font_size_to_family :: (kind: Font_Size_Kind) -> Font_Family_Kind {
+font_size_to_family :: (kind: Font_Size) -> Font_Family {
     if #complete kind == {
         case .font;                  return .font;
         case .font_ui;               return .font_ui;

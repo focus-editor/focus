@@ -314,7 +314,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
             #insert -> string {
                 b: String_Builder;
                 print_to_builder(*b, "if setting == {\n");
-                for name : type_info(Font_Family_Kind).names {
+                for name : type_info(Font_Family).names {
                     code := #string END
                         case "%1";
                             found, error := find_font_by_name(value);
@@ -336,7 +336,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
             #insert -> string {
                 b: String_Builder;
                 print_to_builder(*b, "if setting == {\n");
-                for name : type_info(Font_Size_Kind).names {
+                for name : type_info(Font_Size).names {
                     code := #string END
                         case "%1_size";
                             value_copy := value;
