@@ -316,10 +316,10 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                 print_to_builder(*b, "if setting == {\n");
                 for name : type_info(Font_Family).names {
                     code := #string END
-                        case "%1";
+                        case "font_%1";
                             found, error := find_font_by_name(value);
                             if found {
-                                parsed_config.font_styles.%1 = value;
+                                parsed_config.font_styles.font_%1 = value;
                             } else {
                                 error_msg := log_parser_error(handler, error);
                                 return false, error_msg;
@@ -338,11 +338,11 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                 print_to_builder(*b, "if setting == {\n");
                 for name : type_info(Font_Size).names {
                     code := #string END
-                        case "%1_size";
+                        case "font_size_%1";
                             value_copy := value;
                             int_val, success := parse_int(*value_copy);
                             if success {
-                                parsed_config.font_styles.%1_size = int_val;
+                                parsed_config.font_styles.font_size_%1 = int_val;
                             } else {
                                 error_msg := log_parser_error(handler, "Couldn't parse '%%' - expected a valid integer, got '%%'", setting, value);
                                 return false, error_msg;

@@ -263,21 +263,21 @@ Cmd-MouseMiddle             reset_font_size_to_default
 [[style]]
 
 [user interface]
-font:         default
+font_code:    default
 font_ui:      default
 font_ui_bold: default
 font_icons:   default
 
-font_size:                  14
-font_ui_size:               15
-font_ui_big_size:           28
-font_ui_medium_size:        18
-font_ui_small_size:         14
-font_ui_very_small_size:    12
-font_ui_bold_size:          15
-font_icons_size:            16
-font_icons_small_size:      12
-font_icons_very_small_size: 8
+font_size_code:             14
+font_size_ui:               15
+font_size_ui_big:           28
+font_size_ui_medium:        18
+font_size_ui_small:         14
+font_size_ui_very_small:    12
+font_size_ui_bold:          15
+font_size_icons:            16
+font_size_icons_small:      12
+font_size_icons_very_small: 8
 
 [colors]
 background:                     15212AFF

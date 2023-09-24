@@ -269,15 +269,15 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
         for name : type_info(Font_Family).names {
             // NOTE: add_user_error will be removed by the config success message. Should do something about it
             code := #string END
-                if parsed.font_styles.%1 {
-                    dst.font_styles.%1 = parsed.font_styles.%1;
+                if parsed.font_styles.font_%1 {
+                    dst.font_styles.font_%1 = parsed.font_styles.font_%1;
 
-                    loaded_data, success := load_font_by_name(parsed.font_styles.%1, .%1);
+                    loaded_data, success := load_font_by_name(parsed.font_styles.font_%1, .%1);
                     if success {
-                        %1_data = loaded_data;
-                        %1_name = parsed.font_styles.%1;
+                        font_data_%1 = loaded_data;
+                        font_name_%1 = parsed.font_styles.font_%1;
                     } else {
-                        add_user_error(tprint("Couldn't load font %%", parsed.font_styles.%1));
+                        add_user_error(tprint("Couldn't load font %%", parsed.font_styles.font_%1));
                     }
                 }
             END;
@@ -291,9 +291,9 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
         b: String_Builder;
         for name : type_info(Font_Size).names {
             code := #string END
-                if parsed.font_styles.%1_size > 0 {
-                    dst.font_styles.%1_size = parsed.font_styles.%1_size;
-                    %1_size = parsed.font_styles.%1_size;
+                if parsed.font_styles.font_size_%1 > 0 {
+                    dst.font_styles.font_size_%1 = parsed.font_styles.font_size_%1;
+                    font_size_%1 = parsed.font_styles.font_size_%1;
                 }
             END;
             print_to_builder(*b, code, name);
@@ -318,10 +318,10 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
 load_font_by_name :: (name: string, kind: Font_Family) -> font_data: string, success: bool {
     if name == "default" {
         if #complete kind == {
-            case .font;         return DEFAULT_FONT.data        , true;
-            case .font_ui;      return DEFAULT_FONT_UI.data     , true;
-            case .font_ui_bold; return DEFAULT_FONT_UI_BOLD.data, true;
-            case .font_icons;   return DEFAULT_FONT_ICONS.data  , true;
+            case .code;    return DEFAULT_FONT_CODE.data   , true;
+            case .ui;      return DEFAULT_FONT_UI.data     , true;
+            case .ui_bold; return DEFAULT_FONT_UI_BOLD.data, true;
+            case .icons;   return DEFAULT_FONT_ICONS.data  , true;
         }
     }
 
@@ -409,54 +409,54 @@ Keymap :: struct {
 }
 
 Font_Styles :: struct {
-    font                       := "";
+    font_code                  := "";
     font_ui                    := "";
     font_ui_bold               := "";
     font_icons                 := "";
-    font_size                  := -1;
-    font_ui_size               := -1;
-    font_ui_big_size           := -1;
-    font_ui_medium_size        := -1;
-    font_ui_small_size         := -1;
-    font_ui_very_small_size    := -1;
-    font_ui_bold_size          := -1;
-    font_icons_size            := -1;
-    font_icons_small_size      := -1;
-    font_icons_very_small_size := -1;
+    font_size_code             := -1;
+    font_size_ui               := -1;
+    font_size_ui_big           := -1;
+    font_size_ui_medium        := -1;
+    font_size_ui_small         := -1;
+    font_size_ui_very_small    := -1;
+    font_size_ui_bold          := -1;
+    font_size_icons            := -1;
+    font_size_icons_small      := -1;
+    font_size_icons_very_small := -1;
 }
 
 Font_Size :: enum {
-    font;
-    font_ui;
-    font_ui_big;
-    font_ui_medium;
-    font_ui_small;
-    font_ui_very_small;
-    font_ui_bold; 
-    font_icons;
-    font_icons_small;
-    font_icons_very_small;
+    code;
+    ui;
+    ui_big;
+    ui_medium;
+    ui_small;
+    ui_very_small;
+    ui_bold; 
+    icons;
+    icons_small;
+    icons_very_small;
 }
 
 Font_Family :: enum {
-    font; 
-    font_ui; 
-    font_ui_bold; 
-    font_icons;
+    code; 
+    ui; 
+    ui_bold; 
+    icons;
 }
 
 font_size_to_family :: (kind: Font_Size) -> Font_Family {
     if #complete kind == {
-        case .font;                  return .font;
-        case .font_ui;               return .font_ui;
-        case .font_ui_big;           return .font_ui;
-        case .font_ui_medium;        return .font_ui;
-        case .font_ui_small;         return .font_ui;
-        case .font_ui_very_small;    return .font_ui;
-        case .font_ui_bold;          return .font_ui_bold;
-        case .font_icons;            return .font_icons;
-        case .font_icons_small;      return .font_icons;
-        case .font_icons_very_small; return .font_icons;
+        case .code;             return .code;
+        case .ui;               return .ui;
+        case .ui_big;           return .ui;
+        case .ui_medium;        return .ui;
+        case .ui_small;         return .ui;
+        case .ui_very_small;    return .ui;
+        case .ui_bold;          return .ui_bold;
+        case .icons;            return .icons;
+        case .icons_small;      return .icons;
+        case .icons_very_small; return .icons;
     }
 }
 

@@ -955,14 +955,14 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             colors := ifx line then array_view(buffer.colors, line.data - buffer.bytes.data, line.count) else .[];
             code_lines[line_num-visible_lines_start] = .{ line = line, tab_spaces = tab_spaces, colors = colors };
         }
-        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE, hidden_chars_on_the_left);
+        Simp.draw_code(font_code, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE, hidden_chars_on_the_left);
 
         // Draw continuation markers for wrapped lines
         if line_wrap_is_active(editor) && !config.settings.show_line_numbers {
             Simp.set_shader_for_rects();
 
             radius   := char_x_advance / 4;
-            y_offset := (font.character_height - char_x_advance / 2) / 2;
+            y_offset := (font_code.character_height - char_x_advance / 2) / 2;
 
             for line_num : visible_lines_start .. visible_lines_end {
                 end_offset := get_line_end_offset(editor, buffer, line_num);
@@ -992,7 +992,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 if config.settings.cursor_as_block {
                     letter := get_char_at_offset_as_string(buffer, cursor.pos);
                     if letter != "\n" {
-                        Simp.draw_text(font, xx rect.x, xx (rect.y + (line_height - char_x_advance) / 2), letter);
+                        Simp.draw_text(font_code, xx rect.x, xx (rect.y + (line_height - char_x_advance) / 2), letter);
                     }
                 }
             }
@@ -1029,8 +1029,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
                 if real_line_num != last_line_num {
                     active := array_find(active_lines, real_line_num);
-                    width := Simp.prepare_text(font, tprint("%", real_line_num + 1));
-                    Simp.draw_prepared_text(font, xx (x - width), xx y, color = ifx active then Colors.UI_DEFAULT else Colors.UI_DIM);
+                    width := Simp.prepare_text(font_code, tprint("%", real_line_num + 1));
+                    Simp.draw_prepared_text(font_code, xx (x - width), xx y, color = ifx active then Colors.UI_DEFAULT else Colors.UI_DIM);
                     last_line_num = real_line_num;
                 }
 
@@ -1039,8 +1039,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         } else {
             for line_num : visible_lines_start .. visible_lines_end {
                 active := array_find(active_lines, line_num);
-                width := Simp.prepare_text(font, tprint("%", line_num + 1));
-                Simp.draw_prepared_text(font, xx (x - width), xx y, color = ifx active then Colors.UI_DEFAULT else Colors.UI_DIM);
+                width := Simp.prepare_text(font_code, tprint("%", line_num + 1));
+                Simp.draw_prepared_text(font_code, xx (x - width), xx y, color = ifx active then Colors.UI_DEFAULT else Colors.UI_DIM);
                 y -= line_height;
             }
         }
@@ -1277,7 +1277,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                     pen.x = text_x;
                     if char_offset > 0 {
                         // Line was cut on the left, draw an ellipsis
-                        Simp.draw_text(font, xx pen.x, xx pen.y, "…", color = Colors.UI_DIM);
+                        Simp.draw_text(font_code, xx pen.x, xx pen.y, "…", color = Colors.UI_DIM);
                         pen.x += char_x_advance;
                     }
 
@@ -1297,7 +1297,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                         colors   := array_view(buffer.colors, visible_offset_range.start, line_str.count);
                         code_lines: [1] Simp.Code_Line;
                         code_lines[0] = .{ line = line_str, tab_spaces = 0, colors = colors };
-                        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);
+                        Simp.draw_code(font_code, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);
                     }
                 }
             }
@@ -2622,7 +2622,7 @@ draw_finder :: () {
                 pen.x = text_x;
                 if char_offset > 0 {
                     // Line was cut on the left, draw an ellipsis
-                    Simp.draw_text(font, xx pen.x, xx pen.y, "…", color = Colors.UI_DIM);
+                    Simp.draw_text(font_code, xx pen.x, xx pen.y, "…", color = Colors.UI_DIM);
                     pen.x += char_x_advance;
                 }
                 if buffer.needs_coloring || buffer.colors.count != buffer.bytes.count then recalculate_colors(buffer);  // right before drawing
@@ -2643,7 +2643,7 @@ draw_finder :: () {
                     colors   := array_view(buffer.colors, visible_range.start, line_str.count);
                     code_lines: [1] Simp.Code_Line;
                     code_lines[0] = .{ line = line_str, tab_spaces = 0, colors = colors };
-                    Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);
+                    Simp.draw_code(font_code, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);
                 }
             }
         }
