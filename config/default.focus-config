@@ -276,6 +276,7 @@ font_ui_big_size:           28
 font_ui_medium_size:        18
 font_ui_small_size:         14
 font_ui_very_small_size:    12
+font_ui_bold_size:          15
 font_icons_size:            16
 font_icons_small_size:      12
 font_icons_very_small_size: 8

@@ -343,34 +343,24 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
 }
 
 init_fonts_and_dependent_things :: () {
-    current_font_size                  := cast(int) (clamp(font_size                  + font_size_delta, MIN_FONT_SIZE, MAX_FONT_SIZE) * dpi_scale);
-    current_font_ui_size               := cast(int) (clamp(font_ui_size               + font_size_delta, MIN_FONT_SIZE, MAX_FONT_SIZE) * dpi_scale);
-    current_font_ui_big_size           := cast(int) (clamp(font_ui_big_size           + font_size_delta, MIN_FONT_SIZE, MAX_FONT_SIZE) * dpi_scale);
-    current_font_ui_medium_size        := cast(int) (clamp(font_ui_medium_size        + font_size_delta, MIN_FONT_SIZE, MAX_FONT_SIZE) * dpi_scale);
-    current_font_ui_small_size         := cast(int) (clamp(font_ui_small_size         + font_size_delta, MIN_FONT_SIZE, MAX_FONT_SIZE) * dpi_scale);
-    current_font_ui_very_small_size    := cast(int) (clamp(font_ui_very_small_size    + font_size_delta, MIN_FONT_SIZE, MAX_FONT_SIZE) * dpi_scale);
-    current_font_ui_bold_size          := cast(int) (clamp(font_ui_size               + font_size_delta, MIN_FONT_SIZE, MAX_FONT_SIZE) * dpi_scale);
-    current_font_icons_size            := cast(int) (clamp(font_icons_size            + font_size_delta, MIN_FONT_SIZE, MAX_FONT_SIZE) * dpi_scale);
-    current_font_icons_small_size      := cast(int) (clamp(font_icons_small_size      + font_size_delta, MIN_FONT_SIZE, MAX_FONT_SIZE) * dpi_scale);
-    current_font_icons_very_small_size := cast(int) (clamp(font_icons_very_small_size + font_size_delta, MIN_FONT_SIZE, MAX_FONT_SIZE) * dpi_scale);
-
-    init_font :: (name: string, data: string, size: int, kind: string) -> *Simp.Dynamic_Font #expand {
-        font := Simp.get_font_at_size(name, data, size);
-        assert(font != null, "Couldn't init % font\n", kind);
-        return font;
+    // Reload fonts
+    #insert -> string {
+        b: String_Builder;
+        ti := type_info(Font_Size_Kind);
+        for name : ti.names {
+            code := #string END
+            {
+                new_size := cast(int) (clamp(%1_size + font_size_delta, MIN_FONT_SIZE, MAX_FONT_SIZE) * dpi_scale);
+                new_font := Simp.get_font_at_size(%2_name, %2_data, new_size);
+                assert(new_font != null, "Couldn't init %%\n", %1);
+                %1 = new_font;
+            }
+            END;
+            print_to_builder(*b, code, name, font_size_to_family(xx ti.values[it_index]));
+        }
+        return builder_to_string(*b);
     }
-
-    font                  = init_font(main_font_name   , main_font_data   , current_font_size                 , "main text");
-    font_ui               = init_font(ui_font_name     , ui_font_data     , current_font_ui_size              , "main ui");
-    font_ui_big           = init_font(ui_font_name     , ui_font_data     , current_font_ui_big_size          , "big ui");
-    font_ui_medium        = init_font(ui_font_name     , ui_font_data     , current_font_ui_medium_size       , "medium ui");
-    font_ui_small         = init_font(ui_font_name     , ui_font_data     , current_font_ui_small_size        , "small ui");
-    font_ui_very_small    = init_font(ui_font_name     , ui_font_data     , current_font_ui_very_small_size   , "very small ui");
-    font_ui_bold          = init_font(ui_bold_font_name, ui_bold_font_data, current_font_ui_bold_size         , "bold ui");
-    font_icons            = init_font(icons_font_name  , icons_font_data  , current_font_icons_size           , "main icon");
-    font_icons_small      = init_font(icons_font_name  , icons_font_data  , current_font_icons_small_size     , "small icon");
-    font_icons_very_small = init_font(icons_font_name  , icons_font_data  , current_font_icons_very_small_size, "very small icon");
-
+    
     font_ui_line_height        = cast(float) font_ui.default_line_spacing;
     font_ui_big_line_height    = cast(float) font_ui_big.default_line_spacing;
     font_ui_medium_line_height = cast(float) font_ui_medium.default_line_spacing;
@@ -643,23 +633,20 @@ DEFAULT_FONT_UI_BIG_SIZE           :: 28;
 DEFAULT_FONT_UI_MEDIUM_SIZE        :: 18;
 DEFAULT_FONT_UI_SMALL_SIZE         :: 14;
 DEFAULT_FONT_UI_VERY_SMALL_SIZE    :: 12;
+DEFAULT_FONT_UI_BOLD_SIZE          :: 15;
 DEFAULT_FONT_ICONS_SIZE            :: 16;
 DEFAULT_FONT_ICONS_SMALL_SIZE      :: 12;
 DEFAULT_FONT_ICONS_VERY_SMALL_SIZE :: 8;
 
-main_font_name    := "default";
-main_font_data    := #run DEFAULT_FONT.data;
+font_name         := "default";
+font_ui_name      := "default";
+font_ui_bold_name := "default";
+font_icons_name   := "default";
 
-ui_font_name      := "default";
-ui_font_data      := #run DEFAULT_FONT_UI.data;
-
-ui_bold_font_name := "default";
-ui_bold_font_data := #run DEFAULT_FONT_UI_BOLD.data;
-
-icons_font_name   := "default";
-icons_font_data   := #run DEFAULT_FONT_ICONS.data;
-
-font_size_delta := 0; // used for increasing/decreasing global font size 
+font_data         := #run DEFAULT_FONT.data;
+font_ui_data      := #run DEFAULT_FONT_UI.data;
+font_ui_bold_data := #run DEFAULT_FONT_UI_BOLD.data;
+font_icons_data   := #run DEFAULT_FONT_ICONS.data;
 
 font_size                  := DEFAULT_FONT_SIZE;
 font_ui_size               := DEFAULT_FONT_UI_SIZE;
@@ -667,9 +654,12 @@ font_ui_big_size           := DEFAULT_FONT_UI_BIG_SIZE;
 font_ui_medium_size        := DEFAULT_FONT_UI_MEDIUM_SIZE;
 font_ui_small_size         := DEFAULT_FONT_UI_SMALL_SIZE;
 font_ui_very_small_size    := DEFAULT_FONT_UI_VERY_SMALL_SIZE;
+font_ui_bold_size          := DEFAULT_FONT_UI_BOLD_SIZE;
 font_icons_size            := DEFAULT_FONT_ICONS_SIZE;
 font_icons_small_size      := DEFAULT_FONT_ICONS_SMALL_SIZE;
 font_icons_very_small_size := DEFAULT_FONT_ICONS_VERY_SMALL_SIZE;
+
+font_size_delta := 0; // used for increasing/decreasing global font size 
 
 // Depend on font size
 char_size:                  float;

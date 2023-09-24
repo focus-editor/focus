@@ -263,90 +263,42 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
         return builder_to_string(*b);
     }
 
-    // Fonts
-    if parsed.font {
-        dst.style.font = parsed.font;
+    // Font families
+    #insert -> string {
+        b: String_Builder;
+        for name : type_info(Font_Family_Kind).names {
+            // NOTE: add_user_error will be removed by the config success message. Should do something about it
+            code := #string END
+                if parsed.font_styles.%1 {
+                    dst.font_styles.%1 = parsed.font_styles.%1;
 
-        loaded_data, success := load_font_by_name(parsed.font, .font);
-        if success {
-            main_font_data = loaded_data;
-            main_font_name = parsed.font;
-        } else {
-            // NOTE: this error will be removed by the config success message. Should do something about it
-            add_user_error(tprint("Couldn't load font %", parsed.font));
+                    loaded_data, success := load_font_by_name(parsed.font_styles.%1, .%1);
+                    if success {
+                        %1_data = loaded_data;
+                        %1_name = parsed.font_styles.%1;
+                    } else {
+                        add_user_error(tprint("Couldn't load font %%", parsed.font_styles.%1));
+                    }
+                }
+            END;
+            print_to_builder(*b, code, name);
         }
+        return builder_to_string(*b);
     }
-    if parsed.font_ui {
-        dst.style.font_ui = parsed.font_ui;
 
-        loaded_data, success := load_font_by_name(parsed.font_ui, .font_ui);
-        if success {
-            ui_font_data = loaded_data;
-            ui_font_name = parsed.font_ui;
-        } else {
-            // NOTE: this error will be removed by the config success message. Should do something about it
-            add_user_error(tprint("Couldn't load font %", parsed.font_ui));
+    // Font sizes
+    #insert -> string {
+        b: String_Builder;
+        for name : type_info(Font_Size_Kind).names {
+            code := #string END
+                if parsed.font_styles.%1_size > 0 {
+                    dst.font_styles.%1_size = parsed.font_styles.%1_size;
+                    %1_size = parsed.font_styles.%1_size;
+                }
+            END;
+            print_to_builder(*b, code, name);
         }
-    }
-    if parsed.font_ui_bold {
-        dst.style.font_ui_bold = parsed.font_ui_bold;
-
-        loaded_data, success := load_font_by_name(parsed.font_ui_bold, .font_ui_bold);
-        if success {
-            ui_bold_font_data = loaded_data;
-            ui_bold_font_name = parsed.font_ui_bold;
-        } else {
-            // NOTE: this error will be removed by the config success message. Should do something about it
-            add_user_error(tprint("Couldn't load font %", parsed.font_ui_bold));
-        }
-    }
-    if parsed.font_icons {
-        dst.style.font_icons = parsed.font_icons;
-
-        loaded_data, success := load_font_by_name(parsed.font_icons, .font_icons);
-        if success {
-            icons_font_data = loaded_data;
-            icons_font_name = parsed.font_icons;
-        } else {
-            // NOTE: this error will be removed by the config success message. Should do something about it
-            add_user_error(tprint("Couldn't load font %", parsed.font_icons));
-        }
-    }
-    if parsed.font_size > 0 {
-        dst.style.font_size = parsed.font_size;
-        font_size = parsed.font_size;
-    }
-    if parsed.font_ui_size > 0 {
-        dst.style.font_ui_size = parsed.font_ui_size;
-        font_ui_size = parsed.font_ui_size;
-    }
-    if parsed.font_ui_big_size > 0 {
-        dst.style.font_ui_big_size = parsed.font_ui_big_size;
-        font_ui_big_size = parsed.font_ui_big_size;
-    }
-    if parsed.font_ui_medium_size > 0 {
-        dst.style.font_ui_medium_size = parsed.font_ui_medium_size;
-        font_ui_medium_size = parsed.font_ui_medium_size;
-    }
-    if parsed.font_ui_small_size > 0 {
-        dst.style.font_ui_small_size = parsed.font_ui_small_size;
-        font_ui_small_size = parsed.font_ui_small_size;
-    }
-    if parsed.font_ui_very_small_size > 0 {
-        dst.style.font_ui_very_small_size = parsed.font_ui_very_small_size;
-        font_ui_very_small_size = parsed.font_ui_very_small_size;
-    }
-    if parsed.font_icons_size > 0 {
-        dst.style.font_icons_size = parsed.font_icons_size;
-        font_icons_size = parsed.font_icons_size;
-    }
-    if parsed.font_icons_small_size > 0 {
-        dst.style.font_icons_small_size = parsed.font_icons_small_size;
-        font_icons_small_size = parsed.font_icons_small_size;
-    }
-    if parsed.font_icons_very_small_size > 0 {
-        dst.style.font_icons_very_small_size = parsed.font_icons_very_small_size;
-        font_icons_very_small_size = parsed.font_icons_very_small_size;
+        return builder_to_string(*b);
     }
 
     // Colors
@@ -363,12 +315,14 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     platform_copy_config(*parsed.platform, *dst.platform);
 }
 
-load_font_by_name :: (name: string, kind: enum { font; font_ui; font_ui_bold; font_icons; }) -> font_data: string, success: bool {
+load_font_by_name :: (name: string, kind: Font_Family_Kind) -> font_data: string, success: bool {
     if name == "default" {
-        if      kind == .font         return DEFAULT_FONT.data        , true;
-        else if kind == .font_ui      return DEFAULT_FONT_UI.data     , true;
-        else if kind == .font_ui_bold return DEFAULT_FONT_UI_BOLD.data, true;
-        else if kind == .font_icons   return DEFAULT_FONT_ICONS.data  , true;
+        if #complete kind == {
+            case .font;         return DEFAULT_FONT.data        , true;
+            case .font_ui;      return DEFAULT_FONT_UI.data     , true;
+            case .font_ui_bold; return DEFAULT_FONT_UI_BOLD.data, true;
+            case .font_icons;   return DEFAULT_FONT_ICONS.data  , true;
+        }
     }
 
     font_path := find_font_by_name(name);
@@ -395,12 +349,12 @@ config: Config;
 saved_global_config: Config;
 
 Config :: struct {
-    workspace: Workspace;
-    keymap:    Keymap;
-    settings:  Settings;
-    style:     Style;
-    colors:    Color_Values;
-    platform:  Platform_Config;
+    workspace:   Workspace;
+    keymap:      Keymap;
+    settings:    Settings;
+    font_styles: Font_Styles;
+    colors:      Color_Values;
+    platform:    Platform_Config;
 }
 
 Workspace :: struct {
@@ -454,7 +408,7 @@ Keymap :: struct {
     search_dialog:    [] Key_Mapping;
 }
 
-Style :: struct {
+Font_Styles :: struct {
     font                       := "";
     font_ui                    := "";
     font_ui_bold               := "";
@@ -465,12 +419,46 @@ Style :: struct {
     font_ui_medium_size        := -1;
     font_ui_small_size         := -1;
     font_ui_very_small_size    := -1;
+    font_ui_bold_size          := -1;
     font_icons_size            := -1;
     font_icons_small_size      := -1;
     font_icons_very_small_size := -1;
 }
 
-style: Style;
+Font_Size_Kind :: enum {
+    font;
+    font_ui;
+    font_ui_big;
+    font_ui_medium;
+    font_ui_small;
+    font_ui_very_small;
+    font_ui_bold; 
+    font_icons;
+    font_icons_small;
+    font_icons_very_small;
+}
+
+Font_Family_Kind :: enum {
+    font; 
+    font_ui; 
+    font_ui_bold; 
+    font_icons;
+}
+
+font_size_to_family :: (kind: Font_Size_Kind) -> Font_Family_Kind {
+    if #complete kind == {
+        case .font;                  return .font;
+        case .font_ui;               return .font_ui;
+        case .font_ui_big;           return .font_ui;
+        case .font_ui_medium;        return .font_ui;
+        case .font_ui_small;         return .font_ui;
+        case .font_ui_very_small;    return .font_ui;
+        case .font_ui_bold;          return .font_ui_bold;
+        case .font_icons;            return .font_icons;
+        case .font_icons_small;      return .font_icons;
+        case .font_icons_very_small; return .font_icons;
+    }
+}
 
 Setting :: struct {
     name: string;
