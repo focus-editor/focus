@@ -451,6 +451,7 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
         case .C;            return tokenize_c_for_indentation(buffer);
         case .CSharp;       return tokenize_csharp_for_indentation(buffer);
         case .Glsl;         return tokenize_glsl_for_indentation(buffer);
+        case .Odin;         return tokenize_odin_for_indentation(buffer);
     }
 
     return .[];
