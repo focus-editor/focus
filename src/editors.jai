@@ -1040,9 +1040,10 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
     if found_extension {
         if extension == {
             case "jai";            buffer.lang = .Jai;
-            case "focus-config";   buffer.lang = .Focus_Config;
             case "cs";             buffer.lang = .CSharp;
+            case "focus-config";   buffer.lang = .Focus_Config;
             case "go";             buffer.lang = .Golang;
+            case "odin";           buffer.lang = .Odin;
             case "py";             buffer.lang = .Python;
             case "rpy";            buffer.lang = .RenPy;
 
