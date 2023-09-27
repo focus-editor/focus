@@ -8,6 +8,7 @@ highlight_odin_syntax :: (using buffer: *Buffer) {
 
         using tokenizer;
 
+        // Maybe highlight a function
         before_prev, prev := last_tokens[0], last_tokens[1];
         if token.type == .identifier {
             // Highlight an attribute if we have specific last tokens
@@ -19,22 +20,23 @@ highlight_odin_syntax :: (using buffer: *Buffer) {
         }
         else if token.type == .punctuation {
             if token.punctuation == .l_paren {
-                // Maybe retroactively highlight a function
-                if prev.type == .identifier {
-                    // Handle "func("
-                    memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
-                }
-                else if prev.type == .keyword && prev.keyword == .kw_proc {
-                    // Handle "func :: proc("
+                if prev.type == .identifier && !(before_prev.type == .operation && before_prev.operation == .colon) {
+                    // Handle "func(" but not ": Type("
                     memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
                 }
             }
-            if token.punctuation == .r_paren && inside_attribute {
+            else if token.punctuation == .r_paren && inside_attribute {
                 inside_attribute = false;
             }
-        } else if token.type == .directive && (token.directive == .directive_force_inline || token.directive == .directive_no_force_inline) {
+        }
+        else if token.type == .keyword && token.keyword == .kw_proc {
+            // Handle "func :: proc"
+            if (prev.type == .operation && prev.operation == .double_colon) && before_prev.type == .identifier {
+                memset(colors.data + before_prev.start, xx Code_Color.FUNCTION, before_prev.len);
+            }
+        }
+        else if token.type == .directive && (token.directive == .directive_force_inline || token.directive == .directive_no_force_inline) {
             // Handle "func :: #force_inline" / "func :: #no_force_inline"
-            before_prev, prev := last_tokens[0], last_tokens[1];
             if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
                 memset(colors.data + before_prev.start, xx Code_Color.FUNCTION, before_prev.len);
             }
