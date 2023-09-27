@@ -126,7 +126,8 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         // For example, 0b10002 will highlight 0b1000 as one number and 2 as another number,
         // but when highlit in editor it looks like one number literal rather than two
         // The solution here is to not highlight more numbers if there are many number tokens in a row
-        if tokenizer.last_tokens[1].type != .number || !is_digit((t - 1).*) {
+        last_char := (t - 1).*;
+        if tokenizer.last_tokens[1].type != .number || (!is_digit(last_char) && last_char != #char "_") {
             parse_number(tokenizer, *token);
         }
         else {
@@ -191,6 +192,19 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
+maybe_parse_attribute :: (using tokenizer: *Tokenizer, token: *Token) {
+    attr_str: string;
+    attr_str.data  = start_t;
+    attr_str.count = token.len;
+
+    if attr_str.count > MAX_ATTRIBUTE_LENGTH then return;
+    attr, ok := table_find(*ATTRIBUTES_MAP, attr_str);
+    if !ok then return;
+
+    token.type = .attribute;
+    token.attribute = attr;
+}
+
 parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .number;
 
@@ -198,11 +212,14 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
     if t >= max_t return;
 
     is_decimal_variant :: inline (c: u8) -> bool {
-        return is_digit(c) || c == #char "." || c == #char "e" || c == #char "i" || c == #char "j" || c == #char "k";
+        return is_digit(c)    || c == #char "." || c == #char "-" ||
+               c == #char "e" || c == #char "E" ||
+               c == #char "i" || c == #char "j" || c == #char "k";
     }
 
     if is_decimal_variant(t.*) || t.* == #char "_" {
-        seen_decimal_point := false;
+        seen_decimal_point  := false;
+        scientific_notation := false;
         while t < max_t && (is_decimal_variant(t.*) || t.* == #char "_") {
             if t.* == #char "." {
                 // Handle 0..<1 / 0..=1 (gets interpreted as a float-period-lessthan-int rather than int-rangeop-int)
@@ -213,7 +230,7 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
                 }
 
                 // else handle float decimal
-                if seen_decimal_point break;
+                if seen_decimal_point then break;
                 seen_decimal_point = true;
             }
             else if t.* == #char "i" || t.* == #char "j" || t.* == #char "k" {
@@ -221,15 +238,21 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
                 t += 1;
                 break;
             }
+            else if t.* == #char "e" || t.* == #char "E" {
+                // Scientific notation (10e9, 1.0e-34)
+                if scientific_notation then break;
+                scientific_notation = true;
+            }
+            else if t.* == #char "-" {
+                // Handle scientific notation negative exponent (1.0e-34)
+                if !scientific_notation then break;
+                if (t - 1).* != #char "e" || (t - 1).* != #char "E" then break;
+            }
 
             t += 1;
         }
     }
-    else if t.* == #char "e" {
-        t += 1;
-        while t < max_t && (is_digit(t.*))  t += 1;
-    }
-    else if t.* == #char "x" || t.* == #char "h" {
+    else if t.* == #char "x" || t.* == #char "X" || t.* == #char "h" || t.* == #char "H" {
         // Hex
         is_hex :: inline (c: u8) -> bool {
             return is_digit(c) || (c >= #char "a" && c <= #char "f") || (c >= #char "A" && c <= #char "F");
@@ -254,19 +277,6 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 
     if t > max_t then t = max_t;
-}
-
-maybe_parse_attribute :: (using tokenizer: *Tokenizer, token: *Token) {
-    attr_str : string;
-    attr_str.data  = start_t;
-    attr_str.count = token.len;
-
-    if attr_str.count > MAX_ATTRIBUTE_LENGTH then return;
-    attr, ok := table_find(*ATTRIBUTES_MAP, attr_str);
-    if !ok then return;
-
-    token.type = .attribute;
-    token.attribute = attr;
 }
 
 parse_directive :: (using tokenizer: *Tokenizer, token: *Token) {
