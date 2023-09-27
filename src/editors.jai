@@ -1049,7 +1049,8 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
             case "vert"; #through;
             case "frag"; #through;
             case "geom"; #through;
-            case "tess"; #through;
+            case "tese"; #through;
+            case "tesc"; #through;
             case "glsl";
                 buffer.lang = .Glsl;
 
