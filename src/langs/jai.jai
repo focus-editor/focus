@@ -216,7 +216,7 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
             else if t.* == #char "-" {
                 // Handle negative exponent in scientific notation (1.0e-34)
                 if !scientific_notation then break;
-                if (t - 1).* != #char "e" || (t - 1).* != #char "E" then break;
+                if (t - 1).* != #char "e" && (t - 1).* != #char "E" then break;
             }
 
             t += 1;
@@ -292,7 +292,7 @@ parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .minus_equal;
             t += 1;
@@ -308,7 +308,9 @@ parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
                 token.operation = .unknown;  // -- is not a valid token
             }
         case;
-            if is_digit(<< t) parse_number(tokenizer, token);
+            if tokenizer.last_tokens[1].type != .number && is_digit(t.*) {
+                parse_number(tokenizer, token);
+            }
     }
 }
 
