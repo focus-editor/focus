@@ -812,7 +812,7 @@ ATTRIBUTES :: string.[
     "init", "cold",
     "optimization_mode",
     "static", "thread_local",
-    "objc_name", "objc_type", "objc_is_class_method",
+    "objc_name", "objc_class", "objc_type", "objc_is_class_method",
     "require_target_feature", "enable_target_feature",
 ];
 
