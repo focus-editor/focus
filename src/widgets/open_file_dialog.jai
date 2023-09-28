@@ -111,7 +111,9 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
                 while dir_path != "/" && ends_with(dir_path, #char "/") dir_path.count -= 1;
 
                 full_path := tprint("%/%", dir_path, to_string(input.text));
-                save_buffer_to_disk(buffer, buffer_id, full_path);
+
+                if         mode == .save_as then    save_buffer_to_new_file_on_disk(buffer, buffer_id, full_path);
+                else /* if mode == .save    then */ save_buffer_to_disk            (buffer, buffer_id, full_path);
 
                 hide_open_file_dialog();
             }

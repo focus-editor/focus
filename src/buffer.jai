@@ -558,11 +558,12 @@ offset_is_within_multiline_token :: (tokens: [] Indentation_Token, offset: s32) 
 }
 
 save_buffer_to_new_file_on_disk :: (buffer: *Buffer, buffer_id: s64, file_path: string) -> saved: bool {
-    if buffer.readonly return false;
+    // Don't modify if buffer is readonly, otherwise strip whitespace as if we were saving it
+    if !buffer.readonly {
+        if config.settings.strip_trailing_whitespace_on_save then strip_trailing_whitespace(buffer, buffer_id);
+    }
 
     // Save the file BEFORE making a new buffer so find_or_create_buffer can find it
-    if config.settings.strip_trailing_whitespace_on_save then strip_trailing_whitespace(buffer, buffer_id);
-
     success := write_entire_file(file_path, to_string(buffer.bytes));
     if !success return false;
 
