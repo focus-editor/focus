@@ -8,7 +8,7 @@ highlight_odin_syntax :: (using buffer: *Buffer) {
 
         using tokenizer;
 
-        // Maybe highlight a function
+        // Maybe highlight a function or attribute
         before_prev, prev := last_tokens[0], last_tokens[1];
         if token.type == .identifier {
             // Highlight an attribute if we have specific last tokens
@@ -20,10 +20,16 @@ highlight_odin_syntax :: (using buffer: *Buffer) {
         }
         else if token.type == .punctuation {
             if token.punctuation == .l_paren {
-                if prev.type == .identifier && !(before_prev.type == .operation && before_prev.operation == .colon) {
-                    // Handle "func(" but not ": Type("
-                    memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
+                if prev.type == .identifier {
+                    // Handle "func(" but not ":Type(" or "^Type(" or "$Type(" or "]Type("
+                    if      before_prev.type != .operation && before_prev.type != .punctuation {}
+                    else if before_prev.type == .operation && before_prev.operation == .colon {}
+                    else if before_prev.type == .punctuation && (before_prev.punctuation == .caret || before_prev.punctuation == .dollar || before_prev.punctuation == .r_bracket) {}
+                    else {
+                        memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
+                    }
                 }
+
             }
             else if token.punctuation == .r_paren && inside_attribute {
                 inside_attribute = false;
@@ -60,7 +66,7 @@ tokenize_odin_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token 
     while true {
         src := get_next_token(*tokenizer);
 
-        tokenizer.last_tokens[0] = tokenizer.last_tokens[1];  // if we don't remember last 2 tokens, here strings won't be detected properly
+        tokenizer.last_tokens[0] = tokenizer.last_tokens[1];
         tokenizer.last_tokens[1] = src;
 
         token: Indentation_Token = ---;
@@ -440,13 +446,14 @@ parse_percent :: (using tokenizer: *Tokenizer, token: *Token) {
     if t >= max_t return;
 
     if t.* == {
-        case #char "%";
-            token.operation = .double_percent;
-            t += 1;
-
         case #char "=";
             token.operation = .percent_equal;
             t += 1;
+
+        case #char "%";
+            token.operation = .double_percent;
+            t += 1;
+            if t >= max_t return;
 
             if t.* == #char "=" {
                 token.operation = .double_percent_equal;
@@ -682,7 +689,6 @@ Token :: struct {
         keyword;
         type_keyword;
         value_keyword;
-        builtin;
         attribute;
         directive;
         invalid;
@@ -704,7 +710,6 @@ COLOR_MAP :: Code_Color.[
     .KEYWORD,       // keyword
     .TYPE,          // type_keyword
     .VALUE_KEYWORD, // value_keyword
-    .KEYWORD,       // builtin
     .KEYWORD,       // attribute
     .KEYWORD,       // directive
     .ERROR,         // invalid
@@ -833,21 +838,6 @@ DIRECTIVES :: string.[
     "soa", "relative",
 ];
 
-COMMON_BUILTINS :: string.[
-    "len", "cap", "raw_data",
-    "new", "new_clone", "make", "make_non_zeroed", "delete", "free", "free_all",
-    "resize", "reserve", "shrink", "copy",
-    "append", "assign_at", "inject_at",
-    "pop", "clear", "ordered_remove", "unordered_remove", "remove_range",
-    "incl", "excl", "card",
-    "soa_zip", "soa_unzip",
-    "make_soa", "delete_soa", "resize_soa", "reserve_soa", "append_soa",
-    "swizzle", "complex", "quaternion", "real", "imag", "jmag", "kmag", "conj",
-    "expand_values",
-    "min", "max", "abs", "clamp",
-    "assert", "panic", "unimplemented",
-];
-
 #insert -> string {
     b: String_Builder;
     init_string_builder(*b);
@@ -862,7 +852,7 @@ COMMON_BUILTINS :: string.[
 
     define_enum(*b, "Punctuation", "",           .[PUNCTUATION]);
     define_enum(*b, "Operation",   "",           .[OPERATIONS]);
-    define_enum(*b, "Keyword",     "kw_",        .[KEYWORDS, TYPE_KEYWORDS, VALUE_KEYWORDS, COMMON_BUILTINS]);
+    define_enum(*b, "Keyword",     "kw_",        .[KEYWORDS, TYPE_KEYWORDS, VALUE_KEYWORDS]);
     define_enum(*b, "Directive",   "directive_", .[DIRECTIVES]);
     define_enum(*b, "Attribute",   "attr_",      .[ATTRIBUTES]);
 
@@ -876,7 +866,7 @@ Keyword_Token :: struct {
 
 KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
     table: Table(string, Keyword_Token);
-    size := 10 * (KEYWORDS.count + TYPE_KEYWORDS.count + VALUE_KEYWORDS.count + COMMON_BUILTINS.count);
+    size := 10 * (KEYWORDS.count + TYPE_KEYWORDS.count + VALUE_KEYWORDS.count);
     init(*table, size);
 
     #insert -> string {
@@ -884,7 +874,6 @@ KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
         for KEYWORDS        append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword,       keyword = .kw_%1 });\n", it));
         for TYPE_KEYWORDS   append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .type_keyword,  keyword = .kw_%1 });\n", it));
         for VALUE_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value_keyword, keyword = .kw_%1 });\n", it));
-        for COMMON_BUILTINS append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .builtin,       keyword = .kw_%1 });\n", it));
         return builder_to_string(*b);
     }
 
@@ -926,7 +915,6 @@ MAX_KEYWORD_LENGTH :: #run -> s32 {
     for KEYWORDS        { if it.count > result then result = it.count; }
     for TYPE_KEYWORDS   { if it.count > result then result = it.count; }
     for VALUE_KEYWORDS  { if it.count > result then result = it.count; }
-    for COMMON_BUILTINS { if it.count > result then result = it.count; }
     return xx result;
 }
 
@@ -941,7 +929,6 @@ MAX_DIRECTIVE_LENGTH :: #run -> s32 {
     for DIRECTIVES { if it.count > result then result = it.count; }
     return xx result;
 }
-
 
 eat_white_space :: inline (start: *u8, max_t: *u8) -> *u8 {
     t := start;
