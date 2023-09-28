@@ -525,7 +525,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         if mouse.middle.just_pressed then redraw_requested = true; // so that we don't draw 2 active editors
     }
 
-    if (!mouse.left.is_down || mouse.left.just_released) || (!mouse.middle.is_down || mouse.middle.just_released) {
+    if (!mouse.left.is_down || mouse.left.just_released) {
         selection_mode.type = .chars;
         selection_mode.min_range.start = 0;
         selection_mode.min_range.end   = 0;
