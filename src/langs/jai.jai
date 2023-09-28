@@ -349,10 +349,16 @@ parse_period :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if t.* == #char "." {
-        token.type      = .operation;
-        token.operation = .double_period;
-        t += 1;
+    if t.* == {
+        case #char ".";
+            token.type      = .operation;
+            token.operation = .double_period;
+            t += 1;
+
+        case #char "*";
+            token.type      = .operation;
+            token.operation = .period_asterisk;
+            t += 1;
     }
 }
 
@@ -621,7 +627,7 @@ OPERATIONS :: string.[
     "percent", "percent_equal", "less_than", "double_less_than", "less_than_equal", "greater_than", "greater_than_equal",
     "minus", "minus_equal", "triple_dash", "asterisk", "asterisk_equal", "colon", "colon_equal", "double_colon", "slash",
     "plus", "plus_equal", "slash_equal", "ampersand", "double_ampersand", "ampersand_equal", "tilde", "unknown",
-    "caret", "caret_equal", "double_period",
+    "caret", "caret_equal", "double_period", "period_asterisk",
 ];
 
 KEYWORDS :: string.[
