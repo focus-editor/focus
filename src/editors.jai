@@ -256,7 +256,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
 
             case .word_completion_next;             word_completion();                  
             case .word_completion_previous;         word_completion(forwards = false);
-            case .word_completion_subword;          word_completion(search_for_subwords = true);
+            case .word_completion_subword;          word_completion(subwords = true);
 
             case;                                   return false;
         }
@@ -3121,25 +3121,20 @@ free_editor :: (using editor: *Editor) {
     array_reset(*wrapped_line_starts);
 }
 
-// @CleanUp:
-word_completion :: (forwards := true, search_for_subwords := false) {
-    word_complete.should_abort = false;
-
-    // @Todo: Disabled temporary
-    context.underscore_is_part_of_word = !word_complete.search_for_subwords;
-    defer context.underscore_is_part_of_word = true;
+word_completion :: (forwards := true, subwords := false) {
+    using word_complete;
+    should_abort = false;
     
-    if !word_complete.active {
-        word_complete.search_for_subwords = search_for_subwords;
-        context.underscore_is_part_of_word = !search_for_subwords;
-    }
-    
-    if !word_complete.active {
-        word_complete.active = true;
-        word_complete_search();
+    if !active {
+        active = true;
+        search_for_subwords = subwords;        
         
-        if word_complete.results.count == 0 {
-            word_complete.active = false;
+        context.underscore_is_part_of_word = !subwords;
+        word_complete_search();
+        context.underscore_is_part_of_word = true;
+        
+        if results.count == 0 {
+            active = false;
             return;
         }
     }
@@ -3154,10 +3149,12 @@ word_completion_next :: () {
     selected_result_index = (selected_result_index + 1) % results.count;
 
     start := scroll_top;
-    end   := start + WORD_COMPLETION_MAX_RESULTS;
+    end   := start + WORD_COMPLETION_MAX_VISIBLE_ITEM_AT_ONCE;
 
     if selected_result_index+1 > end  {
         scroll_top += 1;
+    } else if selected_result_index == 0 {
+        scroll_top = 0;
     }
     
     word_complete_apply();
@@ -3168,8 +3165,8 @@ word_completion_previous :: () {
 
     if selected_result_index - 1 < 0 {
         selected_result_index = results.count-1;
-        if selected_result_index - (WORD_COMPLETION_MAX_RESULTS-1) > -1 {
-            scroll_top = selected_result_index - (WORD_COMPLETION_MAX_RESULTS-1);
+        if selected_result_index - (WORD_COMPLETION_MAX_VISIBLE_ITEM_AT_ONCE-1) > -1 {
+            scroll_top = selected_result_index - (WORD_COMPLETION_MAX_VISIBLE_ITEM_AT_ONCE-1);
         }
     } else {
         selected_result_index -= 1;
@@ -3193,6 +3190,10 @@ word_complete_abort :: () {
 }
 
 word_complete_search :: () {
+    // hmm...
+    UNDERSCORE_PENALTY     :: 1000000000;
+    CASE_SENSITIVE_PENALTY :: 100000000;
+
     editor, buffer := get_active_editor_and_buffer();
 
     for *cursor: editor.cursors {
@@ -3204,19 +3205,28 @@ word_complete_search :: () {
     left  := scan_through_similar_chars_on_the_left(buffer, cursor.pos, Char_Type.word, skip_one_space = false);
     word_complete.cursor_backups[0] = left;
     start_subword := get_range_as_string(buffer, Offset_Range.{left, right});
+    
     buffer_str := to_string(buffer.bytes);
 
-    add_new_result_or_update_delta :: inline (new_result: string, cursor_delta_of_result: s64) {
+    add_new_result_or_update_delta :: inline (new_result: string, delta: s64) {
+        if word_complete.search_for_subwords {
+            for 0..new_result.count-1 {
+                if new_result[it] == #char "_" {
+                    delta += UNDERSCORE_PENALTY;
+                    break;
+                }
+            }
+        }
+        
         for * word_complete.results {
-            // @Todo: if we use subwords then probably we want to score things by the length too.
             if it.word == new_result {
                 // found a closer one
-                if cursor_delta_of_result < it.cursor_delta then it.cursor_delta = xx cursor_delta_of_result;
+                if delta < it.cursor_delta then it.cursor_delta = xx delta;
                 return;
             }
         }
         
-        result := Word_Result.{word = new_result, cursor_delta = xx cursor_delta_of_result}; 
+        result := Word_Result.{word = new_result, cursor_delta = xx delta}; 
         array_add(*word_complete.results, result);
     }
 
@@ -3233,7 +3243,7 @@ word_complete_search :: () {
     pos := cast(s64)(left - 1);
     while pos != -1 {
         if pos == 0 then pos = 1; // if in find_index_from_right_nocase start_index got 0 then it's going to start the searching from the end of the buffer
-        pos = find_index_from_right_nocase(buffer_str, start_subword, pos);
+        pos = find_index_from_right_nocase(buffer_str, start_subword, start_index = pos);
         if pos == -1 break;
         
         defer pos -= 1;
@@ -3246,7 +3256,7 @@ word_complete_search :: () {
                 s := advance(buffer_str, pos);
                 s.count = it - pos;
                 cursor_delta := cursor.pos - pos;
-                if !match_strictly(start_subword, s) then cursor_delta += 100000; // case-sensitive penalty
+                if !match_strictly(start_subword, s) then cursor_delta += CASE_SENSITIVE_PENALTY;
                 add_new_result_or_update_delta(s, cursor_delta);
                 
                 if !is_subword then break;
@@ -3273,7 +3283,7 @@ word_complete_search :: () {
                 // Now, we're going left to right, so the distance between the word and the cursor will 
                 // always be closer than in right-to-left searching; thus, we need to apply some corrections to it.
                 cursor_delta := it - cursor.pos;
-                if !match_strictly(start_subword, s) then cursor_delta += 100000; // case-sensitive penalty
+                if !match_strictly(start_subword, s) then cursor_delta += CASE_SENSITIVE_PENALTY;
                 add_new_result_or_update_delta(s, cursor_delta);
                 
                 if !is_subword then break;
@@ -3283,13 +3293,10 @@ word_complete_search :: () {
     }
 
     if !word_complete.results.count then return;
- 
-    bubble_sort(word_complete.results, (a, b) => cast(s64) (a.cursor_delta - b.cursor_delta));
-    
-    // word_complete.results.count = min(word_complete.results.count, WORD_COMPLETION_MAX_RESULTS);
-    
-    add_new_result_or_update_delta(start_subword, cursor_delta_of_result = 0);
-    
+
+    bubble_sort(word_complete.results, (a, b) => cast(s64) ((a.cursor_delta) - (b.cursor_delta)));
+
+    add_new_result_or_update_delta(start_subword, delta = 0);
     for * word_complete.results { it.word = copy_string(it.word); }
 
     return;
@@ -3304,7 +3311,6 @@ word_complete_apply :: () {
     result := results[selected_result_index];
     word   := result.word;
     
-    context.underscore_is_part_of_word = true;
     offset_delta: s32 = 0;
     buf_len := cast(s32) buffer.bytes.count;
 
@@ -3312,7 +3318,6 @@ word_complete_apply :: () {
         if it_index >= cursor_backups.count then cursor_backups[it_index] = cursor.pos;
         cursor.sel = cursor_backups[it_index];
         select_word(buffer, cursor);
-        s := get_selected_string(cursor, buffer);
     }
     
     for *cursor: editor.cursors {
@@ -3328,16 +3333,18 @@ word_complete_apply :: () {
     
         range := get_selection(cursor);
         replace_range(buffer, range, word);
-        add_paste_animation(editor, Offset_Range.{range.start, cast(s32)(range.start+word.count)});
         
-        cursor.pos = cast(s32)(range.start+word.count);
-        cursor.sel = cast(s32)(range.start+word.count);
+        end := cast(s32)(range.start+word.count);
+        add_paste_animation(editor, Offset_Range.{range.start, end});
+        
+        cursor.pos = end;
+        cursor.sel = end;
     } 
 }
 
 #scope_export
 
-WORD_COMPLETION_MAX_RESULTS :: 15;
+WORD_COMPLETION_MAX_VISIBLE_ITEM_AT_ONCE :: 15;
 
 Word_Completion :: struct {
     active := false;

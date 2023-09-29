@@ -1048,7 +1048,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
     // Draw word completion
     if editor_is_active && word_complete.results.count {
-        mm := min(word_complete.results.count, WORD_COMPLETION_MAX_RESULTS);
+        mm := min(word_complete.results.count, WORD_COMPLETION_MAX_VISIBLE_ITEM_AT_ONCE);
     
         padding           := floor(10 * dpi_scale);
         item_delta_scaler := (line_height + 5) * dpi_scale;
@@ -1062,8 +1062,10 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         rect_top  := cursor_screen_pos.y - rect_h;
         rect_left := cursor_screen_pos.x + padding;
-
-        if rect_top < 0 then rect_top  = cursor_screen_pos.y + padding;
+    
+        if rect_top < 0 {
+            rect_top = cursor_screen_pos.y + line_height;
+        }
         if rect_left + rect_w + padding > main_area.w + main_area.x {
             rect_left = (main_area.w + main_area.x) - (rect_w + padding);
         }
