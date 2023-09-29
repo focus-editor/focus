@@ -3180,7 +3180,6 @@ word_completion_previous :: () {
 
 word_complete_abort :: () {
     using word_complete;
-    array_reset(*cursor_backups);
     active = false;
     scroll_top = 0;
     if !results.count return;
@@ -3196,14 +3195,9 @@ word_complete_search :: () {
 
     editor, buffer := get_active_editor_and_buffer();
 
-    for *cursor: editor.cursors {
-        array_add(*word_complete.cursor_backups, cursor.pos);
-    }
-    
     cursor := *editor.cursors[0];
     right := cursor.pos;
     left  := scan_through_similar_chars_on_the_left(buffer, cursor.pos, Char_Type.word, skip_one_space = false);
-    word_complete.cursor_backups[0] = left;
     start_subword := get_range_as_string(buffer, Offset_Range.{left, right});
     
     buffer_str := to_string(buffer.bytes);
@@ -3315,9 +3309,8 @@ word_complete_apply :: () {
     buf_len := cast(s32) buffer.bytes.count;
 
     for *cursor: editor.cursors {
-        if it_index >= cursor_backups.count then cursor_backups[it_index] = cursor.pos;
-        cursor.sel = cursor_backups[it_index];
-        select_word(buffer, cursor);
+        left  := scan_through_similar_chars_on_the_left(buffer, cursor.pos, Char_Type.word, skip_one_space = false);
+        cursor.sel = left;
     }
     
     for *cursor: editor.cursors {
@@ -3327,8 +3320,6 @@ word_complete_apply :: () {
             cursor.pos += offset_delta;
             cursor.sel += offset_delta;
             buf_len = new_len;
-            
-            cursor_backups[it_index] = min(cursor.pos, cursor.sel);
         }
     
         range := get_selection(cursor);
@@ -3351,7 +3342,6 @@ Word_Completion :: struct {
     should_abort := false;
     selected_result_index := -1;
     search_for_subwords := false;
-    cursor_backups: [..] s32;
     results: [..] Word_Result;
     scroll_top := 0;
     max_visible_item_at_once := DEFAULT_MAX_VISIBLE_ITEM;
