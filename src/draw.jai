@@ -1053,7 +1053,6 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         padding           := floor(10 * dpi_scale);
         item_delta_scaler := (line_height + 5) * dpi_scale;
-        cursor            := cursors[0];
         cursor_screen_pos := get_cursor_screen_pos(text_origin, cursor_coords[0].pos);
 
         max_char := 0;
