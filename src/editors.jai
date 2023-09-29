@@ -3189,6 +3189,8 @@ word_complete_abort :: () {
 }
 
 word_complete_search :: () {
+    // @Bug: Let's say you have a comment like "yes, we're here!" then the "re" will be recognized as a separate word.
+
     // hmm...
     UNDERSCORE_PENALTY     :: 1000000000;
     CASE_SENSITIVE_PENALTY :: 100000000;
@@ -3236,6 +3238,7 @@ word_complete_search :: () {
 
     pos := cast(s64)(left - 1);
     while pos != -1 {
+        if word_complete.results.count == word_complete.MAX_TOTAL_RESULT break;
         if pos == 0 then pos = 1; // if in find_index_from_right_nocase start_index got 0 then it's going to start the searching from the end of the buffer
         pos = find_index_from_right_nocase(buffer_str, start_subword, start_index = pos);
         if pos == -1 break;
@@ -3257,9 +3260,10 @@ word_complete_search :: () {
             }
         }
     }
-
+    
     pos = cast(s64)(right + 1);
     while pos != buffer_str.count-1 {
+        if word_complete.results.count == word_complete.MAX_TOTAL_RESULT break;
         pos = find_index_from_left_nocase(buffer_str, start_subword, pos);
         if pos == -1 break;
         
@@ -3287,7 +3291,7 @@ word_complete_search :: () {
     }
 
     if !word_complete.results.count then return;
-
+    
     bubble_sort(word_complete.results, (a, b) => cast(s64) ((a.cursor_delta) - (b.cursor_delta)));
 
     add_new_result_or_update_delta(start_subword, delta = 0);
@@ -3337,6 +3341,7 @@ word_complete_apply :: () {
 
 Word_Completion :: struct {
     DEFAULT_MAX_VISIBLE_ITEM :: 15;
+    MAX_TOTAL_RESULT :: 35;
 
     active := false;
     should_abort := false;
