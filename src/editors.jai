@@ -3149,7 +3149,7 @@ word_completion_next :: () {
     selected_result_index = (selected_result_index + 1) % results.count;
 
     start := scroll_top;
-    end   := start + WORD_COMPLETION_MAX_VISIBLE_ITEM_AT_ONCE;
+    end   := start + max_visible_item_at_once;
 
     if selected_result_index+1 > end  {
         scroll_top += 1;
@@ -3165,8 +3165,8 @@ word_completion_previous :: () {
 
     if selected_result_index - 1 < 0 {
         selected_result_index = results.count-1;
-        if selected_result_index - (WORD_COMPLETION_MAX_VISIBLE_ITEM_AT_ONCE-1) > -1 {
-            scroll_top = selected_result_index - (WORD_COMPLETION_MAX_VISIBLE_ITEM_AT_ONCE-1);
+        if selected_result_index - (max_visible_item_at_once-1) > -1 {
+            scroll_top = selected_result_index - (max_visible_item_at_once-1);
         }
     } else {
         selected_result_index -= 1;
@@ -3344,9 +3344,9 @@ word_complete_apply :: () {
 
 #scope_export
 
-WORD_COMPLETION_MAX_VISIBLE_ITEM_AT_ONCE :: 15;
-
 Word_Completion :: struct {
+    DEFAULT_MAX_VISIBLE_ITEM :: 15;
+
     active := false;
     should_abort := false;
     selected_result_index := -1;
@@ -3354,6 +3354,7 @@ Word_Completion :: struct {
     cursor_backups: [..] s32;
     results: [..] Word_Result;
     scroll_top := 0;
+    max_visible_item_at_once := DEFAULT_MAX_VISIBLE_ITEM;
 }
 
 Word_Result :: struct {

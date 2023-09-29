@@ -1048,8 +1048,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
     // Draw word completion
     if editor_is_active && word_complete.results.count {
-        mm := min(word_complete.results.count, WORD_COMPLETION_MAX_VISIBLE_ITEM_AT_ONCE);
-    
+        word_complete.max_visible_item_at_once = word_complete.DEFAULT_MAX_VISIBLE_ITEM;
+        max_wc_item: s64 = min(word_complete.results.count, word_complete.max_visible_item_at_once);
+
         padding           := floor(10 * dpi_scale);
         item_delta_scaler := (line_height + 5) * dpi_scale;
         cursor            := cursors[0];
@@ -1057,27 +1058,39 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         max_char := 0;
         for word_complete.results { if it.word.count > max_char max_char = it.word.count; }
-        rect_w := (max_char * char_x_advance) + (padding * 2);
-        rect_h := mm * (item_delta_scaler) + padding;
-
-        rect_top  := cursor_screen_pos.y - rect_h;
-        rect_left := cursor_screen_pos.x + padding;
-    
-        if rect_top < 0 {
-            rect_top = cursor_screen_pos.y + line_height;
+        
+        rect_w, rect_h, rect_left, rect_bottom: float = 0;
+        calc_rect :: () #expand {
+            rect_w      = (max_char * char_x_advance) + (padding * 2);
+            rect_h      = max_wc_item * (item_delta_scaler) + padding;
+            rect_bottom = cursor_screen_pos.y - rect_h;
+            rect_left   = cursor_screen_pos.x + padding;
+            
+            if rect_bottom < footer_rect.h {
+                rect_bottom = cursor_screen_pos.y + line_height;
+            }
+            if rect_left + rect_w + padding > main_area.w + main_area.x {
+                rect_left = (main_area.w + main_area.x) - (rect_w + padding);
+            }
         }
-        if rect_left + rect_w + padding > main_area.w + main_area.x {
-            rect_left = (main_area.w + main_area.x) - (rect_w + padding);
+        calc_rect();
+
+        rect_top := rect_bottom + rect_h;
+        if (rect_top > main_area.h) {
+            usable_h := main_area.h - footer_rect.h;
+            max_wc_item = cast(s64)(usable_h / item_delta_scaler / 2);
+            word_complete.max_visible_item_at_once = max_wc_item;
+            calc_rect();
         }
 
-        rect := make_rect(rect_left, rect_top, rect_w, rect_h);
+        rect := make_rect(rect_left, rect_bottom, rect_w, rect_h);
         draw_rounded_rect(rect, Colors.BACKGROUND_DARK, radius = rounding_radius_small, set_shader = true);
 
         i := 0;
-        for word_complete.scroll_top..mm+word_complete.scroll_top-1 {
+        for word_complete.scroll_top..max_wc_item + word_complete.scroll_top - 1 {
             if it == word_complete.results.count then break;
             item_left  := rect_left + padding;
-            item_top   := (rect_top + rect_h) - (item_delta_scaler * (i + 1));
+            item_top   := (rect_bottom + rect_h) - (item_delta_scaler * (i + 1));
             item_color := ifx (it % word_complete.results.count) == word_complete.selected_result_index
                             then Colors.CODE_OPERATION
                             else Colors.CODE_DEFAULT
