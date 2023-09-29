@@ -2863,6 +2863,8 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
     EMPTY_LINE_BIT  :: (cast(s64) 1) >>> 1;
     LINE_START_MASK :: ~EMPTY_LINE_BIT;
 
+    do_empty_line_comment := last_line == 0;
+
     min_indent  := -1;
     add_comment := false;
     for 0..last_line {
@@ -2895,8 +2897,9 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
                     break c;
             }
         }
-
-        if is_empty_line { line_starts[it] |= EMPTY_LINE_BIT; continue; }
+        
+        do_empty_line_comment &= is_empty_line;
+        if is_empty_line && last_line != 0 { line_starts[it] |= EMPTY_LINE_BIT; continue; }
         if min_indent < 0 || indent < min_indent then min_indent = indent;
         if !add_comment && !begins_with(trimmed_str, comment) then add_comment = true;
     }
@@ -2953,6 +2956,12 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
             }
             adjustment += line_length_difference;
         }
+        
+        if do_empty_line_comment {
+            editor.cursors[0].pos += xx adjustment;
+            editor.cursors[0].sel += xx adjustment;
+        }
+        
     } else { // Remove comments
         adjustment := 0;
         for 0..last_line {
