@@ -44,7 +44,7 @@ build :: () {
             compiler_report(tprint("Command-line argument #%, '%', is invalid. Valid options are: 'debug', 'release'.\n", it_index+1, arg));
         }
     }
-    
+
     options.output_path = build_dir;
     make_directory_if_it_does_not_exist(build_dir);
 
@@ -79,13 +79,21 @@ build :: () {
     );
     add_build_string(build_constants, w);
 
+    failed := false;
     while true {
         message := compiler_wait_for_message();
         if message.workspace != w continue;
-        if message.kind == .COMPLETE break;
+        if message.kind == .COMPLETE {
+            m := cast(*Message_Complete) message;
+            if m.error_code == .COMPILATION_FAILED then failed = true;
+            break;
+        }
     }
 
     compiler_end_intercept(w);
+
+    // Don't try to set icon or manifest if we failed compilation
+    if failed then return;
 
     #if OS == .WINDOWS {
         exe_path := tprint("%/%.exe", build_dir, options.output_executable_name);

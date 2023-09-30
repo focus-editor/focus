@@ -752,13 +752,14 @@ dont_ignore_next_window_resize := false;
 #load "langs/jai.jai";
 #load "langs/c.jai";
 #load "langs/csharp.jai";
-#load "langs/golang.jai";
 #load "langs/focus_config.jai";
 #load "langs/glsl.jai";
-#load "langs/worklog.jai";
+#load "langs/golang.jai";
+#load "langs/odin.jai";
 #load "langs/python.jai";
 #load "langs/renpy.jai";
 #load "langs/xml.jai";
+#load "langs/worklog.jai";
 
 #if OS == .WINDOWS {
     #load "platform/windows.jai";
