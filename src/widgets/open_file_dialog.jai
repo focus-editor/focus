@@ -57,7 +57,7 @@ deinit_open_file_dialog :: () {
     array_reset(*entries.filtered);
 }
 
-show_open_file_dialog :: (mode: Open_File_Dialog.Mode, buffer: *Buffer = null, buffer_id: s64 = -1, from_root := false) {
+show_open_file_dialog :: (mode: Open_File_Dialog.Mode, buffer_id_to_save: s64 = -1, from_root := false) {
     if !from_root {
         // Derive the path chunks from the current open file
         editor, buffer := get_active_editor_and_buffer();
@@ -68,13 +68,13 @@ show_open_file_dialog :: (mode: Open_File_Dialog.Mode, buffer: *Buffer = null, b
 
     active_global_widget = .open_file_dialog;
     open_file_dialog.mode = mode;
-    open_file_dialog.buffer = buffer;
-    open_file_dialog.buffer_id = buffer_id;
+    open_file_dialog.buffer_id_to_save = buffer_id_to_save;
 
     refresh_entries();
 }
 
 hide_open_file_dialog :: () {
+    if open_file_dialog.mode == .save || open_file_dialog.mode == .save_as then clear_buffer_save_queue();
     activate_editors();
 }
 
@@ -116,8 +116,10 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
 
                 full_path := tprint("%/%", dir_path, to_string(input.text));
 
-                if         mode == .save_as then    save_buffer_to_new_file_on_disk(buffer, buffer_id, full_path);
-                else /* if mode == .save    then */ save_buffer_to_disk            (buffer, buffer_id, full_path);
+                if         mode == .save_as then    save_buffer_to_new_file_on_disk(buffer, buffer_id_to_save, full_path);
+                else /* if mode == .save    then */ save_buffer_to_disk            (buffer, buffer_id_to_save, full_path);
+
+                remove_buffer_from_save_queue(buffer_id_to_save);
 
                 hide_open_file_dialog();
             }
@@ -125,8 +127,8 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
 
         case .file;
             if mode == {
-                case .save;     show_confirm_overwrite_dialog(.save,    buffer_id, entry.full_path); return true;
-                case .save_as;  show_confirm_overwrite_dialog(.save_as, buffer_id, entry.full_path); return true;
+                case .save;     show_confirm_overwrite_dialog(.save,    buffer_id_to_save, entry.full_path); return true;
+                case .save_as;  show_confirm_overwrite_dialog(.save_as, buffer_id_to_save, entry.full_path); return true;
             }
 
             if folder_only return true;
@@ -518,9 +520,8 @@ Open_File_Dialog :: struct {
     root_dir: string;
     current_files: [..] Entry;  // files in the current folder (used in .navigate mode only)
 
-    /* `buffer` and `buffer_id` are used when `mode` is `.save` or `.save_as` */
-    buffer: *Buffer;
-    buffer_id: s64;
+    /* `buffer_id_to_save` is used when `mode` is `.save` or `.save_as` */
+    buffer_id_to_save: s64;
 
     entries: struct {
         filtered: [..] Entry;

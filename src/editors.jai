@@ -152,7 +152,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .close_right_editor;               close_editor(.right);
         case .save;                             save_buffer(editor, buffer);
         case .save_as;                          save_buffer(editor, buffer, save_new_file = true);
-        case .save_all;                         save_all   (editor, buffer);
+        case .save_all;                         save_all();
         case .toggle_line_wrap;                 toggle_line_wrap                    (editor);
         case .toggle_line_numbers;              toggle_line_numbers                 ();
         case .delete_current_file;              show_delete_file_dialog(editor);
@@ -1524,16 +1524,18 @@ save_buffer :: (editor: *Editor, buffer: *Buffer, save_new_file := false) {
 
         save_buffer_to_new_file_on_disk(buffer, editor.buffer_id, file_path);
     } else {
-        show_open_file_dialog(.save_as, buffer, editor.buffer_id);
+        show_open_file_dialog(.save_as, editor.buffer_id);
     }
 }
 
-save_all :: (editor: *Editor, buffer: *Buffer) {
-    new_edit_group(buffer, editor);
-
-    for * b, b_id : open_buffers {
-        if !b.modified continue;
-        save_buffer_to_disk(b, b_id);
+save_all :: () {
+    for * buffer, buffer_id : open_buffers {
+        if !buffer.modified continue;
+        if buffer.has_file {
+            save_buffer_to_disk(buffer, buffer_id);
+        } else {
+            add_buffer_to_save_queue(buffer_id, after_save = .do_nothing);
+        }
     }
 }
 

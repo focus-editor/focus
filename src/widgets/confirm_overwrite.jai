@@ -35,6 +35,8 @@ confirm_overwrite_dialog_proceed :: () {
         case .save;     save_buffer_to_disk(buffer, buffer_id, path);
     }
 
+    remove_buffer_from_save_queue(buffer_id);
+
     close_confirm_overwrite_dialog();
 }
 

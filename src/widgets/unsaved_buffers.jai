@@ -31,15 +31,24 @@ close_unsaved_buffers_dialog :: () {
 }
 
 unsaved_buffers_save_all :: () {
-    errors_when_saving := false;
+    should_proceed := true;
 
     for buffer_id : unsaved_buffers_dialog.modified_buffers {
         buffer := *open_buffers[buffer_id];
 
-        saved := save_buffer_to_disk(buffer, buffer_id);
-        if buffer.error_when_saving || !saved then errors_when_saving = true;
+        if buffer.has_file {
+            saved := save_buffer_to_disk(buffer, buffer_id);
+            if buffer.error_when_saving || !saved then should_proceed = false;
+        } else {
+            if #complete unsaved_buffers_dialog.mode == {
+                case .exit_program;         add_buffer_to_save_queue(buffer_id, after_save = .exit_program);
+                case .reload_workspace;     add_buffer_to_save_queue(buffer_id, after_save = .reload_workspace);
+            }
+            should_proceed = false;
+        }
     }
-    if !errors_when_saving unsaved_buffers_dialog_proceed();
+
+    if should_proceed unsaved_buffers_dialog_proceed();
 }
 
 unsaved_buffers_dialog_proceed :: () {
