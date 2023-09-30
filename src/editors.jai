@@ -3126,17 +3126,14 @@ word_completion :: (forwards := true, subwords := false) {
     should_abort = false;
     
     if !active {
-        active = true;
         search_for_subwords = subwords;        
         
         context.underscore_is_part_of_word = !subwords;
         word_complete_search();
         context.underscore_is_part_of_word = true;
         
-        if results.count == 0 {
-            active = false;
-            return;
-        }
+        if results.count == 0 then return;
+        active = true;
     }
 
    if forwards word_completion_next();

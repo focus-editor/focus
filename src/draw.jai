@@ -7,7 +7,6 @@ draw_frame :: () {
 
     maybe_set_hot_or_active(.none, screen, .NORMAL);
 
-
     // Check whether we need to deactivate elements before drawing
     if (!mouse.left.is_down || mouse.left.just_released) && (!mouse.middle.is_down || mouse.middle.just_released) then ui.active = .none;
 
@@ -1083,7 +1082,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
 
         rect := make_rect(rect_left, rect_bottom, rect_w, rect_h);
-        draw_rounded_rect(rect, Colors.BACKGROUND_DARK, radius = rounding_radius_small, set_shader = true);
+        draw_rounded_rect(rect, Colors.BACKGROUND_DARK, radius = rounding_radius_large, set_shader = true);
 
         i := 0;
         for word_complete.scroll_top..max_wc_item + word_complete.scroll_top - 1 {
