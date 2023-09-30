@@ -173,6 +173,13 @@ get_real_cursor_coords :: (buffer: Buffer, using cursor: Cursor) -> Cursor_Coord
 
 offset_to_line :: (editor: Editor, buffer: Buffer, offset: s64) -> line_num: s32 {
     assert(!buffer.dirty, "buffer is dirty, can't calculate line from offset");
+    if buffer.bytes.count < offset {
+        if buffer.has_file {
+            print("Buffer: %\n", buffer.file.full_path);
+        } else {
+            print("Buffer has no file\n");
+        }
+    }
     assert(offset <= buffer.bytes.count, "offset exceeds buffer size, can't calculate line");
 
     if line_wrap_is_active(editor) {
@@ -1069,6 +1076,41 @@ remove_all_buffers :: () {
     bucket_array_reset(*open_buffers);
 }
 
+add_buffer_to_save_queue :: (buffer_id: s64, after_save: After_Save_Action) {
+    array_add_if_unique(*buffer_save_queue.buffer_ids, buffer_id);
+    buffer_save_queue.pending = true;
+    buffer_save_queue.after_save = after_save;
+}
+
+remove_buffer_from_save_queue :: (buffer_id: s64) {
+    array_ordered_remove_by_value(*buffer_save_queue.buffer_ids, buffer_id);
+}
+
+clear_buffer_save_queue :: () {
+    array_reset_keeping_memory(*buffer_save_queue.buffer_ids);
+    buffer_save_queue.pending = false;
+}
+
+process_buffer_save_queue :: () {
+    using buffer_save_queue;
+
+    if !pending return;
+
+    if buffer_ids {
+        if active_global_widget != .open_file_dialog && active_global_widget != .confirm_overwrite_dialog {
+            show_open_file_dialog(.save, buffer_ids[0]);
+        }
+    } else {
+        // Nothing left to save, execute the after save action
+        pending = false;
+        if #complete after_save == {
+            case .do_nothing;           // yay, do nothing
+            case .exit_program;         should_quit = true;
+            case .reload_workspace;     should_reload_workspace = true;
+        }
+    }
+}
+
 #scope_file
 
 add_edit_notification :: (using buffer: *Buffer, offset: s64, old_count: s64, new_count: s64) {
@@ -1283,4 +1325,21 @@ Indentation_Token :: struct {
         bracket;
         brace;
     };
+}
+
+
+#scope_file
+
+// A queue to allow us to use the in-editor save dialog for multiple buffers.
+// TODO: consider using a more generic action queue if we have more deferred actions later
+buffer_save_queue: struct {
+    pending := false;
+    buffer_ids: [..] s64;
+    after_save: After_Save_Action = .do_nothing;
+};
+
+After_Save_Action :: enum {
+    do_nothing;
+    exit_program;
+    reload_workspace;
 }

@@ -272,6 +272,8 @@ main :: () {
             should_quit = false;
         }
 
+        process_buffer_save_queue();
+
         refresh_open_buffers();
 
         draw_frame();
