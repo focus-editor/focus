@@ -30,18 +30,7 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
             }
 
             case .tag_end; {
-                is_void_element := tokenizer.last_token.type == .tag_closing_slash || tokenizer.active_tag_is_known_void_element;
-
-                if !is_void_element && tokenizer.html_mode && tokenizer.active_tag_name {
-                    for element: HTML_VOID_ELEMENTS {
-                        if equal_nocase(tokenizer.active_tag_name, element) {
-                            is_void_element = true;
-                            break;
-                        }
-                    }
-                }
-
-                if is_void_element {
+                if tokenizer.last_token.type == .tag_closing_slash || tokenizer.active_tag_is_known_void_element {
                     token.type = .close;
                     token.kind = .brace;
                 }
@@ -107,8 +96,6 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
     start_t = t;
     char := t.*;
 
-    // parse_conditional_section_start(tokenizer, *token);
-    
     if tokenizer.state == .None {
         if char == #char "<" {
             if      at_string(tokenizer, "<?")         state = .Parsing_Processing_Instruction;
@@ -130,7 +117,7 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
         }
     }
 
-    if tokenizer.state == {
+    if #complete tokenizer.state == {
         case .Parsing_Tag; #through;
         case .Parsing_Closing_Tag;
             parse_tag(tokenizer, *token, char);
@@ -146,14 +133,15 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
 
         case .Parsing_Conditional_Section_Start;
             parse_conditional_section_start(tokenizer, *token);
+        
+        case .Parsing_Implicit_Cdata_Tag_Content; #through;
+        case .None;
+            parse_tag_content(tokenizer, *token);
     }
 
     if token.type == .eof {
-        // if tag_depth > 0 && is_known_void_element -> parse up until </active_tag_name
-    
-        token.type = .default;
+        token.type = .error;
         t += 1;
-        eat_until_any(tokenizer, "<]");
     }
         
     if t >= max_t then t = max_t;
@@ -169,19 +157,32 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token, char: u8) {
 
     if char == {
         case #char "<";
-            tag_depth += 1;
             token.type = .tag_start;
             t += 1;
 
         case #char ">";
-            if tag_depth  tag_depth -= 1;
+            is_void_element := active_tag_is_known_void_element || last_token.type == .tag_closing_slash;
+            is_closing_tag := state == .Parsing_Closing_Tag || is_void_element;
+            state = .None;
+            if is_closing_tag {
+                if tag_depth && !is_void_element  tag_depth -= 1;
+            } else {
+                if !is_void_element  tag_depth += 1;
+                if html_mode && (active_tag_name == "script" || active_tag_name == "style") {
+                    state = .Parsing_Implicit_Cdata_Tag_Content;
+                }
+            }
             token.type = .tag_end;
             t += 1;
 
         case #char "/";
-            state = .Parsing_Closing_Tag;
-            token.type = .tag_closing_slash;
-            t += 1;
+            t += 1; // Must increment before using peek_next_token!
+            if state != .Parsing_Closing_Tag && (last_token.type == .tag_start || peek_next_token(tokenizer).type == .tag_end) {
+                state = .Parsing_Closing_Tag;
+                token.type = .tag_closing_slash;
+            } else {
+                token.type = .error;
+            }
         
         case #char "[";
             in_dtd_internal_subset = true;
@@ -221,8 +222,6 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token, char: u8) {
         }
     }
 
-    if token.type == .tag_end  state = .None;
-
     if token.type != .eof  return;
     
     if last_token.type == {
@@ -230,7 +229,20 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token, char: u8) {
         case .tag_exclamation_point; #through;
         case .tag_closing_slash;
             active_tag_name = parse_tag_name(tokenizer, token);
-            active_tag_is_known_void_element = last_token.type == .tag_exclamation_point;
+            
+            // Check if this tag is a known void element.
+            active_tag_is_known_void_element = false;
+            
+            if last_token.type == .tag_exclamation_point {
+                 active_tag_is_known_void_element = true;
+            } else if html_mode && active_tag_name {
+                for element: HTML_VOID_ELEMENTS {
+                    if equal_nocase(active_tag_name, element) {
+                        active_tag_is_known_void_element = true;
+                        break;
+                    }
+                }
+            }
 
         case .attribute_equals;
             parse_attribute_value(tokenizer, token);
@@ -374,21 +386,20 @@ parse_attribute_value :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 
 parse_tag_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     token.type = .tag_content;
-    t += 1;
 
-    if html_mode {
-        in_script := equal_nocase(active_tag_name, "script");
-        in_style  := equal_nocase(active_tag_name, "style");
-
-        if in_script || in_style {
-            while t < max_t {
-                eat_until(tokenizer, "</");
-                if (in_script && at_string(tokenizer, "</script", false)) || (in_style && at_string(tokenizer, "</style", false))  break;
-                t += 1;
-            }
-
-            return;
+    if state == .Parsing_Implicit_Cdata_Tag_Content && active_tag_name {
+        state = .None;
+        
+        mark := get_temporary_storage_mark();
+        defer   set_temporary_storage_mark(mark);
+        
+        end_tag := tprint("</%", active_tag_name);
+        while t < max_t {
+            eat_until(tokenizer, "</");
+            if at_string(tokenizer, end_tag, false)  break;
+            t += 1;
         }
+        return;
     }
     
     if in_dtd_internal_subset || conditional_section_depth > 0  eat_until_any(tokenizer, "<]");
@@ -467,6 +478,7 @@ Xml_Tokenizer_State :: enum u8 {
     Parsing_Cdata;
     Parsing_Processing_Instruction;
     Parsing_Conditional_Section_Start;
+    Parsing_Implicit_Cdata_Tag_Content;
 }
 
 Xml_Token :: struct {
