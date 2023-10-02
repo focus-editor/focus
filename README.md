@@ -33,7 +33,7 @@ https://discord.gg/eSXquAzTmW
 
 `$ jai first.jai - release`
 
-Required Jai version: `0.1.071`
+Required Jai version: `0.1.075`
 
 **On MacOS:**
 
