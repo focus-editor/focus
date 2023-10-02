@@ -3230,42 +3230,15 @@ word_complete_search :: () {
         return true;
     }
 
-    // @Robustness: Searching left to right and right to left based on the first cursor position because 
-    //  I don't want to search the whole buffer for a few words. So, I used this stupid optimization, and I stuck with it.
-
-    pos := cast(s64)(left - 1);
-    while pos != -1 {
-        if word_complete.results.count == word_complete.MAX_TOTAL_RESULT break;
-        if pos == 0 then pos = 1; // if in find_index_from_right_nocase start_index got 0 then it's going to start the searching from the end of the buffer
-        pos = find_index_from_right_nocase(buffer_str, start_subword, start_index = pos);
-        if pos == -1 break;
-        
-        defer pos -= 1;
-        if pos-1 >= 0 && is_word_char(buffer_str[pos-1]) then continue;
-
-        for pos..buffer_str.count-1 {
-            c := buffer_str[it];
-            if !is_word_char(c) {                
-                is_subword := c == #char "_";
-                s := advance(buffer_str, pos);
-                s.count = it - pos;
-                cursor_delta := cursor.pos - pos;
-                if !match_strictly(start_subword, s) then cursor_delta += CASE_SENSITIVE_PENALTY;
-                add_new_result_or_update_delta(s, cursor_delta);
-                
-                if !is_subword then break;
-            }
-        }
-    }
-    
-    pos = cast(s64)(right + 1);
+    pos := 0;
     while pos != buffer_str.count-1 {
-        if word_complete.results.count == word_complete.MAX_TOTAL_RESULT break;
         pos = find_index_from_left_nocase(buffer_str, start_subword, pos);
         if pos == -1 break;
         
         defer pos += start_subword.count;
-        if is_word_char(buffer_str[pos-1]) then continue;
+        if is_word_char(buffer_str[pos-1]) || pos == left {
+            continue;
+        }
         
         for pos..buffer_str.count-1 {
             c := buffer_str[it];
@@ -3277,7 +3250,11 @@ word_complete_search :: () {
                 s.count = it - pos;
                 // Now, we're going left to right, so the distance between the word and the cursor will 
                 // always be closer than in right-to-left searching; thus, we need to apply some corrections to it.
-                cursor_delta := it - cursor.pos;
+                cursor_delta := cursor.pos - pos;
+                if pos > right {
+                    cursor_delta = it - cursor.pos;
+                }
+                
                 if !match_strictly(start_subword, s) then cursor_delta += CASE_SENSITIVE_PENALTY;
                 add_new_result_or_update_delta(s, cursor_delta);
                 
