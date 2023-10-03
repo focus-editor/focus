@@ -177,8 +177,13 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token, char: u8) {
                 if tag_depth && !is_void_element  tag_depth -= 1;
             } else {
                 if !is_void_element  tag_depth += 1;
-                if html_mode && (active_tag_name == "script" || active_tag_name == "style") {
-                    state = .Parsing_Implicit_Cdata_Tag_Content;
+                if html_mode {
+                    if active_tag_name == "script" || active_tag_name == "style" || active_tag_name == "title" || active_tag_name == "textarea" {
+                        // Actually, 'script' and 'style' are 'raw text elements', whereas 'title' and 'textarea' are 'escapable raw text elements'.
+                        // This means that character references (e.g., '&amp;') have meaning inside 'title' and 'textarea' elements. However, we do not
+                        // parse character references separately, so we treat all these tags as regular character data.
+                        state = .Parsing_Implicit_Cdata_Tag_Content;
+                    }
                 }
             }
             token.type = .tag_end;
@@ -241,10 +246,8 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token, char: u8) {
         case .tag_exclamation_point; #through;
         case .tag_closing_slash;
             active_tag_name = parse_tag_name(tokenizer, token);
-            
-            // Check if this tag is a known void element.
-            active_tag_is_known_void_element = false;
-            
+
+            active_tag_is_known_void_element = false;            
             if last_token.type == .tag_exclamation_point {
                  active_tag_is_known_void_element = true;
             } else if html_mode && active_tag_name {
