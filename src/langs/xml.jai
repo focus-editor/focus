@@ -266,6 +266,7 @@ parse_processing_instruction :: (using tokenizer: *Xml_Tokenizer, token: *Xml_To
             t += 2;
             
         case;
+            assert(at_string(tokenizer, "<?"));
             token.type = .processing_instruction_start;
             t += 2;
     }
@@ -275,27 +276,23 @@ parse_comment :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     assert(state == .Parsing_Comment);
 
     if last_token.type == {
-        case .comment_start;
-            token.type = .comment_content;
-        
-            while true {
-                if eat_until(tokenizer, "-->") {
-                    if (t - 1).* == #char "-" { // Comments are not allowed to end in '--->'.
-                        t += 1;
-                        continue;
-                    }
-                }
-                
-                break;
+        case .comment_start; #through;
+        case .comment_content; #through;
+        case .error;
+            if at_string(tokenizer, "-->") {
+                state = .None;
+                token.type = .comment_end;
+                t += 3;
+            } else if at_string(tokenizer, "--") { // The string '--' is not allowed within a comment.
+                token.type = .error;
+                t += 2;
+            } else {
+                token.type = .comment_content;
+                eat_until(tokenizer, "--");
             }
-        
-        case .comment_content;
-            assert(at_string(tokenizer, "-->"));
-            state = .None;
-            token.type = .comment_end;
-            t += 3;
-            
+
         case;
+            assert(at_string(tokenizer, "<!--"));
             token.type = .comment_start;
             t += 4;
     }
@@ -316,6 +313,7 @@ parse_cdata :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
             t += 3;
         
         case;
+            assert(at_string(tokenizer, "<![CDATA["));
             token.type = .cdata_start;
             t += 9;
     }
@@ -323,6 +321,7 @@ parse_cdata :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 
 parse_conditional_section_start :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     assert(state == .Parsing_Conditional_Section_Start);
+    assert(at_string(tokenizer, "<!["));
 
     token.type = .dtd_conditional_section_start;
     conditional_section_depth += 1;
