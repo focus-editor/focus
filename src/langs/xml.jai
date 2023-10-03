@@ -85,7 +85,7 @@ peek_next_token :: (using tokenizer: *Xml_Tokenizer, $skip_characters := 0) -> X
 }
 
 get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
-    eat_white_space(tokenizer);
+    eat_whitespace(tokenizer);
 
     last_token = current_token;
     last_state = state;
@@ -347,9 +347,9 @@ parse_conditional_section_start :: (using tokenizer: *Xml_Tokenizer, token: *Xml
     
     // Try to find a section start of the form '<![xxx[', with optional whitespace around 'xxx'.
     tokenizer_copy := tokenizer.*;
-    eat_white_space(*tokenizer_copy);
+    eat_whitespace(*tokenizer_copy);
     eat_until_any(*tokenizer_copy, " []</!?\t\r\n");
-    eat_white_space(*tokenizer_copy);
+    eat_whitespace(*tokenizer_copy);
     if tokenizer_copy.t.* == #char "[" {
         tokenizer_copy.t += 1;
         tokenizer.t = tokenizer_copy.t;
@@ -456,8 +456,8 @@ eat_until_any :: (using tokenizer: *Xml_Tokenizer, s: string) {
     }
 }
 
-eat_white_space :: (using tokenizer: *Xml_Tokenizer) {
-    while t < max_t && is_space(t.*) {
+eat_whitespace :: (using tokenizer: *Xml_Tokenizer) {
+    while t < max_t && is_whitespace_char(t.*) {
         t += 1;
     }
 }
