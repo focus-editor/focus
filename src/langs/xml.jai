@@ -77,8 +77,9 @@ get_tokenizer :: (using buffer: Buffer) -> Xml_Tokenizer {
     return tokenizer;
 }
 
-peek_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
+peek_next_token :: (using tokenizer: *Xml_Tokenizer, $skip_characters := 0) -> Xml_Token {
     tokenizer_copy := tokenizer.*;
+    tokenizer_copy.t += skip_characters;
     token := get_next_token(*tokenizer_copy);
     return token;
 }
@@ -87,6 +88,7 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
     eat_white_space(tokenizer);
 
     last_token = current_token;
+    last_state = state;
 
     token: Xml_Token;
     token.start = cast(s32) (t - buf.data);
@@ -155,10 +157,17 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
 parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token, char: u8) {
     assert(state == .Parsing_Tag || state == .Parsing_Closing_Tag);
 
+    if last_token.type == .attribute_equals {
+        parse_attribute_value(tokenizer, token);
+        return;
+    }
+
     if char == {
         case #char "<";
-            token.type = .tag_start;
-            t += 1;
+            if last_state == .None {
+                token.type = .tag_start;
+                t += 1;
+            } else return; // error
 
         case #char ">";
             is_void_element := active_tag_is_known_void_element || last_token.type == .tag_closing_slash;
@@ -176,20 +185,23 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token, char: u8) {
             t += 1;
 
         case #char "/";
-            t += 1; // Must increment before using peek_next_token!
-            if state != .Parsing_Closing_Tag && (last_token.type == .tag_start || peek_next_token(tokenizer).type == .tag_end) {
+            if state != .Parsing_Closing_Tag && (last_token.type == .tag_start || peek_next_token(tokenizer, 1).type == .tag_end) {
                 state = .Parsing_Closing_Tag;
                 token.type = .tag_closing_slash;
-            } else {
-                token.type = .error;
-            }
+                t += 1;
+            } else return; // error
         
         case #char "[";
             in_dtd_internal_subset = true;
             token.type = .dtd_bracket_open;
             t += 1;
         
-        case #char "="; token.type = .attribute_equals;         t += 1;
+        case #char "=";
+            if last_token.type == .attribute_name {
+                token.type = .attribute_equals;
+                t += 1;
+            } else return; // error
+
         case #char "("; token.type = .dtd_parenthesis_open;     t += 1;
         case #char ")"; token.type = .dtd_parenthesis_close;    t += 1;
         case #char ","; token.type = .dtd_comma;                t += 1;
@@ -244,9 +256,6 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token, char: u8) {
                 }
             }
 
-        case .attribute_equals;
-            parse_attribute_value(tokenizer, token);
-        
         case;
             parse_attribute_name(tokenizer, token);
     }
@@ -377,10 +386,9 @@ parse_attribute_value :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
         t += 1;
         eat_until(tokenizer, char);
         t += 1;
-    } else {
+    } else if html_mode {
         token.type = .attribute_value;
-        t += 1;
-        eat_until_any(tokenizer, " /<>\t\r\n");
+        eat_until_any(tokenizer, " \t\r\n\"'=<>`");
     }
 }
 
@@ -460,6 +468,7 @@ Xml_Tokenizer :: struct {
     state: Xml_Tokenizer_State;
     current_token: Xml_Token;
     last_token: Xml_Token;
+    last_state: Xml_Tokenizer_State;
     
     active_tag_name: string;
     active_tag_is_known_void_element: bool;
