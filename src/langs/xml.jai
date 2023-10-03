@@ -173,19 +173,7 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token, char: u8) {
             is_void_element := active_tag_is_known_void_element || last_token.type == .tag_closing_slash;
             is_closing_tag := state == .Parsing_Closing_Tag || is_void_element;
             state = .None;
-            if is_closing_tag {
-                if tag_depth && !is_void_element  tag_depth -= 1;
-            } else {
-                if !is_void_element  tag_depth += 1;
-                if html_mode {
-                    if active_tag_name == "script" || active_tag_name == "style" || active_tag_name == "title" || active_tag_name == "textarea" {
-                        // Actually, 'script' and 'style' are 'raw text elements', whereas 'title' and 'textarea' are 'escapable raw text elements'.
-                        // This means that character references (e.g., '&amp;') have meaning inside 'title' and 'textarea' elements. However, we do not
-                        // parse character references separately, so we treat all these tags as regular character data.
-                        state = .Parsing_Implicit_Cdata_Tag_Content;
-                    }
-                }
-            }
+            if !is_closing_tag && html_mode && contains_nocase(HTML_RAW_TEXT_ELEMENTS, active_tag_name)  state = .Parsing_Implicit_Cdata_Tag_Content;
             token.type = .tag_end;
             t += 1;
 
@@ -250,13 +238,8 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token, char: u8) {
             active_tag_is_known_void_element = false;            
             if last_token.type == .tag_exclamation_point {
                  active_tag_is_known_void_element = true;
-            } else if html_mode && active_tag_name {
-                for element: HTML_VOID_ELEMENTS {
-                    if equal_nocase(active_tag_name, element) {
-                        active_tag_is_known_void_element = true;
-                        break;
-                    }
-                }
+            } else if html_mode {
+                active_tag_is_known_void_element = contains_nocase(HTML_VOID_ELEMENTS, active_tag_name);
             }
 
         case;
@@ -462,6 +445,12 @@ eat_whitespace :: (using tokenizer: *Xml_Tokenizer) {
     }
 }
 
+contains_nocase :: (arr: [] string, s: string) -> bool {
+    if !s  return false;
+    for arr  if equal_nocase(s, it)  return true;
+    return false;
+}
+
 Xml_Tokenizer :: struct {
     buf:     string;
     max_t:   *u8;
@@ -475,7 +464,6 @@ Xml_Tokenizer :: struct {
     
     active_tag_name: string;
     active_tag_is_known_void_element: bool;
-    tag_depth := 0;
     conditional_section_depth := 0; 
     in_dtd_internal_subset: bool;
 
@@ -605,4 +593,14 @@ HTML_VOID_ELEMENTS :: string.[
     "source",
     "track",
     "wbr",
+];
+
+// Actually, 'script' and 'style' are 'raw text elements', whereas 'title' and 'textarea' are 'escapable raw text elements'.
+// This means that character references (e.g., '&amp;') have meaning inside 'title' and 'textarea' elements. However, we do not
+// currently parse character references separately, so we treat all these tags as regular character data.
+HTML_RAW_TEXT_ELEMENTS :: string.[
+    "script",
+    "style",
+    "title",
+    "textarea",
 ];
