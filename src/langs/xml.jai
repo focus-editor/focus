@@ -185,6 +185,7 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token, char: u8) {
             } else return; // error
         
         case #char "[";
+            state = .None;
             in_dtd_internal_subset = true;
             token.type = .dtd_bracket_open;
             t += 1;
