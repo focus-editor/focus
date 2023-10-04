@@ -2849,6 +2849,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
         case .Golang;       comment = "//";
         case .Glsl;         comment = "//";
         case .Jai;          comment = "//";
+        case .Odin;         comment = "//";
         case .Focus_Config; comment = "#";
         case .Python;       comment = "#";
         case .RenPy;        comment = "#";
@@ -3016,6 +3017,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
         case .Golang;       comment_start = "/*"; comment_end = "*/";
         case .Glsl;         comment_start = "/*"; comment_end = "*/";
         case .Jai;          comment_start = "/*"; comment_end = "*/";
+        case .Odin;         comment_start = "/*"; comment_end = "*/";
         case;               toggle_comment(editor, buffer); return;  // fallback to toggle_comment for the rest.
     }
 

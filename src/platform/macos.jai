@@ -46,9 +46,7 @@ platform_create_window :: inline () {
 }
 
 platform_maximize_window :: inline (window: Window_Type) {
-    // On macOS, we do not do this.
-    // Maximized (fullscreen) text editor windows on launch would feel jarring
-    // and out of place. It also comes with a cumbersome fullscreening animation.
+    NSWindow.toggleFullScreen(window, window);
 }
 
 platform_enable_drag_and_drop :: inline (window: Window_Type) {
