@@ -3018,6 +3018,8 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
         case .Glsl;         comment_start = "/*"; comment_end = "*/";
         case .Jai;          comment_start = "/*"; comment_end = "*/";
         case .Odin;         comment_start = "/*"; comment_end = "*/";
+        case .Html;         comment_start = "<!--"; comment_end = "-->";
+        case .Xml;          comment_start = "<!--"; comment_end = "-->";
         case;               toggle_comment(editor, buffer); return;  // fallback to toggle_comment for the rest.
     }
 
