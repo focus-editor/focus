@@ -5,7 +5,7 @@
         OPENGL;
         METAL;
     }
-}
+};
 
 #scope_module
 
