@@ -23,7 +23,7 @@ x11_translate_key_code :: (key: X11.KeySym) -> Input.Key_Code {
         return BACKSPACE;
     if key == X11.XK_Delete || key == X11.XK_KP_Delete
         return DELETE;
-    if key == X11.XK_Tab || key == X11.XK_KP_Tab
+    if key == X11.XK_Tab || key == X11.XK_KP_Tab || key == X11.XK_ISO_Left_Tab
         return TAB;
     if key == X11.XK_F1
         return F1;
