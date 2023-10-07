@@ -1047,6 +1047,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
     // Draw word completion
     if editor_is_active && word_complete.results.count {
+    
         word_complete.max_visible_item_at_once = word_complete.DEFAULT_MAX_VISIBLE_ITEM;
         max_wc_item: s64 = min(word_complete.results.count, word_complete.max_visible_item_at_once);
 
@@ -1061,11 +1062,11 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         calc_rect :: () #expand {
             rect_w      = (max_char * char_x_advance) + (padding * 2);
             rect_h      = max_wc_item * (item_delta_scaler) + padding;
-            rect_bottom = cursor_screen_pos.y - rect_h;
+            rect_bottom = cursor_screen_pos.y - rect_h + item_delta_scaler;
             rect_left   = cursor_screen_pos.x + padding;
             
             if rect_bottom < footer_rect.h {
-                rect_bottom = cursor_screen_pos.y + line_height;
+                rect_bottom = footer_rect.h + line_height;
             }
             if rect_left + rect_w + padding > main_area.w + main_area.x {
                 rect_left = (main_area.w + main_area.x) - (rect_w + padding);
@@ -1075,6 +1076,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         rect_top := rect_bottom + rect_h;
         if (rect_top > main_area.h) {
+            // Reduce the max visible results if there is no more space to expand at the top
             usable_h := main_area.h - footer_rect.h;
             max_wc_item = cast(s64)(usable_h / item_delta_scaler / 2);
             word_complete.max_visible_item_at_once = max_wc_item;
@@ -1097,6 +1099,24 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             Simp.draw_prepared_text(font, cast(s64) item_left, cast(s64) item_top, item_color);
             
             i+=1;
+        }
+        
+        {
+            shadow_rect := make_rect(rect_left, rect_bottom, rect_w, rect_h);
+            using shadow_rect;
+            if (word_complete.scroll_top) {
+                Simp.set_shader_for_color(enable_blend = true);
+                s := Colors.SHADOW_DARK;
+                t := Colors.SHADOW_TRANSPARENT;
+                Simp.immediate_quad(x, y+h, x + w, y+h - 45.0 * dpi_scale, c00 = s, c01 = t, c10 = s, c11 = t);
+            }
+            
+            if (word_complete.results.count > word_complete.scroll_top + max_wc_item) {
+                Simp.set_shader_for_color(enable_blend = true);
+                s := Colors.SHADOW_DARK;
+                t := Colors.SHADOW_TRANSPARENT;
+                Simp.immediate_quad(x, y, x + w, y + 30.0 * dpi_scale, c00 = s, c01 = t, c10 = s, c11 = t);
+            }
         }
     }
 

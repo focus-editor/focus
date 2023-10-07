@@ -3186,8 +3186,6 @@ word_complete_abort :: () {
 }
 
 word_complete_search :: () {
-    // @Bug: Let's say you have a comment like "yes, we're here!" then the "re" will be recognized as a separate word.
-
     // hmm...
     UNDERSCORE_PENALTY     :: 1000000000;
     CASE_SENSITIVE_PENALTY :: 100000000;
@@ -3198,6 +3196,7 @@ word_complete_search :: () {
     right := cursor.pos;
     left  := scan_through_similar_chars_on_the_left(buffer, cursor.pos, Char_Type.word, skip_one_space = false);
     start_subword := get_range_as_string(buffer, Offset_Range.{left, right});
+    if start_subword.count == 0 then return;
     
     buffer_str := to_string(buffer.bytes);
 
@@ -3216,18 +3215,11 @@ word_complete_search :: () {
                 // found a closer one
                 if delta < it.cursor_delta then it.cursor_delta = xx delta;
                 return;
-            }
+            } 
         }
         
         result := Word_Result.{word = new_result, cursor_delta = xx delta}; 
         array_add(*word_complete.results, result);
-    }
-
-    match_strictly :: inline (a: string, b: string) -> bool {
-        for 0..min(a.count, b.count)-1 {
-            if is_upper(a[it]) != is_upper(b[it]) then return false;
-        }
-        return true;
     }
 
     pos := 0;
@@ -3236,27 +3228,26 @@ word_complete_search :: () {
         if pos == -1 break;
         
         defer pos += start_subword.count;
-        if is_word_char(buffer_str[pos-1]) || pos == left {
+        if pos > 0 && is_word_char(buffer_str[pos-1]) {
+            // Exclude results that are part of another word. For instance, if your subword is 'ine' and you have a word like 'wine' elsewhere, it will not include the result 'ine' from 'w[ine]'.
             continue;
         }
         
         for pos..buffer_str.count-1 {
             c := buffer_str[it];
-            if !is_word_char(c) {
+            if !is_word_char(c) || it == buffer_str.count-1 {
                 is_subword := c == #char "_";
                 
-                s := advance(buffer_str, pos);
-                if s == start_subword continue;
-                s.count = it - pos;
-                // Now, we're going left to right, so the distance between the word and the cursor will 
-                // always be closer than in right-to-left searching; thus, we need to apply some corrections to it.
-                cursor_delta := cursor.pos - pos;
-                if pos > right {
-                    cursor_delta = it - cursor.pos;
+                s := advance(buffer_str, pos); 
+                if it != buffer_str.count-1 then s.count = it - pos;
+                if s != start_subword {
+                    // Now, we're going left to right, so the distance between the word and the cursor will 
+                    // always be closer than in right-to-left searching; thus, we need to apply some corrections to it.
+                    cursor_delta := cursor.pos - pos;
+                    if pos >= right then cursor_delta = it - cursor.pos;
+                    if is_upper(start_subword[0]) != is_upper(buffer_str[pos]) then cursor_delta += CASE_SENSITIVE_PENALTY;
+                    add_new_result_or_update_delta(s, cursor_delta);
                 }
-                
-                if !match_strictly(start_subword, s) then cursor_delta += CASE_SENSITIVE_PENALTY;
-                add_new_result_or_update_delta(s, cursor_delta);
                 
                 if !is_subword then break;
             }
@@ -3314,7 +3305,7 @@ word_complete_apply :: () {
 #scope_export
 
 Word_Completion :: struct {
-    DEFAULT_MAX_VISIBLE_ITEM :: 15;
+    DEFAULT_MAX_VISIBLE_ITEM :: 8;
     MAX_TOTAL_RESULT :: 35;
 
     active := false;
