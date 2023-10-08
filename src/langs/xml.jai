@@ -40,6 +40,7 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
             case .dtd_parenthesis_open; #through;
             case .dtd_bracket_open; #through;
             case .comment_start; #through;
+            case .dtd_conditional_section_start; #through;
             case .cdata_start; {
                 token.type = .open;
                 token.kind = .brace;
@@ -49,6 +50,7 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
             case .dtd_parenthesis_close; #through;
             case .dtd_bracket_close; #through;
             case .comment_end; #through;
+            case .dtd_conditional_section_end; #through;
             case .cdata_end; {
                 token.type = .close;
                 token.kind = .brace;
@@ -127,14 +129,16 @@ parse_token :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
                 conditional_section_depth -= 1;
                 token.type = .dtd_conditional_section_end;
                 t += 3;
-                return;
             } else if in_dtd_internal_subset {
                 in_dtd_internal_subset = false;
                 state = .Parsing_Tag;
                 token.type = .dtd_bracket_close;
                 t += 1;
-                return;
+            } else {
+                token.type = .tag_content;
+                t += 1;
             }
+            return;
         }
     }
     
@@ -199,20 +203,6 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token, char: u8) {
                 t += 1;
             } else return; // error
 
-        case #char "("; token.type = .dtd_parenthesis_open;     t += 1;
-        case #char ")"; token.type = .dtd_parenthesis_close;    t += 1;
-        case #char ","; token.type = .dtd_comma;                t += 1;
-        case #char "|"; token.type = .dtd_infix_operator;       t += 1;
-        case #char "*"; #through;
-        case #char "+"; token.type = .dtd_postfix_operator;     t += 1;
-        
-        case #char "%"; {
-            if t < max_t - 1 && is_whitespace_char(t[1]) {
-                token.type = .dtd_percent;
-                t += 1;
-            }
-        }
-        
         case #char "'"; #through;
         case #char "\""; {
             parse_attribute_value(tokenizer, token);
@@ -225,10 +215,20 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token, char: u8) {
             }
         }
         
-        case #char "?"; {
-            token.type = .dtd_postfix_operator;
-            t += 1;
+        case #char "%"; {
+            if t < max_t - 1 && is_whitespace_char(t[1]) {
+                token.type = .dtd_percent;
+                t += 1;
+            }
         }
+
+        case #char "("; token.type = .dtd_parenthesis_open;     t += 1;
+        case #char ")"; token.type = .dtd_parenthesis_close;    t += 1;
+        case #char ","; token.type = .dtd_comma;                t += 1;
+        case #char "|"; token.type = .dtd_infix_operator;       t += 1;
+        case #char "*"; token.type = .dtd_postfix_operator;     t += 1;
+        case #char "+"; token.type = .dtd_postfix_operator;     t += 1;
+        case #char "?"; token.type = .dtd_postfix_operator;     t += 1;
     }
 
     if token.type != .eof  return;
@@ -258,17 +258,17 @@ parse_processing_instruction :: (using tokenizer: *Xml_Tokenizer, token: *Xml_To
         case .processing_instruction_start;
             parse_tag_name(tokenizer, token);
             token.type = .processing_instruction_target;
-            
+
         case .processing_instruction_target;
             token.type = .processing_instruction_content;
             eat_until(tokenizer, "?>");
-    
+
         case .processing_instruction_content;
             assert(at_string(tokenizer, "?>"));
             state = .None;
             token.type = .processing_instruction_end;
             t += 2;
-            
+
         case;
             assert(at_string(tokenizer, "<?"));
             token.type = .processing_instruction_start;
@@ -418,21 +418,20 @@ eat_until :: (using tokenizer: *Xml_Tokenizer, c: u8) {
     }
 }
 
-eat_until :: (using tokenizer: *Xml_Tokenizer, s: string) -> bool {
+eat_until :: (using tokenizer: *Xml_Tokenizer, s: string) {
     our_max_t := max_t - s.count + 1;
 
-    while t < our_max_t {
-        found := true;
+    while outer := t < our_max_t {
         for c: 0..s.count-1 {
-            found &= t[c] == s[c];
+            if t[c] != s[c] {
+                t += 1;
+                continue outer;
+            }
         }
-
-        if found  return true;
-        t += 1;
+        return;
     }
 
     t = max_t;
-    return false;
 }
 
 eat_until_any :: (using tokenizer: *Xml_Tokenizer, s: string) {
@@ -600,7 +599,7 @@ HTML_VOID_ELEMENTS :: string.[
 
 // Actually, 'script' and 'style' are 'raw text elements', whereas 'title' and 'textarea' are 'escapable raw text elements'.
 // This means that character references (e.g., '&amp;') have meaning inside 'title' and 'textarea' elements. However, we do not
-// currently parse character references separately, so we treat all these tags as regular character data.
+// currently parse character references separately, so we treat the contents of all these tags as regular character data.
 HTML_RAW_TEXT_ELEMENTS :: string.[
     "script",
     "style",
