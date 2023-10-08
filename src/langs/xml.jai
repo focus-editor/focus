@@ -93,53 +93,11 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
     token: Xml_Token;
     token.start = cast(s32) (t - buf.data);
     token.type  = .eof;
+    
     if t >= max_t return token;
-
     start_t = t;
-    char := t.*;
 
-    if tokenizer.state == .None {
-        if char == #char "<" {
-            if      at_string(tokenizer, "<?")         state = .Parsing_Processing_Instruction;
-            else if at_string(tokenizer, "<!--")       state = .Parsing_Comment;
-            else if at_string(tokenizer, "<![CDATA[")  state = .Parsing_Cdata;
-            else if at_string(tokenizer, "<![")        state = .Parsing_Conditional_Section_Start;
-            else                                       state = .Parsing_Tag;
-        } else if char == #char "]" {
-            if conditional_section_depth > 0 && at_string(tokenizer, "]]>") {
-                conditional_section_depth -= 1;
-                token.type = .dtd_conditional_section_end;
-                t += 3;
-            } else if in_dtd_internal_subset {
-                in_dtd_internal_subset = false;
-                state = .Parsing_Tag;
-                token.type = .dtd_bracket_close;
-                t += 1;
-            }
-        }
-    }
-
-    if #complete tokenizer.state == {
-        case .Parsing_Tag; #through;
-        case .Parsing_Closing_Tag;
-            parse_tag(tokenizer, *token, char);
-        
-        case .Parsing_Processing_Instruction;
-            parse_processing_instruction(tokenizer, *token);
-        
-        case .Parsing_Comment;
-            parse_comment(tokenizer, *token);
-            
-        case .Parsing_Cdata;
-            parse_cdata(tokenizer, *token);
-
-        case .Parsing_Conditional_Section_Start;
-            parse_conditional_section_start(tokenizer, *token);
-        
-        case .Parsing_Implicit_Cdata_Tag_Content; #through;
-        case .None;
-            parse_tag_content(tokenizer, *token);
-    }
+    parse_token(tokenizer, *token);
 
     if token.type == .eof {
         token.type = .error;
@@ -152,6 +110,55 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
     current_token = token;
 
     return token;
+}
+
+parse_token :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
+    char := t.*;
+    
+    if state == .None {
+        if char == #char "<" {
+            if      at_string(tokenizer, "<?")         state = .Parsing_Processing_Instruction;
+            else if at_string(tokenizer, "<!--")       state = .Parsing_Comment;
+            else if at_string(tokenizer, "<![CDATA[")  state = .Parsing_Cdata;
+            else if at_string(tokenizer, "<![")        state = .Parsing_Conditional_Section_Start;
+            else                                       state = .Parsing_Tag;
+        } else if char == #char "]" {
+            if conditional_section_depth > 0 && at_string(tokenizer, "]]>") {
+                conditional_section_depth -= 1;
+                token.type = .dtd_conditional_section_end;
+                t += 3;
+                return;
+            } else if in_dtd_internal_subset {
+                in_dtd_internal_subset = false;
+                state = .Parsing_Tag;
+                token.type = .dtd_bracket_close;
+                t += 1;
+                return;
+            }
+        }
+    }
+    
+    if #complete state == {
+        case .Parsing_Tag; #through;
+        case .Parsing_Closing_Tag;
+            parse_tag(tokenizer, token, char);
+        
+        case .Parsing_Processing_Instruction;
+            parse_processing_instruction(tokenizer, token);
+        
+        case .Parsing_Comment;
+            parse_comment(tokenizer, token);
+        
+        case .Parsing_Cdata;
+            parse_cdata(tokenizer, token);
+        
+        case .Parsing_Conditional_Section_Start;
+            parse_conditional_section_start(tokenizer, token);
+        
+        case .Parsing_Implicit_Cdata_Tag_Content; #through;
+        case .None;
+            parse_tag_content(tokenizer, token);
+    }
 }
 
 parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token, char: u8) {
