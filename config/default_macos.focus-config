@@ -136,6 +136,10 @@ Enter                       break_line
 Cmd-Enter                   new_line_below_without_breaking
 Cmd-Shift-Enter             new_line_above_without_breaking
 
+NumpadEnter                 break_line
+Cmd-NumpadEnter             new_line_below_without_breaking
+Cmd-Shift-NumpadEnter       new_line_above_without_breaking
+
 Cmd-1                       switch_to_left_editor
 Cmd-2                       switch_to_right_editor
 Cmd-,                       switch_to_other_editor
