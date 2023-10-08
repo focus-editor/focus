@@ -171,10 +171,8 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token, char: u8) {
 
     if char == {
         case #char "<";
-            if last_state == .None {
-                token.type = .tag_start;
-                t += 1;
-            } else return; // error
+            token.type = .tag_start;
+            t += 1;
 
         case #char ">";
             is_void_element := active_tag_is_known_void_element || last_token.type == .tag_closing_slash;
@@ -185,11 +183,9 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token, char: u8) {
             t += 1;
 
         case #char "/";
-            if state != .Parsing_Closing_Tag && (last_token.type == .tag_start || peek_next_token(tokenizer, 1).type == .tag_end) {
-                state = .Parsing_Closing_Tag;
-                token.type = .tag_closing_slash;
-                t += 1;
-            } else return; // error
+            state = .Parsing_Closing_Tag;
+            token.type = .tag_closing_slash;
+            t += 1;
         
         case #char "[";
             state = .None;
