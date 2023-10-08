@@ -117,31 +117,6 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
 parse_token :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     char := t.*;
     
-    if state == .None {
-        if char == #char "<" {
-            if      at_string(tokenizer, "<?")         state = .Parsing_Processing_Instruction;
-            else if at_string(tokenizer, "<!--")       state = .Parsing_Comment;
-            else if at_string(tokenizer, "<![CDATA[")  state = .Parsing_Cdata;
-            else if at_string(tokenizer, "<![")        state = .Parsing_Conditional_Section_Start;
-            else                                       state = .Parsing_Tag;
-        } else if char == #char "]" {
-            if conditional_section_depth > 0 && at_string(tokenizer, "]]>") {
-                conditional_section_depth -= 1;
-                token.type = .dtd_conditional_section_end;
-                t += 3;
-            } else if in_dtd_internal_subset {
-                in_dtd_internal_subset = false;
-                state = .Parsing_Tag;
-                token.type = .dtd_bracket_close;
-                t += 1;
-            } else {
-                token.type = .tag_content;
-                t += 1;
-            }
-            return;
-        }
-    }
-    
     if #complete state == {
         case .Parsing_Tag; #through;
         case .Parsing_Closing_Tag;
@@ -155,13 +130,39 @@ parse_token :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
         
         case .Parsing_Cdata;
             parse_cdata(tokenizer, token);
-        
-        case .Parsing_Conditional_Section_Start;
-            parse_conditional_section_start(tokenizer, token);
-        
-        case .Parsing_Implicit_Cdata_Tag_Content; #through;
-        case .None;
+
+        case .Parsing_Implicit_Cdata_Tag_Content;
             parse_tag_content(tokenizer, token);
+        
+        case .None;
+            if char == #char "<" {
+                success := try_parse_processing_instruction_start(tokenizer, token) ||
+                           try_parse_comment_start               (tokenizer, token) ||
+                           try_parse_cdata_start                 (tokenizer, token) ||
+                           try_parse_conditional_section_start   (tokenizer, token);
+                
+                if !success {
+                    token.type = .tag_start;
+                    t += 1;
+                    state = .Parsing_Tag;
+                }
+            } else if char == #char "]" {
+                if conditional_section_depth > 0 && at_string(tokenizer, "]]>") {
+                    conditional_section_depth -= 1;
+                    token.type = .dtd_conditional_section_end;
+                    t += 3;
+                } else if in_dtd_internal_subset {
+                    in_dtd_internal_subset = false;
+                    state = .Parsing_Tag;
+                    token.type = .dtd_bracket_close;
+                    t += 1;
+                } else {
+                    token.type = .tag_content;
+                    t += 1;
+                }
+            } else {
+                parse_tag_content(tokenizer, token);
+            }
     }
 }
 
@@ -175,6 +176,7 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token, char: u8) {
 
     if char == {
         case #char "<";
+            state = .Parsing_Tag;
             token.type = .tag_start;
             t += 1;
 
@@ -251,6 +253,17 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token, char: u8) {
     }
 }
 
+try_parse_processing_instruction_start :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) -> bool {
+    if at_string(tokenizer, "<?") {
+        token.type = .processing_instruction_start;
+        t += 2;
+        state = .Parsing_Processing_Instruction;
+        return true;
+    }
+    
+    return false;
+}
+
 parse_processing_instruction :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     assert(state == .Parsing_Processing_Instruction);
 
@@ -259,10 +272,6 @@ parse_processing_instruction :: (using tokenizer: *Xml_Tokenizer, token: *Xml_To
             parse_tag_name(tokenizer, token);
             token.type = .processing_instruction_target;
 
-        case .processing_instruction_target;
-            token.type = .processing_instruction_content;
-            eat_until(tokenizer, "?>");
-
         case .processing_instruction_content;
             assert(at_string(tokenizer, "?>"));
             state = .None;
@@ -270,46 +279,53 @@ parse_processing_instruction :: (using tokenizer: *Xml_Tokenizer, token: *Xml_To
             t += 2;
 
         case;
-            assert(at_string(tokenizer, "<?"));
-            token.type = .processing_instruction_start;
-            t += 2;
+            token.type = .processing_instruction_content;
+            eat_until(tokenizer, "?>");
     }
+}
+
+try_parse_comment_start :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) -> bool {
+    if at_string(tokenizer, "<!--") {
+        token.type = .comment_start;
+        t += 4;
+        state = .Parsing_Comment;
+        return true;
+    }
+    
+    return false;
 }
 
 parse_comment :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     assert(state == .Parsing_Comment);
 
-    if last_token.type == {
-        case .comment_start; #through;
-        case .comment_content; #through;
-        case .error;
-            if at_string(tokenizer, "-->") {
-                state = .None;
-                token.type = .comment_end;
-                t += 3;
-            } else if at_string(tokenizer, "--") { // The string '--' is not allowed within a comment.
-                token.type = .error;
-                t += 2;
-            } else {
-                token.type = .comment_content;
-                eat_until(tokenizer, "--");
-            }
-
-        case;
-            assert(at_string(tokenizer, "<!--"));
-            token.type = .comment_start;
-            t += 4;
+    if at_string(tokenizer, "-->") {
+        state = .None;
+        token.type = .comment_end;
+        t += 3;
+    } else if at_string(tokenizer, "--") { // The string '--' is not allowed within a comment.
+        token.type = .error;
+        t += 2;
+    } else {
+        token.type = .comment_content;
+        eat_until(tokenizer, "--");
     }
+}
+
+try_parse_cdata_start :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) -> bool {
+    if at_string(tokenizer, "<![CDATA[") {
+        token.type = .cdata_start;
+        t += 9;
+        state = .Parsing_Cdata;
+        return true;
+    }
+    
+    return false;
 }
 
 parse_cdata :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     assert(state == .Parsing_Cdata);
 
     if last_token.type == {
-        case .cdata_start;
-            token.type = .cdata_content;
-            eat_until(tokenizer, "]]>");
-        
         case .cdata_content;
             assert(at_string(tokenizer, "]]>"));
             state = .None;
@@ -317,38 +333,38 @@ parse_cdata :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
             t += 3;
         
         case;
-            assert(at_string(tokenizer, "<![CDATA["));
-            token.type = .cdata_start;
-            t += 9;
+            token.type = .cdata_content;
+            eat_until(tokenizer, "]]>");
     }
 }
 
-parse_conditional_section_start :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
-    assert(state == .Parsing_Conditional_Section_Start);
-    assert(at_string(tokenizer, "<!["));
-
-    token.type = .dtd_conditional_section_start;
-    conditional_section_depth += 1;
-    t += 3;
-    
-    // Try to find a section start of the form '<![xxx[', with optional whitespace around 'xxx'.
-    tokenizer_copy := tokenizer.*;
-    eat_whitespace(*tokenizer_copy);
-    eat_until_any(*tokenizer_copy, " []</!?\t\r\n");
-    eat_whitespace(*tokenizer_copy);
-    if tokenizer_copy.t.* == #char "[" {
-        tokenizer_copy.t += 1;
-        tokenizer.t = tokenizer_copy.t;
+try_parse_conditional_section_start :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) -> bool {
+    if at_string(tokenizer, "<![") {
+        token.type = .dtd_conditional_section_start;
+        conditional_section_depth += 1;
+        t += 3;
+        
+        // Try to find a section start of the form '<![xxx[', with optional whitespace around 'xxx'.
+        tokenizer_copy := tokenizer.*;
+        eat_whitespace(*tokenizer_copy);
+        eat_until_any(*tokenizer_copy, " []</!?\t\r\n");
+        eat_whitespace(*tokenizer_copy);
+        if tokenizer_copy.t.* == #char "[" {
+            tokenizer_copy.t += 1;
+            tokenizer.t = tokenizer_copy.t;
+        }
+        
+        state = .None;
+        return true;
     }
     
-    state = .None;
+    return false;
 }
 
 parse_tag_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) -> string {
     tag_name: string = ---;
     tag_name.data = t;
     token.type = .tag_name;
-    t += 1;
     eat_until_any(tokenizer, " /<>!?\t\r\n");
     tag_name.count = t - tag_name.data;
     return tag_name;
@@ -479,7 +495,6 @@ Xml_Tokenizer_State :: enum u8 {
     Parsing_Comment;
     Parsing_Cdata;
     Parsing_Processing_Instruction;
-    Parsing_Conditional_Section_Start;
     Parsing_Implicit_Cdata_Tag_Content;
 }
 
