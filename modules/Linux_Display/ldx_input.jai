@@ -15,7 +15,7 @@ x11_translate_key_code :: (key: X11.KeySym) -> Input.Key_Code {
         return SHIFT;
     if key == X11.XK_Escape
         return ESCAPE;
-    if key == X11.XK_Return || key == X11.XK_KP_Enter
+    if key == X11.XK_Return
         return ENTER;
     if (key == X11.XK_Control_L) || (key == X11.XK_Control_R)
         return CTRL;
@@ -67,6 +67,39 @@ x11_translate_key_code :: (key: X11.KeySym) -> Input.Key_Code {
         return PAGE_UP;
     if key == X11.XK_Page_Down || key == X11.XK_KP_Page_Down
         return PAGE_DOWN;
+
+    if key == X11.XK_KP_Enter
+        return NUMPAD_ENTER;
+    if key == X11.XK_KP_Multiply
+        return NUMPAD_MULTIPLY;
+    if key == X11.XK_KP_Add
+        return NUMPAD_ADD;
+    if key == X11.XK_KP_Subtract
+        return NUMPAD_SUBTRACT;
+    if key == X11.XK_KP_Decimal
+        return NUMPAD_DECIMAL;
+    if key == X11.XK_KP_Divide
+        return NUMPAD_DIVIDE;
+    if key == X11.XK_KP_0
+        return NUMPAD_0;
+    if key == X11.XK_KP_1
+        return NUMPAD_1;
+    if key == X11.XK_KP_2
+        return NUMPAD_2;
+    if key == X11.XK_KP_3
+        return NUMPAD_3;
+    if key == X11.XK_KP_4
+        return NUMPAD_4;
+    if key == X11.XK_KP_5
+        return NUMPAD_5;
+    if key == X11.XK_KP_6
+        return NUMPAD_6;
+    if key == X11.XK_KP_7
+        return NUMPAD_7;
+    if key == X11.XK_KP_8
+        return NUMPAD_8;
+    if key == X11.XK_KP_9
+        return NUMPAD_9;
 
     key = key & 0xFF;
     if (key >= #char "a") && (key <= #char "z") return cast(Input.Key_Code) (key - 0x20);

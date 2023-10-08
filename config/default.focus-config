@@ -140,6 +140,10 @@ Enter                       break_line
 Ctrl-Enter                  new_line_below_without_breaking
 Ctrl-Shift-Enter            new_line_above_without_breaking
 
+NumpadEnter                 break_line
+Ctrl-NumpadEnter            new_line_below_without_breaking
+Ctrl-Shift-NumpadEnter      new_line_above_without_breaking
+
 Ctrl-1                      switch_to_left_editor
 Ctrl-2                      switch_to_right_editor
 Ctrl-,                      switch_to_other_editor

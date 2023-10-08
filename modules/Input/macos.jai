@@ -219,22 +219,22 @@ init_input_system :: () {
 
     // input_vk_translation_table[OSX_VK_NUMLOCK]   = UNKNOWN;
     // input_vk_translation_table[OSX_VK_NUMPAD_EQUALS] = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_DIVIDE] = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_MULT]   = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_7]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_8]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_9]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_MINUS]  = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_4]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_5]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_6]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_PLUS]   = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_1]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_2]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_3]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_ENTER]  = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_0]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_PERIOD] = UNKNOWN;
+    input_vk_translation_table[OSX_VK_NUMPAD_DIVIDE] = NUMPAD_DIVIDE;
+    input_vk_translation_table[OSX_VK_NUMPAD_MULT]   = NUMPAD_MULTIPLY;
+    input_vk_translation_table[OSX_VK_NUMPAD_7]      = NUMPAD_7;
+    input_vk_translation_table[OSX_VK_NUMPAD_8]      = NUMPAD_8;
+    input_vk_translation_table[OSX_VK_NUMPAD_9]      = NUMPAD_9;
+    input_vk_translation_table[OSX_VK_NUMPAD_MINUS]  = NUMPAD_SUBTRACT;
+    input_vk_translation_table[OSX_VK_NUMPAD_4]      = NUMPAD_4;
+    input_vk_translation_table[OSX_VK_NUMPAD_5]      = NUMPAD_5;
+    input_vk_translation_table[OSX_VK_NUMPAD_6]      = NUMPAD_6;
+    input_vk_translation_table[OSX_VK_NUMPAD_PLUS]   = NUMPAD_ADD;
+    input_vk_translation_table[OSX_VK_NUMPAD_1]      = NUMPAD_1;
+    input_vk_translation_table[OSX_VK_NUMPAD_2]      = NUMPAD_2;
+    input_vk_translation_table[OSX_VK_NUMPAD_3]      = NUMPAD_3;
+    input_vk_translation_table[OSX_VK_NUMPAD_ENTER]  = NUMPAD_ENTER;
+    input_vk_translation_table[OSX_VK_NUMPAD_0]      = NUMPAD_0;
+    input_vk_translation_table[OSX_VK_NUMPAD_PERIOD] = NUMPAD_DECIMAL;
 }
 
 get_key_code :: (param: u16) -> Key_Code {
