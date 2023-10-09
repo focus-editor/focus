@@ -200,7 +200,7 @@ STRING_TO_CODE_MAP :: Str_Code.[
     .{ "NumpadMultiply",  NUMPAD_MULTIPLY },
     .{ "NumpadDivide",    NUMPAD_DIVIDE },
     .{ "NumpadAdd",       NUMPAD_ADD },
-    .{ "NumpadSubstract", NUMPAD_SUBTRACT },
+    .{ "NumpadSubtract",  NUMPAD_SUBTRACT },
     .{ "NumpadDecimal",   NUMPAD_DECIMAL },
     .{ "NumpadEnter",     NUMPAD_ENTER },
 
