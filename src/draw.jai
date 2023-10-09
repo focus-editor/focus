@@ -1063,7 +1063,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             rect_w      = (max_char * char_x_advance) + (padding * 2);
             rect_h      = max_wc_item * (item_delta_scaler) + padding;
             rect_bottom = cursor_screen_pos.y - rect_h + item_delta_scaler;
-            rect_left   = cursor_screen_pos.x + padding;
+            rect_left   = cursor_screen_pos.x + padding*2;
             
             if rect_bottom < footer_rect.h {
                 rect_bottom = footer_rect.h + line_height;
@@ -1101,22 +1101,14 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             i+=1;
         }
         
-        {
-            shadow_rect := make_rect(rect_left, rect_bottom, rect_w, rect_h);
-            using shadow_rect;
-            if (word_complete.scroll_top) {
-                Simp.set_shader_for_color(enable_blend = true);
-                s := Colors.SHADOW_DARK;
-                t := Colors.SHADOW_TRANSPARENT;
-                Simp.immediate_quad(x, y+h, x + w, y+h - 45.0 * dpi_scale, c00 = s, c01 = t, c10 = s, c11 = t);
-            }
-            
-            if (word_complete.results.count > word_complete.scroll_top + max_wc_item) {
-                Simp.set_shader_for_color(enable_blend = true);
-                s := Colors.SHADOW_DARK;
-                t := Colors.SHADOW_TRANSPARENT;
-                Simp.immediate_quad(x, y, x + w, y + 30.0 * dpi_scale, c00 = s, c01 = t, c10 = s, c11 = t);
-            }
+        if (word_complete.scroll_top) {
+            Simp.prepare_text(font_ui_small, BULLET_ICON);
+            Simp.draw_prepared_text(font_ui_small, xx (rect_left + (rect_w/2)), xx (rect_bottom+rect_h-line_height/2), color = Colors.UI_DEFAULT);
+        }
+        
+        if (word_complete.results.count > word_complete.scroll_top + max_wc_item) {
+            Simp.prepare_text(font_ui_small, BULLET_ICON);
+            Simp.draw_prepared_text(font_ui_small, xx (rect_left + (rect_w/2)), xx rect_bottom, color = Colors.UI_DEFAULT);
         }
     }
 

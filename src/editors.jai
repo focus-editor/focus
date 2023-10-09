@@ -3305,7 +3305,7 @@ word_complete_apply :: () {
 #scope_export
 
 Word_Completion :: struct {
-    DEFAULT_MAX_VISIBLE_ITEM :: 8;
+    DEFAULT_MAX_VISIBLE_ITEM :: 10;
     MAX_TOTAL_RESULT :: 35;
 
     active := false;
