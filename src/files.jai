@@ -137,6 +137,29 @@ should_ignore_file :: (path: string) -> bool {
     }
     if begins_with_nocase(path, temp_dir) return true;  // explicitly ignore our own temp dir
 
+    #if OS != .WINDOWS {
+        /*
+         * Even if a certain path is not ignored we still only really want to know about
+         * **regular** files.
+         *
+         * The `File_Visit_Info` structs that `visit_files()` generates as parameters to
+         * the visitor callback would idealy have all the info we need to filter things at
+         * a higher level. However, this is not currently the case - they only have information
+         * on wether a certain path is a directory or a symlink, with anything that is not one
+         * of those things being assumed to be a file. This is not the case on non-Windows OSes
+         * (the filesystem can contain pipes (FIFOs), sockets, device files, etc).
+         *
+         * We could fork the `File_Utilities` module and add the info we need there. That,
+         * however, requires more effort than I'm willing to put in right now. Instead,
+         * I'm going to do an extra `stat()` here and simply ignore anything that's not a
+         * regular file.
+         */
+
+        stats: stat_t;
+        if stat(temp_c_string(path), *stats) < 0 return true;
+        if !S_ISREG(stats.st_mode) return true;
+    }
+
     return false;
 }
 
