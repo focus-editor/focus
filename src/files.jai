@@ -154,10 +154,12 @@ should_ignore_file :: (path: string) -> bool {
          * I'm going to do an extra `stat()` here and simply ignore anything that's not a
          * regular file.
          */
-
-        stats: stat_t;
-        if stat(temp_c_string(path), *stats) < 0 return true;
-        if !S_ISREG(stats.st_mode) return true;
+        
+        POSIX :: #import "POSIX";
+        
+        stats: POSIX.stat_t;
+        if POSIX.stat(temp_c_string(path), *stats) < 0 return true;
+        if !POSIX.S_ISREG(stats.st_mode) return true;
     }
 
     return false;
