@@ -1062,7 +1062,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         calc_rect :: () #expand {
             rect_w      = (max_char * char_x_advance) + (padding * 2);
             rect_h      = max_wc_item * (item_delta_scaler) + padding;
-            rect_bottom = cursor_screen_pos.y - rect_h + item_delta_scaler;
+            rect_bottom = cursor_screen_pos.y - rect_h;
             rect_left   = cursor_screen_pos.x + padding*2;
             
             if rect_bottom < footer_rect.h {
