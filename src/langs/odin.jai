@@ -22,9 +22,9 @@ highlight_odin_syntax :: (using buffer: *Buffer) {
             if token.punctuation == .l_paren {
                 if prev.type == .identifier {
                     // Handle "func(" but not ":Type(" or "^Type(" or "$Type(" or "]Type("
-                    if      before_prev.type != .operation && before_prev.type != .punctuation {}
-                    else if before_prev.type == .operation && before_prev.operation == .colon {}
-                    else if before_prev.type == .punctuation && (before_prev.punctuation == .caret || before_prev.punctuation == .dollar || before_prev.punctuation == .r_bracket) {}
+                    if      before_prev.type == .operation || before_prev.type == .punctuation {}
+                    else if before_prev.type == .operation && before_prev.operation != .colon {}
+                    else if before_prev.type == .punctuation && (before_prev.punctuation != .caret && before_prev.punctuation != .dollar && before_prev.punctuation != .r_bracket) {}
                     else {
                         memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
                     }
@@ -609,17 +609,17 @@ parse_slash_comment_or_filetag :: (using tokenizer: *Tokenizer, token: *Token) {
 }
 
 parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
-    if t.* == #char "`" {
+    delimiter := t.*;   // Could be ' or "
+
+    if delimiter == #char "`" {
         // Handle raw_strings
         token.type = .raw_string;
         t += 1;
-        while t < max_t && t.* != #char "`" {
+        while t < max_t && t.* != delimiter {
             t += 1;
         }
     }
     else {
-        delimiter := t.*;   // Could be ' or "
-
         // Handle normal strings
         token.type = .string_literal;
         escape_seen := false;
