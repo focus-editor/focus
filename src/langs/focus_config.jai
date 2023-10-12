@@ -65,6 +65,9 @@ try_parsing_header :: (using tokenizer: *Tokenizer, token: *Token) {
         case "[[settings]]";    section = .settings;  token.type = .header_top_level;
         case "[[keymap]]";      section = .keymap;    token.type = .header_top_level;
         case "[[style]]";       section = .style;     token.type = .header_top_level;
+        case "[[windows]]";     section = .style;     token.type = .header_top_level;
+        case "[[linux]]";       section = .style;     token.type = .header_top_level;
+        case "[[macos]]";       section = .style;     token.type = .header_top_level;
 
         case "[workspace dirs]";            token.type = .header;
         case "[ignore dirs]";               token.type = .header;
