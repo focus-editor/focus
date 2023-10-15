@@ -198,6 +198,8 @@ parse_less_than_sign :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
                 state = .None;
                 return;
             }
+
+            t -= 1; // No match, step back.
         }
     }
 
@@ -282,7 +284,6 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
         case .tag_exclamation_point; #through;
         case .tag_closing_slash;
             active_tag_name = parse_tag_name(tokenizer, token);
-
             active_tag_is_known_void_element = false;
             if last_token.type == .tag_exclamation_point {
                 active_tag_is_known_void_element = true;
@@ -681,7 +682,8 @@ HTML_RAW_TEXT_ELEMENTS :: string.[
     "textarea",
 ];
 
-// Lookup table generation.
+// Lookup table stuff below. These are used for performance reasons.
+
 WHITE_SPACE_TABLE :: #run generate_lookup_table(Character_Range.[
     make_range(#char " "),
     make_range(#char "\t"),
@@ -696,9 +698,14 @@ VALID_NAME_TABLE :: #run generate_lookup_table(Character_Range.[
     make_range(#char "_"),
     make_range(#char "a", #char "z"),
     make_range(#char "-"),
-    make_range(#char "."), // Not allowed as name start character, but we don't check for that.
-    make_range(#char "0", #char "9"), // Not allowed as name start character, but we don't check for that.
-    make_range(#char "#"), // Not allowed for regular names, but this makes us parse XML keywords like #PCDATA, #IMPLIED, etcetera.
+
+    // '.' and '0' through '9' are not allowed as the initial character for names, but we don't check for that.
+    // This allows us to parse certain values that can occur in DTDs.
+    make_range(#char "."),
+    make_range(#char "0", #char "9"),
+
+    // '#' is not allowed for regular names, but this makes us parse DTD keywords like #PCDATA, #IMPLIED, etcetera.
+    make_range(#char "#"),
 ]);
 
 Character_Range :: struct { start: u8; end: u8; }
