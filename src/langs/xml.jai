@@ -142,8 +142,6 @@ parse_token :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 }
 
 parse_less_than_sign :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
-    assert(state == .None && t.* == #char "<");
-
     t += 1;
 
     if t < max_t {
@@ -204,8 +202,6 @@ parse_less_than_sign :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 }
 
 parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
-    assert(state == .Parsing_Tag || state == .Parsing_Closing_Tag);
-
     if last_token.type == .attribute_equals {
         parse_attribute_value(tokenizer, token);
         return;
@@ -292,8 +288,6 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 }
 
 parse_processing_instruction :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
-    assert(state == .Parsing_Processing_Instruction);
-
     if last_token.type == {
         case .processing_instruction_start;
             parse_tag_name(tokenizer, token);
@@ -312,8 +306,6 @@ parse_processing_instruction :: (using tokenizer: *Xml_Tokenizer, token: *Xml_To
 }
 
 parse_comment :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
-    assert(state == .Parsing_Comment);
-
     if at_string(tokenizer, "-->") {
         state = .None;
         token.type = .comment_end;
@@ -328,8 +320,6 @@ parse_comment :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 }
 
 parse_cdata :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
-    assert(state == .Parsing_Cdata);
-
     if last_token.type == {
         case .cdata_content;
             assert(at_string(tokenizer, "]]>"));
@@ -353,7 +343,6 @@ parse_tag_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) -> string
 }
 
 parse_attribute_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
-
     token.type = .attribute_name;
 
     if !html_mode && t.* == #char "%" { // Handle parameter entity reference.
@@ -363,15 +352,24 @@ parse_attribute_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
         return;
     }
 
-    while t < max_t {
+    if !VALID_NAME_TABLE[t.*] {
         t += 1;
-        if VALID_NAME_TABLE[t.*]  continue;
+        token.type = .error;
+        return;
+    }
+
+    t += 1;
+
+    while t < max_t {
+        if VALID_NAME_TABLE[t.*] {
+            t += 1;
+            continue;
+        }
         break;
     }
 }
 
 parse_attribute_value :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
-
     is_valid_attribute_character :: (char: u8) -> bool #expand {
         return char != #char " " && char != #char ">";
     }
@@ -394,21 +392,9 @@ parse_attribute_value :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 eat_entity :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) -> bool {
     initial_t := t;
 
-    if t.* == #char "#" {
-        t += 1;
-        if t.* == #char "x" { // Hexadecimal reference.
-            t += 1;
-            while is_alpha(t.*) || is_digit(t.*)  t += 1;
-        } else { // Decimal reference.
-            while is_digit(t.*)  t += 1;
-        }
-    } else { // Named reference.
-        while VALID_NAME_TABLE[t.*] {
-            t += 1;
-        }
-    }
+    while t < max_t && VALID_NAME_TABLE[t.*]  t += 1;
 
-    if t.* == #char ";" {
+    if t < max_t && t.* == #char ";" {
         t += 1;
         return true;
     }
