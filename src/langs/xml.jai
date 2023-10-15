@@ -1,5 +1,4 @@
 highlight_xml_syntax :: (using buffer: *Buffer) {
-    ZoneScoped();
     tokenizer := get_tokenizer(buffer);
 
     while true {
@@ -88,7 +87,6 @@ peek_next_token :: (using tokenizer: *Xml_Tokenizer, $skip_characters := 0) -> X
 }
 
 get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
-    ZoneScoped();
     eat_white_space(tokenizer);
 
     last_token = current_token;
@@ -117,7 +115,6 @@ get_next_token :: (using tokenizer: *Xml_Tokenizer) -> Xml_Token {
 }
 
 parse_token :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
-    ZoneScoped();
     if #complete state == {
         case .Parsing_Tag; #through;
         case .Parsing_Closing_Tag;
@@ -145,7 +142,6 @@ parse_token :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 }
 
 parse_less_than_sign :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
-    ZoneScoped();
     assert(state == .None && t.* == #char "<");
 
     t += 1;
@@ -208,7 +204,6 @@ parse_less_than_sign :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 }
 
 parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
-    ZoneScoped();
     assert(state == .Parsing_Tag || state == .Parsing_Closing_Tag);
 
     if last_token.type == .attribute_equals {
@@ -297,7 +292,6 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 }
 
 parse_processing_instruction :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
-    ZoneScoped();
     assert(state == .Parsing_Processing_Instruction);
 
     if last_token.type == {
@@ -318,7 +312,6 @@ parse_processing_instruction :: (using tokenizer: *Xml_Tokenizer, token: *Xml_To
 }
 
 parse_comment :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
-    ZoneScoped();
     assert(state == .Parsing_Comment);
 
     if at_string(tokenizer, "-->") {
@@ -335,7 +328,6 @@ parse_comment :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 }
 
 parse_cdata :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
-    ZoneScoped();
     assert(state == .Parsing_Cdata);
 
     if last_token.type == {
@@ -352,7 +344,6 @@ parse_cdata :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 }
 
 parse_tag_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) -> string {
-    ZoneScoped();
     tag_name: string = ---;
     tag_name.data = t;
     token.type = .tag_name;
@@ -362,7 +353,6 @@ parse_tag_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) -> string
 }
 
 parse_attribute_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
-    ZoneScoped();
 
     token.type = .attribute_name;
 
@@ -381,7 +371,6 @@ parse_attribute_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 }
 
 parse_attribute_value :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
-    ZoneScoped();
 
     is_valid_attribute_character :: (char: u8) -> bool #expand {
         return char != #char " " && char != #char ">";
@@ -429,7 +418,6 @@ eat_entity :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) -> bool {
 }
 
 parse_tag_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
-    ZoneScoped();
     token.type = .tag_content;
 
     if state == .Parsing_Implicit_Cdata_Tag_Content && active_tag_name {
@@ -452,7 +440,6 @@ parse_tag_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 }
 
 parse_bracket_close :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
-    ZoneScoped();
     assert(state == .None && t.* == #char "]");
 
     t += 1;
@@ -471,7 +458,6 @@ parse_bracket_close :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 }
 
 at_string :: (using tokenizer: *Xml_Tokenizer, a: string, $case_sensitive := true) -> bool {
-    ZoneScoped();
     if t + a.count > max_t  return false;
     b: string = ---;
     b.data = t;
@@ -491,7 +477,6 @@ eat_until :: inline (using tokenizer: *Xml_Tokenizer, c: u8) {
 }
 
 eat_until :: (using tokenizer: *Xml_Tokenizer, s: string) {
-    ZoneScoped();
     our_max_t := max_t - s.count + 1;
 
     while outer := t < our_max_t {
@@ -508,7 +493,6 @@ eat_until :: (using tokenizer: *Xml_Tokenizer, s: string) {
 }
 
 eat_until_any :: inline (using tokenizer: *Xml_Tokenizer, s: string) {
-    ZoneScoped();
     while t < max_t {
         for c: 0..s.count-1  if t.* == s[c]  return;
         t += 1;
@@ -516,14 +500,12 @@ eat_until_any :: inline (using tokenizer: *Xml_Tokenizer, s: string) {
 }
 
 eat_white_space :: inline (using tokenizer: *Xml_Tokenizer) {
-    ZoneScoped();
     while t < max_t && WHITE_SPACE_TABLE[t.*] {
         t += 1;
     }
 }
 
 contains :: (arr: [] string, s: string) -> bool {
-    ZoneScoped();
     if !s  return false;
     for arr  if s == it  return true;
     return false;
