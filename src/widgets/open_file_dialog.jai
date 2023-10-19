@@ -396,9 +396,20 @@ refresh_entries :: (clear_input := true) {
     }
 
     quick_sort(entries.filtered, compare_entries);
-
-    if !entries.filtered {
-        array_add(*entries.filtered, Entry.{
+    
+    
+    add_fake_entry := !entries.filtered;
+    
+    if !add_fake_entry && mode == .save_as {
+        for entries.filtered[0].name_highlights {
+            if !it {
+                add_fake_entry = true;
+            }
+        }        
+    }
+    
+    if add_fake_entry {
+        array_insert_at(*entries.filtered, Entry.{
             file = File_Info.{
                 full_path = "",
                 name = "",
@@ -408,7 +419,7 @@ refresh_entries :: (clear_input := true) {
             type = .nothing,
             name_highlights = .[],
             path_highlights = .[],
-        });
+        }, 0);
     }
 }
 
