@@ -22,10 +22,11 @@ highlight_odin_syntax :: (using buffer: *Buffer) {
             if token.punctuation == .l_paren {
                 if prev.type == .identifier {
                     // Handle "func(" but not ":Type(" or "^Type(" or "$Type(" or "]Type("
-                    if      before_prev.type == .operation || before_prev.type == .punctuation {}
-                    else if before_prev.type == .operation && before_prev.operation != .colon {}
-                    else if before_prev.type == .punctuation && (before_prev.punctuation != .caret && before_prev.punctuation != .dollar && before_prev.punctuation != .r_bracket) {}
-                    else {
+                    if before_prev.type == .operation && before_prev.operation == .colon {
+                        // Do nothing.
+                    } else if before_prev.type == .punctuation && (before_prev.punctuation == .caret || before_prev.punctuation == .dollar || before_prev.punctuation == .r_bracket) {
+                        // Do nothing.
+                    } else {
                         memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
                     }
                 }
