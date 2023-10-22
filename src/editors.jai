@@ -1067,6 +1067,21 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
             case "m";   #through;
             case "mm";
                 buffer.lang = .C;
+
+            case "html"; #through;
+            case "htm";  #through;
+            case "xhtml";
+                buffer.lang = .Html;
+
+            case "xml";     #through;
+            case "xsd";     #through;
+            case "dtd";     #through;
+            case "xaml";    #through;
+            case "svg";     #through;
+            case "vcproj";  #through;
+            case "vcxproj"; #through;
+            case "csproj";
+                buffer.lang = .Xml;
         }
     }
 
@@ -3003,6 +3018,8 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
         case .Glsl;         comment_start = "/*"; comment_end = "*/";
         case .Jai;          comment_start = "/*"; comment_end = "*/";
         case .Odin;         comment_start = "/*"; comment_end = "*/";
+        case .Html;         comment_start = "<!--"; comment_end = "-->";
+        case .Xml;          comment_start = "<!--"; comment_end = "-->";
         case;               toggle_comment(editor, buffer); return;  // fallback to toggle_comment for the rest.
     }
 
