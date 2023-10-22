@@ -10,7 +10,7 @@ open_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
             case .open_entry_on_the_left;   if mode != .save && mode != .save_as  open_file_dialog_open_entry(entries.selected, .left);                                          return true;
             case .open_entry_on_the_right;  if mode != .save && mode != .save_as  open_file_dialog_open_entry(entries.selected, .right);                                         return true;
             case .open_entry_in_explorer;   open_file_dialog_open_entry_in_explorer(entries.selected);                                                                           return true;
-            case .open_directory;           open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true, maybe_open_root_dir = event.key_code == #char "/");     return true;
+            case .open_directory;           if open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true, slash_key_pressed = (event.key_code == #char "/"))   return true;
             case .pop_directory;            if pop_directory() return true;
 
             case .toggle_expand;            toggle_expand();                    return true;
@@ -78,15 +78,19 @@ hide_open_file_dialog :: () {
     activate_editors();
 }
 
-open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, folder_only := false, maybe_open_root_dir := false) {
+open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, folder_only := false, slash_key_pressed := false) -> handled: bool {
     using open_file_dialog;
-    if selected >= entries.filtered.count return;
+
+    // If we are in search mode we want the "/" to show up as text in the search bar, instead of eating it
+    if mode == .search && slash_key_pressed return false;
+
+    if selected >= entries.filtered.count   return true;
 
     entry := entries.filtered[selected];
 
-    if path_chunks.count == 0 && maybe_open_root_dir {
+    if path_chunks.count == 0 && slash_key_pressed {
         // We are selecting our first chunk and we just pushed the "/" key.
-        // In this special case, we will open "/" if it is in the list.
+        // In this special case, we will open "/" (the root dir) if it is in the list.
 
         for entries.filtered {
             if it.entry_name == "/" {
@@ -117,15 +121,15 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
 
                 hide_open_file_dialog();
             }
-            return;
+            return true;
 
         case .file;
             if mode == {
-                case .save;     show_confirm_overwrite_dialog(.save,    buffer_id, entry.full_path); return;
-                case .save_as;  show_confirm_overwrite_dialog(.save_as, buffer_id, entry.full_path); return;
+                case .save;     show_confirm_overwrite_dialog(.save,    buffer_id, entry.full_path); return true;
+                case .save_as;  show_confirm_overwrite_dialog(.save_as, buffer_id, entry.full_path); return true;
             }
 
-            if folder_only return;
+            if folder_only return true;
             if entry.buffer_id >= 0 {
                 editors_open_buffer(entry.buffer_id, placement);
             } else {
@@ -151,6 +155,8 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
             array_add(*path_chunks, copy_string(entry.name));
             refresh_entries();
     }
+
+    return true;
 }
 
 open_file_dialog_open_entry_in_explorer :: (selected: s64) {
