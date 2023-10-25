@@ -107,7 +107,7 @@ tokenize_odin_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token 
 get_tokenizer :: (using buffer: Buffer) -> Tokenizer {
     tokenizer: Tokenizer;
 
-    tokenizer.buf   = to_string(bytes);
+    tokenizer.buf   = cast(string) bytes;
     tokenizer.max_t = bytes.data + bytes.count;
     tokenizer.t     = bytes.data;
 
@@ -650,7 +650,7 @@ read_identifier_string_tmp :: (using tokenizer: *Tokenizer) -> string /* temp */
     }
 
     if t >= max_t then t = max_t;
-    return to_string(identifier);
+    return cast(string) identifier;
 }
 
 Tokenizer :: struct {

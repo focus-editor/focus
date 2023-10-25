@@ -68,7 +68,7 @@ tokenize_glsl_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token 
 get_tokenizer :: (using buffer: Buffer) -> Tokenizer {
     tokenizer: Tokenizer;
 
-    tokenizer.buf   = to_string(bytes);
+    tokenizer.buf   = cast(string) bytes;
     tokenizer.max_t = bytes.data + bytes.count;
     tokenizer.t     = bytes.data;
 

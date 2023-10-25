@@ -1,6 +1,6 @@
 highlight_golang_syntax :: (using buffer: *Buffer) {
     tokenizer: Tokenizer = ---;
-    tokenizer.buf   = to_string(bytes);
+    tokenizer.buf   = cast(string) bytes;
     tokenizer.max_t = bytes.data + bytes.count;
     tokenizer.t     = bytes.data;
  

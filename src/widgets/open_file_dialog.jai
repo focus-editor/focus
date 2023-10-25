@@ -114,7 +114,7 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
 
                 while dir_path != "/" && ends_with(dir_path, #char "/") dir_path.count -= 1;
 
-                full_path := tprint("%/%", dir_path, to_string(input.text));
+                full_path := tprint("%/%", dir_path, cast(string) input.text);
 
                 if         mode == .save_as then    save_buffer_to_new_file_on_disk(buffer, buffer_id, full_path);
                 else /* if mode == .save    then */ save_buffer_to_disk            (buffer, buffer_id, full_path);
@@ -198,10 +198,10 @@ open_file_dialog_maybe_expand :: () {
 #scope_file
 
 maybe_handle_text_input_event :: (using input: *Text_Input, event: Input.Event) -> handled: bool {
-    input_text := copy_temporary_string(to_string(text));
+    input_text := copy_temporary_string(cast(string) text);
     handled := text_input_handle_event(input, event);
     if handled {
-        if input_text != to_string(input.text) then refresh_entries(clear_input = false);
+        if input_text != cast(string) input.text then refresh_entries(clear_input = false);
         return true;
     }
     return false;
@@ -284,7 +284,7 @@ refresh_entries :: (clear_input := true) {
     entries.selected = 0;
     array_reset(*entries.filtered);
 
-    filter_chars := decode_utf8_string_to_temp_char_substrings(to_string(input.text));
+    filter_chars := decode_utf8_string_to_temp_char_substrings(cast(string) input.text);
 
     if #complete mode == {
         case .save; #through;

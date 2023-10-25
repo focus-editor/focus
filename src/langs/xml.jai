@@ -72,7 +72,7 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
 
 get_tokenizer :: (using buffer: Buffer) -> Xml_Tokenizer {
     tokenizer: Xml_Tokenizer;
-    tokenizer.buf       = to_string(bytes);
+    tokenizer.buf       = cast(string) bytes;
     tokenizer.max_t     = bytes.data + bytes.count;
     tokenizer.t         = bytes.data;
     tokenizer.html_mode = buffer.lang == .Html;

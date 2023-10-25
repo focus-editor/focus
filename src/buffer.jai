@@ -45,13 +45,13 @@ insert_char_at_offset :: (buffer: *Buffer, offset: s32, char: Utf8_Char) {
 
 delete_range :: (buffer: *Buffer, using range: Offset_Range) {
     if start == end return;
-    old_str := to_string(array_view(buffer.bytes, start, end - start));
+    old_str := cast(string) array_view(buffer.bytes, start, end - start);
     new_delete_edit(buffer, start, end, old_str);
     delete_range_raw(buffer, start, end);
 }
 
 replace_range :: (buffer: *Buffer, using range: Offset_Range, str: string) {
-    old_str := to_string(array_view(buffer.bytes, start, end - start));
+    old_str := cast(string) array_view(buffer.bytes, start, end - start);
     if str == old_str return;
 
     new_replace_edit(buffer, start, end, old_str, str);
@@ -332,7 +332,7 @@ rescan_for_lines :: (using buffer: *Buffer) {
     array_reset_keeping_memory(*line_starts);
     array_add(*line_starts, 0);  // first line
 
-    s := to_string(bytes);
+    s := cast(string) bytes;
 
     // NOTE: this implementation is slightly faster on my machine, but really not by much - need to test on other machines
     if check_feature(cpu_info.feature_leaves, x86_Feature_Flag.AVX2) {
@@ -568,7 +568,7 @@ save_buffer_to_new_file_on_disk :: (buffer: *Buffer, buffer_id: s64, file_path: 
     }
 
     // Save the file BEFORE making a new buffer so find_or_create_buffer can find it
-    success := write_entire_file(file_path, to_string(buffer.bytes));
+    success := write_entire_file(file_path, cast(string) buffer.bytes);
     if !success return false;
 
     new_id, created := find_or_create_buffer(file_path);
@@ -650,7 +650,7 @@ save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64, file_path := "") 
 
     if config.settings.strip_trailing_whitespace_on_save then strip_trailing_whitespace(buffer, buffer_id);
 
-    success := write_entire_file(file.full_path, to_string(bytes));
+    success := write_entire_file(file.full_path, cast(string) bytes);
     if success {
         modified = false;
         modified_on_disk = false;
@@ -701,7 +701,7 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
     b: String_Builder;
     b.allocator = temp;
     init_string_builder(*b, buffer_size = bytes.count + size_of(String_Builder.Buffer));
-    lines := split(to_string(bytes), cast(u8) #char "\n");
+    lines := split(cast(string) bytes, cast(u8) #char "\n");
     for line, i : lines {
         append(*b, trim_right(line));
         if i < lines.count - 1 then append(*b, "\n");
@@ -724,7 +724,7 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
     }
 
     // Replace buffer contents
-    new_replace_edit(buffer, 0, xx bytes.count, to_string(bytes), stripped);
+    new_replace_edit(buffer, 0, xx bytes.count, cast(string) bytes, stripped);
 
     lock(*content_lock);
     memcpy(bytes.data, stripped.data, stripped.count);
@@ -812,7 +812,7 @@ find_or_create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
         // We have to only do this if the workspace scan is complete, otherwise we'll be in for
         // many surprising thread-related bugs
         for * buffer, buffer_id : open_buffers {
-            if !buffer.has_file && !trim(to_string(buffer.bytes)) return buffer_id, false;
+            if !buffer.has_file && !trim(cast(string) buffer.bytes) return buffer_id, false;
         }
     }
 
@@ -942,7 +942,7 @@ refresh_buffer_from_disk :: (path: string) {
     lock(*buffer.content_lock);
     remove_crlf_in_place(*file_contents);
     unlock(*buffer.content_lock);
-    file_contents_str = to_string(file_contents);
+    file_contents_str = cast(string) file_contents;
 
     file_hash := calculate_hash(file_contents);
     if buffer.meow_hash == file_hash {
@@ -970,7 +970,7 @@ refresh_buffer_from_disk :: (path: string) {
         }
 
         // Reload its contents
-        new_replace_edit(buffer, 0, xx buffer.bytes.count, to_string(buffer.bytes), file_contents_str);
+        new_replace_edit(buffer, 0, xx buffer.bytes.count, cast(string) buffer.bytes, file_contents_str);
         replace_range_raw(buffer, 0, xx buffer.bytes.count, file_contents_str);
         rescan_for_lines(buffer);
 

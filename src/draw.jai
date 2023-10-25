@@ -623,7 +623,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             if selected_text.count > 2 && !is_all_whitespace(selected_text) {
                 search_func: (s: string, substring: string, start_index := 0) -> s64;
                 search_func = ifx editor.search_whole_words then find_index_from_left_whole_word else find_index_from_left;
-                buffer_str := to_string(buffer.bytes);
+                buffer_str := cast(string) buffer.bytes;
 
                 cursor_offsets: [..] s32;
                 cursor_offsets.allocator = temp;
@@ -947,7 +947,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         for line_num : visible_lines_start .. visible_lines_end {
             line_start := get_line_start_offset(editor, buffer, line_num);
             length     := get_line_start_offset(editor, buffer, line_num+1) - line_start;
-            line := to_string(array_view(buffer.bytes, line_start, length));
+            line := cast(string) array_view(buffer.bytes, line_start, length);
             tab_spaces := 0;
             line, tab_spaces = advance_by_chars  (line, hidden_chars_on_the_left);
             line = take_first_n_chars(line, max_chars_horizontally);
@@ -1270,7 +1270,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                         }
                     }
                     if char_offset > 0 {
-                        line_str := to_string(array_view(buffer.bytes, line_start, line_range.end));
+                        line_str := cast(string) array_view(buffer.bytes, line_start, line_range.end);
                         byte_offset = slice_chars(line_str, 0, xx char_offset).count;
                     }
 
@@ -2615,7 +2615,7 @@ draw_finder :: () {
                     }
                 }
                 if char_offset > 0 {
-                    line_str := to_string(array_view(buffer.bytes, line_start, line_range.end));
+                    line_str := cast(string) array_view(buffer.bytes, line_start, line_range.end);
                     byte_offset = slice_chars(line_str, 0, xx char_offset).count;
                 }
 
@@ -2805,7 +2805,7 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
 
     input_rect = shrink(input_rect, padding);
 
-    input_text := to_string(text);
+    input_text := cast(string) text;
     cursor_width := 2 * dpi_scale;
 
     // Maybe set cursor on mouse click

@@ -33,7 +33,7 @@ highlight_renpy_syntax :: (using buffer: *Buffer) {
 get_tokenizer :: (using buffer: Buffer) -> Tokenizer {
     tokenizer: Tokenizer;
 
-    tokenizer.buf   = to_string(bytes);
+    tokenizer.buf   = cast(string) bytes;
     tokenizer.max_t = bytes.data + bytes.count;
     tokenizer.t     = bytes.data;
 

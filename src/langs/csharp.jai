@@ -62,7 +62,7 @@ tokenize_csharp_for_indentation :: (using buffer: Buffer) -> [] Indentation_Toke
 get_tokenizer :: (using buffer: Buffer) -> Tokenizer {
     tokenizer: Tokenizer;
 
-    tokenizer.buf   = to_string(bytes);
+    tokenizer.buf   = cast(string) bytes;
     tokenizer.max_t = bytes.data + bytes.count;
     tokenizer.t     = bytes.data;
     tokenizer.last_token = .{0, 0, .eof};

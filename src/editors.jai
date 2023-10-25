@@ -75,10 +75,10 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
 
     if editor.search_bar.active {
         using editor.search_bar;
-        old_search_str := copy_temporary_string(to_string(input.text));
+        old_search_str := copy_temporary_string(cast(string) input.text);
         handled := text_input_handle_event(*input, event);
         if handled {
-            if old_search_str != to_string(input.text) then search_and_update_results(editor, buffer, jump = true);
+            if old_search_str != cast(string) input.text then search_and_update_results(editor, buffer, jump = true);
             return true;
         }
 
@@ -904,7 +904,7 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
     reset_search_results(*search_bar);
 
     using search_bar;
-    needle := to_string(input.text);
+    needle := cast(string) input.text;
     if !needle return;
 
     regex: re.Regexp;
@@ -921,7 +921,7 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
         if !regex_is_valid return;
     }
 
-    buffer_str := to_string(buffer.bytes);
+    buffer_str := cast(string) buffer.bytes;
 
     assert(buffer_str.count < S32_MAX && needle.count < S32_MAX);
     skip_table := bmh_prepare_skip_table(needle, case_sensitive);
@@ -1403,7 +1403,7 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) 
     selected_text := get_selected_text_all_cursors(editor, buffer);
     if selected_text {
         // Cursors have the same text selected - attempt to create another cursor
-        buffer_str := to_string(buffer.bytes);
+        buffer_str := cast(string) buffer.bytes;
 
         search_func: (s: string, substring: string, start_index := 0) -> s64;
         search_func = ifx search_whole_words && is_all_word_chars(selected_text) then find_index_from_left_whole_word else find_index_from_left;
@@ -1472,7 +1472,7 @@ select_all_occurrences :: (using editor: *Editor, buffer: Buffer) -> whole_words
     leave_only_main_cursor(editor);
 
     // Begin search from the main cursor downwards with a wraparound
-    buffer_str    := to_string(buffer.bytes);
+    buffer_str    := cast(string) buffer.bytes;
     selected_text := get_selected_string(cursors[main_cursor], buffer);
     search_func   := ifx search_whole_words && is_all_word_chars(selected_text) then find_index_from_left_whole_word else find_index_from_left;
     initial       := get_selection(cursors[main_cursor]);
@@ -1942,7 +1942,7 @@ break_line :: (editor: *Editor, buffer: *Buffer) {
         space := *space_per_cursor[it_index];
         prev_space := space_per_cursor[max(it_index-1, 0)];
         if space.original_start == prev_space.original_start then space.start = prev_space.start; else space.start += xx offset_delta;  // handle cursors on the same line well
-        space_str := to_string(array_view(buffer.bytes, space.start, space.count));
+        space_str := cast(string) array_view(buffer.bytes, space.start, space.count);
         insert_str := tprint("\n%", space_str);
 
         cursor.pos += xx offset_delta;
@@ -1981,7 +1981,7 @@ new_line_below :: (editor: *Editor, buffer: *Buffer) {
         prev_line_info := line_info_per_cursor[max(it_index-1, 0)];
         if line_info.space.original_start == prev_line_info.space.original_start then line_info.space.start = prev_line_info.space.start; else line_info.space.start += xx offset_delta;  // handle cursors on the same line well
         line_info.end += xx offset_delta;
-        whitespace_str := to_string(array_view(buffer.bytes, line_info.space.start, line_info.space.count));  // construct string from offsets to avoid memory errors on buffer reallocation
+        whitespace_str := cast(string) array_view(buffer.bytes, line_info.space.start, line_info.space.count);  // construct string from offsets to avoid memory errors on buffer reallocation
         insert_str := ifx line_info.last_line then tprint("\n%\n", whitespace_str) else tprint("%\n", whitespace_str);
 
         insert_string_at_offset(buffer, line_info.end, insert_str);
@@ -2012,7 +2012,7 @@ new_line_above :: (editor: *Editor, buffer: *Buffer) {
         prev_line_info := line_info_per_cursor[max(it_index-1, 0)];
         if line_info.space.original_start == prev_line_info.space.original_start then line_info.space.start = prev_line_info.space.start; else line_info.space.start += xx offset_delta;  // handle cursors on the same line well
         line_info.start += xx offset_delta;
-        whitespace_str := to_string(array_view(buffer.bytes, line_info.space.start, line_info.space.count));  // construct string from offsets to avoid memory errors on buffer reallocation
+        whitespace_str := cast(string) array_view(buffer.bytes, line_info.space.start, line_info.space.count);  // construct string from offsets to avoid memory errors on buffer reallocation
         insert_str := tprint("%\n", whitespace_str);
 
         insert_string_at_offset(buffer, line_info.start, insert_str);
@@ -2235,7 +2235,7 @@ indent_lines :: (editor: *Editor, buffer: *Buffer) {
     for 0..line_starts.count-2 {
         start, end := line_starts[it], line_starts[it+1];
         append(*b, spaces);
-        append(*b, to_string(array_view(buffer.bytes, start, end-start)));
+        append(*b, cast(string) array_view(buffer.bytes, start, end-start));
     }
     new_str := builder_to_string(*b);
     defer free(new_str);
@@ -2274,7 +2274,7 @@ unindent_lines :: (editor: *Editor, buffer: *Buffer) {
             if cursor.sel > adjusted_start then cursor.sel -= xx min(cursor.sel - adjusted_start, spaces_at_line_start);
         }
         new_start := start + spaces_at_line_start;
-        append(*b, to_string(array_view(buffer.bytes, new_start, end-new_start)));
+        append(*b, cast(string) array_view(buffer.bytes, new_start, end-new_start));
         spaces_removed += spaces_at_line_start;
     }
     new_str := builder_to_string(*b);
@@ -2777,7 +2777,7 @@ paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
     // Don't paste CRLF from other editors
     clipboard_bytes := to_bytes(system_clipboard_text);
     remove_crlf_in_place(*clipboard_bytes);
-    system_clipboard_text = to_string(clipboard_bytes);
+    system_clipboard_text = cast(string) clipboard_bytes;
 
     if system_clipboard_text != clipboard.text {
         // Editor clipboard and system clipboard are out of sync - drop the editor one
@@ -3032,10 +3032,10 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
     for cursor : editor.cursors {
         selection := get_selection(cursor);
 
-        split_left := to_string(buffer.bytes);
+        split_left := cast(string) buffer.bytes;
         split_left.count = selection.start;
 
-        split_right := to_string(buffer.bytes);
+        split_right := cast(string) buffer.bytes;
         split_right.data  += selection.end;
         split_right.count -= selection.end;
 

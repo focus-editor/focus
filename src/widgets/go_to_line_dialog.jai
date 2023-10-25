@@ -10,12 +10,12 @@ go_to_line_dialog_handle_event :: (event: Input.Event) -> handled: bool {
             case .open_entry_on_the_side;   close_go_to_line_dialog(); return true;
         }
 
-        old_text := copy_temporary_string(to_string(input.text));
+        old_text := copy_temporary_string(cast(string) input.text);
 
         handled := maybe_handle_text_input_event(*input, event);
         if handled {
             // Remove any non-digit bytes in case they were pasted
-            new_text := to_bytes(copy_temporary_string(to_string(input.text)));
+            new_text := to_bytes(copy_temporary_string(cast(string) input.text));
             i := 0;
             for byte : new_text {
                 if #char "0" <= byte && byte <= #char "9" {
@@ -28,7 +28,7 @@ go_to_line_dialog_handle_event :: (event: Input.Event) -> handled: bool {
             input.cursor.sel = clamp(input.cursor.sel, 0, xx i);
         }
 
-        if old_text != to_string(input.text) then jump_to_line();
+        if old_text != cast(string) input.text then jump_to_line();
 
         return handled;
 
@@ -119,10 +119,10 @@ jump_to_line :: () {
 #scope_file
 
 maybe_handle_text_input_event :: (using input: *Text_Input, event: Input.Event) -> handled: bool {
-    input_text := copy_temporary_string(to_string(text));
+    input_text := copy_temporary_string(cast(string) text);
     handled := text_input_handle_event(input, event);
     if handled {
-        if input_text != to_string(input.text) then jump_to_line();
+        if input_text != cast(string) input.text then jump_to_line();
         return true;
     }
     return false;
