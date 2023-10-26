@@ -37,8 +37,8 @@ unsaved_buffers_save_all :: () {
         buffer := *open_buffers[buffer_id];
 
         if buffer.has_file {
-            saved := save_buffer_to_disk(buffer, buffer_id);
-            if buffer.error_when_saving || !saved then should_proceed = false;
+            save_buffer(buffer, buffer_id);
+            if buffer.error_when_saving then should_proceed = false;
         } else {
             if #complete unsaved_buffers_dialog.mode == {
                 case .exit_program;         add_buffer_to_save_queue(buffer_id, after_save = .exit_program);

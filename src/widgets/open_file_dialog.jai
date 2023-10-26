@@ -6,9 +6,9 @@ open_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
         if action == {
             case .close_dialog;             hide_open_file_dialog();                                                                                                             return true;
             case .open_entry_in_place;      open_file_dialog_open_entry(entries.selected, .in_place);                                                                            return true;
-            case .open_entry_on_the_side;   if mode != .save && mode != .save_as  open_file_dialog_open_entry(entries.selected, .on_the_side);                                   return true;
-            case .open_entry_on_the_left;   if mode != .save && mode != .save_as  open_file_dialog_open_entry(entries.selected, .left);                                          return true;
-            case .open_entry_on_the_right;  if mode != .save && mode != .save_as  open_file_dialog_open_entry(entries.selected, .right);                                         return true;
+            case .open_entry_on_the_side;   if mode != .save  open_file_dialog_open_entry(entries.selected, .on_the_side);                                                       return true;
+            case .open_entry_on_the_left;   if mode != .save  open_file_dialog_open_entry(entries.selected, .left);                                                              return true;
+            case .open_entry_on_the_right;  if mode != .save  open_file_dialog_open_entry(entries.selected, .right);                                                             return true;
             case .open_entry_in_explorer;   open_file_dialog_open_entry_in_explorer(entries.selected);                                                                           return true;
             case .open_directory;           if open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true, slash_key_pressed = (event.key_code == #char "/"))   return true;
             case .pop_directory;            if pop_directory() return true;
@@ -74,7 +74,6 @@ show_open_file_dialog :: (mode: Open_File_Dialog.Mode, buffer_id_to_save: s64 = 
 }
 
 hide_open_file_dialog :: () {
-    if open_file_dialog.mode == .save || open_file_dialog.mode == .save_as then clear_buffer_save_queue();
     activate_editors();
 }
 
@@ -102,7 +101,7 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
 
     if entry.type == {
         case .nothing;
-            if mode == .save || mode == .save_as {
+            if mode == .save {
                 dir_path: string;
                 if root_dir {
                     path_chunks_trimmed := array_view(path_chunks, 1, path_chunks.count - 1);
@@ -113,12 +112,10 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
                 defer free(dir_path);
 
                 while dir_path != "/" && ends_with(dir_path, #char "/") dir_path.count -= 1;
-
                 full_path := tprint("%/%", dir_path, to_string(input.text));
 
-                if         mode == .save_as then    save_buffer_to_new_file_on_disk(buffer, buffer_id_to_save, full_path);
-                else /* if mode == .save    then */ save_buffer_to_disk            (buffer, buffer_id_to_save, full_path);
-
+                buffer := *open_buffers[buffer_id_to_save];
+                save_buffer_to_file(buffer, buffer_id_to_save, full_path);
                 remove_buffer_from_save_queue(buffer_id_to_save);
 
                 hide_open_file_dialog();
@@ -126,9 +123,9 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
             return true;
 
         case .file;
-            if mode == {
-                case .save;     show_confirm_overwrite_dialog(.save,    buffer_id_to_save, entry.full_path); return true;
-                case .save_as;  show_confirm_overwrite_dialog(.save_as, buffer_id_to_save, entry.full_path); return true;
+            if mode == .save {
+                show_confirm_overwrite_dialog(buffer_id_to_save, entry.full_path);
+                return true;
             }
 
             if folder_only return true;
@@ -226,7 +223,7 @@ move_cursor :: (delta: s64, wrap := false, snap := true) {
 
 pop_directory :: () -> handled: bool {
     using open_file_dialog;
-    if (mode != .navigate && mode != .save && mode != .save_as) || input.text || !path_chunks return false;
+    if (mode != .navigate && mode != .save) || input.text || !path_chunks return false;
 
     last := pop(*path_chunks);
     free(last);
@@ -290,7 +287,6 @@ refresh_entries :: (clear_input := true) {
 
     if #complete mode == {
         case .save; #through;
-        case .save_as; #through;
         case .navigate;
             if !path_chunks {
                 // Display project dirs and drives
@@ -422,7 +418,7 @@ refresh_entries :: (clear_input := true) {
 
 scan_current_folder :: () {
     using open_file_dialog;
-    if (mode != .navigate && mode != .save && mode != .save_as) || !path_chunks return;
+    if (mode != .navigate && mode != .save) || !path_chunks return;
 
     dir_path: string;
     if root_dir {
@@ -520,7 +516,7 @@ Open_File_Dialog :: struct {
     root_dir: string;
     current_files: [..] Entry;  // files in the current folder (used in .navigate mode only)
 
-    /* `buffer_id_to_save` is used when `mode` is `.save` or `.save_as` */
+    /* `buffer_id_to_save` is used when `mode` is `.save` */
     buffer_id_to_save: s64;
 
     entries: struct {
@@ -542,7 +538,6 @@ Open_File_Dialog :: struct {
         search;
         navigate;
         save;
-        save_as;
     }
 }
 

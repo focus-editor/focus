@@ -150,39 +150,43 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .close_other_editor;               close_editor(.other);
         case .close_left_editor;                close_editor(.left);
         case .close_right_editor;               close_editor(.right);
-        case .save;                             save_buffer(editor, buffer);
-        case .save_as;                          save_buffer(editor, buffer, save_new_file = true);
+
+        case .save;                             save    (editor.buffer_id);
+        case .save_as;                          save_as (editor.buffer_id);
         case .save_all;                         save_all();
-        case .toggle_line_wrap;                 toggle_line_wrap                    (editor);
-        case .toggle_line_numbers;              toggle_line_numbers                 ();
-        case .delete_current_file;              show_delete_file_dialog(editor);
+
         case .switch_to_left_editor;            switch_to_editor(.left);
         case .switch_to_right_editor;           switch_to_editor(.right);
         case .switch_to_other_editor;           switch_to_editor(.other);
         case .duplicate_editor;                 switch_to_editor(.other, duplicate_current = true);
         case .duplicate_editor_to_the_left;     switch_to_editor(.left, duplicate_current = true);
         case .duplicate_editor_to_the_right;    switch_to_editor(.right, duplicate_current = true);
+
         case .move_editor_to_the_left;          if editors.active == editors.right then swap_panes();
         case .move_editor_to_the_right;         if editors.active == editors.left  then swap_panes();
-        case .center_viewport_on_cursor;        center_viewport_on_cursor           (editor, buffer);
-        case .move_cursor_to_viewport_center;   move_cursor_to_viewport_center      (editor, buffer);
-        case .remove_additional_cursors;        remove_additional_cursors           (editor);
-        case .add_cursors_to_line_ends;         add_cursors_to_line_ends            (editor, buffer);
-        case .add_cursors_to_line_starts;       add_cursors_to_line_starts          (editor, buffer);
+
         case .scroll_viewport_up;               smooth_scroll(editor, direction = .up);                 activate_hold_action(action, event);
         case .scroll_viewport_up_fast;          smooth_scroll(editor, direction = .up, fast = true);    activate_hold_action(action, event);
         case .scroll_viewport_down;             smooth_scroll(editor, direction = .down);               activate_hold_action(action, event);
         case .scroll_viewport_down_fast;        smooth_scroll(editor, direction = .down, fast = true);  activate_hold_action(action, event);
         case .scroll_viewport_left;             smooth_scroll(editor, direction = .left, fast = true);  activate_hold_action(action, event);
         case .scroll_viewport_right;            smooth_scroll(editor, direction = .right, fast = true); activate_hold_action(action, event);
+        case .select_word;                      select_word(editor, buffer); keep_selection = true;
+        case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
+        case .select_all_occurrences;               enabled_whole_words = select_all_occurrences              (editor, buffer); keep_selection = true;
+
+        case .toggle_line_wrap;                 toggle_line_wrap                    (editor);
+        case .toggle_line_numbers;              toggle_line_numbers                 ();
+        case .delete_current_file;              show_delete_file_dialog(editor);
+        case .center_viewport_on_cursor;        center_viewport_on_cursor           (editor, buffer);
+        case .move_cursor_to_viewport_center;   move_cursor_to_viewport_center      (editor, buffer);
+        case .remove_additional_cursors;        remove_additional_cursors           (editor);
+        case .add_cursors_to_line_ends;         add_cursors_to_line_ends            (editor, buffer);
+        case .add_cursors_to_line_starts;       add_cursors_to_line_starts          (editor, buffer);
         case .swap_selections;                  swap_selections                     (editor, buffer);         keep_selection = true;
         case .select_all;                       select_all                          (editor, buffer);         keep_selection = true;
         case .create_cursor_above;              create_cursor                       (editor, buffer, .above); keep_selection = true;
         case .create_cursor_below;              create_cursor                       (editor, buffer, .below); keep_selection = true;
-
-        case .select_word;                      select_word(editor, buffer); keep_selection = true;
-        case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
-        case .select_all_occurrences;               enabled_whole_words = select_all_occurrences              (editor, buffer); keep_selection = true;
 
         // Actions that do something per cursor
         case .move_left;                        move_cursors_left                   (editor, buffer, by = .char,      shift_pressed);
@@ -1501,41 +1505,26 @@ select_all_occurrences :: (using editor: *Editor, buffer: Buffer) -> whole_words
     return editor.search_whole_words;
 }
 
-save_buffer :: (editor: *Editor, buffer: *Buffer, save_new_file := false) {
-    new_edit_group(buffer, editor);
-
-    if buffer.has_file {
-        maybe_mark_buffer_as_deleted(editor.buffer_id);   // check in case we missed that it's deleted
-        session_notify_modified_buffer(editor.buffer_id);
-    }
-
+save :: (buffer_id: s64) {
+    buffer := *open_buffers[buffer_id];
     if buffer.readonly return;
 
-    if !save_new_file && buffer.has_file {
-        // Just save the file normally
-        save_buffer_to_disk(buffer, editor.buffer_id);
-        return;
-    }
-
-    // We have to select a path for the file
-    if config.settings.prefer_system_file_dialogs && OS == .WINDOWS {
-        file_path, success := platform_get_save_file_name(get_buffer_name(buffer));
-        if !file_path || !success return;
-
-        save_buffer_to_new_file_on_disk(buffer, editor.buffer_id, file_path);
+    if buffer.has_file {
+        save_buffer(buffer, buffer_id);
     } else {
-        show_open_file_dialog(.save_as, editor.buffer_id);
+        add_buffer_to_save_queue(buffer_id, after_save = .do_nothing);
+        redraw_requested = true;
     }
+}
+
+save_as :: (buffer_id: s64) {
+    add_buffer_to_save_queue(buffer_id, after_save = .do_nothing);
+    redraw_requested = true;
 }
 
 save_all :: () {
     for * buffer, buffer_id : open_buffers {
-        if !buffer.modified continue;
-        if buffer.has_file {
-            save_buffer_to_disk(buffer, buffer_id);
-        } else {
-            add_buffer_to_save_queue(buffer_id, after_save = .do_nothing);
-        }
+        if buffer.modified  save(buffer_id);
     }
 }
 
