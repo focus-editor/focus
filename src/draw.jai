@@ -1553,9 +1553,10 @@ draw_open_file_dialog :: () {
     } else {
         label: string;
         if mode == {
-            case .navigate;     label = ifx !path_chunks then " Navigate to file" else "";
-            case .save;         label = " Choose where to save the file";
-            case .save_as;      label = " Choose where to save the file";
+            case .navigate;
+                label = ifx !path_chunks then " Navigate to file" else "";
+            case .save;
+                label = tprint(" Choose where to save '%'", get_buffer_name(*open_buffers[buffer_id_to_save]));
         }
 
         half_padding := floor(padding / 2);
