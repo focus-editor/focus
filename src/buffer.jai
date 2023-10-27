@@ -1078,8 +1078,9 @@ add_buffer_to_save_queue :: (buffer_id: s64, after_save: After_Save_Action = .do
     buffer_save_queue.after_save = after_save;
 }
 
-remove_buffer_from_save_queue :: (buffer_id: s64) {
+remove_buffer_from_save_queue :: (buffer_id: s64, reset_after_save := false) {
     array_ordered_remove_by_value(*buffer_save_queue.buffer_ids, buffer_id);
+    if reset_after_save then buffer_save_queue.after_save = .do_nothing;
 }
 
 clear_buffer_save_queue :: () {
