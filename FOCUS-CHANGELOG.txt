@@ -37,11 +37,15 @@
     + New command: `swap_selections`. Can swap two selected pieces of text (thanks @hfr4)
     + New option: `highlight_line_with_cursor` (thanks @SentientCoffee)
     + New option: `draw_indent_guides`. Set to `true` to draw a vertical guide line at every indent level (determined by tab size)
+    + New option: `auto_surround_with_brackets_and_quotes` to enable auto-surrounding (thanks @hfr4)
     + Added support for regular expressions in file/project search
-    + Basic Python syntax highlighting
-    + Added built-in 'save file' dialog for Linux and Mac
+    + Added a built-in 'save file' dialog (it will be on by default). To use the system dialogs on Windows, use `prefer_system_file_dialogs: true`
     + Dragging middle mouse button will create cursors (thanks @hfr4)
     + Mac: You can now set `maximize_on_start` in your global config to `true`, and Focus will launch in fullscreen.
+    + New syntax highlighting:
+        + Python
+        + HTML/XML (thanks @arjenwitteveen)
+        + Odin (thanks @SentientCoffee)
     + Numpad keys can now be used in key mappings.
       The editor now recognizes the following new key names:
         Numpad0

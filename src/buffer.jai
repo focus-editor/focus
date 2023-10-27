@@ -173,6 +173,13 @@ get_real_cursor_coords :: (buffer: Buffer, using cursor: Cursor) -> Cursor_Coord
 
 offset_to_line :: (editor: Editor, buffer: Buffer, offset: s64) -> line_num: s32 {
     assert(!buffer.dirty, "buffer is dirty, can't calculate line from offset");
+    if buffer.bytes.count < offset {
+        if buffer.has_file {
+            print("Buffer: %\n", buffer.file.full_path);
+        } else {
+            print("Buffer has no file\n");
+        }
+    }
     assert(offset <= buffer.bytes.count, "offset exceeds buffer size, can't calculate line");
 
     if line_wrap_is_active(editor) {
@@ -561,92 +568,69 @@ offset_is_within_multiline_token :: (tokens: [] Indentation_Token, offset: s32) 
     return token.type == .maybe_multiline && (token.start + token.len) >= offset;
 }
 
-save_buffer_to_new_file_on_disk :: (buffer: *Buffer, buffer_id: s64, file_path: string) -> saved: bool {
-    // Don't modify if buffer is readonly, otherwise strip whitespace as if we were saving it
-    if !buffer.readonly {
-        if config.settings.strip_trailing_whitespace_on_save then strip_trailing_whitespace(buffer, buffer_id);
+save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
+    // Two scenarios here:
+    // 1. We're saving a new buffer to a file (in this case has_file=false)
+    // 2. We're saving an existing buffer using "save as"
+
+    if buffer.has_file && platform_path_equals(buffer.file.full_path, file_path) {
+        log("Tried to 'save as' into the same file: %", file_path);
+        save_buffer(buffer, buffer_id);
+        return;
     }
 
-    // Save the file BEFORE making a new buffer so find_or_create_buffer can find it
-    success := write_entire_file(file_path, cast(string) buffer.bytes);
-    if !success return false;
-
-    new_id, created := find_or_create_buffer(file_path);
-    redraw_requested = true;
-
-    // Reroute all editors using the old id
-    for * editor : open_editors {
-        if editor.buffer_id == buffer_id {
-            editor.buffer_id = new_id;
-            editor.scroll_to_cursor = .yes;
-
-            assert(buffer.num_editors_open >= 1);
-            buffer.num_editors_open -= 1;
-
-            for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
-            organise_cursors(editor);
-        }
-    }
-
-    if !file_is_watched(file_path) then start_watching_file(file_path);
-    update_window_title(open_editors[editors.active].buffer_id);
-
-    return true;
-}
-
-save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64, file_path := "") -> saved: bool {
-    if readonly return false;
-
-    if !has_file && !file_path {
-        buffer_name := get_buffer_name(buffer);
-        add_user_warning(tprint("Can't save buffer in bulk '%' - please save it individually for now. Sorry.", buffer_name));
-        return false;
-    }
-
-    assert(has_file || file_path);
-
-    if !has_file {
-        // Save new file buffer
-        has_file = true;
-        file = get_file_info_from_full_path(file_path);
+    if !buffer.has_file && !buffer.readonly {
+        // We're saving a new buffer into a file (and the path has been chosen already)
+        buffer.has_file = true;
+        buffer.file = get_file_info_from_full_path(file_path);
         set_lang_from_path(buffer, file_path);
-        needs_coloring = true;
-        redraw_requested = true;
+        buffer.needs_coloring = true;
 
         lock(*open_buffers_lock);
         {
             existing_buffer_id, found_existing := table_find(*buffers_table, file_path);
             if found_existing {
-                if buffer_id != existing_buffer_id {
-                    // The user chose to save the new buffer into an existing file. OK.
-                    // Mark the old buffer as deleted and use the new one
-                    removed := table_remove(*buffers_table, file_path);
-                    assert(removed, "For some reason table_remove failed. This is a very unexpected bug.");
-                    existing_buffer := *open_buffers[existing_buffer_id];
-                    existing_buffer.deleted  = true;
-                    existing_buffer.modified = false;
-                    existing_buffer.modified_on_disk = false;
+                assert(buffer_id != existing_buffer_id, "Buffer without a file was added to the buffer table. This is a bug.");
+                // The user chose to save the buffer into an existing file. OK.
+                // Mark the old buffer as deleted and use the new one
+                removed := table_remove(*buffers_table, file_path);
+                assert(removed, "For some reason table_remove failed. This is a very unexpected bug.");
+                existing_buffer := *open_buffers[existing_buffer_id];
+                existing_buffer.deleted  = true;
+                existing_buffer.modified = false;
+                existing_buffer.modified_on_disk = false;
 
-                    // Reroute all editors which use it to the new buffer id
-                    for * editor : open_editors {
-                        if editor.buffer_id == existing_buffer_id {
-                            editor.buffer_id = buffer_id;
-                            editor.scroll_to_cursor = .yes;
-                            for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
-                            organise_cursors(editor);
-                        }
-                    }
-                } else {
-                    assert(false, "Buffer without a file somehow got into the buffers hash table. This is a bug.");
-                }
+                reroute_active_editor(existing_buffer_id, buffer_id);
             }
 
             table_add(*buffers_table, copy_string(file_path), buffer_id);
         }
         unlock(*open_buffers_lock);
 
-        if !file_is_watched(file_path) then start_watching_file(file_path);
+        save_buffer(buffer, buffer_id);
+    } else {
+        // We're "saving as", in which case we want to create a new buffer and also keep the current buffer
+        success := write_entire_file(file_path, to_string(buffer.bytes));
+        if !success {
+            log_error("Couldn't write to file %", file_path);
+            return;
+        }
+        refresh_buffer_from_disk(file_path);
+        new_id, created := find_or_create_buffer(file_path);
+        assert(!created, "Buffer is unexpectedly created when it was supposed to already exist");
+        if new_id < 0 return;  // logged elsewhere
+
+        reroute_active_editor(buffer_id, new_id);
+        update_window_title(open_editors[editors.active].buffer_id);
     }
+
+    if !file_is_watched(file_path) then start_watching_file(file_path);
+}
+
+save_buffer :: (using buffer: *Buffer, buffer_id: s64) {
+    if readonly return;
+
+    assert(has_file, "Trying to save a buffer without an associated file. This is a bug.");
 
     if config.settings.strip_trailing_whitespace_on_save then strip_trailing_whitespace(buffer, buffer_id);
 
@@ -666,7 +650,26 @@ save_buffer_to_disk :: (using buffer: *Buffer, buffer_id: s64, file_path := "") 
     remember_last_modtime_and_size(buffer);
     update_window_title(open_editors[editors.active].buffer_id);
 
-    return !error_when_saving;
+    redraw_requested = true;
+}
+
+reroute_active_editor :: (old_buffer_id: s64, new_buffer_id: s64) {
+    old_buffer := *open_buffers[old_buffer_id];
+    new_buffer := *open_buffers[new_buffer_id];
+
+    editor := *open_editors[editors.active];
+
+    if editor.buffer_id == old_buffer_id {
+        editor.buffer_id = new_buffer_id;
+        editor.scroll_to_cursor = .yes;
+        for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, new_buffer); }
+        organise_cursors(editor);
+
+        assert(old_buffer.num_editors_open >= 1, "Buffer doesn't have the right number of open editors. This is a bug");
+        old_buffer.num_editors_open -= 1;
+        new_buffer.num_editors_open += 1;
+    }
+
 }
 
 delete_buffer_from_disk :: (using buffer: *Buffer) -> deleted: bool {
@@ -1069,6 +1072,55 @@ remove_all_buffers :: () {
     bucket_array_reset(*open_buffers);
 }
 
+add_buffer_to_save_queue :: (buffer_id: s64, after_save: After_Save_Action = .do_nothing) {
+    array_add_if_unique(*buffer_save_queue.buffer_ids, buffer_id);
+    buffer_save_queue.pending = true;
+    buffer_save_queue.after_save = after_save;
+}
+
+remove_buffer_from_save_queue :: (buffer_id: s64, reset_after_save := false) {
+    array_ordered_remove_by_value(*buffer_save_queue.buffer_ids, buffer_id);
+    if reset_after_save then buffer_save_queue.after_save = .do_nothing;
+}
+
+clear_buffer_save_queue :: () {
+    array_reset_keeping_memory(*buffer_save_queue.buffer_ids);
+    buffer_save_queue.pending = false;
+}
+
+process_buffer_save_queue :: () {
+    using buffer_save_queue;
+
+    if !pending return;
+
+    if config.settings.prefer_system_file_dialogs && OS == .WINDOWS {
+        for buffer_id : buffer_ids {
+            buffer := *open_buffers[buffer_id];
+            file_path, success := platform_get_save_file_name(get_buffer_name(buffer));
+            if file_path && success {
+                save_buffer_to_file(buffer, buffer_id, file_path);
+            } else {
+                pending = false;  // don't execute the after save action
+            }
+            remove buffer_id;
+        }
+    }
+
+    if buffer_ids {
+        if active_global_widget != .open_file_dialog && active_global_widget != .confirm_overwrite_dialog {
+            show_open_file_dialog(.save, buffer_ids[0]);
+        }
+    } else if pending {
+        // Nothing left to save, execute the after save action
+        pending = false;
+        if #complete after_save == {
+            case .do_nothing;           // yay, do nothing
+            case .exit_program;         should_quit = true;
+            case .reload_workspace;     should_reload_workspace = true;
+        }
+    }
+}
+
 #scope_file
 
 add_edit_notification :: (using buffer: *Buffer, offset: s64, old_count: s64, new_count: s64) {
@@ -1283,4 +1335,21 @@ Indentation_Token :: struct {
         bracket;
         brace;
     };
+}
+
+
+#scope_file
+
+// A queue to allow us to use the in-editor save dialog for multiple buffers.
+// TODO: consider using a more generic action queue if we have more deferred actions later
+buffer_save_queue: struct {
+    pending := false;
+    buffer_ids: [..] s64;
+    after_save: After_Save_Action = .do_nothing;
+};
+
+After_Save_Action :: enum {
+    do_nothing;
+    exit_program;
+    reload_workspace;
 }

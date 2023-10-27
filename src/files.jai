@@ -154,9 +154,9 @@ should_ignore_file :: (path: string) -> bool {
          * I'm going to do an extra `stat()` here and simply ignore anything that's not a
          * regular file.
          */
-        
+
         POSIX :: #import "POSIX";
-        
+
         stats: POSIX.stat_t;
         if POSIX.stat(temp_c_string(path), *stats) < 0 return true;
         if !POSIX.S_ISREG(stats.st_mode) return true;
@@ -222,5 +222,6 @@ File_Icon :: enum u16 {
     js      :: 0xf15c;
     shell   :: 0xf2d0;
 
+    save    :: 0xf019;
     dots    :: 0xf141;
 }

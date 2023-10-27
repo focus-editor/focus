@@ -1507,7 +1507,7 @@ draw_open_file_dialog :: () {
 
     if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
         // Close the dialog on clicks elsewhere
-        hide_open_file_dialog();
+        hide_open_file_dialog(manual = true);
         return;
     }
 
@@ -1553,9 +1553,10 @@ draw_open_file_dialog :: () {
     } else {
         label: string;
         if mode == {
-            case .navigate;     label = ifx !path_chunks then " Navigate to file" else "";
-            case .save;         label = " Choose where to save the file";
-            case .save_as;      label = " Choose where to save the file";
+            case .navigate;
+                label = ifx !path_chunks then " Navigate to file" else "";
+            case .save;
+                label = tprint(" Choose where to save '%'", get_buffer_name(*open_buffers[buffer_id_to_save]));
         }
 
         half_padding := floor(padding / 2);
@@ -1737,7 +1738,11 @@ draw_open_file_dialog :: () {
 
             // Draw name
             pen.x += xx font_icons.em_width + padding * 1.5;
-            width = xx Simp.draw_text_with_highlights(font_ui, xx pen.x, xx pen.y, entry.entry_name, entry.name_highlights, color = name_color, highlight_color = Colors.LETTER_HIGHLIGHT);
+            if entry.type != .save {
+                width = xx Simp.draw_text_with_highlights(font_ui, xx pen.x, xx pen.y, entry.entry_name, entry.name_highlights, color = name_color, highlight_color = Colors.LETTER_HIGHLIGHT);
+            } else {
+                width = xx Simp.draw_text(font_ui, xx pen.x, xx pen.y, entry.entry_name, color = name_color);
+            }
 
             if entry.flags & .MODIFIED_ON_DISK {
                 pen.x += width + padding;
