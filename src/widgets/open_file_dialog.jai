@@ -403,7 +403,7 @@ refresh_entries :: (clear_input := true) {
     if mode == .save && input.text && path_chunks {
         array_add(*entries.filtered, Entry.{
             file = File_Info.{ full_path = "", name = "", path = "", icon = .save },
-            entry_name = sprint("Save as '%/%'", get_current_folder_path(), to_string(input.text)),
+            entry_name = sprint("Save as '%/%'", get_current_folder_path(), cast(string) input.text),
             type = .save,
             name_highlights = .[],
             path_highlights = .[],

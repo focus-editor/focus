@@ -610,7 +610,7 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
         save_buffer(buffer, buffer_id);
     } else {
         // We're "saving as", in which case we want to create a new buffer and also keep the current buffer
-        success := write_entire_file(file_path, to_string(buffer.bytes));
+        success := write_entire_file(file_path, cast(string) buffer.bytes);
         if !success {
             log_error("Couldn't write to file %", file_path);
             return;
