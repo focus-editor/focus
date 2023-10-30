@@ -434,12 +434,12 @@ scan_through_similar_chars_on_the_left :: (using input: Text_Input, offset: s32,
     t := text.data + offset;
     t, char = unicode_prev_character(t);
     if char_type != .none && char_type != get_char_type(char) return offset;
-    if skip_one_space && char == #char " " && t > line_start then t, char = unicode_prev_character(t);
+    if skip_one_space && is_unicode_space(char) && t > line_start then t, char = unicode_prev_character(t);
 
     if get_char_type(char) == {
         case .space;
-            while t > text.data && is_space_char(char)  { t, char = unicode_prev_character(t); }
-            if char != #char " " then t = unicode_next_character(t);
+            while t > text.data && is_space_or_underscore(char)  { t, char = unicode_prev_character(t); }
+            if !is_unicode_space(char) then t = unicode_next_character(t);
         case .word;
             while t > text.data && is_word_char(char) { t, char = unicode_prev_character(t); }
             if !is_word_char(char) then t = unicode_next_character(t);
@@ -465,19 +465,19 @@ scan_through_similar_chars_on_the_right :: (using input: Text_Input, offset: s32
     if only == {
         case .word;     if !is_word_char(char)     return offset;
         case .non_word; if !is_non_word_char(char) return offset;
-        case .space;    if  char != #char " "      return offset;
+        case .space;    if !is_unicode_space(char) return offset;
     }
-    if skip_one_space && char == #char " " && s then char = utf8_next_character(*s);
+    if skip_one_space && is_unicode_space(char) && s then char = utf8_next_character(*s);
 
-    if char == #char " " {
+    if is_space_or_underscore(char) {
         // Only spaces
-        while s && char == #char " "  { char = utf8_next_character(*s); }
-        if char != #char " " { s.data, char = unicode_prev_character(s.data); }
+        while s && is_space_or_underscore(char)  { char = utf8_next_character(*s); }
+        if !is_unicode_space(char) { s.data, char = unicode_prev_character(s.data); }
     } else if is_word_char(char) {
         // Only word chars
         while s && is_word_char(char) { char = utf8_next_character(*s); }
         if !is_word_char(char) { s.data, char = unicode_prev_character(s.data); }
-    } else if char != #char "\n" {
+    } else if !is_unicode_linebreak(char) {
         // Only non-word chars
         while s && is_non_word_char(char) { char = utf8_next_character(*s); }
         if !is_non_word_char(char) { s.data, char = unicode_prev_character(s.data); }
