@@ -245,37 +245,35 @@ match_whole_word :: (s: string, offset: int, count: int) -> bool {
 
 #add_context underscore_is_part_of_word := true;
 
-is_word_char :: (ch: u32) -> bool {
-    return
-        (#char "a" <= ch && ch <= #char "z") ||
-        (#char "A" <= ch && ch <= #char "Z") ||
-        (ch == #char "_" && context.underscore_is_part_of_word) ||
-        (#char "0" <= ch && ch <= #char "9") ||
-        (#char "а" <= ch && ch <= #char "я") ||
-        (#char "А" <= ch && ch <= #char "Я") ||
-        (ch == #char "ё" || ch == #char "Ё");  // TODO: include other common chars
+is_word_char :: inline (ch: u32) -> bool {
+    return ifx ch == #char "_" then context.underscore_is_part_of_word else (!is_whitespace_char(ch) && !is_separator_char(ch));
 }
 
 is_non_word_char :: inline (ch: u32) -> bool {
     return !is_word_char(ch) && ch != #char " " && ch != #char "\n";
 }
 
-is_space_char :: inline (ch: u32) -> bool {
-    return ch == #char " " || (!context.underscore_is_part_of_word && ch == #char "_");
+is_space_or_underscore :: inline (ch: u32) -> bool {
+    return is_unicode_space(ch) || (!context.underscore_is_part_of_word && ch == #char "_");
 }
 
-is_whitespace_char :: inline (ch: u8) -> bool {
-    return ch == #char " " || ch == #char "\t" || ch == #char "\n" || ch == #char "\r";
+is_whitespace_char :: inline (ch: u32) -> bool {
+    return is_unicode_space(ch) || is_unicode_linebreak(ch);
 }
 
-is_separator_char :: inline (ch: u8) -> bool {
+/*
+ * TODO: is_separator_char(), is_balanceable_char(), is_auto_closeable_char(), get_balancing_char()
+ *       should be part of the syntax highlighters to allow for language-specific behavior
+ */
+is_separator_char :: inline (ch: u32) -> bool {
     return
         ch == #char "`" || ch == #char "~" || ch == #char "!" || ch == #char "@" || ch == #char "#" ||
         ch == #char "%" || ch == #char "^" || ch == #char "&" || ch == #char "*" || ch == #char "(" ||
         ch == #char ")" || ch == #char "-" || ch == #char "=" || ch == #char "+" || ch == #char "[" ||
         ch == #char "{" || ch == #char "]" || ch == #char "}" || ch == #char "$" || ch == #char "|" ||
         ch == #char ";" || ch == #char ":" || ch == #char "'" || ch == #char "?" || ch == #char "," ||
-        ch == #char "." || ch == #char "<" || ch == #char ">" || ch == #char "/" || ch == #char "\"" || ch == #char "\\";
+        ch == #char "." || ch == #char "<" || ch == #char ">" || ch == #char "/" || ch == #char "\"" ||
+        ch == #char "\\";
 }
 
 is_balanceable_char :: (ch: u32) -> bool {
@@ -299,9 +297,9 @@ get_balancing_char :: (ch: u32) -> u32 {
 get_char_type :: (ch: u32) -> Char_Type {
     if is_word_char(ch) {
         return .word;
-    } else if is_space_char(ch) {
+    } else if is_space_or_underscore(ch) {
         return .space;
-    } else if ch != #char "\n" {
+    } else if !is_unicode_linebreak(ch) {
         return .non_word;
     } else {
         return .other;

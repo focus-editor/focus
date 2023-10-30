@@ -103,3 +103,39 @@ unicode_prev_character :: (s: *u8) -> new_s: *u8, char: u32 {  // NOTE: assuming
     char, _, result := character_utf8_to_utf32(t, s - t);
     return t, char;
 }
+/*
+ * is_unicode_linebreak():
+ *     returns `true` if the specified UTF32 codepoint is a whitespace line-break character.
+ *     NOTE: '\r' (U+000D) is omitted since we lack support for the proper Unicode line-break
+ *           algorithm (https://unicode.org/reports/tr14/#CR)
+ *
+ * is_unicode_space():
+ *     returns `true` if the specified UTF32 codepoint is a whitespace character, not including
+ *     line-breaking whitespace.
+ *
+ * References:
+ *   - https://en.wikipedia.org/wiki/Whitespace_character#Unicode
+ *   - https://www.unicode.org/reports/tr44/#White_Space
+ *   - https://www.unicode.org/Public/UCD/latest/ucd/PropList.txt
+ */
+is_unicode_linebreak :: inline (ch: u32) -> bool {
+    return
+        ch == 0x000a || ch == 0x000b || ch == 0x000c ||
+        ch == 0x0085 ||
+        ch == 0x2028 ||
+        ch == 0x2029;
+}
+
+is_unicode_space :: inline (ch: u32) -> bool {
+    return
+        ch == 0x0009 ||
+        ch == 0x0020 ||
+        ch == 0x00a0 ||
+        ch == 0x1680 ||
+        ch == 0x2000 || ch == 0x2001 || ch == 0x2002 || ch == 0x2003 || ch == 0x2004 ||
+        ch == 0x2005 || ch == 0x2006 || ch == 0x2007 || ch == 0x2008 || ch == 0x2009 ||
+        ch == 0x200a ||
+        ch == 0x202f ||
+        ch == 0x205f ||
+        ch == 0x3000;
+}
