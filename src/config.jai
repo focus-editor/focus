@@ -328,6 +328,7 @@ Config :: struct {
     settings:  Settings;
     style:     Style;
     colors:    Color_Values;
+    build:     Build_Config;
     platform:  Platform_Config;
 }
 
@@ -387,12 +388,27 @@ Style :: struct {
     font_size := -1;
 }
 
-style: Style;
+Build_Config :: struct {
+    commands: [..] Command;
+    defaults: Command;
 
-Setting :: struct {
-    name: string;
-    type: enum { boolean; integer; };
+    Command :: struct {
+        name:                   string;
+
+        build_command:          string;
+        build_working_dir:      string;
+
+        run_command:            string;
+        run_working_dir:        string;
+
+        error_regex:            string;
+        auto_jump_to_error:     bool;
+        open_panel:             bool;
+        close_panel_on_success: bool;
+    }
 }
+
+style: Style;
 
 DEFAULT_CONFIG_FILE_DATA  :: #run read_entire_file(tprint("config/%", DEFAULT_CONFIG_NAME));
 EXAMPLE_PROJECT_FILE_DATA :: #run read_entire_file(tprint("config/%", EXAMPLE_PROJECT_CONFIG_NAME));

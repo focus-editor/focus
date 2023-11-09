@@ -29,11 +29,12 @@ parse_config :: (name: string, filename: string, file_data: string) -> Parsed_Co
         error_msg: string;
 
         if #complete top_section == {
-            case .workspace;    success, error_msg = parse_workspace_line(*parser, line);
-            case .settings;     success, error_msg = parse_settings_line(*parser, line);
-            case .keymap;       success, error_msg = parse_keymap_line(*parser, line);
-            case .style;        success, error_msg = parse_style_line(*parser, line);
-            case .platform;     success, error_msg = platform_parse_config_line(*parser, line);
+            case .workspace;        success, error_msg = parse_workspace_line(*parser, line);
+            case .settings;         success, error_msg = parse_settings_line(*parser, line);
+            case .keymap;           success, error_msg = parse_keymap_line(*parser, line);
+            case .style;            success, error_msg = parse_style_line(*parser, line);
+            case .build_commands;   success, error_msg = parse_build_line(*parser, line);
+            case .platform;         success, error_msg = platform_parse_config_line(*parser, line);
             case .none;
                 error_msg := log_parser_error(handler, "Expected a top-level section definition, got '%'", line);
                 return Parsed_Config.{}, false, error_msg, .[];
@@ -248,6 +249,14 @@ switch_top_section :: (using parser: *Config_Parser, line: string) -> error: boo
             }
             seen_top_sections |= .style;
 
+        case "[[build commands]]";
+            top_section = .build_commands;
+            if seen_top_sections & .build_commands {
+                error_msg := log_parser_error(handler, "The section '[[build commands]]' is defined twice. This is an error.");
+                return true, error_msg;
+            }
+            seen_top_sections |= .build_commands;
+
         case PLATFORM_CONFIG_SECTION;
             top_section = .platform;
             if seen_top_sections & .platform {
@@ -257,7 +266,7 @@ switch_top_section :: (using parser: *Config_Parser, line: string) -> error: boo
             seen_top_sections |= .platform;
 
         case;
-            error_msg := log_parser_error(handler, "Expected one of the following top-level sections: [[workspace]], [[settings]], [[keymap]], [[style]], but found '%'", line);
+            error_msg := log_parser_error(handler, "Expected one of the following top-level sections: [[workspace]], [[settings]], [[keymap]], [[style]], [[build commands]], but found '%'", line);
             return true, error_msg;
     }
 
@@ -404,6 +413,87 @@ hex_to_color :: (src_hex: string) -> Color, success: bool {
     c := Color.{ r = to_float(r), g = to_float(g), b = to_float(b), a = to_float(a) };
 
     return c, c.r >= 0 && c.g >= 0 && c.b >= 0 && c.a >= 0;
+}
+
+parse_build_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
+    using parsed_config.build;
+
+    if begins_with(line, "[") {
+        // Add a new command
+        name := trim(line, "[]");
+        if !name {
+            error_msg := log_parser_error(handler, "Command name can't be empty: %", line);
+            return false, error_msg;
+        }
+
+        if commands {
+            last_command := *commands[commands.count-1];
+            if !last_command.build_command && !last_command.run_command {
+                error_msg := log_parser_error(handler, "Command '%' must have at least build_command or run_command configured", last_command.name);
+                return false, error_msg;
+            }
+        }
+
+        command := array_add(*commands);
+        command.name = name;  // points into the file data!
+
+        return true, "";
+    }
+
+    target := *defaults;
+    if commands then target = *commands[commands.count-1];
+
+    option_name, option_value := break_by_spaces(line);
+    option_name = trim_right(option_name, ":");
+
+    value := option_value;  // will be destroyed by parsing
+
+    #insert -> string {
+        b: String_Builder;
+
+        append(*b, "if option_name == {\n");
+
+        for option : type_info(Build_Config.Command).members {
+            print_to_builder(*b, "    case \"%\";\n", option.name);
+            if option.type.type == {
+                case .BOOL;
+                    code := #string END
+                        bool_val, success := parse_bool(*value);
+                        if success {
+                            target.%1 = bool_val;
+                        } else {
+                            error_msg := log_parser_error(handler, "Couldn't parse '%1' - expected 'true' or 'false', got '%%'", option_value);
+                            return false, error_msg;
+                        }
+                    END;
+                    print_to_builder(*b, code, option.name);
+
+                case .STRING;
+                    code := #string END
+                        if value {
+                            target.%1 = value;  // points into the file data!
+                        } else {
+                            error_msg := log_parser_error(handler, "Build command option '%%' can't be empty", option_name);
+                            return false, error_msg;
+                        }
+                    END;
+                    print_to_builder(*b, code, option.name);
+            }
+        }
+
+        code := #string END
+            case;
+                error_msg := log_parser_error(handler, "Unrecognized build command option '%'.", option_name);
+                return false, error_msg;
+        END;
+        append(*b, code);
+
+        append(*b, "}\n");
+
+        return builder_to_string(*b);
+    }
+
+    return true, "";
 }
 
 parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
@@ -635,6 +725,9 @@ Parsed_Config :: struct {
     font_size: int;
     colors:    [..] Parsed_Color;
 
+    // Build commands
+    build: Build_Config;
+
     platform: Platform_Config;
 };
 
@@ -657,6 +750,7 @@ Config_Parser :: struct {
         settings;
         style;
         platform;
+        build_commands;
     } = .none;
 
     seen_top_sections: enum_flags {
@@ -665,6 +759,7 @@ Config_Parser :: struct {
         settings;
         style;
         platform;
+        build_commands;
     };
 
     workspace_subsection: enum {

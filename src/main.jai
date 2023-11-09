@@ -81,7 +81,7 @@ main :: () {
     // This may generate window resize events if DPI/scaling settings need to be
     // applied, so make sure to only call it after the window is created.
     platform_apply_config(*config.platform);
-    
+
     #if OS == .MACOS {
         // On macOS, attempting to maximize the window before a frame has been drawn results in a crash, so we delay it until the end of the first frame.
         should_maximize := config.settings.maximize_on_start;
@@ -259,6 +259,7 @@ main :: () {
                     case .unsaved_buffers_dialog;   handled = unsaved_buffers_dialog_handle_event(event);
                     case .confirm_overwrite_dialog; handled = confirm_overwrite_dialog_handle_event(event);
                     case .commands_dialog;          handled = commands_dialog_handle_event(event);
+                    case .build_panel;              unimplemented(); //handled = commands_dialog_handle_event(event);
                 }
             }
 
@@ -293,7 +294,7 @@ main :: () {
         }
 
         reset_temporary_storage();
-        
+
         #if OS == .MACOS {
             if should_maximize {
                 should_maximize = false;
@@ -717,6 +718,7 @@ active_global_widget: enum {
     open_project_dialog;
     unsaved_buffers_dialog;
     confirm_overwrite_dialog;
+    build_panel;
 } = .editors;
 
 Project_Dir :: struct {
