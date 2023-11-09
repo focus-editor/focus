@@ -164,6 +164,11 @@ load_and_merge_config :: (file_path: string, into: Config, hash: *u64) -> succes
         return false, false, false;
     }
 
+    // Maybe update hash if changed
+    new_hash := calculate_hash(to_bytes(file_data));
+    changed := new_hash != <<hash;
+    if changed then <<hash = new_hash;
+
     parsed_config, success_parse, error_msg, warnings := parse_config(file_path, file_path, file_data);
     if !success_parse {
         if !error_msg assert(false, "No error message on a config error. This is a bug.");
@@ -175,11 +180,6 @@ load_and_merge_config :: (file_path: string, into: Config, hash: *u64) -> succes
         add_user_warning(tprint("Config file % loaded with warnings", file_path), dismiss_in_seconds = 60);
         for warnings add_user_error(it, dismiss_in_seconds = 60);
     }
-
-    // Maybe update hash if changed
-    new_hash := calculate_hash(to_bytes(file_data));
-    changed := new_hash != <<hash;
-    if changed then <<hash = new_hash;
 
     // Merge configs
     config = into;

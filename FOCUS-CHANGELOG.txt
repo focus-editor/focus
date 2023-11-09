@@ -84,6 +84,7 @@
 + Other changes:
     + When the workspace is done scanning, the open file dialog input will no longer be cleared
     + Limited Windows 7 support (no dpi awareness)
+    + Better word detection by commands that move cursors by word
 
 
 
