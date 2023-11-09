@@ -36,7 +36,6 @@ build :: () {
             options.array_bounds_check = .ON;
             options.null_pointer_check = .ON;
             options.arithmetic_overflow_check = .OFF;
-          case "debug";
           case "windows7";
             windows7 = true;
             options.output_executable_name = "focus_windows7";
