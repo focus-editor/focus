@@ -169,21 +169,21 @@ load_and_merge_config :: (file_path: string, into: Config, hash: *u64) -> succes
     changed := new_hash != <<hash;
     if changed then <<hash = new_hash;
 
-    parsed_config, success_parse, error_msg, warnings := parse_config(file_path, file_path, file_data);
-    if !success_parse {
-        if !error_msg assert(false, "No error message on a config error. This is a bug.");
-        log_error(error_msg);
-        add_user_error(error_msg);
+    result := parse_config(file_path, file_path, file_data);
+    if !result.success {
+        if !result.error_msg assert(false, "No error message on a config error. This is a bug.");
+        log_error(result.error_msg);
+        add_user_error(result.error_msg);
         return false, false, false;
     }
-    if warnings {
+    if result.warnings {
         add_user_warning(tprint("Config file % loaded with warnings", file_path), dismiss_in_seconds = 60);
-        for warnings add_user_error(it, dismiss_in_seconds = 60);
+        for result.warnings add_user_error(it, dismiss_in_seconds = 60);
     }
 
     // Merge configs
     config = into;
-    merge_configs(*config, parsed_config);
+    merge_configs(*config, result.config);
 
     // Apply colors
     Colors = config.colors;
@@ -226,7 +226,7 @@ load_and_merge_config :: (file_path: string, into: Config, hash: *u64) -> succes
 
     if !file_is_watched(file_path) start_watching_file(file_path);
 
-    return true, changed, warnings.count > 0 || clamp_warnings;
+    return true, changed, result.warnings.count > 0 || clamp_warnings;
 }
 
 merge_configs :: (dst: *Config, parsed: Parsed_Config) {
@@ -426,17 +426,17 @@ EXAMPLE_PROJECT_CONFIG_NAME :: "example-project.focus-config";
 #scope_export
 
 DEFAULT_CONFIG :: #run -> Config {
-    parsed_config, success := parse_config("Default Config", DEFAULT_CONFIG_NAME, DEFAULT_CONFIG_FILE_DATA);
-    assert(success, "Couldn't parse the default config file '%'", DEFAULT_CONFIG_NAME);
+    result := parse_config("Default Config", DEFAULT_CONFIG_NAME, DEFAULT_CONFIG_FILE_DATA);
+    assert(result.success, "Couldn't parse the default config file '%'", DEFAULT_CONFIG_NAME);
     default_config: Config;
-    merge_configs(*default_config, parsed_config);
+    merge_configs(*default_config, result.config);
     return default_config;
 };
 
 // Validate the example project config
 #run {
-    _, success := parse_config("Example Project Config", EXAMPLE_PROJECT_CONFIG_NAME, EXAMPLE_PROJECT_FILE_DATA);
-    assert(success, "Couldn't parse the example project config file '%'", EXAMPLE_PROJECT_CONFIG_NAME);
+    result := parse_config("Example Project Config", EXAMPLE_PROJECT_CONFIG_NAME, EXAMPLE_PROJECT_FILE_DATA);
+    assert(result.success, "Couldn't parse the example project config file '%'", EXAMPLE_PROJECT_CONFIG_NAME);
 }
 
 #load "config_parser.jai";

@@ -1,6 +1,8 @@
 highlight_glsl_syntax :: (using buffer: *Buffer) {
     tokenizer := get_tokenizer(buffer);
 
+    last_token: Token;
+
     while true {
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
@@ -9,74 +11,24 @@ highlight_glsl_syntax :: (using buffer: *Buffer) {
         // Maybe retroactively highlight a function
         if token.type == .punctuation && token.punctuation == .l_paren {
             // Handle "func("
-            prev := last_tokens[0];
-            if prev.type == .identifier {
-                memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
+            if last_token.type == .identifier {
+                memset(colors.data + last_token.start, xx Code_Color.FUNCTION, last_token.len);
             }
         }
 
-        // Remember last tokens
-        last_tokens[0] = token;
+        last_token = token;
 
         color := COLOR_MAP[token.type];
         memset(colors.data + token.start, xx color, token.len);
     }
 }
 
-tokenize_glsl_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /* temp */ {
-    tokens: [..] Indentation_Token;
-    tokens.allocator = temp;
-
-    tokenizer := get_tokenizer(buffer);
-
-    while true {
-        src := get_next_token(*tokenizer);
-
-        token: Indentation_Token = ---;
-        token.start = src.start;
-        token.len   = src.len;
-
-        if src.type == {
-            case .punctuation;
-                if src.punctuation == {
-                    case .l_paren;      token.type = .open;  token.kind = .paren;
-                    case .l_bracket;    token.type = .open;  token.kind = .bracket;
-                    case .l_brace;      token.type = .open;  token.kind = .brace;
-
-                    case .r_paren;      token.type = .close; token.kind = .paren;
-                    case .r_bracket;    token.type = .close; token.kind = .bracket;
-                    case .r_brace;      token.type = .close; token.kind = .brace;
-
-                    case;               continue;
-                }
-
-            case .multiline_comment;    token.type = .maybe_multiline;
-            case .eof;                  token.type = .eof;  // to guarantee we always have indentation tokens
-            case;                       token.type = .unimportant;
-        }
-
-        array_add(*tokens, token);
-
-        if src.type == .eof break;
-    }
-
-    return tokens;
-}
+get_next_glsl_token :: get_next_token;  // export for indent tokenization
 
 #scope_file
 
-get_tokenizer :: (using buffer: Buffer) -> Tokenizer {
-    tokenizer: Tokenizer;
-
-    tokenizer.buf   = cast(string) bytes;
-    tokenizer.max_t = bytes.data + bytes.count;
-    tokenizer.t     = bytes.data;
-
-    return tokenizer;
-}
-
 get_next_token :: (using tokenizer: *Tokenizer) -> Token {
-    t = eat_white_space(t, max_t);
+    eat_white_space(tokenizer);
 
     token: Token;
     token.start = cast(s32) (t - buf.data);
@@ -136,9 +88,6 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
 
 parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
-
-    // mark := get_temporary_storage_mark();
-    // defer   set_temporary_storage_mark(mark);
 
     identifier_str := read_identifier_string(tokenizer);
 
@@ -216,10 +165,6 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
 
     } else if t.* == #char "x" || t.* == #char "X" {
         // Hex
-        is_hex :: inline (c: u8) -> bool {
-            return is_digit(c) || (c >= #char "a" && c <= #char "f") || (c >= #char "A" && c <= #char "F");
-        }
-
         t += 1;
         while t < max_t && (is_hex(t.*)) t += 1;
 
@@ -356,11 +301,8 @@ parse_preprocessor_directive :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
 
     t += 1;
-    t = eat_white_space(t, max_t);  // there may be spaces between the # and the name
+    eat_white_space(tokenizer);  // there may be spaces between the # and the name
     if !is_alpha(t.*) return;
-
-    // mark := get_temporary_storage_mark();
-    // defer   set_temporary_storage_mark(mark);
 
     directive_str := read_identifier_string(tokenizer);
 
@@ -507,17 +449,6 @@ parse_caret :: (using tokenizer: *Tokenizer, token: *Token) {
             token.operation = .caret_equal;
             t += 1;
     }
-}
-
-//~
-
-Tokenizer :: struct {
-    buf: string;
-    max_t:   *u8;
-    start_t: *u8;  // cursor when starting parsing new token
-    t:       *u8;  // cursor
-
-    last_tokens: [1] Token;  // to retroactively highlight functions
 }
 
 Token :: struct {
@@ -1116,30 +1047,6 @@ MAX_DIRECTIVE_LENGTH :: #run -> s32 {
         if actual.count > max_len max_len = actual.count;
     }
     return xx max_len;
-}
-
-
-read_identifier_string :: (using tokenizer: *Tokenizer) -> string {
-    ret: string;
-    ret.data = t;
-
-    while t < max_t {
-        c := t.*;
-        if is_alnum(c) { t += 1; continue; }
-        break;
-    }
-    if t >= max_t then t = max_t;
-    ret.count = xx (t - ret.data);
-
-    return ret;
-}
-
-eat_white_space :: inline (start: *u8, max_t: *u8) -> *u8 {
-    t := start;
-    while t < max_t && is_white_space(t.*) {
-        t += 1;
-    }
-    return t;
 }
 
 #run assert(enum_highest_value(Token.Type) == COLOR_MAP.count - 1);

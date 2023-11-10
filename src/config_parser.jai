@@ -1,14 +1,19 @@
-parse_config :: (name: string, filename: string, file_data: string) -> Parsed_Config, success: bool, error_msg: string /* temp */, warnings: [] string /* temp */ {
+parse_config :: (name: string, filename: string, file_data: string, for_highlighting := false) -> Config_Parse_Result {
     using parser: Config_Parser;
 
     // NOTE: we don't free on purpose, because some of the parsed data will point into the file data
     trimmed_data := trim_left(file_data, " \t\n\r");  // skip empty lines, otherwise the handler will crash!
     start_from_memory(*handler, name, filename, trimmed_data);
-    if handler.failed return Parsed_Config.{}, false, tprint("Couldn't parse file '%'.\nPlease check that the version number is specified at the top in brackets, otherwise check the error log.", filename), .[];
+    if handler.failed {
+        result.error_msg = tprint("Couldn't parse file '%'.\nPlease check that the version number is specified at the top in brackets, otherwise check the error log.", filename);
+        return result;
+    }
 
-    parsed_config.version = handler.version;
-    if parsed_config.version < 1 || parsed_config.version > 2 {
-        return parsed_config, false, tprint("Invalid config version [%] in file '%'. Supported versions are: [1], [2].", parsed_config.version, filename), .[];
+    // TODO: proper version handling and migration
+    result.config.version = handler.version;
+    if result.config.version < 1 || result.config.version > 2 {
+        result.error_msg = tprint("Invalid config version [%] in file '%'. Supported versions are: [1], [2].", result.config.version, filename);
+        return result;
     }
 
     warnings: [..] string;
@@ -21,7 +26,10 @@ parse_config :: (name: string, filename: string, file_data: string) -> Parsed_Co
         // Maybe switch to a different top section
         if begins_with(line, "[[") {
             error, error_msg := switch_top_section(*parser, line);
-            if error return Parsed_Config.{}, false, error_msg, .[];
+            if error {
+                result.error_msg = error_msg;
+                return result;
+            }
             continue;
         }
 
@@ -29,27 +37,34 @@ parse_config :: (name: string, filename: string, file_data: string) -> Parsed_Co
         error_msg: string;
 
         if #complete top_section == {
-            case .workspace;        success, error_msg = parse_workspace_line(*parser, line);
-            case .settings;         success, error_msg = parse_settings_line(*parser, line);
-            case .keymap;           success, error_msg = parse_keymap_line(*parser, line);
-            case .style;            success, error_msg = parse_style_line(*parser, line);
-            case .build_commands;   success, error_msg = parse_build_line(*parser, line);
+            case .workspace;        success, error_msg = parse_workspace_line      (*parser, line);
+            case .settings;         success, error_msg = parse_settings_line       (*parser, line);
+            case .keymap;           success, error_msg = parse_keymap_line         (*parser, line);
+            case .style;            success, error_msg = parse_style_line          (*parser, line);
+            case .build_commands;   success, error_msg = parse_build_line          (*parser, line);
             case .platform;         success, error_msg = platform_parse_config_line(*parser, line);
             case .none;
-                error_msg := log_parser_error(handler, "Expected a top-level section definition, got '%'", line);
-                return Parsed_Config.{}, false, error_msg, .[];
+                result.error_msg = log_parser_error(handler, "Expected a top-level section definition, got '%'", line);
+                return result;
         }
 
-        if !success return Parsed_Config.{}, false, error_msg, warnings;
+        if !success {
+            result.error_msg = error_msg;
+            return result;
+        }
         if success && error_msg then array_add(*warnings, error_msg);
     }
 
     // Mix the common key mappings into every keymap to support common actions
-    array_extend(*parsed_config.keymap_editors,          parsed_config.keymap_common);
-    array_extend(*parsed_config.keymap_open_file_dialog, parsed_config.keymap_common);
-    array_extend(*parsed_config.keymap_search_dialog,    parsed_config.keymap_common);
+    array_extend(*result.config.keymap_editors,          result.config.keymap_common);
+    array_extend(*result.config.keymap_open_file_dialog, result.config.keymap_common);
+    array_extend(*result.config.keymap_search_dialog,    result.config.keymap_common);
 
-    return parsed_config, true, "", warnings;
+    result.success   = true;
+    result.error_msg = "";
+    result.warnings  = warnings;
+
+    return result;
 }
 
 keymap_map_key_string :: (key_string: string) -> u32 {
@@ -287,7 +302,7 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
             dir_path = ifx success then copy_string(dir_path) else copy_string(line);
             path_overwrite_separators(dir_path, #char "/");
             if success && file_exists(dir_path) {
-                array_add(*parsed_config.workspace_dirs, dir_path);
+                array_add(*result.config.workspace_dirs, dir_path);
             } else {
                 error_msg := log_parser_error(handler, "Directory '%' doesn't exist.", dir_path);
                 return true, error_msg;
@@ -297,16 +312,16 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
             for dir : dirs {
                 if !dir continue;
                 path_overwrite_separators(dir, #char "/");
-                array_add(*parsed_config.ignore_dirs, dir);
+                array_add(*result.config.ignore_dirs, dir);
             }
         case .allow_file_extensions;
             extensions := split(line, cast(u8) #char " ");
             for extensions {
                 if !it continue;
                 if contains_any_character(it, "*?") {
-                    array_add(*parsed_config.allow_file_extension_wildcards, trim_left(it, ".\t "));
+                    array_add(*result.config.allow_file_extension_wildcards, trim_left(it, ".\t "));
                 } else {
-                    array_add(*parsed_config.allow_file_extensions, trim_left(it, "\t "));
+                    array_add(*result.config.allow_file_extensions, trim_left(it, "\t "));
                 }
             }
         case .ignore_file_extensions;
@@ -314,9 +329,9 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
             for extensions {
                 if !it continue;
                 if contains_any_character(it, "*?") {
-                    array_add(*parsed_config.ignore_file_extension_wildcards, trim_left(it, ".\t "));
+                    array_add(*result.config.ignore_file_extension_wildcards, trim_left(it, ".\t "));
                 } else {
-                    array_add(*parsed_config.ignore_file_extensions, trim_left(it, "\t "));
+                    array_add(*result.config.ignore_file_extensions, trim_left(it, "\t "));
                 }
             }
     }
@@ -339,7 +354,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                 case "font";
                     found, error := find_font_by_name(value);
                     if found {
-                        parsed_config.font = value;
+                        result.config.font = value;
                     } else {
                         error_msg := log_parser_error(handler, error);
                         return false, error_msg;
@@ -348,7 +363,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                     value_copy := value;
                     int_val, success := parse_int(*value_copy);
                     if success {
-                        parsed_config.font_size = int_val;
+                        result.config.font_size = int_val;
                     } else {
                         error_msg := log_parser_error(handler, "Couldn't parse '%' - expected a valid integer, got '%'", setting, value);
                         return false, error_msg;
@@ -367,7 +382,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                 error_msg := log_parser_error(handler, "Couldn't parse '%'. Expected a color in the form RRGGBB or RRGGBBAA, got '%'", color_name, value);
                 return false, error_msg;
             }
-            array_add(*parsed_config.colors, Parsed_Color.{ color_name, color });
+            array_add(*result.config.colors, Parsed_Color.{ color_name, color });
     }
 
     return true, "";
@@ -416,7 +431,7 @@ hex_to_color :: (src_hex: string) -> Color, success: bool {
 }
 
 parse_build_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
-    using parsed_config.build;
+    using result.config.build;
 
     if begins_with(line, "[") {
         // Add a new command
@@ -514,7 +529,7 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
                     code := #string END
                         bool_val, success := parse_bool(*value);
                         if success {
-                            parsed_config.settings.%1 = bool_val;
+                            result.config.settings.%1 = bool_val;
                         } else {
                             error_msg := log_parser_error(handler, "Couldn't parse '%1' - expected 'true' or 'false', got '%%'", setting_value);
                             return false, error_msg;
@@ -526,7 +541,7 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
                     code := #string END
                         int_val, success := parse_int(*value);
                         if success {
-                            parsed_config.settings.%1 = int_val;
+                            result.config.settings.%1 = int_val;
                         } else {
                             error_msg := log_parser_error(handler, "Couldn't parse '%1' - expected a valid integer, got '%%'", setting_value);
                             return false, error_msg;
@@ -548,7 +563,7 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
         return builder_to_string(*b);
     }
 
-    array_add_if_unique(*parsed_config.set_settings, setting_name);
+    array_add_if_unique(*result.config.set_settings, setting_name);
 
     return true, "";
 }
@@ -608,17 +623,17 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
     }
 
     if #complete keymap_subsection == {
-        case .common;           map_action(action_name, key_sequence, ACTIONS_COMMON,           *parsed_config.keymap_common,           "[common]");
-        case .editors;          map_action(action_name, key_sequence, ACTIONS_EDITORS,          *parsed_config.keymap_editors,          "[editors]");
-        case .open_file_dialog; map_action(action_name, key_sequence, ACTIONS_OPEN_FILE_DIALOG, *parsed_config.keymap_open_file_dialog, "[open file dialog]");
-        case .search_dialog;    map_action(action_name, key_sequence, ACTIONS_SEARCH_DIALOG,    *parsed_config.keymap_search_dialog,    "[search dialog]");
+        case .common;           map_action(action_name, key_sequence, ACTIONS_COMMON,           *result.config.keymap_common,           "[common]");
+        case .editors;          map_action(action_name, key_sequence, ACTIONS_EDITORS,          *result.config.keymap_editors,          "[editors]");
+        case .open_file_dialog; map_action(action_name, key_sequence, ACTIONS_OPEN_FILE_DIALOG, *result.config.keymap_open_file_dialog, "[open file dialog]");
+        case .search_dialog;    map_action(action_name, key_sequence, ACTIONS_SEARCH_DIALOG,    *result.config.keymap_search_dialog,    "[search dialog]");
     }
 
     return true, "";
 }
 
 parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo, success: bool, error_msg: string /* temp */ {
-    result: Key_Combo;
+    combo: Key_Combo;
 
     // Parse modifier flags
     modifier_string := key_name;
@@ -626,21 +641,21 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo
         found, mod_key, remainder := split_from_left(modifier_string, cast(u8) #char "-");
         if !found break;
 
-        if      equal_nocase(mod_key, "ctrl")       result.mods.ctrl_pressed       = true;
-        else if equal_nocase(mod_key, "shift")      result.mods.shift_pressed      = true;
-        else if equal_nocase(mod_key, "alt")        result.mods.alt_pressed        = true;
-        else if equal_nocase(mod_key, "cmd")        result.mods.cmd_meta_pressed   = true;
-        else if equal_nocase(mod_key, "meta")       result.mods.cmd_meta_pressed   = true;
-        else if equal_nocase(mod_key, "super")      result.mods.cmd_meta_pressed   = true;
-        else if equal_nocase(mod_key, "{ctrl}")     result.ignore.ctrl_pressed     = true;
-        else if equal_nocase(mod_key, "{shift}")    result.ignore.shift_pressed    = true;
-        else if equal_nocase(mod_key, "{alt}")      result.ignore.alt_pressed      = true;
-        else if equal_nocase(mod_key, "{cmd}")      result.ignore.cmd_meta_pressed = true;
-        else if equal_nocase(mod_key, "{meta}")     result.ignore.cmd_meta_pressed = true;
-        else if equal_nocase(mod_key, "{super}")    result.ignore.cmd_meta_pressed = true;
+        if      equal_nocase(mod_key, "ctrl")       combo.mods.ctrl_pressed       = true;
+        else if equal_nocase(mod_key, "shift")      combo.mods.shift_pressed      = true;
+        else if equal_nocase(mod_key, "alt")        combo.mods.alt_pressed        = true;
+        else if equal_nocase(mod_key, "cmd")        combo.mods.cmd_meta_pressed   = true;
+        else if equal_nocase(mod_key, "meta")       combo.mods.cmd_meta_pressed   = true;
+        else if equal_nocase(mod_key, "super")      combo.mods.cmd_meta_pressed   = true;
+        else if equal_nocase(mod_key, "{ctrl}")     combo.ignore.ctrl_pressed     = true;
+        else if equal_nocase(mod_key, "{shift}")    combo.ignore.shift_pressed    = true;
+        else if equal_nocase(mod_key, "{alt}")      combo.ignore.alt_pressed      = true;
+        else if equal_nocase(mod_key, "{cmd}")      combo.ignore.cmd_meta_pressed = true;
+        else if equal_nocase(mod_key, "{meta}")     combo.ignore.cmd_meta_pressed = true;
+        else if equal_nocase(mod_key, "{super}")    combo.ignore.cmd_meta_pressed = true;
         else {
             error_msg := log_parser_error(handler, "Unknown modifier key '%'", mod_key);
-            return result, false, error_msg;
+            return combo, false, error_msg;
         }
         modifier_string = remainder;
     }
@@ -648,18 +663,18 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo
     key_string := modifier_string;
     if !key_string {
         error_msg := log_parser_error(handler, "Missing key code after modifier flags: '%'", key_name);
-        return result, false, error_msg;
+        return combo, false, error_msg;
     }
 
-    result.key_code = keymap_map_key_string(key_string);
+    combo.key_code = keymap_map_key_string(key_string);
 
-    if !result.key_code {
+    if !combo.key_code {
         s := key_string;
         // Try single key chars, e.g. Ctrl-A, Ctrl-C etc.
         key_code, success := utf8_next_character(*s);
         if success != .CONVERSION_OK {
             error_msg := log_parser_error(handler, "Line contains invalid UTF-8");
-            return result, false, error_msg;
+            return combo, false, error_msg;
         }
 
         if (key_code >= #char "a") && (key_code <= #char "z") {
@@ -670,16 +685,16 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string) -> Key_Combo
         if s.count > 0 {
             // There are extra characters, report an error
             error_msg := log_parser_error(handler, "Expected a single char key code or a valid key name, got: '%'.", key_string);
-            return result, false, error_msg;
+            return combo, false, error_msg;
         }
 
-        result.key_code = key_code;
+        combo.key_code = key_code;
     }
 
     // Pre-apply the ignore mask
-    result.mods.packed |= result.ignore.packed;
+    combo.mods.packed |= combo.ignore.packed;
 
-    return result, true, "";
+    return combo, true, "";
 }
 
 platform_parse_config_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string {
@@ -690,7 +705,7 @@ platform_parse_config_line :: (using parser: *Config_Parser, line: string) -> su
         error_msg := log_parser_error(handler, "Unknown platform subsection '%'.\nAvailable options are: %.", line, join(..PLATFORM_SUBSECTION_NAMES, ", ", allocator = temp));
         return false, error_msg;
     }
-    success, error_msg := platform_parse_config_line(*parsed_config.platform, platform_subsection, line);
+    success, error_msg := platform_parse_config_line(*result.config.platform, platform_subsection, line);
     if !success log_parser_error(handler.full_path, handler.line_number, error_msg);
     return success, error_msg;
 }
@@ -731,6 +746,14 @@ Parsed_Config :: struct {
     platform: Platform_Config;
 };
 
+Config_Parse_Result :: struct {
+    config:     Parsed_Config;
+    success:    bool;
+    error_msg:  string;            /* temp */
+    warnings:   [] string;         /* temp */
+    highlights: [] Code_Highlight; /* temp */
+}
+
 Parsed_Color :: struct {
     color_name: string;
     color: Color;
@@ -741,7 +764,7 @@ Parsed_Color :: struct {
 Config_Parser :: struct {
     handler: Text_File_Handler;
 
-    parsed_config: Parsed_Config;  // will be filled during parsing
+    result: Config_Parse_Result;  // will be filled during parsing
 
     top_section: enum {
         none;

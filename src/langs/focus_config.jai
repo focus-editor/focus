@@ -1,4 +1,10 @@
 highlight_focus_config_syntax :: (using buffer: *Buffer) {
+    // memset(colors.data, xx COLOR_MAP[Token.Type.error], colors.count);
+
+    // name := get_buffer_name(buffer);
+    // result := parse_config(name, name, cast(string) bytes);
+    // if !result.success return;
+
     tokenizer: Tokenizer = ---;
     tokenizer.buf   = cast(string) bytes;
     tokenizer.max_t = bytes.data + bytes.count;

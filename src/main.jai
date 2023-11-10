@@ -765,6 +765,7 @@ dont_ignore_next_window_resize := false;
 #load "widgets/open_project.jai";
 #load "widgets/confirm_overwrite.jai";
 
+#load "langs/common.jai";
 #load "langs/jai.jai";
 #load "langs/c.jai";
 #load "langs/csharp.jai";
@@ -821,6 +822,7 @@ _ :: #import "Linux_Display"()(VALIDATE_USAGE = DEBUG);
 #import "Thread";
 #import "Compiler";
 #import "Machine_X64";
+#import "Reflection";
 
 re :: #import "uniform";
 
