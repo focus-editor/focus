@@ -4,8 +4,6 @@ parse_config :: (name: string, filename: string, file_data: string, for_highligh
     context.parse_for_highlighting = for_highlighting;
 
     using parser: Config_Parser;
-    result.warnings.allocator   = temp;
-    result.highlights.allocator = temp;
 
     // NOTE: we don't free on purpose, because some of the parsed data will point into the file data
     trimmed_data := trim_left(file_data, " \t\n\r");  // skip empty lines, otherwise the handler will crash!
@@ -635,13 +633,14 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
     if !added {
         // Duplicate setting, highlight all of them
         add_highlight(parser, 0, setting_name.count, .warning);
-        for get_seen_lines(parser, .setting, setting_name) {
-            add_highlight(parser, 0, it.whole_line_length, .comment, line_start_offset = it.offset);
-            add_highlight(parser, 0, it.line.count, .warning, line_start_offset = it.offset);
+        for seen_settings {
+            if setting_name != it.setting_name continue;
+            add_highlight(parser, 0, it.line_length,        .comment, line_start_offset = it.line_start_offset);
+            add_highlight(parser, 0, it.setting_name.count, .warning, line_start_offset = it.line_start_offset);
         }
     }
 
-    add_to_seen_lines(parser, line_start_offset, .setting, setting_name, line.count);
+    array_add(*seen_settings, Seen_Setting.{ line_start_offset = line_start_offset, line_length = xx line.count, setting_name = setting_name });
 
     return true, "";
 }
@@ -834,26 +833,6 @@ platform_parse_config_line :: (using parser: *Config_Parser, line: string) -> su
     return success, error_msg;
 }
 
-get_seen_lines :: (using parser: *Config_Parser, type: Seen_Line.Type, line: string) -> [] Seen_Line /* temp */ {
-    lines: [..] Seen_Line;
-    lines.allocator = temp;
-
-    for seen_lines {
-        if it.type == type && it.line == line then array_add(*lines, it);
-    }
-
-    return lines;
-}
-
-add_to_seen_lines :: inline (using parser: *Config_Parser, offset: s64, type: Seen_Line.Type, line: string, whole_line_length: s64) {
-    array_add(*seen_lines, Seen_Line.{
-        offset = cast(s32) offset,
-        line = line,
-        type = type,
-        whole_line_length = cast(s32)whole_line_length,
-    });
-}
-
 
 #scope_export
 
@@ -894,9 +873,11 @@ Parsed_Config :: struct {
 Config_Parse_Result :: struct {
     config:     Parsed_Config;
     success:    bool;
-    error_msg:  string;            /* temp */
-    warnings:   [..] string;         /* temp */
-    highlights: [..] Code_Highlight; /* temp */
+    error_msg:  string;         // temp
+    warnings:   [..] string;
+    warnings.allocator = temp;  // I love jai
+    highlights: [..] Code_Highlight;
+    highlights.allocator = temp;
 }
 
 Parsed_Color :: struct {
@@ -910,7 +891,11 @@ Config_Parser :: struct {
     handler: Text_File_Handler;
 
     line_start_offset: s32;
-    seen_lines: [..] Seen_Line;  // to remember where we've seen something so we can go back if needed
+
+    seen_settings: [..] Seen_Setting;  // to remember where we've seen something so we can go back if needed
+    seen_settings.allocator = temp;
+    seen_keymaps:  [..] Seen_Keymap;
+    seen_keymaps.allocator = temp;
 
     result: Config_Parse_Result;  // will be filled during parsing
 
@@ -974,20 +959,20 @@ Config_Parser :: struct {
     platform_subsection: PLATFORM_SUBSECTION_ENUM;
 }
 
-Seen_Line :: struct {
-    offset:            s32;
-    line:              string;  // not owned! treat as temporary
-    type:              Type;
-    whole_line_length: s32;
-    // section_offset: s32;  // TODO?
+Seen_Setting :: struct {
+    using seen_line: Seen_Line;
+    setting_name: string;
+}
 
-    Type :: enum {
-        top_level_section;
-        subsection;
-        workspace_dir;
-        build_command_name;
-        setting;
-    };
+Seen_Keymap :: struct {
+    using seen_line: Seen_Line;
+    key_sequence:    [] Key_Combo;
+    section_offset:  s32;
+}
+
+Seen_Line :: struct {
+    line_start_offset: s32;
+    line_length:       s32;  // for highlighting the whole line if needed
 }
 
 
