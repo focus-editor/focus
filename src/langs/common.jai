@@ -120,7 +120,6 @@ Tokenizer :: struct {
 }
 
 Code_Highlight :: struct {
-    // ????
     offset: s32;
     count: s32;
     color_num: u8;
