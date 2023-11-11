@@ -689,23 +689,39 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
     if key_sequence.count == 0 || !action_name {
         error_msg := tprint("Invalid key sequence: '%'.\n%", line, key_sequence_error_message);
         add_highlight(parser, 0, line.count, .error);
-        return false, error_msg;
+        return true, error_msg;
     }
 
     // Parse actions
     map_action :: (name: string, key_sequence: [] Key_Combo, available_actions: [] string, target_keymap: *[..] Key_Mapping, subsection: string) #expand {
-        found := false;
-        for available_actions {
-            if name == it {
-                array_add(target_keymap, Key_Mapping.{ key_sequence = key_sequence, action = cast(u32) it_index });
-                found = true;
-                break;
+        found, index := array_find(available_actions, name);
+        if found {
+            array_add(target_keymap, Key_Mapping.{ key_sequence = key_sequence, action = cast(u32) index });
+        } else {
+            if context.parse_for_highlighting {
+                add_highlight(parser, cast(s64)(name.data - line.data), name.count, .error);
+                `return true, "";
+            } else {
+                error_msg := tprint("Unknown action '%'. Is it misspelled? Please check the default config file for a reference.", name);
+
+                // Try to help the user find the right subsection if this action is available elsewhere
+                Subsection_Actions :: struct { subsection: string; actions: [] string; };
+                subsection_actions := Subsection_Actions.[
+                    .{ "[common]",           ACTIONS_COMMON },
+                    .{ "[editors]",          ACTIONS_EDITORS },
+                    .{ "[open file dialog]", ACTIONS_OPEN_FILE_DIALOG },
+                    .{ "[search dialog]",    ACTIONS_SEARCH_DIALOG },
+                ];
+                for subsection_actions {
+                    if it.subsection == subsection continue;  // already checked that and failed
+                    if array_find(it.actions, name) {
+                        error_msg = tprint("Action '%' is not available in the % section. However, it is available in the % section", name, subsection, it.subsection);
+                        break;
+                    }
+                }
+                error_msg = log_parser_error(handler, error_msg);
+                `return true, error_msg;
             }
-        }
-        if !found {
-            add_highlight(parser, cast(s64)(name.data - line.data), name.count, .error);
-            error_msg := log_parser_error(handler, "Invalid action '%'.\nPossible reasons:\n* It's misspelled\n* It's in the wrong section\nPlease check the default config file for a reference.", name);
-            `return false, error_msg;
         }
     }
 
