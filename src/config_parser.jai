@@ -311,21 +311,24 @@ switch_top_section :: (using parser: *Config_Parser, line: string) -> error: boo
             return true, error_msg;
     }
 
+    section_offset = line_start_offset;
+
     return false, "";
 }
 
 parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
     if begins_with(line, "[") {
-        for WORKSPACE_SUBSECTIONS {
-            if line == it {
-                workspace_subsection = xx it_index;
-                add_highlight(parser, 0, line.count, .header);
-                return true, "";
-            }
+        found, index := array_find(WORKSPACE_SUBSECTIONS, line);
+        if found {
+            workspace_subsection = xx index;
+            section_offset = line_start_offset;
+            add_highlight(parser, 0, line.count, .header);
+            return true, "";
+        } else {
+            add_highlight(parser, 0, line.count, .error);
+            error_msg := log_parser_error(handler, "Unknown workspace subsection '%'.\nAvailable options are: %.", line, join(..WORKSPACE_SUBSECTIONS, ", ", allocator = temp));
+            return false, error_msg;
         }
-        add_highlight(parser, 0, line.count, .error);
-        error_msg := log_parser_error(handler, "Unknown workspace subsection '%'.\nAvailable options are: %.", line, join(..WORKSPACE_SUBSECTIONS, ", ", allocator = temp));
-        return false, error_msg;
     }
 
     // Always highlight in default colors. If there's an issue with a workspace dir, we'll highlight the part which doesn't exist
@@ -393,16 +396,17 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
 
 parse_style_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
     if begins_with(line, "[") {
-        for STYLE_SUBSECTIONS {
-            if line == it {
-                style_subsection = xx it_index;
-                add_highlight(parser, 0, line.count, .header);
-                return true, "";
-            }
+        found, index := array_find(STYLE_SUBSECTIONS, line);
+        if found {
+            style_subsection = xx index;
+            section_offset = line_start_offset;
+            add_highlight(parser, 0, line.count, .header);
+            return true, "";
+        } else {
+            add_highlight(parser, 0, line.count, .error);
+            error_msg := log_parser_error(handler, "Unknown style subsection '%'.\nAvailable options are: %.", line, join(..STYLE_SUBSECTIONS, ", ", allocator = temp));
+            return false, error_msg;
         }
-        add_highlight(parser, 0, line.count, .error);
-        error_msg := log_parser_error(handler, "Unknown style subsection '%'.\nAvailable options are: %.", line, join(..STYLE_SUBSECTIONS, ", ", allocator = temp));
-        return false, error_msg;
     }
     if #complete style_subsection == {
         case .user_interface;
@@ -647,16 +651,17 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
 
 parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
     if begins_with(line, "[") {
-        for KEYMAP_SUBSECTIONS {
-            if line == it {
-                keymap_subsection = xx it_index;
-                add_highlight(parser, 0, line.count, .header);
-                return true, "";
-            }
+        found, index := array_find(KEYMAP_SUBSECTIONS, line);
+        if found {
+            keymap_subsection = xx index;
+            section_offset = line_start_offset;
+            add_highlight(parser, 0, line.count, .header);
+            return true, "";
+        } else {
+            add_highlight(parser, 0, line.count, .error);
+            error_msg := log_parser_error(handler, "Unknown keymap subsection '%'.\nAvailable options are: %.", line, join(..KEYMAP_SUBSECTIONS, ", ", allocator = temp));
+            return false, error_msg;
         }
-        add_highlight(parser, 0, line.count, .error);
-        error_msg := log_parser_error(handler, "Unknown keymap subsection '%'.\nAvailable options are: %.", line, join(..KEYMAP_SUBSECTIONS, ", ", allocator = temp));
-        return false, error_msg;
     }
 
     add_highlight(parser, 0, line.count, .default);
@@ -667,6 +672,8 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
     action_name: string;
     item: string;
     rest_of_line := line;
+
+    line_parsed_with_error = false;  // reset
 
     while true {
         // The last item we encounter will be interpreted as the action name, all parts before it will be parsed as key combinations.
@@ -731,6 +738,31 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
         case .search_dialog;    map_action(action_name, key_sequence, ACTIONS_SEARCH_DIALOG,    *result.config.keymap_search_dialog,    "[search dialog]");
     }
 
+    if context.parse_for_highlighting && !line_parsed_with_error {
+        // Highlight any other keymaps which match the key sequence of this one
+        is_duplicate := false;
+        for seen_keymaps {
+            if it.section_offset == section_offset && key_sequence_matches(it.key_sequence, key_sequence) {
+                add_highlight(parser, 0, it.line_length, .warning, line_start_offset = it.line_start_offset );
+                is_duplicate = true;
+                break;
+            }
+        }
+        if is_duplicate {
+            action_name_offset := cast(s64)(action_name.data - line.data);
+            add_highlight(parser, 0, action_name_offset, .warning);
+            add_highlight(parser, action_name_offset, action_name.count, .comment);
+        }
+
+        // Remember the keymap
+        array_add(*seen_keymaps, Seen_Keymap.{
+            line_start_offset  = line_start_offset,
+            line_length        = xx line.count,
+            key_sequence       = key_sequence,
+            section_offset     = section_offset,  // NOTE: this won't work well while we still allow to redefine existing subsections
+        });
+    }
+
     return true, "";
 }
 
@@ -765,6 +797,7 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string, line: string
                     return combo, false, error_msg;
                 } else {
                     add_highlight(parser, cast(s64)(mod_key.data - line.data), mod_key.count, .error);
+                    line_parsed_with_error = true;
                 }
         }
         modifier_string = remainder;
@@ -787,6 +820,7 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string, line: string
         key_code, success := utf8_next_character(*s);
         if success != .CONVERSION_OK {
             add_highlight(parser, cast(s64)(key_string.data - line.data), key_string.count, .error);
+            line_parsed_with_error = true;
             error_msg := log_parser_error(handler, "Line contains invalid UTF-8");
             return combo, false, error_msg;
         }
@@ -803,6 +837,7 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string, line: string
                 return combo, false, error_msg;
             } else {
                 add_highlight(parser, cast(s64)(key_string.data - line.data), key_string.count, .error);
+                line_parsed_with_error = true;
             }
         }
 
@@ -817,16 +852,17 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string, line: string
 
 platform_parse_config_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string {
     if begins_with(line, "[") {
-        for PLATFORM_SUBSECTION_NAMES {
-            if line == it {
-                platform_subsection = xx it_index;
-                add_highlight(parser, 0, line.count, .header);
-                return true, "";
-            }
+        found, index := array_find(PLATFORM_SUBSECTION_NAMES, line);
+        if found {
+            platform_subsection = xx index;
+            section_offset = line_start_offset;
+            add_highlight(parser, 0, line.count, .header);
+            return true, "";
+        } else {
+            add_highlight(parser, 0, line.count, .error);
+            error_msg := log_parser_error(handler, "Unknown platform subsection '%'.\nAvailable options are: %.", line, join(..PLATFORM_SUBSECTION_NAMES, ", ", allocator = temp));
+            return false, error_msg;
         }
-        add_highlight(parser, 0, line.count, .error);
-        error_msg := log_parser_error(handler, "Unknown platform subsection '%'.\nAvailable options are: %.", line, join(..PLATFORM_SUBSECTION_NAMES, ", ", allocator = temp));
-        return false, error_msg;
     }
     success, error_msg := platform_parse_config_line(*result.config.platform, platform_subsection, line);
     if !success log_parser_error(handler.full_path, handler.line_number, error_msg);
@@ -890,7 +926,10 @@ Parsed_Color :: struct {
 Config_Parser :: struct {
     handler: Text_File_Handler;
 
-    line_start_offset: s32;
+    line_start_offset: s32;  // holds the start offset of the line being parsed (ignoring any whitespace at the start)
+    section_offset:    s32;  // holds the offset of the last seen section header
+
+    line_parsed_with_error: bool;  // when parsing for highlighting we want to ignore errors but we want to know sometimes whether they have occurred
 
     seen_settings: [..] Seen_Setting;  // to remember where we've seen something so we can go back if needed
     seen_settings.allocator = temp;
@@ -966,8 +1005,8 @@ Seen_Setting :: struct {
 
 Seen_Keymap :: struct {
     using seen_line: Seen_Line;
-    key_sequence:    [] Key_Combo;
-    section_offset:  s32;
+    key_sequence:   [] Key_Combo;
+    section_offset: s32;
 }
 
 Seen_Line :: struct {

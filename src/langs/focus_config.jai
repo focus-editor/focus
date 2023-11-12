@@ -39,7 +39,7 @@ COLOR_MAP :: Code_Color.[
     .OPERATION,      // header
     .KEYWORD,        // header_top_level
 
-    .FUNCTION,       // modifier_key
+    .VALUE_KEYWORD,  // modifier_key
     .DEFAULT,        // key_string
     .DEFAULT,        // action
 

@@ -142,6 +142,16 @@ key_combo_strings :: (combo: Key_Combo) -> [] string /* temp */ {
     return keys;
 }
 
+key_sequence_matches :: (s1: [] Key_Combo, s2: [] Key_Combo) -> bool {
+    if s1.count != s2.count return false;
+    for 0 .. s1.count-1 {
+        c1, c2 := s1[it], s2[it];
+        ignore_mask := c1.ignore.packed | c2.ignore.packed;
+        if (c1.key_code != c2.key_code) || (c1.mods.packed | ignore_mask != c2.mods.packed | ignore_mask) return false;
+    }
+    return true;
+}
+
 key_sequence_for_action_as_string :: (action: $T) -> string /* temp */ {
     key_sequence := get_first_matching_key_sequence_from_action(action);
     if !key_sequence return "";
