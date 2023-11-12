@@ -408,6 +408,9 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
             return false, error_msg;
         }
     }
+
+    add_highlight(parser, 0, line.count, .default);
+
     if #complete style_subsection == {
         case .user_interface;
             setting, value := break_by_spaces(line);
@@ -418,8 +421,10 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                     if found {
                         result.config.font = value;
                     } else {
+                        add_highlight(parser, xx (value.data - line.data), value.count, .error);
                         error_msg := log_parser_error(handler, error);
-                        return false, error_msg;
+                        result.config.font = "default";
+                        return true, error_msg;
                     }
                 case "font_size";
                     value_copy := value;
@@ -427,24 +432,43 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                     if success {
                         result.config.font_size = int_val;
                     } else {
+                        add_highlight(parser, xx (value.data - line.data), value.count, .error);
                         error_msg := log_parser_error(handler, "Couldn't parse '%' - expected a valid integer, got '%'", setting, value);
+                        result.config.font_size = DEFAULT_FONT_SIZE;
                         return false, error_msg;
                     }
+                case;
+                    add_highlight(parser, 0, setting.count, .error);
+                    error_msg := log_parser_error(handler, "Unknown style option '%'", setting);
+                    return true, error_msg;
             }
         case .colors;
             color_name, value := break_by_spaces(line);
             color_name = trim_right(color_name, ":");
             color_ptr := map_color_name_to_color_struct(*Config.{}, color_name);
             if !color_ptr {
+                add_highlight(parser, 0, color_name.count, .error);
                 error_msg := log_parser_error(handler, "Unknown color '%'", color_name);
-                return false, error_msg;
+                return true, error_msg;
             }
             color, success := hex_to_color(value);
             if !success {
+                add_highlight(parser, xx (value.data - line.data), value.count, .error);
                 error_msg := log_parser_error(handler, "Couldn't parse '%'. Expected a color in the form RRGGBB or RRGGBBAA, got '%'", color_name, value);
-                return false, error_msg;
+                return true, error_msg;
             }
             array_add(*result.config.colors, Parsed_Color.{ color_name, color });
+
+            is_duplicate := false;
+            for seen_colors {
+                if color_ptr != it.color_ptr continue;
+                add_highlight(parser, 0, it.line_length,   .comment, line_start_offset = it.line_start_offset);
+                add_highlight(parser, 0, color_name.count, .warning, line_start_offset = it.line_start_offset);
+                is_duplicate = true;
+            }
+            if is_duplicate then add_highlight(parser, 0, line.count, .warning);
+
+            array_add(*seen_colors, Seen_Color.{ line_start_offset = line_start_offset, line_length = xx line.count, color_ptr = color_ptr });
     }
 
     return true, "";
@@ -932,9 +956,11 @@ Config_Parser :: struct {
     line_parsed_with_error: bool;  // when parsing for highlighting we want to ignore errors but we want to know sometimes whether they have occurred
 
     seen_settings: [..] Seen_Setting;  // to remember where we've seen something so we can go back if needed
-    seen_settings.allocator = temp;
     seen_keymaps:  [..] Seen_Keymap;
-    seen_keymaps.allocator = temp;
+    seen_colors:   [..] Seen_Color;
+    seen_settings.allocator = temp;
+    seen_keymaps.allocator  = temp;
+    seen_colors.allocator   = temp;
 
     result: Config_Parse_Result;  // will be filled during parsing
 
@@ -1007,6 +1033,11 @@ Seen_Keymap :: struct {
     using seen_line: Seen_Line;
     key_sequence:   [] Key_Combo;
     section_offset: s32;
+}
+
+Seen_Color :: struct {
+    using seen_line: Seen_Line;
+    color_ptr: *Color;
 }
 
 Seen_Line :: struct {

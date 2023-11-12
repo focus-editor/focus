@@ -21,6 +21,7 @@ main :: () {
     assert(!ends_with(config_dir, "/"), "Config dir '%' ends with a '/'. This is a bug.", config_dir);
     assert(data_dir.count > 0, "Empty data dir");
     assert(!ends_with(data_dir, "/"), "Data dir '%' ends with a '/'. This is a bug.", data_dir);
+    platform_get_fonts_dir();  // warm-up the fonts dir so that the config highlighter can later use it without heap allocations
 
     temp_dir     = sprint("%/temp",     data_dir);
     projects_dir = sprint("%/projects", config_dir);
