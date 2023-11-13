@@ -154,7 +154,6 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
 #scope_file
 
 load_and_merge_config :: (file_path: string, into: Config, hash: *u64) -> success: bool, changed: bool, there_were_warnings: bool {
-
     file_data, success_read := read_entire_file(file_path);
     // NOTE: we're not freeing because the config will take ownership of it (and if you reload it'll leak the old data, which we should probably fix at some point)
     if !success_read {
@@ -167,12 +166,15 @@ load_and_merge_config :: (file_path: string, into: Config, hash: *u64) -> succes
     // Maybe update hash if changed
     new_hash := calculate_hash(to_bytes(file_data));
     changed := new_hash != <<hash;
-    if changed then <<hash = new_hash;
+    if changed {
+        <<hash = new_hash;
+    } else {
+        return true, false, false;
+    }
 
     result := parse_config(file_path, file_path, file_data);
     if !result.success {
         if !result.error_msg assert(false, "No error message on a config error. This is a bug.");
-        log_error(result.error_msg);
         add_user_error(result.error_msg);
         return false, false, false;
     }

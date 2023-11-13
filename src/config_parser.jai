@@ -180,13 +180,6 @@ log_parser_error :: (handler: Text_File_Handler, format: string, args: .. Any, f
     return message;
 } @PrintLike
 
-log_parser_error :: (full_path: string, line_number: int, message: string, flags := Log_Flags.NONE, loc := #caller_location) {
-    if context.parse_for_highlighting return;  // Don't want to log anything
-
-    new_message := tprint("Line % of '%': %", line_number, full_path, message);
-    log(new_message, flags=Log_Flags.ERROR|flags, loc=loc);
-}
-
 Str_Code :: struct { str: string; code: Input.Key_Code; }
 using Input.Key_Code;
 STRING_TO_CODE_MAP :: Str_Code.[
@@ -889,7 +882,7 @@ platform_parse_config_line :: (using parser: *Config_Parser, line: string) -> su
         }
     }
     success, error_msg := platform_parse_config_line(*result.config.platform, platform_subsection, line);
-    if !success log_parser_error(handler.full_path, handler.line_number, error_msg);
+    // if !success log_parser_error(handler.full_path, handler.line_number, error_msg);
     return success, error_msg;
 }
 
