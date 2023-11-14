@@ -1,3 +1,48 @@
+// Parser will be configured by a metaprogram below using the following section definitions
+CONFIG_SECTIONS :: Config_Section.[
+    .{
+        name = "workspace",
+        subsections = .[
+            "workspace dirs",
+            "ignore dirs",
+            "allow file extensions",
+            "ignore file extensions",
+        ],
+        parse_function = "parse_workspace_line",
+    },
+    .{
+        name = "settings",
+        parse_function = "parse_settings_line",
+    },
+    .{
+        name = "keymap",
+        subsections = .[
+            "editors",
+            "open file dialog",
+            "search dialog",
+            "common",
+        ],
+        parse_function = "parse_keymap_line",
+    },
+    .{
+        name = "style",
+        subsections = .[
+            "user interface",
+            "colors",
+        ],
+        parse_function = "parse_style_line",
+    },
+    .{
+        name = "build commands",
+        parse_function = "parse_build_line",
+        allow_arbitrary_subsections = true,
+    },
+    .{
+        name = "linux",
+        parse_function = "parse_linux_config_line",
+    },
+];
+
 #add_context parse_for_highlighting: bool;
 
 parse_config :: (name: string, filename: string, file_data: string, for_highlighting := false) -> Config_Parse_Result {
@@ -26,38 +71,51 @@ parse_config :: (name: string, filename: string, file_data: string, for_highligh
 
         line_start_offset = cast(s32) (line.data - file_data.data);
 
-        // Maybe switch to a different top section
-        if begins_with(line, "[[") {
-            error, error_msg := switch_top_section(*parser, line);
-            if !error {
-                add_highlight(*parser, 0, line.count, .header_top_level);
-                continue;
-            } else {
+        // Maybe switch sections
+        if begins_with(line, "[") {
+            error_msg := maybe_switch_section(*parser, line);
+            if error_msg {
                 add_highlight(*parser, 0, line.count, .error);
-                if !context.parse_for_highlighting {
-                    result.error_msg = error_msg;
-                    return result;
+                if !for_highlighting {
+                    result.error_msg = log_parser_error(handler, error_msg);
+                    return result;  // this is a hard error, we don't want to proceed
                 }
-                continue;
             }
+            continue;
         }
 
+        // Check if we allow lines outside of subsection
+        if active_subsection == .none && !array_find(SECTIONS_ALLOWING_LINES_AT_TOP_LEVEL, active_section) {
+            add_highlight(*parser, 0, line.count, .error);
+            error_msg := log_parser_error(handler, "A keymap line is specified outside of a subsection: '%'. This is an error.", line);
+            array_add(*result.warnings, error_msg);  // not a big deal
+            continue;
+        }
+
+        // Parse a line from within a section
         success:   bool;
         error_msg: string;
+        #insert -> string {
+            b: String_Builder;
 
-        if #complete top_section == {
-            case .workspace;        success, error_msg = parse_workspace_line      (*parser, line);
-            case .settings;         success, error_msg = parse_settings_line       (*parser, line);
-            case .keymap;           success, error_msg = parse_keymap_line         (*parser, line);
-            case .style;            success, error_msg = parse_style_line          (*parser, line);
-            case .build_commands;   success, error_msg = parse_build_line          (*parser, line);
-            case .platform;         success, error_msg = platform_parse_config_line(*parser, line);
-            case .none;
-                if !context.parse_for_highlighting {
-                    result.error_msg = log_parser_error(handler, "Expected a top-level section definition, got '%'", line);
-                    return result;
-                }
+            append(*b, "if #complete active_section == {\n");
+            for section : CONFIG_SECTIONS {
+                print_to_builder(*b, "    case .%;  success, error_msg = %(*parser, line);", replace(section.name, " ", "_"), section.parse_function);
+            }
+            code := #string JAI
+                case .none;
+                    if !context.parse_for_highlighting {
+                        result.error_msg = log_parser_error(handler, "Expected a top-level section definition, got '%%'", line);
+                        return result;
+                    }
+            JAI;
+            print_to_builder(*b, code);
+            append(*b, "}\n");
+
+            return builder_to_string(*b);
         }
+
+        if error_msg then error_msg = log_parser_error(handler, error_msg);  // enrich with file/line information
 
         if !success && !context.parse_for_highlighting {
             result.error_msg = error_msg;
@@ -249,94 +307,81 @@ STRING_TO_CODE_MAP :: Str_Code.[
     // .{ "MouseWheelDown",    MOUSE_WHEEL_DOWN },
 ];
 
-switch_top_section :: (using parser: *Config_Parser, line: string) -> error: bool, msg: string /* temp */ {
-    if line == {
-        case "[[workspace]]";
-            top_section = .workspace;
-            if seen_top_sections & .workspace {
-                error_msg := log_parser_error(handler, "The section '[[workspace]]' is defined twice. This is an error.");
-                return true, error_msg;
-            }
-            seen_top_sections |= .workspace;
+maybe_switch_section :: (using parser: *Config_Parser, line: string) -> error: string {
+    if begins_with(line, "[[") {
+        // Top section
+        if !ends_with(line, "]]") return tprint("Invalid section '%'. Section definitions must end with ]]", line);
+        section_name := trim(line, " \t[]");
 
-        case "[[keymap]]";
-            top_section = .keymap;
-            if seen_top_sections & .keymap {
-                error_msg := log_parser_error(handler, "The section '[[keymap]]' is defined twice. This is an error.");
-                return true, error_msg;
+        #insert -> string {
+            b: String_Builder;
+            append(*b, "if section_name == {\n");
+            for section : CONFIG_SECTIONS {
+                code := #string JAI
+                    case "%1";
+                        active_section = .%2;
+                        active_subsection = .none;
+                        section_offset = line_start_offset;
+                        if seen_sections & .%2 return tprint("Section [[%1]] is defined twice. This is an error.");
+                        seen_sections |= .%2;
+                JAI;
+                print_to_builder(*b, code, section.name, replace(section.name, " ", "_"));
             }
-            seen_top_sections |= .keymap;
+            code := #string JAI
+                case;
+                    return tprint("Unknown top-level section %%", line);
+            JAI;
+            print_to_builder(*b, code);
+            append(*b, "}\n");
+            return builder_to_string(*b);
+        }
+        add_highlight(parser, 0, line.count, .header_top_level);
+    } else {
+        // Subsection
+        if !ends_with(line, "]") return tprint("Invalid subsection '%'. Subsection definitions must end with ]", line);
+        subsection_name := trim(line, " \t[]");
 
-        case "[[settings]]";
-            top_section = .settings;
-            if seen_top_sections & .settings {
-                error_msg := log_parser_error(handler, "The section '[[settings]]' is defined twice. This is an error.");
-                return true, error_msg;
+        #insert -> string {
+            b: String_Builder;
+            append(*b, "if subsection_name == {\n");
+            for section : CONFIG_SECTIONS {
+                for subsection : section.subsections {
+                    code := #string JAI
+                        case "%1";
+                            active_subsection = .%2;
+                            section_offset = line_start_offset;
+                            if seen_subsections & .%2 return tprint("Subsection [%1] is defined twice. This is an error.");
+                            seen_subsections |= .%2;
+                    JAI;
+                    print_to_builder(*b, code, subsection, replace(tprint("%_%", section.name, subsection), " ", "_"));
+                }
             }
-            seen_top_sections |= .settings;
-
-        case "[[style]]";
-            top_section = .style;
-            if seen_top_sections & .style {
-                error_msg := log_parser_error(handler, "The section '[[style]]' is defined twice. This is an error.");
-                return true, error_msg;
-            }
-            seen_top_sections |= .style;
-
-        case "[[build commands]]";
-            top_section = .build_commands;
-            if seen_top_sections & .build_commands {
-                error_msg := log_parser_error(handler, "The section '[[build commands]]' is defined twice. This is an error.");
-                return true, error_msg;
-            }
-            seen_top_sections |= .build_commands;
-
-        case PLATFORM_CONFIG_SECTION;
-            top_section = .platform;
-            if seen_top_sections & .platform {
-                error_msg := log_parser_error(handler, "The section '%' is defined twice. This is an error.", PLATFORM_CONFIG_SECTION);
-                return true, error_msg;
-            }
-            seen_top_sections |= .platform;
-
-        case;
-            error_msg := log_parser_error(handler, "Expected one of the following top-level sections: [[workspace]], [[settings]], [[keymap]], [[style]], [[build commands]], but found '%'", line);
-            return true, error_msg;
+            code := #string JAI
+                case;
+                    return tprint("Unknown subsection %%", line);
+            JAI;
+            print_to_builder(*b, code);
+            append(*b, "}\n");
+            return builder_to_string(*b);
+        }
+        add_highlight(parser, 0, line.count, .header);
     }
 
-    section_offset = line_start_offset;
-
-    return false, "";
+    return "";
 }
 
 parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
-    if begins_with(line, "[") {
-        found, index := array_find(WORKSPACE_SUBSECTIONS, line);
-        if found {
-            workspace_subsection = xx index;
-            section_offset = line_start_offset;
-            add_highlight(parser, 0, line.count, .header);
-            return true, "";
-        } else {
-            add_highlight(parser, 0, line.count, .error);
-            error_msg := log_parser_error(handler, "Unknown workspace subsection '%'.\nAvailable options are: %.", line, join(..WORKSPACE_SUBSECTIONS, ", ", allocator = temp));
-            return false, error_msg;
-        }
-    }
-
     // Always highlight in default colors. If there's an issue with a workspace dir, we'll highlight the part which doesn't exist
     add_highlight(parser, 0, line.count, .default);
 
-    if #complete workspace_subsection == {
-        case .workspace_dirs;
+    if active_subsection == {
+        case .workspace_workspace_dirs;
             dir_path, success := get_absolute_path(line);
             path_overwrite_separators(line,     #char "/");
             path_overwrite_separators(dir_path, #char "/");
             if !success || !platform_path_equals(line, dir_path) {
-                print("dir_path: %\n", dir_path);
                 add_highlight(parser, 0, line.count, .error);
-                error_msg := log_parser_error(handler, "Invalid directory '%'. Maybe it's not an absolute path or has a double slash?", line);
-                return true, error_msg;
+                return true, tprint("Invalid directory '%'. Maybe it's not an absolute path or has a double slash?", line);
             }
 
             dir_path = copy_string(dir_path);
@@ -353,17 +398,16 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
                         }
                     }
                 }
-                error_msg := log_parser_error(handler, "Directory '%' doesn't exist.", dir_path);
-                return true, error_msg;
+                return true, tprint("Directory '%' doesn't exist.", dir_path);
             }
-        case .ignore_dirs;
+        case .workspace_ignore_dirs;
             dirs := split(line, cast(u8) #char " ");
             for dir : dirs {
                 if !dir continue;
                 path_overwrite_separators(dir, #char "/");
                 array_add(*result.config.ignore_dirs, dir);
             }
-        case .allow_file_extensions;
+        case .workspace_allow_file_extensions;
             extensions := split(line, cast(u8) #char " ");
             for extensions {
                 if !it continue;
@@ -373,7 +417,7 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
                     array_add(*result.config.allow_file_extensions, trim_left(it, "\t "));
                 }
             }
-        case .ignore_file_extensions;
+        case .workspace_ignore_file_extensions;
             extensions := split(line, cast(u8) #char " ");
             for extensions {
                 if !it continue;
@@ -388,34 +432,19 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
 }
 
 parse_style_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
-    if begins_with(line, "[") {
-        found, index := array_find(STYLE_SUBSECTIONS, line);
-        if found {
-            style_subsection = xx index;
-            section_offset = line_start_offset;
-            add_highlight(parser, 0, line.count, .header);
-            return true, "";
-        } else {
-            add_highlight(parser, 0, line.count, .error);
-            error_msg := log_parser_error(handler, "Unknown style subsection '%'.\nAvailable options are: %.", line, join(..STYLE_SUBSECTIONS, ", ", allocator = temp));
-            return false, error_msg;
-        }
-    }
-
     add_highlight(parser, 0, line.count, .default);
 
-    if #complete style_subsection == {
-        case .user_interface;
+    if active_subsection == {
+        case .style_user_interface;
             setting, value := break_by_spaces(line);
             setting = trim_right(setting, ":");
             if setting == {
                 case "font";
-                    found, error := find_font_by_name(value);
+                    found, error_msg := find_font_by_name(value);
                     if found {
                         result.config.font = value;
                     } else {
                         add_highlight(parser, xx (value.data - line.data), value.count, .error);
-                        error_msg := log_parser_error(handler, error);
                         result.config.font = "default";
                         return true, error_msg;
                     }
@@ -426,29 +455,25 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         result.config.font_size = int_val;
                     } else {
                         add_highlight(parser, xx (value.data - line.data), value.count, .error);
-                        error_msg := log_parser_error(handler, "Couldn't parse '%' - expected a valid integer, got '%'", setting, value);
                         result.config.font_size = DEFAULT_FONT_SIZE;
-                        return false, error_msg;
+                        return false, tprint("Couldn't parse '%' - expected a valid integer, got '%'", setting, value);
                     }
                 case;
                     add_highlight(parser, 0, setting.count, .error);
-                    error_msg := log_parser_error(handler, "Unknown style option '%'", setting);
-                    return true, error_msg;
+                    return true, tprint("Unknown style option '%'", setting);
             }
-        case .colors;
+        case .style_colors;
             color_name, value := break_by_spaces(line);
             color_name = trim_right(color_name, ":");
             color_ptr := map_color_name_to_color_struct(*Config.{}, color_name);
             if !color_ptr {
                 add_highlight(parser, 0, color_name.count, .error);
-                error_msg := log_parser_error(handler, "Unknown color '%'", color_name);
-                return true, error_msg;
+                return true, tprint("Unknown color '%'", color_name);
             }
             color, success := hex_to_color(value);
             if !success {
                 add_highlight(parser, xx (value.data - line.data), value.count, .error);
-                error_msg := log_parser_error(handler, "Couldn't parse '%'. Expected a color in the form RRGGBB or RRGGBBAA, got '%'", color_name, value);
-                return true, error_msg;
+                return true, tprint("Couldn't parse '%'. Expected a color in the form RRGGBB or RRGGBBAA, got '%'", color_name, value);
             }
             array_add(*result.config.colors, Parsed_Color.{ color_name, color });
 
@@ -517,15 +542,13 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
         name := trim(line, "[]");
         if !name {
             add_highlight(parser, 0, line.count, .error);
-            error_msg := log_parser_error(handler, "Command name can't be empty: %", line);
-            return false, error_msg;
+            return false, tprint("Command name can't be empty: %", line);
         }
 
         if commands {
             last_command := *commands[commands.count-1];
             if !last_command.build_command && !last_command.run_command {
-                error_msg := log_parser_error(handler, "Command '%' must have at least build_command or run_command configured", last_command.name);
-                return false, error_msg;
+                return false, tprint("Command '%' must have at least build_command or run_command configured", last_command.name);
             }
         }
 
@@ -557,8 +580,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         if success {
                             target.%1 = bool_val;
                         } else {
-                            error_msg := log_parser_error(handler, "Couldn't parse '%1' - expected 'true' or 'false', got '%%'", option_value);
-                            return false, error_msg;
+                            return false, tprint("Couldn't parse '%1' - expected 'true' or 'false', got '%%'", option_value);
                         }
                     END;
                     print_to_builder(*b, code, option.name);
@@ -568,8 +590,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         if value {
                             target.%1 = value;  // points into the file data!
                         } else {
-                            error_msg := log_parser_error(handler, "Build command option '%%' can't be empty", option_name);
-                            return false, error_msg;
+                            return false, tprint("Build command option '%%' can't be empty", option_name);
                         }
                     END;
                     print_to_builder(*b, code, option.name);
@@ -578,8 +599,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
 
         code := #string END
             case;
-                error_msg := log_parser_error(handler, "Unrecognized build command option '%'.", option_name);
-                return false, error_msg;
+                return false, tprint("Unrecognized build command option '%'.", option_name);
         END;
         append(*b, code);
 
@@ -615,8 +635,7 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
                             result.config.settings.%1 = bool_val;
                         } else {
                             add_highlight(parser, cast(s64)(setting_value.data - line.data), setting_value.count, .error);
-                            error_msg := log_parser_error(handler, "Couldn't parse '%1' - expected 'true' or 'false', got '%%'", setting_value);
-                            return false, error_msg;
+                            return true, tprint("Couldn't parse '%1' - expected 'true' or 'false', got '%%'", setting_value);
                         }
                     END;
                     print_to_builder(*b, code, setting.name);
@@ -629,8 +648,7 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
                             result.config.settings.%1 = int_val;
                         } else {
                             add_highlight(parser, cast(s64)(setting_value.data - line.data), setting_value.count, .error);
-                            error_msg := log_parser_error(handler, "Couldn't parse '%1' - expected a valid integer, got '%%'", setting_value);
-                            return false, error_msg;
+                            return true, tprint("Couldn't parse '%1' - expected a valid integer, got '%%'", setting_value);
                         }
                     END;
                     print_to_builder(*b, code, setting.name);
@@ -640,8 +658,7 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
         code := #string END
             case;
                 add_highlight(parser, 0, line.count, .error);
-                error_msg := log_parser_error(handler, "Unrecognized setting '%'.", setting_name);
-                return false, error_msg;
+                return true, tprint("Unrecognized setting '%'.", setting_name);
         END;
         append(*b, code);
 
@@ -667,20 +684,6 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
 }
 
 parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
-    if begins_with(line, "[") {
-        found, index := array_find(KEYMAP_SUBSECTIONS, line);
-        if found {
-            keymap_subsection = xx index;
-            section_offset = line_start_offset;
-            add_highlight(parser, 0, line.count, .header);
-            return true, "";
-        } else {
-            add_highlight(parser, 0, line.count, .error);
-            error_msg := log_parser_error(handler, "Unknown keymap subsection '%'.\nAvailable options are: %.", line, join(..KEYMAP_SUBSECTIONS, ", ", allocator = temp));
-            return false, error_msg;
-        }
-    }
-
     add_highlight(parser, 0, line.count, .default);
 
     // Parse key sequence and action
@@ -742,17 +745,16 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
                         break;
                     }
                 }
-                error_msg = log_parser_error(handler, error_msg);
                 `return true, error_msg;
             }
         }
     }
 
-    if #complete keymap_subsection == {
-        case .common;           map_action(action_name, key_sequence, ACTIONS_COMMON,           *result.config.keymap_common,           "[common]");
-        case .editors;          map_action(action_name, key_sequence, ACTIONS_EDITORS,          *result.config.keymap_editors,          "[editors]");
-        case .open_file_dialog; map_action(action_name, key_sequence, ACTIONS_OPEN_FILE_DIALOG, *result.config.keymap_open_file_dialog, "[open file dialog]");
-        case .search_dialog;    map_action(action_name, key_sequence, ACTIONS_SEARCH_DIALOG,    *result.config.keymap_search_dialog,    "[search dialog]");
+    if active_subsection == {
+        case .keymap_common;            map_action(action_name, key_sequence, ACTIONS_COMMON,           *result.config.keymap_common,           "[common]");
+        case .keymap_editors;           map_action(action_name, key_sequence, ACTIONS_EDITORS,          *result.config.keymap_editors,          "[editors]");
+        case .keymap_open_file_dialog;  map_action(action_name, key_sequence, ACTIONS_OPEN_FILE_DIALOG, *result.config.keymap_open_file_dialog, "[open file dialog]");
+        case .keymap_search_dialog;     map_action(action_name, key_sequence, ACTIONS_SEARCH_DIALOG,    *result.config.keymap_search_dialog,    "[search dialog]");
     }
 
     if context.parse_for_highlighting && !line_parsed_with_error {
@@ -810,8 +812,7 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string, line: string
             case;
                 valid_mod_key = false;
                 if !context.parse_for_highlighting {
-                    error_msg := log_parser_error(handler, "Unknown modifier key '%'", mod_key);
-                    return combo, false, error_msg;
+                    return combo, false, tprint("Unknown modifier key '%'", mod_key);
                 } else {
                     add_highlight(parser, cast(s64)(mod_key.data - line.data), mod_key.count, .error);
                     line_parsed_with_error = true;
@@ -825,8 +826,7 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string, line: string
     key_string := modifier_string;
     if !key_string {
         add_highlight(parser, 0, line.count, .error);
-        error_msg := log_parser_error(handler, "Missing key code after modifier flags: '%'", key_name);
-        return combo, false, error_msg;
+        return combo, false, tprint("Missing key code after modifier flags: '%'", key_name);
     }
 
     combo.key_code = keymap_map_key_string(key_string);
@@ -838,8 +838,7 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string, line: string
         if success != .CONVERSION_OK {
             add_highlight(parser, cast(s64)(key_string.data - line.data), key_string.count, .error);
             line_parsed_with_error = true;
-            error_msg := log_parser_error(handler, "Line contains invalid UTF-8");
-            return combo, false, error_msg;
+            return combo, false, tprint("Line contains invalid UTF-8");
         }
 
         if (key_code >= #char "a") && (key_code <= #char "z") {
@@ -850,8 +849,7 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string, line: string
         if s.count > 0 {
             // There are extra characters, report an error
             if !context.parse_for_highlighting {
-                error_msg := log_parser_error(handler, "Expected a single char key code or a valid key name, got: '%'.", key_string);
-                return combo, false, error_msg;
+                return combo, false, tprint("Expected a single char key code or a valid key name, got: '%'.", key_string);
             } else {
                 add_highlight(parser, cast(s64)(key_string.data - line.data), key_string.count, .error);
                 line_parsed_with_error = true;
@@ -867,23 +865,43 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string, line: string
     return combo, true, "";
 }
 
-platform_parse_config_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string {
-    if begins_with(line, "[") {
-        found, index := array_find(PLATFORM_SUBSECTION_NAMES, line);
-        if found {
-            platform_subsection = xx index;
-            section_offset = line_start_offset;
-            add_highlight(parser, 0, line.count, .header);
-            return true, "";
-        } else {
+parse_linux_config_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string {
+    add_highlight(parser, 0, line.count, .default);
+
+    setting, value := break_by_spaces(line);
+    setting = trim_right(setting, ":");
+
+    result.config.linux.scaling_factor = 0.0;
+
+    if setting == {
+        case "scaling_factor";
+            val := value;  // parse_float destroys the string
+            f_val, success := parse_float(*val);
+            if !success {
+                add_highlight(parser, xx (value.data - line.data), value.count, .error);
+                return true, tprint("Couldn't parse '%' - expected a valid float, got '%'", setting, value);
+            }
+            // @TODO: scaling factors under 1.0 break the editor widget on Wayland,
+            //        investigate why this happens
+            lower_limit := ifx DEBUG then 0.5 else 1.0;
+            if (f_val != 0.0) && (f_val < lower_limit || f_val > 5.0) {
+                add_highlight(parser, xx (value.data - line.data), value.count, .error);
+                return true, tprint("Couldn't parse '%' - value out of the expected range ([% ... 5.0])", lower_limit, setting);;
+            }
+            result.config.linux.scaling_factor = f_val;
+
+        case "explorer_command";
+            result.config.linux.explorer_command = value;
+
+        case "explorer_reveal_command";
+            result.config.linux.explorer_reveal_command = value;
+
+        case;
             add_highlight(parser, 0, line.count, .error);
-            error_msg := log_parser_error(handler, "Unknown platform subsection '%'.\nAvailable options are: %.", line, join(..PLATFORM_SUBSECTION_NAMES, ", ", allocator = temp));
-            return false, error_msg;
-        }
+            return true, tprint("Unknown setting '%' in section [[linux]]", setting);
     }
-    success, error_msg := platform_parse_config_line(*result.config.platform, platform_subsection, line);
-    // if !success log_parser_error(handler.full_path, handler.line_number, error_msg);
-    return success, error_msg;
+
+    return true, "";
 }
 
 
@@ -920,7 +938,7 @@ Parsed_Config :: struct {
     // Build commands
     build: Build_Config;
 
-    platform: Platform_Config;
+    linux: Linux_Config;
 };
 
 Config_Parse_Result :: struct {
@@ -928,8 +946,8 @@ Config_Parse_Result :: struct {
     success:    bool;
     error_msg:  string;         // temp
     warnings:   [..] string;
-    warnings.allocator = temp;  // I love jai
     highlights: [..] Code_Highlight;
+    warnings.allocator   = temp;  // I love jai
     highlights.allocator = temp;
 }
 
@@ -939,6 +957,14 @@ Parsed_Color :: struct {
 }
 
 #scope_file
+
+Config_Section :: struct {
+    name: string;
+    parse_function: string;
+    // parse_function: #type (parser: *Config_Parser, line: string) -> success: bool, error: string;
+    subsections: [] string;
+    allow_arbitrary_subsections := false;
+}
 
 Config_Parser :: struct {
     handler: Text_File_Handler;
@@ -957,64 +983,61 @@ Config_Parser :: struct {
 
     result: Config_Parse_Result;  // will be filled during parsing
 
-    top_section: enum {
-        none;
-        workspace;
-        keymap;
-        settings;
-        style;
-        platform;
-        build_commands;
-    } = .none;
+    active_section:    Section    = .none;
+    active_subsection: Subsection = .none;
+    seen_sections:     Seen_Sections;
+    seen_subsections:  Seen_Subsections;
+}
 
-    seen_top_sections: enum_flags {
-        workspace;
-        keymap;
-        settings;
-        style;
-        platform;
-        build_commands;
-    };
+#insert -> string {
+    b: String_Builder;
 
-    workspace_subsection: enum {
-        workspace_dirs;
-        ignore_dirs;
-        allow_file_extensions;
-        ignore_file_extensions;
-    };
-    WORKSPACE_SUBSECTIONS :: string.[
-        // Must match the order of the enum above
-        "[workspace dirs]",
-        "[ignore dirs]",
-        "[allow file extensions]",
-        "[ignore file extensions]",
-    ];
+    // Section
+    append(*b, "Section :: enum {\n");
+    append(*b, "    none;\n");
+    for section : CONFIG_SECTIONS {
+        print_to_builder(*b, "    %;\n", replace(section.name, " ", "_"));
+    }
+    append(*b, "}\n");
 
-    style_subsection: enum {
-        user_interface;
-        colors;
-    };
-    STYLE_SUBSECTIONS :: string.[
-        // Must match the order of the enum above
-        "[user interface]",
-        "[colors]",
-    ];
+    // Subsection
+    append(*b, "Subsection :: enum {\n");
+    append(*b, "    none;\n");
+    for section : CONFIG_SECTIONS {
+        print_to_builder(*b, "    %;\n", replace(section.name, " ", "_"));
+        for subsection : section.subsections {
+            print_to_builder(*b, "    %_%;\n", replace(section.name, " ", "_"), replace(subsection, " ", "_"));
+        }
+    }
+    append(*b, "}\n");
 
-    keymap_subsection: enum {
-        common;
-        editors;
-        open_file_dialog;
-        search_dialog;
-    };
-    KEYMAP_SUBSECTIONS :: string.[
-        // Must match the order of the enum above
-        "[common]",
-        "[editors]",
-        "[open file dialog]",
-        "[search dialog]",
-    ];
+    // Seen sections
+    append(*b, "Seen_Sections :: enum_flags {\n");
+    for section : CONFIG_SECTIONS {
+        print_to_builder(*b, "    %;\n", replace(section.name, " ", "_"));
+    }
+    append(*b, "}\n");
 
-    platform_subsection: PLATFORM_SUBSECTION_ENUM;
+    // Seen subsections
+    append(*b, "Seen_Subsections :: enum_flags {\n");
+    for section : CONFIG_SECTIONS {
+        print_to_builder(*b, "    %;\n", replace(section.name, " ", "_"));
+        for subsection : section.subsections {
+            print_to_builder(*b, "    %_%;\n", replace(section.name, " ", "_"), replace(subsection, " ", "_"));
+        }
+    }
+    append(*b, "}\n");
+
+    // Sections allowing top level lines
+    append(*b, "SECTIONS_ALLOWING_LINES_AT_TOP_LEVEL :: Section.[\n");
+    for section : CONFIG_SECTIONS {
+        if !section.subsections {
+            print_to_builder(*b, "    .%,\n", replace(section.name, " ", "_"));
+        }
+    }
+    append(*b, "];\n");
+
+    return builder_to_string(*b);
 }
 
 Seen_Setting :: struct {

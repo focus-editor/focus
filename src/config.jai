@@ -86,7 +86,8 @@ refresh_config :: (path: string) {
     }
 
     dont_ignore_next_window_resize = true;
-    platform_apply_config(*config.platform);
+
+    platform_apply_config(*config);
 }
 
 is_our_config_file :: (path: string) -> bool {
@@ -179,8 +180,8 @@ load_and_merge_config :: (file_path: string, into: Config, hash: *u64) -> succes
         return false, false, false;
     }
     if result.warnings {
-        add_user_warning(tprint("Config file % loaded with warnings", file_path), dismiss_in_seconds = 60);
-        for result.warnings add_user_error(it, dismiss_in_seconds = 60);
+        add_success_message(tprint("Config file % loaded with warnings", file_path), dismiss_in_seconds = 60);
+        for result.warnings add_user_warning(it, dismiss_in_seconds = 60);
     }
 
     // Merge configs
@@ -295,7 +296,7 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     }
 
     // Platform config
-    platform_copy_config(*parsed.platform, *dst.platform);
+    dst.linux = parsed.linux;
 }
 
 load_font_by_name :: (name: string) -> font_data: string, success: bool {
@@ -331,7 +332,13 @@ Config :: struct {
     style:     Style;
     colors:    Color_Values;
     build:     Build_Config;
-    platform:  Platform_Config;
+    linux:     Linux_Config;
+}
+
+Linux_Config :: struct {
+    scaling_factor: float = 0.0;
+    explorer_command: string;
+    explorer_reveal_command: string;
 }
 
 Workspace :: struct {
@@ -427,16 +434,16 @@ EXAMPLE_PROJECT_CONFIG_NAME :: "example-project.focus-config";
 
 #scope_export
 
-DEFAULT_CONFIG :: #run -> Config {
+DEFAULT_CONFIG :: #run,stallable -> Config {
     result := parse_config("Default Config", DEFAULT_CONFIG_NAME, DEFAULT_CONFIG_FILE_DATA);
-    assert(result.success, "Couldn't parse the default config file '%'", DEFAULT_CONFIG_NAME);
+    assert(result.success, "Couldn't parse the default config file '%'. Error: %", DEFAULT_CONFIG_NAME, result.error_msg);
     default_config: Config;
     merge_configs(*default_config, result.config);
     return default_config;
 };
 
 // Validate the example project config
-#run {
+#run,stallable {
     result := parse_config("Example Project Config", EXAMPLE_PROJECT_CONFIG_NAME, EXAMPLE_PROJECT_FILE_DATA);
     assert(result.success, "Couldn't parse the example project config file '%'", EXAMPLE_PROJECT_CONFIG_NAME);
 }

@@ -1,16 +1,4 @@
-PLATFORM_CONFIG_SECTION :: "[[macos]]";
-PLATFORM_SUBSECTION_ENUM :: enum {}
-PLATFORM_SUBSECTION_NAMES :: string.[];
-Platform_Config :: struct {}
-
-platform_parse_config_line :: (config: *Platform_Config, section: PLATFORM_SUBSECTION_ENUM, line: string) -> success: bool, error_msg: string {
-    return true, "";
-}
-
-platform_apply_config :: inline (config: *Platform_Config) {
-}
-
-platform_copy_config :: (src: *Platform_Config, dst: *Platform_Config) {
+platform_apply_config :: inline (config: *Config) {
 }
 
 platform_setup :: inline () {

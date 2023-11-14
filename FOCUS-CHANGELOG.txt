@@ -1,7 +1,6 @@
 # ROUGH ROADMAP
 
 - A simple build system to launch commands from the editor
-- Config highlighting improvements
 - Config migration system to support changes to the config file across versions
 - Open file dialog improvements (better search)
 - Workspace search improvements (the ability to filter additionally by filename)
@@ -85,6 +84,7 @@
     + When the workspace is done scanning, the open file dialog input will no longer be cleared
     + Limited Windows 7 support (no dpi awareness)
     + Better word detection by commands that move cursors by word
+    + Config highlighting has become smarter and hopefully more helpful
 
 
 
