@@ -85,9 +85,9 @@ parse_config :: (name: string, filename: string, file_data: string, for_highligh
         }
 
         // Check if we allow lines outside of subsection
-        if active_subsection == .none && !array_find(SECTIONS_ALLOWING_LINES_AT_TOP_LEVEL, active_section) {
+        if active_subsection == .none && !section_allows_lines_outside_subsection(active_section) {
             add_highlight(*parser, 0, line.count, .error);
-            error_msg := log_parser_error(handler, "A keymap line is specified outside of a subsection: '%'. This is an error.", line);
+            error_msg := log_parser_error(handler, "Line outside of subsection: '%'. This is an error.", line);
             array_add(*result.warnings, error_msg);  // not a big deal
             continue;
         }
@@ -341,6 +341,17 @@ maybe_switch_section :: (using parser: *Config_Parser, line: string) -> error: s
         if !ends_with(line, "]") return tprint("Invalid subsection '%'. Subsection definitions must end with ]", line);
         subsection_name := trim(line, " \t[]");
 
+        if !section_allows_arbitrary_subsections(active_section) {
+            section := CONFIG_SECTIONS[active_section];
+            if !array_find(section.subsections, subsection_name) {
+                if section.subsections {
+                    return tprint("Unknown subsection of [[%]]: '%'.\nAvailable options: [%].", section.name, line, join(..section.subsections, "], [", allocator = temp));
+                } else {
+                    return tprint("Unexpected subsection of [[%]]: '%'. This section doesn't allow any subsections.", section.name, line);
+                }
+            }
+        }
+
         #insert -> string {
             b: String_Builder;
             append(*b, "if subsection_name == {\n");
@@ -356,11 +367,6 @@ maybe_switch_section :: (using parser: *Config_Parser, line: string) -> error: s
                     print_to_builder(*b, code, subsection, replace(tprint("%_%", section.name, subsection), " ", "_"));
                 }
             }
-            code := #string JAI
-                case;
-                    return tprint("Unknown subsection %%", line);
-            JAI;
-            print_to_builder(*b, code);
             append(*b, "}\n");
             return builder_to_string(*b);
         }
@@ -812,7 +818,7 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string, line: string
             case;
                 valid_mod_key = false;
                 if !context.parse_for_highlighting {
-                    return combo, false, tprint("Unknown modifier key '%'", mod_key);
+                    return combo, false, tprint("Unknown modifier key '%'. Allowed modifiers: Ctrl, Shift, Alt, Meta, Super, Cmd.", mod_key);
                 } else {
                     add_highlight(parser, cast(s64)(mod_key.data - line.data), mod_key.count, .error);
                     line_parsed_with_error = true;
@@ -904,6 +910,16 @@ parse_linux_config_line :: (using parser: *Config_Parser, line: string) -> succe
     return true, "";
 }
 
+section_allows_lines_outside_subsection :: inline (section: Section) -> bool {
+    // Right now it's enough to check that no subsections are defined.
+    // That could change though, in which case we'll need a separate flag
+    return CONFIG_SECTIONS[section].subsections.count == 0;
+}
+
+section_allows_arbitrary_subsections :: inline (section: Section) -> bool {
+    return CONFIG_SECTIONS[section].allow_arbitrary_subsections;
+}
+
 
 #scope_export
 
@@ -938,6 +954,7 @@ Parsed_Config :: struct {
     // Build commands
     build: Build_Config;
 
+    // Platform-specific
     linux: Linux_Config;
 };
 
@@ -961,7 +978,6 @@ Parsed_Color :: struct {
 Config_Section :: struct {
     name: string;
     parse_function: string;
-    // parse_function: #type (parser: *Config_Parser, line: string) -> success: bool, error: string;
     subsections: [] string;
     allow_arbitrary_subsections := false;
 }
@@ -994,9 +1010,9 @@ Config_Parser :: struct {
 
     // Section
     append(*b, "Section :: enum {\n");
-    append(*b, "    none;\n");
+    append(*b, "    none :: -1;\n");
     for section : CONFIG_SECTIONS {
-        print_to_builder(*b, "    %;\n", replace(section.name, " ", "_"));
+        print_to_builder(*b, "    % :: %;\n", replace(section.name, " ", "_"), it_index);
     }
     append(*b, "}\n");
 
@@ -1027,15 +1043,6 @@ Config_Parser :: struct {
         }
     }
     append(*b, "}\n");
-
-    // Sections allowing top level lines
-    append(*b, "SECTIONS_ALLOWING_LINES_AT_TOP_LEVEL :: Section.[\n");
-    for section : CONFIG_SECTIONS {
-        if !section.subsections {
-            print_to_builder(*b, "    .%,\n", replace(section.name, " ", "_"));
-        }
-    }
-    append(*b, "];\n");
 
     return builder_to_string(*b);
 }
