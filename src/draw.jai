@@ -1427,7 +1427,7 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
         label: string;
         if platform_path_equals(buffer.file.full_path, global_config_path) {
             label = "[current global config]";
-        } else if platform_path_equals(buffer.file.full_path, project_config_path) {
+        } else if project_config_path && platform_path_equals(buffer.file.full_path, project_config_path) {
             label = "[current project config]";
         }
         if label {

@@ -92,7 +92,6 @@ platform_path_contains :: inline (path: string, subpath: string) -> bool {
 }
 
 platform_set_border_color :: inline () {
-
 }
 
 platform_show_cursor :: (show: bool) {
@@ -100,6 +99,10 @@ platform_show_cursor :: (show: bool) {
         NSCursor.unhide();
     else
         NSCursor.hide();
+}
+
+platform_get_troubleshooting_info :: () -> string {
+    return copy_string("<not implemented>");
 }
 
 #scope_file

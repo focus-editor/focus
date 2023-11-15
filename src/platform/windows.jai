@@ -251,6 +251,10 @@ platform_show_cursor :: (show: bool) {
     }
 }
 
+platform_get_troubleshooting_info :: () -> string {
+    return copy_string("<not implemented>");
+}
+
 #scope_file
 
 cursor_shown : s32 = 1;

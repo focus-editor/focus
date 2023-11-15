@@ -90,6 +90,11 @@ DONE;
     assert(active_backend != .UNINITIALIZED);
 
     timer = LD.timer_create();
+
+    system_info.ld_backend_choice = backend;
+    system_info.ld_backend = LD.active_backend();
+    system_info.ld_gl_backend_choice = gl_backend;
+    system_info.ld_gl_backend = LD.active_gl_backend();
 }
 
 platform_data_dir :: () -> string {
@@ -228,11 +233,162 @@ platform_path_contains :: inline (path: string, subpath: string) -> bool {
 }
 
 platform_set_border_color :: inline () {
-
 }
 
 platform_show_cursor :: (show: bool) {
+}
 
+platform_get_troubleshooting_info :: () -> string {
+    using LD.GL.gl_procs;
+
+    system_info.ld_gl_backend = LD.active_gl_backend();
+
+    env_check :: (sb: *String_Builder, name: *u8) {
+        val := getenv(name);
+        print_to_builder(sb, "  % : %\n", to_string(name), ifx val then to_string(val) else "<not set>");
+    }
+
+    gl_string :: (id: GLenum) -> string {
+        using LD.GL.gl_procs;
+        str_raw := glGetString(id);
+        return ifx str_raw then to_string(str_raw) else tprint("<GL error %>", glGetError());
+    }
+
+    gl_get_extensions :: (sb: *String_Builder) {
+        using LD.GL.gl_procs;
+        extension_count: u32;
+        extension: u32;
+        glGetIntegerv(GL_NUM_EXTENSIONS, xx *extension_count);
+
+        print_to_builder(sb, "  extensions (%):\n", extension_count);
+        width := 0;
+        while extension < extension_count {
+            ext_raw := glGetStringi(GL_EXTENSIONS, extension);
+            if !ext_raw {
+                print_to_builder(sb, "    >>> glGetStringi(GL_EXTENSIONS, %): %\n", extension, glGetError());
+                break;
+            }
+            ext := to_string(ext_raw);
+            if !width print_to_builder(sb, "    ");
+            if extension && width {
+                print_to_builder(sb, ", ");
+                width += 2;
+            }
+            if width + ext.count < 100 {
+                print_to_builder(sb, "%", ext);
+                width += ext.count;
+            } else {
+                print_to_builder(sb, "\n");
+                width = 0;
+            }
+
+            extension += 1;
+            if extension >= extension_count print_to_builder(sb, "\n");
+        }
+    }
+
+    get_loaded_libs :: (sb: *String_Builder) {
+        #import "String";
+
+        fd := open("/proc/self/maps", O_RDONLY);
+        if fd < 0 {
+            print_to_builder(sb, "Failed to open '/proc/self/maps': %\n", errno());
+            return;
+        }
+        defer close(fd);
+
+        data: [..] u8;
+        buff: [4096] u8;
+        defer array_reset(*data);
+
+        while true {
+            rs := read(fd, buff.data, buff.count);
+            if rs < 0 {
+                print_to_builder(sb, "Failed to read data from '/proc/self/maps': %\n", errno());
+                return;
+            }
+            if !rs break;
+            array_reserve(*data, data.count + rs);
+            memcpy(data.data + data.count, buff.data, rs);
+            data.count += rs;
+        }
+
+        libs: [..] string;
+        lines := split(to_string(data.data, data.count), "\n");
+        for line : lines {
+            parts := split(line, " ", 6);
+            if parts.count != 6 continue;
+            if parts[1].count != 4 continue;
+            if parts[1][2] != #char "x" continue;
+
+            lib := trim(parts[5]);
+            if !starts_with(lib, "/") continue;
+
+            found := false;
+            for l : libs {
+                if l == lib {
+                    found := true;
+                    break;
+                }
+            }
+            if !found array_add(*libs, lib);
+        }
+
+        for libs  print_to_builder(sb, "  %\n", it);
+        array_reset(*libs);
+    }
+
+    sb: String_Builder;
+
+    print_to_builder(*sb, "Kernel:\n");
+    result, output := run_command("uname", "-a", capture_and_return_output = true);
+    print_to_builder(*sb, "  %\n", ifx result.exit_code == 0 then trim(output) else tprint(">> failed to run `uname -a`: %", result));
+    free(output);
+
+    print_to_builder(*sb, "OS information:\n");
+    os_data, ok := read_entire_file("/etc/os-release");
+    if !ok {
+        print_to_builder(*sb, "  >> failed to read '/etc/os-release'\n");
+    } else {
+        lines := split(os_data, "\n");
+        for lines {
+            line := trim(it);
+            if line print_to_builder(*sb, "  %\n", line);
+        }
+        free(os_data);
+    }
+    print_to_builder(*sb, "\n");
+
+    print_to_builder(*sb, "Interesting things in the environment:\n");
+    env_check(*sb, "FOCUS_LD_BACKEND");
+    env_check(*sb, "FOCUS_LD_GL_BACKEND");
+    env_check(*sb, "LD_LIBRARY_PATH");
+    env_check(*sb, "LD_PRELOAD");
+    env_check(*sb, "PATH");
+    print_to_builder(*sb, "\n");
+
+    print_to_builder(*sb, "Loaded libraries:\n");
+    get_loaded_libs(*sb);
+    print_to_builder(*sb, "\n");
+
+    print_to_builder(*sb, "Linux_Display information:\n");
+    print_to_builder(*sb, "  desired backend    : %\n", system_info.ld_backend_choice);
+    print_to_builder(*sb, "  active backend     : %\n", system_info.ld_backend);
+    print_to_builder(*sb, "  desired GL backend : %\n", system_info.ld_gl_backend_choice);
+    print_to_builder(*sb, "  active GL backend  : %\n", system_info.ld_gl_backend);
+    print_to_builder(*sb, "\n");
+
+    print_to_builder(*sb, "OpenGL Information:\n");
+    print_to_builder(*sb, "  vendor       : %\n", gl_string(GL_VENDOR));
+    print_to_builder(*sb, "  renderer     : %\n", gl_string(GL_RENDERER));
+    print_to_builder(*sb, "  version      : %\n", gl_string(GL_VERSION));
+    print_to_builder(*sb, "  GLSL version : %\n", gl_string(GL_SHADING_LANGUAGE_VERSION));
+    gl_get_extensions(*sb);
+    print_to_builder(*sb, "\n");
+
+    ret := builder_to_string(*sb);
+    log("Troubleshooting data: % bytes", ret.count);
+    return ret;
 }
 
 #scope_file
@@ -271,3 +427,11 @@ Linux_Icon :: struct {
 }
 
 timer: LD.Timer;
+
+Linux_System_Info :: struct {
+    ld_backend_choice: LD.BACKEND_CHOICE;
+    ld_backend: LD.ACTIVE_BACKEND;
+    ld_gl_backend_choice: LD.GL_BACKEND_CHOICE;
+    ld_gl_backend: LD.GL_BACKEND;
+}
+system_info: Linux_System_Info;

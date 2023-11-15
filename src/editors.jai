@@ -456,6 +456,27 @@ editors_show_default_config :: (placement: Editor_Placement) {
     editors_open_buffer(global_config_buffer_id, placement);
 }
 
+editors_show_troubleshooting_info :: (placement: Editor_Placement) {
+    if global_troubleshooting_buffer_id < 0 {
+        global_troubleshooting_buffer_id = find_or_create_an_empty_buffer();
+        buffer := *open_buffers[global_troubleshooting_buffer_id];
+        buffer.readonly = true;
+        buffer.lang = .Plain_Text;
+        buffer.file.name = "Troubleshooting info";
+        buffer.file.icon = .debug;
+        buffer.has_file = true;
+    }
+
+    buffer := *open_buffers[global_troubleshooting_buffer_id];
+    info := platform_get_troubleshooting_info();
+    replace_range_raw(buffer, 0, xx buffer.bytes.count, info);
+    free(info);
+    buffer.meow_hash = calculate_hash(buffer.bytes);
+    rescan_for_lines(buffer);
+
+    editors_open_buffer(global_troubleshooting_buffer_id, placement);
+}
+
 editors_create_new_file :: (placement: Editor_Placement = .in_place) {
     buffer_id := find_or_create_an_empty_buffer();
 
@@ -3514,6 +3535,7 @@ cursor_blink_start: Time;
 cursors_blinking := false;
 
 global_config_buffer_id := -1;
+global_troubleshooting_buffer_id := -1;
 
 CURSOR_BLINK_SPEED_MS   :: 500;
 
