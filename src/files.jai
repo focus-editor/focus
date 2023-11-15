@@ -224,4 +224,6 @@ File_Icon :: enum u16 {
 
     save    :: 0xf019;
     dots    :: 0xf141;
+
+    debug   :: 0xf7d9;
 }
