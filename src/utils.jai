@@ -418,6 +418,39 @@ ends_with :: inline (s: string, ch: u8) -> bool {
     return (s.count >= 1) && (s[s.count - 1] == ch);
 }
 
+// a version of `split()` from the `String` module that returns an array with a maximum
+// number of elements
+split :: (s: string, separator: $T, max_splits: int, allocator := temp) -> [] string {
+    #assert (T == u8) || (T == string);
+
+    results: [..] string;
+    results.allocator = allocator;
+
+    if max_splits < 1 return results;
+
+    remainder := s;
+    while remainder {
+        if results.count >= max_splits - 1 {
+            array_add(*results, remainder);
+            break;
+        }
+
+        found, left, right := split_from_left(remainder, separator);
+        if found {
+            array_add(*results, left);
+        } else {
+            array_add(*results, remainder);
+            break;
+        }
+
+        remainder = right;
+    }
+
+    if !remainder && results.count < max_splits array_add(*results, "");
+
+    return results;
+}
+
 Tween_Animation :: struct(T: Type) {
     start, target: T;
     started_at: Time;
