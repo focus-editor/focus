@@ -264,6 +264,8 @@ main :: () {
                 }
             }
 
+            if !handled then handled = maybe_execute_a_build_command(event);
+
             if handled && event.type == .KEYBOARD then num_text_input_events_to_ignore = event.text_input_count;
         }
 
@@ -351,10 +353,22 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
 
         // TODO: search_in_buffer
         case .search_in_project;
-            if active_global_widget == .editors then finder_open_from_editor(); else finder_open();
-            return true;
+            if active_global_widget == .editors then finder_open_from_editor(); else finder_open();                 return true;
     }
     return false;
+}
+
+maybe_execute_a_build_command :: (event: Input.Event) -> handled: bool {
+    action := map_event_to_action(event, Action_Build);
+    if action == INVALID_KEYMAP_ACTION return false;
+
+    command_id := cast(s64) action;
+    assert(command_id <= config.build.commands.count, "A keymap was bound to a nonexistent build command %. Number of build commands: %. This is a bug", command_id, config.build.commands.count);
+
+    command := ifx command_id > 0 then *config.build.commands[command_id-1] else *config.build.defaults;
+    print("Executing build command: [%]\n", command.name);
+
+    return true;
 }
 
 init_fonts_and_dependent_things :: () {

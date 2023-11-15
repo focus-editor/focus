@@ -246,6 +246,9 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
         dst.workspace.ignore_file_extension_wildcards = parsed.ignore_file_extension_wildcards;
     }
 
+    // Build config completely overrides the previous config if present
+    if parsed.build.commands then dst.build = parsed.build;
+
     // Keymap
     merge_keymaps :: (dst_keymap: *[] Key_Mapping, src_keymap: *[..] Key_Mapping) #expand {
         if !src_keymap return;
@@ -390,6 +393,8 @@ Keymap :: struct {
     editors:          [] Key_Mapping;
     open_file_dialog: [] Key_Mapping;
     search_dialog:    [] Key_Mapping;
+
+    build:            [] Key_Mapping;  // treated specially, it's not in the keymap config, but in the build config for convenience
 }
 
 Style :: struct {
@@ -398,11 +403,14 @@ Style :: struct {
 }
 
 Build_Config :: struct {
-    commands: [..] Command;
     defaults: Command;
+    defaults.name = "Default Build Command";
+    commands: [..] Command;
+    keymap: [..] Key_Mapping;  // separate from the other keymaps because it should never merge with the previous config
+                               // (because the build commands don't merge so we can't use the previous config's keymaps)
 
     Command :: struct {
-        name:                   string;
+        name:                   string; @DontParse
 
         build_command:          string;
         build_working_dir:      string;

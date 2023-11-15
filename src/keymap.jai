@@ -1,7 +1,9 @@
+INVALID_KEYMAP_ACTION :: 0xFFFF;
+
 map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mapping {
     using key_sequence_input_state;
 
-    invalid_action := cast(Action) 0xFFFF;
+    invalid_action := cast(Action) INVALID_KEYMAP_ACTION;
     invalid_mapping := Key_Mapping.{};
 
     if event.type != .KEYBOARD return invalid_action, invalid_mapping;
@@ -166,6 +168,8 @@ get_keymap_for_action_type :: ($Action: Type) -> [] Key_Mapping #expand {
         return config.keymap.open_file_dialog;
     } else #if Action == Action_Search_Dialog {
         return config.keymap.search_dialog;
+    } else #if Action == Action_Build {
+        return config.build.keymap;
     } else {
         #assert(false, "In map_event_to_action, the passed action type is not supported.");
     }
@@ -256,6 +260,8 @@ Key_Combo :: struct {
 
     return builder_to_string(*b);
 }
+
+Action_Build :: #type,distinct u32;  // holds the index of the build command in the list
 
 ACTIONS_COMMON :: string.[
     "do_nothing",   // to disable key combinations (DEPRECATED). TODO: auto-remove when we have a config migration system

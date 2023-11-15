@@ -618,6 +618,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
             case "key_binding";
                 key_sequence, error_msg := parse_key_sequence(parser, setting_value, line);
                 if !key_sequence return true, tprint("Invalid key combination: '%'. Error: %", setting_value, error_msg);
+                add_keymap_for_build_command(*result.config.build, key_sequence);
             case;
                 add_highlight(parser, 0, line.count, .error);
                 return true, tprint("Unrecognized build command option '%'.", setting_name);
@@ -649,6 +650,21 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
     }
 
     return true, "";
+}
+
+add_keymap_for_build_command :: (build_config: *Build_Config, key_sequence: [] Key_Combo) {
+    current_command := cast(u32) build_config.commands.count;  // indexed starting from 1 (0 is reserved for the default one)
+
+    for * build_config.keymap {
+        if it.action == current_command {
+            // Handle the rare case when the user specified 2 key bindings for the same action,
+            // in this case we just use the most recent one, which matches existing duplicate highlighting
+            it.key_sequence = key_sequence;
+            return;
+        }
+    }
+
+    array_add(*build_config.keymap, Key_Mapping.{ key_sequence, current_command });
 }
 
 parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {

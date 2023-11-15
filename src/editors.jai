@@ -85,41 +85,41 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         action := map_event_to_action(event, Action_Search_Dialog);
 
         if action == {
-            case .toggle_expand;                    search_bar_toggle_expand(editor);                                             return true;
-            case .toggle_case_sensitive;            search_bar_toggle_case_sensitive(editor, buffer);                             return true;
-            case .toggle_whole_word;                search_bar_toggle_whole_word(editor, buffer);                                 return true;
-            case .toggle_regex_search;              search_bar_toggle_regex_search(editor, buffer);                               return true;
+            case .toggle_expand;                    search_bar_toggle_expand(editor);                                                   return true;
+            case .toggle_case_sensitive;            search_bar_toggle_case_sensitive(editor, buffer);                                   return true;
+            case .toggle_whole_word;                search_bar_toggle_whole_word(editor, buffer);                                       return true;
+            case .toggle_regex_search;              search_bar_toggle_regex_search(editor, buffer);                                     return true;
 
-            case .search_in_buffer;                 open_search_bar(editor, buffer, remember_cursor_position = false);            return true;
-            case .search_in_buffer_dropdown_mode;   open_search_bar(editor, buffer, .dropdown, remember_cursor_position = false); return true;
+            case .search_in_buffer;                 open_search_bar(editor, buffer, remember_cursor_position = false);                  return true;
+            case .search_in_buffer_dropdown_mode;   open_search_bar(editor, buffer, .dropdown, remember_cursor_position = false);       return true;
 
-            case .move_up;                          search_bar_move_cursor(editor, buffer, -1, wrap = true);                      return true;
-            case .move_down;                        search_bar_move_cursor(editor, buffer,  1, wrap = true);                      return true;
-            case .move_up_fast;                     search_bar_move_cursor(editor, buffer, -5);                                   return true;
-            case .move_down_fast;                   search_bar_move_cursor(editor, buffer,  5);                                   return true;
+            case .move_up;                          search_bar_move_cursor(editor, buffer, -1, wrap = true);                            return true;
+            case .move_down;                        search_bar_move_cursor(editor, buffer,  1, wrap = true);                            return true;
+            case .move_up_fast;                     search_bar_move_cursor(editor, buffer, -5);                                         return true;
+            case .move_down_fast;                   search_bar_move_cursor(editor, buffer,  5);                                         return true;
 
-            case .close_current_editor;             close_search_bar(editor); close_editor(.current);                                  return true;
-            case .close_other_editor;               close_editor(.other);                                                              return true;
-            case .close_left_editor;                if editors.active == editors.left  close_search_bar(editor); close_editor(.left);  return true;
-            case .close_right_editor;               if editors.active == editors.right close_search_bar(editor); close_editor(.right); return true;
+            case .close_current_editor;             close_search_bar(editor); close_editor(.current);                                   return true;
+            case .close_other_editor;               close_editor(.other);                                                               return true;
+            case .close_left_editor;                if editors.active == editors.left  close_search_bar(editor); close_editor(.left);   return true;
+            case .close_right_editor;               if editors.active == editors.right close_search_bar(editor); close_editor(.right);  return true;
         }
 
         if mode == .classic {
             if action == {
-                case .close_dialog;                 close_search_bar(editor);                                return true;
-                case .open_entry_in_place;          search_bar_move_cursor(editor, buffer,  1, wrap = true); return true;
+                case .close_dialog;                 close_search_bar(editor);                                       return true;
+                case .open_entry_in_place;          search_bar_move_cursor(editor, buffer,  1, wrap = true);        return true;
             }
         } else {
             if action == {
-                case .close_dialog;                 close_search_bar(editor, jump_to_original_cursor = true);      return true;
+                case .close_dialog;                 close_search_bar(editor, jump_to_original_cursor = true);       return true;
 
-                case .move_up_one_page;             search_bar_move_cursor(editor, buffer, -per_page);             return true;
-                case .move_down_one_page;           search_bar_move_cursor(editor, buffer,  per_page);             return true;
+                case .move_up_one_page;             search_bar_move_cursor(editor, buffer, -per_page);              return true;
+                case .move_down_one_page;           search_bar_move_cursor(editor, buffer,  per_page);              return true;
 
-                case .open_entry_in_place;          close_search_bar(editor, jump_to_selected_result = true);      return true;
-                case .open_entry_on_the_side;       search_bar_open_selected_result(editor, buffer, .on_the_side); return true;
-                case .open_entry_on_the_left;       search_bar_open_selected_result(editor, buffer, .left);        return true;
-                case .open_entry_on_the_right;      search_bar_open_selected_result(editor, buffer, .right);       return true;
+                case .open_entry_in_place;          close_search_bar(editor, jump_to_selected_result = true);       return true;
+                case .open_entry_on_the_side;       search_bar_open_selected_result(editor, buffer, .on_the_side);  return true;
+                case .open_entry_on_the_left;       search_bar_open_selected_result(editor, buffer, .left);         return true;
+                case .open_entry_on_the_right;      search_bar_open_selected_result(editor, buffer, .right);        return true;
             }
         }
         return false;
