@@ -342,8 +342,6 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .show_commands;                                    show_commands_dialog();                             return true;
         case .toggle_fullscreen;                                editor_toggle_fullscreen();                         return true;
 
-        case .dump_key_mappings;                                dump_key_mappings();                                return true;
-
         case .move_to_previous_editor_history;                  move_to_previous_editor_history();                  return true;
         case .move_to_next_editor_history;                      move_to_next_editor_history();                      return true;
 

@@ -45,21 +45,6 @@ map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mappin
     return invalid_action, invalid_mapping;
 }
 
-dump_key_mappings :: () {
-    dump_keys :: (title: string, key_mapping: []Key_Mapping, action_type: Type) #expand {
-        print("\n%\n", title);
-        for keymap: key_mapping {
-            for key_combo: keymap.key_sequence
-                print("% %\n", key_combo_strings(key_combo), cast(action_type)keymap.action);
-        }
-    }
-    dump_keys("File", config.keymap.open_file_dialog, Action_Open_File_Dialog);
-    dump_keys("Search", config.keymap.search_dialog, Action_Search_Dialog);
-    dump_keys("Editor", config.keymap.editors, Action_Editors);
-    dump_keys("Common", config.keymap.common, Action_Common);
-}
-
-
 activate_hold_action :: (action: $Action_Type, event: Input.Event) {
     _, matched_mapping := map_event_to_action(event, Action_Type);  // we map it here again to avoid passing it in through multiple functions
 
@@ -273,7 +258,7 @@ Key_Combo :: struct {
 }
 
 ACTIONS_COMMON :: string.[
-    "do_nothing",   // to disable key combinations
+    "do_nothing",   // to disable key combinations (DEPRECATED). TODO: auto-remove when we have a config migration system
 
     "quit",
 
@@ -335,8 +320,6 @@ ACTIONS_COMMON :: string.[
     "close_other_editor",
     "close_left_editor",
     "close_right_editor",
-
-    "dump_key_mappings",
 ];
 
 ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
