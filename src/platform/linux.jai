@@ -238,10 +238,12 @@ platform_set_border_color :: inline () {
 platform_show_cursor :: (show: bool) {
 }
 
-platform_get_troubleshooting_info :: () -> string {
+platform_get_troubleshooting_info :: () -> string /* temp */ {
     using LD.GL.gl_procs;
 
     system_info.ld_gl_backend = LD.active_gl_backend();
+
+    push_allocator(temp);
 
     env_check :: (sb: *String_Builder, name: *u8) {
         val := getenv(name);
@@ -299,8 +301,6 @@ platform_get_troubleshooting_info :: () -> string {
 
         data: [..] u8;
         buff: [4096] u8;
-        defer array_reset(*data);
-
         while true {
             rs := read(fd, buff.data, buff.count);
             if rs < 0 {
@@ -335,7 +335,6 @@ platform_get_troubleshooting_info :: () -> string {
         }
 
         for libs  print_to_builder(sb, "  %\n", it);
-        array_reset(*libs);
     }
 
     sb: String_Builder;
@@ -343,7 +342,6 @@ platform_get_troubleshooting_info :: () -> string {
     print_to_builder(*sb, "Kernel:\n");
     result, output := run_command("uname", "-a", capture_and_return_output = true);
     print_to_builder(*sb, "  %\n", ifx result.exit_code == 0 then trim(output) else tprint(">> failed to run `uname -a`: %", result));
-    free(output);
 
     print_to_builder(*sb, "OS information:\n");
     os_data, ok := read_entire_file("/etc/os-release");
@@ -355,7 +353,6 @@ platform_get_troubleshooting_info :: () -> string {
             line := trim(it);
             if line print_to_builder(*sb, "  %\n", line);
         }
-        free(os_data);
     }
     print_to_builder(*sb, "\n");
 

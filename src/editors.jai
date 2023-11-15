@@ -468,9 +468,7 @@ editors_show_troubleshooting_info :: (placement: Editor_Placement) {
     }
 
     buffer := *open_buffers[global_troubleshooting_buffer_id];
-    info := platform_get_troubleshooting_info();
-    replace_range_raw(buffer, 0, xx buffer.bytes.count, info);
-    free(info);
+    replace_range_raw(buffer, 0, xx buffer.bytes.count, platform_get_troubleshooting_info());
     buffer.meow_hash = calculate_hash(buffer.bytes);
     rescan_for_lines(buffer);
 
