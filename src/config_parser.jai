@@ -450,7 +450,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                     if found {
                         result.config.font = value;
                     } else {
-                        add_highlight(parser, xx (value.data - line.data), value.count, .error);
+                        add_highlight(parser, value.data - line.data, value.count, .error);
                         result.config.font = "default";
                         return true, error_msg;
                     }
@@ -460,7 +460,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                     if success {
                         result.config.font_size = int_val;
                     } else {
-                        add_highlight(parser, xx (value.data - line.data), value.count, .error);
+                        add_highlight(parser, value.data - line.data, value.count, .error);
                         result.config.font_size = DEFAULT_FONT_SIZE;
                         return false, tprint("Couldn't parse '%' - expected a valid integer, got '%'", setting, value);
                     }
@@ -478,7 +478,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
             }
             color, success := hex_to_color(value);
             if !success {
-                add_highlight(parser, xx (value.data - line.data), value.count, .error);
+                add_highlight(parser, value.data - line.data, value.count, .error);
                 return true, tprint("Couldn't parse '%'. Expected a color in the form RRGGBB or RRGGBBAA, got '%'", color_name, value);
             }
             array_add(*result.config.colors, Parsed_Color.{ color_name, color });
@@ -543,6 +543,8 @@ hex_to_color :: (src_hex: string) -> Color, success: bool {
 parse_build_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
     using result.config.build;
 
+    line_parsed_with_error = false;  // reset
+
     if begins_with(line, "[") {
         // Add a new command
         name := trim(line, "[]");
@@ -564,6 +566,8 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
         command := array_add(*commands);
         command.name = name;  // points into the file data!
 
+        section_offset = line_start_offset;
+
         return true, "";
     }
 
@@ -572,15 +576,15 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
     target := *defaults;
     if commands then target = *commands[commands.count-1];
 
-    option_name, option_value := break_by_spaces(line);
-    option_name = trim_right(option_name, ":");
+    setting_name, setting_value := break_by_spaces(line);
+    setting_name = trim_right(setting_name, ":");
 
-    value := option_value;  // will be destroyed by parsing
+    value := setting_value;  // will be destroyed by parsing
 
     #insert -> string {
         b: String_Builder;
 
-        append(*b, "if option_name == {\n");
+        append(*b, "if setting_name == {\n");
 
         for option : type_info(Build_Config.Command).members {
             print_to_builder(*b, "    case \"%\";\n", option.name);
@@ -590,10 +594,10 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         bool_val, success := parse_bool(*value);
                         if success {
                             target.%1 = bool_val;
-                            add_highlight(parser, xx (option_value.data - line.data), option_value.count, .value);
+                            add_highlight(parser, setting_value.data - line.data, setting_value.count, .value);
                         } else {
-                            add_highlight(parser, xx (option_value.data - line.data), option_value.count, .error);
-                            return true, tprint("Couldn't parse '%1' - expected 'true' or 'false', got '%%'", option_value);
+                            add_highlight(parser, setting_value.data - line.data, setting_value.count, .error);
+                            return true, tprint("Couldn't parse '%1' - expected 'true' or 'false', got '%%'", setting_value);
                         }
                     END;
                     print_to_builder(*b, code, option.name);
@@ -603,7 +607,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         if value {
                             target.%1 = value;  // points into the file data!
                         } else {
-                            return true, tprint("Build command option '%%' can't be empty", option_name);
+                            return true, tprint("Build command option '%%' can't be empty", setting_name);
                         }
                     END;
                     print_to_builder(*b, code, option.name);
@@ -611,15 +615,37 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
         }
 
         code := #string END
+            case "key_binding";
+                key_sequence, error_msg := parse_key_sequence(parser, setting_value, line);
+                if !key_sequence return true, tprint("Invalid key combination: '%'. Error: %", setting_value, error_msg);
             case;
                 add_highlight(parser, 0, line.count, .error);
-                return true, tprint("Unrecognized build command option '%'.", option_name);
+                return true, tprint("Unrecognized build command option '%'.", setting_name);
         END;
         append(*b, code);
 
         append(*b, "}\n");
 
         return builder_to_string(*b);
+    }
+
+    if context.parse_for_highlighting && !line_parsed_with_error {
+        // Highlight any duplicate settings
+        is_duplicate := false;
+        for seen_settings {
+            if it.section_offset != section_offset || it.setting_name != setting_name continue;
+            add_highlight(parser, 0, it.line_length,        .comment, line_start_offset = it.line_start_offset);
+            add_highlight(parser, 0, it.setting_name.count, .warning, line_start_offset = it.line_start_offset);
+            is_duplicate = true;
+        }
+        if is_duplicate then add_highlight(parser, 0, line.count, .warning);
+
+        array_add(*seen_settings, Seen_Setting.{
+            line_start_offset  = line_start_offset,
+            line_length        = xx line.count,
+            setting_name       = setting_name,
+            section_offset     = section_offset,
+        });
     }
 
     return true, "";
@@ -772,7 +798,7 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
             line_start_offset  = line_start_offset,
             line_length        = xx line.count,
             key_sequence       = key_sequence,
-            section_offset     = section_offset,  // NOTE: this won't work well while we still allow to redefine existing subsections
+            section_offset     = section_offset,
         });
     }
 
@@ -835,7 +861,7 @@ parse_key_combo :: (using parser: *Config_Parser, combo_str: string, line: strin
 
     key_string := modifier_string;
     if !key_string {
-        add_highlight(parser, 0, line.count, .error);
+        add_highlight(parser, combo_str.data - line.data, combo_str.count, .error);
         return combo, false, tprint("Missing key code after modifier flags: '%'", combo_str);
     }
 
@@ -888,14 +914,14 @@ parse_linux_config_line :: (using parser: *Config_Parser, line: string) -> succe
             val := value;  // parse_float destroys the string
             f_val, success := parse_float(*val);
             if !success {
-                add_highlight(parser, xx (value.data - line.data), value.count, .error);
+                add_highlight(parser, value.data - line.data, value.count, .error);
                 return true, tprint("Couldn't parse '%' - expected a valid float, got '%'", setting, value);
             }
             // @TODO: scaling factors under 1.0 break the editor widget on Wayland,
             //        investigate why this happens
             lower_limit := ifx DEBUG then 0.5 else 1.0;
             if (f_val != 0.0) && (f_val < lower_limit || f_val > 5.0) {
-                add_highlight(parser, xx (value.data - line.data), value.count, .error);
+                add_highlight(parser, value.data - line.data, value.count, .error);
                 return true, tprint("Couldn't parse '%' - value out of the expected range ([% ... 5.0])", lower_limit, setting);;
             }
             result.config.linux.scaling_factor = f_val;
@@ -1059,7 +1085,6 @@ Seen_Setting :: struct {
 Seen_Keymap :: struct {
     using seen_line: Seen_Line;
     key_sequence:   [] Key_Combo;
-    section_offset: s32;
 }
 
 Seen_Color :: struct {
@@ -1070,6 +1095,7 @@ Seen_Color :: struct {
 Seen_Line :: struct {
     line_start_offset: s32;
     line_length:       s32;  // for highlighting the whole line if needed
+    section_offset: s32;
 }
 
 
