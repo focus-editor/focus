@@ -73,7 +73,7 @@ parse_config :: (name: string, filename: string, file_data: string, for_highligh
 
         // Maybe switch sections
         if begins_with(line, "[") {
-            error_msg := maybe_switch_section(*parser, line);
+            handled, error_msg := maybe_switch_section(*parser, line);
             if error_msg {
                 add_highlight(*parser, 0, line.count, .error);
                 if !for_highlighting {
@@ -81,7 +81,7 @@ parse_config :: (name: string, filename: string, file_data: string, for_highligh
                     return result;  // this is a hard error, we don't want to proceed
                 }
             }
-            continue;
+            if handled continue;
         }
 
         // Check if we allow lines outside of subsection
@@ -307,10 +307,10 @@ STRING_TO_CODE_MAP :: Str_Code.[
     // .{ "MouseWheelDown",    MOUSE_WHEEL_DOWN },
 ];
 
-maybe_switch_section :: (using parser: *Config_Parser, line: string) -> error: string {
+maybe_switch_section :: (using parser: *Config_Parser, line: string) -> handled: bool, error: string {
     if begins_with(line, "[[") {
         // Top section
-        if !ends_with(line, "]]") return tprint("Invalid section '%'. Section definitions must end with ]]", line);
+        if !ends_with(line, "]]") return true, tprint("Invalid section '%'. Section definitions must end with ]]", line);
         section_name := trim(line, " \t[]");
 
         #insert -> string {
@@ -322,14 +322,14 @@ maybe_switch_section :: (using parser: *Config_Parser, line: string) -> error: s
                         active_section = .%2;
                         active_subsection = .none;
                         section_offset = line_start_offset;
-                        if seen_sections & .%2 return tprint("Section [[%1]] is defined twice. This is an error.");
+                        if seen_sections & .%2 return true, tprint("Section [[%1]] is defined twice. This is an error.");
                         seen_sections |= .%2;
                 JAI;
                 print_to_builder(*b, code, section.name, replace(section.name, " ", "_"));
             }
             code := #string JAI
                 case;
-                    return tprint("Unknown top-level section %%", line);
+                    return true, tprint("Unknown top-level section %%", line);
             JAI;
             print_to_builder(*b, code);
             append(*b, "}\n");
@@ -338,17 +338,17 @@ maybe_switch_section :: (using parser: *Config_Parser, line: string) -> error: s
         add_highlight(parser, 0, line.count, .header_top_level);
     } else {
         // Subsection
-        if !ends_with(line, "]") return tprint("Invalid subsection '%'. Subsection definitions must end with ]", line);
+        if !ends_with(line, "]") return true, tprint("Invalid subsection '%'. Subsection definitions must end with ]", line);
+        if section_allows_arbitrary_subsections(active_section) return false, "";  // pass it on to the line parser
+
         subsection_name := trim(line, " \t[]");
 
-        if !section_allows_arbitrary_subsections(active_section) {
-            section := CONFIG_SECTIONS[active_section];
-            if !array_find(section.subsections, subsection_name) {
-                if section.subsections {
-                    return tprint("Unknown subsection of [[%]]: '%'.\nAvailable options: [%].", section.name, line, join(..section.subsections, "], [", allocator = temp));
-                } else {
-                    return tprint("Unexpected subsection of [[%]]: '%'. This section doesn't allow any subsections.", section.name, line);
-                }
+        section := CONFIG_SECTIONS[active_section];
+        if !array_find(section.subsections, subsection_name) {
+            if section.subsections {
+                return true, tprint("Unknown subsection of [[%]]: '%'.\nAvailable options: [%].", section.name, line, join(..section.subsections, "], [", allocator = temp));
+            } else {
+                return true, tprint("Unexpected subsection of [[%]]: '%'. This section doesn't allow any subsections.", section.name, line);
             }
         }
 
@@ -361,7 +361,7 @@ maybe_switch_section :: (using parser: *Config_Parser, line: string) -> error: s
                         case "%1";
                             active_subsection = .%2;
                             section_offset = line_start_offset;
-                            if seen_subsections & .%2 return tprint("Subsection [%1] is defined twice. This is an error.");
+                            if seen_subsections & .%2 return true, tprint("Subsection [%1] is defined twice. This is an error.");
                             seen_subsections |= .%2;
                     JAI;
                     print_to_builder(*b, code, subsection, replace(tprint("%_%", section.name, subsection), " ", "_"));
@@ -373,7 +373,7 @@ maybe_switch_section :: (using parser: *Config_Parser, line: string) -> error: s
         add_highlight(parser, 0, line.count, .header);
     }
 
-    return "";
+    return true, "";
 }
 
 parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
@@ -548,21 +548,26 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
         name := trim(line, "[]");
         if !name {
             add_highlight(parser, 0, line.count, .error);
-            return false, tprint("Command name can't be empty: %", line);
+            return true, tprint("Command name can't be empty: %", line);
         }
 
-        if commands {
-            last_command := *commands[commands.count-1];
-            if !last_command.build_command && !last_command.run_command {
-                return false, tprint("Command '%' must have at least build_command or run_command configured", last_command.name);
-            }
-        }
+        // TODO: validate later at the config stage (maybe there are valid defaults?)
+        // if commands {
+        //     last_command := *commands[commands.count-1];
+        //     if !last_command.build_command && !last_command.run_command {
+        //         return true, tprint("Command '%' must have at least build_command or run_command configured", last_command.name);
+        //     }
+        // }
+
+        add_highlight(parser, 0, line.count, .header);
 
         command := array_add(*commands);
         command.name = name;  // points into the file data!
 
         return true, "";
     }
+
+    add_highlight(parser, 0, line.count, .default);
 
     target := *defaults;
     if commands then target = *commands[commands.count-1];
@@ -585,8 +590,10 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         bool_val, success := parse_bool(*value);
                         if success {
                             target.%1 = bool_val;
+                            add_highlight(parser, xx (option_value.data - line.data), option_value.count, .value);
                         } else {
-                            return false, tprint("Couldn't parse '%1' - expected 'true' or 'false', got '%%'", option_value);
+                            add_highlight(parser, xx (option_value.data - line.data), option_value.count, .error);
+                            return true, tprint("Couldn't parse '%1' - expected 'true' or 'false', got '%%'", option_value);
                         }
                     END;
                     print_to_builder(*b, code, option.name);
@@ -596,7 +603,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         if value {
                             target.%1 = value;  // points into the file data!
                         } else {
-                            return false, tprint("Build command option '%%' can't be empty", option_name);
+                            return true, tprint("Build command option '%%' can't be empty", option_name);
                         }
                     END;
                     print_to_builder(*b, code, option.name);
@@ -605,7 +612,8 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
 
         code := #string END
             case;
-                return false, tprint("Unrecognized build command option '%'.", option_name);
+                add_highlight(parser, 0, line.count, .error);
+                return true, tprint("Unrecognized build command option '%'.", option_name);
         END;
         append(*b, code);
 
@@ -692,37 +700,17 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
 parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
     add_highlight(parser, 0, line.count, .default);
 
-    // Parse key sequence and action
-    key_sequence: [..] Key_Combo;
-    key_sequence_error_message: string;
-    action_name: string;
-    item: string;
-    rest_of_line := line;
-
     line_parsed_with_error = false;  // reset
 
-    while true {
-        // The last item we encounter will be interpreted as the action name, all parts before it will be parsed as key combinations.
-        item, rest_of_line = break_by_spaces(rest_of_line);
-        if !rest_of_line {
-            action_name = item;
-            break;
-        }
-
-        key_combo, key_ok, msg := parse_key_combo(parser, item, line);
-        if !key_ok {
-            key_sequence_error_message = msg;
-            break;
-        }
-
-        array_add(*key_sequence, key_combo);
-    }
-
-    if key_sequence.count == 0 || !action_name {
-        error_msg := tprint("Invalid key sequence: '%'.\n%", line, key_sequence_error_message);
+    found_action, key_sequence_str, action_name := split_from_right_by_any(line, " \t");
+    if !found_action {
         add_highlight(parser, 0, line.count, .error);
-        return true, error_msg;
+        return true, tprint("Invalid key mapping: '%'. \nExpected format: <key_sequence> <action_name>", line);
     }
+
+    key_sequence_str = trim_right(key_sequence_str);
+    key_sequence, error_msg := parse_key_sequence(parser, key_sequence_str, line);
+    if !key_sequence return true, tprint("Invalid key sequence: '%'. Error: %", key_sequence_str, error_msg);
 
     // Parse actions
     map_action :: (name: string, key_sequence: [] Key_Combo, available_actions: [] string, target_keymap: *[..] Key_Mapping, subsection: string) #expand {
@@ -791,11 +779,27 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
     return true, "";
 }
 
-parse_key_combo :: (using parser: *Config_Parser, key_name: string, line: string) -> Key_Combo, success: bool, error_msg: string /* temp */ {
+parse_key_sequence :: (using parser: *Config_Parser, key_sequence_str: string, line: string) -> [] Key_Combo, error_msg: string /* temp */ {
+    key_sequence: [..] Key_Combo;
+    rest_of_line := key_sequence_str;
+
+    while rest_of_line {
+        combo_str:, rest_of_line = break_by_spaces(rest_of_line);
+
+        key_combo, success, error_msg := parse_key_combo(parser, combo_str, line);
+        if !success return .[], error_msg;
+
+        array_add(*key_sequence, key_combo);
+    }
+
+    return key_sequence, "";
+}
+
+parse_key_combo :: (using parser: *Config_Parser, combo_str: string, line: string) -> Key_Combo, success: bool, error_msg: string /* temp */ {
     combo: Key_Combo;
 
     // Parse modifier flags
-    modifier_string := key_name;
+    modifier_string := combo_str;
     while true {
         found, mod_key, remainder := split_from_left(modifier_string, cast(u8) #char "-");
         if !found break;
@@ -832,7 +836,7 @@ parse_key_combo :: (using parser: *Config_Parser, key_name: string, line: string
     key_string := modifier_string;
     if !key_string {
         add_highlight(parser, 0, line.count, .error);
-        return combo, false, tprint("Missing key code after modifier flags: '%'", key_name);
+        return combo, false, tprint("Missing key code after modifier flags: '%'", combo_str);
     }
 
     combo.key_code = keymap_map_key_string(key_string);
