@@ -1,37 +1,34 @@
 INVALID_KEYMAP_ACTION :: 0xFFFF;
 
 map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mapping {
-    using key_sequence_input_state;
-
     invalid_action := cast(Action) INVALID_KEYMAP_ACTION;
-    invalid_mapping := Key_Mapping.{};
+    if event.type != .KEYBOARD || !event.key_pressed return invalid_action, .{};
 
-    if event.type != .KEYBOARD return invalid_action, invalid_mapping;
-    if !event.key_pressed      return invalid_action, invalid_mapping;
+    using key_sequence_input;
 
-    // Check for modifier keys being pressed by themselves; this shouldn't reset a key sequence that's in progress.
-    key_combo_input_this_frame = event.key_code != .ALT && event.key_code != .CTRL && event.key_code != .SHIFT && event.key_code != .CMD && event.key_code != .META;
+    key_mappings := get_keymap_for_action_type(Action);
+    if potential_multipart_matches {
+        filtered_mappings: [..] Key_Mapping;
+        filtered_mappings.allocator = temp;
+        for potential_multipart_matches {
+            if it.action_type == Action then array_add(*filtered_mappings, it.mapping);
+        }
+        key_mappings = filtered_mappings;
+    }
 
-    keys_to_search := get_keymap_for_action_type(Action);
-    if matches_for_current_key_sequence.count > 0  keys_to_search = matches_for_current_key_sequence;
+    for key_mappings {
+        if active_sequence_length >= it.key_sequence.count  continue;
 
-    event_key_code := cast(u32) event.key_code;
+        combo := it.key_sequence[active_sequence_length];
 
-    for key_mapping: keys_to_search {
-        if current_key_sequence_length >= key_mapping.key_sequence.count  continue;
-        if minimum_key_sequence_length > 0 && key_mapping.key_sequence.count < minimum_key_sequence_length  continue;
-
-        key_sequence := key_mapping.key_sequence;
-        combo := key_sequence[current_key_sequence_length];
-
-        if combo.key_code == event_key_code && combo.mods.packed == (event.modifier_flags.packed | combo.ignore.packed) {
-            if key_sequence.count == current_key_sequence_length + 1 {
-                found_match = true;
-                return cast(Action) key_mapping.action, key_mapping;
+        if combo.key_code == xx event.key_code && combo.mods.packed == (event.modifier_flags.packed | combo.ignore.packed) {
+            if it.key_sequence.count == active_sequence_length + 1 {
+                // print("Found match. Action type: %. Action: %\n", Action, cast(Action) it.action);
+                return cast(Action) it.action, it;
             } else {
-                array_add(*new_matches_for_current_key_sequence, key_mapping);
-                minimum_key_sequence_length = key_sequence.count;
-                key_sequence_in_progress = true;
+                // We have to remember the types of potential matches,
+                // otherwise we might accidentally trigger the wrong one
+                array_add(*new_multipart_matches, Typed_Key_Mapping.{ mapping = it, action_type = Action });
             }
         }
     }
@@ -40,11 +37,11 @@ map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mappin
         // Hard-coded case: When the Open File dialog is active, "/" or "\" opens a directory.
         if event.key_code == {
             case #char "/";  #through;
-            case #char "\\"; return .open_directory, invalid_mapping;
+            case #char "\\"; return .open_directory, .{};
         }
     }
 
-    return invalid_action, invalid_mapping;
+    return invalid_action, .{};
 }
 
 activate_hold_action :: (action: $Action_Type, event: Input.Event) {
@@ -157,6 +154,38 @@ key_sequence_for_action_as_string :: (action: $T) -> string /* temp */ {
     return builder_to_string(*b, allocator = temp);
 }
 
+key_sequence_input_process_event :: (event: Input.Event, handled: bool) {
+    using key_sequence_input;
+
+    // Modifier keys pressed by themselves should't reset key sequence
+    key_combo_event := event.type == .KEYBOARD && event.key_pressed &&
+                       event.key_code != .ALT && event.key_code != .CTRL && event.key_code != .SHIFT &&
+                       event.key_code != .CMD && event.key_code != .META;
+
+    if handled || (key_combo_event && !new_multipart_matches) || active_widget != active_global_widget {
+        // Reset current key sequence
+        array_reset_keeping_memory(*potential_multipart_matches);
+        array_reset_keeping_memory(*new_multipart_matches);
+        active_sequence_length = 0;
+    }
+
+    if new_multipart_matches {
+        // Starting or continuing a multipart combo
+        active_sequence_length += 1;
+        array_reset_keeping_memory(*potential_multipart_matches);
+        array_add(*potential_multipart_matches, ..new_multipart_matches);
+        array_reset_keeping_memory(*new_multipart_matches);
+    }
+
+    // Remember the current active widget. If it changes as a result of an event,
+    // we want to reset any key sequence in progress, even if that event wasn't a keyboard event
+    active_widget = active_global_widget;
+}
+
+key_sequence_input_in_progress :: inline () -> bool {
+    return key_sequence_input.potential_multipart_matches.count > 0;
+}
+
 #scope_file
 
 get_keymap_for_action_type :: ($Action: Type) -> [] Key_Mapping #expand {
@@ -175,65 +204,27 @@ get_keymap_for_action_type :: ($Action: Type) -> [] Key_Mapping #expand {
     }
 }
 
-active_hold_actions: [..] Hold_Action;
-
-// We have to get store the matched mapping because one action may be matched
-// by multiple key combos, so when a key is released, in order to deactivate the action
-// we need to check whether it actually belongs to the combo that activated the action!
-Hold_Action :: struct {
-    action_type: Type;
-    matched_mapping: Key_Mapping;
-}
-
 operator == :: (a: Hold_Action, b: Hold_Action) -> bool {
     return memcmp(*a, *b, size_of(Hold_Action)) == 0;
 }
 
-reset_key_sequence :: () {
-    using key_sequence_input_state;
-    array_reset_keeping_memory(*matches_for_current_key_sequence);
-    minimum_key_sequence_length = 0;
-    current_key_sequence_length = 0;
-    key_sequence_in_progress = false;
-}
-
 #scope_export
 
-start_key_sequence_handling :: () {
-    using key_sequence_input_state;
-    key_combo_input_this_frame = false;
-    found_match = false;
-    array_reset_keeping_memory(*new_matches_for_current_key_sequence);
-}
-
-end_key_sequence_handling :: () {
-    using key_sequence_input_state;
-    if new_matches_for_current_key_sequence.count > 0 { // Input occurred this frame, and we have a new list of key combo candidates.
-        current_key_sequence_length += 1;
-        array_reset_keeping_memory(*matches_for_current_key_sequence);
-        array_add(*matches_for_current_key_sequence, ..new_matches_for_current_key_sequence);
-    } else if key_combo_input_this_frame { // Input occurred this frame, but no candidates are left; reset the active key combo.
-        reset_key_sequence();
-    }
-
-    if found_match  reset_key_sequence();
-}
-
-key_sequence_input_state: Key_Sequence_Input_State;
-
-Key_Sequence_Input_State :: struct {
-    matches_for_current_key_sequence: [..] Key_Mapping;
-    new_matches_for_current_key_sequence: [..] Key_Mapping;
-    current_key_sequence_length: int;
-    minimum_key_sequence_length: int;
-    key_sequence_in_progress: bool;
-    key_combo_input_this_frame: bool;
-    found_match: bool;
+key_sequence_input: struct {
+    active_sequence_length := 0;
+    potential_multipart_matches: [..] Typed_Key_Mapping;
+    new_multipart_matches:       [..] Typed_Key_Mapping;
+    active_widget: Active_Global_Widget = .editors;
 }
 
 Key_Mapping :: struct {
     key_sequence: [] Key_Combo;
     action: u32;  // NOTE: tried to use a union with actual enums here, but the compiler crashes @compilerbug
+}
+
+Typed_Key_Mapping :: struct {
+    mapping: Key_Mapping;
+    action_type: Type;
 }
 
 Key_Combo :: struct {
@@ -408,3 +399,15 @@ ACTIONS_SEARCH_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[
     "toggle_whole_word",
     "toggle_regex_search",
 ]);
+
+#scope_file
+
+active_hold_actions: [..] Hold_Action;
+
+// We have to get store the matched mapping because one action may be matched
+// by multiple key combos, so when a key is released, in order to deactivate the action
+// we need to check whether it actually belongs to the combo that activated the action!
+Hold_Action :: struct {
+    action_type: Type;
+    matched_mapping: Key_Mapping;
+}

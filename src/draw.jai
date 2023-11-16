@@ -1449,9 +1449,7 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
         Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = Colors.UI_DIM);
     }
 
-    if key_sequence_input_state.key_sequence_in_progress {
-        using key_sequence_input_state;
-
+    if key_sequence_input_in_progress() {
         // Draw separator
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_small, BULLET_ICON);
@@ -1461,8 +1459,8 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
         builder: String_Builder;
         builder.allocator = temp;
 
-        for combo_index: 0..current_key_sequence_length - 1 {
-            combo_strings := key_combo_strings(matches_for_current_key_sequence[0].key_sequence[combo_index]);
+        for 0 .. key_sequence_input.active_sequence_length - 1 {
+            combo_strings := key_combo_strings(key_sequence_input.potential_multipart_matches[0].mapping.key_sequence[it]);
             for combo_strings {
                 print_to_builder(*builder, "%", it);
                 if it_index < combo_strings.count - 1  print_to_builder(*builder, "+");

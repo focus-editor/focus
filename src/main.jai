@@ -194,9 +194,9 @@ main :: () {
         // If we handle it as a keyboard event we will need to ignore its text input duplicates
         num_text_input_events_to_ignore := 0;
 
-        start_key_sequence_handling();
-
         for event : Input.events_this_frame {
+            if should_quit break;  // don't process any other events we might have in this frame if the previous one set this to true
+
             // General events
             if event.type == {
                 case .QUIT;
@@ -267,9 +267,9 @@ main :: () {
             if !handled then handled = maybe_execute_a_build_command(event);
 
             if handled && event.type == .KEYBOARD then num_text_input_events_to_ignore = event.text_input_count;
-        }
 
-        end_key_sequence_handling();
+            key_sequence_input_process_event(event, handled);
+        }
 
         if should_quit && unsaved_buffers_exist() && !force_quit {
             show_unsaved_buffers_dialog();
@@ -722,7 +722,9 @@ Time :: #type,isa float64;
 
 project_dirs: [..] Project_Dir;
 
-active_global_widget: enum {
+active_global_widget: Active_Global_Widget = .editors;
+
+Active_Global_Widget :: enum {
     editors;
     finder;
     open_file_dialog;
@@ -733,7 +735,7 @@ active_global_widget: enum {
     unsaved_buffers_dialog;
     confirm_overwrite_dialog;
     build_panel;
-} = .editors;
+}
 
 Project_Dir :: struct {
     path: string;          // e.g. "C:/projects/focus"
