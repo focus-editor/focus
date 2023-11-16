@@ -740,6 +740,11 @@ send_key_event :: (key_code: Key_Code, key_down: bool, repeat := false) {
     event.ctrl_pressed  = ctrl_state;
     event.alt_pressed   = alt_state;
     event.repeat = repeat;
+
+    utf32 := cast(u32) key_code;
+    is_printable := ((utf32 >= 32) && (utf32 != 127));
+    event.text_input_count = xx is_printable;
+
     array_add(*events_this_frame, event);
 
     input_button_states[key_code] |= ifx key_down then (Key_Current_State.DOWN | .START) else .END;
