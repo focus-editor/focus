@@ -410,7 +410,7 @@ Build_Config :: struct {
                                // (because the build commands don't merge so we can't use the previous config's keymaps)
 
     Command :: struct {
-        name:                   string; @DontParse
+        name:                   string;  @dontparse
 
         build_command:          string;
         build_working_dir:      string;

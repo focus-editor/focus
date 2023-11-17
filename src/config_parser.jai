@@ -587,10 +587,11 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
         append(*b, "if setting_name == {\n");
 
         for option : type_info(Build_Config.Command).members {
+            if array_find(option.notes, "dontparse") continue;
             print_to_builder(*b, "    case \"%\";\n", option.name);
             if option.type.type == {
                 case .BOOL;
-                    code := #string END
+                    code := #string JAI
                         bool_val, success := parse_bool(*value);
                         if success {
                             target.%1 = bool_val;
@@ -599,22 +600,22 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                             add_highlight(parser, setting_value.data - line.data, setting_value.count, .error);
                             return true, tprint("Couldn't parse '%1' - expected 'true' or 'false', got '%%'", setting_value);
                         }
-                    END;
+                    JAI;
                     print_to_builder(*b, code, option.name);
 
                 case .STRING;
-                    code := #string END
-                        if value {
-                            target.%1 = value;  // points into the file data!
+                    code := #string JAI
+                        if setting_value {
+                            target.%1 = setting_value;  // points into the file data!
                         } else {
                             return true, tprint("Build command option '%%' can't be empty", setting_name);
                         }
-                    END;
+                    JAI;
                     print_to_builder(*b, code, option.name);
             }
         }
 
-        code := #string END
+        code := #string JAI
             case "key_binding";
                 key_sequence, error_msg := parse_key_sequence(parser, setting_value, line);
                 if !key_sequence return true, tprint("Invalid key combination: '%'. Error: %", setting_value, error_msg);
@@ -626,12 +627,20 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
             case;
                 add_highlight(parser, 0, line.count, .error);
                 return true, tprint("Unrecognized build command option '%'.", setting_name);
-        END;
+        JAI;
         append(*b, code);
 
         append(*b, "}\n");
 
         return builder_to_string(*b);
+    }
+
+    if setting_name == "error_regex" {
+        _, regex_is_valid := re.compile(setting_value, BASE_REGEX_FLAGS);
+        if !regex_is_valid {
+            add_highlight(parser, setting_value.data - line.data, setting_value.count, .error);
+            return true, tprint("Error regex is invalid: '%'", setting_value);
+        }
     }
 
     if context.parse_for_highlighting && !line_parsed_with_error {
