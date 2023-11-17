@@ -619,6 +619,10 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                 key_sequence, error_msg := parse_key_sequence(parser, setting_value, line);
                 if !key_sequence return true, tprint("Invalid key combination: '%'. Error: %", setting_value, error_msg);
                 add_keymap_for_build_command(*result.config.build, key_sequence);
+                real_section_offset := section_offset;
+                section_offset = 0;  // override to 0 so that keymaps are matched with other sections
+                maybe_highlight_duplicate_keymaps(parser, line, key_sequence);
+                section_offset = real_section_offset;
             case;
                 add_highlight(parser, 0, line.count, .error);
                 return true, tprint("Unrecognized build command option '%'.", setting_name);
@@ -793,32 +797,31 @@ parse_keymap_line :: (using parser: *Config_Parser, line: string) -> success: bo
         case .keymap_search_dialog;     map_action(action_name, key_sequence, ACTIONS_SEARCH_DIALOG,    *result.config.keymap_search_dialog,    "[search dialog]");
     }
 
-    if context.parse_for_highlighting && !line_parsed_with_error {
-        // Highlight any other keymaps which match the key sequence of this one
-        is_duplicate := false;
-        for seen_keymaps {
-            if it.section_offset == section_offset && key_sequence_matches(it.key_sequence, key_sequence) {
-                add_highlight(parser, 0, it.line_length, .warning, line_start_offset = it.line_start_offset );
-                is_duplicate = true;
-                break;
-            }
-        }
-        if is_duplicate {
-            action_name_offset := cast(s64)(action_name.data - line.data);
-            add_highlight(parser, 0, action_name_offset, .warning);
-            add_highlight(parser, action_name_offset, action_name.count, .comment);
-        }
-
-        // Remember the keymap
-        array_add(*seen_keymaps, Seen_Keymap.{
-            line_start_offset  = line_start_offset,
-            line_length        = xx line.count,
-            key_sequence       = key_sequence,
-            section_offset     = section_offset,
-        });
-    }
+    if !line_parsed_with_error then maybe_highlight_duplicate_keymaps(parser, line, key_sequence);
 
     return true, "";
+}
+
+maybe_highlight_duplicate_keymaps :: (using parser: *Config_Parser, line: string, key_sequence: [] Key_Combo) {
+    if !context.parse_for_highlighting return;
+
+    is_duplicate := false;
+    for seen_keymaps {
+        if (it.section_offset == section_offset || it.section_offset == 0 || section_offset == 0) && key_sequence_matches(it.key_sequence, key_sequence) {
+            add_highlight(parser, 0, it.line_length, .warning, line_start_offset = it.line_start_offset );
+            is_duplicate = true;
+            break;
+        }
+    }
+    if is_duplicate then add_highlight(parser, 0, line.count, .warning);
+
+    // Remember the keymap
+    array_add(*seen_keymaps, Seen_Keymap.{
+        line_start_offset  = line_start_offset,
+        line_length        = xx line.count,
+        key_sequence       = key_sequence,
+        section_offset     = section_offset,
+    });
 }
 
 parse_key_sequence :: (using parser: *Config_Parser, key_sequence_str: string, line: string) -> [] Key_Combo, error_msg: string /* temp */ {

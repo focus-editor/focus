@@ -17,7 +17,7 @@ map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mappin
     }
 
     for key_mappings {
-        if active_sequence_length >= it.key_sequence.count  continue;
+        if active_sequence_length >= it.key_sequence.count continue;
 
         combo := it.key_sequence[active_sequence_length];
 
@@ -127,8 +127,7 @@ key_combo_strings :: (combo: Key_Combo) -> [] string /* temp */ {
 }
 
 key_sequence_matches :: (s1: [] Key_Combo, s2: [] Key_Combo) -> bool {
-    if s1.count != s2.count return false;
-    for 0 .. s1.count-1 {
+    for 0 .. min(s1.count, s2.count)-1 {
         c1, c2 := s1[it], s2[it];
         ignore_mask := c1.ignore.packed | c2.ignore.packed;
         if (c1.key_code != c2.key_code) || (c1.mods.packed | ignore_mask != c2.mods.packed | ignore_mask) return false;
