@@ -87,7 +87,7 @@ parse_config :: (name: string, filename: string, file_data: string, for_highligh
         // Check if we have an active_section
         if active_section == .none {
             add_highlight(*parser, 0, line.count, .error);
-            error_msg := log_parser_error(handler, "Trying to add config outside of config section: '%'. This is an error.", line);
+            error_msg := log_parser_error(handler, "Line outside of any section: '%'. This is an error.", line);
             array_add(*result.warnings, error_msg);
             continue;
         }
