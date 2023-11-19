@@ -84,6 +84,14 @@ parse_config :: (name: string, filename: string, file_data: string, for_highligh
             if handled continue;
         }
 
+        // Check if we have an active_section
+        if active_section == .none {
+            add_highlight(*parser, 0, line.count, .error);
+            error_msg := log_parser_error(handler, "Trying to add config outside of config section: '%'. This is an error.", line);
+            array_add(*result.warnings, error_msg);
+            continue;
+        }
+
         // Check if we allow lines outside of subsection
         if active_subsection == .none && !section_allows_lines_outside_subsection(active_section) {
             add_highlight(*parser, 0, line.count, .error);
