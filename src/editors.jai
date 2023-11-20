@@ -462,7 +462,7 @@ editors_show_troubleshooting_info :: (placement: Editor_Placement) {
         buffer := *open_buffers[global_troubleshooting_buffer_id];
         buffer.readonly = true;
         buffer.lang = .Plain_Text;
-        buffer.file.name = "Troubleshooting info";
+        buffer.file.name = "Troubleshooting Info";
         buffer.file.icon = .debug;
         buffer.has_file = true;
     }
