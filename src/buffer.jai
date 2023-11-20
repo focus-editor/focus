@@ -450,6 +450,7 @@ recalculate_colors :: (buffer: *Buffer) {
         case .Html;         #through;
         case .Xml;          highlight_xml_syntax(buffer);
         case .Worklog;      highlight_worklog(buffer);
+        case .Yang;         highlight_yang_syntax(buffer);
     }
 }
 
@@ -1253,6 +1254,7 @@ Buffer :: struct {
         Xml;
         Html;
         Worklog;
+        Yang;
     } = .Plain_Text;
 
     Edit_Group :: struct {

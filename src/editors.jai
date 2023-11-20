@@ -1106,6 +1106,9 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
             case "vcxproj"; #through;
             case "csproj";
                 buffer.lang = .Xml;
+
+            case "yang";
+                buffer.lang = .Yang;
         }
     }
 
@@ -2864,6 +2867,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
         case .Focus_Config; comment = "#";
         case .Python;       comment = "#";
         case .RenPy;        comment = "#";
+        case .Yang;         comment = "//";
         case;               return;
     }
 
@@ -3031,6 +3035,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
         case .Odin;         comment_start = "/*"; comment_end = "*/";
         case .Html;         comment_start = "<!--"; comment_end = "-->";
         case .Xml;          comment_start = "<!--"; comment_end = "-->";
+        case .Yang;         comment_start = "/*"; comment_end = "*/";
         case;               toggle_comment(editor, buffer); return;  // fallback to toggle_comment for the rest.
     }
 

@@ -796,6 +796,7 @@ dont_ignore_next_window_resize := false;
 #load "langs/renpy.jai";
 #load "langs/xml.jai";
 #load "langs/worklog.jai";
+#load "langs/yang.jai";
 
 #if OS == .WINDOWS {
     #load "platform/windows.jai";
