@@ -447,6 +447,7 @@ editors_show_default_config :: (placement: Editor_Placement) {
         replace_range_raw(buffer, 0, xx buffer.bytes.count, DEFAULT_CONFIG_FILE_DATA);
         buffer.meow_hash = calculate_hash(buffer.bytes);
         buffer.readonly = true;
+        buffer.deleted = true;
         buffer.lang = .Focus_Config;
         buffer.file.name = "Default Focus Config";
         buffer.file.icon = .gear;
