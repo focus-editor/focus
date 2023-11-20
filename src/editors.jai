@@ -1270,6 +1270,28 @@ line_wrap_is_active :: inline (editor: Editor) -> bool {
     return editor.line_wrap == .on || editor.line_wrap == .to_disable;
 }
 
+find_or_create_editor :: (buffer_id: s64, unwanted_existing_editor: s64 = -1) -> editor_id: s64, created: bool {
+    assert(buffer_id >= 0 && buffer_id < open_buffers.count, "Attempt to create editor for nonexistent buffer");
+    for open_editors
+        if it.buffer_id == buffer_id && it_index != unwanted_existing_editor
+            return it_index, false;
+
+    editor_id := open_editors.count;
+    editor := array_add(*open_editors);
+    editor.buffer_id = buffer_id;
+    array_add(*editor.cursors, Cursor.{});
+
+    if config.settings.line_wrap_is_on_by_default {
+        editor.line_wrap = .to_enable;
+        redraw_requested = true;
+    }
+
+    open_buffers[buffer_id].num_editors_open += 1;
+    assert(open_buffers[buffer_id].num_editors_open <= 2);
+
+    return editor_id, true;
+}
+
 #scope_file
 
 delete_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; below; }) {
@@ -1646,28 +1668,6 @@ smooth_scroll :: (editor: Editor, direction: Smooth_Scroll_Direction, fast := fa
         editor_smooth_scroll.start_y    = editor.viewport.top;
         editor_smooth_scroll.fast       = fast;
     }
-}
-
-find_or_create_editor :: (buffer_id: s64, unwanted_existing_editor: s64 = -1) -> editor_id: s64, created: bool {
-    assert(buffer_id >= 0 && buffer_id < open_buffers.count, "Attempt to create editor for nonexistent buffer");
-    for open_editors
-        if it.buffer_id == buffer_id && it_index != unwanted_existing_editor
-            return it_index, false;
-
-    editor_id := open_editors.count;
-    editor := array_add(*open_editors);
-    editor.buffer_id = buffer_id;
-    array_add(*editor.cursors, Cursor.{});
-
-    if config.settings.line_wrap_is_on_by_default {
-        editor.line_wrap = .to_enable;
-        redraw_requested = true;
-    }
-
-    open_buffers[buffer_id].num_editors_open += 1;
-    assert(open_buffers[buffer_id].num_editors_open <= 2);
-
-    return editor_id, true;
 }
 
 undo :: (editor: *Editor, buffer: *Buffer) {

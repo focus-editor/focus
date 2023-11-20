@@ -420,7 +420,8 @@ Build_Config :: struct {
 
         error_regex:            string;
         auto_jump_to_error:     bool;
-        open_panel:             bool;
+
+        open_panel_on_build:    bool;
         close_panel_on_success: bool;
     }
 }

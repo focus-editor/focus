@@ -36,6 +36,7 @@ main :: () {
     load_global_config(fallback_to_default_on_failure = true);
     init_workspace();
     init_buffers();
+    init_build_system();
 
     window_x, window_y, window_width, window_height = platform_get_centered_window_dimensions(config.settings.open_on_the_biggest_monitor);
 
@@ -260,7 +261,6 @@ main :: () {
                     case .unsaved_buffers_dialog;   handled = unsaved_buffers_dialog_handle_event(event);
                     case .confirm_overwrite_dialog; handled = confirm_overwrite_dialog_handle_event(event);
                     case .commands_dialog;          handled = commands_dialog_handle_event(event);
-                    case .build_panel;              unimplemented(); //handled = commands_dialog_handle_event(event);
                 }
             }
 
@@ -350,6 +350,9 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
 
         case .move_to_previous_buffer;                          move_to_previous_editor_history(by_buffer = true);  return true;
         case .move_to_next_buffer;                              move_to_next_editor_history    (by_buffer = true);  return true;
+
+        case .toggle_build_panel;                               toggle_build_panel();                               return true;
+        case .toggle_build_panel_height;                        toggle_build_panel_height();                        return true;
 
         // TODO: search_in_buffer
         case .search_in_project;
@@ -734,7 +737,6 @@ Active_Global_Widget :: enum {
     open_project_dialog;
     unsaved_buffers_dialog;
     confirm_overwrite_dialog;
-    build_panel;
 }
 
 Project_Dir :: struct {
@@ -758,6 +760,7 @@ dont_ignore_next_window_resize := false;
 #load "layout.jai";
 #load "editors.jai";
 #load "buffer.jai";
+#load "build_system.jai";
 #load "unicode.jai";
 #load "draw.jai";
 #load "pointer_image.jai";
@@ -823,22 +826,23 @@ _ :: #import "Linux_Display"()(VALIDATE_USAGE = DEBUG);
 
 #import "Atomics";
 #import "Basic"()(MEMORY_DEBUGGER = DEBUG);
-#import "Math";
-#import "Sloppy_Math";
+#import "Compiler";
 #import "File";
 #import "File_Utilities";
 #import "File_Watcher";
 #import "Flat_Pool";
+#import "Math";
+#import "Machine_X64";
+#import "Process";
+#import "Reflection";
+#import "Sloppy_Math";
 #import "System";
 #import "String";
 #import "Sort";
 #import "Simple_Bucket_Array";
+#import "Thread";
 #import "Unicode";
 #import "Window_Creation";
-#import "Thread";
-#import "Compiler";
-#import "Machine_X64";
-#import "Reflection";
 
 re :: #import "uniform";
 

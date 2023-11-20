@@ -7,7 +7,6 @@ draw_frame :: () {
 
     maybe_set_hot_or_active(.none, screen, .NORMAL);
 
-
     // Check whether we need to deactivate elements before drawing
     if (!mouse.left.is_down || mouse.left.just_released) && (!mouse.middle.is_down || mouse.middle.just_released) then ui.active = .none;
 
@@ -20,10 +19,14 @@ draw_frame :: () {
         case .None;
             editors_snap_splitter(0.5);
             draw_welcome_screen(screen);
+            maybe_draw_build_panel(screen, screen);
+
         case .Single;
             editors_snap_splitter(0.5);
             draw_editor(editors.active, screen, footer_height, .editor_single);
             active_pane_rect = screen;
+            maybe_draw_build_panel(screen, screen);
+
         case .Double;
             // Drag splitter
             if ui.active == .editor_splitter {
@@ -57,9 +60,12 @@ draw_frame :: () {
 
             splitter_rect := make_rect(left_rect.x + left_rect.w, left_rect.y + footer_height, 2, left_rect.h - footer_height);
             draw_splitter(splitter_rect, split_x, .editor_splitter);
+
+            maybe_draw_build_panel(left_rect, right_rect);
     }
 
-    if active_global_widget == {
+    if #complete active_global_widget == {
+        case .editors;                  // already done
         case .open_file_dialog;         draw_open_file_dialog();
         case .delete_file_dialog;       draw_delete_file_dialog();
         case .finder;                   draw_finder();
@@ -287,7 +293,26 @@ draw_user_messages :: (main_area: Rect, footer_height: float) {
     }
 }
 
-draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui_Id, total_editor_area := Rect.{}) {
+maybe_draw_build_panel :: (left_rect: Rect, right_rect: Rect) {
+    if !build_panel_is_shown return;
+
+    ui_id := get_ui_id_from_loc();
+
+    build_panel_rect: Rect;
+    if #complete editors.layout == {
+        case .None;     build_panel_rect = right_rect;
+        case .Single;   build_panel_rect = right_rect;
+        case .Double;   build_panel_rect = ifx editors.active == editors.left then right_rect else left_rect;
+    }
+    build_panel_rect = shrink(build_panel_rect, 4 * char_size);
+    build_panel_rect.y += 4 * char_size;
+
+    editor_id := build_panel_get_editor_id();
+    draw_rounded_rect_with_shadow(build_panel_rect, Colors.BACKGROUND_BUILD_PANEL);
+    draw_editor(editor_id, build_panel_rect, 0, ui_id, as_build_panel = true);
+}
+
+draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui_Id, total_editor_area := Rect.{}, as_build_panel := false) {
     scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
 
     footer_rect, rect := cut_bottom(main_area, footer_height);
@@ -311,7 +336,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     rect = align_to_grid(rect);
     if !is_valid(rect) return;
 
-    draw_rect(rect, Colors.BACKGROUND);
+    if !as_build_panel then draw_rect(rect, Colors.BACKGROUND);
 
     became_active := maybe_set_hot_or_active(ui_id, rect, .TEXT_SELECT);
     if became_active then activate_editors();

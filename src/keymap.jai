@@ -267,6 +267,8 @@ ACTIONS_COMMON :: string.[
     "show_default_config",
     // "open_error_log",  // todo
     "toggle_fullscreen",
+    "toggle_build_panel",
+    "toggle_build_panel_height",
     "show_troubleshooting_info",
 
     "show_commands",
