@@ -102,8 +102,7 @@ Ctrl-]                      indent
 Ctrl-[                      unindent
 
 Ctrl-S                      save
-Ctrl-Shift-S                save_all
-Ctrl-Alt-Shift-S            save_as
+Ctrl-Shift-S                save_as
 
 Alt-Minus                   move_to_previous_editor_history
 Alt-Plus                    move_to_next_editor_history

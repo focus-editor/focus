@@ -99,6 +99,7 @@ Cmd-]                       indent
 Cmd-[                       unindent
 
 Cmd-S                       save
+Cmd-Shift-S                 save_as
 
 Cmd-Alt-Minus               move_to_previous_editor_history
 Cmd-Alt-Plus                move_to_next_editor_history
@@ -108,15 +109,6 @@ Cmd-Shift-Plus              move_to_next_buffer
 
 Cmd-/                       toggle_comment
 Cmd-L                       select_line
-
-Cmd-K                       scroll_viewport_up
-Cmd-E                       scroll_viewport_up_fast  # for some reason Cmd-U didn't reach the window at all, so using Cmd-E instead
-Cmd-PageUp                  scroll_viewport_up_fast
-Cmd-J                       scroll_viewport_down
-Cmd-D                       scroll_viewport_down_fast
-Cmd-PageDown                scroll_viewport_down_fast
-Cmd-H                       scroll_viewport_left
-Cmd-L                       scroll_viewport_right
 
 Ctrl-Cmd-ArrowUp            scroll_viewport_up
 Ctrl-Cmd-ArrowDown          scroll_viewport_down
