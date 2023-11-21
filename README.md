@@ -22,7 +22,6 @@ This editor is for people who value simplicity, are sensitive to input latency a
 
 5. A project in this editor is just a config file that lives in `projects/Project Name.focus-config`. There's an example project config file provided. You just edit the file and then activate the project by using the `Switch To Project` command.
 
-Basic tips and tricks: https://www.youtube.com/watch?v=UZQpQ1wgXCY
 
 ## Official Discord server
 
