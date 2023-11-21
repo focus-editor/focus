@@ -14,18 +14,8 @@ highlight_yang_syntax :: (using buffer: *Buffer) {
 
 #scope_file
 
-get_tokenizer :: (using buffer: Buffer) -> Tokenizer {
-    tokenizer : Tokenizer;
-
-    tokenizer.buf = cast(string) bytes;
-    tokenizer.max_t = bytes.data + bytes.count;
-    tokenizer.t     = bytes.data;
-
-    return tokenizer;
-}
-
 get_next_token :: (using tokenizer: *Tokenizer) -> Token {
-    t = eat_white_space(t, max_t);
+    eat_white_space(tokenizer);
 
     token : Token;
     token.start = cast(s32) (t - buf.data);
@@ -62,10 +52,11 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
 }
 
 parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
+    push_allocator(temp);
     token.type = .identifier;
 
     identifier_str := read_identifier_string(tokenizer);
-    
+
     // need to do this if we want to use the same enum logic as in other parsers, not pretty but get's the job done.
     sanitized_string := replace(identifier_str, "-", "_");
 
@@ -125,7 +116,7 @@ parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
 
 parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token, quote := #char "\"") {
      token.type = .string_literal;
-     
+
      escape_seen := false;
      t += 1;
 
@@ -152,16 +143,6 @@ read_identifier_string :: (using tokenizer: *Tokenizer) -> string {
     ret.count = xx (t - ret.data);
 
     return ret;
-}
-
-
-Tokenizer :: struct {
-    buf: string;
-    max_t:   *u8;
-    start_t: *u8;  // cursor when starting parsing new token
-    t:       *u8;  // cursor
-
-    last_tokens: [2] Token;  // to retroactively highlight functions
 }
 
 Token :: struct {
@@ -270,14 +251,5 @@ MAX_KEYWORD_LENGTH :: #run -> s32 {
     for TYPE_KEYWORDS  { if it.count > result then result = it.count; }
     return xx result;
 }
-
-eat_white_space :: inline (start: *u8, max_t: *u8) -> *u8 {
-    t := start;
-    while t < max_t && is_white_space(<<t) {
-        t += 1;
-    }
-    return t;
-}
-
 
 #import "Hash_Table";
