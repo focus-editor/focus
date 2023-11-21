@@ -359,6 +359,13 @@ platform_get_troubleshooting_info :: () -> string /* temp */ {
     print_to_builder(*sb, "Interesting things in the environment:\n");
     env_check(*sb, "FOCUS_LD_BACKEND");
     env_check(*sb, "FOCUS_LD_GL_BACKEND");
+    env_check(*sb, "DISPLAY");
+    env_check(*sb, "WAYLAND_DISPLAY");
+    env_check(*sb, "DESKTOP_SESSION");
+    env_check(*sb, "XDG_SESSION_DESKTOP");
+    env_check(*sb, "XDG_CURRENT_DESKTOP");
+    env_check(*sb, "XCURSOR_THEME");
+    env_check(*sb, "XCURSOR_SIZE");
     env_check(*sb, "LD_LIBRARY_PATH");
     env_check(*sb, "LD_PRELOAD");
     env_check(*sb, "PATH");
