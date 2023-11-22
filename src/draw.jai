@@ -19,13 +19,11 @@ draw_frame :: () {
         case .None;
             editors_snap_splitter(0.5);
             draw_welcome_screen(screen);
-            maybe_draw_build_panel(screen, screen);
 
         case .Single;
             editors_snap_splitter(0.5);
-            draw_editor(editors.active, screen, footer_height, .editor_single);
+            draw_editor(editors.left, screen, footer_height, .editor_single);
             active_pane_rect = screen;
-            maybe_draw_build_panel(screen, screen);
 
         case .Double;
             // Drag splitter
@@ -60,9 +58,9 @@ draw_frame :: () {
 
             splitter_rect := make_rect(left_rect.x + left_rect.w, left_rect.y + footer_height, 2, left_rect.h - footer_height);
             draw_splitter(splitter_rect, split_x, .editor_splitter);
-
-            maybe_draw_build_panel(left_rect, right_rect);
     }
+
+    if build_panel_is_shown then draw_build_panel();
 
     if #complete active_global_widget == {
         case .editors;                  // already done
@@ -293,10 +291,9 @@ draw_user_messages :: (main_area: Rect, footer_height: float) {
     }
 }
 
-maybe_draw_build_panel :: (left_rect: Rect, right_rect: Rect) {
-    if !build_panel_is_shown return;
+draw_build_panel :: () {
 
-    ui_id := get_ui_id_from_loc();
+    left_rect, right_rect := cut_left(screen, screen.w * splitter_pos, margin = 2);
 
     build_panel_rect: Rect;
     if #complete editors.layout == {
@@ -306,9 +303,12 @@ maybe_draw_build_panel :: (left_rect: Rect, right_rect: Rect) {
     }
     build_panel_rect = shrink(build_panel_rect, 4 * char_size);
     build_panel_rect.y += 4 * char_size;
+    if !is_valid(build_panel_rect) return;
 
     editor_id := build_panel_get_editor_id();
-    draw_rounded_rect_with_shadow(build_panel_rect, Colors.BACKGROUND_BUILD_PANEL);
+    draw_rounded_rect_with_shadow(build_panel_rect, Colors.BACKGROUND_BUILD_PANEL, radius = 0.1, shadow_size = char_size);
+
+    ui_id := get_ui_id_from_loc();
     draw_editor(editor_id, build_panel_rect, 0, ui_id, as_build_panel = true);
 }
 
@@ -347,7 +347,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     text_offset := make_vector2(char_x_advance, -char_x_advance);
     text_origin := top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
 
-    width_in_chars := clamp(cast(s32) ((rect.w - 1.5 * text_offset.x)  / char_x_advance), 1, S32_MAX);
+    width_in_chars := clamp(cast(s32) ((rect.w - 1.5 * text_offset.x) / char_x_advance), 1, S32_MAX);
     if width_in_chars != editor.last_width_in_chars {
         editor.last_width_in_chars = width_in_chars;
         if editor.line_wrap == .on then rescan_for_wrapped_lines(editor, buffer);
@@ -472,6 +472,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // Activate editor
         make_editor_active(editor_id);
         if mouse.left.just_pressed then redraw_requested = true;  // so that we don't draw 2 active editors
+
     } else if ui.active == ui_id && (mouse.middle.just_pressed || mouse.middle.is_dragging) {
         mouse_coords := coords_from_mouse_position();
 
