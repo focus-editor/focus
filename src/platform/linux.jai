@@ -1,4 +1,4 @@
-platform_apply_config :: (config: *Config) {
+platform_apply_config :: () {
     LD.set_fixed_scaling(config.linux.scaling_factor);
 }
 

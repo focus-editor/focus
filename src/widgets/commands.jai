@@ -75,7 +75,7 @@ refresh_entries :: () {
     for command : commands {
         if command.requires_layout == .Single && editors.layout == .None   continue;
         if command.requires_layout == .Double && editors.layout != .Double continue;
-        if !project_config_path && (command.action == .open_project_config || command.action == .close_project) continue;
+        if !project_config.loaded && (command.action == .open_project_config || command.action == .close_project) continue;
 
         score, highlights := fuzzy_match(command.name, filter_chars);
         if score < 0 continue;

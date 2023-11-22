@@ -1,4 +1,4 @@
-platform_apply_config :: inline (config: *Config) {
+platform_apply_config :: inline () {
 }
 
 platform_setup :: () {

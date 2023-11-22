@@ -82,7 +82,7 @@ main :: () {
 
     // This may generate window resize events if DPI/scaling settings need to be
     // applied, so make sure to only call it after the window is created.
-    platform_apply_config(*config);
+    platform_apply_config();
 
     #if OS == .MACOS {
         // On macOS, attempting to maximize the window before a frame has been drawn results in a crash, so we delay it until the end of the first frame.
@@ -293,7 +293,6 @@ main :: () {
             hard_reload_workspace();
             should_reload_workspace = false;
             redraw_requested = true;
-            platform_apply_config(*config);
         }
 
         reset_temporary_storage();

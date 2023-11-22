@@ -232,6 +232,23 @@ map_color_name_to_color_struct :: (config: *Config, color_name: string) -> *Colo
     return xx 0;
 }
 
+free_parsed_config :: (using parsed_config: Parsed_Config) {
+    for workspace_dirs free(it);  // workspace dirs are allocated on the heap separately because we store absolute paths
+
+    array_free(workspace_dirs);
+    array_free(ignore_dirs);
+    array_free(allow_file_extensions);
+    array_free(allow_file_extension_wildcards);
+    array_free(ignore_file_extensions);
+    array_free(ignore_file_extension_wildcards);
+    array_free(keymap_common);
+    array_free(keymap_editors);
+    array_free(keymap_open_file_dialog);
+    array_free(keymap_search_dialog);
+    array_free(set_settings);
+    array_free(colors);
+}
+
 
 #scope_file
 

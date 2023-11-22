@@ -314,7 +314,7 @@ copy_session_data :: (source: string, dest: string) {
 
 session_set_project :: (project: string) {
     session.project = project;
-    platform_set_window_title(tprint("% - Focus", project));
+    // platform_set_window_title(tprint("% - Focus", project));
 }
 
 save_editor_state_into_file :: () {

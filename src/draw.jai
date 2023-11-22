@@ -1451,9 +1451,9 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
 
     if draw_config_warning && buffer.has_file {
         label: string;
-        if platform_path_equals(buffer.file.full_path, global_config_path) {
+        if platform_path_equals(buffer.file.full_path, global_config.path) {
             label = "[current global config]";
-        } else if project_config_path && platform_path_equals(buffer.file.full_path, project_config_path) {
+        } else if project_config.loaded && platform_path_equals(buffer.file.full_path, project_config.path) {
             label = "[current project config]";
         }
         if label {

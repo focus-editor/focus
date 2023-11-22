@@ -34,12 +34,6 @@ array_delete_bytes :: (array: *[..] u8, offset: s64, count: s64) {
     array.count -= count;
 }
 
-array_copy_tmp :: (array: [] $T) -> [] T {
-    dest := NewArray(array.count, T, initialized=false, allocator = temp);
-    memcpy(dest.data, array.data, array.count * size_of(T));
-    return dest;
-}
-
 to_bytes :: (src: string) -> [] u8 {
     result: [] u8;
     result.data = src.data;
