@@ -981,6 +981,7 @@ refresh_buffer_from_disk :: (path: string) {
         new_replace_edit(buffer, 0, xx buffer.bytes.count, cast(string) buffer.bytes, file_contents_str);
         replace_range_raw(buffer, 0, xx buffer.bytes.count, file_contents_str);
         rescan_for_lines(buffer);
+        recalculate_colors(buffer);
 
         // Save edits and put cursors in correct places
         for * editor : open_editors {
