@@ -236,7 +236,7 @@ remember_visible_editors_and_buffers :: () -> Visible_Editor_State {
             if buffer.has_file && !buffer.modified {
                 save_editor_state(*left, editor, buffer);
             } else {
-                layout = .None;  // we don't reopen unmodified buffers, at least for now
+                layout = .None;  // we don't reopen modified buffers, at least for now
             }
         case .Double;
             left_editor  := *open_editors[editors.left];

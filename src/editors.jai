@@ -493,7 +493,8 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
         case .Single;
             if placement == .in_place {
                 // Open in place
-                editors.active  = find_or_create_editor(buffer_id);
+                editors.left  = find_or_create_editor(buffer_id);
+                editors.active = editors.left;
             } else if placement == .on_the_side || placement == .right {
                 // Open on the right
                 editors.right  = find_or_create_editor(buffer_id, editors.active);
