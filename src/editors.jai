@@ -1221,6 +1221,7 @@ remove_all_editors :: () {
     editors = Editor_State.{};
     for * open_editors free_editor(it);
     array_reset_keeping_memory(*open_editors);
+    editor_history.initted = false;
 }
 
 viewport_remember_glue_point :: (using editor: *Editor, buffer: Buffer) {
