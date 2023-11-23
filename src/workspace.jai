@@ -138,6 +138,7 @@ maybe_update_workspace_buffers :: () {
     files_changed := process_changes(*watchers.project_watcher);
     files_changed |= process_changes(*watchers.external_watcher);
     if files_changed {
+        // NOTE: these count comparisons are intentional because count can be -1
         if watchers.project_file_modified.count > 0 && (!should_ignore_file(watchers.project_file_modified) || is_our_config_file(watchers.project_file_modified)) {
             #if DEBUG_FILE_REFRESH log("Attempting to refresh based on project_file_modified: %\n", watchers.project_file_modified);
             refresh_buffer_from_disk(path = watchers.project_file_modified);

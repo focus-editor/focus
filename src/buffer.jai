@@ -906,6 +906,26 @@ get_buffer_name :: (buffer: Buffer) -> string {
 }
 
 refresh_buffer_from_disk :: (path: string) {
+    is_dir, is_dir_success := is_directory(path);
+    if is_dir || !is_dir_success || !file_exists(path) {
+        // Either this is a dir, or a deleted dir, or a deleted file.
+        // So many checks are needed because if a dir gets deleted then
+        // it will get to this point and could get itself a buffer
+        // if we didn't do it.
+
+        // Find if there's an existing buffer already and mark it as deleted
+        lock(*open_buffers_lock);
+        buffer_id, found_buffer := table_find(*buffers_table, path);
+        if found_buffer {
+            open_buffers[buffer_id].deleted = true;
+            finder.need_to_refresh_results = true;
+            #if DEBUG_FILE_REFRESH log("File % doesn't exist", path);
+        }
+        unlock(*open_buffers_lock);
+
+        return;
+    }
+
     if is_our_config_file(path) refresh_config(path);
 
     buffer_id, created := find_or_create_buffer(path);
@@ -917,13 +937,6 @@ refresh_buffer_from_disk :: (path: string) {
     }
 
     buffer := *open_buffers[buffer_id];
-
-    if !file_exists(path) {
-        buffer.deleted = true;
-        finder.need_to_refresh_results = true;
-        #if DEBUG_FILE_REFRESH log("File % doesn't exist", path);
-        return;
-    }
 
     if !buffer_file_has_changed_on_disk(buffer) {
         #if DEBUG_FILE_REFRESH log("File % supposedly hasn't changed on disk", path);

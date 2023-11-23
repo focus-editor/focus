@@ -79,6 +79,7 @@
     + Fix for stuck keys when the editor loses window focus (such as alt-tabbing or moving to other workspaces on Linux)
     + Improved scrolling smoothness (thanks @Sanian-Creations)
     + Parent directories of files outside of project directories are no longer recursively watched for changes. The editor should no longer hang for a long time when opening a file inside a large directory.
+    + Directories created within the project shouldn't get themselves any buffers any more
 
 + Other changes:
     + When the workspace is done scanning, the open file dialog input will no longer be cleared
