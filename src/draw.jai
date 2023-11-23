@@ -572,7 +572,11 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         defer pop_scissor();
 
         // Handle editor scrolling here because we only know the layout at this point.
-        max_y_scroll := max(cast(s32)(get_max_line_num(editor, buffer) * line_height), 0);
+        num_editor_lines := get_max_line_num(editor, buffer);
+        content_height := (num_editor_lines + 2) * line_height;
+        if config.settings.scroll_beyond_last_line then content_height += (rect.h - 3 * line_height);
+
+        max_y_scroll := max(cast(s32)(content_height - rect.h), 0);
 
         if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
             // Mousewheel scrolling - vertical
@@ -631,6 +635,15 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             cursors_start_blinking();
         }
 
+        // If we're past the max scrolling point for any reason (e.g. just deleted some text),
+        // snap back into the allowed range immediately.
+        // Do it after we've handled cursor_moved, because it uses viewport.top
+        if viewport.top > max_y_scroll || viewport.scroll_y.target > max_y_scroll {
+            viewport.scroll_y.target = max_y_scroll;
+            viewport.top = max_y_scroll;
+            viewport_remember_glue_point(editor, buffer);
+        }
+
         // With line wrap enabled we never want to scroll horizontally, so just snap to left always
         if line_wrap_is_active(editor) {
             viewport.scroll_x.target = 0;
@@ -675,7 +688,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
 
         // Scrollbar
-        new_scroll_target := draw_scrollbar(rect, scrollbar_size, rect.h + xx max_y_scroll, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
+        new_scroll_target := draw_scrollbar(rect, scrollbar_size, content_height, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
         if new_scroll_target != viewport.scroll_y.target {
             // Jump immediately to the scroll point when dragging or clicking scrollbar
             viewport.top = new_scroll_target;
@@ -783,14 +796,14 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             Simp.set_shader_for_color(enable_blend = true);
 
             marks_rect := cut_right(rect, scrollbar_size);
-            marks_rect =  cut_top(marks_rect, rect.h * max_y_scroll / (rect.h + xx max_y_scroll));  // account for the non-text area at the bottom
+            marks_rect =  cut_top(marks_rect, rect.h * max_y_scroll / content_height);
             marks_rect_top := marks_rect.y + marks_rect.h;
             assert(buffer.line_starts.count > 0);
 
             highlight_mark_rect := shrink_x(marks_rect, marks_rect.w / 3);
             highlight_mark_rect.h = floor(4 * dpi_scale);
 
-            total_scrollable_lines := cast(float) get_max_real_line_num(buffer) + rect.h / line_height;
+            total_scrollable_lines := content_height / line_height;
 
             if search_bar_is_open(editor) && search_bar.results {
                 // Search results

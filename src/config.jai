@@ -403,6 +403,7 @@ Settings :: struct {
     insert_spaces_when_pressing_tab         := true;
     strip_trailing_whitespace_on_save       := false;
     smooth_scrolling                        := true;
+    scroll_beyond_last_line                 := true;
     line_height_scale_percent               := 120;
     max_editor_width                        := -1;
     can_cancel_go_to_line                   := true;

@@ -37,6 +37,7 @@
     + New option: `highlight_line_with_cursor` (thanks @SentientCoffee)
     + New option: `draw_indent_guides`. Set to `true` to draw a vertical guide line at every indent level (determined by tab size)
     + New option: `auto_surround_with_brackets_and_quotes` to enable auto-surrounding (thanks @hfr4)
+    + New option: `scroll_beyond_last_line` (defaults to `true`). Disable to prevent scrolling past the editor's last line
     + Added support for regular expressions in file/project search
     + Added a built-in 'save file' dialog (it will be on by default). To use the system dialogs on Windows, use `prefer_system_file_dialogs: true`
     + Dragging middle mouse button will create cursors (thanks @hfr4)
