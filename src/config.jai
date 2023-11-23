@@ -255,7 +255,7 @@ load_config :: (file_path: string) -> Loaded_Config {
     loaded_config.loaded = true;
     loaded_config.parsed_config = parse_result.config;
 
-    if !file_is_watched(file_path) start_watching_file(file_path);
+    start_watching_file_if_not_already(file_path);
 
     return loaded_config;
 }

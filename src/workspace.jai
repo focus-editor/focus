@@ -273,7 +273,7 @@ reopen_visible_editors :: (using old_state: Visible_Editor_State) {
         restore_cursor_state(editor, state.cursors);
         editor.main_cursor = state.main_cursor;
         editor.viewport = state.viewport;
-        if !file_is_watched(state.file_path) then start_watching_file(state.file_path);
+        start_watching_file_if_not_already(state.file_path);
     }
 
     editors = Editor_State.{};
@@ -305,7 +305,7 @@ Visible_Editor_State :: struct {
     }
 }
 
-start_watching_file :: (file_path: string) {
+start_watching_file_if_not_already :: (file_path: string) {
     if file_is_watched(file_path) return;
 
     parent_dir := get_parent_dir_path(file_path);

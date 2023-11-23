@@ -625,7 +625,7 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
         update_window_title(open_editors[editors.active].buffer_id);
     }
 
-    if !file_is_watched(file_path) then start_watching_file(file_path);
+    start_watching_file_if_not_already(file_path);
 }
 
 save_buffer :: (using buffer: *Buffer, buffer_id: s64) {

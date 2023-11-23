@@ -423,7 +423,7 @@ editors_open_file :: (path: string, placement: Editor_Placement = .in_place) {
         return;
     }
 
-    if !file_is_watched(full_path) start_watching_file(full_path);
+    start_watching_file_if_not_already(full_path);
 
     editors_open_buffer(buffer_id, placement);
 }
