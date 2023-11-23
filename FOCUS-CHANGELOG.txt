@@ -45,6 +45,7 @@
         + Python
         + HTML/XML (thanks @arjenwitteveen)
         + Odin (thanks @SentientCoffee)
+        + Yang (thanks @jmpstar)
     + Numpad keys can now be used in key mappings.
       The editor now recognizes the following new key names:
         Numpad0
@@ -80,6 +81,7 @@
     + Improved scrolling smoothness (thanks @Sanian-Creations)
     + Parent directories of files outside of project directories are no longer recursively watched for changes. The editor should no longer hang for a long time when opening a file inside a large directory.
     + Directories created within the project shouldn't get themselves any buffers any more
+    + Newer user messages will stop dismissing older ones which have a longer lifetime
 
 + Other changes:
     + When the workspace is done scanning, the open file dialog input will no longer be cleared

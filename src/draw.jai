@@ -241,10 +241,7 @@ draw_user_messages :: (main_area: Rect, footer_height: float) {
 
     message_rect_src.y += footer_height;
 
-    for * user_messages {
-        if it.dismissed continue;
-        if !it.message  continue;
-
+    for < * user_messages {
         // Figure out message height
         lines := split(it.message, cast(u8) #char "\n");
 

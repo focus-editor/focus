@@ -115,20 +115,20 @@ refresh_config :: (path: string) {
     if platform_path_equals(path, global_config.path) {
         success, changed, there_were_warnings := load_global_config();
         if success && changed && !there_were_warnings {
-            clear_user_messages();
-            add_success_message("Global config changes have been applied", dismiss_in_seconds = 3);
+            clear_user_messages(.config);
+            add_success_message("Global config changes have been applied", dismiss_in_seconds = 3, tag = .config);
         }
         if project_config.loaded {
             success, changed, there_were_warnings = load_project_config(current_project_name);
             if success && changed && !there_were_warnings {
-                add_success_message(tprint("Config changes for project '%' have been applied", current_project_name), dismiss_in_seconds = 3);
+                add_success_message(tprint("Config changes for project '%' have been applied", current_project_name), dismiss_in_seconds = 3, tag = .config);
             }
         }
     } else if platform_path_equals(path, project_config.path) {
         success, changed, there_were_warnings := load_project_config();
         if success && changed && !there_were_warnings {
-            clear_user_messages();
-            add_success_message(tprint("Config changes for project '%' have been applied", current_project_name), dismiss_in_seconds = 3);
+            clear_user_messages(.config);
+            add_success_message(tprint("Config changes for project '%' have been applied", current_project_name), dismiss_in_seconds = 3, tag = .config);
         }
     } else {
         log_error("Attempted to refresh config from file %, but it is not a global config or a current project config", path);
@@ -247,8 +247,8 @@ load_config :: (file_path: string) -> Loaded_Config {
         return loaded_config;
     }
     if parse_result.warnings {
-        add_success_message(tprint("Config file % loaded with warnings", file_path), dismiss_in_seconds = 30);
-        for parse_result.warnings add_user_warning(it, dismiss_in_seconds = 30);
+        add_success_message(tprint("Config file % loaded with warnings", file_path), dismiss_in_seconds = 30, tag = .config);
+        for parse_result.warnings add_user_warning(it, dismiss_in_seconds = 30, tag = .config);
         loaded_config.there_were_warnings = true;
     }
 
