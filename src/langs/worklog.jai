@@ -26,10 +26,11 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     char := << t;
 
     if char == {
-        case #char "+";  parse_done_line(tokenizer, *token);
-        case #char "-";  parse_todo_line(tokenizer, *token);
-        case #char "#";  parse_header   (tokenizer, *token);
-        case;            parse_line     (tokenizer, *token);
+        case #char "+";  parse_done_line        (tokenizer, *token);
+        case #char "-";  parse_todo_line        (tokenizer, *token);
+        case #char "*";  parse_current_task_line(tokenizer, *token);
+        case #char "#";  parse_header           (tokenizer, *token);
+        case;            parse_line             (tokenizer, *token);
     }
 
     if t >= max_t then t = max_t;
@@ -47,7 +48,12 @@ parse_done_line :: (using tokenizer: *Tokenizer, token: *Token) {
 parse_todo_line :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .todo;
 
-    // TODO: parse marks such as [bug], [tech-debt] etc.
+    t += 1;
+    eat_until_newline(tokenizer);
+}
+
+parse_current_task_line :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .current_task;
 
     t += 1;
     eat_until_newline(tokenizer);
@@ -78,6 +84,7 @@ Token :: struct {
         done;
         todo;
         header;
+        current_task;
     }
 }
 
@@ -89,4 +96,5 @@ COLOR_MAP :: Code_Color.[
     .FUNCTION,      // done
     .DEFAULT,       // todo
     .KEYWORD,       // header
+    .VALUE_KEYWORD, // current_task
 ];
