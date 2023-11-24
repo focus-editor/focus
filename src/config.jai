@@ -2,6 +2,7 @@ CURRENT_CONFIG_VERSION :: 2;
 
 load_global_config :: (fallback_to_default_on_failure := false) -> success: bool, changed: bool, there_were_warnings: bool {
     config_path := tprint("%/global.focus-config", config_dir);
+    if !global_config.path then global_config.path = copy_string(config_path);
 
     if !file_exists(config_path) {
         // Create one with default contents
@@ -243,7 +244,7 @@ load_config :: (file_path: string) -> Loaded_Config {
     parse_result := parse_config(file_path, file_path, file_data);
     if !parse_result.success {
         if !parse_result.error_msg assert(false, "No error message on a config error. This is a bug.");
-        add_user_error(parse_result.error_msg);
+        add_user_error(parse_result.error_msg, tag = .config);
         return loaded_config;
     }
     if parse_result.warnings {
@@ -440,27 +441,29 @@ Style :: struct {
 }
 
 Build_Config :: struct {
-    defaults: Command;
+    defaults: Build_Command;
     defaults.name = "Default Build Command";
-    commands: [..] Command;
+    commands: [..] Build_Command;
     keymap: [..] Key_Mapping;  // separate from the other keymaps because it should never merge with the previous config
                                // (because the build commands don't merge so we can't use the previous config's keymaps)
+}
 
-    Command :: struct {
-        name:                   string;  @dontparse
+Build_Command :: struct {
+    name:                   string;  @dontparse
 
-        build_command:          string;
-        build_working_dir:      string;
+    build_command:          string;
+    build_working_dir:      string;
 
-        run_command:            string;
-        run_working_dir:        string;
+    run_command:            string;
+    run_working_dir:        string;
 
-        error_regex:            string;
-        auto_jump_to_error:     bool;
+    error_regex:            string;
+    auto_jump_to_error:     bool;
 
-        open_panel_on_build:    bool;
-        close_panel_on_success: bool;
-    }
+    open_panel_on_build:    bool;
+    close_panel_on_success: bool;
+
+    timeout_in_seconds:     int;
 }
 
 style: Style;

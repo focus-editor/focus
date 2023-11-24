@@ -364,6 +364,7 @@ maybe_switch_section :: (using parser: *Config_Parser, line: string) -> handled:
     } else {
         // Subsection
         if !ends_with(line, "]") return true, tprint("Invalid subsection '%'. Subsection definitions must end with ]", line);
+        if active_section == .none return true, tprint("Subsection '%' is outside of any section. This is an error.", line);
         if section_allows_arbitrary_subsections(active_section) return false, "";  // pass it on to the line parser
 
         subsection_name := trim(line, " \t[]");
@@ -578,18 +579,11 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
             return true, tprint("Command name can't be empty: %", line);
         }
 
-        // TODO: validate later at the config stage (maybe there are valid defaults?)
-        // if commands {
-        //     last_command := *commands[commands.count-1];
-        //     if !last_command.build_command && !last_command.run_command {
-        //         return true, tprint("Command '%' must have at least build_command or run_command configured", last_command.name);
-        //     }
-        // }
-
         add_highlight(parser, 0, line.count, .header);
 
         command := array_add(*commands);
-        command.name = name;  // points into the file data!
+        command.* = defaults;  // inherit everything from defaults
+        command.name = name;
 
         section_offset = line_start_offset;
 
@@ -611,19 +605,35 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
 
         append(*b, "if setting_name == {\n");
 
-        for option : type_info(Build_Config.Command).members {
+        for option : type_info(Build_Command).members {
             if array_find(option.notes, "dontparse") continue;
+
+            // TODO: validate workdir here and continue
+
             print_to_builder(*b, "    case \"%\";\n", option.name);
             if option.type.type == {
                 case .BOOL;
                     code := #string JAI
-                        bool_val, success := parse_bool(*value);
+                        val, success := parse_bool(*value);
                         if success {
-                            target.%1 = bool_val;
+                            target.%1 = val;
                             add_highlight(parser, setting_value.data - line.data, setting_value.count, .value);
                         } else {
                             add_highlight(parser, setting_value.data - line.data, setting_value.count, .error);
                             return true, tprint("Couldn't parse '%1' - expected 'true' or 'false', got '%%'", setting_value);
+                        }
+                    JAI;
+                    print_to_builder(*b, code, option.name);
+
+                case .INTEGER;
+                    code := #string JAI
+                        val, success := parse_int(*value);
+                        if success {
+                            target.%1 = val;
+                            add_highlight(parser, setting_value.data - line.data, setting_value.count, .value);
+                        } else {
+                            add_highlight(parser, setting_value.data - line.data, setting_value.count, .error);
+                            return true, tprint("Couldn't parse '%1' - a valid integer, got '%%'", setting_value);
                         }
                     JAI;
                     print_to_builder(*b, code, option.name);

@@ -368,7 +368,7 @@ maybe_execute_a_build_command :: (event: Input.Event) -> handled: bool {
     assert(command_id <= config.build.commands.count, "A keymap was bound to a nonexistent build command %. Number of build commands: %. This is a bug", command_id, config.build.commands.count);
 
     command := ifx command_id > 0 then *config.build.commands[command_id-1] else *config.build.defaults;
-    print("Executing build command: [%]\n", command.name);
+    execute_build_command(command);
 
     return true;
 }

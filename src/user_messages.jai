@@ -68,6 +68,7 @@ User_Message :: struct {
 Tag :: enum_flags {
     none;
     config;
+    build;
 }
 
 MAX_MESSAGES_ON_SCREEN :: 8;
