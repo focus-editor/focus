@@ -466,9 +466,10 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         editor.refresh_highlights = true;
 
-        // Activate editor
-        make_editor_active(editor_id);
-        if mouse.left.just_pressed then redraw_requested = true;  // so that we don't draw 2 active editors
+        if mouse.left.just_pressed {
+            make_editor_active(editor_id);
+            redraw_requested = true;  // so that we don't draw 2 active editors
+        }
 
     } else if ui.active == ui_id && (mouse.middle.just_pressed || mouse.middle.is_dragging) {
         mouse_coords := coords_from_mouse_position();

@@ -90,6 +90,7 @@
     + Limited Windows 7 support (no dpi awareness)
     + Better word detection by commands that move cursors by word
     + Config highlighting has become smarter and hopefully more helpful
+    + Improved CPU usage when selecting text by mouse
 
 
 
