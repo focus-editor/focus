@@ -4,9 +4,11 @@ init_build_system :: () {
     build_buffer_id = find_or_create_an_empty_buffer();
     build_editor_id = find_or_create_editor(build_buffer_id);
     editor, buffer := *open_editors[build_editor_id], *open_buffers[build_buffer_id];
+    editor.line_wrap = .on;
     buffer.readonly = true;
     buffer.deleted  = true;  // so that it doesn't appear in the open file dialog
-    insert_string_raw(buffer, 0, "vasia pupkin");
+
+    init(*output_mutex);
 
     thread_group = Thread_Group.{};  // in case we need to reinitialise it later
     init(*thread_group, num_threads = 1, group_proc = build_threadproc);
@@ -32,6 +34,7 @@ execute_build_command :: (command: *Build_Command) {
     // TODO: validate mandatory fields etc
 
     log("Executing build command [%]\n", command.name);
+    print_to_output_panel_from_main_thread(tprint("[%]\n", command.name));
 
     allocator := get_pool_allocator();
     push_allocator(allocator);
@@ -45,8 +48,57 @@ execute_build_command :: (command: *Build_Command) {
     running_command.run_working_dir   = copy_string(command.run_working_dir);
     running_command.error_regex       = copy_string(command.error_regex);
 
+    if command.open_panel_on_build then build_panel_is_shown = true;
+
     add_work(*thread_group, running_command);
     // Now don't modify running_command as it's being accessed from thread
+}
+
+build_system_update :: () {
+    assert(build_buffer_id >= 0 && build_editor_id >= 0, "Build system is not initialized");
+
+    results := get_completed_work(*thread_group);
+    if results {
+        // We only process one command at a time, so this means our running command has finished
+        assert(running_command != null, "Build thread has finished work, but no command running");
+        assert(results.count == 1 && results[0] == running_command, "Build thread command mismatch");
+
+        log("Build command [%] finished\n", running_command.name);
+
+        if running_command.close_panel_on_success {
+            // TODO: if exit code is not 0 or there are errors, that shouldn't be a success?
+            build_panel_is_shown = false;
+        }
+
+        running_command = null;
+        reset(*memory_pool);
+    }
+
+    // Print to build output panel, if we have anything to print
+    {
+        lock(*output_mutex);
+        defer unlock(*output_mutex);
+
+        output := builder_to_string(*stdout);
+        print_to_output_panel_from_main_thread(output);
+
+        error_output := builder_to_string(*stderr);
+        print_to_output_panel_from_main_thread(error_output);
+    }
+}
+
+print_to_output_panel_from_main_thread :: (s: string) {
+    assert(build_buffer_id >= 0 && build_editor_id >= 0);
+    if !s return;
+
+    buffer := *open_buffers[build_buffer_id];
+    insert_string_raw(buffer, buffer.bytes.count, s);
+
+    editor := *open_editors[build_editor_id];
+    cursor := leave_only_original_cursor(editor);
+    cursor.pos = xx buffer.bytes.count;
+    cursor.sel = cursor.pos;
+    editor.scroll_to_cursor = .yes;
 }
 
 toggle_build_panel :: () {
@@ -70,15 +122,17 @@ build_panel_is_shown := false;
 build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
     command := cast(*Build_Command) work;
 
-    print("Hello from thread, executing the command [%]:\n%\n", command.name, command.*);
+    log("Executing build command [%]\n", command.name);
+
+    allocator := get_pool_allocator();
+    push_allocator(allocator);
 
     result, output, error, timeout_reached := run_command_while_monitoring_output(
         ..break_command_into_strings(command.build_command),
         working_directory = command.build_working_dir,
     );
 
-    // TODO: remove
-    running_command = null;
+    platform_wake_up_main_thread();
 
     return .CONTINUE;
 }
@@ -98,6 +152,14 @@ build_editor_id := -1;
 running_command: *Build_Command = null;
 
 memory_pool: Flat_Pool;
+
+// To avoid potential crashes, the build thread will not write directly to the output buffer because it could be
+// used by the main thread at the same time, and instead will use these string builders to buffer output,
+// which the main thread will pick up at its convenience.
+// We never write to buffers from threads, because if we did, a lot of code would have to be littered with locks.
+stdout: String_Builder;
+stderr: String_Builder;
+output_mutex: Mutex;
 
 
 #scope_file
@@ -127,12 +189,12 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
 
         if num_output_bytes {
             advance_through_ensured_space(*output_builder, num_output_bytes);
-            print("[o]%\n", to_string(output_buffer.data, num_output_bytes));
+            write_output_from_build_thread(*stdout, to_string(output_buffer.data, num_output_bytes));
         }
 
         if num_error_bytes {
             advance_through_ensured_space(*error_builder, num_error_bytes);
-            print("[e]\n%", to_string(error_buffer.data, num_error_bytes));
+            write_output_from_build_thread(*stderr, to_string(error_buffer.data, num_error_bytes));
         }
 
         if !success {
@@ -172,6 +234,12 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
     }
 
     return process_result, output_string, error_string, timeout_reached;
+}
+
+write_output_from_build_thread :: (builder: *String_Builder, s: string) {
+    lock(*output_mutex);
+    defer unlock(*output_mutex);
+    append(builder, s);
 }
 
 System :: #import "System";

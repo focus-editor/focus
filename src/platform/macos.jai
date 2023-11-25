@@ -54,6 +54,10 @@ platform_wait_message :: inline () {
 
 }
 
+platform_wake_up_main_thread :: () {
+    // TODO
+}
+
 platform_set_refresh_timer :: inline (window: Window_Type) {
 
 }

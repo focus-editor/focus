@@ -73,7 +73,7 @@ get_workspace_scan_progress :: () -> float {
     return clamp(cast(float) num_jobs_completed / num_jobs_to_complete, 0.0, 1.0);
 }
 
-maybe_update_workspace_buffers :: () {
+workspace_update :: () {
     if !workspace_scan_complete {
         if !file_list_ready {
             results := get_completed_work(*file_list_thread_group);

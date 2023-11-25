@@ -575,7 +575,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // Handle editor scrolling here because we only know the layout at this point.
         num_editor_lines := get_max_line_num(editor, buffer);
         content_height := (num_editor_lines + 2) * line_height;
-        if config.settings.scroll_beyond_last_line then content_height += (rect.h - 3 * line_height);
+        if config.settings.scroll_beyond_last_line && !as_build_panel then content_height += (rect.h - 3 * line_height);
 
         max_y_scroll := max(cast(s32)(content_height - rect.h), 0);
 

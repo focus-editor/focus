@@ -167,6 +167,10 @@ platform_wait_message :: inline () {
     LD.wait_for_events();
 }
 
+platform_wake_up_main_thread :: () {
+    // TODO
+}
+
 platform_set_refresh_timer :: (window: Window_Type) {
     LD.timer_start(timer, 0, 50);
 }

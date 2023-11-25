@@ -177,7 +177,7 @@ main :: () {
         dont_scroll_this_frame = false;
         window_has_focus = Input.input_application_has_focus;  // so that we always redraw when the window first loses focus
 
-        maybe_update_workspace_buffers();
+        workspace_update();
         finder_update();
 
         for * editor : open_editors {
@@ -277,7 +277,7 @@ main :: () {
         }
 
         process_buffer_save_queue();
-
+        build_system_update();
         refresh_open_buffers();
 
         draw_frame();

@@ -80,6 +80,10 @@ platform_wait_message :: inline () {
     WaitMessage();
 }
 
+platform_wake_up_main_thread :: () {
+    // TODO
+}
+
 platform_set_refresh_timer :: (window: Window_Type) {
     SetTimer(window, REFRESH_TIMER_ID, 50, cast(*void) 0);  // refresh every 50ms
 }
