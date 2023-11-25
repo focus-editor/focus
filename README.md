@@ -7,6 +7,13 @@ This editor is for people who value simplicity, are sensitive to input latency a
 ![focus](https://user-images.githubusercontent.com/119373822/236081314-45d53952-7a6c-4d6b-8773-e5b49d1dbdab.gif)
 
 
+## What do we mean by "simple" and "fast"
+
+Simple: the editor's functionality and code design. It doesn't include a lot of features, and the source code should be simple enough so that people can easily add features if they want to. It is configured using a single simple config file.
+
+Fast: we try to minimize input latency and maximize responsiveness. We also include relatively fast project search, which should work well for reasonably sized projects.
+
+
 ## Quick start
 
 1. [Download the executable](https://github.com/focus-editor/focus/releases) and put it somewhere where it will live.
@@ -32,7 +39,7 @@ https://discord.gg/eSXquAzTmW
 
 `$ jai first.jai - release`
 
-Required Jai version: `0.1.075`
+Minimum Jai version: `0.1.075` (the language is currently in closed beta, but it will hopefully go into open beta soon)
 
 **On MacOS:**
 
@@ -54,7 +61,7 @@ The editor is in beta. This means you may encounter some bugs here and there, an
 ## Limitations
 
 - Only 64-bit systems are supported, Windows 8+, Linux (WIP), macOS (WIP).
-- This editor is not designed for editing very large files.
+- This editor is not designed for editing very large files (it is expected that editing might start lagging upwards of 100K LOC). 2GB files is a hard limit right now.
 - CRLF will be converted to LF on save. It's time to move on.
 - Multi-codepoint Unicode symbols are not supported.
 - Currently only RGB monitor panels are supported. If your text looks funny or blurry, please open an issue.
