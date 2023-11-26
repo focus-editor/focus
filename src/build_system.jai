@@ -127,9 +127,10 @@ build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thre
     allocator := get_pool_allocator();
     push_allocator(allocator);
 
-    result, output, error, timeout_reached := run_command_while_monitoring_output(
+    result, timeout_reached := run_command_while_monitoring_output(
         ..break_command_into_strings(command.build_command),
         working_directory = command.build_working_dir,
+        timeout_ms = command.timeout_in_seconds * 1000,
     );
 
     platform_wake_up_main_thread();
@@ -166,15 +167,17 @@ output_mutex: Mutex;
 
 // Adapted the run_command function from the Process module to allow for monitoring output
 
-run_command_while_monitoring_output :: (args: .. string, working_directory := "", timeout_ms := -1, arg_quoting := Process_Argument_Quoting.QUOTE_IF_NEEDED) -> (process_result: Process_Result, output_string := "", error_string := "", timeout_reached := false) {
+run_command_while_monitoring_output :: (args: .. string, working_directory := "", timeout_ms := -1, arg_quoting := Process_Argument_Quoting.QUOTE_IF_NEEDED) -> (process_result: Process_Result, timeout_reached := false) {
     process: Process;
     launched := create_process(*process, .. args, working_directory, capture_and_return_output = true, arg_quoting = arg_quoting);
     if !launched return .{type = .FAILED_TO_LAUNCH};
-
     defer deinit(*process);
 
     timeout_reached := false;
 
+    // These string builders are to make sure we have fetched everything from `read_to_process` before printing to console.
+    // If we don't use them and print right away, we might have partial output and error output intermingled,
+    // because it could take more than one iteration to read everything from process if it has a lot to output.
     output_builder: String_Builder;
     error_builder:  String_Builder;
 
@@ -182,19 +185,19 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
     remaining_timeout_ms := timeout_ms;
 
     while true {
-        output_buffer := ensure_contiguous_space_and_return_available_range(*output_builder);
-        error_buffer  := ensure_contiguous_space_and_return_available_range(*error_builder);
-
+        output_buffer, error_buffer: [8096] u8;
         success, num_output_bytes, num_error_bytes := read_from_process(*process, output_buffer, error_buffer, remaining_timeout_ms);
 
         if num_output_bytes {
-            advance_through_ensured_space(*output_builder, num_output_bytes);
-            write_output_from_build_thread(*stdout, to_string(output_buffer.data, num_output_bytes));
+            append(*output_builder, to_string(output_buffer.data, num_output_bytes));
+        } else {
+            write_output_from_build_thread(*stdout, builder_to_string(*output_builder));
         }
 
         if num_error_bytes {
-            advance_through_ensured_space(*error_builder, num_error_bytes);
-            write_output_from_build_thread(*stderr, to_string(error_buffer.data, num_error_bytes));
+            append(*error_builder, to_string(error_buffer.data, num_error_bytes));
+        } else {
+            write_output_from_build_thread(*stderr, builder_to_string(*error_builder));
         }
 
         if !success {
@@ -219,11 +222,12 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
             }
         }
 
-        if process.output.eof && process.error.eof    break;
+        if process.output.eof && process.error.eof break;
     }
 
-    output_string := builder_to_string(*output_builder);
-    error_string  := builder_to_string(*error_builder);
+    // Print any leftover output
+    write_output_from_build_thread(*stdout, builder_to_string(*output_builder));
+    write_output_from_build_thread(*stderr, builder_to_string(*error_builder));
 
     success, process_result := get_process_result(*process);
     if !success {
@@ -233,10 +237,11 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
         process_result = .{type = .EXITED, exit_code = 1};
     }
 
-    return process_result, output_string, error_string, timeout_reached;
+    return process_result, timeout_reached;
 }
 
 write_output_from_build_thread :: (builder: *String_Builder, s: string) {
+    if !s return;
     lock(*output_mutex);
     defer unlock(*output_mutex);
     append(builder, s);
