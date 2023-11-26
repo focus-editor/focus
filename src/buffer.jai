@@ -820,7 +820,7 @@ find_or_create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
         // We have to only do this if the workspace scan is complete, otherwise we'll be in for
         // many surprising thread-related bugs
         for * buffer, buffer_id : open_buffers {
-            if !buffer.has_file && !trim(cast(string) buffer.bytes) return buffer_id, false;
+            if !buffer.has_file && !buffer.readonly && !trim(cast(string) buffer.bytes) return buffer_id, false;
         }
     }
 
