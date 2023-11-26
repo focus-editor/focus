@@ -289,17 +289,18 @@ draw_user_messages :: (main_area: Rect, footer_height: float) {
 }
 
 draw_build_panel :: () {
-
-    left_rect, right_rect := cut_left(screen, screen.w * splitter_pos, margin = 2);
+    splitter := ifx !editor_closing then splitter_pos else 0.5;
+    left_rect, right_rect := cut_left(screen, screen.w * splitter, margin = 2);
 
     build_panel_rect: Rect;
     if #complete editors.layout == {
         case .None;     build_panel_rect = right_rect;
         case .Single;   build_panel_rect = right_rect;
         case .Double;   build_panel_rect = ifx editors.active == editors.left then right_rect else left_rect;
+                        if editor_closing then build_panel_rect = right_rect;
     }
-    build_panel_rect = shrink(build_panel_rect, 4 * char_size);
-    build_panel_rect.y += 4 * char_size;
+    build_panel_rect = shrink_y(build_panel_rect, 5 * char_size);
+    build_panel_rect.y += 5 * char_size;
     if !is_valid(build_panel_rect) return;
 
     editor_id := build_panel_get_editor_id();
@@ -995,7 +996,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE, hidden_chars_on_the_left);
 
         // Draw continuation markers for wrapped lines
-        if line_wrap_is_active(editor) && !config.settings.show_line_numbers {
+        if line_wrap_is_active(editor) && !config.settings.show_line_numbers && !as_build_panel {
             Simp.set_shader_for_rects();
 
             radius   := char_x_advance / 4;
