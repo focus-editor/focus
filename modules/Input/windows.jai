@@ -181,8 +181,6 @@ get_vk :: (key: Key_Code) -> VK: u64 {
 MyWindowProc :: (hwnd: HWND, message: u32,
                  wParam: WPARAM, lParam: LPARAM) -> s64 #c_call {
     new_context: Context;
-    new_context.allocator = Context.default_allocator;
-    new_context.logger    = Context.default_logger;
 
     push_context new_context {
         using Key_Code;
