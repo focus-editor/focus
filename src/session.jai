@@ -408,7 +408,7 @@ session_logger :: (raw_msg: string, data: *void, info: Log_Info) {
 
     #if DEBUG {
         // Write to stdout/stderr
-        context.default_logger(message, data, info);
+        runtime_support_default_logger(message, data, info);
     }
 }
 
