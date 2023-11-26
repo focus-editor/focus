@@ -175,29 +175,22 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
 
     timeout_reached := false;
 
-    // These string builders are to make sure we have fetched everything from `read_to_process` before printing to console.
-    // If we don't use them and print right away, we might have partial output and error output intermingled,
-    // because it could take more than one iteration to read everything from process if it has a lot to output.
-    output_builder: String_Builder;
+    // A string builder to buffer error output so that we can print it out at the end
     error_builder:  String_Builder;
 
     start_time := current_time_monotonic();
     remaining_timeout_ms := timeout_ms;
 
     while true {
-        output_buffer, error_buffer: [8096] u8;
+        output_buffer, error_buffer: [4096] u8;
         success, num_output_bytes, num_error_bytes := read_from_process(*process, output_buffer, error_buffer, remaining_timeout_ms);
 
         if num_output_bytes {
-            append(*output_builder, to_string(output_buffer.data, num_output_bytes));
-        } else {
-            write_output_from_build_thread(*stdout, builder_to_string(*output_builder));
+            write_output_from_build_thread(*stdout, to_string(output_buffer.data, num_output_bytes));
         }
 
         if num_error_bytes {
             append(*error_builder, to_string(error_buffer.data, num_error_bytes));
-        } else {
-            write_output_from_build_thread(*stderr, builder_to_string(*error_builder));
         }
 
         if !success {
@@ -225,8 +218,7 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
         if process.output.eof && process.error.eof break;
     }
 
-    // Print any leftover output
-    write_output_from_build_thread(*stdout, builder_to_string(*output_builder));
+    // Print error output
     write_output_from_build_thread(*stderr, builder_to_string(*error_builder));
 
     success, process_result := get_process_result(*process);
