@@ -48,7 +48,7 @@ execute_build_command :: (command: *Build_Command) {
     running_command.run_working_dir   = copy_string(command.run_working_dir);
     running_command.error_regex       = copy_string(command.error_regex);
 
-    if command.open_panel_on_build then build_panel_is_shown = true;
+    if command.open_panel_on_build then show_build_panel();
 
     add_work(*thread_group, running_command);
     // Now don't modify running_command as it's being accessed from thread
@@ -67,7 +67,7 @@ build_system_update :: () {
 
         if running_command.close_panel_on_success {
             // TODO: if exit code is not 0 or there are errors, that shouldn't be a success?
-            build_panel_is_shown = false;
+            hide_build_panel();
         }
 
         running_command = null;
@@ -102,14 +102,27 @@ print_to_output_panel_from_main_thread :: (s: string) {
 }
 
 toggle_build_panel :: () {
+    if build_panel_is_shown {
+        hide_build_panel();
+    } else {
+        show_build_panel();
+    }
+}
+
+show_build_panel :: () {
     if !build_panel_is_shown {
         previously_active_editor = editors.active;
-    } else if editors.active != editors.left && editors.active != editors.right {
+    }
+    build_panel_is_shown = true;
+}
+
+hide_build_panel :: () {
+    if editors.active != editors.left && editors.active != editors.right {
         // If we still have the same editors open when the panel was opened, go back to the previously active one,
         // otherwise default to left.
         editors.active = ifx previously_active_editor == editors.right then editors.right else editors.left;
     }
-    build_panel_is_shown = !build_panel_is_shown;
+    build_panel_is_shown = false;
 }
 
 toggle_build_panel_height :: () {
@@ -125,6 +138,10 @@ build_panel_get_position :: () -> Build_Panel_Position {
                         else if editors.active == editors.right then saved_position = .left;
     }
     return saved_position;
+}
+
+build_panel_is_active :: inline () -> bool {
+    return build_panel_is_shown && build_editor_id >= 0 && editors.active == build_editor_id;
 }
 
 build_panel_get_editor_id :: inline () -> s64 {

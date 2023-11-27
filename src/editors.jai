@@ -3,6 +3,7 @@
 editors_handle_event :: (event: Input.Event) -> handled: bool {
     mods := event.modifier_flags;
 
+    // Used for edit notifications
     context.current_editor_id = editors.active;
     defer context.current_editor_id = -1;
 
@@ -367,7 +368,7 @@ active_editor_type_char :: (char: u32) {
 }
 
 get_active_editor_and_buffer :: () -> *Editor, *Buffer {
-    if editors.layout == .None return null, null;
+    if editors.layout == .None && !build_panel_is_active() return null, null;
     editor := *open_editors[editors.active];
     buffer := *open_buffers[editor.buffer_id];
     return editor, buffer;
@@ -738,6 +739,10 @@ close_editor :: (position: enum { current; other; left; right; }) {
 }
 
 close_current_editor :: () {
+    if build_panel_is_active() {
+        toggle_build_panel();
+        return;
+    }
     if editors.layout == {
         case .None;     return;
         case .Single;
@@ -762,6 +767,8 @@ close_current_editor :: () {
 }
 
 close_other_editor :: () {
+    if build_panel_is_active() return;  // what exactly do you want to close?
+
     if editors.layout == {
         case .None;     return;
         case .Single;   return;  // don't do anything
