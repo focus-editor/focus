@@ -304,7 +304,7 @@ draw_build_panel :: () {
     if !is_valid(build_panel_rect) return;
 
     editor_id := build_panel_get_editor_id();
-    draw_rounded_rect_with_shadow(build_panel_rect, Colors.BACKGROUND_BUILD_PANEL, radius = 0.1, shadow_size = char_size);
+    draw_rounded_rect_with_shadow(build_panel_rect, Colors.BUILD_PANEL_BACKGROUND, radius = 0.1, shadow_size = char_size);
 
     ui_id := get_ui_id_from_loc();
     draw_editor(editor_id, build_panel_rect, 0, ui_id, as_build_panel = true);
@@ -690,7 +690,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
 
         // Scrollbar
-        new_scroll_target := draw_scrollbar(rect, scrollbar_size, content_height, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
+        new_scroll_target := draw_scrollbar(rect, scrollbar_size, content_height, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id, as_build_panel);
         if new_scroll_target != viewport.scroll_y.target {
             // Jump immediately to the scroll point when dragging or clicking scrollbar
             viewport.top = new_scroll_target;
@@ -3090,7 +3090,7 @@ get_new_scroll_target_from_scrollbar :: (main_rect: Rect, width: float, content_
     return draw_scrollbar(main_rect, width, content_height, scroll, scroll_target, max_scroll, ui_id, draw = false);
 }
 
-draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id, $draw := true) -> new_scroll_target: s32 {
+draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id, for_build_panel := false, $draw := true) -> new_scroll_target: s32 {
     if max_scroll <= 0 return scroll_target;
 
     area := cut_right(main_rect, width);  // the scrollbar area of the main rect
@@ -3102,15 +3102,24 @@ draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll:
 
     maybe_set_hot_or_active(ui_id, area, .NORMAL);
 
-    // Draw
-    color := Colors.SCROLLBAR;
+    color       := Colors.SCROLLBAR;
+    color_bg    := Colors.SCROLLBAR_BACKGROUND;
+    color_hover := Colors.SCROLLBAR_HOVER;
 
+    // This is not very nice, but we're just going to do it like this for now and move on
+    if for_build_panel {
+        color       = Colors.BUILD_PANEL_SCROLLBAR;
+        color_bg    = Colors.BUILD_PANEL_SCROLLBAR_BACKGROUND;
+        color_hover = Colors.BUILD_PANEL_SCROLLBAR_HOVER;
+    }
+
+    // Draw
     if is_hovering_over(ui_id) {
-        #if draw draw_rounded_rect(area, Colors.SCROLLBAR_BACKGROUND, radius = rounding_radius_small);
-        color = Colors.SCROLLBAR_HOVER;
+        #if draw draw_rounded_rect(area, color_bg, radius = rounding_radius_small);
+        color = color_hover;
     }
     separator_rect := shrink_y(cut_left(area, 1), rounding_radius_small);
-    #if draw draw_rect(separator_rect, Colors.SCROLLBAR_BACKGROUND);
+    #if draw draw_rect(separator_rect, color_bg);
     scrollbar.y += (cast(float) (max_scroll - scroll) / max_scroll) * scroll_zone_size;
     scrollbar.y = floor(scrollbar.y);
     scrollbar = shrink(scrollbar, 1);

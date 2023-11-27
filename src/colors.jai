@@ -11,13 +11,11 @@ Color :: struct {
 Color_Values :: struct {
     NONE :: Color.{ r = -1, g = -1, b = -1, a = -1 };  // an invalid color to denote no color
 
-
     BACKGROUND              := Color.{ r = 0.086, g = 0.133, b = 0.165 };
     BACKGROUND_DARK         := Color.{ r = 0.065, g = 0.101, b = 0.125 };
     BACKGROUND_HIGHLIGHT    := Color.{ r = 0.097, g = 0.15, b = 0.185 };
     BACKGROUND_LIGHT        := Color.{ r = 0.102, g = 0.158, b = 0.195 };
     BACKGROUND_BRIGHT       := Color.{ r = 0.131, g = 0.202, b = 0.25 };
-    BACKGROUND_BUILD_PANEL  := Color.{ r = 0.065, g = 0.101, b = 0.125 };
     SELECTION_ACTIVE        := Color.{ r = 0.11, g = 0.267, b = 0.29 };
     SELECTION_INACTIVE      := Color.{ r = 0.11, g = 0.267, b = 0.29, a = 0.5 };
     SELECTION_HIGHLIGHT     := Color.{ r = 0.99, g = 0.93, b = 0.99, a = 0.15 };
@@ -37,6 +35,11 @@ Color_Values :: struct {
     SHADOW_DARK             := Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0.5 };
     SHADOW_TRANSPARENT      := Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0 };  // for interpolation
     TEXT_INPUT_LABEL        := Color.{ r = 0.233, g = 0.269, b = 0.316, a = 1.0 };
+
+    BUILD_PANEL_BACKGROUND           := Color.{ r = 0.102, g = 0.158, b = 0.195 };
+    BUILD_PANEL_SCROLLBAR            := Color.{ r = 0.20, g = 0.80, b = 0.80, a = 0.1 };
+    BUILD_PANEL_SCROLLBAR_HOVER      := Color.{ r = 0.20, g = 0.80, b = 0.80, a = 0.3 };
+    BUILD_PANEL_SCROLLBAR_BACKGROUND := Color.{ r = 0.065, g = 0.101, b = 0.125, a = 0.3 };
 
     UI_DEFAULT              := Color.{ r = 0.75, g = 0.79, b = 0.86, a = 1.0 };
     UI_DIM                  := Color.{ r = 0.533, g = 0.569, b = 0.616, a = 1.0 };
