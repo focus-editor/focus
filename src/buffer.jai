@@ -1140,6 +1140,11 @@ process_buffer_save_queue :: () {
     }
 }
 
+clear_buffer_regions :: (using buffer: *Buffer) {
+    for regions free(it.note);
+    array_reset_keeping_memory(*regions);
+}
+
 #scope_file
 
 add_edit_notification :: (using buffer: *Buffer, offset: s64, old_count: s64, new_count: s64) {
@@ -1229,7 +1234,9 @@ Buffer :: struct {
     bytes: [..] u8;
     line_starts: [..] s32;       // real offsets of newlines in the bytes array
 
-    colors: [..] u8;             // we color each byte (even for multi-byte chars). TODO: change this to range-based coloring
+    colors: [..] u8;             // we color each byte (even for multi-byte chars).
+
+    regions: [..] Buffer_Region; // for highlighting parts of buffer
 
     // TODO: put into enum_flags
     has_file               := false;  // a buffer might not have a corresponding file
@@ -1244,7 +1251,7 @@ Buffer :: struct {
     error_when_saving      := false;
     crlf                   := false;
 
-    content_lock: Mutex;  // must hold while modifying content (or reading in an off thread)
+    content_lock: Mutex;  // must hold while modifying content (or reading in a non-main thread)
 
     last_edit_time: Time;  // for creating new edit groups
 
@@ -1328,6 +1335,22 @@ Coords :: struct {
 
 Offset_Range :: struct {
     start, end: s32;  // we won't open large files anyway
+}
+
+Buffer_Region :: struct {
+    using range: Offset_Range;
+    note: string;
+    kind: Kind;
+
+    Kind :: enum u8 {
+        error;
+        warning;
+        success;
+        header;
+        scope_export;
+        scope_file;
+        scope_module;
+    }
 }
 
 Coords_Range :: struct {

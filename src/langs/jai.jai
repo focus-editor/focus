@@ -1,15 +1,16 @@
 highlight_jai_syntax :: (using buffer: *Buffer) {
     tokenizer := get_tokenizer(buffer);
 
+    clear_buffer_regions(buffer);
+    start_scope(*tokenizer, 0, .scope_export);
+
     while true {
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
 
-        using tokenizer;
-
         // Maybe retroactively highlight a function
         if token.type == .punctuation && token.punctuation == .l_paren {
-            before_prev, prev := last_tokens[0], last_tokens[1];
+            before_prev, prev := tokenizer.last_tokens[0], tokenizer.last_tokens[1];
             if prev.type == .identifier {
                 // Handle "func("
                 memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
@@ -19,22 +20,24 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
             }
         } else if token.type == .keyword && token.keyword == .kw_inline {
             // Handle "func :: inline"
-            before_prev, prev := last_tokens[0], last_tokens[1];
+            before_prev, prev := tokenizer.last_tokens[0], tokenizer.last_tokens[1];
             if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
                 memset(colors.data + before_prev.start, xx Code_Color.FUNCTION, before_prev.len);
             }
         }
 
         // Remember last 2 tokens
-        last_tokens[0] = last_tokens[1];
-        last_tokens[1] = token;
+        tokenizer.last_tokens[0] = tokenizer.last_tokens[1];
+        tokenizer.last_tokens[1] = token;
 
         color := COLOR_MAP[token.type];
         memset(colors.data + token.start, xx color, token.len);
     }
+
+    end_scope(*tokenizer, bytes.count);
 }
 
-tokenize_jai_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_jai_for_indentation :: (using buffer: *Buffer) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
@@ -82,12 +85,13 @@ tokenize_jai_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
 
 // We're using a separate tokenizer here because we have to keep track of last 2 tokens in many places
 // and we can't use a global variable for that because of threading
-get_tokenizer :: (using buffer: Buffer) -> Jai_Tokenizer {
+get_tokenizer :: (using buffer: *Buffer) -> Jai_Tokenizer {
     tokenizer: Jai_Tokenizer;
 
-    tokenizer.buf   = cast(string) bytes;
-    tokenizer.max_t = bytes.data + bytes.count;
-    tokenizer.t     = bytes.data;
+    tokenizer.buffer = buffer;
+    tokenizer.buf    = cast(string) bytes;
+    tokenizer.max_t  = bytes.data + bytes.count;
+    tokenizer.t      = bytes.data;
 
     return tokenizer;
 }
@@ -247,6 +251,8 @@ parse_compiler_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
     eat_white_space(tokenizer);  // there may be spaces between the # and the name
     if !is_alpha(<<t) return;
 
+    start_offset := cast(s32) (t - start_t);
+
     mark := get_temporary_storage_mark();
     defer   set_temporary_storage_mark(mark);
 
@@ -261,6 +267,12 @@ parse_compiler_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
     if ok {
         token.type = .compiler_directive;
         token.compiler_directive = directive;
+
+        if directive == {
+            case .directive_scope_export;     start_scope(tokenizer, start_offset, .scope_export);
+            case .directive_scope_module;     start_scope(tokenizer, start_offset, .scope_module);
+            case .directive_scope_file;       start_scope(tokenizer, start_offset, .scope_file);
+        }
     }
 }
 
@@ -561,8 +573,27 @@ read_identifier_string_tmp :: (using tokenizer: *Jai_Tokenizer) -> string /* tem
     return cast(string) identifier;
 }
 
+start_scope :: (using tokenizer: *Jai_Tokenizer, offset: s64, kind: Buffer_Region.Kind) {
+    if current_scope_id >= 0 then end_scope(tokenizer, offset);
+    current_scope_id = buffer.regions.count;
+
+    region := Buffer_Region.{
+        start = xx offset,
+        end   = -1,
+        kind  = kind,
+    };
+    array_add(*buffer.regions, region);
+}
+
+end_scope :: inline (using tokenizer: *Jai_Tokenizer, offset: s64) {
+    buffer.regions[current_scope_id].end = xx offset;
+}
+
 Jai_Tokenizer :: struct {
-    buf: string;
+    buffer:  *Buffer;
+    current_scope_id := -1;
+
+    buf:     string;
     max_t:   *u8;
     start_t: *u8;  // cursor when starting parsing new token
     t:       *u8;  // cursor
@@ -665,9 +696,10 @@ COMPILER_DIRECTIVES :: string.[
 MODIFIERS :: string.[
     "isa", "distinct",  // type
     "only", "except", "map",  // using
-    "no_check", "truncate",  // cast
+    "no_check", "truncate", "force",  // cast
     "file", "dir", "string",  // import
     "scope",  // insert
+    "stallable",  // run
 ];
 
 #insert -> string {
