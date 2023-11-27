@@ -292,13 +292,7 @@ draw_build_panel :: () {
     splitter := ifx !editor_closing then splitter_pos else 0.5;
     left_rect, right_rect := cut_left(screen, screen.w * splitter, margin = 2);
 
-    build_panel_rect: Rect;
-    if #complete editors.layout == {
-        case .None;     build_panel_rect = right_rect;
-        case .Single;   build_panel_rect = right_rect;
-        case .Double;   build_panel_rect = ifx editors.active == editors.left then right_rect else left_rect;
-                        if editor_closing then build_panel_rect = right_rect;
-    }
+    build_panel_rect := ifx build_panel_get_position() == .left then left_rect else right_rect;
     build_panel_rect = shrink_y(build_panel_rect, 5 * char_size);
     build_panel_rect.y += 5 * char_size;
     if !is_valid(build_panel_rect) return;
@@ -959,7 +953,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         if editor.paste_animations.count > 0 then redraw_requested = true;
 
         // Draw inactive cursors before text
-        if !cursors_active && !search_bar_is_open(editor) && config.settings.cursor_as_block {
+        if !cursors_active && !search_bar_is_open(editor) && config.settings.cursor_as_block && !as_build_panel {
             Simp.set_shader_for_rects();
             for cursor : cursors {
                 if cursor.pos < visible_offset_range.start || cursor.pos > visible_offset_range.end continue;
@@ -1015,7 +1009,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
 
         // Draw cursors when they are active
-        cursor_width := ifx config.settings.cursor_as_block then char_x_advance else 2 * dpi_scale;
+        cursor_as_block := config.settings.cursor_as_block && !as_build_panel;
+        cursor_width := ifx cursor_as_block then char_x_advance else 2 * dpi_scale;
 
         if cursors_active && should_draw_cursors() && !search_bar_is_open(editor) {
             Simp.set_shader_for_rects();
@@ -1027,7 +1022,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 draw_rounded_rect(rect, Colors.CURSOR, radius = rounding_radius_small, set_shader = true);
 
                 // Draw the letter on top for better visibility
-                if config.settings.cursor_as_block {
+                if cursor_as_block {
                     letter := get_char_at_offset_as_string(buffer, cursor.pos);
                     if letter != "\n" {
                         Simp.draw_text(font, xx rect.x, xx (rect.y + (line_height - char_x_advance) / 2), letter);
@@ -1356,7 +1351,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     }
 
     // Draw footer
-    {
+    if !as_build_panel {
         footer_color := Colors.BACKGROUND_BRIGHT;
         draw_rect(footer_rect, footer_color);
         draw_top_shadow(footer_rect);

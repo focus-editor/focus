@@ -102,11 +102,29 @@ print_to_output_panel_from_main_thread :: (s: string) {
 }
 
 toggle_build_panel :: () {
+    if !build_panel_is_shown {
+        previously_active_editor = editors.active;
+    } else if editors.active != editors.left && editors.active != editors.right {
+        // If we still have the same editors open when the panel was opened, go back to the previously active one,
+        // otherwise default to left.
+        editors.active = ifx previously_active_editor == editors.right then editors.right else editors.left;
+    }
     build_panel_is_shown = !build_panel_is_shown;
 }
 
 toggle_build_panel_height :: () {
-    // TODO
+    // TODO: remove and use toggle_expand instead
+}
+
+build_panel_get_position :: () -> Build_Panel_Position {
+    if #complete editors.layout == {
+        case .None;     saved_position = .right;
+        case .Single;   saved_position = .right;
+        case .Double;   if editor_closing then saved_position = .right;
+                        else if editors.active == editors.left  then saved_position = .right;
+                        else if editors.active == editors.right then saved_position = .left;
+    }
+    return saved_position;
 }
 
 build_panel_get_editor_id :: inline () -> s64 {
@@ -150,6 +168,9 @@ thread_group: Thread_Group;
 build_buffer_id := -1;
 build_editor_id := -1;
 
+previously_active_editor := -1;
+saved_position := Build_Panel_Position.right;
+
 running_command: *Build_Command = null;
 
 memory_pool: Flat_Pool;
@@ -161,6 +182,9 @@ memory_pool: Flat_Pool;
 stdout: String_Builder;
 stderr: String_Builder;
 output_mutex: Mutex;
+
+
+Build_Panel_Position :: enum { left; right; }
 
 
 #scope_file
