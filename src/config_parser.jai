@@ -228,6 +228,14 @@ map_color_name_to_color_struct :: (config: *Config, color_name: string) -> *Colo
         case "code_error";                              return *config.colors.CODE_ERROR;
         case "code_keyword";                            return *config.colors.CODE_KEYWORD;
 
+        case "region_scope_export";                     return *config.colors.REGION_SCOPE_EXPORT;
+        case "region_scope_file";                       return *config.colors.REGION_SCOPE_FILE;
+        case "region_scope_module";                     return *config.colors.REGION_SCOPE_MODULE;
+        case "region_header";                           return *config.colors.REGION_HEADER;
+        case "region_success";                          return *config.colors.REGION_SUCCESS;
+        case "region_warning";                          return *config.colors.REGION_WARNING;
+        case "region_error";                            return *config.colors.REGION_ERROR;
+
         case "build_panel_background";                  return *config.colors.BUILD_PANEL_BACKGROUND;
         case "build_panel_scrollbar";                   return *config.colors.BUILD_PANEL_SCROLLBAR;
         case "build_panel_scrollbar_hover";             return *config.colors.BUILD_PANEL_SCROLLBAR_HOVER;

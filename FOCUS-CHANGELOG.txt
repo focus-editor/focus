@@ -56,6 +56,7 @@
         NumpadSubtract
         NumpadDecimal
         NumpadEnter
+    + Scopes in Jai are now highlighted. See the default config for the new color options (`region_scope_*`)
 
 + Bug fixes:
     + Mac: Fixed intermittent crashing on launch

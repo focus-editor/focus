@@ -316,6 +316,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
     using editor := *open_editors[editor_id];
     buffer := *open_buffers[buffer_id];
+    if buffer.needs_coloring || buffer.colors.count != buffer.bytes.count then recalculate_colors(buffer);  // right before drawing
 
     line_number_panel: Rect;
     if config.settings.show_line_numbers {
@@ -683,8 +684,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             array_reset_keeping_memory(*editor.highlights);
         }
 
-        // Scrollbar
-        new_scroll_target := draw_scrollbar(rect, scrollbar_size, content_height, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id, as_build_panel);
+        // Update scrollbar without drawing to get the new scrolling position (scrollbar will be drawn later)
+        new_scroll_target := get_new_scroll_target_from_scrollbar(rect, scrollbar_size, content_height, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
         if new_scroll_target != viewport.scroll_y.target {
             // Jump immediately to the scroll point when dragging or clicking scrollbar
             viewport.top = new_scroll_target;
@@ -787,57 +788,27 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             redraw_requested = true;
         }
 
-        // Draw scrollbar marks
-        if !line_wrap_is_active(editor) {
-            Simp.set_shader_for_color(enable_blend = true);
+        // Draw buffer regions
+        for region : buffer.regions {
+            if region.end   < visible_offset_range.start continue;
+            if region.start > visible_offset_range.end   break;
 
-            marks_rect := cut_right(rect, scrollbar_size);
-            marks_rect =  cut_top(marks_rect, rect.h * max_y_scroll / content_height);
-            marks_rect_top := marks_rect.y + marks_rect.h;
-            assert(buffer.line_starts.count > 0);
-
-            highlight_mark_rect := shrink_x(marks_rect, marks_rect.w / 3);
-            highlight_mark_rect.h = floor(4 * dpi_scale);
-
-            total_scrollable_lines := content_height / line_height;
-
-            if search_bar_is_open(editor) && search_bar.results {
-                // Search results
-                for search_bar.results {
-                    pos_from_top := rect.h * cast(float) it.line / total_scrollable_lines;
-                    highlight_mark_rect.y = marks_rect_top - pos_from_top - highlight_mark_rect.h;
-                    draw_rect_raw(highlight_mark_rect, ifx it_index == search_bar.selected_result then Colors.SEARCH_RESULT_ACTIVE else Colors.SEARCH_RESULT_INACTIVE);
-                }
+            color: Color;
+            if region.kind == {
+                case .scope_export;     color = Colors.REGION_SCOPE_EXPORT;
+                case .scope_file;       color = Colors.REGION_SCOPE_FILE;
+                case .scope_module;     color = Colors.REGION_SCOPE_MODULE;
+                case .header;           color = Colors.REGION_HEADER;
+                case .success;          color = Colors.REGION_SUCCESS;
+                case .warning;          color = Colors.REGION_WARNING;
+                case .error;            color = Colors.REGION_ERROR;
             }
 
-            if !search_bar_is_open(editor) {
-                // Selection highlights
-                for highlights {
-                    pos_from_top := rect.h * cast(float) it.line / total_scrollable_lines;
-                    highlight_mark_rect.y = marks_rect_top - pos_from_top - highlight_mark_rect.h;
-                    draw_rect_raw(highlight_mark_rect, Colors.SELECTION_HIGHLIGHT);
-                }
-            }
-
-            // Cursor and selection marks
-            cursor_mark_rect := marks_rect;
-            cursor_mark_rect.h = 2 * dpi_scale;
-            selection_mark_rect := cut_left(marks_rect, marks_rect.w / 3);
-
-            for cursor : cursors {
-                coords := cursor_coords[it_index];
-                pos_from_top := rect.h * cast(float) coords.pos.line / total_scrollable_lines;
-                cursor_mark_rect.y = marks_rect_top - pos_from_top - cursor_mark_rect.h;
-                if has_selection(cursor) {
-                    sel_from_top := rect.h * cast(float) coords.sel.line / total_scrollable_lines;
-                    min_pos := min(pos_from_top, sel_from_top);
-                    max_pos := max(pos_from_top, sel_from_top);
-                    selection_mark_rect.y = marks_rect_top - max_pos - cursor_mark_rect.h;
-                    selection_mark_rect.h = max_pos - min_pos + cursor_mark_rect.h;
-                    draw_rect_raw(selection_mark_rect, Colors.SELECTION_INACTIVE);
-                }
-                draw_rect_raw(cursor_mark_rect, Colors.CURSOR);
-            }
+            range := Coords_Range.{
+                start = offset_to_coords(editor, buffer, region.start),
+                end   = offset_to_coords(editor, buffer, region.end),
+            };
+            draw_range_full_width_lines(range, rect, visible_lines_start, visible_lines_end, text_origin, color);
         }
 
         // Draw selection highlights
@@ -966,8 +937,6 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
 
         // Draw text
-        if buffer.needs_coloring || buffer.colors.count != buffer.bytes.count then recalculate_colors(buffer);  // right before drawing
-
         max_chars_horizontally   := cast(s32) (rect.w / char_x_advance) + 2;
         hidden_chars_on_the_left := cast(s32) max((viewport.left / char_x_advance) - 2, 0);
 
@@ -1028,6 +997,62 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                         Simp.draw_text(font, xx rect.x, xx (rect.y + (line_height - char_x_advance) / 2), letter);
                     }
                 }
+            }
+        }
+
+
+        // Draw scrollbar and scrollbar marks
+        draw_scrollbar(rect, scrollbar_size, content_height, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id, as_build_panel);
+
+        if !line_wrap_is_active(editor) {
+            Simp.set_shader_for_color(enable_blend = true);
+
+            marks_rect := cut_right(rect, scrollbar_size);
+            marks_rect =  cut_top(marks_rect, rect.h * max_y_scroll / content_height);
+            marks_rect_top := marks_rect.y + marks_rect.h;
+            assert(buffer.line_starts.count > 0);
+
+            highlight_mark_rect := shrink_x(marks_rect, marks_rect.w / 3);
+            highlight_mark_rect.h = floor(4 * dpi_scale);
+
+            total_scrollable_lines := content_height / line_height;
+
+            if search_bar_is_open(editor) && search_bar.results {
+                // Search results
+                for search_bar.results {
+                    pos_from_top := rect.h * cast(float) it.line / total_scrollable_lines;
+                    highlight_mark_rect.y = marks_rect_top - pos_from_top - highlight_mark_rect.h;
+                    draw_rect_raw(highlight_mark_rect, ifx it_index == search_bar.selected_result then Colors.SEARCH_RESULT_ACTIVE else Colors.SEARCH_RESULT_INACTIVE);
+                }
+            }
+
+            if !search_bar_is_open(editor) {
+                // Selection highlights
+                for highlights {
+                    pos_from_top := rect.h * cast(float) it.line / total_scrollable_lines;
+                    highlight_mark_rect.y = marks_rect_top - pos_from_top - highlight_mark_rect.h;
+                    draw_rect_raw(highlight_mark_rect, Colors.SELECTION_HIGHLIGHT);
+                }
+            }
+
+            // Cursor and selection marks
+            cursor_mark_rect := marks_rect;
+            cursor_mark_rect.h = 2 * dpi_scale;
+            selection_mark_rect := cut_left(marks_rect, marks_rect.w / 3);
+
+            for cursor : cursors {
+                coords := cursor_coords[it_index];
+                pos_from_top := rect.h * cast(float) coords.pos.line / total_scrollable_lines;
+                cursor_mark_rect.y = marks_rect_top - pos_from_top - cursor_mark_rect.h;
+                if has_selection(cursor) {
+                    sel_from_top := rect.h * cast(float) coords.sel.line / total_scrollable_lines;
+                    min_pos := min(pos_from_top, sel_from_top);
+                    max_pos := max(pos_from_top, sel_from_top);
+                    selection_mark_rect.y = marks_rect_top - max_pos - cursor_mark_rect.h;
+                    selection_mark_rect.h = max_pos - min_pos + cursor_mark_rect.h;
+                    draw_rect_raw(selection_mark_rect, Colors.SELECTION_INACTIVE);
+                }
+                draw_rect_raw(cursor_mark_rect, Colors.CURSOR);
             }
         }
     }
@@ -1168,7 +1193,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             combo := key_sequence_for_action_as_string(Action_Search_Dialog.toggle_whole_word);
             if combo then tooltip = tprint("% (%)", tooltip, combo);
         } else if hover_regex_search {
-            tooltip = "Regex search";
+            tooltip = "Regex Search";
             combo := key_sequence_for_action_as_string(Action_Search_Dialog.toggle_regex_search);
             if combo then tooltip = tprint("% (%)", tooltip, combo);
         }
@@ -2488,7 +2513,7 @@ draw_finder :: () {
         combo := key_sequence_for_action_as_string(Action_Search_Dialog.toggle_whole_word);
         if combo then tooltip = tprint("% (%)", tooltip, combo);
     } else if hover_regex_search {
-        tooltip = "Regex search";
+        tooltip = "Regex Search";
         combo := key_sequence_for_action_as_string(Action_Search_Dialog.toggle_regex_search);
         if combo then tooltip = tprint("% (%)", tooltip, combo);
     }
@@ -2810,6 +2835,41 @@ draw_range :: (range: Coords_Range, editor: Editor, buffer: Buffer, visible_star
             if next_start > first_char || next_end < first_char || next_end == 0 then bl = .in;
             if next_end < last_char then br = .in;
             if next_end > last_char then br = .out;
+        }
+        draw_rounded_rect_with_corners(rect, color, tl, tr, br, bl);
+    }
+}
+
+draw_range_full_width_lines :: (range: Coords_Range, editor_rect: Rect, visible_start: s32, visible_end: s32, text_origin: Vector2, color: Color) {
+    start := max(range.start.line, visible_start);
+    end   := min(range.end.line,   visible_end);
+
+    full_width_rect := Rect.{ editor_rect.x, text_origin.y - start * line_height, editor_rect.w, line_height };
+    text_gap_x := text_origin.x - editor_rect.x;
+
+    for line_num : start..end {
+        rect := Rect.{
+            editor_rect.x,
+            text_origin.y - line_num * line_height,
+            editor_rect.w,
+            line_height,
+        };
+
+        tl, tr, bl, br: Corner_Rounding = .none;
+
+        if line_num == start {
+            if range.start.col > 0 {
+                tl = .in;
+                rect = cut_right(rect, rect.w - (text_gap_x + range.start.col * char_x_advance));
+            }
+        }
+        if line_num == end {
+            if range.end.col > 0 {
+                br = .in;
+                rect = cut_left(rect, text_gap_x + range.end.col * char_x_advance);
+            } else {
+                rect.w = 0;
+            }
         }
         draw_rounded_rect_with_corners(rect, color, tl, tr, br, bl);
     }

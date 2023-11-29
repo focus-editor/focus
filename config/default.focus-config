@@ -320,6 +320,14 @@ code_highlight:                         D89B75FF
 code_error:                             FF0000FF
 code_keyword:                           E67D74FF
 
+region_scope_export:                    15212AFF
+region_scope_file:                      131C22FF
+region_scope_module:                    1A2831FF
+region_header:                          30394F4C
+region_success:                         227722FF
+region_warning:                         986032FF
+region_error:                           772222FF
+
 build_panel_background:                 1A2831FF
 build_panel_scrollbar:                  33CCCC19
 build_panel_scrollbar_hover:            33CCCC4C

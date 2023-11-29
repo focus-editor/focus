@@ -249,17 +249,15 @@ parse_compiler_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
 
     t += 1;
     eat_white_space(tokenizer);  // there may be spaces between the # and the name
+    if t >= max_t return;
     if !is_alpha(<<t) return;
 
-    start_offset := cast(s32) (t - start_t);
+    start_offset := cast(s32) (start_t - buf.data);
 
     mark := get_temporary_storage_mark();
     defer   set_temporary_storage_mark(mark);
 
     directive_str := read_identifier_string_tmp(tokenizer);
-
-    while t < max_t && is_alnum(<< t) t += 1;
-    if t >= max_t return;
 
     // Check if it's one of the existing directives
     if directive_str.count > MAX_DIRECTIVE_LENGTH return;
@@ -603,7 +601,7 @@ Jai_Tokenizer :: struct {
 
 Token :: struct {
     start, len: s32;
-    type: Type;
+    type: Type = .invalid;
 
     // Additional info to distinguish between keywords/punctuation
     union {
