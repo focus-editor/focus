@@ -435,23 +435,18 @@ recalculate_colors :: (buffer: *Buffer) {
 
     assert(!buffer.dirty);
     buffer.needs_coloring = false;
-    array_resize(*buffer.colors, buffer.bytes.count);  // this will reset colors to 0
 
-    if buffer.lang == {
-        case .Jai;          highlight_jai_syntax(buffer);
-        case .C;            highlight_c_syntax(buffer);
-        case .CSharp;       highlight_csharp_syntax(buffer);
-        case .Focus_Config; highlight_focus_config_syntax(buffer);
-        case .Glsl;         highlight_glsl_syntax(buffer);
-        case .Golang;       highlight_golang_syntax(buffer);
-        case .Odin;         highlight_odin_syntax(buffer);
-        case .Python;       highlight_python_syntax(buffer);
-        case .RenPy;        highlight_renpy_syntax(buffer);
-        case .Html;         #through;
-        case .Xml;          highlight_xml_syntax(buffer);
-        case .Worklog;      highlight_worklog(buffer);
-        case .Yang;         highlight_yang_syntax(buffer);
-    }
+    highlighter_function := get_highlighter_function(buffer.lang);
+    if highlighter_function == null return;
+
+    array_resize(*buffer.colors, buffer.bytes.count);  // this will reset colors to 0
+    highlighter_function(buffer);
+}
+
+buffer_needs_coloring :: (buffer: Buffer) -> bool {
+    return
+        (buffer.needs_coloring || buffer.colors.count != buffer.bytes.count) &&
+        get_highlighter_function(buffer.lang) != null;
 }
 
 tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */ {
@@ -1147,6 +1142,27 @@ clear_buffer_regions :: (using buffer: *Buffer) {
 
 #scope_file
 
+Highlighter_Function :: #type (buffer: *Buffer);
+
+get_highlighter_function :: (lang: Buffer.Lang) -> Highlighter_Function {
+    if lang == {
+        case .Jai;          return highlight_jai_syntax;
+        case .C;            return highlight_c_syntax;
+        case .CSharp;       return highlight_csharp_syntax;
+        case .Focus_Config; return highlight_focus_config_syntax;
+        case .Glsl;         return highlight_glsl_syntax;
+        case .Golang;       return highlight_golang_syntax;
+        case .Odin;         return highlight_odin_syntax;
+        case .Python;       return highlight_python_syntax;
+        case .RenPy;        return highlight_renpy_syntax;
+        case .Html;         return highlight_xml_syntax;
+        case .Xml;          return highlight_xml_syntax;
+        case .Worklog;      return highlight_worklog;
+        case .Yang;         return highlight_yang_syntax;
+    }
+    return null;
+}
+
 add_edit_notification :: (using buffer: *Buffer, offset: s64, old_count: s64, new_count: s64) {
     if num_editors_open < 2 return;
     array_add(*edit_notifications, Buffer.Edit_Notification.{
@@ -1261,22 +1277,7 @@ Buffer :: struct {
     cursors: [..] Cursor;  // cursor state before any current edits were made
     edit_notifications: [..] Edit_Notification;
 
-    lang: enum u8 {
-        Plain_Text :: 0;
-        Jai;
-        C;
-        CSharp;
-        Focus_Config;
-        Glsl;
-        Golang;
-        Odin;
-        Python;
-        RenPy;
-        Xml;
-        Html;
-        Worklog;
-        Yang;
-    } = .Plain_Text;
+    lang: Lang = .Plain_Text;
 
     Edit_Group :: struct {
         edits: [] Edit;
@@ -1315,6 +1316,23 @@ Buffer :: struct {
         offset:    s32;
         delta:     s32;
     }
+
+    Lang :: enum u8 {
+        Plain_Text :: 0;
+        Jai;
+        C;
+        CSharp;
+        Focus_Config;
+        Glsl;
+        Golang;
+        Odin;
+        Python;
+        RenPy;
+        Xml;
+        Html;
+        Worklog;
+        Yang;
+    };
 }
 
 Cursor :: struct {

@@ -316,7 +316,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
     using editor := *open_editors[editor_id];
     buffer := *open_buffers[buffer_id];
-    if buffer.needs_coloring || buffer.colors.count != buffer.bytes.count then recalculate_colors(buffer);  // right before drawing
+    if buffer_needs_coloring(buffer) then recalculate_colors(buffer);  // right before drawing
 
     line_number_panel: Rect;
     if config.settings.show_line_numbers {
@@ -956,7 +956,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             colors := ifx line then array_view(buffer.colors, line.data - buffer.bytes.data, line.count) else .[];
             code_lines[line_num-visible_lines_start] = .{ line = line, tab_spaces = tab_spaces, colors = colors };
         }
-        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE, hidden_chars_on_the_left);
+        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE, hidden_chars_on_the_left, is_colored = buffer.colors.count > 0);
 
         // Draw continuation markers for wrapped lines
         if line_wrap_is_active(editor) && !config.settings.show_line_numbers && !as_build_panel {
@@ -1355,7 +1355,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                         colors   := array_view(buffer.colors, visible_offset_range.start, line_str.count);
                         code_lines: [1] Simp.Code_Line;
                         code_lines[0] = .{ line = line_str, tab_spaces = 0, colors = colors };
-                        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);
+                        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE, is_colored = buffer.colors.count > 0);
                     }
                 }
             }
@@ -2686,7 +2686,7 @@ draw_finder :: () {
                     Simp.draw_text(font, xx pen.x, xx pen.y, "…", color = Colors.UI_DIM);
                     pen.x += char_x_advance;
                 }
-                if buffer.needs_coloring || buffer.colors.count != buffer.bytes.count then recalculate_colors(buffer);  // right before drawing
+                if buffer_needs_coloring(buffer) then recalculate_colors(buffer);  // right before drawing
 
                 // Draw highlight
                 highlight_rect := entry_rect;
@@ -2704,7 +2704,7 @@ draw_finder :: () {
                     colors   := array_view(buffer.colors, visible_range.start, line_str.count);
                     code_lines: [1] Simp.Code_Line;
                     code_lines[0] = .{ line = line_str, tab_spaces = 0, colors = colors };
-                    Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE);
+                    Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE, is_colored = buffer.colors.count > 0);
                 }
             }
         }

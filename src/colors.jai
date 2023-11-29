@@ -74,7 +74,7 @@ Color_Values :: struct {
 Colors: Color_Values;  // a hack to avoid replacing a lot of code
 
 Code_Color :: enum u8 {
-    DEFAULT;
+    DEFAULT :: 0;
     COMMENT;
     TYPE;
     KEYWORD;
