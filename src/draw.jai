@@ -731,7 +731,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         max_lines := get_max_line_num(editor, buffer);
         visible_lines_start = clamp(cast(s32) (viewport.top / line_height) - 1, 0, max_lines);
-        visible_lines_end   = clamp(visible_lines_start + cast(s32) (rect.h / line_height) + 1, 0, max_lines);
+        visible_lines_end   = clamp(visible_lines_start + cast(s32) (rect.h / line_height) + 2, 0, max_lines);
         num_visible_lines   := visible_lines_end - visible_lines_start + 1;
 
         visible_offset_range = Offset_Range.{
@@ -950,13 +950,23 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             length     := get_line_start_offset(editor, buffer, line_num+1) - line_start;
             line := cast(string) array_view(buffer.bytes, line_start, length);
             tab_spaces := 0;
-            line, tab_spaces = advance_by_chars  (line, hidden_chars_on_the_left);
+            line, tab_spaces = advance_by_chars(line, hidden_chars_on_the_left);
             line = take_first_n_chars(line, max_chars_horizontally);
             line = trim_right(line, " \r\n");
             colors := ifx line then array_view(buffer.colors, line.data - buffer.bytes.data, line.count) else .[];
-            code_lines[line_num-visible_lines_start] = .{ line = line, tab_spaces = tab_spaces, colors = colors };
+            code_lines[line_num-visible_lines_start] = .{ line = line, start_offset = line_start, tab_spaces = xx tab_spaces, colors = colors };
         }
-        draw_code(font, pen, code_lines, hidden_chars_on_the_left, is_colored = buffer.colors.count > 0);
+
+        selections: [..] Offset_Range;
+        selections.allocator = temp;
+        for cursor : cursors {
+            selection := get_selection(cursor);
+            if selection.end   < visible_offset_range.start continue;
+            if selection.start > visible_offset_range.end   break;
+            array_add(*selections, selection);
+        }
+
+        draw_code(font, pen, code_lines, selections, start_col = hidden_chars_on_the_left, is_colored = buffer.colors.count > 0);
 
         // Draw continuation markers for wrapped lines
         if line_wrap_is_active(editor) && !config.settings.show_line_numbers && !as_build_panel {
@@ -3000,12 +3010,12 @@ draw_tooltip_bottom_left :: (text: string, pos: Vector2) {
     Simp.draw_prepared_text(font_ui_very_small, xx (rect.x + padding), xx (rect.y + (rect.h - font_ui_very_small.character_height) / 2) + 1, Colors.UI_DEFAULT);
 }
 
-draw_code :: (font: *Simp.Dynamic_Font, pen: Vector2, code_lines: [] Simp.Code_Line, start_col := 0, is_colored := true) {
+draw_code :: (font: *Simp.Dynamic_Font, pen: Vector2, code_lines: [] Simp.Code_Line, selections: [] Offset_Range = .[], start_col := 0, is_colored := true) {
     // Use different code paths for colored and uncolored texts to avoid checking if color is present for each letter
     if is_colored {
-        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE, start_col, is_colored = true);
+        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, xx selections, TAB_SIZE, start_col, is_colored = true);
     } else {
-        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, TAB_SIZE, start_col, is_colored = false);
+        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, CODE_COLOR_MAP, xx selections, TAB_SIZE, start_col, is_colored = false);
     }
 }
 
