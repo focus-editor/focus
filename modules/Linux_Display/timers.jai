@@ -24,7 +24,7 @@ timer_create :: (user_data: *void = null, cb: type_of(TimerData.cb) = null, init
         events =  EPOLLIN,
         data._u64 = xx tid,
     };
-    epoll_ctl(timers_epfd, EPOLL_CTL_ADD, tmr.fd, *ev);
+    epoll_ctl(timers_epfd, .ADD, tmr.fd, *ev);
 
     tmr.cb = cb;
     tmr.user_data = user_data;
