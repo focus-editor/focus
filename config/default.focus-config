@@ -324,7 +324,7 @@ region_scope_export:                    15212AFF
 region_scope_file:                      131C22FF
 region_scope_module:                    1A2831FF
 region_header:                          1A5152FF
-region_success:                         227722FF
+region_success:                         226022FF
 region_warning:                         986032FF
 region_error:                           772222FF
 

@@ -35,12 +35,15 @@ execute_build_command :: (command: *Build_Command) {
 
     log("Executing build command [%]\n", command.name);
 
+    // Add an empty line between commands
+    if last_build_result.finished || last_run_result.finished then print_to_output_panel_from_main_thread("\n");
+    last_build_result = .{};
+    last_run_result   = .{};
+
     print_to_output_panel_from_main_thread(tprint("%\n", command.name), mark_as = .header);
 
     allocator := get_pool_allocator();
     push_allocator(allocator);
-
-    last_build_result = .{};
 
     running_command = New(Build_Command);
     running_command.* = command.*;
@@ -74,33 +77,33 @@ build_system_update :: () {
         kind: Buffer_Region.Kind = .none;
 
         if last_build_result.timeout_reached {
-            message = tprint("has timed out (timeout_in_seconds = %)", running_command.timeout_in_seconds);
+            message = tprint("TIMED OUT after % seconds", running_command.timeout_in_seconds);
             kind = .warning;
         } else {
             if #complete last_build_result.process_result.type == {
                 case .UNSTARTED; #through;
                 case .FAILED_TO_LAUNCH;
-                    message = "couldn't start";
+                    message = "ERROR: couldn't start the command";
                     kind = .error;
                 case .STILL_RUNNING;
-                    message = "is still running. This is a bug.";
+                    message = "ERROR: the command is still running. This is a bug.";
                     kind = .error;
                 case .SIGNALED;
-                    message = tprint("signaled %", last_build_result.process_result.signal);
+                    message = tprint("ERROR: the process signaled %", last_build_result.process_result.signal);
                     kind = .error;
                 case .EXITED;
                     exit_code := last_build_result.process_result.exit_code;
                     if exit_code != 0 {
-                        message = tprint("exited with error code %", exit_code);
+                        message = tprint("ERROR: exit code %", exit_code);
                         kind = .error;
                     } else {
-                        message = "has finished";
+                        message = "DONE";
                         kind = .success;
                     }
             }
         }
 
-        print_to_output_panel_from_main_thread(tprint("The command %\n", message), mark_as = kind);
+        print_to_output_panel_from_main_thread(tprint("%\n", message), mark_as = kind);
 
         if running_command.close_panel_on_success {
             // TODO: if exit code is not 0 or there are errors, that shouldn't be a success?
