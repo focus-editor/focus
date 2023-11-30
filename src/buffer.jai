@@ -1361,6 +1361,7 @@ Buffer_Region :: struct {
     kind: Kind;
 
     Kind :: enum u8 {
+        none :: 0;
         error;
         warning;
         success;

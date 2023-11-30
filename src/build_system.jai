@@ -34,10 +34,13 @@ execute_build_command :: (command: *Build_Command) {
     // TODO: validate mandatory fields etc
 
     log("Executing build command [%]\n", command.name);
-    print_to_output_panel_from_main_thread(tprint("[%]\n", command.name));
+
+    print_to_output_panel_from_main_thread(tprint("%\n", command.name), mark_as = .header);
 
     allocator := get_pool_allocator();
     push_allocator(allocator);
+
+    last_build_result = .{};
 
     running_command = New(Build_Command);
     running_command.* = command.*;
@@ -65,6 +68,40 @@ build_system_update :: () {
 
         log("Build command [%] finished\n", running_command.name);
 
+        assert(last_build_result.finished);
+
+        message: string;
+        kind: Buffer_Region.Kind = .none;
+
+        if last_build_result.timeout_reached {
+            message = tprint("has timed out (timeout_in_seconds = %)", running_command.timeout_in_seconds);
+            kind = .warning;
+        } else {
+            if #complete last_build_result.process_result.type == {
+                case .UNSTARTED; #through;
+                case .FAILED_TO_LAUNCH;
+                    message = "couldn't start";
+                    kind = .error;
+                case .STILL_RUNNING;
+                    message = "is still running. This is a bug.";
+                    kind = .error;
+                case .SIGNALED;
+                    message = tprint("signaled %", last_build_result.process_result.signal);
+                    kind = .error;
+                case .EXITED;
+                    exit_code := last_build_result.process_result.exit_code;
+                    if exit_code != 0 {
+                        message = tprint("exited with error code %", exit_code);
+                        kind = .error;
+                    } else {
+                        message = "has finished";
+                        kind = .success;
+                    }
+            }
+        }
+
+        print_to_output_panel_from_main_thread(tprint("The command %\n", message), mark_as = kind);
+
         if running_command.close_panel_on_success {
             // TODO: if exit code is not 0 or there are errors, that shouldn't be a success?
             hide_build_panel();
@@ -87,18 +124,23 @@ build_system_update :: () {
     }
 }
 
-print_to_output_panel_from_main_thread :: (s: string) {
-    assert(build_buffer_id >= 0 && build_editor_id >= 0);
+print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kind = .none) {
     if !s return;
 
-    buffer := *open_buffers[build_buffer_id];
-    insert_string_raw(buffer, buffer.bytes.count, s);
+    editor, buffer := get_build_editor_and_buffer();
 
-    editor := *open_editors[build_editor_id];
+    start := cast(s32) buffer.bytes.count;
+    insert_string_raw(buffer, buffer.bytes.count, s);
+    end   := cast(s32) buffer.bytes.count;
+
     cursor := leave_only_original_cursor(editor);
     cursor.pos = xx buffer.bytes.count;
     cursor.sel = cursor.pos;
     editor.scroll_to_cursor = .yes;
+
+    if mark_as != .none {
+        array_add(*buffer.regions, Buffer_Region.{ start = start, end = end, kind = mark_as });
+    }
 }
 
 toggle_build_panel :: () {
@@ -154,6 +196,15 @@ build_panel_is_shown := false;
 
 #scope_file
 
+get_build_editor_and_buffer :: () -> *Editor, *Buffer {
+    assert(build_buffer_id >= 0 && build_editor_id >= 0);
+
+    buffer := *open_buffers[build_buffer_id];
+    editor := *open_editors[build_editor_id];
+
+    return editor, buffer;
+}
+
 build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
     command := cast(*Build_Command) work;
 
@@ -167,6 +218,13 @@ build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thre
         working_directory = command.build_working_dir,
         timeout_ms = command.timeout_in_seconds * 1000,
     );
+
+    // Writing to a global var but it's OK because it won't be accessed until the thread is done
+    last_build_result = .{
+        finished = true,
+        timeout_reached = timeout_reached,
+        process_result  = result,
+    };
 
     platform_wake_up_main_thread();
 
@@ -190,6 +248,9 @@ saved_position := Build_Panel_Position.right;
 
 running_command: *Build_Command = null;
 
+last_build_result: Command_Result;
+last_run_result:   Command_Result;
+
 memory_pool: Flat_Pool;
 
 // To avoid potential crashes, the build thread will not write directly to the output buffer because it could be
@@ -202,6 +263,12 @@ output_mutex: Mutex;
 
 
 Build_Panel_Position :: enum { left; right; }
+
+Command_Result :: struct {
+    finished:        bool;
+    timeout_reached: bool;
+    process_result:  Process_Result;
+}
 
 
 #scope_file
