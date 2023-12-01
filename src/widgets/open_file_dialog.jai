@@ -4,13 +4,18 @@ open_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
     if event.type == .KEYBOARD && event.key_pressed {
         action := map_event_to_action(event, Action_Open_File_Dialog);
         if action == {
-            case .close_dialog;             hide_open_file_dialog(manual = true);                                                                                                return true;
-            case .open_entry_in_place;      open_file_dialog_open_entry(entries.selected, .in_place);                                                                            return true;
-            case .open_entry_on_the_side;   if mode != .save  open_file_dialog_open_entry(entries.selected, .on_the_side);                                                       return true;
-            case .open_entry_on_the_left;   if mode != .save  open_file_dialog_open_entry(entries.selected, .left);                                                              return true;
-            case .open_entry_on_the_right;  if mode != .save  open_file_dialog_open_entry(entries.selected, .right);                                                             return true;
-            case .open_entry_in_explorer;   open_file_dialog_open_entry_in_explorer(entries.selected);                                                                           return true;
-            case .open_directory;           if open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true, slash_key_pressed = (event.key_code == #char "/"))   return true;
+            case .escape;                   #through;
+            case .close_dialog;             hide_open_file_dialog(manual = true);                                          return true;
+
+            case .open_entry_in_place;      open_file_dialog_open_entry(entries.selected, .in_place);                      return true;
+            case .open_entry_on_the_side;   if mode != .save  open_file_dialog_open_entry(entries.selected, .on_the_side); return true;
+            case .open_entry_on_the_left;   if mode != .save  open_file_dialog_open_entry(entries.selected, .left);        return true;
+            case .open_entry_on_the_right;  if mode != .save  open_file_dialog_open_entry(entries.selected, .right);       return true;
+            case .open_entry_in_explorer;   open_file_dialog_open_entry_in_explorer(entries.selected);                     return true;
+
+            case .open_directory;           handled := open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true, slash_key_pressed = (event.key_code == #char "/"));
+                                            return handled;
+
             case .pop_directory;            if pop_directory() return true;
 
             case .toggle_expand;            toggle_expand();                    return true;

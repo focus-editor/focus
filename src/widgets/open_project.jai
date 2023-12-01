@@ -4,7 +4,9 @@ open_project_dialog_handle_event :: (event: Input.Event) -> handled: bool {
     if event.type == .KEYBOARD && event.key_pressed {
         action, mapping := map_event_to_action(event, Action_Open_File_Dialog);
         if action == {
+            case .escape;                   #through;
             case .close_dialog;             hide_open_project_dialog();     return true;
+
             case .open_entry_in_place;      open_selected_project();        return true;
             case .open_entry_on_the_side;   open_selected_project();        return true;
 

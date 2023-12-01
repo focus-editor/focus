@@ -4,7 +4,9 @@ commands_dialog_handle_event :: (event: Input.Event) -> handled: bool {
     if event.type == .KEYBOARD && event.key_pressed {
         action, mapping := map_event_to_action(event, Action_Open_File_Dialog);
         if action == {
+            case .escape;                   #through;
             case .close_dialog;             hide_commands_dialog();                     return true;
+
             case .open_entry_in_place;      commands_execute_selected(.in_place);       return true;
             case .open_entry_on_the_side;   commands_execute_selected(.on_the_side);    return true;
             case .open_entry_on_the_left;   commands_execute_selected(.left);           return true;

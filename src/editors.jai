@@ -41,8 +41,6 @@ editors_handle_event :: (event: Input.Event) -> handled: bool {
     return false;
 }
 
-
-
 activate_editors :: () {
     active_global_widget = .editors;
     cursors_start_blinking();
@@ -220,7 +218,9 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case;                                   handled = false;
     }
 
-    if !handled && !buffer.readonly {
+    if !handled {
+        if buffer.readonly return false;
+
         if action == {
             case .indent_or_go_to_next_tabstop;     indent_or_tab                       (editor, buffer); keep_selection = true;
             case .indent;                           indent_lines                        (editor, buffer); keep_selection = true;
