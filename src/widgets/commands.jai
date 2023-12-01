@@ -56,7 +56,10 @@ commands_execute_selected :: (placement: Editor_Placement = .in_place) {
     if command.action == .do_nothing return;
 
     handled := handle_common_editor_action(command.action, placement);
-    if !handled then active_editor_handle_event(Input.Event.{}, command.action);
+    if !handled {
+        editor, buffer := get_active_editor_and_buffer();
+        if editor then active_editor_handle_event(editor, buffer, Input.Event.{}, command.action);
+    }
 }
 
 #scope_file

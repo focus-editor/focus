@@ -351,9 +351,6 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .move_to_next_buffer;                              move_to_next_editor_history    (by_buffer = true);  return true;
 
         case .toggle_build_panel;                               toggle_build_panel();                               return true;
-        case .toggle_build_panel_height;                        toggle_build_panel_height();                        return true;
-
-        case .escape;                                           hide_build_panel();  /* don't mark as handled */    return false;
 
         // TODO: search_in_buffer
         case .search_in_project;

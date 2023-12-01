@@ -289,19 +289,67 @@ draw_user_messages :: (main_area: Rect, footer_height: float) {
 }
 
 draw_build_panel :: () {
-    splitter := ifx !editor_closing then splitter_pos else 0.5;
-    left_rect, right_rect := cut_left(screen, screen.w * splitter, margin = 2);
+    // Drag build panel splitter first before drawing
+    if ui.active == .build_panel_splitter_h || ui.active == .build_panel_splitter_wh then build_panel_set_height((mouse.pointer.y - screen.y) / screen.h);
+    if ui.active == .build_panel_splitter_w || ui.active == .build_panel_splitter_wh then build_panel_set_width (abs(mouse.pointer.x - screen.x - screen.w) / screen.w);
 
-    build_panel_rect := ifx build_panel_get_position() == .left then left_rect else right_rect;
-    build_panel_rect = shrink_y(build_panel_rect, 5 * char_size);
-    build_panel_rect.y += 5 * char_size;
+    build_panel_rect: Rect;
+    if editors.layout != .Double || config.settings.build_panel_stays_in_one_place || editor_closing {
+        build_panel_rect = cut_right(screen, screen.w * build_panel_width, margin = 2);
+    } else {
+        left_rect, right_rect := cut_left(screen, screen.w * splitter_pos, margin = 2);
+        build_panel_rect = ifx build_panel_get_position() == .left then left_rect else right_rect;
+    }
+
+    if !values_are_close(build_panel_height, build_panel_height_anim.target) {
+        redraw_requested = true;
+        build_panel_height = get_animation_value(build_panel_height_anim);
+    }
+    build_panel_rect = cut_bottom(build_panel_rect, build_panel_rect.h * build_panel_height);
     if !is_valid(build_panel_rect) return;
 
+    // Draw text
     editor_id := build_panel_get_editor_id();
     draw_rounded_rect_with_shadow(build_panel_rect, Colors.BUILD_PANEL_BACKGROUND, radius = 0.1, shadow_size = char_size);
+    draw_editor(editor_id, build_panel_rect, 0, get_ui_id_from_loc(), as_build_panel = true);
 
-    ui_id := get_ui_id_from_loc();
-    draw_editor(editor_id, build_panel_rect, 0, ui_id, as_build_panel = true);
+    // Draw splitters
+    {
+        // Top splitter
+        splitter_rect := cut_top(build_panel_rect, 4 * dpi_scale);
+        maybe_set_hot_or_active(.build_panel_splitter_h, splitter_rect, .DRAGGING_VERTICAL);
+
+        if is_hovering_over(.build_panel_splitter_h) {
+            color := Colors.SPLITTER;
+            if ui.active == .build_panel_splitter_h then color = Colors.SPLITTER_HOVER;
+            draw_rect(splitter_rect, color);
+        }
+
+    }
+    if editors.layout != .Double || config.settings.build_panel_stays_in_one_place {
+        // Left splitter
+        splitter_rect := cut_left(build_panel_rect, 4 * dpi_scale);
+        maybe_set_hot_or_active(.build_panel_splitter_w, splitter_rect, .DRAGGING_HORIZONTAL);
+
+        if is_hovering_over(.build_panel_splitter_w) {
+            color := Colors.SPLITTER;
+            if ui.active == .build_panel_splitter_w then color = Colors.SPLITTER_HOVER;
+            draw_rect(splitter_rect, color);
+        }
+    }
+    {
+        // Corner splitter
+        splitter_rect := cut_top(cut_left(build_panel_rect, 6 * dpi_scale), 6 * dpi_scale);
+        maybe_set_hot_or_active(.build_panel_splitter_wh, splitter_rect, .DRAGGING_NW_SE);
+        if is_hovering_over(.build_panel_splitter_wh) {
+            color := Colors.SPLITTER;
+            if ui.active == .build_panel_splitter_wh then color = Colors.SPLITTER_HOVER;
+            splitter_rect_w := cut_left(build_panel_rect, 4 * dpi_scale);
+            splitter_rect_h := cut_top (build_panel_rect, 4 * dpi_scale);
+            draw_rect(splitter_rect_w, color);
+            draw_rect(splitter_rect_h, color);
+        }
+    }
 }
 
 draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui_Id, total_editor_area := Rect.{}, as_build_panel := false) {
@@ -3316,21 +3364,24 @@ ui: struct {
 }
 
 Ui_Id :: enum s64 {
-    none                :: -1;
-    unavailable         :: -2;
+    none                    :: -1;
+    unavailable             :: -2;
 
-    editor_single       :: -3;
-    editor_left         :: -4;
-    editor_right        :: -5;
-    editor_splitter     :: -6;
-    open_file_dialog    :: -7;
-    finder              :: -8;
-    splash_screen       :: -9;
-    unsaved_buffers     :: -10;
-    commands_dialog     :: -11;
-    open_project_dialog :: -12;
-    delete_file_dialog  :: -13;
-    confirm_overwrite   :: -14;
+    editor_single           :: -3;
+    editor_left             :: -4;
+    editor_right            :: -5;
+    editor_splitter         :: -6;
+    open_file_dialog        :: -7;
+    finder                  :: -8;
+    splash_screen           :: -9;
+    unsaved_buffers         :: -10;
+    commands_dialog         :: -11;
+    open_project_dialog     :: -12;
+    delete_file_dialog      :: -13;
+    confirm_overwrite       :: -14;
+    build_panel_splitter_w  :: -15;
+    build_panel_splitter_h  :: -16;
+    build_panel_splitter_wh :: -17;
 
     // The rest will be derived from loc
 }

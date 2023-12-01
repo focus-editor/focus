@@ -83,7 +83,7 @@ build_system_update :: () {
             if #complete last_build_result.process_result.type == {
                 case .UNSTARTED; #through;
                 case .FAILED_TO_LAUNCH;
-                    message = "ERROR: couldn't start the command";
+                    message = tprint("ERROR: couldn't start the command '%'", running_command.build_command);
                     kind = .error;
                 case .STILL_RUNNING;
                     message = "ERROR: the command is still running. This is a bug.";
@@ -171,7 +171,27 @@ hide_build_panel :: () {
 }
 
 toggle_build_panel_height :: () {
-    // TODO: remove and use toggle_expand instead
+    target := ifx build_panel_is_expanded then config.settings.build_panel_height_percent / 100.0 else 1.0;
+    target = clamp(target, 0.1, 1.0);
+
+    if !config.settings.disable_file_open_close_animations {
+        start_animation(*build_panel_height_anim, build_panel_height, target);
+    } else {
+        build_panel_height_anim.target = target;
+        build_panel_height = target;
+    }
+    build_panel_is_expanded = !build_panel_is_expanded;
+}
+
+build_panel_set_height :: (height: float) {
+    height = clamp(height, 0.1, 1.0);
+    build_panel_height_anim.target = height;
+    build_panel_height = height;
+    build_panel_is_expanded = !(height < 1.0);
+}
+
+build_panel_set_width :: (width: float) {
+    build_panel_width = clamp(width, 0.1, 1.0);
 }
 
 build_panel_get_position :: () -> Build_Panel_Position {
@@ -195,6 +215,10 @@ build_panel_get_editor_id :: inline () -> s64 {
 }
 
 build_panel_is_shown := false;
+
+build_panel_width:  float = 0.5;
+build_panel_height: float = 0.5;
+build_panel_height_anim: Tween_Animation(float);
 
 
 #scope_file
@@ -248,6 +272,8 @@ build_editor_id := -1;
 
 previously_active_editor := -1;
 saved_position := Build_Panel_Position.right;
+
+build_panel_is_expanded := false;
 
 running_command: *Build_Command = null;
 

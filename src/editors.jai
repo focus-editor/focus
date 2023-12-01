@@ -11,7 +11,16 @@ editors_handle_event :: (event: Input.Event) -> handled: bool {
         case .KEYBOARD;
             if event.key_pressed {
                 action, mapping := map_event_to_action(event, Action_Editors);
-                return active_editor_handle_event(event, action);
+                editor, buffer := get_active_editor_and_buffer();
+                if editor {
+                    return active_editor_handle_event(editor, buffer, event, action);
+                } else {
+                    if action == {
+                        case .escape;           #through;
+                        case .close_dialog;     hide_build_panel();     return true;
+                    }
+                    return false;
+                }
             } else {
                 hold_actions_to_be_stopped := map_key_release_to_hold_actions(event, Action_Editors);
                 for hold_actions_to_be_stopped {
@@ -65,10 +74,7 @@ editors_handle_file_drop :: (files: [] string) {
     }
 }
 
-active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> handled: bool {
-    editor, buffer := get_active_editor_and_buffer();
-    if !editor return false;
-
+active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Event, action: Action_Editors) -> handled: bool {
     shift_pressed := event.modifier_flags.shift_pressed;
     ctrl_pressed  := event.modifier_flags.ctrl_pressed;
 
@@ -144,7 +150,7 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
 
     if action == {
         // General actions (which are not associated with any cursor)
-        case .toggle_expand;                    toggle_expand(!editors.expanded);
+        case .toggle_expand;                    toggle_expand();
         case .search_in_buffer;                 open_search_bar(editor, buffer);
         case .search_in_buffer_dropdown_mode;   open_search_bar(editor, buffer, .dropdown);
         case .close_current_editor;             close_editor(.current);
@@ -1666,7 +1672,15 @@ swap_panes :: () {
     // editors.left, editors.right = swap(editors.left, editors.right);
 }
 
-toggle_expand :: (expanded: bool) {
+toggle_expand :: () {
+    if build_panel_is_active() {
+        toggle_build_panel_height();
+    } else {
+        toggle_editor_expand(!editors.expanded);
+    }
+}
+
+toggle_editor_expand :: (expanded: bool) {
     if editors.layout != .Double return;
 
     editors.expanded = expanded;
@@ -3539,7 +3553,7 @@ move_to_editor_history_frame :: (frame: Editor_History_Frame, old_frame: Editor_
     } else {
         editor.scroll_to_cursor = .yes;
     }
-    if frame.expanded != old_frame.expanded && !editor_closing then toggle_expand(frame.expanded);  // do it last
+    if frame.expanded != old_frame.expanded && !editor_closing then toggle_editor_expand(frame.expanded);  // do it last
 
     cursor := leave_only_original_cursor(editor);
     cursor.pos = frame.pos;

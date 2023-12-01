@@ -64,6 +64,10 @@ draw_indent_guides:                     false
 auto_surround_with_brackets_and_quotes: false
 auto_close_brackets:                    false
 
+build_panel_stays_in_one_place:         false  # if true, the build panel will flip to the inactive pane in two pane layouts
+build_panel_width_percent:              50
+build_panel_height_percent:             50
+
 
 [[keymap]]
 

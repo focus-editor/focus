@@ -59,7 +59,10 @@
         NumpadEnter
     + Scopes in Jai are now highlighted. See the default config for the new color options (`region_scope_*`)
     + Build system:
-        + (more details will be added here)
+        + New config options:
+            + `build_panel_width_percent`, `build_panel_height_percent` - how much space the build panel occupies. Both default to 50%.
+            + `build_panel_stays_in_one_place`. Defaults to `false`. If disabled, then the panel will flip to the other side of the active pane.
+        + (more details will be added later)
 
 + Bug fixes:
     + Mac: Fixed intermittent crashing on launch
