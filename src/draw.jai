@@ -319,7 +319,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     if buffer_needs_coloring(buffer) then recalculate_colors(buffer);  // right before drawing
 
     line_number_panel: Rect;
-    if config.settings.show_line_numbers {
+    if config.settings.show_line_numbers && !as_build_panel {
         max_lines  := get_max_line_num(editor, buffer) + 1;
         num_digits := tprint("%", max_lines).count;
         panel_width := (num_digits + 2) * char_x_advance;
@@ -826,7 +826,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
 
         // Draw indent guides
-        if config.settings.draw_indent_guides {
+        if config.settings.draw_indent_guides && !as_build_panel {
             indent_levels: [..] int;
             indent_levels.allocator = temp;
 
@@ -869,7 +869,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                     color := ifx cursors_active then Colors.SELECTION_ACTIVE else Colors.SELECTION_INACTIVE;
                     draw_range(selection, editor, buffer, visible_lines_start, visible_lines_end, text_origin, color);
                 }
-                else if cursors_active && config.settings.highlight_line_with_cursor {
+                else if cursors_active && config.settings.highlight_line_with_cursor && !as_build_panel {
                     // Draw current line highlight
                     coords := cursor_coords[it_index];
                     line_start_offset := get_line_start_offset(editor, buffer, coords.pos.line);
