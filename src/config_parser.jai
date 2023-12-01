@@ -240,6 +240,7 @@ map_color_name_to_color_struct :: (config: *Config, color_name: string) -> *Colo
         case "build_panel_scrollbar";                   return *config.colors.BUILD_PANEL_SCROLLBAR;
         case "build_panel_scrollbar_hover";             return *config.colors.BUILD_PANEL_SCROLLBAR_HOVER;
         case "build_panel_scrollbar_background";        return *config.colors.BUILD_PANEL_SCROLLBAR_BACKGROUND;
+        case "build_panel_title_bar";                   return *config.colors.BUILD_PANEL_TITLE_BAR;
     }
 
     return xx 0;

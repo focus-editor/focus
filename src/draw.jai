@@ -289,9 +289,11 @@ draw_user_messages :: (main_area: Rect, footer_height: float) {
 }
 
 draw_build_panel :: () {
-    // Drag build panel splitter first before drawing
-    if ui.active == .build_panel_splitter_h || ui.active == .build_panel_splitter_wh then build_panel_set_height((mouse.pointer.y - screen.y) / screen.h);
-    if ui.active == .build_panel_splitter_w || ui.active == .build_panel_splitter_wh then build_panel_set_width (abs(mouse.pointer.x - screen.x - screen.w) / screen.w);
+    // Drag build panel title bar first before drawing
+    if ui.active == .build_panel_title_bar {
+        build_panel_set_width((screen.x + screen.w - (mouse.pointer.x - build_panel_grab_point.x)) / screen.w);
+        build_panel_set_height((mouse.pointer.y - build_panel_grab_point.y - screen.y) / screen.h);
+    }
 
     build_panel_rect: Rect;
     if editors.layout != .Double || config.settings.build_panel_stays_in_one_place || editor_closing {
@@ -306,50 +308,42 @@ draw_build_panel :: () {
         build_panel_height = get_animation_value(build_panel_height_anim);
     }
     build_panel_rect = cut_bottom(build_panel_rect, build_panel_rect.h * build_panel_height);
+
     if !is_valid(build_panel_rect) return;
+    draw_rounded_rect_with_shadow(build_panel_rect, Colors.BUILD_PANEL_BACKGROUND, radius = 0.1, shadow_size = char_size);
+
+    margin := floor(4 * dpi_scale);
+    title_bar_height := font_ui_line_height + 2 * margin + 4 * dpi_scale;
+    title_bar_rect, build_output_rect := cut_top(build_panel_rect, title_bar_height);
+
+    if !is_valid(title_bar_rect) return;
+
+    // Draw title bar
+    {
+        started_dragging := maybe_set_hot_or_active(.build_panel_title_bar, title_bar_rect, .NORMAL);
+        if started_dragging then build_panel_grab_point = mouse.pointer - top_left(title_bar_rect);
+        if ui.active == .build_panel_title_bar then set_pointer_image(.DRAGGING_FREE);
+
+        push_scissor(title_bar_rect);
+        defer pop_scissor();
+
+        draw_rect(title_bar_rect, Colors.BUILD_PANEL_TITLE_BAR);
+
+        pen := Vector2.{
+            x = title_bar_rect.x + char_x_advance,
+            y = title_bar_rect.y + (title_bar_rect.h - font_ui_bold.character_height) / 2 + 2,
+        };
+        Simp.draw_text(font_ui_bold, xx pen.x, xx pen.y, "Build Output", Colors.UI_DEFAULT);
+
+        hr := cut_bottom(title_bar_rect, 1);
+        draw_rect(hr, Colors.BACKGROUND_DARK);
+    }
+
+    if !is_valid(build_output_rect) return;
 
     // Draw text
     editor_id := build_panel_get_editor_id();
-    draw_rounded_rect_with_shadow(build_panel_rect, Colors.BUILD_PANEL_BACKGROUND, radius = 0.1, shadow_size = char_size);
-    draw_editor(editor_id, build_panel_rect, 0, get_ui_id_from_loc(), as_build_panel = true);
-
-    // Draw splitters
-    {
-        // Top splitter
-        splitter_rect := cut_top(build_panel_rect, 4 * dpi_scale);
-        maybe_set_hot_or_active(.build_panel_splitter_h, splitter_rect, .DRAGGING_VERTICAL);
-
-        if is_hovering_over(.build_panel_splitter_h) {
-            color := Colors.SPLITTER;
-            if ui.active == .build_panel_splitter_h then color = Colors.SPLITTER_HOVER;
-            draw_rect(splitter_rect, color);
-        }
-
-    }
-    if editors.layout != .Double || config.settings.build_panel_stays_in_one_place {
-        // Left splitter
-        splitter_rect := cut_left(build_panel_rect, 4 * dpi_scale);
-        maybe_set_hot_or_active(.build_panel_splitter_w, splitter_rect, .DRAGGING_HORIZONTAL);
-
-        if is_hovering_over(.build_panel_splitter_w) {
-            color := Colors.SPLITTER;
-            if ui.active == .build_panel_splitter_w then color = Colors.SPLITTER_HOVER;
-            draw_rect(splitter_rect, color);
-        }
-    }
-    {
-        // Corner splitter
-        splitter_rect := cut_top(cut_left(build_panel_rect, 6 * dpi_scale), 6 * dpi_scale);
-        maybe_set_hot_or_active(.build_panel_splitter_wh, splitter_rect, .DRAGGING_NW_SE);
-        if is_hovering_over(.build_panel_splitter_wh) {
-            color := Colors.SPLITTER;
-            if ui.active == .build_panel_splitter_wh then color = Colors.SPLITTER_HOVER;
-            splitter_rect_w := cut_left(build_panel_rect, 4 * dpi_scale);
-            splitter_rect_h := cut_top (build_panel_rect, 4 * dpi_scale);
-            draw_rect(splitter_rect_w, color);
-            draw_rect(splitter_rect_h, color);
-        }
-    }
+    draw_editor(editor_id, build_output_rect, 0, get_ui_id_from_loc(), as_build_panel = true);
 }
 
 draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui_Id, total_editor_area := Rect.{}, as_build_panel := false) {
@@ -3379,9 +3373,7 @@ Ui_Id :: enum s64 {
     open_project_dialog     :: -12;
     delete_file_dialog      :: -13;
     confirm_overwrite       :: -14;
-    build_panel_splitter_w  :: -15;
-    build_panel_splitter_h  :: -16;
-    build_panel_splitter_wh :: -17;
+    build_panel_title_bar   :: -15;
 
     // The rest will be derived from loc
 }
@@ -3392,6 +3384,9 @@ Ui_Id :: enum s64 {
 // clean way this should probably be stored in widget storage?
 // Problem is, we don't have much else to store for scrollbars...
 scrollbar_grab_point: float;
+
+// Same as the scrollbar grab point above
+build_panel_grab_point: Vector2;
 
 // What to select when dragging
 selection_mode: Selection_Mode;

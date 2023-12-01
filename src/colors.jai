@@ -69,6 +69,7 @@ Color_Values :: struct {
     BUILD_PANEL_SCROLLBAR            := Color.{ r = 0.20, g = 0.80, b = 0.80, a = 0.1 };
     BUILD_PANEL_SCROLLBAR_HOVER      := Color.{ r = 0.20, g = 0.80, b = 0.80, a = 0.3 };
     BUILD_PANEL_SCROLLBAR_BACKGROUND := Color.{ r = 0.065, g = 0.101, b = 0.125, a = 0.3 };
+    BUILD_PANEL_TITLE_BAR            := Color.{ r = 0.131, g = 0.202, b = 0.25 };
 };
 
 Colors: Color_Values;  // a hack to avoid replacing a lot of code
