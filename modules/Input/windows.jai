@@ -266,8 +266,7 @@ MyWindowProc :: (hwnd: HWND, message: u32,
           case WM_KILLFOCUS;
             input_application_has_focus = false;
           case WM_PAINT;
-		    ValidateRect(hwnd, null);
-	        return DefWindowProcW(hwnd, message, wParam, lParam);
+            ValidateRect(hwnd, null);
 
           case WM_LBUTTONDOWN; #through;
           case WM_LBUTTONUP;
