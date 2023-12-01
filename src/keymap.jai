@@ -319,6 +319,8 @@ ACTIONS_COMMON :: string.[
     "close_other_editor",
     "close_left_editor",
     "close_right_editor",
+    "close_dialog",
+    "escape",
 ];
 
 ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
@@ -380,7 +382,6 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
 ]);
 
 ACTIONS_OPEN_FILE_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[
-    "close_dialog",
     "open_entry_in_place",
     "open_entry_on_the_side",
     "open_entry_on_the_left",
@@ -391,7 +392,6 @@ ACTIONS_OPEN_FILE_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[
 ]);
 
 ACTIONS_SEARCH_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[
-    "close_dialog",
     "open_entry_in_place",
     "open_entry_on_the_side",
     "open_entry_on_the_left",

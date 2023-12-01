@@ -121,7 +121,6 @@ Cmd-Shift-C                 move_cursor_to_viewport_center
 {Shift}-Ctrl-ArrowUp        move_up_to_empty_line
 {Shift}-Ctrl-ArrowDown      move_down_to_empty_line
 
-Escape                      remove_additional_cursors
 Alt-Shift-I                 add_cursors_to_line_ends
 Alt-Shift-Ctrl-I            add_cursors_to_line_starts
 
@@ -153,8 +152,6 @@ Alt-Z                       toggle_line_wrap
 
 [open file dialog]
 
-Escape                      close_dialog
-
 Enter                       open_entry_in_place
 Cmd-Enter                   open_entry_on_the_side
 Cmd-1                       open_entry_on_the_left
@@ -167,8 +164,6 @@ Backspace                   pop_directory
 
 
 [search dialog]
-
-Escape                      close_dialog
 
 Enter                       open_entry_in_place
 Cmd-Enter                   open_entry_on_the_side
@@ -212,6 +207,8 @@ Cmd-A                       select_all
 
 Cmd-W                       close_current_editor
 Cmd-Shift-W                 close_other_editor
+
+Escape                      escape  # combines close_dialog and remove_additional_cursors
 
 Cmd-Shift-L                 toggle_expand
 

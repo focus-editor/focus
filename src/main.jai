@@ -353,6 +353,8 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .toggle_build_panel;                               toggle_build_panel();                               return true;
         case .toggle_build_panel_height;                        toggle_build_panel_height();                        return true;
 
+        case .escape;                                           hide_build_panel();  /* don't mark as handled */    return false;
+
         // TODO: search_in_buffer
         case .search_in_project;
             if active_global_widget == .editors then finder_open_from_editor(); else finder_open();                 return true;

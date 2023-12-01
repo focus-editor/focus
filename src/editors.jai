@@ -107,11 +107,13 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
 
         if mode == .classic {
             if action == {
+                case .escape;                       #through;
                 case .close_dialog;                 close_search_bar(editor);                                       return true;
                 case .open_entry_in_place;          search_bar_move_cursor(editor, buffer,  1, wrap = true);        return true;
             }
         } else {
             if action == {
+                case .escape;                       #through;
                 case .close_dialog;                 close_search_bar(editor, jump_to_original_cursor = true);       return true;
 
                 case .move_up_one_page;             search_bar_move_cursor(editor, buffer, -per_page);              return true;
@@ -151,6 +153,9 @@ active_editor_handle_event :: (event: Input.Event, action: Action_Editors) -> ha
         case .close_other_editor;               close_editor(.other);
         case .close_left_editor;                close_editor(.left);
         case .close_right_editor;               close_editor(.right);
+
+        case .close_dialog;                     hide_build_panel();
+        case .escape;                           hide_build_panel(); remove_additional_cursors(editor);
 
         case .save;                             save    (editor.buffer_id);
         case .save_as;                          save_as (editor.buffer_id);

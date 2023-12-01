@@ -34,6 +34,7 @@
     + New command: `toggle_fullscreen`. Defaults to F11 (thanks @ustance)
     + New command: `close_project`. Can be used to (surprise!) close the active project
     + New command: `swap_selections`. Can swap two selected pieces of text (thanks @hfr4)
+    + New command: `escape`. Tries to close dialogs, remove additional cursors, etc. You can just bind it to `Escape` in `[common]` and forget.
     + New option: `highlight_line_with_cursor` (thanks @SentientCoffee)
     + New option: `draw_indent_guides`. Set to `true` to draw a vertical guide line at every indent level (determined by tab size)
     + New option: `auto_surround_with_brackets_and_quotes` to enable auto-surrounding (thanks @hfr4)
@@ -57,6 +58,8 @@
         NumpadDecimal
         NumpadEnter
     + Scopes in Jai are now highlighted. See the default config for the new color options (`region_scope_*`)
+    + Build system:
+        + (more details will be added here)
 
 + Bug fixes:
     + Mac: Fixed intermittent crashing on launch

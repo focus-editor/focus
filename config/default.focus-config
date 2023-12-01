@@ -133,7 +133,6 @@ Alt-V                       move_cursor_to_viewport_center
 {Shift}-Ctrl-ArrowUp        move_up_to_empty_line
 {Shift}-Ctrl-ArrowDown      move_down_to_empty_line
 
-Escape                      remove_additional_cursors
 Alt-Shift-I                 add_cursors_to_line_ends
 Alt-Shift-Ctrl-I            add_cursors_to_line_starts
 
@@ -166,8 +165,6 @@ Alt-Shift-L                 toggle_line_numbers
 
 [open file dialog]
 
-Escape                      close_dialog
-
 Enter                       open_entry_in_place
 Ctrl-Enter                  open_entry_on_the_side
 Ctrl-1                      open_entry_on_the_left
@@ -180,8 +177,6 @@ Backspace                   pop_directory
 
 
 [search dialog]
-
-Escape                      close_dialog
 
 Enter                       open_entry_in_place
 Ctrl-Enter                  open_entry_on_the_side
@@ -227,6 +222,8 @@ Ctrl-A                      select_all
 
 Ctrl-W                      close_current_editor
 Ctrl-Shift-W                close_other_editor
+
+Escape                      escape  # combines close_dialog and remove_additional_cursors
 
 Ctrl-Shift-L                toggle_expand
 
