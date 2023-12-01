@@ -335,6 +335,24 @@ draw_build_panel :: () {
         };
         Simp.draw_text(font_ui_bold, xx pen.x, xx pen.y, "Build Output", Colors.UI_DEFAULT);
 
+        // Draw the close button
+        {
+            button_rect := cut_right(title_bar_rect, title_bar_rect.h);
+            button_id := get_ui_id_from_loc();
+            maybe_set_hot_or_active(button_id, button_rect, .PRESSABLE);
+            if ui.hot_last_frame == button_id && mouse.left.just_released && mouse_pointer_is_within(button_rect) {
+                hide_build_panel();
+                redraw_requested = true;
+            }
+
+            color := Colors.UI_DIM;
+            if is_hovering_over(button_id) color = Colors.UI_DEFAULT;
+            icon_char := convert_utf32_to_utf8(xx Icon.xmark);
+            icon_width := Simp.prepare_text(font_icons, to_string(*icon_char));
+            icon_x := button_rect.x + (button_rect.w - icon_width) / 2 ;
+            Simp.draw_prepared_text(font_icons, xx icon_x, xx pen.y, color = color);
+        }
+
         hr := cut_bottom(title_bar_rect, 1);
         draw_rect(hr, Colors.BACKGROUND_DARK);
     }
@@ -1487,7 +1505,7 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
     pen := _pen;
 
     // Icon
-    icon_char := convert_utf32_to_utf8(xx ifx buffer.has_file then buffer.file.icon else File_Icon.text);
+    icon_char := convert_utf32_to_utf8(xx ifx buffer.has_file then buffer.file.icon else Icon.text);
     icon_width := Simp.prepare_text(font_icons, to_string(*icon_char));
     icon_x := pen.x - (icon_width - font_icons.em_width) / 2.0;
     Simp.draw_prepared_text(font_icons, xx icon_x, xx pen.y, color = file_name_color);
@@ -3349,6 +3367,36 @@ maybe_set_hot_or_active :: (ui_id: Ui_Id, rect: Rect, pointer_image: Pointer_Ima
 is_hovering_over :: (ui_id: Ui_Id) -> bool {
     return (ui.hot_last_frame == ui_id && ui.active == .none) || ui.active == ui_id;
 }
+
+#scope_export
+
+Icon :: enum u16 {
+    // File types
+    file_unknown :: 0xf15b;
+    text         :: 0xf15c;
+    jai          :: 0xf574;
+    cpp          :: 0xf1c9;
+    cs           :: 0xf1c9;
+    worklog      :: 0xf46d;
+    git          :: 0xf387;
+    image        :: 0xf1c5;
+    audio        :: 0xf1c7;
+    font         :: 0xf031;
+    key          :: 0xf084;
+    gear         :: 0xf013;
+    folder       :: 0xe185;
+    drive        :: 0xf0a0;
+    js           :: 0xf15c;
+    shell        :: 0xf2d0;
+
+    save         :: 0xf019;
+    dots         :: 0xf141;
+    xmark        :: 0xf00d;
+
+    debug        :: 0xf7d9;
+}
+
+#scope_file
 
 ui: struct {
     active: Ui_Id = .none;

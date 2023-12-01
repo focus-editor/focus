@@ -431,7 +431,7 @@ init_fonts_and_dependent_things :: () {
 
     common_icons: String_Builder;
     common_icons.allocator = temp;
-    for enum_values_as_enum(File_Icon) {
+    for enum_values_as_enum(Icon) {
         char := convert_utf32_to_utf8(xx it);
         append(*common_icons, to_string(*char));
     }

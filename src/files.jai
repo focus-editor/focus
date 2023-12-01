@@ -25,8 +25,8 @@ get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> Fil
     return info;
 }
 
-get_file_icon :: (name: string, extension: string) -> File_Icon {
-    icon := File_Icon.unknown;
+get_file_icon :: (name: string, extension: string) -> Icon {
+    icon := Icon.file_unknown;
 
     if extension == {
         case "jai";
@@ -77,7 +77,7 @@ get_file_icon :: (name: string, extension: string) -> File_Icon {
 
     // Special cases
     if icon == .text && equal_nocase(name, "log.md") then icon = .worklog;
-    if icon == .text || icon == .unknown {
+    if icon == .text || icon == .file_unknown {
         if contains_nocase(name, "license") || contains_nocase(name, "licence")  || contains_nocase(name, "key") {
             icon = .key;
         } else if contains_nocase(name, ".git") {
@@ -199,31 +199,6 @@ File_Info :: struct {
     full_path: string;
     name: string;
     path: string;
-    icon: File_Icon;
+    icon: Icon;
     project_dir_id: s8 = 0;  // to be used for sorting
-}
-
-File_Icon :: enum u16 {
-    // These are character codes for the font-awesome font
-    unknown :: 0xf15b;
-    text    :: 0xf15c;
-    jai     :: 0xf574;
-    cpp     :: 0xf1c9;
-    cs      :: 0xf1c9;
-    worklog :: 0xf46d;
-    git     :: 0xf387;
-    image   :: 0xf1c5;
-    audio   :: 0xf1c7;
-    font    :: 0xf031;
-    key     :: 0xf084;
-    gear    :: 0xf013;
-    folder  :: 0xe185;
-    drive   :: 0xf0a0;
-    js      :: 0xf15c;
-    shell   :: 0xf2d0;
-
-    save    :: 0xf019;
-    dots    :: 0xf141;
-
-    debug   :: 0xf7d9;
 }

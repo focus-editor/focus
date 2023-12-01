@@ -379,7 +379,7 @@ refresh_entries :: (clear_input := true) {
                 entry.entry_name = buffer_name;
                 if !buffer.has_file {
                     entry.entry_name = copy_string(buffer_name);
-                    entry.icon = File_Icon.text;
+                    entry.icon = Icon.text;
                 }
                 entry.name_highlights = name_highlights;
                 entry.path_highlights = path_highlights;
