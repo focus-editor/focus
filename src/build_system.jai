@@ -67,6 +67,19 @@ execute_build_command :: (command: *Build_Command) {
 build_system_update :: () {
     assert(build_buffer_id >= 0 && build_editor_id >= 0, "Build system is not initialized");
 
+    // Print to build output panel, if we have anything to print
+    {
+        lock(*output_mutex);
+        defer unlock(*output_mutex);
+
+        output := builder_to_string(*stdout);
+        print_to_output_panel_from_main_thread(output);
+
+        error_output := builder_to_string(*stderr);
+        print_to_output_panel_from_main_thread(error_output);
+    }
+
+    // Check if a command has finished executing
     results := get_completed_work(*thread_group);
     if results {
         // We only process one command at a time, so this means our running command has finished
@@ -116,18 +129,6 @@ build_system_update :: () {
 
         running_command = null;
         reset(*memory_pool);
-    }
-
-    // Print to build output panel, if we have anything to print
-    {
-        lock(*output_mutex);
-        defer unlock(*output_mutex);
-
-        output := builder_to_string(*stdout);
-        print_to_output_panel_from_main_thread(output);
-
-        error_output := builder_to_string(*stderr);
-        print_to_output_panel_from_main_thread(error_output);
     }
 }
 
