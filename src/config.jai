@@ -478,7 +478,7 @@ Build_Command :: struct {
     open_panel_on_build:    bool;
     close_panel_on_success: bool;
 
-    timeout_in_seconds:     int;
+    timeout_in_seconds:     int = -1;
 }
 
 style: Style;

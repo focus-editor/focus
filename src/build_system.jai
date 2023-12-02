@@ -54,6 +54,10 @@ execute_build_command :: (command: *Build_Command) {
     running_command.run_working_dir   = copy_string(command.run_working_dir);
     running_command.error_regex       = copy_string(command.error_regex);
 
+    // We never want a timeout of 0 seconds because the command will never run.
+    // People probably expect 0 to be no timeout, so we convert it to -1, which means no timeout
+    if command.timeout_in_seconds == 0 then running_command.timeout_in_seconds = -1;
+
     if command.open_panel_on_build then show_build_panel();
 
     add_work(*thread_group, running_command);
