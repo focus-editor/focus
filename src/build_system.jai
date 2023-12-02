@@ -27,11 +27,26 @@ deinit_build_system :: () {
 
 execute_build_command :: (command: *Build_Command) {
     if running_command != null {
-        add_user_warning(tprint("Build command [%] is still running", running_command.name), dismiss_in_seconds = 5, tag = .build);
+        add_user_warning("Build command [%] is still running", running_command.name, dismiss_in_seconds = 5, tag = .build);
         return;
     }
 
-    // TODO: validate mandatory fields etc
+    // Validate command
+    {
+        using command;
+        if build_working_dir {
+            is_dir, success := is_directory(build_working_dir);
+            if !is_dir || !success then add_user_warning("Build directory '%' doesn't seem to be a valid directory", build_working_dir);
+        }
+        if run_working_dir {
+            is_dir, success := is_directory(run_working_dir);
+            if !is_dir || !success then add_user_warning("Run directory '%' doesn't seem to be a valid directory", run_working_dir);
+        }
+        if !build_command && !run_command {
+            add_user_error("Can't run [%]:\nbuild_command or run_command must be specified in the config", name);
+            return;
+        }
+    }
 
     log("Executing build command [%]\n", command.name);
 

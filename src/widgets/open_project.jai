@@ -57,7 +57,7 @@ open_selected_project :: () {
             should_reload_workspace = false;
         }
     } else {
-        add_user_error(tprint("Couldn't load project config for %", entry.name), dismiss_in_seconds = 10);
+        add_user_error("Couldn't load project config for %", entry.name, dismiss_in_seconds = 10);
     }
 }
 

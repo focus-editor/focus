@@ -425,7 +425,7 @@ editors_open_file :: (path: string, placement: Editor_Placement = .in_place) {
     path_overwrite_separators(full_path, separator = #char "/");
     if !file_exists(full_path) || !success {
         log_error("Couldn't open file %", path);
-        add_user_error(tprint("Couldn't open file %", path), dismiss_in_seconds = 60);
+        add_user_error("Couldn't open file %", path, dismiss_in_seconds = 60);
         return;
     }
     buffer_id := find_or_create_buffer(full_path);
@@ -1561,7 +1561,7 @@ select_all_occurrences :: (using editor: *Editor, buffer: Buffer) -> whole_words
 
         MAX_CURSORS :: 5000; // @Todo Make it a setting ?
         if cursors.count >= MAX_CURSORS {
-            add_user_warning(tprint("The maximum number of occurrences to be selected at once has been limited to %.", MAX_CURSORS));
+            add_user_warning("The maximum number of occurrences to be selected at once has been limited to %.", MAX_CURSORS);
             break;
         }
 

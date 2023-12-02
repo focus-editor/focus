@@ -1,24 +1,24 @@
-add_user_error :: inline (message: string, dismiss_in_seconds: float64 = -1, tag := Tag.none ) {
-    add_user_message(message, .error, cast(Time) dismiss_in_seconds, tag);
-}
+add_user_error :: inline (message: string, args: .. Any, dismiss_in_seconds: float64 = 10, tag := Tag.none ) {
+    add_user_message(message, ..args, .error, cast(Time) dismiss_in_seconds, tag);
+} @PrintLike
 
-add_user_warning :: inline (message: string, dismiss_in_seconds: float64 = 10, tag := Tag.none) {
-    add_user_message(message, .warning, cast(Time) dismiss_in_seconds, tag);
-}
+add_user_warning :: inline (message: string, args: .. Any, dismiss_in_seconds: float64 = 10, tag := Tag.none) {
+    add_user_message(message, ..args, .warning, cast(Time) dismiss_in_seconds, tag);
+} @PrintLike
 
-add_success_message :: inline (message: string, dismiss_in_seconds: float64 = 10, tag := Tag.none) {
-    add_user_message(message, .success, cast(Time) dismiss_in_seconds, tag);
-}
+add_success_message :: inline (message: string, args: .. Any, dismiss_in_seconds: float64 = 10, tag := Tag.none) {
+    add_user_message(message, ..args, .success, cast(Time) dismiss_in_seconds, tag);
+} @PrintLike
 
-add_user_message :: (message: string, level: User_Message.Level, dismiss_in_seconds: Time, tag: Tag) {
+add_user_message :: (message: string, args: .. Any, level: User_Message.Level, dismiss_in_seconds: Time, tag: Tag) {
     array_add(*user_messages, User_Message.{
-        message            = copy_string(message),
+        message            = sprint(message, ..args),
         level              = level,
         tag                = tag,
         time               = cast(Time) get_time(),
         dismiss_in_seconds = cast(Time) dismiss_in_seconds,
     });
-}
+} @PrintLike
 
 get_user_messages :: (current_time: Time) -> [] User_Message {
     // Cleanup the old or manually dismissed messages
