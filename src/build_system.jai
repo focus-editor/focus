@@ -100,7 +100,7 @@ build_system_update :: () {
             if #complete last_build_result.process_result.type == {
                 case .UNSTARTED; #through;
                 case .FAILED_TO_LAUNCH;
-                    message = tprint("ERROR: couldn't start the command '%'", running_command.build_command);
+                    message = tprint("ERROR: couldn't launch '%'", running_command.build_command);
                     kind = .error;
                 case .STILL_RUNNING;
                     message = "ERROR: the command is still running. This is a bug.";
