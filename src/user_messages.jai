@@ -11,6 +11,7 @@ add_success_message :: inline (message: string, args: .. Any, dismiss_in_seconds
 } @PrintLike
 
 add_user_message :: (message: string, args: .. Any, level: User_Message.Level, dismiss_in_seconds: Time, tag: Tag) {
+    push_allocator(focus_allocator);  // so that we can call this function from anywhere. We always want to allocate messages using the same allocator
     array_add(*user_messages, User_Message.{
         message            = sprint(message, ..args),
         level              = level,

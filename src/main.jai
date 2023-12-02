@@ -5,6 +5,8 @@ main :: () {
 
         // OA :: #import "Overwriting_Allocator";
         // context.allocator = OA.get_overwriting_allocator();
+
+        focus_allocator = context.allocator;  // to be used as a default allocator where we need it
     }
 
     cpu_info = get_cpu_info();
@@ -747,6 +749,8 @@ Project_Dir :: struct {
 just_dropped_file := "";
 
 cpu_info: Cpu_X86;
+
+focus_allocator: Allocator;
 
 // This will be set to `true` in `refresh_config()` to signal that the
 // next window resize event should be handled even if the window doesn't actually

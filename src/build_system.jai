@@ -73,7 +73,11 @@ execute_build_command :: (command: *Build_Command) {
     // People probably expect 0 to be no timeout, so we convert it to -1, which means no timeout
     if command.timeout_in_seconds == 0 then running_command.timeout_in_seconds = -1;
 
-    if command.open_panel_on_build then show_build_panel();
+    if command.open_panel_on_build {
+        show_build_panel();
+    } else {
+        add_success_message("Running [%]…", running_command.name, dismiss_in_seconds = 3);
+    }
 
     add_work(*thread_group, running_command);
     // Now don't modify running_command as it's being accessed from thread
@@ -137,9 +141,12 @@ build_system_update :: () {
 
         print_to_output_panel_from_main_thread(tprint("%\n", message), mark_as = kind);
 
-        if running_command.close_panel_on_success {
-            // TODO: if exit code is not 0 or there are errors, that shouldn't be a success?
-            hide_build_panel();
+        if kind == .success {
+            if running_command.close_panel_on_success then hide_build_panel();
+            if !running_command.open_panel_on_build   then add_success_message("Finished [%]", running_command.name, dismiss_in_seconds = 3);
+        } else {
+            // Always show the panel on errors
+            show_build_panel();
         }
 
         running_command = null;
