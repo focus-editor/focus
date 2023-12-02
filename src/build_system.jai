@@ -159,6 +159,20 @@ toggle_build_panel :: () {
 }
 
 show_build_panel :: () {
+    // Maybe hide other popups
+    if #complete active_global_widget == {
+        case .editors;                  // nothing to do
+
+        case .unsaved_buffers_dialog;   // do nothing, we still want to see them
+        case .confirm_overwrite_dialog; // do nothing, we still want to see them
+
+        case .open_file_dialog;         #through;
+        case .delete_file_dialog;       #through;
+        case .finder;                   #through;
+        case .go_to_line_dialog;        #through;
+        case .open_project_dialog;      #through;
+        case .commands_dialog;          active_global_widget = .editors;
+    }
     if !build_panel_is_shown {
         previously_active_editor = editors.active;
     }
