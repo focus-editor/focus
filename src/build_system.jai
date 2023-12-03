@@ -75,7 +75,7 @@ execute_build_command :: (command: *Build_Command) {
 
     if command.open_panel_on_build {
         show_build_panel();
-    } else {
+    } else if !build_panel_is_shown {
         add_success_message("Running [%]…", running_command.name, dismiss_in_seconds = 3);
     }
 
@@ -236,6 +236,8 @@ build_panel_set_width :: (width: float) {
 }
 
 build_panel_get_position :: () -> Build_Panel_Position {
+    if config.settings.build_panel_stays_in_one_place return .right;
+
     if #complete editors.layout == {
         case .None;     saved_position = .right;
         case .Single;   saved_position = .right;

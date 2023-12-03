@@ -291,18 +291,20 @@ draw_user_messages :: (main_area: Rect, footer_height: float) {
 draw_build_panel :: () {
     // Drag build panel title bar first before drawing
     if ui.active == .build_panel_title_bar {
-        build_panel_set_width((screen.x + screen.w - (mouse.pointer.x - build_panel_grab_point.x)) / screen.w);
+        if build_panel_get_position() == .left {
+            build_panel_set_width(((mouse.pointer.x - screen.x) - build_panel_grab_point.x) / screen.w);
+        } else {
+            build_panel_set_width((screen.x + screen.w - (mouse.pointer.x - build_panel_grab_point.x)) / screen.w);
+        }
         build_panel_set_height((mouse.pointer.y - build_panel_grab_point.y - screen.y) / screen.h);
     }
 
     build_panel_rect: Rect;
-    if editors.layout != .Double || config.settings.build_panel_stays_in_one_place || editor_closing {
-        build_panel_rect = cut_right(screen, screen.w * build_panel_width, margin = 2);
+    if build_panel_get_position() == .left {
+        build_panel_rect = cut_left(screen, screen.w * build_panel_width, margin = 2);
     } else {
-        left_rect, right_rect := cut_left(screen, screen.w * splitter_pos, margin = 2);
-        build_panel_rect = ifx build_panel_get_position() == .left then left_rect else right_rect;
+        build_panel_rect = cut_right(screen, screen.w * build_panel_width, margin = 2);
     }
-
     if !values_are_close(build_panel_height, build_panel_height_anim.target) {
         redraw_requested = true;
         build_panel_height = get_animation_value(build_panel_height_anim);
@@ -321,7 +323,13 @@ draw_build_panel :: () {
     // Draw title bar
     {
         started_dragging := maybe_set_hot_or_active(.build_panel_title_bar, title_bar_rect, .NORMAL);
-        if started_dragging then build_panel_grab_point = mouse.pointer - top_left(title_bar_rect);
+        if started_dragging {
+            if build_panel_get_position() == .left {
+                build_panel_grab_point = mouse.pointer - top_right(title_bar_rect);
+            } else {
+                build_panel_grab_point = mouse.pointer - top_left(title_bar_rect);
+            }
+        }
         if ui.active == .build_panel_title_bar then set_pointer_image(.DRAGGING_FREE);
 
         push_scissor(title_bar_rect);
