@@ -243,14 +243,7 @@ MyWindowProc :: (hwnd: HWND, message: u32,
           case WM_CHAR;
             keycode := wParam;
 
-            // @Hack to allow AltGr shortcuts for AZERTY and QWERTZ layout...
-            altgr_keycode := keycode == #char "~" || keycode == #char "#" || keycode == #char "{"  || keycode == #char "[" ||
-                             keycode == #char "|" || keycode == #char "`" || keycode == #char "\\" || keycode == #char "^" ||
-                             keycode == #char "@" || keycode == #char "]" || keycode == #char "}"  || keycode == #char ";" ||
-                             keycode == #char "<" || keycode == #char ">"  || keycode == #char "$" || keycode == #char "&" ||
-                             keycode == #char "*";
-
-            if (keycode > 31 && keycode < 127 && !(ctrl_state || alt_state)) || (altgr_keycode && alt_state) || keycode > 255 {
+            if (keycode > 31 && keycode < 127) || keycode > 255 {
                 // Control characters generate key codes < 32, but these are redundant
                 // with KEYDOWN events and are also ambiguous (ctrl-m generates 13, but
                 // so does RETURN.)
