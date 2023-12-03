@@ -1,6 +1,8 @@
 highlight_csharp_syntax :: (using buffer: *Buffer) {
     using tokenizer := get_tokenizer(buffer);
 
+    last_token := Token.{0, 0, .eof};
+
     while true {
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
@@ -17,61 +19,12 @@ highlight_csharp_syntax :: (using buffer: *Buffer) {
     }
 }
 
-tokenize_csharp_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /* temp */ {
-    tokens: [..] Indentation_Token;
-    tokens.allocator = temp;
-
-    tokenizer := get_tokenizer(buffer);
-
-    while true {
-        src := get_next_token(*tokenizer);
-
-        token: Indentation_Token = ---;
-        token.start = src.start;
-        token.len   = src.len;
-
-        if src.type == {
-            case .punctuation;
-                if src.punctuation == {
-                    case .l_paren;      token.type = .open;  token.kind = .paren;
-                    case .l_bracket;    token.type = .open;  token.kind = .bracket;
-                    case .l_brace;      token.type = .open;  token.kind = .brace;
-
-                    case .r_paren;      token.type = .close; token.kind = .paren;
-                    case .r_bracket;    token.type = .close; token.kind = .bracket;
-                    case .r_brace;      token.type = .close; token.kind = .brace;
-
-                    case;               continue;
-                }
-
-            case .multiline_comment;    token.type = .maybe_multiline;
-            case .eof;                  token.type = .eof;  // to guarantee we always have indentation tokens
-            case;                       token.type = .unimportant;
-        }
-
-        array_add(*tokens, token);
-
-        if src.type == .eof break;
-    }
-
-    return tokens;
-}
+get_next_csharp_token :: get_next_token;  // export for indent tokenization
 
 #scope_file
 
-get_tokenizer :: (using buffer: Buffer) -> Tokenizer {
-    tokenizer: Tokenizer;
-
-    tokenizer.buf   = to_string(bytes);
-    tokenizer.max_t = bytes.data + bytes.count;
-    tokenizer.t     = bytes.data;
-    tokenizer.last_token = .{0, 0, .eof};
-
-    return tokenizer;
-}
-
 get_next_token :: (using tokenizer: *Tokenizer) -> Token {
-    t = eat_white_space(t, max_t);
+    eat_white_space(tokenizer);
 
     token: Token;
     token.start = cast(s32) (t - buf.data);
@@ -139,10 +92,6 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token, check_for_keywo
         kw_token, ok := table_find(*KEYWORD_MAP, identifier);
         if ok { token.type = kw_token.type; token.keyword = kw_token.keyword; return; }
     }
-}
-
-is_hex :: inline (c: u8) -> bool {
-    return is_digit(c) || (c >= #char "a" && c <= #char "f") || (c >= #char "A" && c <= #char "F");
 }
 
 // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/integral-numeric-types
@@ -352,7 +301,7 @@ parse_preprocessor_directive :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
 
     t += 1;
-    t = eat_white_space(t, max_t);  // There may be spaces between the # and the name
+    eat_white_space(tokenizer);  // There may be spaces between the # and the name
     if !is_alpha(<<t) return;
 
     directive := read_identifier_string(tokenizer);
@@ -601,36 +550,6 @@ parse_caret :: (using tokenizer: *Tokenizer, token: *Token) {
             token.operation = .caret_equal;
             t += 1;
     }
-}
-
-read_identifier_string :: (using tokenizer: *Tokenizer) -> string {
-    identifier: string;
-    identifier.data = t;
-
-    while t < max_t && is_alnum(<<t) {
-        t += 1;
-    }
-    if t >= max_t then t = max_t;
-    identifier.count = t - identifier.data;
-
-    return identifier;
-}
-
-eat_white_space :: inline (start: *u8, max_t: *u8) -> *u8 {
-    t := start;
-    while t < max_t && is_white_space(<<t) {
-        t += 1;
-    }
-    return t;
-}
-
-Tokenizer :: struct {
-    buf: string;
-    max_t:   *u8;
-    start_t: *u8;  // Cursor when starting parsing new token
-    t:       *u8;  // Cursor
-
-    last_token: Token;  // To retroactively highlight methods
 }
 
 Token :: struct {
@@ -897,18 +816,6 @@ Directive :: enum u16 {
 Keyword_Token :: struct {
     type: Token.Type;
     keyword: Keyword;
-}
-
-enum_value_to_name :: (value: $Enum) -> string
-#modify { return (cast(*Type_Info) Enum).type == .ENUM; }
-{
-    info := type_info(Enum);
-    for info.names {
-        if info.values[it_index] == cast(s64) value return it;
-    }
-
-    assert(false, "Unknown enum value of '%'\n", value);
-    return "";
 }
 
 KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {

@@ -1,22 +1,32 @@
 CURRENT_CONFIG_VERSION :: 2;
 
 load_global_config :: (fallback_to_default_on_failure := false) -> success: bool, changed: bool, there_were_warnings: bool {
-    global_config_path = sprint("%/global.focus-config", config_dir);
+    config_path := tprint("%/global.focus-config", config_dir);
+    if !global_config.path then global_config.path = copy_string(config_path);
 
-    if !file_exists(global_config_path) {
+    if !file_exists(config_path) {
         // Create one with default contents
-        success := write_entire_file(global_config_path, DEFAULT_CONFIG_FILE_DATA);
-        if !success panic_messagebox("Couldn't create a new config file '%'.\nIs the directory writable?", global_config_path);
+        success := write_entire_file(config_path, DEFAULT_CONFIG_FILE_DATA);
+        if !success panic_messagebox("Couldn't create a new config file '%'.\nIs the directory writable?", config_path);
     }
 
-    success, changed, there_were_warnings := load_and_merge_config(global_config_path, into = Config.{}, hash = *global_config_hash);
-    if !success && fallback_to_default_on_failure {
-        config = DEFAULT_CONFIG;
-        saved_global_config = config;
-    }
-    if success then saved_global_config = config;
+    loaded_config, changed := load_config(config_path, *global_config);
+    if !changed return true, false, false;
 
-    return success, changed, there_were_warnings;
+    if loaded_config.loaded {
+        // Merge into an empty config
+        config = Config.{};
+        merge_configs(*config, loaded_config.parsed_config);
+        apply_config();
+        free_loaded_config(*global_config);
+        global_config = loaded_config;
+        return true, true, loaded_config.there_were_warnings;
+    } else {
+        if fallback_to_default_on_failure then config = DEFAULT_CONFIG;
+        global_config.hash = loaded_config.hash;
+        free_loaded_config(*loaded_config);
+        return false, false, false;
+    }
 }
 
 load_project_config :: (project: string = "") -> success: bool, changed: bool, there_were_warnings: bool {
@@ -25,37 +35,111 @@ load_project_config :: (project: string = "") -> success: bool, changed: bool, t
         return false, false, false;
     }
     project_name := ifx project then project else current_project_name;
-    config_path  := sprint("%/%.focus-config", projects_dir, project_name);
+    config_path  := tprint("%/%.focus-config", projects_dir, project_name);
 
-    success, changed, there_were_warnings := load_and_merge_config(config_path, into = saved_global_config, hash = *project_config_hash);
-    if success {
-        current_project_name = project_name;
-        project_config_path  = config_path;
+    loaded_config, changed := load_config(config_path, *project_config);
+    if !changed return true, false, false;
+
+    if loaded_config.loaded {
+        // Merge into an empty config, starting from a loaded global config
+        if global_config.loaded {
+            config = Config.{};
+            merge_configs(*config, global_config.parsed_config);
+        } else {
+            config = DEFAULT_CONFIG;
+        }
+        // Now mix in the project config
+        merge_configs(*config, loaded_config.parsed_config);
+        apply_config();
+
+        changed := loaded_config.hash != project_config.hash;
+        free_loaded_config(*project_config);
+        project_config = loaded_config;
+
+        current_project_name = copy_string(project_name);
+
+        return true, changed, loaded_config.there_were_warnings;
+    } else {
+        project_config.hash = loaded_config.hash;
+        free_loaded_config(*loaded_config);
+        return false, false, false;
+    }
+}
+
+apply_config :: () {
+    // Apply colors
+    Colors = config.colors;
+    CODE_COLOR_MAP = refresh_code_color_map();
+    platform_set_border_color();
+
+    // Make sure the values are within the acceptable range
+    old_tab_size := TAB_SIZE;
+    TAB_SIZE = clamp(cast(s32) config.settings.tab_size, 1, 100);  // be reasonable mkay (though even 100 is unreasonable)
+    if config.settings.tab_size != TAB_SIZE then add_user_warning("Tab size clamped to %", TAB_SIZE);
+
+    if old_tab_size != TAB_SIZE {
+        // Refresh all editors which have line wrap on
+        for * editor : open_editors {
+            buffer := *open_buffers[editor.buffer_id];
+            if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
+        }
     }
 
-    return success, changed, there_were_warnings;
+    clamp_and_warn :: (setting: *$T, min: T, max: T, message: string) {
+        old := setting.*;
+        clamped := clamp(old, min, max);
+        if clamped != old {
+            add_user_warning(message, clamped);
+            setting.* = clamped;
+        }
+    }
+
+    clamp_and_warn(*config.settings.line_height_scale_percent,  50,  1000,        "Line height scale clamped to % percent");
+    clamp_and_warn(*config.settings.editor_history_size,        4,   1024 * 1024, "Editor history size clamped to %");
+    clamp_and_warn(*config.settings.build_panel_height_percent, 10,  100,         "Build panel height clamped to % percent");
+    clamp_and_warn(*config.settings.build_panel_width_percent,  10,  100,         "Build panel width clamped to % percent");
+
+    build_panel_width  = config.settings.build_panel_width_percent  / 100.0;
+    build_panel_height = config.settings.build_panel_height_percent / 100.0;
+    build_panel_height_anim.target = build_panel_height;
+
+    // Must do after the validation
+    init_fonts_and_dependent_things();
+
+    platform_apply_config();
+}
+
+free_loaded_config :: (loaded_config: *Loaded_Config) {
+    free(loaded_config.path);
+    loaded_config.path = "";
+    free(loaded_config.file_data);
+    loaded_config.file_data = "";
+    free_parsed_config(loaded_config.parsed_config);
 }
 
 refresh_config :: (path: string) {
-    old_workspace_dirs := array_copy_tmp(config.workspace.workspace_dirs);
+    // Deep copy old workspace dirs (they will be freed by the load config function otherwise)
+    old_workspace_dirs: [..] string;
+    old_workspace_dirs.allocator = temp;
+    for config.workspace.workspace_dirs array_add(*old_workspace_dirs, copy_temporary_string(it));
 
-    if platform_path_equals(path, global_config_path) {
+    if platform_path_equals(path, global_config.path) {
         success, changed, there_were_warnings := load_global_config();
         if success && changed && !there_were_warnings {
-            clear_user_messages();
-            add_success_message("Global config changes have been applied", dismiss_in_seconds = 3);
+            clear_user_messages(.config);
+            add_success_message("Global config changes have been applied", dismiss_in_seconds = 3, tag = .config);
         }
-        if current_project_name {
+        if project_config.loaded {
             success, changed, there_were_warnings = load_project_config(current_project_name);
             if success && changed && !there_were_warnings {
-                add_success_message(tprint("Config changes for project '%' have been applied", current_project_name), dismiss_in_seconds = 3);
+                add_success_message("Config changes for project '%' have been applied", current_project_name, dismiss_in_seconds = 3, tag = .config);
             }
         }
-    } else if platform_path_equals(path, project_config_path) {
+    } else if platform_path_equals(path, project_config.path) {
         success, changed, there_were_warnings := load_project_config();
         if success && changed && !there_were_warnings {
-            clear_user_messages();
-            add_success_message(tprint("Config changes for project '%' have been applied", current_project_name), dismiss_in_seconds = 3);
+            clear_user_messages(.config);
+            add_success_message("Config changes for project '%' have been applied", current_project_name, dismiss_in_seconds = 3, tag = .config);
         }
     } else {
         log_error("Attempted to refresh config from file %, but it is not a global config or a current project config", path);
@@ -86,27 +170,26 @@ refresh_config :: (path: string) {
     }
 
     dont_ignore_next_window_resize = true;
-    platform_apply_config(*config.platform);
 }
 
 is_our_config_file :: (path: string) -> bool {
-    return path != "" && (platform_path_equals(path, global_config_path) || platform_path_equals(path, project_config_path));
+    return path != "" && (platform_path_equals(path, global_config.path) || platform_path_equals(path, project_config.path));
 }
 
 close_project :: () {
-    if !project_config_path {
+    if !project_config.loaded {
         add_user_warning("No project is currently active.", dismiss_in_seconds = 5);
         return;
     }
 
     success := load_global_config();
     if success {
-        should_reload_workspace = true;
+        project_config.loaded = false;
         if unsaved_buffers_exist() {
             show_unsaved_buffers_dialog(.reload_workspace);
-            should_reload_workspace = false;
+        } else {
+            should_reload_workspace = true;
         }
-        project_config_path = "";
     } else {
         add_user_error("Couldn't close project because the global config failed to load", dismiss_in_seconds = 10);
     }
@@ -153,80 +236,40 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
 
 #scope_file
 
-load_and_merge_config :: (file_path: string, into: Config, hash: *u64) -> success: bool, changed: bool, there_were_warnings: bool {
+load_config :: (file_path: string, existing: *Loaded_Config) -> Loaded_Config, changed := true {
+    loaded_config: Loaded_Config;
 
     file_data, success_read := read_entire_file(file_path);
-    // NOTE: we're not freeing because the config will take ownership of it (and if you reload it'll leak the old data, which we should probably fix at some point)
     if !success_read {
         error_msg := tprint("Couldn't read the config file file '%'", file_path);
         log_error(error_msg);
         add_user_error(error_msg);
-        return false, false, false;
+        return loaded_config;
     }
 
-    parsed_config, success_parse, error_msg, warnings := parse_config(file_path, file_path, file_data);
-    if !success_parse {
-        if !error_msg assert(false, "No error message on a config error. This is a bug.");
-        log_error(error_msg);
-        add_user_error(error_msg);
-        return false, false, false;
+    loaded_config.path = copy_string(file_path);
+    loaded_config.file_data = file_data;
+    loaded_config.hash = calculate_hash(to_bytes(file_data));
+    if loaded_config.hash == existing.hash return loaded_config, false;  // unchanged so no need to parse
+
+    parse_result := parse_config(file_path, file_path, file_data);
+    if !parse_result.success {
+        if !parse_result.error_msg assert(false, "No error message on a config error. This is a bug.");
+        add_user_error(parse_result.error_msg, tag = .config);
+        return loaded_config;
     }
-    if warnings {
-        add_user_warning(tprint("Config file % loaded with warnings", file_path), dismiss_in_seconds = 60);
-        for warnings add_user_error(it, dismiss_in_seconds = 60);
-    }
-
-    // Maybe update hash if changed
-    new_hash := calculate_hash(to_bytes(file_data));
-    changed := new_hash != <<hash;
-    if changed then <<hash = new_hash;
-
-    // Merge configs
-    config = into;
-    merge_configs(*config, parsed_config);
-
-    // Apply colors
-    Colors = config.colors;
-    CODE_COLOR_MAP = refresh_code_color_map();
-    platform_set_border_color();
-
-    // Make sure the values are within the acceptable range
-    clamp_warnings := false;
-
-    old_tab_size := TAB_SIZE;
-    TAB_SIZE = clamp(cast(s32) config.settings.tab_size, 1, 100);  // be reasonable (though 100 is unreasonable)
-    if config.settings.tab_size != TAB_SIZE {
-        add_user_warning(tprint("Tab size clamped to %", TAB_SIZE));
-        clamp_warnings = true;
-    }
-    if old_tab_size != TAB_SIZE {
-        // Refresh all editors which have line wrap on
-        for * editor : open_editors {
-            buffer := *open_buffers[editor.buffer_id];
-            if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
-        }
+    if parse_result.warnings {
+        add_success_message(tprint("Config file % loaded with warnings", file_path), dismiss_in_seconds = 30, tag = .config);
+        for parse_result.warnings add_user_warning(it, dismiss_in_seconds = 30, tag = .config);
+        loaded_config.there_were_warnings = true;
     }
 
-    line_height_scale := config.settings.line_height_scale_percent;
-    config.settings.line_height_scale_percent = clamp(line_height_scale, 50, 1000);
-    if config.settings.line_height_scale_percent != line_height_scale {
-        add_user_warning(tprint("Line height scale clamped to %", config.settings.line_height_scale_percent));
-        clamp_warnings = true;
-    }
+    loaded_config.loaded = true;
+    loaded_config.parsed_config = parse_result.config;
 
-    editor_history_size := config.settings.editor_history_size;
-    config.settings.editor_history_size = clamp(editor_history_size, 4, 1024 * 1024);
-    if config.settings.editor_history_size != editor_history_size {
-        add_user_warning(tprint("Editor history size clamped to %", config.settings.editor_history_size));
-        clamp_warnings = true;
-    }
+    start_watching_file_if_not_already(file_path);
 
-    // Must do after the validation
-    init_fonts_and_dependent_things();
-
-    if !file_is_watched(file_path) start_watching_file(file_path);
-
-    return true, changed, warnings.count > 0 || clamp_warnings;
+    return loaded_config;
 }
 
 merge_configs :: (dst: *Config, parsed: Parsed_Config) {
@@ -242,6 +285,9 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
         dst.workspace.ignore_file_extensions          = parsed.ignore_file_extensions;
         dst.workspace.ignore_file_extension_wildcards = parsed.ignore_file_extension_wildcards;
     }
+
+    // Build config completely overrides the previous config if present
+    if parsed.build.commands then dst.build = parsed.build;
 
     // Keymap
     merge_keymaps :: (dst_keymap: *[] Key_Mapping, src_keymap: *[..] Key_Mapping) #expand {
@@ -273,7 +319,7 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
             main_font_name = parsed.font;
         } else {
             // NOTE: this error will be removed by the config success message. Should do something about it
-            add_user_error(tprint("Couldn't load font %", parsed.font));
+            add_user_error("Couldn't load font %", parsed.font);
         }
     }
     if parsed.font_size > 0 {
@@ -293,7 +339,7 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     }
 
     // Platform config
-    platform_copy_config(*parsed.platform, *dst.platform);
+    dst.linux = parsed.linux;
 }
 
 load_font_by_name :: (name: string) -> font_data: string, success: bool {
@@ -310,17 +356,16 @@ load_font_by_name :: (name: string) -> font_data: string, success: bool {
 
 #scope_export
 
-global_config_path:  string;
-global_config_hash:  u64;
-project_config_path: string;
-project_config_hash: u64;
-current_project_name: string;
-
+// Currently active config
 config: Config;
 
-// Used to remember the global settings to then apply the project config on top
-// when it's reloaded to avoid losing the original global settings
-saved_global_config: Config;
+// If nonempty, then there's an active project
+current_project_name: string;
+
+// Info about currently loaded configs, useful when reloading etc.
+global_config:  Loaded_Config;
+project_config: Loaded_Config;
+
 
 Config :: struct {
     workspace: Workspace;
@@ -328,7 +373,23 @@ Config :: struct {
     settings:  Settings;
     style:     Style;
     colors:    Color_Values;
-    platform:  Platform_Config;
+    build:     Build_Config;
+    linux:     Linux_Config;
+}
+
+Loaded_Config :: struct {
+    loaded := false;
+    there_were_warnings := false;
+    path: string;
+    hash: u64;
+    parsed_config: Parsed_Config;  // points into the file data below
+    file_data: string;  // to free when not needed.
+}
+
+Linux_Config :: struct {
+    scaling_factor: float = 0.0;
+    explorer_command: string;
+    explorer_reveal_command: string;
 }
 
 Workspace :: struct {
@@ -354,6 +415,7 @@ Settings :: struct {
     insert_spaces_when_pressing_tab         := true;
     strip_trailing_whitespace_on_save       := false;
     smooth_scrolling                        := true;
+    scroll_beyond_last_line                 := true;
     line_height_scale_percent               := 120;
     max_editor_width                        := -1;
     can_cancel_go_to_line                   := true;
@@ -370,6 +432,10 @@ Settings :: struct {
     auto_close_brackets                     := false;
     prefer_system_file_dialogs              := false;
 
+    build_panel_width_percent               := 50;
+    build_panel_height_percent              := 50;
+    build_panel_stays_in_one_place          := false;
+
     // TODO
     // convert_tabs_to_spaces_on_load:     false
     // load_last_session_on_start:         true
@@ -380,6 +446,8 @@ Keymap :: struct {
     editors:          [] Key_Mapping;
     open_file_dialog: [] Key_Mapping;
     search_dialog:    [] Key_Mapping;
+
+    build:            [] Key_Mapping;  // treated specially, it's not in the keymap config, but in the build config for convenience
 }
 
 Style :: struct {
@@ -387,12 +455,33 @@ Style :: struct {
     font_size := -1;
 }
 
-style: Style;
-
-Setting :: struct {
-    name: string;
-    type: enum { boolean; integer; };
+Build_Config :: struct {
+    defaults: Build_Command;
+    defaults.name = "Default Build Command";
+    commands: [..] Build_Command;
+    keymap: [..] Key_Mapping;  // separate from the other keymaps because it should never merge with the previous config
+                               // (because the build commands don't merge so we can't use the previous config's keymaps)
 }
+
+Build_Command :: struct {
+    name:                   string;  @dontparse
+
+    build_command:          string;
+    build_working_dir:      string;
+
+    run_command:            string;
+    run_working_dir:        string;
+
+    error_regex:            string;
+    auto_jump_to_error:     bool;
+
+    open_panel_on_build:    bool;
+    close_panel_on_success: bool;
+
+    timeout_in_seconds:     int = -1;
+}
+
+style: Style;
 
 DEFAULT_CONFIG_FILE_DATA  :: #run read_entire_file(tprint("config/%", DEFAULT_CONFIG_NAME));
 EXAMPLE_PROJECT_FILE_DATA :: #run read_entire_file(tprint("config/%", EXAMPLE_PROJECT_CONFIG_NAME));
@@ -409,18 +498,18 @@ EXAMPLE_PROJECT_CONFIG_NAME :: "example-project.focus-config";
 
 #scope_export
 
-DEFAULT_CONFIG :: #run -> Config {
-    parsed_config, success := parse_config("Default Config", DEFAULT_CONFIG_NAME, DEFAULT_CONFIG_FILE_DATA);
-    assert(success, "Couldn't parse the default config file '%'", DEFAULT_CONFIG_NAME);
+DEFAULT_CONFIG :: #run,stallable -> Config {
+    result := parse_config("Default Config", DEFAULT_CONFIG_NAME, DEFAULT_CONFIG_FILE_DATA);
+    assert(result.success, "Couldn't parse the default config file '%'. Error: %", DEFAULT_CONFIG_NAME, result.error_msg);
     default_config: Config;
-    merge_configs(*default_config, parsed_config);
+    merge_configs(*default_config, result.config);
     return default_config;
 };
 
 // Validate the example project config
-#run {
-    _, success := parse_config("Example Project Config", EXAMPLE_PROJECT_CONFIG_NAME, EXAMPLE_PROJECT_FILE_DATA);
-    assert(success, "Couldn't parse the example project config file '%'", EXAMPLE_PROJECT_CONFIG_NAME);
+#run,stallable {
+    result := parse_config("Example Project Config", EXAMPLE_PROJECT_CONFIG_NAME, EXAMPLE_PROJECT_FILE_DATA);
+    assert(result.success, "Couldn't parse the example project config file '%'", EXAMPLE_PROJECT_CONFIG_NAME);
 }
 
 #load "config_parser.jai";

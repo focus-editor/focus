@@ -19,7 +19,7 @@ set_custom_cursor_handling :: (is_custom: bool) {
 
 //#scope_export
 
-get_key_code :: (wParam: WPARAM) -> Key_Code {
+get_key_code :: (wParam: WPARAM, extended := false) -> Key_Code {
     if (wParam >= 48) && (wParam <= 90) return cast(Key_Code) wParam;
 
     using Key_Code;
@@ -67,7 +67,7 @@ get_key_code :: (wParam: WPARAM) -> Key_Code {
     if wParam == VK_ESCAPE
         return ESCAPE;
     if wParam == VK_RETURN
-        return ENTER;
+        return ifx extended then NUMPAD_ENTER else ENTER;
     if wParam == VK_TAB
         return TAB;
 
@@ -99,21 +99,21 @@ get_key_code :: (wParam: WPARAM) -> Key_Code {
         return PRINT_SCREEN;
 
     // Numpad keys
-    if wParam == VK_NUMPAD0  return xx #char "0";
-    if wParam == VK_NUMPAD1  return xx #char "1";
-    if wParam == VK_NUMPAD2  return xx #char "2";
-    if wParam == VK_NUMPAD3  return xx #char "3";
-    if wParam == VK_NUMPAD4  return xx #char "4";
-    if wParam == VK_NUMPAD5  return xx #char "5";
-    if wParam == VK_NUMPAD6  return xx #char "6";
-    if wParam == VK_NUMPAD7  return xx #char "7";
-    if wParam == VK_NUMPAD8  return xx #char "8";
-    if wParam == VK_NUMPAD9  return xx #char "9";
-    if wParam == VK_MULTIPLY return xx #char "*";
-    if wParam == VK_ADD      return xx #char "+";
-    if wParam == VK_SUBTRACT return xx #char "-";
-    if wParam == VK_DECIMAL  return xx #char ".";
-    if wParam == VK_DIVIDE   return xx #char "/";
+    if wParam == VK_NUMPAD0  return NUMPAD_0;
+    if wParam == VK_NUMPAD1  return NUMPAD_1;
+    if wParam == VK_NUMPAD2  return NUMPAD_2;
+    if wParam == VK_NUMPAD3  return NUMPAD_3;
+    if wParam == VK_NUMPAD4  return NUMPAD_4;
+    if wParam == VK_NUMPAD5  return NUMPAD_5;
+    if wParam == VK_NUMPAD6  return NUMPAD_6;
+    if wParam == VK_NUMPAD7  return NUMPAD_7;
+    if wParam == VK_NUMPAD8  return NUMPAD_8;
+    if wParam == VK_NUMPAD9  return NUMPAD_9;
+    if wParam == VK_MULTIPLY return NUMPAD_MULTIPLY;
+    if wParam == VK_ADD      return NUMPAD_ADD;
+    if wParam == VK_SUBTRACT return NUMPAD_SUBTRACT;
+    if wParam == VK_DECIMAL  return NUMPAD_DECIMAL;
+    if wParam == VK_DIVIDE   return NUMPAD_DIVIDE;
 
     return UNKNOWN;
 }
@@ -181,8 +181,6 @@ get_vk :: (key: Key_Code) -> VK: u64 {
 MyWindowProc :: (hwnd: HWND, message: u32,
                  wParam: WPARAM, lParam: LPARAM) -> s64 #c_call {
     new_context: Context;
-    new_context.allocator = Context.default_allocator;
-    new_context.logger    = Context.default_logger;
 
     push_context new_context {
         using Key_Code;
@@ -228,13 +226,15 @@ MyWindowProc :: (hwnd: HWND, message: u32,
           case WM_SYSKEYDOWN; #through;
           case WM_KEYDOWN;
 
+            extended := ((cast(u16)((cast(u32)lParam >> 16) & 0xffff)) & 0x0100 == 0x0100);  // (HIWORD(lParam) & KF_EXTENDED) == KF_EXTENDED
             repeat := ((cast (s32) lParam) & 0x40000000) != 0;
-            maybe_send_vkey_event(wParam, true, repeat);
+            maybe_send_vkey_event(wParam, true, repeat, extended = extended);
 
           case WM_SYSKEYUP; #through;
           case WM_KEYUP;
 
-            maybe_send_vkey_event(wParam, false);
+            extended := ((cast(u16)((cast(u32)lParam >> 16) & 0xffff)) & 0x0100 == 0x0100);  // (HIWORD(lParam) & KF_EXTENDED) == KF_EXTENDED
+            maybe_send_vkey_event(wParam, false, extended = extended);
 
           case WM_SYSCHAR;
               // This is here to prevent beeps when a Alt key combo is pressed. If we don't return 0, windows helpfully emits a beep sound to
@@ -243,12 +243,12 @@ MyWindowProc :: (hwnd: HWND, message: u32,
           case WM_CHAR;
             keycode := wParam;
 
-            // @Hack to allow AltGr shortcuts for AZERTY and QERTZ/Y layout...
+            // @Hack to allow AltGr shortcuts for AZERTY and QWERTZ layout...
             altgr_keycode := keycode == #char "~" || keycode == #char "#" || keycode == #char "{"  || keycode == #char "[" ||
                              keycode == #char "|" || keycode == #char "`" || keycode == #char "\\" || keycode == #char "^" ||
                              keycode == #char "@" || keycode == #char "]" || keycode == #char "}"  || keycode == #char ";" ||
-                             keycode == #char ";" || keycode == #char "<" || keycode == #char ">"  || keycode == #char "$" ||
-                             keycode == #char "&" || keycode == #char "*";
+                             keycode == #char "<" || keycode == #char ">"  || keycode == #char "$" || keycode == #char "&" ||
+                             keycode == #char "*";
 
             if (keycode > 31 && keycode < 127 && !(ctrl_state || alt_state)) || (altgr_keycode && alt_state) || keycode > 255 {
                 // Control characters generate key codes < 32, but these are redundant
@@ -266,8 +266,7 @@ MyWindowProc :: (hwnd: HWND, message: u32,
           case WM_KILLFOCUS;
             input_application_has_focus = false;
           case WM_PAINT;
-		    ValidateRect(hwnd, null);
-	        return DefWindowProcW(hwnd, message, wParam, lParam);
+            ValidateRect(hwnd, null);
 
           case WM_LBUTTONDOWN; #through;
           case WM_LBUTTONUP;
@@ -708,7 +707,7 @@ set_key_down_state :: (vkey : u32, is_down: bool) -> was_down:bool {
     return was_down;
 }
 
-maybe_send_vkey_event :: (vkey: u64, key_down: bool, repeat := false) {
+maybe_send_vkey_event :: (vkey: u64, key_down: bool, repeat := false, extended := false) {
     was_down := set_key_down_state(cast,trunc(u32) vkey, key_down);
     if !key_down && !was_down {
         // redundant key_up event
@@ -721,7 +720,7 @@ maybe_send_vkey_event :: (vkey: u64, key_down: bool, repeat := false) {
         repeat = false;
     }
 
-    send_key_event(get_key_code(vkey), key_down, repeat);
+    send_key_event(get_key_code(vkey, extended), key_down, repeat);
 }
 
 send_key_event :: (key_code: Key_Code, key_down: bool, repeat := false) {
@@ -738,6 +737,11 @@ send_key_event :: (key_code: Key_Code, key_down: bool, repeat := false) {
     event.ctrl_pressed  = ctrl_state;
     event.alt_pressed   = alt_state;
     event.repeat = repeat;
+
+    utf32 := cast(u32) key_code;
+    is_printable := ((utf32 >= 32) && (utf32 != 127));
+    event.text_input_count = xx is_printable;
+
     array_add(*events_this_frame, event);
 
     input_button_states[key_code] |= ifx key_down then (Key_Current_State.DOWN | .START) else .END;

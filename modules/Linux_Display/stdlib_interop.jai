@@ -8,6 +8,10 @@ active_backend :: inline () -> ACTIVE_BACKEND {
     return active_backend(global_display);
 }
 
+active_gl_backend :: inline () -> GL_BACKEND {
+    return active_gl_backend(global_display);
+}
+
 create_window :: inline (width: int, height: int, window_name: string, window_x := 0, window_y := 0,
     parent: *Window = INVALID_WINDOW, background_color_rgb: [3]float) -> *Window
 {

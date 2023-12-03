@@ -4,13 +4,18 @@ open_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
     if event.type == .KEYBOARD && event.key_pressed {
         action := map_event_to_action(event, Action_Open_File_Dialog);
         if action == {
-            case .close_dialog;             hide_open_file_dialog();                                                                                                             return true;
-            case .open_entry_in_place;      open_file_dialog_open_entry(entries.selected, .in_place);                                                                            return true;
-            case .open_entry_on_the_side;   if mode != .save && mode != .save_as  open_file_dialog_open_entry(entries.selected, .on_the_side);                                   return true;
-            case .open_entry_on_the_left;   if mode != .save && mode != .save_as  open_file_dialog_open_entry(entries.selected, .left);                                          return true;
-            case .open_entry_on_the_right;  if mode != .save && mode != .save_as  open_file_dialog_open_entry(entries.selected, .right);                                         return true;
-            case .open_entry_in_explorer;   open_file_dialog_open_entry_in_explorer(entries.selected);                                                                           return true;
-            case .open_directory;           open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true, maybe_open_root_dir = event.key_code == #char "/");     return true;
+            case .escape;                   #through;
+            case .close_dialog;             hide_open_file_dialog(manual = true);                                          return true;
+
+            case .open_entry_in_place;      open_file_dialog_open_entry(entries.selected, .in_place);                      return true;
+            case .open_entry_on_the_side;   if mode != .save  open_file_dialog_open_entry(entries.selected, .on_the_side); return true;
+            case .open_entry_on_the_left;   if mode != .save  open_file_dialog_open_entry(entries.selected, .left);        return true;
+            case .open_entry_on_the_right;  if mode != .save  open_file_dialog_open_entry(entries.selected, .right);       return true;
+            case .open_entry_in_explorer;   open_file_dialog_open_entry_in_explorer(entries.selected);                     return true;
+
+            case .open_directory;           handled := open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true, slash_key_pressed = (event.key_code == #char "/"));
+                                            return handled;
+
             case .pop_directory;            if pop_directory() return true;
 
             case .toggle_expand;            toggle_expand();                    return true;
@@ -57,7 +62,7 @@ deinit_open_file_dialog :: () {
     array_reset(*entries.filtered);
 }
 
-show_open_file_dialog :: (mode: Open_File_Dialog.Mode, buffer: *Buffer = null, buffer_id: s64 = -1, from_root := false) {
+show_open_file_dialog :: (mode: Open_File_Dialog.Mode, buffer_id_to_save: s64 = -1, from_root := false) {
     if !from_root {
         // Derive the path chunks from the current open file
         editor, buffer := get_active_editor_and_buffer();
@@ -68,26 +73,36 @@ show_open_file_dialog :: (mode: Open_File_Dialog.Mode, buffer: *Buffer = null, b
 
     active_global_widget = .open_file_dialog;
     open_file_dialog.mode = mode;
-    open_file_dialog.buffer = buffer;
-    open_file_dialog.buffer_id = buffer_id;
+    open_file_dialog.buffer_id_to_save = buffer_id_to_save;
 
     refresh_entries();
 }
 
-hide_open_file_dialog :: () {
+hide_open_file_dialog :: (manual := false) {
+    using open_file_dialog;
+
+    if mode == .save && buffer_id_to_save >= 0 {
+        // If we were in the middle of saving something and closed the dialog, we don't want to save that,
+        // but also we don't want to proceed with whatever after-save action we had if we closed it ourselves
+        remove_buffer_from_save_queue(buffer_id_to_save, reset_after_save = manual);
+    }
+
     activate_editors();
 }
 
-open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, folder_only := false, maybe_open_root_dir := false) {
+open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, folder_only := false, slash_key_pressed := false) -> handled: bool {
     using open_file_dialog;
-    if selected >= entries.filtered.count return;
+
+    // If we are in search mode we want the "/" to show up as text in the search bar, instead of eating it
+    if mode == .search && slash_key_pressed return false;
+
+    if selected >= entries.filtered.count   return true;
 
     entry := entries.filtered[selected];
 
-    if path_chunks.count == 0 && maybe_open_root_dir {
+    if path_chunks.count == 0 && slash_key_pressed {
         // We are selecting our first chunk and we just pushed the "/" key.
-        // In this special case, we will open "/" if it is in the list.
-
+        // In this special case, we will open "/" (the root dir) if it is in the list.
         for entries.filtered {
             if it.entry_name == "/" {
                 entry = it;
@@ -97,33 +112,27 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
     }
 
     if entry.type == {
-        case .nothing;
-            if mode == .save || mode == .save_as {
-                dir_path: string;
-                if root_dir {
-                    path_chunks_trimmed := array_view(path_chunks, 1, path_chunks.count - 1);
-                    dir_path = sprint("%/%", root_dir, join(..path_chunks_trimmed, separator = "/"));
-                } else {
-                    dir_path = join(..path_chunks, separator = "/");
-                }
-                defer free(dir_path);
+        case .save;
+            if folder_only return true;
 
-                while dir_path != "/" && ends_with(dir_path, #char "/") dir_path.count -= 1;
-
-                full_path := tprint("%/%", dir_path, to_string(input.text));
-                save_buffer_to_disk(buffer, buffer_id, full_path);
+            if mode == .save {
+                full_path := tprint("%/%", get_current_folder_path(), cast(string) input.text);
+                buffer := *open_buffers[buffer_id_to_save];
+                save_buffer_to_file(buffer, buffer_id_to_save, full_path);
+                remove_buffer_from_save_queue(buffer_id_to_save);
 
                 hide_open_file_dialog();
             }
-            return;
+            return true;
 
         case .file;
-            if mode == {
-                case .save;     show_confirm_overwrite_dialog(.save,    buffer_id, entry.full_path); return;
-                case .save_as;  show_confirm_overwrite_dialog(.save_as, buffer_id, entry.full_path); return;
+            if folder_only return true;
+
+            if mode == .save {
+                show_confirm_overwrite_dialog(buffer_id_to_save, entry.full_path);
+                return true;
             }
 
-            if folder_only return;
             if entry.buffer_id >= 0 {
                 editors_open_buffer(entry.buffer_id, placement);
             } else {
@@ -149,6 +158,8 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
             array_add(*path_chunks, copy_string(entry.name));
             refresh_entries();
     }
+
+    return true;
 }
 
 open_file_dialog_open_entry_in_explorer :: (selected: s64) {
@@ -190,10 +201,10 @@ open_file_dialog_maybe_expand :: () {
 #scope_file
 
 maybe_handle_text_input_event :: (using input: *Text_Input, event: Input.Event) -> handled: bool {
-    input_text := copy_temporary_string(to_string(text));
+    input_text := copy_temporary_string(cast(string) text);
     handled := text_input_handle_event(input, event);
     if handled {
-        if input_text != to_string(input.text) then refresh_entries(clear_input = false);
+        if input_text != cast(string) input.text then refresh_entries(clear_input = false);
         return true;
     }
     return false;
@@ -216,7 +227,7 @@ move_cursor :: (delta: s64, wrap := false, snap := true) {
 
 pop_directory :: () -> handled: bool {
     using open_file_dialog;
-    if (mode != .navigate && mode != .save && mode != .save_as) || input.text || !path_chunks return false;
+    if (mode != .navigate && mode != .save) || input.text || !path_chunks return false;
 
     last := pop(*path_chunks);
     free(last);
@@ -276,11 +287,10 @@ refresh_entries :: (clear_input := true) {
     entries.selected = 0;
     array_reset(*entries.filtered);
 
-    filter_chars := decode_utf8_string_to_temp_char_substrings(to_string(input.text));
+    filter_chars := decode_utf8_string_to_temp_char_substrings(cast(string) input.text);
 
     if #complete mode == {
         case .save; #through;
-        case .save_as; #through;
         case .navigate;
             if !path_chunks {
                 // Display project dirs and drives
@@ -369,7 +379,7 @@ refresh_entries :: (clear_input := true) {
                 entry.entry_name = buffer_name;
                 if !buffer.has_file {
                     entry.entry_name = copy_string(buffer_name);
-                    entry.icon = File_Icon.text;
+                    entry.icon = Icon.text;
                 }
                 entry.name_highlights = name_highlights;
                 entry.path_highlights = path_highlights;
@@ -395,14 +405,19 @@ refresh_entries :: (clear_input := true) {
 
     quick_sort(entries.filtered, compare_entries);
 
+    if mode == .save && input.text && path_chunks {
+        array_add(*entries.filtered, Entry.{
+            file = File_Info.{ full_path = "", name = "", path = "", icon = .save },
+            entry_name = sprint("Save as '%/%'", get_current_folder_path(), cast(string) input.text),
+            type = .save,
+            name_highlights = .[],
+            path_highlights = .[],
+        });
+    }
+
     if !entries.filtered {
         array_add(*entries.filtered, Entry.{
-            file = File_Info.{
-                full_path = "",
-                name = "",
-                path = "",
-                icon = .dots,
-            },
+            file = File_Info.{ full_path = "", name = "", path = "", icon = .dots, },
             type = .nothing,
             name_highlights = .[],
             path_highlights = .[],
@@ -410,11 +425,13 @@ refresh_entries :: (clear_input := true) {
     }
 }
 
-scan_current_folder :: () {
+get_current_folder_path :: () -> string {
     using open_file_dialog;
-    if (mode != .navigate && mode != .save && mode != .save_as) || !path_chunks return;
+
+    if !path_chunks return "";
 
     dir_path: string;
+
     if root_dir {
         path_chunks_trimmed := array_view(path_chunks, 1, path_chunks.count - 1);
         dir_path = sprint("%/%", root_dir, join(..path_chunks_trimmed, separator = "/"));
@@ -422,6 +439,15 @@ scan_current_folder :: () {
         dir_path = join(..path_chunks, separator = "/");
     }
     while dir_path != "/" && ends_with(dir_path, #char "/") dir_path.count -= 1;
+
+    return dir_path;
+}
+
+scan_current_folder :: () {
+    using open_file_dialog;
+    if (mode != .navigate && mode != .save) || !path_chunks return;
+
+    dir_path := get_current_folder_path();
 
     // Reset current files
     array_reset(*current_files);
@@ -510,9 +536,8 @@ Open_File_Dialog :: struct {
     root_dir: string;
     current_files: [..] Entry;  // files in the current folder (used in .navigate mode only)
 
-    /* `buffer` and `buffer_id` are used when `mode` is `.save` or `.save_as` */
-    buffer: *Buffer;
-    buffer_id: s64;
+    /* `buffer_id_to_save` is used when `mode` is `.save` */
+    buffer_id_to_save: s64;
 
     entries: struct {
         filtered: [..] Entry;
@@ -533,7 +558,6 @@ Open_File_Dialog :: struct {
         search;
         navigate;
         save;
-        save_as;
     }
 }
 
@@ -544,7 +568,7 @@ Entry :: struct {
         MODIFIED;
         MODIFIED_ON_DISK;
     }
-    type: enum u8 { file; folder; drive; project_dir; nothing; } = .file;
+    type: enum u8 { file; folder; drive; project_dir; save; nothing; } = .file;
     entry_name: string;
     name_highlights: [] bool;
     path_highlights: [] bool;

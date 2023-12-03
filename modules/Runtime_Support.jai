@@ -79,21 +79,19 @@ write_loc :: (loc: Source_Code_Location, to_standard_error := false) #no_context
 	write_number(loc.character_number, to_standard_error = to_standard_error);
 }
 
-runtime_support_assertion_failed :: (loc: Source_Code_Location, message: string) {
+runtime_support_assertion_failed :: (loc: Source_Code_Location, message: string) -> bool {
     write_loc(loc, to_standard_error = true);
 	write_string(": Assertion failed", to_standard_error = true);
 
 	if message {
-		write_string(": ", to_standard_error = true);
-		write_string(message, to_standard_error = true);
-		write_string("\n", to_standard_error = true);
+		write_strings(": ", message, "\n", to_standard_error = true);
 	} else {
 		write_string("!\n", to_standard_error = true);
 	}
 
     report_failed_assertion_more_visibly(loc, message);
 
-    print_stack_trace :: (node: *Stack_Trace_Node) {  // @Cutnpaste from modules/Basic, but wihtout calling print.
+    print_stack_trace :: (node: *Stack_Trace_Node) {  // @Copypasta from modules/Basic, but without calling print.
         while node {
             // There are two different line numbers available.
             // node.info.location has a line number, but this is the location of
@@ -123,7 +121,8 @@ runtime_support_assertion_failed :: (loc: Source_Code_Location, message: string)
     }
 
     __runtime_support_disable_stack_trace = true;
-    debug_break();
+
+    return true;
 }
 
 runtime_support_default_logger :: (message: string, data: *void, info: Log_Info) {
@@ -481,7 +480,7 @@ __system_entry_point :: (argc: s32, argv: **u8) -> s32 #c_call {
         __instrumentation_first ();
         __instrumentation_second();
 
-        __program_main :: () #runtime_support;
+        __program_main :: () #entry_point;
         __program_main();
     }
 
@@ -491,6 +490,105 @@ __system_entry_point :: (argc: s32, argv: **u8) -> s32 #c_call {
 Default_Allocator :: #import "Default_Allocator";
 
 runtime_support_default_allocator_proc :: Default_Allocator.allocator_proc;
+
+#scope_export
+// one_time_init is exposed because maybe user libraries want to use a similar thing.
+one_time_init :: (synch_value: *s32, to_insert: Code) #expand {
+    // A routine to run the code in 'to_insert' only once, even if
+    // there are multiple threads. <<synch_value should be 0 at startup.
+
+    // The values of <<synch_value:
+    // 0 = uninitialized, 1 = in progress init, 2 = initialized.
+
+    // Courtesy of Jeff Roberts.
+
+    while 1 {
+        // @Warning: Apparently this read may not work on ARM, we need to look into it.
+        // The goal here is just to avoid the overhead of spamming the compare_and_swap.
+        if synch_value.* == 2  break;
+
+        old := lock_cmpxchg(synch_value, 0, 1);
+        if old == {
+          case 0;
+            #insert to_insert;
+
+            if lock_cmpxchg(synch_value, 1, 2) != 1  debug_break();  // Should not happen!
+          case 1;
+            // Maybe some exponential fall offy thing here?
+            #if CPU == .X64 {
+                for 1..4 #asm { pause; pause; pause; pause; pause; }
+            } else {
+                // @Incomplete: Sleep a bit, maybe?
+            }
+          case 2;
+        }
+    }
+}
+
+// @Volatile: Context_Base must match internal compiler settings in general.h
+// It must exist and be relatively easy to compile (without requiring #run of
+// procedures, for example). Context_Base is going to be annoying to edit because
+// if you make an error of some kind, even a simple one like an undeclared identifier,
+// you won't get a helpful error message. 
+Context_Base :: struct {
+    context_info:  *Type_Info_Struct; // Allow libs or DLLs to see what context we are passing them.
+
+    thread_index   : u32;
+
+    allocator      := default_allocator;
+
+    logger         := runtime_support_default_logger;
+    logger_data    :  *void;
+    log_source_identifier: u64;      // Arbitrary identifier; settable by the main program.
+    log_level      :  Log_Level;     // Settable by the main program to inform anyone who logs.
+
+    temporary_storage: *Temporary_Storage;
+
+    // Currently, for simplicity we don't #if this out right now when _STACK_TRACE is false;
+    // initially an implementation detail prevented us from doing this, but now that's gone,
+    // but to be conservative we aren't changing this yet (but may later). It is probably
+    // convenient to let runtime code be able to check context.stack_trace to see if it is
+    // null in some cases, rather than needing all that to be #iffed as well. We will see.
+    stack_trace: *Stack_Trace_Node;
+
+    assertion_failed := runtime_support_assertion_failed;
+    handling_assertion_failure := false;  // Used to avoid assert() infinite loops. Do not mess with this value.
+
+    program_print_plugin: *void;  // This is a dumb field that will go away when we have a better alternative.
+
+    default_allocator :: Allocator.{runtime_support_default_allocator_proc, null};
+}
+
+Temporary_Storage :: struct {  // @Volatile: Must match general.h
+    data:     *u8;
+    size:     s64;
+    current_page_bytes_occupied: s64;
+    total_bytes_occupied: s64;
+    high_water_mark: s64;
+    last_set_mark_location: Source_Code_Location;
+
+    overflow_allocator : Allocator;
+
+    overflow_pages: *Overflow_Page;
+    original_data: *u8;  // Data to restore after clearing overflow pages. @Simplify: Maybe could be an Overflow_Page, but maybe we want to be able to assert on overflow_pages==null to ensure performance.
+    original_size: s64;
+
+    Overflow_Page :: struct {
+        next: *Overflow_Page;
+        allocator: Allocator;
+        size: s64;
+    }
+}
+
+set_initial_data :: (ts: *Temporary_Storage, count: s64, data: *u8) #no_context {
+    ts.data = data;
+    ts.size = count;
+
+    ts.original_data = data;
+    ts.original_size = count;
+}
+
+#add_context using base: Context_Base;
 
 #scope_file
 #if OS == .WINDOWS {

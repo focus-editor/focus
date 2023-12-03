@@ -1,5 +1,5 @@
 text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> handled: bool {
-    old_text := copy_temporary_string(to_string(text));
+    old_text := copy_temporary_string(cast(string) text);
     if edits.count == 0 {
         // Always remember cursor before any edits
         cursor_before_edits = cursor;
@@ -37,13 +37,13 @@ text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> han
         case;                           return false;
     }
 
-    if old_text != to_string(text) then last_edit_time = frame_time;
+    if old_text != cast(string) text then last_edit_time = frame_time;
 
     return true;
 }
 
 text_input_type_char :: (using input: *Text_Input, char: u32) {
-    if key_sequence_input_state.key_sequence_in_progress  return;
+    if key_sequence_input_in_progress() return;
 
     if edits.count == 0 {
         // Always remember cursor before any edits
@@ -133,7 +133,7 @@ replace_text :: (using input: *Text_Input, new_text: string) {
 copy :: (using input: Text_Input) {
     if !has_selection(cursor) return;
     left, right := get_selected_offsets(cursor);
-    os_clipboard_set_text(slice(to_string(text), left, right - left));
+    os_clipboard_set_text(slice(cast(string) text, left, right - left));
 }
 
 paste :: (using input: *Text_Input) {
@@ -301,7 +301,7 @@ delete_to_end_of_line :: inline (using input: *Text_Input) {
 delete_selection :: inline (using input: *Text_Input, copy_to_clipboard := false) {
     left, right := get_selected_offsets(cursor);
     if right > left {
-        if copy_to_clipboard then os_clipboard_set_text(slice(to_string(text), left, right - left));
+        if copy_to_clipboard then os_clipboard_set_text(slice(cast(string) text, left, right - left));
         delete_range(input, left, right);
     }
 
@@ -325,7 +325,7 @@ insert_string_at_offset :: (using input: *Text_Input, offset: s64, new_str: stri
 }
 
 replace_range :: (using input: *Text_Input, start: s64, end: s64, new_str: string) {
-    old_str := to_string(array_view(text, start, end - start));
+    old_str := cast(string) array_view(text, start, end - start);
     if new_str == old_str return;
 
     new_replace_edit(input, xx start, xx end, old_str, new_str);
@@ -333,7 +333,7 @@ replace_range :: (using input: *Text_Input, start: s64, end: s64, new_str: strin
 }
 
 delete_range :: (using input: *Text_Input, start: s64, end: s64) {
-    old_str := to_string(array_view(text, start, end - start));
+    old_str := cast(string) array_view(text, start, end - start);
     new_delete_edit(input, xx start, xx end, old_str);
     delete_range_raw(input, start, end);
 }
@@ -434,12 +434,12 @@ scan_through_similar_chars_on_the_left :: (using input: Text_Input, offset: s32,
     t := text.data + offset;
     t, char = unicode_prev_character(t);
     if char_type != .none && char_type != get_char_type(char) return offset;
-    if skip_one_space && char == #char " " && t > line_start then t, char = unicode_prev_character(t);
+    if skip_one_space && is_unicode_space(char) && t > line_start then t, char = unicode_prev_character(t);
 
     if get_char_type(char) == {
         case .space;
-            while t > text.data && is_space_char(char)  { t, char = unicode_prev_character(t); }
-            if char != #char " " then t = unicode_next_character(t);
+            while t > text.data && is_space_or_underscore(char)  { t, char = unicode_prev_character(t); }
+            if !is_unicode_space(char) then t = unicode_next_character(t);
         case .word;
             while t > text.data && is_word_char(char) { t, char = unicode_prev_character(t); }
             if !is_word_char(char) then t = unicode_next_character(t);
@@ -465,19 +465,19 @@ scan_through_similar_chars_on_the_right :: (using input: Text_Input, offset: s32
     if only == {
         case .word;     if !is_word_char(char)     return offset;
         case .non_word; if !is_non_word_char(char) return offset;
-        case .space;    if  char != #char " "      return offset;
+        case .space;    if !is_unicode_space(char) return offset;
     }
-    if skip_one_space && char == #char " " && s then char = utf8_next_character(*s);
+    if skip_one_space && is_unicode_space(char) && s then char = utf8_next_character(*s);
 
-    if char == #char " " {
+    if is_space_or_underscore(char) {
         // Only spaces
-        while s && char == #char " "  { char = utf8_next_character(*s); }
-        if char != #char " " { s.data, char = unicode_prev_character(s.data); }
+        while s && is_space_or_underscore(char)  { char = utf8_next_character(*s); }
+        if !is_unicode_space(char) { s.data, char = unicode_prev_character(s.data); }
     } else if is_word_char(char) {
         // Only word chars
         while s && is_word_char(char) { char = utf8_next_character(*s); }
         if !is_word_char(char) { s.data, char = unicode_prev_character(s.data); }
-    } else if char != #char "\n" {
+    } else if !is_unicode_linebreak(char) {
         // Only non-word chars
         while s && is_non_word_char(char) { char = utf8_next_character(*s); }
         if !is_non_word_char(char) { s.data, char = unicode_prev_character(s.data); }

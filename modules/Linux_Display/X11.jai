@@ -376,6 +376,8 @@ X11_Lib :: struct #type_info_no_size_complaint {
     TrueColor   :: 4;
     DirectColor :: 5;
 
+    XK_ISO_Left_Tab            ::  0xfe20;
+
     XK_BackSpace               ::  0xff08;
     XK_Tab                     ::  0xff09;
     XK_Linefeed                ::  0xff0a;

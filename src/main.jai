@@ -5,7 +5,9 @@ main :: () {
 
         // OA :: #import "Overwriting_Allocator";
         // context.allocator = OA.get_overwriting_allocator();
+
     }
+    focus_allocator = context.allocator;  // to be used as a default allocator where we need it
 
     cpu_info = get_cpu_info();
 
@@ -21,6 +23,7 @@ main :: () {
     assert(!ends_with(config_dir, "/"), "Config dir '%' ends with a '/'. This is a bug.", config_dir);
     assert(data_dir.count > 0, "Empty data dir");
     assert(!ends_with(data_dir, "/"), "Data dir '%' ends with a '/'. This is a bug.", data_dir);
+    platform_get_fonts_dir();  // warm-up the fonts dir so that the config highlighter can later use it without heap allocations
 
     temp_dir     = sprint("%/temp",     data_dir);
     projects_dir = sprint("%/projects", config_dir);
@@ -35,6 +38,7 @@ main :: () {
     load_global_config(fallback_to_default_on_failure = true);
     init_workspace();
     init_buffers();
+    init_build_system();
 
     window_x, window_y, window_width, window_height = platform_get_centered_window_dimensions(config.settings.open_on_the_biggest_monitor);
 
@@ -80,9 +84,14 @@ main :: () {
 
     // This may generate window resize events if DPI/scaling settings need to be
     // applied, so make sure to only call it after the window is created.
-    platform_apply_config(*config.platform);
+    platform_apply_config();
 
-    if config.settings.maximize_on_start then platform_maximize_window(window);
+    #if OS == .MACOS {
+        // On macOS, attempting to maximize the window before a frame has been drawn results in a crash, so we delay it until the end of the first frame.
+        should_maximize := config.settings.maximize_on_start;
+    } else {
+        if config.settings.maximize_on_start then platform_maximize_window(window);
+    }
 
     platform_enable_drag_and_drop(window);
 
@@ -170,7 +179,7 @@ main :: () {
         dont_scroll_this_frame = false;
         window_has_focus = Input.input_application_has_focus;  // so that we always redraw when the window first loses focus
 
-        maybe_update_workspace_buffers();
+        workspace_update();
         finder_update();
 
         for * editor : open_editors {
@@ -188,9 +197,9 @@ main :: () {
         // If we handle it as a keyboard event we will need to ignore its text input duplicates
         num_text_input_events_to_ignore := 0;
 
-        start_key_sequence_handling();
-
         for event : Input.events_this_frame {
+            if should_quit break;  // don't process any other events we might have in this frame if the previous one set this to true
+
             // General events
             if event.type == {
                 case .QUIT;
@@ -257,16 +266,20 @@ main :: () {
                 }
             }
 
-            if handled && event.type == .KEYBOARD then num_text_input_events_to_ignore = event.text_input_count;
-        }
+            if !handled then handled = maybe_execute_a_build_command(event);
 
-        end_key_sequence_handling();
+            if handled && event.type == .KEYBOARD then num_text_input_events_to_ignore = event.text_input_count;
+
+            key_sequence_input_process_event(event, handled);
+        }
 
         if should_quit && unsaved_buffers_exist() && !force_quit {
             show_unsaved_buffers_dialog();
             should_quit = false;
         }
 
+        process_buffer_save_queue();
+        build_system_update();
         refresh_open_buffers();
 
         draw_frame();
@@ -282,10 +295,16 @@ main :: () {
             hard_reload_workspace();
             should_reload_workspace = false;
             redraw_requested = true;
-            platform_apply_config(*config.platform);
         }
 
         reset_temporary_storage();
+
+        #if OS == .MACOS {
+            if should_maximize {
+                should_maximize = false;
+                platform_maximize_window(window);
+            }
+        }
 
         // #if DEBUG FrameMark();
 
@@ -314,6 +333,7 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .open_global_config;                               editors_open_global_config(placement);              return true;
         case .open_project_config;                              editors_open_project_config(placement);             return true;
         case .show_default_config;                              editors_show_default_config(placement);             return true;
+        case .show_troubleshooting_info;                        editors_show_troubleshooting_info(placement);       return true;
 
         case .go_to_line;                                       show_go_to_line_dialog();                           return true;
         case .create_new_file;                                  editors_create_new_file(placement);                 return true;
@@ -326,20 +346,32 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .show_commands;                                    show_commands_dialog();                             return true;
         case .toggle_fullscreen;                                editor_toggle_fullscreen();                         return true;
 
-        case .dump_key_mappings;                                dump_key_mappings();                                return true;
-
         case .move_to_previous_editor_history;                  move_to_previous_editor_history();                  return true;
         case .move_to_next_editor_history;                      move_to_next_editor_history();                      return true;
 
         case .move_to_previous_buffer;                          move_to_previous_editor_history(by_buffer = true);  return true;
         case .move_to_next_buffer;                              move_to_next_editor_history    (by_buffer = true);  return true;
 
+        case .toggle_build_panel;                               toggle_build_panel();                               return true;
+
         // TODO: search_in_buffer
         case .search_in_project;
-            if active_global_widget == .editors then finder_open_from_editor(); else finder_open();
-            return true;
+            if active_global_widget == .editors then finder_open_from_editor(); else finder_open();                 return true;
     }
     return false;
+}
+
+maybe_execute_a_build_command :: (event: Input.Event) -> handled: bool {
+    action := map_event_to_action(event, Action_Build);
+    if action == INVALID_KEYMAP_ACTION return false;
+
+    command_id := cast(s64) action;
+    assert(command_id <= config.build.commands.count, "A keymap was bound to a nonexistent build command %. Number of build commands: %. This is a bug", command_id, config.build.commands.count);
+
+    command := ifx command_id > 0 then *config.build.commands[command_id-1] else *config.build.defaults;
+    execute_build_command(command);
+
+    return true;
 }
 
 init_fonts_and_dependent_things :: () {
@@ -401,7 +433,7 @@ init_fonts_and_dependent_things :: () {
 
     common_icons: String_Builder;
     common_icons.allocator = temp;
-    for enum_values_as_enum(File_Icon) {
+    for enum_values_as_enum(Icon) {
         char := convert_utf32_to_utf8(xx it);
         append(*common_icons, to_string(*char));
     }
@@ -693,7 +725,9 @@ Time :: #type,isa float64;
 
 project_dirs: [..] Project_Dir;
 
-active_global_widget: enum {
+active_global_widget: Active_Global_Widget = .editors;
+
+Active_Global_Widget :: enum {
     editors;
     finder;
     open_file_dialog;
@@ -703,7 +737,7 @@ active_global_widget: enum {
     open_project_dialog;
     unsaved_buffers_dialog;
     confirm_overwrite_dialog;
-} = .editors;
+}
 
 Project_Dir :: struct {
     path: string;          // e.g. "C:/projects/focus"
@@ -716,6 +750,8 @@ just_dropped_file := "";
 
 cpu_info: Cpu_X86;
 
+focus_allocator: Allocator;
+
 // This will be set to `true` in `refresh_config()` to signal that the
 // next window resize event should be handled even if the window doesn't actually
 // change size. This is needed when changing DPI/scaling options which require
@@ -726,6 +762,7 @@ dont_ignore_next_window_resize := false;
 #load "layout.jai";
 #load "editors.jai";
 #load "buffer.jai";
+#load "build_system.jai";
 #load "unicode.jai";
 #load "draw.jai";
 #load "pointer_image.jai";
@@ -749,15 +786,19 @@ dont_ignore_next_window_resize := false;
 #load "widgets/open_project.jai";
 #load "widgets/confirm_overwrite.jai";
 
+#load "langs/common.jai";
 #load "langs/jai.jai";
 #load "langs/c.jai";
 #load "langs/csharp.jai";
-#load "langs/golang.jai";
 #load "langs/focus_config.jai";
 #load "langs/glsl.jai";
-#load "langs/worklog.jai";
+#load "langs/golang.jai";
+#load "langs/odin.jai";
 #load "langs/python.jai";
 #load "langs/renpy.jai";
+#load "langs/xml.jai";
+#load "langs/worklog.jai";
+#load "langs/yang.jai";
 
 #if OS == .WINDOWS {
     #load "platform/windows.jai";
@@ -788,21 +829,23 @@ _ :: #import "Linux_Display"()(VALIDATE_USAGE = DEBUG);
 
 #import "Atomics";
 #import "Basic"()(MEMORY_DEBUGGER = DEBUG);
-#import "Math";
-#import "Sloppy_Math";
+#import "Compiler";
 #import "File";
 #import "File_Utilities";
 #import "File_Watcher";
 #import "Flat_Pool";
+#import "Math";
+#import "Machine_X64";
+#import "Process";
+#import "Reflection";
+#import "Sloppy_Math";
 #import "System";
 #import "String";
 #import "Sort";
 #import "Simple_Bucket_Array";
+#import "Thread";
 #import "Unicode";
 #import "Window_Creation";
-#import "Thread";
-#import "Compiler";
-#import "Machine_X64";
 
 re :: #import "uniform";
 

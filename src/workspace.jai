@@ -73,7 +73,7 @@ get_workspace_scan_progress :: () -> float {
     return clamp(cast(float) num_jobs_completed / num_jobs_to_complete, 0.0, 1.0);
 }
 
-maybe_update_workspace_buffers :: () {
+workspace_update :: () {
     if !workspace_scan_complete {
         if !file_list_ready {
             results := get_completed_work(*file_list_thread_group);
@@ -138,6 +138,7 @@ maybe_update_workspace_buffers :: () {
     files_changed := process_changes(*watchers.project_watcher);
     files_changed |= process_changes(*watchers.external_watcher);
     if files_changed {
+        // NOTE: these count comparisons are intentional because count can be -1
         if watchers.project_file_modified.count > 0 && (!should_ignore_file(watchers.project_file_modified) || is_our_config_file(watchers.project_file_modified)) {
             #if DEBUG_FILE_REFRESH log("Attempting to refresh based on project_file_modified: %\n", watchers.project_file_modified);
             refresh_buffer_from_disk(path = watchers.project_file_modified);
@@ -195,6 +196,7 @@ hard_reload_workspace :: () {
     if scanner_thread_group.initted   then shutdown(*scanner_thread_group);
 
     deinit_finder();
+    deinit_build_system();
     deinit_open_file_dialog();
     deinit_file_watcher();
 
@@ -209,6 +211,8 @@ hard_reload_workspace :: () {
     array_reset_keeping_memory(*project_dirs);
     init_workspace();
     init_buffers();
+    init_build_system();
+    update_window_title();
     reopen_visible_editors(old_editor_state);
     start_initial_workspace_scan();
 
@@ -236,7 +240,7 @@ remember_visible_editors_and_buffers :: () -> Visible_Editor_State {
             if buffer.has_file && !buffer.modified {
                 save_editor_state(*left, editor, buffer);
             } else {
-                layout = .None;  // we don't reopen unmodified buffers, at least for now
+                layout = .None;  // we don't reopen modified buffers, at least for now
             }
         case .Double;
             left_editor  := *open_editors[editors.left];
@@ -271,7 +275,7 @@ reopen_visible_editors :: (using old_state: Visible_Editor_State) {
         restore_cursor_state(editor, state.cursors);
         editor.main_cursor = state.main_cursor;
         editor.viewport = state.viewport;
-        if !file_is_watched(state.file_path) then start_watching_file(state.file_path);
+        start_watching_file_if_not_already(state.file_path);
     }
 
     editors = Editor_State.{};
@@ -303,7 +307,7 @@ Visible_Editor_State :: struct {
     }
 }
 
-start_watching_file :: (file_path: string) {
+start_watching_file_if_not_already :: (file_path: string) {
     if file_is_watched(file_path) return;
 
     parent_dir := get_parent_dir_path(file_path);

@@ -25,8 +25,8 @@ get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> Fil
     return info;
 }
 
-get_file_icon :: (name: string, extension: string) -> File_Icon {
-    icon := File_Icon.unknown;
+get_file_icon :: (name: string, extension: string) -> Icon {
+    icon := Icon.file_unknown;
 
     if extension == {
         case "jai";
@@ -77,7 +77,7 @@ get_file_icon :: (name: string, extension: string) -> File_Icon {
 
     // Special cases
     if icon == .text && equal_nocase(name, "log.md") then icon = .worklog;
-    if icon == .text || icon == .unknown {
+    if icon == .text || icon == .file_unknown {
         if contains_nocase(name, "license") || contains_nocase(name, "licence")  || contains_nocase(name, "key") {
             icon = .key;
         } else if contains_nocase(name, ".git") {
@@ -137,6 +137,31 @@ should_ignore_file :: (path: string) -> bool {
     }
     if begins_with_nocase(path, temp_dir) return true;  // explicitly ignore our own temp dir
 
+    #if OS != .WINDOWS {
+        /*
+         * Even if a certain path is not ignored we still only really want to know about
+         * **regular** files.
+         *
+         * The `File_Visit_Info` structs that `visit_files()` generates as parameters to
+         * the visitor callback would idealy have all the info we need to filter things at
+         * a higher level. However, this is not currently the case - they only have information
+         * on wether a certain path is a directory or a symlink, with anything that is not one
+         * of those things being assumed to be a file. This is not the case on non-Windows OSes
+         * (the filesystem can contain pipes (FIFOs), sockets, device files, etc).
+         *
+         * We could fork the `File_Utilities` module and add the info we need there. That,
+         * however, requires more effort than I'm willing to put in right now. Instead,
+         * I'm going to do an extra `stat()` here and simply ignore anything that's not a
+         * regular file.
+         */
+
+        POSIX :: #import "POSIX";
+
+        stats: POSIX.stat_t;
+        if POSIX.stat(temp_c_string(path), *stats) < 0 return true;
+        if !POSIX.S_ISREG(stats.st_mode) return true;
+    }
+
     return false;
 }
 
@@ -174,28 +199,6 @@ File_Info :: struct {
     full_path: string;
     name: string;
     path: string;
-    icon: File_Icon;
+    icon: Icon;
     project_dir_id: s8 = 0;  // to be used for sorting
-}
-
-File_Icon :: enum u16 {
-    // These are character codes for the font-awesome font
-    unknown :: 0xf15b;
-    text    :: 0xf15c;
-    jai     :: 0xf574;
-    cpp     :: 0xf1c9;
-    cs      :: 0xf1c9;
-    worklog :: 0xf46d;
-    git     :: 0xf387;
-    image   :: 0xf1c5;
-    audio   :: 0xf1c7;
-    font    :: 0xf031;
-    key     :: 0xf084;
-    gear    :: 0xf013;
-    folder  :: 0xe185;
-    drive   :: 0xf0a0;
-    js      :: 0xf15c;
-    shell   :: 0xf2d0;
-
-    dots    :: 0xf141;
 }

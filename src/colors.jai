@@ -11,7 +11,6 @@ Color :: struct {
 Color_Values :: struct {
     NONE :: Color.{ r = -1, g = -1, b = -1, a = -1 };  // an invalid color to denote no color
 
-
     BACKGROUND              := Color.{ r = 0.086, g = 0.133, b = 0.165 };
     BACKGROUND_DARK         := Color.{ r = 0.065, g = 0.101, b = 0.125 };
     BACKGROUND_HIGHLIGHT    := Color.{ r = 0.097, g = 0.15, b = 0.185 };
@@ -57,12 +56,26 @@ Color_Values :: struct {
     CODE_HIGHLIGHT          := Color.{ r = 0.85, g = 0.61, b = 0.46, a = 1.0 };
     CODE_ERROR              := Color.{ r = 1.00, g = 0.00, b = 0.00, a = 1.0 };
     CODE_KEYWORD            := Color.{ r = 0.902, g = 0.493, b = 0.457, a = 1.0 };
+
+    REGION_SCOPE_EXPORT     := Color.{ r = 0.086, g = 0.133, b = 0.165 };
+    REGION_SCOPE_FILE       := Color.{ r = 0.065, g = 0.101, b = 0.125 };
+    REGION_SCOPE_MODULE     := Color.{ r = 0.097, g = 0.15, b = 0.185 };
+    REGION_HEADER           := Color.{ r = 0.131, g = 0.202, b = 0.25 };
+    REGION_SUCCESS          := Color.{ r = 0.10, g = 0.50, b = 0.10, a = 1.0 };
+    REGION_WARNING          := Color.{ r = 0.59, g = 0.37, b = 0.19, a = 1.0 };
+    REGION_ERROR            := Color.{ r = 0.46, g = 0.13, b = 0.13, a = 1.0 };
+
+    BUILD_PANEL_BACKGROUND           := Color.{ r = 0.102, g = 0.158, b = 0.195 };
+    BUILD_PANEL_SCROLLBAR            := Color.{ r = 0.20, g = 0.80, b = 0.80, a = 0.1 };
+    BUILD_PANEL_SCROLLBAR_HOVER      := Color.{ r = 0.20, g = 0.80, b = 0.80, a = 0.3 };
+    BUILD_PANEL_SCROLLBAR_BACKGROUND := Color.{ r = 0.065, g = 0.101, b = 0.125, a = 0.3 };
+    BUILD_PANEL_TITLE_BAR            := Color.{ r = 0.131, g = 0.202, b = 0.25 };
 };
 
 Colors: Color_Values;  // a hack to avoid replacing a lot of code
 
 Code_Color :: enum u8 {
-    DEFAULT;
+    DEFAULT :: 0;
     COMMENT;
     TYPE;
     KEYWORD;

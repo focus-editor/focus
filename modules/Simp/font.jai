@@ -67,8 +67,13 @@ Font_Line :: struct {
 
 Code_Line :: struct {
     line:   string;
-    tab_spaces: s64;
+    start_offset: s32;
+    tab_spaces: s32;
     colors: [] u8;
+}
+
+Offset_Range :: struct {
+    start, end: s32;
 }
 
 init_fonts :: (_page_size_x: s32 = -1, _page_size_y: s32 = -1) {
@@ -144,7 +149,7 @@ convert_to_temporary_glyphs :: (font: *Dynamic_Font, s: string) -> width_in_pixe
     return width_in_pixels;
 }
 
-draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_x_advance: float, line_height: float, visible_lines: [] Code_Line, color_map: [] Vector4, tab_size: s64 = 4, start_col := 0) {
+draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_x_advance: float, line_height: float, visible_lines: [] Code_Line, color_map: [] Vector4, selections: [] Offset_Range = .[], tab_size: s64 = 4, start_col := 0, $is_colored := true) {
     // Setup OpenGL stuff. We do it all in one place because it's easier and there will be only one backend - GL.
     // Otherwise we would have to create temporary glyphs and pass them on to the backend draw function.
     CheckInit();
@@ -157,12 +162,20 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_x_advance: float, line_h
 
     last_texture: GLuint = 0xFFFFFFFF;
 
+    character_is_selected :: inline (offset: s32, selections: [] Offset_Range) -> bool {
+        for selections {
+            if offset >= it.start && offset <= it.end return true;
+        }
+        return false;
+    }
+
     sy := cast(float) y;
 
     // Draw all lines
     for visible_lines {
         line   := it.line;
         colors := it.colors;
+        start_offset := it.start_offset;
 
         sx  := cast(float) (x + it.tab_spaces * char_x_advance);
         col := start_col + it.tab_spaces;
@@ -219,16 +232,27 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_x_advance: float, line_h
                 quad.v0 = glyph.y0 / cast(float) texture.height;
                 quad.v1 = (cast(float) glyph.y0 + glyph.height) / texture.height;
 
-                color := color_map[colors[t - line.data]];
+                #if is_colored {
+                    color := color_map[colors[t - line.data]];
+                } else {
+                    color := color_map[0];  // default
+                }
                 if utf32 != #char "\t" {
                     sx  += char_x_advance;
                     col += 1;
                 } else {
-                    // Draw tabs wide
+                    // Tabs are wide
                     chars_to_tabstop := tab_size - col % tab_size;
                     sx  += chars_to_tabstop * char_x_advance;
                     col += chars_to_tabstop;
-                    color.w = 0.1;  // don't make it too bright
+                    color = color_map[0];  // always use default color
+
+                    // Only draw tabs if they are within a selection
+                    if character_is_selected(start_offset + cast(s32)(t - line.data), selections) {
+                        color.w = 0.2;
+                    } else {
+                        color.w = 0.0;
+                    }
                 }
                 immediate_letter_quad(quad, color);
             }

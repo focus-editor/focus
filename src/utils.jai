@@ -34,12 +34,6 @@ array_delete_bytes :: (array: *[..] u8, offset: s64, count: s64) {
     array.count -= count;
 }
 
-array_copy_tmp :: (array: [] $T) -> [] T {
-    dest := NewArray(array.count, T, initialized=false, allocator = temp);
-    memcpy(dest.data, array.data, array.count * size_of(T));
-    return dest;
-}
-
 to_bytes :: (src: string) -> [] u8 {
     result: [] u8;
     result.data = src.data;
@@ -262,37 +256,35 @@ match_whole_word :: (s: string, offset: int, count: int) -> bool {
 
 #add_context underscore_is_part_of_word := true;
 
-is_word_char :: (ch: u32) -> bool {
-    return
-        (#char "a" <= ch && ch <= #char "z") ||
-        (#char "A" <= ch && ch <= #char "Z") ||
-        (ch == #char "_" && context.underscore_is_part_of_word) ||
-        (#char "0" <= ch && ch <= #char "9") ||
-        (#char "а" <= ch && ch <= #char "я") ||
-        (#char "А" <= ch && ch <= #char "Я") ||
-        (ch == #char "ё" || ch == #char "Ё");  // TODO: include other common chars
+is_word_char :: inline (ch: u32) -> bool {
+    return ifx ch == #char "_" then context.underscore_is_part_of_word else (!is_whitespace_char(ch) && !is_separator_char(ch));
 }
 
 is_non_word_char :: inline (ch: u32) -> bool {
     return !is_word_char(ch) && ch != #char " " && ch != #char "\n";
 }
 
-is_space_char :: inline (ch: u32) -> bool {
-    return ch == #char " " || (!context.underscore_is_part_of_word && ch == #char "_");
+is_space_or_underscore :: inline (ch: u32) -> bool {
+    return is_unicode_space(ch) || (!context.underscore_is_part_of_word && ch == #char "_");
 }
 
-is_whitespace_char :: inline (ch: u8) -> bool {
-    return ch == #char " " || ch == #char "\t" || ch == #char "\n" || ch == #char "\r";
+is_whitespace_char :: inline (ch: u32) -> bool {
+    return is_unicode_space(ch) || is_unicode_linebreak(ch);
 }
 
-is_separator_char :: inline (ch: u8) -> bool {
+/*
+ * TODO: is_separator_char(), is_balanceable_char(), is_auto_closeable_char(), get_balancing_char()
+ *       should be part of the syntax highlighters to allow for language-specific behavior
+ */
+is_separator_char :: inline (ch: u32) -> bool {
     return
         ch == #char "`" || ch == #char "~" || ch == #char "!" || ch == #char "@" || ch == #char "#" ||
         ch == #char "%" || ch == #char "^" || ch == #char "&" || ch == #char "*" || ch == #char "(" ||
         ch == #char ")" || ch == #char "-" || ch == #char "=" || ch == #char "+" || ch == #char "[" ||
         ch == #char "{" || ch == #char "]" || ch == #char "}" || ch == #char "$" || ch == #char "|" ||
         ch == #char ";" || ch == #char ":" || ch == #char "'" || ch == #char "?" || ch == #char "," ||
-        ch == #char "." || ch == #char "<" || ch == #char ">" || ch == #char "/" || ch == #char "\"" || ch == #char "\\";
+        ch == #char "." || ch == #char "<" || ch == #char ">" || ch == #char "/" || ch == #char "\"" ||
+        ch == #char "\\";
 }
 
 is_balanceable_char :: (ch: u32) -> bool {
@@ -316,9 +308,9 @@ get_balancing_char :: (ch: u32) -> u32 {
 get_char_type :: (ch: u32) -> Char_Type {
     if is_word_char(ch) {
         return .word;
-    } else if is_space_char(ch) {
+    } else if is_space_or_underscore(ch) {
         return .space;
-    } else if ch != #char "\n" {
+    } else if !is_unicode_linebreak(ch) {
         return .non_word;
     } else {
         return .other;
@@ -434,47 +426,45 @@ get_num_cpus :: () -> s32 {
     return num_cpus;
 }
 
-is_white_space :: inline (char : u8) -> bool #no_aoc {
-    result : u32 = ---;
-
-    // Should be in register, not immediate
-    white_spaces : u64 = (#char " "  <<  0)  // space.
-                       | (#char "\t" <<  8)  // horizontal tab.
-                       | (#char "\n" << 16)  // line feed.
-                       | (#char "\r" << 24)  // carriage return.
-                       | (0x0C       << 32)  // form feed.    Warning: Unknown escape sequence '\f' in string constant!
-                       | (0x0B       << 40); // vertical tab. Warning: Unknown escape sequence '\v' in string constant!
-
-    #asm {
-        chars  : vec === 0;
-        mask   : vec === 1;
-        spaces : vec === 2;
-        result       === a;
-        white_spaces === b;
-        char         === c;
-
-        movq spaces, white_spaces;
-
-        pxor mask, mask;
-
-        // Fill chars with c
-        pinsrb chars, char, 0;
-        pshufb chars, mask;
-
-        pcmpeqb chars, spaces;
-
-        pmovmskb result, chars;
-    }
-
-    return cast,no_check(bool) result;
-}
-
 starts_with :: inline (s: string, ch: u8) -> bool {
     return (s.count >= 1) && (s[0] == ch);
 }
 
 ends_with :: inline (s: string, ch: u8) -> bool {
     return (s.count >= 1) && (s[s.count - 1] == ch);
+}
+
+// a version of `split()` from the `String` module that returns an array with a maximum
+// number of elements
+split :: (s: string, separator: $T, max_splits: int, allocator := temp) -> [] string {
+    #assert (T == u8) || (T == string);
+
+    results: [..] string;
+    results.allocator = allocator;
+
+    if max_splits < 1 return results;
+
+    remainder := s;
+    while remainder {
+        if results.count >= max_splits - 1 {
+            array_add(*results, remainder);
+            break;
+        }
+
+        found, left, right := split_from_left(remainder, separator);
+        if found {
+            array_add(*results, left);
+        } else {
+            array_add(*results, remainder);
+            break;
+        }
+
+        remainder = right;
+    }
+
+    if !remainder && results.count < max_splits array_add(*results, "");
+
+    return results;
 }
 
 Tween_Animation :: struct(T: Type) {

@@ -1,61 +1,5 @@
-PLATFORM_CONFIG_SECTION :: "[[linux]]";
-PLATFORM_SUBSECTION_ENUM :: enum {}
-PLATFORM_SUBSECTION_NAMES :: string.[];
-
-Platform_Config :: struct {
-    scaling_factor: float = 0.0;
-    explorer_command: string;
-    explorer_reveal_command: string;
-}
-
-platform_parse_config_line :: (config: *Platform_Config, section: PLATFORM_SUBSECTION_ENUM, line: string) -> success: bool, error_msg: string {
-    if trim(line) == "" return true, "";  // ???
-
-    setting, value := break_by_spaces(line);
-    setting = trim_right(setting, ":");
-
-    config.scaling_factor = 0.0;
-
-    if setting == {
-        case "scaling_factor"; {
-            f_val, success := parse_float(*value);
-            if !success {
-                error_msg := tprint("Couldn't parse '%' - expected a valid float, got '%'", setting, value);
-                return false, error_msg;
-            }
-            // @TODO: scaling factors under 1.0 break the editor widget on Wayland,
-            //        investigate why this happens
-            lower_limit := ifx DEBUG then 0.5 else 1.0;
-            if (f_val != 0.0) && (f_val < lower_limit || f_val > 5.0) {
-                error_msg := tprint("Couldn't parse '%' - value out of the expected range ([% ... 5.0])", lower_limit, setting);
-                return false, error_msg;
-            }
-            config.scaling_factor = f_val;
-        }
-        case "explorer_command"; {
-            config.explorer_command = copy_string(trim(value));
-        }
-        case "explorer_reveal_command"; {
-            config.explorer_reveal_command = copy_string(trim(value));
-        }
-        case; {
-            error_msg := tprint("Unknown setting '%' in section '%'", setting, PLATFORM_CONFIG_SECTION);
-            return false, error_msg;
-        }
-    }
-
-    return true, "";
-}
-
-platform_apply_config :: (config: *Platform_Config) {
-    LD.set_fixed_scaling(config.scaling_factor);
-}
-
-platform_copy_config :: (src: *Platform_Config, dst: *Platform_Config) {
-    free(dst.explorer_command);
-    free(dst.explorer_reveal_command);
-    dst.* = src.*;
-    src.* = .{};
+platform_apply_config :: () {
+    LD.set_fixed_scaling(config.linux.scaling_factor);
 }
 
 platform_setup :: inline () {
@@ -146,6 +90,11 @@ DONE;
     assert(active_backend != .UNINITIALIZED);
 
     timer = LD.timer_create();
+
+    system_info.ld_backend_choice = backend;
+    system_info.ld_backend = LD.active_backend();
+    system_info.ld_gl_backend_choice = gl_backend;
+    system_info.ld_gl_backend = LD.active_gl_backend();
 }
 
 platform_data_dir :: () -> string {
@@ -218,6 +167,10 @@ platform_wait_message :: inline () {
     LD.wait_for_events();
 }
 
+platform_wake_up_main_thread :: () {
+    // TODO
+}
+
 platform_set_refresh_timer :: (window: Window_Type) {
     LD.timer_start(timer, 0, 50);
 }
@@ -250,7 +203,7 @@ platform_get_fonts_dir :: () -> string {
 }
 
 platform_open_in_explorer :: (path: string, reveal := false) {
-    local_run := (reveal && (config.platform.explorer_reveal_command.count > 0)) || (!reveal && (config.platform.explorer_command.count > 0));
+    local_run := (reveal && (config.linux.explorer_reveal_command.count > 0)) || (!reveal && (config.linux.explorer_command.count > 0));
     if local_run {
         args: [..]string;
         cmd_s: string;
@@ -258,11 +211,11 @@ platform_open_in_explorer :: (path: string, reveal := false) {
         defer free(cmd_s);
         defer array_reset(*args);
 
-        if !reveal && config.platform.explorer_command.count > 0 {
-            cmd_s = replace(config.platform.explorer_command, "%s", path);
+        if !reveal && config.linux.explorer_command.count > 0 {
+            cmd_s = replace(config.linux.explorer_command, "%s", path);
         }
-        if reveal && config.platform.explorer_reveal_command.count > 0 {
-            cmd_s = replace(config.platform.explorer_reveal_command, "%s", path);
+        if reveal && config.linux.explorer_reveal_command.count > 0 {
+            cmd_s = replace(config.linux.explorer_reveal_command, "%s", path);
         }
 
         if cmd_s.count > 0 {
@@ -284,11 +237,166 @@ platform_path_contains :: inline (path: string, subpath: string) -> bool {
 }
 
 platform_set_border_color :: inline () {
-
 }
 
 platform_show_cursor :: (show: bool) {
+}
 
+platform_get_troubleshooting_info :: () -> string /* temp */ {
+    using LD.GL.gl_procs;
+
+    system_info.ld_gl_backend = LD.active_gl_backend();
+
+    push_allocator(temp);
+
+    env_check :: (sb: *String_Builder, name: *u8) {
+        val := getenv(name);
+        print_to_builder(sb, "  % : %\n", to_string(name), ifx val then to_string(val) else "<not set>");
+    }
+
+    gl_string :: (id: GLenum) -> string {
+        using LD.GL.gl_procs;
+        str_raw := glGetString(id);
+        return ifx str_raw then to_string(str_raw) else tprint("<GL error %>", glGetError());
+    }
+
+    gl_get_extensions :: (sb: *String_Builder) {
+        using LD.GL.gl_procs;
+        extension_count: u32;
+        extension: u32;
+        glGetIntegerv(GL_NUM_EXTENSIONS, xx *extension_count);
+
+        print_to_builder(sb, "  extensions (%):\n", extension_count);
+        width := 0;
+        while extension < extension_count {
+            ext_raw := glGetStringi(GL_EXTENSIONS, extension);
+            if !ext_raw {
+                print_to_builder(sb, "    >>> glGetStringi(GL_EXTENSIONS, %): %\n", extension, glGetError());
+                break;
+            }
+            ext := to_string(ext_raw);
+            if !width print_to_builder(sb, "    ");
+            if extension && width {
+                print_to_builder(sb, ", ");
+                width += 2;
+            }
+            if width + ext.count < 100 {
+                print_to_builder(sb, "%", ext);
+                width += ext.count;
+            } else {
+                print_to_builder(sb, "\n");
+                width = 0;
+            }
+
+            extension += 1;
+            if extension >= extension_count print_to_builder(sb, "\n");
+        }
+    }
+
+    get_loaded_libs :: (sb: *String_Builder) {
+        #import "String";
+
+        fd := open("/proc/self/maps", O_RDONLY);
+        if fd < 0 {
+            print_to_builder(sb, "Failed to open '/proc/self/maps': %\n", errno());
+            return;
+        }
+        defer close(fd);
+
+        data: [..] u8;
+        buff: [4096] u8;
+        while true {
+            rs := read(fd, buff.data, buff.count);
+            if rs < 0 {
+                print_to_builder(sb, "Failed to read data from '/proc/self/maps': %\n", errno());
+                return;
+            }
+            if !rs break;
+            array_reserve(*data, data.count + rs);
+            memcpy(data.data + data.count, buff.data, rs);
+            data.count += rs;
+        }
+
+        libs: [..] string;
+        lines := split(to_string(data.data, data.count), "\n");
+        for line : lines {
+            parts := split(line, " ", 6);
+            if parts.count != 6 continue;
+            if parts[1].count != 4 continue;
+            if parts[1][2] != #char "x" continue;
+
+            lib := trim(parts[5]);
+            if !starts_with(lib, "/") continue;
+
+            found := false;
+            for l : libs {
+                if l == lib {
+                    found := true;
+                    break;
+                }
+            }
+            if !found array_add(*libs, lib);
+        }
+
+        for libs  print_to_builder(sb, "  %\n", it);
+    }
+
+    sb: String_Builder;
+
+    print_to_builder(*sb, "Kernel:\n");
+    result, output := run_command("uname", "-a", capture_and_return_output = true);
+    print_to_builder(*sb, "  %\n", ifx result.exit_code == 0 then trim(output) else tprint(">> failed to run `uname -a`: %", result));
+
+    print_to_builder(*sb, "OS information:\n");
+    os_data, ok := read_entire_file("/etc/os-release");
+    if !ok {
+        print_to_builder(*sb, "  >> failed to read '/etc/os-release'\n");
+    } else {
+        lines := split(os_data, "\n");
+        for lines {
+            line := trim(it);
+            if line print_to_builder(*sb, "  %\n", line);
+        }
+    }
+    print_to_builder(*sb, "\n");
+
+    print_to_builder(*sb, "Interesting things in the environment:\n");
+    env_check(*sb, "FOCUS_LD_BACKEND");
+    env_check(*sb, "FOCUS_LD_GL_BACKEND");
+    env_check(*sb, "DISPLAY");
+    env_check(*sb, "WAYLAND_DISPLAY");
+    env_check(*sb, "DESKTOP_SESSION");
+    env_check(*sb, "XDG_SESSION_DESKTOP");
+    env_check(*sb, "XDG_CURRENT_DESKTOP");
+    env_check(*sb, "XCURSOR_THEME");
+    env_check(*sb, "XCURSOR_SIZE");
+    env_check(*sb, "LD_LIBRARY_PATH");
+    env_check(*sb, "LD_PRELOAD");
+    env_check(*sb, "PATH");
+    print_to_builder(*sb, "\n");
+
+    print_to_builder(*sb, "Loaded libraries:\n");
+    get_loaded_libs(*sb);
+    print_to_builder(*sb, "\n");
+
+    print_to_builder(*sb, "Linux_Display information:\n");
+    print_to_builder(*sb, "  desired backend    : %\n", system_info.ld_backend_choice);
+    print_to_builder(*sb, "  active backend     : %\n", system_info.ld_backend);
+    print_to_builder(*sb, "  desired GL backend : %\n", system_info.ld_gl_backend_choice);
+    print_to_builder(*sb, "  active GL backend  : %\n", system_info.ld_gl_backend);
+    print_to_builder(*sb, "\n");
+
+    print_to_builder(*sb, "OpenGL Information:\n");
+    print_to_builder(*sb, "  vendor       : %\n", gl_string(GL_VENDOR));
+    print_to_builder(*sb, "  renderer     : %\n", gl_string(GL_RENDERER));
+    print_to_builder(*sb, "  version      : %\n", gl_string(GL_VERSION));
+    print_to_builder(*sb, "  GLSL version : %\n", gl_string(GL_SHADING_LANGUAGE_VERSION));
+    gl_get_extensions(*sb);
+    print_to_builder(*sb, "\n");
+
+    ret := builder_to_string(*sb);
+    log("Troubleshooting data: % bytes", ret.count);
+    return ret;
 }
 
 #scope_file
@@ -327,3 +435,11 @@ Linux_Icon :: struct {
 }
 
 timer: LD.Timer;
+
+Linux_System_Info :: struct {
+    ld_backend_choice: LD.BACKEND_CHOICE;
+    ld_backend: LD.ACTIVE_BACKEND;
+    ld_gl_backend_choice: LD.GL_BACKEND_CHOICE;
+    ld_gl_backend: LD.GL_BACKEND;
+}
+system_info: Linux_System_Info;

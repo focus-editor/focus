@@ -1,16 +1,4 @@
-PLATFORM_CONFIG_SECTION :: "[[windows]]";
-PLATFORM_SUBSECTION_ENUM :: enum {}
-PLATFORM_SUBSECTION_NAMES :: string.[];
-Platform_Config :: struct {}
-
-platform_parse_config_line :: (config: *Platform_Config, section: PLATFORM_SUBSECTION_ENUM, line: string) -> success: bool, error_msg: string {
-    return true, "";
-}
-
-platform_apply_config :: inline (config: *Platform_Config) {
-}
-
-platform_copy_config :: (src: *Platform_Config, dst: *Platform_Config) {
+platform_apply_config :: inline () {
 }
 
 platform_setup :: () {
@@ -90,6 +78,10 @@ platform_set_window_title :: (title: string) {
 
 platform_wait_message :: inline () {
     WaitMessage();
+}
+
+platform_wake_up_main_thread :: () {
+    // TODO
 }
 
 platform_set_refresh_timer :: (window: Window_Type) {
@@ -261,6 +253,10 @@ platform_show_cursor :: (show: bool) {
             cursor_shown = ShowCursor(0);
         }
     }
+}
+
+platform_get_troubleshooting_info :: () -> string {
+    return "<not implemented>";
 }
 
 #scope_file

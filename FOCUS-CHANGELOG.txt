@@ -1,7 +1,6 @@
 # ROUGH ROADMAP
 
 - A simple build system to launch commands from the editor
-- Config highlighting improvements
 - Config migration system to support changes to the config file across versions
 - Open file dialog improvements (better search)
 - Workspace search improvements (the ability to filter additionally by filename)
@@ -35,14 +34,38 @@
     + New command: `toggle_fullscreen`. Defaults to F11 (thanks @ustance)
     + New command: `close_project`. Can be used to (surprise!) close the active project
     + New command: `swap_selections`. Can swap two selected pieces of text (thanks @hfr4)
+    + New command: `escape`. Tries to close dialogs, remove additional cursors, etc. You can just bind it to `Escape` in `[common]` and forget.
     + New option: `highlight_line_with_cursor` (thanks @SentientCoffee)
     + New option: `draw_indent_guides`. Set to `true` to draw a vertical guide line at every indent level (determined by tab size)
+    + New option: `auto_surround_with_brackets_and_quotes` to enable auto-surrounding (thanks @hfr4)
+    + New option: `scroll_beyond_last_line` (defaults to `true`). Disable to prevent scrolling past the editor's last line
     + Added support for regular expressions in file/project search
-    + Basic Python syntax highlighting
-    + Added built-in 'save file' dialog for Linux and MacOS
+    + Added a built-in 'save file' dialog (it will be on by default). To use the system dialogs on Windows, use `prefer_system_file_dialogs: true`
     + Dragging middle mouse button will create cursors (thanks @hfr4)
+    + Mac: You can now set `maximize_on_start` in your global config to `true`, and Focus will launch in fullscreen.
+    + New syntax highlighting:
+        + Python
+        + HTML/XML (thanks @arjenwitteveen)
+        + Odin (thanks @SentientCoffee)
+        + Yang (thanks @jmpstar)
+    + Numpad keys can now be used in key mappings.
+      The editor now recognizes the following new key names:
+        Numpad0 - Numpad9
+        NumpadMultiply
+        NumpadDivide
+        NumpadAdd
+        NumpadSubtract
+        NumpadDecimal
+        NumpadEnter
+    + Scopes in Jai are now highlighted. See the default config for the new color options (`region_scope_*`)
+    + Build system:
+        + New config options:
+            + `build_panel_width_percent`, `build_panel_height_percent` - how much space the build panel occupies. Both default to 50%.
+            + `build_panel_stays_in_one_place`. Defaults to `false`. If disabled, then the panel will flip to the other side of the active pane.
+        + (more details will be added later)
 
 + Bug fixes:
+    + Mac: Fixed intermittent crashing on launch
     + It should now be possible to scroll the viewport by dragging outside it in all cases (previously it wasn't always possible - see issue #101)
     + Duplicating a line near the end now duplicates a line as expected
     + Fixed a bug with multi-cursor copying/pasting when some of the cursors don't have a selection
@@ -56,10 +79,17 @@
     + Fix for stuck keys when the editor loses window focus (such as alt-tabbing or moving to other workspaces on Linux)
     + Improved scrolling smoothness (thanks @Sanian-Creations)
     + Parent directories of files outside of project directories are no longer recursively watched for changes. The editor should no longer hang for a long time when opening a file inside a large directory.
+    + Directories created within the project shouldn't get themselves any buffers any more
+    + Newer user messages will stop dismissing older ones which have a longer lifetime
+    + Fixed a crash when trying to rewind editor history after reloading workspace
 
 + Other changes:
     + When the workspace is done scanning, the open file dialog input will no longer be cleared
     + Limited Windows 7 support (no dpi awareness)
+    + Better word detection by commands that move cursors by word
+    + Config highlighting has become smarter and hopefully more helpful
+    + Improved CPU usage when selecting text by mouse
+    + Tab characters are now only shown when they are within selection
 
 
 

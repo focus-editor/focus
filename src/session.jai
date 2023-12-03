@@ -314,7 +314,7 @@ copy_session_data :: (source: string, dest: string) {
 
 session_set_project :: (project: string) {
     session.project = project;
-    platform_set_window_title(tprint("% - Focus", project));
+    // platform_set_window_title(tprint("% - Focus", project));
 }
 
 save_editor_state_into_file :: () {
@@ -408,7 +408,7 @@ session_logger :: (raw_msg: string, data: *void, info: Log_Info) {
 
     #if DEBUG {
         // Write to stdout/stderr
-        context.default_logger(message, data, info);
+        runtime_support_default_logger(message, data, info);
     }
 }
 

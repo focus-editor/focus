@@ -4,7 +4,9 @@ commands_dialog_handle_event :: (event: Input.Event) -> handled: bool {
     if event.type == .KEYBOARD && event.key_pressed {
         action, mapping := map_event_to_action(event, Action_Open_File_Dialog);
         if action == {
+            case .escape;                   #through;
             case .close_dialog;             hide_commands_dialog();                     return true;
+
             case .open_entry_in_place;      commands_execute_selected(.in_place);       return true;
             case .open_entry_on_the_side;   commands_execute_selected(.on_the_side);    return true;
             case .open_entry_on_the_left;   commands_execute_selected(.left);           return true;
@@ -54,7 +56,10 @@ commands_execute_selected :: (placement: Editor_Placement = .in_place) {
     if command.action == .do_nothing return;
 
     handled := handle_common_editor_action(command.action, placement);
-    if !handled then active_editor_handle_event(Input.Event.{}, command.action);
+    if !handled {
+        editor, buffer := get_active_editor_and_buffer();
+        if editor then active_editor_handle_event(editor, buffer, Input.Event.{}, command.action);
+    }
 }
 
 #scope_file
@@ -70,12 +75,12 @@ refresh_entries :: () {
     scroll_y = 0;
     selected = 0;
 
-    filter_chars := decode_utf8_string_to_temp_char_substrings(to_string(input.text));
+    filter_chars := decode_utf8_string_to_temp_char_substrings(cast(string) input.text);
 
     for command : commands {
         if command.requires_layout == .Single && editors.layout == .None   continue;
         if command.requires_layout == .Double && editors.layout != .Double continue;
-        if !project_config_path && (command.action == .open_project_config || command.action == .close_project) continue;
+        if !project_config.loaded && (command.action == .open_project_config || command.action == .close_project) continue;
 
         score, highlights := fuzzy_match(command.name, filter_chars);
         if score < 0 continue;
@@ -114,10 +119,10 @@ move_cursor :: (delta: s64, wrap := false, snap := true) {
 }
 
 maybe_handle_text_input_event :: (using input: *Text_Input, event: Input.Event) -> handled: bool {
-    input_text := copy_temporary_string(to_string(text));
+    input_text := copy_temporary_string(cast(string) text);
     handled := text_input_handle_event(input, event);
     if handled {
-        if input_text != to_string(input.text) then refresh_entries();
+        if input_text != cast(string) input.text then refresh_entries();
         return true;
     }
     return false;
@@ -142,6 +147,7 @@ commands := #run Command.[
     .{ .open_project_config,                                "Open Project Config",                0, .None },
     .{ .open_global_config,                                 "Open Global Config",                 0, .None },
     .{ .show_default_config,                                "Show Default Config (readonly)",     0, .None },
+    .{ .show_troubleshooting_info,                          "Show Troubleshooting Information",   0, .None },
 
     .{ .create_new_file,                                    "Create New File",                    0, .None },
     .{ .create_new_file_on_the_side,                        "Create New File On The Side",        0, .Single },
@@ -205,7 +211,7 @@ commands := #run Command.[
     .{ .move_editor_to_the_right,                           "Move Pane To The Right",             0, .Double },
 
     .{ .toggle_line_wrap,                                   "Toggle Line Wrap",                   0, .Single },
-    .{ .toggle_line_numbers,                                "Toggle Line Numbers",                0, .None },
+    .{ .toggle_line_numbers,                                "Toggle Line Numbers",                0, .Single },
     .{ .toggle_fullscreen,                                  "Toggle Fullscreen",                  0, .None },
 
     .{ .autoindent_region,                                  "Autoindent Region",                  0, .Single },

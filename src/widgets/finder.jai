@@ -39,7 +39,9 @@ finder_handle_event :: (event: Input.Event) -> handled: bool {
             case .move_up_one_page;         move_cursor(-per_page);                                 return true;
             case .move_down_one_page;       move_cursor( per_page);                                 return true;
 
+            case .escape;                   #through;
             case .close_dialog;             finder_close();                                         return true;
+
             case .open_entry_in_place;      finder_open_selected_result(selected, .in_place);       return true;
             case .open_entry_on_the_side;   finder_open_selected_result(selected, .on_the_side);    return true;
             case .open_entry_on_the_left;   finder_open_selected_result(selected, .left);           return true;
@@ -84,7 +86,7 @@ finder_open_from_editor :: () {
     if editor && editor.cursors.count == 1 {
         cursor := editor.cursors[0];
         selected_text := get_selected_string(cursor, buffer);
-        if selected_text && selected_text != to_string(finder.input.text) && offset_to_line(editor, buffer, cursor.pos) == offset_to_line(editor, buffer, cursor.sel) {
+        if selected_text && selected_text != cast(string) finder.input.text && offset_to_line(editor, buffer, cursor.pos) == offset_to_line(editor, buffer, cursor.sel) {
             replace_text(*finder.input, selected_text);
             reset_results();
             start_new_search();
@@ -228,14 +230,14 @@ start_new_search :: (force := false) {
         reset_results();
         return;
     }
-    if request.needle == to_string(input.text) && !force return;  // needle hasn't changed, no need to repeat
+    if request.needle == cast(string) input.text && !force return;  // needle hasn't changed, no need to repeat
     if regex_search {
         regex: re.Regexp;
 
         flags := BASE_REGEX_FLAGS;
         if !case_sensitive flags |= .FoldCase;
 
-        regex, regex_is_valid = re.compile(to_string(input.text), flags);
+        regex, regex_is_valid = re.compile(cast(string) input.text, flags);
         if !regex_is_valid return;  // only search if the regex is valid
 
         re.uninit(*regex);
@@ -245,7 +247,7 @@ start_new_search :: (force := false) {
     request.whole_word     = whole_word;
     request.regex_search   = regex_search;
 
-    reset_search_request(*request, new_needle = to_string(input.text));
+    reset_search_request(*request, new_needle = cast(string) input.text);
     request.in_progress = true;
 
     num_threads := thread_group.worker_info.count;
@@ -301,7 +303,7 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
         lock(*buffer.content_lock);
         defer unlock(*buffer.content_lock);
 
-        contents := to_string(buffer.bytes);
+        contents := cast(string) buffer.bytes;
 
         // Sort key parts
         dir_id_part:    u64 = (cast,trunc(u64) (buffer.file.project_dir_id + 1)) << 56;

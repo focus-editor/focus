@@ -4,7 +4,9 @@ open_project_dialog_handle_event :: (event: Input.Event) -> handled: bool {
     if event.type == .KEYBOARD && event.key_pressed {
         action, mapping := map_event_to_action(event, Action_Open_File_Dialog);
         if action == {
+            case .escape;                   #through;
             case .close_dialog;             hide_open_project_dialog();     return true;
+
             case .open_entry_in_place;      open_selected_project();        return true;
             case .open_entry_on_the_side;   open_selected_project();        return true;
 
@@ -55,7 +57,7 @@ open_selected_project :: () {
             should_reload_workspace = false;
         }
     } else {
-        add_user_error(tprint("Couldn't load project config for %", entry.name), dismiss_in_seconds = 10);
+        add_user_error("Couldn't load project config for %", entry.name, dismiss_in_seconds = 10);
     }
 }
 
@@ -70,7 +72,7 @@ refresh_entries :: () {
     scroll_y = 0;
     selected = 0;
 
-    filter_chars := decode_utf8_string_to_temp_char_substrings(to_string(input.text));
+    filter_chars := decode_utf8_string_to_temp_char_substrings(cast(string) input.text);
 
     Project_Config :: struct {
         name: string;
@@ -128,10 +130,10 @@ move_cursor :: (delta: s64, wrap := false, snap := true) {
 }
 
 maybe_handle_text_input_event :: (using input: *Text_Input, event: Input.Event) -> handled: bool {
-    input_text := copy_temporary_string(to_string(text));
+    input_text := copy_temporary_string(cast(string) text);
     handled := text_input_handle_event(input, event);
     if handled {
-        if input_text != to_string(input.text) then refresh_entries();
+        if input_text != cast(string) input.text then refresh_entries();
         return true;
     }
     return false;

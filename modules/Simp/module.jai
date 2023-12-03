@@ -1,11 +1,11 @@
-Render_API :: enum {
-    NONE;
-    SOFTWARE;
-    OPENGL;
-    METAL;
-}
-
-#module_parameters (render_api := Render_API.OPENGL);
+#module_parameters (render_api := Render_API.OPENGL) {
+    Render_API :: enum {
+        NONE;
+        SOFTWARE;
+        OPENGL;
+        METAL;
+    }
+};
 
 #scope_module
 
