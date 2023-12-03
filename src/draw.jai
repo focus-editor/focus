@@ -1274,6 +1274,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             push_scissor(results_rect);
             defer pop_scissor();
 
+            draw_rect(results_rect, Colors.BACKGROUND);  // to make contrasting scopes more visible
+
             {
                 // Scrollbar
                 content_height := results.count * entry_height;
@@ -1961,8 +1963,6 @@ draw_commands_dialog :: () {
 
         push_scissor(entries_rect);
         defer pop_scissor();
-
-        if filtered then draw_rect(entries_rect, Colors.BACKGROUND);  // to make contrasting scopes more visible
 
         {
             // Scrollbar
