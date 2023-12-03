@@ -266,30 +266,8 @@ MyWindowProc :: (hwnd: HWND, message: u32,
           case WM_KILLFOCUS;
             input_application_has_focus = false;
 
-          case WM_PAINT;
-            Simp :: #import "Simp";
-
-            // MW_PAINT is mostly generated when we open a window for the first time (which we do not care about),
-            // when we resize it and when we pulling it out from the outside of the display area.
-            // So let's just present here to avoid WNDCLASSEXW.hbrBackground being rendered instead of the content we want to see.
-            // That does not fix the case when we resize a window, but it does fix the "display area".
-            //
-            // @Important: Also, it's important to mention that now we will see the clear color of the Simp's backbuffer instead of
-            // WNDCLASSEXW.hbrBackground on resize since now we always present our content and do not fallback to WNDCLASSEXW.hbrBackground.
-            // If we want to render valid picture when we resize a window we have to render a frame on WM_SIZING.
-            // I (https://github.com/Roman-Skabin) do not want to do that by myself because then I have to refactor an entire
-            // update/draw process and maybe some Simp code.
-            //
-            // @Important: If we want to render (and present) and process window events in different threads
-            // we have to synchronize this present with present (and rendering itself) in the main loop.
-            // Otherwise in the best case an empty backbuffer will be presented, in the worst - you will get DEVICE_LOST.
-            // But now we do all these stuff in the same thread, so no synchronization required.
-            Simp.swap_buffers(hwnd);
-
-            // Let Windows do Windows stuff (i.e. do "internal" paint, painting non-client area and so on)
-            // P.S. DefWindowProcW will validate the client area for us, so there is no need to do that by ourselves
-            // unless we use GDI, but that's another long story.
-            return DefWindowProcW(hwnd, message, wParam, lParam);
+          // case WM_PAINT;
+          // NOTE: we don't handle WM_PAINT, see the discussion here https://github.com/focus-editor/focus/pull/228
 
           case WM_LBUTTONDOWN; #through;
           case WM_LBUTTONUP;
