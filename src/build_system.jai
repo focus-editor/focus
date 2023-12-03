@@ -4,9 +4,9 @@ init_build_system :: () {
     build_buffer_id = find_or_create_an_empty_buffer();
     build_editor_id = find_or_create_editor(build_buffer_id);
     editor, buffer := *open_editors[build_editor_id], *open_buffers[build_buffer_id];
-    editor.line_wrap = .on;
     buffer.readonly = true;
     buffer.deleted  = true;  // so that it doesn't appear in the open file dialog
+    if config.settings.build_panel_line_wrap_always_on then editor.line_wrap = .on; else editor.line_wrap = .off;
 
     init(*output_mutex);
 
@@ -253,6 +253,13 @@ build_panel_is_active :: inline () -> bool {
 build_panel_get_editor_id :: inline () -> s64 {
     assert(build_editor_id >= 0);
     return build_editor_id;
+}
+
+build_panel_set_line_wrap :: (enable: bool) {
+    if build_editor_id < 0 return;
+    editor := *open_editors[build_editor_id];
+    if  enable && editor.line_wrap == .off then editor.line_wrap = .to_enable;
+    if !enable && editor.line_wrap == .on  then editor.line_wrap = .to_disable;
 }
 
 build_panel_is_shown := false;
