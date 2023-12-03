@@ -3294,23 +3294,23 @@ word_complete_search :: () {
         if pos == -1 break;
         
         defer pos += start_subword.count;
-        if pos > 0 && is_word_char(buffer_str[pos-1]) {
+        if pos == left || (pos > 0 && is_word_char(buffer_str[pos-1])) {
             // Exclude results that are part of another word. For instance, if your subword is 'ine' and you have a word like 'wine' elsewhere, it will not include the result 'ine' from 'w[ine]'.
             continue;
         }
         
-        for pos..buffer_str.count-1 {
-            c := buffer_str[it];
-            if !is_word_char(c) || it == buffer_str.count-1 {
+        for i: pos..buffer_str.count-1 {
+            c := buffer_str[i];
+            if !is_word_char(c) || i == buffer_str.count-1 {
                 is_subword := c == #char "_";
                 
                 s := advance(buffer_str, pos); 
-                if it != buffer_str.count-1 then s.count = it - pos;
+                s.count = i - pos;
                 if s != start_subword {
                     // Now, we're going left to right, so the distance between the word and the cursor will 
                     // always be closer than in right-to-left searching; thus, we need to apply some corrections to it.
                     cursor_delta := cursor.pos - pos;
-                    if pos >= right then cursor_delta = it - cursor.pos;
+                    if pos >= right then cursor_delta = i - cursor.pos;
                     if is_upper(start_subword[0]) != is_upper(buffer_str[pos]) then cursor_delta += CASE_SENSITIVE_PENALTY;
                     add_new_result_or_update_delta(s, cursor_delta);
                 }
