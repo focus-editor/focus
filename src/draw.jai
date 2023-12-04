@@ -1507,13 +1507,21 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             line_col_start_x := footer_rect.x + footer_rect.w - width;
             Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = Colors.UI_DIM);
 
-            // Make sure the text is cut nicely
-            fadeout_rect := cut_rect;
-            fadeout_rect.w = 4 * padding;
-            trans := footer_color;
-            trans.a = 0;
-            Simp.set_shader_for_color(enable_blend = true);
-            draw_rect_raw(fadeout_rect, c00 = footer_color, c10 = trans, c01 = footer_color, c11 = trans);
+            if editor.cursors.count > 1 && editor_is_active {
+                width = xx Simp.prepare_text(font_ui_bold, tprint("Cursors: %", editor.cursors.count));
+                cursor_indicator_x := line_col_start_x - width - char_x_advance;
+                Simp.draw_prepared_text(font_ui_bold, xx cursor_indicator_x, xx pen.y, color = Colors.CURSOR);
+            }
+
+            // Make sure the text is cut nicely (only if footer color is not translucent, otherwise it won't work)
+            if footer_color.a >= 1.0 {
+                fadeout_rect := cut_rect;
+                fadeout_rect.w = 4 * padding;
+                trans := footer_color;
+                trans.a = 0;
+                Simp.set_shader_for_color(enable_blend = true);
+                draw_rect_raw(fadeout_rect, c00 = footer_color, c10 = trans, c01 = footer_color, c11 = trans);
+            }
         }
     }
 
