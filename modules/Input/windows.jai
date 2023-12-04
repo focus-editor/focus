@@ -178,6 +178,12 @@ get_vk :: (key: Key_Code) -> VK: u64 {
 
 #add_context _windows_windowproc :: MyWindowProc;
 
+#scope_file
+
+wm_char_high_surrogate : u32;
+
+#scope_export
+
 MyWindowProc :: (hwnd: HWND, message: u32,
                  wParam: WPARAM, lParam: LPARAM) -> s64 #c_call {
     new_context: Context;
@@ -241,17 +247,33 @@ MyWindowProc :: (hwnd: HWND, message: u32,
               // indicate the user that the key wasn't handled.
 
           case WM_CHAR;
-            keycode := wParam;
+            HIGH_SURROGATE_START  :: 0xd800;
+            HIGH_SURROGATE_END    :: 0xdbff;
+            LOW_SURROGATE_START   :: 0xdc00;
+            LOW_SURROGATE_END     :: 0xdfff;
 
-            if (keycode > 31 && keycode < 127) || keycode > 255 {
+            if wParam >= HIGH_SURROGATE_START && wParam <= HIGH_SURROGATE_END {
+                wm_char_high_surrogate = cast (u32) wParam;
+            } else {
+                codepoint := cast (u32) wParam;
+
+                if codepoint >= LOW_SURROGATE_START && codepoint <= LOW_SURROGATE_END {
+                    low_surrogate := cast (u32) wParam;
+                    codepoint = (wm_char_high_surrogate - HIGH_SURROGATE_START) << 10;
+                    codepoint += (low_surrogate - LOW_SURROGATE_START);
+                    codepoint += 0x10000;
+                }
+
                 // Control characters generate key codes < 32, but these are redundant
                 // with KEYDOWN events and are also ambiguous (ctrl-m generates 13, but
                 // so does RETURN.)
-                event: Event;
-                event.type = .TEXT_INPUT;
-                event.utf32 = xx keycode;
+                if codepoint > 31 && codepoint != 127 {
+                    event: Event;
+                    event.type = .TEXT_INPUT;
+                    event.utf32 = codepoint;
 
-                array_add(*events_this_frame, event);
+                    array_add(*events_this_frame, event);
+                }
             }
 
           case WM_SETFOCUS;
