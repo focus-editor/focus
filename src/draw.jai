@@ -628,6 +628,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     visible_lines_start: s32;
     visible_lines_end:   s32;
     visible_offset_range: Offset_Range;
+    cursors_off_screen := 0;
 
     // Draw editor
     {
@@ -1046,21 +1047,31 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // Draw cursors when they are active
         cursor_as_block := config.settings.cursor_as_block && !as_build_panel;
         cursor_width := ifx cursor_as_block then char_x_advance else 2 * dpi_scale;
+        cursors_should_be_visible := should_draw_cursors() && !search_bar_is_open(editor);
 
-        if cursors_active && should_draw_cursors() && !search_bar_is_open(editor) {
+        if cursors_active {
             Simp.set_shader_for_rects();
             for cursor : cursors {
-                if cursor.pos < visible_offset_range.start || cursor.pos > visible_offset_range.end continue;
-                screen_pos := get_cursor_screen_pos(text_origin, cursor_coords[it_index].pos);
+                if cursor.pos < visible_offset_range.start || cursor.pos > visible_offset_range.end {
+                    cursors_off_screen += 1;
+                    continue;
+                }
 
-                rect := make_rect(screen_pos.x, screen_pos.y, cursor_width, line_height);
-                draw_rounded_rect(rect, Colors.CURSOR, radius = rounding_radius_small, set_shader = true);
+                screen_pos := get_cursor_screen_pos(text_origin, cursor_coords[it_index].pos);
+                if screen_pos.x >= rect.x + rect.w || screen_pos.x + char_x_advance <= rect.x || screen_pos.y >= rect.y + rect.h || screen_pos.y + line_height < rect.y {
+                    cursors_off_screen += 1;  // additional check for visibility (offset is not reliable)
+                }
+
+                if !cursors_should_be_visible continue;  // do it within the loop so that we always count cursors off screen
+
+                cursor_rect := make_rect(screen_pos.x, screen_pos.y, cursor_width, line_height);
+                draw_rounded_rect(cursor_rect, Colors.CURSOR, radius = rounding_radius_small, set_shader = true);
 
                 // Draw the letter on top for better visibility
                 if cursor_as_block {
                     letter := get_char_at_offset_as_string(buffer, cursor.pos);
                     if letter != "\n" {
-                        Simp.draw_text(font, xx rect.x, xx (rect.y + (line_height - char_x_advance) / 2), letter);
+                        Simp.draw_text(font, xx cursor_rect.x, xx (cursor_rect.y + (line_height - char_x_advance) / 2), letter);
                     }
                 }
             }
@@ -1507,8 +1518,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             line_col_start_x := footer_rect.x + footer_rect.w - width;
             Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = Colors.UI_DIM);
 
-            if editor.cursors.count > 1 && editor_is_active {
-                width = xx Simp.prepare_text(font_ui_bold, tprint("Cursors: %", editor.cursors.count));
+            if editor.cursors.count > 1 && cursors_off_screen {
+                width = xx Simp.prepare_text(font_ui_bold, tprint("Cursors off screen: %", cursors_off_screen));
                 cursor_indicator_x := line_col_start_x - width - char_x_advance;
                 Simp.draw_prepared_text(font_ui_bold, xx cursor_indicator_x, xx pen.y, color = Colors.CURSOR);
             }
