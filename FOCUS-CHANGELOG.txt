@@ -90,6 +90,7 @@
     + Config highlighting has become smarter and hopefully more helpful
     + Improved CPU usage when selecting text by mouse
     + Tab characters are now only shown when they are within selection
+    + Windows: better handling of Unicode input (thanks @ostef)
 
 
 
