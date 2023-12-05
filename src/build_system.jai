@@ -139,7 +139,7 @@ build_system_update :: () {
             }
         }
 
-        print_to_output_panel_from_main_thread(tprint("%\n", message), mark_as = kind);
+        print_to_output_panel_from_main_thread(tprint("%\n", message), mark_as = kind, add_newline_if_missing = true);
 
         if kind == .success {
             if running_command.close_panel_on_success then hide_build_panel();
@@ -154,10 +154,14 @@ build_system_update :: () {
     }
 }
 
-print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kind = .none) {
+print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kind = .none, add_newline_if_missing := false) {
     if !s return;
 
     editor, buffer := get_build_editor_and_buffer();
+
+    if add_newline_if_missing && buffer.bytes.count > 0 && buffer.bytes[buffer.bytes.count-1] != #char "\n" {
+        insert_string_raw(buffer, buffer.bytes.count, "\n");
+    }
 
     start := cast(s32) buffer.bytes.count;
     insert_string_raw(buffer, buffer.bytes.count, s);
