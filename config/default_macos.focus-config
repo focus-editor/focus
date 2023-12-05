@@ -63,6 +63,7 @@ highlight_line_with_cursor:             false
 draw_indent_guides:                     false
 auto_surround_with_brackets_and_quotes: false
 auto_close_brackets:                    false
+show_cursors_off_screen:                true
 
 build_panel_stays_in_one_place:         false  # if true, the build panel will flip to the inactive pane in two pane layouts
 build_panel_line_wrap_always_on:        true

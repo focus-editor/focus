@@ -1518,7 +1518,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             line_col_start_x := footer_rect.x + footer_rect.w - width;
             Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = Colors.UI_DIM);
 
-            if editor.cursors.count > 1 && cursors_off_screen {
+            if editor.cursors.count > 1 && cursors_off_screen && config.settings.show_cursors_off_screen {
                 width = xx Simp.prepare_text(font_ui_bold, tprint("Cursors off screen: %", cursors_off_screen));
                 cursor_indicator_x := line_col_start_x - width - char_x_advance;
                 Simp.draw_prepared_text(font_ui_bold, xx cursor_indicator_x, xx pen.y, color = Colors.CURSOR);

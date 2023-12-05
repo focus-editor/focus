@@ -432,6 +432,7 @@ Settings :: struct {
     auto_surround_with_brackets_and_quotes  := false;
     auto_close_brackets                     := false;
     prefer_system_file_dialogs              := false;
+    show_cursors_off_screen                 := true;
 
     build_panel_width_percent               := 50;
     build_panel_height_percent              := 50;
