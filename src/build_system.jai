@@ -378,6 +378,7 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
 
         if num_output_bytes {
             write_output_from_build_thread(*stdout, to_string(output_buffer.data, num_output_bytes));
+            platform_wake_up_main_thread();
         }
 
         if num_error_bytes {
