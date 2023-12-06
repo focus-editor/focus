@@ -1047,7 +1047,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // Draw cursors when they are active
         cursor_as_block := config.settings.cursor_as_block && !as_build_panel;
         cursor_width := ifx cursor_as_block then char_x_advance else 2 * dpi_scale;
-        cursors_should_be_visible := should_draw_cursors() && !search_bar_is_open(editor);
+        cursors_are_visible := should_draw_cursors() && !search_bar_is_open(editor);
 
         if cursors_active {
             Simp.set_shader_for_rects();
@@ -1062,7 +1062,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                     cursors_off_screen += 1;  // additional check for visibility (offset is not reliable)
                 }
 
-                if !cursors_should_be_visible continue;  // do it within the loop so that we always count cursors off screen
+                if !cursors_are_visible continue;  // check it within the loop so that we always calculate how many cursors are off screen
 
                 cursor_rect := make_rect(screen_pos.x, screen_pos.y, cursor_width, line_height);
                 draw_rounded_rect(cursor_rect, Colors.CURSOR, radius = rounding_radius_small, set_shader = true);
@@ -1518,10 +1518,24 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             line_col_start_x := footer_rect.x + footer_rect.w - width;
             Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = Colors.UI_DIM);
 
+            // Maybe draw the number of cursors off screen
             if editor.cursors.count > 1 && cursors_off_screen && config.settings.show_cursors_off_screen {
-                width = xx Simp.prepare_text(font_ui_bold, tprint("Cursors off screen: %", cursors_off_screen));
+                width = xx Simp.prepare_text(font_ui_bold, tprint("%", cursors_off_screen));
                 cursor_indicator_x := line_col_start_x - width - char_x_advance;
                 Simp.draw_prepared_text(font_ui_bold, xx cursor_indicator_x, xx pen.y, color = Colors.CURSOR);
+
+                cursor_width := ifx config.settings.cursor_as_block then char_x_advance else 2 * dpi_scale;
+                cursor_y := footer_rect.y + (footer_rect.h - line_height) / 2;
+                cursor_rect := align_to_grid(make_rect(cursor_indicator_x - cursor_width - padding, cursor_y, cursor_width, line_height));
+
+                if should_draw_cursors() then draw_rounded_rect(cursor_rect, Colors.CURSOR, radius = rounding_radius_small, set_shader = true);
+
+                hover_rect := Rect.{ cursor_rect.x - padding, footer_rect.y, cursor_rect.w + padding + width + 2 * padding, footer_rect.h };
+                cursor_number_id := get_ui_id_from_loc();
+                maybe_set_hot_or_active(cursor_number_id, hover_rect, .NORMAL);
+                if is_hovering_over(cursor_number_id) {
+                    draw_tooltip_bottom_left(tprint("Cursors off screen: %", cursors_off_screen), top_right(cursor_rect));
+                }
             }
 
             // Make sure the text is cut nicely (only if footer color is not translucent, otherwise it won't work)
