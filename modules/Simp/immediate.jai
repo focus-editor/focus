@@ -27,7 +27,7 @@ Immediate_Vertex :: struct {
     position:    Vector2;
     color_scale: Vector4;
     uv0:         Vector2;
-    
+
     // The following values are for rendering rounded rects - most of the time they are not used, but it's ok
     // because it's simpler than the alternatives and the performance is good enough for our purposes
     rect_center: Vector2;
@@ -59,16 +59,6 @@ immediate_set_shader :: (s: *Shader) {
     if state.current_shader && (state.current_shader != s) {
         immediate_flush();
     }
-
-    p := s.gl_handle;
-    s.position_loc    = glGetAttribLocation(p, "vert_position");
-    s.color_scale_loc = glGetAttribLocation(p, "vert_color");
-    s.uv_0_loc        = glGetAttribLocation(p, "vert_uv0");
-    
-    s.rect_center_loc        = glGetAttribLocation(p, "vert_rect_center");
-    s.rect_size_loc          = glGetAttribLocation(p, "vert_rect_size");
-    s.rect_corner_radius_loc = glGetAttribLocation(p, "vert_rect_corner_radius");
-    s.rect_edge_softness_loc = glGetAttribLocation(p, "vert_rect_edge_softness");
 
     state.current_shader = s;
     backend_use_shader(s);
@@ -157,13 +147,13 @@ set_vertex_format :: (shader: *Shader) {
         glEnableVertexAttribArray(xx shader.rect_size_loc);
         DumpGLErrors("rect_size");
     }
-    
+
     if shader.rect_corner_radius_loc != -1 {
         glVertexAttribPointer(xx shader.rect_corner_radius_loc, 1, GL_FLOAT, xx false, stride, xx *offset.rect_corner_radius);
         glEnableVertexAttribArray(xx shader.rect_corner_radius_loc);
         DumpGLErrors("rect_corner_radius");
     }
-    
+
     if shader.rect_edge_softness_loc != -1 {
         glVertexAttribPointer(xx shader.rect_edge_softness_loc, 1, GL_FLOAT, xx false, stride, xx *offset.rect_edge_softness);
         glEnableVertexAttribArray(xx shader.rect_edge_softness_loc);
@@ -274,7 +264,7 @@ immediate_quad :: (x0: float, y0: float, x1: float, y1: float,
 // p0 = bottom left, p2 = top right
 immediate_rounded_rect :: (p0: Vector2, p2: Vector2, color: Vector4, center: Vector2, size: Vector2, radius: float, softness := 1.0) {
     CheckSpace(6);
-    
+
     p1 := Vector2.{ x = p0.x, y = p2.y };
     p3 := Vector2.{ x = p2.x, y = p0.y };
 

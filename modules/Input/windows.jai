@@ -178,6 +178,12 @@ get_vk :: (key: Key_Code) -> VK: u64 {
 
 #add_context _windows_windowproc :: MyWindowProc;
 
+#scope_file
+
+wm_char_high_surrogate : u32;
+
+#scope_export
+
 MyWindowProc :: (hwnd: HWND, message: u32,
                  wParam: WPARAM, lParam: LPARAM) -> s64 #c_call {
     new_context: Context;
@@ -241,32 +247,42 @@ MyWindowProc :: (hwnd: HWND, message: u32,
               // indicate the user that the key wasn't handled.
 
           case WM_CHAR;
-            keycode := wParam;
+            HIGH_SURROGATE_START  :: 0xd800;
+            HIGH_SURROGATE_END    :: 0xdbff;
+            LOW_SURROGATE_START   :: 0xdc00;
+            LOW_SURROGATE_END     :: 0xdfff;
 
-            // @Hack to allow AltGr shortcuts for AZERTY and QWERTZ layout...
-            altgr_keycode := keycode == #char "~" || keycode == #char "#" || keycode == #char "{"  || keycode == #char "[" ||
-                             keycode == #char "|" || keycode == #char "`" || keycode == #char "\\" || keycode == #char "^" ||
-                             keycode == #char "@" || keycode == #char "]" || keycode == #char "}"  || keycode == #char ";" ||
-                             keycode == #char "<" || keycode == #char ">"  || keycode == #char "$" || keycode == #char "&" ||
-                             keycode == #char "*";
+            if wParam >= HIGH_SURROGATE_START && wParam <= HIGH_SURROGATE_END {
+                wm_char_high_surrogate = cast (u32) wParam;
+            } else {
+                codepoint := cast (u32) wParam;
 
-            if (keycode > 31 && keycode < 127 && !(ctrl_state || alt_state)) || (altgr_keycode && alt_state) || keycode > 255 {
+                if codepoint >= LOW_SURROGATE_START && codepoint <= LOW_SURROGATE_END {
+                    low_surrogate := cast (u32) wParam;
+                    codepoint = (wm_char_high_surrogate - HIGH_SURROGATE_START) << 10;
+                    codepoint += (low_surrogate - LOW_SURROGATE_START);
+                    codepoint += 0x10000;
+                }
+
                 // Control characters generate key codes < 32, but these are redundant
                 // with KEYDOWN events and are also ambiguous (ctrl-m generates 13, but
                 // so does RETURN.)
-                event: Event;
-                event.type = .TEXT_INPUT;
-                event.utf32 = xx keycode;
+                if codepoint > 31 && codepoint != 127 {
+                    event: Event;
+                    event.type = .TEXT_INPUT;
+                    event.utf32 = codepoint;
 
-                array_add(*events_this_frame, event);
+                    array_add(*events_this_frame, event);
+                }
             }
 
           case WM_SETFOCUS;
             input_application_has_focus = true;
           case WM_KILLFOCUS;
             input_application_has_focus = false;
-          case WM_PAINT;
-            ValidateRect(hwnd, null);
+
+          // case WM_PAINT;
+          // NOTE: we don't handle WM_PAINT, see the discussion here https://github.com/focus-editor/focus/pull/228
 
           case WM_LBUTTONDOWN; #through;
           case WM_LBUTTONUP;

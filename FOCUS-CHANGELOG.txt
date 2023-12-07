@@ -39,9 +39,11 @@
     + New option: `draw_indent_guides`. Set to `true` to draw a vertical guide line at every indent level (determined by tab size)
     + New option: `auto_surround_with_brackets_and_quotes` to enable auto-surrounding (thanks @hfr4)
     + New option: `scroll_beyond_last_line` (defaults to `true`). Disable to prevent scrolling past the editor's last line
+    + New option: `show_cursors_off_screen` (defaults to `true`). If enabled, displays a warning in the footer if there are cursors off screen (only when more than one is used)
     + Added support for regular expressions in file/project search
     + Added a built-in 'save file' dialog (it will be on by default). To use the system dialogs on Windows, use `prefer_system_file_dialogs: true`
-    + Dragging middle mouse button will create cursors (thanks @hfr4)
+    + Dragging with the middle mouse button will create cursors (thanks @hfr4)
+    + Added an indicator showing if there are any cursors off screen (if you have more than one)
     + Mac: You can now set `maximize_on_start` in your global config to `true`, and Focus will launch in fullscreen.
     + New syntax highlighting:
         + Python
@@ -90,6 +92,7 @@
     + Config highlighting has become smarter and hopefully more helpful
     + Improved CPU usage when selecting text by mouse
     + Tab characters are now only shown when they are within selection
+    + Windows: better handling of Unicode input (thanks @ostef)
 
 
 

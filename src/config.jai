@@ -102,6 +102,7 @@ apply_config :: () {
     build_panel_width  = config.settings.build_panel_width_percent  / 100.0;
     build_panel_height = config.settings.build_panel_height_percent / 100.0;
     build_panel_height_anim.target = build_panel_height;
+    build_panel_set_line_wrap(config.settings.build_panel_line_wrap_always_on);
 
     // Must do after the validation
     init_fonts_and_dependent_things();
@@ -431,10 +432,12 @@ Settings :: struct {
     auto_surround_with_brackets_and_quotes  := false;
     auto_close_brackets                     := false;
     prefer_system_file_dialogs              := false;
+    show_cursors_off_screen                 := true;
 
     build_panel_width_percent               := 50;
     build_panel_height_percent              := 50;
     build_panel_stays_in_one_place          := false;
+    build_panel_line_wrap_always_on         := true;
 
     // TODO
     // convert_tabs_to_spaces_on_load:     false

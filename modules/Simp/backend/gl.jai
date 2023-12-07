@@ -120,8 +120,6 @@ Shader_Platform :: struct {
     rect_corner_radius_loc: GLint = -1;
     rect_edge_softness_loc: GLint = -1;
 
-    diffuse_texture_loc: GLint = -1;
-
     alpha_blend := false;
 }
 
@@ -164,23 +162,51 @@ swap_buffers :: (window: Window_Type, vsync := true) {  // @Incomplete: Have som
 #scope_module
 
 backend_init_shaders :: () {
-    shader_color.gl_handle   = get_shader_program(SHADER_COLOR);
-    shader_color.alpha_blend = false;
+    s := *shader_color;
+    {
+        s.gl_handle       = get_shader_program(SHADER_COLOR);
+        s.position_loc    = 0;
+        s.color_scale_loc = 1;
+        s.alpha_blend = false;
+    }
 
-    shader_color_with_blend.gl_handle   = shader_color.gl_handle;
-    shader_color_with_blend.alpha_blend = true;
+    s = *shader_color_with_blend;
+    {
+        s.gl_handle   = shader_color.gl_handle;
+        s.position_loc    = 0;
+        s.color_scale_loc = 1;
+        s.alpha_blend = true;
+    }
 
-    shader_text.gl_handle   = get_shader_program(SHADER_TEXT);
-    shader_text.alpha_blend = true;
+    s = *shader_text;
+    {
+        s.gl_handle       = get_shader_program(SHADER_TEXT);
+        s.position_loc    = 0;
+        s.color_scale_loc = 1;
+        s.uv_0_loc        = 2;
+        s.alpha_blend = true;
+    }
 
-    shader_sprite.gl_handle   = get_shader_program(SHADER_SPRITE);
-    shader_sprite.alpha_blend = true;
+    s = *shader_sprite;
+    {
+        s.gl_handle   = get_shader_program(SHADER_SPRITE);
+        s.position_loc    = 0;
+        s.color_scale_loc = 1;
+        s.uv_0_loc        = 2;
+        s.alpha_blend = true;
+    }
 
-    shader_rounded_rect.gl_handle   = get_shader_program(SHADER_ROUNDED_RECT);
-    shader_rounded_rect.alpha_blend = true;
-
-    shader_circle.gl_handle   = get_shader_program(SHADER_CIRCLE);
-    shader_circle.alpha_blend = true;
+    s = *shader_rounded_rect;
+    {
+        s.gl_handle   = get_shader_program(SHADER_ROUNDED_RECT);
+        s.position_loc           = 0;
+        s.color_scale_loc        = 1;
+        s.rect_center_loc        = 2;
+        s.rect_size_loc          = 3;
+        s.rect_corner_radius_loc = 4;
+        s.rect_edge_softness_loc = 5;
+        s.alpha_blend = true;
+    }
 }
 
 #scope_file
@@ -196,9 +222,9 @@ OUT_IN vec2 TextureCoords;
 OUT_IN vec4 iterated_color;
 
 #ifdef VERTEX_SHADER
-in vec2 vert_position;
-in vec4 vert_color;
-in vec2 vert_uv0;
+layout(location = 0) in vec2 vert_position;
+layout(location = 1) in vec4 vert_color;
+layout(location = 2) in vec2 vert_uv0;
 
 uniform mat4 projection;
 
@@ -232,8 +258,8 @@ SHADER_COLOR :: #string END
 OUT_IN vec4 iterated_color;
 
 #ifdef VERTEX_SHADER
-in vec2 vert_position;
-in vec4 vert_color;
+layout(location = 0) in vec2 vert_position;
+layout(location = 1) in vec4 vert_color;
 
 uniform mat4 projection;
 
@@ -261,9 +287,9 @@ OUT_IN vec2 TexCoords;
 OUT_IN vec4 iterated_color;
 
 #ifdef VERTEX_SHADER
-in vec2 vert_position;
-in vec4 vert_color;
-in vec2 vert_uv0;
+layout(location = 0) in vec2 vert_position;
+layout(location = 1) in vec4 vert_color;
+layout(location = 2) in vec2 vert_uv0;
 
 uniform mat4 projection;
 
@@ -296,13 +322,13 @@ flat OUT_IN float rect_corner_radius;
 flat OUT_IN float rect_edge_softness;
 
 #ifdef VERTEX_SHADER
-in vec2 vert_position;
-in vec4 vert_color;
+layout(location = 0) in vec2 vert_position;
+layout(location = 1) in vec4 vert_color;
 
-in vec2 vert_rect_center;
-in vec2 vert_rect_size;
-in float vert_rect_corner_radius;
-in float vert_rect_edge_softness;
+layout(location = 2) in vec2 vert_rect_center;
+layout(location = 3) in vec2 vert_rect_size;
+layout(location = 4) in float vert_rect_corner_radius;
+layout(location = 5) in float vert_rect_edge_softness;
 
 uniform mat4 projection;
 
@@ -332,47 +358,6 @@ void main () {
 
 #endif // FRAGMENT_SHADER
 END
-
-// TODO: finish
-SHADER_CIRCLE :: #string END
-OUT_IN vec4 iterated_color;
-flat OUT_IN vec2 center;
-flat OUT_IN float radius;
-flat OUT_IN float softness;
-
-#ifdef VERTEX_SHADER
-in vec2 vert_position;
-in vec4 vert_color;
-
-in vec2 vert_rect_center;
-in vec2 vert_rect_size;
-in float vert_rect_corner_radius;
-in float vert_rect_edge_softness;
-
-uniform mat4 projection;
-
-void main() {
-    gl_Position = projection * vec4(vert_position, 0.0, 1.0);
-    iterated_color    = vert_color;
-
-    center = vert_rect_center;
-    radius = vert_rect_corner_radius;
-    softness = vert_rect_edge_softness;
-}
-#endif // VERTEX_SHADER
-
-#ifdef FRAGMENT_SHADER
-out vec4 color;
-
-void main () {
-    float distance = length(max(abs(gl_FragCoord.xy - center) + radius, 0.0)) - radius;
-    float smoothed_alpha = 1.0f - smoothstep(0.0f, softness, distance);
-    color = vec4(iterated_color.xyz, iterated_color.a * smoothed_alpha);
-}
-
-#endif // FRAGMENT_SHADER
-END
-
 
 get_shader_program :: (shader_text: string) -> GLuint {
     LOG_BUFFER_SIZE :: 512;

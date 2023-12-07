@@ -81,7 +81,7 @@ platform_wait_message :: inline () {
 }
 
 platform_wake_up_main_thread :: () {
-    // TODO
+    PostMessageW(window, WM_USER, 0, 0);
 }
 
 platform_set_refresh_timer :: (window: Window_Type) {
@@ -297,6 +297,8 @@ monitors : [..] Monitor;
 
 REFRESH_TIMER_ID :: 0;
 
+WM_USER :: 0x0400;
+
 user32   :: #system_library "user32";
 kernel32 :: #system_library "kernel32";
 shell32  :: #system_library "shell32";
@@ -306,6 +308,7 @@ KF_FLAG_CREATE :: 0x00008000;                                       // https://l
 FOLDERID_Fonts :: #run uid("FD228CB7-AE11-4AE3-864C-16F3910AB8FE"); // https://learn.microsoft.com/en-us/windows/win32/shell/knownfolderid
 
 WaitMessage :: () -> s32 #foreign user32;
+PostMessageW :: (hWnd: HWND, Msg: u32, wParam: WPARAM, lParam: LPARAM) -> BOOL #foreign user32;
 SetTimer  :: (hWnd: HWND, nIDEvent: u64, uElapse: u32, lpTimerFunc: *void) -> s32 #foreign user32;
 KillTimer :: (hWnd: HWND, nIDEvent: u64) -> bool #foreign user32;
 GetDpiForWindow :: (hWnd: HWND) -> u32 #foreign user32;
@@ -322,29 +325,29 @@ Dwmapi :: #system_library "Dwmapi";
 DwmSetWindowAttribute :: (handle: HANDLE, dwAttribute: DwmAttribute, pvAttributde :*void, cbAttribute :DWORD) -> HRESULT #foreign Dwmapi;
 
 DwmAttribute :: enum u32 {
-  NCRENDERING_ENABLED;
-  NCRENDERING_POLICY;
-  TRANSITIONS_FORCEDISABLED;
-  ALLOW_NCPAINT;
-  CAPTION_BUTTON_BOUNDS;
-  NONCLIENT_RTL_LAYOUT;
-  FORCE_ICONIC_REPRESENTATION;
-  FLIP3D_POLICY;
-  EXTENDED_FRAME_BOUNDS;
-  HAS_ICONIC_BITMAP;
-  DISALLOW_PEEK;
-  EXCLUDED_FROM_PEEK;
-  CLOAK;
-  CLOAKED;
-  FREEZE_REPRESENTATION;
-  PASSIVE_UPDATE_MODE;
-  USE_HOSTBACKDROPBRUSH;
-  USE_IMMERSIVE_DARK_MODE :: 20;
-  WINDOW_CORNER_PREFERENCE :: 33;
-  BORDER_COLOR;
-  CAPTION_COLOR;
-  TEXT_COLOR;
-  VISIBLE_FRAME_BORDER_THICKNESS;
-  SYSTEMBACKDROP_TYPE;
-  LAST;
+    NCRENDERING_ENABLED;
+    NCRENDERING_POLICY;
+    TRANSITIONS_FORCEDISABLED;
+    ALLOW_NCPAINT;
+    CAPTION_BUTTON_BOUNDS;
+    NONCLIENT_RTL_LAYOUT;
+    FORCE_ICONIC_REPRESENTATION;
+    FLIP3D_POLICY;
+    EXTENDED_FRAME_BOUNDS;
+    HAS_ICONIC_BITMAP;
+    DISALLOW_PEEK;
+    EXCLUDED_FROM_PEEK;
+    CLOAK;
+    CLOAKED;
+    FREEZE_REPRESENTATION;
+    PASSIVE_UPDATE_MODE;
+    USE_HOSTBACKDROPBRUSH;
+    USE_IMMERSIVE_DARK_MODE :: 20;
+    WINDOW_CORNER_PREFERENCE :: 33;
+    BORDER_COLOR;
+    CAPTION_COLOR;
+    TEXT_COLOR;
+    VISIBLE_FRAME_BORDER_THICKNESS;
+    SYSTEMBACKDROP_TYPE;
+    LAST;
 }

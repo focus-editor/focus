@@ -4,9 +4,9 @@ init_build_system :: () {
     build_buffer_id = find_or_create_an_empty_buffer();
     build_editor_id = find_or_create_editor(build_buffer_id);
     editor, buffer := *open_editors[build_editor_id], *open_buffers[build_buffer_id];
-    editor.line_wrap = .on;
     buffer.readonly = true;
     buffer.deleted  = true;  // so that it doesn't appear in the open file dialog
+    if config.settings.build_panel_line_wrap_always_on then editor.line_wrap = .on; else editor.line_wrap = .off;
 
     init(*output_mutex);
 
@@ -75,7 +75,7 @@ execute_build_command :: (command: *Build_Command) {
 
     if command.open_panel_on_build {
         show_build_panel();
-    } else {
+    } else if !build_panel_is_shown {
         add_success_message("Running [%]…", running_command.name, dismiss_in_seconds = 3);
     }
 
@@ -139,7 +139,7 @@ build_system_update :: () {
             }
         }
 
-        print_to_output_panel_from_main_thread(tprint("%\n", message), mark_as = kind);
+        print_to_output_panel_from_main_thread(tprint("%\n", message), mark_as = kind, add_newline_if_missing = true);
 
         if kind == .success {
             if running_command.close_panel_on_success then hide_build_panel();
@@ -151,25 +151,6 @@ build_system_update :: () {
 
         running_command = null;
         reset(*memory_pool);
-    }
-}
-
-print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kind = .none) {
-    if !s return;
-
-    editor, buffer := get_build_editor_and_buffer();
-
-    start := cast(s32) buffer.bytes.count;
-    insert_string_raw(buffer, buffer.bytes.count, s);
-    end   := cast(s32) buffer.bytes.count;
-
-    cursor := leave_only_original_cursor(editor);
-    cursor.pos = xx buffer.bytes.count;
-    cursor.sel = cursor.pos;
-    editor.scroll_to_cursor = .yes;
-
-    if mark_as != .none {
-        array_add(*buffer.regions, Buffer_Region.{ start = start, end = end, kind = mark_as });
     }
 }
 
@@ -236,6 +217,8 @@ build_panel_set_width :: (width: float) {
 }
 
 build_panel_get_position :: () -> Build_Panel_Position {
+    if config.settings.build_panel_stays_in_one_place return .right;
+
     if #complete editors.layout == {
         case .None;     saved_position = .right;
         case .Single;   saved_position = .right;
@@ -253,6 +236,13 @@ build_panel_is_active :: inline () -> bool {
 build_panel_get_editor_id :: inline () -> s64 {
     assert(build_editor_id >= 0);
     return build_editor_id;
+}
+
+build_panel_set_line_wrap :: (enable: bool) {
+    if build_editor_id < 0 return;
+    editor := *open_editors[build_editor_id];
+    if  enable && editor.line_wrap == .off then editor.line_wrap = .to_enable;
+    if !enable && editor.line_wrap == .on  then editor.line_wrap = .to_disable;
 }
 
 build_panel_is_shown := false;
@@ -299,6 +289,44 @@ build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thre
     return .CONTINUE;
 }
 
+print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kind = .none, add_newline_if_missing := false) {
+    if !s return;
+
+    editor, buffer := get_build_editor_and_buffer();
+
+    if add_newline_if_missing && buffer.bytes.count > 0 && buffer.bytes[buffer.bytes.count-1] != #char "\n" {
+        insert_string_raw(buffer, buffer.bytes.count, "\n");
+    }
+
+    start := cast(s32) buffer.bytes.count;
+    insert_string_raw(buffer, buffer.bytes.count, s);
+    end   := cast(s32) buffer.bytes.count;
+
+    cursor := leave_only_original_cursor(editor);
+    cursor.pos = xx buffer.bytes.count;
+    cursor.sel = cursor.pos;
+    editor.scroll_to_cursor = .yes;
+
+    if mark_as != .none {
+        array_add(*buffer.regions, Buffer_Region.{ start = start, end = end, kind = mark_as });
+    }
+
+    // Maybe forget some bytes at the beginning
+    if buffer.bytes.count > MAX_BUILD_OUTPUT_BUFFER_SIZE {
+        bytes_to_forget := cast(s32) (buffer.bytes.count - MAX_BUILD_OUTPUT_BUFFER_SIZE);
+        delete_range_raw(buffer, 0, bytes_to_forget);
+        for * region : buffer.regions {
+            region.start -= bytes_to_forget;
+            region.end   -= bytes_to_forget;
+            if region.start < 0 || region.end < 0 then remove region;  // will have to sort later because they must be sorted
+        }
+        compare_regions :: (r1: Buffer_Region, r2: Buffer_Region) -> s64 {
+            return r1.start - r2.start;
+        }
+        quick_sort(buffer.regions, compare_regions);
+    }
+}
+
 get_pool_allocator :: () -> Allocator {
     a: Allocator;
     a.proc = flat_pool_allocator_proc;
@@ -331,7 +359,6 @@ stdout: String_Builder;
 stderr: String_Builder;
 output_mutex: Mutex;
 
-
 Build_Panel_Position :: enum { left; right; }
 
 Command_Result :: struct {
@@ -339,6 +366,8 @@ Command_Result :: struct {
     timeout_reached: bool;
     process_result:  Process_Result;
 }
+
+MAX_BUILD_OUTPUT_BUFFER_SIZE :: 6 * 1024 * 1024;
 
 
 #scope_file
@@ -365,6 +394,7 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
 
         if num_output_bytes {
             write_output_from_build_thread(*stdout, to_string(output_buffer.data, num_output_bytes));
+            platform_wake_up_main_thread();
         }
 
         if num_error_bytes {
