@@ -2240,9 +2240,12 @@ get_line_starts_for_lines_with_cursors_tmp :: (editor: *Editor, buffer: *Buffer)
     last_added := -1;
     last_line_end_offset := 0;
     for cursor : editor.cursors {
+        coords := get_cursor_coords(editor, buffer, cursor);
         selection := get_selection(cursor);
         start_line := offset_to_real_line(buffer, selection.start);
         end_line   := ifx selection.start != selection.end then offset_to_real_line(buffer, selection.end) else start_line;
+        if coords.pos.line > coords.sel.line && !coords.pos.col end_line = max(start_line, end_line - 1);
+        if coords.pos.line < coords.sel.line && !coords.sel.col end_line = max(start_line, end_line - 1);
         for start_line..end_line {
             line_start := get_real_line_start_offset(buffer, it);
             if last_added < line_start { array_add(*line_starts, line_start); last_added = line_start; }
