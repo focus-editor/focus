@@ -123,12 +123,14 @@ x11_wait_for_events :: (display: *Display) {
 
         if needs_flush X11.XFlush(x11_display.handle);
 
-        pfd: [2]pollfd;
+        pfd: [3]pollfd;
         pfd[0].fd = x11_display.file_descriptor;
         pfd[0].events = POLLIN;
         pfd[1].fd = timers_epfd;
         pfd[1].events = POLLIN;
-        result := poll(pfd.data, 2, -1);
+        pfd[2].fd = display.base.loop_wakeup_event;
+        pfd[2].events = POLLIN;
+        result := poll(pfd.data, xx pfd.count, -1);
 
         if result < 0 {
             error := errno();
@@ -148,6 +150,11 @@ x11_wait_for_events :: (display: *Display) {
                 log_error("Unknown error happened while waiting on X11 file descriptor. Error code: %\n", error);
             }
             return;
+        }
+
+        if pfd[2].revents & POLLIN {
+            consume_loop_wakeup_event(display);
+            break;
         }
 
         if pfd[1].revents & POLLIN {

@@ -49,6 +49,10 @@ update_window_events :: inline () {
     update_window_events(global_display);
 }
 
+wake_up_event_loop :: () {
+    wake_up_event_loop(global_display);
+}
+
 clipboard_get_text :: inline () -> string {
     return clipboard_get_text(global_display);
 }

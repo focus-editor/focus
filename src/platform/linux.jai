@@ -163,7 +163,7 @@ platform_wait_message :: inline () {
 }
 
 platform_wake_up_main_thread :: () {
-    // TODO
+    LD.wake_up_event_loop();
 }
 
 platform_set_refresh_timer :: (window: Window_Type) {
