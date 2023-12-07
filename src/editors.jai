@@ -3264,7 +3264,7 @@ word_complete_search :: () {
     start_subword := get_range_as_string(buffer, Offset_Range.{left, right});
     if start_subword.count == 0 then return;
     
-    buffer_str := to_string(buffer.bytes);
+    buffer_str := cast(string)buffer.bytes;
 
     add_new_result_or_update_delta :: inline (new_result: string, delta: s64) {
         if word_complete.search_for_subwords {
