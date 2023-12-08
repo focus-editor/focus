@@ -150,16 +150,21 @@ open :: (path: string, reveal_in_explorer := false) -> bool {
 }
 
 reap_child_processes :: () {
-    reaped := 0;
+    empty := 0;
     for * unreaped_children {
-        if !it.pid continue;
+        if !it.pid {
+            empty += 1;
+            continue;
+        }
         if waitpid(it.pid, null, WNOHANG) == it.pid {
             log("XDG: Reaped child process %", it.pid);
             it.pid = 0;
-            reaped += 1;
+            empty += 1;
         }
     }
-    if unreaped_children.count && !reaped array_reset_keeping_memory(*unreaped_children);
+    if unreaped_children.count && unreaped_children.count == empty {
+        array_reset_keeping_memory(*unreaped_children);
+    }
 }
 
 #scope_module
