@@ -51,9 +51,9 @@ execute_build_command :: (command: *Build_Command) {
     log("Executing build command [%]\n", command.name);
 
     // Add an empty line between commands
-    if last_build_result.finished || last_run_result.finished then print_to_output_panel_from_main_thread("\n");
-    last_build_result = .{};
-    last_run_result   = .{};
+    if last_command_result.finished then print_to_output_panel_from_main_thread("\n");
+
+    last_command_result = .{};
 
     print_to_output_panel_from_main_thread(tprint("%\n", command.name), mark_as = .header);
 
@@ -107,16 +107,18 @@ build_system_update :: () {
 
         log("Build command [%] finished\n", running_command.name);
 
-        assert(last_build_result.finished);
+        assert(last_command_result.finished);
 
         message: string;
         kind: Buffer_Region.Kind = .none;
 
-        if last_build_result.timeout_reached {
+        result := ifx last_command_result.run.finished then last_command_result.run else last_command_result.build;
+
+        if result.timeout_reached {
             message = tprint("TIMED OUT after % seconds", running_command.timeout_in_seconds);
             kind = .warning;
         } else {
-            if #complete last_build_result.process_result.type == {
+            if #complete result.process_result.type == {
                 case .UNSTARTED; #through;
                 case .FAILED_TO_LAUNCH;
                     message = tprint("ERROR: couldn't launch '%'", running_command.build_command);
@@ -125,10 +127,10 @@ build_system_update :: () {
                     message = "ERROR: the command is still running. This is a bug.";
                     kind = .error;
                 case .SIGNALED;
-                    message = tprint("ERROR: the process signaled %", last_build_result.process_result.signal);
+                    message = tprint("ERROR: the process signaled %", result.process_result.signal);
                     kind = .error;
                 case .EXITED;
-                    exit_code := last_build_result.process_result.exit_code;
+                    exit_code := result.process_result.exit_code;
                     if exit_code != 0 {
                         message = tprint("ERROR: exit code %", exit_code);
                         kind = .error;
@@ -271,20 +273,39 @@ build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thre
     allocator := get_pool_allocator();
     push_allocator(allocator);
 
-    result, timeout_reached := run_command_while_monitoring_output(
-        ..break_command_into_strings(command.build_command),
-        working_directory = command.build_working_dir,
-        timeout_ms = command.timeout_in_seconds * 1000,
-    );
+    defer {
+        // Writing to a global var here and below but it's OK because it won't be accessed until the thread is done
+        last_command_result.finished = true;
+        platform_wake_up_main_thread();
+    }
 
-    // Writing to a global var but it's OK because it won't be accessed until the thread is done
-    last_build_result = .{
-        finished = true,
-        timeout_reached = timeout_reached,
-        process_result  = result,
-    };
+    if command.build_command {
+        write_output_from_build_thread(*stdout, tprint("> %\n", command.build_command));
 
-    platform_wake_up_main_thread();
+        result, timeout_reached := run_command_while_monitoring_output(
+            ..break_command_into_strings(command.build_command),
+            working_directory = command.build_working_dir,
+            timeout_ms = command.timeout_in_seconds * 1000,
+        );
+
+        last_command_result.build = .{ finished = true, timeout_reached = timeout_reached, process_result = result };
+
+        // Don't run the run command if failed
+        if result.type != .EXITED || result.exit_code != 0 return .CONTINUE;
+    }
+
+    if command.run_command {
+        // Run if the build command has succeeded or doesn't exist
+        if command.build_command then write_output_from_build_thread(*stdout, "\n");
+        write_output_from_build_thread(*stdout, tprint("> %\n", command.run_command));
+
+        result, timeout_reached := run_command_while_monitoring_output(
+            ..break_command_into_strings(command.run_command),
+            working_directory = command.run_working_dir,
+            timeout_ms = command.timeout_in_seconds * 1000,
+        );
+        last_command_result.run = .{ finished = true, timeout_reached = timeout_reached, process_result = result };
+    }
 
     return .CONTINUE;
 }
@@ -346,8 +367,11 @@ build_panel_is_expanded := false;
 
 running_command: *Build_Command = null;
 
-last_build_result: Command_Result;
-last_run_result:   Command_Result;
+last_command_result: struct {
+    build: Command_Result;
+    run:   Command_Result;
+    finished := false;
+};
 
 memory_pool: Flat_Pool;
 
