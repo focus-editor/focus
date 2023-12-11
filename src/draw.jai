@@ -322,7 +322,7 @@ draw_build_panel :: () {
 
     // Draw title bar
     {
-        started_dragging := maybe_set_hot_or_active(.build_panel_title_bar, title_bar_rect, .NORMAL);
+        started_dragging := maybe_set_hot_or_active(.build_panel_title_bar, title_bar_rect, .NORMAL, .left);
         if started_dragging {
             if build_panel_get_position() == .left {
                 build_panel_grab_point = mouse.pointer - top_right(title_bar_rect);
@@ -331,6 +331,7 @@ draw_build_panel :: () {
             }
         }
         if ui.active == .build_panel_title_bar then set_pointer_image(.DRAGGING_FREE);
+        if ui.hot_last_frame == .build_panel_title_bar && ui.active == .none && mouse.middle.just_pressed then hide_build_panel();
 
         push_scissor(title_bar_rect);
         defer pop_scissor();
@@ -3432,12 +3433,16 @@ is_child :: (ui_id: Ui_Id, parent_id: Ui_Id) -> bool {
     return parent_min <= num && num <= parent_max;
 }
 
-maybe_set_hot_or_active :: (ui_id: Ui_Id, rect: Rect, pointer_image: Pointer_Image) -> became_active: bool {
+maybe_set_hot_or_active :: (ui_id: Ui_Id, rect: Rect, pointer_image: Pointer_Image, mouse_buttons: enum_flags { left; middle; right; } = .left|.middle|.right) -> became_active: bool {
     if !is_valid(rect) || !mouse_pointer_is_within(rect) return false;
+
+    just_clicked := (mouse_buttons & .left   && mouse.left.just_pressed)  ||
+                    (mouse_buttons & .right  && mouse.right.just_pressed) ||
+                    (mouse_buttons & .middle && mouse.middle.just_pressed);
 
     ui.hot = ui_id;
     if ui.hot_last_frame == ui_id && ui.active == .none || ui.active == ui_id then set_pointer_image(pointer_image);
-    if ui.hot_last_frame == ui_id && ui.active == .none && (mouse.left.just_pressed || mouse.middle.just_pressed) {
+    if ui.hot_last_frame == ui_id && ui.active == .none && just_clicked {
         ui.active = ui_id;
         return true;
     }
