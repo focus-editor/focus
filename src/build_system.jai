@@ -35,10 +35,20 @@ execute_build_command :: (command: *Build_Command) {
     {
         using command;
         if build_working_dir {
+            if contains(build_working_dir, "\\") {
+                build_working_dir = copy_string(build_working_dir);  // @leak
+                path_overwrite_separators(build_working_dir, #char "/");
+                build_working_dir = trim_right(build_working_dir, "/");
+            }
             is_dir, success := is_directory(build_working_dir);
             if !is_dir || !success then add_user_warning("Build directory '%' doesn't seem to be a valid directory", build_working_dir);
         }
         if run_working_dir {
+            if contains(run_working_dir, "\\") {
+                run_working_dir = copy_string(run_working_dir);  // @leak
+                path_overwrite_separators(run_working_dir, #char "/");
+                run_working_dir = trim_right(run_working_dir, "/");
+            }
             is_dir, success := is_directory(run_working_dir);
             if !is_dir || !success then add_user_warning("Run directory '%' doesn't seem to be a valid directory", run_working_dir);
         }
@@ -113,6 +123,7 @@ build_system_update :: () {
         kind: Buffer_Region.Kind = .none;
 
         result := ifx last_command_result.run.finished then last_command_result.run else last_command_result.build;
+        failed_command := ifx last_command_result.run.finished then running_command.run_command else running_command.build_command;
 
         if result.timeout_reached {
             message = tprint("TIMED OUT after % seconds", running_command.timeout_in_seconds);
@@ -121,7 +132,8 @@ build_system_update :: () {
             if #complete result.process_result.type == {
                 case .UNSTARTED; #through;
                 case .FAILED_TO_LAUNCH;
-                    message = tprint("ERROR: couldn't launch '%'", running_command.build_command);
+                    message = tprint("ERROR: couldn't launch '%'", failed_command);
+                    if !is_absolute_path(failed_command) then message = tprint("%. Try specifying a full path to the executable.", message);
                     kind = .error;
                 case .STILL_RUNNING;
                     message = "ERROR: the command is still running. This is a bug.";
@@ -400,8 +412,16 @@ MAX_BUILD_OUTPUT_BUFFER_SIZE :: 6 * 1024 * 1024;
 
 run_command_while_monitoring_output :: (args: .. string, working_directory := "", timeout_ms := -1, arg_quoting := Process_Argument_Quoting.QUOTE_IF_NEEDED) -> (process_result: Process_Result, timeout_reached := false) {
     process: Process;
+
     launched := create_process(*process, .. args, working_directory, capture_and_return_output = true, arg_quoting = arg_quoting);
-    if !launched return .{type = .FAILED_TO_LAUNCH};
+    if !launched {
+        executable := args[0];
+        if is_absolute_path(executable) return .{type = .FAILED_TO_LAUNCH};
+        // Retry with an absolute path if possible
+        args[0] = tprint("%/%", working_directory, executable);
+        launched := create_process(*process, .. args, working_directory, capture_and_return_output = true, arg_quoting = arg_quoting);
+        if !launched return .{type = .FAILED_TO_LAUNCH};
+    }
     defer deinit(*process);
 
     timeout_reached := false;
