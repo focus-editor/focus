@@ -1086,6 +1086,7 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
             case "cs";             buffer.lang = .CSharp;
             case "focus-config";   buffer.lang = .Focus_Config;
             case "go";             buffer.lang = .Golang;
+            case "lua";            buffer.lang = .Lua;
             case "odin";           buffer.lang = .Odin;
             case "py";             buffer.lang = .Python;
             case "rpy";            buffer.lang = .RenPy;
@@ -2894,6 +2895,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
         case .Golang;       comment = "//";
         case .Glsl;         comment = "//";
         case .Jai;          comment = "//";
+        case .Lua;          comment = "--";
         case .Odin;         comment = "//";
         case .Focus_Config; comment = "#";
         case .Python;       comment = "#";
@@ -3064,6 +3066,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
         case .Glsl;         comment_start = "/*"; comment_end = "*/";
         case .Jai;          comment_start = "/*"; comment_end = "*/";
         case .Odin;         comment_start = "/*"; comment_end = "*/";
+        case .Lua;          comment_start = "--[["; comment_end = "]]";
         case .Html;         comment_start = "<!--"; comment_end = "-->";
         case .Xml;          comment_start = "<!--"; comment_end = "-->";
         case .Yang;         comment_start = "/*"; comment_end = "*/";
