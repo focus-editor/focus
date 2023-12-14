@@ -129,37 +129,82 @@ slice_chars :: (str: string, pos1: s32, pos2: s32) -> string {
     return slice(str, offset1, offset2 - offset1);
 }
 
-// @Speed: this is even slower than the standard find_index_from_left
-// NOTE: this function assumes that the substring contains only word chars,
-// otherwise it doesn't make sense to call it
 find_index_from_left_whole_word :: (s: string, substring: string, start_index := 0) -> s64 {
-    if !substring return -1;
+    if substring.count > 4 && (check_feature(context.cpu_info.feature_leaves, .SSE) || check_feature(context.cpu_info.feature_leaves, .AVX)) {
+        needle := substring.data;
+        haystack := s.data;
 
-    for i : start_index .. s.count - substring.count {
-        t := slice(s, i, substring.count);
-        if t == substring {
-            // Check the char on the right
-            right := slice(s, i + substring.count, 4);
-            if right {
-                next_char, success := utf8_next_character(*right);
-                if success == .CONVERSION_OK && is_word_char(next_char) continue;  // not a whole word
-            }
-
-            // Check the char on the left
-            for j : max(i-2, start_index) .. i-1  {
-                // We check the last 2 bytes and try to get a valid utf8 character in 2 attempts.
-                // @limitation: this will not match utf8 sequences longer than 2 bytes, but our current
-                // word chars are maximum 2 bytes long.
-                left := slice(s, j, i - j);
-                char, byte_len, result := character_utf8_to_utf32(left.data, left.count);
-                if result == .CONVERSION_OK && byte_len == left.count && is_word_char(char) continue i;  // not a whole word
-            }
-
-            return i;
+        #asm SSE {
+            lddqu.x prefix: vec, [needle];
+            pxor zeroes: vec, zeroes;
         }
-    }
 
-    return -1;
+        i := start_index;
+        while i < s.count - substring.count {
+            defer i += 8;
+
+            mask: u64;
+
+            #asm SSE {
+                lddqu.x     data: vec, [haystack + i];
+                mpsadbw.x   data, prefix, 0;
+                pcmpeqw.x   data, zeroes;
+                pmovmskb.x  m: gpr, data;
+                and         m, 0x5555;
+                mov         mask, m;
+            }
+
+            while mask != 0 {
+                bitpos: u8;
+                // rightmost bit
+                #asm {
+                    bsf     bitpos, mask;
+                }
+
+                bitpos /= 2;
+
+                if memcmp(haystack + i + bitpos + 4, needle + 4, substring.count - 4) == 0 {
+                    return i + bitpos;
+                }
+
+                // clear leftmost bit
+                #asm {
+                    bsr bitpos, mask;
+                    btr mask, bitpos;
+                }
+            }
+        }
+
+        return -1;
+    } else {
+        if !substring return -1;
+
+        for i : start_index .. s.count - substring.count {
+            t := slice(s, i, substring.count);
+            if t == substring {
+                // Check the char on the right
+                right := slice(s, i + substring.count, 4);
+                if right {
+                    next_char, success := utf8_next_character(*right);
+                    if success == .CONVERSION_OK && is_word_char(next_char) continue;  // not a whole word
+                }
+
+                // Check the char on the left
+                for j : max(i-2, start_index) .. i-1  {
+                    // We check the last 2 bytes and try to get a valid utf8 character in 2 attempts.
+                    // @limitation: this will not match utf8 sequences longer than 2 bytes, but our current
+                    // word chars are maximum 2 bytes long.
+                    left := slice(s, j, i - j);
+                    char, byte_len, result := character_utf8_to_utf32(left.data, left.count);
+                    if result == .CONVERSION_OK && byte_len == left.count && is_word_char(char) continue i;  // not a whole word
+                }
+
+                return i;
+            }
+        }
+
+        return -1;
+    }
 }
 
 fuzzy_match :: (str: string, chars: [] string) -> score: s32, highlights: [] bool {
