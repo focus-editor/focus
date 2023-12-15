@@ -130,7 +130,7 @@ slice_chars :: (str: string, pos1: s32, pos2: s32) -> string {
 }
 
 find_index_from_left_whole_word :: (s: string, substring: string, start_index := 0) -> s64 {
-    if substring.count > 4 && (check_feature(context.cpu_info.feature_leaves, .SSE) || check_feature(context.cpu_info.feature_leaves, .AVX)) {
+    if substring.count > 4 && (check_feature(cpu_info.feature_leaves, .SSE) || check_feature(cpu_info.feature_leaves, .AVX)) {
         needle := substring.data;
         haystack := s.data;
 

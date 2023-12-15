@@ -9,10 +9,10 @@ main :: () {
     }
     focus_allocator = context.allocator;  // to be used as a default allocator where we need it
 
-    context.cpu_info = get_cpu_info();
+    cpu_info = get_cpu_info();
 
     // Meow hash relies on AES instruction support, so fall back to a standard hash function
-    if !check_feature(context.cpu_info.feature_leaves, x86_Feature_Flag.AES) then calculate_hash = fallback_hash;
+    if !check_feature(cpu_info.feature_leaves, x86_Feature_Flag.AES) then calculate_hash = fallback_hash;
 
     platform_setup();
 
