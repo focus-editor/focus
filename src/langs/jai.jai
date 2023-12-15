@@ -419,8 +419,7 @@ parse_caret :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
 }
 
 parse_note :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
-    token.type = .punctuation;
-    token.punctuation = .note;
+    token.type = .note;
 
     t += 1;
     while t < max_t && is_alnum(<< t) t += 1;
@@ -617,6 +616,7 @@ Token :: struct {
         identifier;
         string_literal;
         here_string;
+        note;
         number;
         comment;
         multiline_comment;
@@ -637,6 +637,7 @@ COLOR_MAP :: Code_Color.[
     .DEFAULT,       // identifier
     .STRING,        // string_literal
     .STRING,        // here_string
+    .OPERATION,     // note
     .VALUE,         // number
     .COMMENT,       // comment
     .COMMENT,       // multiline_comment
@@ -652,7 +653,7 @@ COLOR_MAP :: Code_Color.[
 
 PUNCTUATION :: string.[
     "dollar", "semicolon", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket",
-    "period", "comma", "note",
+    "period", "comma",
 ];
 
 OPERATIONS :: string.[
