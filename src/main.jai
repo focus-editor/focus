@@ -848,8 +848,6 @@ _ :: #import "Linux_Display"()(VALIDATE_USAGE = DEBUG);
 #import "Unicode";
 #import "Window_Creation";
 
-#add_context cpu_info: Cpu_X86;
-
 re :: #import "uniform";
 
 // NOTE to future self: remove `.NeverCapture` from `BASE_REGEX_FLAGS` if we ever want to have
