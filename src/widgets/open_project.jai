@@ -49,7 +49,7 @@ open_selected_project :: () {
 
     entry := filtered[selected];
 
-    success := load_project_config(entry.name);
+    success := load_project_config(entry.name, force = true);
     if success {
         should_reload_workspace = true;
         if unsaved_buffers_exist() {
