@@ -41,8 +41,13 @@ tokenize_lua_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
                 if src.keyword == {
                     case .kw_do;        token.type = .open; token.kind  = .brace;
                     case .kw_then;      token.type = .open; token.kind  = .brace;
-
                     case .kw_end;       token.type = .close; token.kind = .brace;
+
+                    case .kw_else;
+                        // Intentionally adding 2 tokens to get a `}{` effect when indenting
+                        token.type = .close; token.kind = .brace;
+                        array_add(*tokens, token);
+                        token.type = .open; token.kind = .brace;
 
                     case;               continue;
                 }
