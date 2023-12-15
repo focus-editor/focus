@@ -131,7 +131,7 @@ refresh_config :: (path: string) {
             add_success_message("Global config changes have been applied", dismiss_in_seconds = 3, tag = .config);
         }
         if project_config.loaded {
-            success, changed, there_were_warnings = load_project_config(current_project_name);
+            success, changed, there_were_warnings = load_project_config(current_project_name, force = true);
             if success && changed && !there_were_warnings {
                 add_success_message("Config changes for project '%' have been applied", current_project_name, dismiss_in_seconds = 3, tag = .config);
             }
