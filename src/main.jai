@@ -618,6 +618,7 @@ redraw_requested        := true;  // set to true to render the first frame
 should_quit             := false;
 force_quit              := false;
 should_reload_workspace := false;
+preserve_visible_editors_after_reload := false;
 
 frame_time: Time;                 // ever-increasing time since start in seconds
 frame_dt:   Time = MAX_FRAME_DT;  // time delta since the last frame
