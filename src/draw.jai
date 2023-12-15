@@ -127,7 +127,7 @@ draw_welcome_screen :: (main_area: Rect) {
         font := font_ui_big;
         version_text := tprint("Version %", VERSION);
         version_width := cast(float) Simp.prepare_text(font, version_text);
-        if version_width / info_area.w > 0.4 {
+        if version_width / info_area.w > 0.8 {
             font = font_ui;
             version_width = cast(float) Simp.prepare_text(font, version_text);
         }
@@ -135,6 +135,18 @@ draw_welcome_screen :: (main_area: Rect) {
             x := (info_area.w - version_width) / 2;
             y := info_area.y + info_area.h - shrink_step - font_ui_line_height;
             Simp.draw_prepared_text(font, xx x, xx y, color = Colors.UI_DIM);
+
+            // Copy version when clicking on it
+            {
+                version_rect := Rect.{ x, y, version_width, font_ui_line_height};
+                version_ui_id := get_ui_id_from_loc();
+                clicked := maybe_set_hot_or_active(version_ui_id, version_rect, .PRESSABLE);
+                if clicked {
+                    os_clipboard_set_text(version_text);
+                    add_success_message("Version copied to clipboard", dismiss_in_seconds = 3);
+                }
+                if is_hovering_over(version_ui_id) then draw_tooltip_bottom_left("Click to copy to clipboard", Vector2.{ mouse.pointer.x, y });
+            }
 
             date_width := Simp.prepare_text(font_ui_medium, RELEASE_DATE);
             x = (info_area.w - date_width) / 2;

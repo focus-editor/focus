@@ -269,17 +269,10 @@ find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) 
 }
 
 match_whole_word :: (s: string, offset: int, count: int) -> bool {
-    before := <<cast(*u8) (s.data + offset - 1);
-    after  := <<cast(*u8) (s.data + offset + count);
-    first  := <<cast(*u8) (s.data + offset);
-    last   := <<cast(*u8) (s.data + offset + count - 1);
+    word_ends_on_the_left  := offset <= 0               || !is_word_char(s[offset - 1])     || !is_word_char(s[offset]);
+    word_ends_on_the_right := offset + count >= s.count || !is_word_char(s[offset + count]) || !is_word_char(s[offset + count - 1]);
 
-    b := (inline is_whitespace_char(before)) || (inline is_separator_char(before)) || offset - 1 < 0;
-    a := (inline is_whitespace_char(after))  || (inline is_separator_char(after))  || offset + count > s.count - 1;
-    f := (inline is_whitespace_char(first))  || (inline is_separator_char(first));
-    l := (inline is_whitespace_char(last))   || (inline is_separator_char(last));
-
-    return (f && l) || (f && !l && a) || (!f && l && b) || (!f && !l && b && a);
+    return word_ends_on_the_left && word_ends_on_the_right;
 }
 
 #add_context underscore_is_part_of_word := true;

@@ -311,6 +311,7 @@ code_string:                            D4BC7DFF
 code_value:                             D699B5FF
 code_highlight:                         D89B75FF
 code_error:                             FF0000FF
+code_warning:                           E4D97DFF
 code_keyword:                           E67D74FF
 
 region_scope_export:                    15212AFF

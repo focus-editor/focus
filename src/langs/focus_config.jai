@@ -33,7 +33,7 @@ Focus_Config_Token :: enum u16 {
 // Must match the order of the types in the token enum
 COLOR_MAP :: Code_Color.[
     .ERROR,          // error
-    .STRING,         // warning
+    .WARNING,        // warning
     .DEFAULT,        // default
     .COMMENT,        // comment
     .OPERATION,      // header

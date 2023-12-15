@@ -226,6 +226,7 @@ map_color_name_to_color_struct :: (config: *Config, color_name: string) -> *Colo
         case "code_value";                              return *config.colors.CODE_VALUE;
         case "code_highlight";                          return *config.colors.CODE_HIGHLIGHT;
         case "code_error";                              return *config.colors.CODE_ERROR;
+        case "code_warning";                            return *config.colors.CODE_WARNING;
         case "code_keyword";                            return *config.colors.CODE_KEYWORD;
 
         case "region_scope_export";                     return *config.colors.REGION_SCOPE_EXPORT;
