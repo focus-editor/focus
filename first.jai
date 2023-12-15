@@ -1,10 +1,14 @@
-VERSION      :: "0.2.0-dev";
+VERSION      :: #run -> string {
+    result, revision := run_command("git", "rev-parse", "--short", "HEAD", capture_and_return_output = true);
+    if revision return sprint("0.2.0-%", trim(revision));
+    return "0.2.0-dev";
+}
 RELEASE_DATE :: #run -> string {
     current_time := to_calendar(current_time_consensus());
     return calendar_to_string(current_time);
 }
 
-#run build();
+#run,stallable build();
 
 build :: () {
     options := get_build_options();
@@ -132,7 +136,6 @@ build :: () {
         run_command("rm", "-r", DMG_DIR);
 
         #import "MacOS_Bundler";
-        #import "Process";
         #import "File";
     }
 }
@@ -140,6 +143,8 @@ build :: () {
 #import "Compiler";
 #import "Basic";
 #import "File";
+#import "Process";
+#import "String";
 
 #if OS == .WINDOWS {
     #import "Ico_File";
