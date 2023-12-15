@@ -140,7 +140,8 @@ find_index_from_left_whole_word :: (s: string, substring: string, start_index :=
         }
 
         i := start_index;
-        while i < s.count - substring.count {
+
+        while outer := i < s.count {
             defer i += 8;
 
             mask: u64;
@@ -154,9 +155,10 @@ find_index_from_left_whole_word :: (s: string, substring: string, start_index :=
                 mov         mask, m;
             }
 
-            while mask != 0 {
+            while inner := mask != 0 { // substring!
                 bitpos: u8;
-                // rightmost bit
+
+                // clear rightmost bit
                 #asm {
                     bsf     bitpos, mask;
                 }
@@ -164,6 +166,18 @@ find_index_from_left_whole_word :: (s: string, substring: string, start_index :=
                 bitpos /= 2;
 
                 if memcmp(haystack + i + bitpos + 4, needle + 4, substring.count - 4) == 0 {
+                    right := slice(s, i + substring.count + bitpos, 4);
+                    if right {
+                        next_char, success := utf8_next_character(*right);
+                        if success == .CONVERSION_OK && is_word_char(next_char) continue outer;  // not a whole word
+                    }
+
+                    for j : max(i-2 + bitpos, start_index) .. i + bitpos-1  {
+                        left := slice(s, j, i - j + bitpos);
+                        char, byte_len, result := character_utf8_to_utf32(left.data, left.count);
+                        if result == .CONVERSION_OK && byte_len == left.count && is_word_char(char) continue outer;  // not a whole word
+                    }
+
                     return i + bitpos;
                 }
 
