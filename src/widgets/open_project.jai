@@ -67,13 +67,14 @@ open_selected_project :: () {
 refresh_entries :: () {
     using open_project_dialog;
 
+    for filtered array_free(it.highlights);
     array_reset_keeping_memory(*filtered);
 
     scroll_to_cursor = .snap;
     scroll_y = 0;
     selected = 0;
 
-    filter_chars := decode_utf8_string_to_temp_char_substrings(cast(string) input.text);
+    filter := construct_fuzzy_filter(cast(string) input.text);
 
     Project_Config :: struct {
         name: string;
@@ -97,7 +98,7 @@ refresh_entries :: () {
     visit_files(projects_dir, recursive = true, *project_configs, visitor, visit_files = true, visit_directories = false);
 
     for project : project_configs {
-        score, highlights := fuzzy_match(project.name, filter_chars);
+        score, highlights := fuzzy_match(project.name, filter);
         if score < 0 continue;
 
         entry := array_add(*filtered);

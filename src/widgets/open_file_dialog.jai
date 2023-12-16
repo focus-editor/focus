@@ -287,7 +287,7 @@ refresh_entries :: (clear_input := true) {
     entries.selected = 0;
     array_reset(*entries.filtered);
 
-    filter_chars := decode_utf8_string_to_temp_char_substrings(cast(string) input.text);
+    filter := construct_fuzzy_filter(cast(string) input.text);
 
     if #complete mode == {
         case .save; #through;
@@ -295,7 +295,7 @@ refresh_entries :: (clear_input := true) {
             if !path_chunks {
                 // Display project dirs and drives
                 for project_dirs {
-                    score, name_highlights := fuzzy_match(it.name, filter_chars);
+                    score, name_highlights := fuzzy_match(it.name, filter);
                     if score < 0 continue;
 
                     entry := array_add(*entries.filtered);
@@ -316,7 +316,7 @@ refresh_entries :: (clear_input := true) {
                 for platform_enumerate_logical_drives() {
                     name := copy_string(it);
 
-                    score, name_highlights := fuzzy_match(name, filter_chars);
+                    score, name_highlights := fuzzy_match(name, filter);
                     if score < 0 continue;
 
                     entry := array_add(*entries.filtered);
@@ -337,7 +337,7 @@ refresh_entries :: (clear_input := true) {
             } else {
                 // Filter current files
                 for current_files {
-                    score, name_highlights := fuzzy_match(it.name, filter_chars);
+                    score, name_highlights := fuzzy_match(it.name, filter);
                     if score < 0 continue;
 
                     entry := array_add(*entries.filtered);
@@ -355,7 +355,6 @@ refresh_entries :: (clear_input := true) {
 
         case .search;
             // @MEMORY SAFETY: if we ever delete buffers from open_buffers and free memory, this will have to copy everything!
-            num_entries := 0;
 
             // This bit will be set when we want to make sure an entry appears on top
             top_priority_bit: u64 = 1 << 62;  // NOT the topmost bit because we'll be converting to s64 later
@@ -368,8 +367,8 @@ refresh_entries :: (clear_input := true) {
                                                                  // still want to see it here
 
                 buffer_name := get_buffer_name(buffer);
-                name_score, name_highlights := fuzzy_match(buffer_name, filter_chars);
-                path_score, path_highlights := fuzzy_match(buffer.file.path, filter_chars);
+                name_score, name_highlights := fuzzy_match(buffer_name,      filter);
+                path_score, path_highlights := fuzzy_match(buffer.file.path, filter);
                 score := 200 * name_score + path_score;  // name score is much more important
                 if score < 0 continue;
 
@@ -391,9 +390,6 @@ refresh_entries :: (clear_input := true) {
 
                 if buffer.modified         then { entry.flags |= .MODIFIED;         entry.sort_key |= top_priority_bit; }
                 if buffer.modified_on_disk then { entry.flags |= .MODIFIED_ON_DISK; entry.sort_key |= top_priority_bit; }
-
-                num_entries += 1;
-                if num_entries >= config.settings.max_entries_in_open_file_dialog break;
             }
     }
 
