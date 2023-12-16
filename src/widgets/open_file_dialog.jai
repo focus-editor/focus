@@ -315,8 +315,8 @@ refresh_entries :: (clear_input := true) {
         entry.name_highlights = name_highlights;
         entry.path_highlights = path_highlights;
         // NOTE: there's space left in the sort key in case we need to add more parameters
-        dir_id_part:     u64 = (cast,trunc(u64) (63 - buffer.file.project_dir_id))  << 55;
-        score_part:      u64 = (cast,trunc(u64) score)                              << 16;
+        score_part:      u64 = (cast,trunc(u64) score)                              << 22;
+        dir_id_part:     u64 = (cast,trunc(u64) (63 - buffer.file.project_dir_id))  << 16;
         times_open_part: u64 = (cast,trunc(u64) buffer.num_times_opened)            <<  0;
         entry.sort_key = dir_id_part | score_part | times_open_part;
 

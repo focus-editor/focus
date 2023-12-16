@@ -1734,7 +1734,7 @@ draw_open_file_dialog :: () {
 
     if #complete mode == {
         case .search;
-            label := ifx finder.initted then " Search files by name" else " Still scanning the workspace. Please wait...";
+            label := ifx finder.initted then " Search files by name" else " Scanning the workspace. Please wait...";
             draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = label);
             if !finder.initted then redraw_requested = true;  // draw the progress bar and update as soon as we're done
 
@@ -2617,7 +2617,7 @@ draw_finder :: () {
     input_rect, files_rect := cut_top(box_rect, input_rect_height);
     input_rect = shrink(input_rect, margin);
     input_id := get_ui_id_from_loc(parent_id = ui_id);
-    label := ifx initted then "Type to search in workspace" else "Still scanning the workspace. Please wait...";
+    label := ifx initted then "Type to search in workspace" else "Scanning the workspace. Please wait...";
     color := ifx !regex_search || (regex_search && regex_is_valid) then Colors.NONE else Colors.UI_ERROR_BRIGHT;
     draw_text_input(*finder.input, input_rect, ui_id = input_id, active = true, label = label, margin_right = input_rect.h * 2, _color = color);
 
