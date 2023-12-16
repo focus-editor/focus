@@ -201,7 +201,7 @@ hide_build_panel :: () {
     if editors.active != editors.left && editors.active != editors.right {
         // If we still have the same editors open when the panel was opened, go back to the previously active one,
         // otherwise default to left.
-        editors.active = ifx previously_active_editor == editors.right then editors.right else editors.left;
+        make_editor_active(ifx previously_active_editor == editors.right then editors.right else editors.left);
     }
     build_panel_is_shown = false;
 }

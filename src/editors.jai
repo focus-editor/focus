@@ -543,7 +543,7 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
     buffer := *open_buffers[buffer_id];
     if buffer.num_times_opened < 255 then buffer.num_times_opened += 1;
 
-    update_window_title(buffer_id);
+    make_editor_active(editors.active);
     maybe_mark_buffer_as_deleted(buffer_id);  // check in case we missed that it's deleted
     session_notify_modified_buffer(buffer_id);
     cursors_start_blinking();
@@ -1275,7 +1275,12 @@ restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor) {
 make_editor_active :: (editor_id: s64) {
     assert(editor_id < open_editors.count, "Trying to activate editor %, but the last available one is %", editor_id, open_editors.count - 1);
     editors.active = editor_id;
-    update_window_title(open_editors[editor_id].buffer_id);
+
+    buffer_id := open_editors[editor_id].buffer_id;
+    update_window_title(buffer_id);
+
+    array_ordered_remove_by_value(*most_recent_buffers, buffer_id);
+    array_insert_at(*most_recent_buffers, buffer_id, 0);
 }
 
 update_window_title :: (buffer_id: s64 = -1) {
@@ -1643,7 +1648,7 @@ switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := fa
     editor := *open_editors[editors.active];
     maybe_mark_buffer_as_deleted(editor.buffer_id);  // check in case we missed that it's deleted
 
-    update_window_title(open_editors[editors.active].buffer_id);
+    make_editor_active(editors.active);
     cursors_start_blinking();
 }
 
@@ -3324,11 +3329,13 @@ Editor_Placement :: enum {
     right;
 }
 
+open_buffers_lock: Mutex;  // must hold while adding a new buffer
+
 open_buffers: Simple_Bucket_Array(Buffer, items_per_bucket = 1024, max_buckets = 1024);  // 8 Kb for pointer array, ~1 million buffers is the maximum
 open_editors: [..] Editor;
 buffers_table: Table(string, s64);  // a map from full buffer path to buffer id (only for the open buffers, obviously)
 
-open_buffers_lock: Mutex;  // must hold while adding a new buffer
+most_recent_buffers: [..] s64;  // updated when an editor is activated, used to switch between open files
 
 editors: Editor_State;
 editor_closing  := false;  // whether the active editor is currently being closed (so that we can change the layout when it's done closing)

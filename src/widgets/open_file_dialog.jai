@@ -396,8 +396,7 @@ refresh_entries :: (clear_input := true) {
             }
 
         case .open_editors;
-            open_buffer_ids := get_buffer_ids_with_open_editors();
-            for buffer_id : open_buffer_ids {
+            for buffer_id : most_recent_buffers {
                 buffer := *open_buffers[buffer_id];
                 maybe_add_a_buffer_entry(buffer, buffer_id);
             }
@@ -409,7 +408,9 @@ refresh_entries :: (clear_input := true) {
         return memcmp(e1.name.data, e2.name.data, min(e1.name.count, e2.name.count));
     }
 
-    quick_sort(entries.filtered, compare_entries);
+    if !(mode == .open_editors && !input.text) {  // don't sort most recent buffers if no filters are used
+        quick_sort(entries.filtered, compare_entries);
+    }
 
     if mode == .save && input.text && path_chunks {
         array_add(*entries.filtered, Entry.{
