@@ -89,9 +89,6 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
 parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
 
-    // mark := get_temporary_storage_mark();
-    // defer   set_temporary_storage_mark(mark);
-
     identifier_str := read_identifier_string(tokenizer);
 
     // Maybe it's a keyword
@@ -305,9 +302,6 @@ parse_preprocessor_directive :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     eat_white_space(tokenizer);  // there may be spaces between the # and the name
     if !is_alpha(<<t) return;
-
-    // mark := get_temporary_storage_mark();
-    // defer   set_temporary_storage_mark(mark);
 
     directive_str := read_identifier_string(tokenizer);
 

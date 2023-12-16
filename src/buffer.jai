@@ -699,8 +699,7 @@ delete_buffer_from_disk :: (using buffer: *Buffer) -> deleted: bool {
 }
 
 strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
-    mark := get_temporary_storage_mark();
-    defer   set_temporary_storage_mark(mark);
+    auto_release_temp();
 
     b: String_Builder;
     b.allocator = temp;

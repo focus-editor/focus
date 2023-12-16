@@ -190,8 +190,7 @@ get_next_token :: (using tokenizer: *Odin_Tokenizer) -> Token {
 parse_identifier :: (using tokenizer: *Odin_Tokenizer, token: *Token) {
     token.type = .identifier;
 
-    mark := get_temporary_storage_mark();
-    defer   set_temporary_storage_mark(mark);
+    auto_release_temp();
 
     identifier_str := read_identifier_string_tmp(tokenizer);
 
@@ -292,8 +291,7 @@ parse_directive :: (using tokenizer: *Odin_Tokenizer, token: *Token) {
     eat_white_space(tokenizer);  // there may be spaces between the # and the name
     if !is_alpha(t.*) then return;
 
-    mark := get_temporary_storage_mark();
-    defer   set_temporary_storage_mark(mark);
+    auto_release_temp();
 
     directive_str := read_identifier_string_tmp(tokenizer);
 

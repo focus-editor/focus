@@ -174,8 +174,7 @@ get_next_token :: (using tokenizer: *Jai_Tokenizer) -> Token {
 parse_identifier :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
     token.type = .identifier;
 
-    mark := get_temporary_storage_mark();
-    defer   set_temporary_storage_mark(mark);
+    auto_release_temp();
 
     identifier_str := read_identifier_string_tmp(tokenizer);
 
@@ -272,8 +271,7 @@ parse_compiler_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
 
     start_offset := cast(s32) (start_t - buf.data);
 
-    mark := get_temporary_storage_mark();
-    defer   set_temporary_storage_mark(mark);
+    auto_release_temp();
 
     directive_str := read_identifier_string_tmp(tokenizer);
 

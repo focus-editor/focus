@@ -86,9 +86,6 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
 parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
 
-    // mark := get_temporary_storage_mark();
-    // defer   set_temporary_storage_mark(mark);
-
     identifier_str := read_identifier_string(tokenizer);
 
     // Maybe it's a keyword
