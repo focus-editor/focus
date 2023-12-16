@@ -342,6 +342,7 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);                     return true;
         case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);                   return true;
         case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true); return true;
+        case .show_open_file_dialog_in_open_editors_mode;       show_open_file_dialog(.open_editors);               return true;
 
         case .show_commands;                                    show_commands_dialog();                             return true;
         case .toggle_fullscreen;                                editor_toggle_fullscreen();                         return true;

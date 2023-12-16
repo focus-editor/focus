@@ -287,6 +287,43 @@ refresh_entries :: (clear_input := true) {
     entries.selected = 0;
     array_reset(*entries.filtered);
 
+    // This bit will be set when we want to make sure an entry appears on top
+    top_priority_bit: u64 = 1 << 62;  // NOT the topmost bit because we'll be converting to s64 later
+
+    maybe_add_a_buffer_entry :: (buffer: Buffer, buffer_id: s64) #expand {
+        // @MEMORY SAFETY: if we ever delete buffers from open_buffers and free memory, this will have to copy everything!
+        if buffer.deleted && !buffer.modified continue;  // NOTE: we might still want to see externally deleted buffers.
+                                                         // Maybe use 'deleted' and 'modified_on_disk' to distingiush the buffers
+                                                         // we haven't deleted ourselves?
+                                                         // Alternatively, if there's an editor for a deleted buffer we probably
+                                                         // still want to see it here
+
+        buffer_name := get_buffer_name(buffer);
+        name_score, name_highlights := fuzzy_match(buffer_name,      filter);
+        path_score, path_highlights := fuzzy_match(buffer.file.path, filter);
+        score := 200 * name_score + path_score;  // name score is much more important
+        if score < 0 continue;
+
+        entry := array_add(*entries.filtered);
+        entry.buffer_id = buffer_id;
+        entry.file = buffer.file;
+        entry.entry_name = buffer_name;
+        if !buffer.has_file {
+            entry.entry_name = copy_string(buffer_name);
+            entry.icon = Icon.text;
+        }
+        entry.name_highlights = name_highlights;
+        entry.path_highlights = path_highlights;
+        // NOTE: there's space left in the sort key in case we need to add more parameters
+        dir_id_part:     u64 = (cast,trunc(u64) (63 - buffer.file.project_dir_id))  << 55;
+        score_part:      u64 = (cast,trunc(u64) score)                              << 16;
+        times_open_part: u64 = (cast,trunc(u64) buffer.num_times_opened)            <<  0;
+        entry.sort_key = dir_id_part | score_part | times_open_part;
+
+        if buffer.modified         then { entry.flags |= .MODIFIED;         entry.sort_key |= top_priority_bit; }
+        if buffer.modified_on_disk then { entry.flags |= .MODIFIED_ON_DISK; entry.sort_key |= top_priority_bit; }
+    }
+
     filter := construct_fuzzy_filter(cast(string) input.text);
 
     if #complete mode == {
@@ -354,42 +391,15 @@ refresh_entries :: (clear_input := true) {
             }
 
         case .search;
-            // @MEMORY SAFETY: if we ever delete buffers from open_buffers and free memory, this will have to copy everything!
-
-            // This bit will be set when we want to make sure an entry appears on top
-            top_priority_bit: u64 = 1 << 62;  // NOT the topmost bit because we'll be converting to s64 later
-
             for buffer, buffer_id : open_buffers {
-                if buffer.deleted && !buffer.modified continue;  // NOTE: we might still want to see externally deleted buffers.
-                                                                 // Maybe use 'deleted' and 'modified_on_disk' to distingiush the buffers
-                                                                 // we haven't deleted ourselves?
-                                                                 // Alternatively, if there's an editor for a deleted buffer we probably
-                                                                 // still want to see it here
+                maybe_add_a_buffer_entry(buffer, buffer_id);
+            }
 
-                buffer_name := get_buffer_name(buffer);
-                name_score, name_highlights := fuzzy_match(buffer_name,      filter);
-                path_score, path_highlights := fuzzy_match(buffer.file.path, filter);
-                score := 200 * name_score + path_score;  // name score is much more important
-                if score < 0 continue;
-
-                entry := array_add(*entries.filtered);
-                entry.buffer_id = buffer_id;
-                entry.file = buffer.file;
-                entry.entry_name = buffer_name;
-                if !buffer.has_file {
-                    entry.entry_name = copy_string(buffer_name);
-                    entry.icon = Icon.text;
-                }
-                entry.name_highlights = name_highlights;
-                entry.path_highlights = path_highlights;
-                // NOTE: there's space left in the sort key in case we need to add more parameters
-                dir_id_part:     u64 = (cast,trunc(u64) (63 - buffer.file.project_dir_id))  << 55;
-                score_part:      u64 = (cast,trunc(u64) score)                              << 16;
-                times_open_part: u64 = (cast,trunc(u64) buffer.num_times_opened)            <<  0;
-                entry.sort_key = dir_id_part | score_part | times_open_part;
-
-                if buffer.modified         then { entry.flags |= .MODIFIED;         entry.sort_key |= top_priority_bit; }
-                if buffer.modified_on_disk then { entry.flags |= .MODIFIED_ON_DISK; entry.sort_key |= top_priority_bit; }
+        case .open_editors;
+            open_buffer_ids := get_buffer_ids_with_open_editors();
+            for buffer_id : open_buffer_ids {
+                buffer := *open_buffers[buffer_id];
+                maybe_add_a_buffer_entry(buffer, buffer_id);
             }
     }
 
@@ -552,6 +562,7 @@ Open_File_Dialog :: struct {
 
     Mode :: enum {
         search;
+        open_editors;
         navigate;
         save;
     }

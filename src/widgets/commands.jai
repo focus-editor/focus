@@ -141,6 +141,7 @@ commands := #run Command.[
     .{ .show_open_file_dialog_in_search_mode,               "Open File By Name",                  0, .None },
     .{ .show_open_file_dialog_in_navigate_mode,             "Navigate To File",                   0, .None },
     .{ .show_open_file_dialog_in_navigate_mode_from_root,   "Navigate To File From Root",         0, .None },
+    .{ .show_open_file_dialog_in_open_editors_mode,         "Switch Between Open Files" ,         0, .None },
 
     .{ .switch_to_project,                                  "Switch To Project",                  0, .None },
     .{ .close_project,                                      "Close Project",                      0, .None },

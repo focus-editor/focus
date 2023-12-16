@@ -27,6 +27,18 @@ refresh_open_buffers :: () {
     }
 }
 
+get_buffer_ids_with_open_editors :: () -> [] s64 /* temp */ {
+    buffer_ids: [..] s64;
+    buffer_ids.allocator = temp;
+    array_reserve(*buffer_ids, open_editors.count);
+
+    for open_editors {
+        array_add_if_unique(*buffer_ids, it.buffer_id);  // aaaa linear search oh no the program is slow now
+    }
+
+    return buffer_ids;
+}
+
 put_cursor_in_valid_spot :: (using cursor: *Cursor, buffer: Buffer) {
     pos = clamp(pos, 0, xx buffer.bytes.count);
     sel = clamp(sel, 0, xx buffer.bytes.count);

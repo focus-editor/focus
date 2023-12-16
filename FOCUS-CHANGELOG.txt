@@ -66,6 +66,7 @@
             + `build_panel_stays_in_one_place`. Defaults to `false`. If disabled, then the panel will flip to the other side of the active pane.
         + (more details will be added later)
     + New code color: `code_warning`. Used to highlight things such as duplicate key binding etc.
+    + New dialog: Switch Between Open Files (defaults to Ctrl-Tab)
 
 + Bug fixes:
     + Mac: Fixed intermittent crashing on launch

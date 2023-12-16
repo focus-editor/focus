@@ -101,7 +101,6 @@ Alt-ArrowDown               move_selected_lines_down
 Ctrl-J                      join_lines
 Ctrl-Shift-J                join_lines_no_spaces_in_between
 
-Ctrl-Tab                    autoindent_region
 Tab                         indent_or_go_to_next_tabstop
 Shift-Tab                   unindent
 
@@ -213,6 +212,7 @@ Ctrl-Shift-F                search_in_project
 Ctrl-P                      show_open_file_dialog_in_search_mode
 Ctrl-O                      show_open_file_dialog_in_navigate_mode
 Ctrl-Shift-O                show_open_file_dialog_in_navigate_mode_from_root
+Ctrl-Tab                    show_open_file_dialog_in_open_editors_mode
 
 Ctrl-G                      go_to_line
 
