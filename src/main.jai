@@ -326,8 +326,8 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .decrease_font_size;                               decrease_font_size();                               return true;
         case .reset_font_size_to_default;                       reset_font_size_to_default();                       return true;
 
-        case .open_project; /* deprecated */                    show_open_project_dialog();                         return true;
-        case .switch_to_project;                                show_open_project_dialog();                         return true;
+        case .open_project; /* deprecated */                    show_dialog(*open_project_dialog);                  return true;
+        case .switch_to_project;                                show_dialog(*open_project_dialog);                  return true;
         case .close_project;                                    close_project();                                    return true;
         case .open_projects_directory;                          platform_open_in_explorer(projects_dir);            return true;
         case .open_global_config;                               editors_open_global_config(placement);              return true;
@@ -344,7 +344,7 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true); return true;
         case .show_open_file_dialog_in_open_editors_mode;       show_open_file_dialog(.open_editors);               return true;
 
-        case .show_commands;                                    show_commands_dialog();                             return true;
+        case .show_commands;                                    show_dialog(*commands_dialog);                      return true;
         case .toggle_fullscreen;                                editor_toggle_fullscreen();                         return true;
 
         case .move_to_previous_editor_history;                  move_to_previous_editor_history();                  return true;
@@ -778,6 +778,7 @@ dont_ignore_next_window_resize := false;
 #load "meow_hash.jai";
 #load "user_messages.jai";
 
+#load "widgets/generic_choice_dialog.jai";
 #load "widgets/text_input.jai";
 #load "widgets/open_file_dialog.jai";
 #load "widgets/delete_file_dialog.jai";

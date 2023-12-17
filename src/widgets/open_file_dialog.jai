@@ -51,7 +51,7 @@ deinit_open_file_dialog :: () {
 
     initted = false;
 
-    pool_allocator := get_pool_allocator();
+    pool_allocator := Allocator.{ proc = flat_pool_allocator_proc, data = *memory_pool };
     push_allocator(pool_allocator);
 
     reset(*memory_pool);
@@ -273,7 +273,7 @@ refresh_entries :: (clear_input := true) {
     // Do it before pushing the pool allocator because the input uses use the global heap
     if clear_input then text_input_fully_clear(*input);
 
-    pool_allocator := get_pool_allocator();
+    pool_allocator := Allocator.{ proc = flat_pool_allocator_proc, data = *memory_pool };
     push_allocator(pool_allocator);
 
     reset(*memory_pool);  // to avoid having to free each string
@@ -514,13 +514,6 @@ toggle_expand :: () {
 
     target_width := ifx width_percentage != WIDTH_EXPANDED then WIDTH_EXPANDED else WIDTH_NORMAL;
     start_animation(*width_anim, width_percentage, target_width);
-}
-
-get_pool_allocator :: () -> Allocator {
-    a: Allocator;
-    a.proc = flat_pool_allocator_proc;
-    a.data = *memory_pool;
-    return a;
 }
 
 memory_pool: Flat_Pool;
