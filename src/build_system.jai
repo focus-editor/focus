@@ -314,7 +314,6 @@ build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thre
         result, timeout_reached := run_command_while_monitoring_output(
             ..break_command_into_strings(command.run_command),
             working_directory = command.run_working_dir,
-            timeout_ms = command.timeout_in_seconds * 1000,
         );
         last_command_result.run = .{ finished = true, timeout_reached = timeout_reached, process_result = result };
     }
