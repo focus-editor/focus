@@ -218,6 +218,8 @@ Escape                      escape  # combines close_dialog and remove_additiona
 
 Cmd-Shift-L                 toggle_expand
 
+Ctrl-B                      toggle_build_panel
+
 F11                         toggle_fullscreen
 
 # {Shift}- means shift is optional, the key combination will still be matched.
