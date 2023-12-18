@@ -13,7 +13,7 @@ open_selected_project :: () {
     success := load_project_config(entry.name, force = true);
     if success {
         should_reload_workspace = true;
-        preserve_visible_editors_after_reload = false;
+        automatic_workspace_reload = false;
         if unsaved_buffers_exist() {
             show_unsaved_buffers_dialog(.reload_workspace);
             should_reload_workspace = false;

@@ -162,7 +162,7 @@ refresh_config :: (path: string) {
 
     if dirs_added || dirs_removed {
         should_reload_workspace = true;
-        preserve_visible_editors_after_reload = true;
+        automatic_workspace_reload = true;
         if unsaved_buffers_exist() {
             show_unsaved_buffers_dialog(.reload_workspace);
             clear_user_messages();
@@ -192,7 +192,7 @@ close_project :: () {
         } else {
             should_reload_workspace = true;
         }
-        preserve_visible_editors_after_reload = false;
+        automatic_workspace_reload = false;
     } else {
         add_user_error("Couldn't close project because the global config failed to load", dismiss_in_seconds = 10);
     }
