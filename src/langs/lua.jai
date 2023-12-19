@@ -8,11 +8,11 @@ highlight_lua_syntax :: (using buffer: *Buffer) {
 
         prev := tokenizer.last_token;
         if (token.type == .punctuation && token.punctuation == .l_paren) && prev.type == .identifier {
-            memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
+            memset(colors.data + prev.start, xx Color.CODE_FUNCTION, prev.len);
         }
 
         if token.type == .identifier && (prev.type == .keyword && prev.keyword == .kw_function) {
-            memset(colors.data + token.start, xx Code_Color.FUNCTION, token.len);
+            memset(colors.data + token.start, xx Color.CODE_FUNCTION, token.len);
         }
         else {
             color := COLOR_MAP[token.type];
@@ -439,19 +439,19 @@ Token :: struct {
 }
 
 // Must match the order of the types in the enum
-COLOR_MAP :: Code_Color.[
-    .COMMENT,       // eof - obviously not used
-    .DEFAULT,       // identifier
-    .STRING,        // string_literal
-    .STRING,        // long_string_literal
-    .VALUE,         // number
-    .COMMENT,       // comment
-    .COMMENT,       // multiline_comment
-    .OPERATION,     // operation
-    .PUNCTUATION,   // punctuation
-    .KEYWORD,       // keyword
-    .VALUE_KEYWORD, // value_keyword
-    .ERROR,         // invalid
+COLOR_MAP :: Color.[
+    .CODE_COMMENT,       // eof - obviously not used
+    .CODE_DEFAULT,       // identifier
+    .CODE_STRING,        // string_literal
+    .CODE_STRING,        // long_string_literal
+    .CODE_VALUE,         // number
+    .CODE_COMMENT,       // comment
+    .CODE_COMMENT,       // multiline_comment
+    .CODE_OPERATION,     // operation
+    .CODE_PUNCTUATION,   // punctuation
+    .CODE_KEYWORD,       // keyword
+    .CODE_VALUE,         // value_keyword
+    .CODE_ERROR,         // invalid
 ];
 
 KEYWORDS :: string.[

@@ -13,16 +13,16 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
             before_prev, prev := tokenizer.last_tokens[0], tokenizer.last_tokens[1];
             if prev.type == .identifier {
                 // Handle "func("
-                memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
+                memset(colors.data + prev.start, xx Color.CODE_FUNCTION, prev.len);
             } else if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
                 // Handle "func :: ("
-                memset(colors.data + before_prev.start, xx Code_Color.FUNCTION, before_prev.len);
+                memset(colors.data + before_prev.start, xx Color.CODE_FUNCTION, before_prev.len);
             }
         } else if token.type == .keyword && token.keyword == .kw_inline {
             // Handle "func :: inline"
             before_prev, prev := tokenizer.last_tokens[0], tokenizer.last_tokens[1];
             if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
-                memset(colors.data + before_prev.start, xx Code_Color.FUNCTION, before_prev.len);
+                memset(colors.data + before_prev.start, xx Color.CODE_FUNCTION, before_prev.len);
             }
         }
 
@@ -649,24 +649,24 @@ Token :: struct {
 }
 
 // Must match the order of the types in the enum
-COLOR_MAP :: Code_Color.[
-    .COMMENT,       // eof - obviously not used
-    .DEFAULT,       // identifier
-    .STRING,        // string_literal
-    .STRING,        // here_string
-    .OPERATION,     // note
-    .VALUE,         // number
-    .COMMENT,       // comment
-    .COMMENT,       // multiline_comment
-    .OPERATION,     // operation
-    .PUNCTUATION,   // punctuation
-    .KEYWORD,       // keyword
-    .KEYWORD,       // modifier_keyword
-    .TYPE,          // type_keyword
-    .VALUE_KEYWORD, // value_keyword
-    .KEYWORD,       // compiler_directive
-    .KEYWORD,       // modifier
-    .ERROR,         // invalid
+COLOR_MAP :: Color.[
+    .CODE_COMMENT,       // eof - obviously not used
+    .CODE_DEFAULT,       // identifier
+    .CODE_STRING,        // string_literal
+    .CODE_STRING,        // here_string
+    .CODE_OPERATION,     // note
+    .CODE_VALUE,         // number
+    .CODE_COMMENT,       // comment
+    .CODE_COMMENT,       // multiline_comment
+    .CODE_OPERATION,     // operation
+    .CODE_PUNCTUATION,   // punctuation
+    .CODE_KEYWORD,       // keyword
+    .CODE_KEYWORD,       // modifier_keyword
+    .CODE_TYPE,          // type_keyword
+    .CODE_VALUE,         // value_keyword
+    .CODE_KEYWORD,       // compiler_directive
+    .CODE_KEYWORD,       // modifier
+    .CODE_ERROR,         // invalid
 ];
 
 PUNCTUATION :: string.[

@@ -31,19 +31,19 @@ Focus_Config_Token :: enum u16 {
 #scope_file
 
 // Must match the order of the types in the token enum
-COLOR_MAP :: Code_Color.[
-    .ERROR,          // error
-    .WARNING,        // warning
-    .DEFAULT,        // default
-    .COMMENT,        // comment
-    .OPERATION,      // header
-    .KEYWORD,        // header_top_level
+COLOR_MAP :: Color.[
+    .CODE_ERROR,          // error
+    .CODE_WARNING,        // warning
+    .CODE_DEFAULT,        // default
+    .CODE_COMMENT,        // comment
+    .CODE_OPERATION,      // header
+    .CODE_KEYWORD,        // header_top_level
 
-    .VALUE_KEYWORD,  // modifier_key
-    .DEFAULT,        // key_string
-    .DEFAULT,        // action
+    .CODE_VALUE,          // modifier_key
+    .CODE_DEFAULT,        // key_string
+    .CODE_DEFAULT,        // action
 
-    .VALUE_KEYWORD,  // value
+    .CODE_VALUE,          // value
 ];
 
 #run assert(enum_highest_value(Focus_Config_Token) == COLOR_MAP.count - 1);

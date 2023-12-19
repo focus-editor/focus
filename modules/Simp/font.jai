@@ -149,7 +149,7 @@ convert_to_temporary_glyphs :: (font: *Dynamic_Font, s: string) -> width_in_pixe
     return width_in_pixels;
 }
 
-draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_x_advance: float, line_height: float, visible_lines: [] Code_Line, color_map: [] Vector4, selections: [] Offset_Range = .[], tab_size: s64 = 4, start_col := 0, $is_colored := true) {
+draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_x_advance: float, line_height: float, visible_lines: [] Code_Line, selections: [] Offset_Range = .[], tab_size: s64 = 4, start_col := 0, $is_colored := true) {
     // Setup OpenGL stuff. We do it all in one place because it's easier and there will be only one backend - GL.
     // Otherwise we would have to create temporary glyphs and pass them on to the backend draw function.
     CheckInit();
@@ -233,9 +233,9 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_x_advance: float, line_h
                 quad.v1 = (cast(float) glyph.y0 + glyph.height) / texture.height;
 
                 #if is_colored {
-                    color := color_map[colors[t - line.data]];
+                    color := COLOR_MAP[colors[t - line.data]];
                 } else {
-                    color := color_map[0];  // default
+                    color := COLOR_MAP[0];  // default
                 }
                 if utf32 != #char "\t" {
                     sx  += char_x_advance;
@@ -245,7 +245,7 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_x_advance: float, line_h
                     chars_to_tabstop := tab_size - col % tab_size;
                     sx  += chars_to_tabstop * char_x_advance;
                     col += chars_to_tabstop;
-                    color = color_map[0];  // always use default color
+                    color = COLOR_MAP[0];  // always use default color
 
                     // Only draw tabs if they are within a selection
                     if character_is_selected(start_offset + cast(s32)(t - line.data), selections) {
@@ -270,7 +270,7 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_x_advance: float, line_h
 
 // @Copypasta: some GL copypasta present
 // We represent highlights as an array of bools, which is wasteful but we don't care
-draw_text_with_highlights :: (font: *Dynamic_Font, x: s64, y: s64, text: string, highlights: [] bool, color: Vector4, highlight_color: Vector4) -> width: s64 {
+draw_text_with_highlights :: (font: *Dynamic_Font, x: s64, y: s64, text: string, highlights: [] bool, color: u8, highlight_color: u8) -> width: s64 {
     if !text return 0;
 
     assert(text.count == highlights.count, "In Simp.draw_text_with_highlights, the text length doesn't match the highlight length");
@@ -288,6 +288,9 @@ draw_text_with_highlights :: (font: *Dynamic_Font, x: s64, y: s64, text: string,
     width_in_pixels := 0;
 
     last_texture: GLuint = 0xFFFFFFFF;
+
+    color_vec4           := COLOR_MAP[color];
+    highlight_color_vec4 := COLOR_MAP[highlight_color];
 
     sx := cast(float) x;
     sy := cast(float) y;
@@ -356,7 +359,7 @@ draw_text_with_highlights :: (font: *Dynamic_Font, x: s64, y: s64, text: string,
             quad.v0 = glyph.y0 / cast(float) texture.height;
             quad.v1 = (cast(float) glyph.y0 + glyph.height) / texture.height;
 
-            immediate_letter_quad(quad, ifx highlights[t - text.data] then highlight_color else color);
+            immediate_letter_quad(quad, ifx highlights[t - text.data] then highlight_color_vec4 else color_vec4);
         }
 
         t = unicode_next_character(t);

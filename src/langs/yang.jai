@@ -170,17 +170,17 @@ Token :: struct {
 }
 
 // Must match the order of the types in the enum
-COLOR_MAP :: Code_Color.[
-    .COMMENT,       // eof - obviously not used
-    .DEFAULT,       // identifier
-    .STRING,        // string_literal
-    .STRING,        // multiline_string
-    .VALUE,         // number
-    .COMMENT,       // comment
-    .PUNCTUATION,   // punctuation
-    .KEYWORD,       // keyword
-    .DEFAULT,       // type_keyword
-    .DEFAULT        // invalid / anything else
+COLOR_MAP :: Color.[
+    .CODE_COMMENT,       // eof - obviously not used
+    .CODE_DEFAULT,       // identifier
+    .CODE_STRING,        // string_literal
+    .CODE_STRING,        // multiline_string
+    .CODE_VALUE,         // number
+    .CODE_COMMENT,       // comment
+    .CODE_PUNCTUATION,   // punctuation
+    .CODE_KEYWORD,       // keyword
+    .CODE_DEFAULT,       // type_keyword
+    .CODE_DEFAULT        // invalid / anything else
 ];
 
 // https://datatracker.ietf.org/doc/html/rfc7950

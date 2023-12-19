@@ -180,71 +180,72 @@ keymap_map_key_code_to_string :: (key_code: u32) -> string /* temp */ {
     return "??";
 }
 
-map_color_name_to_color_struct :: (config: *Config, color_name: string) -> *Color {
-    if color_name == {
-        case "background";                              return *config.colors.BACKGROUND;
-        case "background_dark";                         return *config.colors.BACKGROUND_DARK;
-        case "background_highlight";                    return *config.colors.BACKGROUND_HIGHLIGHT;
-        case "background_light";                        return *config.colors.BACKGROUND_LIGHT;
-        case "background_bright";                       return *config.colors.BACKGROUND_BRIGHT;
-        case "selection_active";                        return *config.colors.SELECTION_ACTIVE;
-        case "selection_inactive";                      return *config.colors.SELECTION_INACTIVE;
-        case "selection_highlight";                     return *config.colors.SELECTION_HIGHLIGHT;
-        case "search_result_active";                    return *config.colors.SEARCH_RESULT_ACTIVE;
-        case "search_result_inactive";                  return *config.colors.SEARCH_RESULT_INACTIVE;
-        case "scrollbar";                               return *config.colors.SCROLLBAR;
-        case "scrollbar_hover";                         return *config.colors.SCROLLBAR_HOVER;
-        case "scrollbar_background";                    return *config.colors.SCROLLBAR_BACKGROUND;
-        case "cursor";                                  return *config.colors.CURSOR;
-        case "cursor_inactive";                         return *config.colors.CURSOR_INACTIVE;
-        case "paste_animation";                         return *config.colors.PASTE_ANIMATION;
-        case "splitter";                                return *config.colors.SPLITTER;
-        case "splitter_hover";                          return *config.colors.SPLITTER_HOVER;
-        case "letter_highlight";                        return *config.colors.LETTER_HIGHLIGHT;
-        case "list_cursor_lite";                        return *config.colors.LIST_CURSOR_LITE;
-        case "list_cursor";                             return *config.colors.LIST_CURSOR;
-        case "shadow_dark";                             return *config.colors.SHADOW_DARK;
-        case "shadow_transparent";                      return *config.colors.SHADOW_TRANSPARENT;
-        case "text_input_label";                        return *config.colors.TEXT_INPUT_LABEL;
+map_name_to_color :: (name: string) -> Color {
+    if name == {
+        case "background";                              return .BACKGROUND;
+        case "background_dark";                         return .BACKGROUND_DARK;
+        case "background_highlight";                    return .BACKGROUND_HIGHLIGHT;
+        case "background_light";                        return .BACKGROUND_LIGHT;
+        case "background_bright";                       return .BACKGROUND_BRIGHT;
+        case "selection_active";                        return .SELECTION_ACTIVE;
+        case "selection_inactive";                      return .SELECTION_INACTIVE;
+        case "selection_highlight";                     return .SELECTION_HIGHLIGHT;
+        case "search_result_active";                    return .SEARCH_RESULT_ACTIVE;
+        case "search_result_inactive";                  return .SEARCH_RESULT_INACTIVE;
+        case "scrollbar";                               return .SCROLLBAR;
+        case "scrollbar_hover";                         return .SCROLLBAR_HOVER;
+        case "scrollbar_background";                    return .SCROLLBAR_BACKGROUND;
+        case "cursor";                                  return .CURSOR;
+        case "cursor_inactive";                         return .CURSOR_INACTIVE;
+        case "paste_animation";                         return .PASTE_ANIMATION;
+        case "splitter";                                return .SPLITTER;
+        case "splitter_hover";                          return .SPLITTER_HOVER;
+        case "letter_highlight";                        return .LETTER_HIGHLIGHT;
+        case "list_cursor_lite";                        return .LIST_CURSOR_LITE;
+        case "list_cursor";                             return .LIST_CURSOR;
+        case "shadow_dark";                             return .SHADOW_DARK;
+        case "shadow_transparent";                      return .SHADOW_TRANSPARENT;
+        case "text_input_label";                        return .TEXT_INPUT_LABEL;
+        case "char_under_cursor";                       return .CHAR_UNDER_CURSOR;
 
-        case "ui_default";                              return *config.colors.UI_DEFAULT;
-        case "ui_dim";                                  return *config.colors.UI_DIM;
-        case "ui_neutral";                              return *config.colors.UI_NEUTRAL;
-        case "ui_warning";                              return *config.colors.UI_WARNING;
-        case "ui_warning_dim";                          return *config.colors.UI_WARNING_DIM;
-        case "ui_error";                                return *config.colors.UI_ERROR;
-        case "ui_error_bright";                         return *config.colors.UI_ERROR_BRIGHT;
-        case "ui_success";                              return *config.colors.UI_SUCCESS;
+        case "ui_default";                              return .UI_DEFAULT;
+        case "ui_dim";                                  return .UI_DIM;
+        case "ui_neutral";                              return .UI_NEUTRAL;
+        case "ui_warning";                              return .UI_WARNING;
+        case "ui_warning_dim";                          return .UI_WARNING_DIM;
+        case "ui_error";                                return .UI_ERROR;
+        case "ui_error_bright";                         return .UI_ERROR_BRIGHT;
+        case "ui_success";                              return .UI_SUCCESS;
 
-        case "code_default";                            return *config.colors.CODE_DEFAULT;
-        case "code_comment";                            return *config.colors.CODE_COMMENT;
-        case "code_type";                               return *config.colors.CODE_TYPE;
-        case "code_function";                           return *config.colors.CODE_FUNCTION;
-        case "code_punctuation";                        return *config.colors.CODE_PUNCTUATION;
-        case "code_operation";                          return *config.colors.CODE_OPERATION;
-        case "code_string";                             return *config.colors.CODE_STRING;
-        case "code_value";                              return *config.colors.CODE_VALUE;
-        case "code_highlight";                          return *config.colors.CODE_HIGHLIGHT;
-        case "code_error";                              return *config.colors.CODE_ERROR;
-        case "code_warning";                            return *config.colors.CODE_WARNING;
-        case "code_keyword";                            return *config.colors.CODE_KEYWORD;
+        case "code_default";                            return .CODE_DEFAULT;
+        case "code_comment";                            return .CODE_COMMENT;
+        case "code_type";                               return .CODE_TYPE;
+        case "code_function";                           return .CODE_FUNCTION;
+        case "code_punctuation";                        return .CODE_PUNCTUATION;
+        case "code_operation";                          return .CODE_OPERATION;
+        case "code_string";                             return .CODE_STRING;
+        case "code_value";                              return .CODE_VALUE;
+        case "code_highlight";                          return .CODE_HIGHLIGHT;
+        case "code_error";                              return .CODE_ERROR;
+        case "code_warning";                            return .CODE_WARNING;
+        case "code_keyword";                            return .CODE_KEYWORD;
 
-        case "region_scope_export";                     return *config.colors.REGION_SCOPE_EXPORT;
-        case "region_scope_file";                       return *config.colors.REGION_SCOPE_FILE;
-        case "region_scope_module";                     return *config.colors.REGION_SCOPE_MODULE;
-        case "region_header";                           return *config.colors.REGION_HEADER;
-        case "region_success";                          return *config.colors.REGION_SUCCESS;
-        case "region_warning";                          return *config.colors.REGION_WARNING;
-        case "region_error";                            return *config.colors.REGION_ERROR;
+        case "region_scope_export";                     return .REGION_SCOPE_EXPORT;
+        case "region_scope_file";                       return .REGION_SCOPE_FILE;
+        case "region_scope_module";                     return .REGION_SCOPE_MODULE;
+        case "region_header";                           return .REGION_HEADER;
+        case "region_success";                          return .REGION_SUCCESS;
+        case "region_warning";                          return .REGION_WARNING;
+        case "region_error";                            return .REGION_ERROR;
 
-        case "build_panel_background";                  return *config.colors.BUILD_PANEL_BACKGROUND;
-        case "build_panel_scrollbar";                   return *config.colors.BUILD_PANEL_SCROLLBAR;
-        case "build_panel_scrollbar_hover";             return *config.colors.BUILD_PANEL_SCROLLBAR_HOVER;
-        case "build_panel_scrollbar_background";        return *config.colors.BUILD_PANEL_SCROLLBAR_BACKGROUND;
-        case "build_panel_title_bar";                   return *config.colors.BUILD_PANEL_TITLE_BAR;
+        case "build_panel_background";                  return .BUILD_PANEL_BACKGROUND;
+        case "build_panel_scrollbar";                   return .BUILD_PANEL_SCROLLBAR;
+        case "build_panel_scrollbar_hover";             return .BUILD_PANEL_SCROLLBAR_HOVER;
+        case "build_panel_scrollbar_background";        return .BUILD_PANEL_SCROLLBAR_BACKGROUND;
+        case "build_panel_title_bar";                   return .BUILD_PANEL_TITLE_BAR;
     }
 
-    return xx 0;
+    return .NONE;
 }
 
 free_parsed_config :: (using parsed_config: Parsed_Config) {
@@ -513,12 +514,12 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
         case .style_colors;
             color_name, value := break_by_spaces(line);
             color_name = trim_right(color_name, ":");
-            color_ptr := map_color_name_to_color_struct(*Config.{}, color_name);
-            if !color_ptr {
+            color_id := map_name_to_color(color_name);
+            if color_id == .NONE {
                 add_highlight(parser, 0, color_name.count, .error);
                 return true, tprint("Unknown color '%'", color_name);
             }
-            color, success := hex_to_color(value);
+            color, success := hex_to_color_vec4(value);
             if !success {
                 add_highlight(parser, value.data - line.data, value.count, .error);
                 return true, tprint("Couldn't parse '%'. Expected a color in the form RRGGBB or RRGGBBAA, got '%'", color_name, value);
@@ -527,36 +528,23 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
 
             is_duplicate := false;
             for seen_colors {
-                if color_ptr != it.color_ptr continue;
+                if color_id != it.color continue;
                 add_highlight(parser, 0, it.line_length,   .comment, line_start_offset = it.line_start_offset);
                 add_highlight(parser, 0, color_name.count, .warning, line_start_offset = it.line_start_offset);
                 is_duplicate = true;
             }
             if is_duplicate then add_highlight(parser, 0, line.count, .warning);
 
-            array_add(*seen_colors, Seen_Color.{ line_start_offset = line_start_offset, line_length = xx line.count, color_ptr = color_ptr });
+            array_add(*seen_colors, Seen_Color.{ line_start_offset = line_start_offset, line_length = xx line.count, color = color_id });
     }
 
     return true, "";
 }
 
-color_to_hex :: (using color: Color, exclude_hash := false) -> string /* temp  */ {
-    r_u8 := cast(u8)(255 * r);
-    g_u8 := cast(u8)(255 * g);
-    b_u8 := cast(u8)(255 * b);
-    a_u8 := cast(u8)(255 * a);
-
-    h :: #bake_arguments formatInt(base=16, minimum_digits=2);
-    format := "#%1%2%3%4";
-    if exclude_hash advance(*format, 1);
-
-    return tprint(format, h(r_u8), h(g_u8), h(b_u8), h(a_u8));
-}
-
-hex_to_color :: (src_hex: string) -> Color, success: bool {
+hex_to_color_vec4 :: (src_hex: string) -> Vector4, success: bool {
     hex := src_hex;
     if hex.count == 6 then hex = tprint("%FF", hex);
-    if hex.count != 8 return Color.{}, false;
+    if hex.count != 8 return Vector4.{}, false;
 
     r := slice(hex, 0, 2);
     g := slice(hex, 2, 2);
@@ -577,9 +565,9 @@ hex_to_color :: (src_hex: string) -> Color, success: bool {
         return (16 * d1 + d0) / 255;
     }
 
-    c := Color.{ r = to_float(r), g = to_float(g), b = to_float(b), a = to_float(a) };
+    c := Vector4.{ to_float(r), to_float(g), to_float(b), to_float(a) };
 
-    return c, c.r >= 0 && c.g >= 0 && c.b >= 0 && c.a >= 0;
+    return c, c.x >= 0 && c.y >= 0 && c.z >= 0 && c.w >= 0;
 }
 
 parse_build_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
@@ -1106,7 +1094,7 @@ Config_Parse_Result :: struct {
 
 Parsed_Color :: struct {
     color_name: string;
-    color: Color;
+    color: Vector4;
 }
 
 #scope_file
@@ -1195,7 +1183,7 @@ Seen_Keymap :: struct {
 
 Seen_Color :: struct {
     using seen_line: Seen_Line;
-    color_ptr: *Color;
+    color: Color;
 }
 
 Seen_Line :: struct {

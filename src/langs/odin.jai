@@ -27,7 +27,7 @@ highlight_odin_syntax :: (using buffer: *Buffer) {
                     } else if before_prev.type == .punctuation && (before_prev.punctuation == .caret || before_prev.punctuation == .dollar || before_prev.punctuation == .r_bracket) {
                         // Do nothing.
                     } else {
-                        memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
+                        memset(colors.data + prev.start, xx Color.CODE_FUNCTION, prev.len);
                     }
                 }
 
@@ -39,13 +39,13 @@ highlight_odin_syntax :: (using buffer: *Buffer) {
         else if token.type == .keyword && token.keyword == .kw_proc {
             // Handle "func :: proc"
             if (prev.type == .operation && prev.operation == .double_colon) && before_prev.type == .identifier {
-                memset(colors.data + before_prev.start, xx Code_Color.FUNCTION, before_prev.len);
+                memset(colors.data + before_prev.start, xx Color.CODE_FUNCTION, before_prev.len);
             }
         }
         else if token.type == .directive && (token.directive == .directive_force_inline || token.directive == .directive_no_force_inline) {
             // Handle "func :: #force_inline" / "func :: #no_force_inline"
             if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
-                memset(colors.data + before_prev.start, xx Code_Color.FUNCTION, before_prev.len);
+                memset(colors.data + before_prev.start, xx Color.CODE_FUNCTION, before_prev.len);
             }
         }
 
@@ -692,23 +692,23 @@ Token :: struct {
 }
 
 // Must match the order of the types in the enum
-COLOR_MAP :: Code_Color.[
-    .COMMENT,       // eof - obviously not used
-    .DEFAULT,       // identifier
-    .STRING,        // string_literal
-    .STRING,        // raw_string
-    .VALUE,         // number
-    .COMMENT,       // comment
-    .COMMENT,       // multiline_comment
-    .STRING,        // file_tag
-    .OPERATION,     // operation
-    .PUNCTUATION,   // punctuation
-    .KEYWORD,       // keyword
-    .TYPE,          // type_keyword
-    .VALUE_KEYWORD, // value_keyword
-    .KEYWORD,       // attribute
-    .KEYWORD,       // directive
-    .ERROR,         // invalid
+COLOR_MAP :: Color.[
+    .CODE_COMMENT,       // eof - obviously not used
+    .CODE_DEFAULT,       // identifier
+    .CODE_STRING,        // string_literal
+    .CODE_STRING,        // raw_string
+    .CODE_VALUE,         // number
+    .CODE_COMMENT,       // comment
+    .CODE_COMMENT,       // multiline_comment
+    .CODE_STRING,        // file_tag
+    .CODE_OPERATION,     // operation
+    .CODE_PUNCTUATION,   // punctuation
+    .CODE_KEYWORD,       // keyword
+    .CODE_TYPE,          // type_keyword
+    .CODE_VALUE,         // value_keyword
+    .CODE_KEYWORD,       // attribute
+    .CODE_KEYWORD,       // directive
+    .CODE_ERROR,         // invalid
 ];
 
 PUNCTUATION :: string.[

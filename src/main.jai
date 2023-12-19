@@ -80,11 +80,10 @@ main :: () {
         init_session_with_no_guidance();
     }
 
-    CODE_COLOR_MAP = refresh_code_color_map();
-
     // This may generate window resize events if DPI/scaling settings need to be
     // applied, so make sure to only call it after the window is created.
     platform_apply_config();
+    Simp.set_color_map(COLOR_MAP);
 
     #if OS == .MACOS {
         // On macOS, attempting to maximize the window before a frame has been drawn results in a crash, so we delay it until the end of the first frame.

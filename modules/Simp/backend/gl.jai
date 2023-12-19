@@ -429,7 +429,7 @@ get_shader_program :: (shader_text: string) -> GLuint {
 
 
 #scope_export
-draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
+draw_generated_quads :: (font: *Dynamic_Font, color: u8) {
     CheckInit();
     quads := font.current_quads;
 
@@ -444,6 +444,8 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     last_texture: GLuint = 0xFFFFFFFF;
+
+    color_vec4 := COLOR_MAP[color];
 
     for quad, i: quads {
         page := quad.glyph.page;
@@ -470,7 +472,7 @@ draw_generated_quads :: (font: *Dynamic_Font, color := Vector4.{1, 1, 1, 1}) {
             glUniform1i(loc, 0);
         }
 
-        immediate_letter_quad(quad, color);
+        immediate_letter_quad(quad, color_vec4);
     }
 
     // Same as above. This is not good

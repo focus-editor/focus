@@ -303,6 +303,7 @@ list_cursor:                            33CCCC4C
 shadow_dark:                            0E161C7F
 shadow_transparent:                     0E161C00
 text_input_label:                       3B4450FF
+char_under_cursor:                      FFFFFFFF
 
 ui_default:                             BFC9DBFF
 ui_dim:                                 87919DFF

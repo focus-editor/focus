@@ -268,6 +268,7 @@ ACTIONS_COMMON :: string.[
     // "open_error_log",  // todo
     "toggle_fullscreen",
     "toggle_build_panel",
+    "build_kill_running_command",
     "show_troubleshooting_info",
 
     "show_commands",

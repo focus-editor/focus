@@ -135,6 +135,8 @@ commands := #run Command.[
     .{ .toggle_fullscreen,                                  "Toggle Fullscreen",                  .None,    0 },
     .{ .toggle_build_panel,                                 "Toggle Build Panel",                 .None,    0 },
 
+    .{ .build_kill_running_command,                         "Build: Kill Running Command",        .None,    0 },
+
     .{ .autoindent_region,                                  "Autoindent Region",                  .Single,  0 },
 ];
 

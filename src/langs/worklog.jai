@@ -89,12 +89,11 @@ Token :: struct {
 }
 
 // Must match the order of the types in the enum above
-COLOR_MAP :: Code_Color.[
-    .COMMENT,       // eof - obviously not used
-
-    .DEFAULT,       // line
-    .FUNCTION,      // done
-    .DEFAULT,       // todo
-    .KEYWORD,       // header
-    .VALUE_KEYWORD, // current_task
+COLOR_MAP :: Color.[
+    .CODE_COMMENT,       // eof - obviously not used
+    .CODE_DEFAULT,       // line
+    .CODE_FUNCTION,      // done
+    .CODE_DEFAULT,       // todo
+    .CODE_KEYWORD,       // header
+    .CODE_VALUE,         // current_task
 ];

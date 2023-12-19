@@ -84,6 +84,10 @@ set_render_target :: (texture: *Texture) {
     backend_set_render_target(texture);
 }
 
+set_color_map :: (color_map: [] Vector4) {
+    COLOR_MAP = color_map;
+}
+
 update_window :: (window: Window_Type) {
     CheckInit();
 
@@ -112,14 +116,14 @@ update_window :: (window: Window_Type) {
     }
 }
 
-draw_text :: (font: *Dynamic_Font, x: s64, y: s64, text: string, color := Vector4.{1,1,1,1}) -> width: s64 {
+draw_text :: (font: *Dynamic_Font, x: s64, y: s64, text: string, color: u8) -> width: s64 {
     // @Cleanup: generate_quads should return quads in a threadsafe way?
     width := prepare_text(font, text);
     draw_prepared_text(font, x, y, color);
     return width;
 }
 
-draw_prepared_text :: (font: *Dynamic_Font, x: s64, y: s64, color := Vector4.{1, 1, 1, 1}) {
+draw_prepared_text :: (font: *Dynamic_Font, x: s64, y: s64, color: u8) {
     generate_quads_for_prepared_text(font, x, y);
     draw_generated_quads(font, color);
 }
@@ -181,6 +185,9 @@ find_window_info :: (window: Window_Type) -> *Window_Info {
     for * window_infos  if it.window == window  return it;
     return null;
 }
+
+COLOR_MAP: [] Vector4;
+
 #scope_file
 
 find_or_add_window_info :: (window: Window_Type) -> *Window_Info, bool {

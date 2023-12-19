@@ -51,7 +51,7 @@ platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, 
 }
 
 platform_create_window :: () {
-    window = create_window(window_width, window_height, window_generic_title, window_x, window_y, background_color_rgb = as_3_floats(Colors.BACKGROUND));
+    window = create_window(window_width, window_height, window_generic_title, window_x, window_y, background_color_rgb = color_as_3_floats(Color.BACKGROUND));
     platform_set_border_color();
 }
 
@@ -228,10 +228,10 @@ platform_set_border_color :: () {
     using DwmAttribute;
     col : u32 = 0xFFFFFFFF;
     if config.settings.colored_titlebar {
-        background := Colors.BACKGROUND;
-        r : u32 = cast(u32)(background.r * 255.0);
-        g : u32 = cast(u32)(background.g * 255.0);
-        b : u32 = cast(u32)(background.b * 255.0);
+        background := map_color_to_vec4(Color.BACKGROUND);
+        r : u32 = cast(u32)(background.x * 255.0);
+        g : u32 = cast(u32)(background.y * 255.0);
+        b : u32 = cast(u32)(background.z * 255.0);
         // COLORREF format is 0x00bbggrr
         col = 0x00000000;
         col |= b << 16;

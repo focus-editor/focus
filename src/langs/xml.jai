@@ -575,48 +575,48 @@ Xml_Token :: struct {
 }
 
 // Must match the order of the types in the enum above
-COLOR_MAP :: Code_Color.[
-    .COMMENT,       // eof - obviously not used
+COLOR_MAP :: Color.[
+    .CODE_COMMENT,       // eof - obviously not used
 
-    .ERROR,         // error
-    .DEFAULT,       // default
+    .CODE_ERROR,         // error
+    .CODE_DEFAULT,       // default
 
-    .FUNCTION,      // tag_start
-    .FUNCTION,      // tag_end
-    .FUNCTION,      // tag_closing_slash
-    .FUNCTION,      // tag_exclamation_point
-    .KEYWORD,       // tag_name
-    .DEFAULT,       // tag_content
+    .CODE_FUNCTION,      // tag_start
+    .CODE_FUNCTION,      // tag_end
+    .CODE_FUNCTION,      // tag_closing_slash
+    .CODE_FUNCTION,      // tag_exclamation_point
+    .CODE_KEYWORD,       // tag_name
+    .CODE_DEFAULT,       // tag_content
 
-    .TYPE,          // attribute_name
-    .VALUE,         // attribute_value
-    .STRING,        // attribute_string_value
-    .DEFAULT,       // attribute_equals
+    .CODE_TYPE,          // attribute_name
+    .CODE_VALUE,         // attribute_value
+    .CODE_STRING,        // attribute_string_value
+    .CODE_DEFAULT,       // attribute_equals
 
-    .COMMENT,       // comment_start
-    .COMMENT,       // comment_end
-    .COMMENT,       // comment_content
+    .CODE_COMMENT,       // comment_start
+    .CODE_COMMENT,       // comment_end
+    .CODE_COMMENT,       // comment_content
 
-    .COMMENT,       // processing_instruction_start
-    .COMMENT,       // processing_instruction_end
-    .COMMENT,       // processing_instruction_target
-    .COMMENT,       // processing_instruction_content
+    .CODE_COMMENT,       // processing_instruction_start
+    .CODE_COMMENT,       // processing_instruction_end
+    .CODE_COMMENT,       // processing_instruction_target
+    .CODE_COMMENT,       // processing_instruction_content
 
-    .COMMENT,       // cdata_start
-    .COMMENT,       // cdata_end
-    .VALUE,         // cdata_content
+    .CODE_COMMENT,       // cdata_start
+    .CODE_COMMENT,       // cdata_end
+    .CODE_VALUE,         // cdata_content
 
-    .PUNCTUATION,   // dtd_parenthesis_open
-    .PUNCTUATION,   // dtd_parenthesis_close
-    .PUNCTUATION,   // dtd_bracket_open
-    .PUNCTUATION,   // dtd_bracket_close
-    .OPERATION,     // dtd_infix_operator
-    .OPERATION,     // dtd_postfix_operator
-    .OPERATION,     // dtd_percent
-    .PUNCTUATION,   // dtd_comma
-    .VALUE_KEYWORD, // dtd_parameter_entity
-    .COMMENT,       // dtd_conditional_section_start
-    .COMMENT,       // dtd_conditional_section_end
+    .CODE_PUNCTUATION,   // dtd_parenthesis_open
+    .CODE_PUNCTUATION,   // dtd_parenthesis_close
+    .CODE_PUNCTUATION,   // dtd_bracket_open
+    .CODE_PUNCTUATION,   // dtd_bracket_close
+    .CODE_OPERATION,     // dtd_infix_operator
+    .CODE_OPERATION,     // dtd_postfix_operator
+    .CODE_OPERATION,     // dtd_percent
+    .CODE_PUNCTUATION,   // dtd_comma
+    .CODE_VALUE,         // dtd_parameter_entity
+    .CODE_COMMENT,       // dtd_conditional_section_start
+    .CODE_COMMENT,       // dtd_conditional_section_end
 ];
 
 // HTML elements that should not have a closing tag, and have an *optional* forward slash at the end of the tag.

@@ -12,7 +12,7 @@ highlight_glsl_syntax :: (using buffer: *Buffer) {
         if token.type == .punctuation && token.punctuation == .l_paren {
             // Handle "func("
             if last_token.type == .identifier {
-                memset(colors.data + last_token.start, xx Code_Color.FUNCTION, last_token.len);
+                memset(colors.data + last_token.start, xx Color.CODE_FUNCTION, last_token.len);
             }
         }
 
@@ -484,23 +484,23 @@ Token :: struct {
 }
 
 // Must match the order of the types in the enum above
-COLOR_MAP :: Code_Color.[
-    .COMMENT,       // eof - obviously not used
-    .DEFAULT,       // identifier
-    .STRING,        // string_literal
-    .STRING,        // char_literal
-    .VALUE,         // number
-    .COMMENT,       // comment
-    .COMMENT,       // multiline_comment
-    .OPERATION,     // operation
-    .PUNCTUATION,   // punctuation
-    .KEYWORD,       // keyword
-    .KEYWORD,       // modifier_keyword
-    .TYPE,          // type_keyword
-    .VALUE_KEYWORD, // value_keyword
-    .VALUE_KEYWORD, // builtin_keyword
-    .KEYWORD,       // preprocessor_directive
-    .ERROR,         // invalid
+COLOR_MAP :: Color.[
+    .CODE_COMMENT,       // eof - obviously not used
+    .CODE_DEFAULT,       // identifier
+    .CODE_STRING,        // string_literal
+    .CODE_STRING,        // char_literal
+    .CODE_VALUE,         // number
+    .CODE_COMMENT,       // comment
+    .CODE_COMMENT,       // multiline_comment
+    .CODE_OPERATION,     // operation
+    .CODE_PUNCTUATION,   // punctuation
+    .CODE_KEYWORD,       // keyword
+    .CODE_KEYWORD,       // modifier_keyword
+    .CODE_TYPE,          // type_keyword
+    .CODE_VALUE,         // value_keyword
+    .CODE_VALUE,         // builtin_keyword
+    .CODE_KEYWORD,       // preprocessor_directive
+    .CODE_ERROR,         // invalid
 ];
 
 Keyword :: enum u16 {

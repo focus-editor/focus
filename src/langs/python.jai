@@ -11,7 +11,7 @@ highlight_python_syntax :: (using buffer: *Buffer) {
 
         // Maybe highlight a function
         if token.type == .punctuation && token.punctuation == .l_paren && last_token.type == .identifier {
-            memset(colors.data + last_token.start, xx Code_Color.FUNCTION, last_token.len);
+            memset(colors.data + last_token.start, xx Color.CODE_FUNCTION, last_token.len);
         }
 
         last_token = token;
@@ -404,23 +404,23 @@ Token :: struct {
 }
 
 // Must match the order of the types in the enum
-COLOR_MAP :: Code_Color.[
-    .COMMENT,       // eof - obviously not used
-    .DEFAULT,       // identifier
-    .STRING,        // string_literal
-    .STRING,        // multiline_string
-    .VALUE,         // number
-    .COMMENT,       // comment
-    .COMMENT,       // multiline_comment
-    .OPERATION,     // operation
-    .PUNCTUATION,   // punctuation
-    .KEYWORD,       // keyword
-    .KEYWORD,       // modifier_keyword
-    .TYPE,          // type_keyword
-    .VALUE_KEYWORD, // value_keyword
-    .OPERATION,     // builtin_function
-    .OPERATION,     // builtin_exception
-    .ERROR,         // invalid
+COLOR_MAP :: Color.[
+    .CODE_COMMENT,       // eof - obviously not used
+    .CODE_DEFAULT,       // identifier
+    .CODE_STRING,        // string_literal
+    .CODE_STRING,        // multiline_string
+    .CODE_VALUE,         // number
+    .CODE_COMMENT,       // comment
+    .CODE_COMMENT,       // multiline_comment
+    .CODE_OPERATION,     // operation
+    .CODE_PUNCTUATION,   // punctuation
+    .CODE_KEYWORD,       // keyword
+    .CODE_KEYWORD,       // modifier_keyword
+    .CODE_TYPE,          // type_keyword
+    .CODE_VALUE,         // value_keyword
+    .CODE_OPERATION,     // builtin_function
+    .CODE_OPERATION,     // builtin_exception
+    .CODE_ERROR,         // invalid
 ];
 
 PUNCTUATION :: string.[
