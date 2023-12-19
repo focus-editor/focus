@@ -113,7 +113,8 @@ platform_create_window :: () {
         window_width, window_height,
         window_generic_title,
         window_x, window_y,
-        background_color_rgb = map_color_to_vec4(Color.BACKGROUND).xyz;
+        background_color_rgb = color_as_3_floats(Color.BACKGROUND),
+    );
 
     if LD.active_backend() == .X11 {
         data := icon_data.png_data;
