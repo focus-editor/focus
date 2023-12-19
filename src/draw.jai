@@ -2541,58 +2541,53 @@ draw_finder :: () {
 
         if results then draw_rect(files_rect, Color.BACKGROUND);  // to make contrasting scopes more visible
 
-        {
-            // Scrollbar
-            content_height := results.count * entry_height;
-            max_y_scroll := content_height - files_rect.h;
-            new_scroll_target := get_new_scroll_target_from_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
-            if new_scroll_target != scroll_anim.target {
-                scroll_y = new_scroll_target;
-                scroll_anim.target = new_scroll_target;
-                redraw_requested = true;
-            }
+        // Scrollbar
+        content_height := results.count * entry_height;
+        max_y_scroll := content_height - files_rect.h;
+        new_scroll_target := get_new_scroll_target_from_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
+        if new_scroll_target != scroll_anim.target {
+            scroll_y = new_scroll_target;
+            scroll_anim.target = new_scroll_target;
+            redraw_requested = true;
+        }
 
-            // Scrolling update
-            if scroll_to_cursor != .no {
-                // We only want to scroll to cursor when cursor is moved by arrow keys
-                target := scroll_anim.target;
-                selected_top    := selected * entry_height - target;
-                selected_bottom := selected_top + entry_height;
-                if selected_top < 0 then target = cast(s32) (selected * entry_height);
-                if selected_bottom > files_rect.h then target = cast(s32) ((selected + 1) * entry_height - files_rect.h);
-                if content_height - target < files_rect.h then target = cast(s32) (content_height - files_rect.h);
-                if target != scroll_anim.target {
-                    if scroll_to_cursor == .yes {
-                        start_animation(*scroll_anim, scroll_y, target);
-                    } else {
-                        scroll_y = target;
-                        scroll_anim.target = target;
-                    }
-                }
-                scroll_to_cursor = .no;
-            }
-
-            // Mouse scrolling
-            if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(files_rect) {
-                if is_hovering_over(ui_id) then set_pointer_image(.PRESSABLE);
-                if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
-                    target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
-                    if mouse.smooth_scroll {
-                        start_animation(*scroll_anim, scroll_y, target);
-                    } else {
-                        scroll_anim.target = target;
-                        scroll_y = target;
-                    }
+        // Scrolling update
+        if scroll_to_cursor != .no {
+            // We only want to scroll to cursor when cursor is moved by arrow keys
+            target := scroll_anim.target;
+            selected_top    := selected * entry_height - target;
+            selected_bottom := selected_top + entry_height;
+            if selected_top < 0 then target = cast(s32) (selected * entry_height);
+            if selected_bottom > files_rect.h then target = cast(s32) ((selected + 1) * entry_height - files_rect.h);
+            if content_height - target < files_rect.h then target = cast(s32) (content_height - files_rect.h);
+            if target != scroll_anim.target {
+                if scroll_to_cursor == .yes {
+                    start_animation(*scroll_anim, scroll_y, target);
+                } else {
+                    scroll_y = target;
+                    scroll_anim.target = target;
                 }
             }
+            scroll_to_cursor = .no;
+        }
 
-            if scroll_y != scroll_anim.target {
-                redraw_requested = true;
-                scroll_y = get_animation_value(scroll_anim);
+        // Mouse scrolling
+        if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(files_rect) {
+            if is_hovering_over(ui_id) then set_pointer_image(.PRESSABLE);
+            if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
+                target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
+                if mouse.smooth_scroll {
+                    start_animation(*scroll_anim, scroll_y, target);
+                } else {
+                    scroll_anim.target = target;
+                    scroll_y = target;
+                }
             }
+        }
 
-            // The above operations could've updated scrollbar position, so drawing it here
-            draw_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
+        if scroll_y != scroll_anim.target {
+            redraw_requested = true;
+            scroll_y = get_animation_value(scroll_anim);
         }
 
         if !initted {
@@ -2721,6 +2716,9 @@ draw_finder :: () {
                 }
             }
         }
+
+        // Drawing the scrollbar here so that scopes don't cover it
+        draw_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
 
         if finder.input.text && !results {
             label := "Searching...";
