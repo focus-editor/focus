@@ -960,7 +960,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
 
         // Draw search results
-        if search_bar_is_open(editor) {
+        if search_bar.results {
             for search_bar.results {
                 start, end := it.offset, it.offset + it.count;
                 if end   < visible_offset_range.start continue;
@@ -1105,7 +1105,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
             total_scrollable_lines := content_height / line_height;
 
-            if search_bar_is_open(editor) && search_bar.results {
+            if search_bar.results {
                 // Search results
                 for search_bar.results {
                     pos_from_top := rect.h * cast(float) it.line / total_scrollable_lines;
