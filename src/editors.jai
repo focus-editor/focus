@@ -379,6 +379,9 @@ active_editor_type_char :: (char: u32) {
     buffer.last_edit_time = frame_time;
     editor.cursor_moved = .unimportant;
     cursors_start_blinking();
+    if editor.search_bar.results {
+        search_and_update_results(editor, buffer, jump = false);
+    }
 }
 
 get_active_editor_and_buffer :: () -> *Editor, *Buffer {
