@@ -315,22 +315,84 @@ is_separator_char :: inline (ch: u32) -> bool {
         ch == #char "\\";
 }
 
-is_balanceable_char :: (ch: u32) -> bool {
-    return ch == #char "{" || ch == #char "(" || ch == #char "[" || ch == #char "\"";
+is_balanceable_char :: (ch: u32, include_closing := false) -> bool {
+    if ch == {
+        case #char "{";  return true;
+        case #char "(";  return true;
+        case #char "[";  return true;
+        case #char "\""; return true;
+    }
+    if include_closing {
+        if ch == {
+            case #char "}"; return true;
+            case #char ")"; return true;
+            case #char "]"; return true;
+        }
+    }
+    return false;
 }
 
 is_auto_closeable_char :: (ch: u32) -> bool {
     return ch == #char "{" || ch == #char "(" || ch == #char "[";
 }
 
-get_balancing_char :: (ch: u32) -> u32 {
+get_balancing_char :: (ch: u32, include_closing := false) -> u32 {
     if ch == {
         case #char "{";  return #char "}";
         case #char "(";  return #char ")";
         case #char "[";  return #char "]";
         case #char "\""; return #char "\"";
-        case; return 0;
     }
+    if include_closing {
+        if ch == {
+            case #char "}";  return #char "{";
+            case #char ")";  return #char "(";
+            case #char "]";  return #char "[";
+        }
+    }
+    return 0;
+}
+
+find_balancing_char :: (s: string, ch: u32, start_index: s64) -> s64 {
+    if !s return -1;
+
+    // determine direction. 0 is a symmetric character like a quotation mark, which this does not currently handle.
+    direction := 0;
+    if ch == {
+        case #char "{"; #through;
+        case #char "("; #through;
+        case #char "[";
+            direction = 1;
+        case #char "}"; #through;
+        case #char ")"; #through;
+        case #char "]";
+            direction = -1;
+    }
+    balancing_char : u32 = get_balancing_char(ch, true);
+    if direction < 0 {
+        balance := 0;
+        for < i: start_index..0 {
+            t : u32 = s[i];
+            if t == ch balance += 1;
+            else if t == balancing_char {
+                balance -= 1;
+                if balance == 0 return i;
+            }
+        }
+    }
+    else if direction > 0 {
+        balance := 0;
+        for i: start_index..s.count - 1{
+            t : u32 = s[i];
+            if t == ch balance += 1;
+            else if t == balancing_char {
+                balance -= 1;
+                if balance == 0 return i;
+            }
+        }
+    }
+
+    return -1;
 }
 
 get_char_type :: (ch: u32) -> Char_Type {

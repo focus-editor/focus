@@ -28,6 +28,7 @@ text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> han
         case .jump_to_file_start;       move_home(input, extend_selection);
         case .jump_to_line_end; #through;
         case .jump_to_file_end;         move_end (input, extend_selection);
+        // TODO? case .jump_to_matching_bracket; move_matching_bracket(input);
         case .delete_left_char;         delete_left_char (input);
         case .delete_right_char;        delete_right_char(input);
         case .delete_word_left;         delete_word_left(input);

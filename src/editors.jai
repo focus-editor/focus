@@ -220,6 +220,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .jump_to_line_end;                 move_cursors_end                    (editor, buffer);
         case .jump_to_file_start;               move_to_file_start                  (editor, buffer);
         case .jump_to_file_end;                 move_to_file_end                    (editor, buffer);
+        case .jump_to_matching_bracket;         move_cursors_to_matching_bracket    (editor, buffer);
 
         case .select_line;                      select_lines                        (editor, buffer); keep_selection = true;
         case .copy;                             copy_selection_to_clipboard         (editor, buffer);
@@ -1814,6 +1815,7 @@ is_a_move_action :: (action: Action_Editors) -> bool {
         case .jump_to_line_end;                 return true;
         case .jump_to_file_start;               return true;
         case .jump_to_file_end;                 return true;
+        case .jump_to_matching_bracket;         return true;
     }
     return false;
 }
@@ -1960,6 +1962,32 @@ move_cursors_end :: (editor: *Editor, buffer: Buffer) {
         line := offset_to_real_line(buffer, cursor.pos);
         cursor.pos = get_real_line_end_offset(buffer, line);
         cursor.col_wanted = -1;
+    }
+
+    editor.cursor_moved = .unimportant;
+}
+
+move_cursors_to_matching_bracket :: (editor: *Editor, buffer: Buffer) {
+    buffer_str := cast(string) buffer.bytes;
+    for * cursor : editor.cursors {
+        c : u32 = 0;
+        pos := cursor.pos;
+        if cursor.pos < buffer.bytes.count {
+            t := buffer_str[cursor.pos];
+            if is_balanceable_char(t, true) then c = t;
+        }
+        // do the character left of the cursor as well.
+        if !c && cursor.pos - 1 >= 0 {
+            pos = cursor.pos - 1;
+            t := buffer_str[cursor.pos - 1];
+            if is_balanceable_char(t, true) then c = t;
+        }
+        if !c continue;
+        offset := find_balancing_char(buffer_str, c, pos);
+        if offset < 0 continue;
+
+        line := offset_to_real_line(buffer, offset);
+        cursor.pos = xx offset;
     }
 
     editor.cursor_moved = .unimportant;

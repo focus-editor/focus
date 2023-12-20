@@ -729,41 +729,67 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             viewport.left   = 0;
         }
 
-        // Maybe update selection highlights
-        if editor.refresh_highlights && buffer.bytes.count <= MAX_BUFFER_SIZE_FOR_HIGHLIGHTS && config.settings.highlight_selection_occurrences {
+        // Maybe update highlights
+        if editor.refresh_highlights {
             editor.refresh_highlights = false;
             array_reset_keeping_memory(*editor.highlights);
 
-            selected_text := get_selected_text_all_cursors(editor, buffer);
-            if selected_text.count > 2 && !is_all_whitespace(selected_text) {
-                search_func: (s: string, substring: string, start_index := 0) -> s64;
-                search_func = ifx editor.search_whole_words then find_index_from_left_whole_word else find_index_from_left;
+            // matching bracket highlights
+            if config.settings.highlight_matching_brackets {
                 buffer_str := cast(string) buffer.bytes;
 
-                cursor_offsets: [..] s32;
-                cursor_offsets.allocator = temp;
-                for editor.cursors  array_add(*cursor_offsets, min(it.pos, it.sel));
-
-                offset := 0;
-                while true {
-                    offset = search_func(buffer_str, selected_text, start_index = offset);
-                    if offset < 0 break;
-
-                    if !array_find(cursor_offsets, xx offset) {  // @Speed: slow when many cursors
-                        highlight := array_add(*editor.highlights);
-                        highlight.offset = offset;
-                        highlight.count  = selected_text.count;
-                        highlight.line   = offset_to_real_line(buffer, offset);
+                for cursor : cursors {
+                    c : u32 = 0;
+                    pos := cursor.pos;
+                    if cursor.pos < buffer.bytes.count {
+                        t := buffer_str[cursor.pos];
+                        if is_balanceable_char(t, true) then c = t;
                     }
-
-                    offset += selected_text.count;
+                    // do the character left of the cursor as well.
+                    if !c && cursor.pos - 1 >= 0 {
+                        pos = cursor.pos - 1;
+                        t := buffer_str[cursor.pos - 1];
+                        if is_balanceable_char(t, true) then c = t;
+                    }
+                    if !c continue;
+                    offset := find_balancing_char(buffer_str, c, pos);
+                    if offset < 0 continue;
+                    highlight := array_add(*editor.highlights);
+                    highlight.offset = offset;
+                    highlight.count  = 1;
+                    highlight.line   = offset_to_real_line(buffer, offset);
                 }
             }
-            editor.selected_text_length = selected_text.count;
-        }
-        if !config.settings.highlight_selection_occurrences {
-            editor.refresh_highlights = false;
-            array_reset_keeping_memory(*editor.highlights);
+
+            // selection highlights
+            if buffer.bytes.count <= MAX_BUFFER_SIZE_FOR_HIGHLIGHTS && config.settings.highlight_selection_occurrences {
+                selected_text := get_selected_text_all_cursors(editor, buffer);
+                if selected_text.count > 2 && !is_all_whitespace(selected_text) {
+                    search_func: (s: string, substring: string, start_index := 0) -> s64;
+                    search_func = ifx editor.search_whole_words then find_index_from_left_whole_word else find_index_from_left;
+                    buffer_str := cast(string) buffer.bytes;
+
+                    cursor_offsets: [..] s32;
+                    cursor_offsets.allocator = temp;
+                    for editor.cursors  array_add(*cursor_offsets, min(it.pos, it.sel));
+
+                    offset := 0;
+                    while true {
+                        offset = search_func(buffer_str, selected_text, start_index = offset);
+                        if offset < 0 break;
+
+                        if !array_find(cursor_offsets, xx offset) {  // @Speed: slow when many cursors
+                            highlight := array_add(*editor.highlights);
+                            highlight.offset = offset;
+                            highlight.count  = selected_text.count;
+                            highlight.line   = offset_to_real_line(buffer, offset);
+                        }
+
+                        offset += selected_text.count;
+                    }
+                }
+                editor.selected_text_length = selected_text.count;
+            }
         }
 
         // Update scrollbar without drawing to get the new scrolling position (scrollbar will be drawn later)
