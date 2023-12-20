@@ -97,6 +97,7 @@
     + Tab characters are now only shown when they are within selection
     + Windows: better handling of Unicode input (thanks @ostef)
     + Fuzzy match improvements in dialogs
+    + Search highlights will persist even when the search bar is closed. Press escape to dismiss (you might need to bind the `escape` action for it to work). (thanks @amasondev)
 
 
 
