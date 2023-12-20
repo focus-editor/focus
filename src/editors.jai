@@ -288,6 +288,9 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
     if buffer.dirty {
         rescan_for_lines(buffer);
         if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
+        if editor.search_bar.results {
+            search_and_update_results(editor, buffer, jump = false);
+        }
     }
     for * editor.cursors put_cursor_in_valid_spot(it, buffer);
     if editor.cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
