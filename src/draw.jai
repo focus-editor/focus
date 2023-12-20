@@ -2020,7 +2020,7 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
     input_rect = shrink(input_rect, margin);
     input_id := get_ui_id_from_loc(parent_id = ui_id);
 
-    draw_text_input(*commands_dialog.input, input_rect, ui_id = input_id, active = true, label = input_label);
+    draw_text_input(*dialog.input, input_rect, ui_id = input_id, active = true, label = input_label);
 
     _pad: Rect = ---;  // allow some space at the bottom so that we don't cover up the rounded corners with the cursor
     _pad, entries_rect = cut_bottom(entries_rect, padding);
