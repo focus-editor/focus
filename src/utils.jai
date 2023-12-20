@@ -141,7 +141,7 @@ find_index_from_left_whole_word :: (s: string, substring: string, start_index :=
 
         i := start_index;
 
-        while outer := i < s.count {
+        while outer := i < s.count - substring.count {
             defer i += 8;
 
             mask: u64;
