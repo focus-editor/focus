@@ -159,7 +159,10 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .close_right_editor;               close_editor(.right);
 
         case .close_dialog;                     hide_build_panel();
-        case .escape;                           hide_build_panel(); remove_additional_cursors(editor);
+        case .escape;                           hide_build_panel();
+                                                remove_additional_cursors(editor);
+                                                reset_search_results(*editor.search_bar);
+                                                editor.refresh_highlights = true;
 
         case .save;                             save    (editor.buffer_id);
         case .save_as;                          save_as (editor.buffer_id);
@@ -857,9 +860,6 @@ close_search_bar :: inline (editor: *Editor, jump_to_original_cursor := false, j
         cursor.pos = xx (cursor.sel + results[selected_result].count);
         editor.scroll_to_cursor = .yes;
     }
-
-    reset_search_results(*editor.search_bar);
-    editor.refresh_highlights = true;
 }
 
 search_bar_toggle_expand :: (using editor: *Editor) {
