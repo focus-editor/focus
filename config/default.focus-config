@@ -1,4 +1,4 @@
-[2]  # Version number. Do not delete.
+[1]  # Version number. Do not delete.
 
 [[workspace]]
 
@@ -38,7 +38,7 @@ __pycache__
 [[settings]]
 
 maximize_on_start:                      false
-open_on_the_biggest_monitor:            true
+open_on_the_biggest_monitor:            false
 cursor_as_block:                        true
 cursor_blink_time_in_seconds:           5
 highlight_selection_occurrences:        true
@@ -59,7 +59,7 @@ editor_history_size:                    1024
 line_wrap_is_on_by_default:             false
 show_line_numbers:                      false
 colored_titlebar:                       true   # Windows 11+ only
-hide_mouse_when_typing:                 true
+hide_mouse_when_typing:                 false
 highlight_line_with_cursor:             false
 draw_indent_guides:                     false
 auto_surround_with_brackets_and_quotes: false
