@@ -255,6 +255,19 @@ load_config :: (file_path: string, existing: *Loaded_Config, force := false) -> 
     loaded_config.hash = calculate_hash(to_bytes(file_data));
     if loaded_config.hash == existing.hash && !force return loaded_config, false;  // unchanged so no need to parse
 
+    // migration_result, new_file_data := maybe_migrate_config(file_path, file_data);
+    // if #complete migration_result == {
+    //     case .no_need_to_migrate;   // do nothing
+    //     case .migrated_successfully;
+    //         add_success_message("Config file '%' has been migrated to version [%]", file_path, CURRENT_CONFIG_VERSION);
+    //         free(file_data);
+    //         file_data = new_file_data;
+    //         // @nocheckin: replace the file with the new data
+    //     case .doesnt_parse_after_migration;
+    //         add_user_error("We attempted to migrate config file '%' to version [%],\nbut it doesn't parse after migration. Please migrate manually using the default config as a reference.", file_path, CURRENT_CONFIG_VERSION);
+    //         return loaded_config;
+    // }
+
     parse_result := parse_config(file_path, file_path, file_data);
     if !parse_result.success {
         if !parse_result.error_msg assert(false, "No error message on a config error. This is a bug.");
@@ -515,5 +528,3 @@ DEFAULT_CONFIG :: #run,stallable -> Config {
     result := parse_config("Example Project Config", EXAMPLE_PROJECT_CONFIG_NAME, EXAMPLE_PROJECT_FILE_DATA);
     assert(result.success, "Couldn't parse the example project config file '%'", EXAMPLE_PROJECT_CONFIG_NAME);
 }
-
-#load "config_parser.jai";

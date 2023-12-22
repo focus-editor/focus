@@ -1,16 +1,12 @@
 # ROUGH ROADMAP
 
-- Config migration system to support changes to the config file across versions
-- Open file dialog improvements (better search)
 - Workspace search improvements (the ability to filter additionally by filename)
-- Language highlighting config files
+- Settings per file type
 - Add the ability to assign syntax to a buffer
+- Basic language definition files for the highlighting of languages we don't yet support
 - Config files for directories (i.e. adding a .focus-config file to your directory and have Focus load it)
-- Improve smooth scrolling for fancy mice
 - Identifier search
 - A little bit of semantic highlighting for Jai
-- Settings per file type
-- Custom title bar on Windows
 - Backup unsaved changes
 - Proper highlighting for C++
 - ...

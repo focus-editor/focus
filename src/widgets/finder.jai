@@ -377,7 +377,7 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
     return .CONTINUE;  // we want to reuse this thread for future searches
 }
 
-reset_search_request :: (using request: *Search_Request, new_needle: string) { //@nocheckin: add whole_word / case sensitive parameters
+reset_search_request :: (using request: *Search_Request, new_needle: string) {
     id += 1;
     for completed_tasks free_task(it);
     array_reset_keeping_memory(*completed_tasks);

@@ -50,7 +50,6 @@ parse_config :: (name: string, filename: string, file_data: string, for_highligh
 
     using parser: Config_Parser;
 
-    // NOTE: we don't free on purpose, because some of the parsed data will point into the file data
     trimmed_data := trim_left(file_data, " \t\n\r");  // skip empty lines, otherwise the handler will crash!
     start_from_memory(*handler, name, filename, trimmed_data);
     if handler.failed {
