@@ -41,7 +41,10 @@ maybe_migrate_config :: (name: string, file_data: string) -> Migration_Result, m
                         config_info.last_color_offset = line_start_offset;
 
                         for RENAMED_COLORS {
-                            if color_name == it.old_name || color_name == it.new_name then table_set(*config_info.colors_present, it.new_name, color_value);
+                            if color_name == it.old_name || color_name == it.new_name {
+                                table_set(*config_info.colors_present, it.old_name, color_value);
+                                table_set(*config_info.colors_present, it.new_name, color_value);
+                            }
                         }
                         for ADDED_COLORS {
                             if color_name == it.name then table_set(*config_info.colors_present, color_name, color_value);
@@ -79,6 +82,9 @@ maybe_migrate_config :: (name: string, file_data: string) -> Migration_Result, m
                     inserted_bytes += setting.count;
                 }
             }
+
+            // Adjust the offsets we remembered
+            if config_info.last_color_offset >= config_info.last_setting_offset then config_info.last_color_offset += inserted_bytes;
         }
 
         // Insert new colors
@@ -118,13 +124,16 @@ maybe_migrate_config :: (name: string, file_data: string) -> Migration_Result, m
         current_subsection: string;
         offset_difference := 0;  // difference between original and modified, in bytes
 
-        start_from_memory(*handler, name, name, cast(string) trimmed_data);  // we use trimmed data here on purpose as it will stay unchanged
+        data_with_insertions := copy_temporary_string(cast(string) modified_data);
+
+        // Do replacements and deletions
+        start_from_memory(*handler, name, name, data_with_insertions);
 
         while true {
             line, found := consume_next_line(*handler);
             if !found break;
 
-            line_start_offset := line.data - trimmed_data.data + offset_difference;
+            line_start_offset := line.data - data_with_insertions.data + offset_difference;
 
             if begins_with(line, "[[") && ends_with(line, "]]") {
                 current_section = trim(line, " \t[]");
@@ -304,8 +313,9 @@ RUN_TESTS :: true;
 // Also your code must comply with the SOLID principles. Are we real programmers or what?
 
 #if RUN_TESTS #run,stallable {
-    run_test("Settings migration", "global.focus-config", SETTINGS_1, .migrated_successfully, SETTINGS_1_EXPECTED);
-    run_test("New colors",         "global.focus-config", COLORS_1,   .migrated_successfully, COLORS_1_EXPECTED);
+    run_test("Settings migration",  "global.focus-config", SETTINGS_1, .migrated_successfully, SETTINGS_1_EXPECTED);
+    run_test("New colors",          "global.focus-config", COLORS_1,   .migrated_successfully, COLORS_1_EXPECTED);
+    run_test("Settings and colors", "global.focus-config", COLORS_2,   .migrated_successfully, COLORS_2_EXPECTED);
 }
 
 run_test :: (test_name: string, file_name: string, config_data: string, expected_result: Migration_Result, expected_data: string) {
@@ -402,6 +412,111 @@ FOCUS_CONFIG
 
 COLORS_1_EXPECTED :: #string FOCUS_CONFIG
 [2]   # Version number. Do not delete.
+
+[[style]]
+
+font:       default
+font_size:  14
+
+[colors]
+background0:                             15212AFF
+background1:                             10191FFF
+background2:                             18262FFF
+background3:                             1A2831FF
+background4:                             21333FFF
+
+scrollbar_hover:                         FFCCCC4C
+scrollbar_background:                    FF191F4C
+
+# Colors added after last migration
+code_warning:                            E4D97DFF
+region_scope_export:                     15212AFF
+region_scope_file:                       15212AFF
+region_scope_module:                     15212AFF
+region_header:                           1A5152FF
+region_success:                          226022FF
+region_warning:                          986032FF
+region_error:                            772222FF
+build_panel_background:                  1A2831FF
+build_panel_scrollbar:                   33CCCC19
+build_panel_scrollbar_hover:             33CCCC4C
+build_panel_scrollbar_background:        10191F4C
+build_panel_title_bar:                   1C303AFF
+
+FOCUS_CONFIG
+
+
+// Test that new colors and settings are added correctly when they are both present
+
+COLORS_2 :: #string FOCUS_CONFIG
+  [1]   # Version number. Do not delete.
+
+[[workspace]]
+
+[workspace dirs]
+# These directories will be scanned when a workspace is opened so that search etc. works.
+# Example:
+
+[[settings]]
+
+maximize_on_start:                      false
+tab_size:                               4
+build_panel_width_percent:              50
+max_entries_in_open_file_dialog:        2000
+insert_spaces_when_pressing_tab:        true
+prefer_system_file_dialogs:             false  # Windows only
+show_cursors_off_screen:                true
+
+[[keymap]]
+# ...
+
+[[style]]
+
+[user interface]
+font:       default
+font_size:  14
+
+[colors]
+background:                              15212AFF
+background_dark:                         10191FFF
+background_highlight:                    18262FFF
+background_light:                        1A2831FF
+background_bright:                       21333FFF
+
+scrollbar_hover:                         FFCCCC4C
+scrollbar_background:                    FF191F4C
+
+FOCUS_CONFIG
+
+COLORS_2_EXPECTED :: #string FOCUS_CONFIG
+[2]   # Version number. Do not delete.
+
+[[workspace]]
+
+[workspace dirs]
+# These directories will be scanned when a workspace is opened so that search etc. works.
+# Example:
+
+[[settings]]
+
+maximize_on_start:                      false
+tab_size:                               4
+build_panel_width_percent:              50
+insert_spaces_when_pressing_tab:        true
+prefer_system_file_dialogs:             false  # Windows only
+show_cursors_off_screen:                true
+
+# Settings added after last migration
+build_panel_height_percent:             50
+build_panel_stays_in_one_place:         false  # if true, the build panel will flip to the inactive pane in two pane layouts
+build_panel_line_wrap_always_on:        true
+highlight_line_with_cursor:             false
+draw_indent_guides:                     false
+auto_surround_with_brackets_and_quotes: false
+scroll_beyond_last_line:                true
+
+[[keymap]]
+# ...
 
 [[style]]
 
