@@ -81,7 +81,7 @@ build_panel_height_percent:             50
 # Key combination           Action
 
 Cmd-D                       select_word_or_create_another_cursor
-Ctrl-Shift-A                select_all_occurrences
+Cmd-Shift-A                 select_all_occurrences
 
 Cmd-Shift-D                 duplicate_lines
 
@@ -151,9 +151,9 @@ Cmd-Shift-N                 create_new_file_on_the_side
 
 Alt-Shift-ArrowUp           create_cursor_above
 Alt-Shift-ArrowDown         create_cursor_below
-Alt-A                       align_cursors
+Alt-Cmd-A                   align_cursors
 
-Alt-Z                       toggle_line_wrap
+Alt-Cmd-Z                   toggle_line_wrap
 
 
 [open file dialog]
@@ -219,7 +219,7 @@ Escape                      escape  # combines close_dialog and remove_additiona
 
 Cmd-Shift-L                 toggle_expand
 
-Ctrl-B                      toggle_build_panel
+Cmd-B                       toggle_build_panel
 
 F11                         toggle_fullscreen
 

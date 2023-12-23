@@ -50,6 +50,14 @@ maybe_migrate_config :: (name: string, file_data: string) -> Migration_Result, m
                             if color_name == it.name then table_set(*config_info.colors_present, color_name, color_value);
                         }
                     }
+                case "keymap";
+                    success, key_sequence_str, action_name := split_from_right_by_any(line, " \t");
+                    if success {
+                        key := tprint("%_%", current_subsection, action_name);
+                        table_set(*config_info.keybinds_present, key, true);
+                    }
+                    if current_subsection == "common"  then config_info.last_common_keybind_offset  = line_start_offset;
+                    if current_subsection == "editors" then config_info.last_editors_keybind_offset = line_start_offset;
             }
         }
     }
@@ -70,7 +78,7 @@ maybe_migrate_config :: (name: string, file_data: string) -> Migration_Result, m
                 if !table_contains(*config_info.settings_present, it.name) { there_are_settings_to_add = true; break; }
             }
             if there_are_settings_to_add {
-                heading := "\n# Settings added after last migration\n";
+                heading := "\n# New in version [2]\n";
                 array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) heading);
                 inserted_bytes += heading.count;
             }
@@ -84,7 +92,9 @@ maybe_migrate_config :: (name: string, file_data: string) -> Migration_Result, m
             }
 
             // Adjust the offsets we remembered
-            if config_info.last_color_offset >= config_info.last_setting_offset then config_info.last_color_offset += inserted_bytes;
+            if config_info.last_color_offset           >= config_info.last_setting_offset then config_info.last_color_offset           += inserted_bytes;
+            if config_info.last_common_keybind_offset  >= config_info.last_setting_offset then config_info.last_common_keybind_offset  += inserted_bytes;
+            if config_info.last_editors_keybind_offset >= config_info.last_setting_offset then config_info.last_editors_keybind_offset += inserted_bytes;
         }
 
         // Insert new colors
@@ -97,7 +107,7 @@ maybe_migrate_config :: (name: string, file_data: string) -> Migration_Result, m
                 if !table_contains(*config_info.colors_present, added.name) { there_are_colors_to_add = true; break; }
             }
             if there_are_colors_to_add {
-                heading := "\n# Colors added after last migration\n";
+                heading := "\n# New in version [2]\n";
                 array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) heading);
                 inserted_bytes += heading.count;
             }
@@ -112,6 +122,73 @@ maybe_migrate_config :: (name: string, file_data: string) -> Migration_Result, m
                     color := tprint("%1:%2%3\n", added.name, padding, value);
                     array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) color);
                     inserted_bytes += color.count;
+                }
+            }
+
+            // Adjust the offsets we remembered
+            if config_info.last_common_keybind_offset  >= config_info.last_color_offset then config_info.last_common_keybind_offset  += inserted_bytes;
+            if config_info.last_editors_keybind_offset >= config_info.last_color_offset then config_info.last_editors_keybind_offset += inserted_bytes;
+        }
+
+        // Insert new keybinds into the editors section
+        if config_info.last_editors_keybind_offset >= 0 {
+            SUBSECTION :: "editors";
+            insert_offset := config_info.last_editors_keybind_offset + get_line_length(modified_data, config_info.last_editors_keybind_offset);
+            inserted_bytes := 0;
+
+            // Maybe print a heading
+            for added : ADDED_KEYBINDS {
+                if added.subsection != SUBSECTION continue;
+                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) {
+                    heading := "\n# New in version [2]\n";
+                    array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) heading);
+                    inserted_bytes += heading.count;
+                    break;
+                }
+            }
+
+            for added : ADDED_KEYBINDS {
+                if added.subsection != SUBSECTION continue;
+                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) {
+                    key_combo := added.key_combo;
+                    if OS == .MACOS then key_combo = added.key_combo_mac;
+                    padding := get_tmp_spaces(KEYBINDS_INDENT - key_combo.count);
+                    key_binding := tprint("%1%2%3\n", key_combo, padding, added.action);
+                    array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) key_binding);
+                    inserted_bytes += key_binding.count;
+                }
+            }
+
+            // Adjust the offsets we remembered
+            if config_info.last_common_keybind_offset  >= config_info.last_editors_keybind_offset then config_info.last_common_keybind_offset  += inserted_bytes;
+        }
+
+        // Insert new keybinds into the common section
+        if config_info.last_common_keybind_offset >= 0 {
+            SUBSECTION :: "common";
+            insert_offset := config_info.last_common_keybind_offset + get_line_length(modified_data, config_info.last_common_keybind_offset);
+            inserted_bytes := 0;
+
+            // Maybe print a heading
+            for added : ADDED_KEYBINDS {
+                if added.subsection != SUBSECTION continue;
+                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) {
+                    heading := "\n# New in version [2]\n";
+                    array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) heading);
+                    inserted_bytes += heading.count;
+                    break;
+                }
+            }
+
+            for added : ADDED_KEYBINDS {
+                if added.subsection != SUBSECTION continue;
+                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) {
+                    key_combo := added.key_combo;
+                    if OS == .MACOS then key_combo = added.key_combo_mac;
+                    padding := get_tmp_spaces(KEYBINDS_INDENT - key_combo.count);
+                    key_binding := tprint("%1%2%3\n", key_combo, padding, added.action);
+                    array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) key_binding);
+                    inserted_bytes += key_binding.count;
                 }
             }
         }
@@ -184,6 +261,17 @@ maybe_migrate_config :: (name: string, file_data: string) -> Migration_Result, m
                         }
                     }
 
+                case "keymap";
+                    if current_subsection == "editors" {
+                        success, key_sequence_str, action_name := split_from_right_by_any(line, " \t");
+                        if success {
+                            if action_name == "remove_additional_cursors" && to_lower_copy(trim(key_sequence_str), allocator = temp) == "escape" {
+                                // Rebind action to "escape"
+                                new_binding := tprint("Escape                      escape\n");
+                                offset_difference += replace_line(*modified_data, line_start_offset, new_binding);
+                            }
+                        }
+                    }
             }
         }
     }
@@ -266,13 +354,28 @@ COLOR_VALUES_INDENT :: #run -> int {
     return max(length, 41);  // 41 is based on the current indent, but might get longer later if we have longer names
 }
 
+ADDED_KEYBINDS :: Added_Keybind.[
+    .{ 2, "editors", "add_cursors_to_line_ends",   "Alt-Shift-I",      "Alt-Shift-I"      },
+    .{ 2, "editors", "add_cursors_to_line_starts", "Alt-Shift-Ctrl-I", "Alt-Shift-Ctrl-I" },
+    .{ 2, "editors", "align_cursors",              "Alt-A",            "Alt-Cmd-A"        },
+    .{ 2, "editors", "select_all_occurrences",     "Ctrl-Shift-A",     "Cmd-Shift-A"      },
+    .{ 2, "common",  "toggle_build_panel",         "Ctrl-B",           "Cmd-B"            },
+    .{ 2, "common",  "toggle_fullscreen",          "F11",              "F11"              },
+];
+
+KEYBINDS_INDENT :: 28;
+
 handler: Text_File_Handler;
 
 Config_Info :: struct {
     settings_present: Table(string, bool);  // e.g. build_panel_width_percent -> true means it's present
     colors_present: Table(string, string);  // e.g. code_warning -> E4D97DFF (store a value we've seen)
+    keybinds_present: Table(string, bool);
+
     last_setting_offset := -1;
     last_color_offset   := -1;
+    last_common_keybind_offset  := -1;
+    last_editors_keybind_offset := -1;
 };
 
 Added_Setting :: struct {
@@ -299,6 +402,14 @@ Renamed_Color :: struct {
     new_name:  string;
 }
 
+Added_Keybind :: struct {
+    version:    int;
+    subsection: string;
+    action:     string;
+    key_combo:  string;
+    key_combo_mac: string;
+}
+
 Migration_Result :: enum {
     no_need_to_migrate;
     migrated_successfully;
@@ -314,9 +425,11 @@ RUN_TESTS :: true;
 // Also your code must comply with the SOLID principles. Are we real programmers or what?
 
 #if RUN_TESTS #run,stallable {
-    run_test("Settings migration",  "global.focus-config", SETTINGS_1, .migrated_successfully, SETTINGS_1_EXPECTED);
-    run_test("New colors",          "global.focus-config", COLORS_1,   .migrated_successfully, COLORS_1_EXPECTED);
-    run_test("Settings and colors", "global.focus-config", COLORS_2,   .migrated_successfully, COLORS_2_EXPECTED);
+    run_test("Settings migration",   "global.focus-config",  SETTINGS_1,  .migrated_successfully, SETTINGS_1_EXPECTED);
+    // run_test("Settings in projects", "project.focus-config", SETTINGS_2,  .migrated_successfully, SETTINGS_2_EXPECTED);
+    run_test("New colors",           "global.focus-config",  COLORS_1,    .migrated_successfully, COLORS_1_EXPECTED);
+    run_test("Settings and colors",  "global.focus-config",  COLORS_2,    .migrated_successfully, COLORS_2_EXPECTED);
+    run_test("New keybinds",         "global.focus-config",  KEYBINDS_1,  .migrated_successfully, KEYBINDS_1_EXPECTED);
 }
 
 run_test :: (test_name: string, file_name: string, config_data: string, expected_result: Migration_Result, expected_data: string) {
@@ -376,7 +489,7 @@ prefer_system_file_dialogs:             false  # Windows only
 show_cursors_off_screen:                true
 persist_local_search_results:           false
 
-# Settings added after last migration
+# New in version [2]
 build_panel_height_percent:             50
 build_panel_stays_in_one_place:         false  # if true, the build panel will flip to the inactive pane in two pane layouts
 build_panel_line_wrap_always_on:        true
@@ -431,7 +544,7 @@ background4:                             21333FFF
 scrollbar_hover:                         FFCCCC4C
 scrollbar_background:                    FF191F4C
 
-# Colors added after last migration
+# New in version [2]
 code_warning:                            E4D97DFF
 region_scope_export:                     15212AFF
 region_scope_file:                       15212AFF
@@ -509,7 +622,7 @@ insert_spaces_when_pressing_tab:        true
 prefer_system_file_dialogs:             false  # Windows only
 show_cursors_off_screen:                true
 
-# Settings added after last migration
+# New in version [2]
 build_panel_height_percent:             50
 build_panel_stays_in_one_place:         false  # if true, the build panel will flip to the inactive pane in two pane layouts
 build_panel_line_wrap_always_on:        true
@@ -537,7 +650,7 @@ background4:                             21333FFF
 scrollbar_hover:                         FFCCCC4C
 scrollbar_background:                    FF191F4C
 
-# Colors added after last migration
+# New in version [2]
 code_warning:                            E4D97DFF
 region_scope_export:                     15212AFF
 region_scope_file:                       15212AFF
@@ -553,3 +666,114 @@ build_panel_scrollbar_background:        10191F4C
 build_panel_title_bar:                   1C303AFF
 
 FOCUS_CONFIG
+
+
+KEYBINDS_1 :: #string FOCUS_CONFIG
+[1]  # Version number. Do not delete.
+
+[[style]]
+
+[user interface]
+font:       default
+font_size:  14
+
+[colors]
+background:                              15212AFF
+background_dark:                         10191FFF
+background_highlight:                    18262FFF
+background_light:                        1A2831FF
+background_bright:                       21333FFF
+
+scrollbar_hover:                         FFCCCC4C
+scrollbar_background:                    FF191F4C
+
+[[keymap]]
+
+# - The first matching combination will be used, so order matters
+
+[editors]   # <- this means that the following key combos will apply only when editing text
+
+Alt-F4                      quit
+Escape                      remove_additional_cursors
+Ctrl-Escape                 remove_additional_cursors
+
+Ctrl-D                      select_word_or_create_another_cursor
+Ctrl-Shift-A                select_all_occurrences
+
+[open file dialog]
+Tab                         open_directory
+
+[common]
+Alt-X                       show_commands
+Ctrl-Shift-P                show_commands
+
+Ctrl-Alt-P                  switch_to_project
+
+FOCUS_CONFIG
+
+KEYBINDS_1_EXPECTED :: #string FOCUS_CONFIG
+[2]  # Version number. Do not delete.
+
+[[style]]
+
+font:       default
+font_size:  14
+
+[colors]
+background0:                             15212AFF
+background1:                             10191FFF
+background2:                             18262FFF
+background3:                             1A2831FF
+background4:                             21333FFF
+
+scrollbar_hover:                         FFCCCC4C
+scrollbar_background:                    FF191F4C
+
+# New in version [2]
+code_warning:                            E4D97DFF
+region_scope_export:                     15212AFF
+region_scope_file:                       15212AFF
+region_scope_module:                     15212AFF
+region_header:                           1A5152FF
+region_success:                          226022FF
+region_warning:                          986032FF
+region_error:                            772222FF
+build_panel_background:                  1A2831FF
+build_panel_scrollbar:                   33CCCC19
+build_panel_scrollbar_hover:             33CCCC4C
+build_panel_scrollbar_background:        10191F4C
+build_panel_title_bar:                   1C303AFF
+
+[[keymap]]
+
+# - The first matching combination will be used, so order matters
+
+[editors]   # <- this means that the following key combos will apply only when editing text
+
+Alt-F4                      quit
+Escape                      escape
+Ctrl-Escape                 remove_additional_cursors
+
+Ctrl-D                      select_word_or_create_another_cursor
+Ctrl-Shift-A                select_all_occurrences
+
+# New in version [2]
+Alt-Shift-I                 add_cursors_to_line_ends
+Alt-Shift-Ctrl-I            add_cursors_to_line_starts
+Alt-A                       align_cursors
+
+[open file dialog]
+Tab                         open_directory
+
+[common]
+Alt-X                       show_commands
+Ctrl-Shift-P                show_commands
+
+Ctrl-Alt-P                  switch_to_project
+
+# New in version [2]
+Ctrl-B                      toggle_build_panel
+F11                         toggle_fullscreen
+
+FOCUS_CONFIG
+
