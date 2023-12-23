@@ -43,7 +43,7 @@ commands_refresh_entries :: (filter: Fuzzy_Filter) {
         if !project_config.loaded && (command.action == .open_project_config || command.action == .close_project) continue;
 
         score, highlights := fuzzy_match(command.name, filter);
-        if score < 0 continue;
+        if score <= 0 && filter.full_string continue;
 
         entry := array_add(*filtered);
         entry.details    = command;

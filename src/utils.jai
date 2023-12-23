@@ -142,64 +142,71 @@ find_index_from_left_whole_word :: (s: string, substring: string, start_index :=
     return -1;
 }
 
-fuzzy_match :: (str: string, filter: Fuzzy_Filter) -> score: s32, highlights: [] bool {
+fuzzy_match :: (str: string, filter: Fuzzy_Filter, only_exact := false) -> score: s32, highlights: [] bool, exact_match := false {
     highlights := NewArray(str.count, bool, initialized = true);
     if !filter.chunks return 0, highlights;
 
-    MAX_CHARS :: 200;
+    MAX_CHARS :: 400;
 
     // Try matching the full string first and rank it the highest
     {
         index := find_index_from_left_nocase(str, filter.full_string, 0);
         if index >= 0 {
             memset(highlights.data + index, cast(u8) true, filter.full_string.count);
-            score := 200 * (MAX_CHARS - index) - str.count;
-            return cast(s32) score, highlights;
+            score := (400 + filter.full_string.count) * (MAX_CHARS - index);
+            return cast(s32) score, highlights, true;
         }
     }
 
-    // Then try matching each chunk exactly and accept the match if at least one matches
-    auto_release_temp();
-    chunk_highlights := NewArray(str.count, bool, initialized = false, allocator = temp);  // to store temporary highlights we might later reject
-    chunk_matched_exactly := false;
     score := 0;
 
+    auto_release_temp();
+    chunk_highlights := NewArray(str.count, bool, initialized = false, allocator = temp);  // to store temporary highlights we might later reject
+
+    // Try matching each chunk exactly and accept the match if at least one matches
+    for chunk : filter.chunks {
+        chunk_score := 0;
+        memset(chunk_highlights.data, 0, chunk_highlights.count);
+
+        index := find_index_from_left_nocase(str, chunk.str, 0);
+        if index >= 0 {
+            memset(chunk_highlights.data + index, cast(u8) true, chunk.str.count);
+            chunk_score += (200 + chunk.str.count) * (MAX_CHARS - index) - str.count;
+        }
+
+        if chunk_score >= 0 {
+            score += chunk_score;
+            for i : 0 .. chunk_highlights.count - 1 { highlights[i] |= chunk_highlights[i]; }  // apply chunk highlights
+        }
+    }
+
+    if score > 0 return xx score, highlights, true;  // if we had at least one exact match, don't proceed
+    if score <= 0 && only_exact return xx score, highlights;
+
+    // Then match individual chars
     for chunk : filter.chunks {
         pos := 0;
         chunk_score := 0;
         memset(chunk_highlights.data, 0, chunk_highlights.count);
 
         // Try matching the full chunk first
-        index := find_index_from_left_nocase(str, chunk.str, 0);
-        if index >= 0 {
-            memset(chunk_highlights.data + index, cast(u8) true, chunk.str.count);
-            chunk_score += 100 * (MAX_CHARS - index) - str.count;
-            chunk_matched_exactly = true;
-        } else {
-            for char : chunk.chars {
-                index := find_index_from_left_nocase(str, char, pos);
-                if index < 0 { chunk_score = -1; break; }
-                chunk_highlights[index] = true;
-                chunk_score += 10 * (MAX_CHARS - index);  // the closer to the beginning, the better
-                pos = index + char.count;
-            }
+        for char : chunk.chars {
+            index := find_index_from_left_nocase(str, char, pos);
+            if index < 0 { chunk_score = -1; break; }
+            chunk_highlights[index] = true;
+            chunk_score += 10 * (MAX_CHARS - index);  // the closer to the beginning, the better
+            pos = index + char.count;
         }
 
         if chunk_score >= 0 {
             score += chunk_score;
-            for i : 0 .. chunk_highlights.count - 1 {
-                highlights[i] |= chunk_highlights[i];  // apply chunk highlights
-            }
-        } else if chunk_matched_exactly {
-            break;
+            for i : 0 .. chunk_highlights.count - 1 { highlights[i] |= chunk_highlights[i]; }  // apply chunk highlights
         }
     }
 
-    if score < 0 then memset(highlights.data, 0, highlights.count);  // no match -> no highlighting
+    // if score <= 0 then memset(highlights.data, 0, highlights.count);  // no match -> no highlighting
 
-    score -= str.count;  // prefer shorter matches if everything else is equal
-
-    return cast(s32) score, highlights;
+    return xx score, highlights;
 }
 
 construct_fuzzy_filter :: (filter_str: string, treat_slashes_as_spaces := false) -> Fuzzy_Filter {
