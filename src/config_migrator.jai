@@ -1,13 +1,13 @@
 // We have a crappy parser here which only does some very superficial parsing.
 // The reason is because it's much simpler than keeping valid parsers for each historical version.
 
-maybe_migrate_config :: (name: string, file_data: string) -> Migration_Result, modified_data := "" {
+maybe_migrate_config :: (name: string, file_data: string) -> migrated: bool, modified_data := "" {
     trimmed_data := trim_left(file_data, " \t\n\r");  // skip empty lines, otherwise the handler will crash!
     start_from_memory(*handler, name, name, trimmed_data);
-    if handler.failed return .no_need_to_migrate;  // let it proceed and fail later
-    if handler.version >= CURRENT_CONFIG_VERSION return .no_need_to_migrate;
+    if handler.failed return false;
+    if handler.version >= CURRENT_CONFIG_VERSION return false;
 
-    is_global_config := name == "global.focus-config";
+    is_global_config := contains_nocase(name, "global.focus-config");
 
     // Do one full pass to collect information, not touching anything
     config_info: Config_Info;
@@ -278,7 +278,7 @@ maybe_migrate_config :: (name: string, file_data: string) -> Migration_Result, m
         }
     }
 
-    return .migrated_successfully, cast(string) modified_data;
+    return true, cast(string) modified_data;
 }
 
 
@@ -412,12 +412,6 @@ Added_Keybind :: struct {
     key_combo_mac: string;
 }
 
-Migration_Result :: enum {
-    no_need_to_migrate;
-    migrated_successfully;
-    doesnt_parse_after_migration;
-}
-
 
 // ================================= TESTS ====================================
 
@@ -427,14 +421,14 @@ RUN_TESTS :: false;
 // Also your code must comply with the SOLID principles. Are we real programmers or what?
 
 #if RUN_TESTS #run,stallable {
-    run_test("Settings migration",   "global.focus-config",  SETTINGS_1,  .migrated_successfully, SETTINGS_1_EXPECTED);
-    run_test("Settings in projects", "project.focus-config", SETTINGS_2,  .migrated_successfully, SETTINGS_2_EXPECTED);
-    run_test("New colors",           "global.focus-config",  COLORS_1,    .migrated_successfully, COLORS_1_EXPECTED);
-    run_test("Settings and colors",  "global.focus-config",  COLORS_2,    .migrated_successfully, COLORS_2_EXPECTED);
-    run_test("New keybinds",         "global.focus-config",  KEYBINDS_1,  .migrated_successfully, KEYBINDS_1_EXPECTED);
+    run_test("Settings migration",   "global.focus-config",  SETTINGS_1,  true, SETTINGS_1_EXPECTED);
+    run_test("Settings in projects", "project.focus-config", SETTINGS_2,  true, SETTINGS_2_EXPECTED);
+    run_test("New colors",           "global.focus-config",  COLORS_1,    true, COLORS_1_EXPECTED);
+    run_test("Settings and colors",  "global.focus-config",  COLORS_2,    true, COLORS_2_EXPECTED);
+    run_test("New keybinds",         "global.focus-config",  KEYBINDS_1,  true, KEYBINDS_1_EXPECTED);
 }
 
-run_test :: (test_name: string, file_name: string, config_data: string, expected_result: Migration_Result, expected_data: string) {
+run_test :: (test_name: string, file_name: string, config_data: string, expected_result: bool, expected_data: string) {
     result, modified_data := maybe_migrate_config(file_name, config_data);
     assert(result == expected_result, "%: Expected result %, got %", test_name, expected_result, result);
     if modified_data != expected_data {

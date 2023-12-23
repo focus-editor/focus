@@ -35,9 +35,9 @@ main :: () {
     if !projects_dir_existed then write_entire_file(tprint("%/Example Project.focus-config", projects_dir), EXAMPLE_PROJECT_FILE_DATA);
 
     init_file_watcher();
+    init_buffers();
     load_global_config(fallback_to_default_on_failure = true);
     init_workspace();
-    init_buffers();
     init_build_system();
 
     window_x, window_y, window_width, window_height = platform_get_centered_window_dimensions(config.settings.open_on_the_biggest_monitor);

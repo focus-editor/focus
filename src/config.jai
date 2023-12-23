@@ -255,18 +255,32 @@ load_config :: (file_path: string, existing: *Loaded_Config, force := false) -> 
     loaded_config.hash = calculate_hash(to_bytes(file_data));
     if loaded_config.hash == existing.hash && !force return loaded_config, false;  // unchanged so no need to parse
 
-    // migration_result, new_file_data := maybe_migrate_config(file_path, file_data);
-    // if #complete migration_result == {
-    //     case .no_need_to_migrate;   // do nothing
-    //     case .migrated_successfully;
-    //         add_success_message("Config file '%' has been migrated to version [%]", file_path, CURRENT_CONFIG_VERSION);
-    //         free(file_data);
-    //         file_data = new_file_data;
-    //         // @nocheckin: replace the file with the new data
-    //     case .doesnt_parse_after_migration;
-    //         add_user_error("We attempted to migrate config file '%' to version [%],\nbut it doesn't parse after migration. Please migrate manually using the default config as a reference.", file_path, CURRENT_CONFIG_VERSION);
-    //         return loaded_config;
-    // }
+    // Attempt a migration
+#if false {
+    migrated, new_file_data := maybe_migrate_config(file_path, file_data);
+    if migrated {
+        // Try parsing after migration to verify it's OK
+        result := parse_config(file_path, file_path, new_file_data);
+        if !result.success {
+            add_user_error("We attempted to migrate config file '%' to version [%],\nbut it doesn't parse after migration. Please migrate manually using the default config as a reference.", file_path, CURRENT_CONFIG_VERSION);
+            return loaded_config;
+        }
+
+        // All good
+        write_entire_file(tprint("%.bak", file_path), file_data);
+        free(file_data);
+        file_data = new_file_data;
+        loaded_config.file_data = file_data;
+
+        // Replace the old config's file
+        success := write_entire_file(file_path, new_file_data);
+        if success {
+            add_success_message("Config file '%' has been migrated to version [%]", file_path, CURRENT_CONFIG_VERSION);
+        } else {
+            add_user_error("We migrated config file '%' to version [%],\nbut could't save the file. Is it writable?", file_path, CURRENT_CONFIG_VERSION);
+        }
+    }
+}
 
     parse_result := parse_config(file_path, file_path, file_data);
     if !parse_result.success {
