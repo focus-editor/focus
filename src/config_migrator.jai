@@ -31,14 +31,7 @@ maybe_migrate_config :: (name: string, file_data: string) -> Migration_Result, m
                     setting_name = trim_right(setting_name, ":");
 
                     config_info.last_setting_offset = line_start_offset;
-
-                    #insert -> string {
-                        b: String_Builder;
-                        append(*b, "if setting_name == {\n");
-                        for added : ADDED_SETTINGS  print_to_builder(*b, "    case \"%1\";  config_info.settings_present |= .%1;\n", added.name);
-                        append(*b, "}\n");
-                        return builder_to_string(*b);
-                    }
+                    table_set(*config_info.settings_present, setting_name, true);
 
                 case "style";
                     if current_subsection == "colors" {
@@ -47,16 +40,11 @@ maybe_migrate_config :: (name: string, file_data: string) -> Migration_Result, m
 
                         config_info.last_color_offset = line_start_offset;
 
-                        // Remember colors
-                        #insert -> string {
-                            b: String_Builder;
-                            for RENAMED_COLORS {
-                                print_to_builder(*b, "if color_name == \"%1\" || color_name == \"%2\" then config_info.colors_present.%2 = color_value;\n", it.old_name, it.new_name);
-                            }
-                            for ADDED_COLORS {
-                                print_to_builder(*b, "if color_name == \"%1\" then config_info.colors_present.%1 = color_value;\n", it.name);
-                            }
-                            return builder_to_string(*b);
+                        for RENAMED_COLORS {
+                            if color_name == it.old_name || color_name == it.new_name then table_set(*config_info.colors_present, it.new_name, color_value);
+                        }
+                        for ADDED_COLORS {
+                            if color_name == it.name then table_set(*config_info.colors_present, color_name, color_value);
                         }
                     }
             }
@@ -75,34 +63,21 @@ maybe_migrate_config :: (name: string, file_data: string) -> Migration_Result, m
             inserted_bytes := 0;
 
             there_are_settings_to_add := false;
-            #insert -> string {
-                b: String_Builder;
-                for added : ADDED_SETTINGS {
-                    print_to_builder(*b, "if !(config_info.settings_present & .%) then there_are_settings_to_add = true;\n", added.name);
-                }
-                return builder_to_string(*b);
+            for ADDED_SETTINGS {
+                if !table_contains(*config_info.settings_present, it.name) { there_are_settings_to_add = true; break; }
             }
-
             if there_are_settings_to_add {
                 heading := "\n# Settings added after last migration\n";
                 array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) heading);
                 inserted_bytes += heading.count;
             }
-
-            #insert -> string {
-                b: String_Builder;
-                for added : ADDED_SETTINGS {
-                    code := #string JAI
-                        if !(config_info.settings_present & .%1) {
-                            setting := "%1:%2%3\n";
-                            array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) setting);
-                            inserted_bytes += setting.count;
-                        }
-                    JAI
+            for added : ADDED_SETTINGS {
+                if !table_contains(*config_info.settings_present, added.name) {
                     padding := get_tmp_spaces(SETTING_VALUES_INDENT - added.name.count - 1);
-                    print_to_builder(*b, code, added.name, padding, added.value);
+                    setting := tprint("%1:%2%3\n", added.name, padding, added.value);
+                    array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) setting);
+                    inserted_bytes += setting.count;
                 }
-                return builder_to_string(*b);
             }
         }
 
@@ -112,39 +87,26 @@ maybe_migrate_config :: (name: string, file_data: string) -> Migration_Result, m
             inserted_bytes := 0;
 
             there_are_colors_to_add := false;
-            #insert -> string {
-                b: String_Builder;
-                for added : ADDED_COLORS {
-                    print_to_builder(*b, "if !config_info.colors_present.% then there_are_colors_to_add = true;\n", added.name);
-                }
-                return builder_to_string(*b);
+            for added : ADDED_COLORS {
+                if !table_contains(*config_info.colors_present, added.name) { there_are_colors_to_add = true; break; }
             }
-
             if there_are_colors_to_add {
                 heading := "\n# Colors added after last migration\n";
                 array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) heading);
                 inserted_bytes += heading.count;
             }
-
-            #insert -> string {
-                b: String_Builder;
-                for added : ADDED_COLORS {
-                    code := #string JAI
-                        if !config_info.colors_present.%1 {
-                            %3  // get value
-                            color := tprint("%1:%2%%\n", value);
-                            array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) color);
-                            inserted_bytes += color.count;
-                        }
-                    JAI
-                    padding := get_tmp_spaces(COLOR_VALUES_INDENT - added.name.count - 1);
-                    value_getter := tprint("value := \"%\";", added.default);
+            for added : ADDED_COLORS {
+                if !table_contains(*config_info.colors_present, added.name) {
+                    value := added.default;
                     if added.value_from {
-                        value_getter = tprint("%1 if config_info.colors_present.%2 then value = config_info.colors_present.%2;", value_getter, added.value_from);
+                        source_value, success := table_find(*config_info.colors_present, added.value_from);
+                        if success && source_value then value = source_value;
                     }
-                    print_to_builder(*b, code, added.name, padding, value_getter);
+                    padding := get_tmp_spaces(COLOR_VALUES_INDENT - added.name.count - 1);
+                    color := tprint("%1:%2%3\n", added.name, padding, value);
+                    array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) color);
+                    inserted_bytes += color.count;
                 }
-                return builder_to_string(*b);
             }
         }
 
@@ -297,8 +259,8 @@ COLOR_VALUES_INDENT :: #run -> int {
 handler: Text_File_Handler;
 
 Config_Info :: struct {
-    settings_present: Settings_Present;
-    colors_present: Colors_Present;
+    settings_present: Table(string, bool);  // e.g. build_panel_width_percent -> true means it's present
+    colors_present: Table(string, string);  // e.g. code_warning -> E4D97DFF (store a value we've seen)
     last_setting_offset := -1;
     last_color_offset   := -1;
 };
@@ -325,34 +287,6 @@ Renamed_Color :: struct {
     version:   int;
     old_name:  string;
     new_name:  string;
-}
-
-// Settings_Present:
-#insert -> string {
-    b: String_Builder;
-    append(*b, "Settings_Present :: enum_flags {\n");
-    for ADDED_SETTINGS  print_to_builder(*b, "    %;\n", it.name);
-    append(*b, "}\n");
-    return builder_to_string(*b);
-}
-
-// Colors_Present:
-#insert -> string {
-    b: String_Builder;
-    colors: [..] string;
-    for ADDED_COLORS {
-        array_add_if_unique(*colors, it.name);
-        if it.value_from then array_add_if_unique(*colors, it.value_from);
-    }
-    for RENAMED_COLORS {
-        array_add_if_unique(*colors, it.old_name);
-        array_add_if_unique(*colors, it.new_name);
-    }
-
-    append(*b, "Colors_Present :: struct {\n");
-    for colors  print_to_builder(*b, "    %: string;\n", it);
-    append(*b, "}\n");
-    return builder_to_string(*b);
 }
 
 Migration_Result :: enum {
@@ -500,4 +434,3 @@ build_panel_scrollbar_background:        10191F4C
 build_panel_title_bar:                   1C303AFF
 
 FOCUS_CONFIG
-
