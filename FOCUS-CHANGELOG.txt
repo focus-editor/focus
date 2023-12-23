@@ -20,6 +20,7 @@
 # Main Git Branch
 
 + New features:
+    + An automatic config migration system. All configs will be bumped to version [2], with new things added or renamed where needed.
     + Windows 11+: New config option: `colored_titlebar`. Sets the color of the title bar to the background color (thanks @amasondev)
     + New option: `hide_mouse_when_typing` (currently Windows/Mac only). Set to `true` to hide the mouse cursor when entering text (thanks @amasondev)
     + New commands: `add_cursors_to_line_ends` (Alt-Shift-I) and `add_cursors_to_line_starts` (Alt-Shift-Ctrl-I)

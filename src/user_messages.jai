@@ -72,4 +72,4 @@ Tag :: enum_flags {
     build;
 }
 
-MAX_MESSAGES_ON_SCREEN :: 8;
+MAX_MESSAGES_ON_SCREEN :: 20;

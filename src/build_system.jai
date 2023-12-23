@@ -8,7 +8,7 @@ init_build_system :: () {
     buffer.deleted  = true;  // so that it doesn't appear in the open file dialog
     if config.settings.build_panel_line_wrap_always_on then editor.line_wrap = .on; else editor.line_wrap = .off;
 
-    init(*output_mutex);
+    init(*build_mutex);
 
     thread_group = Thread_Group.{};  // in case we need to reinitialise it later
     init(*thread_group, num_threads = 1, group_proc = build_threadproc);
@@ -93,13 +93,23 @@ execute_build_command :: (command: *Build_Command) {
     // Now don't modify running_command as it's being accessed from thread
 }
 
+build_kill_running_command :: () {
+    if !running_command {
+        add_user_warning("No command is currently running", dismiss_in_seconds = 3);
+        return;
+    }
+    lock(*build_mutex);
+    kill_process(*running_process);
+    unlock(*build_mutex);
+}
+
 build_system_update :: () {
     assert(build_buffer_id >= 0 && build_editor_id >= 0, "Build system is not initialized");
 
     // Print to build output panel, if we have anything to print
     {
-        lock(*output_mutex);
-        defer unlock(*output_mutex);
+        lock(*build_mutex);
+        defer unlock(*build_mutex);
 
         output := builder_to_string(*stdout);
         print_to_output_panel_from_main_thread(output);
@@ -198,7 +208,7 @@ show_build_panel :: () {
 }
 
 hide_build_panel :: () {
-    if editors.active != editors.left && editors.active != editors.right {
+    if editors.active != editors.left && editors.active != editors.right && editors.left >= 0 && editors.right >= 0 {
         // If we still have the same editors open when the panel was opened, go back to the previously active one,
         // otherwise default to left.
         make_editor_active(ifx previously_active_editor == editors.right then editors.right else editors.left);
@@ -377,6 +387,7 @@ saved_position := Build_Panel_Position.right;
 build_panel_is_expanded := false;
 
 running_command: *Build_Command = null;
+running_process: Process;
 
 last_command_result: struct {
     build: Command_Result;
@@ -392,7 +403,7 @@ memory_pool: Flat_Pool;
 // We never write to buffers from threads, because if we did, a lot of code would have to be littered with locks.
 stdout: String_Builder;
 stderr: String_Builder;
-output_mutex: Mutex;
+build_mutex: Mutex;
 
 Build_Panel_Position :: enum { left; right; }
 
@@ -410,18 +421,25 @@ MAX_BUILD_OUTPUT_BUFFER_SIZE :: 6 * 1024 * 1024;
 // Adapted the run_command function from the Process module to allow for monitoring output
 
 run_command_while_monitoring_output :: (args: .. string, working_directory := "", timeout_ms := -1, arg_quoting := Process_Argument_Quoting.QUOTE_IF_NEEDED) -> (process_result: Process_Result, timeout_reached := false) {
-    process: Process;
+    process  := *running_process;  // accessing a global! NOTE: this is assuming we only ever have one running command
+    lock(*build_mutex);
+    process.* = Process.{};
+    unlock(*build_mutex);
 
-    launched := create_process(*process, .. args, working_directory, capture_and_return_output = true, arg_quoting = arg_quoting);
+    launched := create_process(process, .. args, working_directory, capture_and_return_output = true, arg_quoting = arg_quoting);
     if !launched {
         executable := args[0];
         if is_absolute_path(executable) return .{type = .FAILED_TO_LAUNCH};
         // Retry with an absolute path if possible
         args[0] = tprint("%/%", working_directory, executable);
-        launched := create_process(*process, .. args, working_directory, capture_and_return_output = true, arg_quoting = arg_quoting);
+        launched := create_process(process, .. args, working_directory, capture_and_return_output = true, arg_quoting = arg_quoting);
         if !launched return .{type = .FAILED_TO_LAUNCH};
     }
-    defer deinit(*process);
+    defer {
+        lock(*build_mutex);
+        deinit(process);
+        unlock(*build_mutex);
+    }
 
     timeout_reached := false;
 
@@ -433,7 +451,7 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
 
     while true {
         output_buffer, error_buffer: [4096] u8;
-        success, num_output_bytes, num_error_bytes := read_from_process(*process, output_buffer, error_buffer, remaining_timeout_ms);
+        success, num_output_bytes, num_error_bytes := read_from_process(process, output_buffer, error_buffer, remaining_timeout_ms);
 
         if num_output_bytes {
             write_output_from_build_thread(*stdout, to_string(output_buffer.data, num_output_bytes));
@@ -446,7 +464,7 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
 
         if !success {
             log_error("Could not read output of command \"%\"", get_quoted_command_string(args));
-            kill_process(*process);
+            kill_process(process);
             break;
         }
 
@@ -457,7 +475,7 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
             if remaining_timeout_ms <= 0 {
                 // We’ve hit a timeout! Time to kill the child. (will be reaped below)
                 timeout_reached = true;
-                success := kill_process(*process);
+                success := kill_process(process);
                 if !success {
                     error_code, error_string := System.get_error_value_and_string();
                     log_error("Could not kill child for command \"%\": % %", get_quoted_command_string(args), error_code, error_string);
@@ -472,11 +490,11 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
     // Print error output
     write_output_from_build_thread(*stderr, builder_to_string(*error_builder));
 
-    success, process_result := get_process_result(*process);
+    success, process_result := get_process_result(process);
     if !success {
         error_code, error_string := System.get_error_value_and_string();
         log_error("Could not get process result for command \"%\": % %", get_quoted_command_string(args), error_code, error_string);
-        kill_process(*process);
+        kill_process(process);
         process_result = .{type = .EXITED, exit_code = 1};
     }
 
@@ -485,8 +503,8 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
 
 write_output_from_build_thread :: (builder: *String_Builder, s: string) {
     if !s return;
-    lock(*output_mutex);
-    defer unlock(*output_mutex);
+    lock(*build_mutex);
+    defer unlock(*build_mutex);
     append(builder, s);
 }
 
