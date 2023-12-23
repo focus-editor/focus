@@ -7,6 +7,8 @@ maybe_migrate_config :: (name: string, file_data: string) -> Migration_Result, m
     if handler.failed return .no_need_to_migrate;  // let it proceed and fail later
     if handler.version >= CURRENT_CONFIG_VERSION return .no_need_to_migrate;
 
+    is_global_config := name == "global.focus-config";
+
     // Do one full pass to collect information, not touching anything
     config_info: Config_Info;
     {
@@ -69,7 +71,7 @@ maybe_migrate_config :: (name: string, file_data: string) -> Migration_Result, m
         memcpy(modified_data.data, trimmed_data.data, trimmed_data.count);
 
         // Insert new settings
-        if config_info.last_setting_offset >= 0 {
+        if config_info.last_setting_offset >= 0 && is_global_config {
             insert_offset := config_info.last_setting_offset + get_line_length(modified_data, config_info.last_setting_offset);
             inserted_bytes := 0;
 
@@ -419,14 +421,14 @@ Migration_Result :: enum {
 
 // ================================= TESTS ====================================
 
-RUN_TESTS :: true;
+RUN_TESTS :: false;
 
 // Yes we do unit tests now! Don't you dare submit a PR without tests and 100% coverage.
 // Also your code must comply with the SOLID principles. Are we real programmers or what?
 
 #if RUN_TESTS #run,stallable {
     run_test("Settings migration",   "global.focus-config",  SETTINGS_1,  .migrated_successfully, SETTINGS_1_EXPECTED);
-    // run_test("Settings in projects", "project.focus-config", SETTINGS_2,  .migrated_successfully, SETTINGS_2_EXPECTED);
+    run_test("Settings in projects", "project.focus-config", SETTINGS_2,  .migrated_successfully, SETTINGS_2_EXPECTED);
     run_test("New colors",           "global.focus-config",  COLORS_1,    .migrated_successfully, COLORS_1_EXPECTED);
     run_test("Settings and colors",  "global.focus-config",  COLORS_2,    .migrated_successfully, COLORS_2_EXPECTED);
     run_test("New keybinds",         "global.focus-config",  KEYBINDS_1,  .migrated_successfully, KEYBINDS_1_EXPECTED);
@@ -497,6 +499,56 @@ highlight_line_with_cursor:             false
 draw_indent_guides:                     false
 auto_surround_with_brackets_and_quotes: false
 scroll_beyond_last_line:                true
+
+[[keymap]]
+# ...
+FOCUS_CONFIG
+
+// Settings should not be added to project configs, only removed
+
+SETTINGS_2 :: #string FOCUS_CONFIG
+
+[1]  # Version number. Do not delete.
+
+[[workspace]]
+
+[workspace dirs]
+# These directories will be scanned when a workspace is opened so that search etc. works.
+# Example:
+
+[[settings]]
+
+maximize_on_start:                      false
+tab_size:                               4
+build_panel_width_percent:              50
+max_entries_in_open_file_dialog:        2000
+insert_spaces_when_pressing_tab:        true
+prefer_system_file_dialogs:             false  # Windows only
+show_cursors_off_screen:                true
+persist_local_search_results:           false
+
+[[keymap]]
+# ...
+FOCUS_CONFIG
+
+SETTINGS_2_EXPECTED :: #string FOCUS_CONFIG
+[2]  # Version number. Do not delete.
+
+[[workspace]]
+
+[workspace dirs]
+# These directories will be scanned when a workspace is opened so that search etc. works.
+# Example:
+
+[[settings]]
+
+maximize_on_start:                      false
+tab_size:                               4
+build_panel_width_percent:              50
+insert_spaces_when_pressing_tab:        true
+prefer_system_file_dialogs:             false  # Windows only
+show_cursors_off_screen:                true
+persist_local_search_results:           false
 
 [[keymap]]
 # ...
