@@ -219,6 +219,7 @@ ADDED_SETTINGS :: Added_Setting.[
     .{ 2, "auto_surround_with_brackets_and_quotes",     "false" },
     .{ 2, "scroll_beyond_last_line",                    "true" },
     .{ 2, "show_cursors_off_screen",                    "true" },
+    .{ 2, "persist_local_search_results",               "false  # if true, search results will stay highlighted and you have to dismiss them using the `escape` action" },
 ];
 
 REMOVED_SETTINGS :: Removed_Setting.[
@@ -350,6 +351,7 @@ max_entries_in_open_file_dialog:        2000
 insert_spaces_when_pressing_tab:        true
 prefer_system_file_dialogs:             false  # Windows only
 show_cursors_off_screen:                true
+persist_local_search_results:           false
 
 [[keymap]]
 # ...
@@ -372,6 +374,7 @@ build_panel_width_percent:              50
 insert_spaces_when_pressing_tab:        true
 prefer_system_file_dialogs:             false  # Windows only
 show_cursors_off_screen:                true
+persist_local_search_results:           false
 
 # Settings added after last migration
 build_panel_height_percent:             50
@@ -514,6 +517,7 @@ highlight_line_with_cursor:             false
 draw_indent_guides:                     false
 auto_surround_with_brackets_and_quotes: false
 scroll_beyond_last_line:                true
+persist_local_search_results:           false  # if true, search results will stay highlighted and you have to dismiss them using the `escape` action
 
 [[keymap]]
 # ...

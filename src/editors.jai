@@ -862,6 +862,11 @@ close_search_bar :: inline (editor: *Editor, jump_to_original_cursor := false, j
         cursor.pos = xx (cursor.sel + results[selected_result].count);
         editor.scroll_to_cursor = .yes;
     }
+
+    if !config.settings.persist_local_search_results {
+        reset_search_results(*editor.search_bar);
+        editor.refresh_highlights = true;
+    }
 }
 
 search_bar_toggle_expand :: (using editor: *Editor) {

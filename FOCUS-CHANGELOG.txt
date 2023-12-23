@@ -35,6 +35,7 @@
     + New option: `auto_surround_with_brackets_and_quotes` to enable auto-surrounding (thanks @hfr4)
     + New option: `scroll_beyond_last_line` (defaults to `true`). Disable to prevent scrolling past the editor's last line
     + New option: `show_cursors_off_screen` (defaults to `true`). If enabled, displays a warning in the footer if there are cursors off screen (only when more than one is used)
+    + New option: `persist_local_search_results` (defaults to `false`). If enabled, search highlights will persist even when the search bar is closed. Press escape to dismiss (you might need to bind the `escape` action for it to work). (thanks @amasondev)
     + Added support for regular expressions in file/project search
     + Added a built-in 'save file' dialog (it will be on by default). To use the system dialogs on Windows, use `prefer_system_file_dialogs: true`
     + Dragging with the middle mouse button will create cursors (thanks @hfr4)
@@ -93,7 +94,6 @@
     + Tab characters are now only shown when they are within selection
     + Windows: better handling of Unicode input (thanks @ostef)
     + Fuzzy match improvements in dialogs
-    + Search highlights will persist even when the search bar is closed. Press escape to dismiss (you might need to bind the `escape` action for it to work). (thanks @amasondev)
 
 
 
