@@ -106,15 +106,6 @@ draw_welcome_screen :: (main_area: Rect) {
     {
         draw_rect(left_area, Color.BACKGROUND_LIGHT);
 
-        // TODO: fix the circle shader
-        // center := center_of(logo_rect);
-        // draw_circle(center, Color.BACKGROUND_DARK, radius = logo_rect.w / 2);
-        // shrink_step := logo_rect.w / 6.5;
-        // logo_rect = shrink(logo_rect, shrink_step);
-        // draw_circle(center, Color.BACKGROUND, radius = logo_rect.w / 2);
-        // logo_rect = shrink(logo_rect, shrink_step);
-        // draw_circle(center, Color.BACKGROUND_LIGHT, radius = logo_rect.w / 2);
-
         Simp.set_shader_for_rects();
 
         circle := logo_rect;
