@@ -261,9 +261,10 @@ main :: () {
                 case .commands_dialog;          handled = commands_dialog_handle_event(event);
             }
 
-            action := map_event_to_action(event, Action_Editors);
-            handled = handle_common_editor_action(action);
-
+            if !handled {
+                action := map_event_to_action(event, Action_Editors);
+                handled = handle_common_editor_action(action);
+            }
             if !handled then handled = maybe_execute_a_build_command(event);
 
             if handled && event.type == .KEYBOARD then num_text_input_events_to_ignore = event.text_input_count;
