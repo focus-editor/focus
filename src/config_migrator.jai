@@ -5,7 +5,7 @@ maybe_migrate_config :: (name: string, file_data: string) -> migrated: bool, mod
     trimmed_data := trim_left(file_data, " \t\n\r");  // skip empty lines, otherwise the handler will crash!
     start_from_memory(*handler, name, name, trimmed_data);
     if handler.failed return false;
-    if handler.version >= CURRENT_CONFIG_VERSION return false;
+    if handler.version >= CURRENT_CONFIG_VERSION || handler.version <= 0 return false;
 
     is_global_config := contains_nocase(name, "global.focus-config");
 
