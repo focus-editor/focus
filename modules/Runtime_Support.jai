@@ -89,8 +89,6 @@ runtime_support_assertion_failed :: (loc: Source_Code_Location, message: string)
 		write_string("!\n", to_standard_error = true);
 	}
 
-    report_failed_assertion_more_visibly(loc, message);
-
     print_stack_trace :: (node: *Stack_Trace_Node) {  // @Copypasta from modules/Basic, but without calling print.
         while node {
             // There are two different line numbers available.
@@ -119,6 +117,8 @@ runtime_support_assertion_failed :: (loc: Source_Code_Location, message: string)
     } else {
         write_string("Exiting.\n", to_standard_error = true);
     }
+
+    report_failed_assertion_more_visibly(loc, message);
 
     __runtime_support_disable_stack_trace = true;
 
