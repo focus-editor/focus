@@ -1,4 +1,4 @@
-[1]  # Version number. Do not delete.
+[2]  # Version number. Do not delete.
 
 [[workspace]]
 
@@ -72,6 +72,30 @@ build_panel_stays_in_one_place:         false  # if true, the build panel will f
 build_panel_line_wrap_always_on:        true
 build_panel_width_percent:              50
 build_panel_height_percent:             50
+
+
+# This is an example configuration for build commands
+
+# [[build commands]]
+# build_working_dir:      <build working dir for all commands>
+# open_panel_on_build:    true  #  <- any settings specified here will apply to all commands unless overriddent
+
+# [Debug Build And Run]   # <- command name. Can be arbitrary
+# build_command:          jai main.jai  # should be an executable or a script
+# build_working_dir:      <build working dir for this command only>
+# timeout_in_seconds:     5             # if you don't want a timeout, don't specify it
+# run_command:            test.exe      # will be run if build succeeds
+# run_working_dir:        W:/focus      # working dir for the run command
+# key_binding:            F5
+
+# [Run]                   # <- You could have commands that don't build anything and just run something
+# run_command:            test.exe
+# run_working_dir:        /home/user/test
+# key_binding:            Ctrl-F5
+
+# [Release]
+# build_command:          jai first.jai - release
+# key_binding:            F9
 
 
 [[keymap]]
@@ -210,10 +234,10 @@ Ctrl-F                      search_in_buffer
 Alt-F                       search_in_buffer_dropdown_mode
 Ctrl-Shift-F                search_in_project
 
-Ctrl-P                      show_open_file_dialog_in_search_mode
-Ctrl-O                      show_open_file_dialog_in_navigate_mode
-Ctrl-Shift-O                show_open_file_dialog_in_navigate_mode_from_root
-Ctrl-Tab                    show_open_file_dialog_in_open_editors_mode
+Ctrl-P                      open_file_by_name
+Ctrl-O                      navigate_to_file
+Ctrl-Shift-O                navigate_to_file_from_root
+Ctrl-Tab                    switch_between_open_files
 
 Ctrl-G                      go_to_line
 
@@ -275,16 +299,16 @@ Ctrl-MouseMiddle            reset_font_size_to_default
 
 [[style]]
 
-[user interface]
+[fonts]
 font:       default
 font_size:  14
 
 [colors]
-background:                             15212AFF
-background_dark:                        10191FFF
-background_highlight:                   18262FFF
-background_light:                       1A2831FF
-background_bright:                      21333FFF
+background0:                            15212AFF
+background1:                            10191FFF
+background2:                            18262FFF
+background3:                            1A2831FF
+background4:                            21333FFF
 selection_active:                       1C4449FF
 selection_inactive:                     1C44497F
 selection_highlight:                    FCEDFC26

@@ -1,6 +1,6 @@
 draw_frame :: () {
     {
-        c := map_color_to_vec4(Color.BACKGROUND_DARK);
+        c := map_color_to_vec4(Color.BACKGROUND_1);
         Simp.clear_render_target(c.x, c.y, c.z, c.w);
     }
     if !is_valid(screen) || screen.w < MIN_WINDOW_WIDTH || screen.h < MIN_WINDOW_HEIGHT return;
@@ -104,16 +104,16 @@ draw_welcome_screen :: (main_area: Rect) {
 
     // Draw the left part
     {
-        draw_rect(left_area, Color.BACKGROUND_LIGHT);
+        draw_rect(left_area, Color.BACKGROUND_3);
 
         Simp.set_shader_for_rects();
 
         circle := logo_rect;
-        draw_rounded_rect(circle, Color.BACKGROUND_DARK, radius = circle.w / 2, set_shader = false);
+        draw_rounded_rect(circle, Color.BACKGROUND_1, radius = circle.w / 2, set_shader = false);
         circle = shrink(circle, shrink_step);
-        draw_rounded_rect(circle, Color.BACKGROUND, radius = circle.w / 2, set_shader = false);
+        draw_rounded_rect(circle, Color.BACKGROUND_0, radius = circle.w / 2, set_shader = false);
         circle = shrink(circle, shrink_step);
-        draw_rounded_rect(circle, Color.BACKGROUND_LIGHT, radius = circle.w / 2, set_shader = false);
+        draw_rounded_rect(circle, Color.BACKGROUND_3, radius = circle.w / 2, set_shader = false);
 
         font := font_ui_big;
         version_text := tprint("Version %", VERSION);
@@ -148,18 +148,18 @@ draw_welcome_screen :: (main_area: Rect) {
 
     // Draw the right part
     {
-        draw_rect(right_area, Color.BACKGROUND);
+        draw_rect(right_area, Color.BACKGROUND_0);
 
         Shortcut :: struct { action: Action_Common; description: string; }
 
         SHORTCUTS_TO_DISPLAY :: Shortcut.[
-            .{ .show_commands,                                      "Show All Commands" },
-            .{ .show_open_file_dialog_in_search_mode,               "Open File By Name" },
-            .{ .show_open_file_dialog_in_navigate_mode,             "Navigate To File" },
-            .{ .show_open_file_dialog_in_open_editors_mode,         "Switch Between Open Files" },
-            .{ .search_in_buffer,                                   "Search In Open File" },
-            .{ .search_in_buffer_dropdown_mode,                     "Search In Open File (Dropdown Mode)" },
-            .{ .search_in_project,                                  "Search In Workspace" },
+            .{ .show_commands,                      "Show All Commands" },
+            .{ .open_file_by_name,                  "Open File By Name" },
+            .{ .navigate_to_file,                   "Navigate To File" },
+            .{ .switch_between_open_files,          "Switch Between Open Files" },
+            .{ .search_in_buffer,                   "Search In Open File" },
+            .{ .search_in_buffer_dropdown_mode,     "Search In Open File (Dropdown Mode)" },
+            .{ .search_in_project,                  "Search In Workspace" },
         ];
 
         right_area = shrink(right_area, margin);
@@ -209,7 +209,7 @@ draw_welcome_screen :: (main_area: Rect) {
                     key_rect = align_to_grid(key_rect);
                     shadow_rect := expand(key_rect, 1);
                     shadow_rect.y -= 2;
-                    draw_rounded_rect(shadow_rect, Color.BACKGROUND_DARK);
+                    draw_rounded_rect(shadow_rect, Color.BACKGROUND_1);
                     draw_rounded_rect(key_rect, Color.SELECTION_ACTIVE);
                     Simp.draw_prepared_text(font_ui, xx (x + padding_h), xx text_y, xx Color.UI_DEFAULT);
                     x += key_rect.w;
@@ -371,7 +371,7 @@ draw_build_panel :: () {
         }
 
         hr := cut_bottom(title_bar_rect, 1);
-        draw_rect(hr, Color.BACKGROUND_DARK);
+        draw_rect(hr, Color.BACKGROUND_1);
     }
 
     if !is_valid(build_output_rect) return;
@@ -406,7 +406,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     rect = align_to_grid(rect);
     if !is_valid(rect) return;
 
-    if !as_build_panel then draw_rect(rect, Color.BACKGROUND);
+    if !as_build_panel then draw_rect(rect, Color.BACKGROUND_0);
 
     became_active := maybe_set_hot_or_active(ui_id, rect, .TEXT_SELECT);
     if became_active then activate_editors();
@@ -675,7 +675,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             bounds.h += 2;
             bounds.y -= line_height + 2;
             if bounds.w < 0 || bounds.h < 0 then bounds = rect;  // fall back
-            // draw_rect(bounds, Color.BACKGROUND_DARK);
+            // draw_rect(bounds, Color.BACKGROUND_1);
 
             screen_pos := get_cursor_screen_pos(text_origin, cursor_coords[main_cursor].pos);
             if !point_within(screen_pos, bounds) {
@@ -950,7 +950,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                         w = rect.w - scrollbar_size - ifx x_offset == 0 then char_x_advance,   // @Note: text_origin.x is 1 char_x_advance in, so if we can see the beginning of the line, shorten the rect
                         h = line_height,
                     };
-                    draw_rect(line_rect, Color.BACKGROUND_BRIGHT);
+                    draw_rect(line_rect, Color.BACKGROUND_4);
                 }
             }
         }
@@ -996,7 +996,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
                 rect := make_rect(screen_pos.x, screen_pos.y, char_x_advance, line_height);
                 draw_rounded_rect(rect, Color.CURSOR, radius = rounding_radius_small, set_shader = true);
-                draw_rounded_rect(shrink(rect, 1), Color.BACKGROUND, radius = rounding_radius_small, set_shader = false);
+                draw_rounded_rect(shrink(rect, 1), Color.BACKGROUND_0, radius = rounding_radius_small, set_shader = false);
             }
         }
 
@@ -1146,7 +1146,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         push_scissor(line_number_panel);
         defer pop_scissor();
 
-        draw_rect(line_number_panel, Color.BACKGROUND);
+        draw_rect(line_number_panel, Color.BACKGROUND_0);
 
         // Get the visible lines which have cursors on them (for highlighting)
         active_lines: [..] s32;
@@ -1222,7 +1222,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         top_rect, results_rect := cut_top(bar_rect, top_rect_height);
 
-        draw_rounded_rect_with_shadow(bar_rect, Color.BACKGROUND_LIGHT);
+        draw_rounded_rect_with_shadow(bar_rect, Color.BACKGROUND_3);
 
         maybe_set_hot_or_active(input_id,   bar_rect, .NORMAL);
         maybe_set_hot_or_active(results_id, bar_rect, .NORMAL);
@@ -1292,7 +1292,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             push_scissor(results_rect);
             defer pop_scissor();
 
-            draw_rect(results_rect, Color.BACKGROUND);  // to make contrasting scopes more visible
+            draw_rect(results_rect, Color.BACKGROUND_0);  // to make contrasting scopes more visible
 
             {
                 // Scrollbar
@@ -1486,7 +1486,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
     // Draw footer
     if !as_build_panel {
-        footer_color := Color.BACKGROUND_BRIGHT;
+        footer_color := Color.BACKGROUND_4;
         draw_rect(footer_rect, footer_color);
         draw_top_shadow(footer_rect);
 
@@ -1714,7 +1714,7 @@ draw_open_file_dialog :: () {
         box_rect = make_rect(x, screen.h - height - y, width, height);
         if !is_valid(box_rect) return;
     }
-    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_LIGHT, radius = rounding_radius_large);
+    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3, radius = rounding_radius_large);
 
     maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
 
@@ -2007,7 +2007,7 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
         box_rect = make_rect(x, screen.h - height - y, width, height);
         if !is_valid(box_rect) return;
     }
-    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_LIGHT, radius = rounding_radius_large);
+    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3, radius = rounding_radius_large);
 
     maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
 
@@ -2151,7 +2151,7 @@ draw_delete_file_dialog :: () {
 
     maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
 
-    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_LIGHT);
+    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3);
 
     header_rect, buffers_rect := cut_top(box_rect, header_height);
     buffers_rect = shrink(buffers_rect, margin);
@@ -2161,7 +2161,7 @@ draw_delete_file_dialog :: () {
         push_scissor(header_rect);
         defer pop_scissor();
 
-        draw_rounded_rect_with_corners(header_rect, Color.BACKGROUND_BRIGHT, tl = .in, tr = .in, br = .none, bl = .none);
+        draw_rounded_rect_with_corners(header_rect, Color.BACKGROUND_4, tl = .in, tr = .in, br = .none, bl = .none);
 
         pen_x := cast(s32) (header_rect.x + 2 * margin);
         pen_y := cast(s32) (header_rect.y + (header_rect.h - font_ui_medium.character_height) / 2 + 2);
@@ -2169,7 +2169,7 @@ draw_delete_file_dialog :: () {
         Simp.draw_text(font_ui_medium, pen_x, pen_y, header_text, xx Color.UI_DEFAULT);
 
         hr := cut_bottom(header_rect, 1);
-        draw_rect(hr, Color.BACKGROUND_DARK);
+        draw_rect(hr, Color.BACKGROUND_1);
     }
 
     // File to delete
@@ -2253,7 +2253,7 @@ draw_unsaved_buffers_dialog :: () {
 
     maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
 
-    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_LIGHT);
+    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3);
 
     header_rect, buffers_rect := cut_top(box_rect, header_height);
     buffers_rect = shrink(buffers_rect, margin);
@@ -2263,7 +2263,7 @@ draw_unsaved_buffers_dialog :: () {
         push_scissor(header_rect);
         defer pop_scissor();
 
-        draw_rounded_rect_with_corners(header_rect, Color.BACKGROUND_BRIGHT, tl = .in, tr = .in, br = .none, bl = .none);
+        draw_rounded_rect_with_corners(header_rect, Color.BACKGROUND_4, tl = .in, tr = .in, br = .none, bl = .none);
 
         pen_x := cast(s32) (header_rect.x + 2 * margin);
         pen_y := cast(s32) (header_rect.y + (header_rect.h - font_ui_medium.character_height) / 2 + 2);
@@ -2272,7 +2272,7 @@ draw_unsaved_buffers_dialog :: () {
         Simp.draw_text(font_ui_medium, pen_x, pen_y, header_text, xx Color.UI_DEFAULT);
 
         hr := cut_bottom(header_rect, 1);
-        draw_rect(hr, Color.BACKGROUND_DARK);
+        draw_rect(hr, Color.BACKGROUND_1);
     }
 
     // Unsaved buffers
@@ -2361,7 +2361,7 @@ draw_confirm_overwrite_dialog :: () {
 
     maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
 
-    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_LIGHT);
+    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3);
 
     header_rect, buffers_rect := cut_top(box_rect, header_height);
     buffers_rect = shrink(buffers_rect, margin);
@@ -2371,7 +2371,7 @@ draw_confirm_overwrite_dialog :: () {
         push_scissor(header_rect);
         defer pop_scissor();
 
-        draw_rounded_rect_with_corners(header_rect, Color.BACKGROUND_BRIGHT, tl = .in, tr = .in, br = .none, bl = .none);
+        draw_rounded_rect_with_corners(header_rect, Color.BACKGROUND_4, tl = .in, tr = .in, br = .none, bl = .none);
 
         pen_x := cast(s32) (header_rect.x + 2 * margin);
         pen_y := cast(s32) (header_rect.y + (header_rect.h - font_ui_medium.character_height) / 2 + 2);
@@ -2379,7 +2379,7 @@ draw_confirm_overwrite_dialog :: () {
         Simp.draw_text(font_ui_medium, pen_x, pen_y, header_text, xx Color.UI_DEFAULT);
 
         hr := cut_bottom(header_rect, 1);
-        draw_rect(hr, Color.BACKGROUND_DARK);
+        draw_rect(hr, Color.BACKGROUND_1);
     }
 
     // Message
@@ -2462,7 +2462,7 @@ draw_finder :: () {
         box_rect = make_rect(x, screen.h - height - y, width, height);
         if !is_valid(box_rect) return;
     }
-    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_LIGHT, radius = rounding_radius_large);
+    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3, radius = rounding_radius_large);
 
     maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
 
@@ -2535,7 +2535,7 @@ draw_finder :: () {
         push_scissor(files_rect);
         defer pop_scissor();
 
-        if results then draw_rect(files_rect, Color.BACKGROUND);  // to make contrasting scopes more visible
+        if results then draw_rect(files_rect, Color.BACKGROUND_0);  // to make contrasting scopes more visible
 
         // Scrollbar
         content_height := results.count * entry_height;
@@ -2772,7 +2772,7 @@ draw_go_to_line_dialog :: (active_editor_rect: Rect) {
     input_rect := shrink(bar_rect, margin);
     input_rect = cut_right(input_rect, input_rect.w - (label_width + margin));
 
-    draw_rounded_rect_with_shadow(bar_rect, Color.BACKGROUND_LIGHT);
+    draw_rounded_rect_with_shadow(bar_rect, Color.BACKGROUND_3);
 
     pen := Vector2.{
         x = bar_rect.x + margin,
@@ -2892,9 +2892,9 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
     if font == null then font = font_ui;
     padding := (rect.h - cast(float) font.default_line_spacing) / 2;
 
-    draw_rect(rect, ifx active then Color.CURSOR_INACTIVE else Color.BACKGROUND_DARK);
+    draw_rect(rect, ifx active then Color.CURSOR_INACTIVE else Color.BACKGROUND_1);
     input_rect := shrink(rect, 1);
-    draw_rect(input_rect, Color.BACKGROUND);
+    draw_rect(input_rect, Color.BACKGROUND_0);
 
     maybe_set_hot_or_active(ui_id, input_rect, .TEXT_SELECT);
 
@@ -2973,7 +2973,7 @@ draw_text_input_modifier_button :: (input_id: Ui_Id, input_rect: Rect, width: fl
     maybe_set_hot_or_active(ui_id, btn, .PRESSABLE);
 
     hover := is_hovering_over(ui_id);
-    bg_color := ifx hover then Color.BACKGROUND_BRIGHT else Color.BACKGROUND_LIGHT;
+    bg_color := ifx hover then Color.BACKGROUND_4 else Color.BACKGROUND_3;
 
     if hover then draw_rounded_rect(shrink(btn, 1), bg_color);
 
@@ -3003,7 +3003,7 @@ draw_tooltip_bottom_left :: (text: string, pos: Vector2) {
     rect.h = 2 * padding + font_ui_very_small.character_height;
     rect.y -= rect.h;
 
-    draw_rounded_rect_with_shadow(rect, Color.BACKGROUND_LIGHT);
+    draw_rounded_rect_with_shadow(rect, Color.BACKGROUND_3);
     Simp.draw_prepared_text(font_ui_very_small, xx (rect.x + padding), xx (rect.y + (rect.h - font_ui_very_small.character_height) / 2) + 1, xx Color.UI_DEFAULT);
 }
 
@@ -3276,7 +3276,7 @@ draw_button :: (font: *Simp.Dynamic_Font, label: string, color: Color, text_colo
 #scope_file
 
 get_region_color :: (kind: Buffer_Region.Kind) -> Color {
-    color := Color.BACKGROUND;
+    color := Color.BACKGROUND_0;
     if #complete kind == {
         case .none;             // nothing
         case .scope_export;     color = Color.REGION_SCOPE_EXPORT;

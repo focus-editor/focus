@@ -256,7 +256,6 @@ load_config :: (file_path: string, existing: *Loaded_Config, force := false) -> 
     if loaded_config.hash == existing.hash && !force return loaded_config, false;  // unchanged so no need to parse
 
     // Attempt a migration
-#if false {
     migrated, new_file_data := maybe_migrate_config(file_path, file_data);
     if migrated {
         // Try parsing after migration to verify it's OK
@@ -280,7 +279,6 @@ load_config :: (file_path: string, existing: *Loaded_Config, force := false) -> 
             add_user_error("We migrated config file '%' to version [%],\nbut could't save the file. Is it writable?", file_path, CURRENT_CONFIG_VERSION);
         }
     }
-}
 
     parse_result := parse_config(file_path, file_path, file_data);
     if !parse_result.success {

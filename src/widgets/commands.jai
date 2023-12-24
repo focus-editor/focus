@@ -56,10 +56,10 @@ commands_refresh_entries :: (filter: Fuzzy_Filter) {
 }
 
 commands := #run Command.[
-    .{ .show_open_file_dialog_in_search_mode,               "Open File By Name",                  .None,    0 },
-    .{ .show_open_file_dialog_in_navigate_mode,             "Navigate To File",                   .None,    0 },
-    .{ .show_open_file_dialog_in_navigate_mode_from_root,   "Navigate To File From Root",         .None,    0 },
-    .{ .show_open_file_dialog_in_open_editors_mode,         "Switch Between Open Files" ,         .None,    0 },
+    .{ .open_file_by_name,                                  "Open File By Name",                  .None,    0 },
+    .{ .navigate_to_file,                                   "Navigate To File",                   .None,    0 },
+    .{ .navigate_to_file_from_root,                         "Navigate To File From Root",         .None,    0 },
+    .{ .switch_between_open_files,                          "Switch Between Open Files" ,         .None,    0 },
 
     .{ .switch_to_project,                                  "Switch To Project",                  .None,    0 },
     .{ .close_project,                                      "Close Project",                      .None,    0 },

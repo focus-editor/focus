@@ -27,7 +27,7 @@ CONFIG_SECTIONS :: Config_Section.[
     .{
         name = "style",
         subsections = .[
-            "user interface",
+            "fonts",
             "colors",
         ],
         parse_function = "parse_style_line",
@@ -59,8 +59,8 @@ parse_config :: (name: string, filename: string, file_data: string, for_highligh
 
     // TODO: proper version handling and migration
     result.config.version = handler.version;
-    if result.config.version < 1 || result.config.version > 2 {
-        result.error_msg = tprint("Invalid config version [%] in file '%'. Supported versions are: [1], [2].", result.config.version, filename);
+    if result.config.version != CURRENT_CONFIG_VERSION {
+        result.error_msg = tprint("Invalid config version [%] in file '%'. The only supported version is [%].", result.config.version, filename, CURRENT_CONFIG_VERSION);
         return result;
     }
 
@@ -181,11 +181,11 @@ keymap_map_key_code_to_string :: (key_code: u32) -> string /* temp */ {
 
 map_name_to_color :: (name: string) -> Color {
     if name == {
-        case "background";                              return .BACKGROUND;
-        case "background_dark";                         return .BACKGROUND_DARK;
-        case "background_highlight";                    return .BACKGROUND_HIGHLIGHT;
-        case "background_light";                        return .BACKGROUND_LIGHT;
-        case "background_bright";                       return .BACKGROUND_BRIGHT;
+        case "background0";                             return .BACKGROUND_0;
+        case "background1";                             return .BACKGROUND_1;
+        case "background2";                             return .BACKGROUND_2;
+        case "background3";                             return .BACKGROUND_3;
+        case "background4";                             return .BACKGROUND_4;
         case "selection_active";                        return .SELECTION_ACTIVE;
         case "selection_inactive";                      return .SELECTION_INACTIVE;
         case "selection_highlight";                     return .SELECTION_HIGHLIGHT;
@@ -483,7 +483,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
     add_highlight(parser, 0, line.count, .default);
 
     if active_subsection == {
-        case .style_user_interface;
+        case .style_fonts;
             setting, value := break_by_spaces(line);
             setting = trim_right(setting, ":");
             if setting == {

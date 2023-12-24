@@ -113,7 +113,7 @@ platform_create_window :: () {
         window_width, window_height,
         window_generic_title,
         window_x, window_y,
-        background_color_rgb = color_as_3_floats(Color.BACKGROUND),
+        background_color_rgb = color_as_3_floats(Color.BACKGROUND_0),
     );
 
     if LD.active_backend() == .X11 {

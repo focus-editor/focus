@@ -1,4 +1,4 @@
-[1]  # Version number. Do not delete.
+[2]  # Version number. Do not delete.
 
 [[workspace]]
 
@@ -16,14 +16,29 @@
 # override the global [ignore dirs], which allows you to "unignore" some dirs just for your project!
 # Empty sections are ignored.
 
-[ignore dirs]
 
 
-[allow file extensions]
+# This is an example configuration for build commands
 
+[[build commands]]
+# build_working_dir:      <build working dir for all commands>
+# open_panel_on_build:    true  #  <- any settings specified here will apply to all commands unless overriddent
 
-[ignore file extensions]
+# [Debug Build And Run]   # <- command name. Can be arbitrary
+# build_command:          jai main.jai  # should be an executable or a script
+# build_working_dir:      <build working dir for this command only>
+# timeout_in_seconds:     5             # if you don't want a timeout, don't specify it
+# run_command:            test.exe      # will be run if build succeeds
+# run_working_dir:        W:/focus      # working dir for the run command
+# key_binding:            F5
 
+# [Run]                   # <- You could have commands that don't build anything and just run something
+# run_command:            test.exe
+# run_working_dir:        /home/user/test
+# key_binding:            Ctrl-F5
 
+# [Release]
+# build_command:          jai first.jai - release
+# key_binding:            F9
 
 
