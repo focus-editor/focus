@@ -1081,6 +1081,7 @@ unsaved_buffers_exist :: () -> bool {
 }
 
 remove_all_buffers :: () {
+    array_reset_keeping_memory(*most_recent_buffers);
     deinit(*buffers_table);
     for * open_buffers free_buffer(it);
     bucket_array_reset(*open_buffers);
