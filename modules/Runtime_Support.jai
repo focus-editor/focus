@@ -686,6 +686,7 @@ report_error_in_yer_face :: (message: string, args: .. Any) {
     #if OS == .WINDOWS {
         W :: #import "Windows";
         W_Utf8 :: #import "Windows_Utf8";
+        W.ShowCursor(1);
         W.MessageBoxW(null, W_Utf8.utf8_to_wide(formatted_message), W_Utf8.utf8_to_wide("Fatal Error"), W.MB_OK);
     }
 }
