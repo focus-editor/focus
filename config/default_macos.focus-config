@@ -72,6 +72,29 @@ build_panel_width_percent:              50
 build_panel_height_percent:             50
 
 
+# [[build commands]]
+# build_working_dir:      <build working dir for all commands>
+# open_panel_on_build:    true  #  <- any settings specified here will apply to all commands unless overridden
+# close_panel_on_success: false
+
+# [Debug Build And Run]   # <- command name. Can be arbitrary
+# build_command:          jai main.jai  # should be an executable or a script
+# build_working_dir:      <build working dir for this command only>
+# timeout_in_seconds:     5             # if you don't want a timeout, don't specify it
+# run_command:            test          # will be run if build succeeds
+# run_working_dir:        /path/to/cmd  # working dir for the run command
+# key_binding:            F5
+
+# [Run]                   # <- You could have commands that don't build anything and just run something
+# run_command:            test
+# run_working_dir:        /Users/user/test
+# key_binding:            Ctrl-F5
+
+# [Release]
+# build_command:          jai first.jai - release
+# key_binding:            F9
+
+
 [[keymap]]
 
 # - The first matching combination will be used, so order matters

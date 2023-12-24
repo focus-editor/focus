@@ -22,7 +22,8 @@
 
 [[build commands]]
 # build_working_dir:      <build working dir for all commands>
-# open_panel_on_build:    true  #  <- any settings specified here will apply to all commands unless overriddent
+# open_panel_on_build:    true  #  <- any settings specified here will apply to all commands unless overridden
+# close_panel_on_success: false
 
 # [Debug Build And Run]   # <- command name. Can be arbitrary
 # build_command:          jai main.jai  # should be an executable or a script
