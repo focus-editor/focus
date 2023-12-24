@@ -245,25 +245,24 @@ main :: () {
 
             // Maybe handle a common action that applies to all widgets
             handled := false;
+
+            // Pass events to the active widget.
+            // Note that the active widget may change during the frame, so the following events
+            // will be sent to the new widget, that's why we check global widget for each event.
+            if #complete active_global_widget == {
+                case .editors;                  handled = editors_handle_event(event);
+                case .finder;                   handled = finder_handle_event(event);
+                case .open_file_dialog;         handled = open_file_dialog_handle_event(event);
+                case .delete_file_dialog;       handled = delete_file_dialog_handle_event(event);
+                case .go_to_line_dialog;        handled = go_to_line_dialog_handle_event(event);
+                case .open_project_dialog;      handled = open_project_dialog_handle_event(event);
+                case .unsaved_buffers_dialog;   handled = unsaved_buffers_dialog_handle_event(event);
+                case .confirm_overwrite_dialog; handled = confirm_overwrite_dialog_handle_event(event);
+                case .commands_dialog;          handled = commands_dialog_handle_event(event);
+            }
+
             action := map_event_to_action(event, Action_Editors);
             handled = handle_common_editor_action(action);
-
-            if !handled {
-                // Pass events to the active widget.
-                // Note that the active widget may change during the frame, so the following events
-                // will be sent to the new widget, that's why we check global widget for each event.
-                if #complete active_global_widget == {
-                    case .editors;                  handled = editors_handle_event(event);
-                    case .finder;                   handled = finder_handle_event(event);
-                    case .open_file_dialog;         handled = open_file_dialog_handle_event(event);
-                    case .delete_file_dialog;       handled = delete_file_dialog_handle_event(event);
-                    case .go_to_line_dialog;        handled = go_to_line_dialog_handle_event(event);
-                    case .open_project_dialog;      handled = open_project_dialog_handle_event(event);
-                    case .unsaved_buffers_dialog;   handled = unsaved_buffers_dialog_handle_event(event);
-                    case .confirm_overwrite_dialog; handled = confirm_overwrite_dialog_handle_event(event);
-                    case .commands_dialog;          handled = commands_dialog_handle_event(event);
-                }
-            }
 
             if !handled then handled = maybe_execute_a_build_command(event);
 
