@@ -372,10 +372,10 @@ ADDED_KEYBINDS :: Added_Keybind.[
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
-    .{ 2, "common",  "show_open_file_dialog_in_search_mode",              "open_file_by_name"          },
-    .{ 2, "common",  "show_open_file_dialog_in_navigate_mode",            "navigate_to_file"           },
-    .{ 2, "common",  "show_open_file_dialog_in_navigate_mode_from_root",  "navigate_to_file_from_root" },
-    .{ 2, "common",  "show_open_file_dialog_in_open_editors_mode",        "switch_between_open_files"  },
+    .{ 2, "",  "show_open_file_dialog_in_search_mode",              "open_file_by_name"          },
+    .{ 2, "",  "show_open_file_dialog_in_navigate_mode",            "navigate_to_file"           },
+    .{ 2, "",  "show_open_file_dialog_in_navigate_mode_from_root",  "navigate_to_file_from_root" },
+    .{ 2, "",  "show_open_file_dialog_in_open_editors_mode",        "switch_between_open_files"  },
 ];
 
 KEYBINDS_INDENT :: 28;
