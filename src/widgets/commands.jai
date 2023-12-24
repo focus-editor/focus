@@ -130,6 +130,7 @@ commands := #run Command.[
     .{ .move_editor_to_the_left,                            "Move Pane To The Left",              .Double,  0 },
     .{ .move_editor_to_the_right,                           "Move Pane To The Right",             .Double,  0 },
 
+    .{ .toggle_block_comment,                               "Toggle Block Comment",               .Single,  0 },
     .{ .toggle_line_wrap,                                   "Toggle Line Wrap",                   .Single,  0 },
     .{ .toggle_line_numbers,                                "Toggle Line Numbers",                .Single,  0 },
     .{ .toggle_fullscreen,                                  "Toggle Fullscreen",                  .None,    0 },

@@ -75,6 +75,14 @@ show_open_file_dialog :: (mode: Open_File_Dialog.Mode, buffer_id_to_save: s64 = 
     open_file_dialog.mode = mode;
     open_file_dialog.buffer_id_to_save = buffer_id_to_save;
 
+    if mode == .open_editors && most_recent_buffers.count >= 2 && editors.active >= 0 {
+        active_buffer_id := open_editors[editors.active].buffer_id;
+        if active_buffer_id == most_recent_buffers[0] {
+            // Swap the first 2 buffers so that we don't show the current buffer first
+            Swap(*most_recent_buffers[0], *most_recent_buffers[1]);
+        }
+    }
+
     refresh_entries();
 }
 
@@ -407,13 +415,14 @@ refresh_entries :: (clear_input := true) {
             }
     }
 
-    compare_entries :: (e1: Entry, e2: Entry) -> s64 {
-        key_diff := cast,no_check(s64) e2.sort_key - cast,no_check(s64) e1.sort_key;
-        if key_diff != 0 return key_diff;
-        return memcmp(e1.name.data, e2.name.data, min(e1.name.count, e2.name.count));
-    }
-
     if !(mode == .open_editors && !input.text) {  // don't sort most recent buffers if no filters are used
+
+        compare_entries :: (e1: Entry, e2: Entry) -> s64 {
+            key_diff := cast,no_check(s64) e2.sort_key - cast,no_check(s64) e1.sort_key;
+            if key_diff != 0 return key_diff;
+            return memcmp(e1.name.data, e2.name.data, min(e1.name.count, e2.name.count));
+        }
+
         quick_sort(entries.filtered, compare_entries);
     }
 
