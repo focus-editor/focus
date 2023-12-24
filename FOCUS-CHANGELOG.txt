@@ -85,6 +85,7 @@
     + Newer user messages will stop dismissing older ones which have a longer lifetime
     + Fixed a crash when trying to rewind editor history after reloading workspace
     + Fixed a crash when searching with whole word match on
+    + Aligned missing shortcuts on the welcome screen
 
 + Other changes:
     + When the workspace is done scanning, the open file dialog input will no longer be cleared

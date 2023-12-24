@@ -222,6 +222,11 @@ draw_welcome_screen :: (main_area: Rect) {
                 x += padding_between_parts;
             }
 
+            if !key_sequence_strings {
+                Simp.draw_text(font_ui, xx (x - padding_h), xx text_y, "-", xx Color.UI_DEFAULT);
+                x += padding_between_parts;
+            }
+
             Simp.draw_text(font_ui, xx (x + padding_h * 10), xx text_y, shortcut.description, xx Color.UI_DEFAULT);
 
             y -= line_height;
