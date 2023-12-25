@@ -72,6 +72,7 @@ draw_frame :: () {
         case .unsaved_buffers_dialog;   draw_unsaved_buffers_dialog();
         case .confirm_overwrite_dialog; draw_confirm_overwrite_dialog();
         case .commands_dialog;          draw_commands_dialog();
+        case .theme_dialog;             draw_theme_dialog();
     }
 
     draw_user_messages(screen, footer_height);
@@ -2225,6 +2226,11 @@ draw_open_project_dialog :: () {
     draw_generic_choice_dialog(*open_project_dialog, Ui_Id.open_project_dialog, label);
 }
 
+draw_theme_dialog :: () {
+    label := ifx theme_dialog.filtered then " Choose theme" else tprint(" No themes found in %", themes_dir);
+    draw_generic_choice_dialog(*theme_dialog, Ui_Id.theme_dialog, label);
+}
+
 draw_unsaved_buffers_dialog :: () {
     ui_id := Ui_Id.unsaved_buffers;
 
@@ -3406,6 +3412,7 @@ Ui_Id :: enum s64 {
     delete_file_dialog      :: -13;
     confirm_overwrite       :: -14;
     build_panel_title_bar   :: -15;
+    theme_dialog            :: -16;
 
     // The rest will be derived from loc
 }

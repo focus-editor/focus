@@ -43,17 +43,13 @@ open_project_refresh_entries :: (filter: Fuzzy_Filter) {
 
     project_configs: [..] Project_Config;
 
-    // Get all session dirs
     visitor :: (info: *File_Visit_Info, project_configs: *[..] Project_Config) {
         if !ends_with_nocase(info.full_name, ".focus-config") return;
 
         full_path := copy_string(info.full_name);
         path, basename, extension, name := path_decomp(full_path);
 
-        array_add(project_configs, Project_Config.{
-            name = basename,
-            path = full_path,
-        });
+        array_add(project_configs, Project_Config.{ name = basename, path = full_path });
     }
     visit_files(projects_dir, recursive = true, *project_configs, visitor, visit_files = true, visit_directories = false);
 

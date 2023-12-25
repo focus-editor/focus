@@ -263,6 +263,7 @@ main :: () {
                 case .unsaved_buffers_dialog;   handled = unsaved_buffers_dialog_handle_event(event);
                 case .confirm_overwrite_dialog; handled = confirm_overwrite_dialog_handle_event(event);
                 case .commands_dialog;          handled = commands_dialog_handle_event(event);
+                case .theme_dialog;             handled = theme_dialog_handle_event(event);
             }
 
             if !handled {
@@ -329,9 +330,12 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .decrease_font_size;                               decrease_font_size();                               return true;
         case .reset_font_size_to_default;                       reset_font_size_to_default();                       return true;
 
-        case .open_project; /* deprecated */                    show_dialog(*open_project_dialog);                  return true;
+        case .open_project;                                     #through;
         case .switch_to_project;                                show_dialog(*open_project_dialog);                  return true;
         case .close_project;                                    close_project();                                    return true;
+
+        case .choose_theme;                                     show_dialog(*theme_dialog);                  return true;
+
         case .open_projects_directory;                          platform_open_in_explorer(projects_dir);            return true;
         case .open_global_config;                               editors_open_global_config(placement);              return true;
         case .open_project_config;                              editors_open_project_config(placement);             return true;
@@ -752,6 +756,7 @@ Active_Global_Widget :: enum {
     open_project_dialog;
     unsaved_buffers_dialog;
     confirm_overwrite_dialog;
+    theme_dialog;
 }
 
 Project_Dir :: struct {
@@ -769,13 +774,11 @@ BUILTIN_THEMES :: #run -> [] Builtin_Theme {
     themes: [..] Builtin_Theme;
 
     visitor :: (info: *File_Visit_Info, themes: *[..] Builtin_Theme) {
-        if !ends_with_nocase(info.full_name, ".focus-theme") return;
-        full_path := copy_string(info.full_name);
-
+        full_path := info.full_name;
         path, basename, extension, name := path_decomp(full_path);
-        file_contents, ok := read_entire_file(full_path);
-        if !ok return;
-
+        if extension != "focus-theme" return;
+        file_contents, success := read_entire_file(full_path);
+        if !success return;
         array_add(themes, Builtin_Theme.{ name = basename, contents = file_contents });
     }
     visit_files("config/themes", recursive = false, *themes, visitor, visit_files = true, visit_directories = false);
@@ -826,6 +829,7 @@ dont_ignore_next_window_resize := false;
 #load "widgets/commands.jai";
 #load "widgets/open_project.jai";
 #load "widgets/confirm_overwrite.jai";
+#load "widgets/theme_dialog.jai";
 
 #load "langs/common.jai";
 #load "langs/jai.jai";

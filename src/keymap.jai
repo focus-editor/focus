@@ -260,8 +260,10 @@ ACTIONS_COMMON :: string.[
 
     "open_project",
     "switch_to_project",  // alias of open_project
-
     "close_project",
+
+    "choose_theme",
+
     "open_projects_directory",
     "open_global_config",
     "open_project_config",
