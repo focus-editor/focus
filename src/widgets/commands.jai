@@ -55,8 +55,9 @@ commands_refresh_entries :: (filter: Fuzzy_Filter) {
     }
 }
 
-#no_reset commands := #run -> []Command {
-    base_commands := Command.[
+commands := #run -> []Command {
+    ret: [..]Command;
+    array_add(*ret, ...[
         .{ .open_file_by_name,                     "Open File By Name",                  .None,    0 },
         .{ .navigate_to_file,                      "Navigate To File",                   .None,    0 },
         .{ .navigate_to_file_from_root,            "Navigate To File From Root",         .None,    0 },
@@ -139,17 +140,12 @@ commands_refresh_entries :: (filter: Fuzzy_Filter) {
         .{ .build_kill_running_command,            "Build: Kill Running Command",        .None,    0 },
 
         .{ .autoindent_region,                     "Autoindent Region",                  .Single,  0 },
-    ];
+    ]);
 
-    linux_commands := Command.[
+    #if OS == .LINUX then array_add(*ret, ...[
         .{ .show_troubleshooting_info,             "Show Troubleshooting Information",   .None,    0 },
-    ];
+    ]);
 
-    ret: [..]Command;
-    for base_commands array_add(*ret, it);
-    #if OS == .LINUX {
-        for linux_commands array_add(*ret, it);
-    }
     return ret;
 }
 
