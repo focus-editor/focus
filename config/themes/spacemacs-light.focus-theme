@@ -1,0 +1,48 @@
+[1]  # Version number. Do not delete
+
+[colors]
+background:                     fbf8efFF
+background_dark:                d2cedaFF
+background_highlight:           e3deddFF
+background_light:               efeae9FF
+background_bright:              d2cedaFF
+selection_active:               d3d3e7FF
+selection_inactive:             e7e7fcFF # This is in the search result
+selection_highlight:            dae6d0FF # highlight in search result
+search_result_active:           ba2f595F # Have to dim it because no foreground for search matches
+search_result_inactive:         dae6d0FF
+scrollbar:                      d3d3e7FF
+scrollbar_hover:                d3d3e7FF
+scrollbar_background:           efeae9FF
+cursor:                         100a14FF
+cursor_inactive:                196666FF
+paste_animation:                e7e7fcFF
+splitter:                       b3b9beFF
+splitter_hover:                 efeae9FF
+letter_highlight:               3a81c3FF
+list_cursor_lite:               d3d3e7FF
+list_cursor:                    d3d3e7FF
+shadow_dark:                    a094a23F
+shadow_transparent:             a094a200
+text_input_label:               655370FF
+
+ui_default:                     6c3163FF
+ui_dim:                         655370FF
+ui_neutral:                     4C4C4CFF # TODO
+ui_warning:                     dc752fFF
+ui_warning_dim:                 dc752f5F
+ui_error:                       e0211dFF
+ui_error_bright:                FF0000FF # TODO
+ui_success:                     42ae2cFF
+
+code_default:                   655370FF
+code_comment:                   2aa1aeFF
+code_type:                      ba2f59FF
+code_function:                  6c3163FF
+code_punctuation:               655370FF
+code_operation:                 655370FF
+code_string:                    2d9574FF
+code_value:                     4e3163FF
+code_highlight:                 ba2f59FF
+code_error:                     e0211dFF
+code_keyword:                   3a81c3FF

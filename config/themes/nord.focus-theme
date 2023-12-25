@@ -1,0 +1,57 @@
+[1]  # Version number. Do not delete
+
+[colors]
+region_scope_export:              2E3440FF
+region_scope_file:                3B4252AF
+region_scope_module:              434C5E9F
+
+build_panel_background:           2E3440FF
+build_panel_scrollbar:            292D38AF
+build_panel_scrollbar_hover:      292D38FF
+build_panel_scrollbar_background: 1d212990
+
+background:                       2E3440FF
+background_dark:                  3B4252FF
+background_highlight:             434C5EFF
+background_light:                 434C5EFF
+background_bright:                3B4252FF
+selection_active:                 434C5EFF
+selection_inactive:               434C5EFF
+selection_highlight:              434C5EFF
+search_result_active:             B48EADFF
+search_result_inactive:           B48EAD26
+scrollbar:                        3A4252AF
+scrollbar_hover:                  3A4252FF
+scrollbar_background:             2E3440FF
+cursor:                           D8DEE99F
+cursor_inactive:                  D8DEE9FF
+paste_animation:                  2E3440FF
+splitter:                         3B4252FF
+splitter_hover:                   3B4252FF
+letter_highlight:                 81A1C1FF
+list_cursor_lite:                 88C0D019
+list_cursor:                      88C0D04C
+shadow_dark:                      2A2F3AFF
+shadow_transparent:               2A2F3A00
+text_input_label:                 ECEFF4FF
+
+ui_default:                       ECEFF4FF
+ui_dim:                           ECEFF49F
+ui_neutral:                       2E3440FF
+ui_warning:                       D08770FF
+ui_warning_dim:                   D087709F
+ui_error:                         BF616A9F
+ui_error_bright:                  BF616AFF
+ui_success:                       5E81ACFF
+
+code_default:                     ECEFF4FF
+code_comment:                     EBCB8BAF
+code_type:                        8FBCBBFF
+code_function:                    88C0D0FF
+code_punctuation:                 81A1C1FF
+code_operation:                   81A1C1FF
+code_string:                      A3BE8CFF
+code_value:                       B48EADFF
+code_highlight:                   5E81ACFF
+code_error:                       BF616AFF
+code_keyword:                     81A1C1FF

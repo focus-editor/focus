@@ -1,0 +1,50 @@
+[1]  # Version number. Do not delete
+
+[colors]
+background:                     002B36FF
+background_dark:                002B36FF
+background_highlight:           073642FF
+background_light:               073642FF
+background_bright:              073642FF
+
+selection_active:               073642FF
+selection_inactive:             073642FF
+selection_highlight:            93A1A1FF
+search_result_active:           B58900FF
+search_result_inactive:         FCEDFC26
+
+scrollbar:                      33CCCC19
+scrollbar_hover:                33CCCC4C
+scrollbar_background:           10191F4C
+cursor:                         93A1A1FF
+cursor_inactive:                93A1A1FF
+paste_animation:                1C4449FF
+splitter:                       21333FFF
+splitter_hover:                 1C4449FF
+letter_highlight:               599999FF
+list_cursor_lite:               93A1A1FF
+list_cursor:                    93A1A1FF
+shadow_dark:                    0E161C7F
+shadow_transparent:             0E161C00
+text_input_label:               3B4450FF
+
+ui_default:                     BFC9DBFF
+ui_dim:                         87919DFF
+ui_neutral:                     073642FF
+ui_warning:                     CB4B16FF
+ui_warning_dim:                 CB4B16FF
+ui_error:                       FC32FFFF
+ui_error_bright:                DC322FFF
+ui_success:                     073642FF
+
+code_default:                   839496FF
+code_comment:                   586E75FF
+code_type:                      859900FF
+code_function:                  839496FF
+code_punctuation:               93A1A1FF
+code_operation:                 93A1A1FF
+code_string:                    2AA198FF
+code_value:                     D33682FF
+code_highlight:                 D89B75FF
+code_error:                     FF0000FF
+code_keyword:                   859900FF

@@ -27,12 +27,16 @@ main :: () {
 
     temp_dir     = sprint("%/temp",     data_dir);
     projects_dir = sprint("%/projects", config_dir);
+    themes_dir   = sprint("%/themes",   config_dir);
 
     projects_dir_existed := file_exists(projects_dir);
 
     if !make_directory_if_it_does_not_exist(projects_dir) then panic_messagebox("Couldn't create folder %. Is the directory writable?", projects_dir);
     if !make_directory_if_it_does_not_exist(temp_dir)     then panic_messagebox("Couldn't create folder % for temporary files. Is the directory writable?", temp_dir);
+    if !make_directory_if_it_does_not_exist(themes_dir)   then panic_messagebox("Couldn't create folder % for themes. Is the directory writable?", themes_dir);
     if !projects_dir_existed then write_entire_file(tprint("%/Example Project.focus-config", projects_dir), EXAMPLE_PROJECT_FILE_DATA);
+
+    fill_in_missing_default_themes();
 
     init_file_watcher();
     init_buffers();
@@ -597,6 +601,13 @@ current_time_consensus_backwards_compatible :: () -> Apollo_Time {
     }
 }
 
+fill_in_missing_default_themes :: () {
+    for theme : BUILTIN_THEMES {
+        theme_file := tprint("%/%.focus-theme", themes_dir, theme.name);
+        if !file_exists(theme_file) then write_entire_file(theme_file, theme.contents);
+    }
+}
+
 calculate_hash: (bytes: [] u8) -> u64 = calculate_meow_hash;
 
 // Important directories
@@ -604,6 +615,7 @@ config_dir:   string;
 data_dir:     string;
 temp_dir:     string;
 projects_dir: string;
+themes_dir:   string;
 
 window: Window_Type;
 window_generic_title: string = ---;
@@ -746,6 +758,29 @@ Project_Dir :: struct {
     path: string;          // e.g. "C:/projects/focus"
     path_prefix_len: s64;  // in this case the length of "C:/projects/"
     name: string;          // a view into path
+}
+
+Builtin_Theme :: struct {
+    name: string;
+    contents: string;
+}
+
+BUILTIN_THEMES :: #run -> [] Builtin_Theme {
+    themes: [..] Builtin_Theme;
+
+    visitor :: (info: *File_Visit_Info, themes: *[..] Builtin_Theme) {
+        if !ends_with_nocase(info.full_name, ".focus-theme") return;
+        full_path := copy_string(info.full_name);
+
+        path, basename, extension, name := path_decomp(full_path);
+        file_contents, ok := read_entire_file(full_path);
+        if !ok return;
+
+        array_add(themes, Builtin_Theme.{ name = basename, contents = file_contents });
+    }
+    visit_files("config/themes", recursive = false, *themes, visitor, visit_files = true, visit_directories = false);
+
+    return themes;
 }
 
 // A string which contains the path to a file which was just drag-and-dropped into the editor (for the draw code to use)
