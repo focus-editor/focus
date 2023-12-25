@@ -27,12 +27,9 @@ open_project_dialog: Open_Project_Dialog;
 
 Open_Project_Dialog :: struct {
     using #as generic_dialog: Generic_Choice_Dialog(Project_Config);
-    generic_dialog.global_widget_id = .open_project_dialog;
-    generic_dialog.refresh_entries  = open_project_refresh_entries;
-    generic_dialog.open_entry_in_place     = open_selected_project;
-    generic_dialog.open_entry_on_the_side  = open_selected_project;
-    generic_dialog.open_entry_on_the_left  = open_selected_project;
-    generic_dialog.open_entry_on_the_right = open_selected_project;
+    generic_dialog.global_widget_id    = .open_project_dialog;
+    generic_dialog.refresh_entries     = open_project_refresh_entries;
+    generic_dialog.open_entry_in_place = open_selected_project;
 };
 
 #scope_file

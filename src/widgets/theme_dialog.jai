@@ -2,7 +2,7 @@ theme_dialog_handle_event :: (event: Input.Event) -> handled: bool {
     return dialog_handle_event(*theme_dialog, event);
 }
 
-apply_selected_theme :: (placement: Editor_Placement = .in_place) {
+apply_selected_theme :: () {
     // hide_dialog(*theme_dialog);
 
     // using theme_dialog;
@@ -24,15 +24,18 @@ theme_dialog: Theme_Dialog;
 
 Theme_Dialog :: struct {
     using #as generic_dialog: Generic_Choice_Dialog(Theme);
-    generic_dialog.global_widget_id = .theme_dialog;
-    generic_dialog.refresh_entries  = theme_dialog_refresh_entries;
-    generic_dialog.open_entry_in_place     = #bake_arguments apply_selected_theme(placement = .in_place);
-    generic_dialog.open_entry_on_the_side  = #bake_arguments apply_selected_theme(placement = .on_the_side);
-    generic_dialog.open_entry_on_the_left  = #bake_arguments apply_selected_theme(placement = .left);
-    generic_dialog.open_entry_on_the_right = #bake_arguments apply_selected_theme(placement = .right);
+    generic_dialog.global_widget_id     = .theme_dialog;
+    generic_dialog.refresh_entries      = theme_dialog_refresh_entries;
+    generic_dialog.open_entry_in_place  = apply_selected_theme;
+    generic_dialog.on_move              = preview_selected_theme;
 };
 
 #scope_file
+
+preview_selected_theme :: () {
+    using theme_dialog;
+    print("Selected theme: %\n", selected);
+}
 
 // NOTE: assuming we're allocating from a pool
 theme_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
