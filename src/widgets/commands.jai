@@ -55,7 +55,7 @@ commands_refresh_entries :: (filter: Fuzzy_Filter) {
     }
 }
 
-#no_reset commands := #run -> []Command {
+commands := #run -> [] Command {
     base_commands := Command.[
         .{ .open_file_by_name,                     "Open File By Name",                  .None,    0 },
         .{ .navigate_to_file,                      "Navigate To File",                   .None,    0 },
@@ -145,12 +145,12 @@ commands_refresh_entries :: (filter: Fuzzy_Filter) {
         .{ .show_troubleshooting_info,             "Show Troubleshooting Information",   .None,    0 },
     ];
 
-    ret: [..]Command;
-    for base_commands array_add(*ret, it);
-    #if OS == .LINUX {
-        for linux_commands array_add(*ret, it);
-    }
-    return ret;
+    commands: [..] Command;
+
+    array_extend(*commands, base_commands);
+    #if OS == .LINUX then array_extend(*commands, linux_commands);
+
+    return commands;
 }
 
 Command :: struct {
