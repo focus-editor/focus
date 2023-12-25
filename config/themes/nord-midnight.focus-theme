@@ -1,57 +1,65 @@
-[1]  # Version number. Do not delete
+[2]  # Version number. Do not delete
 
 [colors]
-region_scope_export:              1D2129FF
-region_scope_file:                3B425270
-region_scope_module:              434C5E30
 
-build_panel_background:           1D2129FF
-build_panel_scrollbar:            292D38AF
-build_panel_scrollbar_hover:      292D38FF
-build_panel_scrollbar_background: 1d212990
+region_scope_export:                    1D2129FF
+region_scope_file:                      3B425270
+region_scope_module:                    434C5E30
+region_header:                          1A5152FF
+region_success:                         226022FF
+region_warning:                         986032FF
+region_error:                           772222FF
 
-background:                       1D2129FF
-background_dark:                  3B4252FF
-background_highlight:             434C5EFF
-background_light:                 292D38FF
-background_bright:                292D38FF
-selection_active:                 434C5eFF
-selection_inactive:               434C5e52
-selection_highlight:              434C5EFF
-search_result_active:             B48EADFF
-search_result_inactive:           B48EAD26
-scrollbar:                        292D38AF
-scrollbar_hover:                  292D38FF
-scrollbar_background:             1d212990
-cursor:                           D8DEE99F
-cursor_inactive:                  D8DEE9FF
-paste_animation:                  2E3440FF
-splitter:                         3B4252FF
-splitter_hover:                   3B4252FF
-letter_highlight:                 81A1C1FF
-list_cursor_lite:                 88C0D019
-list_cursor:                      88C0D04C
-shadow_dark:                      121419AF
-shadow_transparent:               1D21291F
-text_input_label:                 ECEFF4FF
+build_panel_title_bar:                  1C303AFF
+build_panel_background:                 1D2129FF
+build_panel_scrollbar:                  292D38AF
+build_panel_scrollbar_hover:            292D38FF
+build_panel_scrollbar_background:       1d212990
 
-ui_default:                       ECEFF4FF
-ui_dim:                           ECEFF49F
-ui_neutral:                       2E3440FF
-ui_warning:                       D08770FF
-ui_warning_dim:                   D08770FF
-ui_error:                         BF616AFF
-ui_error_bright:                  BF616AFF
-ui_success:                       5E81ACFF
+background0:                            1D2129FF
+background1:                            3B4252FF
+background2:                            434C5EFF
+background3:                            292D38FF
+background4:                            292D38FF
+selection_active:                       434C5eFF
+selection_inactive:                     434C5e52
+selection_highlight:                    434C5EFF
+search_result_active:                   B48EADFF
+search_result_inactive:                 B48EAD26
+scrollbar:                              292D38AF
+scrollbar_hover:                        292D38FF
+scrollbar_background:                   1d212990
+cursor:                                 D8DEE99F
+cursor_inactive:                        D8DEE9FF
+paste_animation:                        2E3440FF
+splitter:                               3B4252FF
+splitter_hover:                         3B4252FF
+letter_highlight:                       81A1C1FF
+list_cursor_lite:                       88C0D019
+list_cursor:                            88C0D04C
+shadow_dark:                            121419AF
+shadow_transparent:                     1D21291F
+text_input_label:                       ECEFF4FF
 
-code_default:                     ECEFF4FF
-code_comment:                     516173FF
-code_type:                        8FBCBBFF
-code_function:                    88C0D0FF
-code_punctuation:                 81A1C1FF
-code_operation:                   81A1C1FF
-code_string:                      A3BE8CFF
-code_value:                       B48EADFF
-code_highlight:                   5E81ACFF
-code_error:                       BF616AFF
-code_keyword:                     81A1C1FF
+ui_default:                             ECEFF4FF
+ui_dim:                                 ECEFF49F
+ui_neutral:                             2E3440FF
+ui_warning:                             D08770FF
+ui_warning_dim:                         D08770FF
+ui_error:                               BF616AFF
+ui_error_bright:                        BF616AFF
+ui_success:                             5E81ACFF
+
+code_default:                           ECEFF4FF
+code_comment:                           516173FF
+code_type:                              8FBCBBFF
+code_function:                          88C0D0FF
+code_punctuation:                       81A1C1FF
+code_operation:                         81A1C1FF
+code_string:                            A3BE8CFF
+code_value:                             B48EADFF
+code_highlight:                         5E81ACFF
+code_error:                             BF616AFF
+code_keyword:                           81A1C1FF
+code_warning:                           E4D97DFF
+

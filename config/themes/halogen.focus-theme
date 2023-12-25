@@ -1,11 +1,11 @@
-[1]  # Version number. Do not delete
+[2]  # Version number. Do not delete
 
 [colors]
-background:                             181818FF
-background_dark:                        181818FF
-background_highlight:                   383838FF
-background_light:                       181818FB
-background_bright:                      181818FB
+background0:                            181818FF
+background1:                            181818FF
+background2:                            383838FF
+background3:                            181818FB
+background4:                            181818FB
 selection_active:                       BFC9DB38
 selection_inactive:                     BFC9DB38
 selection_highlight:                    FCEDFC26
@@ -46,6 +46,7 @@ code_value:                             3aa982FF
 code_highlight:                         D89B75FF
 code_error:                             FF0000FF
 code_keyword:                           3aa982FF
+code_warning:                           E4D97DFF
 
 region_scope_export:                    181818FF
 region_scope_file:                      181818FF
@@ -59,3 +60,5 @@ build_panel_background:                 1A2831FF
 build_panel_scrollbar:                  33CCCC19
 build_panel_scrollbar_hover:            33CCCC4C
 build_panel_scrollbar_background:       10191F4C
+build_panel_title_bar:                  1C303AFF
+

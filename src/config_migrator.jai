@@ -1,7 +1,7 @@
 // We have a crappy parser here which only does some very superficial parsing.
 // The reason is because it's much simpler than keeping valid parsers for each historical version.
 
-maybe_migrate_config :: (name: string, file_data: string) -> migrated: bool, modified_data := "" {
+maybe_migrate_config :: (name: string, file_data: string, assume_section := "") -> migrated: bool, modified_data := "" {
     trimmed_data := trim_left(file_data, " \t\n\r");  // skip empty lines, otherwise the handler will crash!
     start_from_memory(*handler, name, name, trimmed_data);
     if handler.failed return false;
@@ -12,7 +12,7 @@ maybe_migrate_config :: (name: string, file_data: string) -> migrated: bool, mod
     // Do one full pass to collect information, not touching anything
     config_info: Config_Info;
     {
-        current_section: string;
+        current_section := assume_section;
         current_subsection: string;
 
         while true {
@@ -199,7 +199,7 @@ maybe_migrate_config :: (name: string, file_data: string) -> migrated: bool, mod
         assert(begins_with(cast(string) modified_data, "[1]"));
         modified_data[1] = cast(u8) #char "2";
 
-        current_section: string;
+        current_section := assume_section;
         current_subsection: string;
         offset_difference := 0;  // difference between original and modified, in bytes
 
@@ -441,16 +441,17 @@ RUN_TESTS :: false;
 // Also your code must comply with the SOLID principles. Are we real programmers or what?
 
 #if RUN_TESTS #run,stallable {
-    run_test("Settings migration",   "global.focus-config",  SETTINGS_1,  true, SETTINGS_1_EXPECTED);
-    run_test("Settings in projects", "project.focus-config", SETTINGS_2,  true, SETTINGS_2_EXPECTED);
-    run_test("New colors",           "global.focus-config",  COLORS_1,    true, COLORS_1_EXPECTED);
-    run_test("Settings and colors",  "global.focus-config",  COLORS_2,    true, COLORS_2_EXPECTED);
-    run_test("New keybinds",         "global.focus-config",  KEYBINDS_1,  true, KEYBINDS_1_EXPECTED);
+    run_test("Settings migration",   "global.focus-config",  SETTINGS_1,  SETTINGS_1_EXPECTED);
+    run_test("Settings in projects", "project.focus-config", SETTINGS_2,  SETTINGS_2_EXPECTED);
+    run_test("New colors",           "global.focus-config",  COLORS_1,    COLORS_1_EXPECTED);
+    run_test("Settings and colors",  "global.focus-config",  COLORS_2,    COLORS_2_EXPECTED);
+    run_test("New keybinds",         "global.focus-config",  KEYBINDS_1,  KEYBINDS_1_EXPECTED);
+    run_test("Theme migration",      "nord.focus-theme",     THEME_1,     THEME_1_EXPECTED, assume_section = "style");
 }
 
-run_test :: (test_name: string, file_name: string, config_data: string, expected_result: bool, expected_data: string) {
-    result, modified_data := maybe_migrate_config(file_name, config_data);
-    assert(result == expected_result, "%: Expected result %, got %", test_name, expected_result, result);
+run_test :: (test_name: string, file_name: string, config_data: string, expected_data: string, assume_section := "") {
+    migrated, modified_data := maybe_migrate_config(file_name, config_data, assume_section = assume_section);
+    assert(migrated, "%: unexpectedly did not migrate successfully", test_name);
     if modified_data != expected_data {
         print("========================\n");
         print("%", cast(string) modified_data);
@@ -869,6 +870,61 @@ Ctrl-Alt-P                  switch_to_project
 # New in version [2]
 Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
+
+FOCUS_CONFIG
+
+// Test that themes can be migrated properly
+
+THEME_1 :: #string FOCUS_CONFIG
+  [1]   # Version number. Do not delete.
+
+[user interface]
+font:       default
+font_size:  14
+
+[colors]
+background:                             15212AFF
+background_dark:                        10191FFF
+background_highlight:                   18262FFF
+background_light:                       1A2831FF
+background_bright:                      21333FFF
+
+scrollbar_hover:                        FFCCCC4C
+scrollbar_background:                   FF191F4C
+
+FOCUS_CONFIG
+
+THEME_1_EXPECTED :: #string FOCUS_CONFIG
+[2]   # Version number. Do not delete.
+
+[fonts]
+font:       default
+font_size:  14
+
+[colors]
+background0:                            15212AFF
+background1:                            10191FFF
+background2:                            18262FFF
+background3:                            1A2831FF
+background4:                            21333FFF
+
+scrollbar_hover:                        FFCCCC4C
+scrollbar_background:                   FF191F4C
+
+# New in version [2]
+code_warning:                           E4D97DFF
+region_scope_export:                    15212AFF
+region_scope_file:                      15212AFF
+region_scope_module:                    15212AFF
+region_header:                          1A5152FF
+region_success:                         226022FF
+region_warning:                         986032FF
+region_error:                           772222FF
+build_panel_background:                 1A2831FF
+build_panel_scrollbar:                  33CCCC19
+build_panel_scrollbar_hover:            33CCCC4C
+build_panel_scrollbar_background:       10191F4C
+build_panel_title_bar:                  1C303AFF
 
 FOCUS_CONFIG
 

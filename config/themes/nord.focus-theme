@@ -1,20 +1,26 @@
-[1]  # Version number. Do not delete
+[2]  # Version number. Do not delete
 
 [colors]
+
 region_scope_export:              2E3440FF
 region_scope_file:                3B4252AF
 region_scope_module:              434C5E9F
+region_header:                    1A5152FF
+region_success:                   226022FF
+region_warning:                   986032FF
+region_error:                     772222FF
 
 build_panel_background:           2E3440FF
 build_panel_scrollbar:            292D38AF
 build_panel_scrollbar_hover:      292D38FF
 build_panel_scrollbar_background: 1d212990
+build_panel_title_bar:            1C303AFF
 
-background:                       2E3440FF
-background_dark:                  3B4252FF
-background_highlight:             434C5EFF
-background_light:                 434C5EFF
-background_bright:                3B4252FF
+background0:                      2E3440FF
+background1:                      3B4252FF
+background2:                      434C5EFF
+background3:                      434C5EFF
+background4:                      3B4252FF
 selection_active:                 434C5EFF
 selection_inactive:               434C5EFF
 selection_highlight:              434C5EFF
@@ -55,3 +61,5 @@ code_value:                       B48EADFF
 code_highlight:                   5E81ACFF
 code_error:                       BF616AFF
 code_keyword:                     81A1C1FF
+code_warning:                     E4D97DFF
+

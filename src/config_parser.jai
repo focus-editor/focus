@@ -45,7 +45,7 @@ CONFIG_SECTIONS :: Config_Section.[
 
 #add_context parse_for_highlighting: bool;
 
-parse_config :: (name: string, filename: string, file_data: string, for_highlighting := false) -> Config_Parse_Result {
+parse_config :: (name: string, filename: string, file_data: string, for_highlighting := false, fix_section := Section.none) -> Config_Parse_Result {
     context.parse_for_highlighting = for_highlighting;
 
     using parser: Config_Parser;
@@ -57,12 +57,13 @@ parse_config :: (name: string, filename: string, file_data: string, for_highligh
         return result;
     }
 
-    // TODO: proper version handling and migration
     result.config.version = handler.version;
     if result.config.version != CURRENT_CONFIG_VERSION {
-        result.error_msg = tprint("Invalid config version [%] in file '%'. The only supported version is [%].", result.config.version, filename, CURRENT_CONFIG_VERSION);
+        result.error_msg = tprint("Invalid version [%] in file '%'. The only supported version is [%].", result.config.version, filename, CURRENT_CONFIG_VERSION);
         return result;
     }
+
+    active_section = fix_section;
 
     while true {
         line, found := consume_next_line(*handler);
@@ -72,7 +73,7 @@ parse_config :: (name: string, filename: string, file_data: string, for_highligh
 
         // Maybe switch sections
         if begins_with(line, "[") {
-            handled, error_msg := maybe_switch_section(*parser, line);
+            handled, error_msg := maybe_switch_section(*parser, line, fix_section);
             if error_msg {
                 add_highlight(*parser, 0, line.count, .error);
                 if !for_highlighting {
@@ -140,27 +141,6 @@ parse_config :: (name: string, filename: string, file_data: string, for_highligh
     result.error_msg = "";
 
     return result;
-}
-
-add_highlight :: inline (parser: *Config_Parser, offset_from_line_start: s64, count: s64, type: Focus_Config_Token, line_start_offset := -1) {
-    if !context.parse_for_highlighting return;
-
-    offset := parser.line_start_offset + offset_from_line_start;
-    if line_start_offset >= 0 then offset = line_start_offset + offset_from_line_start;
-
-    array_add(
-        *parser.result.highlights,
-        Code_Highlight.{ offset = cast(s32) offset, count = cast(s32) count, color_num = cast(u8) type },
-    );
-}
-
-keymap_map_key_string :: (key_string: string) -> u32 {
-    for STRING_TO_CODE_MAP {
-        if equal_nocase(key_string, it.str) {
-            return cast(u32) it.code;
-        }
-    }
-    return 0;
 }
 
 keymap_map_key_code_to_string :: (key_code: u32) -> string /* temp */ {
@@ -247,6 +227,7 @@ map_name_to_color :: (name: string) -> Color {
     return .NONE;
 }
 
+// TODO: use a memory pool
 free_parsed_config :: (using parsed_config: Parsed_Config) {
     for workspace_dirs free(it);  // workspace dirs are allocated on the heap separately because we store absolute paths
 
@@ -266,6 +247,27 @@ free_parsed_config :: (using parsed_config: Parsed_Config) {
 
 
 #scope_file
+
+add_highlight :: inline (parser: *Config_Parser, offset_from_line_start: s64, count: s64, type: Focus_Config_Token, line_start_offset := -1) {
+    if !context.parse_for_highlighting return;
+
+    offset := parser.line_start_offset + offset_from_line_start;
+    if line_start_offset >= 0 then offset = line_start_offset + offset_from_line_start;
+
+    array_add(
+        *parser.result.highlights,
+        Code_Highlight.{ offset = cast(s32) offset, count = cast(s32) count, color_num = cast(u8) type },
+    );
+}
+
+keymap_map_key_string :: (key_string: string) -> u32 {
+    for STRING_TO_CODE_MAP {
+        if equal_nocase(key_string, it.str) {
+            return cast(u32) it.code;
+        }
+    }
+    return 0;
+}
 
 log_parser_error :: (handler: Text_File_Handler, format: string, args: .. Any, flags := Log_Flags.NONE, loc := #caller_location) -> string {
     if context.parse_for_highlighting return "";  // Don't want to log anything
@@ -347,8 +349,10 @@ STRING_TO_CODE_MAP :: Str_Code.[
     // .{ "MouseWheelDown",    MOUSE_WHEEL_DOWN },
 ];
 
-maybe_switch_section :: (using parser: *Config_Parser, line: string) -> handled: bool, error: string {
+maybe_switch_section :: (using parser: *Config_Parser, line: string, fix_section := Section.none) -> handled: bool, error: string {
     if begins_with(line, "[[") {
+        if fix_section != .none return true, tprint("No top-level sections are allowed here (section is fixed to [[%]])", fix_section);
+
         // Top section
         if !ends_with(line, "]]") return true, tprint("Invalid section '%'. Section definitions must end with ]]", line);
         section_name := trim(line, " \t[]");

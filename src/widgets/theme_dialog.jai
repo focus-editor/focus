@@ -34,7 +34,31 @@ Theme_Dialog :: struct {
 
 preview_selected_theme :: () {
     using theme_dialog;
-    print("Selected theme: %\n", selected);
+    if !filtered || selected < 0 || selected >= filtered.count return;
+
+    push_allocator(temp);
+
+    theme := filtered[selected];
+    if !theme.path {
+        // TODO: custom theme
+        return;
+    }
+
+    file_data, success := read_entire_file(theme.path);
+    if !success {
+        add_user_error("Couldn't read theme file '%'", theme.path);
+        return;
+    }
+
+    migrated, new_file_data := maybe_migrate_config(theme.path, file_data, assume_section = "style");
+    if migrated {
+        success := write_entire_file(theme.path, new_file_data);
+        if !success then add_user_error("We migrated theme file '%' to version [%],\nbut could't save the file. Is it writable?", theme.path, CURRENT_CONFIG_VERSION);
+        file_data = new_file_data;
+    }
+
+    result := parse_config(theme.name, theme.path, file_data, fix_section = .style);
+    print("Parse result. Success: %, Error: %\n", result.success, result.error_msg);
 }
 
 // NOTE: assuming we're allocating from a pool
@@ -43,7 +67,7 @@ theme_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
 
     themes: [..] Theme;
 
-    array_add(*themes, .{ name = "Default", path = "" });
+    array_add(*themes, .{ name = "Custom", path = "" });
 
     visitor :: (info: *File_Visit_Info, themes: *[..] Theme) {
         if !ends_with_nocase(info.full_name, ".focus-theme") return;
@@ -51,7 +75,7 @@ theme_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
         full_path := copy_string(info.full_name);
         path, basename, extension, name := path_decomp(full_path);
 
-        name_parts := split(basename, "-");
+        name_parts := split(copy_string(basename), "-");
         for part : name_parts {
             if !part { remove part; continue; }
             part[0] = to_upper(part[0]);  // capitalize
