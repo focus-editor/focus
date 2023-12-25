@@ -648,22 +648,16 @@ synch_initted: s32 = 0;
 // Below are the functions we've added.
 
 report_bounds_check_error_more_visibly :: (index: s64, limit: s64, line_number: s64, filename: *u8) #no_context {
-    ctx: Context;
-    push_context ctx {
-        report_error_in_yer_face("Array bounds check failed in file % at line number %: \nProvided index: %, maximum index: %\n", to_string(filename), line_number, index, limit);
-    }
+    report_error_in_yer_face_no_ctx("Array bounds check failed in file % at line number %: \nProvided index: %, maximum index: %", to_string(filename), line_number, index, limit-1);
 }
 
 report_null_pointer_error_more_visibly :: (index: s64, line_number: s64, filename: *u8) #no_context {
-    ctx: Context;
-    push_context ctx {
-        if index {
-            // This is a procedure argument.
-            report_error_in_yer_face("Null pointer check failed in file % at line number %: \nArgument % is undergoing an automatic dereference, but the pointer is null.", to_string(filename), line_number, index);
-        } else {
-            // It was a dereference that happened in some other way.
-            report_error_in_yer_face("Null pointer check failed in file % at line number %: \nA pointer is undergoing an automatic dereference, but the pointer is null.", to_string(filename), line_number);
-        }
+    if index {
+        // This is a procedure argument.
+        report_error_in_yer_face_no_ctx("Null pointer check failed in file % at line number %: \nArgument % is undergoing an automatic dereference, but the pointer is null.", to_string(filename), line_number, index);
+    } else {
+        // It was a dereference that happened in some other way.
+        report_error_in_yer_face_no_ctx("Null pointer check failed in file % at line number %: \nA pointer is undergoing an automatic dereference, but the pointer is null.", to_string(filename), line_number);
     }
 }
 
@@ -671,16 +665,41 @@ report_failed_assertion_more_visibly :: (loc: Source_Code_Location, msg: string)
     report_error_in_yer_face("Assertion failed in file % at line %, char %: \n%", loc.fully_pathed_filename, loc.line_number, loc.character_number, msg);
 }
 
-report_error_in_yer_face :: (message: string, args: .. Any) {
-    System :: #import "System";
-    String :: #import "String";
-    Basic :: #import "Basic";
-    File :: #import "File";
+report_error_in_yer_face_no_ctx :: (message: string, args: .. Any) #no_context {
+    push_context Context.{} { report_error_in_yer_face(message, ..args, from_no_context = true); }
+}
+
+report_error_in_yer_face :: (message: string, args: .. Any, from_no_context := false) {
+    using #import "System"; // 'using' ensures the imports stay within this scope. (Raw imports do not respect scopes)
+    using #import "String";
+    using #import "Basic";
+    using #import "File";
+
+    formatted_message := tprint(message, ..args);
+
+    builder: String_Builder;
+    append(*builder, formatted_message);
+    append(*builder, "\n\n");
+    if from_no_context || !context.stack_trace {
+        print_to_builder(*builder, "Stack trace not available%.\n", ifx from_no_context " (it was lost due to a #no_context call)");
+    } else {
+        append(*builder, "Stack trace:\n");
+        node := context.stack_trace;
+        while node {
+            if node.info print_to_builder(*builder, "%:%: %\n", node.info.location.fully_pathed_filename, node.line_number, node.info.name);
+            node = node.next;
+        }
+    }
+    crash_report := builder_to_string(*builder);
+
     // Log it in a crash report file next to the exe
-    exe_dir := String.path_strip_filename(System.get_path_of_running_executable());
-    crash_report_file_path := Basic.sprint("%/focus-crash-report.txt", exe_dir);
-    formatted_message := Basic.sprint(message, ..args);
-    File.write_entire_file(crash_report_file_path, formatted_message);
+    exe_dir := path_strip_filename(get_path_of_running_executable());
+    crash_report_file_path := tprint("%/focus-crash-report.txt", exe_dir);
+    write_entire_file(crash_report_file_path, crash_report);
+
+    // The crash report is overwritten every new crash, so we also print it to the session log for safekeeping.
+    // Unfortunately #no_context also strips us of the correct logger, so we can't always do that.
+    if !from_no_context then log_error(crash_report, flags = .TO_FILE_ONLY);
 
     // Show a Windows message box
     #if OS == .WINDOWS {
