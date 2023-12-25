@@ -408,7 +408,9 @@ session_logger :: (raw_msg: string, data: *void, info: Log_Info) {
 
     #if DEBUG {
         // Write to stdout/stderr
-        runtime_support_default_logger(message, data, info);
+        if (info.common_flags & .TO_FILE_ONLY) == 0 {
+            runtime_support_default_logger(message, data, info);
+        }
     }
 }
 
