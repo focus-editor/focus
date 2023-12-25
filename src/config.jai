@@ -16,6 +16,7 @@ load_global_config :: (fallback_to_default_on_failure := false, force := false) 
     if loaded_config.loaded {
         // Merge into an empty config
         config = Config.{};
+        reset_color_map_to_default();
         merge_configs(*config, loaded_config.parsed_config);
         apply_config();
         free_loaded_config(*global_config);
@@ -47,6 +48,7 @@ load_project_config :: (project: string = "", force := false) -> success: bool, 
         // Merge into an empty config, starting from a loaded global config
         if global_config.loaded {
             config = Config.{};
+            reset_color_map_to_default();
             merge_configs(*config, global_config.parsed_config);
         } else {
             config = DEFAULT_CONFIG;
@@ -382,6 +384,10 @@ load_font_by_name :: (name: string) -> font_data: string, success: bool {
     return "", false;
 }
 
+reset_color_map_to_default :: () {
+    COLOR_MAP = DEFAULT_COLOR_MAP;
+}
+
 #scope_export
 
 // Currently active config
@@ -532,6 +538,7 @@ DEFAULT_CONFIG :: #run,stallable -> Config {
     assert(result.success, "Couldn't parse the default config file '%'. Error: %", DEFAULT_CONFIG_NAME, result.error_msg);
     default_config: Config;
     merge_configs(*default_config, result.config);
+    DEFAULT_COLOR_MAP = COLOR_MAP;  // remember the default color map
     return default_config;
 };
 
