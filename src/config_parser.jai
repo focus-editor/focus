@@ -107,7 +107,7 @@ parse_config :: (name: string, filename: string, file_data: string, for_highligh
 
             append(*b, "if #complete active_section == {\n");
             for section : CONFIG_SECTIONS {
-                print_to_builder(*b, "    case .%;  success, error_msg = %(*parser, line);", replace(section.name, " ", "_"), section.parse_function);
+                print_to_builder(*b, "    case .%;  success, error_msg = %(*parser, line);\n", replace(section.name, " ", "_"), section.parse_function);
             }
             code := #string JAI
                 case .none;
@@ -1050,8 +1050,6 @@ parse_linux_config_line :: (using parser: *Config_Parser, line: string) -> succe
     setting, value := break_by_spaces(line);
     setting = trim_right(setting, ":");
 
-    result.config.linux.scaling_factor = 0.0;
-
     if setting == {
         case "scaling_factor";
             val := value;  // parse_float destroys the string
@@ -1065,7 +1063,7 @@ parse_linux_config_line :: (using parser: *Config_Parser, line: string) -> succe
             lower_limit := ifx DEBUG then 0.5 else 1.0;
             if (f_val != 0.0) && (f_val < lower_limit || f_val > 5.0) {
                 add_highlight(parser, value.data - line.data, value.count, .error);
-                return true, tprint("Couldn't parse '%' - value out of the expected range ([% ... 5.0])", lower_limit, setting);;
+                return true, tprint("Couldn't parse '%' - value out of the expected range ([% ... 5.0])", lower_limit, setting);
             }
             result.config.linux.scaling_factor = f_val;
 
