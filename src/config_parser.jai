@@ -31,6 +31,7 @@ CONFIG_SECTIONS :: Config_Section.[
             "colors",
         ],
         parse_function = "parse_style_line",
+        allow_lines_outside_subsection = true,
     },
     .{
         name = "build commands",
@@ -243,6 +244,11 @@ free_parsed_config :: (using parsed_config: Parsed_Config) {
     array_free(keymap_search_dialog);
     array_free(set_settings);
     array_free(colors);
+}
+
+get_theme_file_from_name :: (name: string) -> string /* temp */ {
+    theme_name := to_lower_copy(name, allocator = temp);
+    return tprint("%/%.focus-theme", themes_dir, theme_name);
 }
 
 
@@ -484,12 +490,24 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
 }
 
 parse_style_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
-    add_highlight(parser, 0, line.count, .default);
+    if result.config.theme {
+        add_highlight(parser, 0, line.count, .comment);
+        return true, "";  // ignore all style lines if theme is set
+    } else {
+        add_highlight(parser, 0, line.count, .default);
+    }
 
     if active_subsection == {
         case .style_fonts;
             setting, value := break_by_spaces(line);
             setting = trim_right(setting, ":");
+
+            font_settings := string.[ "font", "font_size" ];
+            if !array_find(font_settings, setting) {
+                add_highlight(parser, 0, setting.count, .error);
+                return true, tprint("Unknown font option '%'. Available options: ", setting, join(..font_settings, ", ", allocator = temp));
+            }
+
             if setting == {
                 case "font";
                     found, error_msg := find_font_by_name(value);
@@ -510,10 +528,8 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         result.config.font_size = DEFAULT_FONT_SIZE;
                         return false, tprint("Couldn't parse '%' - expected a valid integer, got '%'", setting, value);
                     }
-                case;
-                    add_highlight(parser, 0, setting.count, .error);
-                    return true, tprint("Unknown style option '%'", setting);
             }
+
         case .style_colors;
             color_name, value := break_by_spaces(line);
             color_name = trim_right(color_name, ":");
@@ -539,6 +555,36 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
             if is_duplicate then add_highlight(parser, 0, line.count, .warning);
 
             array_add(*seen_colors, Seen_Color.{ line_start_offset = line_start_offset, line_length = xx line.count, color = color_id });
+
+        case;
+            setting, value := break_by_spaces(line);
+            setting = trim_right(setting, ":");
+            if setting == {
+                case "theme";
+                    theme_file := get_theme_file_from_name(value);
+                    if !file_exists(theme_file) {
+                        add_highlight(parser, value.data - line.data, value.count, .error);
+                        return true, tprint("Couldn't find theme file '%'", theme_file);
+                    }
+                    result.config.theme = value;
+
+                    if !context.parse_for_highlighting {
+                        // Parse theme
+                        file_data, success := read_entire_file(theme_file);  // @leak - use a memory pool and remove all the frees
+                        if !success return true, tprint("Couldn't read theme file '%'", theme_file);
+
+                        theme_parse_result := parse_config(value, theme_file, file_data, fix_section = .style);
+                        if !theme_parse_result.success return true, tprint("Couldn't parse theme file '%'.\nError: %", theme_file, theme_parse_result.error_msg);
+
+                        // Copy colors and font data (it points into the theme file data)
+                        array_extend(*result.config.colors, theme_parse_result.config.colors);
+                        result.config.font      = theme_parse_result.config.font;
+                        result.config.font_size = theme_parse_result.config.font_size;
+                    }
+                case;
+                    add_highlight(parser, 0, setting.count, .error);
+                    return true, tprint("Unknown style option '%'. Available option: theme.", setting);
+            }
     }
 
     return true, "";
@@ -1038,9 +1084,7 @@ parse_linux_config_line :: (using parser: *Config_Parser, line: string) -> succe
 }
 
 section_allows_lines_outside_subsection :: inline (section: Section) -> bool {
-    // Right now it's enough to check that no subsections are defined.
-    // That could change though, in which case we'll need a separate flag
-    return CONFIG_SECTIONS[section].subsections.count == 0;
+    return CONFIG_SECTIONS[section].subsections.count == 0 || CONFIG_SECTIONS[section].allow_lines_outside_subsection;
 }
 
 section_allows_arbitrary_subsections :: inline (section: Section) -> bool {
@@ -1074,7 +1118,8 @@ Parsed_Config :: struct {
     set_settings: [..] string;  // so that we know which options were included in the config, and only touch those when merging
 
     // Style
-    font:      string;
+    theme: string;
+    font: string;
     font_size: int;
     colors:    [..] Parsed_Color;
 
@@ -1106,7 +1151,8 @@ Config_Section :: struct {
     name: string;
     parse_function: string;
     subsections: [] string;
-    allow_arbitrary_subsections := false;
+    allow_arbitrary_subsections    := false;
+    allow_lines_outside_subsection := false;
 }
 
 Config_Parser :: struct {

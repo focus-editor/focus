@@ -24,13 +24,23 @@ theme_dialog: Theme_Dialog;
 
 Theme_Dialog :: struct {
     using #as generic_dialog: Generic_Choice_Dialog(Theme);
-    generic_dialog.global_widget_id     = .theme_dialog;
-    generic_dialog.refresh_entries      = theme_dialog_refresh_entries;
-    generic_dialog.open_entry_in_place  = apply_selected_theme;
-    generic_dialog.on_move              = preview_selected_theme;
+    generic_dialog.global_widget_id    = .theme_dialog;
+    generic_dialog.refresh_entries     = theme_dialog_refresh_entries;
+    generic_dialog.open_entry_in_place = apply_selected_theme;
+    generic_dialog.on_move             = preview_selected_theme;
+    generic_dialog.on_show             = remember_current_theme;
+    generic_dialog.on_hide             = maybe_revert_theme;
 };
 
 #scope_file
+
+remember_current_theme :: () {
+    print("Show\n");
+}
+
+maybe_revert_theme :: () {
+    print("Hide\n");
+}
 
 preview_selected_theme :: () {
     using theme_dialog;
@@ -40,10 +50,14 @@ preview_selected_theme :: () {
 
     theme := filtered[selected];
     if !theme.path {
-        // TODO: custom theme
+        // Custom theme
+        reset_color_map_to_default();
+        if global_config.loaded  then apply_style(*config.style, global_config.parsed_config);
+        if project_config.loaded then apply_style(*config.style, project_config.parsed_config);
         return;
     }
 
+    // We read and parse files each time without caching anything because we want flexibility and because it's cheap
     file_data, success := read_entire_file(theme.path);
     if !success {
         add_user_error("Couldn't read theme file '%'", theme.path);
@@ -58,7 +72,13 @@ preview_selected_theme :: () {
     }
 
     result := parse_config(theme.name, theme.path, file_data, fix_section = .style);
-    print("Parse result. Success: %, Error: %\n", result.success, result.error_msg);
+    if !result.success {
+        add_user_error("Couldn't parse theme file '%'.\nError: %", theme.path, result.error_msg);
+        return;
+    }
+
+    reset_color_map_to_default();
+    apply_style(*config.style, result.config);
 }
 
 // NOTE: assuming we're allocating from a pool

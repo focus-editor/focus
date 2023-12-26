@@ -239,6 +239,41 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
     return "", error_msg;
 }
 
+reset_color_map_to_default :: () {
+    COLOR_MAP = DEFAULT_COLOR_MAP;
+}
+
+apply_style :: (dst_style: *Style, parsed: Parsed_Config) {
+    // Fonts
+    if parsed.font {
+        dst_style.font = parsed.font;
+
+        loaded_data, success := load_font_by_name(parsed.font);  // @leak
+        if success {
+            main_font_data = loaded_data;
+            main_font_name = parsed.font;
+        } else {
+            // NOTE: this error will be removed by the config success message. Should do something about it
+            add_user_error("Couldn't load font %", parsed.font);
+        }
+    }
+    if parsed.font_size > 0 {
+        dst_style.font_size = parsed.font_size;
+        font_size = parsed.font_size;
+        default_font_size = font_size;
+    }
+
+    // Colors
+    for parsed.colors {
+        color := map_name_to_color(it.color_name);
+        if color != .NONE {
+            COLOR_MAP[color] = it.color;
+        } else {
+            log_error("Couldn't map color name '%' to color enum value. This is a bug", it.color_name);
+        }
+    }
+}
+
 #scope_file
 
 load_config :: (file_path: string, existing: *Loaded_Config, force := false) -> Loaded_Config, changed := true {
@@ -339,34 +374,9 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
         return builder_to_string(*b);
     }
 
-    // Fonts
-    if parsed.font {
-        dst.style.font = parsed.font;
-
-        loaded_data, success := load_font_by_name(parsed.font);
-        if success {
-            main_font_data = loaded_data;
-            main_font_name = parsed.font;
-        } else {
-            // NOTE: this error will be removed by the config success message. Should do something about it
-            add_user_error("Couldn't load font %", parsed.font);
-        }
-    }
-    if parsed.font_size > 0 {
-        dst.style.font_size = parsed.font_size;
-        font_size = parsed.font_size;
-        default_font_size = font_size;
-    }
-
-    // Colors
-    for parsed.colors {
-        color := map_name_to_color(it.color_name);
-        if color != .NONE {
-            COLOR_MAP[color] = it.color;
-        } else {
-            log_error("Couldn't map color name '%' to color enum value. This is a bug", it.color_name);
-        }
-    }
+    // Style
+    if parsed.theme then dst.style.theme = copy_string(parsed.theme);  // @leak
+    apply_style(*dst.style, parsed);
 
     // Platform config
     dst.linux = parsed.linux;
@@ -382,10 +392,6 @@ load_font_by_name :: (name: string) -> font_data: string, success: bool {
     }
 
     return "", false;
-}
-
-reset_color_map_to_default :: () {
-    COLOR_MAP = DEFAULT_COLOR_MAP;
 }
 
 #scope_export
@@ -486,6 +492,7 @@ Keymap :: struct {
 }
 
 Style :: struct {
+    theme     := "";
     font      := "";
     font_size := -1;
 }

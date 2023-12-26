@@ -35,10 +35,12 @@ show_dialog :: (dialog: *Generic_Choice_Dialog) {
     assert(dialog.open_entry_in_place != null, "Generic dialogs must define open_entry_in_place and this one doesn't. This is a bug.");
     text_input_fully_clear(*dialog.input);
     refresh_dialog_entries(dialog);
+    if dialog.on_show then dialog.on_show();
 }
 
 hide_dialog :: (dialog: Generic_Choice_Dialog) {
     activate_editors();
+    if dialog.on_hide then dialog.on_hide();
 }
 
 refresh_dialog_entries :: (using dialog: *Generic_Choice_Dialog) {
@@ -113,6 +115,8 @@ Generic_Choice_Dialog :: struct(Entry_Details: Type) {
     global_widget_id: Active_Global_Widget;
     refresh_entries: (filter: Fuzzy_Filter) -> ();
     on_move: () -> ();
+    on_show: () -> ();
+    on_hide: () -> ();
     open_entry_in_place:     () -> ();
     open_entry_on_the_side:  () -> ();
     open_entry_on_the_left:  () -> ();
