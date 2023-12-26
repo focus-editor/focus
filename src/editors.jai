@@ -2476,16 +2476,13 @@ remove_additional_cursors :: (editor: *Editor) {
 add_cursors_to_line_starts :: (editor: *Editor, buffer: Buffer) {
     if buffer.bytes.count <= 0 return;
 
-    line_ranges := get_whole_line_ranges_for_cursors(editor, buffer);
-    array_reset_keeping_memory(*editor.cursors);  // reset after getting ranges (obviously)
+    line_num_ranges := get_real_line_numbers_for_cursors(editor, buffer);
+    array_reset_keeping_memory(*editor.cursors);  // reset *after* getting ranges
 
-    for * line_range : line_ranges {
-        line_num := offset_to_line(editor, buffer, line_range.start);
-        while true {
-            pos := buffer.line_starts[line_num];
-            if pos >= line_range.end break;
-            array_add(*editor.cursors, Cursor.{ pos = pos, sel = pos, col_wanted = -1 });
-            line_num += 1;
+    for range : line_num_ranges  {
+        for range.first_line_num..range.last_line_num {
+            offset := buffer.line_starts[it];
+            array_add(*editor.cursors, Cursor.{ pos = offset, sel = offset, col_wanted = -1 });
         }
     }
 
@@ -2581,6 +2578,36 @@ get_whole_line_ranges_for_cursors :: (editor: Editor, buffer: Buffer, merge_adja
     }
     return line_ranges;
 }
+
+Line_Number_Range :: struct {
+    first_line_num: s32;
+    last_line_num: s32; // included in the range
+}
+
+get_real_line_numbers_for_cursors :: (editor: Editor, buffer: Buffer) -> [] Line_Number_Range /* tmp */ {
+    line_num_ranges: [..] Line_Number_Range;
+    line_num_ranges.allocator = temp;
+    line_after_prev_range: type_of(Line_Number_Range.last_line_num);
+
+    for cursor : editor.cursors {
+        selection := get_selection(cursor);
+        range: Line_Number_Range = ---;
+        range.first_line_num = offset_to_real_line(buffer, selection.start);
+        range.last_line_num  = ifx selection.start == selection.end then range.first_line_num else offset_to_real_line(buffer, selection.end);
+
+        should_extend := line_num_ranges.count > 0 && range.first_line_num <= line_after_prev_range;
+
+        if should_extend {
+            line_num_ranges[line_num_ranges.count-1].last_line_num = range.last_line_num;
+        } else {
+            array_add(*line_num_ranges, range);
+        }
+        line_after_prev_range = range.last_line_num + 1;
+    }
+
+    return line_num_ranges;
+}
+
 
 duplicate_lines :: (editor: *Editor, buffer: *Buffer) {
     lines := get_whole_line_ranges_for_cursors(editor, buffer, merge_adjacent = false);
