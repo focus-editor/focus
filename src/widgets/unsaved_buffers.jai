@@ -55,7 +55,7 @@ unsaved_buffers_dialog_proceed :: () {
             should_quit = true;
 
         case .reload_workspace;  should_reload_workspace = true;
-        case .switch_project;    should_switch_project   = true;
+        case .switch_project;    switch_project();
         case .do_nothing;
     }
 

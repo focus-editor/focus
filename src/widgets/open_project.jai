@@ -12,7 +12,7 @@ open_selected_project :: () {
     if unsaved_buffers_exist() {
         show_unsaved_buffers_dialog(After_Save_Action.switch_project);
     } else {
-        should_switch_project = true;
+        switch_project();
     }
 }
 
@@ -23,7 +23,22 @@ Open_Project_Dialog :: struct {
     generic_dialog.global_widget_id    = .open_project_dialog;
     generic_dialog.refresh_entries     = open_project_refresh_entries;
     generic_dialog.open_entry_in_place = open_selected_project;
+
+    project_to_switch_to := "";
 };
+
+switch_project :: () {
+    using open_project_dialog;
+    assert(project_to_switch_to != "");
+
+    success := load_project_config(project_to_switch_to, force = true);
+    if success {
+        should_reload_workspace = true;
+    } else {
+        add_user_error("Couldn't load project config for %", project_to_switch_to, dismiss_in_seconds = 10);
+    }
+    project_to_switch_to = "";
+}
 
 #scope_file
 

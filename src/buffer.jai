@@ -1132,7 +1132,7 @@ process_buffer_save_queue :: () {
             case .do_nothing;           // yay, do nothing
             case .exit_program;         should_quit = true;
             case .reload_workspace;     should_reload_workspace = true;
-            case .switch_project;       should_switch_project = true;
+            case .switch_project;       switch_project();
         }
     }
 }

@@ -283,19 +283,6 @@ main :: () {
         }
 
         process_buffer_save_queue();
-
-        if should_switch_project {
-            success := load_project_config(project_to_switch_to, force = true);
-            if success {
-                should_reload_workspace = true;
-            } else {
-                add_user_error("Couldn't load project config for %", project_to_switch_to, dismiss_in_seconds = 10);
-            }
-
-            should_switch_project   = false;
-            project_to_switch_to    = "";
-        }
-
         build_system_update();
         refresh_open_buffers();
 
@@ -650,8 +637,6 @@ should_quit             := false;
 force_quit              := false;
 should_reload_workspace := false;
 automatic_workspace_reload := false;
-should_switch_project   := false;
-project_to_switch_to    := "";
 
 frame_time: Time;                 // ever-increasing time since start in seconds
 frame_dt:   Time = MAX_FRAME_DT;  // time delta since the last frame
