@@ -71,7 +71,7 @@ preview_selected_theme :: () {
         file_data = new_file_data;
     }
 
-    result := parse_config(theme.name, theme.path, file_data, fix_section = .style);
+    result := parse_config(theme.name, theme.path, file_data, as_theme = true);
     if !result.success {
         add_user_error("Couldn't parse theme file '%'.\nError: %", theme.path, result.error_msg);
         return;
