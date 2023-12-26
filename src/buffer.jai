@@ -1132,6 +1132,7 @@ process_buffer_save_queue :: () {
             case .do_nothing;           // yay, do nothing
             case .exit_program;         should_quit = true;
             case .reload_workspace;     should_reload_workspace = true;
+            case .switch_project;       should_switch_project = true;
         }
     }
 }
@@ -1403,6 +1404,13 @@ Indentation_Token :: struct {
 }
 
 
+After_Save_Action :: enum {
+    do_nothing;
+    exit_program;
+    reload_workspace;
+    switch_project;
+}
+
 #scope_file
 
 // A queue to allow us to use the in-editor save dialog for multiple buffers.
@@ -1413,8 +1421,3 @@ buffer_save_queue: struct {
     after_save: After_Save_Action = .do_nothing;
 };
 
-After_Save_Action :: enum {
-    do_nothing;
-    exit_program;
-    reload_workspace;
-}

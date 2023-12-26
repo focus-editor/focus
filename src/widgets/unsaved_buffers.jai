@@ -11,7 +11,7 @@ unsaved_buffers_dialog_handle_event :: (event: Input.Event) -> bool {
     return false;
 }
 
-show_unsaved_buffers_dialog :: (requested_mode: Mode = .exit_program) {
+show_unsaved_buffers_dialog :: (requested_mode: After_Save_Action = .exit_program) {
     using unsaved_buffers_dialog;
 
     active_global_widget = .unsaved_buffers_dialog;
@@ -40,10 +40,7 @@ unsaved_buffers_save_all :: () {
             save_buffer(buffer, buffer_id);
             if buffer.error_when_saving then should_proceed = false;
         } else {
-            if #complete unsaved_buffers_dialog.mode == {
-                case .exit_program;         add_buffer_to_save_queue(buffer_id, after_save = .exit_program);
-                case .reload_workspace;     add_buffer_to_save_queue(buffer_id, after_save = .reload_workspace);
-            }
+            add_buffer_to_save_queue(buffer_id, after_save = unsaved_buffers_dialog.mode);
             should_proceed = false;
         }
     }
@@ -56,8 +53,10 @@ unsaved_buffers_dialog_proceed :: () {
         case .exit_program;
             force_quit  = true;
             should_quit = true;
-        case .reload_workspace;
-            should_reload_workspace = true;
+
+        case .reload_workspace;  should_reload_workspace = true;
+        case .switch_project;    should_switch_project   = true;
+        case .do_nothing;
     }
 
     close_unsaved_buffers_dialog();
@@ -67,12 +66,5 @@ unsaved_buffers_dialog_proceed :: () {
 
 unsaved_buffers_dialog: struct {
     modified_buffers: [..] s64;
-    mode: Mode;
+    mode: After_Save_Action;
 };
-
-#scope_file
-
-Mode :: enum {
-    exit_program;
-    reload_workspace;
-}

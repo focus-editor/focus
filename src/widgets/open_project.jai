@@ -8,18 +8,11 @@ open_selected_project :: () {
     using open_project_dialog;
     if selected >= filtered.count return;
 
-    entry := filtered[selected];
-
-    success := load_project_config(entry.name, force = true);
-    if success {
-        should_reload_workspace = true;
-        automatic_workspace_reload = false;
-        if unsaved_buffers_exist() {
-            show_unsaved_buffers_dialog(.reload_workspace);
-            should_reload_workspace = false;
-        }
+    project_to_switch_to  = filtered[selected].name;
+    if unsaved_buffers_exist() {
+        show_unsaved_buffers_dialog(After_Save_Action.switch_project);
     } else {
-        add_user_error("Couldn't load project config for %", entry.name, dismiss_in_seconds = 10);
+        should_switch_project = true;
     }
 }
 
