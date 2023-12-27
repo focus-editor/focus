@@ -2588,7 +2588,7 @@ Line_Number_Range :: struct {
 get_real_line_numbers_for_cursors :: (editor: Editor, buffer: Buffer) -> [] Line_Number_Range /* tmp */ {
     line_num_ranges: [..] Line_Number_Range;
     line_num_ranges.allocator = temp;
-    line_after_prev_range: type_of(Line_Number_Range.last_line_num);
+    line_after_prev_range: s32;
 
     for cursor : editor.cursors {
         selection := get_selection(cursor);
