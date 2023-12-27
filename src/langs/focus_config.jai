@@ -4,7 +4,7 @@ highlight_focus_config_syntax :: (using buffer: *Buffer) {
     push_allocator(temp);  // we don't care about anything it might allocate
 
     name := get_buffer_name(buffer);
-    result := parse_config(name, name, cast(string) bytes, for_highlighting = true);
+    result := parse_config(name, name, cast(string) bytes, for_highlighting = true, as_theme = lang == .Focus_Theme);
 
     for result.highlights {
         memset(colors.data + it.offset, xx COLOR_MAP[it.color_num], it.count);

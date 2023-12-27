@@ -1152,6 +1152,7 @@ get_highlighter_function :: (lang: Buffer.Lang) -> Highlighter_Function {
         case .C;            return highlight_c_syntax;
         case .CSharp;       return highlight_csharp_syntax;
         case .Focus_Config; return highlight_focus_config_syntax;
+        case .Focus_Theme;  return highlight_focus_config_syntax;
         case .Glsl;         return highlight_glsl_syntax;
         case .Golang;       return highlight_golang_syntax;
         case .Lua;          return highlight_lua_syntax;
@@ -1326,6 +1327,7 @@ Buffer :: struct {
         C;
         CSharp;
         Focus_Config;
+        Focus_Theme;
         Glsl;
         Golang;
         Lua;

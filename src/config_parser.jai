@@ -555,7 +555,10 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
             array_add(*seen_colors, Seen_Color.{ line_start_offset = line_start_offset, line_length = xx line.count, color = color_id });
 
         case;
-            if parse_as_theme then return true, "Unexpected line outside of sections. Available sections: [fonts], [colors]";
+            if parse_as_theme {
+                add_highlight(parser, 0, line.count, .error);
+                return true, "Unexpected line outside of sections. Available sections: [fonts], [colors]";
+            }
 
             setting, value := break_by_spaces(line);
             setting = trim_right(setting, ":");
