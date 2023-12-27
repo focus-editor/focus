@@ -1094,6 +1094,7 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
             case "jai";            buffer.lang = .Jai;
             case "cs";             buffer.lang = .CSharp;
             case "focus-config";   buffer.lang = .Focus_Config;
+            case "focus-theme";    buffer.lang = .Focus_Theme;
             case "go";             buffer.lang = .Golang;
             case "lua";            buffer.lang = .Lua;
             case "odin";           buffer.lang = .Odin;
@@ -2939,6 +2940,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
         case .Lua;          comment = "--";
         case .Odin;         comment = "//";
         case .Focus_Config; comment = "#";
+        case .Focus_Theme;  comment = "#";
         case .Python;       comment = "#";
         case .RenPy;        comment = "#";
         case .Yang;         comment = "//";
