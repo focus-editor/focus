@@ -2474,23 +2474,28 @@ remove_additional_cursors :: (editor: *Editor) {
     editor.cursor_moved = .refresh_only;
 }
 
-add_cursors_to_line_starts :: (editor: *Editor, buffer: Buffer) {
+add_cursors_to_line_starts :: (using editor: *Editor, buffer: Buffer) {
     if buffer.bytes.count <= 0 return;
 
     line_ranges := get_whole_line_ranges_for_cursors(editor, buffer);
-    array_reset_keeping_memory(*editor.cursors);  // reset after getting ranges (obviously)
+    array_reset_keeping_memory(*cursors);  // reset after getting ranges (obviously)
+
+    pos: s32;
 
     for * line_range : line_ranges {
         line_num := offset_to_line(editor, buffer, line_range.start);
         while true {
-            pos := buffer.line_starts[line_num];
+            pos = buffer.line_starts[line_num];
             if pos >= line_range.end break;
-            array_add(*editor.cursors, Cursor.{ pos = pos, sel = pos, col_wanted = -1 });
+            array_add(*cursors, Cursor.{ pos = pos, sel = pos, col_wanted = -1 });
             line_num += 1;
         }
     }
 
-    assert(editor.cursors.count > 0);
+    if !cursors then array_add(*cursors, Cursor.{ pos = pos, sel = pos, col_wanted = -1 });
+
+    main_cursor     = clamp(main_cursor,     0, cursors.count - 1);
+    original_cursor = clamp(original_cursor, 0, cursors.count - 1);
 
     editor.cursor_moved = .unimportant;
 }
