@@ -3,6 +3,7 @@ CURRENT_CONFIG_VERSION :: 2;
 load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
     config_path := tprint("%/global.focus-config", config_dir);
     if !global_config.path then global_config.path = copy_string(config_path);
+    start_watching_file_if_not_already(config_path);
 
     if !file_exists(config_path) {
         // Create one with default contents
@@ -40,6 +41,7 @@ load_project_config :: (project: string = "", force := false) -> success: bool, 
     }
     project_name := ifx project then project else current_project_name;
     config_path  := tprint("%/%.focus-config", projects_dir, project_name);
+    start_watching_file_if_not_already(config_path);
 
     loaded_config, changed := load_config(config_path, *project_config, force);
     if !changed && !force return true, false, false;
@@ -112,12 +114,10 @@ apply_config :: () {
     platform_apply_config();
 }
 
-free_loaded_config :: (loaded_config: *Loaded_Config) {
-    free(loaded_config.path);
-    loaded_config.path = "";
-    free(loaded_config.file_data);
-    loaded_config.file_data = "";
-    free_parsed_config(loaded_config.parsed_config);
+free_loaded_config :: (using loaded_config: *Loaded_Config) {
+    path = "";
+    parsed_config = Parsed_Config.{};
+    reset(*memory_pool);
 }
 
 refresh_config :: (path: string) {
@@ -243,22 +243,18 @@ reset_color_map_to_default :: () {
     COLOR_MAP = DEFAULT_COLOR_MAP;
 }
 
-apply_style :: (dst_style: *Style, parsed: Parsed_Config) {
+apply_style :: (parsed: Parsed_Config) {
     // Fonts
     if parsed.font {
-        dst_style.font = parsed.font;
-
-        loaded_data, success := load_font_by_name(parsed.font);  // @leak
+        loaded_data, success := load_font_by_name(parsed.font);
         if success {
             main_font_data = loaded_data;
             main_font_name = parsed.font;
         } else {
-            // NOTE: this error will be removed by the config success message. Should do something about it
             add_user_error("Couldn't load font %", parsed.font);
         }
     }
     if parsed.font_size > 0 {
-        dst_style.font_size = parsed.font_size;
         font_size = parsed.font_size;
         default_font_size = font_size;
     }
@@ -279,6 +275,9 @@ apply_style :: (dst_style: *Style, parsed: Parsed_Config) {
 load_config :: (file_path: string, existing: *Loaded_Config, force := false) -> Loaded_Config, changed := true {
     loaded_config: Loaded_Config;
 
+    allocator := Allocator.{ proc = flat_pool_allocator_proc, data = *loaded_config.memory_pool };
+    push_allocator(allocator);
+
     file_data, success_read := read_entire_file(file_path);
     if !success_read {
         error_msg := tprint("Couldn't read the config file file '%'", file_path);
@@ -288,7 +287,6 @@ load_config :: (file_path: string, existing: *Loaded_Config, force := false) -> 
     }
 
     loaded_config.path = copy_string(file_path);
-    loaded_config.file_data = file_data;
     loaded_config.hash = calculate_hash(to_bytes(file_data));
     if loaded_config.hash == existing.hash && !force return loaded_config, false;  // unchanged so no need to parse
 
@@ -304,9 +302,7 @@ load_config :: (file_path: string, existing: *Loaded_Config, force := false) -> 
 
         // All good
         write_entire_file(tprint("%.bak", file_path), file_data);
-        free(file_data);
         file_data = new_file_data;
-        loaded_config.file_data = file_data;
 
         // Replace the old config's file
         success := write_entire_file(file_path, new_file_data);
@@ -331,8 +327,6 @@ load_config :: (file_path: string, existing: *Loaded_Config, force := false) -> 
 
     loaded_config.loaded = true;
     loaded_config.parsed_config = parse_result.config;
-
-    start_watching_file_if_not_already(file_path);
 
     return loaded_config;
 }
@@ -375,8 +369,8 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     }
 
     // Style
-    if parsed.theme then dst.style.theme = copy_string(parsed.theme);  // @leak
-    apply_style(*dst.style, parsed);
+    // if parsed.theme then dst.style.theme = copy_string(parsed.theme);  // TODO: rework how themes and styles are applied
+    apply_style(parsed);
 
     // Platform config
     dst.linux = parsed.linux;
@@ -385,14 +379,24 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
 load_font_by_name :: (name: string) -> font_data: string, success: bool {
     if name == "default" return FONT.data, true;
 
+    push_allocator(focus_allocator);  // we sometimes call this from within a temp allocator, but we will always want to persist fonts
+
     font_path := find_font_by_name(name);
     if font_path {
+        cached_data, found := table_find(*font_cache, font_path);
+        if found return cached_data, true;
+
         font_data, success := read_entire_file(font_path);
-        return font_data, success;
+        if success {
+            table_set(*font_cache, copy_string(font_path), font_data);
+            return font_data, true;
+        }
     }
 
     return "", false;
 }
+
+font_cache: Table(string, string);  // path -> file data
 
 #scope_export
 
@@ -411,7 +415,7 @@ Config :: struct {
     workspace: Workspace;
     keymap:    Keymap;
     settings:  Settings;
-    style:     Style;
+    // style:     Style;  // TODO: rework how styles and fonts are applied
     build:     Build_Config;
     linux:     Linux_Config;
 }
@@ -421,8 +425,8 @@ Loaded_Config :: struct {
     there_were_warnings := false;
     path: string;
     hash: u64;
-    parsed_config: Parsed_Config;  // points into the file data below
-    file_data: string;  // to free when not needed.
+    parsed_config: Parsed_Config;
+    memory_pool: Flat_Pool;  // must be valid for the lifetime of the config
 }
 
 Linux_Config :: struct {
@@ -491,12 +495,6 @@ Keymap :: struct {
     build:            [] Key_Mapping;  // treated specially, it's not in the keymap config, but in the build config for convenience
 }
 
-Style :: struct {
-    theme     := "";
-    font      := "";
-    font_size := -1;
-}
-
 Build_Config :: struct {
     defaults: Build_Command;
     defaults.name = "Default Build Command";
@@ -522,8 +520,6 @@ Build_Command :: struct {
 
     timeout_in_seconds:     int = -1;
 }
-
-style: Style;
 
 DEFAULT_CONFIG_FILE_DATA  :: #run read_entire_file(tprint("config/%", DEFAULT_CONFIG_NAME));
 EXAMPLE_PROJECT_FILE_DATA :: #run read_entire_file(tprint("config/%", EXAMPLE_PROJECT_CONFIG_NAME));

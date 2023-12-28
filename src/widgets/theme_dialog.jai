@@ -40,8 +40,8 @@ remember_current_theme :: () {
 
 maybe_revert_theme :: () {
     reset_color_map_to_default();
-    if global_config.loaded  then apply_style(*config.style, global_config.parsed_config);
-    if project_config.loaded then apply_style(*config.style, project_config.parsed_config);
+    if global_config.loaded  then apply_style(global_config.parsed_config);
+    if project_config.loaded then apply_style(project_config.parsed_config);
     init_fonts_and_dependent_things();
 }
 
@@ -49,17 +49,18 @@ preview_selected_theme :: () {
     using theme_dialog;
     if !filtered || selected < 0 || selected >= filtered.count return;
 
-    // push_allocator(temp);  // TODO: re-enable and copy things that need to live longer
-
     theme := filtered[selected];
     if !theme.path {
         // Custom theme
         reset_color_map_to_default();
-        if global_config.loaded  then apply_style(*config.style, global_config.parsed_config);
-        if project_config.loaded then apply_style(*config.style, project_config.parsed_config);
+        if global_config.loaded  then apply_style(global_config.parsed_config);
+        if project_config.loaded then apply_style(project_config.parsed_config);
         init_fonts_and_dependent_things();
         return;
     }
+
+    push_allocator(temp);
+    auto_release_temp();
 
     // We read and parse files each time without caching anything because we want flexibility and because it's cheap
     file_data, success := read_entire_file(theme.path);
@@ -82,9 +83,11 @@ preview_selected_theme :: () {
     }
 
     reset_color_map_to_default();
-    if global_config.loaded  then apply_style(*config.style, global_config.parsed_config);
-    if project_config.loaded then apply_style(*config.style, project_config.parsed_config);
-    apply_style(*config.style, result.config);
+    if global_config.loaded  then apply_style(global_config.parsed_config);
+    if project_config.loaded then apply_style(project_config.parsed_config);
+
+    result.config.font = copy_string(result.config.font);  // @leak
+    apply_style(result.config);
     init_fonts_and_dependent_things();
 }
 

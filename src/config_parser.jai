@@ -45,6 +45,9 @@ CONFIG_SECTIONS :: Config_Section.[
 ];
 
 parse_config :: (name: string, filename: string, file_data: string, for_highlighting := false, as_theme := false) -> Config_Parse_Result {
+    // NOTE: This function allocates a lot and never frees.
+    //       It expects context.allocator to be either temp or a pool allocator.
+
     using parser: Config_Parser;
     parser.parse_for_highlighting = for_highlighting;
     parser.parse_as_theme = as_theme;
@@ -224,24 +227,6 @@ map_name_to_color :: (name: string) -> Color {
     }
 
     return .NONE;
-}
-
-// TODO: use a memory pool
-free_parsed_config :: (using parsed_config: Parsed_Config) {
-    for workspace_dirs free(it);  // workspace dirs are allocated on the heap separately because we store absolute paths
-
-    array_free(workspace_dirs);
-    array_free(ignore_dirs);
-    array_free(allow_file_extensions);
-    array_free(allow_file_extension_wildcards);
-    array_free(ignore_file_extensions);
-    array_free(ignore_file_extension_wildcards);
-    array_free(keymap_common);
-    array_free(keymap_editors);
-    array_free(keymap_open_file_dialog);
-    array_free(keymap_search_dialog);
-    array_free(set_settings);
-    array_free(colors);
 }
 
 get_theme_file_from_name :: (name: string) -> string /* temp */ {
@@ -1101,11 +1086,11 @@ Parsed_Config :: struct {
     version: int;
 
     // Workspace
-    workspace_dirs:         [..] string;
-    ignore_dirs:            [..] string;
-    allow_file_extensions:  [..] string;
+    workspace_dirs:                  [..] string;
+    ignore_dirs:                     [..] string;
+    allow_file_extensions:           [..] string;
     allow_file_extension_wildcards:  [..] string;
-    ignore_file_extensions: [..] string;
+    ignore_file_extensions:          [..] string;
     ignore_file_extension_wildcards: [..] string;
 
     // Keymap
@@ -1134,7 +1119,7 @@ Parsed_Config :: struct {
 Config_Parse_Result :: struct {
     config:     Parsed_Config;
     success:    bool;
-    error_msg:  string;         // temp
+    error_msg:  string;  // temp
     warnings:   [..] string;
     highlights: [..] Code_Highlight;
     warnings.allocator   = temp;  // I love jai

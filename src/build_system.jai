@@ -67,7 +67,7 @@ execute_build_command :: (command: *Build_Command) {
 
     print_to_output_panel_from_main_thread(tprint("%\n", command.name), mark_as = .header);
 
-    allocator := get_pool_allocator();
+    allocator := Allocator.{ proc = flat_pool_allocator_proc, data = *memory_pool };
     push_allocator(allocator);
 
     running_command = New(Build_Command);
@@ -293,7 +293,7 @@ build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thre
 
     log("Executing build command [%]\n", command.name);
 
-    allocator := get_pool_allocator();
+    allocator := Allocator.{ proc = flat_pool_allocator_proc, data = *memory_pool };
     push_allocator(allocator);
 
     defer {
@@ -368,13 +368,6 @@ print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kin
         }
         quick_sort(buffer.regions, compare_regions);
     }
-}
-
-get_pool_allocator :: () -> Allocator {
-    a: Allocator;
-    a.proc = flat_pool_allocator_proc;
-    a.data = *memory_pool;
-    return a;
 }
 
 thread_group: Thread_Group;

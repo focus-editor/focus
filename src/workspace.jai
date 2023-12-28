@@ -312,6 +312,7 @@ Visible_Editor_State :: struct {
 }
 
 start_watching_file_if_not_already :: (file_path: string) {
+    assert(context.allocator.proc == focus_allocator.proc, "Unexpected context allocator for start_watching_file_if_not_already. This is a bug.");
     if file_is_watched(file_path) return;
 
     parent_dir := get_parent_dir_path(file_path);
