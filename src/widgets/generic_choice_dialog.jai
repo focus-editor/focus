@@ -65,6 +65,8 @@ refresh_dialog_entries :: (using dialog: *Generic_Choice_Dialog) {
     }
 
     quick_sort(filtered, compare_entries);
+
+    if dialog.after_refresh then dialog.after_refresh();
 }
 
 move_dialog_cursor :: (using dialog: *Generic_Choice_Dialog, delta: s64, wrap := false, snap := true) {
@@ -114,6 +116,7 @@ Generic_Choice_Dialog :: struct(Entry_Details: Type) {
     // Will be overridden by the actual dialog structs
     global_widget_id: Active_Global_Widget;
     refresh_entries: (filter: Fuzzy_Filter) -> ();
+    after_refresh: () -> ();
     on_move: () -> ();
     on_show: () -> ();
     on_hide: () -> ();

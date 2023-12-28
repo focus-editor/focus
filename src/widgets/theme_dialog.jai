@@ -26,6 +26,7 @@ Theme_Dialog :: struct {
     using #as generic_dialog: Generic_Choice_Dialog(Theme);
     generic_dialog.global_widget_id    = .theme_dialog;
     generic_dialog.refresh_entries     = theme_dialog_refresh_entries;
+    generic_dialog.after_refresh       = preview_selected_theme;
     generic_dialog.open_entry_in_place = apply_selected_theme;
     generic_dialog.on_move             = preview_selected_theme;
     generic_dialog.on_show             = remember_current_theme;
