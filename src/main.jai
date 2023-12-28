@@ -387,8 +387,8 @@ maybe_execute_a_build_command :: (event: Input.Event) -> handled: bool {
 init_fonts_and_dependent_things :: () {
     push_allocator(focus_allocator);  // we sometimes call this from within a temp allocator
 
-    delta := font_size - default_font_size;
-    font_size               = clamp(font_size,                               MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_size = clamp(font_size, MIN_FONT_SIZE, MAX_FONT_SIZE);
+    delta := font_size - DEFAULT_FONT_SIZE;
     font_ui_size            = clamp(DEFAULT_FONT_UI_SIZE            + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_ui_big_size        = clamp(DEFAULT_FONT_UI_BIG_SIZE        + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_ui_medium_size     = clamp(DEFAULT_FONT_UI_MEDIUM_SIZE     + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
