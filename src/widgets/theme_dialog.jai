@@ -11,15 +11,24 @@ Theme_Dialog :: struct {
     generic_dialog.after_refresh       = preview_selected_theme;
     generic_dialog.open_entry_in_place = apply_selected_theme;
     generic_dialog.on_move             = preview_selected_theme;
-    generic_dialog.on_show             = remember_current_theme;
-    generic_dialog.on_hide             = maybe_revert_theme;
 };
+
+maybe_revert_temporary_theme :: () {
+    if !temporary_theme || active_global_widget == .theme_dialog return;
+
+    reset_color_map_to_default();
+    if global_config.loaded  then apply_style(global_config.parsed_config);
+    if project_config.loaded then apply_style(project_config.parsed_config);
+    init_fonts_and_dependent_things();
+
+    set_temporary_theme("");
+}
 
 #scope_file
 
-remember_current_theme :: () {
-    // print("Show\n");
-    print("Current theme: %\n", config.style.theme);
+set_temporary_theme :: (theme_name: string) {
+    free(temporary_theme, allocator = focus_allocator);
+    temporary_theme = copy_string(theme_name, allocator = focus_allocator);
 }
 
 apply_selected_theme :: () {
@@ -61,18 +70,14 @@ apply_selected_theme :: () {
     hide_dialog(*theme_dialog);
 }
 
-maybe_revert_theme :: () {
-    reset_color_map_to_default();
-    if global_config.loaded  then apply_style(global_config.parsed_config);
-    if project_config.loaded then apply_style(project_config.parsed_config);
-    init_fonts_and_dependent_things();
-}
-
 preview_selected_theme :: () {
     using theme_dialog;
     if !filtered || selected < 0 || selected >= filtered.count return;
 
     theme := filtered[selected];
+
+    set_temporary_theme(theme.config_name);
+
     if theme.config_name == "default" {
         reset_color_map_to_default();
         init_fonts_and_dependent_things();
@@ -151,4 +156,6 @@ Theme :: struct {
     config_name: string;
     path:        string;
 }
+
+temporary_theme: string;
 

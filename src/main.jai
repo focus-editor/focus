@@ -284,6 +284,7 @@ main :: () {
 
         process_buffer_save_queue();
         build_system_update();
+        maybe_revert_temporary_theme();
         refresh_open_buffers();
 
         draw_frame();
