@@ -553,7 +553,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
             if setting == {
                 case "theme";
                     theme_file := get_theme_file_from_name(value);
-                    if !file_exists(theme_file) {
+                    if !file_exists(theme_file) && value != "default" {
                         add_highlight(parser, value.data - line.data, value.count, .error);
                         return true, tprint("Couldn't find theme file '%'", theme_file);
                     }
@@ -561,11 +561,17 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                     result.config.offsets.theme_line = line_start_offset;
 
                     if !parse_for_highlighting {
-                        // Parse theme
-                        file_data, success := read_entire_file(theme_file);  // @leak - use a memory pool and remove all the frees
-                        if !success return true, tprint("Couldn't read theme file '%'", theme_file);
+                        theme_parse_result: Config_Parse_Result;
 
-                        theme_parse_result := parse_config(value, theme_file, file_data, as_theme = true);
+                        // Parse theme
+                        if value != "default" {
+                            file_data, success := read_entire_file(theme_file);
+                            if !success return true, tprint("Couldn't read theme file '%'", theme_file);
+                            theme_parse_result = parse_config(value, theme_file, file_data, as_theme = true);
+                        } else {
+                            theme_parse_result = parse_config(value, "default", DEFAULT_CONFIG_FILE_DATA);
+                        }
+
                         if !theme_parse_result.success return true, tprint("Couldn't parse theme file '%'.\nError: %", theme_file, theme_parse_result.error_msg);
 
                         // Copy colors and font data (it points into the theme file data)

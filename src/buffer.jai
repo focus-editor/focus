@@ -645,7 +645,7 @@ save_buffer :: (using buffer: *Buffer, buffer_id: s64) {
         error_when_saving = true;
     }
     remember_last_modtime_and_size(buffer);
-    update_window_title(open_editors[editors.active].buffer_id);
+    if editors.active >= 0 && editors.active < open_editors.count then update_window_title(open_editors[editors.active].buffer_id);
 
     // The config will attempt to refresh again on a file watcher message, but it should exit early because it will be unchanged.
     // We're doing it here because this way we always refresh right away, without waiting for a message to wake us up

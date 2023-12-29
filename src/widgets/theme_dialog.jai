@@ -18,46 +18,45 @@ Theme_Dialog :: struct {
 #scope_file
 
 remember_current_theme :: () {
-    print("Show\n");
+    // print("Show\n");
 }
 
 apply_selected_theme :: () {
     using theme_dialog;
     if selected >= filtered.count return;
 
+    // Change project config if it has a style section, otherwise change global config
+    config_to_change := ifx project_config.loaded && project_config.parsed_config.offsets.style_section >= 0 then *project_config else *global_config;
+    offsets := config_to_change.parsed_config.offsets;
+
+    buffer_id := find_or_create_buffer(config_to_change.path);
+    buffer := *open_buffers[buffer_id];
+
     theme := filtered[selected];
 
-    print("Selected theme: %\n", theme.config_name);
-
-    // TODO: If project config doesn't have the style section, change global config
-    if project_config.loaded {
-        print("Project config has a style section: %\n", project_config.parsed_config.offsets.style_section >= 0);
-        print("Project config has a theme: %\n", project_config.parsed_config.offsets.theme_line >= 0);
+    if offsets.theme_line >= 0 {
+        // Replace theme
+        line := offset_to_real_line(buffer, offsets.theme_line);
+        line_end_offset := get_real_line_end_offset(buffer, line);
+        replace_range(buffer, .{ cast(s32) offsets.theme_line, line_end_offset }, tprint("theme: %", theme.config_name));
+    } else if offsets.style_section >= 0 {
+        // Add theme to the style section
+        line := offset_to_real_line(buffer, offsets.style_section);
+        line_end_offset := get_real_line_end_offset(buffer, line);
+        insert_string_at_offset(buffer, line_end_offset, tprint("\n\ntheme: %", theme.config_name));
+    } else {
+        // No style section - add at the bottom
+        insert_string_at_offset(buffer, buffer.bytes.count, tprint("\n[[style]]\n\ntheme: %\n\n", theme.config_name));
     }
-    if global_config.loaded {
-        print("Global config has a style section: %\n", global_config.parsed_config.offsets.style_section >= 0);
-        print("Global config has a theme: %\n", global_config.parsed_config.offsets.theme_line >= 0);
-    }
+    add_success_message("Theme has been saved to %", config_to_change.path);
 
-
-
-
-    // command := filtered[selected].details;
-    // for * commands { if command.action == it.action { it.num_times_used += 1; break; } }
-
-    // if command.action == .do_nothing return;
-
-    // handled := handle_common_editor_action(command.action, placement);
-    // if !handled {
-    //     editor, buffer := get_active_editor_and_buffer();
-    //     if editor then active_editor_handle_event(editor, buffer, Input.Event.{}, command.action);
-    // }
+    save_buffer(buffer, buffer_id);
 
     hide_dialog(*theme_dialog);
 }
 
 maybe_revert_theme :: () {
-    reset_color_map_to_default();
+    reset_style_to_default();
     if global_config.loaded  then apply_style(global_config.parsed_config);
     if project_config.loaded then apply_style(project_config.parsed_config);
     init_fonts_and_dependent_things();
@@ -68,11 +67,8 @@ preview_selected_theme :: () {
     if !filtered || selected < 0 || selected >= filtered.count return;
 
     theme := filtered[selected];
-    if !theme.path {
-        // Custom theme
-        reset_color_map_to_default();
-        if global_config.loaded  then apply_style(global_config.parsed_config);
-        if project_config.loaded then apply_style(project_config.parsed_config);
+    if theme.config_name == "default" {
+        reset_style_to_default();
         init_fonts_and_dependent_things();
         return;
     }
@@ -100,7 +96,7 @@ preview_selected_theme :: () {
         return;
     }
 
-    reset_color_map_to_default();
+    reset_style_to_default();
     if global_config.loaded  then apply_style(global_config.parsed_config);
     if project_config.loaded then apply_style(project_config.parsed_config);
 
@@ -115,7 +111,7 @@ theme_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
 
     themes: [..] Theme;
 
-    array_add(*themes, .{ name = "Custom", path = "" });
+    array_add(*themes, .{ name = "Default", config_name = "default", path = "" });
 
     visitor :: (info: *File_Visit_Info, themes: *[..] Theme) {
         if !ends_with_nocase(info.full_name, ".focus-theme") return;
