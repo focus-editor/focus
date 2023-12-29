@@ -176,8 +176,17 @@ refresh_config :: (path: string) {
     dont_ignore_next_window_resize = true;
 }
 
+refresh_current_theme :: () {
+    if global_config.loaded  then load_global_config(force = true);
+    if project_config.loaded then load_project_config(force = true);
+}
+
 is_our_config_file :: (path: string) -> bool {
     return path != "" && (platform_path_equals(path, global_config.path) || platform_path_equals(path, project_config.path));
+}
+
+is_current_theme :: (path: string) -> bool {
+    return config.style.theme && platform_path_equals(path, tprint("%/%.focus-theme", themes_dir, config.style.theme));
 }
 
 close_project :: () {

@@ -1616,7 +1616,7 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
             label = "[current global config]";
         } else if project_config.loaded && platform_path_equals(buffer.file.full_path, project_config.path) {
             label = "[current project config]";
-        } else if platform_path_equals(buffer.file.full_path, tprint("%/%.focus-theme", themes_dir, config.style.theme)) {
+        } else if is_current_theme(buffer.file.full_path) {
             label = "[currently active theme]";
         }
         if label {

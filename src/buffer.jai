@@ -650,6 +650,7 @@ save_buffer :: (using buffer: *Buffer, buffer_id: s64) {
     // The config will attempt to refresh again on a file watcher message, but it should exit early because it will be unchanged.
     // We're doing it here because this way we always refresh right away, without waiting for a message to wake us up
     if is_our_config_file(buffer.file.full_path) refresh_config(buffer.file.full_path);
+    if is_current_theme(buffer.file.full_path) refresh_current_theme();
 
     redraw_requested = true;
 }
@@ -922,6 +923,7 @@ refresh_buffer_from_disk :: (path: string) {
     }
 
     if is_our_config_file(path) refresh_config(path);
+    if is_current_theme(path)   refresh_current_theme();
 
     buffer_id, created := find_or_create_buffer(path);
     if created return;

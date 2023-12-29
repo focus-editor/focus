@@ -33,7 +33,6 @@ maybe_revert_temporary_theme :: () {
     reset_color_map_to_default();
     if global_config.loaded  then apply_style(global_config.parsed_config);
     if project_config.loaded then apply_style(project_config.parsed_config);
-    init_fonts_and_dependent_things();
 
     set_temporary_theme("");
 }
@@ -94,7 +93,6 @@ preview_selected_theme :: () {
 
     if theme.config_name == "default" {
         reset_color_map_to_default();
-        init_fonts_and_dependent_things();
         return;
     }
 
@@ -127,7 +125,6 @@ preview_selected_theme :: () {
 
     result.config.font = copy_string(result.config.font);  // @leak
     apply_style(result.config);
-    init_fonts_and_dependent_things();
 }
 
 // NOTE: assuming we're allocating from a pool
