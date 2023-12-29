@@ -19,6 +19,7 @@ Theme_Dialog :: struct {
 
 remember_current_theme :: () {
     // print("Show\n");
+    print("Current theme: %\n", config.style.theme);
 }
 
 apply_selected_theme :: () {

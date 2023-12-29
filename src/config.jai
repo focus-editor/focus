@@ -369,7 +369,7 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     }
 
     // Style
-    // if parsed.theme then dst.style.theme = copy_string(parsed.theme);  // TODO: rework how themes and styles are applied
+    if parsed.theme then dst.style.theme = copy_string(parsed.theme); /* @leak */  // TODO: rework how themes and styles are applied
     apply_style(parsed);
 
     // Platform config
@@ -415,9 +415,14 @@ Config :: struct {
     workspace: Workspace;
     keymap:    Keymap;
     settings:  Settings;
-    // style:     Style;  // TODO: rework how styles and fonts are applied
+    style:     Style;
     build:     Build_Config;
     linux:     Linux_Config;
+}
+
+Style :: struct {
+    theme: string;
+    // TODO: add other things in there at some point
 }
 
 Loaded_Config :: struct {
