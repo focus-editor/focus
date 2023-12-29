@@ -2,24 +2,6 @@ theme_dialog_handle_event :: (event: Input.Event) -> handled: bool {
     return dialog_handle_event(*theme_dialog, event);
 }
 
-apply_selected_theme :: () {
-    // hide_dialog(*theme_dialog);
-
-    // using theme_dialog;
-    // if selected >= filtered.count return;
-
-    // command := filtered[selected].details;
-    // for * commands { if command.action == it.action { it.num_times_used += 1; break; } }
-
-    // if command.action == .do_nothing return;
-
-    // handled := handle_common_editor_action(command.action, placement);
-    // if !handled {
-    //     editor, buffer := get_active_editor_and_buffer();
-    //     if editor then active_editor_handle_event(editor, buffer, Input.Event.{}, command.action);
-    // }
-}
-
 theme_dialog: Theme_Dialog;
 
 Theme_Dialog :: struct {
@@ -37,6 +19,41 @@ Theme_Dialog :: struct {
 
 remember_current_theme :: () {
     print("Show\n");
+}
+
+apply_selected_theme :: () {
+    using theme_dialog;
+    if selected >= filtered.count return;
+
+    theme := filtered[selected];
+
+    print("Selected theme: %\n", theme.config_name);
+
+    // TODO: If project config doesn't have the style section, change global config
+    if project_config.loaded {
+        print("Project config has a style section: %\n", project_config.parsed_config.offsets.style_section >= 0);
+        print("Project config has a theme: %\n", project_config.parsed_config.offsets.theme_line >= 0);
+    }
+    if global_config.loaded {
+        print("Global config has a style section: %\n", global_config.parsed_config.offsets.style_section >= 0);
+        print("Global config has a theme: %\n", global_config.parsed_config.offsets.theme_line >= 0);
+    }
+
+
+
+
+    // command := filtered[selected].details;
+    // for * commands { if command.action == it.action { it.num_times_used += 1; break; } }
+
+    // if command.action == .do_nothing return;
+
+    // handled := handle_common_editor_action(command.action, placement);
+    // if !handled {
+    //     editor, buffer := get_active_editor_and_buffer();
+    //     if editor then active_editor_handle_event(editor, buffer, Input.Event.{}, command.action);
+    // }
+
+    hide_dialog(*theme_dialog);
 }
 
 maybe_revert_theme :: () {
@@ -112,7 +129,7 @@ theme_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
             part[0] = to_upper(part[0]);  // capitalize
         }
 
-        array_add(themes, .{ name = join(..name_parts, " "), path = full_path });
+        array_add(themes, .{ name = join(..name_parts, " "), config_name = basename, path = full_path });
     }
     visit_files(themes_dir, recursive = false, *themes, visitor, visit_files = true, visit_directories = false);
 
@@ -128,7 +145,8 @@ theme_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
 }
 
 Theme :: struct {
-    name: string;
-    path: string;
+    name:        string;  // display name
+    config_name: string;
+    path:        string;
 }
 

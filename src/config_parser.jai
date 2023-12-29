@@ -369,6 +369,9 @@ maybe_switch_section :: (using parser: *Config_Parser, line: string, fix_section
             return builder_to_string(*b);
         }
         add_highlight(parser, 0, line.count, .header_top_level);
+
+        if active_section == .style then result.config.offsets.style_section = line_start_offset;
+
     } else {
         // Subsection
         if !ends_with(line, "]") return true, tprint("Invalid subsection '%'. Subsection definitions must end with ]", line);
@@ -555,6 +558,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         return true, tprint("Couldn't find theme file '%'", theme_file);
                     }
                     result.config.theme = value;
+                    result.config.offsets.theme_line = line_start_offset;
 
                     if !parse_for_highlighting {
                         // Parse theme
@@ -568,6 +572,10 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         array_extend(*result.config.colors, theme_parse_result.config.colors);
                         result.config.font      = theme_parse_result.config.font;
                         result.config.font_size = theme_parse_result.config.font_size;
+
+                        // If font details are not specified in the theme, assume default
+                        if !result.config.font      then result.config.font = "default";
+                        if !result.config.font_size then result.config.font_size = DEFAULT_FONT_SIZE;
                     }
                 case;
                     add_highlight(parser, 0, setting.count, .error);
@@ -1114,6 +1122,12 @@ Parsed_Config :: struct {
 
     // Platform-specific
     linux: Linux_Config;
+
+    // Remember offsets to help with modifying configs later
+    offsets: struct {
+        style_section := -1;
+        theme_line    := -1;
+    };
 };
 
 Config_Parse_Result :: struct {
