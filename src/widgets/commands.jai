@@ -70,6 +70,7 @@ commands := #run -> [] Command {
         .{ .show_default_config,                   "Show Default Config (readonly)",     .None,    0 },
 
         .{ .choose_theme,                          "Choose Theme",                       .None,    0 },
+        .{ .edit_current_theme,                    "Edit Current Theme",                 .None,    0 },
 
         .{ .create_new_file,                       "Create New File",                    .None,    0 },
         .{ .create_new_file_on_the_side,           "Create New File On The Side",        .Single,  0 },

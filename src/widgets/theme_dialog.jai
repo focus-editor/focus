@@ -13,6 +13,20 @@ Theme_Dialog :: struct {
     generic_dialog.on_move             = preview_selected_theme;
 };
 
+edit_current_theme :: (placement: Editor_Placement) {
+    if !config.style.theme {
+        add_user_warning("No theme is currently active");
+        return;
+    }
+    if config.style.theme == "default" {
+        add_user_warning("Default theme is active. It's immutable.\nIf you want to edit it, copy [colors] from the default config and adjust them.");
+        editors_show_default_config(placement);
+        return;
+    }
+    theme_path := tprint("%/%.focus-theme", themes_dir, config.style.theme);
+    editors_open_file(theme_path, placement);
+}
+
 maybe_revert_temporary_theme :: () {
     if !temporary_theme || active_global_widget == .theme_dialog return;
 
@@ -148,6 +162,9 @@ theme_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
         entry.details = theme;
         entry.highlights = highlights;
         entry.sort_key = cast(u64) score;
+
+        // Sort our current theme on top when we first open the dialog
+        if !filter.full_string && theme.config_name == config.style.theme then entry.sort_key |= cast(u64) 1 << 62;
     }
 }
 

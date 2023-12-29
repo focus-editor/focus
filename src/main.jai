@@ -335,7 +335,8 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .switch_to_project;                                show_dialog(*open_project_dialog);                  return true;
         case .close_project;                                    close_project();                                    return true;
 
-        case .choose_theme;                                     show_dialog(*theme_dialog);                  return true;
+        case .choose_theme;                                     show_dialog(*theme_dialog);                         return true;
+        case .edit_current_theme;                               edit_current_theme(placement);                      return true;
 
         case .open_projects_directory;                          platform_open_in_explorer(projects_dir);            return true;
         case .open_global_config;                               editors_open_global_config(placement);              return true;

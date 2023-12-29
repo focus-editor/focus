@@ -263,6 +263,7 @@ ACTIONS_COMMON :: string.[
     "close_project",
 
     "choose_theme",
+    "edit_current_theme",
 
     "open_projects_directory",
     "open_global_config",
