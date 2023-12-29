@@ -27,11 +27,14 @@ apply_selected_theme :: () {
 
     // Change project config if it has a style section, otherwise change global config
     config_to_change := ifx project_config.loaded && project_config.parsed_config.offsets.style_section >= 0 then *project_config else *global_config;
-    offsets := config_to_change.parsed_config.offsets;
 
     buffer_id := find_or_create_buffer(config_to_change.path);
     buffer := *open_buffers[buffer_id];
     if buffer.dirty rescan_for_lines(buffer);
+
+    // Parse the buffer again because we can't trust the offsets we remembered when we last parsed it
+    result := parse_config(config_to_change.path, config_to_change.path, cast(string) buffer.bytes, for_highlighting = true /* lying */);
+    offsets := result.config.offsets;  // even if it fails to parse, it's OK, the offsets might just be -1
 
     theme := filtered[selected];
 
@@ -49,10 +52,10 @@ apply_selected_theme :: () {
         // No style section - add at the bottom
         insert_string_at_offset(buffer, buffer.bytes.count, tprint("\n[[style]]\n\ntheme: %\n\n", theme.config_name));
     }
-    add_success_message("Theme has been saved to %", config_to_change.path);
 
-    if buffer.dirty rescan_for_lines(buffer);
+    rescan_for_lines(buffer);
     save_buffer(buffer, buffer_id);
+    add_success_message("Theme has been saved to %", config_to_change.path);
 
     hide_dialog(*theme_dialog);
 }

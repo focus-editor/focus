@@ -552,13 +552,14 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
             setting = trim_right(setting, ":");
             if setting == {
                 case "theme";
+                    result.config.offsets.theme_line = line_start_offset;
+
                     theme_file := get_theme_file_from_name(value);
                     if !file_exists(theme_file) && value != "default" {
                         add_highlight(parser, value.data - line.data, value.count, .error);
                         return true, tprint("Couldn't find theme file '%'", theme_file);
                     }
                     result.config.theme = value;
-                    result.config.offsets.theme_line = line_start_offset;
 
                     if !parse_for_highlighting {
                         theme_parse_result: Config_Parse_Result;
