@@ -305,6 +305,7 @@ load_config :: (file_path: string, existing: *Loaded_Config, force := false) -> 
         file_data = new_file_data;
 
         // Replace the old config's file
+        loaded_config.hash = calculate_hash(to_bytes(new_file_data));
         success := write_entire_file(file_path, new_file_data);
         if success {
             add_success_message("Config file '%' has been migrated to version [%]", file_path, CURRENT_CONFIG_VERSION);
