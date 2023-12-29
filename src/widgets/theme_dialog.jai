@@ -31,6 +31,7 @@ apply_selected_theme :: () {
 
     buffer_id := find_or_create_buffer(config_to_change.path);
     buffer := *open_buffers[buffer_id];
+    if buffer.dirty rescan_for_lines(buffer);
 
     theme := filtered[selected];
 
@@ -50,6 +51,7 @@ apply_selected_theme :: () {
     }
     add_success_message("Theme has been saved to %", config_to_change.path);
 
+    if buffer.dirty rescan_for_lines(buffer);
     save_buffer(buffer, buffer_id);
 
     hide_dialog(*theme_dialog);
