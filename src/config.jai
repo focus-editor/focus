@@ -17,7 +17,7 @@ load_global_config :: (fallback_to_default_on_failure := false, force := false) 
     if loaded_config.loaded {
         // Merge into an empty config
         config = Config.{};
-        reset_style_to_default();
+        reset_color_map_to_default();
         merge_configs(*config, loaded_config.parsed_config);
         apply_config();
         free_loaded_config(*global_config);
@@ -50,7 +50,7 @@ load_project_config :: (project: string = "", force := false) -> success: bool, 
         // Merge into an empty config, starting from a loaded global config
         if global_config.loaded {
             config = Config.{};
-            reset_style_to_default();
+            reset_color_map_to_default();
             merge_configs(*config, global_config.parsed_config);
         } else {
             config = DEFAULT_CONFIG;
@@ -239,11 +239,8 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
     return "", error_msg;
 }
 
-reset_style_to_default :: () {
+reset_color_map_to_default :: () {
     COLOR_MAP = DEFAULT_COLOR_MAP;
-    main_font_name = "default";
-    font_size = DEFAULT_FONT_SIZE;
-    default_font_size = DEFAULT_FONT_SIZE;
 }
 
 apply_style :: (parsed: Parsed_Config) {

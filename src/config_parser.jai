@@ -407,6 +407,9 @@ maybe_switch_section :: (using parser: *Config_Parser, line: string, fix_section
             append(*b, "}\n");
             return builder_to_string(*b);
         }
+
+        if parse_as_theme && active_subsection != .style_colors return true, "";  // don't highlight any subsections other than colors
+
         add_highlight(parser, 0, line.count, .header);
     }
 
@@ -476,12 +479,11 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
 }
 
 parse_style_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
-    if result.config.theme {
+    if parse_as_theme && active_subsection != .style_colors {
         add_highlight(parser, 0, line.count, .comment);
-        return true, "";  // ignore all style lines if theme is set
-    } else {
-        add_highlight(parser, 0, line.count, .default);
+        return true, "";  // ignore anything that's not a color
     }
+    add_highlight(parser, 0, line.count, .default);
 
     if active_subsection == {
         case .style_fonts;
@@ -517,6 +519,11 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
             }
 
         case .style_colors;
+            if result.config.theme {
+                add_highlight(parser, 0, line.count, .comment);
+                return true, "";  // ignore all colors if theme is set
+            }
+
             color_name, value := break_by_spaces(line);
             color_name = trim_right(color_name, ":");
             color_id := map_name_to_color(color_name);
@@ -545,7 +552,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
         case;
             if parse_as_theme {
                 add_highlight(parser, 0, line.count, .error);
-                return true, "Unexpected line outside of sections. Available sections: [fonts], [colors]";
+                return true, "Unexpected line outside of sections. Available section: [colors]";
             }
 
             setting, value := break_by_spaces(line);

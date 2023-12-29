@@ -61,7 +61,7 @@ apply_selected_theme :: () {
 }
 
 maybe_revert_theme :: () {
-    reset_style_to_default();
+    reset_color_map_to_default();
     if global_config.loaded  then apply_style(global_config.parsed_config);
     if project_config.loaded then apply_style(project_config.parsed_config);
     init_fonts_and_dependent_things();
@@ -73,7 +73,7 @@ preview_selected_theme :: () {
 
     theme := filtered[selected];
     if theme.config_name == "default" {
-        reset_style_to_default();
+        reset_color_map_to_default();
         init_fonts_and_dependent_things();
         return;
     }
@@ -101,7 +101,7 @@ preview_selected_theme :: () {
         return;
     }
 
-    reset_style_to_default();
+    reset_color_map_to_default();
     if global_config.loaded  then apply_style(global_config.parsed_config);
     if project_config.loaded then apply_style(project_config.parsed_config);
 
