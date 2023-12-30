@@ -379,6 +379,17 @@ maybe_execute_a_build_command :: (event: Input.Event) -> handled: bool {
 
     command_id := cast(s64) action;
     assert(command_id <= config.build.commands.count, "A keymap was bound to a nonexistent build command %. Number of build commands: %. This is a bug", command_id, config.build.commands.count);
+    
+    if config.settings.save_all_file_backed_buffers_on_build {
+        for * buffer, buffer_id : open_buffers {
+            if buffer.modified && buffer.has_file {
+                save_buffer(buffer, buffer_id);
+            }
+        }
+    } else if config.settings.save_current_buffer_on_build {
+        editor, buffer := get_active_editor_and_buffer();
+        if editor save_buffer(buffer, editor.buffer_id);
+    }
 
     command := ifx command_id > 0 then *config.build.commands[command_id-1] else *config.build.defaults;
     execute_build_command(command);
