@@ -446,13 +446,14 @@ update_cocoa_window_events :: () {
                 dely := NSEvent.deltaY(nsevent);
 
                 event: Event;
-                if delx != 0.0 {
-                    event.type = .MOUSE_H_WHEEL;
-                    event.typical_wheel_delta = WHEEL_DELTA;
-                    event.wheel_delta = cast(s32) (dely * 10.0);
-                    array_add(*events_this_frame, event);
-                    mouse_wheel_delta.horizontal += event.wheel_delta;
-                }
+                // NOTE: horizontal scrolling is temporarily disabled because it's almost unusable and needs tweaking
+                // if delx != 0.0 {
+                //     event.type = .MOUSE_H_WHEEL;
+                //     event.typical_wheel_delta = WHEEL_DELTA;
+                //     event.wheel_delta = cast(s32) (dely * 10.0);
+                //     array_add(*events_this_frame, event);
+                //     mouse_wheel_delta.horizontal += event.wheel_delta;
+                // }
                 if dely != 0.0 {
                     event.type = .MOUSE_V_WHEEL;
                     event.typical_wheel_delta = WHEEL_DELTA;
