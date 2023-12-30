@@ -93,6 +93,7 @@ preview_selected_theme :: () {
 
     if theme.config_name == "default" {
         reset_color_map_to_default();
+        platform_set_border_color();
         return;
     }
 
