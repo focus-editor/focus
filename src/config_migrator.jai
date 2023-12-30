@@ -369,6 +369,7 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 2, "editors", "select_all_occurrences",     "Ctrl-Shift-A",     "Cmd-Shift-A"      },
     .{ 2, "common",  "toggle_build_panel",         "Ctrl-B",           "Cmd-B"            },
     .{ 2, "common",  "toggle_fullscreen",          "F11",              "F11"              },
+    .{ 2, "common",  "switch_between_open_files",  "Ctrl-Tab",         "Ctrl-Tab"         },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[

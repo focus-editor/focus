@@ -62,7 +62,8 @@
         + New config options:
             + `build_panel_width_percent`, `build_panel_height_percent` - how much space the build panel occupies. Both default to 50%.
             + `build_panel_stays_in_one_place`. Defaults to `false`. If disabled, then the panel will flip to the other side of the active pane.
-        + (more details will be added later)
+        + Check an example build configuration in the example project or in the default config (use the show default config command)
+        + Thanks to the Jai beta user Jakob for writing the first version of the build system
     + New code color: `code_warning`. Used to highlight things such as duplicate key binding etc.
     + New dialog: Switch Between Open Files (defaults to Ctrl-Tab)
     + Support horizontal scrolling with trackpads/mice with horizontal scroll wheels.
