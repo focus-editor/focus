@@ -220,7 +220,7 @@ Cmd-Alt-P                   switch_to_project
 Cmd-P                       open_file_by_name
 Cmd-O                       navigate_to_file
 Cmd-Shift-O                 navigate_to_file_from_root
-Cmd-Tab                     switch_between_open_files
+Ctrl-Tab                    switch_between_open_files
 
 Cmd-G                       go_to_line
 
