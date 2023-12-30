@@ -347,7 +347,8 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .go_to_line;                                       show_go_to_line_dialog();                           return true;
         case .create_new_file;                                  editors_create_new_file(placement);                 return true;
         case .create_new_file_on_the_side;                      editors_create_new_file(.on_the_side);              return true;
-
+        case .go_to_next_build_error;                           go_to_next_build_error();
+        
         case .open_file_by_name;                                show_open_file_dialog(.search);                     return true;
         case .navigate_to_file;                                 show_open_file_dialog(.navigate);                   return true;
         case .navigate_to_file_from_root;                       show_open_file_dialog(.navigate, from_root = true); return true;

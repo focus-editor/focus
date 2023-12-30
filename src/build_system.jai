@@ -59,6 +59,9 @@ execute_build_command :: (command: *Build_Command) {
     }
 
     log("Executing build command [%]\n", command.name);
+    
+    clear_build_errors();
+    //array_reset(*build_errors);//if we move this to other place, remember to copy_string the file and message
 
     // Add an empty line between commands
     if last_command_result.finished then print_to_output_panel_from_main_thread("\n");
@@ -101,6 +104,129 @@ build_kill_running_command :: () {
     lock(*build_mutex);
     kill_process(*running_process);
     unlock(*build_mutex);
+}
+
+Build_Error_Location :: struct {
+    file: string;
+    line: s32;
+    col: s32;
+    message: string;
+}
+
+build_error_index := -1;
+go_to_next_build_error :: () {
+    if !build_errors.count {
+        //TODO: show message that there are no errors?
+        return;
+    }
+    
+    build_error_index += 1;
+    
+    if build_error_index >= build_errors.count
+        build_error_index = 0;
+    
+    error := build_errors[build_error_index];
+    
+    beditor, bbuffer := get_build_editor_and_buffer();
+    log("Build editor: %, %", bbuffer.bytes.data, bbuffer.bytes.count);
+    
+    log("Trying to go to error: %", error);
+    
+    editors_open_file(error.file, .in_place);//TODO: test ctrl-modifier for .on_the_side
+    // found := -1;
+    // for buffer, buffer_id : open_buffers {
+    //     if buffer.file.full_path == error.file {
+    //         found = buffer_id;
+    //         break;
+    //     }
+    // }
+    
+    // if found == -1 {
+    //     add_user_error("File with name '%' is not found.", error.file);
+    //     return;
+    // }
+    
+    // activate_buffer(open_buffers[found], found);
+    
+    editor, buffer := get_active_editor_and_buffer();
+    go_to_line(editor, buffer, error.line, error.col);
+    
+    clear_user_messages(.build_error);
+    add_user_error(error.message, dismiss_in_seconds = -1, .build_error);//TODO: -1 to dismiss manually or on next
+}
+
+build_errors: [..]Build_Error_Location;
+clear_build_errors :: () {
+    clear_user_messages(.build_error);
+    
+    for build_errors {
+        free(it.file);
+        free(it.message);
+    }
+    array_reset(*build_errors);
+}
+
+parse_build_errors :: (command: Build_Command) {
+    if !command.error_regex return;
+    
+    build_error_index = -1;
+    
+    editor, buffer := get_build_editor_and_buffer();
+    
+    start := 0;
+    for < * region : buffer.regions {
+        if region.kind == .header {
+            start = region.end;
+            break;
+        }
+    }
+    
+    contents := slice(cast(string)buffer.bytes, start, buffer.bytes.count);
+    
+    log("Parsing build_errors: %\n%", start, contents);
+    
+    regex, valid := re.compile(command.error_regex, .LikePerl);
+    if !valid return;
+    
+    while true {
+        matched, captures := re.match(contents, regex);
+        
+        if !matched break;
+        defer free(captures.data);
+        
+        c := captures[0];
+        if !c {
+            log_error("build regex matched an empty line");
+            break;//TODO: skip one char/line
+        }
+        
+        local_offset := c.data - contents.data;
+        count  := c.count;
+        //offset := contents_advance + local_offset;
+        //contents_advance := offset + count;
+
+        advance(*contents, local_offset + count);
+        
+        log("Found: %", c);
+        
+        //TODO: copy_string, because build editor gets modified? But we reset build_errors before that
+        error := Build_Error_Location.{ file = copy_string(captures[1]), message = copy_string(captures[4]) };
+        
+        val, parsed := string_to_int(captures[2], T=s32);
+        if !parsed continue;
+        error.line = val;
+        
+        val, parsed  = string_to_int(captures[3], T=s32);
+        if !parsed continue;
+        error.col = val - 1;//TODO: config based? other compilers could be 0 based
+        
+        array_add(*build_errors, error);
+    }
+    
+    log("FOUND: %", build_errors);
+    log("Build editor: %, %", buffer.bytes.data, buffer.bytes.count);
+    
+    //TODO: run regex on build_buffer from X to end
 }
 
 build_system_update :: () {
@@ -161,7 +287,12 @@ build_system_update :: () {
                         kind = .success;
                     }
             }
+            
+            if last_command_result.build.process_result.exit_code != 0 {
+                parse_build_errors(running_command);
+            }
         }
+        
 
         print_to_output_panel_from_main_thread(tprint("%\n", message), mark_as = kind, add_newline_if_missing = true);
 
