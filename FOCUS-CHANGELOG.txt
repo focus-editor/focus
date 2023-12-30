@@ -65,6 +65,7 @@
         + (more details will be added later)
     + New code color: `code_warning`. Used to highlight things such as duplicate key binding etc.
     + New dialog: Switch Between Open Files (defaults to Ctrl-Tab)
+    + Support horizontal scrolling with trackpads/mice with horizontal scroll wheels.
 
 + Bug fixes:
     + Mac: Fixed intermittent crashing on launch
