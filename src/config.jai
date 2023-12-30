@@ -74,8 +74,6 @@ load_project_config :: (project: string = "", force := false) -> success: bool, 
 }
 
 apply_config :: () {
-    platform_set_border_color();
-
     // Make sure the values are within the acceptable range
     old_tab_size := TAB_SIZE;
     TAB_SIZE = clamp(cast(s32) config.settings.tab_size, 1, 100);  // be reasonable mkay (though even 100 is unreasonable)
@@ -277,6 +275,8 @@ apply_style :: (parsed: Parsed_Config) {
             log_error("Couldn't map color name '%' to color enum value. This is a bug", it.color_name);
         }
     }
+
+    platform_set_border_color();
 }
 
 #scope_file
