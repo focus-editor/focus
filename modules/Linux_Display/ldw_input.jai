@@ -210,6 +210,7 @@ pointer_listener :: wl_pointer_listener.{
         ctx: Context;
         push_context ctx {
             d: *Wayland_Display = wl_proxy_get_user_data(self);
+            if d.seat_version >= 8 return;
             sign := ifx (wl_fixed_to_int(value) < 0) then cast(s32)-1 else 1;
             delta := (WHEEL_DELTA / 2); // @TODO: this is set on a "feels good on my machine" basis, should be calculated some other way (perhaps based on the height of a line?)
             d.pointer_axis_accumulator[axis] += d.pointer_axis_multiplier[axis] * sign * delta;
@@ -220,15 +221,22 @@ pointer_listener :: wl_pointer_listener.{
         ctx: Context;
         push_context ctx {
             d: *Wayland_Display = wl_proxy_get_user_data(self);
+            event: Input.Event;
             if d.pointer_axis_accumulator[0] {
-                event: Input.Event;
-                event.type = .MOUSE_WHEEL;
+                event.type = .MOUSE_V_WHEEL;
                 event.typical_wheel_delta = WHEEL_DELTA;
                 event.wheel_delta = d.pointer_axis_accumulator[0];
                 array_add(*d.base.events_this_frame, event);
-                d.base.mouse_delta_z += event.wheel_delta;
-
+                d.base.mouse_wheel_delta.vertical += event.wheel_delta;
                 d.pointer_axis_accumulator[0] = 0;
+            }
+            if d.pointer_axis_accumulator[1] {
+                event.type = .MOUSE_H_WHEEL;
+                event.typical_wheel_delta = WHEEL_DELTA;
+                event.wheel_delta = d.pointer_axis_accumulator[1];
+                array_add(*d.base.events_this_frame, event);
+                d.base.mouse_wheel_delta.horizontal += event.wheel_delta;
+                d.pointer_axis_accumulator[1] = 0;
             }
         }
     },

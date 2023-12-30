@@ -15,12 +15,13 @@
 
 Event_Type :: enum u32 {  // If we set this to u8, our packing will stop matching C's.
     UNINITIALIZED :: 0;
-    KEYBOARD    :: 1;
-    TEXT_INPUT  :: 2;
-    WINDOW      :: 3;
-    MOUSE_WHEEL :: 4;
-    QUIT        :: 5;
-    DRAG_AND_DROP_FILES :: 6;
+    KEYBOARD      :: 1;
+    TEXT_INPUT    :: 2;
+    WINDOW        :: 3;
+    MOUSE_V_WHEEL :: 4;
+    MOUSE_H_WHEEL :: 5;
+    QUIT          :: 6;
+    DRAG_AND_DROP_FILES :: 7;
 }
 
 Key_Current_State :: enum_flags u32 {
@@ -183,10 +184,15 @@ Event :: struct {
     files: [..] string;  // Used only for drag and drop events. Both the array and its contents are heap-allocated, lives until events are reset for the next frame.
 }
 
+Wheel_Delta :: struct {
+    vertical: s32;
+    horizontal: s32;
+}
+
 // Per-frame mouse deltas:
 mouse_delta_x: int;
 mouse_delta_y: int;
-mouse_delta_z: int;
+mouse_wheel_delta: Wheel_Delta;
 
 events_this_frame:   [..] Event;
 input_button_states: [NUM_BUTTON_STATES] Key_Current_State;
@@ -255,7 +261,7 @@ input_per_frame_event_and_flag_update :: () {
 
     mouse_delta_x = 0;
     mouse_delta_y = 0;
-    mouse_delta_z = 0;
+    mouse_wheel_delta = .{};
 }
 
 #scope_module
