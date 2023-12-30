@@ -4,7 +4,7 @@ A simple editor whose goal is to get out of your way and let you do work.
 
 This editor is for people who value simplicity, are sensitive to input latency and do not require heavy language support in their editor.
 
-![focus](https://user-images.githubusercontent.com/119373822/236081314-45d53952-7a6c-4d6b-8773-e5b49d1dbdab.gif)
+![focus-0 3 0](https://github.com/focus-editor/focus/assets/119373822/49a80c5a-f24a-469e-bbbb-88c315f9b391)
 
 
 ## What do we mean by "simple" and "fast"
