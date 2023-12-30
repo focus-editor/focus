@@ -434,26 +434,32 @@ update_cocoa_window_events :: () {
                 mouse_delta_y += cast(int) NSEvent.deltaY(nsevent);
 
             case NSEventTypeScrollWheel;
-                // delx := NSEvent.deltaX(nsevent);
+                /*
+                 * NOTE:
+                 * According to https://developer.apple.com/documentation/appkit/nsevent/1534158-deltay we
+                 * should be using `NSEvent.scrollingDelta{X,Y}` here, not `NSEvent.delta{X,Y}`.
+                 *
+                 * The `Objective_C` module is missing the correct bindings however so we're stuck with
+                 * what we have. Change these as soon as possible.
+                 */
+                delx := NSEvent.deltaX(nsevent);
                 dely := NSEvent.deltaY(nsevent);
-                // delz := NSEvent.deltaZ(nsevent);
-                // print("del: %, %, %\n", delx, dely, delz);
-
-                // it seems that OSX does scroll wheel acceleration.
-                // the smallest step I'm seeing with a Razer mouse is 0.1 for 1 bump
-                // but just quickly going past about 3 bumps yeilds ~0.6. Spinning
-                // the wheel a bit more quickly starts hitting above 15.0, sigh.
-                // In any case for now we're just multiplying by 10 since we probably
-                // as least want to register a single scroll bump. We'll likely need to
-                // tune WHEEL_DELTA at some point. -josh 6 November 2018
 
                 event: Event;
-                event.type = .MOUSE_WHEEL;
-                event.typical_wheel_delta = WHEEL_DELTA;
-                event.wheel_delta = cast(s32) (dely * 10.0);
-                array_add(*events_this_frame, event);
-
-                mouse_delta_z += event.wheel_delta;
+                if delx != 0.0 {
+                    event.type = .MOUSE_H_WHEEL;
+                    event.typical_wheel_delta = WHEEL_DELTA;
+                    event.wheel_delta = cast(s32) (dely * 10.0);
+                    array_add(*events_this_frame, event);
+                    mouse_wheel_delta.horizontal += event.wheel_delta;
+                }
+                if dely != 0.0 {
+                    event.type = .MOUSE_V_WHEEL;
+                    event.typical_wheel_delta = WHEEL_DELTA;
+                    event.wheel_delta = cast(s32) (dely * 10.0);
+                    array_add(*events_this_frame, event);
+                    mouse_wheel_delta.vertical += event.wheel_delta;
+                }
         }
     }
 

@@ -226,7 +226,7 @@ main :: () {
                         if event.key_pressed then last_press = frame_time;
                     }
 
-                case .MOUSE_WHEEL;
+                case .MOUSE_V_WHEEL;
                     #if OS != .MACOS {
                         if ctrl_or_cmd_pressed() {
                             if event.wheel_delta < 0  {
@@ -480,9 +480,10 @@ update_mouse_state :: () {
     mouse.previous_position = mouse.pointer;
 
     if shift_pressed() {
-        mouse.scroll_x_delta = cast(s32) (cast(float) Input.mouse_delta_z * WHEEL_SENSITIVITY);
+        mouse.scroll_x_delta = cast(s32) (cast(float) Input.mouse_wheel_delta.vertical * WHEEL_SENSITIVITY);
     } else {
-        mouse.scroll_y_delta = cast(s32) (cast(float) Input.mouse_delta_z * WHEEL_SENSITIVITY);
+        mouse.scroll_x_delta = cast(s32) (cast(float) Input.mouse_wheel_delta.horizontal * WHEEL_SENSITIVITY);
+        mouse.scroll_y_delta = cast(s32) (cast(float) Input.mouse_wheel_delta.vertical   * WHEEL_SENSITIVITY);
     }
     mouse.smooth_scroll = (mouse.scroll_y_delta % 120) == 0;  // @Robustness: hard-coded typical delta, but it really should be ok for now
     if !config.settings.smooth_scrolling then mouse.smooth_scroll = false;

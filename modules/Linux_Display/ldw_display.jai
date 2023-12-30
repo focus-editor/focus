@@ -13,7 +13,7 @@ Wayland_Display :: struct {
     decoration_manager: *zxdg_decoration_manager_v1;
 
     seat: *wl_seat;
-
+    seat_version: u32;
     pointer: *wl_pointer;
     cursor_theme: *wl_cursor_theme;
     cursors: Table(string, WLCursor);
@@ -242,6 +242,7 @@ registry_listener :: wl_registry_listener.{
             }
             case "wl_seat"; {
                 wl_jext_bind(*d.seat, registry, id, version);
+                d.seat_version = version;
 
                 d.pointer = wl_seat.get_pointer(d.seat);
                 wl_proxy_set_user_data(d.pointer, d);

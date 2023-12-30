@@ -219,13 +219,13 @@ update_window_events :: (display: *Display) {
 
         memcpy(Input.input_button_states.data, bd.input_button_states.data, bd.input_button_states.count * size_of(Input.Key_Current_State));
 
-        Input.mouse_delta_x = bd.mouse_delta_x;
-        Input.mouse_delta_y = bd.mouse_delta_y;
-        Input.mouse_delta_z = bd.mouse_delta_z;
+        Input.mouse_delta_x     = bd.mouse_delta_x;
+        Input.mouse_delta_y     = bd.mouse_delta_y;
+        Input.mouse_wheel_delta = bd.mouse_wheel_delta;
 
-        bd.mouse_delta_x = 0;
-        bd.mouse_delta_y = 0;
-        bd.mouse_delta_z = 0;
+        bd.mouse_delta_x     = 0;
+        bd.mouse_delta_y     = 0;
+        bd.mouse_wheel_delta = .{};
 
         // A little copypaste from `input_per_frame_event_and_flag_update`
         // Basically, we also need to reset "just clicked" and "just released"
@@ -304,7 +304,7 @@ Base_Display :: struct {
 
     mouse_delta_x: int;
     mouse_delta_y: int;
-    mouse_delta_z: int;
+    mouse_wheel_delta: Input.Wheel_Delta;
 
     events_this_frame: [..]Input.Event;
     input_button_states: [Input.NUM_BUTTON_STATES] Input.Key_Current_State;

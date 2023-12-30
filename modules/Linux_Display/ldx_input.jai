@@ -328,19 +328,24 @@ x11_handle_event :: (x11_display: *X11_Display, xev: *X11.XEvent) -> expect_more
             event: Input.Event;
             button := xev.xbutton.button;
 
-            //  - buttons 6/7 will be used for the forward/backward direction of the second scroll wheel
-            // But we don't handle horizontal scroll for now
-            if button > 5 return;
+            if button == {
+                case 4; #through;
+                case 5;
+                    event.type = .MOUSE_V_WHEEL;
+                    event.typical_wheel_delta = WHEEL_DELTA;
+                    event.wheel_delta = WHEEL_DELTA * (ifx (button & 0x01) then cast(s32) -1 else 1);
+                    array_add(*x11_display.base.events_this_frame, event);
+                    x11_display.base.mouse_wheel_delta.vertical += event.wheel_delta;
+                    return;
 
-            if button >= 4 {
-                // Buttons 4 and above are 'synthetic' events for scroll wheels:
-                //  - 4/5 will be used for the forward/backward direction of the first scroll wheel
-                event.type = .MOUSE_WHEEL;
-                event.typical_wheel_delta = WHEEL_DELTA;
-                event.wheel_delta = WHEEL_DELTA * (ifx (button & 0x01) then cast(s32) -1 else 1);
-                array_add(*x11_display.base.events_this_frame, event);
-                x11_display.base.mouse_delta_z += event.wheel_delta;
-                return;
+                case 6; #through;
+                case 7;
+                    event.type = .MOUSE_H_WHEEL;
+                    event.typical_wheel_delta = WHEEL_DELTA;
+                    event.wheel_delta = WHEEL_DELTA * (ifx (button & 0x01) then cast(s32) -1 else 1);
+                    array_add(*x11_display.base.events_this_frame, event);
+                    x11_display.base.mouse_wheel_delta.horizontal += event.wheel_delta;
+                    return;
             }
 
             event.type = .KEYBOARD;

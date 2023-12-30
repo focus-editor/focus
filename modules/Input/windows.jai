@@ -317,12 +317,19 @@ MyWindowProc :: (hwnd: HWND, message: u32,
 */
           case WM_MOUSEWHEEL;
             event: Event;
-            event.type = .MOUSE_WHEEL;
+            event.type = .MOUSE_V_WHEEL;
             event.typical_wheel_delta = WHEEL_DELTA;
             event.wheel_delta = xx cast,trunc(s16)(wParam >> 16);
             array_add(*events_this_frame, event);
+            mouse_wheel_delta.vertical += event.wheel_delta;
 
-            mouse_delta_z += event.wheel_delta;
+          case WM_MOUSEHWHEEL;
+            event: Event;
+            event.type = .MOUSE_H_WHEEL;
+            event.typical_wheel_delta = WHEEL_DELTA;
+            event.wheel_delta = xx -cast,trunc(s16)(wParam >> 16);
+            array_add(*events_this_frame, event);
+            mouse_wheel_delta.horizontal += event.wheel_delta;
 
           case WM_CLOSE; #through;
           case WM_QUIT;
