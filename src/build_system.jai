@@ -107,10 +107,15 @@ build_kill_running_command :: () {
 }
 
 Build_Error_Location :: struct {
+    message: string;
+    type: enum {
+        error;
+        warning;
+        info;
+    };
     file: string;
     line: s32;
     col: s32;
-    message: string;
 }
 
 build_error_index := -1;
@@ -132,27 +137,30 @@ go_to_next_build_error :: () {
     
     log("Trying to go to error: %", error);
     
-    editors_open_file(error.file, .in_place);//TODO: test ctrl-modifier for .on_the_side
-    // found := -1;
-    // for buffer, buffer_id : open_buffers {
-    //     if buffer.file.full_path == error.file {
-    //         found = buffer_id;
-    //         break;
-    //     }
-    // }
-    
-    // if found == -1 {
-    //     add_user_error("File with name '%' is not found.", error.file);
-    //     return;
-    // }
-    
-    // activate_buffer(open_buffers[found], found);
-    
-    editor, buffer := get_active_editor_and_buffer();
-    go_to_line(editor, buffer, error.line, error.col);
+    if error.file {
+        //TODO: remember last error and info place so we don't switch each time
+        editors_open_file(error.file, .in_place);//TODO: test ctrl-modifier for .on_the_side
+        
+        editor, buffer := get_active_editor_and_buffer();
+        go_to_line(editor, buffer, error.line, error.col);
+    }
     
     clear_user_messages(.build_error);
-    add_user_error(error.message, dismiss_in_seconds = -1, .build_error);//TODO: -1 to dismiss manually or on next
+    add_user_error(error.message, dismiss_in_seconds = -1, .build_error);
+    
+    //TODO: open info first or switch back to error site?
+    if error.type == .error && build_error_index < build_errors.count - 1 && build_errors[build_error_index+1].type == .info {
+        next_error := build_errors[build_error_index+1];
+        
+        if next_error.file {
+            editors_open_file(next_error.file, .on_the_side);//TODO: test ctrl-modifier for .on_the_side
+            
+            editor, buffer := get_active_editor_and_buffer();
+            go_to_line(editor, buffer, next_error.line, next_error.col);
+        }
+        
+        add_user_warning(next_error.message, dismiss_in_seconds = -1, .build_error);
+    }
 }
 
 build_errors: [..]Build_Error_Location;
@@ -185,7 +193,7 @@ parse_build_errors :: (command: Build_Command) {
     
     log("Parsing build_errors: %\n%", start, contents);
     
-    regex, valid := re.compile(command.error_regex, .LikePerl);
+    regex, valid := re.compile(command.error_regex, .LikePerl & ~.OneLine);
     if !valid return;
     
     while true {
@@ -200,6 +208,8 @@ parse_build_errors :: (command: Build_Command) {
             break;//TODO: skip one char/line
         }
         
+        log("Found regex error match: %", c);
+        
         local_offset := c.data - contents.data;
         count  := c.count;
         //offset := contents_advance + local_offset;
@@ -207,26 +217,53 @@ parse_build_errors :: (command: Build_Command) {
 
         advance(*contents, local_offset + count);
         
-        log("Found: %", c);
+        named_captures := re.map_named_captures(captures, regex);
+        for value, name: named_captures {
+            log("Captured name: %=%", name, value);
+        }
+        
+        msg, found := table_find(*named_captures, "msg");
+        if !found return;
+        
+        table_find_or_default :: (table: *Table, key: table.Key_Type) -> table.Value_Type {
+            pointer := inline table_find_pointer(table, key);
+            if pointer  return << pointer;
+            
+            default: table.Value_Type; 
+            return default;
+        }
+        
+        file := table_find_or_default(*named_captures, "file");
         
         //TODO: copy_string, because build editor gets modified? But we reset build_errors before that
-        error := Build_Error_Location.{ file = copy_string(captures[1]), message = copy_string(captures[4]) };
+        error := Build_Error_Location.{ file = copy_string(file), message = copy_string(msg) };
         
-        val, parsed := string_to_int(captures[2], T=s32);
-        if !parsed continue;
-        error.line = val;
+        type := table_find_or_default(*named_captures, "type");
+        if type {
+            //TODO: enum_from_string_nocase
+            if equal_nocase(type, "warning") {
+                error.type = .warning;
+            } else if equal_nocase(type, "info") {
+                error.type = .info;
+            }
+        }
         
-        val, parsed  = string_to_int(captures[3], T=s32);
-        if !parsed continue;
-        error.col = val - 1;//TODO: config based? other compilers could be 0 based
+        line := table_find_or_default(*named_captures, "line");
+        col := table_find_or_default(*named_captures, "col");
+        
+        val, parsed := string_to_int(line, T=s32);
+        if parsed error.line = val;
+        
+        val, parsed  = string_to_int(col, T=s32);
+        if parsed error.col = val - 1;//TODO: config based? other compilers could be 0 based
         
         array_add(*build_errors, error);
     }
     
     log("FOUND: %", build_errors);
-    log("Build editor: %, %", buffer.bytes.data, buffer.bytes.count);
     
-    //TODO: run regex on build_buffer from X to end
+    if command.auto_jump_to_error
+        go_to_next_build_error();
 }
 
 build_system_update :: () {

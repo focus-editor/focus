@@ -758,7 +758,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
     }
 
     if setting_name == "error_regex" {
-        _, regex_is_valid := re.compile(setting_value, BASE_REGEX_FLAGS);
+        _, regex_is_valid := re.compile(setting_value, BASE_REGEX_FLAGS&~.NeverCapture);
         if !regex_is_valid {
             add_highlight(parser, setting_value.data - line.data, setting_value.count, .error);
             return true, tprint("Error regex is invalid: '%'", setting_value);

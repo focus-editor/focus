@@ -79,6 +79,8 @@ build_panel_height_percent:             50
 # build_working_dir:      <build working dir for all commands>
 # open_panel_on_build:    true  #  <- any settings specified here will apply to all commands unless overridden
 # close_panel_on_success: false
+# error_regex:            ^(?P<file>.*):(?P<line>\d+),(?P<col>\d+): (?P<type>Error|Warning|Info): (?P<msg>.*)|^(?P<msg>.*error LNK.*)
+# auto_jump_to_error:     true
 
 # [Debug Build And Run]   # <- command name. Can be arbitrary
 # build_command:          jai main.jai  # should be an executable or a script
