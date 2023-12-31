@@ -132,9 +132,6 @@ go_to_next_build_error :: () {
     
     error := build_errors[build_error_index];
     
-    beditor, bbuffer := get_build_editor_and_buffer();
-    log("Build editor: %, %", bbuffer.bytes.data, bbuffer.bytes.count);
-    
     log("Trying to go to error: %", error);
     
     if error.file {
@@ -150,7 +147,8 @@ go_to_next_build_error :: () {
     
     //TODO: open info first or switch back to error site?
     if error.type == .error && build_error_index < build_errors.count - 1 && build_errors[build_error_index+1].type == .info {
-        next_error := build_errors[build_error_index+1];
+        build_error_index += 1;
+        next_error := build_errors[build_error_index];
         
         if next_error.file {
             editors_open_file(next_error.file, .on_the_side);//TODO: test ctrl-modifier for .on_the_side
@@ -218,6 +216,7 @@ parse_build_errors :: (command: Build_Command) {
         advance(*contents, local_offset + count);
         
         named_captures := re.map_named_captures(captures, regex);
+        defer deinit(*named_captures);
         for value, name: named_captures {
             log("Captured name: %=%", name, value);
         }
