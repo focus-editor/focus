@@ -31,7 +31,7 @@ bucket_array_add :: (using array: *Simple_Bucket_Array) -> ptr: *array.type, ind
     next_index_in_bucket := count % items_per_bucket;
     if next_index_in_bucket == 0 {
         last_bucket_index += 1;
-        buckets[last_bucket_index] = New(Bucket, allocator = allocator);
+        buckets[last_bucket_index] = New(Bucket,, allocator = allocator);
     }
 
     index := count;
@@ -48,7 +48,7 @@ bucket_array_add :: (using array: *Simple_Bucket_Array, item: array.type) {
 
 bucket_array_reset :: (using array: *Simple_Bucket_Array) {
     for 0..last_bucket_index {
-        free(buckets[it], allocator = allocator);
+        free(buckets[it],, allocator = allocator);
     }
     count = 0;
     last_bucket_index = -1;

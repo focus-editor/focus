@@ -391,7 +391,7 @@ data_device_listener :: wl_data_device_listener.{
                     if i == -1  break;
 
                     file_name := "";
-                    file_name_bytes := cast(*u8) alloc(i, __temporary_allocator);
+                    file_name_bytes := cast(*u8) alloc(i,, allocator = temp);
                     memcpy(file_name_bytes, p.data, i);
                     p.data = p.data + i + 2;
                     p.count = p.count - i - 2;

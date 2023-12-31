@@ -912,7 +912,7 @@ maybe_handle_xdnd_drop_events :: (x11_display: *X11_Display, xevent: *X11.XEvent
 
             file_name := "";
             // Heap allocated like on Windows.
-            file_name_bytes := cast(*u8) alloc(i, __temporary_allocator);
+            file_name_bytes := cast(*u8) alloc(i,, allocator = temp);
             memcpy(file_name_bytes, p.data, i);
             p.data = p.data + i + 2;
             p.count = p.count - i - 2;
