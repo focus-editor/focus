@@ -1993,7 +1993,7 @@ move_to_file_end :: (editor: *Editor, buffer: Buffer) {
 break_line :: (editor: *Editor, buffer: *Buffer) {
     // Remember by how much we need to indent the new lines upfront to avoid any scanning of the dirty buffer later
     Space :: struct { start: s32; count: s32; original_start: s32; }  // not a string to avoid invalid pointers
-    space_per_cursor := NewArray(editor.cursors.count, Space, initialized = false, allocator = temp);
+    space_per_cursor := NewArray(editor.cursors.count, Space, initialized = false,, allocator = temp);
     for cursor : editor.cursors {
         selection := get_selection(cursor);
         start := get_real_line_start_offset(buffer, offset_to_real_line(buffer, selection.start));
@@ -2029,7 +2029,7 @@ break_line :: (editor: *Editor, buffer: *Buffer) {
 
 new_line_below :: (editor: *Editor, buffer: *Buffer) {
     Line_Info :: struct { end: s32; space: struct { start, count, original_start: s32; }; last_line: bool; };
-    line_info_per_cursor := NewArray(editor.cursors.count, Line_Info, initialized = false, allocator = temp);
+    line_info_per_cursor := NewArray(editor.cursors.count, Line_Info, initialized = false,, allocator = temp);
     for cursor : editor.cursors {
         selection := get_selection(cursor);
         last_line := offset_to_real_line(buffer, selection.end);
@@ -2060,7 +2060,7 @@ new_line_below :: (editor: *Editor, buffer: *Buffer) {
 
 new_line_above :: (editor: *Editor, buffer: *Buffer) {
     Line_Info :: struct { start: s32; space: struct { start, count, original_start: s32; }; };
-    line_info_per_cursor := NewArray(editor.cursors.count, Line_Info, initialized = false, allocator = temp);
+    line_info_per_cursor := NewArray(editor.cursors.count, Line_Info, initialized = false,, allocator = temp);
     for cursor : editor.cursors {
         selection  := get_selection(cursor);
         first_line := offset_to_real_line(buffer, selection.start);
@@ -2128,7 +2128,7 @@ delete_left_char :: (editor: *Editor, buffer: *Buffer) {
     // NOTE: we don't have to worry about a cursor with no selection being immediately next
     //       to the non-cursor end of another cursor's selection (thanks to organise_cursors),
     //       so it should be safe to delete at least one character to the left of every cursor if there is one
-    range_per_cursor := NewArray(editor.cursors.count, Offset_Range, initialized = false, allocator = temp);
+    range_per_cursor := NewArray(editor.cursors.count, Offset_Range, initialized = false,, allocator = temp);
     for cursor : editor.cursors {
         if should_delete_closing_bracket {
             range_per_cursor[it_index] = .{ start = cursor.pos - 1, end = cursor.pos + 1 };
@@ -2443,7 +2443,7 @@ autoindent_region :: (editor: *Editor, buffer: *Buffer, fallback := true) {
                 level = max(0, level + next_delta);
             }
 
-            replacement = builder_to_string(*b, allocator = temp);
+            replacement = builder_to_string(*b,, allocator = temp);
         }
 
         array_add(*replacements, replacement);
@@ -2712,7 +2712,7 @@ join_lines :: (editor: *Editor, buffer: *Buffer, in_between := " ") {
         append(*b, "\n");
         add_deletion(-1);
 
-        new_str := builder_to_string(*b, allocator = temp);
+        new_str := builder_to_string(*b,, allocator = temp);
         replace_range(buffer, range.range, new_str);
         add_paste_animation(editor, .{ start = range.start + cast(s32)first_line.count, end = range.start + cast(s32)new_str.count });
 

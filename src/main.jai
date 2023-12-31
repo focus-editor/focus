@@ -447,7 +447,7 @@ init_fonts_and_dependent_things :: () {
     }
     append(*common_icons, PEN_ICON);
     append(*common_icons, XMARK_ICON);
-    icons_string := builder_to_string(*common_icons, allocator = temp);
+    icons_string := builder_to_string(*common_icons,, allocator = temp);
 
     Simp.prepare_text(font_icons,       icons_string);
     Simp.prepare_text(font_icons_tiny, icons_string);

@@ -632,7 +632,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
     // Get the coordinates of all cursors
     // @Speed: instead of doing it every frame we could do it when cursors change only - but probably it's ok
-    cursor_coords := NewArray(cursors.count, Cursor_Coords, initialized = false, allocator = temp);
+    cursor_coords := NewArray(cursors.count, Cursor_Coords, initialized = false,, allocator = temp);
     for cursors cursor_coords[it_index] = get_cursor_coords(editor, buffer, it);
 
     visible_lines_start: s32;
@@ -1009,7 +1009,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         pen.y += (line_height - char_x_advance) / 2 - visible_lines_start * line_height;
         pen.x += hidden_chars_on_the_left * char_x_advance;
 
-        code_lines := NewArray(num_visible_lines, Simp.Code_Line, initialized = false, allocator = temp);
+        code_lines := NewArray(num_visible_lines, Simp.Code_Line, initialized = false,, allocator = temp);
         for line_num : visible_lines_start .. visible_lines_end {
             line_start := get_line_start_offset(editor, buffer, line_num);
             length     := get_line_start_offset(editor, buffer, line_num+1) - line_start;
@@ -1661,7 +1661,7 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
         print_to_builder(*builder, "...");
 
         pen.x += width + padding;
-        width = xx Simp.prepare_text(font_ui_small, builder_to_string(*builder, allocator = temp));
+        width = xx Simp.prepare_text(font_ui_small, builder_to_string(*builder,, allocator = temp));
         Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = xx Color.UI_DIM);
     }
 

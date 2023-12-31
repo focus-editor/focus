@@ -98,7 +98,7 @@ workspace_update :: () {
 
                 files_per_thread := min((files_to_scan.count / num_threads) + 1, MAX_FILES_PER_JOB);
                 num_ranges  := (files_to_scan.count / files_per_thread) + 1;
-                file_ranges := NewArray(num_ranges, [] string, allocator = get_scan_pool_allocator());
+                file_ranges := NewArray(num_ranges, [] string,, allocator = get_scan_pool_allocator());
 
                 for 0..num_ranges-1 {
                     file_range := *file_ranges[it];

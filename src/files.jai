@@ -104,7 +104,7 @@ get_lowercase_extension :: (path: string, greedy := true) -> string /* temp */, 
     extension := advance(basename_with_extension, index + 1);
     if !extension return "", false;
 
-    return to_lower_copy(extension), true;
+    return to_lower_copy_new(extension,, allocator = temp), true;
 }
 
 is_file_binary :: (file_data: string) -> bool {

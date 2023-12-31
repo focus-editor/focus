@@ -48,7 +48,7 @@ fc_find_font :: (name: string, allocator := temp) -> success: bool, path: string
         defer FcStrFree(s);
         tmp := to_string(s);
         if starts_with(tmp, ":file=") then advance(*tmp, 6);
-        ret := copy_string(tmp, allocator);
+        ret := copy_string(tmp,, allocator);
 
         escaped := true;
         size := 0;

@@ -170,7 +170,7 @@ fuzzy_match :: (str: string, filter: Fuzzy_Filter, only_exact := false) -> score
     score := 0;
 
     auto_release_temp();
-    chunk_highlights := NewArray(str.count, bool, initialized = false, allocator = temp);  // to store temporary highlights we might later reject
+    chunk_highlights := NewArray(str.count, bool, initialized = false,, allocator = temp);  // to store temporary highlights we might later reject
 
     // Try matching each chunk exactly and accept the match if at least one matches
     for chunk : filter.chunks {

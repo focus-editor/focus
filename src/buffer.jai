@@ -710,7 +710,7 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
         append(*b, trim_right(line));
         if i < lines.count - 1 then append(*b, "\n");
     }
-    stripped := builder_to_string(*b, allocator = temp);
+    stripped := builder_to_string(*b,, allocator = temp);
 
     if stripped.count == bytes.count return;  // nothing stripped
 

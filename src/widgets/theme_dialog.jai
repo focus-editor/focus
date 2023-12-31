@@ -40,8 +40,8 @@ maybe_revert_temporary_theme :: () {
 #scope_file
 
 set_temporary_theme :: (theme_name: string) {
-    free(temporary_theme, allocator = focus_allocator);
-    temporary_theme = copy_string(theme_name, allocator = focus_allocator);
+    free(temporary_theme,, allocator = focus_allocator);
+    temporary_theme = copy_string(theme_name,, allocator = focus_allocator);
 }
 
 apply_selected_theme :: () {
