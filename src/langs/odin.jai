@@ -6,52 +6,87 @@ highlight_odin_syntax :: (using buffer: *Buffer) {
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
 
-        using tokenizer;
-
-        // Maybe highlight a function or attribute
-        before_prev, prev := last_tokens[0], last_tokens[1];
-        if token.type == .identifier {
+        should_highlight_attribute :: (tokenizer: Odin_Tokenizer, token: Token) -> bool {
             // Highlight an attribute if we have specific last tokens
-            if inside_attribute || (prev.type == .punctuation && prev.punctuation == .attribute) ||
-               (prev.type == .punctuation && before_prev.type == .punctuation && prev.punctuation == .l_paren && before_prev.punctuation == .attribute) {
+            if token.type != .identifier then return false;
+            prev1, prev2, prev3 := tokenizer.last_tokens[0], tokenizer.last_tokens[1], tokenizer.last_tokens[2];
+
+            if prev1.type != .punctuation then return false;
+            if prev1.punctuation != .attribute {
+                if prev2.type != .punctuation                                       then return false;
+                if prev1.punctuation != .l_paren || prev2.punctuation != .attribute then return false;
+            }
+
+            return true;
+        }
+
+        // Maybe highlight an attribute
+        if token.type == .identifier {
+            if inside_attribute || should_highlight_attribute(tokenizer, token) {
                inside_attribute = true;
                maybe_parse_attribute(*tokenizer, *token);
             }
+        } else if token.type == .punctuation && token.punctuation == .r_paren {
+            if inside_attribute then inside_attribute = false;
         }
-        else if token.type == .punctuation {
-            if token.punctuation == .l_paren {
-                if prev.type == .identifier {
-                    // Handle "func(" but not ":Type(" or "^Type(" or "$Type(" or "]Type("
-                    if before_prev.type == .operation && before_prev.operation == .colon {
-                        // Do nothing.
-                    } else if before_prev.type == .punctuation && (before_prev.punctuation == .caret || before_prev.punctuation == .dollar || before_prev.punctuation == .r_bracket) {
-                        // Do nothing.
-                    } else {
-                        memset(colors.data + prev.start, xx Color.CODE_FUNCTION, prev.len);
-                    }
+
+        // Maybe highlight a procedure
+        should_highlight_last_token_as_proc :: (tokenizer: Odin_Tokenizer, token: Token) -> bool {
+            if token.type != .punctuation    then return false;
+            if token.punctuation != .l_paren then return false;
+
+            prev1, prev2, prev3 := tokenizer.last_tokens[0], tokenizer.last_tokens[1], tokenizer.last_tokens[2];
+
+            // Handle "Identifier(" ...
+            if prev1.type != .identifier then return false;
+
+            if prev2.type == .operation {
+                // ... but not ":Identifier(" (likely a type) ...
+                if prev2.operation == .colon then return false;
+            } else if prev2.type == .punctuation {
+                if prev2.punctuation == {
+                    // ... nor "^Identifier(" / "$Identifier(" / "]Identifier(" (also likely types)
+                    case .caret;      #through;
+                    case .dollar;     #through;
+                    case .r_bracket;  return false;
+
+                    // ... nor "cast(Identifier(" (definitely a type)
+                    case .l_paren;
+                        if prev3.type == .keyword && prev3.keyword == .kw_cast then return false;
                 }
+            }
 
-            }
-            else if token.punctuation == .r_paren && inside_attribute {
-                inside_attribute = false;
-            }
-        }
-        else if token.type == .keyword && token.keyword == .kw_proc {
-            // Handle "func :: proc"
-            if (prev.type == .operation && prev.operation == .double_colon) && before_prev.type == .identifier {
-                memset(colors.data + before_prev.start, xx Color.CODE_FUNCTION, before_prev.len);
-            }
-        }
-        else if token.type == .directive && (token.directive == .directive_force_inline || token.directive == .directive_no_force_inline) {
-            // Handle "func :: #force_inline" / "func :: #no_force_inline"
-            if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
-                memset(colors.data + before_prev.start, xx Color.CODE_FUNCTION, before_prev.len);
-            }
+            return true;
         }
 
-        // Remember last 2 tokens
-        last_tokens[0] = last_tokens[1];
-        last_tokens[1] = token;
+        should_highlight_second_last_token_as_proc :: (tokenizer: Odin_Tokenizer, token: Token) -> bool {
+            if token.type != .keyword && token.type != .directive then return false;
+            prev1, prev2 := tokenizer.last_tokens[0], tokenizer.last_tokens[1];
+
+            if token.type == .keyword {
+                if token.keyword != .kw_proc                                       then return false;
+                if !(prev1.type == .operation && prev1.operation == .double_colon) then return false;
+                if prev2.type != .identifier                                       then return false;
+            } else if token.type == .directive {
+                if !(token.directive == .directive_force_inline || token.directive == .directive_no_force_inline) then return false;
+                if !(prev1.type == .operation && prev1.operation == .double_colon) then return false;
+                if prev2.type != .identifier                                       then return false;
+            }
+
+            return true;
+        }
+
+        if should_highlight_last_token_as_proc(tokenizer, token) {
+            memset(colors.data + tokenizer.last_tokens[0].start, xx Color.CODE_FUNCTION, tokenizer.last_tokens[0].len);
+        }
+        if should_highlight_second_last_token_as_proc(tokenizer, token) {
+            memset(colors.data + tokenizer.last_tokens[1].start, xx Color.CODE_FUNCTION, tokenizer.last_tokens[1].len);
+        }
+
+        // Remember last 3 tokens
+        tokenizer.last_tokens[2] = tokenizer.last_tokens[1];
+        tokenizer.last_tokens[1] = tokenizer.last_tokens[0];
+        tokenizer.last_tokens[0] = token;
 
         color := COLOR_MAP[token.type];
         memset(colors.data + token.start, xx color, token.len);
@@ -178,6 +213,8 @@ get_next_token :: (using tokenizer: *Odin_Tokenizer) -> Token {
         case #char "]";  token.type = .punctuation; token.punctuation = .r_bracket; t += 1;
         case #char "$";  token.type = .punctuation; token.punctuation = .dollar;    t += 1;
         case #char "@";  token.type = .punctuation; token.punctuation = .attribute; t += 1;
+
+        case #char "\n"; token.type = .punctuation; token.punctuation = .newline;   t += 1;
 
         case;            token.type = .invalid; t += 1;
     }
@@ -639,7 +676,7 @@ read_identifier_string_tmp :: (using tokenizer: *Odin_Tokenizer) -> string /* te
     array_add(*identifier, t.*);
     t += 1;
 
-    while is_alnum(t.*) {
+    while t < max_t && is_alnum(t.*) {
         array_add(*identifier, t.*);
         t += 1;
     }
@@ -654,7 +691,7 @@ Odin_Tokenizer :: struct {
     start_t: *u8;  // cursor when starting parsing new token
     t:       *u8;  // cursor
 
-    last_tokens: [2] Token;  // to retroactively highlight functions
+    last_tokens: [3] Token;  // to retroactively highlight procedures
 }
 
 Token :: struct {
@@ -717,6 +754,8 @@ PUNCTUATION :: string.[
     "l_paren", "r_paren",
     "l_brace", "r_brace",
     "l_bracket", "r_bracket",
+
+    "newline",  // Odin has optional semicolons, which can confuse the parser
 ];
 
 // https://github.com/odin-lang/Odin/wiki/Keywords-and-Operators
@@ -927,7 +966,9 @@ MAX_DIRECTIVE_LENGTH :: #run -> s32 {
 }
 
 eat_white_space :: (using tokenizer: *Odin_Tokenizer) {
-    while t < max_t && is_white_space(t.*) {
+    while t < max_t {
+        if t.* == #char "\n"    then break;  // Make newlines a token
+        if !is_white_space(t.*) then break;
         t += 1;
     }
 }
