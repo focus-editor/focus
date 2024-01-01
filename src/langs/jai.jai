@@ -683,14 +683,14 @@ OPERATIONS :: string.[
 ];
 
 KEYWORDS :: string.[
-    "break", "case", "cast", "code_of", "continue", "defer", "else", "enum", "enum_flags", "for",
+    "break", "case", "cast", "code_of", "continue", "defer", "else", "enum", "enum_flags", "for", "initializer_of",
     "if", "ifx", "is_constant", "inline", "push_context", "return", "size_of", "struct", "then", "type_info", "type_of",
     "union", "using", "while", "xx", "operator", "remove",
 ];
 
 TYPE_KEYWORDS :: string.[
     "__reg", "bool", "float", "float32", "float64", "int", "reg", "s16", "s32", "s64", "s8", "string",
-    "u16", "u32", "u64", "u8", "void", "v128", "Any", "Code",
+    "u16", "u32", "u64", "u8", "void", "v128", "Any", "Code", "Type",
 ];
 
 VALUE_KEYWORDS :: string.[
