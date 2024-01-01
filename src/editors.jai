@@ -1085,6 +1085,9 @@ init_buffers :: () {
     init(*buffers_table, slots_to_allocate = 3000);
 
     init(*open_buffers_lock);
+
+    global_config_buffer_id = -1;
+    global_troubleshooting_buffer_id = -1;
 }
 
 set_lang_from_path :: (buffer: *Buffer, path: string) {
