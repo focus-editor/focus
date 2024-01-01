@@ -82,11 +82,6 @@ xkb_compose_feed_result :: enum {
 using libxkb_procs: XKB_Procs;
 
 xkbcommon_load :: (intf: *XKB_Procs = *libxkb_procs, init_xcb_compat := false) -> bool {
-    if intf._xkb_procs_meta.loaded {
-        log_error("LOADED!\n");
-        return true;
-    }
-
     populate_procs :: inline (procs: *$T, $soname: string) -> bool {
         generic_c_call :: #type () #c_call;
 
@@ -120,6 +115,14 @@ xkbcommon_load :: (intf: *XKB_Procs = *libxkb_procs, init_xcb_compat := false) -
             }
         }
 
+        return true;
+    }
+
+    if intf._xkb_procs_meta.loaded {
+        if init_xcb_compat && !intf.x11_compat.xkb_x11_setup_xkb_extension {
+            log("xkbcommon: reinitializing with X11 compat");
+            return populate_procs(*intf.x11_compat, "libxkbcommon-x11.so");
+        }
         return true;
     }
 
