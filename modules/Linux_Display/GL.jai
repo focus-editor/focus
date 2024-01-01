@@ -78,12 +78,18 @@ EGL_Lib :: struct {
         minor: s32;
     }
 
-    create_context :: (using egl: *EGL_Lib, native_display: *void, major_version := 0, minor_version := 0, compatibility := false, debug := false) -> *void, *void, *void {
+    create_context :: (using egl: *EGL_Lib, native_display: *void, platform: s32, attrib_list: *s32, major_version := 0, minor_version := 0, compatibility := false, debug := false) -> *void, *void, *void {
         assert(_meta.loaded);
 
         n: s32;
 
-        egl_dpy := GetDisplay(native_display);
+        egl_dpy: *void;
+        if !platform && !attrib_list {
+            egl_dpy = GetDisplay(native_display);
+        } else {
+            assert(GetPlatformDisplayEXT != null);
+            egl_dpy = GetPlatformDisplayEXT(platform, native_display, attrib_list);
+        }
         assert(egl_dpy != NO_DISPLAY, "egl_dpy=%, native_display=%", egl_dpy, native_display);
 
         if !Initialize(egl_dpy, *_meta.major, *_meta.minor)
@@ -153,6 +159,8 @@ EGL_Lib :: struct {
     CONTEXT_OPENGL_DEBUG                        : s32 : 0x31B0;
     CONTEXT_MAJOR_VERSION                       : s32 : 0x3098;
     CONTEXT_MINOR_VERSION                       : s32 : 0x30FB;
+    PLATFORM_XCB_EXT                            : s32 : 0x31DC;
+    PLATFORM_XCB_SCREEN_EXT                     : s32 : 0x31DE;
 
     NO_CONTEXT : *void : null;
     NO_DISPLAY : *void : null;
@@ -173,6 +181,9 @@ EGL_Lib :: struct {
         DestroySurface      : (dpy: *void, surface: *void) -> s32 #c_call;
     }
     using _procs: Procs;
+
+    GetPlatformDisplayEXT : (platform: s32, native_display: *void, attrib_list: *s32) -> *void #c_call;
+    CreatePlatformWindowSurfaceEXT: (egl_display: *void, config: *void, native_window: *void, attrib_list: *s32) -> *void #c_call;
 };
 
 wsi_load :: (intf: *EGL_Lib) -> bool {
@@ -207,6 +218,9 @@ wsi_load :: (intf: *EGL_Lib) -> bool {
         ppfn.* = cast(generic_c_call) dlsym(lib, name.data);
         assert(!!(ppfn.*), "Failed to resolve function '%': %", name, to_string(dlerror()));
     }
+
+    intf.GetPlatformDisplayEXT = xx intf.GetProcAddress("eglGetPlatformDisplayEXT");
+    intf.CreatePlatformWindowSurfaceEXT = xx intf.GetProcAddress("eglCreatePlatformWindowSurfaceEXT");
 
     intf._meta.loaded = true;
 

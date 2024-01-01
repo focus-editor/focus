@@ -1,7 +1,12 @@
 global_display :: *_global_display;
 
-init_with_stdlib_interop :: inline (desired_backend := BACKEND_CHOICE.PREFER_BEST_USER_EXPERIENCE, desired_gl_backend := GL_BACKEND_CHOICE.AUTOSELECT, app_id := "com.jai.application") -> bool {
-    return init_display(global_display, desired_backend, desired_gl_backend, app_id);
+init_with_stdlib_interop :: inline (desired_backend := BACKEND_CHOICE.PREFER_BEST_USER_EXPERIENCE, desired_gl_backend := GL_BACKEND_CHOICE.AUTOSELECT, flags: Init_Flags = 0, app_id := "com.jai.application") -> bool {
+    return init_display(
+        display = global_display,
+        desired_backend = desired_backend,
+        desired_gl_backend = desired_gl_backend,
+        flags = flags,
+        app_id = app_id);
 }
 
 active_backend :: inline () -> ACTIVE_BACKEND {

@@ -81,43 +81,52 @@ xkb_compose_feed_result :: enum {
 
 using libxkb_procs: XKB_Procs;
 
-xkb_load :: (intf: *XKB_Procs = *libxkb_procs) -> bool {
-    if intf._meta.loaded {
+xkbcommon_load :: (intf: *XKB_Procs = *libxkb_procs, init_xcb_compat := false) -> bool {
+    if intf._xkb_procs_meta.loaded {
         log_error("LOADED!\n");
         return true;
     }
 
-    generic_c_call :: #type () #c_call;
-    soname :: "libxkbcommon.so";
+    populate_procs :: inline (procs: *$T, $soname: string) -> bool {
+        generic_c_call :: #type () #c_call;
 
-    dlerror();
-    lib := dlopen(soname.data, RTLD_NOW | RTLD_NOLOAD);
-    if lib {
-        log_error("'%' already loaded!", soname);
-    } else {
         dlerror();
-        lib = dlopen(soname.data, RTLD_NOW);
-        if !lib {
-            log_error("Failed to load %: %", soname, to_string(dlerror()));
-            return false;
+        lib := dlopen(soname.data, RTLD_NOW | RTLD_NOLOAD);
+        if lib {
+            log_error("'%' already loaded!", soname);
+        } else {
+            dlerror();
+            lib = dlopen(soname.data, RTLD_NOW);
+            if !lib {
+                log_error("Failed to load %: %", soname, to_string(dlerror()));
+                return false;
+            }
         }
+
+        tis := cast(*Type_Info_Struct) type_info(T);
+        for m : tis.members {
+            if m.type.type != .PROCEDURE continue;
+            if m.flags & .CONSTANT continue;
+
+            pi := cast(*Type_Info_Procedure) m.type;
+            if !(pi.procedure_flags & .IS_C_CALL) continue;
+
+            dlerror();
+            ppfn := cast(*generic_c_call)((cast(*u8) procs) + m.offset_in_bytes);
+            ppfn.* = cast(generic_c_call) dlsym(lib, m.name.data);
+            if !ppfn.* {
+                log_error("Failed to resolve function '%': %", m.name, to_string(dlerror()));
+                return false;
+            }
+        }
+
+        return true;
     }
 
-    tis := cast(*Type_Info_Struct) type_info(XKB_Procs);
-    for m : tis.members {
-        if m.type.type != .PROCEDURE continue;
-        if m.flags & .CONSTANT continue;
+    if !populate_procs(intf, "libxkbcommon.so") return false;
+    if init_xcb_compat && !populate_procs(*intf.x11_compat, "libxkbcommon-x11.so") return false;
 
-        pi := cast(*Type_Info_Procedure) m.type;
-        if !(pi.procedure_flags & .IS_C_CALL) continue;
-
-        dlerror();
-        ppfn := cast(*generic_c_call)((cast(*u8) intf) + m.offset_in_bytes);
-        ppfn.* = cast(generic_c_call) dlsym(lib, m.name.data);
-        assert(!!(ppfn.*), "Failed to resolve function '%': %", m.name, to_string(dlerror()));
-    }
-
-    intf._meta.loaded = true;
+    intf._xkb_procs_meta.loaded = true;
 
     return true;
 }
@@ -128,7 +137,7 @@ xkb_load :: (intf: *XKB_Procs = *libxkb_procs) -> bool {
 #import "POSIX";
 
 XKB_Procs :: struct {
-    _meta : struct {
+    _xkb_procs_meta : struct {
         loaded: bool;
     }
 
@@ -170,9 +179,21 @@ XKB_Procs :: struct {
     xkb_state_mod_index_is_consumed : (state: *xkb_state, key: xkb_keycode_t, idx: xkb_mod_index_t) -> s32 #c_call;
 
     xkb_compose_table_new_from_locale : (ctx: *xkb_context, locale: *u8, flags: xkb_compose_compile_flags) -> *xkb_compose_table #c_call;
+    xkb_compose_table_ref : (table: *xkb_compose_table) -> *xkb_compose_table #c_call;
+    xkb_compose_table_unref : (table: *xkb_compose_table) #c_call;
+
     xkb_compose_state_new : (table: *xkb_compose_table, flags: xkb_compose_state_flags) -> *xkb_compose_state #c_call;
+    xkb_compose_state_ref : (state: xkb_compose_state) -> *xkb_compose_state #c_call;
+    xkb_compose_state_unref : (state: *xkb_compose_state) #c_call;
     xkb_compose_state_feed : (state: *xkb_compose_state, keysym: xkb_keysym_t) -> xkb_compose_feed_result #c_call;
     xkb_compose_state_reset : (state: *xkb_compose_state) #c_call;
     xkb_compose_state_get_status : (state: *xkb_compose_state) -> xkb_compose_status #c_call;
     xkb_compose_state_get_one_sym : (state: *xkb_compose_state) -> xkb_keysym_t #c_call;
+
+    using x11_compat: struct {
+        xkb_x11_setup_xkb_extension: (xcb_connection: *void, xkb_major_version: u16, xkb_minor_version: u16, flags: u32, xkb_major_version_out: *u16, xkb_minor_version_out: *u16, base_event_out: *u8, base_error_out: *u8) -> s32 #c_call;
+        xkb_x11_get_core_keyboard_device_id: (xcb_connection: *void) -> s32 #c_call;
+        xkb_x11_keymap_new_from_device: (ctx: *xkb_context, xkb_connection: *void, device_id: s32, flags: xkb_keymap_compile_flags) -> *xkb_keymap #c_call;
+        xkb_x11_state_new_from_device: (keymap: *xkb_keymap, xcb_connection: *void, device_id: s32) -> *xkb_state #c_call;
+    }
 }

@@ -68,6 +68,7 @@ DONE;
     if equal_nocase(backend_s, "prefer-x11") then backend = .PREFER_X11;
     if equal_nocase(backend_s, "wayland") then backend = .FORCE_WAYLAND;
     if equal_nocase(backend_s, "x11") then backend = .FORCE_X11;
+    if equal_nocase(backend_s, "xcb") then backend = .FORCE_XCB;
 
     gl_backend := LD.GL_BACKEND_CHOICE.AUTOSELECT;
     cstr = getenv("FOCUS_LD_GL_BACKEND");
@@ -75,7 +76,22 @@ DONE;
     if equal_nocase(backend_s, "glx") then gl_backend = .GLX;
     if equal_nocase(backend_s, "egl") then gl_backend = .EGL;
 
-    LD.init_with_stdlib_interop(desired_backend=backend, desired_gl_backend=gl_backend, app_id=app_id);
+    flags : LD.Init_Flags = 0;
+    cstr = getenv("FOCUS_LD_FLAGS");
+    flags_s := ifx cstr then to_lower_copy(to_string(cstr)) else "";
+    flags_a := split(flags_s, ",");
+    for flag : flags_a {
+        if flag == {
+            case "xcb-pure"; flags |= .XCB_Pure;
+            case "xcb-core-events"; flags |= .XCB_Force_Core_Events;
+        }
+    }
+
+    LD.init_with_stdlib_interop(
+        desired_backend=backend,
+        desired_gl_backend=gl_backend,
+        flags=flags,
+        app_id=app_id);
 
     active_backend := LD.active_backend();
     assert(active_backend != .UNINITIALIZED);
@@ -116,7 +132,7 @@ platform_create_window :: () {
         background_color_rgb = color_as_3_floats(Color.BACKGROUND_0),
     );
 
-    if LD.active_backend() == .X11 {
+    if LD.active_backend() != .WAYLAND {
         data := icon_data.png_data;
 
         width: s32;
