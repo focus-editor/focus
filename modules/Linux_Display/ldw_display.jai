@@ -1,5 +1,12 @@
 #scope_module
 
+/*
+ * TODO: currently we associate `Display`/`Window` pointers with Wayland proxy objects.
+ *       This is a ticking time bomb! If ever we have more than one Display/Window we cannot
+ *       count on these pointers not being invalidated (by resizing the `Display.windows` array
+ *       for example). This needs to be fixed!
+ */
+
 Wayland_Display :: struct {
     #as base: Base_Display;
 
@@ -107,10 +114,13 @@ Wayland_Window :: struct {
 }
 
 wl_init_display :: (display: *Display) -> bool {
-    if !xkb_load(*libxkb_procs) return false;
+    if !xkbcommon_load() return false;
     if !wl_global_init() return false;
 
+    base_copy := display.base;
     d: *Wayland_Display = display;
+    d.* = .{};
+    d.base = base_copy;
 
     d.handle = wl_display_connect(null);
     if !d.handle return false;
@@ -541,6 +551,8 @@ wl_create_window :: (display: *Display, window: *Window, width: int, height: int
 
     d: *Wayland_Display = display;
     w: *Wayland_Window = window;
+
+
 
     w.display = d;
 

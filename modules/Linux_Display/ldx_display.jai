@@ -9,7 +9,7 @@ X11_Display :: struct {
     im: X11.XIM;
 
     fixed_scaling: bool;
-    dpi_override: s32;
+    dpi_override: float;
 
     global_atoms: X11.Global_Atoms;
 
@@ -30,6 +30,8 @@ X11_Display :: struct {
     ];
     visual_info: *X11.XVisualInfo;
     color_map: X11.Colormap;
+
+    x_cursors: Table(string, X11.Cursor);
 }
 
 X11_Window :: struct {
@@ -41,7 +43,6 @@ X11_Window :: struct {
     ic: X11.XIC;
 }
 
-x_cursors: Table(string, X11.Cursor);
 preloaded_x_cursors :: string.[
     "default", "pointer", "not-allowed", "col-resize", "row-resize",
     "all-scroll", "nw-resize", "se-resize", "text",
@@ -114,22 +115,33 @@ Inspect available locales [$ locale -a] and the one you have set up: [$ locale]
 
     }
 
-    dpy := X11.XOpenDisplay(null);
-    X11.init_global_atoms(*X11, dpy, *display.x11.global_atoms);
+    x11_display := X11_Display.{ base = display.base };
+    x11_display.base.type                       = X11_Display;
+    x11_display.base.create_window              = x11_create_window;
+    x11_display.base.set_fixed_scaling          = x11_set_fixed_scaling;
+    x11_display.base.translate_key_code         = x11_translate_key_code;
+    x11_display.base.wait_for_events            = x11_wait_for_events;
+    x11_display.base.update_window_events       = x11_update_window_events;
+    x11_display.base.clipboard_set_text         = x11_clipboard_set_text;
+    x11_display.base.clipboard_get_text         = x11_clipboard_get_text;
+    x11_display.base.get_mouse_pointer_position = x11_get_mouse_pointer_position;
+
+    x11_display.handle = X11.XOpenDisplay(null);
+    X11.init_global_atoms(*X11, x11_display.handle, *x11_display.global_atoms);
 
     // NOTE: Should we explicitly support XMODIFIERS and XIM_SERVERS such as dbus and fcitx?
     // Try the best we can to get the input method
     X11.XSetLocaleModifiers("");
-    im := X11.XOpenIM(dpy, null, null, null);
-    if !im {
+    x11_display.im = X11.XOpenIM(x11_display.handle, null, null, null);
+    if !x11_display.im {
         // local seems like the same thing as none, but more examples use it!
         X11.XSetLocaleModifiers("@im=local");
-        im = X11.XOpenIM(dpy, null, null, null);
-        if !im {
+        x11_display.im = X11.XOpenIM(x11_display.handle, null, null, null);
+        if !x11_display.im {
             X11.XSetLocaleModifiers("@im=");
-            im = X11.XOpenIM(dpy, null, null, null);
+            x11_display.im = X11.XOpenIM(x11_display.handle, null, null, null);
             // Nothing more we can do
-            if !im {
+            if !x11_display.im {
                 log_error("Could not get X11 Input Method");
             }
         }
@@ -141,44 +153,31 @@ Inspect available locales [$ locale -a] and the one you have set up: [$ locale]
             XcursorLibraryLoadCursor = xx dlsym(lib, "XcursorLibraryLoadCursor");
             xcursor_initialized = (XcursorLibraryLoadCursor != null);
             if xcursor_initialized {
-                init(*x_cursors);
+                init(*x11_display.x_cursors);
                 for preloaded_x_cursors {
-                    table_add(*x_cursors, it, XcursorLibraryLoadCursor(dpy, it.data));
+                    table_add(*x11_display.x_cursors, it, XcursorLibraryLoadCursor(x11_display.handle, it.data));
                 }
             }
         }
     }
 
-    file_descriptor := X11.XConnectionNumber(dpy);
+    x11_display.file_descriptor = X11.XConnectionNumber(x11_display.handle);
 
-    d: *X11_Display = display;
-    d.handle = dpy;
-    d.im = im;
-    d.file_descriptor = file_descriptor;
+    screen := X11.DefaultScreen(x11_display.handle);
+    root   := X11.DefaultRootWindow(x11_display.handle);
     if #complete display.base.desired_gl_backend == {
         case .AUTOSELECT; #through;
-        case .GLX; d.visual_info = GLX.ChooseVisual(dpy, 0, d.glx_visual_attrs.data);
+        case .GLX; x11_display.visual_info = GLX.ChooseVisual(x11_display.handle, 0, x11_display.glx_visual_attrs.data);
         case .EGL; {
             vi: X11.XVisualInfo;
-            X11.XMatchVisualInfo(dpy, X11.DefaultScreen(dpy), d.color_depth, X11.TrueColor, *vi);
-            d.visual_info = New(X11.XVisualInfo);
-            d.visual_info.* = vi;
+            X11.XMatchVisualInfo(x11_display.handle, screen, x11_display.color_depth, X11.TrueColor, *vi);
+            x11_display.visual_info = New(X11.XVisualInfo);
+            x11_display.visual_info.* = vi;
         }
     }
-    d.color_map = X11.XCreateColormap(dpy, X11.DefaultRootWindow(dpy), d.visual_info.visual, X11.AllocNone);
+    x11_display.color_map = X11.XCreateColormap(x11_display.handle, root, x11_display.visual_info.visual, X11.AllocNone);
 
-    bd: *Base_Display = display;
-    bd.type = X11_Display;
-
-    bd.create_window              = x11_create_window;
-    bd.set_fixed_scaling          = x11_set_fixed_scaling;
-    bd.translate_key_code         = x11_translate_key_code;
-    bd.wait_for_events            = x11_wait_for_events;
-    bd.update_window_events       = x11_update_window_events;
-    bd.clipboard_set_text         = x11_clipboard_set_text;
-    bd.clipboard_get_text         = x11_clipboard_get_text;
-    bd.get_mouse_pointer_position = x11_get_mouse_pointer_position;
-
+    display.x11 = x11_display;
     return true;
 }
 
@@ -291,7 +290,27 @@ x11_create_window :: (display: *Display, window: *Window, width: int, height: in
 
     x11_display: *X11_Display = display;
     x11_parent: *X11_Window = parent;
-    x11_win: *X11_Window = window;
+
+    x11_win := X11_Window.{
+        base = .{
+            type = X11_Window,
+            display = display,
+
+            set_icon_from_raw_data     = x11_set_icon_from_raw_data,
+            toggle_fullscreen          = x11_toggle_fullscreen,
+            has_native_handle          = x11_has_native_handle,
+            get_dimensions             = x11_get_dimensions,
+            get_render_dimensions      = x11_get_render_dimensions,
+            get_mouse_pointer_position = x11_get_mouse_pointer_position,
+            enable_dnd                 = x11_enable_dnd,
+            set_window_title           = x11_set_window_title,
+            maximize_window            = x11_maximize_window,
+            set_cursor_from_theme      = x11_set_cursor_from_theme,
+            get_dpi_scaling_factor     = x11_get_dpi_scaling_factor,
+        },
+
+        display = display,
+    };
 
     d := x11_display.handle;
 
@@ -322,7 +341,7 @@ x11_create_window :: (display: *Display, window: *Window, width: int, height: in
         X11.LeaveWindowMask |
         X11.PointerMotionMask;
     swa.background_pixel = background_color.pixel;
-    win := X11.XCreateWindow(d, parent_handle,
+    x11_win.handle = X11.XCreateWindow(d, parent_handle,
         xx window_x, xx window_y, xx width, xx height,
         0,
         x11_display.visual_info.depth,
@@ -331,7 +350,7 @@ x11_create_window :: (display: *Display, window: *Window, width: int, height: in
         *swa);
 
     win_name := temp_c_string(window_name);
-    if window_name then X11.XStoreName(d, win, win_name);
+    if window_name then X11.XStoreName(d, x11_win.handle, win_name);
 
     class_hints := X11.XAllocClassHint();
     if class_hints {
@@ -341,44 +360,24 @@ x11_create_window :: (display: *Display, window: *Window, width: int, height: in
             class_hints.res_name = "jai-application";
         }
         class_hints.res_class = temp_c_string(display.base.app_id);
-        X11.XSetClassHint(d, win, class_hints);
+        X11.XSetClassHint(d, x11_win.handle, class_hints);
     }
 
-    X11.XMapWindow(d, win);
+    X11.XMapWindow(d, x11_win.handle);
 
-    X11.XSetWMProtocols(d, win, *x11_display.global_atoms.WM_DELETE_WINDOW, 1);
+    X11.XSetWMProtocols(d, x11_win.handle, *x11_display.global_atoms.WM_DELETE_WINDOW, 1);
 
-    ic := X11.XCreateIC(x11_display.im,
-        X11.XNClientWindow, win,
-        X11.XNFocusWindow, win,
+    x11_win.ic = X11.XCreateIC(x11_display.im,
+        X11.XNClientWindow, x11_win.handle,
+        X11.XNFocusWindow, x11_win.handle,
         X11.XNInputStyle, X11.XIMPreeditNothing | X11.XIMStatusNothing,
         null);
 
-    if !ic {
+    if x11_win.ic {
         log_error("Could not create X11 input context\n");
     }
 
-    xw: *X11_Window = window;
-    xw.handle  = win;
-    xw.display = x11_display;
-    xw.ic      = ic;
-
-    bw: *Base_Window = window;
-    bw.type    = X11_Window;
-    bw.display = display;
-
-    bw.set_icon_from_raw_data     = x11_set_icon_from_raw_data;
-    bw.toggle_fullscreen          = x11_toggle_fullscreen;
-    bw.has_native_handle          = x11_has_native_handle;
-    bw.get_dimensions             = x11_get_dimensions;
-    bw.get_render_dimensions      = x11_get_render_dimensions;
-    bw.get_mouse_pointer_position = x11_get_mouse_pointer_position;
-    bw.enable_dnd                 = x11_enable_dnd;
-    bw.set_window_title           = x11_set_window_title;
-    bw.maximize_window            = x11_maximize_window;
-    bw.set_cursor_from_theme      = x11_set_cursor_from_theme;
-    bw.get_dpi_scaling_factor     = x11_get_dpi_scaling_factor;
-
+    window.x11 = x11_win;
     return true;
 }
 
@@ -430,7 +429,7 @@ x11_set_icon_from_raw_data :: (window: *Window, data: *u8, width: u32, height: u
 x11_set_cursor_from_theme :: (window: *Window, name: string) {
     win: *X11_Window = window;
     if xcursor_initialized {
-        cursor, found := table_find(*x_cursors, name);
+        cursor, found := table_find(*win.display.x_cursors, name);
         if found {
             X11.XDefineCursor(win.display.handle, win.handle, cursor);
         }
@@ -569,7 +568,7 @@ x11_get_dpi_scaling_factor :: (window: *Window) -> float {
     x11_check_usage(null, window);
 
     w: *X11_Window = window;
-    if w.display.fixed_scaling return cast(float) w.display.dpi_override / 96.0;
+    if w.display.fixed_scaling return w.display.dpi_override / 96.0;
 
     screen := X11.XScreenOfDisplay(w.display.handle, 0);
     sw := X11.XWidthOfScreen(screen);
@@ -581,14 +580,10 @@ x11_set_fixed_scaling :: (display: *Display, factor: float) {
     x11_check_usage(display);
 
     d: *X11_Display = display;
-    fixed_scaling := (factor != 0.0);
-    new_dpi: s32 = xx (factor * 96.0);
-    if ((fixed_scaling != d.fixed_scaling) || (fixed_scaling && (new_dpi != d.dpi_override))) && (factor >= 0.0) {
-        d.fixed_scaling = fixed_scaling;
-        if fixed_scaling d.dpi_override = new_dpi;
-        for * d.base.windows {
-            x11_generate_resize(it);
-        }
+    d.fixed_scaling = (factor >= 0.1);
+    d.dpi_override = factor * 96.0;
+    for * d.base.windows {
+        x11_generate_resize(it);
     }
 }
 
