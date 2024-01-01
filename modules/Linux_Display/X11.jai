@@ -1440,7 +1440,7 @@ X11_Lib :: struct #type_info_no_size_complaint {
                 assert(note.count >= 1);
                 note.count -= 1;
 
-                pieces := split(note, ",");
+                pieces := split(note, ",",, allocator = temp);
                 for piece : pieces {
                     if starts_with(piece, "must_exist=") {
                         advance(*piece, "must_exist=".count);

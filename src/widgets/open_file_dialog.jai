@@ -263,7 +263,7 @@ set_path_chunks_from_file :: (file_path: string) {
 
     advance(*parent_dir, project_dir.path.count);
 
-    for chunk : split(parent_dir, cast(u8) #char "/") {
+    for chunk : split(parent_dir, cast(u8) #char "/",, allocator = temp) {
         trimmed := trim(chunk);
         if !trimmed continue;
         array_add(*path_chunks, copy_string(trimmed));

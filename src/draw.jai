@@ -252,7 +252,7 @@ draw_user_messages :: (main_area: Rect, footer_height: float) {
 
     for < * user_messages {
         // Figure out message height
-        lines := split(it.message, cast(u8) #char "\n");
+        lines := split(it.message, cast(u8) #char "\n",, allocator = temp);
 
         max_seen_width := 0;
         for line : lines {

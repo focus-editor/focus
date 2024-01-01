@@ -228,7 +228,7 @@ construct_fuzzy_filter :: (filter_str: string, treat_slashes_as_spaces := false)
     // Split into strings separated by spaces or slashes
     space := cast(u8) #char " ";
     if treat_slashes_as_spaces then replace_chars(str, "\\/", space);
-    strings := split(str, space);
+    strings := split(str, space,, allocator = temp);
 
     for s : strings {
         if !s continue;
@@ -475,11 +475,11 @@ ends_with :: inline (s: string, ch: u8) -> bool {
 
 // a version of `split()` from the `String` module that returns an array with a maximum
 // number of elements
-split :: (s: string, separator: $T, max_splits: int, allocator := temp) -> [] string {
+split :: (s: string, separator: $T, max_splits: int) -> [] string {
     #assert (T == u8) || (T == string);
 
     results: [..] string;
-    results.allocator = allocator;
+    results.allocator = context.allocator;
 
     if max_splits < 1 return results;
 
