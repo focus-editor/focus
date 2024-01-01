@@ -166,7 +166,10 @@ pointer_listener :: wl_pointer_listener.{
         }
     },
 
-    leave = (data: *void, self: *wl_pointer, serial: u32, surface: *wl_surface) -> void #c_call {},
+    leave = (data: *void, self: *wl_pointer, serial: u32, surface: *wl_surface) -> void #c_call {
+        d: *Wayland_Display = wl_proxy_get_user_data(self);
+        d.current_hovered_window = null;
+    },
 
     motion = (data: *void, self: *wl_pointer, time: u32, fx: wl_fixed_t, fy: wl_fixed_t) -> void #c_call {
         ctx: Context;
