@@ -82,5 +82,9 @@ gl_initialized :: inline () -> bool {
     return gl_initialized(global_display);
 }
 
+dump_debug_info :: (sb: *String_Builder) {
+    dump_debug_info(global_display, sb);
+}
+
 #scope_file
 _global_display: Display;

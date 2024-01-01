@@ -306,6 +306,21 @@ find_font :: (name: string, allocator := temp) -> bool, string {
     #load "stdlib_interop.jai";
 }
 
+// Misc
+dump_debug_info :: (display: *Display, sb: *String_Builder) {
+    sfmt := context.print_style.default_format_struct;
+    defer context.print_style.default_format_struct = sfmt;
+
+    context.print_style.default_format_struct.use_long_form_if_more_than_this_many_members = -1;
+    context.print_style.default_format_struct.use_newlines_if_long_form = true;
+    if display.base.type == {
+        case Wayland_Display; print_to_builder(sb, "%.%\n", display.base.type, display.wld);
+        case X11_Display;     print_to_builder(sb, "%.%\n", display.base.type, display.x11);
+        case XCB_Display;     print_to_builder(sb, "%.%\n", display.base.type, display.xcb);
+        case;                 print_to_builder(sb, "%.%\n", display.base.type, display.base);
+    }
+}
+
 #scope_module;
 
 #import "String";

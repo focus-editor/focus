@@ -388,7 +388,7 @@ platform_get_troubleshooting_info :: () -> string /* temp */ {
     print_to_builder(*sb, "\n");
 
     print_to_builder(*sb, "Interesting things in the environment:\n");
-    env_check(*sb, "FOCUS_LD_BACKEND", "FOCUS_LD_GL_BACKEND");
+    env_check(*sb, "FOCUS_LD_BACKEND", "FOCUS_LD_GL_BACKEND", "FOCUS_LD_FLAGS");
     env_check(*sb, "DISPLAY", "WAYLAND_DISPLAY");
     env_check(*sb, "DESKTOP_SESSION", "XDG_SESSION_DESKTOP", "XDG_CURRENT_DESKTOP");
     env_check(*sb, "XCURSOR_THEME", "XCURSOR_SIZE");
@@ -406,6 +406,9 @@ platform_get_troubleshooting_info :: () -> string /* temp */ {
     print_to_builder(*sb, "  active backend     : %\n", system_info.ld_backend);
     print_to_builder(*sb, "  desired GL backend : %\n", system_info.ld_gl_backend_choice);
     print_to_builder(*sb, "  active GL backend  : %\n", system_info.ld_gl_backend);
+    print_to_builder(*sb, "\n");
+
+    LD.dump_debug_info(*sb);
     print_to_builder(*sb, "\n");
 
     print_to_builder(*sb, "OpenGL Information:\n");
