@@ -118,17 +118,12 @@ xkbcommon_load :: (intf: *XKB_Procs = *libxkb_procs, init_xcb_compat := false) -
         return true;
     }
 
-    if intf._xkb_procs_meta.loaded {
-        if init_xcb_compat && !intf.x11_compat.xkb_x11_setup_xkb_extension {
-            log("xkbcommon: reinitializing with X11 compat");
-            return populate_procs(*intf.x11_compat, "libxkbcommon-x11.so");
-        }
-        return true;
+    if init_xcb_compat {
+        if !populate_procs(*intf.x11_compat, "libxkbcommon-x11.so") return false;
+        intf._x11_compat_meta.loaded = true;
     }
 
     if !populate_procs(intf, "libxkbcommon.so") return false;
-    if init_xcb_compat && !populate_procs(*intf.x11_compat, "libxkbcommon-x11.so") return false;
-
     intf._xkb_procs_meta.loaded = true;
 
     return true;
@@ -194,6 +189,9 @@ XKB_Procs :: struct {
     xkb_compose_state_get_one_sym : (state: *xkb_compose_state) -> xkb_keysym_t #c_call;
 
     using x11_compat: struct {
+        _x11_compat_meta: struct {
+            loaded: bool;
+        }
         xkb_x11_setup_xkb_extension: (xcb_connection: *void, xkb_major_version: u16, xkb_minor_version: u16, flags: u32, xkb_major_version_out: *u16, xkb_minor_version_out: *u16, base_event_out: *u8, base_error_out: *u8) -> s32 #c_call;
         xkb_x11_get_core_keyboard_device_id: (xcb_connection: *void) -> s32 #c_call;
         xkb_x11_keymap_new_from_device: (ctx: *xkb_context, xkb_connection: *void, device_id: s32, flags: xkb_keymap_compile_flags) -> *xkb_keymap #c_call;
