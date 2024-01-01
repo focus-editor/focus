@@ -142,7 +142,7 @@ theme_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
         full_path := copy_string(info.full_name);
         path, basename, extension, name := path_decomp(full_path);
 
-        name_parts := split(copy_string(basename), "-");
+        name_parts := split(copy_string(basename), "-",, allocator = temp);
         for part : name_parts {
             if !part { remove part; continue; }
             part[0] = to_upper(part[0]);  // capitalize

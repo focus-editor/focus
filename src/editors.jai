@@ -2410,7 +2410,7 @@ autoindent_region :: (editor: *Editor, buffer: *Buffer, fallback := true) {
 
             range_str := get_range_as_string(buffer, line_range.range);
             if ends_with(range_str, "\n") then range_str.count -= 1;
-            lines_in_range := split(range_str, cast(u8) #char "\n");
+            lines_in_range := split(range_str, cast(u8) #char "\n",, allocator = temp);
 
             level := base_level;
             start, end: s32;
@@ -2688,7 +2688,7 @@ join_lines :: (editor: *Editor, buffer: *Buffer, in_between := " ") {
         range.end   += xx offset_delta;
 
         range_str := get_range_as_string(buffer, range.range);
-        individual_lines := split(trim_right(range_str, " \t"), cast(u8) #char "\n");
+        individual_lines := split(trim_right(range_str, " \t"), cast(u8) #char "\n",, allocator = temp);
         if individual_lines.count <= 1 continue;  // nothing to join
 
         first_line         := individual_lines[0];
