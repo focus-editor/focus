@@ -189,42 +189,42 @@ EGL_Lib :: struct {
 wsi_load :: (intf: *EGL_Lib) -> bool {
     if intf._meta.loaded return true;
 
-    soname :: "libEGL.so";
+    sonames :: string.["libEGL.so.1", "libEGL.so"];
 
-    dlerror();
-    lib := dlopen(soname.data, RTLD_NOW | RTLD_NOLOAD);
-    if lib {
-        log_error("% already loaded!", soname);
-    } else {
+    for soname : sonames {
         dlerror();
-        lib = dlopen(soname.data, RTLD_NOW);
+        lib := dlopen(soname.data, RTLD_NOW);
         if !lib {
             log_error("Failed to load %: %", soname, to_string(dlerror()));
-            return false;
+            continue;
         }
+
+        tis := cast(*Type_Info_Struct) type_info(type_of(intf._procs));
+        for m : tis.members {
+            if m.type.type != .PROCEDURE continue;
+            if m.flags & .CONSTANT continue;
+
+            pi := cast(*Type_Info_Procedure) m.type;
+            if !(pi.procedure_flags & .IS_C_CALL) continue;
+
+            dlerror();
+            name := tprint("egl%\0", m.name);
+            ppfn := cast(*generic_c_call)((cast(*u8) *intf._procs) + m.offset_in_bytes);
+            ppfn.* = cast(generic_c_call) dlsym(lib, name.data);
+            if !ppfn.* {
+                log("Failed to resolve function '%' in '%': %", name, soname, to_string(dlerror()));
+                continue soname;
+            }
+        }
+
+        intf.GetPlatformDisplayEXT = xx intf.GetProcAddress("eglGetPlatformDisplayEXT");
+        intf.CreatePlatformWindowSurfaceEXT = xx intf.GetProcAddress("eglCreatePlatformWindowSurfaceEXT");
+        intf._meta.loaded = true;
+        log("EGL: loaded %", soname);
+        return true;
     }
 
-    tis := cast(*Type_Info_Struct) type_info(type_of(intf._procs));
-    for m : tis.members {
-        if m.type.type != .PROCEDURE continue;
-        if m.flags & .CONSTANT continue;
-
-        pi := cast(*Type_Info_Procedure) m.type;
-        if !(pi.procedure_flags & .IS_C_CALL) continue;
-
-        dlerror();
-        name := tprint("egl%\0", m.name);
-        ppfn := cast(*generic_c_call)((cast(*u8) *intf._procs) + m.offset_in_bytes);
-        ppfn.* = cast(generic_c_call) dlsym(lib, name.data);
-        assert(!!(ppfn.*), "Failed to resolve function '%': %", name, to_string(dlerror()));
-    }
-
-    intf.GetPlatformDisplayEXT = xx intf.GetProcAddress("eglGetPlatformDisplayEXT");
-    intf.CreatePlatformWindowSurfaceEXT = xx intf.GetProcAddress("eglCreatePlatformWindowSurfaceEXT");
-
-    intf._meta.loaded = true;
-
-    return true;
+    return false;
 }
 
 GLX_Lib :: struct {
@@ -330,61 +330,65 @@ GLX_Lib :: struct {
 wsi_load :: (intf: *GLX_Lib) -> bool {
     if intf._meta.loaded return true;
 
-    soname :: "libGLX.so";
+    sonames :: string.["libGLX.so.0", "libGLX.so"];
 
-    dlerror();
-    lib := dlopen(soname.data, RTLD_NOW | RTLD_NOLOAD);
-    if lib {
-        log_error("% already loaded!", soname);
-    } else {
+    for soname : sonames {
         dlerror();
-        lib = dlopen(soname.data, RTLD_NOW);
+        lib := dlopen(soname.data, RTLD_NOW);
         if !lib {
             log_error("Failed to load %: %", soname, to_string(dlerror()));
-            return false;
+            continue;
         }
-    }
 
-    ext_funcs: [..] struct {
-        name: string;
-        call: *generic_c_call;
-        optional: bool;
-    };
+        ext_funcs: [..] struct {
+            name: string;
+            call: *generic_c_call;
+            optional: bool;
+        };
 
-    tis := cast(*Type_Info_Struct) type_info(type_of(intf._procs));
-    for m : tis.members {
-        if m.type.type != .PROCEDURE continue;
-        if m.flags & .CONSTANT continue;
+        tis := cast(*Type_Info_Struct) type_info(type_of(intf._procs));
+        for m : tis.members {
+            if m.type.type != .PROCEDURE continue;
+            if m.flags & .CONSTANT continue;
 
-        pi := cast(*Type_Info_Procedure) m.type;
-        if !(pi.procedure_flags & .IS_C_CALL) continue;
+            pi := cast(*Type_Info_Procedure) m.type;
+            if !(pi.procedure_flags & .IS_C_CALL) continue;
 
-        dlerror();
-        name := tprint("glX%\0", m.name);
-        ppfn := cast(*generic_c_call)((cast(*u8) *intf._procs) + m.offset_in_bytes);
+            dlerror();
+            name := tprint("glX%\0", m.name);
+            ppfn := cast(*generic_c_call)((cast(*u8) *intf._procs) + m.offset_in_bytes);
 
-        optional, _ := array_find(m.notes, "optional");
-        is_extension_func, _ := array_find(m.notes, "GLX_EXT");
+            optional, _ := array_find(m.notes, "optional");
+            is_extension_func, _ := array_find(m.notes, "GLX_EXT");
 
-        if is_extension_func {
-            info := array_add(*ext_funcs);
-            info.name = name;
-            info.call = ppfn;
-            info.optional = optional;
-        } else {
-            ppfn.* = cast(generic_c_call) dlsym(lib, name.data);
-            if !optional  assert(!!(ppfn.*), "Failed to resolve function '%': %", name, to_string(dlerror()));
+            if is_extension_func {
+                info := array_add(*ext_funcs);
+                info.name = name;
+                info.call = ppfn;
+                info.optional = optional;
+            } else {
+                ppfn.* = cast(generic_c_call) dlsym(lib, name.data);
+                if !optional && !ppfn.* {
+                    log("Failed to resolve function '%' in '%': %", name, soname, to_string(dlerror()));
+                    continue soname;
+                }
+            }
         }
+
+        for info: ext_funcs {
+            info.call.* = cast(generic_c_call) intf.GetProcAddress(info.name.data);
+            if !info.optional && !info.call.* {
+                log("Failed to resolve extension function '%'", info.name);
+                continue soname;
+            }
+        }
+
+        intf._meta.loaded = true;
+        log("GLX: loaded %", soname);
+        return true;
     }
 
-    for info: ext_funcs {
-        info.call.* = cast(generic_c_call) intf.GetProcAddress(info.name.data);
-        if !info.optional  assert(!!(info.call.*), "Failed to resolve extension function '%'", info.name);
-    }
-
-    intf._meta.loaded = true;
-
-    return true;
+    return false;
 }
 
 #scope_file

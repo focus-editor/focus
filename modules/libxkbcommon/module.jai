@@ -82,48 +82,47 @@ xkb_compose_feed_result :: enum {
 using libxkb_procs: XKB_Procs;
 
 xkbcommon_load :: (intf: *XKB_Procs = *libxkb_procs, init_xcb_compat := false) -> bool {
-    populate_procs :: inline (procs: *$T, $soname: string) -> bool {
+    populate_procs :: inline (procs: *$T, sonames: []string) -> bool {
         generic_c_call :: #type () #c_call;
 
-        dlerror();
-        lib := dlopen(soname.data, RTLD_NOW | RTLD_NOLOAD);
-        if lib {
-            log_error("'%' already loaded!", soname);
-        } else {
+        for soname : sonames {
             dlerror();
-            lib = dlopen(soname.data, RTLD_NOW);
+            lib := dlopen(soname.data, RTLD_NOW);
             if !lib {
                 log_error("Failed to load %: %", soname, to_string(dlerror()));
-                return false;
+                continue;
             }
+
+            tis := cast(*Type_Info_Struct) type_info(T);
+            for m : tis.members {
+                if m.type.type != .PROCEDURE continue;
+                if m.flags & .CONSTANT continue;
+
+                pi := cast(*Type_Info_Procedure) m.type;
+                if !(pi.procedure_flags & .IS_C_CALL) continue;
+
+                dlerror();
+                ppfn := cast(*generic_c_call)((cast(*u8) procs) + m.offset_in_bytes);
+                ppfn.* = cast(generic_c_call) dlsym(lib, m.name.data);
+                if !ppfn.* {
+                    log_error("Failed to resolve function '%' in '%': %", m.name, soname, to_string(dlerror()));
+                    continue;
+                }
+            }
+
+            log("xkbcommon: loaded %", soname);
+            return true;
         }
 
-        tis := cast(*Type_Info_Struct) type_info(T);
-        for m : tis.members {
-            if m.type.type != .PROCEDURE continue;
-            if m.flags & .CONSTANT continue;
-
-            pi := cast(*Type_Info_Procedure) m.type;
-            if !(pi.procedure_flags & .IS_C_CALL) continue;
-
-            dlerror();
-            ppfn := cast(*generic_c_call)((cast(*u8) procs) + m.offset_in_bytes);
-            ppfn.* = cast(generic_c_call) dlsym(lib, m.name.data);
-            if !ppfn.* {
-                log_error("Failed to resolve function '%': %", m.name, to_string(dlerror()));
-                return false;
-            }
-        }
-
-        return true;
+        return false;
     }
 
     if init_xcb_compat {
-        if !populate_procs(*intf.x11_compat, "libxkbcommon-x11.so") return false;
+        if !populate_procs(*intf.x11_compat, .["libxkbcommon-x11.so.0", "libxkbcommon-x11.so"]) return false;
         intf._x11_compat_meta.loaded = true;
     }
 
-    if !populate_procs(intf, "libxkbcommon.so") return false;
+    if !populate_procs(intf, .["libxkbcommon.so.0", "libxkbcommon.so"]) return false;
     intf._xkb_procs_meta.loaded = true;
 
     return true;

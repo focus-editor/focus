@@ -71,9 +71,9 @@ XCB_Window :: struct {
 }
 
 xcb_init_display :: (display: *Display) -> bool {
-    if !load_procs(*xcb,        "libxcb.so",        "xcb_",        *xcb_loaded)        return false;
-    if !load_procs(*xcb_xkb,    "libxcb-xkb.so",    "xcb_xkb_",    *xcb_xkb_loaded)    return false;
-    if !load_procs(*xcb_cursor, "libxcb-cursor.so", "xcb_cursor_", *xcb_cursor_loaded) return false;
+    if !load_procs(*xcb,        .["libxcb.so.1",        "libxcb.so"       ], "xcb_",        *xcb_loaded)        return false;
+    if !load_procs(*xcb_xkb,    .["libxcb-xkb.so.1",    "libxcb-xkb.so"   ], "xcb_xkb_",    *xcb_xkb_loaded)    return false;
+    if !load_procs(*xcb_cursor, .["libxcb-cursor.so.0", "libxcb-cursor.so"], "xcb_cursor_", *xcb_cursor_loaded) return false;
     if !xkbcommon_load(init_xcb_compat=true) return false;
 
     xd := XCB_Display.{ base = display.base };
@@ -117,7 +117,7 @@ xcb_init_display :: (display: *Display) -> bool {
     xd.max_request_length = xcb.get_maximum_request_length(xd.handle);
     log("XCB: max_request_length=%", xd.max_request_length);
 
-    if !(display.base.init_flags & .XCB_Force_Core_Events) && load_procs(*xcb_input, "libxcb-xinput.so", "xcb_input_", *xcb_xinput_loaded) {
+    if !(display.base.init_flags & .XCB_Force_Core_Events) && load_procs(*xcb_input, .["libxcb-xinput.so.0", "libxcb-xinput.so"], "xcb_input_", *xcb_xinput_loaded) {
         xi_ext := xcb.get_extension_data(xd.handle, xcb_input.id);
         if !xi_ext || (xi_ext && !xi_ext.present) {
             log_error("XCB: XInput extenstion not available");
@@ -783,41 +783,46 @@ xcb_xinput_loaded := false;
 xcb_xkb_loaded := false;
 xcb_cursor_loaded := false;
 
-load_procs :: (procs: *$T, libname: string, prefix: $string, loaded: *bool) -> success := false {
+load_procs :: (procs: *$T, libnames: []string, prefix: $string, loaded: *bool) -> success := false {
     if loaded.* return true;
 
-    dlerror();
-    lib := dlopen(temp_c_string(libname), RTLD_NOW);
-    if !lib {
-        log_error("Failed to load %: %", libname, to_string(dlerror()));
-        return false;
-    }
-
-    tis := cast(*Type_Info_Struct) type_info(T);
-    for m : tis.members {
+    loaded.* = false;
+    for libname : libnames {
         dlerror();
-        name := tprint("%1%2\0", prefix, m.name);
-        if m.type.type == .PROCEDURE {
-            if m.flags & .CONSTANT continue;
-
-            pi := cast(*Type_Info_Procedure) m.type;
-            if !(pi.procedure_flags & .IS_C_CALL) continue;
-
-            ppfn := cast(*generic_c_call)((cast(*u8) procs) + m.offset_in_bytes);
-            ppfn.* = cast(generic_c_call) dlsym(lib, name.data);
-            if !ppfn.* {
-                log_error("Failed to resolve function '%': %", name, to_string(dlerror()));
-                return false;
-            }
-        } else if m.type.type == .POINTER {
-            ppv := cast(**void)((cast(*u8) procs) + m.offset_in_bytes);
-            ppv.* = dlsym(lib, name.data);
+        lib := dlopen(temp_c_string(libname), RTLD_NOW);
+        if !lib {
+            log_error("Failed to load %: %", libname, to_string(dlerror()));
+            continue;
         }
+
+        tis := cast(*Type_Info_Struct) type_info(T);
+        for m : tis.members {
+            dlerror();
+            name := tprint("%1%2\0", prefix, m.name);
+            if m.type.type == .PROCEDURE {
+                if m.flags & .CONSTANT continue;
+
+                pi := cast(*Type_Info_Procedure) m.type;
+                if !(pi.procedure_flags & .IS_C_CALL) continue;
+
+                ppfn := cast(*generic_c_call)((cast(*u8) procs) + m.offset_in_bytes);
+                ppfn.* = cast(generic_c_call) dlsym(lib, name.data);
+                if !ppfn.* {
+                    log_error("Failed to resolve function '%' in '%': %", name, libname, to_string(dlerror()));
+                    continue libname;
+                }
+            } else if m.type.type == .POINTER {
+                ppv := cast(**void)((cast(*u8) procs) + m.offset_in_bytes);
+                ppv.* = dlsym(lib, name.data);
+            }
+        }
+
+        log("XCB: loaded %", libname);
+        loaded.* = true;
+        return true;
     }
 
-    loaded.* = true;
-
-    return true;
+    return false;
 }
 
 reinit_xkb_state :: (xd: *XCB_Display) -> bool {

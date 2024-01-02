@@ -1504,36 +1504,40 @@ X11_Lib :: struct #type_info_no_size_complaint {
 xlib_load :: (intf: *X11_Lib, init_xcb_compat := false) -> success := false {
     generic_c_call :: #type () #c_call;
 
-    populate_procs :: inline (procs: *$T, $soname: string) -> bool {
-        dlerror();
-        lib := dlopen(soname, RTLD_NOW);
-        if !lib {
-            log_error("Failed to load %: %", soname, to_string(dlerror()));
-            return false;
-        }
-
-        tis := cast(*Type_Info_Struct) type_info(T);
-        for m : tis.members {
-            if m.type.type != .PROCEDURE continue;
-            if m.flags & .CONSTANT continue;
-
-            pi := cast(*Type_Info_Procedure) m.type;
-            if !(pi.procedure_flags & .IS_C_CALL) continue;
-
+    populate_procs :: inline (procs: *$T, sonames: []string) -> bool {
+        for soname : sonames {
             dlerror();
-            ppfn := cast(*generic_c_call)((cast(*u8) procs) + m.offset_in_bytes);
-            ppfn.* = cast(generic_c_call) dlsym(lib, m.name.data);
-            if !ppfn.* {
-                log("Failed to resolve function '%': %", m.name, to_string(dlerror()));
-                return false;
+            lib := dlopen(temp_c_string(soname), RTLD_NOW);
+            if !lib {
+                log_error("Failed to load %: %", soname, to_string(dlerror()));
+                continue;
             }
-        }
 
-        return true;
+            tis := cast(*Type_Info_Struct) type_info(T);
+            for m : tis.members {
+                if m.type.type != .PROCEDURE continue;
+                if m.flags & .CONSTANT continue;
+
+                pi := cast(*Type_Info_Procedure) m.type;
+                if !(pi.procedure_flags & .IS_C_CALL) continue;
+
+                dlerror();
+                ppfn := cast(*generic_c_call)((cast(*u8) procs) + m.offset_in_bytes);
+                ppfn.* = cast(generic_c_call) dlsym(lib, m.name.data);
+                if !ppfn.* {
+                    log("Failed to resolve function '%' in '%': %", m.name, soname, to_string(dlerror()));
+                    continue soname;
+                }
+            }
+
+            log("X11: loaded %", soname);
+            return true;
+        }
+        return false;
     }
 
-    if !populate_procs(*intf._procs, "libX11.so") return false;
-    if init_xcb_compat && !populate_procs(*intf._xcb_compat, "libX11-xcb.so") return false;
+    if !populate_procs(*intf._procs, .["libX11.so.6", "libX11.so"]) return false;
+    if init_xcb_compat && !populate_procs(*intf._xcb_compat, .["libX11-xcb.so.1", "libX11-xcb.so"]) return false;
 
     return true;
 }

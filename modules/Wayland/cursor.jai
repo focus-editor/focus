@@ -27,7 +27,7 @@ using wayland_cursor_procs: Wayland_Cursor_Procs;
 
 #scope_module
 
-Wayland_Cursor_Procs :: struct @lib(libwayland-cursor.so) {
+Wayland_Cursor_Procs :: struct {
     wl_cursor_theme_load : (name: *u8, size: s32, shm: *wl_shm) -> *wl_cursor_theme #c_call;
     wl_cursor_theme_destroy : (theme: *wl_cursor_theme) -> void #c_call;
     wl_cursor_theme_get_cursor : (theme: *wl_cursor_theme, name: *u8) -> *wl_cursor #c_call;

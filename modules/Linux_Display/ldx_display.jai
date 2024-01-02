@@ -373,7 +373,7 @@ x11_create_window :: (display: *Display, window: *Window, width: int, height: in
         X11.XNInputStyle, X11.XIMPreeditNothing | X11.XIMStatusNothing,
         null);
 
-    if x11_win.ic {
+    if !x11_win.ic {
         log_error("Could not create X11 input context\n");
     }
 
