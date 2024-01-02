@@ -388,7 +388,7 @@ maybe_execute_a_build_command :: (event: Input.Event) -> handled: bool {
         }
     } else if config.settings.save_current_buffer_on_build {
         editor, buffer := get_active_editor_and_buffer();
-        if editor save_buffer(buffer, editor.buffer_id);
+        if editor && buffer.has_file save_buffer(buffer, editor.buffer_id);
     }
 
     command := ifx command_id > 0 then *config.build.commands[command_id-1] else *config.build.defaults;
