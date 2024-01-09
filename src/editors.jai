@@ -798,7 +798,7 @@ close_other_editor :: () {
                 }
                 editor_closing = true;
             } else {
-                editors.layout = .Single;  // snap
+                finish_closing_editor();
             }
     }
 }
