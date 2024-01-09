@@ -1020,7 +1020,7 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
             count = needle.count;
         }
 
-        assert(count > 0);
+        if !regex_search assert(count > 0);
 
         if regex_search || !whole_word || (whole_word && match_whole_word(buffer_str, offset, count)) {
             result := array_add(*results);
