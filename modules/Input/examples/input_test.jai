@@ -110,7 +110,7 @@ start_frame :: () {
             break;
         }
 
-        now := get_time();
+        now := seconds_since_init();
         if last_time dt = cast(float) (now - last_time);
         last_time = now;
         

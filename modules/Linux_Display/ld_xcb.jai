@@ -638,12 +638,12 @@ xcb_clipboard_get_text :: (display: *Display) -> string {
     }
 
     xd.cliboard_blocking_tranfser_ongoing = true;
-    start_time := get_time();
-    now := get_time();
+    start_time := seconds_since_init();
+    now := seconds_since_init();
     while (now - start_time) < 5.0 && xd.cliboard_blocking_tranfser_ongoing {
         if !xd.pending_event  xd.pending_event = xcb.wait_for_event(xd.handle);
         xcb_update_window_events(display);
-        now = get_time();
+        now = seconds_since_init();
     }
 
     return copy_string(xd.clipboard_incoming_data);

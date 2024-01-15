@@ -78,7 +78,7 @@ DONE;
 
     flags : LD.Init_Flags = 0;
     cstr = getenv("FOCUS_LD_FLAGS");
-    flags_s := ifx cstr then to_lower_copy(to_string(cstr)) else "";
+    flags_s := ifx cstr then to_lower_copy_new(to_string(cstr),, allocator = temp) else "";
     flags_a := split(flags_s, ",");
     for flag : flags_a {
         if flag == {

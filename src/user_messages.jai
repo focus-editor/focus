@@ -16,7 +16,7 @@ add_user_message :: (message: string, args: .. Any, level: User_Message.Level, d
         message            = sprint(message, ..args),
         level              = level,
         tag                = tag,
-        time               = cast(Time) get_time(),
+        time               = cast(Time) seconds_since_init(),
         dismiss_in_seconds = cast(Time) dismiss_in_seconds,
     });
 } @PrintLike
