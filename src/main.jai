@@ -129,8 +129,8 @@ main :: () {
 
         Input.update_window_events();
 
-        if frame_time > MAX_TIME_BEFORE_RESETTING then { init_time(); frame_time = cast(Time) get_time(); }
-        current_time := cast(Time) get_time();
+        if frame_time > MAX_TIME_BEFORE_RESETTING then { init_time(); frame_time = cast(Time) seconds_since_init(); }
+        current_time := cast(Time) seconds_since_init();
         frame_dt   = min(current_time - frame_time, MAX_FRAME_DT);
         frame_time = current_time;
 
@@ -296,7 +296,7 @@ main :: () {
 
         // #if DEBUG FrameMark();
 
-        if cast(Time) get_time() - frame_time <= QUICK_FRAME_DT {
+        if cast(Time) seconds_since_init() - frame_time <= QUICK_FRAME_DT {
             // It should be ok to sleep a bit after a quick frame to avoid pegging the core.
             sleep_milliseconds(2);
         }
