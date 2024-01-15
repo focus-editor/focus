@@ -953,90 +953,92 @@ search_bar_open_selected_result :: (editor: Editor, buffer: Buffer, placement: E
 search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := false) {
     reset_search_results(*search_bar);
 
-    using search_bar;
-    needle := cast(string) input.text;
+    needle := cast(string) search_bar.input.text;
     if !needle return;
 
-    regex: re.Regexp;
-    defer  if regex_search && regex_is_valid re.uninit(*regex);
+    assert(buffer.bytes.count < S32_MAX && needle.count < S32_MAX);
 
-    if regex_search {
-        re_text := ifx whole_word then sprint("\\w%\\w", needle) else copy_string(needle);
-        defer free(re_text);
-
-        flags := BASE_REGEX_FLAGS;
-        if !case_sensitive flags |= .FoldCase;
-
-        regex, regex_is_valid = re.compile(re_text, flags);
-        if !regex_is_valid return;
+    if search_bar.regex_search {
+        find_all_using_regex(*search_bar, needle, buffer);
+    } else {
+        find_all(*search_bar, needle, buffer);
     }
+
+    if search_bar.selected_result < 0 && search_bar.results.count > 0 then search_bar.selected_result = search_bar.results.count - 1;  // all results are before cursor, select the closest one
+    if search_bar.selected_result >= 0 && jump then jump_to_search_result(editor, buffer);
+}
+
+#scope_file
+
+find_all_using_regex :: (using search_bar: *Search_Bar, needle: string, buffer: Buffer) {
+    re_text := ifx whole_word then tprint("\\w%\\w", needle) else needle;
+    flags := BASE_REGEX_FLAGS;
+    if !case_sensitive then flags |= .FoldCase;
+
+    regex: re.Regexp;
+    regex, regex_is_valid = re.compile(re_text, flags);
+    if !regex_is_valid return;
+    defer re.uninit(*regex);
 
     buffer_str := cast(string) buffer.bytes;
 
-    assert(buffer_str.count < S32_MAX && needle.count < S32_MAX);
-    skip_table := bmh_prepare_skip_table(needle, case_sensitive);
-    offset := 0;
-    count := 0;
-    i := 0;
-    buffer_advance := 0;
-    captures: [] string;
     while true {
-        if !buffer_str break;
+        if buffer_str.count <= 0 break;
 
-        if regex_search {
-            // `re.match()` does not take a start index so we need to constantly advance
-            // `buffer_str` and keep track of our 'real' position in the original buffer
-            matched: bool;
-            matched, captures = re.match(buffer_str, regex);
-            if !matched break;
-            defer free(captures.data);
+        matched, captures := re.match(buffer_str, regex);
+        if !matched break;
+        defer free(captures.data);  // TODO: when we migrate to the new beta, use `re.match(buffer_str, regex,, allocator = temp)`
 
-            c := captures[0];
-            local_offset := c.data - buffer_str.data;
-            offset = buffer_advance + local_offset;
-            count  = c.count;
-            buffer_advance = offset + count;
+        c := captures[0];
+        offset := c.data - buffer.bytes.data;
+        count  := c.count;
+        if offset < 0 || offset >= buffer.bytes.count break;
 
-            advance(*buffer_str, local_offset + count);
+        advance_amount := c.data - buffer_str.data + count;
+        if advance_amount > 0 then advance(*buffer_str, advance_amount);
 
-            empty_capture := (c.count == 0);
-            nl_next := starts_with(buffer_str, #char "\n");
+        if count == 0 then advance_to_next_line(*buffer_str);  // some matches could be of 0 length, which is valid, skip to the next line in this case, because otherwise we could have to look at every byte and that takes too long
 
-            if empty_capture || nl_next {
-                advance(*buffer_str, 1);
-                buffer_advance += 1;
-            }
+        // Valid result, add it to the list
+        if selected_result < 0 && offset >= search_point_offset then selected_result = results.count;
 
-            valid_result := (!empty_capture || (empty_capture && nl_next));
-            if !valid_result continue;
+        result := array_add(*results);
+        result.offset = offset;
+        result.count  = count;
+        result.line   = offset_to_real_line(buffer, offset);
+
+        if results.count >= 5000 break;
+    }
+}
+
+find_all :: (using search_bar: *Search_Bar, needle: string, buffer: Buffer) {
+    buffer_str := cast(string) buffer.bytes;
+
+    offset := 0;
+    skip_table := bmh_prepare_skip_table(needle, case_sensitive);
+
+    while true {
+        if case_sensitive {
+            offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = true);
         } else {
-            if case_sensitive {
-                offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = true);
-            } else {
-                offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = false);
-            }
-            if offset < 0 break;
-
-            count = needle.count;
+            offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = false);
         }
+        if offset < 0 break;
+        if whole_word && !match_whole_word(buffer_str, offset, needle.count) { offset += needle.count; continue; }
 
-        if !regex_search assert(count > 0);
+        // Valid result, add it to the list
+        if selected_result < 0 && offset >= search_point_offset then selected_result = results.count;
 
-        if regex_search || !whole_word || (whole_word && match_whole_word(buffer_str, offset, count)) {
-            result := array_add(*results);
-            result.offset = offset;
-            result.count  = count;
-            result.line   = offset_to_real_line(buffer, offset);
-            if selected_result < 0 && result.offset >= search_point_offset then selected_result = i;
-            i += 1;
-        }
+        result := array_add(*results);
+        result.offset = offset;
+        result.count  = needle.count;
+        result.line   = offset_to_real_line(buffer, offset);
 
         offset += needle.count;
     }
-
-    if selected_result < 0 && i > 0 then selected_result = i - 1;  // all results are before cursor, select the closest one
-    if selected_result >= 0 && jump then jump_to_search_result(editor, buffer);
 }
+
+#scope_export
 
 jump_to_search_result :: (using editor: *Editor, buffer: Buffer, move_search_point := false) {
     using search_bar;

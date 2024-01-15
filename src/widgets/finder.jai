@@ -231,6 +231,10 @@ start_new_search :: (force := false) {
         return;
     }
     if request.needle == cast(string) input.text && !force return;  // needle hasn't changed, no need to repeat
+
+    request.case_sensitive = case_sensitive;
+    request.whole_word     = whole_word;
+    request.regex_search   = regex_search;
     if regex_search {
         regex: re.Regexp;
 
@@ -242,10 +246,6 @@ start_new_search :: (force := false) {
 
         re.uninit(*regex);
     }
-
-    request.case_sensitive = case_sensitive;
-    request.whole_word     = whole_word;
-    request.regex_search   = regex_search;
 
     reset_search_request(*request, new_needle = cast(string) input.text);
     request.in_progress = true;
@@ -280,19 +280,14 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
     using task := cast(*Search_Task) work;
 
     regex: re.Regexp;
-    regex_is_valid: bool;
-    defer if regex_search && regex_is_valid re.uninit(*regex);
-
     if regex_search {
-        re_text := ifx whole_word then sprint("\\w%\\w", needle) else copy_string(needle);
-        defer free(re_text);
-
+        // Compile the regex for each threadproc for thread safety
+        re_text := ifx whole_word then tprint("\\w%\\w", needle) else needle;
         flags := BASE_REGEX_FLAGS;
-        if !case_sensitive flags |= .FoldCase;
-
-        regex, regex_is_valid = re.compile(re_text, flags);
-        assert(regex_is_valid, "Failed to compile regex: '%'", re_text);
+        if !case_sensitive then flags |= .FoldCase;
+        regex = re.compile(re_text, flags);  // NOTE: the validity of this regex has been determined by previous code
     }
+    defer if regex_search then re.uninit(*regex);
 
     for buffer_id : buffer_start_index .. buffer_end_index {
         // Search in buffer
@@ -303,78 +298,85 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
         lock(*buffer.content_lock);
         defer unlock(*buffer.content_lock);
 
-        contents := cast(string) buffer.bytes;
-
         // Sort key parts
         dir_id_part:    u64 = (cast,trunc(u64) (buffer.file.project_dir_id + 1)) << 56;
         buffer_id_part: u64 = (cast,trunc(u64) buffer_id)                        << 32;
         if buffer.modified || buffer.modified_on_disk then dir_id_part = 0;  // make sure modified buffers are on top
+        buffer_sort_key: u64 = dir_id_part | buffer_id_part;
 
-        offset := 0;
-        count := 0;
-        contents_advance := 0;
-        captures: [] string;
-        while true {
-            if !contents break;
+        buffer_str := cast(string) buffer.bytes;
 
-            if regex_search {
-                // `re.match()` does not take a start index so we need to constantly advance
-                // `contents` and keep track of our 'real' position in the original buffer
-                matched: bool;
-                matched, captures = re.match(contents, regex);
-                if !matched break;
-                defer free(captures.data);
-
-                c := captures[0];
-                local_offset := c.data - contents.data;
-                offset = contents_advance + local_offset;
-                count  = c.count;
-                contents_advance = offset + count;
-
-                advance(*contents, local_offset + count);
-
-                empty_capture := (c.count == 0);
-                nl_next := starts_with(contents, #char "\n");
-
-                if empty_capture || nl_next {
-                    advance(*contents, 1);
-                    contents_advance += 1;
-                }
-
-                valid_result := !empty_capture || (empty_capture && nl_next);
-                if !valid_result continue;
-            } else {
-                if case_sensitive {
-                    offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table, case_sensitive = true);
-                } else {
-                    offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table, case_sensitive = false);
-                }
-                if offset < 0 break;
-
-                count = needle.count;
-            }
-
-            if !regex_search assert(count > 0);
-
-            if regex_search || !whole_word || (whole_word && match_whole_word(contents, offset, count)) {
-                result := *results[num_results];
-                result.buffer_id    = buffer_id;
-                result.match_offset = xx offset;
-                result.match_count  = xx count;
-
-                offset_part: u64 = (cast,trunc(u64) offset) << 0;
-                result.sort_key = dir_id_part | buffer_id_part | offset_part;
-
-                num_results += 1;
-                if num_results >= MAX_RESULTS_PER_WORKER break buffer_id;
-
-            }
-
-            offset += count;
+        if regex_search {
+            find_all_using_regex(task, regex, buffer, buffer_id, buffer_sort_key);
+        } else {
+            find_all(task, buffer, buffer_id, buffer_sort_key);
         }
+
+        if num_results >= MAX_RESULTS_PER_WORKER break;
     }
 
     return .CONTINUE;  // we want to reuse this thread for future searches
+}
+
+find_all_using_regex :: (using task: *Search_Task, regex: re.Regexp, buffer: Buffer, buffer_id: s32, buffer_sort_key: u64) {
+    buffer_str := cast(string) buffer.bytes;
+
+    while true {
+        if buffer_str.count <= 0 break;
+
+        matched, captures := re.match(buffer_str, regex);
+        if !matched break;
+        defer free(captures.data);  // TODO: when we migrate to the new beta, use `re.match(buffer_str, regex,, allocator = temp)`
+
+        c := captures[0];
+        offset := c.data - buffer.bytes.data;
+        count  := c.count;
+        if offset < 0 || offset >= buffer.bytes.count break;
+
+        advance_amount := c.data - buffer_str.data + count;
+        if advance_amount > 0 then advance(*buffer_str, advance_amount);
+
+        if count == 0 then advance_to_next_line(*buffer_str);  // some matches could be of 0 length, which is valid, skip to the next line in this case, because otherwise we could have to look at every byte and that takes too long
+
+        // Valid result, add to the list
+        result := *results[num_results];
+        result.buffer_id    = buffer_id;
+        result.match_offset = xx offset;
+        result.match_count  = xx count;
+
+        offset_part: u64 = (cast,trunc(u64) offset) << 0;
+        result.sort_key = buffer_sort_key | offset_part;
+
+        num_results += 1;
+        if num_results >= MAX_RESULTS_PER_WORKER break;
+    }
+}
+
+find_all :: (using task: *Search_Task, buffer: Buffer, buffer_id: s32, buffer_sort_key: u64) {
+    buffer_str := cast(string) buffer.bytes;
+    offset := 0;
+
+    while true {
+        if case_sensitive {
+            offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = true);
+        } else {
+            offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = false);
+        }
+        if offset < 0 break;
+
+        result := *results[num_results];
+        result.buffer_id    = buffer_id;
+        result.match_offset = xx offset;
+        result.match_count  = xx needle.count;
+
+        offset_part: u64 = (cast,trunc(u64) offset) << 0;
+        result.sort_key = buffer_sort_key | offset_part;
+
+        num_results += 1;
+        if num_results >= MAX_RESULTS_PER_WORKER break;
+
+        offset += needle.count;
+    }
 }
 
 reset_search_request :: (using request: *Search_Request, new_needle: string) {

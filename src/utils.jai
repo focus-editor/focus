@@ -109,6 +109,15 @@ slice_chars :: (str: string, pos1: s32, pos2: s32) -> string {
     return slice(str, offset1, offset2 - offset1);
 }
 
+advance_to_next_line :: inline (s: *string) {
+    while s.* {
+        saw_newline := s.*[0] == #char "\n";
+        s.count -= 1;
+        s.data  += 1;
+        if saw_newline break;  // only break after the newline, not before
+    }
+}
+
 // @Speed: this is even slower than the standard find_index_from_left
 // NOTE: this function assumes that the substring contains only word chars,
 // otherwise it doesn't make sense to call it
