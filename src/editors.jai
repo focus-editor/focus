@@ -997,7 +997,7 @@ find_all_using_regex :: (using search_bar: *Search_Bar, needle: string, buffer: 
         advance_amount := c.data - buffer_str.data + count;
         if advance_amount > 0 then advance(*buffer_str, advance_amount);
 
-        if count == 0 then advance_to_next_line(*buffer_str);  // some matches could be of 0 length, which is valid, skip to the next line in this case, because otherwise we could have to look at every byte and that takes too long
+        if count == 0 || starts_with(buffer_str, #char "\n") then advance_to_next_line(*buffer_str);  // some matches could be of 0 length, which is valid, skip to the next line in this case, because otherwise we could have to look at every byte and that takes too long
 
         // Valid result, add it to the list
         if selected_result < 0 && offset >= search_point_offset then selected_result = results.count;
