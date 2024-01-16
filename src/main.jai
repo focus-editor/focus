@@ -119,8 +119,8 @@ main :: () {
     window_resized   := false;
 
     shift_key: struct {
-        last_press:   Time = -1;
-        last_release: Time = -1;
+        last_press:   Apollo_Time = #run to_apollo(-1);
+        last_release: Apollo_Time = #run to_apollo(-1);
         press_count := 0;
     };
 
@@ -129,9 +129,8 @@ main :: () {
 
         Input.update_window_events();
 
-        if frame_time > MAX_TIME_BEFORE_RESETTING then { init_time(); frame_time = cast(Time) seconds_since_init(); }
-        current_time := cast(Time) seconds_since_init();
-        frame_dt   = min(current_time - frame_time, MAX_FRAME_DT);
+        current_time := current_time_monotonic();
+        frame_dt   = cast(Time) min(to_float64_seconds(current_time - frame_time), MAX_FRAME_DT);
         frame_time = current_time;
 
         old_line_height = line_height;
@@ -197,7 +196,7 @@ main :: () {
                         using shift_key;
                         if !event.key_pressed then last_release = frame_time;
                         if event.key_pressed && only_shift_pressed(event.modifier_flags) {
-                            if last_press < last_release && press_count > 0 && frame_time - last_press < 0.2 {
+                            if last_press < last_release && press_count > 0 && to_float64_seconds(frame_time - last_press) < 0.2 {
                                 if finder_is_open() then finder_close();
                                 else finder_open_from_editor();
                                 press_count = 0;
@@ -296,7 +295,7 @@ main :: () {
 
         // #if DEBUG FrameMark();
 
-        if cast(Time) seconds_since_init() - frame_time <= QUICK_FRAME_DT {
+        if cast(Time) to_float64_seconds(current_time_monotonic() - frame_time) <= QUICK_FRAME_DT {
             // It should be ok to sleep a bit after a quick frame to avoid pegging the core.
             sleep_milliseconds(2);
         }
@@ -488,8 +487,8 @@ update_mouse_state :: () {
         button.just_released = key_state(key) & .END   != 0;
 
         if button.just_pressed {
-            time_from_last_click := frame_time - button.last_down_time;
-            time_from_last_double_click := frame_time - button.last_double_click_time;
+            time_from_last_click := to_float64_seconds(frame_time - button.last_down_time);
+            time_from_last_double_click := to_float64_seconds(frame_time - button.last_double_click_time);
             distance_from_last_click := mouse.pointer - button.last_down_pos;
             max_distance := max(abs(distance_from_last_click.x), abs(distance_from_last_click.y));
             button.last_down_pos  = mouse.pointer;
@@ -637,11 +636,11 @@ force_quit              := false;
 should_reload_workspace := false;
 automatic_workspace_reload := false;
 
-frame_time: Time;                 // ever-increasing time since start in seconds
+frame_time: Apollo_Time;          // ever-increasing time since start in seconds
 frame_dt:   Time = MAX_FRAME_DT;  // time delta since the last frame
 MAX_FRAME_DT:   Time : xx (1.0 / 60);
 QUICK_FRAME_DT: Time : xx (1.0 / 300);  // sorry 300Hz monitor users
-MAX_TIME_BEFORE_RESETTING: Time : xx (60 * 60 * 24 * 7);  // reset timer after a week to avoid losing timer precision
+// MAX_TIME_BEFORE_RESETTING: Time : xx (60 * 60 * 24 * 7);  // reset timer after a week to avoid losing timer precision
 
 EDIT_GROUP_TIMEOUT :: 0.3;  // for undo/redo
 
@@ -671,8 +670,8 @@ Mouse_Button_State :: struct {
     just_triple_clicked: bool;
 
     last_down_pos:  Vector2;
-    last_down_time: Time;
-    last_double_click_time: Time;
+    last_down_time: Apollo_Time;
+    last_double_click_time: Apollo_Time;
 }
 
 WHEEL_SENSITIVITY :: 1.0;

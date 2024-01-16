@@ -627,7 +627,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         selection_mode.type = .chars;
         selection_mode.min_range.start = 0;
         selection_mode.min_range.end   = 0;
-        if editor.new_cursor_just_created_using_mouse && (frame_time - editor.last_cursor_created_using_mouse_at) >= cast(Time) (2 * DOUBLE_CLICK_SPEED) then editor.new_cursor_just_created_using_mouse = false;
+        if editor.new_cursor_just_created_using_mouse && to_float64_seconds(frame_time - editor.last_cursor_created_using_mouse_at) >= cast(Time) (2 * DOUBLE_CLICK_SPEED) then editor.new_cursor_just_created_using_mouse = false;
     }
 
     // Get the coordinates of all cursors
@@ -779,7 +779,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         if (editor_smooth_scroll.direction == .up || editor_smooth_scroll.direction == .down) && editor_id == editors.active {
             speed := 60 * line_height;  // pixels per second
             if editor_smooth_scroll.fast then speed *= 2;
-            time_elapsed := cast(float) (frame_time - editor_smooth_scroll.started_at);
+            time_elapsed := cast(float) to_float64_seconds(frame_time - editor_smooth_scroll.started_at);
             new_scroll_y := cast(float) editor_smooth_scroll.start_y;
             if editor_smooth_scroll.direction == {
                 case .up;    new_scroll_y -= time_elapsed * speed;
@@ -850,7 +850,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         if (editor_smooth_scroll.direction == .left || editor_smooth_scroll.direction == .right) && editor_id == editors.active {
             speed := 60 * char_x_advance;
             if editor_smooth_scroll.fast then speed *= 2;
-            time_elapsed := cast(float) (frame_time - editor_smooth_scroll.started_at);
+            time_elapsed := cast(float) to_float64_seconds(frame_time - editor_smooth_scroll.started_at);
             new_scroll_x := cast(float) editor_smooth_scroll.start_x;
             if editor_smooth_scroll.direction == {
                 case .left;  new_scroll_x -= time_elapsed * speed;
@@ -979,7 +979,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 anim.coords_range.start = offset_to_coords(editor, buffer, anim.range.start);
                 anim.coords_range.end   = offset_to_coords(editor, buffer, anim.range.end);
             }
-            t := (frame_time - anim.started_at) / Paste_Animation.SPEED;
+            t := to_float64_seconds(frame_time - anim.started_at) / Paste_Animation.SPEED;
             if t < 1 {
                 draw_range(anim.coords_range, editor, buffer, visible_lines_start, visible_lines_end, text_origin, Color.PASTE_ANIMATION, alpha = xx (1 - t));
             } else {
