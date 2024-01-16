@@ -495,8 +495,8 @@ Settings :: struct {
     build_panel_height_percent              := 50;
     build_panel_stays_in_one_place          := false;
     build_panel_line_wrap_always_on         := true;
-    
-    save_current_buffer_on_build            := true;
+
+    save_current_buffer_on_build            := false;
     save_all_file_backed_buffers_on_build   := false;
 
     // TODO

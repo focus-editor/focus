@@ -20,7 +20,7 @@
 # Main Git Branch
 
 + New features:
-    + ...
+    + New options: `save_current_buffer_on_build` and `save_all_file_backed_buffers_on_build`. Enable to auto-save files before running build commands (thanks @jlami)
 + Bug fixes:
     + Previewing themes will now change window border color as well as it should (thanks @jmpstar)
     + Regex search should no longer crash the editor on certain inputs
