@@ -342,6 +342,7 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .show_open_file_dialog_in_search_mode;             show_open_file_dialog(.search);                     return true;
         case .show_open_file_dialog_in_navigate_mode;           show_open_file_dialog(.navigate);                   return true;
         case .show_open_file_dialog_in_navigate_mode_from_root; show_open_file_dialog(.navigate, from_root = true); return true;
+        case .show_open_file_dialog_in_open_editors_mode;       show_open_file_dialog(.open_editors);               return true;
 
         case .show_commands;                                    show_commands_dialog();                             return true;
         case .toggle_fullscreen;                                editor_toggle_fullscreen();                         return true;
@@ -618,6 +619,7 @@ redraw_requested        := true;  // set to true to render the first frame
 should_quit             := false;
 force_quit              := false;
 should_reload_workspace := false;
+preserve_visible_editors_after_reload := false;
 
 frame_time: Time;                 // ever-increasing time since start in seconds
 frame_dt:   Time = MAX_FRAME_DT;  // time delta since the last frame
@@ -793,6 +795,7 @@ dont_ignore_next_window_resize := false;
 #load "langs/focus_config.jai";
 #load "langs/glsl.jai";
 #load "langs/golang.jai";
+#load "langs/lua.jai";
 #load "langs/odin.jai";
 #load "langs/python.jai";
 #load "langs/renpy.jai";

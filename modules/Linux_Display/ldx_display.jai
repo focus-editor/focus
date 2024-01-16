@@ -401,6 +401,30 @@ x11_set_icon_from_raw_data :: (window: *Window, data: *u8, width: u32, height: u
     hints.icon_pixmap = icon_pixmap;
     X11.XSetWMHints(dpy, w, hints);
     X11.XFree(hints);
+
+    {
+        /*
+         * Some components of certain desktop environments (such as the task manager widgets in
+         * XFCE panels) do not work with the icon set via `WM_HINTS`, they require `_NET_WM_ICON`
+         * to be set to display the correct icon.
+         */
+        push_allocator(temp);
+        cardinal_data : [..]u64;  // CARDINAL is defined as `long` even though it works with 32bit values...
+        array_resize(*cardinal_data, 2 + width * height, initialize=false);
+        cardinal_data[0] = width;
+        cardinal_data[1] = height;
+        pixels := cast(*u32)data;
+        for 0..width * height - 1 {
+            cardinal_data[2 + it] = pixels[it];
+        }
+
+        X11.XChangeProperty(
+            dpy, w,
+            win.display.global_atoms._NET_WM_ICON,
+            X11.XA_CARDINAL, 32,
+            X11.PropModeReplace,
+            xx cardinal_data.data, xx cardinal_data.count);
+    }
 }
 
 x11_set_cursor_from_theme :: (window: *Window, name: string) {
@@ -538,6 +562,7 @@ x11_set_window_title :: (window: *Window, title: string) {
         nitems = xx title.count,
     };
     X11.XSetWMName(w.display.handle, w.handle, *prop);
+    X11.XSetWMIconName(w.display.handle, w.handle, *prop);
 }
 
 x11_get_dpi_scaling_factor :: (window: *Window) -> float {

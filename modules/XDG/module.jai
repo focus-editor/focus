@@ -106,13 +106,13 @@ open :: (path: string, reveal_in_explorer := false) -> bool {
     //        children that doesn't depend on external help.
     run :: (arg: ..string) -> result: Process_Result, output: string {
         result: Process_Result;
-        process: Process;
-        if !create_process(*process, ..arg, capture_and_return_output = true) return result, "";
+        process := get_child_process_slot();
+        if !create_process(process, ..arg, capture_and_return_output = true) return result, "";
 
         result.type = .STILL_RUNNING;
         output: [512]u8;
         error: [512]u8;
-        success, out_bytes, err_bytes := read_from_process(*process, output, error);
+        success, out_bytes, err_bytes := read_from_process(process, output, error);
         if !success {
             result.type = .EXITED;
             result.exit_code = 126;
@@ -123,8 +123,8 @@ open :: (path: string, reveal_in_explorer := false) -> bool {
     }
 
     if !reveal_in_explorer {
-        process: Process;
-        return create_process(*process, "xdg-open", path);
+        process := get_child_process_slot();
+        return create_process(process, "xdg-open", path);
     }
 
     status, output := run("xdg-mime", "query", "default", "inode/directory");
@@ -141,12 +141,30 @@ open :: (path: string, reveal_in_explorer := false) -> bool {
     if file_name == {
         case "dolphin"; #through;
         case "nautilus"; {
-            process: Process;
-            return create_process(*process, exec, "--select", path);
+            process := get_child_process_slot();
+            return create_process(process, exec, "--select", path);
         }
     }
 
     return false;
+}
+
+reap_child_processes :: () {
+    empty := 0;
+    for * unreaped_children {
+        if !it.pid {
+            empty += 1;
+            continue;
+        }
+        if waitpid(it.pid, null, WNOHANG) == it.pid {
+            log("XDG: Reaped child process %", it.pid);
+            it.pid = 0;
+            empty += 1;
+        }
+    }
+    if unreaped_children.count && unreaped_children.count == empty {
+        array_reset_keeping_memory(*unreaped_children);
+    }
 }
 
 #scope_module
@@ -156,3 +174,20 @@ open :: (path: string, reveal_in_explorer := false) -> bool {
 #import "POSIX";
 #import "Process";
 #import "File";
+
+get_child_process_slot :: () -> *Process {
+    ret: *Process;
+    for * unreaped_children {
+        if !it.pid {
+            ret = it;
+            break;
+        }
+    }
+    if !ret {
+        ret = array_add(*unreaped_children);
+        ret.pid = 0;
+    }
+    return ret;
+}
+
+unreaped_children: [..] Process;

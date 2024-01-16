@@ -55,6 +55,7 @@ Color_Values :: struct {
     CODE_VALUE              := Color.{ r = 0.84, g = 0.60, b = 0.71, a = 1.0 };
     CODE_HIGHLIGHT          := Color.{ r = 0.85, g = 0.61, b = 0.46, a = 1.0 };
     CODE_ERROR              := Color.{ r = 1.00, g = 0.00, b = 0.00, a = 1.0 };
+    CODE_WARNING            := Color.{ r = 0.835, g = 0.74, b = 0.494, a = 1.0 };
     CODE_KEYWORD            := Color.{ r = 0.902, g = 0.493, b = 0.457, a = 1.0 };
 
     REGION_SCOPE_EXPORT     := Color.{ r = 0.086, g = 0.133, b = 0.165 };
@@ -85,6 +86,7 @@ Code_Color :: enum u8 {
     PUNCTUATION;
     STRING;
     ERROR;
+    WARNING;
     OPERATION;
 
     NUM_COLORS;
@@ -106,6 +108,7 @@ refresh_code_color_map :: () -> [Code_Color.NUM_COLORS] Vector4 {
     result[VALUE]           = Colors.CODE_VALUE;
     result[VALUE_KEYWORD]   = Colors.CODE_VALUE;
     result[ERROR]           = Colors.CODE_ERROR;
+    result[WARNING]         = Colors.CODE_WARNING;
     result[KEYWORD]         = Colors.CODE_KEYWORD;
     result[OPERATION]       = Colors.CODE_OPERATION;
 

@@ -1,6 +1,5 @@
 # ROUGH ROADMAP
 
-- A simple build system to launch commands from the editor
 - Config migration system to support changes to the config file across versions
 - Open file dialog improvements (better search)
 - Workspace search improvements (the ability to filter additionally by filename)
@@ -50,6 +49,7 @@
         + HTML/XML (thanks @arjenwitteveen)
         + Odin (thanks @SentientCoffee)
         + Yang (thanks @jmpstar)
+        + Lua (thanks @SentientCoffee)
     + Numpad keys can now be used in key mappings.
       The editor now recognizes the following new key names:
         Numpad0 - Numpad9
@@ -65,6 +65,8 @@
             + `build_panel_width_percent`, `build_panel_height_percent` - how much space the build panel occupies. Both default to 50%.
             + `build_panel_stays_in_one_place`. Defaults to `false`. If disabled, then the panel will flip to the other side of the active pane.
         + (more details will be added later)
+    + New code color: `code_warning`. Used to highlight things such as duplicate key binding etc.
+    + New dialog: Switch Between Open Files (defaults to Ctrl-Tab)
 
 + Bug fixes:
     + Mac: Fixed intermittent crashing on launch
@@ -84,6 +86,7 @@
     + Directories created within the project shouldn't get themselves any buffers any more
     + Newer user messages will stop dismissing older ones which have a longer lifetime
     + Fixed a crash when trying to rewind editor history after reloading workspace
+    + Fixed a crash when searching with whole word match on
 
 + Other changes:
     + When the workspace is done scanning, the open file dialog input will no longer be cleared
@@ -93,6 +96,7 @@
     + Improved CPU usage when selecting text by mouse
     + Tab characters are now only shown when they are within selection
     + Windows: better handling of Unicode input (thanks @ostef)
+    + Fuzzy match improvements in dialogs
 
 
 

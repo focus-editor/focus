@@ -354,6 +354,8 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
                 count = needle.count;
             }
 
+            assert(count > 0);
+
             if regex_search || !whole_word || (whole_word && match_whole_word(contents, offset, count)) {
                 result := *results[num_results];
                 result.buffer_id    = buffer_id;

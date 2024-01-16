@@ -1020,6 +1020,8 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
             count = needle.count;
         }
 
+        assert(count > 0);
+
         if regex_search || !whole_word || (whole_word && match_whole_word(buffer_str, offset, count)) {
             result := array_add(*results);
             result.offset = offset;
@@ -1093,6 +1095,7 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
             case "cs";             buffer.lang = .CSharp;
             case "focus-config";   buffer.lang = .Focus_Config;
             case "go";             buffer.lang = .Golang;
+            case "lua";            buffer.lang = .Lua;
             case "odin";           buffer.lang = .Odin;
             case "py";             buffer.lang = .Python;
             case "rpy";            buffer.lang = .RenPy;
@@ -2250,6 +2253,8 @@ get_line_starts_for_lines_with_cursors_tmp :: (editor: *Editor, buffer: *Buffer)
         selection := get_selection(cursor);
         start_line := offset_to_real_line(buffer, selection.start);
         end_line   := ifx selection.start != selection.end then offset_to_real_line(buffer, selection.end) else start_line;
+        selection_end_col := offset_to_real_coords(buffer, selection.end).col;
+        if selection_end_col == 0 then end_line = max(start_line, end_line - 1);  // don't include the last line if the cursor is at the very beginning of it
         for start_line..end_line {
             line_start := get_real_line_start_offset(buffer, it);
             if last_added < line_start { array_add(*line_starts, line_start); last_added = line_start; }
@@ -2899,6 +2904,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
         case .Golang;       comment = "//";
         case .Glsl;         comment = "//";
         case .Jai;          comment = "//";
+        case .Lua;          comment = "--";
         case .Odin;         comment = "//";
         case .Focus_Config; comment = "#";
         case .Python;       comment = "#";
@@ -3069,6 +3075,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
         case .Glsl;         comment_start = "/*"; comment_end = "*/";
         case .Jai;          comment_start = "/*"; comment_end = "*/";
         case .Odin;         comment_start = "/*"; comment_end = "*/";
+        case .Lua;          comment_start = "--[["; comment_end = "]]";
         case .Html;         comment_start = "<!--"; comment_end = "-->";
         case .Xml;          comment_start = "<!--"; comment_end = "-->";
         case .Yang;         comment_start = "/*"; comment_end = "*/";

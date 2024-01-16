@@ -49,26 +49,6 @@ arrays_concat :: (array1: [] $T, array2: [] T) -> [] T {
     return result;
 }
 
-decode_utf8_string_to_temp_char_substrings :: (str: string) -> [] string {
-    substrings: [..] string;
-    substrings.allocator = temp;
-
-    if !str return substrings;
-
-    array_reserve(*substrings, str.count);
-
-    t := str.data;
-    while t < str.data + str.count {
-        substr: string = ---;
-        substr.data = t;
-        t = unicode_next_character(t);
-        substr.count = t - substr.data;
-        array_add(*substrings, substr);
-    }
-
-    return substrings;
-}
-
 maybe_free_and_clear :: (str: *string) {
     if !str.data || str.count == 0 return;
     free(<< str);
@@ -162,27 +142,94 @@ find_index_from_left_whole_word :: (s: string, substring: string, start_index :=
     return -1;
 }
 
-fuzzy_match :: (str: string, chars: [] string) -> score: s32, highlights: [] bool {
-    highlights := NewArray(str.count, bool, initialized = true);  // allocates from the pool
-                                                                  // we "leak" if there's no match but that should be ok
-    if !chars return 0, highlights;
+fuzzy_match :: (str: string, filter: Fuzzy_Filter) -> score: s32, highlights: [] bool {
+    highlights := NewArray(str.count, bool, initialized = true);
+    if !filter.chunks return 0, highlights;
 
     MAX_CHARS :: 200;
 
-    score: s32;
-    pos := 0;
+    // Try matching the full string first and rank it the highest
+    {
+        index := find_index_from_left_nocase(str, filter.full_string, 0);
+        if index >= 0 {
+            memset(highlights.data + index, cast(u8) true, filter.full_string.count);
+            score := 200 * (MAX_CHARS - index) - str.count;
+            return cast(s32) score, highlights;
+        }
+    }
 
-    for char : chars {
-        index := find_index_from_left_nocase(str, char, pos);
-        if index < 0 { score = -1; break; }
-        highlights[index] = true;
-        score += cast(s32) (MAX_CHARS - index);  // the closer to the beginning, the better
-        pos = index + char.count;
+    score := 0;
+
+    // Then try matching each chunk exactly and accept the match if at least one matches
+    chunk_matched_exactly := false;
+
+    for chunk : filter.chunks {
+        pos := 0;
+        chunk_score := 0;
+
+        // Try matching the full chunk first
+        index := find_index_from_left_nocase(str, chunk.str, 0);
+        if index >= 0 {
+            memset(highlights.data + index, cast(u8) true, chunk.str.count);
+            chunk_score += 100 * (MAX_CHARS - index) - str.count;
+            chunk_matched_exactly = true;
+        } else {
+            for char : chunk.chars {
+                index := find_index_from_left_nocase(str, char, pos);
+                if index < 0 { chunk_score = -1; break; }
+                highlights[index] = true;
+                chunk_score += 10 * (MAX_CHARS - index);  // the closer to the beginning, the better
+                pos = index + char.count;
+            }
+        }
+
+        if chunk_score >= 0 {
+            score += chunk_score;
+        } else if chunk_matched_exactly {
+            break;
+        }
     }
 
     if score < 0 then memset(highlights.data, 0, highlights.count);  // no match -> no highlighting
 
-    return score, highlights;
+    score -= str.count;  // prefer shorter matches if everything else is equal
+
+    return cast(s32) score, highlights;
+}
+
+construct_fuzzy_filter :: (filter_str: string, treat_slashes_as_spaces := false) -> Fuzzy_Filter {
+    str := copy_temporary_string(trim(filter_str));
+    if !str return .{};
+
+    chunks: [..] Fuzzy_Filter.Chunk;
+    chunks.allocator = temp;
+
+    // Split into strings separated by spaces or slashes
+    space := cast(u8) #char " ";
+    if treat_slashes_as_spaces then replace_chars(str, "\\/", space);
+    strings := split(str, space);
+
+    for s : strings {
+        if !s continue;
+
+        // Split the strings into individual chars
+        chars: [..] string;
+        chars.allocator = temp;
+        array_reserve(*chars, strings.count);
+
+        t := s.data;
+        while t < s.data + s.count {
+            substr: string = ---;
+            substr.data = t;
+            t = unicode_next_character(t);
+            substr.count = t - substr.data;
+            array_add(*chars, substr);
+        }
+
+        array_add(*chunks, Fuzzy_Filter.Chunk.{ str = s, chars = chars });
+    }
+
+    return Fuzzy_Filter.{ full_string = str, chunks = chunks };
 }
 
 bmh_prepare_skip_table :: (needle: string, case_sensitive: bool) -> [256] s32 {
@@ -241,17 +288,10 @@ find_index_from_right_nocase :: (s: string, substring: string, start_index := 0)
 }
 
 match_whole_word :: (s: string, offset: int, count: int) -> bool {
-    before := <<cast(*u8) (s.data + offset - 1);
-    after  := <<cast(*u8) (s.data + offset + count);
-    first  := <<cast(*u8) (s.data + offset);
-    last   := <<cast(*u8) (s.data + offset + count - 1);
+    word_ends_on_the_left  := offset <= 0               || !is_word_char(s[offset - 1])     || !is_word_char(s[offset]);
+    word_ends_on_the_right := offset + count >= s.count || !is_word_char(s[offset + count]) || !is_word_char(s[offset + count - 1]);
 
-    b := (inline is_whitespace_char(before)) || (inline is_separator_char(before)) || offset - 1 < 0;
-    a := (inline is_whitespace_char(after))  || (inline is_separator_char(after))  || offset + count > s.count - 1;
-    f := (inline is_whitespace_char(first))  || (inline is_separator_char(first));
-    l := (inline is_whitespace_char(last))   || (inline is_separator_char(last));
-
-    return (f && l) || (f && !l && a) || (!f && l && b) || (!f && !l && b && a);
+    return word_ends_on_the_left && word_ends_on_the_right;
 }
 
 #add_context underscore_is_part_of_word := true;
@@ -480,4 +520,14 @@ Char_Type :: enum {
     non_word;
     space;
     other;
+}
+
+Fuzzy_Filter :: struct {
+    full_string: string;
+    chunks: [] Chunk;
+
+    Chunk :: struct {
+        str: string;
+        chars: [] string;
+    }
 }

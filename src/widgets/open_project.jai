@@ -49,9 +49,10 @@ open_selected_project :: () {
 
     entry := filtered[selected];
 
-    success := load_project_config(entry.name);
+    success := load_project_config(entry.name, force = true);
     if success {
         should_reload_workspace = true;
+        preserve_visible_editors_after_reload = false;
         if unsaved_buffers_exist() {
             show_unsaved_buffers_dialog(.reload_workspace);
             should_reload_workspace = false;
@@ -66,13 +67,14 @@ open_selected_project :: () {
 refresh_entries :: () {
     using open_project_dialog;
 
+    for filtered array_free(it.highlights);
     array_reset_keeping_memory(*filtered);
 
     scroll_to_cursor = .snap;
     scroll_y = 0;
     selected = 0;
 
-    filter_chars := decode_utf8_string_to_temp_char_substrings(cast(string) input.text);
+    filter := construct_fuzzy_filter(cast(string) input.text);
 
     Project_Config :: struct {
         name: string;
@@ -96,7 +98,7 @@ refresh_entries :: () {
     visit_files(projects_dir, recursive = true, *project_configs, visitor, visit_files = true, visit_directories = false);
 
     for project : project_configs {
-        score, highlights := fuzzy_match(project.name, filter_chars);
+        score, highlights := fuzzy_match(project.name, filter);
         if score < 0 continue;
 
         entry := array_add(*filtered);

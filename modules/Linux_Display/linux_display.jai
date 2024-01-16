@@ -42,6 +42,7 @@ init_display :: (display: *Display, desired_backend := BACKEND_CHOICE.PREFER_BES
     if bd.app_id free(bd.app_id);
     bd.app_id = copy_string(app_id);
     bd.desired_gl_backend = desired_gl_backend;
+    bd.loop_wakeup_event = eventfd(0, EFD_CLOEXEC);
 
     if #complete desired_backend == {
         case .PREFER_BEST_USER_EXPERIENCE; {
@@ -243,6 +244,11 @@ update_window_events :: (display: *Display) {
     }
 }
 
+wake_up_event_loop :: (display: *Display) {
+    val : u64 = 1;
+    write(display.base.loop_wakeup_event, *val, size_of(type_of(val)));
+}
+
 clipboard_get_text :: inline (display: *Display) -> string {
     bd: *Base_Display = display;
     return bd.clipboard_get_text(display);
@@ -302,6 +308,8 @@ Base_Display :: struct {
 
     events_this_frame: [..]Input.Event;
     input_button_states: [Input.NUM_BUTTON_STATES] Input.Key_Current_State;
+
+    loop_wakeup_event : s32;
 
     gl: GL_Display;
 
@@ -385,3 +393,8 @@ wl_check_usage :: #bake_arguments check_usage(type=Wayland_Display);
 x11_check_usage :: #bake_arguments check_usage(type=X11_Display);
 
 WHEEL_DELTA : s32 : 120;
+
+consume_loop_wakeup_event :: (bd: *Base_Display) {
+    val: u64;
+    read(bd.loop_wakeup_event, *val, size_of(type_of(val)));
+}

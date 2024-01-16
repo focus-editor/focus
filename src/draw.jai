@@ -127,7 +127,7 @@ draw_welcome_screen :: (main_area: Rect) {
         font := font_ui_big;
         version_text := tprint("Version %", VERSION);
         version_width := cast(float) Simp.prepare_text(font, version_text);
-        if version_width / info_area.w > 0.4 {
+        if version_width / info_area.w > 0.8 {
             font = font_ui;
             version_width = cast(float) Simp.prepare_text(font, version_text);
         }
@@ -135,6 +135,18 @@ draw_welcome_screen :: (main_area: Rect) {
             x := (info_area.w - version_width) / 2;
             y := info_area.y + info_area.h - shrink_step - font_ui_line_height;
             Simp.draw_prepared_text(font, xx x, xx y, color = Colors.UI_DIM);
+
+            // Copy version when clicking on it
+            {
+                version_rect := Rect.{ x, y, version_width, font_ui_line_height};
+                version_ui_id := get_ui_id_from_loc();
+                clicked := maybe_set_hot_or_active(version_ui_id, version_rect, .PRESSABLE);
+                if clicked {
+                    os_clipboard_set_text(version_text);
+                    add_success_message("Version copied to clipboard", dismiss_in_seconds = 3);
+                }
+                if is_hovering_over(version_ui_id) then draw_tooltip_bottom_left("Click to copy to clipboard", Vector2.{ mouse.pointer.x, y });
+            }
 
             date_width := Simp.prepare_text(font_ui_medium, RELEASE_DATE);
             x = (info_area.w - date_width) / 2;
@@ -153,7 +165,7 @@ draw_welcome_screen :: (main_area: Rect) {
             .{ .show_commands,                                      "Show All Commands" },
             .{ .show_open_file_dialog_in_search_mode,               "Open File By Name" },
             .{ .show_open_file_dialog_in_navigate_mode,             "Navigate To File" },
-            .{ .show_open_file_dialog_in_navigate_mode_from_root,   "Navigate To File From Root" },
+            .{ .show_open_file_dialog_in_open_editors_mode,         "Switch Between Open Files" },
             .{ .search_in_buffer,                                   "Search In Open File" },
             .{ .search_in_buffer_dropdown_mode,                     "Search In Open File (Dropdown Mode)" },
             .{ .search_in_project,                                  "Search In Workspace" },
@@ -322,7 +334,7 @@ draw_build_panel :: () {
 
     // Draw title bar
     {
-        started_dragging := maybe_set_hot_or_active(.build_panel_title_bar, title_bar_rect, .NORMAL);
+        started_dragging := maybe_set_hot_or_active(.build_panel_title_bar, title_bar_rect, .NORMAL, .left);
         if started_dragging {
             if build_panel_get_position() == .left {
                 build_panel_grab_point = mouse.pointer - top_right(title_bar_rect);
@@ -331,6 +343,7 @@ draw_build_panel :: () {
             }
         }
         if ui.active == .build_panel_title_bar then set_pointer_image(.DRAGGING_FREE);
+        if ui.hot_last_frame == .build_panel_title_bar && ui.active == .none && mouse.middle.just_pressed then hide_build_panel();
 
         push_scissor(title_bar_rect);
         defer pop_scissor();
@@ -1786,74 +1799,81 @@ draw_open_file_dialog :: () {
     input_rect = shrink(input_rect, margin);
     input_id := get_ui_id_from_loc(parent_id = ui_id);
 
-    if mode == .search {
-        label := ifx finder.initted then " Search files by name" else " Still scanning the workspace. Please wait...";
-        draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = label);
-        if !finder.initted then redraw_requested = true;  // draw the progress bar and update as soon as we're done
+    if #complete mode == {
+        case .search;
+            label := ifx finder.initted then " Search files by name" else " Still scanning the workspace. Please wait...";
+            draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = label);
+            if !finder.initted then redraw_requested = true;  // draw the progress bar and update as soon as we're done
 
-        scan_progress := get_workspace_scan_progress();
-        if scan_progress < 1.0 {
-            progress_bar_rect := shrink(input_rect, 1);
-            progress_bar_rect.w *= scan_progress;
-            draw_rect(progress_bar_rect, Colors.LIST_CURSOR_LITE);
-        }
-    } else {
-        label: string;
-        if mode == {
-            case .navigate;
-                label = ifx !path_chunks then " Navigate to file" else "";
-            case .save;
-                label = tprint(" Choose where to save '%'", get_buffer_name(*open_buffers[buffer_id_to_save]));
-        }
+            scan_progress := get_workspace_scan_progress();
+            if scan_progress < 1.0 {
+                progress_bar_rect := shrink(input_rect, 1);
+                progress_bar_rect.w *= scan_progress;
+                draw_rect(progress_bar_rect, Colors.LIST_CURSOR_LITE);
+            }
 
-        half_padding := floor(padding / 2);
+        case .open_editors;
+            label := " Switch to open file";
+            draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = label);
 
-        min_cursor_area_width := cast(float)font_ui.em_width * 5;  // leave enough space to type text
+        case .navigate;     #through;
+        case .save;
+            label: string;
+            if mode == {
+                case .navigate;
+                    label = ifx !path_chunks then " Navigate to file" else "";
+                case .save;
+                    label = tprint(" Choose where to save '%'", get_buffer_name(*open_buffers[buffer_id_to_save]));
+            }
 
-        // Figure out how much to pad on the left (if only there were a Javascript library for that…)
-        margin_left  := 0.0;
-        for path_chunks { margin_left += cast(float) Simp.get_text_width(font_ui, it) + padding * 2 + half_padding * 3; }
+            half_padding := floor(padding / 2);
 
-        margin_delta := margin_left + min_cursor_area_width - input_rect.w;
-        if margin_delta > 0 {
-            open_file_dialog_maybe_expand();
-            margin_left -= margin_delta;
-        }
+            min_cursor_area_width := cast(float)font_ui.em_width * 5;  // leave enough space to type text
 
-        draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = label, margin_left = margin_left);
+            // Figure out how much to pad on the left (if only there were a Javascript library for that…)
+            margin_left  := 0.0;
+            for path_chunks { margin_left += cast(float) Simp.get_text_width(font_ui, it) + padding * 2 + half_padding * 3; }
 
-        push_scissor(shrink_x(input_rect, padding));
-        defer pop_scissor();
+            margin_delta := margin_left + min_cursor_area_width - input_rect.w;
+            if margin_delta > 0 {
+                open_file_dialog_maybe_expand();
+                margin_left -= margin_delta;
+            }
 
-        dir_rect := shrink(input_rect, padding);
-        if margin_delta > 0 then dir_rect.x -= margin_delta;
-        text_y := dir_rect.y + floor((dir_rect.h - cast(float)font_ui.em_width) / 2);
-        for path_chunks {
-            width := cast(float) Simp.prepare_text(font_ui, it);
-            dir_rect.w = width + 2 * padding + 2 * half_padding;
-            color := Colors.SELECTION_ACTIVE;
-            if ui.hot_last_frame == input_id && mouse_pointer_is_within(dir_rect) {
-                color = Colors.LIST_CURSOR;
-                set_pointer_image(.PRESSABLE);
-                if mouse.left.just_pressed {
-                    if shift_pressed() {
-                        // Shift + Click = Open dir in explorer
-                        path_chunks_trimmed := array_view(path_chunks, 1, it_index);
-                        dir_path: string = ---;
-                        if path_chunks_trimmed.count == 0 dir_path = root_dir;
-                        else dir_path = tprint("%/%", root_dir, join(..path_chunks_trimmed, separator = "/"));
-                        platform_open_in_explorer(dir_path);
-                    } else {
-                        // Regular Click = Trim chunks past this dir
-                        open_file_dialog_truncate_path_chunks(it_index);
-                        redraw_requested = true;
+            draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = label, margin_left = margin_left);
+
+            push_scissor(shrink_x(input_rect, padding));
+            defer pop_scissor();
+
+            dir_rect := shrink(input_rect, padding);
+            if margin_delta > 0 then dir_rect.x -= margin_delta;
+            text_y := dir_rect.y + floor((dir_rect.h - cast(float)font_ui.em_width) / 2);
+            for path_chunks {
+                width := cast(float) Simp.prepare_text(font_ui, it);
+                dir_rect.w = width + 2 * padding + 2 * half_padding;
+                color := Colors.SELECTION_ACTIVE;
+                if ui.hot_last_frame == input_id && mouse_pointer_is_within(dir_rect) {
+                    color = Colors.LIST_CURSOR;
+                    set_pointer_image(.PRESSABLE);
+                    if mouse.left.just_pressed {
+                        if shift_pressed() {
+                            // Shift + Click = Open dir in explorer
+                            path_chunks_trimmed := array_view(path_chunks, 1, it_index);
+                            dir_path: string = ---;
+                            if path_chunks_trimmed.count == 0 dir_path = root_dir;
+                            else dir_path = tprint("%/%", root_dir, join(..path_chunks_trimmed, separator = "/"));
+                            platform_open_in_explorer(dir_path);
+                        } else {
+                            // Regular Click = Trim chunks past this dir
+                            open_file_dialog_truncate_path_chunks(it_index);
+                            redraw_requested = true;
+                        }
                     }
                 }
+                draw_rounded_rect(dir_rect, color);
+                Simp.draw_prepared_text(font_ui, xx (dir_rect.x + padding + half_padding), xx text_y, Colors.UI_DEFAULT);
+                dir_rect.x += dir_rect.w + half_padding;
             }
-            draw_rounded_rect(dir_rect, color);
-            Simp.draw_prepared_text(font_ui, xx (dir_rect.x + padding + half_padding), xx text_y, Colors.UI_DEFAULT);
-            dir_rect.x += dir_rect.w + half_padding;
-        }
     }
 
     _pad: Rect = ---;  // allow some space at the bottom so that we don't cover up the rounded corners with the cursor
@@ -3499,12 +3519,16 @@ is_child :: (ui_id: Ui_Id, parent_id: Ui_Id) -> bool {
     return parent_min <= num && num <= parent_max;
 }
 
-maybe_set_hot_or_active :: (ui_id: Ui_Id, rect: Rect, pointer_image: Pointer_Image) -> became_active: bool {
+maybe_set_hot_or_active :: (ui_id: Ui_Id, rect: Rect, pointer_image: Pointer_Image, mouse_buttons: enum_flags { left; middle; right; } = .left|.middle|.right) -> became_active: bool {
     if !is_valid(rect) || !mouse_pointer_is_within(rect) return false;
+
+    just_clicked := (mouse_buttons & .left   && mouse.left.just_pressed)  ||
+                    (mouse_buttons & .right  && mouse.right.just_pressed) ||
+                    (mouse_buttons & .middle && mouse.middle.just_pressed);
 
     ui.hot = ui_id;
     if ui.hot_last_frame == ui_id && ui.active == .none || ui.active == ui_id then set_pointer_image(pointer_image);
-    if ui.hot_last_frame == ui_id && ui.active == .none && (mouse.left.just_pressed || mouse.middle.just_pressed) {
+    if ui.hot_last_frame == ui_id && ui.active == .none && just_clicked {
         ui.active = ui_id;
         return true;
     }

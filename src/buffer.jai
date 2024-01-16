@@ -27,6 +27,18 @@ refresh_open_buffers :: () {
     }
 }
 
+get_buffer_ids_with_open_editors :: () -> [] s64 /* temp */ {
+    buffer_ids: [..] s64;
+    buffer_ids.allocator = temp;
+    array_reserve(*buffer_ids, open_editors.count);
+
+    for open_editors {
+        array_add_if_unique(*buffer_ids, it.buffer_id);  // aaaa linear search oh no the program is slow now
+    }
+
+    return buffer_ids;
+}
+
 put_cursor_in_valid_spot :: (using cursor: *Cursor, buffer: Buffer) {
     pos = clamp(pos, 0, xx buffer.bytes.count);
     sel = clamp(sel, 0, xx buffer.bytes.count);
@@ -458,6 +470,7 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
         case .Glsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_glsl_token);
         case .Html;         #through;
         case .Xml;          return tokenize_xml_for_indentation(buffer);
+        case .Lua;          return tokenize_lua_for_indentation(buffer);
         case .Odin;         return tokenize_odin_for_indentation(buffer);
     }
 
@@ -698,8 +711,7 @@ delete_buffer_from_disk :: (using buffer: *Buffer) -> deleted: bool {
 }
 
 strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
-    mark := get_temporary_storage_mark();
-    defer   set_temporary_storage_mark(mark);
+    auto_release_temp();
 
     b: String_Builder;
     b.allocator = temp;
@@ -1152,6 +1164,7 @@ get_highlighter_function :: (lang: Buffer.Lang) -> Highlighter_Function {
         case .Focus_Config; return highlight_focus_config_syntax;
         case .Glsl;         return highlight_glsl_syntax;
         case .Golang;       return highlight_golang_syntax;
+        case .Lua;          return highlight_lua_syntax;
         case .Odin;         return highlight_odin_syntax;
         case .Python;       return highlight_python_syntax;
         case .RenPy;        return highlight_renpy_syntax;
@@ -1325,6 +1338,7 @@ Buffer :: struct {
         Focus_Config;
         Glsl;
         Golang;
+        Lua;
         Odin;
         Python;
         RenPy;

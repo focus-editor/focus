@@ -258,31 +258,23 @@ pointer_listener :: wl_pointer_listener.{
 wl_display_poll :: (display: *Wayland_Display, timeout: s32) -> wayland_events := false, timer_events := false {
     wlfd := wl_display_get_fd(display.handle);
 
-    pfd: [2]pollfd;
+    pfd: [3]pollfd;
     pfd[0].fd = wlfd;
     pfd[0].events = POLLIN;
     pfd[1].fd = timers_epfd;
     pfd[1].events = POLLIN;
+    pfd[2].fd = display.base.loop_wakeup_event;
+    pfd[2].events = POLLIN;
 
-    ret := poll(pfd.data, 2, timeout);
+    ret := poll(pfd.data, xx pfd.count, timeout);
     if ret <= 0 return;
 
-    has_wayland_events := false;
-    has_timer_events := false;
-    for 0..1 {
-        if !pfd[it].revents {
-            continue;
-        }
-        if pfd[it].fd == wlfd {
-            has_wayland_events = true;
-            assert(pfd[it].revents == POLLIN);
-            continue;
-        }
+    has_wayland_events    := (pfd[0].revents & POLLIN) == POLLIN;
+    has_timer_events      := (pfd[1].revents & POLLIN) == POLLIN;
+    has_loop_wakeup_event := (pfd[2].revents & POLLIN) == POLLIN;
 
-        assert(pfd[it].fd == timers_epfd);
-        timers_tick();
-        has_timer_events = true;
-    }
+    if has_loop_wakeup_event  consume_loop_wakeup_event(display);
+    if has_timer_events       timers_tick();
 
     return has_wayland_events, has_timer_events;
 }

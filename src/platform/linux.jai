@@ -8,15 +8,6 @@ platform_setup :: inline () {
     ver_id     :: #run sprint("%-%", app_id, app_ver_id);
     ver_id_key :: #run sprint("X-Focus-Ver-Id=%", ver_id);
 
-    sa := sigaction_t.{
-        sa_sigaction = (sig: s32, info: *siginfo_t, ctx: *void) #c_call {
-            if sig != SIGCHLD return;
-            waitpid(info._kill.si_pid, null, 0);
-        },
-        sa_flags = SA_SIGINFO,
-    };
-    sigaction(SIGCHLD, *sa, null);
-
     data_dir := platform_data_dir();
     defer free(data_dir);
 
@@ -90,6 +81,10 @@ DONE;
     assert(active_backend != .UNINITIALIZED);
 
     timer = LD.timer_create();
+    xdg_reap_timer = LD.timer_create(cb = (tid: LD.Timer, data: *void) {
+        XDG.reap_child_processes();
+    });
+    LD.timer_start(xdg_reap_timer, 500, 500);
 
     system_info.ld_backend_choice = backend;
     system_info.ld_backend = LD.active_backend();
@@ -168,7 +163,7 @@ platform_wait_message :: inline () {
 }
 
 platform_wake_up_main_thread :: () {
-    // TODO
+    LD.wake_up_event_loop();
 }
 
 platform_set_refresh_timer :: (window: Window_Type) {
@@ -435,6 +430,7 @@ Linux_Icon :: struct {
 }
 
 timer: LD.Timer;
+xdg_reap_timer: LD.Timer;
 
 Linux_System_Info :: struct {
     ld_backend_choice: LD.BACKEND_CHOICE;

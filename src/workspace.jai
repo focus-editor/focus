@@ -213,7 +213,8 @@ hard_reload_workspace :: () {
     init_buffers();
     init_build_system();
     update_window_title();
-    reopen_visible_editors(old_editor_state);
+    if preserve_visible_editors_after_reload then reopen_visible_editors(old_editor_state);
+    show_open_file_dialog(.search);
     start_initial_workspace_scan();
 
     add_success_message("Workspace has been reloaded", dismiss_in_seconds=3);

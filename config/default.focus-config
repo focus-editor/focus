@@ -105,7 +105,6 @@ Alt-ArrowDown               move_selected_lines_down
 Ctrl-J                      join_lines
 Ctrl-Shift-J                join_lines_no_spaces_in_between
 
-Ctrl-Tab                    autoindent_region
 Tab                         indent_or_go_to_next_tabstop
 Shift-Tab                   unindent
 
@@ -217,6 +216,7 @@ Ctrl-Shift-F                search_in_project
 Ctrl-P                      show_open_file_dialog_in_search_mode
 Ctrl-O                      show_open_file_dialog_in_navigate_mode
 Ctrl-Shift-O                show_open_file_dialog_in_navigate_mode_from_root
+Ctrl-Tab                    show_open_file_dialog_in_open_editors_mode
 
 Ctrl-G                      go_to_line
 
@@ -325,6 +325,7 @@ code_string:                            D4BC7DFF
 code_value:                             D699B5FF
 code_highlight:                         D89B75FF
 code_error:                             FF0000FF
+code_warning:                           E4D97DFF
 code_keyword:                           E67D74FF
 
 region_scope_export:                    15212AFF

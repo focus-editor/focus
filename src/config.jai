@@ -1,6 +1,6 @@
 CURRENT_CONFIG_VERSION :: 2;
 
-load_global_config :: (fallback_to_default_on_failure := false) -> success: bool, changed: bool, there_were_warnings: bool {
+load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
     config_path := tprint("%/global.focus-config", config_dir);
     if !global_config.path then global_config.path = copy_string(config_path);
 
@@ -10,8 +10,8 @@ load_global_config :: (fallback_to_default_on_failure := false) -> success: bool
         if !success panic_messagebox("Couldn't create a new config file '%'.\nIs the directory writable?", config_path);
     }
 
-    loaded_config, changed := load_config(config_path, *global_config);
-    if !changed return true, false, false;
+    loaded_config, changed := load_config(config_path, *global_config, force = force);
+    if !changed && !force return true, false, false;
 
     if loaded_config.loaded {
         // Merge into an empty config
@@ -29,7 +29,7 @@ load_global_config :: (fallback_to_default_on_failure := false) -> success: bool
     }
 }
 
-load_project_config :: (project: string = "") -> success: bool, changed: bool, there_were_warnings: bool {
+load_project_config :: (project: string = "", force := false) -> success: bool, changed: bool, there_were_warnings: bool {
     if !project && !current_project_name {
         log_error("Attempted to load an empty project config. This is a bug.");
         return false, false, false;
@@ -37,8 +37,8 @@ load_project_config :: (project: string = "") -> success: bool, changed: bool, t
     project_name := ifx project then project else current_project_name;
     config_path  := tprint("%/%.focus-config", projects_dir, project_name);
 
-    loaded_config, changed := load_config(config_path, *project_config);
-    if !changed return true, false, false;
+    loaded_config, changed := load_config(config_path, *project_config, force);
+    if !changed && !force return true, false, false;
 
     if loaded_config.loaded {
         // Merge into an empty config, starting from a loaded global config
@@ -131,7 +131,7 @@ refresh_config :: (path: string) {
             add_success_message("Global config changes have been applied", dismiss_in_seconds = 3, tag = .config);
         }
         if project_config.loaded {
-            success, changed, there_were_warnings = load_project_config(current_project_name);
+            success, changed, there_were_warnings = load_project_config(current_project_name, force = true);
             if success && changed && !there_were_warnings {
                 add_success_message("Config changes for project '%' have been applied", current_project_name, dismiss_in_seconds = 3, tag = .config);
             }
@@ -162,6 +162,7 @@ refresh_config :: (path: string) {
 
     if dirs_added || dirs_removed {
         should_reload_workspace = true;
+        preserve_visible_editors_after_reload = true;
         if unsaved_buffers_exist() {
             show_unsaved_buffers_dialog(.reload_workspace);
             clear_user_messages();
@@ -183,7 +184,7 @@ close_project :: () {
         return;
     }
 
-    success := load_global_config();
+    success := load_global_config(force = true);
     if success {
         project_config.loaded = false;
         if unsaved_buffers_exist() {
@@ -191,6 +192,7 @@ close_project :: () {
         } else {
             should_reload_workspace = true;
         }
+        preserve_visible_editors_after_reload = false;
     } else {
         add_user_error("Couldn't close project because the global config failed to load", dismiss_in_seconds = 10);
     }
@@ -237,7 +239,7 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
 
 #scope_file
 
-load_config :: (file_path: string, existing: *Loaded_Config) -> Loaded_Config, changed := true {
+load_config :: (file_path: string, existing: *Loaded_Config, force := false) -> Loaded_Config, changed := true {
     loaded_config: Loaded_Config;
 
     file_data, success_read := read_entire_file(file_path);
@@ -251,7 +253,7 @@ load_config :: (file_path: string, existing: *Loaded_Config) -> Loaded_Config, c
     loaded_config.path = copy_string(file_path);
     loaded_config.file_data = file_data;
     loaded_config.hash = calculate_hash(to_bytes(file_data));
-    if loaded_config.hash == existing.hash return loaded_config, false;  // unchanged so no need to parse
+    if loaded_config.hash == existing.hash && !force return loaded_config, false;  // unchanged so no need to parse
 
     parse_result := parse_config(file_path, file_path, file_data);
     if !parse_result.success {

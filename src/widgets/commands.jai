@@ -67,6 +67,7 @@ commands_execute_selected :: (placement: Editor_Placement = .in_place) {
 refresh_entries :: () {
     using commands_dialog;
 
+    for filtered array_free(it.highlights);
     array_reset_keeping_memory(*filtered);
 
     editor, buffer := get_active_editor_and_buffer();
@@ -75,14 +76,14 @@ refresh_entries :: () {
     scroll_y = 0;
     selected = 0;
 
-    filter_chars := decode_utf8_string_to_temp_char_substrings(cast(string) input.text);
+    filter := construct_fuzzy_filter(cast(string) input.text);
 
     for command : commands {
         if command.requires_layout == .Single && editors.layout == .None   continue;
         if command.requires_layout == .Double && editors.layout != .Double continue;
         if !project_config.loaded && (command.action == .open_project_config || command.action == .close_project) continue;
 
-        score, highlights := fuzzy_match(command.name, filter_chars);
+        score, highlights := fuzzy_match(command.name, filter);
         if score < 0 continue;
 
         entry := array_add(*filtered);
@@ -140,6 +141,7 @@ commands := #run Command.[
     .{ .show_open_file_dialog_in_search_mode,               "Open File By Name",                  0, .None },
     .{ .show_open_file_dialog_in_navigate_mode,             "Navigate To File",                   0, .None },
     .{ .show_open_file_dialog_in_navigate_mode_from_root,   "Navigate To File From Root",         0, .None },
+    .{ .show_open_file_dialog_in_open_editors_mode,         "Switch Between Open Files" ,         0, .None },
 
     .{ .switch_to_project,                                  "Switch To Project",                  0, .None },
     .{ .close_project,                                      "Close Project",                      0, .None },

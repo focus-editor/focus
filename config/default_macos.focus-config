@@ -98,7 +98,6 @@ Alt-ArrowDown               move_selected_lines_down
 Cmd-J                       join_lines
 Cmd-Shift-J                 join_lines_no_spaces_in_between
 
-Alt-Tab                     autoindent_region
 Tab                         indent_or_go_to_next_tabstop
 Shift-Tab                   unindent
 
@@ -198,6 +197,7 @@ Cmd-Alt-P                   switch_to_project
 Cmd-P                       show_open_file_dialog_in_search_mode
 Cmd-O                       show_open_file_dialog_in_navigate_mode
 Cmd-Shift-O                 show_open_file_dialog_in_navigate_mode_from_root
+Ctrl-Tab                    show_open_file_dialog_in_open_editors_mode
 
 Cmd-G                       go_to_line
 
@@ -311,6 +311,7 @@ code_string:                            D4BC7DFF
 code_value:                             D699B5FF
 code_highlight:                         D89B75FF
 code_error:                             FF0000FF
+code_warning:                           E4D97DFF
 code_keyword:                           E67D74FF
 
 region_scope_export:                    15212AFF

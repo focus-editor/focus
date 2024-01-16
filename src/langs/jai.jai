@@ -174,8 +174,7 @@ get_next_token :: (using tokenizer: *Jai_Tokenizer) -> Token {
 parse_identifier :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
     token.type = .identifier;
 
-    mark := get_temporary_storage_mark();
-    defer   set_temporary_storage_mark(mark);
+    auto_release_temp();
 
     identifier_str := read_identifier_string_tmp(tokenizer);
 
@@ -185,12 +184,30 @@ parse_identifier :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
         if ok { token.type = kw_token.type; token.keyword = kw_token.keyword; return; }
     }
 
-    // Check for here-string
-    if last_tokens[1].type == .compiler_directive && last_tokens[1].compiler_directive == .directive_string {
+    // Check for here-string and directive modifiers
+    prev, before_prev := last_tokens[1], last_tokens[0];
+    if prev.type == .compiler_directive && prev.compiler_directive == .directive_string {
         token.type = .here_string;
         end := find_index_from_left(buf, identifier_str, start_index = t - buf.data);
         if end < 0 { t = max_t; return; }
         t = buf.data + end + identifier_str.count;
+    } else if prev.type == .punctuation && prev.punctuation == .comma {
+        is_modifier := false;
+        if before_prev.type == {
+            case .compiler_directive;
+                if before_prev.compiler_directive == {
+                    case .directive_type;    is_modifier = array_find(string.["isa", "distinct"], identifier_str);
+                    case .directive_import;  is_modifier = array_find(string.["file", "dir", "string"], identifier_str);
+                    case .directive_insert;  is_modifier = array_find(string.["scope"], identifier_str);
+                    case .directive_run;     is_modifier = array_find(string.["stallable"], identifier_str);
+                }
+            case .keyword;
+                if before_prev.keyword == {
+                    case .kw_using;   is_modifier = array_find(string.["only", "except", "map"], identifier_str);
+                    case .kw_cast;    is_modifier = array_find(string.["no_check", "trunc", "force"], identifier_str);
+                }
+        }
+        if is_modifier then token.type = .modifier;
     }
 }
 
@@ -254,8 +271,7 @@ parse_compiler_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
 
     start_offset := cast(s32) (start_t - buf.data);
 
-    mark := get_temporary_storage_mark();
-    defer   set_temporary_storage_mark(mark);
+    auto_release_temp();
 
     directive_str := read_identifier_string_tmp(tokenizer);
 
@@ -419,8 +435,7 @@ parse_caret :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
 }
 
 parse_note :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
-    token.type = .punctuation;
-    token.punctuation = .note;
+    token.type = .note;
 
     t += 1;
     while t < max_t && is_alnum(<< t) t += 1;
@@ -617,6 +632,7 @@ Token :: struct {
         identifier;
         string_literal;
         here_string;
+        note;
         number;
         comment;
         multiline_comment;
@@ -627,6 +643,7 @@ Token :: struct {
         type_keyword;
         value_keyword;
         compiler_directive;
+        modifier;
         invalid;
     }
 }
@@ -637,6 +654,7 @@ COLOR_MAP :: Code_Color.[
     .DEFAULT,       // identifier
     .STRING,        // string_literal
     .STRING,        // here_string
+    .OPERATION,     // note
     .VALUE,         // number
     .COMMENT,       // comment
     .COMMENT,       // multiline_comment
@@ -647,12 +665,13 @@ COLOR_MAP :: Code_Color.[
     .TYPE,          // type_keyword
     .VALUE_KEYWORD, // value_keyword
     .KEYWORD,       // compiler_directive
+    .KEYWORD,       // modifier
     .ERROR,         // invalid
 ];
 
 PUNCTUATION :: string.[
     "dollar", "semicolon", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket",
-    "period", "comma", "note",
+    "period", "comma",
 ];
 
 OPERATIONS :: string.[
@@ -688,16 +707,6 @@ COMPILER_DIRECTIVES :: string.[
     "scope_export", "scope_file", "scope_module", "specified", "string", "symmetric", "this", "through", "type",
     "type_info_no_size_complaint", "type_info_none", "type_info_procedures_are_void_pointers",
     "compile_time", "no_debug", "procedure_name",
-];
-
-// TODO: implement
-MODIFIERS :: string.[
-    "isa", "distinct",  // type
-    "only", "except", "map",  // using
-    "no_check", "truncate", "force",  // cast
-    "file", "dir", "string",  // import
-    "scope",  // insert
-    "stallable",  // run
 ];
 
 #insert -> string {
