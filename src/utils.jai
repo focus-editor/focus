@@ -415,11 +415,11 @@ start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: Time
 
     // Pretend the animation started last frame so we start moving right away.
     // If the current frame was t=0, then the movement would simply be delayed one frame.
-    anim.started_at = frame_time - frame_dt;
+    anim.started_at = frame_time - to_apollo(frame_dt);
 }
 
 get_animation_value :: (using anim: Tween_Animation($T)) -> T {
-    t := cast(float) ((frame_time - started_at) / speed);
+    t := (to_float64_seconds(frame_time - started_at) / speed);
     t = clamp(t, 0, 1);
     if #complete func == {
         case .lerp;       return start + cast(T) (cast(float)(target - start) * t);
@@ -508,8 +508,8 @@ split :: (s: string, separator: $T, max_splits: int) -> [] string {
 
 Tween_Animation :: struct(T: Type) {
     start, target: T;
-    started_at: Time;
-    speed: Time = xx 0.1;  // how many seconds to finish
+    started_at: Apollo_Time;
+    speed : Time = xx 0.1;  // how many seconds to finish
     func: enum { lerp; smoothstep; } = .smoothstep;
 }
 

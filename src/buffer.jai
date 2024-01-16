@@ -1274,7 +1274,7 @@ Buffer :: struct {
 
     content_lock: Mutex;  // must hold while modifying content (or reading in a non-main thread)
 
-    last_edit_time: Time;  // for creating new edit groups
+    last_edit_time: Apollo_Time;  // for creating new edit groups
 
     undos: [..] Edit_Group;
     redos: [..] Edit_Group;

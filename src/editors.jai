@@ -135,7 +135,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
     // We always want to put some actions in a separate edit group (e.g. block indent)
     new_group := false;
     for cursor : editor.cursors { if new_edit_group_required_for_action(action, cursor) { new_group = true; break; } }
-    if new_group || frame_time - buffer.last_edit_time >= EDIT_GROUP_TIMEOUT then new_edit_group(buffer, editor);  // do it before action
+    if new_group || to_float64_seconds(frame_time - buffer.last_edit_time) >= EDIT_GROUP_TIMEOUT then new_edit_group(buffer, editor);  // do it before action
 
     // We want to remember where cursors were before we do any edits
     if buffer.edits.count == 0 {
@@ -318,7 +318,7 @@ active_editor_type_char :: (char: u32) {
     new_group := false;  // we always want to remember cursor state when a selection is replaced with anything
     for editor.cursors { if has_selection(it) { new_group = true; break; } }
 
-    if new_group || frame_time - buffer.last_edit_time >= EDIT_GROUP_TIMEOUT {
+    if new_group || to_float64_seconds(frame_time - buffer.last_edit_time) >= EDIT_GROUP_TIMEOUT {
         new_edit_group(buffer, editor);
     }
 
@@ -1243,7 +1243,7 @@ cursors_stop_blinking :: inline () {
 should_draw_cursors :: inline () -> bool {
     if !cursors_blinking || config.settings.cursor_blink_time_in_seconds <= 0 return true;
 
-    ms_since_start := cast(s64) ((frame_time - cursor_blink_start) * 1000);
+    ms_since_start := cast(s64) (to_float64_seconds(frame_time - cursor_blink_start) * 1000);
     if ms_since_start > config.settings.cursor_blink_time_in_seconds * 1000 {
         cursors_stop_blinking();
         return true;
@@ -3225,7 +3225,7 @@ Editor :: struct {
 
     // TODO: use a global flag rather than per editor?
     new_cursor_just_created_using_mouse := false;  // useful to know in order to handle select-by-drag and select-word with the new cursor
-    last_cursor_created_using_mouse_at: Time;
+    last_cursor_created_using_mouse_at: Apollo_Time;
 
     initial_middle_mouse_coords: Coords; // used for creating cursors while dragging middle mouse button
 
@@ -3320,7 +3320,7 @@ Paste_Animation :: struct {
     range: Offset_Range;
     coords_range: Coords_Range;
     initted := false;
-    started_at: Time;
+    started_at: Apollo_Time;
     SPEED :: 0.3;
 }
 
@@ -3383,7 +3383,7 @@ Smooth_Scroll_Direction :: enum {
 editor_smooth_scroll: struct {
     direction: Smooth_Scroll_Direction;
     fast: bool;
-    started_at: Time;
+    started_at: Apollo_Time;
     start_x: s32;
     start_y: s32;
 };
@@ -3597,7 +3597,7 @@ move_to_editor_history_frame :: (frame: Editor_History_Frame, old_frame: Editor_
 
 #scope_file
 
-cursor_blink_start: Time;
+cursor_blink_start: Apollo_Time;
 cursors_blinking := false;
 
 global_config_buffer_id := -1;
