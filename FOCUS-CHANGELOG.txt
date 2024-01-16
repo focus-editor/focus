@@ -23,8 +23,10 @@
     + ...
 + Bug fixes:
     + Previewing themes will now change window border color as well as it should (thanks @jmpstar)
+    + Regex search should no longer crash the editor on certain inputs
 + Other changes:
     + Theme improvements: jblow-nostalgia
+    + Crash reports now print stack traces in release mode where possible (thanks @Sanian-Creations)
 
 
 # RELEASES ==================================================================
