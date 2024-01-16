@@ -106,6 +106,8 @@ build_kill_running_command :: () {
     unlock(*build_mutex);
 }
 
+DEBUG_BUILD_ERRORS :: true;
+
 Build_Error_Location :: struct {
     message: string;
     type: enum {
@@ -127,12 +129,11 @@ go_to_next_build_error :: () {
     
     build_error_index += 1;
     
-    if build_error_index >= build_errors.count
-        build_error_index = 0;
+    if build_error_index >= build_errors.count then build_error_index = 0;
     
     error := build_errors[build_error_index];
     
-    log("Trying to go to error: %", error);
+    #if DEBUG_BUILD_ERRORS log("Trying to go to error: %", error);
     
     if error.file {
         //TODO: remember last error and info place so we don't switch each time
@@ -169,13 +170,14 @@ clear_build_errors :: () {
         free(it.file);
         free(it.message);
     }
+    
     array_reset(*build_errors);
+    
+    build_error_index = -1;
 }
 
 parse_build_errors :: (command: Build_Command) {
     if !command.error_regex return;
-    
-    build_error_index = -1;
     
     editor, buffer := get_build_editor_and_buffer();
     
@@ -189,7 +191,7 @@ parse_build_errors :: (command: Build_Command) {
     
     contents := slice(cast(string)buffer.bytes, start, buffer.bytes.count);
     
-    log("Parsing build_errors: %\n%", start, contents);
+    #if DEBUG_BUILD_ERRORS log("Parsing build_errors: %\n%", start, contents);
     
     regex, valid := re.compile(command.error_regex, .LikePerl & ~.OneLine);
     if !valid return;
@@ -206,7 +208,7 @@ parse_build_errors :: (command: Build_Command) {
             break;//TODO: skip one char/line
         }
         
-        log("Found regex error match: %", c);
+        #if DEBUG_BUILD_ERRORS log("Found regex error match: %", c);
         
         local_offset := c.data - contents.data;
         count  := c.count;
@@ -218,7 +220,7 @@ parse_build_errors :: (command: Build_Command) {
         named_captures := re.map_named_captures(captures, regex);
         defer deinit(*named_captures);
         for value, name: named_captures {
-            log("Captured name: %=%", name, value);
+            #if DEBUG_BUILD_ERRORS log("Captured name: %=%", name, value);
         }
         
         msg, found := table_find(*named_captures, "msg");
@@ -248,21 +250,20 @@ parse_build_errors :: (command: Build_Command) {
         }
         
         line := table_find_or_default(*named_captures, "line");
-        col := table_find_or_default(*named_captures, "col");
+        col  := table_find_or_default(*named_captures, "col");
         
         val, parsed := string_to_int(line, T=s32);
-        if parsed error.line = val;
+        if parsed then error.line = val;
         
         val, parsed  = string_to_int(col, T=s32);
-        if parsed error.col = val - 1;//TODO: config based? other compilers could be 0 based
+        if parsed then error.col = val - 1;//TODO: config based? other compilers could be 0 based
         
         array_add(*build_errors, error);
     }
     
-    log("FOUND: %", build_errors);
+    #if DEBUG_BUILD_ERRORS log("FOUND: %", build_errors);
     
-    if command.auto_jump_to_error
-        go_to_next_build_error();
+    if command.auto_jump_to_error then go_to_next_build_error();
 }
 
 build_system_update :: () {
