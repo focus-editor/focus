@@ -73,7 +73,7 @@ platform_get_dpi_scale :: (window: Window_Type) -> float {
 }
 
 platform_set_window_title :: (title: string) {
-    SetWindowTextW(window, utf8_to_wide(title));
+    SetWindowTextW(window, utf8_to_wide_new(title,, allocator = temp));
 }
 
 platform_wait_message :: inline () {
@@ -101,7 +101,7 @@ platform_enumerate_logical_drives :: () -> [] string {
     drive_wstr := drives_buf.data;
     for drives_buf {
         if it == 0 {
-            drive, success := wide_to_utf8(drive_wstr);
+            drive, success := wide_to_utf8_new(drive_wstr,, allocator = temp);
             if !drive || !success break;
             drive.count -= 1;  // cut off separator
             array_add(*drives, drive);
@@ -121,7 +121,7 @@ platform_get_save_file_name :: (file_name := "") -> string /* temp */, success: 
 
     // Get the name to populate it in the filename box (convenient if we're resaving a deleted file)
     if name && name != "<new file>" {
-        wide_name, success, length := utf8_to_wide(name);
+        wide_name, success, length := utf8_to_wide_new(name,, allocator = temp);
         if success memcpy(buffer.data, wide_name, min(buffer.count, length));
     }
 
@@ -130,12 +130,12 @@ platform_get_save_file_name :: (file_name := "") -> string /* temp */, success: 
     ofn.hwndOwner   = window;
     ofn.lpstrFile   = buffer.data;
     ofn.nMaxFile    = buffer.count;
-    ofn.lpstrTitle  = utf8_to_wide(tprint("Choose where to save '%'", name));
+    ofn.lpstrTitle  = utf8_to_wide_new(tprint("Choose where to save '%'", name),, allocator = temp);
     ofn.Flags       = OFN_NOCHANGEDIR;
 
     for dir : project_dirs {
         if dir.path {
-            ofn.lpstrInitialDir = utf8_to_wide(dir.path);
+            ofn.lpstrInitialDir = utf8_to_wide_new(dir.path,, allocator = temp);
             break;
         }
     }
@@ -145,7 +145,7 @@ platform_get_save_file_name :: (file_name := "") -> string /* temp */, success: 
     open_success := GetSaveFileNameW(*ofn);
 
     if open_success {
-        file_path, success := wide_to_utf8(buffer.data);
+        file_path, success := wide_to_utf8_new(buffer.data,, allocator = temp);
         path_overwrite_separators(file_path, #char "/");
 
         if success {
@@ -183,9 +183,9 @@ platform_find_font_by_name :: (name: string, allocator := temp) -> bool, string 
                 path := to_string(buff.data, size);
                 if !is_absolute_path(path) {
                     full_path := tprint("%/%", platform_get_fonts_dir(), path);
-                    return true, copy_string(full_path, allocator);
+                    return true, copy_string(full_path,, allocator = allocator);
                 }
-                return true, copy_string(path, allocator);
+                return true, copy_string(path,, allocator = allocator);
             }
         }
     }
@@ -199,7 +199,7 @@ platform_get_fonts_dir :: () -> string {
         ret := SHGetKnownFolderPath(*FOLDERID_Fonts, KF_FLAG_CREATE, null, *path_utf16);
         defer CoTaskMemFree(path_utf16);
         if SUCCEEDED(ret) {
-            fonts_dir = copy_string(wide_to_utf8(path_utf16));
+            fonts_dir = copy_string(wide_to_utf8_new(path_utf16,, allocator = temp));
             path_overwrite_separators(fonts_dir, #char "/");
         } else {
             fonts_dir = "C:/Windows/Fonts";
@@ -209,7 +209,7 @@ platform_get_fonts_dir :: () -> string {
 }
 
 platform_open_in_explorer :: (path: string, reveal := false) {
-    path_backslashes := copy_string(path, allocator = temp);
+    path_backslashes := copy_string(path,, allocator = temp);
     path_overwrite_separators(path_backslashes, #char "\\");
 
     if reveal run_command("explorer", "/select,", path_backslashes);
