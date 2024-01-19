@@ -51,7 +51,7 @@ platform_set_window_title :: inline (title: string) {
 }
 
 platform_wait_message :: inline () {
-
+    Input.macos_wait_for_event();
 }
 
 platform_wake_up_main_thread :: () {

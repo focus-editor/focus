@@ -252,7 +252,13 @@ update_cocoa_window_events :: () {
     past := NSDate.distantPast();
 
     while true {
-        nsevent := NSApplication.nextEventMatchingMask(NSApp, NSEventMaskAny, past, NSDefaultRunLoopMode, YES);
+        nsevent: *NSEvent;
+        if queued_event {
+            nsevent = queued_event;
+            queued_event = null;
+        } else {
+            nsevent = NSApplication.nextEventMatchingMask(NSApp, NSEventMaskAny, past, NSDefaultRunLoopMode, YES);
+        }
         if !nsevent then break;
 
         NSApplication.sendEvent(NSApp, nsevent);
@@ -472,7 +478,14 @@ update_cocoa_window_events :: () {
 
 WHEEL_DELTA :: 120;
 
+queued_event: *NSEvent;
+
 #scope_export
+
+macos_wait_for_event :: () {
+    future := NSDate.distantFuture();
+    queued_event = NSApplication.nextEventMatchingMask(NSApp, NSEventMaskAny, future, NSDefaultRunLoopMode, YES);
+}
 
 update_window_events :: () {
     if !input_vk_table_initialized {
