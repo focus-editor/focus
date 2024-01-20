@@ -6,13 +6,11 @@ background1:                            002B36FF
 background2:                            073642FF
 background3:                            073642FF
 background4:                            073642FF
-
 selection_active:                       073642FF
 selection_inactive:                     073642FF
 selection_highlight:                    93A1A1FF
 search_result_active:                   B58900FF
 search_result_inactive:                 FCEDFC26
-
 scrollbar:                              33CCCC19
 scrollbar_hover:                        33CCCC4C
 scrollbar_background:                   10191F4C
@@ -22,8 +20,8 @@ paste_animation:                        1C4449FF
 splitter:                               21333FFF
 splitter_hover:                         1C4449FF
 letter_highlight:                       599999FF
-list_cursor_lite:                       93A1A1FF
-list_cursor:                            93A1A1FF
+list_cursor_lite:                       93A1A122
+list_cursor:                            93A1A144
 shadow_dark:                            0E161C7F
 shadow_transparent:                     0E161C00
 text_input_label:                       3B4450FF

@@ -56,9 +56,9 @@ region_success:                         227722FF
 region_warning:                         227722FF
 region_error:                           227722FF
 
-build_panel_background:                 1A2831FF
+build_panel_background:                 202020FF
 build_panel_scrollbar:                  33CCCC19
 build_panel_scrollbar_hover:            33CCCC4C
 build_panel_scrollbar_background:       10191F4C
-build_panel_title_bar:                  1C303AFF
+build_panel_title_bar:                  383838FF
 
