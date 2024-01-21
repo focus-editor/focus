@@ -776,8 +776,8 @@ OPERATIONS :: string.[
 KEYWORDS :: string.[
     "align_of", "asm", "auto_cast", "break", "case", "cast", "container_of", "continue", "defer", "distinct", "do", "dynamic",
     "else", "enum", "fallthrough", "for", "foreign", "if", "in", "import", "not_in", "offset_of", "or_else", "or_return",
-    "package", "proc", "return", "size_of", "struct", "switch", "transmute", "typeid_of", "type_info_of", "type_of", "union",
-    "using", "when", "where",
+    "or_break", "or_continue", "package", "proc", "return", "size_of", "struct", "switch", "transmute", "typeid_of",
+    "type_info_of", "type_of", "union", "using", "when", "where",
 ];
 
 // https://odin-lang.org/docs/overview/#basic-types
