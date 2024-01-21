@@ -666,14 +666,15 @@ report_failed_assertion_more_visibly :: (loc: Source_Code_Location, msg: string)
 }
 
 report_error_in_yer_face_no_ctx :: (message: string, args: .. Any) #no_context {
-    push_context Context.{} { report_error_in_yer_face(message, ..args, from_no_context = true); }
+    ctx: Context;
+    push_context ctx { report_error_in_yer_face(message, ..args, from_no_context = true); }
 }
 
 report_error_in_yer_face :: (message: string, args: .. Any, from_no_context := false) {
-    using #import "System"; // 'using' ensures the imports stay within this scope. (Raw imports do not respect scopes)
-    using #import "String";
-    using #import "Basic";
-    using #import "File";
+    using _ :: #import "System"; // 'using' ensures the imports stay within this scope. (Raw imports do not respect scopes)
+    using _ :: #import "String";
+    using _ :: #import "Basic";
+    using _ :: #import "File";
 
     formatted_message := tprint(message, ..args);
 
