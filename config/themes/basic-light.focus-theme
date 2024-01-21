@@ -1,0 +1,64 @@
+[2]  # Version number. Do not delete
+
+[colors]
+background0:                            FFFFFFFF
+background1:                            CCCCCCFF
+background2:                            FFFFFFFF
+background3:                            FFFFFFFF
+background4:                            CCCCCCFF
+selection_active:                       B6B6B6FF
+selection_inactive:                     B6B6B67F
+selection_highlight:                    E6FEFE26
+search_result_active:                   D6C280FF
+search_result_inactive:                 FCEDFC26
+scrollbar:                              CCCCCC19
+scrollbar_hover:                        1818184C
+scrollbar_background:                   10191F4C
+cursor:                                 181818FF
+cursor_inactive:                        196666FF
+paste_animation:                        1C4449FF
+splitter:                               CCCCCCFF
+splitter_hover:                         FCFCFCFF
+letter_highlight:                       599999FF
+list_cursor_lite:                       18181819
+list_cursor:                            1818184C
+shadow_dark:                            18181809
+shadow_transparent:                     0E161C00
+text_input_label:                       3B4450FF
+char_under_cursor:                      FFFFFFFF
+
+ui_default:                             181818FF
+ui_dim:                                 383838FF
+ui_neutral:                             181818FF
+ui_warning:                             AC600CFF
+ui_warning_dim:                         FFA500FF
+ui_error:                               772222FF
+ui_error_bright:                        FF0000FF
+ui_success:                             6DA465FF
+
+code_default:                           181818FF
+code_comment:                           416529FF
+code_type:                              0000FFFF
+code_function:                          181818FF
+code_punctuation:                       181818FF
+code_operation:                         181818FF
+code_string:                            008080FF
+code_value:                             0000FFFF
+code_highlight:                         E6FEFEFF
+code_error:                             FF0000FF
+code_warning:                           E4D97DFF
+code_keyword:                           6f0093FF
+
+region_scope_export:                    FFFFFFFF
+region_scope_file:                      FFFFFFFF
+region_scope_module:                    FFFFFFFF
+region_header:                          FFFFFFFF
+region_success:                         F0FFF0FF
+region_warning:                         EEE8AAFF
+region_error:                           FFC0CBFF
+
+build_panel_background:                 EEEEEEFF
+build_panel_scrollbar:                  33CCCC19
+build_panel_scrollbar_hover:            33CCCC4C
+build_panel_scrollbar_background:       10191F4C
+build_panel_title_bar:                  CCCCCCFF

@@ -2,32 +2,32 @@
 
 [colors]
 
-background0:                            32302f
-background1:                            32302f
-background2:                            5a524c
-background3:                            3c3836
-background4:                            21333FFF
-selection_active:                       1C4449FF
-selection_inactive:                     D5C4A1FF
-selection_highlight:                    D5C4A1FF
+background0:                            32302FFF
+background1:                            32302FFF
+background2:                            5A524CFF
+background3:                            282828FF
+background4:                            282828FF
+selection_active:                       3c3836FF
+selection_inactive:                     3C3836AA
+selection_highlight:                    FCEDFC26
 search_result_active:                   8E772EFF
 search_result_inactive:                 FCEDFC26
-scrollbar:                              33CCCC19
-scrollbar_hover:                        33CCCC4C
+scrollbar:                              D4BE9819
+scrollbar_hover:                        D4BE984C
 scrollbar_background:                   10191F4C
-cursor:                                 45403d
-cursor_inactive:                        196666FF
-paste_animation:                        1C4449FF
-splitter:                               21333FFF
-splitter_hover:                         1C4449FF
+cursor:                                 45403DFF
+cursor_inactive:                        000000FF
+paste_animation:                        D4BE9822
+splitter:                               282828FF
+splitter_hover:                         282828FF
 letter_highlight:                       D79921FF
-list_cursor_lite:                       33CCCC19
-list_cursor:                            33CCCC4C
-shadow_dark:                            0E161C7F
-shadow_transparent:                     0E161C00
-text_input_label:                       3B4450FF
+list_cursor_lite:                       D4BE9819
+list_cursor:                            D4BE984C
+shadow_dark:                            1818182F
+shadow_transparent:                     18181800
+text_input_label:                       D4BE98FF
 
-ui_default:                             BFC9DBFF
+ui_default:                             D4BE98FF
 ui_dim:                                 87919DFF
 ui_neutral:                             4C4C4CFF
 ui_warning:                             F8AD34FF
@@ -36,28 +36,29 @@ ui_error:                               772222FF
 ui_error_bright:                        FF0000FF
 ui_success:                             227722FF
 
-code_default:                           d4be98
-code_comment:                           504945FF
-code_type:                              D65D0E
-code_function:                          fb4934FF
+code_default:                           D4BE98FF
+code_comment:                           7C6f64FF
+code_type:                              D65D0EFF
+code_function:                          FB4934FF
 code_punctuation:                       928374FF
-code_operation:                         d79221
-code_string:                            a9b665
-code_value:                             d3869bFF
+code_operation:                         D79221FF
+code_string:                            A9B665FF
+code_value:                             D3869BFF
 code_highlight:                         458588FF
 code_error:                             FF0000FF
-code_keyword:                           d79921
+code_keyword:                           D79921FF
 code_warning:                           E4D97DFF
 
-region_scope_export:                    32302f
-region_scope_file:                      32302f
-region_scope_module:                    32302f
+region_scope_export:                    32302FFF
+region_scope_file:                      32302FFF
+region_scope_module:                    32302FFF
 region_header:                          1A5152FF
 region_success:                         226022FF
 region_warning:                         986032FF
 region_error:                           772222FF
-build_panel_background:                 3c3836
+
+build_panel_background:                 3C3836FF
 build_panel_scrollbar:                  33CCCC19
 build_panel_scrollbar_hover:            33CCCC4C
 build_panel_scrollbar_background:       10191F4C
-build_panel_title_bar:                  1C303AFF
+build_panel_title_bar:                  282828FF

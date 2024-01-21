@@ -1,0 +1,65 @@
+[2]  # Version number. Do not delete
+
+# Based on the gruber darker theme by Jason Blevins
+# https://github.com/rexim/gruber-darker-theme
+[colors]
+background0:                            181818FF
+background1:                            141416FF
+background2:                            453D41FF
+background3:                            282828FF
+background4:                            141416FF
+selection_active:                       484848FF
+selection_inactive:                     48484899
+selection_highlight:                    FCEDFC26
+search_result_active:                   565F73FF
+search_result_inactive:                 95A99F26
+scrollbar:                              484848FF
+scrollbar_hover:                        484848FF
+scrollbar_background:                   4848484C
+cursor:                                 FFDD33FF
+cursor_inactive:                        FFDD3311
+paste_animation:                        484848FF
+splitter:                               1A1A1AFF
+splitter_hover:                         484848FF
+letter_highlight:                       FFDD33FF
+list_cursor_lite:                       FCEDFC19
+list_cursor:                            FCEDFC4C
+shadow_dark:                            0E161C33
+shadow_transparent:                     0E161C00
+text_input_label:                       3B4450FF
+
+ui_default:                             BFC9DBFF
+ui_dim:                                 87919DFF
+ui_neutral:                             4C4C4CFF
+ui_warning:                             CB4B16FF
+ui_warning_dim:                         986032FF
+ui_error:                               772222FF
+ui_error_bright:                        FF0000FF
+ui_success:                             227722FF
+
+code_default:                           E4E4EFFF
+code_comment:                           CC8C3CFF
+code_type:                              95A99fFF
+code_function:                          E4E4EFFF
+code_punctuation:                       E4E4EFFF
+code_operation:                         E4E4EFFF
+code_string:                            73C936FF
+code_value:                             E4E4EFFF
+code_highlight:                         D89B75FF
+code_error:                             FF0000FF
+code_keyword:                           FFDD33FF
+code_warning:                           E4D97DFF
+
+region_scope_export:                    181818FF
+region_scope_file:                      202020FF
+region_scope_module:                    222222FF
+region_header:                          181818FF
+region_success:                         181818FF
+region_warning:                         226022FF
+region_error:                           772222FF
+
+build_panel_background:                 262624FF
+build_panel_scrollbar:                  33CCCC19
+build_panel_scrollbar_hover:            33CCCC4C
+build_panel_scrollbar_background:       2626244C
+build_panel_title_bar:                  141416FF

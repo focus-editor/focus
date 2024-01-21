@@ -2,47 +2,33 @@
 
 [colors]
 
-region_scope_export                     161616FF
-region_scope_file                       202020FF
-region_scope_module                     18181BFF
-region_header:                          1A5152FF
-region_success:                         226022FF
-region_warning:                         986032FF
-region_error:                           772222FF
-
-build_panel_title_bar:                  202020FF
-build_panel_background:                 161616FF
-build_panel_scrollbar:                  D0C5A94C
-build_panel_scrollbar_hover:            D0C5A9A8
-build_panel_scrollbar_background:       1212124C
-
-background0:                            191919FF
-background1:                            161616FF
-background2:                            18262FFF
-background3:                            202020FF
-background4:                            202020FF
-selection_active:                       0000FFCF
-selection_inactive:                     1C44497F
+background0:                            292929FF
+background1:                            1A1A1AFF
+background2:                            1A1A1AFF
+background3:                            1A1A1AFF
+background4:                            1A1A1AFF
+selection_active:                       0000FFFF
+selection_inactive:                     0000FF00
 selection_highlight:                    FCEDFC26
-search_result_active:                   8E772EFF
+search_result_active:                   CD6889FF
 search_result_inactive:                 FCEDFC26
 scrollbar:                              D0C5A94C
 scrollbar_hover:                        D0C5A9A8
-scrollbar_background:                   1212124C
+scrollbar_background:                   10191F4C
 cursor:                                 89E2A1FF
 cursor_inactive:                        161616FF
-paste_animation:                        1C4449FF
+paste_animation:                        D3B58D19
 splitter:                               D0C5A94C
 splitter_hover:                         D0C5A9A8
-letter_highlight:                       89E2A1FF
-list_cursor_lite:                       1616167F
-list_cursor:                            161616FF
-shadow_dark:                            1616167F
-shadow_transparent:                     16161600
-text_input_label:                       D0C5A966
+letter_highlight:                       FFFFFFFF
+list_cursor_lite:                       D3B58D19
+list_cursor:                            D3B58D4C
+shadow_dark:                            0E161C33
+shadow_transparent:                     0E161C00
+text_input_label:                       3B4450FF
 
-ui_default:                             D0C5A9FF
-ui_dim:                                 D0C5A966
+ui_default:                             BFC9DBFF
+ui_dim:                                 87919DFF
 ui_neutral:                             4C4C4CFF
 ui_warning:                             F8AD34FF
 ui_warning_dim:                         986032FF
@@ -50,15 +36,29 @@ ui_error:                               772222FF
 ui_error_bright:                        FF0000FF
 ui_success:                             227722FF
 
-code_default:                           D0C5A9FF
-code_comment:                           F7F06FFF
-code_type:                              89E2A1FF
-code_function:                          D0C5A9FF
-code_punctuation:                       BFC9DBFF
-code_operation:                         B6A997FF
-code_string:                            CCE8D3FF
-code_value:                             89E2A1FF
+code_default:                           D3B58DFF
+code_comment:                           FFFF00FF
+code_type:                              98FB98FF
+code_function:                          D3B58DFF
+code_punctuation:                       D3B58DFF
+code_operation:                         D3B58DFF
+code_string:                            BEBEBEFF
+code_value:                             7FFFD4FF
 code_highlight:                         D89B75FF
 code_error:                             FF0000FF
-code_keyword:                           FFFBD9FF
+code_keyword:                           FFFFFFFF
 code_warning:                           E4D97DFF
+
+region_scope_export                     292929FF
+region_scope_file                       292929FF
+region_scope_module                     292929FF
+region_header:                          1A5152FF
+region_success:                         226022FF
+region_warning:                         986032FF
+region_error:                           772222FF
+
+build_panel_title_bar:                  1A1A1AFF
+build_panel_background:                 131313FF
+build_panel_scrollbar:                  D0C5A94C
+build_panel_scrollbar_hover:            D0C5A9A8
+build_panel_scrollbar_background:       10191F4C

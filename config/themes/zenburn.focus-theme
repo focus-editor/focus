@@ -1,0 +1,65 @@
+[2]  # Version number. Do not delete
+
+# Based on the original Zenburn Vim theme:
+# https://github.com/jnurmine/Zenburn/blob/master/colors/zenburn.vim
+[colors]
+background0:                            3F3F3FFF
+background1:                            282828FF
+background2:                            2E3330FF
+background3:                            2E3330FF
+background4:                            2E3330FF
+selection_active:                       304A3DFF
+selection_inactive:                     484848FF
+selection_highlight:                    FCEDFC26
+search_result_active:                   385f38FF
+search_result_inactive:                 95A99F55
+scrollbar:                              28282819
+scrollbar_hover:                        484848FF
+scrollbar_background:                   4848484C
+cursor:                                 8FAF9FFF
+cursor_inactive:                        8FAF9FFF
+paste_animation:                        304A3DFF
+splitter:                               2E3330FF
+splitter_hover:                         2E3330FF
+letter_highlight:                       DFDFBFFF
+list_cursor_lite:                       2E33304C
+list_cursor:                            304A3DFF
+shadow_dark:                            0E161C33
+shadow_transparent:                     0E161C00
+text_input_label:                       BFC9DBFF
+
+ui_default:                             BFC9DBFF
+ui_dim:                                 87919DFF
+ui_neutral:                             4C4C4CFF
+ui_warning:                             F8AD34FF
+ui_warning_dim:                         986032FF
+ui_error:                               772222FF
+ui_error_bright:                        FF0000FF
+ui_success:                             227722FF
+
+code_default:                           DCDCCCFF
+code_comment:                           7F9F7FFF
+code_type:                              DFDFBFFF
+code_function:                          EFEF8FFF
+code_punctuation:                       DCDCCCFF
+code_operation:                         F0EFD0FF
+code_string:                            CC9393FF
+code_value:                             8CD0D3FF
+code_highlight:                         D89B75FF
+code_error:                             FF0000FF
+code_keyword:                           F0DFAFFF
+code_warning:                           E4D97DFF
+
+region_scope_export:                    3F3F3FFF
+region_scope_file:                      484848FF
+region_scope_module:                    292929FF
+region_header:                          1A5152FF
+region_success:                         226022FF
+region_warning:                         986032FF
+region_error:                           772222FF
+
+build_panel_background:                 1F1F1FFF
+build_panel_scrollbar:                  33CCCC19
+build_panel_scrollbar_hover:            33CCCC4C
+build_panel_scrollbar_background:       2626244C
+build_panel_title_bar:                  2E3330FF
