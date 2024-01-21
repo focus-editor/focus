@@ -23,7 +23,7 @@ background2:                            ff0000ff
 background3:                            000000aa # Dialog background
 background4:                            ffffff02 # Status bar
 selection_active:                       4000ff80 # Selection and file dialog current directory
-#selection_active:                      3e02b5a0 # 
+#selection_active:                      3e02b5a0
 selection_inactive:                     3e02b580 # Background of selection on other side
 selection_highlight:                    ffffff20 # Background of other occurences of selection
 search_result_active:                   4000ff80 # Background of highlighted occurence
@@ -42,16 +42,6 @@ list_cursor_lite:                       4000ff80 # Mouse cursor in dialog
 shadow_dark:                            ffffff08 # Shadow at the edge of status bar and dialog
 shadow_transparent:                     ffffff00 # Statusbar inverse shadow
 text_input_label:                       ffffff60 # Dialog input prompt
-
-# I don't understand any of these.
-ui_default:                             BFC9DBFF
-ui_dim:                                 87919DFF
-ui_neutral:                             4C4C4CFF
-ui_warning:                             F8AD34FF
-ui_warning_dim:                         986032FF
-ui_error:                               772222FF
-ui_error_bright:                        FF0000FF
-ui_success:                             227722FF
 
 # These are all pretty self-explanatory.
 code_default:                           FFFFFFe0
