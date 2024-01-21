@@ -707,7 +707,7 @@ report_error_in_yer_face :: (message: string, args: .. Any, from_no_context := f
         W :: #import "Windows";
         W_Utf8 :: #import "Windows_Utf8";
         W.ShowCursor(1);
-        W.MessageBoxW(null, W_Utf8.utf8_to_wide_new(formatted_message,, allocator = Basic.temp), W_Utf8.utf8_to_wide_new("Fatal Error",, allocator = Basic.temp), W.MB_OK);
+        W.MessageBoxW(null, W_Utf8.utf8_to_wide_new(formatted_message,, allocator = temp), W_Utf8.utf8_to_wide_new("Fatal Error",, allocator = temp), W.MB_OK);
     }
 }
 
