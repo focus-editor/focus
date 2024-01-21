@@ -49,16 +49,16 @@ code_error:                             FF0000FF
 code_keyword:                           FFFFFFFF
 code_warning:                           E4D97DFF
 
-region_scope_export                     161616FF
-region_scope_file                       202020FF
-region_scope_module                     18181BFF
+region_scope_export                     292929FF
+region_scope_file                       292929FF
+region_scope_module                     292929FF
 region_header:                          1A5152FF
 region_success:                         226022FF
 region_warning:                         986032FF
 region_error:                           772222FF
 
 build_panel_title_bar:                  1A1A1AFF
-build_panel_background:                 000000FF
+build_panel_background:                 131313FF
 build_panel_scrollbar:                  D0C5A94C
 build_panel_scrollbar_hover:            D0C5A9A8
 build_panel_scrollbar_background:       10191F4C

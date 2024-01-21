@@ -49,13 +49,13 @@ code_error:                             FF0000FF
 code_warning:                           E4D97DFF
 code_keyword:                           6f0093FF
 
-region_scope_export:                    15212AFF
-region_scope_file:                      131C22FF
-region_scope_module:                    1A2831FF
-region_header:                          51adc2FF
-region_success:                         6DA465FF
-region_warning:                         C25151FF
-region_error:                           772222FF
+region_scope_export:                    FFFFFFFF
+region_scope_file:                      FFFFFFFF
+region_scope_module:                    FFFFFFFF
+region_header:                          FFFFFFFF
+region_success:                         F0FFF0FF
+region_warning:                         EEE8AAFF
+region_error:                           FFC0CBFF
 
 build_panel_background:                 EEEEEEFF
 build_panel_scrollbar:                  33CCCC19

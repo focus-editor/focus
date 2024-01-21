@@ -50,9 +50,9 @@ code_error:                             FF0000FF
 code_keyword:                           F0DFAFFF
 code_warning:                           E4D97DFF
 
-region_scope_export:                    072626FF
-region_scope_file:                      072626FF
-region_scope_module:                    072626FF
+region_scope_export:                    3F3F3FFF
+region_scope_file:                      484848FF
+region_scope_module:                    292929FF
 region_header:                          1A5152FF
 region_success:                         226022FF
 region_warning:                         986032FF

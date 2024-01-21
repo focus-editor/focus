@@ -50,12 +50,12 @@ code_error:                             FF0000FF
 code_keyword:                           FFDD33FF
 code_warning:                           E4D97DFF
 
-region_scope_export:                    072626FF
-region_scope_file:                      072626FF
-region_scope_module:                    072626FF
-region_header:                          1A5152FF
-region_success:                         226022FF
-region_warning:                         986032FF
+region_scope_export:                    181818FF
+region_scope_file:                      202020FF
+region_scope_module:                    222222FF
+region_header:                          181818FF
+region_success:                         181818FF
+region_warning:                         226022FF
 region_error:                           772222FF
 
 build_panel_background:                 262624FF
