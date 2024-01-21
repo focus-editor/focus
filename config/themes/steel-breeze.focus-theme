@@ -33,7 +33,7 @@ scrollbar_hover:                        ffffff40 # Whole scrollbar groove when h
 scrollbar_background:                   ffffff20 # Scrollbar curb
 cursor:                                 4020FFFF # Text in body area
 cursor_inactive:                        000000FF # Search dialog text area
-paste_animation:                        1C4449FF # Background colour during paste animation
+paste_animation:                        4000ffE0 # Background colour during paste animation
 splitter:                               ffffff20 # Splitter between right and left body
 splitter_hover:                         ffffff40 # Splitter while hovered
 letter_highlight:                       ffffffff # Highlighted letters in open dialog
