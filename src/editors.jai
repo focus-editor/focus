@@ -985,9 +985,8 @@ find_all_using_regex :: (using search_bar: *Search_Bar, needle: string, buffer: 
     while true {
         if buffer_str.count <= 0 break;
 
-        matched, captures := re.match(buffer_str, regex);
+        matched, captures := re.match(buffer_str, regex,, allocator = temp);
         if !matched break;
-        defer free(captures.data);  // TODO: when we migrate to the new beta, use `re.match(buffer_str, regex,, allocator = temp)`
 
         c := captures[0];
         offset := c.data - buffer.bytes.data;
