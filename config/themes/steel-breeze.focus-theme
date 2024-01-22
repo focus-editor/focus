@@ -2,19 +2,19 @@
 
 [colors]
 
-region_scope_export                     2C2C2C80
+region_scope_export                     2c2c2c80
 region_scope_file                       40404080
 region_scope_module                     30303080
-region_header:                          34A2A480 # Debug build header message background
-region_success:                         44C04480 # Debug Panel success message background
-region_warning:                         FFC04480
-region_error:                           EE444480
+region_header:                          34a2a480 # Debug build header message background
+region_success:                         44c04480 # Debug Panel success message background
+region_warning:                         ffc04480
+region_error:                           ee444480
 
 # Build panel colours (self-explanatory)
 build_panel_title_bar:                  ffffff03
 build_panel_background:                 000000e8
-build_panel_scrollbar:                  ffffff20
-build_panel_scrollbar_hover:            ffffff40
+build_panel_scrollbar:                  ffffff40
+build_panel_scrollbar_hover:            ffffff30
 build_panel_scrollbar_background:       ffffff20
 
 background0:                            00000060 # Body and dialog text area background
@@ -48,7 +48,7 @@ ui_warning:                             ffc044e0
 ui_warning_dim:                         ffc04480
 ui_error:                               ee4444e0
 ui_error_bright:                        ee4444ff
-ui_success:                             44C044e0
+ui_success:                             44c044e0
 
 # These are all pretty self-explanatory.
 code_default:                           ffffffe0
