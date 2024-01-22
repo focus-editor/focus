@@ -7,7 +7,7 @@ region_scope_file                       40404080
 region_scope_module                     30303080
 region_header:                          34A2A480 # Debug build header message background
 region_success:                         44C04480 # Debug Panel success message background
-region_warning:                         FFC06480
+region_warning:                         FFC04480
 region_error:                           EE444480
 
 # Build panel colours (self-explanatory)
@@ -17,42 +17,49 @@ build_panel_scrollbar:                  ffffff20
 build_panel_scrollbar_hover:            ffffff40
 build_panel_scrollbar_background:       ffffff20
 
-background0:                            ffffff00 # Body area background
+background0:                            00000060 # Body and dialog text area background
 background1:                            000000ff # Bottom layer
 background2:                            ff0000ff
 background3:                            000000aa # Dialog background
 background4:                            ffffff02 # Status bar
 selection_active:                       4000ff80 # Selection and file dialog current directory
-#selection_active:                      3e02b5a0
 selection_inactive:                     3e02b580 # Background of selection on other side
 selection_highlight:                    ffffff20 # Background of other occurences of selection
+paste_animation:                        4000ffc0 # Background colour during paste animation
 search_result_active:                   4000ff80 # Background of highlighted occurence
 search_result_inactive:                 ffffff30 # Background of unhighlighted occurences
-scrollbar:                              ffffff20 # Actual scrollbar
-scrollbar_hover:                        ffffff40 # Whole scrollbar groove when highlighted
+scrollbar:                              ffffff40 # Actual scrollbar
 scrollbar_background:                   ffffff20 # Scrollbar curb
-cursor:                                 4020FFFF # Text in body area
-cursor_inactive:                        000000FF # Search dialog text area
-paste_animation:                        4000ffE0 # Background colour during paste animation
+scrollbar_hover:                        ffffff30 # Whole scrollbar groove when hovered
+cursor:                                 4020ffff # Text cursor background in body area
 splitter:                               ffffff20 # Splitter between right and left body
 splitter_hover:                         ffffff40 # Splitter while hovered
-letter_highlight:                       ffffffff # Highlighted letters in open dialog
 list_cursor:                            4000ffa0 # Cursor in dialog
-list_cursor_lite:                       4000ff80 # Mouse cursor in dialog 
+list_cursor_lite:                       4000ff80 # Mouse cursor in dialog
 shadow_dark:                            ffffff08 # Shadow at the edge of status bar and dialog
 shadow_transparent:                     ffffff00 # Statusbar inverse shadow
-text_input_label:                       ffffff60 # Dialog input prompt
+cursor_inactive:                        4000ffa0 # Search dialog text area outline
+text_input_label:                       ffffff90 # Dialog input prompt
+letter_highlight:                       ffffffff # Highlighted letters in dialog
+ui_default:                             ffffffe0 # normal letters in dialog
+ui_dim:                                 ffffff80
+ui_neutral:                             ffffff40
+ui_warning:                             ffc044e0
+ui_warning_dim:                         ffc04480
+ui_error:                               ee4444e0
+ui_error_bright:                        ee4444ff
+ui_success:                             44C044e0
 
 # These are all pretty self-explanatory.
-code_default:                           FFFFFFe0
-code_comment:                           ffffff60
+code_default:                           ffffffe0
+code_comment:                           ffffff80
 code_type:                              00ff88e0
 code_function:                          0060ffe0
-code_punctuation:                       FFFFFF30
-code_operation:                         FFFFFF38
+code_punctuation:                       ffffff60
+code_operation:                         ffffff70
 code_string:                            ff6000e0
 code_value:                             ff6060e0
-code_highlight:                         D89B75e0
-code_error:                             FF0000e0
-code_keyword:                           8860FFe0
-code_warning:                           FFFF60e0
+code_highlight:                         d89b75e0
+code_error:                             ff0000e0
+code_keyword:                           8860ffe0
+code_warning:                           ffff60e0
