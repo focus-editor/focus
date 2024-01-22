@@ -170,7 +170,7 @@ fuzzy_match :: (str: string, filter: Fuzzy_Filter, only_exact := false) -> score
     score := 0;
 
     auto_release_temp();
-    chunk_highlights := NewArray(str.count, bool, initialized = false, allocator = temp);  // to store temporary highlights we might later reject
+    chunk_highlights := NewArray(str.count, bool, initialized = false,, allocator = temp);  // to store temporary highlights we might later reject
 
     // Try matching each chunk exactly and accept the match if at least one matches
     for chunk : filter.chunks {
@@ -228,7 +228,7 @@ construct_fuzzy_filter :: (filter_str: string, treat_slashes_as_spaces := false)
     // Split into strings separated by spaces or slashes
     space := cast(u8) #char " ";
     if treat_slashes_as_spaces then replace_chars(str, "\\/", space);
-    strings := split(str, space);
+    strings := split(str, space,, allocator = temp);
 
     for s : strings {
         if !s continue;
@@ -415,11 +415,11 @@ start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: Time
 
     // Pretend the animation started last frame so we start moving right away.
     // If the current frame was t=0, then the movement would simply be delayed one frame.
-    anim.started_at = frame_time - frame_dt;
+    anim.started_at = frame_time - to_apollo(frame_dt);
 }
 
 get_animation_value :: (using anim: Tween_Animation($T)) -> T {
-    t := cast(float) ((frame_time - started_at) / speed);
+    t := (to_float64_seconds(frame_time - started_at) / speed);
     t = clamp(t, 0, 1);
     if #complete func == {
         case .lerp;       return start + cast(T) (cast(float)(target - start) * t);
@@ -475,11 +475,11 @@ ends_with :: inline (s: string, ch: u8) -> bool {
 
 // a version of `split()` from the `String` module that returns an array with a maximum
 // number of elements
-split :: (s: string, separator: $T, max_splits: int, allocator := temp) -> [] string {
+split :: (s: string, separator: $T, max_splits: int) -> [] string {
     #assert (T == u8) || (T == string);
 
     results: [..] string;
-    results.allocator = allocator;
+    results.allocator = context.allocator;
 
     if max_splits < 1 return results;
 
@@ -508,8 +508,8 @@ split :: (s: string, separator: $T, max_splits: int, allocator := temp) -> [] st
 
 Tween_Animation :: struct(T: Type) {
     start, target: T;
-    started_at: Time;
-    speed: Time = xx 0.1;  // how many seconds to finish
+    started_at: Apollo_Time;
+    speed : Time = xx 0.1;  // how many seconds to finish
     func: enum { lerp; smoothstep; } = .smoothstep;
 }
 

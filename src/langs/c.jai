@@ -101,76 +101,74 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
 parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .number;
 
+    start_char := t.*;
+
     t += 1;
     if t >= max_t return;
 
-    if is_digit(<< t) {
+    if is_digit(t.*) || t.* == #char "." {
         // Decimal
-        t += 1;
         seen_decimal_point := false;
-        while t < max_t && (is_digit(<< t) || << t == #char ".") {
-            if << t == #char "." {
+        while t < max_t && (is_digit(t.*) || t.* == #char ".") {
+            if t.* == #char "." {
                 if seen_decimal_point break;
                 seen_decimal_point = true;
             }
             t += 1;
         }
         if t >= max_t return;
-        // t += 1;
-        // if t >= max_t return;
 
-        // exponent
-        if << t == #char "e" || << t == #char "E" {
+        // Exponent
+        if t.* == #char "e" || t.* == #char "E" {
             t += 1;
             if t >= max_t return;
 
-            if << t == #char "+" || << t == #char "-" {
+            if t.* == #char "+" || t.* == #char "-" {
               t += 1;
               if t >= max_t return;
             }
 
-            while t < max_t && is_digit(<< t) {
+            while t < max_t && is_digit(t.*) {
                 t += 1;
             }
             if t >= max_t return;
         }
 
-        // suffixes
+        // Suffixes
         if seen_decimal_point {
-            if << t == #char "f" || << t == #char "F" || << t == #char "d" || << t == #char "D" {
-              t += 1;
+            if t.* == #char "f" || t.* == #char "F" || t.* == #char "d" || t.* == #char "D" {
+                t += 1;
             }
         } else {
-
-          // This is getting kindof hard to follow...
-          if << t == #char "l" || << t == #char "L" {             // l
-              t += 1;
-              if t >= max_t return;
-
-              if << t == #char "l" || << t == #char "L" {         // ll
-                  t += 1;
-                  if t >= max_t return;
-
-                  if << t == #char "u" || << t == #char "U" {     // llu
-                    t += 1;
-                  }
-              } else if << t == #char "u" || << t == #char "U" {  // lu
+            if t.* == #char "l" || t.* == #char "L" {             // l
                 t += 1;
-              }
-          } else if  << t == #char "u" || << t == #char "U" {     // u
-              t += 1;
-          }
+                if t >= max_t return;
 
+                if t.* == #char "l" || t.* == #char "L" {         // ll
+                    t += 1;
+                    if t >= max_t return;
+
+                    if t.* == #char "u" || t.* == #char "U" {     // llu
+                    t += 1;
+                }
+            } else if t.* == #char "u" || t.* == #char "U" {      // lu
+                t += 1;
+            }
+            } else if  t.* == #char "u" || t.* == #char "U" {     // u
+                t += 1;
+            }
         }
+    } else if start_char == #char "0" {
+        if t.* == #char "x" || t.* == #char "X" {
+            // Hex
+            t += 1;
+            while t < max_t && (is_hex(t.*)) t += 1;
 
-    } else if << t == #char "x" || << t == #char "X" {
-        t += 1;
-        while t < max_t && (is_hex(<< t)) t += 1;
-
-    } else if << t == #char "b" || << t == #char "B" {
-        // Binary
-        t += 1;
-        while t < max_t && (<< t == #char "1" || << t == #char "0") t += 1;
+        } else if t.* == #char "b" || t.* == #char "B" {
+            // Binary
+            t += 1;
+            while t < max_t && (t.* == #char "1" || t.* == #char "0") t += 1;
+        }
     }
 }
 

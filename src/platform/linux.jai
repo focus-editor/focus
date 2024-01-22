@@ -78,7 +78,7 @@ DONE;
 
     flags : LD.Init_Flags = 0;
     cstr = getenv("FOCUS_LD_FLAGS");
-    flags_s := ifx cstr then to_lower_copy(to_string(cstr)) else "";
+    flags_s := ifx cstr then to_lower_copy_new(to_string(cstr),, allocator = temp) else "";
     flags_a := split(flags_s, ",");
     for flag : flags_a {
         if flag == {
@@ -273,7 +273,7 @@ platform_get_troubleshooting_info :: () -> string /* temp */ {
             ptr := environ;
             while ptr.* {
                 defer ptr += 1;
-                parts := split(to_string(ptr.*), "=", 2);
+                parts := split(to_string(ptr.*), "=", 2,, allocator = temp);
                 if parts.count != 2 continue;
                 if !starts_with(parts[0], to_string(prefix)) continue;
                 print_to_builder(sb, "  % : %\n", parts[0], parts[1]);
@@ -345,9 +345,9 @@ platform_get_troubleshooting_info :: () -> string /* temp */ {
         }
 
         libs: [..] string;
-        lines := split(to_string(data.data, data.count), "\n");
+        lines := split(to_string(data.data, data.count), "\n",, allocator = temp);
         for line : lines {
-            parts := split(line, " ", 6);
+            parts := split(line, " ", 6,, allocator = temp);
             if parts.count != 6 continue;
             if parts[1].count != 4 continue;
             if parts[1][2] != #char "x" continue;
@@ -379,7 +379,7 @@ platform_get_troubleshooting_info :: () -> string /* temp */ {
     if !ok {
         print_to_builder(*sb, "  >> failed to read '/etc/os-release'\n");
     } else {
-        lines := split(os_data, "\n");
+        lines := split(os_data, "\n",, allocator = temp);
         for lines {
             line := trim(it);
             if line print_to_builder(*sb, "  %\n", line);

@@ -40,8 +40,8 @@ maybe_revert_temporary_theme :: () {
 #scope_file
 
 set_temporary_theme :: (theme_name: string) {
-    free(temporary_theme, allocator = focus_allocator);
-    temporary_theme = copy_string(theme_name, allocator = focus_allocator);
+    free(temporary_theme,, allocator = focus_allocator);
+    temporary_theme = copy_string(theme_name,, allocator = focus_allocator);
 }
 
 apply_selected_theme :: () {
@@ -142,7 +142,7 @@ theme_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
         full_path := copy_string(info.full_name);
         path, basename, extension, name := path_decomp(full_path);
 
-        name_parts := split(copy_string(basename), "-");
+        name_parts := split(copy_string(basename), "-",, allocator = temp);
         for part : name_parts {
             if !part { remove part; continue; }
             part[0] = to_upper(part[0]);  // capitalize

@@ -397,11 +397,11 @@ MyWindowProc :: (hwnd: HWND, message: u32,
  	 	        file_name_wide_count := DragQueryFileW(drop, i, null, 0) + 2;
  	 	        assert(file_name_wide_count > 0);
 
- 	  	        file_name_wide := cast(*u16) alloc(file_name_wide_count * size_of(u16));
+		        file_name_wide := cast(*u16) alloc(file_name_wide_count * size_of(u16));
  	 	        ok := DragQueryFileW(drop, i, file_name_wide, file_name_wide_count);
  	 	        assert(ok > 0); // means success
 
- 	  	        file_name := wide_to_utf8(file_name_wide);
+		        file_name := wide_to_utf8_new(file_name_wide,, allocator = temp);
  	 	        array_add(*files, file_name);
  	 	    }
 

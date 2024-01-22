@@ -16,16 +16,16 @@ add_user_message :: (message: string, args: .. Any, level: User_Message.Level, d
         message            = sprint(message, ..args),
         level              = level,
         tag                = tag,
-        time               = cast(Time) get_time(),
-        dismiss_in_seconds = cast(Time) dismiss_in_seconds,
+        time               = current_time_monotonic(),
+        dismiss_in_seconds = dismiss_in_seconds,
     });
 } @PrintLike
 
-get_user_messages :: (current_time: Time) -> [] User_Message {
+get_user_messages :: (current_time: Apollo_Time) -> [] User_Message {
     // Cleanup the old or manually dismissed messages
     for < user_messages {
         // We do care about the order here, but since we're looping backwards we won't change the order
-        if (it.dismiss_in_seconds >= 0 && current_time - it.time > it.dismiss_in_seconds) || it.dismissed || !it.message {
+        if (it.dismiss_in_seconds >= 0 && to_float64_seconds(current_time - it.time) > it.dismiss_in_seconds) || it.dismissed || !it.message {
             free_message(it);
             remove it;
         }
@@ -58,7 +58,7 @@ User_Message :: struct {
     message: string;
     level: Level;
     tag: Tag;
-    time: Time;
+    time: Apollo_Time;
     dismiss_in_seconds: Time;
     dismissed: bool;
 

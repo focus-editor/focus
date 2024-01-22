@@ -385,7 +385,7 @@ dump_buffer_state :: (buffer_id: s64) -> [] u8 #must {
     if buffer.modified append(*builder, buffer.bytes.data, buffer.bytes.count);
 
     // Calculate and append a hash for verification
-    hashable_str := builder_to_string(*builder, allocator = temp, do_reset = false);
+    hashable_str := builder_to_string(*builder, do_reset = false,, allocator = temp);
     meow_hash := calculate_hash(to_bytes(hashable_str));
     append(*builder, cast(*u8) *meow_hash, size_of(type_of(meow_hash)));
 

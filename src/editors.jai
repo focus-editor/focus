@@ -135,7 +135,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
     // We always want to put some actions in a separate edit group (e.g. block indent)
     new_group := false;
     for cursor : editor.cursors { if new_edit_group_required_for_action(action, cursor) { new_group = true; break; } }
-    if new_group || frame_time - buffer.last_edit_time >= EDIT_GROUP_TIMEOUT then new_edit_group(buffer, editor);  // do it before action
+    if new_group || to_float64_seconds(frame_time - buffer.last_edit_time) >= EDIT_GROUP_TIMEOUT then new_edit_group(buffer, editor);  // do it before action
 
     // We want to remember where cursors were before we do any edits
     if buffer.edits.count == 0 {
@@ -318,7 +318,7 @@ active_editor_type_char :: (char: u32) {
     new_group := false;  // we always want to remember cursor state when a selection is replaced with anything
     for editor.cursors { if has_selection(it) { new_group = true; break; } }
 
-    if new_group || frame_time - buffer.last_edit_time >= EDIT_GROUP_TIMEOUT {
+    if new_group || to_float64_seconds(frame_time - buffer.last_edit_time) >= EDIT_GROUP_TIMEOUT {
         new_edit_group(buffer, editor);
     }
 
@@ -985,9 +985,8 @@ find_all_using_regex :: (using search_bar: *Search_Bar, needle: string, buffer: 
     while true {
         if buffer_str.count <= 0 break;
 
-        matched, captures := re.match(buffer_str, regex);
+        matched, captures := re.match(buffer_str, regex,, allocator = temp);
         if !matched break;
-        defer free(captures.data);  // TODO: when we migrate to the new beta, use `re.match(buffer_str, regex,, allocator = temp)`
 
         c := captures[0];
         offset := c.data - buffer.bytes.data;
@@ -1243,7 +1242,7 @@ cursors_stop_blinking :: inline () {
 should_draw_cursors :: inline () -> bool {
     if !cursors_blinking || config.settings.cursor_blink_time_in_seconds <= 0 return true;
 
-    ms_since_start := cast(s64) ((frame_time - cursor_blink_start) * 1000);
+    ms_since_start := cast(s64) (to_float64_seconds(frame_time - cursor_blink_start) * 1000);
     if ms_since_start > config.settings.cursor_blink_time_in_seconds * 1000 {
         cursors_stop_blinking();
         return true;
@@ -1993,7 +1992,7 @@ move_to_file_end :: (editor: *Editor, buffer: Buffer) {
 break_line :: (editor: *Editor, buffer: *Buffer) {
     // Remember by how much we need to indent the new lines upfront to avoid any scanning of the dirty buffer later
     Space :: struct { start: s32; count: s32; original_start: s32; }  // not a string to avoid invalid pointers
-    space_per_cursor := NewArray(editor.cursors.count, Space, initialized = false, allocator = temp);
+    space_per_cursor := NewArray(editor.cursors.count, Space, initialized = false,, allocator = temp);
     for cursor : editor.cursors {
         selection := get_selection(cursor);
         start := get_real_line_start_offset(buffer, offset_to_real_line(buffer, selection.start));
@@ -2029,7 +2028,7 @@ break_line :: (editor: *Editor, buffer: *Buffer) {
 
 new_line_below :: (editor: *Editor, buffer: *Buffer) {
     Line_Info :: struct { end: s32; space: struct { start, count, original_start: s32; }; last_line: bool; };
-    line_info_per_cursor := NewArray(editor.cursors.count, Line_Info, initialized = false, allocator = temp);
+    line_info_per_cursor := NewArray(editor.cursors.count, Line_Info, initialized = false,, allocator = temp);
     for cursor : editor.cursors {
         selection := get_selection(cursor);
         last_line := offset_to_real_line(buffer, selection.end);
@@ -2060,7 +2059,7 @@ new_line_below :: (editor: *Editor, buffer: *Buffer) {
 
 new_line_above :: (editor: *Editor, buffer: *Buffer) {
     Line_Info :: struct { start: s32; space: struct { start, count, original_start: s32; }; };
-    line_info_per_cursor := NewArray(editor.cursors.count, Line_Info, initialized = false, allocator = temp);
+    line_info_per_cursor := NewArray(editor.cursors.count, Line_Info, initialized = false,, allocator = temp);
     for cursor : editor.cursors {
         selection  := get_selection(cursor);
         first_line := offset_to_real_line(buffer, selection.start);
@@ -2128,7 +2127,7 @@ delete_left_char :: (editor: *Editor, buffer: *Buffer) {
     // NOTE: we don't have to worry about a cursor with no selection being immediately next
     //       to the non-cursor end of another cursor's selection (thanks to organise_cursors),
     //       so it should be safe to delete at least one character to the left of every cursor if there is one
-    range_per_cursor := NewArray(editor.cursors.count, Offset_Range, initialized = false, allocator = temp);
+    range_per_cursor := NewArray(editor.cursors.count, Offset_Range, initialized = false,, allocator = temp);
     for cursor : editor.cursors {
         if should_delete_closing_bracket {
             range_per_cursor[it_index] = .{ start = cursor.pos - 1, end = cursor.pos + 1 };
@@ -2410,7 +2409,7 @@ autoindent_region :: (editor: *Editor, buffer: *Buffer, fallback := true) {
 
             range_str := get_range_as_string(buffer, line_range.range);
             if ends_with(range_str, "\n") then range_str.count -= 1;
-            lines_in_range := split(range_str, cast(u8) #char "\n");
+            lines_in_range := split(range_str, cast(u8) #char "\n",, allocator = temp);
 
             level := base_level;
             start, end: s32;
@@ -2443,7 +2442,7 @@ autoindent_region :: (editor: *Editor, buffer: *Buffer, fallback := true) {
                 level = max(0, level + next_delta);
             }
 
-            replacement = builder_to_string(*b, allocator = temp);
+            replacement = builder_to_string(*b,, allocator = temp);
         }
 
         array_add(*replacements, replacement);
@@ -2688,7 +2687,7 @@ join_lines :: (editor: *Editor, buffer: *Buffer, in_between := " ") {
         range.end   += xx offset_delta;
 
         range_str := get_range_as_string(buffer, range.range);
-        individual_lines := split(trim_right(range_str, " \t"), cast(u8) #char "\n");
+        individual_lines := split(trim_right(range_str, " \t"), cast(u8) #char "\n",, allocator = temp);
         if individual_lines.count <= 1 continue;  // nothing to join
 
         first_line         := individual_lines[0];
@@ -2712,7 +2711,7 @@ join_lines :: (editor: *Editor, buffer: *Buffer, in_between := " ") {
         append(*b, "\n");
         add_deletion(-1);
 
-        new_str := builder_to_string(*b, allocator = temp);
+        new_str := builder_to_string(*b,, allocator = temp);
         replace_range(buffer, range.range, new_str);
         add_paste_animation(editor, .{ start = range.start + cast(s32)first_line.count, end = range.start + cast(s32)new_str.count });
 
@@ -3225,7 +3224,7 @@ Editor :: struct {
 
     // TODO: use a global flag rather than per editor?
     new_cursor_just_created_using_mouse := false;  // useful to know in order to handle select-by-drag and select-word with the new cursor
-    last_cursor_created_using_mouse_at: Time;
+    last_cursor_created_using_mouse_at: Apollo_Time;
 
     initial_middle_mouse_coords: Coords; // used for creating cursors while dragging middle mouse button
 
@@ -3320,7 +3319,7 @@ Paste_Animation :: struct {
     range: Offset_Range;
     coords_range: Coords_Range;
     initted := false;
-    started_at: Time;
+    started_at: Apollo_Time;
     SPEED :: 0.3;
 }
 
@@ -3383,7 +3382,7 @@ Smooth_Scroll_Direction :: enum {
 editor_smooth_scroll: struct {
     direction: Smooth_Scroll_Direction;
     fast: bool;
-    started_at: Time;
+    started_at: Apollo_Time;
     start_x: s32;
     start_y: s32;
 };
@@ -3597,7 +3596,7 @@ move_to_editor_history_frame :: (frame: Editor_History_Frame, old_frame: Editor_
 
 #scope_file
 
-cursor_blink_start: Time;
+cursor_blink_start: Apollo_Time;
 cursors_blinking := false;
 
 global_config_buffer_id := -1;

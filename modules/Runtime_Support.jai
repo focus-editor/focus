@@ -280,25 +280,25 @@ __arithmetic_overflow :: (left: s64, right: s64, type_code: u16, line_number: s6
 
     signed_string := ifx signed then "s" else "u";
     operator_string := " / ";
-    
+
     if      operator_index == 1 then operator_string = " + ";
     else if operator_index == 2 then operator_string = " - ";
     else if operator_index == 3 then operator_string = " * ";
-    
+
     write_string("Arithmetic overflow. We tried to compute:\n    ", to_standard_error = true);
 
     if signed  write_number(left, to_standard_error = true);
     else       write_nonnegative_number(cast,no_check(u64)left, to_standard_error = true);
 
     write_string(operator_string, to_standard_error = true);
-    
+
     if signed  write_number(right, to_standard_error = true);
     else       write_nonnegative_number(cast,no_check(u64)right, to_standard_error = true);
-    
+
     write_strings("\nThe operand type is ", signed_string, to_standard_error = true);
     write_nonnegative_number(size, to_standard_error = true);
     write_string(", but the result does not fit into this type.\n", to_standard_error = true);
-    
+
     if fatal my_panic();
 }
 
@@ -529,7 +529,7 @@ one_time_init :: (synch_value: *s32, to_insert: Code) #expand {
 // It must exist and be relatively easy to compile (without requiring #run of
 // procedures, for example). Context_Base is going to be annoying to edit because
 // if you make an error of some kind, even a simple one like an undeclared identifier,
-// you won't get a helpful error message. 
+// you won't get a helpful error message.
 Context_Base :: struct {
     context_info:  *Type_Info_Struct; // Allow libs or DLLs to see what context we are passing them.
 
@@ -707,7 +707,7 @@ report_error_in_yer_face :: (message: string, args: .. Any, from_no_context := f
         W :: #import "Windows";
         W_Utf8 :: #import "Windows_Utf8";
         W.ShowCursor(1);
-        W.MessageBoxW(null, W_Utf8.utf8_to_wide(formatted_message), W_Utf8.utf8_to_wide("Fatal Error"), W.MB_OK);
+        W.MessageBoxW(null, W_Utf8.utf8_to_wide_new(formatted_message,, allocator = temp), W_Utf8.utf8_to_wide_new("Fatal Error",, allocator = temp), W.MB_OK);
     }
 }
 

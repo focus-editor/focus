@@ -199,7 +199,7 @@ x11_update_window_events :: (display: *Display) {
     // that doesn't expect other events, or at most after a second,
     // so some buggy program doesn't hang the editor while handling our clipboard response.
     expect_more_events := false;
-    start_time := get_time();
+    start_time := seconds_since_init();
     elapsed_time := start_time;
 
     while X11.XPending(x11_display.handle) || (expect_more_events && elapsed_time < 1.0) {
@@ -208,7 +208,7 @@ x11_update_window_events :: (display: *Display) {
             expect_more_events = x11_handle_event(x11_display, *xev);
             timers_tick();
         }
-        elapsed_time = get_time() - start_time;
+        elapsed_time = seconds_since_init() - start_time;
     }
 }
 
@@ -703,14 +703,14 @@ get_selection :: (x11_display: *X11_Display, from: X11.Window, prop: X11.Atom, i
     X11.XDeleteProperty(display, insert, prop);
 
     /* @Cleanup: Get rid of fd_set stuff.
-    time_start := get_time();
+    time_start := seconds_since_init();
     while true {
         r: fd_set;
         xe: XEvent;
         if XCheckMaskEvent(display, PropertyChangeMask, *xe) {
             if xe.type == PropertyNotify && xe.xproperty.state == PropertyNewValue {
                 // time between arrivals of data
-                time_start = get_time();
+                time_start = seconds_since_init();
                 if paste_property(display, from, insert, prop, True)  break;
             }
         } else {
@@ -720,7 +720,7 @@ get_selection :: (x11_display: *X11_Display, from: X11.Window, prop: X11.Atom, i
 
             if FD_ISSET(ConnectionNumber(display), *r)  continue;
         }
-        end := get_time();
+        end := seconds_since_init();
 
         // no data for five seconds, so quit
         if end - start > 5000000  return false;
@@ -912,7 +912,7 @@ maybe_handle_xdnd_drop_events :: (x11_display: *X11_Display, xevent: *X11.XEvent
 
             file_name := "";
             // Heap allocated like on Windows.
-            file_name_bytes := cast(*u8) alloc(i, __temporary_allocator);
+            file_name_bytes := cast(*u8) alloc(i,, allocator = temp);
             memcpy(file_name_bytes, p.data, i);
             p.data = p.data + i + 2;
             p.count = p.count - i - 2;

@@ -267,7 +267,7 @@ maybe_migrate_config :: (name: string, file_data: string, assume_section := "") 
                     success, key_sequence_str, action_name := split_from_right_by_any(line, " \t");
                     if success {
                          if current_subsection == "editors" {
-                            if action_name == "remove_additional_cursors" && to_lower_copy(trim(key_sequence_str), allocator = temp) == "escape" {
+                            if action_name == "remove_additional_cursors" && to_lower_copy_new(trim(key_sequence_str),, allocator = temp) == "escape" {
                                 // Rebind action to "escape"
                                 new_binding := tprint("Escape                      escape\n");
                                 offset_difference += replace_line(*modified_data, line_start_offset, new_binding);
@@ -308,7 +308,7 @@ get_line_length :: (buffer: [..] u8, line_start_offset: s64) -> length: s64 {
 ADDED_SETTINGS :: Added_Setting.[
     .{ 2, "build_panel_width_percent",                  "50" },
     .{ 2, "build_panel_height_percent",                 "50" },
-    .{ 2, "build_panel_stays_in_one_place",             "false  # if true, the build panel will flip to the inactive pane in two pane layouts" },
+    .{ 2, "build_panel_stays_in_one_place",             "false  # if false, the build panel will flip to the inactive pane in two pane layouts" },
     .{ 2, "build_panel_line_wrap_always_on",            "true" },
     .{ 2, "highlight_line_with_cursor",                 "false" },
     .{ 2, "draw_indent_guides",                         "false" },

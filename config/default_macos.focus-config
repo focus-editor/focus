@@ -246,6 +246,7 @@ Cmd-B                       toggle_build_panel
 F11                         toggle_fullscreen
 
 # {Shift}- means shift is optional, the key combination will still be matched.
+# NOTE: in this editor the Shift key is hard-coded to extend selection when held
 {Shift}-ArrowUp             move_up
 {Shift}-Alt-Cmd-ArrowUp     move_up_fast
 {Shift}-PageUp              move_up_one_page

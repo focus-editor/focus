@@ -227,7 +227,7 @@ map_name_to_color :: (name: string) -> Color {
 }
 
 get_theme_file_from_name :: (name: string) -> string /* temp */ {
-    theme_name := to_lower_copy(name, allocator = temp);
+    theme_name := to_lower_copy_new(name,, allocator = temp);
     return tprint("%/%.focus-theme", themes_dir, theme_name);
 }
 
@@ -380,7 +380,7 @@ maybe_switch_section :: (using parser: *Config_Parser, line: string, fix_section
         section := CONFIG_SECTIONS[active_section];
         if !array_find(section.subsections, subsection_name) {
             if section.subsections {
-                return true, tprint("Unknown subsection of [[%]]: '%'.\nAvailable options: [%].", section.name, line, join(..section.subsections, "], [", allocator = temp));
+                return true, tprint("Unknown subsection of [[%]]: '%'.\nAvailable options: [%].", section.name, line, join(..section.subsections, "], [",, allocator = temp));
             } else {
                 return true, tprint("Unexpected subsection of [[%]]: '%'. This section doesn't allow any subsections.", section.name, line);
             }
@@ -434,7 +434,7 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
             } else {
                 if parse_for_highlighting {
                     // Highlight the bad chunk
-                    for chunk : split(dir_path, "/") {
+                    for chunk : split(dir_path, "/",, allocator = temp) {
                         dir_prefix := slice(dir_path, 0, chunk.data - dir_path.data + chunk.count);
                         if !file_exists(dir_prefix) {
                             add_highlight(parser, chunk.data - dir_path.data, chunk.count, .error);
@@ -445,14 +445,14 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
                 return true, tprint("Directory '%' doesn't exist.", dir_path);
             }
         case .workspace_ignore_dirs;
-            dirs := split(line, cast(u8) #char " ");
+            dirs := split(line, cast(u8) #char " ",, allocator = temp);
             for dir : dirs {
                 if !dir continue;
                 path_overwrite_separators(dir, #char "/");
                 array_add(*result.config.ignore_dirs, dir);
             }
         case .workspace_allow_file_extensions;
-            extensions := split(line, cast(u8) #char " ");
+            extensions := split(line, cast(u8) #char " ",, allocator = temp);
             for extensions {
                 if !it continue;
                 if contains_any_character(it, "*?") {
@@ -462,7 +462,7 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
                 }
             }
         case .workspace_ignore_file_extensions;
-            extensions := split(line, cast(u8) #char " ");
+            extensions := split(line, cast(u8) #char " ",, allocator = temp);
             for extensions {
                 if !it continue;
                 if contains_any_character(it, "*?") {
@@ -490,7 +490,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
             font_settings := string.[ "font", "font_size" ];
             if !array_find(font_settings, setting) {
                 add_highlight(parser, 0, setting.count, .error);
-                return true, tprint("Unknown font option '%'. Available options: ", setting, join(..font_settings, ", ", allocator = temp));
+                return true, tprint("Unknown font option '%'. Available options: ", setting, join(..font_settings, ", ",, allocator = temp));
             }
 
             if setting == {
@@ -722,7 +722,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                                 return true, "";
                             } else {
                                 // Highlight the bad chunk
-                                for chunk : split(dir_path, "/") {
+                                for chunk : split(dir_path, "/",, allocator = temp) {
                                     dir_prefix := slice(dir_path, 0, chunk.data - dir_path.data + chunk.count);
                                     if !file_exists(dir_prefix) {
                                         add_highlight(parser, setting_value.data - line.data + chunk.data - dir_path.data, chunk.count, .error);
@@ -982,7 +982,7 @@ parse_key_combo :: (using parser: *Config_Parser, combo_str: string, line: strin
 
         valid_mod_key := true;
 
-        if to_lower_copy(mod_key, allocator = temp) == {
+        if to_lower_copy_new(mod_key,, allocator = temp) == {
             case "ctrl";    combo.mods.ctrl_pressed       = true;
             case "shift";   combo.mods.shift_pressed      = true;
             case "alt";     combo.mods.alt_pressed        = true;

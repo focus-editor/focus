@@ -25,8 +25,10 @@
     + Previewing themes will now change window border color as well as it should (thanks @jmpstar)
     + Regex search should no longer crash the editor on certain inputs
 + Other changes:
-    + Theme improvements: jblow-nostalgia
+    + Various theme improvements (thanks @jmpstar, @Leonader, @maxamundsen)
     + Crash reports now print stack traces in release mode where possible (thanks @Sanian-Creations)
+    + Upgraded to Jai 0.1.83+ (thanks @valignatev)
+    + C highlighting improvements
 
 
 # RELEASES ==================================================================

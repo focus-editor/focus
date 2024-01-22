@@ -104,7 +104,7 @@ get_lowercase_extension :: (path: string, greedy := true) -> string /* temp */, 
     extension := advance(basename_with_extension, index + 1);
     if !extension return "", false;
 
-    return to_lower_copy(extension), true;
+    return to_lower_copy_new(extension,, allocator = temp), true;
 }
 
 is_file_binary :: (file_data: string) -> bool {
@@ -166,7 +166,7 @@ should_ignore_file :: (path: string) -> bool {
 }
 
 should_ignore_dir :: (path: string) -> bool {
-    path_chunks := split(path, "/");
+    path_chunks := split(path, "/",, allocator = temp);
     for config.workspace.ignore_dirs {
         if contains(it, cast(u8) #char "/") {
             // Match whole path

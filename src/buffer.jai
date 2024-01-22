@@ -705,12 +705,12 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
     b: String_Builder;
     b.allocator = temp;
     init_string_builder(*b, buffer_size = bytes.count + size_of(String_Builder.Buffer));
-    lines := split(cast(string) bytes, cast(u8) #char "\n");
+    lines := split(cast(string) bytes, cast(u8) #char "\n",, allocator = temp);
     for line, i : lines {
         append(*b, trim_right(line));
         if i < lines.count - 1 then append(*b, "\n");
     }
-    stripped := builder_to_string(*b, allocator = temp);
+    stripped := builder_to_string(*b,, allocator = temp);
 
     if stripped.count == bytes.count return;  // nothing stripped
 
@@ -1274,7 +1274,7 @@ Buffer :: struct {
 
     content_lock: Mutex;  // must hold while modifying content (or reading in a non-main thread)
 
-    last_edit_time: Time;  // for creating new edit groups
+    last_edit_time: Apollo_Time;  // for creating new edit groups
 
     undos: [..] Edit_Group;
     redos: [..] Edit_Group;
