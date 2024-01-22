@@ -308,7 +308,7 @@ get_line_length :: (buffer: [..] u8, line_start_offset: s64) -> length: s64 {
 ADDED_SETTINGS :: Added_Setting.[
     .{ 2, "build_panel_width_percent",                  "50" },
     .{ 2, "build_panel_height_percent",                 "50" },
-    .{ 2, "build_panel_stays_in_one_place",             "false  # if true, the build panel will flip to the inactive pane in two pane layouts" },
+    .{ 2, "build_panel_stays_in_one_place",             "false  # if false, the build panel will flip to the inactive pane in two pane layouts" },
     .{ 2, "build_panel_line_wrap_always_on",            "true" },
     .{ 2, "highlight_line_with_cursor",                 "false" },
     .{ 2, "draw_indent_guides",                         "false" },
