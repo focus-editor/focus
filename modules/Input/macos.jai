@@ -448,8 +448,8 @@ update_cocoa_window_events :: () {
                  * The `Objective_C` module is missing the correct bindings however so we're stuck with
                  * what we have. Change these as soon as possible.
                  */
-                delx := NSEvent.deltaX(nsevent);
-                dely := NSEvent.deltaY(nsevent);
+                delx := NSEvent.scrollingDeltaX(nsevent);
+                dely := NSEvent.scrollingDeltaY(nsevent);
 
                 event: Event;
                 // NOTE: horizontal scrolling is temporarily disabled because it's almost unusable and needs tweaking
