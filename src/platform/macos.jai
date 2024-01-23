@@ -128,35 +128,32 @@ monitors : [..] Monitor;
 #import "Hash_Table";
 
 // We need to hold the association between `Focus_Timer` instances and `NSTimer` instances externally
-// since currently we can't properly do instance variables for Cocoa classes (see the comment on
-// `objc_create_class` for more details). Granted this platform layer only ever uses a single timer
-// but I've implemented the "generic" way in case we ever want to move this implementation to some
-// generic macOS support module (similar to how `Linux_Display` works).
+// since currently we can't properly do instance variables for Cocoa classes (see the warning at the
+// top of `modules/Objective_C/module.jai` for more details). Granted this platform layer only ever
+// uses a single timer but I've implemented the "generic" way in case we ever want to move this
+// implementation to some macOS support module (similar to how `Linux_Display` works).
 //
 //  - ileonte 23.01.2024
 //
-native_timers: Table(*Focus_Timer, *NSTimer); 
+native_timers: Table(*Focus_Timer, *NSTimer);
 platform_timer: *Focus_Timer;
 
 timer_class_registered := false;
 Focus_Timer :: struct {
     using #as base: NSObject;
-    
+
     timerFired :: (using self: *Focus_Timer, _sel: Selector, notification: *NSNotification) #c_call {
-        ctx: Context;
-        push_context ctx {            
-            event := NSEvent.otherEventWithType(
-                type = NSEventTypeApplicationDefined,
-                location = .{},
-                modifierFlags = 0,
-                timestamp = 0,
-                windowNumber = 0,
-                ctx = null,
-                subtype = 0,
-                data1 = 0,
-                data2 = 0);
-            NSApplication.postEvent(NSApp, event, YES);
-        }
+        event := NSEvent.otherEventWithType(
+            type = NSEventTypeApplicationDefined,
+            location = .{},
+            modifierFlags = 0,
+            timestamp = 0,
+            windowNumber = 0,
+            ctx = null,
+            subtype = 0,
+            data1 = 0,
+            data2 = 0);
+        NSApplication.postEvent(NSApp, event, YES);
     } @selector(timerFired:)
 }
 
@@ -164,7 +161,7 @@ create_timer :: (timeout_ms: u64, repeat := true) -> *Focus_Timer {
     if !timer_class_registered {
         timer_class_registered = true;
         init(*native_timers);
-        
+
         cls := objc_create_class(Focus_Timer, NSObject);
         objc_add_instance_method(cls, Focus_Timer.timerFired, "timerFired:");
         objc_finalize_class(cls);
