@@ -29,6 +29,10 @@
     + Crash reports now print stack traces in release mode where possible (thanks @Sanian-Creations)
     + Upgraded to Jai 0.1.83+ (thanks @valignatev)
     + C highlighting improvements
+    + Platform support enchancements for macOS:
+        + the editor no longer consumes CPU when idle
+        + implemented the refresh timer (2024, year of the blinking cursor)
+        + smoother trackpad scrolling (still a work in progress, can be a bit too sensitive right now)
 
 
 # RELEASES ==================================================================
