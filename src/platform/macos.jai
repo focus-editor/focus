@@ -34,7 +34,7 @@ platform_create_window :: inline () {
 }
 
 platform_maximize_window :: inline (window: Window_Type) {
-    NSWindow.toggleFullScreen(window, window);
+    NSWindow.maximize(window);
 }
 
 platform_enable_drag_and_drop :: inline (window: Window_Type) {

@@ -517,6 +517,9 @@ NSWindow :: struct {
     setFrame :: (self: *NSWindow, frame: NSRect, display: BOOL) {
         objc_msgSend(self, _sel.setFrame_display_, frame, display);
     }
+    setFrame :: (self: *NSWindow, frame: NSRect, display: BOOL, animate: BOOL) {
+        objc_msgSend(self, _sel.setFrame_display_animate_, frame, display, animate);
+    }
 
     level :: (self: *NSWindow) -> NSWindowLevel {
         return xx objc_msgSend(self, _sel.level);
@@ -628,12 +631,21 @@ NSWindow :: struct {
         objc_msgSend(self, _sel.toggleFullScreen_, sender);
     }
 
+    screen :: (self: *NSWindow) -> *NSScreen {
+        return xx objc_msgSend(self, _sel.screen);
+    }
+
     // helper functions
     setTitle :: (self: *NSWindow, title: string) -> id {
         nsstring := NSString.initWithString(objc_alloc(NSString), title);
         defer release(nsstring);
 
         return setTitle(self, nsstring);
+    }
+
+    maximize :: (self: *NSWindow) {
+        visibleFrame := NSScreen.visibleFrame(screen(self));
+        setFrame(self, visibleFrame, display=YES);
     }
 }
 
@@ -992,6 +1004,12 @@ NSScreen :: struct {
 
     frame              :: NSView.frame;
     backingScaleFactor :: NSView.backingScaleFactor;
+
+    visibleFrame :: (self: *NSScreen) -> NSRect #c_call {
+        func: (*void, Selector) -> NSRect #c_call;
+        func = xx objc_msgSend_stret;
+        return func(self, _sel.visibleFrame);
+    }
 }
 
 NSCursor :: struct {
@@ -1263,12 +1281,14 @@ _sel: struct #type_info_no_size_complaint {
     frame: Selector;
     setFrame_: Selector;
     setFrame_display_: Selector;
+    setFrame_display_animate_: Selector;
     center: Selector;
     convertRectToBacking_: Selector;
     convertRectFromBacking_: Selector;
     convertPointToBacking_: Selector;
     convertPointFromBacking_: Selector;
     backingScaleFactor: Selector;
+    visibleFrame: Selector;
     setWantsBestResolutionOpenGLSurface_: Selector;
     mainScreen: Selector;
     hide: Selector;
@@ -1288,6 +1308,7 @@ _sel: struct #type_info_no_size_complaint {
     enterFullScreenMode_withOptions_: Selector;
     exitFullScreenModeWithOptions_: Selector;
     toggleFullScreen_: Selector;
+    screen: Selector;
     setCollectionBehavior_: Selector;
     setContentSize_: Selector;
     setFrameOrigin_: Selector;
