@@ -32,7 +32,8 @@
     + Platform support enchancements for macOS:
         + the editor no longer consumes CPU when idle
         + implemented the refresh timer (2024, year of the blinking cursor)
-        + smoother trackpad scrolling (still a work in progress, can be a bit too sensitive right now)
+        + smoother trackpad scrolling
+        + the `maximize_on_start` option now actually maximizes the main window instead of making it full-screen
 
 
 # RELEASES ==================================================================
