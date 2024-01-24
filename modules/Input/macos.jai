@@ -441,29 +441,50 @@ update_cocoa_window_events :: () {
 
             case NSEventTypeScrollWheel;
                 /*
-                 * NOTE:
-                 * According to https://developer.apple.com/documentation/appkit/nsevent/1534158-deltay we
-                 * should be using `NSEvent.scrollingDelta{X,Y}` here, not `NSEvent.delta{X,Y}`.
+                 * A lot of the various factors we use to multiply/divide stuff here are basically
+                 * determined by what felt good on my Macbook trackpad at the time this was written.
                  *
-                 * The `Objective_C` module is missing the correct bindings however so we're stuck with
-                 * what we have. Change these as soon as possible.
+                 * The main goal here is to translate from the "scrolling units" that macOS uses
+                 * for `scrollingDeltaX`/`scrollingDeltaY` to the "multiple-of-120" style of units
+                 * that are used in Windows applications (which the whole `Input` module is built
+                 * around). I couldn't find any official documentation on how exactly to correctly
+                 * do this translation so I just experimented until things felt right (as far as I
+                 * can tell there really is no official way to perform this conversion; we may want
+                 * to make these configurable somehow).
+                 *
+                 * We also try to be mindful of momentum scrolling and reduce the "jitter" that
+                 * horizontal scrolling on a trackpad naturally incurs.
+                 *
+                 *  - @ileonte 24.01.2024
                  */
-                delx := NSEvent.scrollingDeltaX(nsevent);
-                dely := NSEvent.scrollingDeltaY(nsevent);
+                deltaX := NSEvent.scrollingDeltaX(nsevent);
+                deltaY := NSEvent.scrollingDeltaY(nsevent);
+                phase := NSEvent.phase(nsevent);
+                momentumPhase := NSEvent.momentumPhase(nsevent);
+                is_momentum := (phase == NSEventPhaseNone) && (momentumPhase != NSEventPhaseNone);
+                has_precise_scrolling := ifx NSEvent.hasPreciseScrollingDeltas(nsevent) == YES then true else false;
+
+                if !has_precise_scrolling {
+                    deltaX *= 10.0;
+                    deltaY *= 20.0;
+                } else {
+                    if !is_momentum && (abs(deltaX) >= abs(deltaY) * 0.75) then deltaY = 0.0;
+                    deltaY *= 3.275;
+                    deltaX *= 2.0;
+                }
 
                 event: Event;
-                // NOTE: horizontal scrolling is temporarily disabled because it's almost unusable and needs tweaking
-                // if delx != 0.0 {
-                //     event.type = .MOUSE_H_WHEEL;
-                //     event.typical_wheel_delta = WHEEL_DELTA;
-                //     event.wheel_delta = cast(s32) (dely * 10.0);
-                //     array_add(*events_this_frame, event);
-                //     mouse_wheel_delta.horizontal += event.wheel_delta;
-                // }
-                if dely != 0.0 {
+                if deltaX != 0.0 {
+                    event.type = .MOUSE_H_WHEEL;
+                    event.typical_wheel_delta = WHEEL_DELTA;
+                    event.wheel_delta = cast(s32) ((deltaX / 100.0) * WHEEL_DELTA);
+                    array_add(*events_this_frame, event);
+                    mouse_wheel_delta.horizontal += event.wheel_delta;
+                }
+                if deltaY != 0.0 {
                     event.type = .MOUSE_V_WHEEL;
                     event.typical_wheel_delta = WHEEL_DELTA;
-                    event.wheel_delta = cast(s32) (dely * 10.0);
+                    event.wheel_delta = cast(s32) ((deltaY / 100.0) * WHEEL_DELTA);
                     array_add(*events_this_frame, event);
                     mouse_wheel_delta.vertical += event.wheel_delta;
                 }
@@ -475,6 +496,8 @@ update_cocoa_window_events :: () {
     array_add(*events_this_frame, ..osx_externally_generated_events);
     array_reset(*osx_externally_generated_events);
 }
+
+
 
 WHEEL_DELTA :: 120;
 
@@ -516,6 +539,8 @@ add_resize_record :: (hwnd: Window_Type, width: s32, height: s32) {
 }
 
 #scope_file
+
+#import "Math";
 
 // :DecoupleWindowCreationAndInput:
 #add_context _macos_create_app_delegate    :: create_app_delegate;

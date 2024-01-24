@@ -127,13 +127,13 @@ monitors : [..] Monitor;
 #import "Process";
 #import "Hash_Table";
 
-// We need to hold the association between `Focus_Timer` instances and `NSTimer` instances externally
+// We need to store the association between `Focus_Timer` instances and `NSTimer` instances externally
 // since currently we can't properly do instance variables for Cocoa classes (see the warning at the
 // top of `modules/Objective_C/module.jai` for more details). Granted this platform layer only ever
 // uses a single timer but I've implemented the "generic" way in case we ever want to move this
 // implementation to some macOS support module (similar to how `Linux_Display` works).
 //
-//  - ileonte 23.01.2024
+//  - @ileonte 23.01.2024
 //
 native_timers: Table(*Focus_Timer, *NSTimer);
 platform_timer: *Focus_Timer;

@@ -48,7 +48,7 @@ NSApplication :: struct {
     sendEvent :: (self: *NSApplication, event: *NSEvent) #no_context {
         objc_msgSend(self, _sel.sendEvent_, event);
     }
-    
+
     postEvent :: (self: *NSApplication, event: *NSEvent, atStart: BOOL) #no_context {
         objc_msgSend(self, _sel.postEvent_atStart_, event, atStart);
     }
@@ -106,14 +106,14 @@ NSApplication :: struct {
 
 NSEvent :: struct {
     using #as super: NSObject;
-    
+
     otherEventWithType :: (type: NSEventType, location: NSPoint, modifierFlags: NSEventModifierFlags, timestamp: NSTimeInterval, windowNumber: u64, ctx: *void, subtype: u16, data1: u64, data2: u64) -> *NSEvent #c_call {
         func: (*void, Selector, NSEventType, NSPoint, NSEventModifierFlags, NSTimeInterval, u64, *void, u16, u64, u64) -> *NSEvent #c_call;
         func = xx objc_msgSend;
         return xx func(
             class(NSEvent),
             _sel.otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2_,
-            type, location, modifierFlags, timestamp, windowNumber, ctx, subtype, data1, data2); 
+            type, location, modifierFlags, timestamp, windowNumber, ctx, subtype, data1, data2);
     }
 
     mouseLocation :: () -> NSPoint {
@@ -203,6 +203,34 @@ NSEvent :: struct {
         func = xx objc_msgSend;
         return func(self, _sel.scrollingDeltaY);
     }
+
+    hasPreciseScrollingDeltas :: (self: *NSEvent) -> BOOL {
+        func: (self: *void, op: Selector) -> BOOL #c_call;
+        func = xx objc_msgSend;
+        return func(self, _sel.hasPreciseScrollingDeltas);
+    }
+
+    phase :: (self: *NSEvent) -> NSEventPhase {
+        func: (self: *void, op: Selector) -> NSEventPhase #c_call;
+        func = xx objc_msgSend;
+        return func(self, _sel.phase);
+    }
+
+    momentumPhase :: (self: *NSEvent) -> NSEventPhase {
+        func: (self: *void, op: Selector) -> NSEventPhase #c_call;
+        func = xx objc_msgSend;
+        return func(self, _sel.momentumPhase);
+    }
+}
+
+using NSEventPhase :: enum NSUInteger {
+    NSEventPhaseNone       ::  0;
+    NSEventPhaseBegan      ::  1;
+    NSEventPhaseStationary ::  2;
+    NSEventPhaseChanged    ::  4;
+    NSEventPhaseEnded      ::  8;
+    NSEventPhaseCancelled  :: 16;
+    NSEventPhaseMayBegin   :: 32;
 }
 
 using NSEventModifierFlags :: enum_flags NSUInteger {
@@ -1222,6 +1250,9 @@ _sel: struct #type_info_no_size_complaint {
     deltaZ: Selector;
     scrollingDeltaX: Selector;
     scrollingDeltaY: Selector;
+    hasPreciseScrollingDeltas: Selector;
+    phase: Selector;
+    momentumPhase: Selector;
     otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2_: Selector;
     associatedEventsMask: Selector;
     buttonNumber: Selector;
