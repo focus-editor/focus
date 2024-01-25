@@ -452,25 +452,18 @@ update_cocoa_window_events :: () {
                  * can tell there really is no official way to perform this conversion; we may want
                  * to make these configurable somehow).
                  *
-                 * We also try to be mindful of momentum scrolling and reduce the "jitter" that
-                 * horizontal scrolling on a trackpad naturally incurs.
-                 *
                  *  - @ileonte 24.01.2024
                  */
                 deltaX := NSEvent.scrollingDeltaX(nsevent);
                 deltaY := NSEvent.scrollingDeltaY(nsevent);
-                phase := NSEvent.phase(nsevent);
-                momentumPhase := NSEvent.momentumPhase(nsevent);
-                is_momentum := (phase == NSEventPhaseNone) && (momentumPhase != NSEventPhaseNone);
                 has_precise_scrolling := ifx NSEvent.hasPreciseScrollingDeltas(nsevent) == YES then true else false;
 
                 if !has_precise_scrolling {
                     deltaX *= 10.0;
                     deltaY *= 20.0;
                 } else {
-                    if !is_momentum && (abs(deltaX) >= abs(deltaY) * 0.75) then deltaY = 0.0;
-                    deltaY *= 3.275;
-                    deltaX *= 2.0;
+                    deltaY *= 3.85;
+                    deltaX *= 3.85;
                 }
 
                 event: Event;
