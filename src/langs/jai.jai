@@ -685,7 +685,7 @@ OPERATIONS :: string.[
 KEYWORDS :: string.[
     "break", "case", "cast", "code_of", "continue", "defer", "else", "enum", "enum_flags", "for", "initializer_of",
     "if", "ifx", "is_constant", "inline", "push_context", "return", "size_of", "struct", "then", "type_info", "type_of",
-    "union", "using", "while", "xx", "operator", "remove",
+    "union", "using", "while", "xx", "operator", "remove", "interface",
 ];
 
 TYPE_KEYWORDS :: string.[
@@ -706,7 +706,7 @@ COMPILER_DIRECTIVES :: string.[
     "place", "placeholder", "poke_name", "procedure_of_call", "program_export", "run", "runtime_support",
     "scope_export", "scope_file", "scope_module", "specified", "string", "symmetric", "this", "through", "type",
     "type_info_no_size_complaint", "type_info_none", "type_info_procedures_are_void_pointers",
-    "compile_time", "no_debug", "procedure_name",
+    "compile_time", "no_debug", "procedure_name", "discard", "entry_point",
 ];
 
 #insert -> string {
