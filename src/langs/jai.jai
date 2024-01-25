@@ -24,6 +24,12 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
             if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
                 memset(colors.data + before_prev.start, xx Color.CODE_FUNCTION, before_prev.len);
             }
+        } else if token.type == .compiler_directive && token.compiler_directive == .directive_bake_arguments {
+            // Handle "baked_func :: #bake_arguments"
+            before_prev, prev := tokenizer.last_tokens[0], tokenizer.last_tokens[1];
+            if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
+                memset(colors.data + before_prev.start, xx Color.CODE_FUNCTION, before_prev.len);
+            }
         }
 
         // Remember last 2 tokens
