@@ -9,8 +9,8 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
         if token.type == .eof break;
 
         // Maybe retroactively highlight a function
+        before_prev, prev := tokenizer.last_tokens[0], tokenizer.last_tokens[1];
         if token.type == .punctuation && token.punctuation == .l_paren {
-            before_prev, prev := tokenizer.last_tokens[0], tokenizer.last_tokens[1];
             if prev.type == .identifier {
                 // Handle "func("
                 memset(colors.data + prev.start, xx Color.CODE_FUNCTION, prev.len);
@@ -18,9 +18,8 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
                 // Handle "func :: ("
                 memset(colors.data + before_prev.start, xx Color.CODE_FUNCTION, before_prev.len);
             }
-        } else if token.type == .keyword && token.keyword == .kw_inline {
-            // Handle "func :: inline"
-            before_prev, prev := tokenizer.last_tokens[0], tokenizer.last_tokens[1];
+        } else if (token.type == .keyword && token.keyword == .kw_inline) || (token.type == .compiler_directive && token.compiler_directive == .directive_bake_arguments) {
+            // Handle "func :: inline" and "func :: #bake_arguments"
             if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
                 memset(colors.data + before_prev.start, xx Color.CODE_FUNCTION, before_prev.len);
             }
