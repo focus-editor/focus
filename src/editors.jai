@@ -768,16 +768,12 @@ close_current_editor :: () {
         case .Double;
             if !config.settings.disable_file_open_close_animations {
                 // Start the animation (the layout will change when the animation is finished)
-                if editors.active == editors.left {
-                    editors_start_moving_splitter(0.0);  // close left
-                    make_editor_active(editors.right);
-                } else {
-                    editors_start_moving_splitter(1.0);  // close right
-                    make_editor_active(editors.left);
-                }
+                editors_start_moving_splitter(ifx editors.active == editors.left then 0.0 else 1.0);
+                make_editor_active(ifx editors.active == editors.left then editors.right else editors.left);
                 editor_closing = true;
             } else {
-                editors.layout = .Single;  // snap
+                make_editor_active(ifx editors.active == editors.left then editors.right else editors.left);
+                finish_closing_editor();
             }
     }
 }
@@ -791,11 +787,7 @@ close_other_editor :: () {
         case .Double;
             if !config.settings.disable_file_open_close_animations {
                 // Start the animation (the layout will change when the animation is finished)
-                if editors.active == editors.left {
-                    editors_start_moving_splitter(1.0);  // close right
-                } else {
-                    editors_start_moving_splitter(0.0);  // close left
-                }
+                editors_start_moving_splitter(ifx editors.active == editors.left then 1.0 else 0.0);
                 editor_closing = true;
             } else {
                 finish_closing_editor();

@@ -24,6 +24,7 @@
 + Bug fixes:
     + Previewing themes will now change window border color as well as it should (thanks @jmpstar)
     + Regex search should no longer crash the editor on certain inputs
+    + Close current editor when animations are disabled should now focus the remaining editor
 + Other changes:
     + Various theme improvements (thanks @jmpstar, @Leonader, @maxamundsen)
     + Crash reports now print stack traces in release mode where possible (thanks @Sanian-Creations)
