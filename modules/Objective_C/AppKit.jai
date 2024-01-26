@@ -115,6 +115,10 @@ NSEvent :: struct {
             _sel.otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2_,
             type, location, modifierFlags, timestamp, windowNumber, ctx, subtype, data1, data2);
     }
+    
+    window :: (self: *NSEvent) -> *NSWindow {
+        return xx objc_msgSend(self, _sel.window);
+    }
 
     mouseLocation :: () -> NSPoint {
         func: (*void, Selector) -> NSPoint #c_call;
@@ -1253,6 +1257,7 @@ _sel: struct #type_info_no_size_complaint {
     initWithFormat_shareContext_: Selector;
     makeCurrentContext: Selector;
     initWithAttributes_: Selector;
+    window: Selector;
     type: Selector;
     mouseLocation: Selector;
     generalPasteboard: Selector;
