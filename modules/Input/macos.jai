@@ -461,9 +461,6 @@ update_cocoa_window_events :: () {
                 if !has_precise_scrolling {
                     deltaX *= 10.0;
                     deltaY *= 20.0;
-                } else {
-                    deltaY *= 3.85;
-                    deltaX *= 3.85;
                 }
 
                 event: Event;
