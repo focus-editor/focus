@@ -162,6 +162,11 @@ should_ignore_file :: (path: string) -> bool {
         if !POSIX.S_ISREG(stats.st_mode) return true;
     }
 
+    // Ignore binary files
+    auto_release_temp();
+    file_contents, success := read_entire_file(path,, allocator = temp);
+    if !success || is_file_binary(file_contents) return true;
+
     return false;
 }
 
