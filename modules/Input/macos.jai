@@ -467,7 +467,7 @@ update_cocoa_window_events :: () {
                 if deltaX != 0.0 {
                     event.type = .MOUSE_H_WHEEL;
                     event.typical_wheel_delta = WHEEL_DELTA;
-                    event.wheel_delta = cast(s32) ((deltaX / 100.0) * WHEEL_DELTA);
+                    event.wheel_delta = cast(s32) ((deltaX / 100.0) * WHEEL_DELTA * NSWindow.backingScaleFactor(NSEvent.window(nsevent)));
                     array_add(*events_this_frame, event);
                     mouse_wheel_delta.horizontal += event.wheel_delta;
                 }
