@@ -249,15 +249,13 @@ update_cocoa_window_events :: () {
 
     input_per_frame_event_and_flag_update();
 
-    past := NSDate.distantPast();
-
     while true {
         nsevent: *NSEvent;
         if queued_event {
             nsevent = queued_event;
             queued_event = null;
         } else {
-            nsevent = NSApplication.nextEventMatchingMask(NSApp, NSEventMaskAny, past, NSDefaultRunLoopMode, YES);
+            nsevent = NSApplication.nextEventMatchingMask(NSApp, NSEventMaskAny, NSDate.distantPast(), NSDefaultRunLoopMode, YES);
         }
         if !nsevent then break;
 
@@ -495,8 +493,7 @@ queued_event: *NSEvent;
 #scope_export
 
 macos_wait_for_event :: () {
-    future := NSDate.distantFuture();
-    queued_event = NSApplication.nextEventMatchingMask(NSApp, NSEventMaskAny, future, NSDefaultRunLoopMode, YES);
+    queued_event = NSApplication.nextEventMatchingMask(NSApp, NSEventMaskAny, NSDate.distantFuture(), NSDefaultRunLoopMode, YES);
 }
 
 update_window_events :: () {
