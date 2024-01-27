@@ -456,6 +456,7 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
         case .C;            return tokenize_c_like_lang_for_indentation(buffer, get_next_c_token);
         case .CSharp;       return tokenize_c_like_lang_for_indentation(buffer, get_next_csharp_token);
         case .Glsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_glsl_token);
+        case .Zig;          return tokenize_c_like_lang_for_indentation(buffer, get_next_zig_token);
         case .Html;         #through;
         case .Xml;          return tokenize_xml_for_indentation(buffer);
         case .Lua;          return tokenize_lua_for_indentation(buffer);
@@ -1164,6 +1165,7 @@ get_highlighter_function :: (lang: Buffer.Lang) -> Highlighter_Function {
         case .Xml;          return highlight_xml_syntax;
         case .Worklog;      return highlight_worklog;
         case .Yang;         return highlight_yang_syntax;
+        case .Zig;          return highlight_zig_syntax;
     }
     return null;
 }
@@ -1339,6 +1341,7 @@ Buffer :: struct {
         Html;
         Worklog;
         Yang;
+        Zig;
     };
 }
 

@@ -1135,6 +1135,9 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
 
             case "yang";
                 buffer.lang = .Yang;
+
+            case "zig";
+                buffer.lang = .Zig;
         }
     }
 
