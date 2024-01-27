@@ -19,6 +19,14 @@
 
 # Main Git Branch
 
++ ...
+
+
+# RELEASES ==================================================================
+
+
+# Version 0.3.1
+
 + New features:
     + New options: `save_current_buffer_on_build` and `save_all_file_backed_buffers_on_build`. Enable to auto-save files before running build commands (thanks @jlami)
     + Zig highlighting
@@ -40,9 +48,6 @@
         + implemented the refresh timer (2024, year of the blinking cursor)
         + smoother trackpad scrolling
         + the `maximize_on_start` option now actually maximizes the main window instead of making it full-screen
-
-
-# RELEASES ==================================================================
 
 
 # Version 0.3.0

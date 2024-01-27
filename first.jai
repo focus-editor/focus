@@ -1,12 +1,15 @@
-VERSION      :: #run -> string {
-    result, revision := run_command("git", "rev-parse", "--short", "HEAD", capture_and_return_output = true);
-    if revision return sprint("0.3.0-%", trim(revision));
-    return "0.3.0-dev";
-}
-RELEASE_DATE :: #run -> string {
-    current_time := to_calendar(current_time_consensus());
-    return calendar_to_string(current_time);
-}
+// VERSION      :: #run -> string {
+//     result, revision := run_command("git", "rev-parse", "--short", "HEAD", capture_and_return_output = true);
+//     if revision return sprint("0.3.1-%", trim(revision));
+//     return "0.3.1-dev";
+// }
+// RELEASE_DATE :: #run -> string {
+//     current_time := to_calendar(current_time_consensus());
+//     return calendar_to_string(current_time);
+// }
+
+VERSION :: "0.3.1";
+RELEASE_DATE :: "27 January 2024";
 
 #run,stallable build();
 
