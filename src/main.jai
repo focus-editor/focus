@@ -361,7 +361,7 @@ maybe_execute_a_build_command :: (event: Input.Event) -> handled: bool {
 
     command_id := cast(s64) action;
     assert(command_id <= config.build.commands.count, "A keymap was bound to a nonexistent build command %. Number of build commands: %. This is a bug", command_id, config.build.commands.count);
-    
+
     if config.settings.save_all_file_backed_buffers_on_build {
         for * buffer, buffer_id : open_buffers {
             if buffer.modified && buffer.has_file {
@@ -952,3 +952,11 @@ Embedded_Font :: struct {
 }
 
 DEBUG_FILE_REFRESH :: false;  // TODO: remove when done debugging
+
+#if OS == .LINUX {
+    /*
+     * EXTREME JANK - nuke once the Jai standard library no longer depends on libc
+     */
+    memcpy :: (dst: *void, src: *void, size: u64) -> *void #foreign libc "memmove";
+    libc :: #system_library "libc";
+}
