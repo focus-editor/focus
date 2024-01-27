@@ -199,7 +199,7 @@ platform_get_fonts_dir :: () -> string {
         ret := SHGetKnownFolderPath(*FOLDERID_Fonts, KF_FLAG_CREATE, null, *path_utf16);
         defer CoTaskMemFree(path_utf16);
         if SUCCEEDED(ret) {
-            fonts_dir = copy_string(wide_to_utf8_new(path_utf16,, allocator = temp));
+            fonts_dir = wide_to_utf8_new(path_utf16);
             path_overwrite_separators(fonts_dir, #char "/");
         } else {
             fonts_dir = "C:/Windows/Fonts";
