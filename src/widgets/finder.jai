@@ -126,7 +126,7 @@ finder_update :: () {
             array_resize(*results, total_results, initialize = false);
             i := 0;
             for request.completed_tasks {
-                memcpy(results.data + i, it.results.data, it.num_results * size_of(Search_Result));
+                focus_memcpy(results.data + i, it.results.data, it.num_results * size_of(Search_Result));
                 i += it.num_results;
             }
 

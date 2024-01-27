@@ -68,7 +68,7 @@ maybe_migrate_config :: (name: string, file_data: string, assume_section := "") 
     modified_data: [..] u8;
     {
         array_resize(*modified_data, trimmed_data.count, initialize = false);
-        memcpy(modified_data.data, trimmed_data.data, trimmed_data.count);
+        focus_memcpy(modified_data.data, trimmed_data.data, trimmed_data.count);
 
         // Insert new settings
         if config_info.last_setting_offset >= 0 && is_global_config {

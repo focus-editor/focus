@@ -5,14 +5,12 @@ array_insert_bytes_at :: (array: *[..] u8, offset: s64, bytes: [] u8) {
     new_size := array.count + bytes.count;
     array_reserve(array, new_size);
 
-    // NOTE: assuming memcpy works well with overlapping ranges!
-    // (tested on Windows with all backends)
     src := array.data + offset;
     dst := src + bytes.count;
-    memcpy(dst, src, array.count - offset);
+    focus_memcpy(dst, src, array.count - offset);
 
     // Insert the string
-    memcpy(array.data + offset, bytes.data, bytes.count);
+    focus_memcpy(array.data + offset, bytes.data, bytes.count);
 
     array.count = new_size;
 }
@@ -23,14 +21,14 @@ array_add_bytes :: (array: *[..] u8, bytes: [] u8) {
     new_size := array.count + bytes.count;
     array_reserve(array, new_size);
 
-    memcpy(array.data + array.count, bytes.data, bytes.count);
+    focus_memcpy(array.data + array.count, bytes.data, bytes.count);
 
     array.count = new_size;
 }
 
 array_delete_bytes :: (array: *[..] u8, offset: s64, count: s64) {
     assert(offset >= 0 && count >= 0 && offset + count <= array.count);
-    memcpy(array.data + offset, array.data + offset + count, array.count - offset - count);
+    focus_memcpy(array.data + offset, array.data + offset + count, array.count - offset - count);
     array.count -= count;
 }
 
@@ -72,7 +70,7 @@ array_extend :: (array: *[..] $T, slice: [] T) {
     new_size := array.count + slice.count;
     array_reserve(array, new_size);
 
-    memcpy(array.data + array.count, slice.data, slice.count * size_of(T));
+    focus_memcpy(array.data + array.count, slice.data, slice.count * size_of(T));
 
     array.count = new_size;
 }

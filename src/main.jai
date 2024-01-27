@@ -957,6 +957,8 @@ DEBUG_FILE_REFRESH :: false;  // TODO: remove when done debugging
     /*
      * EXTREME JANK - nuke once the Jai standard library no longer depends on libc
      */
-    memcpy :: (dst: *void, src: *void, size: u64) -> *void #foreign libc "memmove";
+    focus_memcpy :: (dst: *void, src: *void, size: s64) -> *void #foreign libc "memmove";
     libc :: #system_library "libc";
+} else {
+    focus_memcpy :: memcpy;
 }

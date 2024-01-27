@@ -312,7 +312,7 @@ remove_crlf_in_place :: (bytes: *[] u8) {
         byte := <<cursor;
         if byte == #char "\r" {
             count := cursor - src;
-            memcpy(dst, src, count);
+            focus_memcpy(dst, src, count);
             dst += count;
             cursor += 1;
             src = cursor;
@@ -322,7 +322,7 @@ remove_crlf_in_place :: (bytes: *[] u8) {
     }
     // Copy the remaining bit
     count := cursor - src;
-    memcpy(dst, src, count);
+    focus_memcpy(dst, src, count);
 
     bytes.count = dst + count - bytes.data;
 }
@@ -731,7 +731,7 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
     new_replace_edit(buffer, 0, xx bytes.count, cast(string) bytes, stripped);
 
     lock(*content_lock);
-    memcpy(bytes.data, stripped.data, stripped.count);
+    focus_memcpy(bytes.data, stripped.data, stripped.count);
     bytes.count = stripped.count;
     unlock(*content_lock);
 

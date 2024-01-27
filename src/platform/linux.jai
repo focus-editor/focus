@@ -340,7 +340,7 @@ platform_get_troubleshooting_info :: () -> string /* temp */ {
             }
             if !rs break;
             array_reserve(*data, data.count + rs);
-            memcpy(data.data + data.count, buff.data, rs);
+            focus_memcpy(data.data + data.count, buff.data, rs);
             data.count += rs;
         }
 
