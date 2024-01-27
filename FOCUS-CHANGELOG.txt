@@ -19,7 +19,12 @@
 
 # Main Git Branch
 
-+ ...
++ New features:
+    + New option - `dark_titlebar` (thanks @amasondev). Works on Windows only.
++ Bug fixes:
+    + ...
++ Other changes:
+    + ...
 
 
 # RELEASES ==================================================================

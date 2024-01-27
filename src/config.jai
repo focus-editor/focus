@@ -480,7 +480,7 @@ Settings :: struct {
     editor_history_size                     := 128;
     line_wrap_is_on_by_default              := false;
     show_line_numbers                       := false;
-    dark_titlebar                           := false;  // TODO: fix the issues with window resize first
+    dark_titlebar                           := false;
     colored_titlebar                        := true;
     hide_mouse_when_typing                  := true;
     highlight_line_with_cursor              := false;
