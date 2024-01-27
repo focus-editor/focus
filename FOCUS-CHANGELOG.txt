@@ -33,6 +33,8 @@
     + Crash reports now print stack traces in release mode where possible (thanks @Sanian-Creations)
     + Upgraded to Jai 0.1.83+ (thanks @valignatev)
     + C highlighting improvements
+    + Linux: the editor now uses libxcb to interact with an X11 server by default. The old X11 backend (Xlib) is still around and can be activated by running the editor with `FOCUS_LD_BACKEND=x11` set in the environment
+        + NOTE: the xcb backend is currently missing drag-and-drop support. If that is important to you please use the old Xlib backend as described above.
     + Platform support enchancements for macOS:
         + the editor no longer consumes CPU when idle
         + implemented the refresh timer (2024, year of the blinking cursor)
