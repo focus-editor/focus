@@ -452,7 +452,7 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
         print_to_builder(*b, "%", <<change);
         change_kind := "Project file";
         if watcher == *watchers.external_watcher change_kind = "External file";
-        defer log("% change: %\n", change_kind, builder_to_string(*b, allocator = temp));
+        defer log("% change: %\n", change_kind, builder_to_string(*b,, allocator = temp));
     }
 
     maybe_add_to_queue :: (dir: string) {

@@ -477,7 +477,6 @@ split :: (s: string, separator: $T, max_splits: int) -> [] string {
     #assert (T == u8) || (T == string);
 
     results: [..] string;
-    results.allocator = context.allocator;
 
     if max_splits < 1 return results;
 
