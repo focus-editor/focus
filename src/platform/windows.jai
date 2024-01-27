@@ -242,14 +242,6 @@ platform_set_border_color :: () {
 
     darkmode := ifx config.settings.dark_titlebar then 1 else 0;
     DwmSetWindowAttribute(window, USE_IMMERSIVE_DARK_MODE, *darkmode, size_of(type_of(darkmode)));
-
-    {
-        // A hack to make the title bar update, otherwise it will draw in a buggy way. Nothing else I've tried helped
-        rect: RECT;
-        GetWindowRect(window, *rect);
-        SetWindowPos(window, null, 0, 0, rect.right - rect.left + 1, rect.bottom - rect.top + 1, SWP_NOMOVE | SWP_NOZORDER);
-        SetWindowPos(window, null, 0, 0, rect.right - rect.left,     rect.bottom - rect.top,     SWP_NOMOVE | SWP_NOZORDER);
-    }
 }
 
 platform_show_cursor :: (show: bool) {
