@@ -195,10 +195,12 @@ parse_identifier :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
         if before_prev.type == {
             case .compiler_directive;
                 if before_prev.compiler_directive == {
-                    case .directive_type;    is_modifier = array_find(string.["isa", "distinct"], identifier_str);
-                    case .directive_import;  is_modifier = array_find(string.["file", "dir", "string"], identifier_str);
-                    case .directive_insert;  is_modifier = array_find(string.["scope"], identifier_str);
-                    case .directive_run;     is_modifier = array_find(string.["stallable"], identifier_str);
+                    case .directive_type;           is_modifier = array_find(string.["isa", "distinct"], identifier_str);
+                    case .directive_import;         is_modifier = array_find(string.["file", "dir", "string"], identifier_str);
+                    case .directive_insert;         is_modifier = array_find(string.["scope"], identifier_str);
+                    case .directive_run;            is_modifier = array_find(string.["stallable"], identifier_str);
+                    case .directive_library;        is_modifier = array_find(string.["no_static_library", "no_dll", "system", "link_always"], identifier_str);
+                    case .directive_system_library; is_modifier = array_find(string.["no_static_library", "no_dll", "link_always"], identifier_str);
                 }
             case .keyword;
                 if before_prev.keyword == {
