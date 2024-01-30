@@ -237,12 +237,13 @@ init_input_system :: () {
     input_vk_translation_table[OSX_VK_NUMPAD_PERIOD] = NUMPAD_DECIMAL;
 }
 
-get_key_code :: (param: u16) -> Key_Code {
-    if param < 128 return input_vk_translation_table[param];
-
-    return .UNKNOWN;
+get_key_code :: (keycode: u16, char: u16 = 128) -> Key_Code {
+    if char >= 128 {
+        return ifx keycode < 128 then input_vk_translation_table[keycode] else .UNKNOWN;
+    }
+    if char >= #char "a" && char <= #char "z" then return cast(Key_Code)(char - 0x20);
+    return cast(Key_Code)char;
 }
-
 
 update_cocoa_window_events :: () {
     using Key_Current_State;
@@ -303,7 +304,9 @@ update_cocoa_window_events :: () {
                 keycode := NSEvent.keyCode(nsevent);
                 characters := NSEvent.characters(nsevent);
                 modifiers := NSEvent.modifierFlags(nsevent);
-
+                charslen := ifx characters then NSString.length(characters) else 0;
+                first := ifx charslen > 0 then NSString.characterAtIndex(characters, 0) else 128;
+                
                 shift_state := (modifiers & NSEventModifierFlagShift) != 0;
                 ctrl_state  := (modifiers & NSEventModifierFlagControl) != 0;
                 alt_state   := (modifiers & NSEventModifierFlagOption) != 0;
@@ -314,20 +317,21 @@ update_cocoa_window_events :: () {
                 event: Event;
                 event.type = .KEYBOARD;
                 event.key_pressed = 1;
-                event.key_code = get_key_code(keycode);
+                event.key_code = get_key_code(keycode, first);
                 event.packed = 0;
                 event.shift_pressed    = shift_state;
                 event.ctrl_pressed     = ctrl_state;
                 event.alt_pressed      = alt_state;
                 event.cmd_meta_pressed = cmd_state;
                 event.repeat = (repeat != NO);
+                log("event=%", event);
 
                 input_button_states[event.key_code] |= (DOWN | START);
 
                 // Length will be 0 if this was a dead key.
                 // @Incomplete: How do we handle diacritics entered via dead keys?
                 // For example for "¨ + a => ä", if we ignore the dead key for ¨ here and then only handle the "a", people won’t be able to assemble the "ä".
-                if characters && NSString.length(characters) {
+                if characters && charslen > 0 {
                     utf32_data := NSString.dataUsingEncoding(characters, NSUTF32LittleEndianStringEncoding);
                     // defer release(utf32_data);
                     utf32 := cast(*u32) NSData.bytes(utf32_data);

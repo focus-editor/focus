@@ -125,6 +125,10 @@ NSString :: struct {
     length :: (self: *NSString) -> NSUInteger {
         return xx objc_msgSend(self, _sel.length);
     }
+    
+    characterAtIndex :: (self: *NSString, at: int) -> u16 {
+        return xx objc_msgSend(self, _sel.characterAtIndex_, at);
+    }
 
     // helper functions
     initWithString :: (self: *NSString, str: string) -> *NSString {
@@ -617,6 +621,7 @@ _sel: struct {
     lastPathComponent:                                                Selector;
     bytes:                                                            Selector;
     length:                                                           Selector;
+    characterAtIndex_:                                                Selector;
     arrayWithObject_:                                                 Selector;
     arrayWithObjects_count_:                                          Selector;
     containsObject_:                                                  Selector;
