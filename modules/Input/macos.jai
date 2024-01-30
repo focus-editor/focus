@@ -238,7 +238,7 @@ init_input_system :: () {
 }
 
 get_key_code :: (keycode: u16, char: u16 = 128) -> Key_Code {
-    if char >= 128 {
+    if char >= 127 {
         return ifx keycode < 128 then input_vk_translation_table[keycode] else .UNKNOWN;
     }
     if char >= #char "a" && char <= #char "z" then return cast(Key_Code)(char - 0x20);
