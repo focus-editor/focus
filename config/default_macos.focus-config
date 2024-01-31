@@ -146,8 +146,8 @@ Ctrl-Cmd-ArrowRight         scroll_viewport_right
 
 Cmd-Shift-C                 move_cursor_to_viewport_center
 
-{Shift}-Ctrl-ArrowUp        move_up_to_empty_line
-{Shift}-Ctrl-ArrowDown      move_down_to_empty_line
+{Shift}-Ctrl-Alt-Cmd-ArrowUp      move_up_to_empty_line
+{Shift}-Ctrl-Alt-Cmd-ArrowDown    move_down_to_empty_line
 
 Alt-Shift-I                 add_cursors_to_line_ends
 Alt-Shift-Ctrl-I            add_cursors_to_line_starts
@@ -243,7 +243,8 @@ Cmd-Shift-L                 toggle_expand
 
 Cmd-B                       toggle_build_panel
 
-F11                         toggle_fullscreen
+# Ctrl-Cmd-F will always toggle fullscreen on macOS, but you can uncomment this to use something else.
+# F11                         toggle_fullscreen
 
 # {Shift}- means shift is optional, the key combination will still be matched.
 # NOTE: in this editor the Shift key is hard-coded to extend selection when held
@@ -276,7 +277,7 @@ F11                         toggle_fullscreen
 {Shift}-Backspace           delete_left_char
 {Shift}-Delete              delete_right_char
 {Shift}-Alt-Backspace       delete_word_left_no_underscore
-{Shift}-Alt-Delete          delete_word_right_no_underscore
+{Shift}-Alt-Delete          
 {Shift}-Alt-Cmd-Backspace   delete_word_left
 {Shift}-Alt-Cmd-Delete      delete_word_right
 
