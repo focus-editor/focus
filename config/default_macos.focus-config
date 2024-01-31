@@ -115,8 +115,8 @@ Cmd-K                           delete_to_end_of_line
 Cmd-Delete                      delete_to_end_of_line
 Cmd-Backspace                   delete_to_start_of_line
 
-Alt-ArrowUp                     move_selected_lines_up
-Alt-ArrowDown                   move_selected_lines_down
+Opt-ArrowUp                     move_selected_lines_up
+Opt-ArrowDown                   move_selected_lines_down
 
 Cmd-J                           join_lines
 Cmd-Shift-J                     join_lines_no_spaces_in_between
@@ -130,8 +130,8 @@ Cmd-[                           unindent
 Cmd-S                           save
 Cmd-Shift-S                     save_as
 
-Cmd-Alt-Minus                   move_to_previous_editor_history
-Cmd-Alt-Plus                    move_to_next_editor_history
+Cmd-Opt-Minus                   move_to_previous_editor_history
+Cmd-Opt-Plus                    move_to_next_editor_history
 
 Cmd-Shift-Minus                 move_to_previous_buffer
 Cmd-Shift-Plus                  move_to_next_buffer
@@ -146,11 +146,11 @@ Ctrl-Cmd-ArrowRight             scroll_viewport_right
 
 Cmd-Shift-C                     move_cursor_to_viewport_center
 
-{Shift}-Ctrl-Alt-Cmd-ArrowUp    move_up_to_empty_line
-{Shift}-Ctrl-Alt-Cmd-ArrowDown  move_down_to_empty_line
+{Shift}-Ctrl-Opt-Cmd-ArrowUp    move_up_to_empty_line
+{Shift}-Ctrl-Opt-Cmd-ArrowDown  move_down_to_empty_line
 
-Alt-Shift-I                     add_cursors_to_line_ends
-Alt-Shift-Ctrl-I                add_cursors_to_line_starts
+Opt-Shift-I                     add_cursors_to_line_ends
+Opt-Shift-Ctrl-I                add_cursors_to_line_starts
 
 Enter                           break_line
 Cmd-Enter                       new_line_below_without_breaking
@@ -171,11 +171,11 @@ Ctrl-Cmd-Shift-ArrowRight       move_editor_to_the_right
 Cmd-N                           create_new_file
 Cmd-Shift-N                     create_new_file_on_the_side
 
-Alt-Shift-ArrowUp               create_cursor_above
-Alt-Shift-ArrowDown             create_cursor_below
-Alt-Cmd-A                       align_cursors
+Opt-Shift-ArrowUp               create_cursor_above
+Opt-Shift-ArrowDown             create_cursor_below
+Opt-Cmd-A                       align_cursors
 
-Alt-Cmd-Z                       toggle_line_wrap
+Opt-Cmd-Z                       toggle_line_wrap
 
 
 [open file dialog]
@@ -200,9 +200,9 @@ Cmd-2                           open_entry_on_the_right
 
 Shift-Enter                     move_up  # an alternative way to move
 
-Cmd-Alt-C                       toggle_case_sensitive
-Cmd-Alt-W                       toggle_whole_word
-Cmd-Alt-R                       toggle_regex_search
+Cmd-Opt-C                       toggle_case_sensitive
+Cmd-Opt-W                       toggle_whole_word
+Cmd-Opt-R                       toggle_regex_search
 
 [common]
 
@@ -212,10 +212,10 @@ Cmd-Alt-R                       toggle_regex_search
 Cmd-Shift-P                     show_commands
 
 Cmd-F                           search_in_buffer
-Cmd-Alt-F                       search_in_buffer_dropdown_mode
+Cmd-Opt-F                       search_in_buffer_dropdown_mode
 Cmd-Shift-F                     search_in_project
 
-Cmd-Alt-P                       switch_to_project
+Cmd-Opt-P                       switch_to_project
 
 Cmd-P                           open_file_by_name
 Cmd-O                           navigate_to_file
@@ -249,21 +249,21 @@ Cmd-B                           toggle_build_panel
 # {Shift}- means shift is optional, the key combination will still be matched.
 # NOTE: in this editor the Shift key is hard-coded to extend selection when held
 {Shift}-ArrowUp                 move_up
-{Shift}-Alt-Cmd-ArrowUp         move_up_fast
+{Shift}-Opt-Cmd-ArrowUp         move_up_fast
 {Shift}-PageUp                  move_up_one_page
 
 {Shift}-ArrowDown               move_down
-{Shift}-Alt-Cmd-ArrowDown       move_down_fast
+{Shift}-Opt-Cmd-ArrowDown       move_down_fast
 {Shift}-PageDown                move_down_one_page
 
 {Shift}-ArrowLeft               move_left
-{Shift}-Alt-ArrowLeft           move_left_by_word
-{Shift}-Alt-Cmd-ArrowLeft       move_left_by_word_ends
+{Shift}-Opt-ArrowLeft           move_left_by_word
+{Shift}-Opt-Cmd-ArrowLeft       move_left_by_word_ends
 {Shift}-Cmd-ArrowLeft           jump_to_line_start
 
 {Shift}-ArrowRight              move_right
-{Shift}-Alt-ArrowRight          move_right_by_word
-{Shift}-Alt-Cmd-ArrowRight      move_right_by_word_ends
+{Shift}-Opt-ArrowRight          move_right_by_word
+{Shift}-Opt-Cmd-ArrowRight      move_right_by_word_ends
 {Shift}-Cmd-ArrowRight          jump_to_line_end
 
 {Shift}-Cmd-ArrowUp             jump_to_file_start
@@ -276,10 +276,10 @@ Cmd-B                           toggle_build_panel
 
 {Shift}-Backspace               delete_left_char
 {Shift}-Delete                  delete_right_char
-{Shift}-Alt-Backspace           delete_word_left_no_underscore
-{Shift}-Alt-Delete              delete_word_right_no_underscore
-{Shift}-Alt-Cmd-Backspace       delete_word_left
-{Shift}-Alt-Cmd-Delete          delete_word_right
+{Shift}-Opt-Backspace           delete_word_left_no_underscore
+{Shift}-Opt-Delete              delete_word_right_no_underscore
+{Shift}-Opt-Cmd-Backspace       delete_word_left
+{Shift}-Opt-Cmd-Delete          delete_word_right
 
 Cmd-Plus                        increase_font_size
 Cmd-Minus                       decrease_font_size
