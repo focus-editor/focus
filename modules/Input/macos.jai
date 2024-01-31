@@ -324,7 +324,6 @@ update_cocoa_window_events :: () {
                 event.alt_pressed      = alt_state;
                 event.cmd_meta_pressed = cmd_state;
                 event.repeat = (repeat != NO);
-                log("event=%", event);
 
                 input_button_states[event.key_code] |= (DOWN | START);
 
