@@ -552,6 +552,7 @@ create_app_delegate :: () -> *App_Delegate {
         objc_add_instance_method(ad_class, App_Delegate.applicationDidResignActive, "applicationDidResignActive:");
         objc_add_instance_method(ad_class, App_Delegate.applicationDidBecomeActive, "applicationDidBecomeActive:");
         objc_add_instance_method(ad_class, App_Delegate.applicationDidFinishLaunching, "applicationDidFinishLaunching:");
+        objc_add_instance_method(ad_class, App_Delegate.applicationOpenFiles, "application:openFiles:");
         objc_finalize_class(ad_class);
     }
 
@@ -619,6 +620,41 @@ App_Delegate :: struct {
             NSApplication.setActivationPolicy(NSApp, NSApplicationActivationPolicyRegular);
             NSApplication.activateIgnoringOtherApps(NSApp, YES);
             NSApp.stop(NSApp, null);
+        }
+    }
+
+    applicationOpenFiles :: (self: *App_Delegate, _sel: Selector, sender: *NSApplication, nsfiles: *NSArray(*NSString)) #c_call {
+        ctx: Context;
+        push_context ctx {
+            count := nsfiles.count(nsfiles);
+
+            files: [..] string;
+            array_reserve(*files, xx count);
+
+            for i: 0..count -1 {
+                nspath := nsfiles.objectAtIndex(nsfiles, xx i);
+                path := to_string(nspath);
+                array_add(*files, copy_string(path));
+            }
+
+            event: Event;
+            event.type  = .DRAG_AND_DROP_FILES;
+            event.files = files;
+            array_add(*osx_externally_generated_events, event);
+
+            nsev := NSEvent.otherEventWithType(
+                type = NSEventTypeApplicationDefined,
+                location = .{},
+                modifierFlags = 0,
+                timestamp = 0,
+                windowNumber = 0,
+                ctx = null,
+                subtype = 0,
+                data1 = 0,
+                data2 = 0);
+            NSApplication.postEvent(sender, nsev, YES);
+
+            NSApplication.replyToOpenOrPrint(sender, 0);
         }
     }
 }

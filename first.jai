@@ -187,6 +187,46 @@ build :: () {
 
         <key>NSHumanReadableCopyright</key>
         <string>© 2023 Ivan Ivanov</string>
+
+        <key>CFBundleDocumentTypes</key>
+        <array>
+            <dict>
+                <key>CFBundleTypeName</key>
+                <string>Text Document</string>
+                <key>CFBundleTypeRole</key>
+                <string>Editor</string>
+                <key>LSItemContentTypes</key>
+                <array>
+                    <string>public.text</string>
+                </array>
+                <key>NSDocumentClass</key>
+                <string>Document</string>
+            </dict>
+            <dict>
+                <key>CFBundleTypeName</key>
+                <string>Text Document</string>
+                <key>CFBundleTypeRole</key>
+                <string>Editor</string>
+                <key>LSItemContentTypes</key>
+                <array>
+                    <string>public.plain-text</string>
+                </array>
+                <key>NSDocumentClass</key>
+                <string>Document</string>
+            </dict>
+            <dict>
+                <key>CFBundleTypeName</key>
+                <string>Unknown document</string>
+                <key>CFBundleTypeRole</key>
+                <string>Editor</string>
+                <key>LSItemContentTypes</key>
+                <array>
+                    <string>public.data</string>
+                </array>
+                <key>NSDocumentClass</key>
+                <string>Document</string>
+            </dict>
+        </array>
     </dict>
 </plist>
 STRING
