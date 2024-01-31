@@ -1,7 +1,5 @@
 #module_parameters(ENABLE_BACKTRACE_ON_CRASH: bool);
 
-OS_IS_UNIX :: OS == .MACOS || OS == .LINUX || OS == .PS5 || OS == .IOS || OS == .ANDROID;
-
 debug_break :: () #no_context {
     if #compile_time {
         compile_time_debug_break :: () #compiler #no_context;
