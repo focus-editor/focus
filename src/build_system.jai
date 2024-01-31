@@ -59,6 +59,9 @@ execute_build_command :: (command: *Build_Command) {
     }
 
     log("Executing build command [%]\n", command.name);
+    
+    clear_build_errors();
+    //array_reset(*build_errors);//if we move this to other place, remember to copy_string the file and message
 
     // Add an empty line between commands
     if last_command_result.finished then print_to_output_panel_from_main_thread("\n");
@@ -101,6 +104,166 @@ build_kill_running_command :: () {
     lock(*build_mutex);
     kill_process(*running_process);
     unlock(*build_mutex);
+}
+
+DEBUG_BUILD_ERRORS :: true;
+
+Build_Error_Location :: struct {
+    message: string;
+    type: enum {
+        error;
+        warning;
+        info;
+    };
+    file: string;
+    line: s32;
+    col: s32;
+}
+
+build_error_index := -1;
+go_to_next_build_error :: () {
+    if !build_errors.count {
+        //TODO: show message that there are no errors?
+        return;
+    }
+    
+    build_error_index += 1;
+    
+    if build_error_index >= build_errors.count then build_error_index = 0;
+    
+    error := build_errors[build_error_index];
+    
+    #if DEBUG_BUILD_ERRORS log("Trying to go to error: %", error);
+    
+    if error.file {
+        //TODO: remember last error and info place so we don't switch each time
+        editors_open_file(error.file, .in_place);//TODO: test ctrl-modifier for .on_the_side
+        
+        editor, buffer := get_active_editor_and_buffer();
+        go_to_line(editor, buffer, error.line, error.col);
+    }
+    
+    clear_user_messages(.build_error);
+    add_user_error(error.message, dismiss_in_seconds = -1, .build_error);
+    
+    //TODO: open info first or switch back to error site?
+    if error.type == .error && build_error_index < build_errors.count - 1 && build_errors[build_error_index+1].type == .info {
+        build_error_index += 1;
+        next_error := build_errors[build_error_index];
+        
+        if next_error.file {
+            editors_open_file(next_error.file, .on_the_side);//TODO: test ctrl-modifier for .on_the_side
+            
+            editor, buffer := get_active_editor_and_buffer();
+            go_to_line(editor, buffer, next_error.line, next_error.col);
+        }
+        
+        add_user_warning(next_error.message, dismiss_in_seconds = -1, .build_error);
+    }
+}
+
+build_errors: [..]Build_Error_Location;
+clear_build_errors :: () {
+    clear_user_messages(.build_error);
+    
+    for build_errors {
+        free(it.file);
+        free(it.message);
+    }
+    
+    array_reset(*build_errors);
+    
+    build_error_index = -1;
+}
+
+parse_build_errors :: (command: Build_Command) {
+    if !command.error_regex return;
+    
+    editor, buffer := get_build_editor_and_buffer();
+    
+    start := 0;
+    for < * region : buffer.regions {
+        if region.kind == .header {
+            start = region.end;
+            break;
+        }
+    }
+    
+    contents := slice(cast(string)buffer.bytes, start, buffer.bytes.count);
+    
+    #if DEBUG_BUILD_ERRORS log("Parsing build_errors: %\n%", start, contents);
+    
+    regex, valid := re.compile(command.error_regex, .LikePerl & ~.OneLine);
+    if !valid return;
+    
+    while true {
+        matched, captures := re.match(contents, regex);
+        
+        if !matched break;
+        defer free(captures.data);
+        
+        c := captures[0];
+        if !c {
+            log_error("build regex matched an empty line");
+            break;//TODO: skip one char/line
+        }
+        
+        #if DEBUG_BUILD_ERRORS log("Found regex error match: %", c);
+        
+        local_offset := c.data - contents.data;
+        count  := c.count;
+        //offset := contents_advance + local_offset;
+        //contents_advance := offset + count;
+
+        advance(*contents, local_offset + count);
+        
+        named_captures := re.map_named_captures(captures, regex);
+        defer deinit(*named_captures);
+        for value, name: named_captures {
+            #if DEBUG_BUILD_ERRORS log("Captured name: %=%", name, value);
+        }
+        
+        msg, found := table_find(*named_captures, "msg");
+        if !found return;
+        
+        table_find_or_default :: (table: *Table, key: table.Key_Type) -> table.Value_Type {
+            pointer := inline table_find_pointer(table, key);
+            if pointer  return << pointer;
+            
+            default: table.Value_Type; 
+            return default;
+        }
+        
+        file := table_find_or_default(*named_captures, "file");
+        
+        //TODO: copy_string, because build editor gets modified? But we reset build_errors before that
+        error := Build_Error_Location.{ file = copy_string(file), message = copy_string(msg) };
+        
+        type := table_find_or_default(*named_captures, "type");
+        if type {
+            //TODO: enum_from_string_nocase
+            if equal_nocase(type, "warning") {
+                error.type = .warning;
+            } else if equal_nocase(type, "info") {
+                error.type = .info;
+            }
+        }
+        
+        line := table_find_or_default(*named_captures, "line");
+        col  := table_find_or_default(*named_captures, "col");
+        
+        val, parsed := string_to_int(line, T=s32);
+        if parsed then error.line = val;
+        
+        val, parsed  = string_to_int(col, T=s32);
+        if parsed then error.col = val - 1;//TODO: config based? other compilers could be 0 based
+        
+        array_add(*build_errors, error);
+    }
+    
+    #if DEBUG_BUILD_ERRORS log("FOUND: %", build_errors);
+    
+    if command.auto_jump_to_error then go_to_next_build_error();
 }
 
 build_system_update :: () {
@@ -161,7 +324,12 @@ build_system_update :: () {
                         kind = .success;
                     }
             }
+            
+            if last_command_result.build.process_result.exit_code != 0 {
+                parse_build_errors(running_command);
+            }
         }
+        
 
         print_to_output_panel_from_main_thread(tprint("%\n", message), mark_as = kind, add_newline_if_missing = true);
 

@@ -70,6 +70,7 @@ Tag :: enum_flags {
     none;
     config;
     build;
+    build_error;
 }
 
 MAX_MESSAGES_ON_SCREEN :: 20;

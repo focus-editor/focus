@@ -79,6 +79,36 @@ match :: (text: string, re: Regexp, re_anchor_in: Anchor = .UNANCHORED) -> match
 	return matched, submatches;
 }
 
+
+map_named_captures :: (captures: []string, re: Regexp) -> Table(string, string) {
+    result: Table(string, string);
+    
+    Named_Capture :: struct {
+        name: string;
+        index: s32;
+    }
+    
+    get_all_named_captures :: (list: *[..]Named_Capture, re: *Regexp_Node, v: *void) -> *void, bool {
+        if re.op == .Capture && re.name {
+            array_add(list, .{re.name, re.cap});
+        }
+        
+        return null, false;
+    }
+    
+    named_captures: [..]Named_Capture;
+    w := Walk(*[..]Named_Capture, *void).{pre_visit = get_all_named_captures};
+	walk(*named_captures, re.suffix_regexp, null, w);
+    
+    for named_captures {
+        if captures[it.index] {
+            table_set(*result, it.name, captures[it.index]);
+        }
+    }
+    
+    return result;
+}
+
 // Avoid possible locale nonsense in standard strcasecmp.
 // The string a is known to be all lowercase.
 ascii_strcasecmp :: (a: string, b: string) -> int {

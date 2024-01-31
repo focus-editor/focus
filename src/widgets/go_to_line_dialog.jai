@@ -103,14 +103,27 @@ jump_to_line :: () {
         line_num += digit * n;
         n *= 10;
     }
+    
+    go_to_line(editor, buffer, line_num);
+}
 
+go_to_line :: (editor: *Editor, buffer: *Buffer, line_num: s64, col : s32 = -1) {
     line_num = clamp(line_num - 1, 0, get_max_real_line_num(buffer));
     line_start := get_real_line_start_offset(buffer, cast(s32)line_num);
     line_end   := get_real_line_end_offset  (buffer, cast(s32)line_num);
 
     cursor := leave_only_original_cursor(editor);
-    cursor.pos = line_start + count_whitespace(buffer.bytes, line_start, line_end);
-    cursor.sel = line_end;  // to make the line visible
+    
+    if col < 0 {
+        cursor.pos = line_start + count_whitespace(buffer.bytes, line_start, line_end);
+        cursor.sel = line_end;  // to make the line visible
+    } else {
+        cursor.pos = line_start + col;
+        if cursor.pos > line_end
+            cursor.pos = line_end;
+        
+        cursor.sel = cursor.pos;
+    }
     add_paste_animation(editor, get_selection(cursor));
     editor.cursor_moved = .jumped;
     editor.scroll_to_cursor = .yes;
