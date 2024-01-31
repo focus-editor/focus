@@ -986,6 +986,7 @@ parse_key_combo :: (using parser: *Config_Parser, combo_str: string, line: strin
             case "ctrl";    combo.mods.ctrl_pressed       = true;
             case "shift";   combo.mods.shift_pressed      = true;
             case "alt";     combo.mods.alt_pressed        = true;
+            case "opt";     combo.mods.alt_pressed        = true;
             case "cmd";     combo.mods.cmd_meta_pressed   = true;
             case "meta";    combo.mods.cmd_meta_pressed   = true;
             case "super";   combo.mods.cmd_meta_pressed   = true;
