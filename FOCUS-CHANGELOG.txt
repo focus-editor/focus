@@ -20,7 +20,7 @@
 # Main Git Branch
 
 + New features:
-    + ...
+    + New build option: `clear_build_output_before_running`. Set to `true` to clear the build output window every time a command is run.
 + Bug fixes:
     + ...
 + Other changes:

@@ -89,8 +89,22 @@ execute_build_command :: (command: *Build_Command) {
         add_success_message("Running [%]…", running_command.name, dismiss_in_seconds = 3);
     }
 
+    if command.clear_build_output_before_running then build_clear_output();
+
     add_work(*thread_group, running_command);
     // Now don't modify running_command as it's being accessed from thread
+}
+
+build_clear_output :: () {
+    if build_buffer_id < 0 return;
+    editor, buffer := get_build_editor_and_buffer();
+
+    lock(*build_mutex);
+    array_reset_keeping_memory(*buffer.regions);
+    delete_range_raw(buffer, 0, buffer.bytes.count);
+    rescan_for_lines(buffer);
+    rescan_for_wrapped_lines(editor, buffer);
+    unlock(*build_mutex);
 }
 
 build_kill_running_command :: () {

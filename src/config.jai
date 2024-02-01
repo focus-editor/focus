@@ -524,19 +524,20 @@ Build_Config :: struct {
 Build_Command :: struct {
     name:                   string;  @dontparse
 
-    build_command:          string;
-    build_working_dir:      string;
+    build_command:                      string;
+    build_working_dir:                  string;
 
-    run_command:            string;
-    run_working_dir:        string;
+    run_command:                        string;
+    run_working_dir:                    string;
 
-    error_regex:            string;
-    auto_jump_to_error:     bool;
+    error_regex:                        string;
+    auto_jump_to_error:                 bool;
 
-    open_panel_on_build:    bool;
-    close_panel_on_success: bool;
+    open_panel_on_build:                bool;
+    close_panel_on_success:             bool;
+    clear_build_output_before_running:  bool;
 
-    timeout_in_seconds:     int = -1;
+    timeout_in_seconds:                 int = -1;
 }
 
 DEFAULT_CONFIG_FILE_DATA  :: #run read_entire_file(tprint("config/%", DEFAULT_CONFIG_NAME));
