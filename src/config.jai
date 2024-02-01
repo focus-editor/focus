@@ -110,6 +110,9 @@ apply_config :: () {
     init_fonts_and_dependent_things();
 
     platform_apply_config();
+
+    array_reset_keeping_memory(*active_hold_actions);  // NOTE: this doesn't actually stop the actions, it's just here so that we don't
+                                                       //       keep pointers to old keymaps when the config is reloaded
 }
 
 free_loaded_config :: (using loaded_config: *Loaded_Config) {

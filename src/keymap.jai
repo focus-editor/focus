@@ -44,10 +44,10 @@ map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mappin
     return invalid_action, .{};
 }
 
+// This function just remembers that a hold action is now active, so that we can deactivate it on key release.
+// The action itself is done elsewhere.
 activate_hold_action :: (action: $Action_Type, event: Input.Event) {
     _, matched_mapping := map_event_to_action(event, Action_Type);  // we map it here again to avoid passing it in through multiple functions
-
-    if matched_mapping.key_sequence.count != 1  return; // Don't support hold actions for multipart key sequences.
 
     hold_action := Hold_Action.{ action_type = Action_Type, matched_mapping = matched_mapping };
 
@@ -69,7 +69,7 @@ map_key_release_to_hold_actions :: (event: Input.Event, $Action: Type) -> [] Act
 
     for active_hold_actions {
         if it.action_type != Action continue;
-        combo := it.matched_mapping.key_sequence[0];
+        combo := it.matched_mapping.key_sequence[it.matched_mapping.key_sequence.count-1];
 
         if combo.key_code == cast(u32) event.key_code ||
           (event.key_code == .SHIFT && combo.mods.shift_pressed    && !combo.ignore.shift_pressed)    ||
@@ -79,6 +79,7 @@ map_key_release_to_hold_actions :: (event: Input.Event, $Action: Type) -> [] Act
         {
             // We have released a button that's part of the key combo which activated this action
             array_add(*actions, cast(Action) it.matched_mapping.action);
+            remove it;  // actually remove the action from the active actions
         }
     }
 
@@ -408,7 +409,6 @@ ACTIONS_SEARCH_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[
     "toggle_regex_search",
 ]);
 
-#scope_file
 
 active_hold_actions: [..] Hold_Action;
 

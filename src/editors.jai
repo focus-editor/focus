@@ -9,7 +9,7 @@ editors_handle_event :: (event: Input.Event) -> handled: bool {
 
     if event.type == {
         case .KEYBOARD;
-            if event.key_pressed {
+            if event.key_pressed && !active_hold_actions {
                 action, mapping := map_event_to_action(event, Action_Editors);
                 editor, buffer := get_active_editor_and_buffer();
                 if editor {
