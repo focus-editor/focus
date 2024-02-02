@@ -20,7 +20,7 @@ Fast: we try to minimize input latency and maximize responsiveness. We also incl
 
 2. Launch the executable. Once launched, it will generate its configuration files.
     * On **Windows**, it will create a `global.focus-config` file and a `projects` folder next to itself.
-    * On **Mac**, these files will be found in `/Users/YOURNAME/Library/Application Support/dev.focus-editor/`.
+    * On **macOS**, these files will be found in `/Users/YOURNAME/Library/Application Support/dev.focus-editor/`.
     * On **Linux**, these files will be found in `${XDG_CONFIG_HOME}/focus-editor/` (which usually expands to `${HOME}/.config/focus-editor`).
 
 3. Open the global config file by using the command `Open Global Config` - you can find the shortcut to show commands on the welcome screen.
@@ -41,7 +41,7 @@ https://discord.gg/eSXquAzTmW
 
 Minimum Jai version: `0.1.084` (the language is currently in closed beta, but it will hopefully go into open beta soon)
 
-**On MacOS:**
+**On macOS:**
 
 1. Full XCode must be installed
 
