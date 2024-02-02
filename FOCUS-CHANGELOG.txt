@@ -21,12 +21,15 @@
 
 + New features:
     + New build option: `clear_build_output_before_running`. Set to `true` to clear the build output window every time a command is run.
+    + macOS: `Opt` is now allowed in keybinds rather than `Alt`.
 + Bug fixes:
     + ...
 + Other changes:
-    + macOS: installing the editor from the `.dmg` package will register it as a handler for text files. This means that:
+    + macOS: Installing the editor from the `.dmg` package will register it as a handler for text files. This means that:
         1. you will see Focus as an entry in the "Open With" list in the context menu for text files in Finder
         2. you can use Focus to open files from the terminal by running `open -a Focus file`
+    + macOS: Some default keyboard shortcuts were changed to remove conflicts with system shortcuts.
+    + macOS: The oldest OS that can launch Focus is now macOS 10.13 High Sierra.
 
 
 # RELEASES ==================================================================
