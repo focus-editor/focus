@@ -241,8 +241,10 @@ get_key_code :: (keycode: u16, char: u16 = 128) -> Key_Code {
     if char >= 127 {
         return ifx keycode < 128 then input_vk_translation_table[keycode] else .UNKNOWN;
     }
-    if char >= #char "a" && char <= #char "z" then return cast(Key_Code)(char - 0x20);
-    return cast(Key_Code)char;
+    if char == {
+        case 25; return .TAB;   // Shift-Tab
+        case; return cast(Key_Code) (char - (ifx char >= #char "a" && char <= #char "z" then 32 else 0));
+    }
 }
 
 update_cocoa_window_events :: () {
@@ -306,7 +308,7 @@ update_cocoa_window_events :: () {
                 modifiers := NSEvent.modifierFlags(nsevent);
                 charslen := ifx characters then NSString.length(characters) else 0;
                 first := ifx charslen > 0 then NSString.characterAtIndex(characters, 0) else 128;
-                
+
                 shift_state := (modifiers & NSEventModifierFlagShift) != 0;
                 ctrl_state  := (modifiers & NSEventModifierFlagControl) != 0;
                 alt_state   := (modifiers & NSEventModifierFlagOption) != 0;
