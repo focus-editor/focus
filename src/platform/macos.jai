@@ -55,7 +55,17 @@ platform_wait_message :: inline () {
 }
 
 platform_wake_up_main_thread :: () {
-    // TODO
+    nsev := NSEvent.otherEventWithType(
+        type = NSEventTypeApplicationDefined,
+        location = .{},
+        modifierFlags = 0,
+        timestamp = 0,
+        windowNumber = 0,
+        ctx = null,
+        subtype = 0,
+        data1 = 0,
+        data2 = 0);
+    NSApplication.postEvent(NSApp, nsev, YES);
 }
 
 platform_set_refresh_timer :: inline (window: Window_Type) {
