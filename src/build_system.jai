@@ -59,10 +59,11 @@ execute_build_command :: (command: *Build_Command) {
     }
 
     log("Executing build command [%]\n", command.name);
-    if command.clear_build_output_before_running then build_clear_output();
 
     // Add an empty line between commands
     if last_command_result.finished then print_to_output_panel_from_main_thread("\n");
+
+    if command.clear_build_output_before_running then build_clear_output();
 
     last_command_result = .{};
 
