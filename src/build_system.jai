@@ -59,6 +59,7 @@ execute_build_command :: (command: *Build_Command) {
     }
 
     log("Executing build command [%]\n", command.name);
+    if command.clear_build_output_before_running then build_clear_output();
 
     // Add an empty line between commands
     if last_command_result.finished then print_to_output_panel_from_main_thread("\n");
@@ -88,8 +89,6 @@ execute_build_command :: (command: *Build_Command) {
     } else if !build_panel_is_shown {
         add_success_message("Running [%]…", running_command.name, dismiss_in_seconds = 3);
     }
-
-    if command.clear_build_output_before_running then build_clear_output();
 
     add_work(*thread_group, running_command);
     // Now don't modify running_command as it's being accessed from thread
