@@ -299,7 +299,6 @@ REFRESH_TIMER_ID :: 0;
 
 WM_USER :: 0x0400;
 
-_ :: #library,system,link_always "advapi32";  // @TODO: only needed because of a bug in the standard modules in Jai 0.1.084. Remove once 085 comes out.
 user32   :: #system_library "user32";
 kernel32 :: #system_library "kernel32";
 shell32  :: #system_library "shell32";
