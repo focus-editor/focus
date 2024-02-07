@@ -881,7 +881,7 @@ handle_xinput_event :: (xd: *XCB_Display, geev: *xcb_ge_generic_event_t) {
         case XCB_INPUT_KEY_PRESS; #through;
         case XCB_INPUT_KEY_RELEASE;
             kpev := cast(*xcb_input_key_press_event_t) geev;
-            event_type := ifx geev.event_type == XCB_INPUT_KEY_PRESS then Key_Event_Type.Press else .Release
+            event_type := ifx geev.event_type == XCB_INPUT_KEY_PRESS then Key_Event_Type.Press else .Release;
             handle_key_event(xd, kpev.detail, event_type);
 
         case XCB_INPUT_BUTTON_PRESS; #through;
