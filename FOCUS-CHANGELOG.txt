@@ -22,7 +22,9 @@
 + New features:
     + New build option: `clear_build_output_before_running`. Set to `true` to clear the build output window every time a command is run.
     + macOS: `Opt` is now allowed in keybinds rather than `Alt`.
+    + macOS: colored title bars are now used by default
 + Bug fixes:
+    + macOS: added `NSHighResolutionCapable` to `Info.plist` which should fix blurry rendering when installing Focus via the `.dmg` package.
     + macOS: keyboard shortcuts should now work correctly on non-QWERTY layouts (https://github.com/focus-editor/focus/issues/29)
         - NOTE: key composition still does not work correctly, this fix is only about the base keyboard layout being respected
 + Other changes:
