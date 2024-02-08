@@ -31,6 +31,7 @@ platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, 
 
 platform_create_window :: inline () {
     window = create_window(window_width, window_height, window_generic_title, window_x, window_y);
+    platform_set_border_color();
 }
 
 platform_maximize_window :: inline (window: Window_Type) {
@@ -108,6 +109,29 @@ platform_path_contains :: inline (path: string, subpath: string) -> bool {
 }
 
 platform_set_border_color :: inline () {
+    // NOTE: this gets called during compile-time parsing of the default config file which
+    //       causes the meta-program to crash.
+    if #compile_time return;
+
+    bg := map_color_to_vec4(.BACKGROUND_0);
+
+    // There is no way to set the color of the title bar directly. Instead we set the titlebar as
+    // "transparent" and the window's color background to the active theme's background color.
+    color := NSColor.colorWithRed(bg.x, bg.y, bg.z, 1.0);
+    defer release(color);
+    NSWindow.setTitlebarAppearsTransparent(window, YES);
+    NSWindow.setBackgroundColor(window, color);
+
+    // There is no way to change the color of the title bar text directly. As a result we do
+    // the following:
+    //   1. classify the active theme's background color as either "dark" or "light". We do this
+    //      by applying the algorithm described on this page: http://alienryderflex.com/hsp.html
+    //   2. we set the window appearance to be either the "dark" on "light" macOS theme based on
+    //      the result of the classification from step 1, which indirectly set a (hopefully)
+    //      appropriate titlebar text color.
+    hsp := sqrt(bg.x * bg.x * .299 + bg.y * bg.y * .587 + bg.z * bg.z * .114) * 256.0;
+    appearance_name := ifx hsp < 130 then "NSAppearanceNameDarkAqua" else "NSAppearanceNameAqua";
+    NSWindow.setAppearance(window, NSAppearance.appearanceNamed(NSString.getTempString(appearance_name)));
 }
 
 platform_show_cursor :: (show: bool) {
@@ -136,6 +160,7 @@ monitors : [..] Monitor;
 #import "Objective_C/AppKit";
 #import "Process";
 #import "Hash_Table";
+#import "Math";
 
 // We need to store the association between `Focus_Timer` instances and `NSTimer` instances externally
 // since currently we can't properly do instance variables for Cocoa classes (see the warning at the

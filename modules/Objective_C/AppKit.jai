@@ -435,6 +435,10 @@ NSColor :: struct {
     blueColor :: () -> *NSColor {
         return xx objc_msgSend(class(NSColor), _sel.blueColor);
     }
+
+    colorWithRed :: (red: CGFloat, green: CGFloat, blue: CGFloat, alpha: CGFloat) -> *NSColor {
+        return xx objc_msgSend(class(NSColor), _sel.colorWithRed_green_blue_alpha_, red, green, blue, alpha);
+    }
 }
 
 NSPasteboardReadingOptionKey :: *NSString;
@@ -641,6 +645,14 @@ NSWindow :: struct {
 
     screen :: (self: *NSWindow) -> *NSScreen {
         return xx objc_msgSend(self, _sel.screen);
+    }
+
+    setTitlebarAppearsTransparent :: (self: *NSWindow, value: BOOL) {
+        objc_msgSend(self, _sel.setTitlebarAppearsTransparent_, value);
+    }
+
+    setAppearance :: (self: *NSWindow, appearance: *NSAppearance) {
+        objc_msgSend(self, _sel.setAppearance_, appearance);
     }
 
     // helper functions
@@ -1221,9 +1233,21 @@ NSDraggingInfo :: struct {
     }
 }
 
+NSAppearance :: struct {
+    using #as super: NSObject;
+
+    appearanceNamed :: (named: *NSString) -> *NSAppearance {
+        return xx objc_msgSend(class(NSAppearance), _sel.appearanceNamed_, named);
+    }
+}
+
 #scope_module
 
 _sel: struct #type_info_no_size_complaint {
+    appearanceNamed_: Selector;
+    colorWithRed_green_blue_alpha_: Selector;
+    setTitlebarAppearsTransparent_: Selector;
+    setAppearance_: Selector;
     replyToOpenOrPrint_: Selector;
     characters: Selector;
     run: Selector;
