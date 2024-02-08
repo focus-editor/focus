@@ -19,6 +19,10 @@ x11_translate_key_code :: (key: X11.KeySym) -> Input.Key_Code {
         return ENTER;
     if (key == X11.XK_Control_L) || (key == X11.XK_Control_R)
         return CTRL;
+    if key == X11.XK_Alt_L
+        return .ALT;
+    if (key == X11.XK_Meta_L) || (key == X11.XK_Meta_R)
+        return .META;
     if key == X11.XK_BackSpace
         return BACKSPACE;
     if key == X11.XK_Delete || key == X11.XK_KP_Delete
