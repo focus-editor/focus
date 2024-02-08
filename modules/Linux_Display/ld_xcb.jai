@@ -882,7 +882,8 @@ handle_xinput_event :: (xd: *XCB_Display, geev: *xcb_ge_generic_event_t) {
         case XCB_INPUT_KEY_RELEASE;
             kpev := cast(*xcb_input_key_press_event_t) geev;
             event_type := ifx geev.event_type == XCB_INPUT_KEY_PRESS then Key_Event_Type.Press else .Release;
-            handle_key_event(xd, kpev.detail, event_type);
+            repeat := (kpev.flags & cast(u32) xcb_input_key_event_flags_t.XCB_INPUT_KEY_EVENT_FLAGS_KEY_REPEAT) != 0;
+            handle_key_event(xd, kpev.detail, event_type, repeat);
 
         case XCB_INPUT_BUTTON_PRESS; #through;
         case XCB_INPUT_BUTTON_RELEASE;
@@ -935,7 +936,7 @@ Key_Event_Type :: enum {
 }
 Button_Event_Type :: Key_Event_Type;
 
-handle_key_event :: (xd: *XCB_Display, keycode: u32, event_type: Key_Event_Type) {
+handle_key_event :: (xd: *XCB_Display, keycode: u32, event_type: Key_Event_Type, repeat := false) {
     utf32: u32;
     is_printable: bool;
     keysym := xkb_state_key_get_one_sym(xd.kb_state, keycode);
@@ -968,6 +969,7 @@ handle_key_event :: (xd: *XCB_Display, keycode: u32, event_type: Key_Event_Type)
         ji_event.key_code = x11_translate_key_code(keysym);
         xd.base.input_button_states[ji_event.key_code] = Input.Key_Current_State.END;
     }
+    ji_event.repeat = repeat;
 
     array_add(*xd.base.events_this_frame, ji_event);
 

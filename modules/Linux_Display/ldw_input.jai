@@ -88,10 +88,10 @@ wl_key_repeat_cb :: (tid: Timer, user_data: *void) {
         return;
     }
 
-    handle_key_event(d, d.input_serial, d.key_to_repeat, wl_keyboard.key_state_pressed);
+    handle_key_event(d, d.input_serial, d.key_to_repeat, wl_keyboard.key_state_pressed, true);
 }
 
-handle_key_event :: (d: *Wayland_Display, serial: u32, key: u32, state: u32) {
+handle_key_event :: (d: *Wayland_Display, serial: u32, key: u32, state: u32, repeat := false) {
     utf32: u32;
     is_printable: bool;
     keycode: xkb_keycode_t = key + 8;
@@ -126,6 +126,7 @@ handle_key_event :: (d: *Wayland_Display, serial: u32, key: u32, state: u32) {
         event.key_code = x11_translate_key_code(keysym);
         d.base.input_button_states[event.key_code] = Input.Key_Current_State.END;
     }
+    event.repeat = repeat;
 
     array_add(*d.base.events_this_frame, event);
 
