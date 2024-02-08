@@ -188,6 +188,9 @@ build :: () {
         <key>NSHumanReadableCopyright</key>
         <string>© 2023 Ivan Ivanov</string>
 
+        <key>NSHighResolutionCapable</key>
+        <true/>
+
         <key>CFBundleDocumentTypes</key>
         <array>
             <dict>
