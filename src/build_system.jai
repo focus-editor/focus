@@ -99,12 +99,10 @@ build_clear_output :: () {
     if build_buffer_id < 0 return;
     editor, buffer := get_build_editor_and_buffer();
 
-    lock(*build_mutex);
-    array_reset_keeping_memory(*buffer.regions);
+    array_reset_keeping_memory(*buffer.regions);  // TODO: should we lock buffer content_lock before accessing this?
     delete_range_raw(buffer, 0, buffer.bytes.count);
     rescan_for_lines(buffer);
     rescan_for_wrapped_lines(editor, buffer);
-    unlock(*build_mutex);
 }
 
 build_kill_running_command :: () {

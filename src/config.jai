@@ -118,7 +118,11 @@ apply_config :: () {
 free_loaded_config :: (using loaded_config: *Loaded_Config) {
     path = "";
     parsed_config = Parsed_Config.{};
-    reset(*memory_pool);
+    if memory_pool {
+        reset(memory_pool);
+        free(memory_pool);
+        memory_pool = null;
+    }
 }
 
 refresh_config :: (path: string) {
@@ -286,8 +290,9 @@ apply_style :: (parsed: Parsed_Config) {
 
 load_config :: (file_path: string, existing: *Loaded_Config, force := false) -> Loaded_Config, changed := true {
     loaded_config: Loaded_Config;
+    loaded_config.memory_pool = New(Flat_Pool);
 
-    allocator := Allocator.{ proc = flat_pool_allocator_proc, data = *loaded_config.memory_pool };
+    allocator := Allocator.{ proc = flat_pool_allocator_proc, data = loaded_config.memory_pool };
     push_allocator(allocator);
 
     file_data, success_read := read_entire_file(file_path);
@@ -364,8 +369,8 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     // Keymap
     merge_keymaps :: (dst_keymap: *[] Key_Mapping, src_keymap: *[..] Key_Mapping) #expand {
         if !src_keymap return;
-        array_extend(src_keymap, <<dst_keymap);
-        <<dst_keymap = <<src_keymap;
+        array_add(src_keymap, ..dst_keymap.*);
+        dst_keymap.* = src_keymap.*;
     }
     merge_keymaps(*dst.keymap.common,           *parsed.keymap_common);
     merge_keymaps(*dst.keymap.editors,          *parsed.keymap_editors);
@@ -444,7 +449,7 @@ Loaded_Config :: struct {
     path: string;
     hash: u64;
     parsed_config: Parsed_Config;
-    memory_pool: Flat_Pool;  // must be valid for the lifetime of the config
+    memory_pool: *Flat_Pool;  // must be valid for the lifetime of the config
 }
 
 Linux_Config :: struct {

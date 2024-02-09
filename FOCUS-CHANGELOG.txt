@@ -27,6 +27,7 @@
     + macOS: added `NSHighResolutionCapable` to `Info.plist` which should fix blurry rendering when installing Focus via the `.dmg` package.
     + macOS: keyboard shortcuts should now work correctly on non-QWERTY layouts (https://github.com/focus-editor/focus/issues/29)
         - NOTE: key composition still does not work correctly, this fix is only about the base keyboard layout being respected
+    + Fixed a crash when attempting to override key mappings in a project config
 + Other changes:
     + macOS: Installing the editor from the `.dmg` package will register it as a handler for text files. This means that:
         1. you will see Focus as an entry in the "Open With" list in the context menu for text files in Finder

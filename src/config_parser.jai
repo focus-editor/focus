@@ -132,9 +132,9 @@ parse_config :: (name: string, filename: string, file_data: string, for_highligh
     }
 
     // Mix the common key mappings into every keymap to support common actions
-    array_extend(*result.config.keymap_editors,          result.config.keymap_common);
-    array_extend(*result.config.keymap_open_file_dialog, result.config.keymap_common);
-    array_extend(*result.config.keymap_search_dialog,    result.config.keymap_common);
+    array_add(*result.config.keymap_editors,          ..result.config.keymap_common);
+    array_add(*result.config.keymap_open_file_dialog, ..result.config.keymap_common);
+    array_add(*result.config.keymap_search_dialog,    ..result.config.keymap_common);
 
     result.success   = true;
     result.error_msg = "";

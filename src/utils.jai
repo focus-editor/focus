@@ -47,13 +47,6 @@ arrays_concat :: (array1: [] $T, array2: [] T) -> [] T {
     return result;
 }
 
-maybe_free_and_clear :: (str: *string) {
-    if !str.data || str.count == 0 return;
-    free(<< str);
-    str.data  = null;
-    str.count = 0;
-}
-
 to_owned_array :: (array: *[..]$T, free_memory := false) -> []T {
     new_array := array_copy(<<array);
     if free_memory {
