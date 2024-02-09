@@ -580,7 +580,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         if !theme_parse_result.success return true, tprint("Couldn't parse theme file '%'.\nError: %", theme_file, theme_parse_result.error_msg);
 
                         // Copy colors and font data (it points into the theme file data)
-                        array_extend(*result.config.colors, theme_parse_result.config.colors);
+                        array_add(*result.config.colors, ..theme_parse_result.config.colors);
                         result.config.font      = theme_parse_result.config.font;
                         result.config.font_size = theme_parse_result.config.font_size;
 

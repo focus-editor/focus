@@ -42,8 +42,8 @@ to_bytes :: (src: string) -> [] u8 {
 // Intended for compile-time
 arrays_concat :: (array1: [] $T, array2: [] T) -> [] T {
     result: [..] T;
-    array_extend(*result, array1);
-    array_extend(*result, array2);
+    array_add(*result, ..array1);
+    array_add(*result, ..array2);
     return result;
 }
 
@@ -55,17 +55,6 @@ to_owned_array :: (array: *[..]$T, free_memory := false) -> []T {
         array_reset_keeping_memory(array);
     }
     return new_array;
-}
-
-array_extend :: (array: *[..] $T, slice: [] T) {
-    if slice.count <= 0 return;
-
-    new_size := array.count + slice.count;
-    array_reserve(array, new_size);
-
-    focus_memcpy(array.data + array.count, slice.data, slice.count * size_of(T));
-
-    array.count = new_size;
 }
 
 pos_to_offset :: (str: string, pos: s64) -> s64 {

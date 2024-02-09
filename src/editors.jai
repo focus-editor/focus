@@ -1740,7 +1740,7 @@ undo :: (editor: *Editor, buffer: *Buffer) {
     redo.edits = edit_group.edits;
     redo.cursors = to_owned_array(*buffer.cursors);
 
-    array_extend(*buffer.cursors, edit_group.cursors);
+    array_add(*buffer.cursors, ..edit_group.cursors);
     restore_cursor_state(editor, edit_group.cursors);
     array_free(edit_group.cursors);
 
@@ -1765,7 +1765,7 @@ redo :: (editor: *Editor, buffer: *Buffer) {
     undo.edits = edit_group.edits;
     undo.cursors = to_owned_array(*buffer.cursors);
 
-    array_extend(*buffer.cursors, edit_group.cursors);
+    array_add(*buffer.cursors, ..edit_group.cursors);
     restore_cursor_state(editor, edit_group.cursors);
     array_free(edit_group.cursors);
 

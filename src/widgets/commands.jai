@@ -150,8 +150,8 @@ commands := #run -> [] Command {
 
     commands: [..] Command;
 
-    array_extend(*commands, base_commands);
-    #if OS == .LINUX then array_extend(*commands, linux_commands);
+    array_add(*commands, ..base_commands);
+    #if OS == .LINUX then array_add(*commands, ..linux_commands);
 
     return commands;
 }
