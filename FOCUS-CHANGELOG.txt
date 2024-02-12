@@ -28,12 +28,14 @@
     + macOS: keyboard shortcuts should now work correctly on non-QWERTY layouts (https://github.com/focus-editor/focus/issues/29)
         - NOTE: key composition still does not work correctly, this fix is only about the base keyboard layout being respected
     + Fixed a crash when attempting to override key mappings in a project config
+    + Fixed the double shift search action not registering on Linux consistently
 + Other changes:
     + macOS: Installing the editor from the `.dmg` package will register it as a handler for text files. This means that:
         1. you will see Focus as an entry in the "Open With" list in the context menu for text files in Finder
         2. you can use Focus to open files from the terminal by running `open -a Focus file`
     + macOS: Some default keyboard shortcuts were changed to remove conflicts with system shortcuts.
     + macOS: The oldest OS that can launch Focus is now macOS 10.13 High Sierra.
+    + Continuous scroll actions such as `scroll_viewport_up`, `scroll_viewport_down` etc. now should work with multipart combos.
 
 
 # RELEASES ==================================================================
