@@ -128,6 +128,13 @@ handle_key_event :: (d: *Wayland_Display, serial: u32, key: u32, state: u32, rep
     }
     event.repeat = repeat;
 
+    if event.key_code == {
+        case .SHIFT; event.shift_pressed = true;
+        case .CTRL;  event.ctrl_pressed = true;
+        case .ALT;   event.alt_pressed = true;
+        case .META;  event.cmd_meta_pressed = true;
+    }
+
     array_add(*d.base.events_this_frame, event);
 
     if event.key_pressed && is_printable {

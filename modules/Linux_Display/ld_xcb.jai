@@ -971,6 +971,13 @@ handle_key_event :: (xd: *XCB_Display, keycode: u32, event_type: Key_Event_Type,
     }
     ji_event.repeat = repeat;
 
+    if ji_event.key_code == {
+        case .SHIFT; ji_event.shift_pressed = true;
+        case .CTRL;  ji_event.ctrl_pressed = true;
+        case .ALT;   ji_event.alt_pressed = true;
+        case .META;  ji_event.cmd_meta_pressed = true;
+    }
+
     array_add(*xd.base.events_this_frame, ji_event);
 
     if ji_event.key_pressed && is_printable {

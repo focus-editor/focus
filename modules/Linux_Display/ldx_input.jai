@@ -275,6 +275,14 @@ x11_handle_event :: (x11_display: *X11_Display, xev: *X11.XEvent) -> expect_more
                     utf32 := text[it];
                     if utf32 >= 32 && utf32 != 127 event.text_input_count += 1;
                 }
+
+                if event.key_code == {
+                    case .SHIFT; event.shift_pressed = true;
+                    case .CTRL;  event.ctrl_pressed = true;
+                    case .ALT;   event.alt_pressed = true;
+                    case .META;  event.cmd_meta_pressed = true;
+                }
+
                 array_add(*x11_display.base.events_this_frame, event);
 
                 x11_display.base.input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
@@ -323,6 +331,14 @@ x11_handle_event :: (x11_display: *X11_Display, xev: *X11.XEvent) -> expect_more
                 event.type = .KEYBOARD;
                 event.key_pressed = 0;
                 event.key_code = x11_translate_key_code(keysym);
+
+                if event.key_code == {
+                    case .SHIFT; event.shift_pressed = true;
+                    case .CTRL;  event.ctrl_pressed = true;
+                    case .ALT;   event.alt_pressed = true;
+                    case .META;  event.cmd_meta_pressed = true;
+                }
+
                 array_add(*x11_display.base.events_this_frame, event);
 
                 x11_display.base.input_button_states[event.key_code] = Input.Key_Current_State.END;
