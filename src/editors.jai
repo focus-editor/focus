@@ -9,8 +9,10 @@ editors_handle_event :: (event: Input.Event) -> handled: bool {
 
     if event.type == {
         case .KEYBOARD;
-            if event.key_pressed && !active_hold_actions {
+            if event.key_pressed {
                 action, mapping := map_event_to_action(event, Action_Editors);
+                if active_hold_actions && !is_hold_action(action) return true;  // don't execute any non-hold actions while hold actions are active
+
                 editor, buffer := get_active_editor_and_buffer();
                 if editor {
                     return active_editor_handle_event(editor, buffer, event, action);
@@ -21,8 +23,6 @@ editors_handle_event :: (event: Input.Event) -> handled: bool {
                     }
                     return false;
                 }
-            } else if event.key_pressed && active_hold_actions {
-                return true;
             } else {
                 hold_actions_to_be_stopped := map_key_release_to_hold_actions(event, Action_Editors);
                 for hold_actions_to_be_stopped {

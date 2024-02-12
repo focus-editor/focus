@@ -61,6 +61,15 @@ activate_hold_action :: (action: $Action_Type, event: Input.Event) {
     array_add(*active_hold_actions, hold_action);
 }
 
+is_hold_action :: inline (action: Action_Editors) -> bool {
+    return action == .scroll_viewport_up ||
+           action == .scroll_viewport_up_fast ||
+           action == .scroll_viewport_down ||
+           action == .scroll_viewport_down_fast ||
+           action == .scroll_viewport_left ||
+           action == .scroll_viewport_right;
+}
+
 map_key_release_to_hold_actions :: (event: Input.Event, $Action: Type) -> [] Action /* temporary storage */ {
     if event.type != .KEYBOARD || event.key_pressed return .[];
 
