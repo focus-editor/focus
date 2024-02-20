@@ -1267,6 +1267,8 @@ restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor) {
         cursor.col_wanted = -1;
     }
     if main_cursor >= cursors.count then main_cursor = cursors.count - 1;  // maybe we should remember it too
+
+    editor.cursor_moved = .jumped;
 }
 
 make_editor_active :: (editor_id: s64) {
@@ -1733,14 +1735,23 @@ cursors_match :: (c1: [] Cursor, c2: [] Cursor) -> bool {
 
 undo :: (editor: *Editor, buffer: *Buffer) {
     new_edit_group(buffer, editor);
-    if buffer.undos.count == 0 return;
+
+    if buffer.undos.count == 0 {
+        // Go back to 0:0
+        array_resize(*editor.cursors, 1);
+        editor.main_cursor     = 0;
+        editor.original_cursor = 0;
+        editor.cursors[0].pos  = 0;
+        editor.cursors[0].sel  = 0;
+        editor.cursor_moved = .jumped;
+        return;
+    }
 
     edit_group := peek(buffer.undos);
 
     // Maybe put cursors in the position right before the undo edits, unless they are already there
     if !cursors_match(editor.cursors, edit_group.cursors_after) {
         restore_cursor_state(editor, edit_group.cursors_after);
-        editor.cursor_moved = .jumped;
         return;  // let people hit undo again to see the changes for more visual feedback
     }
 
@@ -1769,7 +1780,6 @@ redo :: (editor: *Editor, buffer: *Buffer) {
     // Maybe put cursors in the position right before the redo edits, unless they are already there
     if !cursors_match(editor.cursors, edit_group.cursors_before) {
         restore_cursor_state(editor, edit_group.cursors_before);
-        editor.cursor_moved = .jumped;
         return;  // let people hit undo again to see the changes for more visual feedback
     }
 
