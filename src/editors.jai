@@ -1259,7 +1259,7 @@ viewport_glue_to_point :: (editor: *Editor, buffer: Buffer) -> changed: bool {
 }
 
 restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor) {
-    if cursor_state.count == 0 return;  // the first undo doesn't have any remembered cursors
+    if cursor_state.count == 0 return;
 
     array_resize(*cursors, cursor_state.count);
     for * cursor, i : cursors {
@@ -1721,12 +1721,28 @@ smooth_scroll :: (editor: Editor, direction: Smooth_Scroll_Direction, fast := fa
     }
 }
 
+cursors_match :: (c1: [] Cursor, c2: [] Cursor) -> bool {
+    if c1.count != c2.count return false;
+
+    for 0 .. c1.count-1 {
+        if c1[it].pos != c2[it].pos return false;  // we don't compare sel on purpose, to avoid jumping between selections too much
+    }
+
+    return true;
+}
+
 undo :: (editor: *Editor, buffer: *Buffer) {
     new_edit_group(buffer, editor);
-
     if buffer.undos.count == 0 return;
 
-    edit_group := pop(*buffer.undos);
+    edit_group := peek(buffer.undos);
+
+    // Maybe put cursors in the position right before the undo edits, unless they are already there
+    if !cursors_match(editor.cursors, edit_group.cursors_after) {
+        restore_cursor_state(editor, edit_group.cursors_after);
+        editor.cursor_moved = .jumped;
+        return;  // let people hit undo again to see the changes for more visual feedback
+    }
 
     // Revert edits in the backwards order
     for < e : edit_group.edits {
@@ -1738,6 +1754,7 @@ undo :: (editor: *Editor, buffer: *Buffer) {
         }
     }
 
+    pop(*buffer.undos);
     array_add(*buffer.redos, edit_group);  // push onto the redo stack
     restore_cursor_state(editor, edit_group.cursors_before);
 
@@ -1747,7 +1764,14 @@ undo :: (editor: *Editor, buffer: *Buffer) {
 redo :: (editor: *Editor, buffer: *Buffer) {
     if buffer.redos.count == 0 return;
 
-    edit_group := pop(*buffer.redos);
+    edit_group := peek(buffer.redos);
+
+    // Maybe put cursors in the position right before the redo edits, unless they are already there
+    if !cursors_match(editor.cursors, edit_group.cursors_before) {
+        restore_cursor_state(editor, edit_group.cursors_before);
+        editor.cursor_moved = .jumped;
+        return;  // let people hit undo again to see the changes for more visual feedback
+    }
 
     // Replay edits in the normal order
     for e : edit_group.edits {
@@ -1759,6 +1783,7 @@ redo :: (editor: *Editor, buffer: *Buffer) {
         }
     }
 
+    pop(*buffer.redos);
     array_add(*buffer.undos, edit_group);  // push onto the undo stack
     restore_cursor_state(editor, edit_group.cursors_after);
 
