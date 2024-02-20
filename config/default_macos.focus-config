@@ -300,6 +300,18 @@ background1:                            10191FFF
 background2:                            18262FFF
 background3:                            1A2831FF
 background4:                            21333FFF
+
+# NOTE: for Jai region_scope colors define background colors for blocks of code that fall into those scopes,
+#       so make sure to override those as well if you change the background.
+#       Those regions are likely to be used for languages other than Jai in the future
+region_scope_export:                    15212AFF
+region_scope_file:                      131C22FF
+region_scope_module:                    1A2831FF
+region_header:                          1A5152FF
+region_success:                         226022FF
+region_warning:                         986032FF
+region_error:                           772222FF
+
 selection_active:                       1C4449FF
 selection_inactive:                     1C44497F
 selection_highlight:                    FCEDFC26
@@ -342,14 +354,6 @@ code_highlight:                         D89B75FF
 code_error:                             FF0000FF
 code_warning:                           E4D97DFF
 code_keyword:                           E67D74FF
-
-region_scope_export:                    15212AFF
-region_scope_file:                      131C22FF
-region_scope_module:                    1A2831FF
-region_header:                          1A5152FF
-region_success:                         226022FF
-region_warning:                         986032FF
-region_error:                           772222FF
 
 build_panel_background:                 1A2831FF
 build_panel_scrollbar:                  33CCCC19
