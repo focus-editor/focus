@@ -1237,7 +1237,8 @@ deinit :: (using edit_group: *Buffer.Edit_Group) {
         }
     }
     array_free(edits);
-    array_free(cursors);
+    array_free(cursors_before);
+    array_free(cursors_after);
 }
 
 #scope_export
@@ -1278,6 +1279,8 @@ Buffer :: struct {
 
     last_edit_time: Apollo_Time;  // for creating new edit groups
 
+    // @Memory: all of these are allocated on the heap, which is not great, but it works fine right now.
+    // Eventually we'll want to revisit all this and make it not allocate as much.
     undos: [..] Edit_Group;
     redos: [..] Edit_Group;
     edits: [..] Edit;  // current edits, not in a group yet
@@ -1288,7 +1291,8 @@ Buffer :: struct {
 
     Edit_Group :: struct {
         edits: [] Edit;
-        cursors: [] Cursor;
+        cursors_before: [] Cursor;  // have to remember where the cursors were both before and after
+        cursors_after:  [] Cursor;  // because otherwise the redo behaviour can't be properly implemented
     }
 
     // All strings in this struct are owned

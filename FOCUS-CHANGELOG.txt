@@ -36,6 +36,7 @@
     + macOS: Some default keyboard shortcuts were changed to remove conflicts with system shortcuts.
     + macOS: The oldest OS that can launch Focus is now macOS 10.13 High Sierra.
     + Continuous scroll actions such as `scroll_viewport_up`, `scroll_viewport_down` etc. now should work with multipart combos.
+    + Undo/redo behaviour has been improved with regard to cursor positioning when redoing
 
 
 # RELEASES ==================================================================

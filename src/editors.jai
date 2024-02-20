@@ -734,18 +734,6 @@ all_cursors_can_auto_delete_closing_bracket :: (using editor: Editor, buffer: Bu
     return true;
 }
 
-new_edit_group :: (buffer: *Buffer, editor: *Editor) {
-    if buffer.edits.count == 0 return;
-
-    new_group := array_add(*buffer.undos);
-    new_group.edits = to_owned_array(*buffer.edits);  // @Speed: could group all char inserts into one if needed
-    new_group.cursors = to_owned_array(*buffer.cursors);
-
-    // Remember cursor state
-    array_resize(*buffer.cursors, editor.cursors.count);
-    for * cursor, i : buffer.cursors { cursor.* = editor.cursors[i]; }
-}
-
 close_editor :: (position: enum { current; other; left; right; }) {
     using editors;
     if position == {
@@ -1334,6 +1322,19 @@ find_or_create_editor :: (buffer_id: s64, unwanted_existing_editor: s64 = -1) ->
     return editor_id, true;
 }
 
+new_edit_group :: (buffer: *Buffer, editor: *Editor) {
+    if buffer.edits.count == 0 return;
+
+    new_group := array_add(*buffer.undos);
+    new_group.edits = to_owned_array(*buffer.edits);  // @Speed: could group all char inserts into one if needed
+    new_group.cursors_before = to_owned_array(*buffer.cursors);
+    new_group.cursors_after  = array_copy(editor.cursors);
+
+    // Remember cursor state
+    array_resize(*buffer.cursors, editor.cursors.count);
+    for * cursor, i : buffer.cursors { cursor.* = editor.cursors[i]; }
+}
+
 #scope_file
 
 delete_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; below; }) {
@@ -1726,23 +1727,19 @@ undo :: (editor: *Editor, buffer: *Buffer) {
     if buffer.undos.count == 0 return;
 
     edit_group := pop(*buffer.undos);
+
     // Revert edits in the backwards order
     for < e : edit_group.edits {
         if #complete e.type == {
-            case .delete;  using e.delete;  insert_string_raw(buffer, offset_range.start, old_bytes);
-            case .replace; using e.replace; replace_range_raw(buffer, offset_range.start, offset_range.start + xx new_bytes.count, old_bytes);
-            case .insert;  using e.insert;  delete_range_raw (buffer, offset, offset + new_bytes.count);
+            case .delete;      using e.delete;       insert_string_raw(buffer, offset_range.start, old_bytes);
+            case .replace;     using e.replace;      replace_range_raw(buffer, offset_range.start, offset_range.start + xx new_bytes.count, old_bytes);
+            case .insert;      using e.insert;       delete_range_raw (buffer, offset, offset + new_bytes.count);
             case .insert_char; using e.insert_char;  delete_range_raw (buffer, offset, offset + char.count);
         }
     }
-    // Add a new redo group
-    redo := array_add(*buffer.redos);
-    redo.edits = edit_group.edits;
-    redo.cursors = to_owned_array(*buffer.cursors);
 
-    array_add(*buffer.cursors, ..edit_group.cursors);
-    restore_cursor_state(editor, edit_group.cursors);
-    array_free(edit_group.cursors);
+    array_add(*buffer.redos, edit_group);  // push onto the redo stack
+    restore_cursor_state(editor, edit_group.cursors_before);
 
     editor.cursor_moved = .large_edit;
 }
@@ -1751,23 +1748,19 @@ redo :: (editor: *Editor, buffer: *Buffer) {
     if buffer.redos.count == 0 return;
 
     edit_group := pop(*buffer.redos);
+
     // Replay edits in the normal order
     for e : edit_group.edits {
         if #complete e.type == {
-            case .delete;  using e.delete;  delete_range_raw (buffer, offset_range.start, offset_range.end);
-            case .replace; using e.replace; replace_range_raw(buffer, offset_range.start, offset_range.end, new_bytes);
-            case .insert;  using e.insert;  insert_string_raw(buffer, offset, new_bytes);
+            case .delete;      using e.delete;      delete_range_raw (buffer, offset_range.start, offset_range.end);
+            case .replace;     using e.replace;     replace_range_raw(buffer, offset_range.start, offset_range.end, new_bytes);
+            case .insert;      using e.insert;      insert_string_raw(buffer, offset, new_bytes);
             case .insert_char; using e.insert_char; insert_string_raw(buffer, offset, to_string(*char));
         }
     }
-    // Add a new undo group
-    undo := array_add(*buffer.undos);
-    undo.edits = edit_group.edits;
-    undo.cursors = to_owned_array(*buffer.cursors);
 
-    array_add(*buffer.cursors, ..edit_group.cursors);
-    restore_cursor_state(editor, edit_group.cursors);
-    array_free(edit_group.cursors);
+    array_add(*buffer.undos, edit_group);  // push onto the undo stack
+    restore_cursor_state(editor, edit_group.cursors_after);
 
     editor.cursor_moved = .large_edit;
 }
@@ -1987,6 +1980,8 @@ move_to_file_end :: (editor: *Editor, buffer: Buffer) {
 }
 
 break_line :: (editor: *Editor, buffer: *Buffer) {
+    new_edit_group(buffer, editor);
+
     // Remember by how much we need to indent the new lines upfront to avoid any scanning of the dirty buffer later
     Space :: struct { start: s32; count: s32; original_start: s32; }  // not a string to avoid invalid pointers
     space_per_cursor := NewArray(editor.cursors.count, Space, initialized = false,, allocator = temp);
@@ -2024,6 +2019,8 @@ break_line :: (editor: *Editor, buffer: *Buffer) {
 }
 
 new_line_below :: (editor: *Editor, buffer: *Buffer) {
+    new_edit_group(buffer, editor);
+
     Line_Info :: struct { end: s32; space: struct { start, count, original_start: s32; }; last_line: bool; };
     line_info_per_cursor := NewArray(editor.cursors.count, Line_Info, initialized = false,, allocator = temp);
     for cursor : editor.cursors {
@@ -2055,6 +2052,8 @@ new_line_below :: (editor: *Editor, buffer: *Buffer) {
 }
 
 new_line_above :: (editor: *Editor, buffer: *Buffer) {
+    new_edit_group(buffer, editor);
+
     Line_Info :: struct { start: s32; space: struct { start, count, original_start: s32; }; };
     line_info_per_cursor := NewArray(editor.cursors.count, Line_Info, initialized = false,, allocator = temp);
     for cursor : editor.cursors {
