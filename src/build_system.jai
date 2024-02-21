@@ -105,6 +105,10 @@ build_clear_output :: () {
     rescan_for_wrapped_lines(editor, buffer);
 }
 
+build_command_is_running :: () -> bool {
+    return running_command != null;
+}
+
 build_kill_running_command :: () {
     if !running_command {
         add_user_warning("No command is currently running", dismiss_in_seconds = 3);

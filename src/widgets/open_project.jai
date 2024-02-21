@@ -3,6 +3,11 @@ open_project_dialog_handle_event :: (event: Input.Event) -> handled: bool {
 }
 
 open_selected_project :: () {
+    if build_command_is_running() {
+        add_user_warning("A build command is currently running. Please kill it or let it finish before switching projects.", dismiss_in_seconds = 5, tag = .build);
+        return;
+    }
+
     hide_dialog(*open_project_dialog);
 
     using open_project_dialog;
