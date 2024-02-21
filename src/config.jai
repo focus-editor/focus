@@ -468,44 +468,45 @@ Workspace :: struct {
 }
 
 Settings :: struct {
-    maximize_on_start                       := false;
-    open_on_the_biggest_monitor             := true;
-    cursor_as_block                         := true;
-    cursor_blink_time_in_seconds            := 5;
-    highlight_selection_occurrences         := true;
-    disable_that_annoying_paste_effect      := false;
-    disable_file_open_close_animations      := false;
-    double_shift_to_search_in_workspace     := false;
-    tab_size                                := 4;
-    insert_spaces_when_pressing_tab         := true;
-    strip_trailing_whitespace_on_save       := false;
-    smooth_scrolling                        := true;
-    scroll_beyond_last_line                 := true;
-    line_height_scale_percent               := 120;
-    max_editor_width                        := -1;
-    can_cancel_go_to_line                   := true;
-    copy_whole_line_without_selection       := false;
-    editor_history_size                     := 128;
-    line_wrap_is_on_by_default              := false;
-    show_line_numbers                       := false;
-    dark_titlebar                           := false;
-    colored_titlebar                        := true;
-    hide_mouse_when_typing                  := true;
-    highlight_line_with_cursor              := false;
-    draw_indent_guides                      := false;
-    auto_surround_with_brackets_and_quotes  := false;
-    auto_close_brackets                     := false;
-    prefer_system_file_dialogs              := false;
-    show_cursors_off_screen                 := true;
-    persist_local_search_results            := false;
+    maximize_on_start                             := false;
+    open_on_the_biggest_monitor                   := true;
+    cursor_as_block                               := true;
+    cursor_blink_time_in_seconds                  := 5;
+    highlight_selection_occurrences               := true;
+    disable_that_annoying_paste_effect            := false;
+    disable_file_open_close_animations            := false;
+    disable_viewport_chasing_cursor_near_the_edge := false;
+    double_shift_to_search_in_workspace           := false;
+    tab_size                                      := 4;
+    insert_spaces_when_pressing_tab               := true;
+    strip_trailing_whitespace_on_save             := false;
+    smooth_scrolling                              := true;
+    scroll_beyond_last_line                       := true;
+    line_height_scale_percent                     := 120;
+    max_editor_width                              := -1;
+    can_cancel_go_to_line                         := true;
+    copy_whole_line_without_selection             := false;
+    editor_history_size                           := 128;
+    line_wrap_is_on_by_default                    := false;
+    show_line_numbers                             := false;
+    dark_titlebar                                 := false;
+    colored_titlebar                              := true;
+    hide_mouse_when_typing                        := true;
+    highlight_line_with_cursor                    := false;
+    draw_indent_guides                            := false;
+    auto_surround_with_brackets_and_quotes        := false;
+    auto_close_brackets                           := false;
+    prefer_system_file_dialogs                    := false;
+    show_cursors_off_screen                       := true;
+    persist_local_search_results                  := false;
 
-    build_panel_width_percent               := 50;
-    build_panel_height_percent              := 50;
-    build_panel_stays_in_one_place          := false;
-    build_panel_line_wrap_always_on         := true;
+    build_panel_width_percent                     := 50;
+    build_panel_height_percent                    := 50;
+    build_panel_stays_in_one_place                := false;
+    build_panel_line_wrap_always_on               := true;
 
-    save_current_buffer_on_build            := false;
-    save_all_file_backed_buffers_on_build   := false;
+    save_current_buffer_on_build                  := false;
+    save_all_file_backed_buffers_on_build         := false;
 
     // TODO
     // convert_tabs_to_spaces_on_load:     false

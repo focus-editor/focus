@@ -21,6 +21,7 @@
 
 + New features:
     + New build option: `clear_build_output_before_running`. Set to `true` to clear the build output window every time a command is run.
+    + New option: `disable_viewport_chasing_cursor_near_the_edge`. Set to `true` to prevent the viewport from smoothly scrolling to the new cursor position when it moved near the edge by a small amount.
     + macOS: `Opt` is now allowed in keybinds rather than `Alt`.
     + macOS: colored title bars are now used by default
 + Bug fixes:

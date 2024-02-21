@@ -1245,6 +1245,19 @@ remove_all_editors :: () {
 viewport_remember_glue_point :: (using editor: *Editor, buffer: Buffer) {
     viewport.glue_point.buffer_pos = get_line_start_offset(editor, buffer, viewport.top / cast(s32) line_height);
     viewport.glue_point.offset_within_line = viewport.top % cast(s32) line_height;
+    redraw_requested = true;
+}
+
+snap_viewport_top_to_target :: (using editor: *Editor, buffer: Buffer, top_target: s32) {
+    viewport.scroll_y.target = top_target;  // snap
+    viewport.top = top_target;
+    viewport_remember_glue_point(editor, buffer);
+    redraw_requested = true;
+}
+
+snap_viewport_left_to_target :: (using editor: *Editor, left_target: s32) {
+    viewport.scroll_x.target = left_target;
+    viewport.left = left_target;
 }
 
 viewport_glue_to_point :: (editor: *Editor, buffer: Buffer) -> changed: bool {

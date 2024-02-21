@@ -690,8 +690,20 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 left_target := max(viewport.left  + cast(s32) offset.x, 0);
                 top_target  := clamp(viewport.top - cast(s32) offset.y, 0, max_y_scroll);
 
-                if left_target != viewport.scroll_x.target then start_animation(*viewport.scroll_x, viewport.left, left_target);
-                if top_target  != viewport.scroll_y.target then start_animation(*viewport.scroll_y, viewport.top,  top_target);
+                if left_target != viewport.scroll_x.target {
+                    if config.settings.disable_viewport_chasing_cursor_near_the_edge && abs(left_target - viewport.scroll_x.target) < cast(s32) (2 * char_x_advance) {
+                        snap_viewport_left_to_target(editor, left_target);
+                    } else {
+                        start_animation(*viewport.scroll_x, viewport.left, left_target);
+                    }
+                }
+                if top_target != viewport.scroll_y.target {
+                    if config.settings.disable_viewport_chasing_cursor_near_the_edge && abs(top_target - viewport.scroll_y.target) < cast(s32) (2 * line_height) {
+                        snap_viewport_top_to_target(editor, buffer, top_target);
+                    } else {
+                        start_animation(*viewport.scroll_y, viewport.top, top_target);
+                    }
+                }
             }
         } else if scroll_to_cursor != .no {
             using editor.viewport;
@@ -714,11 +726,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         // If we're past the max scrolling point for any reason (e.g. just deleted some text),
         // snap back into the allowed range immediately.
         // Do it after we've handled cursor_moved, because it uses viewport.top
-        if viewport.top > max_y_scroll || viewport.scroll_y.target > max_y_scroll {
-            viewport.scroll_y.target = max_y_scroll;
-            viewport.top = max_y_scroll;
-            viewport_remember_glue_point(editor, buffer);
-        }
+        if viewport.top > max_y_scroll || viewport.scroll_y.target > max_y_scroll then snap_viewport_top_to_target(editor, buffer, max_y_scroll);
 
         // With line wrap enabled we never want to scroll horizontally, so just snap to left always
         if line_wrap_is_active(editor) {
@@ -767,10 +775,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         new_scroll_target := get_new_scroll_target_from_scrollbar(rect, scrollbar_size, content_height, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
         if new_scroll_target != viewport.scroll_y.target {
             // Jump immediately to the scroll point when dragging or clicking scrollbar
-            viewport.top = new_scroll_target;
-            viewport.scroll_y.target = new_scroll_target;
-            viewport_remember_glue_point(editor, buffer);
-            redraw_requested = true;
+            snap_viewport_top_to_target(editor, buffer, new_scroll_target);
         }
 
         // Keyboard smooth scrolling - vertical
@@ -785,10 +790,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 case .up;    new_scroll_y -= time_elapsed * speed;
                 case .down;  new_scroll_y += time_elapsed * speed;
             }
-            viewport.top = clamp(cast(s32) new_scroll_y, 0, max_y_scroll);
-            viewport.scroll_y.target = viewport.top;
-            viewport_remember_glue_point(editor, buffer);
-            redraw_requested = true;
+            scroll_y_target := clamp(cast(s32) new_scroll_y, 0, max_y_scroll);
+            snap_viewport_top_to_target(editor, buffer, scroll_y_target);
         }
 
         if viewport.top == viewport.scroll_y.target {
