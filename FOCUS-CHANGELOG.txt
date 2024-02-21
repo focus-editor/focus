@@ -30,6 +30,7 @@
     + Fixed a crash when attempting to override key mappings in a project config
     + Fixed the double shift search action not registering on Linux consistently
     + It shouldn't now be allowed to switch projects while a build command is running, to prevent freezing
+    + Go-to-line now works when you press enter to jump to an already entered line number
 + Other changes:
     + macOS: Installing the editor from the `.dmg` package will register it as a handler for text files. This means that:
         1. you will see Focus as an entry in the "Open With" list in the context menu for text files in Finder
