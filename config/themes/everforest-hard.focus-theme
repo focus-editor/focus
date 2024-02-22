@@ -1,0 +1,64 @@
+[2]  # Version number. Do not delete
+
+# Based on the https://github.com/sainnhe/everforest Hard colors
+[colors]
+background0:                            1E2326FF
+background1:                            272E33FF
+background2:                            2E383CFF
+background3:                            272E33FF
+background4:                            272E33FF
+selection_active:                       3C4841FF
+selection_inactive:                     2E383CFF
+selection_highlight:                    A7C08022
+search_result_active:                   385f38FF
+search_result_inactive:                 95A99F55
+scrollbar:                              272E3319
+scrollbar_hover:                        484848FF
+scrollbar_background:                   4848484C
+cursor:                                 A7C080AA
+cursor_inactive:                        A7C080FF
+paste_animation:                        4F5B58FF
+splitter:                               2E383CFF
+splitter_hover:                         4F5B58FF
+letter_highlight:                       DFDFBFFF
+list_cursor_lite:                       4F5B584C
+list_cursor:                            4F5B58FF
+shadow_dark:                            0E161C44
+shadow_transparent:                     0E161C00
+text_input_label:                       7A8478FF
+
+ui_default:                             D3C6AAFF
+ui_dim:                                 9DA9A0FF
+ui_neutral:                             7A8478FF
+ui_warning:                             DBBC7FFF
+ui_warning_dim:                         45443CFF
+ui_error:                               E67E80FF
+ui_error_bright:                        FF0000FF
+ui_success:                             3C4841FF
+
+code_default:                           D3C6AAFF
+code_comment:                           7A8478FF
+code_type:                              E69875FF
+code_function:                          A7C080FF
+code_punctuation:                       7A8478FF
+code_operation:                         7A8478FF
+code_string:                            83C092FF
+code_value:                             DBBC7FFF
+code_highlight:                         D699B6FF
+code_error:                             E67E80FF
+code_keyword:                           E67E80FF
+code_warning:                           E69875FF
+
+region_scope_export:                    1E2326FF
+region_scope_file:                      00000033
+region_scope_module:                    00000022
+region_header:                          1A5152FF
+region_success:                         226022FF
+region_warning:                         986032FF
+region_error:                           772222FF
+
+build_panel_background:                 1E2326FF
+build_panel_scrollbar:                  33CCCC19
+build_panel_scrollbar_hover:            33CCCC4C
+build_panel_scrollbar_background:       2626244C
+build_panel_title_bar:                  272E33FF
