@@ -481,27 +481,7 @@ scan_current_folder :: () {
             if should_ignore_file(file.full_name) return;
         }
 
-        full_path: string = ---;   // one allocation in the pool, the rest are views into it
-        #if OS == .WINDOWS {
-            // Fix an extra slash in Windows (ugh)
-            b: String_Builder;
-            previous_char_was_slash := false;
-            for 0..file.full_name.count - 1 {
-                c := file.full_name.data[it];
-                if c == #char "/" {
-                    if previous_char_was_slash continue; // Ignore double slashes
-                    previous_char_was_slash = true;
-                } else {
-                    previous_char_was_slash = false;
-                }
-
-                append(*b, c);
-            }
-
-            full_path = builder_to_string(*b);
-        } else {
-            full_path = copy_string(file.full_name);
-        }
+        full_path := copy_string(file.full_name);  // one allocation in the pool, the rest are views into it
 
         path, basename, extension, name := path_decomp(full_path);
 
