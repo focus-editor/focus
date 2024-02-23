@@ -20,6 +20,7 @@
 # Main Git Branch
 
 + New features:
+    + macOS: Drag files into the window to open them.
     + ...
 + Bug fixes:
     + ...

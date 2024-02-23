@@ -39,8 +39,7 @@ platform_maximize_window :: inline (window: Window_Type) {
 }
 
 platform_enable_drag_and_drop :: inline (window: Window_Type) {
-    // Currently crashes. Which is strange, because this same line seems to work fine in Codex Viewer.
-    // NSView.registerForDraggedTypes(window, NSArray(NSPasteboardType).arrayWithObject(NSPasteboardTypeFileURL));
+    NSView.registerForDraggedTypes(window, NSArray(NSPasteboardType).arrayWithObject(NSPasteboardTypeFileURL));
 }
 
 platform_get_dpi_scale :: (window: Window_Type) -> float {
