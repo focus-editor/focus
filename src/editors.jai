@@ -3,10 +3,6 @@
 editors_handle_event :: (event: Input.Event) -> handled: bool {
     mods := event.modifier_flags;
 
-    // Used for edit notifications
-    context.current_editor_id = editors.active;
-    defer context.current_editor_id = -1;
-
     if event.type == {
         case .KEYBOARD;
             if event.key_pressed {
@@ -77,6 +73,9 @@ editors_handle_file_drop :: (files: [] string) {
 }
 
 active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Event, action: Action_Editors) -> handled: bool {
+    context.current_editor_id = editors.active;  // used for edit notifications
+    defer context.current_editor_id = -1;
+
     shift_pressed := event.modifier_flags.shift_pressed;
     ctrl_pressed  := event.modifier_flags.ctrl_pressed;
 
@@ -305,6 +304,9 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
 active_editor_type_char :: (char: u32) {
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
+
+    context.current_editor_id = editors.active;  // used for edit notifications
+    defer context.current_editor_id = -1;
 
     if editor.search_bar.active {
         text_input_type_char(*editor.search_bar.input, char);
