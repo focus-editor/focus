@@ -896,7 +896,8 @@ get_buffer_name :: (buffer: Buffer) -> string {
 
     for 0..buffer.line_starts.count-2 {
         line := trim(get_real_line_as_string(buffer, xx it), "\t \r\n");
-        if line return take_first_n_chars(line, min(50, line.count));
+        name := replace(line, "\t", " ");  // remove tabs from the middle
+        if name return take_first_n_chars(name, min(50, name.count));
     }
 
     return "<new file>";

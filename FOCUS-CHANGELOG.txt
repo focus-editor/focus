@@ -24,6 +24,7 @@
     + C/C++ highlighter will now accept most common unicode letter characters in identifiers
 + Bug fixes:
     + Fixed a bug with cursor positioning when using the align_cursors action through the command dialog
+    + Fixed a visual glitch when attempting to draw tabs as characters in a new buffer name
 + Other changes:
     + ...
 
