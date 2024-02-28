@@ -26,7 +26,7 @@
     + Fixed a bug with cursor positioning when using the align_cursors action through the command dialog
     + Fixed a visual glitch when attempting to draw tabs as characters in a new buffer name
 + Other changes:
-    + ...
+    + Improved the scanning speed by ignoring large binary files quicker
 
 
 # RELEASES ==================================================================
