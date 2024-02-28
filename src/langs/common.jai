@@ -21,6 +21,37 @@ read_identifier_string :: (using tokenizer: *Tokenizer) -> string {
     return identifier;
 }
 
+read_utf8_identifier_string :: (using tokenizer: *Tokenizer) -> string {
+    identifier: string;
+    identifier.data = t;
+
+    while t < max_t {
+        c := t.*;
+        if c == #char "_" || is_alpha(c) || (t > identifier.data && is_digit(c)) { t += 1; continue; }
+
+        // Only check for unicode chars after the most common case is out of the way.
+        // We don't do comprehensive checks because Unicode docs are cryptic and we might not need every possible character anyway
+        utf32, length := character_utf8_to_utf32(t, max_t - t);
+
+        if utf32 >= 0xC0  && utf32 <= 0xF6  ||  // Latin-1 Supplement for Western European languages (À-ö)
+           utf32 >= 0xF8  && utf32 <= 0xFF  ||  // continuing Latin-1 Supplement (ø-ÿ), excluding the division sign (÷) and multiplication sign (×)
+           utf32 >= 0x410 && utf32 <= 0x42F ||  // capital cyrillic
+           utf32 >= 0x430 && utf32 <= 0x44F ||  // lowercase cyrillic
+           utf32 >= 0x100 && utf32 <= 0x17F     // Latin Extended-A for Central European languages (Ā-ſ)
+        {
+            t += length;
+            continue;
+        }
+
+        break;  // unknown char. NOTE: this could result in an empty string, that should be ok but parsers need to account for that
+    }
+    if t >= max_t then t = max_t;
+
+    identifier.count = t - identifier.data;
+
+    return identifier;
+}
+
 eat_until_newline :: (using tokenizer: *Tokenizer) {
     while t < max_t && t.* != #char "\n" {
         t += 1;

@@ -89,7 +89,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
 parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
 
-    identifier_str := read_identifier_string(tokenizer);
+    identifier_str := read_utf8_identifier_string(tokenizer);
 
     // Maybe it's a keyword
     if identifier_str.count <= MAX_KEYWORD_LENGTH {

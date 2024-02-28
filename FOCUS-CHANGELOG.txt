@@ -21,7 +21,7 @@
 
 + New features:
     + macOS: Drag files into the window to open them.
-    + ...
+    + C/C++ highlighter will now accept most common unicode letter characters in identifiers
 + Bug fixes:
     + Fixed a bug with cursor positioning when using the align_cursors action through the command dialog
 + Other changes:
