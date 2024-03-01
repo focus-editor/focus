@@ -66,6 +66,7 @@ get_next_token :: (using tokenizer: *Uxntal_Tokenizer) -> Token {
         case #char "\""; parse_ascii_literal(tokenizer, *token);
         case #char "(";  parse_comment(tokenizer, *token);
         case #char "#";  parse_hex_literal(tokenizer, *token);
+        case #char "%";  parse_macro(tokenizer, *token);
 
         case;
             token.type = .comment;
@@ -149,6 +150,7 @@ Token :: struct {
         ascii_literal;
         punctuation;
         label;
+        macro;
         invalid;
     }
 }
@@ -163,6 +165,7 @@ COLOR_MAP :: Color.[
     .CODE_STRING,      // ascii_literal
     .CODE_PUNCTUATION, // punctuation
     .CODE_FUNCTION,    // label
+    .CODE_TYPE,        // macro
     .CODE_ERROR,       // invalid
 ];
 
@@ -246,11 +249,20 @@ parse_identifier :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
 
 parse_label :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
     t += 1;
-    // parse_identifier(tokenizer, token);
-    while t < max_t && (is_alnum(t.*) || is_char_allowed_within_name(t.*)){
+
+    while t < max_t && (is_alnum(t.*) || is_char_allowed_within_name(t.*)) {
         t += 1;
     }
     token.type = .label;
+}
+
+parse_macro :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
+    t += 1;
+
+    while t < max_t && (is_alnum(t.*) || is_char_allowed_within_name(t.*)) {
+        t += 1;
+    }
+    token.type = .macro;
 }
 
 parse_padding :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
