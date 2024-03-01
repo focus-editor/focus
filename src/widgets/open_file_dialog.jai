@@ -51,15 +51,14 @@ deinit_open_file_dialog :: () {
 
     initted = false;
 
-    pool_allocator := Allocator.{ proc = flat_pool_allocator_proc, data = *memory_pool };
-    push_allocator(pool_allocator);
+    clear_path_chunks();
 
     reset(*memory_pool);
 
     scroll_to_cursor = .snap;
     entries.scroll_y = 0;
     entries.selected = 0;
-    array_reset(*entries.filtered);
+    array_reset(*entries.filtered,, allocator = Allocator.{ proc = flat_pool_allocator_proc, data = *memory_pool });
 }
 
 show_open_file_dialog :: (mode: Open_File_Dialog.Mode, buffer_id_to_save: s64 = -1, from_root := false) {
@@ -281,8 +280,8 @@ refresh_entries :: (clear_input := true) {
     // Do it before pushing the pool allocator because the input uses use the global heap
     if clear_input then text_input_fully_clear(*input);
 
-    pool_allocator := Allocator.{ proc = flat_pool_allocator_proc, data = *memory_pool };
-    push_allocator(pool_allocator);
+    entries_allocator := Allocator.{ proc = flat_pool_allocator_proc, data = *memory_pool };
+    push_allocator(entries_allocator);
 
     reset(*memory_pool);  // to avoid having to free each string
 
