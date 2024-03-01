@@ -226,7 +226,6 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
 
     if ident.count <= MAX_OPCODE_LENGTH {
         opcode, ok := table_find(*OPCODE_MAP, ident);
-        print("Ident: %, ok: %. \n", ident, ok);
         if ok {
             token.type = .opcode;
             token.opcode = opcode;
