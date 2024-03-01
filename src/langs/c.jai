@@ -649,6 +649,8 @@ Keyword :: enum u16 {
     kwt_size_t;
     kwt_ptrdiff_t;
     kwt_sig_atomic_t;
+    kwt_time_t;
+    kwt_clock_t;
 
     // some STL types
     kwt_vector;
