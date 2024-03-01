@@ -67,6 +67,7 @@ get_next_token :: (using tokenizer: *Uxntal_Tokenizer) -> Token {
         case #char "(";  parse_comment(tokenizer, *token);
         case #char "#";  parse_hex_literal(tokenizer, *token);
         case #char "%";  parse_macro(tokenizer, *token);
+        case #char "~";  parse_include(tokenizer, *token);
 
         case;
             token.type = .comment;
@@ -143,6 +144,7 @@ Token :: struct {
         punctuation;
         label;
         macro;
+        include;
         invalid;
     }
 }
@@ -158,6 +160,7 @@ COLOR_MAP :: Color.[
     .CODE_PUNCTUATION, // punctuation
     .CODE_FUNCTION,    // label
     .CODE_TYPE,        // macro
+    .CODE_OPERATION,   // include
     .CODE_ERROR,       // invalid
 ];
 
@@ -209,6 +212,7 @@ is_char_allowed_within_name :: inline (char: u8) -> bool {
         case #char "?"; #through;
         case #char "!"; #through;
         case #char "_"; #through;
+        case #char "."; #through;
         case #char "+"; #through;
         case #char "<"; #through; // i assume these are cosmetic until proven otherwise
         case #char ">"; #through; // i assume these are cosmetic until proven otherwise
@@ -301,6 +305,15 @@ parse_hex_literal :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
         token.type = .number;
     else
         token.type = .invalid;
+}
+
+parse_include :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
+    t += 1;
+
+    while t < max_t && (is_alnum(t.*) || is_char_allowed_within_name(t.*)) {
+        t += 1;
+    }
+    token.type = .include;
 }
 
 is_hex_digit :: inline (char: u8) -> bool {
