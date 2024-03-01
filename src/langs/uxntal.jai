@@ -304,27 +304,7 @@ parse_hex_literal :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
 }
 
 is_hex_digit :: inline (char: u8) -> bool {
-    if char == {
-        case #char "0"; #through;
-        case #char "1"; #through;
-        case #char "2"; #through;
-        case #char "3"; #through;
-        case #char "4"; #through;
-        case #char "5"; #through;
-        case #char "6"; #through;
-        case #char "7"; #through;
-        case #char "8"; #through;
-        case #char "9"; #through;
-        case #char "a"; #through;
-        case #char "b"; #through;
-        case #char "c"; #through;
-        case #char "d"; #through;
-        case #char "e"; #through;
-        case #char "f";
-            return true;
-        case;
-            return false;
-    }
+    return (char >= #char "a" && char <= #char "f") || (char >= #char "0" && char <= #char "9");
 }
 
 is_alnum :: inline (c: u8) -> bool { return is_alpha(c) || is_digit(c); }
