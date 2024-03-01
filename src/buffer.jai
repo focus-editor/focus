@@ -1167,6 +1167,7 @@ get_highlighter_function :: (lang: Buffer.Lang) -> Highlighter_Function {
         case .Worklog;      return highlight_worklog;
         case .Yang;         return highlight_yang_syntax;
         case .Zig;          return highlight_zig_syntax;
+        case .Uxntal;       return highlight_uxntal_syntax;
     }
     return null;
 }
@@ -1347,6 +1348,7 @@ Buffer :: struct {
         Worklog;
         Yang;
         Zig;
+        Uxntal;
     };
 }
 

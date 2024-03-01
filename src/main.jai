@@ -844,6 +844,7 @@ dont_ignore_next_window_resize := false;
 #load "langs/worklog.jai";
 #load "langs/yang.jai";
 #load "langs/zig.jai";
+#load "langs/uxntal.jai";
 
 #if OS == .WINDOWS {
     #load "platform/windows.jai";
