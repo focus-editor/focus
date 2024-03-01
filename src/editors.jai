@@ -1130,6 +1130,9 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
 
             case "zig";
                 buffer.lang = .Zig;
+
+            case "tal";
+                buffer.lang = .Uxntal;
         }
     }
 
