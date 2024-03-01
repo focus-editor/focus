@@ -4,19 +4,16 @@ highlight_uxntal_syntax :: (using buffer: *Buffer) {
     while true {
         token := get_next_token(*tokenizer);
         if token.type == .eof then break;
-        prev := tokenizer.last_token;
 
         color := COLOR_MAP[token.type];
         memset(colors.data + token.start, xx color, token.len);
-
-        tokenizer.last_token = token;
     }
 }
 
 #scope_file
 
-get_tokenizer :: (using buffer: Buffer) -> Uxntal_Tokenizer {
-    tokenizer: Uxntal_Tokenizer;
+get_tokenizer :: (using buffer: Buffer) -> Tokenizer {
+    tokenizer: Tokenizer;
 
     tokenizer.buf   = cast(string) bytes;
     tokenizer.max_t = bytes.data + bytes.count;
@@ -25,7 +22,7 @@ get_tokenizer :: (using buffer: Buffer) -> Uxntal_Tokenizer {
     return tokenizer;
 }
 
-get_next_token :: (using tokenizer: *Uxntal_Tokenizer) -> Token {
+get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     eat_white_space(tokenizer);
 
     token := Token.{
@@ -116,11 +113,6 @@ OPCODES :: string.[
     print_to_builder(*b, "}\n");
 
     return builder_to_string(*b);
-}
-
-Uxntal_Tokenizer :: struct {
-    using #as base: Tokenizer;
-    last_token: Token;
 }
 
 Token :: struct {
@@ -223,7 +215,7 @@ is_char_allowed_within_name :: inline (char: u8) -> bool {
     }
 }
 
-parse_identifier :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
+parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
     ident, is_number := read_identifier_string(tokenizer);
 
@@ -243,7 +235,7 @@ parse_identifier :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
     }
 }
 
-parse_label :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
+parse_label :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
 
     while t < max_t && (is_alnum(t.*) || is_char_allowed_within_name(t.*)) {
@@ -252,7 +244,7 @@ parse_label :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
     token.type = .label;
 }
 
-parse_macro :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
+parse_macro :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
 
     while t < max_t && (is_alnum(t.*) || is_char_allowed_within_name(t.*)) {
@@ -261,7 +253,7 @@ parse_macro :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
     token.type = .macro;
 }
 
-parse_padding :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
+parse_padding :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
 
     while t < max_t && is_hex_digit(t.*) {
@@ -271,7 +263,7 @@ parse_padding :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
     token.type = .padding;
 }
 
-parse_ascii_literal :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
+parse_ascii_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
 
     while t < max_t && !is_space(t.*){
@@ -281,7 +273,7 @@ parse_ascii_literal :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
     token.type = .ascii_literal;
 }
 
-parse_comment :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
+parse_comment :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
 
     while t < max_t && t.* != #char ")" {
@@ -291,7 +283,7 @@ parse_comment :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
     token.type = .comment; // lol
 }
 
-parse_hex_literal :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
+parse_hex_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
 
     counter := 0;
@@ -307,7 +299,7 @@ parse_hex_literal :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
         token.type = .invalid;
 }
 
-parse_include :: (using tokenizer: *Uxntal_Tokenizer, token: *Token) {
+parse_include :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
 
     while t < max_t && (is_alnum(t.*) || is_char_allowed_within_name(t.*)) {
