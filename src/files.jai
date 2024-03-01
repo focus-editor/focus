@@ -214,8 +214,7 @@ read_file_in_chunks_and_scan_for_zeroes :: (path: string) -> found_zeroes: bool 
 
     while true {
         success, bytes_read := file_read(file, buf.data, buf.count);
-        if  success && bytes_read <= 0 return false;  // success could be false but that could indicate a successful read near the end of the file
-        if !success && bytes_read <= 0 return true;   // this indicates a failure to read
+        if bytes_read <= 0 return false;  // success could be false but that could indicate a successful read near the end of the file
         chunk := cast(string) array_view(buf, 0, bytes_read);
         if find_index_from_left(chunk, byte = 0) >= 0 return true;
     }

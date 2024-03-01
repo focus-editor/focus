@@ -18,7 +18,7 @@ __pycache__
 # These files are explicitly allowed so that the editor doesn't waste time figuring out
 # whether it should ignore these or not (if a file is not explicitly allowed or ignored,
 # it will be read to determine if it's binary or not).
-.jai .c .cpp .h .hpp .cc .cs .txt .md .focus-* .ini .csv .log .sql .py .m .html .xml .plist .js .ts .yml .yaml .toml
+.jai .c .cpp .h .hpp .cc .cs .txt .md .focus-* .ini .csv .log .sql .py .m .html .xml .plist .js .ts .yml .yaml .toml .zig
 
 [ignore file extensions]
 # Files with the following extensions will not appear in the file open dialog and won't be indexed.
