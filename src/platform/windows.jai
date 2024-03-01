@@ -159,7 +159,7 @@ platform_find_font_by_name :: (name: string, allocator := temp) -> bool, string 
     // We would like to use `EnumFontFamiliesExA()` so we can filter out fonts that are
     // not monospace. However it only enumerates fonts that have been loaded in GDI via
     // `AddFontResourceEx()` which doesn't include fonts installed in the user specific
-    // location (`%LocalAppData\Microsoft\Windows\Fonts`) by default.
+    // location (`%LocalAppData%\Microsoft\Windows\Fonts`) by default.
     //
     // Instead of spamming `AddFontResourceEx()` calls we just take file names straight
     // from he registry.
