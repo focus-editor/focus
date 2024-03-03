@@ -1532,7 +1532,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             // Draw length of selected text if any text is currently selected
             if config.settings.show_selected_text_length && editor.selected_text_length > 0 {
                 
-                width += xx Simp.prepare_text(font_ui_bold, tprint("Length: %", editor.selected_text_length));
+                width += xx Simp.prepare_text(font_ui_bold, tprint("Length: %  ", editor.selected_text_length));
                 line_col_start_x := footer_rect.x + footer_rect.w - width;
                 Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = xx Color.UI_DIM);
             }
