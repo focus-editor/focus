@@ -499,6 +499,7 @@ Settings :: struct {
     prefer_system_file_dialogs                    := false;
     show_cursors_off_screen                       := true;
     persist_local_search_results                  := false;
+    show_selected_text_length                     := true;
 
     build_panel_width_percent                     := 50;
     build_panel_height_percent                    := 50;
