@@ -15,6 +15,8 @@ init_finder :: () {
 
 deinit_finder :: () {
     if finder.initted shutdown(*thread_group);
+    reset_results();
+    text_input_fully_clear(*finder.input);
     finder.initted = false;
 }
 
