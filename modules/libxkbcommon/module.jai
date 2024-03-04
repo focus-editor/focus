@@ -6,6 +6,7 @@ xkb_keysym_t  :: u32;
 xkb_mod_mask_t :: u32;
 xkb_mod_index_t :: u32;
 xkb_layout_index_t :: u32;
+xkb_level_index_t :: u32;
 xkb_state_component :: enum {
     XKB_STATE_MODS_DEPRESSED :: (1 << 0);
     XKB_STATE_MODS_LATCHED :: (1 << 1);
@@ -155,12 +156,19 @@ XKB_Procs :: struct {
     xkb_keymap_ref : (keymap: *xkb_keymap) -> *xkb_keymap #c_call;
     xkb_keymap_unref : (keymap: *xkb_keymap) #c_call;
     xkb_keymap_mod_get_index : (keymap: *xkb_keymap, name: *u8) -> xkb_mod_index_t #c_call;
+    xkb_keymap_min_keycode : (keymap: *xkb_keymap) -> xkb_keycode_t #c_call;
+    xkb_keymap_max_keycode : (keymap: *xkb_keymap) -> xkb_keycode_t #c_call;
+    xkb_keymap_num_layouts : (keymap: *xkb_keymap) -> xkb_layout_index_t #c_call;
+    xkb_keymap_num_levels_for_key : (keymap: *xkb_keymap, key: xkb_keycode_t, layout: xkb_layout_index_t) -> xkb_level_index_t #c_call;
+    xkb_keymap_layout_get_name : (keymap: *xkb_keymap, idx: xkb_layout_index_t) -> *u8 #c_call;
+    xkb_keymap_key_get_syms_by_level : (keymap: *xkb_keymap, key: xkb_keycode_t, layout: xkb_layout_index_t, level: xkb_level_index_t, syms_out: **xkb_keysym_t) -> s32 #c_call;
 
     xkb_state_new : (keymap: *xkb_keymap) -> *xkb_state #c_call;
     xkb_state_ref : (state: *xkb_state) -> *xkb_state #c_call;
     xkb_state_unref : (state: *xkb_state) #c_call;
     xkb_state_update_key : (state: *xkb_state, key: xkb_keycode_t, direction: xkb_key_direction) -> xkb_state_component #c_call;
     xkb_state_key_get_one_sym : (state: *xkb_state, key: xkb_keycode_t) -> xkb_keysym_t #c_call;
+    xkb_state_key_get_syms : (state: *xkb_state, key: xkb_keycode_t, syms_out: **xkb_keysym_t) -> s32 #c_call;
     xkb_state_key_get_utf8 : (state: *xkb_state, key: xkb_keycode_t, buffer: *u8, size: u64) -> s32 #c_call;
     xkb_state_key_get_utf32 : (state: *xkb_state, key: xkb_keycode_t) -> u32 #c_call;
     xkb_state_update_mask : (
@@ -174,6 +182,8 @@ XKB_Procs :: struct {
     xkb_state_mod_index_is_active : (state: *xkb_state, idx: xkb_mod_index_t, type: xkb_state_component) -> s32 #c_call;
     xkb_state_key_get_consumed_mods2 : (state: *xkb_state, key: xkb_keycode_t, mode: xkb_consumed_mode) -> xkb_mod_mask_t #c_call;
     xkb_state_mod_index_is_consumed : (state: *xkb_state, key: xkb_keycode_t, idx: xkb_mod_index_t) -> s32 #c_call;
+    xkb_state_key_get_layout: (state: *xkb_state, key: xkb_keycode_t) -> xkb_layout_index_t #c_call;
+    xkb_state_key_get_level: (state: *xkb_state, key: xkb_keycode_t, layout: xkb_layout_index_t) -> xkb_level_index_t #c_call;
 
     xkb_compose_table_new_from_locale : (ctx: *xkb_context, locale: *u8, flags: xkb_compose_compile_flags) -> *xkb_compose_table #c_call;
     xkb_compose_table_ref : (table: *xkb_compose_table) -> *xkb_compose_table #c_call;
