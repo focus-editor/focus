@@ -9,20 +9,8 @@ keyboard_listenter :: wl_keyboard_listener.{
                 defer munmap(keymap, size);
 
                 d: *Wayland_Display = wl_proxy_get_user_data(self);
-                d.kb_context = xkb_context_new(.XKB_CONTEXT_NO_FLAGS);
-                d.kb_keymap = xkb_keymap_new_from_string(d.kb_context, keymap,
-                    .XKB_KEYMAP_FORMAT_TEXT_V1, .XKB_KEYMAP_COMPILE_NO_FLAGS);
-                d.kb_state = xkb_state_new(d.kb_keymap);
-
-                d.mod_idx_shift     = xkb_keymap_mod_get_index(d.kb_keymap, XKB_MOD_NAME_SHIFT.data);
-                d.mod_idx_ctrl      = xkb_keymap_mod_get_index(d.kb_keymap, XKB_MOD_NAME_CTRL.data);
-                d.mod_idx_alt       = xkb_keymap_mod_get_index(d.kb_keymap, XKB_MOD_NAME_ALT.data);
-                d.mod_idx_caps_lock = xkb_keymap_mod_get_index(d.kb_keymap, XKB_MOD_NAME_CAPS.data);
-                d.mod_idx_super     = xkb_keymap_mod_get_index(d.kb_keymap, XKB_MOD_NAME_LOGO.data);
-                d.mod_idx_alt_gr    = xkb_keymap_mod_get_index(d.kb_keymap, XKB_MOD_NAME_ALT_GR.data);
-
-                d.kb_compose_table = xkb_compose_table_new_from_locale(d.kb_context, setlocale(LC_ALL, null), .XKB_COMPOSE_COMPILE_NO_FLAGS);
-                d.kb_compose_state = xkb_compose_state_new(d.kb_compose_table, .XKB_COMPOSE_STATE_NO_FLAGS);
+                if !ld_xkb_state_init(d, keymap)
+                    log_error("Failed to initialize XKB state");
             } else {
                 log_error("Received unsupported keymap from compositor!\n");
                 assert(false);
@@ -47,7 +35,7 @@ keyboard_listenter :: wl_keyboard_listener.{
         ctx: Context;
         push_context ctx {
             d: *Wayland_Display = wl_proxy_get_user_data(self);
-            if !d.kb_state return;
+            if !d.base.xkb_state.kb_state return;
 
             if state == wl_keyboard.key_state_pressed {
                 d.key_to_repeat = key;
@@ -66,10 +54,7 @@ keyboard_listenter :: wl_keyboard_listener.{
         mods_depressed: u32, mods_latched: u32, mods_locked: u32, group: u32) -> void #c_call
     {
         d: *Wayland_Display = wl_proxy_get_user_data(self);
-        xkb_state_update_mask(
-            d.kb_state,
-            mods_depressed, mods_latched, mods_locked,
-            group, group, group);
+        ld_xkb_state_set_mods(d, mods_depressed, mods_latched, mods_locked, group);
     },
 
     repeat_info = (data: *void, self: *wl_keyboard, rate: s32, delay: s32) -> void #c_call {
@@ -91,60 +76,10 @@ wl_key_repeat_cb :: (tid: Timer, user_data: *void) {
     handle_key_event(d, d.input_serial, d.key_to_repeat, wl_keyboard.key_state_pressed, true);
 }
 
-handle_key_event :: (d: *Wayland_Display, serial: u32, key: u32, state: u32, repeat := false) {
-    utf32: u32;
-    is_printable: bool;
-    keycode: xkb_keycode_t = key + 8;
-    keysym := xkb_state_key_get_one_sym(d.kb_state, keycode);
-
-    event: Input.Event;
-    event.type = .KEYBOARD;
-    event.shift_pressed    = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_shift, .XKB_STATE_MODS_EFFECTIVE) == 1;
-    event.ctrl_pressed     = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_ctrl,  .XKB_STATE_MODS_EFFECTIVE) == 1;
-    event.alt_pressed      = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_alt,   .XKB_STATE_MODS_EFFECTIVE) == 1;
-    event.cmd_meta_pressed = xkb_state_mod_index_is_active(d.kb_state, d.mod_idx_super, .XKB_STATE_MODS_EFFECTIVE) == 1;
-
-    if state == wl_keyboard.key_state_pressed {
-        xkb_compose_state_feed(d.kb_compose_state, keysym);
-
-        status := xkb_compose_state_get_status(d.kb_compose_state);
-        if status == .XKB_COMPOSE_COMPOSED || status == .XKB_COMPOSE_CANCELLED {
-            keysym = xkb_compose_state_get_one_sym(d.kb_compose_state);
-            xkb_compose_state_reset(d.kb_compose_state);
-        }
-
-        utf32 = xkb_keysym_to_utf32(keysym);
-        is_printable = ((utf32 >= 32) && (utf32 != 127));
-
-        event.key_pressed = 1;
-        event.key_code = x11_translate_key_code(keysym);
-        event.text_input_count = xx is_printable;
-        d.base.input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
-        if event.ctrl_pressed d.input_serial = serial;
-    } else {
-        event.key_pressed = 0;
-        event.key_code = x11_translate_key_code(keysym);
-        d.base.input_button_states[event.key_code] = Input.Key_Current_State.END;
-    }
-    event.repeat = repeat;
-
-    if event.key_code == {
-        case .SHIFT; event.shift_pressed = true;
-        case .CTRL;  event.ctrl_pressed = true;
-        case .ALT;   event.alt_pressed = true;
-        case .META;  event.cmd_meta_pressed = true;
-    }
-
-    array_add(*d.base.events_this_frame, event);
-
-    if event.key_pressed && is_printable {
-        text_event: Input.Event;
-        text_event.type = .TEXT_INPUT;
-        text_event.key_pressed = 1;
-        text_event.key_code = x11_translate_key_code(keysym);
-        text_event.utf32 = utf32;
-        array_add(*d.base.events_this_frame, text_event);
-    }
+handle_key_event :: (d: *Wayland_Display, serial: u32, key: u32, key_state: u32, repeat := false) {
+    event_type : LD_XKB_Key_Event_Type = ifx key_state == wl_keyboard.key_state_pressed then .Press else .Release;
+    event := ld_xkb_handle_key_event(d, key + 8, event_type, repeat);
+    if event.ctrl_pressed d.input_serial = serial;
 }
 
 /* These are taken from <linux/input-event-codes.h> */

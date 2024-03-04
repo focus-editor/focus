@@ -1,108 +1,111 @@
-x11_translate_key_code :: (key: X11.KeySym) -> Input.Key_Code {
+x11_translate_key_code :: (xkey: X11.KeySym) -> Input.Key_Code {
     using Input.Key_Code;
+    using X11.Known_Keysyms;
 
-    if key == 32 || key == X11.XK_KP_Space return SPACEBAR;
+    key := cast(X11.Known_Keysyms)xkey;
 
-    if key == X11.XK_Left || key == X11.XK_KP_Left
+    if key == 32 || key == XK_KP_Space return SPACEBAR;
+
+    if key == XK_Left || key == XK_KP_Left
         return ARROW_LEFT;
-    if key == X11.XK_Right || key == X11.XK_KP_Right
+    if key == XK_Right || key == XK_KP_Right
         return ARROW_RIGHT;
-    if key == X11.XK_Up || key == X11.XK_KP_Up
+    if key == XK_Up || key == XK_KP_Up
         return ARROW_UP;
-    if key == X11.XK_Down || key == X11.XK_KP_Down
+    if key == XK_Down || key == XK_KP_Down
         return ARROW_DOWN;
-    if (key == X11.XK_Shift_L) || (key == X11.XK_Shift_R)
+    if (key == XK_Shift_L) || (key == XK_Shift_R)
         return SHIFT;
-    if key == X11.XK_Escape
+    if key == XK_Escape
         return ESCAPE;
-    if key == X11.XK_Return
+    if key == XK_Return
         return ENTER;
-    if (key == X11.XK_Control_L) || (key == X11.XK_Control_R)
+    if (key == XK_Control_L) || (key == XK_Control_R)
         return CTRL;
-    if key == X11.XK_Alt_L
+    if (key == XK_Alt_L) || (key == XK_Alt_R) || (key == XK_ISO_Level3_Shift)
         return .ALT;
-    if (key == X11.XK_Meta_L) || (key == X11.XK_Meta_R)
+    if (key == XK_Meta_L) || (key == XK_Meta_R)
         return .META;
-    if key == X11.XK_BackSpace
+    if key == XK_BackSpace
         return BACKSPACE;
-    if key == X11.XK_Delete || key == X11.XK_KP_Delete
+    if key == XK_Delete || key == XK_KP_Delete
         return DELETE;
-    if key == X11.XK_Tab || key == X11.XK_KP_Tab || key == X11.XK_ISO_Left_Tab
+    if key == XK_Tab || key == XK_KP_Tab || key == XK_ISO_Left_Tab
         return TAB;
-    if key == X11.XK_F1
+    if key == XK_F1
         return F1;
-    if key == X11.XK_F2
+    if key == XK_F2
         return F2;
-    if key == X11.XK_F3
+    if key == XK_F3
         return F3;
-    if key == X11.XK_F4
+    if key == XK_F4
         return F4;
-    if key == X11.XK_F5
+    if key == XK_F5
         return F5;
-    if key == X11.XK_F6
+    if key == XK_F6
         return F6;
-    if key == X11.XK_F7
+    if key == XK_F7
         return F7;
-    if key == X11.XK_F8
+    if key == XK_F8
         return F8;
-    if key == X11.XK_F9
+    if key == XK_F9
         return F9;
-    if key == X11.XK_F10
+    if key == XK_F10
         return F10;
-    if key == X11.XK_F11
+    if key == XK_F11
         return F11;
-    if key == X11.XK_F12
+    if key == XK_F12
         return F12;
-    if key == X11.XK_F13
+    if key == XK_F13
         return F13;
-    if key == X11.XK_F14
+    if key == XK_F14
         return F14;
-    if key == X11.XK_F15
+    if key == XK_F15
         return F15;
-    if key == X11.XK_F16
+    if key == XK_F16
         return F16;
-    if key == X11.XK_Home || key == X11.XK_KP_Home
+    if key == XK_Home || key == XK_KP_Home
         return HOME;
-    if key == X11.XK_End || key == X11.XK_KP_End
+    if key == XK_End || key == XK_KP_End
         return END;
-    if key == X11.XK_Insert || key == X11.XK_KP_Insert
+    if key == XK_Insert || key == XK_KP_Insert
         return INSERT;
-    if key == X11.XK_Page_Up || key == X11.XK_KP_Page_Up
+    if key == XK_Page_Up || key == XK_KP_Page_Up
         return PAGE_UP;
-    if key == X11.XK_Page_Down || key == X11.XK_KP_Page_Down
+    if key == XK_Page_Down || key == XK_KP_Page_Down
         return PAGE_DOWN;
 
-    if key == X11.XK_KP_Enter
+    if key == XK_KP_Enter
         return NUMPAD_ENTER;
-    if key == X11.XK_KP_Multiply
+    if key == XK_KP_Multiply
         return NUMPAD_MULTIPLY;
-    if key == X11.XK_KP_Add
+    if key == XK_KP_Add
         return NUMPAD_ADD;
-    if key == X11.XK_KP_Subtract
+    if key == XK_KP_Subtract
         return NUMPAD_SUBTRACT;
-    if key == X11.XK_KP_Decimal
+    if key == XK_KP_Decimal
         return NUMPAD_DECIMAL;
-    if key == X11.XK_KP_Divide
+    if key == XK_KP_Divide
         return NUMPAD_DIVIDE;
-    if key == X11.XK_KP_0
+    if key == XK_KP_0
         return NUMPAD_0;
-    if key == X11.XK_KP_1
+    if key == XK_KP_1
         return NUMPAD_1;
-    if key == X11.XK_KP_2
+    if key == XK_KP_2
         return NUMPAD_2;
-    if key == X11.XK_KP_3
+    if key == XK_KP_3
         return NUMPAD_3;
-    if key == X11.XK_KP_4
+    if key == XK_KP_4
         return NUMPAD_4;
-    if key == X11.XK_KP_5
+    if key == XK_KP_5
         return NUMPAD_5;
-    if key == X11.XK_KP_6
+    if key == XK_KP_6
         return NUMPAD_6;
-    if key == X11.XK_KP_7
+    if key == XK_KP_7
         return NUMPAD_7;
-    if key == X11.XK_KP_8
+    if key == XK_KP_8
         return NUMPAD_8;
-    if key == X11.XK_KP_9
+    if key == XK_KP_9
         return NUMPAD_9;
 
     key = key & 0xFF;

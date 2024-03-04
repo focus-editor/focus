@@ -34,17 +34,6 @@ Wayland_Display :: struct {
     pointer_axis_accumulator: [2]s32 = .[0, 0];
 
     keyboard: *wl_keyboard;
-    kb_context: *xkb_context;
-    kb_keymap : *xkb_keymap;
-    kb_state  : *xkb_state;
-    kb_compose_table: *xkb_compose_table;
-    kb_compose_state: *xkb_compose_state;
-    mod_idx_shift     : u32;
-    mod_idx_ctrl      : u32;
-    mod_idx_alt       : u32;
-    mod_idx_caps_lock : u32;
-    mod_idx_super     : u32;
-    mod_idx_alt_gr    : u32;
 
     data_device_manager: *wl_data_device_manager;
     data_device: *wl_data_device;
