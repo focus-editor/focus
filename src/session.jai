@@ -26,7 +26,7 @@ maybe_load_previous_session :: () -> Session {
         if num_old_sessions > 0 {
             for i : 1 .. num_old_sessions {
                 session_dir := tprint("%/%", temp_dir, session_dirs[session_dirs.count - i].name);
-                deleted := delete_directory(session_dir);
+                deleted := delete_dir_recursively(session_dir);
                 if !deleted log_error("Couldn't delete old session '%'", session_dir);
             }
         }
@@ -157,6 +157,44 @@ maybe_load_previous_session :: () -> Session {
     //
     //     visit_files(last_session_dir, recursive = false, null, visitor);
     // }
+}
+
+delete_dir_recursively :: (dir_path: string) -> deleted: bool {
+    // NOTE: ideally we'd want to use the standard library's delete_directory function,
+    //       but on Windows it uses the SHFileOperationW function, which can load
+    //       a HELL OF A LOT of useless DLLs into the process and cause an unnecessary slowdown.
+    //       So we're doing it ourselves here.
+
+    success := true;
+
+    directory_visitor_func :: (info: *File_Visit_Info, success_pointer: *bool) {
+        if info.is_directory {
+            visit_files(info.full_name, recursive=false, success_pointer, directory_visitor_func, visit_files=true, visit_directories=true);
+            deleted := delete_empty_dir(info.full_name);
+            if !deleted then success_pointer.* = false;
+        } else {
+            deleted := file_delete(info.full_name);
+            if !deleted then success_pointer.* = false;
+        }
+    }
+
+    visit_files(dir_path, recursive=false, *success, directory_visitor_func, visit_files=true, visit_directories=true);
+
+    deleted := delete_empty_dir(dir_path);
+    if !deleted then success = false;
+
+    return success;
+}
+
+delete_empty_dir :: (dir_path: string) -> deleted: bool {
+    #if OS == .WINDOWS {
+        deleted := RemoveDirectoryW(utf8_to_wide_new(dir_path,, temp));
+        return cast(bool) deleted;
+    } else {
+        POSIX :: #import "POSIX";
+        result := POSIX._remove(temp_c_string(dir_path));
+        return result == 0;
+    }
 }
 
 init_logger :: () {
@@ -501,4 +539,4 @@ saves_in_flight: [..] Async_Buffer_Save;
 
 logger_mutex: Mutex;
 
-MAX_SESSIONS_TO_STORE :: 20;  // in case people open several files in several editors, hopefully should be enough
+MAX_SESSIONS_TO_STORE :: 50;  // in case people open several files in several editors, hopefully should be enough
