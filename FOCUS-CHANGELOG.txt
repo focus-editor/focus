@@ -30,6 +30,7 @@
     + Fixed a crash when opening the global search widget immediately after switching projects
 + Other changes:
     + Improved the scanning speed by ignoring large binary files quicker
+    + Windows: improved the startup times by avoiding the use of heavy Win32 API calls
 
 
 # RELEASES ==================================================================
