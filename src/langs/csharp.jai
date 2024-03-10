@@ -59,13 +59,11 @@ tokenize_csharp_for_indentation :: (using buffer: Buffer) -> [] Indentation_Toke
 #scope_file
 
 get_csharp_tokenizer :: (using buffer: Buffer) -> CSharp_Tokenizer {
-    tokenizer := CSharp_Tokenizer.{
+    return CSharp_Tokenizer.{
         buf = cast(string) bytes,
         max_t = bytes.data + bytes.count,
         t = bytes.data
     };
-    tokenizer.interpolated_string_is_verbatim.allocator = temp;
-    return tokenizer;
 }
 
 get_next_token :: (using tokenizer: *CSharp_Tokenizer) -> Token {
@@ -590,8 +588,7 @@ parse_interpolated_string_literal :: (using tokenizer: *CSharp_Tokenizer, token:
     }
 
     // Unescaped left brace
-    if left_brace_seen
-        array_add(*interpolated_string_is_verbatim, is_verbatim,);
+    if left_brace_seen then array_add(*interpolated_string_is_verbatim, is_verbatim,);
 
     if t >= max_t return;
 
@@ -657,6 +654,7 @@ CSharp_Tokenizer :: struct {
     // Records if the interpolated string is also a verbatim string at
     // the current nested interpolated expression level(array index).
     interpolated_string_is_verbatim: [..] bool;
+    interpolated_string_is_verbatim.allocator = temp;
 }
 
 Token :: struct {
