@@ -1,29 +1,74 @@
 highlight_csharp_syntax :: (using buffer: *Buffer) {
-    using tokenizer := get_tokenizer(buffer);
-
-    last_token := Token.{0, 0, .eof};
+    tokenizer := get_csharp_tokenizer(buffer);
 
     while true {
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
 
         // Maybe retroactively highlight a "method("
-        if token.type == .punctuation && token.punctuation == .l_paren && last_token.type == .identifier {
-            memset(colors.data + last_token.start, xx Color.CODE_FUNCTION, last_token.len);
+        last := tokenizer.last_token;
+        if token.type == .punctuation && token.punctuation == .l_paren && last.type == .identifier {
+            memset(colors.data + last.start, xx Color.CODE_FUNCTION, last.len);
         }
 
-        last_token = token;
+        tokenizer.last_token = token;
 
         color := COLOR_MAP[token.type];
         memset(colors.data + token.start, xx color, token.len);
     }
 }
 
-get_next_csharp_token :: get_next_token;  // export for indent tokenization
+tokenize_csharp_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /* temp */ {
+    tokens: [..] Indentation_Token;
+    tokens.allocator = temp;
+
+    tokenizer := get_csharp_tokenizer(buffer);
+
+    while true {
+        src := get_next_token(*tokenizer);
+
+        token: Indentation_Token = ---;
+        token.start = src.start;
+        token.len   = src.len;
+
+        if src.type == {
+            case .punctuation;
+                if src.punctuation == {
+                    case .l_paren;      token.type = .open;  token.kind = .paren;
+                    case .l_bracket;    token.type = .open;  token.kind = .bracket;
+                    case .l_brace;      token.type = .open;  token.kind = .brace;
+                    case .r_paren;      token.type = .close; token.kind = .paren;
+                    case .r_bracket;    token.type = .close; token.kind = .bracket;
+                    case .r_brace;      token.type = .close; token.kind = .brace;
+                    case;               continue;
+                }
+
+            case .multiline_comment;    token.type = .maybe_multiline;
+            case .eof;                  token.type = .eof;  // to guarantee we always have indentation tokens
+            case;                       token.type = .unimportant;
+        }
+
+        array_add(*tokens, token);
+
+        if src.type == .eof break;
+    }
+
+    return tokens;
+}
 
 #scope_file
 
-get_next_token :: (using tokenizer: *Tokenizer) -> Token {
+get_csharp_tokenizer :: (using buffer: Buffer) -> CSharp_Tokenizer {
+    tokenizer := CSharp_Tokenizer.{
+        buf = cast(string) bytes,
+        max_t = bytes.data + bytes.count,
+        t = bytes.data
+    };
+    tokenizer.interpolated_string_is_verbatim.allocator = temp;
+    return tokenizer;
+}
+
+get_next_token :: (using tokenizer: *CSharp_Tokenizer) -> Token {
     eat_white_space(tokenizer);
 
     token: Token;
@@ -36,7 +81,11 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     // Look at the first char as if it's ASCII (if it isn't, this is just a text line)
     char := t.*;
 
-    if is_alpha(char) || char == #char "_" {
+    if interpolated_string_is_verbatim.count > 0 && last_token.type == .punctuation && last_token.punctuation == .r_brace {
+        is_verbatim := interpolated_string_is_verbatim[interpolated_string_is_verbatim.count - 1];
+        parse_interpolated_string_literal(tokenizer, *token, is_verbatim , is_start = false);
+        array_ordered_remove_by_index(*interpolated_string_is_verbatim, interpolated_string_is_verbatim.count - 1);
+    } else if is_alpha(char) || char == #char "_" {
         parse_identifier(tokenizer, *token, true);
     } else if is_digit(char) {
         parse_number(tokenizer, *token);
@@ -498,20 +547,75 @@ parse_verbatim_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
 }
 
+// https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/tokens/interpolated
+// Interpolated strings are parsed in sections.
+// - From start to the first interpolated expression section in {} (or the end)
+// - Between the interpolated expression sections in {}
+// - From the end of an interpolated expression section to the end
+// After the start of an interpolated expression section interpolated_string_is_verbatim
+// will have data that tells get_next_token() to come back and start parsing the interpolated
+// string again after a right brace is encountered.
+parse_interpolated_string_literal :: (using tokenizer: *CSharp_Tokenizer, token: *Token, is_verbatim: bool, is_start: bool) {
+    token.type = .string_literal;
+
+    // Parse until an unescaped { (interpolated expression section start)
+    // or unescaped " (end of interpolated string)
+    quote_seen, left_slash_seen, left_brace_seen := false;
+
+    // If it's not the start of the interpolated string we keep the " as it could be the end
+    if is_start t += 1;
+
+    if is_verbatim {
+        while t < max_t && t.* != #char "\n" {
+            // Escape for " in verbatim is ""
+            // Escape for { in interpolated is {{
+            if quote_seen && t.* != #char "\"" { t -= 1; break; }
+            if left_brace_seen && t.* != #char "{" { t -= 2; break; }
+
+            quote_seen = !quote_seen && t.* == #char "\"";
+            left_brace_seen = !left_brace_seen && t.* == #char "{";
+            t += 1;
+        }
+    } else {
+        while t < max_t && t.* != #char "\n" {
+            // Escape for " in literal is \"
+            // Escape for { in interpolated is {{
+            if !left_slash_seen && t.* == #char "\"" { quote_seen = true; break; }
+            if left_brace_seen && t.* != #char "{" { t -= 2; break; }
+
+            left_slash_seen = !left_slash_seen && t.* == #char "\\";
+            left_brace_seen = !left_brace_seen && t.* == #char "{";
+            t += 1;
+        }
+    }
+
+    // Unescaped left brace
+    if left_brace_seen
+        array_add(*interpolated_string_is_verbatim, is_verbatim,);
+
+    if t >= max_t return;
+
+    t += 1;
+}
+
 // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/tokens/verbatim
 // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/attributes
-parse_at :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_at :: (using tokenizer: *CSharp_Tokenizer, token: *Token, is_interpolated := false) {
     token.type = .invalid;
 
     t += 1;
     if t >= max_t return;
 
     if t.* == #char "$" {
-        // Verbatim interpolated string
-        parse_dollar(tokenizer, token, true);
+        parse_dollar(tokenizer, token, is_verbatim = true);
     } else if t.* == #char "\"" {
-        // Verbatim string
-        parse_verbatim_string_literal(tokenizer, token);
+        if is_interpolated {
+            // Interpolated verbatim  string
+            parse_interpolated_string_literal(tokenizer, token, is_verbatim = true, is_start = true);
+        } else {
+            // Verbatim string
+            parse_verbatim_string_literal(tokenizer, token);
+        }
     } else if is_alpha(t.*) || t.* == #char "_" {
         // Identifier or disambiguate attribute
         parse_identifier(tokenizer, token, check_for_keyword = false);
@@ -519,24 +623,17 @@ parse_at :: (using tokenizer: *Tokenizer, token: *Token) {
 }
 
 // Interpolated string
-// The enclosed identifiers and braces are not parsed
-parse_dollar :: (using tokenizer: *Tokenizer, token: *Token, verbatim := false) {
+parse_dollar :: (using tokenizer: *CSharp_Tokenizer, token: *Token, is_verbatim := false) {
     token.type = .invalid;
 
     t += 1;
     if t >= max_t return;
 
     if t.* == #char "@" {
-        // Interpolated verbatim string
-        parse_at(tokenizer, token);
+        parse_at(tokenizer, token, is_interpolated = true);
     } else if t.* == #char "\"" {
-        if verbatim {
-            // Verbatim interpolated string
-            parse_verbatim_string_literal(tokenizer, token);
-        } else {
-            // Interpolated string
-            parse_string_literal(tokenizer, token);
-        }
+        // Interpolated or verbatim interpolated string
+        parse_interpolated_string_literal(tokenizer, token, is_verbatim, is_start = true);
     }
 }
 
@@ -552,6 +649,14 @@ parse_caret :: (using tokenizer: *Tokenizer, token: *Token) {
             token.operation = .caret_equal;
             t += 1;
     }
+}
+
+CSharp_Tokenizer :: struct {
+    using #as base: Tokenizer;
+    last_token: Token;
+    // Records if the interpolated string is also a verbatim string at
+    // the current nested interpolated expression level(array index).
+    interpolated_string_is_verbatim: [..] bool;
 }
 
 Token :: struct {
