@@ -538,7 +538,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             organise_cursors(editor, *selection_mode);
         }
 
-        editor.refresh_highlights = true;
+        editor.refresh_selection = true;
 
         if mouse.left.just_pressed {
             make_editor_active(editor_id);
@@ -616,7 +616,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             organise_cursors(editor);
         }
 
-        editor.refresh_highlights = true;
+        editor.refresh_selection = true;
 
         // Activate editor
         make_editor_active(editor_id);
@@ -669,7 +669,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 top = new_target;
                 viewport_remember_glue_point(editor, buffer);
             }
-        } else if cursor_moved {
+        } else if cursor_moved != .has_not_moved {
             // Detect if cursor is off screen and start scrolling to it
             bounds := shrink_x(rect, text_offset.x + char_x_advance * min_visible_chars);
             bounds  = shrink_y(bounds, -text_offset.y + line_height * min_visible_chars);
@@ -735,8 +735,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
 
         // Maybe update selection highlights
-        if editor.refresh_highlights && buffer.bytes.count <= MAX_BUFFER_SIZE_FOR_HIGHLIGHTS && config.settings.highlight_selection_occurrences {
-            editor.refresh_highlights = false;
+        if editor.refresh_selection && buffer.bytes.count <= MAX_BUFFER_SIZE_FOR_HIGHLIGHTS && config.settings.highlight_selection_occurrences {
             array_reset_keeping_memory(*editor.highlights);
 
             selected_text := get_selected_text_all_cursors(editor, buffer);
@@ -764,12 +763,12 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                     offset += selected_text.count;
                 }
             }
-            editor.selected_text_length = selected_text.count;
         }
-        if !config.settings.highlight_selection_occurrences {
-            editor.refresh_highlights = false;
-            array_reset_keeping_memory(*editor.highlights);
-        }
+        if !config.settings.highlight_selection_occurrences then array_reset_keeping_memory(*editor.highlights);
+
+        if config.settings.show_selected_text_length && editor.refresh_selection then calculate_selected_text_length(editor, buffer);
+
+        editor.refresh_selection = false;  // should probably move this to some central place where we reset stuff
 
         // Update scrollbar without drawing to get the new scrolling position (scrollbar will be drawn later)
         new_scroll_target := get_new_scroll_target_from_scrollbar(rect, scrollbar_size, content_height, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
@@ -1530,21 +1529,14 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = xx Color.UI_DIM);
 
             // Draw length of selected text if any text is currently selected
-            if config.settings.show_selected_text_length {
-            
-                selection_length:= 0;
-                for cursor : cursors {
-                    text := get_selected_string(cursor, buffer);
-                    selection_length += text.count;
-                }
-
-                if selection_length > 0 {
-                    width += xx Simp.prepare_text(font_ui_bold, tprint("Length: %  ", selection_length));
-                    line_col_start_x = footer_rect.x + footer_rect.w - width;
-                    Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = xx Color.UI_DIM);
-                }
+            if config.settings.show_selected_text_length && num_selected_bytes > 0 {
+                label := tprint("Selected: %  ", num_selected_bytes);
+                if num_selected_bytes != num_selected_chars then label = tprint("Selected: % chars, % bytes  ", num_selected_chars, num_selected_bytes);
+                width += xx Simp.prepare_text(font_ui_bold, label);
+                line_col_start_x = footer_rect.x + footer_rect.w - width;
+                Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = xx Color.UI_DIM);
             }
-            
+
             // Maybe draw the number of cursors off screen
             if editor.cursors.count > 1 && cursors_off_screen && config.settings.show_cursors_off_screen {
                 width = xx Simp.prepare_text(font_ui_bold, tprint("%", cursors_off_screen));

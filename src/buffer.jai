@@ -721,7 +721,7 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
     cursor_states.allocator = temp;
     for * editor, editor_id : open_editors {
         if editor.buffer_id != buffer_id continue;
-        editor.refresh_highlights = true;
+        editor.refresh_selection = true;
 
         for cursor, cursor_id : editor.cursors {
             array_add(*cursor_states, Editor_Cursor_State.{ editor_id, cursor_id, get_real_cursor_coords(buffer, cursor) });

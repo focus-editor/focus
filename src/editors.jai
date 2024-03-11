@@ -163,7 +163,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .escape;                           hide_build_panel();
                                                 remove_additional_cursors(editor);
                                                 reset_search_results(*editor.search_bar);
-                                                editor.refresh_highlights = true;
+                                                editor.refresh_selection = true;
 
         case .save;                             save    (editor.buffer_id);
         case .save_as;                          save_as (editor.buffer_id);
@@ -294,9 +294,11 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
     for * editor.cursors put_cursor_in_valid_spot(it, buffer);
     if editor.cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
 
-    if editor.cursor_moved && !enabled_whole_words then editor.search_whole_words = false;
-    if editor.cursor_moved then editor.refresh_highlights = true;  // update or remove highlights
-    if editor.cursor_moved then cursors_start_blinking();
+    if editor.cursor_moved != .has_not_moved {
+        if !enabled_whole_words then editor.search_whole_words = false;
+        editor.refresh_selection = true;  // update or remove highlights etc
+        cursors_start_blinking();
+    }
 
     return true;
 }
@@ -402,7 +404,7 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
         if editor.line_wrap == .on then rescan_for_wrapped_lines(editor, buffer);
 
         adjust_cursors_and_viewport(editor, buffer, editor_id);
-        editor.refresh_highlights = true;
+        editor.refresh_selection = true;
         if editor.search_bar.results then search_and_update_results(editor, buffer);
     }
     array_reset_keeping_memory(*buffer.edit_notifications);
@@ -647,6 +649,17 @@ organise_cursors :: (using editor: *Editor, selection_mode: *Selection_Mode = xx
     }
 }
 
+calculate_selected_text_length :: (using editor: *Editor, buffer: Buffer) {
+    num_selected_bytes = 0;
+    num_selected_chars = 0;
+
+    for cursor : cursors {
+        text := get_selected_string(cursor, buffer);
+        num_selected_bytes += xx text.count;
+        num_selected_chars += num_chars_in_string(text);
+    }
+}
+
 get_max_line_num :: (editor: Editor, buffer: Buffer) -> s32 {
     assert(!buffer.dirty);
     return cast(s32) get_line_starts(editor, buffer).count - 2;
@@ -849,7 +862,7 @@ close_search_bar :: inline (editor: *Editor, jump_to_original_cursor := false, j
 
     if !config.settings.persist_local_search_results {
         reset_search_results(*editor.search_bar);
-        editor.refresh_highlights = true;
+        editor.refresh_selection = true;
     }
 }
 
@@ -2591,6 +2604,7 @@ select_all :: (editor: *Editor, buffer: Buffer) {
     cursor := leave_only_original_cursor(editor);
     cursor.sel = 0;
     cursor.pos = cast(s32) buffer.bytes.count;
+    editor.refresh_selection = true;
 }
 
 Line_Range :: struct {
@@ -3280,8 +3294,9 @@ Editor :: struct {
     scroll_to_cursor: enum u8 { no; yes; yes_new_editor; }  // trigger a scroll so that the cursor is in the center vertically
 
     highlights: [..] Text_Highlight;
-    refresh_highlights: bool;
-    selected_text_length: s64;
+    refresh_selection: bool;
+    num_selected_chars: s32;  // across all cursors
+    num_selected_bytes: s32;
 
     search_bar: Search_Bar;
 
