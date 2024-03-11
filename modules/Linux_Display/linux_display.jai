@@ -323,6 +323,9 @@ dump_debug_info :: (display: *Display, sb: *String_Builder) {
 
 #scope_module;
 
+#import "POSIX";
+#import "Linux";
+
 #import "String";
 #import "Hash_Table";
 
