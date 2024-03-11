@@ -415,8 +415,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     editor_is_active := editor_id == editors.active && Input.input_application_has_focus;
 
     // Calculate text origin in screen coordinates
-    text_offset := make_vector2(char_x_advance, -char_x_advance);
-    text_origin := top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
+    text_offset := Vector2.{char_x_advance, -char_x_advance};
+    text_origin := top_left(rect) + text_offset - Vector2.{xx viewport.left, line_height - viewport.top};
 
     width_in_chars := clamp(cast(s32) ((rect.w - 1.5 * text_offset.x) / char_x_advance), 1, S32_MAX);
     if width_in_chars != editor.last_width_in_chars {
@@ -808,7 +808,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         }
 
         // Need to update after updating scrolling to reduce latency
-        text_origin = top_left(rect) + text_offset - make_vector2(xx viewport.left, line_height - viewport.top);
+        text_origin = top_left(rect) + text_offset - Vector2.{xx viewport.left, line_height - viewport.top};
 
         max_lines := get_max_line_num(editor, buffer);
         visible_lines_start = clamp(cast(s32) (viewport.top / line_height) - 1, 0, max_lines);
@@ -1405,10 +1405,10 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 }
                 if entry_index == selected_result then draw_rect(entry_rect, Color.LIST_CURSOR);
 
-                pen := make_vector2(
+                pen := Vector2.{
                     entry_rect.x + margin + padding,
                     entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
-                );
+                };
                 width: float;
 
                 line_range := Offset_Range.{ start = get_real_line_start_offset(buffer, entry.line), end = get_real_line_end_offset(buffer, entry.line) };
@@ -1501,10 +1501,10 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
         width   := 0.0;
         padding := floor(4 * dpi_scale);
 
-        pen := make_vector2(
+        pen := Vector2.{
             footer_rect.x,
             footer_rect.y + (footer_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
-        );
+        };
 
         // Draw file name and path
         width, pen = draw_file_info(buffer, width, padding, pen, draw_crlf_warning = true, draw_config_warning = true);
@@ -1927,10 +1927,10 @@ draw_open_file_dialog :: () {
                 }
             }
 
-            pen := make_vector2(
+            pen := Vector2.{
                 entry_rect.x + margin + padding,
                 entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
-            );
+            };
             width: float;
 
             name_color := ifx entry.flags & .MODIFIED then Color.UI_WARNING else Color.UI_DEFAULT;
@@ -2130,10 +2130,10 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
             if selected_by_mouse == entry_index then draw_rect(entry_rect, Color.LIST_CURSOR);
             if entry_index == selected then draw_rect(entry_rect, Color.LIST_CURSOR);
 
-            pen := make_vector2(
+            pen := Vector2.{
                 entry_rect.x + margin + padding,
                 entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
-            );
+            };
 
             // Draw name
             width := Simp.draw_text_with_highlights(font_ui, xx pen.x, xx pen.y, entry.name, entry.highlights, color = xx Color.UI_DEFAULT, highlight_color = xx Color.LETTER_HIGHLIGHT);
@@ -2652,10 +2652,10 @@ draw_finder :: () {
             if selected_by_mouse == entry_index then draw_rect(entry_rect, Color.LIST_CURSOR);
             if entry_index == selected then draw_rect(entry_rect, Color.LIST_CURSOR);
 
-            pen := make_vector2(
+            pen := Vector2.{
                 entry_rect.x + margin + padding,
                 entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
-            );
+            };
             width: float;
 
             // Not sure if it's cheaper to do this for the visible results only, but every frame,
@@ -2753,10 +2753,10 @@ draw_finder :: () {
                 }
             }
             entry_rect := cut_top(files_rect, entry_height);
-            pen := make_vector2(
+            pen := Vector2.{
                 entry_rect.x + margin + padding,
                 entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
-            );
+            };
             Simp.draw_text(font_ui_small, xx pen.x, xx pen.y, label, xx Color.UI_DIM);
         }
 
@@ -2802,10 +2802,10 @@ draw_go_to_line_dialog :: (active_editor_rect: Rect) {
 }
 
 get_cursor_screen_pos :: (text_origin: Vector2, coords: Coords) -> Vector2 {
-    return make_vector2(
+    return .{
         text_origin.x + coords.col * char_x_advance,
         text_origin.y - coords.line * line_height,
-    );
+    };
 }
 
 draw_range :: (range: Coords_Range, editor: Editor, buffer: Buffer, visible_start: s32, visible_end: s32, text_origin: Vector2, color: Color, alpha := 1.0) {
