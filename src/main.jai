@@ -57,7 +57,7 @@ main :: () {
         }
     }
 
-    args := get_command_line_arguments();
+    args = get_command_line_arguments();
 
     if args.count >= 2 {
         session_initialized := false;
@@ -309,6 +309,8 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
     if action == {
         case .quit;                                             should_quit = true;                                 return true;
 
+        case .open_another_window;                              open_another_window();                              return true;
+
         case .increase_font_size;                               increase_font_size();                               return true;
         case .decrease_font_size;                               decrease_font_size();                               return true;
         case .reset_font_size_to_default;                       reset_font_size_to_default();                       return true;
@@ -517,6 +519,12 @@ editor_toggle_fullscreen :: () {
     toggle_fullscreen(window, fullscreen, *fullscreen_state);  // platform-specific
 }
 
+open_another_window :: () {
+    new_window_process := Process.{};
+    print("opening another window: %\n", args);
+    create_process(*new_window_process, .. args, "", capture_and_return_output = false, arg_quoting = Process_Argument_Quoting.QUOTE_IF_NEEDED);
+}
+
 increase_font_size :: () {
     if (font_size + 1) <= MAX_FONT_SIZE {
         font_size += 1;
@@ -618,6 +626,8 @@ data_dir:     string;
 temp_dir:     string;
 projects_dir: string;
 themes_dir:   string;
+
+args: []string;
 
 window: Window_Type;
 window_generic_title: string = ---;
