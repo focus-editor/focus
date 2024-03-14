@@ -268,6 +268,8 @@ ACTIONS_COMMON :: string.[
 
     "quit",
 
+    "open_another_window",
+
     "open_project",
     "switch_to_project",  // alias of open_project
     "close_project",

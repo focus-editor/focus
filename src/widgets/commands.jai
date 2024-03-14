@@ -142,6 +142,8 @@ commands := #run -> [] Command {
         .{ .build_kill_running_command,            "Build: Kill Running Command",        .None,    0 },
 
         .{ .autoindent_region,                     "Autoindent Region",                  .Single,  0 },
+
+        .{ .open_another_window,                   "Open Anohter Window",                .None,    0 },
     ];
 
     linux_commands := Command.[
