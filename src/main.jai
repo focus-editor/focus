@@ -57,26 +57,26 @@ main :: () {
         }
     }
 
-    args = get_command_line_arguments();
+    focus_executable_args = get_command_line_arguments();
 
-    if args.count >= 2 {
+    if focus_executable_args.count >= 2 {
         session_initialized := false;
-        for < i: args.count - 1..1 {
-            if is_directory(args[i]) {
+        for < i: focus_executable_args.count - 1..1 {
+            if is_directory(focus_executable_args[i]) {
                 if !session_initialized {
                     session = start_fresh_session();
                     session_initialized = true;
                 }
-                add_directory_to_workspace(args[i], index = 0);
+                add_directory_to_workspace(focus_executable_args[i], index = 0);
             }
         }
-        for i: 1..args.count - 1 {
-            if file_exists(args[i]) && !is_directory(args[i]) {
+        for i: 1..focus_executable_args.count - 1 {
+            if file_exists(focus_executable_args[i]) && !is_directory(focus_executable_args[i]) {
                 if !session_initialized {
                     session = start_fresh_session();
                     session_initialized = true;
                 }
-                editors_open_file(args[i]);
+                editors_open_file(focus_executable_args[i]);
             }
         }
         if !session_initialized init_session_with_no_guidance();
@@ -521,7 +521,13 @@ editor_toggle_fullscreen :: () {
 
 open_another_editor_instance :: () {
     new_window_process := Process.{};
-    create_process(*new_window_process, .. args, "", capture_and_return_output = false, arg_quoting = Process_Argument_Quoting.QUOTE_IF_NEEDED, kill_process_if_parent_exits = false);
+    #if OS == .WINDOWS {
+        kill_children := false;
+    } else {
+        // Not killing children is not yet implemented on non-Windows systems
+        kill_children := true;
+    }
+    create_process(*new_window_process, .. focus_executable_args, "", capture_and_return_output = false, arg_quoting = Process_Argument_Quoting.QUOTE_IF_NEEDED, kill_process_if_parent_exits = kill_children);
 }
 
 increase_font_size :: () {
@@ -626,7 +632,7 @@ temp_dir:     string;
 projects_dir: string;
 themes_dir:   string;
 
-args: []string;
+focus_executable_args: [] string;
 
 window: Window_Type;
 window_generic_title: string = ---;
