@@ -309,7 +309,7 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
     if action == {
         case .quit;                                             should_quit = true;                                 return true;
 
-        case .duplicate_session;                                duplicate_session();                                return true;
+        case .open_another_editor_instance;                     open_another_editor_instance();                     return true;
 
         case .increase_font_size;                               increase_font_size();                               return true;
         case .decrease_font_size;                               decrease_font_size();                               return true;
@@ -519,7 +519,7 @@ editor_toggle_fullscreen :: () {
     toggle_fullscreen(window, fullscreen, *fullscreen_state);  // platform-specific
 }
 
-duplicate_session :: () {
+open_another_editor_instance :: () {
     new_window_process := Process.{};
     create_process(*new_window_process, .. args, "", capture_and_return_output = false, arg_quoting = Process_Argument_Quoting.QUOTE_IF_NEEDED);
 }

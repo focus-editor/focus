@@ -143,7 +143,7 @@ commands := #run -> [] Command {
 
         .{ .autoindent_region,                     "Autoindent Region",                  .Single,  0 },
 
-        .{ .duplicate_session,                     "Duplicate Session",                  .None,    0 },
+        .{ .open_another_editor_instance,          "Open Another Editor Instance",       .None,    0 },
     ];
 
     linux_commands := Command.[

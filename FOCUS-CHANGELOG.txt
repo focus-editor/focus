@@ -25,6 +25,7 @@
     + Added highlighting for the Uxntal language (thanks @LainLayer)
     + C# highlighting: support nested string interpolation (thanks @audV)
     + New option: `show_selected_text_length`. Set to `true` to display the number of selected chars (and bytes) in the footer (thanks @CELLTH)
+    + New command: `open_another_editor_instance`. Defaults to Ctrl-Shift-Alt-N. Opens a new editor instance as a subprocess. Thanks @LainLayer
 + Bug fixes:
     + Fixed a bug with cursor positioning when using the align_cursors action through the command dialog
     + Fixed a visual glitch when attempting to draw tabs as characters in a new buffer name
