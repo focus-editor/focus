@@ -521,7 +521,7 @@ editor_toggle_fullscreen :: () {
 
 open_another_editor_instance :: () {
     new_window_process := Process.{};
-    create_process(*new_window_process, .. args, "", capture_and_return_output = false, arg_quoting = Process_Argument_Quoting.QUOTE_IF_NEEDED);
+    create_process(*new_window_process, .. args, "", capture_and_return_output = false, arg_quoting = Process_Argument_Quoting.QUOTE_IF_NEEDED, kill_process_if_parent_exits = false);
 }
 
 increase_font_size :: () {
