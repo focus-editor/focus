@@ -100,6 +100,9 @@ Wayland_Window :: struct {
 
     // dumb stuff
     pre_configure_desired_state: WLDesiredPreconfigureState;
+
+    initial_max_width: s32;
+    initial_max_height: s32;
 }
 
 wl_init_display :: (display: *Display) -> bool {
@@ -486,6 +489,12 @@ x_toplevel_listener :: xdg_toplevel_listener.{
         }
     },
 
+    configure_bounds = (data: *void, self: *xdg_toplevel, width: s32, height: s32) -> void #c_call {
+        w: *Wayland_Window = wl_proxy_get_user_data(self);
+        w.initial_max_width = width;
+        w.initial_max_height = height;
+    },
+
     close = (data: *void, toplevel: *xdg_toplevel) -> void #c_call {
         ctx: Context;
         push_context ctx {
@@ -541,8 +550,6 @@ wl_create_window :: (display: *Display, window: *Window, width: int, height: int
     d: *Wayland_Display = display;
     w: *Wayland_Window = window;
 
-
-
     w.display = d;
 
     w.title = copy_string(window_name);
@@ -552,7 +559,6 @@ wl_create_window :: (display: *Display, window: *Window, width: int, height: int
 
     w.window_width = xx width;
     w.window_height = xx height;
-    window_calculate_buffer_size(w);
 
     cursor, found := table_find(*d.cursors, "default");
     if !found {
@@ -588,8 +594,6 @@ wl_create_window :: (display: *Display, window: *Window, width: int, height: int
         wp_fractional_scale_v1.add_listener(w.fractional_scale_proxy, *fractional_scale_listener, w);
     }
 
-    wl_window_resize_viewport(w);
-
     wl_surface.damage(w.handle, 0, 0, w.window_width, w.window_height);
     wl_surface.commit(w.handle);
 
@@ -597,6 +601,13 @@ wl_create_window :: (display: *Display, window: *Window, width: int, height: int
     while !(w.native_state & configured) {
         wl_display_dispatch(d.handle);
     }
+
+    if w.initial_max_height > 10 && w.initial_max_width > 10 {
+        w.window_width = min(w.window_width, w.initial_max_width - 10);
+        w.window_height = min(w.window_height, w.initial_max_height - 10);
+    }
+    window_calculate_buffer_size(w);
+    wl_window_resize_viewport(w);
 
     bw: *Base_Window = window;
     bw.type    = Wayland_Window;
