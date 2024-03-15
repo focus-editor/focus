@@ -268,7 +268,7 @@ ACTIONS_COMMON :: string.[
 
     "quit",
 
-    "open_another_window",
+    "duplicate_session",
 
     "open_project",
     "switch_to_project",  // alias of open_project
