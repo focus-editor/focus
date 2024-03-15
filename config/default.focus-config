@@ -196,7 +196,7 @@ Alt-A                       align_cursors
 Alt-Z                       toggle_line_wrap
 Alt-Shift-L                 toggle_line_numbers
 
-Ctrl-Shift-Alt-N            open_another_window
+Ctrl-Shift-Alt-N            duplicate_session
 
 [open file dialog]
 
