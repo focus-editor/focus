@@ -39,6 +39,8 @@ XCB_Display :: struct {
         _NET_WM_STATE_MAXIMIZED_VERT: xcb_atom_t;
         _NET_WM_STATE_MAXIMIZED_HORZ: xcb_atom_t;
         _NET_WM_STATE_FULLSCREEN: xcb_atom_t;
+        _NET_WM_NAME: xcb_atom_t;
+        _NET_WM_ICON_NAME: xcb_atom_t;
 
         UTF8_STRING: xcb_atom_t;                     @create
     }
@@ -260,7 +262,15 @@ xcb_create_window :: (display: *Display, window: *Window, width: int, height: in
         xx xcb_atom_enum_t.ATOM,
         32, 1, *xd.global_atoms.WM_DELETE_WINDOW);
 
-    set_utf8_property(*xw, xx xcb_atom_enum_t.WM_NAME, window_name);
+    class_sz := tprint("%\0%\0", ifx window_name then window_name else "jai-application", display.base.app_id);
+    xcb.change_property(
+        xd.handle,
+        .REPLACE,
+        xw.handle,
+        xx xcb_atom_enum_t.WM_CLASS,
+        xx xcb_atom_enum_t.STRING,
+        8, xx class_sz.count, class_sz.data);
+    xcb_set_window_title(xx *xw, window_name);
 
     if xd.xi_initialized {
         mask: struct {
@@ -718,6 +728,9 @@ xcb_enable_dnd :: (window: *Window, typelist: []string) {
 xcb_set_window_title :: (window: *Window, title: string) {
     xcb_check_usage(null, window);
     set_utf8_property(window, xx xcb_atom_enum_t.WM_NAME, title);
+    set_utf8_property(window, xx xcb_atom_enum_t.WM_ICON_NAME, title);
+    set_utf8_property(window, window.xcb.display.global_atoms._NET_WM_NAME, title);
+    set_utf8_property(window, window.xcb.display.global_atoms._NET_WM_ICON_NAME, title);
 }
 
 xcb_maximize_window :: (window: *Window) {
@@ -1070,14 +1083,13 @@ get_device_info :: (xd: *XCB_Display, device_id: xcb_input_device_id_t) -> *XCB_
 
 set_utf8_property :: (xw: *XCB_Window, property: xcb_atom_t, value: string) {
     xd := xw.display;
-    sz_val := tprint("%\0", value);
     xcb.change_property(
         xd.handle,
         .REPLACE,
         xw.handle,
         property,
         xd.global_atoms.UTF8_STRING,
-        8, xx sz_val.count, sz_val.data);
+        8, xx value.count, value.data);
 }
 
 WM_State_Op :: enum u32 {

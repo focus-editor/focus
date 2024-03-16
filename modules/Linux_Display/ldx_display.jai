@@ -350,7 +350,7 @@ x11_create_window :: (display: *Display, window: *Window, width: int, height: in
         *swa);
 
     win_name := temp_c_string(window_name);
-    if window_name then X11.XStoreName(d, x11_win.handle, win_name);
+    if window_name then x11_set_window_title(xx *x11_win, window_name);
 
     class_hints := X11.XAllocClassHint();
     if class_hints {
@@ -560,8 +560,10 @@ x11_set_window_title :: (window: *Window, title: string) {
         format = 8,
         nitems = xx title.count,
     };
-    X11.XSetWMName(w.display.handle, w.handle, *prop);
-    X11.XSetWMIconName(w.display.handle, w.handle, *prop);
+    X11.XSetTextProperty(w.display.handle, w.handle, *prop, w.display.global_atoms.WM_NAME);
+    X11.XSetTextProperty(w.display.handle, w.handle, *prop, w.display.global_atoms.WM_ICON_NAME);
+    X11.XSetTextProperty(w.display.handle, w.handle, *prop, w.display.global_atoms._NET_WM_NAME);
+    X11.XSetTextProperty(w.display.handle, w.handle, *prop, w.display.global_atoms._NET_WM_ICON_NAME);
 }
 
 x11_get_dpi_scaling_factor :: (window: *Window) -> float {

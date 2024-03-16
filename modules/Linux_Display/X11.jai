@@ -1260,6 +1260,8 @@ X11_Lib :: struct #type_info_no_size_complaint {
         NET_WM_ICON_NAME                : Atom;
         NET_WM_STATE                    : Atom;
         NET_WM_STATE_FULLSCREEN         : Atom;
+        WM_NAME                         : Atom;
+        WM_ICON_NAME                    : Atom;
 
         _NET_WM_STATE                   : Atom;
         _NET_WM_STATE_DEMANDS_ATTENTION : Atom;
@@ -1267,6 +1269,8 @@ X11_Lib :: struct #type_info_no_size_complaint {
         _NET_WM_STATE_MAXIMIZED_HORZ    : Atom;
         _NET_WM_STATE_MAXIMIZED_VERT    : Atom;
         _NET_WM_ICON                    : Atom;
+        _NET_WM_NAME                    : Atom;
+        _NET_WM_ICON_NAME               : Atom;
 
         _DUMMY : Atom; @opts(actual_name=JXSelectionWindowProperty)
     }
@@ -1380,6 +1384,7 @@ X11_Lib :: struct #type_info_no_size_complaint {
         XSetICFocus: (unk0: XIC) -> void #c_call;
         XSetLocaleModifiers: (unk0: *u8) -> *u8 #c_call;
         XSetSelectionOwner: (unk0: *Display, unk1: Atom, unk2: Window, unk3: Time) -> s32 #c_call;
+        XSetTextProperty: (dpy: *Display, w: Window, prop_text: *XTextProperty, prop: Atom) #c_call;
         XSetWMHints: (unk0: *Display, unk1: Window, unk2: *XWMHints) -> s32 #c_call;
         XSetWMIconName: (unk0: *Display, unk1: Window, unk2: *XTextProperty) -> void #c_call;
         XSetWMName: (unk0: *Display, unk1: Window, unk2: *XTextProperty) -> void #c_call;
