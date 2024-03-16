@@ -252,7 +252,10 @@ main :: () {
                 action := map_event_to_action(event, Action_Editors);
                 handled = handle_common_editor_action(action);
             }
-            if !handled then handled = maybe_execute_a_build_command(event);
+            if !handled {
+                action := map_event_to_action(event, Action_Build);
+                handled = maybe_execute_a_build_command(action);
+            }
 
             if handled && event.type == .KEYBOARD then num_text_input_events_to_ignore = event.text_input_count;
 
@@ -357,8 +360,7 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
     return false;
 }
 
-maybe_execute_a_build_command :: (event: Input.Event) -> handled: bool {
-    action := map_event_to_action(event, Action_Build);
+maybe_execute_a_build_command :: (action: Action_Build) -> handled: bool {
     if action == INVALID_KEYMAP_ACTION return false;
 
     command_id := cast(s64) action;

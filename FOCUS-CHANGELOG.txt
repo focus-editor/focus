@@ -35,6 +35,7 @@
     + Improved the scanning speed by ignoring large binary files quicker
     + Windows: improved the startup times by avoiding the use of heavy Win32 API calls
     + It is now possible to select all occurrences of the selected text while the search bar is open
+    + Build commands will now appear in the command palette. There's no need to assign each command a key binding any more.
 
 
 # RELEASES ==================================================================

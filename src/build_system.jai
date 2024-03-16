@@ -8,6 +8,8 @@ init_build_system :: () {
     buffer.deleted  = true;  // so that it doesn't appear in the open file dialog
     if config.settings.build_panel_line_wrap_always_on then editor.line_wrap = .on; else editor.line_wrap = .off;
 
+    commands_refresh_after_config_change();
+
     init(*build_mutex);
 
     thread_group = Thread_Group.{};  // in case we need to reinitialise it later

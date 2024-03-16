@@ -126,6 +126,11 @@ free_loaded_config :: (using loaded_config: *Loaded_Config) {
 }
 
 refresh_config :: (path: string) {
+    if build_command_is_running() {
+        add_user_warning("Couldn't refresh config because a build command is currently running. Please let it finish or kill it before refreshing config.");
+        return;
+    }
+
     // Deep copy old workspace dirs (they will be freed by the load config function otherwise)
     old_workspace_dirs: [..] string;
     old_workspace_dirs.allocator = temp;
@@ -177,6 +182,8 @@ refresh_config :: (path: string) {
             should_reload_workspace = false;
         }
     }
+
+    commands_refresh_after_config_change();
 
     dont_ignore_next_window_resize = true;
 }

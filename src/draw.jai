@@ -1976,7 +1976,12 @@ draw_commands_dialog :: () {
 
     draw_extra_entry_stuff :: (entry_ptr: *void, entry_rect: Rect, name_width: float, pen: Vector2, margin: float, padding: float) {
         entry := cast(*Commands_Dialog.Entry) entry_ptr;
-        key_sequence := key_sequence_for_action_as_string(entry.action);
+        key_sequence: string;
+        if entry.is_build_command {
+            key_sequence = key_sequence_for_action_as_string(cast(Action_Build) entry.action);
+        } else {
+            key_sequence = key_sequence_for_action_as_string(cast(Action_Editors) entry.action);
+        }
         if key_sequence {
             key_sequence_rect := shrink_x(entry_rect, margin);
 
