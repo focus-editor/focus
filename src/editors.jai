@@ -88,8 +88,14 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
             return true;
         }
 
-        action := map_event_to_action(event, Action_Search_Dialog);
+        // Handle editor actions which make sense while the search bar is open
+        editor_action := map_event_to_action(event, Action_Editors);
+        if editor_action == {
+            case .select_all_occurrences;           select_all_occurrences(editor, buffer); close_search_bar(editor);                   return true;
+        }
 
+        // Handle search dialog actions
+        action := map_event_to_action(event, Action_Search_Dialog);
         if action == {
             case .toggle_expand;                    search_bar_toggle_expand(editor);                                                   return true;
             case .toggle_case_sensitive;            search_bar_toggle_case_sensitive(editor, buffer);                                   return true;

@@ -1530,7 +1530,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
             // Draw length of selected text if any text is currently selected
             if config.settings.show_selected_text_length && num_selected_bytes > 0 {
-                label := tprint("Selected: %  ", num_selected_bytes);
+                label := tprint("Selected: % chars  ", num_selected_chars);
                 if num_selected_bytes != num_selected_chars then label = tprint("Selected: % chars, % bytes  ", num_selected_chars, num_selected_bytes);
                 width += xx Simp.prepare_text(font_ui_bold, label);
                 line_col_start_x = footer_rect.x + footer_rect.w - width;
