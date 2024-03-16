@@ -1625,6 +1625,8 @@ select_all_occurrences :: (using editor: *Editor, buffer: Buffer) -> whole_words
         offset += selected_text.count;
     }
 
+    cursors_start_blinking();
+
     return editor.search_whole_words;
 }
 
