@@ -261,8 +261,8 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
             case .delete_right_char;                delete_right_char                   (editor, buffer);
             case .delete_word_left;                 delete_word_left                    (editor, buffer);
             case .delete_word_right;                delete_word_right                   (editor, buffer);
-            case .delete_word_left_no_underscore;   delete_word_left_no_underscore      (editor, buffer);
-            case .delete_word_right_no_underscore;  delete_word_right_no_underscore     (editor, buffer);
+            case .delete_word_left_no_underscore;   delete_word_left                    (editor, buffer,, underscore_is_part_of_word = false);
+            case .delete_word_right_no_underscore;  delete_word_right                   (editor, buffer,, underscore_is_part_of_word = false);
 
             case .duplicate_lines;                  duplicate_lines                     (editor, buffer); keep_selection = true;
             case .move_selected_lines_up;           move_lines_up                       (editor, buffer); keep_selection = true;
@@ -1893,9 +1893,7 @@ move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: enum { char; w
         } else {
             if by == {
                 case .word;
-                    context.underscore_is_part_of_word = false;
-                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = skip_one_space);
-                    context.underscore_is_part_of_word = true;
+                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = skip_one_space,, underscore_is_part_of_word = false);
                 case .word_ends;
                     char_type := get_char_type(get_char_at_offset(buffer, cursor.pos));
                     if char_type != .word then cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, char_type, skip_one_space = false);
@@ -1920,9 +1918,7 @@ move_cursors_right :: (editor: *Editor, using buffer: *Buffer, by: enum { char; 
         } else {
             if by == {
                 case .word;
-                    context.underscore_is_part_of_word = false;
-                    cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = skip_one_space);
-                    context.underscore_is_part_of_word = true;
+                    cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = skip_one_space,, underscore_is_part_of_word = false);
                 case .word_ends;
                     char := get_char_at_offset(buffer, cursor.pos);
                     char_type := get_char_type(char);
@@ -2167,18 +2163,6 @@ delete_word_right :: (editor: *Editor, buffer: *Buffer) {
     }
     organise_cursors(editor);  // resolve overlapping selections
     delete_right_char(editor, buffer);
-}
-
-delete_word_left_no_underscore :: (editor: *Editor, buffer: *Buffer) {
-    context.underscore_is_part_of_word = false;
-    delete_word_left(editor, buffer);
-    context.underscore_is_part_of_word = true;
-}
-
-delete_word_right_no_underscore :: (editor: *Editor, buffer: *Buffer) {
-    context.underscore_is_part_of_word = false;
-    delete_word_right(editor, buffer);
-    context.underscore_is_part_of_word = true;
 }
 
 delete_left_char :: (editor: *Editor, buffer: *Buffer) {
