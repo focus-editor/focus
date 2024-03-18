@@ -1774,17 +1774,7 @@ cursors_match :: (c1: [] Cursor, c2: [] Cursor) -> bool {
 
 undo :: (editor: *Editor, buffer: *Buffer) {
     new_edit_group(buffer, editor);
-
-    if buffer.undos.count == 0 {
-        // Go back to 0:0
-        array_resize(*editor.cursors, 1);
-        editor.main_cursor     = 0;
-        editor.original_cursor = 0;
-        editor.cursors[0].pos  = 0;
-        editor.cursors[0].sel  = 0;
-        editor.cursor_moved = .jumped;
-        return;
-    }
+    if buffer.undos.count == 0 return;
 
     edit_group := peek(buffer.undos);
 
