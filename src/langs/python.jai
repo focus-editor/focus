@@ -61,19 +61,20 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "%";  parse_percent           (tokenizer, *token);
         case #char "^";  parse_caret             (tokenizer, *token);
 
-        case #char ";";  token.type = .punctuation; token.punctuation = .semicolon; t += 1;
-        case #char ",";  token.type = .punctuation; token.punctuation = .comma;     t += 1;
-        case #char ".";  token.type = .punctuation; token.punctuation = .period;    t += 1;
-        case #char "{";  token.type = .punctuation; token.punctuation = .l_brace;   t += 1;
-        case #char "}";  token.type = .punctuation; token.punctuation = .r_brace;   t += 1;
-        case #char "(";  token.type = .punctuation; token.punctuation = .l_paren;   t += 1;
-        case #char ")";  token.type = .punctuation; token.punctuation = .r_paren;   t += 1;
-        case #char "[";  token.type = .punctuation; token.punctuation = .l_bracket; t += 1;
-        case #char "]";  token.type = .punctuation; token.punctuation = .r_bracket; t += 1;
-        case #char "$";  token.type = .punctuation; token.punctuation = .dollar;    t += 1;
+        case #char ";";  token.type = .punctuation; token.punctuation = .semicolon;  t += 1;
+        case #char ",";  token.type = .punctuation; token.punctuation = .comma;      t += 1;
+        case #char ".";  token.type = .punctuation; token.punctuation = .period;     t += 1;
+        case #char "{";  token.type = .punctuation; token.punctuation = .l_brace;    t += 1;
+        case #char "}";  token.type = .punctuation; token.punctuation = .r_brace;    t += 1;
+        case #char "(";  token.type = .punctuation; token.punctuation = .l_paren;    t += 1;
+        case #char ")";  token.type = .punctuation; token.punctuation = .r_paren;    t += 1;
+        case #char "[";  token.type = .punctuation; token.punctuation = .l_bracket;  t += 1;
+        case #char "]";  token.type = .punctuation; token.punctuation = .r_bracket;  t += 1;
+        case #char "$";  token.type = .punctuation; token.punctuation = .dollar;     t += 1;
+        case #char "\\"; token.type = .punctuation; token.punctuation = .back_slash; t += 1;
 
-        case #char "~";  token.type = .operation;   token.operation   = .tilde;     t += 1;
-        case #char "`";  token.type = .operation;   token.operation   = .backtick;  t += 1;
+        case #char "~";  token.type = .operation;   token.operation   = .tilde;      t += 1;
+        case #char "`";  token.type = .operation;   token.operation   = .backtick;   t += 1;
 
         case;            token.type = .invalid; t += 1;
     }
@@ -424,7 +425,7 @@ COLOR_MAP :: Color.[
 ];
 
 PUNCTUATION :: string.[
-    "dollar", "semicolon", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", "period", "comma",
+    "dollar", "semicolon", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", "period", "comma", "back_slash"
 ];
 
 OPERATIONS :: string.[
