@@ -2207,6 +2207,7 @@ delete_left_char :: (editor: *Editor, buffer: *Buffer) {
         delete_range(buffer, range);
 
         cursor.pos = range.start;
+        cursor.sel = range.start;
         cursor.col_wanted = -1;
 
         offset_delta += (range.end - range.start);

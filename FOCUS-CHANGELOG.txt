@@ -31,6 +31,7 @@
     + Fixed a visual glitch when attempting to draw tabs as characters in a new buffer name
     + After switching to a new project the Navigate to File dialog should no longer persist paths from the previous project
     + Fixed a crash when opening the global search widget immediately after switching projects
+    + Fixed incorrect cursor positioning when redoing with multiple cursors in some cases
 + Other changes:
     + Improved the scanning speed by ignoring large binary files quicker
     + Windows: improved the startup times by avoiding the use of heavy Win32 API calls
