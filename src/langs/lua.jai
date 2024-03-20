@@ -1,7 +1,8 @@
 // Based on https://www.lua.org/manual/5.4/manual.html#3
 
-highlight_lua_syntax :: (using buffer: *Buffer) {
-    tokenizer := get_tokenizer(buffer);
+highlight_lua_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+    tokenizer := get_lua_tokenizer(buffer, start_offset, count);
+
     while true {
         token := get_next_token(*tokenizer);
         if token.type == .eof then break;
@@ -21,13 +22,15 @@ highlight_lua_syntax :: (using buffer: *Buffer) {
 
         tokenizer.last_token = token;
     }
+
+    return .[];
 }
 
 tokenize_lua_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
-    tokenizer := get_tokenizer(buffer);
+    tokenizer := get_lua_tokenizer(buffer);
 
     while true {
         src := get_next_token(*tokenizer);
@@ -80,12 +83,19 @@ tokenize_lua_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
 }
 
 #scope_file
-get_tokenizer :: (using buffer: Buffer) -> Lua_Tokenizer {
+get_lua_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> Lua_Tokenizer {
     tokenizer: Lua_Tokenizer;
 
     tokenizer.buf   = cast(string) bytes;
     tokenizer.max_t = bytes.data + bytes.count;
     tokenizer.t     = bytes.data;
+
+    if start_offset >= 0 {
+        start_offset = clamp(start_offset, 0, bytes.count - 1);
+        count        = clamp(count,        0, bytes.count - 1);
+        tokenizer.t += start_offset;
+        tokenizer.max_t = tokenizer.t + count;
+    }
 
     return tokenizer;
 }

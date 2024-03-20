@@ -1,5 +1,5 @@
-highlight_uxntal_syntax :: (using buffer: *Buffer) {
-    tokenizer := get_tokenizer(buffer);
+highlight_uxntal_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+    tokenizer := get_tokenizer(buffer, start_offset, count);
 
     while true {
         token := get_next_token(*tokenizer);
@@ -8,19 +8,11 @@ highlight_uxntal_syntax :: (using buffer: *Buffer) {
         color := COLOR_MAP[token.type];
         memset(colors.data + token.start, xx color, token.len);
     }
+
+    return .[];
 }
 
 #scope_file
-
-get_tokenizer :: (using buffer: Buffer) -> Tokenizer {
-    tokenizer: Tokenizer;
-
-    tokenizer.buf   = cast(string) bytes;
-    tokenizer.max_t = bytes.data + bytes.count;
-    tokenizer.t     = bytes.data;
-
-    return tokenizer;
-}
 
 get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     eat_white_space(tokenizer);

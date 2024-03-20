@@ -1,4 +1,4 @@
-highlight_focus_config_syntax :: (using buffer: *Buffer) {
+highlight_focus_config_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
     memset(colors.data, xx COLOR_MAP[Focus_Config_Token.comment], colors.count);
 
     push_allocator(temp);  // we don't care about anything it might allocate
@@ -9,6 +9,8 @@ highlight_focus_config_syntax :: (using buffer: *Buffer) {
     for result.highlights {
         memset(colors.data + it.offset, xx COLOR_MAP[it.color_num], it.count);
     }
+
+    return .[];
 }
 
 Focus_Config_Token :: enum u16 {

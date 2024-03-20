@@ -1,8 +1,7 @@
-highlight_jai_syntax :: (using buffer: *Buffer) {
-    tokenizer := get_tokenizer(buffer);
+highlight_jai_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+    tokenizer := get_jai_tokenizer(buffer, start_offset, count);
 
-    clear_buffer_regions(buffer);
-    start_scope(*tokenizer, 0, .scope_export);
+    start_scope(*tokenizer, tokenizer.t - tokenizer.buf.data, .scope_export);
 
     while true {
         token := get_next_token(*tokenizer);
@@ -33,14 +32,16 @@ highlight_jai_syntax :: (using buffer: *Buffer) {
         memset(colors.data + token.start, xx color, token.len);
     }
 
-    end_scope(*tokenizer, bytes.count);
+    end_scope(*tokenizer, tokenizer.t - tokenizer.buf.data);
+
+    return tokenizer.regions;
 }
 
 tokenize_jai_for_indentation :: (using buffer: *Buffer) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
-    tokenizer := get_tokenizer(buffer);
+    tokenizer := get_jai_tokenizer(buffer);
 
     while true {
         src := get_next_token(*tokenizer);
@@ -84,13 +85,19 @@ tokenize_jai_for_indentation :: (using buffer: *Buffer) -> [] Indentation_Token 
 
 // We're using a separate tokenizer here because we have to keep track of last 2 tokens in many places
 // and we can't use a global variable for that because of threading
-get_tokenizer :: (using buffer: *Buffer) -> Jai_Tokenizer {
+get_jai_tokenizer :: (using buffer: *Buffer, start_offset := -1, count := -1) -> Jai_Tokenizer {
     tokenizer: Jai_Tokenizer;
 
-    tokenizer.buffer = buffer;
     tokenizer.buf    = cast(string) bytes;
     tokenizer.max_t  = bytes.data + bytes.count;
     tokenizer.t      = bytes.data;
+
+    if start_offset >= 0 {
+        start_offset = clamp(start_offset, 0, bytes.count - 1);
+        count        = clamp(count,        0, bytes.count - 1);
+        tokenizer.t += start_offset;
+        tokenizer.max_t = tokenizer.t + count;
+    }
 
     return tokenizer;
 }
@@ -173,8 +180,6 @@ get_next_token :: (using tokenizer: *Jai_Tokenizer) -> Token {
 parse_identifier :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
     token.type = .identifier;
 
-    auto_release_temp();
-
     identifier_str := read_identifier_string_tmp(tokenizer);
 
     // Maybe it's a keyword
@@ -186,10 +191,23 @@ parse_identifier :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
     // Check for here-string and directive modifiers
     prev, before_prev := last_tokens[1], last_tokens[0];
     if prev.type == .compiler_directive && prev.compiler_directive == .directive_string {
+        // Here-string
         token.type = .here_string;
-        end := find_index_from_left(buf, identifier_str, start_index = t - buf.data);
-        if end < 0 { t = max_t; return; }
-        t = buf.data + end + identifier_str.count;
+        start := cast(s32) (t - buf.data);
+        end := find_index_from_left(buf, identifier_str, start_index = start);
+        if end < 0 {
+            end = buf.count - 1;
+            t = max_t;
+        } else {
+            t = buf.data + end + identifier_str.count;
+        }
+
+        // Maybe add a sublang region for deferred highlighting
+        lang := get_lang_from_name(identifier_str);
+        if lang != .Plain_Text {
+            array_add(*regions, Buffer_Region.{ start = start + 1, end = xx end, kind = .sublang, lang = lang });  // start + 1 to not include the newline
+        }
+
     } else if prev.type == .punctuation && prev.punctuation == .comma {
         is_modifier := false;
         if before_prev.type == {
@@ -271,8 +289,6 @@ parse_compiler_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
     if !is_alpha(<<t) return;
 
     start_offset := cast(s32) (start_t - buf.data);
-
-    auto_release_temp();
 
     directive_str := read_identifier_string_tmp(tokenizer);
 
@@ -589,28 +605,26 @@ read_identifier_string_tmp :: (using tokenizer: *Jai_Tokenizer) -> string /* tem
 
 start_scope :: (using tokenizer: *Jai_Tokenizer, offset: s64, kind: Buffer_Region.Kind) {
     if current_scope_id >= 0 then end_scope(tokenizer, offset);
-    current_scope_id = buffer.regions.count;
+    current_scope_id = regions.count;
 
     region := Buffer_Region.{
         start = xx offset,
         end   = -1,
         kind  = kind,
     };
-    array_add(*buffer.regions, region);
+    array_add(*regions, region);
 }
 
 end_scope :: inline (using tokenizer: *Jai_Tokenizer, offset: s64) {
-    buffer.regions[current_scope_id].end = xx offset;
+    regions[current_scope_id].end = xx offset;
 }
 
 Jai_Tokenizer :: struct {
-    buffer:  *Buffer;
-    current_scope_id := -1;
+    using #as base: Tokenizer;
 
-    buf:     string;
-    max_t:   *u8;
-    start_t: *u8;  // cursor when starting parsing new token
-    t:       *u8;  // cursor
+    regions: [..] Buffer_Region;
+    regions.allocator = temp;
+    current_scope_id := -1;
 
     last_tokens: [2] Token;
 }

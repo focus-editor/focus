@@ -216,7 +216,7 @@ backend_init_shaders :: () {
 // Shaders Here!
 //
 //
-SHADER_TEXT :: #string END
+SHADER_TEXT :: #string GLSL
 
 OUT_IN vec2 TextureCoords;
 OUT_IN vec4 iterated_color;
@@ -251,7 +251,7 @@ void main () {
     colorMask = vec4(sample_left * color.a, sample_center * color.a, sample_right * color.a, 1.0);
 }
 #endif // FRAGMENT_SHADER
-END
+GLSL
 
 
 SHADER_COLOR :: #string END

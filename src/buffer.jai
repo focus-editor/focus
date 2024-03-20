@@ -436,17 +436,33 @@ recalculate_colors :: (buffer: *Buffer) {
     assert(!buffer.dirty);
     buffer.needs_coloring = false;
 
-    highlighter_function := get_highlighter_function(buffer.lang);
-    if highlighter_function == null return;
-
     array_resize(*buffer.colors, buffer.bytes.count);  // this will reset colors to 0
-    highlighter_function(buffer);
+
+    tokenize := get_tokenize_function(buffer.lang);
+    if tokenize == null return;
+    new_regions := tokenize(buffer);
+
+    // Clear buffer regions
+    for buffer.regions free(it.note);
+    array_reset_keeping_memory(*buffer.regions);
+
+    for * region : new_regions {
+        // Add regions into buffer
+        if region.note then region.note = copy_string(region.note);
+        array_add(*buffer.regions, region.*);
+
+        // Maybe tokenize sublangs
+        if region.kind == .sublang {
+            tokenize := get_tokenize_function(region.lang);
+            if tokenize != null then tokenize(buffer, region.start, region.end - region.start);  // ignore subregions here
+        }
+    }
 }
 
 buffer_needs_coloring :: (buffer: Buffer) -> bool {
     return
         (buffer.needs_coloring || buffer.colors.count != buffer.bytes.count) &&
-        get_highlighter_function(buffer.lang) != null;
+        get_tokenize_function(buffer.lang) != null;
 }
 
 tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */ {
@@ -1140,16 +1156,11 @@ process_buffer_save_queue :: () {
     }
 }
 
-clear_buffer_regions :: (using buffer: *Buffer) {
-    for regions free(it.note);
-    array_reset_keeping_memory(*regions);
-}
-
 #scope_file
 
-Highlighter_Function :: #type (buffer: *Buffer);
+Tokenize_Function :: #type (buffer: *Buffer, start_offset: s64 = -1, count: s64 = -1) -> [] Buffer_Region /* temp */;
 
-get_highlighter_function :: (lang: Buffer.Lang) -> Highlighter_Function {
+get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
     if lang == {
         case .Jai;          return highlight_jai_syntax;
         case .C;            return highlight_c_syntax;
@@ -1376,6 +1387,7 @@ Buffer_Region :: struct {
     using range: Offset_Range;
     note: string;
     kind: Kind;
+    lang: Buffer.Lang;
 
     Kind :: enum u8 {
         none :: 0;
@@ -1383,9 +1395,12 @@ Buffer_Region :: struct {
         warning;
         success;
         header;
+
         scope_export;
         scope_file;
         scope_module;
+
+        sublang;
     }
 }
 

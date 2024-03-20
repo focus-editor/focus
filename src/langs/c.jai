@@ -1,5 +1,5 @@
-highlight_c_syntax :: (using buffer: *Buffer) {
-    tokenizer := get_tokenizer(buffer);
+highlight_c_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+    tokenizer := get_tokenizer(buffer, start_offset, count);
 
     last_token: Token;  // to retroactively highlight functions
 
@@ -21,6 +21,8 @@ highlight_c_syntax :: (using buffer: *Buffer) {
         color := COLOR_MAP[token.type];
         memset(colors.data + token.start, xx color, token.len);
     }
+
+    return .[];
 }
 
 get_next_c_token :: get_next_token;  // export for indent tokenization

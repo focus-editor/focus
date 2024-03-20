@@ -1,5 +1,5 @@
-highlight_odin_syntax :: (using buffer: *Buffer) {
-    tokenizer := get_tokenizer(buffer);
+highlight_odin_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+    tokenizer := get_odin_tokenizer(buffer, start_offset, count);
     inside_attribute := false;
 
     while true {
@@ -91,13 +91,15 @@ highlight_odin_syntax :: (using buffer: *Buffer) {
         color := COLOR_MAP[token.type];
         memset(colors.data + token.start, xx color, token.len);
     }
+
+    return .[];
 }
 
 tokenize_odin_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
-    tokenizer := get_tokenizer(buffer);
+    tokenizer := get_odin_tokenizer(buffer);
 
     while true {
         src := get_next_token(*tokenizer);
@@ -140,12 +142,19 @@ tokenize_odin_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token 
 #scope_file
 
 // A separate tokenizer for the same reasons as with Jai
-get_tokenizer :: (using buffer: Buffer) -> Odin_Tokenizer {
+get_odin_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> Odin_Tokenizer {
     tokenizer: Odin_Tokenizer;
 
     tokenizer.buf   = cast(string) bytes;
     tokenizer.max_t = bytes.data + bytes.count;
     tokenizer.t     = bytes.data;
+
+    if start_offset >= 0 {
+        start_offset = clamp(start_offset, 0, bytes.count - 1);
+        count        = clamp(count,        0, bytes.count - 1);
+        tokenizer.t += start_offset;
+        tokenizer.max_t = tokenizer.t + count;
+    }
 
     return tokenizer;
 }

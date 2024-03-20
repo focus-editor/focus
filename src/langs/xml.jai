@@ -1,5 +1,5 @@
-highlight_xml_syntax :: (using buffer: *Buffer) {
-    tokenizer := get_tokenizer(buffer);
+highlight_xml_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+    tokenizer := get_xml_tokenizer(buffer, start_offset, count);
 
     while true {
         token := get_next_token(*tokenizer);
@@ -7,13 +7,15 @@ highlight_xml_syntax :: (using buffer: *Buffer) {
         color := COLOR_MAP[token.type];
         memset(colors.data + token.start, xx color, token.len);
     }
+
+    return .[];
 }
 
 tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
-    tokenizer := get_tokenizer(buffer);
+    tokenizer := get_xml_tokenizer(buffer);
 
     while true {
         src := get_next_token(*tokenizer);
@@ -70,12 +72,21 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
 
 #scope_file
 
-get_tokenizer :: (using buffer: Buffer) -> Xml_Tokenizer {
+get_xml_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> Xml_Tokenizer {
     tokenizer: Xml_Tokenizer;
+
     tokenizer.buf       = cast(string) bytes;
     tokenizer.max_t     = bytes.data + bytes.count;
     tokenizer.t         = bytes.data;
     tokenizer.html_mode = buffer.lang == .Html;
+
+    if start_offset >= 0 {
+        start_offset = clamp(start_offset, 0, bytes.count - 1);
+        count        = clamp(count,        0, bytes.count - 1);
+        tokenizer.t += start_offset;
+        tokenizer.max_t = tokenizer.t + count;
+    }
+
     return tokenizer;
 }
 

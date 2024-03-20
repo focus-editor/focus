@@ -215,6 +215,7 @@ map_name_to_color :: (name: string) -> Color {
         case "region_success";                          return .REGION_SUCCESS;
         case "region_warning";                          return .REGION_WARNING;
         case "region_error";                            return .REGION_ERROR;
+        case "region_sublang";                          return .REGION_SUBLANG;
 
         case "build_panel_background";                  return .BUILD_PANEL_BACKGROUND;
         case "build_panel_scrollbar";                   return .BUILD_PANEL_SCROLLBAR;

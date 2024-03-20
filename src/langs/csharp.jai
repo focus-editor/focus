@@ -1,5 +1,5 @@
-highlight_csharp_syntax :: (using buffer: *Buffer) {
-    tokenizer := get_csharp_tokenizer(buffer);
+highlight_csharp_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+    tokenizer := get_csharp_tokenizer(buffer, start_offset, count);
 
     while true {
         token := get_next_token(*tokenizer);
@@ -16,6 +16,8 @@ highlight_csharp_syntax :: (using buffer: *Buffer) {
         color := COLOR_MAP[token.type];
         memset(colors.data + token.start, xx color, token.len);
     }
+
+    return .[];
 }
 
 tokenize_csharp_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /* temp */ {
@@ -58,12 +60,21 @@ tokenize_csharp_for_indentation :: (using buffer: Buffer) -> [] Indentation_Toke
 
 #scope_file
 
-get_csharp_tokenizer :: (using buffer: Buffer) -> CSharp_Tokenizer {
-    return CSharp_Tokenizer.{
+get_csharp_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> CSharp_Tokenizer {
+    tokenizer := CSharp_Tokenizer.{
         buf = cast(string) bytes,
         max_t = bytes.data + bytes.count,
-        t = bytes.data
+        t = bytes.data,
     };
+
+    if start_offset >= 0 {
+        start_offset = clamp(start_offset, 0, bytes.count - 1);
+        count        = clamp(count,        0, bytes.count - 1);
+        tokenizer.t += start_offset;
+        tokenizer.max_t = tokenizer.t + count;
+    }
+
+    return tokenizer;
 }
 
 get_next_token :: (using tokenizer: *CSharp_Tokenizer) -> Token {

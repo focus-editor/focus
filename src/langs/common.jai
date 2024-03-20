@@ -1,9 +1,16 @@
-get_tokenizer :: (using buffer: Buffer) -> Tokenizer {
+get_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> Tokenizer {
     tokenizer: Tokenizer;
 
     tokenizer.buf   = cast(string) bytes;
     tokenizer.max_t = bytes.data + bytes.count;
     tokenizer.t     = bytes.data;
+
+    if start_offset >= 0 {
+        start_offset = clamp(start_offset, 0, bytes.count - 1);
+        count        = clamp(count,        0, bytes.count - 1);
+        tokenizer.t += start_offset;
+        tokenizer.max_t = tokenizer.t + count;
+    }
 
     return tokenizer;
 }
@@ -141,6 +148,28 @@ tokenize_c_like_lang_for_indentation :: (using buffer: Buffer, $get_next_token: 
     }
 
     return tokens;
+}
+
+get_lang_from_name :: (lang_name: string) -> Buffer.Lang {
+    if ends_with_nocase(lang_name, "jai")          return .Jai;
+    if ends_with_nocase(lang_name, "c")            return .C;
+    if ends_with_nocase(lang_name, "csharp")       return .CSharp;
+    // if ends_with_nocase(lang_name, "focus_config") return .Focus_Config;  // disabled for now
+    // if ends_with_nocase(lang_name, "focus_theme")  return .Focus_Theme;
+    if ends_with_nocase(lang_name, "glsl")         return .Glsl;
+    if ends_with_nocase(lang_name, "golang")       return .Golang;
+    if ends_with_nocase(lang_name, "lua")          return .Lua;
+    if ends_with_nocase(lang_name, "odin")         return .Odin;
+    if ends_with_nocase(lang_name, "python")       return .Python;
+    if ends_with_nocase(lang_name, "renpy")        return .RenPy;
+    if ends_with_nocase(lang_name, "html")         return .Html;
+    if ends_with_nocase(lang_name, "xml")          return .Xml;
+    if ends_with_nocase(lang_name, "worklog")      return .Worklog;
+    if ends_with_nocase(lang_name, "yang")         return .Yang;
+    if ends_with_nocase(lang_name, "zig")          return .Zig;
+    if ends_with_nocase(lang_name, "uxntal")       return .Uxntal;
+
+    return .Plain_Text;
 }
 
 Tokenizer :: struct {

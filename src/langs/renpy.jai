@@ -1,7 +1,7 @@
 // NOTE: lots of copypasta from Python
 
-highlight_renpy_syntax :: (using buffer: *Buffer) {
-    tokenizer := get_tokenizer(buffer);
+highlight_renpy_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+    tokenizer := get_tokenizer(buffer, start_offset, count);
 
     last_token: Token;
 
@@ -21,6 +21,8 @@ highlight_renpy_syntax :: (using buffer: *Buffer) {
         color := COLOR_MAP[token.type];
         memset(colors.data + token.start, xx color, token.len);
     }
+
+    return .[];
 }
 
 #scope_file
