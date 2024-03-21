@@ -16,8 +16,20 @@
 
 - See https://github.com/focus-editor/focus/issues
 
-
 # Main Git Branch
+
++ New features:
+    + ...
++ Bug fixes:
+    + ...
++ Other changes:
+    + ...
+
+
+# RELEASES ==================================================================
+
+
+# Version 0.3.3
 
 + New features:
     + macOS: Drag files into the window to open them.
@@ -39,8 +51,6 @@
     + It is now possible to select all occurrences of the selected text while the search bar is open
     + Build commands will now appear in the command palette. There's no need to assign each command a key binding any more.
 
-
-# RELEASES ==================================================================
 
 # Version 0.3.2
 
