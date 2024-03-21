@@ -56,6 +56,7 @@ region_header:                          1A5152FF
 region_success:                         226022FF
 region_warning:                         986032FF
 region_error:                           772222FF
+region_heredoc:                         23201FFF
 
 build_panel_background:                 3C3836FF
 build_panel_scrollbar:                  33CCCC19

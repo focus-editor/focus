@@ -9,6 +9,7 @@ region_header:                          34a2a480 # Debug build header message ba
 region_success:                         44c04480 # Debug Panel success message background
 region_warning:                         ffc04480
 region_error:                           ee444480
+region_heredoc:                         101010FF
 
 # Build panel colours (self-explanatory)
 build_panel_title_bar:                  ffffff03
