@@ -314,7 +314,7 @@ region_header:                          1A5152FF
 region_success:                         226022FF
 region_warning:                         986032FF
 region_error:                           772222FF
-region_sublang:                         090e12FF
+region_heredoc:                         090e12FF
 
 selection_active:                       1C4449FF
 selection_inactive:                     1C44497F

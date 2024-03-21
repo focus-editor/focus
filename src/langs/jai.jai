@@ -202,10 +202,10 @@ parse_identifier :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
             t = buf.data + end + identifier_str.count;
         }
 
-        // Maybe add a sublang region for deferred highlighting
+        // Maybe add a heredoc region for deferred highlighting
         lang := get_lang_from_name(identifier_str);
         if lang != .Plain_Text {
-            array_add(*regions, Buffer_Region.{ start = start + 1, end = xx end, kind = .sublang, lang = lang });  // start + 1 to not include the newline
+            array_add(*regions, Buffer_Region.{ start = start + 1, end = xx end, kind = .heredoc, lang = lang });  // start + 1 to not include the newline
         }
 
     } else if prev.type == .punctuation && prev.punctuation == .comma {

@@ -1,6 +1,6 @@
 # ROUGH ROADMAP
 
-- Workspace search improvements (the ability to filter additionally by filename)
+- Workspace search improvements (the ability to filter additionally by filename, global replace etc)
 - Settings per file type
 - Add the ability to assign syntax to a buffer
 - Basic language definition files for the highlighting of languages we don't yet support
@@ -26,7 +26,7 @@
     + C# highlighting: support nested string interpolation (thanks @audV)
     + New option: `show_selected_text_length`. Set to `true` to display the number of selected chars (and bytes) in the footer (thanks @CELLTH)
     + New command: `open_another_editor_instance`. Defaults to Ctrl-Shift-Alt-N. Opens a new editor instance as a subprocess. Thanks @LainLayer
-    + In Jai, `#string` literals will now support highlighting text. E.g. `#string STR_PYTHON` will highlight the contents as python. The name needs to end with the desired language name. The string block can have a special background color (set as `region_sublang` in the config)
+    + In Jai, `#string` literals will now support highlighting text. E.g. `#string STR_PYTHON` will highlight the contents as python. The name needs to end with the desired language name. The string block can have a special background color (called `region_heredoc` in the config)
 + Bug fixes:
     + Fixed a bug with cursor positioning when using the align_cursors action through the command dialog
     + Fixed a visual glitch when attempting to draw tabs as characters in a new buffer name

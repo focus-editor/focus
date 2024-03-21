@@ -3303,7 +3303,7 @@ get_region_color :: (kind: Buffer_Region.Kind) -> Color {
     color := Color.BACKGROUND_0;
     if #complete kind == {
         case .none;             // nothing
-        case .sublang;          color = Color.REGION_SUBLANG;
+        case .heredoc;          color = Color.REGION_HEREDOC;
         case .scope_export;     color = Color.REGION_SCOPE_EXPORT;
         case .scope_file;       color = Color.REGION_SCOPE_FILE;
         case .scope_module;     color = Color.REGION_SCOPE_MODULE;

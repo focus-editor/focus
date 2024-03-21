@@ -451,8 +451,8 @@ recalculate_colors :: (buffer: *Buffer) {
         if region.note then region.note = copy_string(region.note);
         array_add(*buffer.regions, region.*);
 
-        // Maybe tokenize sublangs
-        if region.kind == .sublang {
+        // Maybe tokenize heredocs
+        if region.kind == .heredoc {
             tokenize := get_tokenize_function(region.lang);
             if tokenize != null then tokenize(buffer, region.start, region.end - region.start);  // ignore subregions here
         }
@@ -1400,7 +1400,7 @@ Buffer_Region :: struct {
         scope_file;
         scope_module;
 
-        sublang;
+        heredoc;
     }
 }
 
