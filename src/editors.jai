@@ -775,13 +775,14 @@ close_current_editor :: () {
         case .Single;
             editors.layout = .None;  // close immediately
             update_window_title();
+            do_things_on_editor_close(editors.active);
 
         case .Double;
+            editor_closing_id = editors.active;
             if !config.settings.disable_file_open_close_animations {
                 // Start the animation (the layout will change when the animation is finished)
                 editors_start_moving_splitter(ifx editors.active == editors.left then 0.0 else 1.0);
                 make_editor_active(ifx editors.active == editors.left then editors.right else editors.left);
-                editor_closing = true;
             } else {
                 make_editor_active(ifx editors.active == editors.left then editors.right else editors.left);
                 finish_closing_editor();
@@ -796,10 +797,10 @@ close_other_editor :: () {
         case .None;     return;
         case .Single;   return;  // don't do anything
         case .Double;
+            editor_closing_id = ifx editors.active == editors.left then editors.right else editors.left;
             if !config.settings.disable_file_open_close_animations {
                 // Start the animation (the layout will change when the animation is finished)
                 editors_start_moving_splitter(ifx editors.active == editors.left then 1.0 else 0.0);
-                editor_closing = true;
             } else {
                 finish_closing_editor();
             }
@@ -812,7 +813,20 @@ finish_closing_editor :: () {
         editors.left  = editors.active;  // editor history needs it for comparison
         editors.right = editors.active;
     }
-    editor_closing = false;
+    do_things_on_editor_close(editor_closing_id);
+    editor_closing_id = -1;
+}
+
+do_things_on_editor_close :: (editor_id: s64) {
+    editor := *open_editors[editor_id];
+    buffer := *open_buffers[editor.buffer_id];
+
+    // Remove buffer from the open buffers if it's not unsaved and if there's no editor with this buffer currently visible
+    assert(editors.layout != .Double, "An editor just closed but layout is still .Double. This is a bug.");
+    buffer_is_still_visible := editors.layout == .Single && editors.active != editor_id && open_editors[editors.active].buffer_id == editor.buffer_id;
+    if !buffer_is_still_visible && !buffer.modified {
+        array_ordered_remove_by_value(*most_recent_buffers, editor.buffer_id);
+    }
 }
 
 search_bar_is_open :: inline (using editor: *Editor) -> bool {
@@ -3403,7 +3417,7 @@ buffers_table: Table(string, s64);  // a map from full buffer path to buffer id 
 most_recent_buffers: [..] s64;  // updated when an editor is activated, used to switch between open files
 
 editors: Editor_State;
-editor_closing  := false;  // whether the active editor is currently being closed (so that we can change the layout when it's done closing)
+editor_closing_id := -1;  // holds the id of the editor being closed (so that we can change the layout when it's done closing)
 
 editor_history: Editor_History;
 
@@ -3473,7 +3487,7 @@ previous_history_index :: (f: s64) -> s64 {
 }
 
 maybe_save_editor_history :: () {
-    if editor_closing return;
+    if editor_closing_id >= 0 return;
 
     using editor_history;
 
@@ -3615,24 +3629,34 @@ move_to_editor_history_frame :: (frame: Editor_History_Frame, old_frame: Editor_
         }
     } else if old_frame.layout == .Double && frame.layout == .Single {
         // Closing a pane
-        if (frame.active == old_frame.left || frame.active == old_frame.right) && !config.settings.disable_file_open_close_animations {
+        if (frame.active == old_frame.left || frame.active == old_frame.right) {
+
+            editor_closing_id = frame.active;
+
+            editors.layout = .Double;  // will change when the animation finishes
             if frame.active == old_frame.left {
                 editors.right = old_frame.right;  // make sure we're drawing the correct buffer while it closes
                 editors.left  = editors.active;
-                editors_start_moving_splitter(1.0);  // close right
+                if !config.settings.disable_file_open_close_animations {
+                    editors_start_moving_splitter(1.0);  // close right
+                } else {
+                    finish_closing_editor();
+                }
             } else {
                 editors.left  = old_frame.left;  // make sure we're drawing the correct buffer while it closes
                 editors.right = editors.active;
-                editors_start_moving_splitter(0.0);  // close left
+                if !config.settings.disable_file_open_close_animations {
+                    editors_start_moving_splitter(0.0);  // close left
+                } else {
+                    finish_closing_editor();
+                }
             }
-            editors.layout = .Double;  // will change when the animation finishes
-            editor_closing = true;
         }
         editor.scroll_to_cursor = .yes;
     } else {
         editor.scroll_to_cursor = .yes;
     }
-    if frame.expanded != old_frame.expanded && !editor_closing then toggle_editor_expand(frame.expanded);  // do it last
+    if frame.expanded != old_frame.expanded && editor_closing_id < 0 then toggle_editor_expand(frame.expanded);  // do it last
 
     cursor := leave_only_original_cursor(editor);
     cursor.pos = frame.pos;

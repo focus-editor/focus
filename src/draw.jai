@@ -34,7 +34,7 @@ draw_frame :: () {
             if !values_are_close(splitter_pos, splitter_anim.target) {
                 redraw_requested = true;
                 splitter_pos = get_animation_value(splitter_anim);  // removed the clamp because we want to close smoothly. Will this cause problems? Not sure
-            } else if editor_closing {
+            } else if editor_closing_id >= 0 {
                 finish_closing_editor();
             }
             if editors.expanded {
