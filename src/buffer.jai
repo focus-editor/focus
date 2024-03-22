@@ -436,10 +436,10 @@ recalculate_colors :: (buffer: *Buffer) {
     assert(!buffer.dirty);
     buffer.needs_coloring = false;
 
-    array_resize(*buffer.colors, buffer.bytes.count);  // this will reset colors to 0
-
     tokenize := get_tokenize_function(buffer.lang);
     if tokenize == null return;
+
+    array_resize(*buffer.colors, buffer.bytes.count);  // this will reset colors to 0
     new_regions := tokenize(buffer);
 
     // Clear buffer regions
