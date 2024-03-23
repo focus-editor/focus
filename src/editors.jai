@@ -1117,6 +1117,7 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
             case "focus-config";   buffer.lang = .Focus_Config;
             case "focus-theme";    buffer.lang = .Focus_Theme;
             case "go";             buffer.lang = .Golang;
+            case "js";             buffer.lang = .Js;
             case "lua";            buffer.lang = .Lua;
             case "odin";           buffer.lang = .Odin;
             case "py";             buffer.lang = .Python;
@@ -2979,6 +2980,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
         case .Golang;       comment = "//";
         case .Glsl;         comment = "//";
         case .Jai;          comment = "//";
+        case .Js;           comment = "//";
         case .Lua;          comment = "--";
         case .Odin;         comment = "//";
         case .Focus_Config; comment = "#";
@@ -3150,6 +3152,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
         case .Golang;       comment_start = "/*"; comment_end = "*/";
         case .Glsl;         comment_start = "/*"; comment_end = "*/";
         case .Jai;          comment_start = "/*"; comment_end = "*/";
+        case .Js;           comment_start = "/*"; comment_end = "*/";
         case .Odin;         comment_start = "/*"; comment_end = "*/";
         case .Lua;          comment_start = "--[["; comment_end = "]]";
         case .Html;         comment_start = "<!--"; comment_end = "-->";
