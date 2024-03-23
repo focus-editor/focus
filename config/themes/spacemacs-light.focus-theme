@@ -51,13 +51,13 @@ code_warning:                           E4D97DFF
 region_scope_export:                    fbf8efFF
 region_scope_file:                      fbf8efFF
 region_scope_module:                    fbf8efFF
-region_header:                          1A5152FF
-region_success:                         226022FF
+region_header:                          d2cedaFF
+region_success:                         42ae2cFF
 region_warning:                         986032FF
-region_error:                           772222FF
+region_error:                           e0211dFF
 region_heredoc:                         f0eee0FF
 
-build_panel_background:                 efeae9FF
+build_panel_background:                 fbf8efFF
 build_panel_scrollbar:                  33CCCC19
 build_panel_scrollbar_hover:            33CCCC4C
 build_panel_scrollbar_background:       10191F4C
