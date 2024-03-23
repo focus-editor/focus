@@ -853,6 +853,7 @@ dont_ignore_next_window_resize := false;
 #load "langs/focus_config.jai";
 #load "langs/glsl.jai";
 #load "langs/golang.jai";
+#load "langs/js.jai";
 #load "langs/lua.jai";
 #load "langs/odin.jai";
 #load "langs/python.jai";

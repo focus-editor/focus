@@ -1156,6 +1156,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .Focus_Theme;  return highlight_focus_config_syntax;
         case .Glsl;         return highlight_glsl_syntax;
         case .Golang;       return highlight_golang_syntax;
+        case .Js            return highlight_js_syntax;
         case .Lua;          return highlight_lua_syntax;
         case .Odin;         return highlight_odin_syntax;
         case .Python;       return highlight_python_syntax;
@@ -1337,6 +1338,7 @@ Buffer :: struct {
         Focus_Theme;
         Glsl;
         Golang;
+        Js;
         Lua;
         Odin;
         Python;
