@@ -1517,13 +1517,24 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             push_scissor(cut_rect);
             defer pop_scissor();
 
-            coords := cursor_coords[main_cursor].pos;
-            if line_wrap_is_active(editor) then coords = get_real_cursor_coords(buffer, editor.cursors[main_cursor]).pos;
+            // Get line/col.
+            line := cursor_coords[main_cursor].pos.line;
+            col  := 0;
+            {
+                // Do not count indented tabs here, only count each tab as one character.
+                start, end := buffer.line_starts[line], editor.cursors[main_cursor].pos;
+                s := cast(string) array_view(buffer.bytes, start, end - start);
+                while s {
+                    byte := s[0];
+                    advance(*s, 1 + trailingBytesForUTF8[byte]);
+                    col += 1;
+                }
+            }
 
             #if DEBUG {
-                width = xx Simp.prepare_text(font_ui_bold, tprint("Offset: %  Line: %  Col: %", editor.cursors[main_cursor].pos, coords.line + 1, coords.col + 1));
+                width = xx Simp.prepare_text(font_ui_bold, tprint("Offset: %  Line: %  Col: %", editor.cursors[main_cursor].pos, line + 1, col + 1));
             } else {
-                width = xx Simp.prepare_text(font_ui_bold, tprint("Line: %  Col: %", coords.line + 1, coords.col + 1));
+                width = xx Simp.prepare_text(font_ui_bold, tprint("Line: %  Col: %", line + 1, col + 1));
             }
             line_col_start_x := footer_rect.x + footer_rect.w - width;
             Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = xx Color.UI_DIM);

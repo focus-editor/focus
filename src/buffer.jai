@@ -129,34 +129,21 @@ get_line_starts :: (editor: Editor, buffer: Buffer) -> [] s32 {
 
 offset_to_coords :: (editor: Editor, buffer: Buffer, offset: s64) -> Coords {
     line := offset_to_line(editor, buffer, offset);
-    col  := _find_col_by_scanning_line(buffer, line, offset, get_line_starts(editor, buffer));
+    col  := _get_visual_col_by_scanning_line(buffer, line, offset, get_line_starts(editor, buffer));
 
     return Coords.{ line = line, col = col };
 }
 
 offset_to_real_coords :: (buffer: Buffer, offset: s64) -> Coords {
     line := offset_to_real_line(buffer, offset);
-    col  := _find_col_by_scanning_line(buffer, line, offset, buffer.line_starts);
+    col  := _get_visual_col_by_scanning_line(buffer, line, offset, buffer.line_starts);
 
     return Coords.{ line = line, col = col };
 }
 
-_find_col_by_scanning_line :: (buffer: Buffer, line_num: s32, offset: s64, line_starts: [] s32) -> col: s32 {
-    col: s32 = 0;
-
-    i := line_starts[line_num];
-    while i < offset {
-        byte := buffer.bytes[i];
-        if byte != #char "\t" {  // I hate tabs
-            col += 1;
-            i += 1 + trailingBytesForUTF8[byte];
-        } else {
-            col += TAB_SIZE - col % TAB_SIZE;
-            i += 1;
-        }
-    }
-
-    return col;
+// This function counts visual indent, taking tab size into account
+_get_visual_col_by_scanning_line :: (buffer: Buffer, line_num: s32, offset: s64, line_starts: [] s32) -> col: s32 {
+    return num_chars_in_string(xx array_view(buffer.bytes, line_starts[line_num], offset - line_starts[line_num]));
 }
 
 get_cursor_coords :: (editor: Editor, buffer: Buffer, using cursor: Cursor) -> Cursor_Coords {

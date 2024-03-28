@@ -20,10 +20,11 @@
 
 + New features:
     + Closing an editor will now remove the corresponding file from the open files list (only if it's not modified)
+    + New Handmade Hero theme (thanks @Sokus)
 + Bug fixes:
     + ...
 + Other changes:
-    + ...
+    + Column number shown in the footer will now count the number of characters, not the visual offset (previously it would take tab size into account)
 
 
 # RELEASES ==================================================================
