@@ -654,7 +654,42 @@ Keyword :: enum u16 {
     kwt_uimage2DMS;
     kwt_uimage2DMSArray;
 
+    // GL_KHR_vulkan_glsl texture types
+    kwt_texture1D;
+    kwt_texture2D;
+    kwt_texture3D;
+    kwt_textureCube;
+    kwt_texture1DArray;
+    kwt_texture2DArray;
+    kwt_textureCubeArray;
+    kwt_textureBuffer;
+    kwt_texture2DMS;
+    kwt_texture2DMSArray;
+
+    kwt_itexture1D;
+    kwt_itexture2D;
+    kwt_itexture3D;
+    kwt_itextureCube;
+    kwt_itexture1DArray;
+    kwt_itexture2DArray;
+    kwt_itextureCubeArray;
+    kwt_itextureBuffer;
+    kwt_itexture2DMS;
+    kwt_itexture2DMSArray;
+
+    kwt_utexture1D;
+    kwt_utexture2D;
+    kwt_utexture3D;
+    kwt_utextureCube;
+    kwt_utexture1DArray;
+    kwt_utexture2DArray;
+    kwt_utextureCubeArray;
+    kwt_utextureBuffer;
+    kwt_utexture2DMS;
+    kwt_utexture2DMSArray;
+
     // sampler types
+    kwt_sampler; // GL_KHR_vulkan_glsl
     kwt_sampler1D;
     kwt_sampler2D;
     kwt_sampler3D;
@@ -690,6 +725,7 @@ Keyword :: enum u16 {
     kwt_usampler2DMSArray;
 
     // shadow sampler types
+    kwt_samplerShadow; // GL_KHR_vulkan_glsl
     kwt_sampler1DShadow;
     kwt_sampler2DShadow;
     kwt_samplerCubeShadow;
@@ -698,12 +734,21 @@ Keyword :: enum u16 {
     kwt_sampler2DArrayShadow;
     kwt_samplerCubeArrayShadow;
 
-    // builtin variables
+    // GL_KHR_vulkan_glsl input attachment types
+    kwt_subpassInput;
+    kwt_isubpassInput;
+    kwt_usubpassInput;
+    kwt_subpassInputMS;
+    kwt_isubpassInputMS;
+    kwt_usubpassInputMS;
+
+    // built-in variables
     kwb_gl_in;
     kwb_gl_out;
     kwb_gl_BaseVertex;
     kwb_gl_BaseInstance;
     kwb_gl_ClipDistance;
+    kwb_gl_CullDistance;
     kwb_gl_DrawID;
     kwb_gl_DepthRangeParameters;
     kwb_gl_DepthRange;
@@ -711,6 +756,7 @@ Keyword :: enum u16 {
     kwb_gl_FragDepth;
     kwb_gl_FrontFacing;
     kwb_gl_GlobalInvocationID;
+    kwb_gl_HelperInvocation;
     kwb_gl_InstanceID;
     kwb_gl_InvocationID;
     kwb_gl_Layer;
@@ -737,7 +783,11 @@ Keyword :: enum u16 {
     kwb_gl_WorkGroupID;
     kwb_gl_WorkGroupSize;
 
-    // builtin constants
+    // GL_KHR_vulkan_glsl built-in variables
+    kwb_gl_VertexIndex;   // replaces OpenGL's gl_VertexID
+    kwb_gl_InstanceIndex; // replaces OpenGL's gl_InstanceID
+
+    // built-in constants
     kwb_gl_MaxClipDistances;
     kwb_gl_MaxDrawBuffers;
     kwb_gl_MaxImageSamples;
