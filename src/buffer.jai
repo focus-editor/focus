@@ -457,6 +457,7 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
     if buffer.lang == {
         case .Jai;          return tokenize_jai_for_indentation(buffer);
         case .C;            return tokenize_c_like_lang_for_indentation(buffer, get_next_c_token);
+        case .Js;           return tokenize_c_like_lang_for_indentation(buffer, get_next_js_token);
         case .CSharp;       return tokenize_csharp_for_indentation(buffer);
         case .Glsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_glsl_token);
         case .Zig;          return tokenize_c_like_lang_for_indentation(buffer, get_next_zig_token);
@@ -1156,7 +1157,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .Focus_Theme;  return highlight_focus_config_syntax;
         case .Glsl;         return highlight_glsl_syntax;
         case .Golang;       return highlight_golang_syntax;
-        case .Js            return highlight_js_syntax;
+        case .Js;           return highlight_js_syntax;
         case .Lua;          return highlight_lua_syntax;
         case .Odin;         return highlight_odin_syntax;
         case .Python;       return highlight_python_syntax;

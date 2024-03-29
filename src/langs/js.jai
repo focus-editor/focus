@@ -25,7 +25,7 @@ highlight_js_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) 
     return .[];
 }
 
-get_next_c_token :: get_next_token;  // export for indent tokenization
+get_next_js_token :: get_next_token;  // export for indent tokenization
 
 #scope_file
 
@@ -58,7 +58,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "!";  parse_bang                        (tokenizer, *token);
         case #char "\""; parse_double_quote_string_literal (tokenizer, *token);
         case #char "'";  parse_single_quote_string_literal (tokenizer, *token);
-        case #char "`";  parse_string_literal              (tokenizer, *token);
+        case #char "`";  parse_template_string_literal     (tokenizer, *token);
         case #char "/";  parse_slash_or_comment            (tokenizer, *token);
         case #char "&";  parse_ampersand                   (tokenizer, *token);
         case #char "|";  parse_pipe                        (tokenizer, *token);
@@ -284,33 +284,33 @@ parse_double_quote_string_literal :: (using tokenizer: *Tokenizer, token: *Token
 
 parse_single_quote_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .single_quote_string_literal;
-    
+
     escape_seen := false;
-    
+
     t += 1;
     while t < max_t && << t != #char "\n" {
-        if <<t == #char "\'" && !escape_seen break;
+        if <<t == #char "'" && !escape_seen break;
         escape_seen = !escape_seen && <<t == #char "\\";
         t += 1;
     }
     if t >= max_t return;
-    
+
     t += 1;
 }
 
 parse_template_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .template_string_literal;
-    
+
     escape_seen := false;
-    
+
     t += 1;
     while t < max_t {
-        if <<t == #char "\`" && !escape_seen break;
+        if <<t == #char "`" && !escape_seen break;
         escape_seen = !escape_seen && <<t == #char "\\";
         t += 1;
     }
     if t >= max_t return;
-    
+
     t += 1;
 }
 
@@ -455,142 +455,79 @@ COLOR_MAP :: Color.[
     .CODE_ERROR,         // invalid
 ];
 
-Keyword :: enum u16 {
-    kw_break;
-    kw_case;
-    kw_catch;
-    kw_class;
-    kw_continue;
-    kw_delete;
-    kw_do;
-    kw_else;
-    kw_export;
-    kw_import;
-    kw_for;
-    kw_if;
-    kw_new;
-    kw_return;
-    kw_switch;
-    kw_throw;
-    kw_try;
-    kw_finally;
-    kw_while;
-    kw_const;
-    kw_let;
-    kw_var;
-    kw_function;
-    kw_extends;
-    
-    kwv_false;
-    kwv_this;
-    kwv_true;
+PUNCTUATION :: string.[
+    "semicolon", "backslash", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", "period", "comma",
+];
+
+OPERATIONS :: string.[
+    "arrow", "bang", "backtick", "pipe", "double_pipe", "pipe_equal", "equal", "equal_equal", "bang_equal", "percent",
+    "percent_equal", "less_than", "double_less_than", "less_than_equal", "greater_than", "greater_than_equal", "minus",
+    "minus_equal", "minus_minus", "asterisk", "asterisk_equal", "colon", "slash", "plus", "plus_equal", "plus_plus",
+    "slash_equal", "ampersand", "double_ampersand", "ampersand_equal", "tilde", "question", "unknown", "caret", "caret_equal",
+];
+
+KEYWORDS :: string.[
+    "async", "abstract", "arguments", "await", "boolean", "break", "byte", "case", "catch", "char", "class", "const", "continue",
+    "debugger", "default", "delete", "do", "double", "else", "enum", "eval", "export", "extends", "final", "finally",
+    "float", "for", "function", "goto", "if", "implements", "import", "in", "instanceof", "int", "interface", "let", "long",
+    "native", "new", "package", "private", "protected", "public", "return", "short", "static", "super", "switch", "synchronized",
+    "throw", "throws", "transient", "try", "typeof", "var", "void", "volatile", "while", "with", "yield",
+];
+
+TYPE_KEYWORDS :: string.[
+    // this is not typescript
+];
+
+VALUE_KEYWORDS :: string.[
+    "false", "this", "true", "undefined", "null",
+];
+
+#insert -> string {
+    b: String_Builder;
+    init_string_builder(*b);
+
+    define_enum :: (b: *String_Builder, enum_name: string, prefix: string, value_lists: [][] string) {
+        print_to_builder(b, "% :: enum u16 {\n", enum_name);
+        for values : value_lists {
+            for v : values print_to_builder(b, "    %0%;\n", prefix, v);
+        }
+        print_to_builder(b, "}\n");
+    }
+
+    define_enum(*b, "Punctuation",        "",           .[PUNCTUATION]);
+    define_enum(*b, "Operation",          "",           .[OPERATIONS]);
+    define_enum(*b, "Keyword",            "kw_",        .[KEYWORDS, TYPE_KEYWORDS, VALUE_KEYWORDS]);
+
+    return builder_to_string(*b);
 }
 
-Operation :: enum u16 {
-    arrow;
-    bang;
-    backtick;
-    pipe;
-    double_pipe;
-    pipe_equal;
-    equal;
-    equal_equal;
-    bang_equal;
-    percent;
-    percent_equal;
-    less_than;
-    double_less_than;
-    less_than_equal;
-    greater_than;
-    greater_than_equal;
-    minus;
-    minus_equal;
-    minus_minus;
-    asterisk;
-    asterisk_equal;
-    colon;
-    slash;
-    plus;
-    plus_equal;
-    plus_plus;
-    slash_equal;
-    ampersand;
-    double_ampersand;
-    ampersand_equal;
-    tilde;
-    question;
-    unknown;
-    caret;
-    caret_equal;
-}
-
-Punctuation :: enum u16 {
-    semicolon;
-    backslash;
-    l_paren;
-    r_paren;
-    l_brace;
-    r_brace;
-    l_bracket;
-    r_bracket;
-    period;
-    comma;
-}
-
-//- Keyword Specifics
 Keyword_Token :: struct {
     type: Token.Type;
     keyword: Keyword;
 }
+
 KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
     table: Table(string, Keyword_Token);
-    temp, keywords_count := enum_range(Keyword);
-    size := 2 * (keywords_count);
+    size := 10 * (KEYWORDS.count + TYPE_KEYWORDS.count + VALUE_KEYWORDS.count);
     init(*table, size);
 
     #insert -> string {
         b: String_Builder;
-        init_string_builder(*b);
-        curr_type := "keyword";
-        curr_slice_count := 3;
-        for enum_names(Keyword) {
-            if starts_with(it, "kwt") {
-                curr_type = "type_keyword";
-                curr_slice_count = 4;
-            } else if starts_with(it, "kwm") {
-                curr_type = "modifier_keyword";
-                curr_slice_count = 4;
-            } else if starts_with(it, "kwv") {
-                curr_type = "value_keyword";
-                curr_slice_count = 4;
-            } else {
-                curr_type = "keyword";
-                curr_slice_count = 3;
-            }
-
-            print_to_builder(*b, "table_add(*table, \"%\", Keyword_Token.{type = .%, keyword = .%});\n",
-                            slice(it, curr_slice_count, it.count - curr_slice_count), curr_type, it);
-        }
+        for KEYWORDS        append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword,       keyword = .kw_%1 });\n", it));
+        for TYPE_KEYWORDS   append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .type_keyword,  keyword = .kw_%1 });\n", it));
+        for VALUE_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value_keyword, keyword = .kw_%1 });\n", it));
         return builder_to_string(*b);
     }
 
     return table;
 }
+
 MAX_KEYWORD_LENGTH :: #run -> s32 {
-    max_len := 0;
-
-    curr_slice_count := 3;
-
-    for enum_names(Keyword) {
-        if starts_with(it, "kwt") curr_slice_count = 4;
-        else if starts_with(it, "kwm") curr_slice_count = 4;
-        else if starts_with(it, "kwv") curr_slice_count = 4;
-        else curr_slice_count = 3;
-
-        actual := slice(it, curr_slice_count, it.count - curr_slice_count);
-        if actual.count > max_len max_len = actual.count;
-    }
-    return xx max_len;
+    result: s64;
+    for KEYWORDS       { if it.count > result then result = it.count; }
+    for TYPE_KEYWORDS  { if it.count > result then result = it.count; }
+    for VALUE_KEYWORDS { if it.count > result then result = it.count; }
+    return xx result;
 }
 
 #run assert(enum_highest_value(Token.Type) == COLOR_MAP.count - 1);
