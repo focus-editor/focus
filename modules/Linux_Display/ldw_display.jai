@@ -56,6 +56,8 @@ Wayland_Display :: struct {
     scale_factor_override: s32;
 
     current_hovered_window: *Wayland_Window;
+
+    no_loop_mime: string;
 }
 
 Wayland_Window :: struct {
@@ -149,6 +151,7 @@ wl_init_display :: (display: *Display) -> bool {
     }
 
     d.key_repeat_timer = timer_create(cb = wl_key_repeat_cb, user_data = d);
+    d.no_loop_mime = sprint("text/x-plain-do-not-loop-on-self;charset=utf-8;pid=%", getpid());
 
     bd: *Base_Display = display;
     bd.type = Wayland_Display;
@@ -454,7 +457,7 @@ wl_clipboard_set_text :: (display: *Display, text: string) {
     wl_proxy_set_user_data(d.clipboard_source, d);
 
     wl_data_source.offer(d.clipboard_source, MIME_TYPE_TEXT.data);
-    wl_data_source.offer(d.clipboard_source, MIME_TYPE_TEXT_NOLOOP.data);
+    wl_data_source.offer(d.clipboard_source, d.no_loop_mime.data);
 
     wl_data_device.set_selection(d.data_device, d.clipboard_source, d.input_serial);
 }
@@ -737,7 +740,6 @@ wl_set_fixed_scaling :: (display: *Display, factor: float) {
 #scope_file
 
 MIME_TYPE_TEXT        :: "text/plain;charset=utf-8";
-MIME_TYPE_TEXT_NOLOOP :: "text/x-plain-do-not-loop-on-self;charset=utf-8";
 MIME_TYPE_FILE_LIST   :: "text/uri-list";
 
 DATA_OFFER_READ_SIZE :: 2048;
@@ -760,7 +762,7 @@ data_offer_has_mime_type :: (d: *Wayland_Display, mime: string) -> bool {
 }
 
 data_offer_read_data :: (d: *Wayland_Display, mime_type: string, sb: *String_Builder) {
-    if data_offer_has_mime_type(d, MIME_TYPE_TEXT_NOLOOP) {
+    if data_offer_has_mime_type(d, d.no_loop_mime) {
         /* Do not block on read when we're the source of clipboard data */
         if mime_type == MIME_TYPE_TEXT append(sb, d.clipboard_send_data);
         return;
@@ -791,7 +793,7 @@ data_offer_read_data :: (d: *Wayland_Display, mime_type: string, sb: *String_Bui
 }
 
 data_offer_read_data :: (d: *Wayland_Display, mime_type: string, dst: *[..]u8) {
-    if data_offer_has_mime_type(d, MIME_TYPE_TEXT_NOLOOP) {
+    if data_offer_has_mime_type(d, d.no_loop_mime) {
         /* Do not block on read when we're the source of clipboard data */
         if mime_type == MIME_TYPE_TEXT {
             old_count := dst.count;
