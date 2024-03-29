@@ -4,7 +4,7 @@ platform_apply_config :: () {
 
 platform_setup :: inline () {
     app_id     :: "dev.focus-editor.focus";  // needs to be lower-case as (some?) Wayland compositors seem to lower-case app ids anyway and we need the desktop entry file name to match the app id
-    app_ver_id :: 2;   // ID that we can increment if we need to change the desktop entry in any way
+    app_ver_id :: 3;   // ID that we can increment if we need to change the desktop entry in any way
     ver_id     :: #run sprint("%-%", app_id, app_ver_id);
     ver_id_key :: #run sprint("X-Focus-Ver-Id=%", ver_id);
 
@@ -54,9 +54,10 @@ NoDisplay=true
 DBusActivatable=false
 Exec=focus-linux
 Icon=%
+StartupWMClass=%
 %
 DONE;
-        desktop_entry_data := sprint(desktop_entry_fmt, icon_path, ver_id_key);
+        desktop_entry_data := sprint(desktop_entry_fmt, icon_path, app_id, ver_id_key);
         write_entire_file(desktop_entry_path, desktop_entry_data);
         free(desktop_entry_data);
     }
