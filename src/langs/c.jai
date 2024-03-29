@@ -301,7 +301,7 @@ parse_preprocessor_directive :: (using tokenizer: *Tokenizer, token: *Token) {
 
     t += 1;
     eat_white_space(tokenizer);  // there may be spaces between the # and the name
-    if !is_alpha(<<t) return;
+    if t < max_t && !is_alpha(<<t) return;
 
     directive_str := read_identifier_string(tokenizer);
 
