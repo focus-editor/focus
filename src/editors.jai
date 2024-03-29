@@ -1117,7 +1117,10 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
             case "focus-config";   buffer.lang = .Focus_Config;
             case "focus-theme";    buffer.lang = .Focus_Theme;
             case "go";             buffer.lang = .Golang;
+
+            case "ts";             #through;
             case "js";             buffer.lang = .Js;
+
             case "lua";            buffer.lang = .Lua;
             case "odin";           buffer.lang = .Odin;
             case "py";             buffer.lang = .Python;
