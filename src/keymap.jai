@@ -340,6 +340,11 @@ ACTIONS_COMMON :: string.[
     "close_right_editor",
     "close_dialog",
     "escape",
+
+    "go_to_next_build_error",
+    "go_to_next_build_error_on_the_side",
+    "go_to_previous_build_error",
+    "go_to_previous_build_error_on_the_side",
 ];
 
 ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[

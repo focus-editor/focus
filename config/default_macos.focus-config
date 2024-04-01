@@ -290,6 +290,11 @@ Cmd-Minus                       decrease_font_size
 Cmd-0                           reset_font_size_to_default
 Cmd-MouseMiddle                 reset_font_size_to_default
 
+F8                              go_to_next_build_error
+Cmd-F8                          go_to_next_build_error_on_the_side
+Shift-F8                        go_to_previous_build_error
+Shift-Cmd-F8                    go_to_previous_build_error_on_the_side
+
 
 [[style]]
 

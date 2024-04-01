@@ -364,6 +364,19 @@ count_whitespace :: (bytes: [] u8, start_offset: s64, max_offset: s64, spaces :=
     return cast(s32) (max_offset - start_offset);
 }
 
+count_bytes_knowing_number_of_chars :: (bytes: [] u8, start_offset: s64, max_offset: s64, num_chars: s32) -> count: s32 {
+    count: s32 = 0;
+    s := cast(string) array_view(bytes, start_offset, max_offset - start_offset);
+    while s && num_chars {
+        byte := s[0];
+        num_bytes := 1 + trailingBytesForUTF8[byte];
+        advance(*s, num_bytes);
+        count += num_bytes;
+        num_chars -= 1;
+    }
+    return count;
+}
+
 get_visual_indent_in_spaces :: (line: string, spaces := " \t") -> indent: int {
     indent := 0;
     for byte : to_bytes(trim_right(line)) {
@@ -483,6 +496,14 @@ split :: (s: string, separator: $T, max_splits: int) -> [] string {
     if !remainder && results.count < max_splits array_add(*results, "");
 
     return results;
+}
+
+table_find_or_default :: (table: *Table, key: table.Key_Type) -> table.Value_Type {
+    pointer := inline table_find_pointer(table, key);
+    if pointer  return << pointer;
+
+    default: table.Value_Type;
+    return default;
 }
 
 Tween_Animation :: struct(T: Type) {

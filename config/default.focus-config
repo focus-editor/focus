@@ -83,6 +83,8 @@ save_current_buffer_on_build:           false
 # open_panel_on_build:    true  #  <- any settings specified here will apply to all commands unless overridden
 # close_panel_on_success: false
 # clear_build_output_before_running: false
+# error_regex:            ^(?P<file>.*):(?P<line>\d+),(?P<col>\d+): (?P<type>Error|Warning|Info): (?P<msg>.*)|^(?P<msg>.*error LNK.*)
+# auto_jump_to_error:     false
 
 # [Debug Build And Run]   # <- command name. Can be arbitrary
 # build_command:          jai main.jai  # should be an executable or a script
@@ -301,6 +303,11 @@ Ctrl-Plus                   increase_font_size
 Ctrl-Minus                  decrease_font_size
 Ctrl-0                      reset_font_size_to_default
 Ctrl-MouseMiddle            reset_font_size_to_default
+
+F8                          go_to_next_build_error
+Ctrl-F8                     go_to_next_build_error_on_the_side
+Shift-F8                    go_to_previous_build_error
+Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
 
 
 [[style]]

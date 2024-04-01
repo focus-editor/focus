@@ -33,6 +33,8 @@ execute_build_command :: (command: *Build_Command) {
         return;
     }
 
+    clear_user_messages(.build);
+
     // Validate command
     {
         using command;
@@ -71,10 +73,9 @@ execute_build_command :: (command: *Build_Command) {
 
     print_to_output_panel_from_main_thread(tprint("%\n", command.name), mark_as = .header);
 
-    allocator := Allocator.{ proc = flat_pool_allocator_proc, data = *memory_pool };
-    push_allocator(allocator);
+    reset(*memory_pool);
 
-    running_command = New(Build_Command);
+    running_command = New(Build_Command,, allocator = get_pool_allocator());
     running_command.* = command.*;
     running_command.name              = copy_string(command.name);
     running_command.build_command     = copy_string(command.build_command);
@@ -113,7 +114,7 @@ build_command_is_running :: () -> bool {
 
 build_kill_running_command :: () {
     if !running_command {
-        add_user_warning("No command is currently running", dismiss_in_seconds = 3);
+        add_user_warning("No command is currently running", dismiss_in_seconds = 3, tag = .build);
         return;
     }
     lock(*build_mutex);
@@ -151,7 +152,7 @@ build_system_update :: () {
         kind: Buffer_Region.Kind = .none;
 
         result := ifx last_command_result.run.finished then last_command_result.run else last_command_result.build;
-        failed_command := ifx last_command_result.run.finished then running_command.run_command else running_command.build_command;
+        finished_command := ifx last_command_result.run.finished then running_command.run_command else running_command.build_command;
 
         if result.timeout_reached {
             message = tprint("TIMED OUT after % seconds", running_command.timeout_in_seconds);
@@ -160,8 +161,8 @@ build_system_update :: () {
             if #complete result.process_result.type == {
                 case .UNSTARTED; #through;
                 case .FAILED_TO_LAUNCH;
-                    message = tprint("ERROR: couldn't launch '%'", failed_command);
-                    if !is_absolute_path(failed_command) then message = tprint("%. Try specifying a full path to the executable.", message);
+                    message = tprint("ERROR: couldn't launch '%'", finished_command);
+                    if !is_absolute_path(finished_command) then message = tprint("%. Try specifying a full path to the executable.", message);
                     kind = .error;
                 case .STILL_RUNNING;
                     message = "ERROR: the command is still running. This is a bug.";
@@ -179,6 +180,8 @@ build_system_update :: () {
                         kind = .success;
                     }
             }
+
+            if last_command_result.build.finished && last_command_result.build.process_result.exit_code != 0 then parse_build_errors(running_command.error_regex);
         }
 
         print_to_output_panel_from_main_thread(tprint("%\n", message), mark_as = kind, add_newline_if_missing = true);
@@ -189,10 +192,10 @@ build_system_update :: () {
         } else {
             // Always show the panel on errors
             show_build_panel();
+            if running_command.auto_jump_to_error then go_to_next_build_error();
         }
 
         running_command = null;
-        reset(*memory_pool);
     }
 }
 
@@ -227,12 +230,25 @@ show_build_panel :: () {
 }
 
 hide_build_panel :: () {
+    build_panel_lose_focus();
+    build_panel_is_shown = false;
+}
+
+is_build_panel :: inline (editor_id: s64) -> bool {
+    return editor_id == build_editor_id;
+}
+
+build_panel_activate :: () {
+    previously_active_editor = editors.active;
+}
+
+build_panel_lose_focus :: () {
+    // Sometimes we might want to make the previously active editor active, e.g. when deciding on new buffer placement
     if editors.active != editors.left && editors.active != editors.right && editors.left >= 0 && editors.right >= 0 {
         // If we still have the same editors open when the panel was opened, go back to the previously active one,
         // otherwise default to left.
         make_editor_active(ifx previously_active_editor == editors.right then editors.right else editors.left);
     }
-    build_panel_is_shown = false;
 }
 
 toggle_build_panel_height :: () {
@@ -276,6 +292,24 @@ build_panel_is_active :: inline () -> bool {
     return build_panel_is_shown && build_editor_id >= 0 && editors.active == build_editor_id;
 }
 
+cursor_is_on_build_error :: (cursor: Cursor) -> bool {
+    return get_error_id_under_cursor(cursor) >= 0;
+}
+
+go_to_build_error_under_cursor :: (cursor: Cursor, placement: Editor_Placement = .in_place) {
+    error_id := get_error_id_under_cursor(cursor);
+    if error_id < 0 || error_id >= last_command_result.build_errors.count return;
+    last_command_result.current_build_error_id = error_id;
+    go_to_current_build_error(placement, show_error = false);
+}
+
+get_error_id_under_cursor :: (cursor: Cursor) -> error_id: s64 {
+    for last_command_result.build_errors {
+        if it.file_output_range.start <= cursor.pos && cursor.pos <= it.file_output_range.end return it_index;
+    }
+    return -1;
+}
+
 build_panel_get_editor_id :: inline () -> s64 {
     assert(build_editor_id >= 0);
     return build_editor_id;
@@ -286,6 +320,18 @@ build_panel_set_line_wrap :: (enable: bool) {
     editor := *open_editors[build_editor_id];
     if  enable && editor.line_wrap == .off then editor.line_wrap = .to_enable;
     if !enable && editor.line_wrap == .on  then editor.line_wrap = .to_disable;
+}
+
+go_to_next_build_error :: (placement: Editor_Placement = .in_place) {
+    using last_command_result;
+    current_build_error_id = (current_build_error_id + 1) % build_errors.count;
+    go_to_current_build_error(placement);
+}
+
+go_to_previous_build_error :: (placement: Editor_Placement = .in_place) {
+    using last_command_result;
+    current_build_error_id = (current_build_error_id - 1 + build_errors.count) % build_errors.count;
+    go_to_current_build_error(placement);
 }
 
 build_panel_is_shown := false;
@@ -311,8 +357,7 @@ build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thre
 
     log("Executing build command [%]\n", command.name);
 
-    allocator := Allocator.{ proc = flat_pool_allocator_proc, data = *memory_pool };
-    push_allocator(allocator);
+    push_allocator(get_pool_allocator());
 
     defer {
         // Writing to a global var here and below but it's OK because it won't be accessed until the thread is done
@@ -321,7 +366,8 @@ build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thre
     }
 
     if command.build_command {
-        write_output_from_build_thread(*stdout, tprint("> %\n", command.build_command));
+        header := tprint("> %\n", command.build_command);
+        write_output_from_build_thread(*stdout, header);
 
         result, timeout_reached := run_command_while_monitoring_output(
             ..break_command_into_strings(command.build_command),
@@ -388,6 +434,113 @@ print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kin
     }
 }
 
+parse_build_errors :: (error_regex: string) {
+    if !error_regex return;
+
+    assert(last_command_result.build.finished);
+    assert(!last_command_result.build_errors);  // we should've cleared it by now
+
+    push_allocator(get_pool_allocator());
+
+    // Find the command output range
+    editor, buffer := get_build_editor_and_buffer();
+    start := -1;
+    for < * region : buffer.regions {
+        if region.kind == .header { start = region.end; break; }
+    }
+    if start < 0 || start >= buffer.bytes.count return;
+    build_output := cast(string) array_view(buffer.bytes, start, buffer.bytes.count - start);
+
+    compiled_regex, valid := re.compile(error_regex, .LikePerl & ~.OneLine);
+    if !valid {
+        log_error("Unable to parse build errors because error_regex is invalid: %\n", error_regex);
+        return;
+    }
+
+    while true {
+        matched, captures := re.match(build_output, compiled_regex);
+        if !matched break;
+
+        capture := captures[0];
+        if !capture { log_error("Build error_regex matched an empty line. Skipping...\n"); break; }
+
+        advance(*build_output, capture.data - build_output.data + capture.count);
+
+        named_captures := re.map_named_captures(captures, compiled_regex);
+        #if DEBUG_BUILD_ERRORS for value, name : named_captures { print("% = %\n", name, value); }
+
+        msg, msg_found := table_find(*named_captures, "msg");
+        if !msg_found continue;
+
+        file, file_found := table_find(*named_captures, "file");
+        if !file_found continue;
+
+        build_error := Build_Error.{ file = copy_string(file), message = copy_string(msg) };
+        path_overwrite_separators(build_error.file, #char "/");
+
+        build_error.file_output_range = .{
+            start = cast(s32)(file.data - buffer.bytes.data),
+            end   = cast(s32)(file.data - buffer.bytes.data + file.count),
+        };
+
+        type := table_find_or_default(*named_captures, "type");
+        if type {
+            if contains_nocase(type, "warning") {
+                build_error.type = .warning;
+            } else if contains_nocase(type, "info") {
+                build_error.type = .info;
+            }
+        }
+
+        line := table_find_or_default(*named_captures, "line");
+        val, parsed := string_to_int(line, T = s32);
+        if parsed then build_error.line = val;
+
+        col  := table_find_or_default(*named_captures, "col");
+        val, parsed  = string_to_int(col, T = s32);
+        if parsed then build_error.col = val;
+
+        array_add(*last_command_result.build_errors, build_error);
+    }
+
+    #if DEBUG_BUILD_ERRORS for last_command_result.build_errors print("%\n", it);
+}
+
+get_pool_allocator :: inline () -> Allocator {
+    return Allocator.{ proc = flat_pool_allocator_proc, data = *memory_pool };
+}
+
+go_to_current_build_error :: (placement: Editor_Placement = .in_place, show_error := true) {
+    using last_command_result;
+
+    clear_user_messages(.build);
+
+    if !build_errors {
+        add_user_warning("No build errors are found", dismiss_in_seconds = 3, tag = .build);
+        return;
+    }
+
+    current_build_error_id = clamp(current_build_error_id, 0, build_errors.count - 1);
+
+    build_error := build_errors[current_build_error_id];
+
+    old_layout := editors.layout;
+    editors_open_file(build_error.file, placement);
+
+    editor, buffer := get_active_editor_and_buffer();
+    go_to_line(editor, buffer, build_error.line, build_error.col);
+
+    if old_layout == .Single && editors.layout == .Double then editor.scroll_to_cursor = .yes_new_editor;
+
+    if show_error {
+        if #complete build_error.type == {
+            case .error;    add_user_error(build_error.message, dismiss_in_seconds = 15, .build);
+            case .warning;  #through;
+            case .info;     add_user_warning(build_error.message, dismiss_in_seconds = 15, .build);
+        }
+    }
+}
+
 thread_group: Thread_Group;
 
 build_buffer_id := -1;
@@ -405,6 +558,9 @@ last_command_result: struct {
     build: Command_Result;
     run:   Command_Result;
     finished := false;
+
+    build_errors: [..] Build_Error;  // allocated from pool
+    current_build_error_id := -1;
 };
 
 memory_pool: Flat_Pool;
@@ -423,6 +579,15 @@ Command_Result :: struct {
     finished:        bool;
     timeout_reached: bool;
     process_result:  Process_Result;
+}
+
+Build_Error :: struct {
+    file: string;
+    file_output_range: Offset_Range;  // where in the build output the file path is (for double-click support)
+    message: string;
+    line: s32 = -1;
+    col:  s32 = -1;
+    type: enum { error; warning; info; } = .error;
 }
 
 MAX_BUILD_OUTPUT_BUFFER_SIZE :: 6 * 1024 * 1024;
@@ -656,3 +821,5 @@ write_output_from_build_thread :: (builder: *String_Builder, s: string) {
 }
 
 System :: #import "System";
+
+DEBUG_BUILD_ERRORS :: false;

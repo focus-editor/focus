@@ -19,8 +19,10 @@
 # Main Git Branch
 
 + New features:
+    + Jumping to build errors is now supported. See the default config for examples and more information (thanks @jlami for the initial implementation)
     + Closing an editor will now remove the corresponding file from the open files list (only if it's not modified)
     + New Handmade Hero theme (thanks @Sokus)
+    + Basic JS highlighting (thanks @simonvallz)
 + Bug fixes:
     + ...
 + Other changes:

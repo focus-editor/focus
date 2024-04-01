@@ -436,6 +436,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
     if ui.active == ui_id && (mouse.left.just_pressed || mouse.left.is_dragging) {
         mouse_coords := coords_from_mouse_position();
 
+        just_jumped_from_build_panel := false;
+
         cursors_stop_blinking();
 
         if ctrl_or_cmd_pressed() && !(mouse.left.is_dragging || mouse.left.just_double_clicked || mouse.left.just_triple_clicked) {
@@ -524,7 +526,10 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
             if !shift_pressed() && mouse.left.just_pressed then cursor.sel = cursor.pos;
 
-            if mouse.left.just_double_clicked {
+            if mouse.left.just_double_clicked && as_build_panel && cursor_is_on_build_error(cursor) {
+                go_to_build_error_under_cursor(cursor, ifx ctrl_or_cmd_pressed() then Editor_Placement.on_the_side else Editor_Placement.in_place);
+                just_jumped_from_build_panel = true;
+            } else if mouse.left.just_double_clicked {
                 select_word(buffer, cursor);
                 selection_mode.type  = .words;
                 selection_mode.range = get_selection(cursor);
@@ -540,7 +545,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         editor.refresh_selection = true;
 
-        if mouse.left.just_pressed {
+        if mouse.left.just_pressed && !just_jumped_from_build_panel {
             make_editor_active(editor_id);
             redraw_requested = true;  // so that we don't draw 2 active editors
         }

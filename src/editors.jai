@@ -512,6 +512,8 @@ editors_create_new_file :: (placement: Editor_Placement = .in_place) {
 }
 
 editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place) {
+    if build_panel_is_active() then build_panel_lose_focus();
+
     if #complete editors.layout == {
         case .None;
             editors.active = find_or_create_editor(buffer_id);
@@ -579,6 +581,25 @@ move_cursor_to_viewport_center :: (editor: *Editor, buffer: Buffer) {
     cursor.pos = coords_to_offset(editor, buffer, coords);
     cursor.sel = cursor.pos;
     editor.cursor_moved = .refresh_only;
+}
+
+go_to_line :: (editor: *Editor, buffer: Buffer, line: s64, col: s32 = -1) {
+    line_num   := clamp(line - 1, 0, get_max_real_line_num(buffer));
+    line_start := get_real_line_start_offset(buffer, cast(s32) line_num);
+    line_end   := get_real_line_end_offset  (buffer, cast(s32) line_num);
+
+    cursor := leave_only_original_cursor(editor);
+    if col < 0 {
+        cursor.pos = line_start + count_whitespace(buffer.bytes, line_start, line_end);
+        cursor.sel = line_end;  // to make the line visible
+    } else {
+        cursor.pos = line_start + count_bytes_knowing_number_of_chars(buffer.bytes, line_start, line_end, col - 1);
+        if cursor.pos > line_end then cursor.pos = line_end;
+        cursor.sel = cursor.pos;
+    }
+    add_paste_animation(editor, .{ line_start, line_end});
+    editor.cursor_moved = .jumped;
+    editor.scroll_to_cursor = .yes;
 }
 
 leave_only_original_cursor :: (using editor: *Editor) -> *Cursor {
@@ -1328,6 +1349,7 @@ restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor) {
 
 make_editor_active :: (editor_id: s64) {
     assert(editor_id < open_editors.count, "Trying to activate editor %, but the last available one is %", editor_id, open_editors.count - 1);
+    if is_build_panel(editor_id) then build_panel_activate();
     editors.active = editor_id;
 
     buffer_id := open_editors[editor_id].buffer_id;
