@@ -1523,7 +1523,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             defer pop_scissor();
 
             // Get line/col.
-            line := cursor_coords[main_cursor].pos.line;
+            line := offset_to_real_line(buffer, editor.cursors[main_cursor].pos);
             col  := 0;
             {
                 // Do not count indented tabs here, only count each tab as one character.
