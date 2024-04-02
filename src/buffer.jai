@@ -424,9 +424,11 @@ recalculate_colors :: (buffer: *Buffer) {
     buffer.needs_coloring = false;
 
     tokenize := get_tokenize_function(buffer.lang);
+
+    // Resize colors if we ever changed the color array
+    if buffer.colors || tokenize != null then array_resize(*buffer.colors, buffer.bytes.count);  // this will reset colors to 0
     if tokenize == null return;
 
-    array_resize(*buffer.colors, buffer.bytes.count);  // this will reset colors to 0
     new_regions := tokenize(buffer);
 
     // Clear buffer regions
@@ -449,7 +451,7 @@ recalculate_colors :: (buffer: *Buffer) {
 buffer_needs_coloring :: (buffer: Buffer) -> bool {
     return
         (buffer.needs_coloring || buffer.colors.count != buffer.bytes.count) &&
-        get_tokenize_function(buffer.lang) != null;
+        (get_tokenize_function(buffer.lang) != null || buffer.colors.count > 0);
 }
 
 tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */ {
@@ -1142,6 +1144,12 @@ process_buffer_save_queue :: () {
             case .reload_workspace;     should_reload_workspace = true;
         }
     }
+}
+
+manually_mark_range_as_token :: (buffer: *Buffer, range: Offset_Range, color: Color) {
+    assert(range.start >= 0 && range.end <= buffer.bytes.count);
+    array_resize(*buffer.colors, buffer.bytes.count);
+    memset(buffer.colors.data + range.start, xx color, range.end - range.start);
 }
 
 #scope_file

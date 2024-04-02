@@ -487,6 +487,9 @@ parse_build_errors :: (error_regex: string) {
             end   = cast(s32)(file.data - buffer.bytes.data + file.count),
         };
 
+        // Highlight file paths for easier recognition that an error has been detected
+        manually_mark_range_as_token(buffer, build_error.file_output_range, .CODE_HIGHLIGHT);
+
         type := table_find_or_default(*named_captures, "type");
         if type {
             if contains_nocase(type, "warning") {
