@@ -1,4 +1,4 @@
-CURRENT_CONFIG_VERSION :: 2;
+CURRENT_CONFIG_VERSION :: 3;
 
 load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
     config_path := tprint("%/global.focus-config", config_dir);

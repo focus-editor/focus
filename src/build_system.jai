@@ -324,12 +324,16 @@ build_panel_set_line_wrap :: (enable: bool) {
 
 go_to_next_build_error :: (placement: Editor_Placement = .in_place) {
     using last_command_result;
+    if !build_errors return;
+
     current_build_error_id = (current_build_error_id + 1) % build_errors.count;
     go_to_current_build_error(placement);
 }
 
 go_to_previous_build_error :: (placement: Editor_Placement = .in_place) {
     using last_command_result;
+    if !build_errors return;
+
     current_build_error_id = (current_build_error_id - 1 + build_errors.count) % build_errors.count;
     go_to_current_build_error(placement);
 }

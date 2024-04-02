@@ -12,6 +12,8 @@ maybe_migrate_config :: (name: string, file_data: string, assume_section := "") 
     // Do one full pass to collect information, not touching anything
     config_info: Config_Info;
     {
+        config_info.version = handler.version;
+
         current_section := assume_section;
         current_subsection: string;
 
@@ -76,16 +78,16 @@ maybe_migrate_config :: (name: string, file_data: string, assume_section := "") 
             inserted_bytes := 0;
 
             there_are_settings_to_add := false;
-            for ADDED_SETTINGS {
-                if !table_contains(*config_info.settings_present, it.name) { there_are_settings_to_add = true; break; }
+            for added : ADDED_SETTINGS {
+                if !table_contains(*config_info.settings_present, added.name) && added.version > config_info.version { there_are_settings_to_add = true; break; }
             }
             if there_are_settings_to_add {
-                heading := "\n# New in version [2]\n";
+                heading := tprint("\n# Added after migration to version [%]\n", CURRENT_CONFIG_VERSION);
                 array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) heading);
                 inserted_bytes += heading.count;
             }
             for added : ADDED_SETTINGS {
-                if !table_contains(*config_info.settings_present, added.name) {
+                if !table_contains(*config_info.settings_present, added.name) && added.version > config_info.version {
                     padding := get_tmp_spaces(SETTING_VALUES_INDENT - added.name.count - 1);
                     setting := tprint("%1:%2%3\n", added.name, padding, added.value);
                     array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) setting);
@@ -106,15 +108,15 @@ maybe_migrate_config :: (name: string, file_data: string, assume_section := "") 
 
             there_are_colors_to_add := false;
             for added : ADDED_COLORS {
-                if !table_contains(*config_info.colors_present, added.name) { there_are_colors_to_add = true; break; }
+                if !table_contains(*config_info.colors_present, added.name) && added.version > config_info.version { there_are_colors_to_add = true; break; }
             }
             if there_are_colors_to_add {
-                heading := "\n# New in version [2]\n";
+                heading := tprint("\n# Added after migration to version [%]\n", CURRENT_CONFIG_VERSION);
                 array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) heading);
                 inserted_bytes += heading.count;
             }
             for added : ADDED_COLORS {
-                if !table_contains(*config_info.colors_present, added.name) {
+                if !table_contains(*config_info.colors_present, added.name) && added.version > config_info.version {
                     value := added.default;
                     if added.value_from {
                         source_value, success := table_find(*config_info.colors_present, added.value_from);
@@ -141,8 +143,8 @@ maybe_migrate_config :: (name: string, file_data: string, assume_section := "") 
             // Maybe print a heading
             for added : ADDED_KEYBINDS {
                 if added.subsection != SUBSECTION continue;
-                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) {
-                    heading := "\n# New in version [2]\n";
+                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) && added.version > config_info.version {
+                    heading := tprint("\n# Added after migration to version [%]\n", CURRENT_CONFIG_VERSION);
                     array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) heading);
                     inserted_bytes += heading.count;
                     break;
@@ -151,7 +153,7 @@ maybe_migrate_config :: (name: string, file_data: string, assume_section := "") 
 
             for added : ADDED_KEYBINDS {
                 if added.subsection != SUBSECTION continue;
-                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) {
+                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) && added.version > config_info.version {
                     key_combo := added.key_combo;
                     if OS == .MACOS then key_combo = added.key_combo_mac;
                     padding := get_tmp_spaces(KEYBINDS_INDENT - key_combo.count);
@@ -174,8 +176,8 @@ maybe_migrate_config :: (name: string, file_data: string, assume_section := "") 
             // Maybe print a heading
             for added : ADDED_KEYBINDS {
                 if added.subsection != SUBSECTION continue;
-                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) {
-                    heading := "\n# New in version [2]\n";
+                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) && added.version > config_info.version {
+                    heading := tprint("\n# Added after migration to version [%]\n", CURRENT_CONFIG_VERSION);
                     array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) heading);
                     inserted_bytes += heading.count;
                     break;
@@ -184,7 +186,7 @@ maybe_migrate_config :: (name: string, file_data: string, assume_section := "") 
 
             for added : ADDED_KEYBINDS {
                 if added.subsection != SUBSECTION continue;
-                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) {
+                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) && added.version > config_info.version {
                     key_combo := added.key_combo;
                     if OS == .MACOS then key_combo = added.key_combo_mac;
                     padding := get_tmp_spaces(KEYBINDS_INDENT - key_combo.count);
@@ -195,9 +197,10 @@ maybe_migrate_config :: (name: string, file_data: string, assume_section := "") 
             }
         }
 
-        // Bump version [1] -> [2]
-        assert(begins_with(cast(string) modified_data, "[1]"));
-        modified_data[1] = cast(u8) #char "2";
+        // Bump version from [whatever] to [current]
+        assert(begins_with(cast(string) modified_data, tprint("[%]", config_info.version)));
+        new_version_number := tprint("[%]", CURRENT_CONFIG_VERSION);
+        focus_memcpy(modified_data.data, new_version_number.data, new_version_number.count);
 
         current_section := assume_section;
         current_subsection: string;
@@ -306,16 +309,21 @@ get_line_length :: (buffer: [..] u8, line_start_offset: s64) -> length: s64 {
 }
 
 ADDED_SETTINGS :: Added_Setting.[
-    .{ 2, "build_panel_width_percent",                  "50" },
-    .{ 2, "build_panel_height_percent",                 "50" },
-    .{ 2, "build_panel_stays_in_one_place",             "false  # if false, the build panel will flip to the inactive pane in two pane layouts" },
-    .{ 2, "build_panel_line_wrap_always_on",            "true" },
-    .{ 2, "highlight_line_with_cursor",                 "false" },
-    .{ 2, "draw_indent_guides",                         "false" },
-    .{ 2, "auto_surround_with_brackets_and_quotes",     "false" },
-    .{ 2, "scroll_beyond_last_line",                    "true" },
-    .{ 2, "show_cursors_off_screen",                    "true" },
-    .{ 2, "persist_local_search_results",               "false  # if true, search results will stay highlighted and you have to dismiss them using the `escape` action" },
+    .{ 2, "build_panel_width_percent",                          "50" },
+    .{ 2, "build_panel_height_percent",                         "50" },
+    .{ 2, "build_panel_stays_in_one_place",                     "false  # if false, the build panel will flip to the inactive pane in two pane layouts" },
+    .{ 2, "build_panel_line_wrap_always_on",                    "true" },
+    .{ 2, "highlight_line_with_cursor",                         "false" },
+    .{ 2, "draw_indent_guides",                                 "false" },
+    .{ 2, "auto_surround_with_brackets_and_quotes",             "false" },
+    .{ 2, "scroll_beyond_last_line",                            "true" },
+    .{ 2, "show_cursors_off_screen",                            "true" },
+    .{ 2, "persist_local_search_results",                       "false  # if true, search results will stay highlighted and you have to dismiss them using the `escape` action" },
+
+    .{ 3, "save_current_buffer_on_build",                       "false" },
+    .{ 3, "save_all_file_backed_buffers_on_build",              "false" },
+    .{ 3, "disable_viewport_chasing_cursor_near_the_edge",      "false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts" },
+    .{ 3, "show_selected_text_length",                          "false" },
 ];
 
 REMOVED_SETTINGS :: Removed_Setting.[
@@ -327,7 +335,7 @@ SETTING_VALUES_INDENT :: #run -> int {
     for ADDED_SETTINGS {
         length = max(length, it.name.count);
     }
-    return max(length, 40);  // 40 is based on the current indent, but might get longer later if we have longer setting names
+    return length + 2;
 }
 
 RENAMED_COLORS :: Renamed_Color.[
@@ -352,6 +360,8 @@ ADDED_COLORS :: Added_Color.[
     .{ 2, "build_panel_scrollbar_hover",      "scrollbar_hover",        "33CCCC4C" },
     .{ 2, "build_panel_scrollbar_background", "scrollbar_background",   "10191F4C" },
     .{ 2, "build_panel_title_bar",            "",                       "1C303AFF" },
+
+    .{ 3, "region_heredoc",                   "background1",            "090e12FF" },
 ];
 
 COLOR_VALUES_INDENT :: #run -> int {
@@ -363,13 +373,19 @@ COLOR_VALUES_INDENT :: #run -> int {
 }
 
 ADDED_KEYBINDS :: Added_Keybind.[
-    .{ 2, "editors", "add_cursors_to_line_ends",   "Alt-Shift-I",      "Alt-Shift-I"      },
-    .{ 2, "editors", "add_cursors_to_line_starts", "Alt-Shift-Ctrl-I", "Alt-Shift-Ctrl-I" },
-    .{ 2, "editors", "align_cursors",              "Alt-A",            "Alt-Cmd-A"        },
-    .{ 2, "editors", "select_all_occurrences",     "Ctrl-Shift-A",     "Cmd-Shift-A"      },
-    .{ 2, "common",  "toggle_build_panel",         "Ctrl-B",           "Cmd-B"            },
-    .{ 2, "common",  "toggle_fullscreen",          "F11",              "F11"              },
-    .{ 2, "common",  "switch_between_open_files",  "Ctrl-Tab",         "Ctrl-Tab"         },
+    .{ 2, "editors", "add_cursors_to_line_ends",        "Alt-Shift-I",      "Alt-Shift-I"      },
+    .{ 2, "editors", "add_cursors_to_line_starts",      "Alt-Shift-Ctrl-I", "Alt-Shift-Ctrl-I" },
+    .{ 2, "editors", "align_cursors",                   "Alt-A",            "Alt-Cmd-A"        },
+    .{ 2, "editors", "select_all_occurrences",          "Ctrl-Shift-A",     "Cmd-Shift-A"      },
+    .{ 2, "common",  "toggle_build_panel",              "Ctrl-B",           "Cmd-B"            },
+    .{ 2, "common",  "toggle_fullscreen",               "F11",              "F11"              },
+    .{ 2, "common",  "switch_between_open_files",       "Ctrl-Tab",         "Ctrl-Tab"         },
+
+    .{ 3, "common",  "open_another_editor_instance",              "Ctrl-Shift-Alt-N",   "Cmd-Shift-Alt-N" },
+    .{ 3, "common",  "go_to_next_build_error",                    "F8",                 "F8"              },
+    .{ 3, "common",  "go_to_next_build_error_on_the_side",        "Ctrl-F8",            "Cmd-F8"          },
+    .{ 3, "common",  "go_to_previous_build_error",                "Shift-F8",           "Shift-F8"        },
+    .{ 3, "common",  "go_to_previous_build_error_on_the_side",    "Shift-Ctrl-F8",      "Shift-Cmd-F8"    },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
@@ -384,6 +400,8 @@ KEYBINDS_INDENT :: 28;
 handler: Text_File_Handler;
 
 Config_Info :: struct {
+    version: int;
+
     settings_present: Table(string, bool);  // e.g. build_panel_width_percent -> true means it's present
     colors_present: Table(string, string);  // e.g. code_warning -> E4D97DFF (store a value we've seen)
     keybinds_present: Table(string, bool);
@@ -436,34 +454,39 @@ Renamed_Keybind :: struct {
 
 // ================================= TESTS ====================================
 
-RUN_TESTS :: false;
+RUN_TESTS :: true;
 
 // Yes we do unit tests now! Don't you dare submit a PR without tests and 100% coverage.
 // Also your code must comply with the SOLID principles. Are we real programmers or what?
 
 #if RUN_TESTS #run,stallable {
-    run_test("Settings migration",   "global.focus-config",  SETTINGS_1,  SETTINGS_1_EXPECTED);
-    run_test("Settings in projects", "project.focus-config", SETTINGS_2,  SETTINGS_2_EXPECTED);
-    run_test("New colors",           "global.focus-config",  COLORS_1,    COLORS_1_EXPECTED);
-    run_test("Settings and colors",  "global.focus-config",  COLORS_2,    COLORS_2_EXPECTED);
-    run_test("New keybinds",         "global.focus-config",  KEYBINDS_1,  KEYBINDS_1_EXPECTED);
-    run_test("Theme migration",      "nord.focus-theme",     THEME_1,     THEME_1_EXPECTED, assume_section = "style");
+    run_test("Settings migration [1] to [3]",   "global.focus-config",  SETTINGS_1_TO_3,               SETTINGS_1_TO_3_EXPECTED);
+    run_test("Settings migration [2] to [3]",   "global.focus-config",  SETTINGS_2_TO_3,               SETTINGS_2_TO_3_EXPECTED);
+    run_test("Project settings [1] to [3]",     "project.focus-config", PROJECT_SETTINGS_1_TO_3,       PROJECT_SETTINGS_1_TO_3_EXPECTED);
+    run_test("Сolors [1] to [3]",               "global.focus-config",  COLORS_1_TO_3,                 COLORS_1_TO_3_EXPECTED);
+    run_test("Сolors [2] to [3]",               "global.focus-config",  COLORS_2_TO_3,                 COLORS_2_TO_3_EXPECTED);
+    run_test("Settings and colors [1] to [3]",  "global.focus-config",  COLORS_AND_SETTINGS_1_TO_3,    COLORS_AND_SETTINGS_1_TO_3_EXPECTED);
+    run_test("Keybinds [1] to [3]",             "global.focus-config",  KEYBINDS_1_TO_3,               KEYBINDS_1_TO_3_EXPECTED);
+    run_test("Keybinds [2] to [3]",             "global.focus-config",  KEYBINDS_2_TO_3,               KEYBINDS_2_TO_3_EXPECTED);
+    run_test("Theme [1] to [3]",                "nord.focus-theme",     THEME_1_TO_3,                  THEME_1_TO_3_EXPECTED, assume_section = "style");
 }
 
 run_test :: (test_name: string, file_name: string, config_data: string, expected_data: string, assume_section := "") {
     migrated, modified_data := maybe_migrate_config(file_name, config_data, assume_section = assume_section);
     assert(migrated, "%: unexpectedly did not migrate successfully", test_name);
     if modified_data != expected_data {
-        print("========================\n");
+        print("EXPECTED DATA ========================\n");
+        print("%", cast(string) expected_data);
+        print("ACTUAL DATA ==========================\n");
         print("%", cast(string) modified_data);
-        print("========================\n");
+        print("======================================\n");
     }
     assert(modified_data == expected_data, "%: expected data mismatch", test_name);
 }
 
 // Test that settings are added and removed correctly
 
-SETTINGS_1 :: #string FOCUS_CONFIG
+SETTINGS_1_TO_3 :: #string FOCUS_CONFIG
 
 [1]  # Version number. Do not delete.
 
@@ -490,7 +513,55 @@ persist_local_search_results:           false
 
 FOCUS_CONFIG
 
-SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
+SETTINGS_1_TO_3_EXPECTED :: #string FOCUS_CONFIG
+[3]  # Version number. Do not delete.
+
+[[workspace]]
+
+[workspace dirs]
+# These directories will be scanned when a workspace is opened so that search etc. works.
+# Example:
+
+[[keymap]]
+[common]
+Ctrl-P                      open_file_by_name
+
+# Added after migration to version [3]
+Ctrl-B                      toggle_build_panel
+F11                         toggle_fullscreen
+Ctrl-Tab                    switch_between_open_files
+Ctrl-Shift-Alt-N            open_another_editor_instance
+F8                          go_to_next_build_error
+Ctrl-F8                     go_to_next_build_error_on_the_side
+Shift-F8                    go_to_previous_build_error
+Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
+
+[[settings]]
+
+maximize_on_start:                      false
+tab_size:                               4
+build_panel_width_percent:              50
+insert_spaces_when_pressing_tab:        true
+prefer_system_file_dialogs:             false  # Windows only
+show_cursors_off_screen:                true
+persist_local_search_results:           false
+
+# Added after migration to version [3]
+build_panel_height_percent:                    50
+build_panel_stays_in_one_place:                false  # if false, the build panel will flip to the inactive pane in two pane layouts
+build_panel_line_wrap_always_on:               true
+highlight_line_with_cursor:                    false
+draw_indent_guides:                            false
+auto_surround_with_brackets_and_quotes:        false
+scroll_beyond_last_line:                       true
+save_current_buffer_on_build:                  false
+save_all_file_backed_buffers_on_build:         false
+disable_viewport_chasing_cursor_near_the_edge: false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts
+show_selected_text_length:                     false
+
+FOCUS_CONFIG
+
+SETTINGS_2_TO_3 :: #string FOCUS_CONFIG
 [2]  # Version number. Do not delete.
 
 [[workspace]]
@@ -503,9 +574,10 @@ SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
 [common]
 Ctrl-P                      open_file_by_name
 
-# New in version [2]
+# Added after migration to version [2]
 Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
+Ctrl-Tab                    switch_between_open_files
 
 [[settings]]
 
@@ -517,10 +589,7 @@ prefer_system_file_dialogs:             false  # Windows only
 show_cursors_off_screen:                true
 persist_local_search_results:           false
 
-# New in version [2]
-build_panel_height_percent:             50
-build_panel_stays_in_one_place:         false  # if true, the build panel will flip to the inactive pane in two pane layouts
-build_panel_line_wrap_always_on:        true
+# Added after migration to version [2]
 highlight_line_with_cursor:             false
 draw_indent_guides:                     false
 auto_surround_with_brackets_and_quotes: false
@@ -528,9 +597,58 @@ scroll_beyond_last_line:                true
 
 FOCUS_CONFIG
 
+SETTINGS_2_TO_3_EXPECTED :: #string FOCUS_CONFIG
+[3]  # Version number. Do not delete.
+
+[[workspace]]
+
+[workspace dirs]
+# These directories will be scanned when a workspace is opened so that search etc. works.
+# Example:
+
+[[keymap]]
+[common]
+Ctrl-P                      open_file_by_name
+
+# Added after migration to version [2]
+Ctrl-B                      toggle_build_panel
+F11                         toggle_fullscreen
+Ctrl-Tab                    switch_between_open_files
+
+# Added after migration to version [3]
+Ctrl-Shift-Alt-N            open_another_editor_instance
+F8                          go_to_next_build_error
+Ctrl-F8                     go_to_next_build_error_on_the_side
+Shift-F8                    go_to_previous_build_error
+Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
+
+[[settings]]
+
+maximize_on_start:                      false
+tab_size:                               4
+build_panel_width_percent:              50
+insert_spaces_when_pressing_tab:        true
+prefer_system_file_dialogs:             false  # Windows only
+show_cursors_off_screen:                true
+persist_local_search_results:           false
+
+# Added after migration to version [2]
+highlight_line_with_cursor:             false
+draw_indent_guides:                     false
+auto_surround_with_brackets_and_quotes: false
+scroll_beyond_last_line:                true
+
+# Added after migration to version [3]
+save_current_buffer_on_build:                  false
+save_all_file_backed_buffers_on_build:         false
+disable_viewport_chasing_cursor_near_the_edge: false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts
+show_selected_text_length:                     false
+
+FOCUS_CONFIG
+
 // Settings should not be added to project configs, only removed
 
-SETTINGS_2 :: #string FOCUS_CONFIG
+PROJECT_SETTINGS_1_TO_3 :: #string FOCUS_CONFIG
 
 [1]  # Version number. Do not delete.
 
@@ -557,8 +675,8 @@ persist_local_search_results:           false
 
 FOCUS_CONFIG
 
-SETTINGS_2_EXPECTED :: #string FOCUS_CONFIG
-[2]  # Version number. Do not delete.
+PROJECT_SETTINGS_1_TO_3_EXPECTED :: #string FOCUS_CONFIG
+[3]  # Version number. Do not delete.
 
 [[workspace]]
 
@@ -570,9 +688,15 @@ SETTINGS_2_EXPECTED :: #string FOCUS_CONFIG
 [common]
 Ctrl-P                      open_file_by_name
 
-# New in version [2]
+# Added after migration to version [3]
 Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
+Ctrl-Tab                    switch_between_open_files
+Ctrl-Shift-Alt-N            open_another_editor_instance
+F8                          go_to_next_build_error
+Ctrl-F8                     go_to_next_build_error_on_the_side
+Shift-F8                    go_to_previous_build_error
+Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
 
 [[settings]]
 
@@ -589,7 +713,7 @@ FOCUS_CONFIG
 
 // Test that new colors are added correctly
 
-COLORS_1 :: #string FOCUS_CONFIG
+COLORS_1_TO_3 :: #string FOCUS_CONFIG
   [1]   # Version number. Do not delete.
 
 [[style]]
@@ -610,8 +734,8 @@ scrollbar_background:                   FF191F4C
 
 FOCUS_CONFIG
 
-COLORS_1_EXPECTED :: #string FOCUS_CONFIG
-[2]   # Version number. Do not delete.
+COLORS_1_TO_3_EXPECTED :: #string FOCUS_CONFIG
+[3]   # Version number. Do not delete.
 
 [[style]]
 
@@ -629,7 +753,7 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
-# New in version [2]
+# Added after migration to version [3]
 code_warning:                           E4D97DFF
 region_scope_export:                    15212AFF
 region_scope_file:                      15212AFF
@@ -643,13 +767,60 @@ build_panel_scrollbar:                  33CCCC19
 build_panel_scrollbar_hover:            33CCCC4C
 build_panel_scrollbar_background:       10191F4C
 build_panel_title_bar:                  1C303AFF
+region_heredoc:                         10191FFF
+
+FOCUS_CONFIG
+
+
+COLORS_2_TO_3 :: #string FOCUS_CONFIG
+  [2]   # Version number. Do not delete.
+
+[[style]]
+
+[user interface]
+font:       default
+font_size:  14
+
+[colors]
+background0:                            15212AFF
+background1:                            10191FFF
+background2:                            18262FFF
+background3:                            1A2831FF
+background4:                            21333FFF
+
+scrollbar_hover:                        FFCCCC4C
+scrollbar_background:                   FF191F4C
+
+FOCUS_CONFIG
+
+COLORS_2_TO_3_EXPECTED :: #string FOCUS_CONFIG
+[3]   # Version number. Do not delete.
+
+[[style]]
+
+[fonts]
+font:       default
+font_size:  14
+
+[colors]
+background0:                            15212AFF
+background1:                            10191FFF
+background2:                            18262FFF
+background3:                            1A2831FF
+background4:                            21333FFF
+
+scrollbar_hover:                        FFCCCC4C
+scrollbar_background:                   FF191F4C
+
+# Added after migration to version [3]
+region_heredoc:                         10191FFF
 
 FOCUS_CONFIG
 
 
 // Test that new colors and settings are added correctly when they are both present
 
-COLORS_2 :: #string FOCUS_CONFIG
+COLORS_AND_SETTINGS_1_TO_3 :: #string FOCUS_CONFIG
   [1]   # Version number. Do not delete.
 
 [[workspace]]
@@ -679,7 +850,7 @@ font_size:  14
 
 [colors]
 background:                             15212AFF
-background_dark:                        10191FFF
+background_dark:                        FF191FFF
 background_highlight:                   18262FFF
 background_light:                       1A2831FF
 background_bright:                      21333FFF
@@ -689,8 +860,8 @@ scrollbar_background:                   FF191F4C
 
 FOCUS_CONFIG
 
-COLORS_2_EXPECTED :: #string FOCUS_CONFIG
-[2]   # Version number. Do not delete.
+COLORS_AND_SETTINGS_1_TO_3_EXPECTED :: #string FOCUS_CONFIG
+[3]   # Version number. Do not delete.
 
 [[workspace]]
 
@@ -707,15 +878,19 @@ insert_spaces_when_pressing_tab:        true
 prefer_system_file_dialogs:             false  # Windows only
 show_cursors_off_screen:                true
 
-# New in version [2]
-build_panel_height_percent:             50
-build_panel_stays_in_one_place:         false  # if true, the build panel will flip to the inactive pane in two pane layouts
-build_panel_line_wrap_always_on:        true
-highlight_line_with_cursor:             false
-draw_indent_guides:                     false
-auto_surround_with_brackets_and_quotes: false
-scroll_beyond_last_line:                true
-persist_local_search_results:           false  # if true, search results will stay highlighted and you have to dismiss them using the `escape` action
+# Added after migration to version [3]
+build_panel_height_percent:                    50
+build_panel_stays_in_one_place:                false  # if false, the build panel will flip to the inactive pane in two pane layouts
+build_panel_line_wrap_always_on:               true
+highlight_line_with_cursor:                    false
+draw_indent_guides:                            false
+auto_surround_with_brackets_and_quotes:        false
+scroll_beyond_last_line:                       true
+persist_local_search_results:                  false  # if true, search results will stay highlighted and you have to dismiss them using the `escape` action
+save_current_buffer_on_build:                  false
+save_all_file_backed_buffers_on_build:         false
+disable_viewport_chasing_cursor_near_the_edge: false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts
+show_selected_text_length:                     false
 
 [[keymap]]
 # ...
@@ -728,7 +903,7 @@ font_size:  14
 
 [colors]
 background0:                            15212AFF
-background1:                            10191FFF
+background1:                            FF191FFF
 background2:                            18262FFF
 background3:                            1A2831FF
 background4:                            21333FFF
@@ -736,7 +911,7 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
-# New in version [2]
+# Added after migration to version [3]
 code_warning:                           E4D97DFF
 region_scope_export:                    15212AFF
 region_scope_file:                      15212AFF
@@ -750,11 +925,12 @@ build_panel_scrollbar:                  33CCCC19
 build_panel_scrollbar_hover:            33CCCC4C
 build_panel_scrollbar_background:       10191F4C
 build_panel_title_bar:                  1C303AFF
+region_heredoc:                         FF191FFF
 
 FOCUS_CONFIG
 
 
-KEYBINDS_1 :: #string FOCUS_CONFIG
+KEYBINDS_1_TO_3 :: #string FOCUS_CONFIG
 [1]  # Version number. Do not delete.
 
 [[style]]
@@ -802,8 +978,8 @@ Ctrl-Alt-P                  switch_to_project
 
 FOCUS_CONFIG
 
-KEYBINDS_1_EXPECTED :: #string FOCUS_CONFIG
-[2]  # Version number. Do not delete.
+KEYBINDS_1_TO_3_EXPECTED :: #string FOCUS_CONFIG
+[3]  # Version number. Do not delete.
 
 [[style]]
 
@@ -821,7 +997,7 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
-# New in version [2]
+# Added after migration to version [3]
 code_warning:                           E4D97DFF
 region_scope_export:                    15212AFF
 region_scope_file:                      15212AFF
@@ -835,6 +1011,7 @@ build_panel_scrollbar:                  33CCCC19
 build_panel_scrollbar_hover:            33CCCC4C
 build_panel_scrollbar_background:       10191F4C
 build_panel_title_bar:                  1C303AFF
+region_heredoc:                         10191FFF
 
 [[keymap]]
 
@@ -849,7 +1026,7 @@ Ctrl-Escape                 remove_additional_cursors
 Ctrl-D                      select_word_or_create_another_cursor
 Ctrl-Shift-A                select_all_occurrences
 
-# New in version [2]
+# Added after migration to version [3]
 Alt-Shift-I                 add_cursors_to_line_ends
 Alt-Shift-Ctrl-I            add_cursors_to_line_starts
 Alt-A                       align_cursors
@@ -868,15 +1045,93 @@ Ctrl-Tab                    switch_between_open_files
 
 Ctrl-Alt-P                  switch_to_project
 
-# New in version [2]
+# Added after migration to version [3]
 Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
+Ctrl-Tab                    switch_between_open_files
+Ctrl-Shift-Alt-N            open_another_editor_instance
+F8                          go_to_next_build_error
+Ctrl-F8                     go_to_next_build_error_on_the_side
+Shift-F8                    go_to_previous_build_error
+Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
+
+FOCUS_CONFIG
+
+
+KEYBINDS_2_TO_3 :: #string FOCUS_CONFIG
+[2]  # Version number. Do not delete.
+
+[[keymap]]
+
+# - The first matching combination will be used, so order matters
+
+[editors]   # <- this means that the following key combos will apply only when editing text
+
+Alt-F4                      quit
+Escape                      remove_additional_cursors
+Ctrl-Escape                 remove_additional_cursors
+
+Ctrl-D                      select_word_or_create_another_cursor
+Ctrl-Shift-A                select_all_occurrences
+
+[open file dialog]
+Tab                         open_directory
+
+[common]
+Alt-X                       show_commands
+Ctrl-Shift-P                show_commands
+
+Ctrl-P                      show_open_file_dialog_in_search_mode
+Ctrl-O                      show_open_file_dialog_in_navigate_mode
+Ctrl-Shift-O                show_open_file_dialog_in_navigate_mode_from_root
+Ctrl-Tab                    show_open_file_dialog_in_open_editors_mode
+
+Ctrl-Alt-P                  switch_to_project
+
+FOCUS_CONFIG
+
+KEYBINDS_2_TO_3_EXPECTED :: #string FOCUS_CONFIG
+[3]  # Version number. Do not delete.
+
+[[keymap]]
+
+# - The first matching combination will be used, so order matters
+
+[editors]   # <- this means that the following key combos will apply only when editing text
+
+Alt-F4                      quit
+Escape                      escape
+Ctrl-Escape                 remove_additional_cursors
+
+Ctrl-D                      select_word_or_create_another_cursor
+Ctrl-Shift-A                select_all_occurrences
+
+[open file dialog]
+Tab                         open_directory
+
+[common]
+Alt-X                       show_commands
+Ctrl-Shift-P                show_commands
+
+Ctrl-P                      open_file_by_name
+Ctrl-O                      navigate_to_file
+Ctrl-Shift-O                navigate_to_file_from_root
+Ctrl-Tab                    switch_between_open_files
+
+Ctrl-Alt-P                  switch_to_project
+
+# Added after migration to version [3]
+Ctrl-Shift-Alt-N            open_another_editor_instance
+F8                          go_to_next_build_error
+Ctrl-F8                     go_to_next_build_error_on_the_side
+Shift-F8                    go_to_previous_build_error
+Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
 
 FOCUS_CONFIG
 
 // Test that themes can be migrated properly
 
-THEME_1 :: #string FOCUS_CONFIG
+THEME_1_TO_3 :: #string FOCUS_CONFIG
   [1]   # Version number. Do not delete.
 
 [user interface]
@@ -895,8 +1150,8 @@ scrollbar_background:                   FF191F4C
 
 FOCUS_CONFIG
 
-THEME_1_EXPECTED :: #string FOCUS_CONFIG
-[2]   # Version number. Do not delete.
+THEME_1_TO_3_EXPECTED :: #string FOCUS_CONFIG
+[3]   # Version number. Do not delete.
 
 [fonts]
 font:       default
@@ -912,7 +1167,7 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
-# New in version [2]
+# Added after migration to version [3]
 code_warning:                           E4D97DFF
 region_scope_export:                    15212AFF
 region_scope_file:                      15212AFF
@@ -926,6 +1181,7 @@ build_panel_scrollbar:                  33CCCC19
 build_panel_scrollbar_hover:            33CCCC4C
 build_panel_scrollbar_background:       10191F4C
 build_panel_title_bar:                  1C303AFF
+region_heredoc:                         10191FFF
 
 FOCUS_CONFIG
 

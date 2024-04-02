@@ -20,6 +20,9 @@
 
 + New features:
     + Jumping to build errors is now supported. See the default config for examples and more information (thanks @jlami for the initial implementation)
+        + Use the new commands `go_to_next_build_error` (F8 by default) and `go_to_previous_build_error` (Shift-F8 by default)
+        + Double-clicking the file name in the build output will also jump to the error location (provided it matched the error regex)
+        + You can add Ctrl to your key combo or double-click to open on the side, as usual (when the default keybinds are used)
     + Closing an editor will now remove the corresponding file from the open files list (only if it's not modified)
     + New Handmade Hero theme (thanks @Sokus)
     + Basic JS highlighting (thanks @simonvallz)
@@ -27,6 +30,7 @@
     + ...
 + Other changes:
     + Column number shown in the footer will now count the number of characters, not the visual offset (previously it would take tab size into account)
+    + Configs will be migrated to version [3]. New settings, colors and keybinds will be automatically added.
 
 
 # RELEASES ==================================================================
