@@ -587,7 +587,7 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
         // We're saving a new buffer into a file (and the path has been chosen already)
         buffer.has_file = true;
         buffer.file = get_file_info_from_full_path(file_path);
-        set_lang_from_path(buffer, file_path);
+        buffer.lang = get_lang_from_path(file_path);
         buffer.needs_coloring = true;
 
         lock(*open_buffers_lock);
@@ -884,10 +884,8 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     unlock(*buffer.content_lock);
 
     buffer.crlf = buffer.bytes.count != old_size;
-
     buffer.meow_hash = calculate_hash(buffer.bytes);
-
-    set_lang_from_path(buffer, path);
+    buffer.lang = get_lang_from_path(path);
 
     rescan_for_lines(buffer);
     recalculate_colors(buffer);
@@ -1152,10 +1150,6 @@ manually_mark_range_as_token :: (buffer: *Buffer, range: Offset_Range, color: Co
     memset(buffer.colors.data + range.start, xx color, range.end - range.start);
 }
 
-#scope_file
-
-Tokenize_Function :: #type (buffer: *Buffer, start_offset: s64 = -1, count: s64 = -1) -> [] Buffer_Region /* temp */;
-
 get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
     if lang == {
         case .Jai;          return highlight_jai_syntax;
@@ -1179,6 +1173,10 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
     }
     return null;
 }
+
+#scope_file
+
+Tokenize_Function :: #type (buffer: *Buffer, start_offset: s64 = -1, count: s64 = -1) -> [] Buffer_Region /* temp */;
 
 add_edit_notification :: (using buffer: *Buffer, offset: s64, old_count: s64, new_count: s64) {
     if num_editors_open < 2 return;

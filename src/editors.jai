@@ -1129,23 +1129,25 @@ init_buffers :: () {
     global_troubleshooting_buffer_id = -1;
 }
 
-set_lang_from_path :: (buffer: *Buffer, path: string) {
+get_lang_from_path :: (path: string) -> Buffer.Lang {
+    lang: Buffer.Lang = .Plain_Text;
+
     extension, found_extension := get_lowercase_extension(path, greedy = false);
     if found_extension {
         if extension == {
-            case "jai";            buffer.lang = .Jai;
-            case "cs";             buffer.lang = .CSharp;
-            case "focus-config";   buffer.lang = .Focus_Config;
-            case "focus-theme";    buffer.lang = .Focus_Theme;
-            case "go";             buffer.lang = .Golang;
+            case "jai";            lang = .Jai;
+            case "cs";             lang = .CSharp;
+            case "focus-config";   lang = .Focus_Config;
+            case "focus-theme";    lang = .Focus_Theme;
+            case "go";             lang = .Golang;
 
             case "ts";             #through;
-            case "js";             buffer.lang = .Js;
+            case "js";             lang = .Js;
 
-            case "lua";            buffer.lang = .Lua;
-            case "odin";           buffer.lang = .Odin;
-            case "py";             buffer.lang = .Python;
-            case "rpy";            buffer.lang = .RenPy;
+            case "lua";            lang = .Lua;
+            case "odin";           lang = .Odin;
+            case "py";             lang = .Python;
+            case "rpy";            lang = .RenPy;
 
             case "vert"; #through;
             case "frag"; #through;
@@ -1153,7 +1155,7 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
             case "tese"; #through;
             case "tesc"; #through;
             case "glsl";
-                buffer.lang = .Glsl;
+                lang = .Glsl;
 
             case "c";   #through;
             case "h";   #through;
@@ -1166,12 +1168,12 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
             case "cc";  #through;
             case "m";   #through;
             case "mm";
-                buffer.lang = .C;
+                lang = .C;
 
             case "html"; #through;
             case "htm";  #through;
             case "xhtml";
-                buffer.lang = .Html;
+                lang = .Html;
 
             case "xml";     #through;
             case "xsd";     #through;
@@ -1181,24 +1183,26 @@ set_lang_from_path :: (buffer: *Buffer, path: string) {
             case "vcproj";  #through;
             case "vcxproj"; #through;
             case "csproj";
-                buffer.lang = .Xml;
+                lang = .Xml;
 
             case "yang";
-                buffer.lang = .Yang;
+                lang = .Yang;
 
             case "zig";
-                buffer.lang = .Zig;
+                lang = .Zig;
 
             case "tal";
-                buffer.lang = .Uxntal;
+                lang = .Uxntal;
         }
     }
 
     path_, basename, _, basename_with_extension := path_decomp(path);
 
     if equal_nocase(basename, "todo") || equal_nocase(basename_with_extension, "FOCUS-CHANGELOG.txt") {
-        buffer.lang = .Worklog;
+        lang = .Worklog;
     }
+
+    return lang;
 }
 
 select_lines :: (editor: *Editor, buffer: Buffer) {

@@ -441,8 +441,10 @@ print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kin
 parse_build_errors :: (error_regex: string) {
     if !error_regex return;
 
-    assert(last_command_result.build.finished);
-    assert(!last_command_result.build_errors);  // we should've cleared it by now
+    using last_command_result;
+
+    assert(build.finished);
+    assert(!build_errors);  // we should've cleared it by now
 
     push_allocator(get_pool_allocator());
 
@@ -503,14 +505,49 @@ parse_build_errors :: (error_regex: string) {
         val, parsed := string_to_int(line, T = s32);
         if parsed then build_error.line = val;
 
-        col  := table_find_or_default(*named_captures, "col");
+        col := table_find_or_default(*named_captures, "col");
         val, parsed  = string_to_int(col, T = s32);
         if parsed then build_error.col = val;
 
-        array_add(*last_command_result.build_errors, build_error);
+        // Detect the error info range (for subsequent code highlighting).
+        {
+            starts := s64.[xx file.data, xx msg.data, xx line.data, xx col.data];
+            ends   := s64.[xx (file.data + file.count), xx (msg.data + msg.count), xx (line.data + line.count), xx (col.data + col.count)];
+
+            max_s64_in_array :: (array: [] s64) -> s64 {
+                max := 0;  // can't go below that
+                for array { if max < it then max = it; }
+                return max;
+            }
+
+            min_s64_in_array :: (array: [] s64) -> s64 {
+                min := S64_MAX;
+                for array { if min > it then min = it; }
+                return min;
+            }
+
+            build_error.error_info_start_offset = xx (min_s64_in_array(starts) - cast(s64) buffer.bytes.data);
+            build_error.error_info_end_offset   = xx (max_s64_in_array(ends)   - cast(s64) buffer.bytes.data);
+        }
+
+        array_add(*build_errors, build_error);
     }
 
-    #if DEBUG_BUILD_ERRORS for last_command_result.build_errors print("%\n", it);
+    // Maybe highlight code samples.
+    for error : build_errors {
+        lang     := get_lang_from_path(error.file);
+        tokenize := get_tokenize_function(lang);
+        if tokenize == null continue;
+
+        // Assume that code samples might be somewhere in between the error data we've parsed
+        code_start := error.error_info_end_offset;
+        code_end   := buffer.bytes.count;
+        if it_index < build_errors.count - 1 then code_end = build_errors[build_errors.count-1].error_info_start_offset;
+
+        tokenize(buffer, code_start, code_end - code_start);
+    }
+
+    #if DEBUG_BUILD_ERRORS for build_errors print("%\n", it);
 }
 
 get_pool_allocator :: inline () -> Allocator {
@@ -589,12 +626,15 @@ Command_Result :: struct {
 }
 
 Build_Error :: struct {
-    file: string;
-    file_output_range: Offset_Range;  // where in the build output the file path is (for double-click support)
-    message: string;
+    file:     string;
+    message:  string;
     line: s32 = -1;
     col:  s32 = -1;
     type: enum { error; warning; info; } = .error;
+    file_output_range: Offset_Range;  // where in the build output the file path is (for double-click support)
+
+    error_info_start_offset: s32;  // for code highlighting. We assume code might be in between the error info we've parsed
+    error_info_end_offset:   s32;
 }
 
 MAX_BUILD_OUTPUT_BUFFER_SIZE :: 6 * 1024 * 1024;
