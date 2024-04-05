@@ -438,7 +438,18 @@ print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kin
     // Maybe forget some bytes at the beginning
     if buffer.bytes.count > MAX_BUILD_OUTPUT_BUFFER_SIZE {
         bytes_to_forget := cast(s32) (buffer.bytes.count - MAX_BUILD_OUTPUT_BUFFER_SIZE);
+
+        lock(*buffer.content_lock);
+        array_resize(*buffer.colors, buffer.bytes.count);  // resize first before we delete
         delete_range_raw(buffer, 0, bytes_to_forget);
+        array_delete_bytes(*buffer.colors, 0, bytes_to_forget);
+        unlock(*buffer.content_lock);
+
+        for * last_command_result.build_errors {
+            it.file_output_range.start -= bytes_to_forget;
+            it.file_output_range.end   -= bytes_to_forget;
+        }
+
         for * region : buffer.regions {
             region.start -= bytes_to_forget;
             region.end   -= bytes_to_forget;
