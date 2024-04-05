@@ -31,12 +31,12 @@ deinit_build_system :: () {
     // Assuming that the editor and the buffer will be cleaned up separately
     build_buffer_id = -1;
     build_editor_id = -1;
-    running_command = null;
+    running_command = false;
 }
 
 execute_build_command :: (command: *Build_Command) {
-    if running_command != null {
-        add_user_warning("Build command [%] is still running", running_command.name, dismiss_in_seconds = 5, tag = .build);
+    if running_command {
+        add_user_warning("A build command is still running", dismiss_in_seconds = 5, tag = .build);
         return;
     }
 
@@ -82,27 +82,31 @@ execute_build_command :: (command: *Build_Command) {
 
     reset(*memory_pool);
 
-    running_command = New(Build_Command,, allocator = get_pool_allocator());
-    running_command.* = command.*;
-    running_command.name              = copy_string(command.name);
-    running_command.build_command     = copy_string(command.build_command);
-    running_command.build_working_dir = copy_string(command.build_working_dir);
-    running_command.run_command       = copy_string(command.run_command);
-    running_command.run_working_dir   = copy_string(command.run_working_dir);
-    running_command.error_regex       = copy_string(command.error_regex);
+    push_allocator(get_pool_allocator());
+
+    work := New(Build_Thread_Work);
+    work.command = command.*;
+    work.name              = copy_string(command.name);
+    work.build_command     = copy_string(command.build_command);
+    work.build_working_dir = copy_string(command.build_working_dir);
+    work.run_command       = copy_string(command.run_command);
+    work.run_working_dir   = copy_string(command.run_working_dir);
+    work.error_regex       = copy_string(command.error_regex);
 
     // We never want a timeout of 0 seconds because the command will never run.
     // People probably expect 0 to be no timeout, so we convert it to -1, which means no timeout
-    if command.timeout_in_seconds == 0 then running_command.timeout_in_seconds = -1;
+    if command.timeout_in_seconds == 0 then work.timeout_in_seconds = -1;
 
     if command.open_panel_on_build {
         show_build_panel();
     } else if !build_panel_is_shown {
-        add_success_message("Running [%]…", running_command.name, dismiss_in_seconds = 3);
+        add_success_message("Running [%]…", work.name, dismiss_in_seconds = 3,, allocator = focus_allocator);
     }
 
-    add_work(*thread_group, running_command);
-    // Now don't modify running_command as it's being accessed from thread
+    work.current_build_buffer_offset = open_buffers[build_buffer_id].bytes.count;
+
+    add_work(*thread_group, work);
+    running_command = true;
 }
 
 build_clear_output :: () {
@@ -121,7 +125,7 @@ build_clear_output :: () {
 }
 
 build_command_is_running :: () -> bool {
-    return running_command != null;
+    return running_command;
 }
 
 build_kill_running_command :: () {
@@ -154,10 +158,12 @@ build_system_update :: () {
     results := get_completed_work(*thread_group);
     if results {
         // We only process one command at a time, so this means our running command has finished
-        assert(running_command != null, "Build thread has finished work, but no command running");
-        assert(results.count == 1 && results[0] == running_command, "Build thread command mismatch");
+        assert(running_command != false, "Build thread has finished work, but no command running");
+        assert(results.count == 1, "Build thread returned more than 1 result. This is a bug.");
 
-        log("Build command [%] finished\n", running_command.name);
+        finished_command := cast(*Build_Thread_Work) results[0];
+
+        log("Build command [%] finished\n", finished_command.name);
 
         assert(last_command_result.finished);
 
@@ -167,13 +173,13 @@ build_system_update :: () {
         result := ifx last_command_result.run.finished then last_command_result.run else last_command_result.build;
 
         if result.timeout_reached {
-            message = tprint("TIMED OUT after % seconds", running_command.timeout_in_seconds);
+            message = tprint("TIMED OUT after % seconds", finished_command.timeout_in_seconds);
             kind = .warning;
         } else {
             if #complete result.process_result.type == {
                 case .UNSTARTED; #through;
                 case .FAILED_TO_LAUNCH;
-                    command := ifx last_command_result.run.finished then running_command.run_command else running_command.build_command;
+                    command := ifx last_command_result.run.finished then finished_command.run_command else finished_command.build_command;
                     message = tprint("ERROR: couldn't launch '%'", command);
                     if !is_absolute_path(command) then message = tprint("%. Try specifying a full path to the executable.", message);
                     kind = .error;
@@ -194,21 +200,21 @@ build_system_update :: () {
                     }
             }
 
-            if last_command_result.build.finished && last_command_result.build.process_result.exit_code != 0 then parse_build_errors(running_command.error_regex);
+            if last_command_result.build.finished then parse_build_errors(finished_command.error_regex, finished_command.current_build_buffer_offset, last_command_result.build.num_bytes_printed);
         }
 
         print_to_output_panel_from_main_thread(tprint("%\n", message), mark_as = kind, add_newline_if_missing = true);
 
         if kind == .success {
-            if running_command.close_panel_on_success then hide_build_panel();
-            if !running_command.open_panel_on_build   then add_success_message("Finished [%]", running_command.name, dismiss_in_seconds = 3);
+            if finished_command.close_panel_on_success then hide_build_panel();
+            if !finished_command.open_panel_on_build   then add_success_message("Finished [%]", finished_command.name, dismiss_in_seconds = 3);
         } else {
             // Always show the panel on errors
             show_build_panel();
-            if running_command.auto_jump_to_error then go_to_next_build_error();
+            if finished_command.auto_jump_to_error then go_to_next_build_error();
         }
 
-        running_command = null;
+        running_command = false;
     }
 }
 
@@ -383,16 +389,20 @@ build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thre
     }
 
     if command.build_command {
-        header := tprint("> %\n", command.build_command);
-        write_output_from_build_thread(*stdout, header);
+        write_output_from_build_thread(*stdout, tprint("> %\n", command.build_command));
 
-        result, timeout_reached := run_command_while_monitoring_output(
+        result, timeout_reached, stdout_bytes, stderr_bytes := run_command_while_monitoring_output(
             ..break_command_into_strings(command.build_command),
             working_directory = command.build_working_dir,
             timeout_ms = command.timeout_in_seconds * 1000,
         );
 
-        last_command_result.build = .{ finished = true, timeout_reached = timeout_reached, process_result = result };
+        last_command_result.build = .{
+            finished = true,
+            timeout_reached = timeout_reached,
+            process_result = result,
+            num_bytes_printed = stdout_bytes + stderr_bytes,
+        };
 
         // Don't run the run command if failed
         if result.type != .EXITED || result.exit_code != 0 return .CONTINUE;
@@ -403,11 +413,16 @@ build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thre
         if command.build_command then write_output_from_build_thread(*stdout, "\n");
         write_output_from_build_thread(*stdout, tprint("> %\n", command.run_command));
 
-        result, timeout_reached := run_command_while_monitoring_output(
+        result, timeout_reached, stdout_bytes, stderr_bytes := run_command_while_monitoring_output(
             ..break_command_into_strings(command.run_command),
             working_directory = command.run_working_dir,
         );
-        last_command_result.run = .{ finished = true, timeout_reached = timeout_reached, process_result = result };
+        last_command_result.run = .{
+            finished = true,
+            timeout_reached = timeout_reached,
+            process_result = result,
+            num_bytes_printed = stdout_bytes + stderr_bytes,
+         };
     }
 
     return .CONTINUE;
@@ -462,7 +477,7 @@ print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kin
     }
 }
 
-parse_build_errors :: (error_regex: string) {
+parse_build_errors :: (error_regex: string, start_offset: s64, num_bytes: s64) {
     if !error_regex return;
 
     using last_command_result;
@@ -472,14 +487,9 @@ parse_build_errors :: (error_regex: string) {
 
     push_allocator(get_pool_allocator());
 
-    // Find the command output range
     editor, buffer := get_build_editor_and_buffer();
-    start := -1;
-    for < * region : buffer.regions {
-        if region.kind == .header { start = region.end; break; }
-    }
-    if start < 0 || start >= buffer.bytes.count return;
-    build_output := cast(string) array_view(buffer.bytes, start, buffer.bytes.count - start);
+    if start_offset < 0 || start_offset + num_bytes > buffer.bytes.count return;
+    build_output := cast(string) array_view(buffer.bytes, start_offset, num_bytes);
 
     compiled_regex, valid := re.compile(error_regex, .LikePerl & ~.OneLine);
     if !valid {
@@ -640,7 +650,7 @@ saved_position := Build_Panel_Position.right;
 
 build_panel_is_expanded := false;
 
-running_command: *Build_Command = null;
+running_command := false;
 running_process: Process;
 
 last_command_result: struct {
@@ -664,10 +674,16 @@ build_mutex: Mutex;
 
 Build_Panel_Position :: enum { left; right; }
 
+Build_Thread_Work :: struct {
+    using command: Build_Command;
+    current_build_buffer_offset: s64;  // the size of the build buffer at the time the command is submitted
+}
+
 Command_Result :: struct {
     finished:        bool;
     timeout_reached: bool;
     process_result:  Process_Result;
+    num_bytes_printed:   s64;
 }
 
 Build_Error :: struct {
@@ -689,7 +705,7 @@ MAX_BUILD_OUTPUT_BUFFER_SIZE :: 6 * 1024 * 1024;
 
 // Adapted the run_command function from the Process module to allow for monitoring output
 
-run_command_while_monitoring_output :: (args: .. string, working_directory := "", timeout_ms := -1, arg_quoting := Process_Argument_Quoting.QUOTE_IF_NEEDED) -> (process_result: Process_Result, timeout_reached := false) {
+run_command_while_monitoring_output :: (args: .. string, working_directory := "", timeout_ms := -1, arg_quoting := Process_Argument_Quoting.QUOTE_IF_NEEDED) -> (process_result: Process_Result, timeout_reached := false, stdout_bytes: s64 = 0, stderr_bytes: s64 = 0) {
     process  := *running_process;  // accessing a global! NOTE: this is assuming we only ever have one running command
     lock(*build_mutex);
     process.* = Process.{};
@@ -718,6 +734,10 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
     start_time := current_time_monotonic();
     remaining_timeout_ms := timeout_ms;
 
+    // Count the number of bytes we print
+    stdout_bytes := 0;
+    stderr_bytes := 0;
+
     while true {
         output_buffer, error_buffer: [4096] u8;
         success, num_output_bytes, num_error_bytes := read_from_process(process, output_buffer, error_buffer, remaining_timeout_ms);
@@ -730,6 +750,9 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
         if num_error_bytes {
             append(*error_builder, to_string(error_buffer.data, num_error_bytes));
         }
+
+        stdout_bytes += num_output_bytes;
+        stderr_bytes += num_error_bytes;
 
         if !success {
             log_error("Could not read output of command \"%\"", get_quoted_command_string(args));
@@ -767,7 +790,7 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
         process_result = .{type = .EXITED, exit_code = 1};
     }
 
-    return process_result, timeout_reached;
+    return process_result, timeout_reached, stdout_bytes, stderr_bytes;
 }
 
 write_output_from_build_thread :: (builder: *String_Builder, s: string) {
