@@ -204,8 +204,13 @@ build_system_update :: () {
         }
 
         // Print elapsed time
-        if last_command_result.build.finished then message = tprint("%  [Build took %s]", message, formatFloat(last_command_result.build.elapsed_seconds, trailing_width = 3));
-        if last_command_result.run.finished   then message = tprint("%  [Run took %s]",   message, formatFloat(last_command_result.run.elapsed_seconds,   trailing_width = 3));
+        if last_command_result.build.finished && last_command_result.run.finished {
+            message = tprint("%  [Build took %s]", message, formatFloat(last_command_result.build.elapsed_seconds, trailing_width = 3, zero_removal = .NO));
+            message = tprint("%  [Run took %s]",   message, formatFloat(last_command_result.run.elapsed_seconds,   trailing_width = 3, zero_removal = .NO));
+        } else if last_command_result.build.finished || last_command_result.run.finished {
+            command := ifx last_command_result.run.finished then last_command_result.run else last_command_result.build;
+            message = tprint("%  [Elapsed: %s]", message, formatFloat(command.elapsed_seconds, trailing_width = 3, zero_removal = .NO));
+        }
 
         print_to_output_panel_from_main_thread(tprint("%\n", message), mark_as = kind, add_newline_if_missing = true);
 
