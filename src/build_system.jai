@@ -623,6 +623,15 @@ go_to_current_build_error :: (placement: Editor_Placement = .in_place, show_erro
 
     build_error := build_errors[current_build_error_id];
 
+    // Select the error to see clearly what the current error is
+    {
+        editor, buffer := get_build_editor_and_buffer();
+        cursor := leave_only_original_cursor(editor);
+        cursor.sel = build_error.file_output_range.start;
+        cursor.pos = build_error.file_output_range.end;
+        editor.cursor_moved = .jumped;
+    }
+
     old_layout := editors.layout;
     editors_open_file(build_error.file, placement);
 
