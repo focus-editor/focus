@@ -1293,7 +1293,7 @@ Buffer :: struct {
     redos: [..] Edit_Group;
     edits: [..] Edit;  // current edits, not in a group yet
     cursors: [..] Cursor;  // cursor state before any current edits were made
-    edit_notifications: [..] Edit_Notification;
+    edit_notifications: [..] Edit_Notification;  // TODO: make it a global array for all buffers instead
 
     lang: Lang = .Plain_Text;
 

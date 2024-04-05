@@ -5,8 +5,8 @@ main :: () {
 
         // OA :: #import "Overwriting_Allocator";
         // context.allocator = OA.get_overwriting_allocator();
-
     }
+
     focus_allocator = context.allocator;  // to be used as a default allocator where we need it
 
     cpu_info = get_cpu_info();

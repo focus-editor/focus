@@ -8,6 +8,13 @@ init_build_system :: () {
     buffer.deleted  = true;  // so that it doesn't appear in the open file dialog
     if config.settings.build_panel_line_wrap_always_on then editor.line_wrap = .on; else editor.line_wrap = .off;
 
+    // Remember allocators, so that we don't accidentally use the pool allocator on any of these arrays.
+    // We should really use custom expandable arrays which don't remember allocators on buffers at some point
+    buffer.bytes.allocator   = focus_allocator;
+    buffer.colors.allocator  = focus_allocator;
+    buffer.regions.allocator = focus_allocator;
+    buffer.cursors.allocator = focus_allocator;
+
     commands_refresh_after_config_change();
 
     init(*build_mutex);
@@ -102,7 +109,12 @@ build_clear_output :: () {
     if build_buffer_id < 0 return;
     editor, buffer := get_build_editor_and_buffer();
 
-    array_reset_keeping_memory(*buffer.regions);  // TODO: should we lock buffer content_lock before accessing this?
+    push_allocator(focus_allocator);
+
+    lock(*buffer.content_lock);
+    array_reset_keeping_memory(*buffer.regions);
+    unlock(*buffer.content_lock);
+
     delete_range_raw(buffer, 0, buffer.bytes.count);
     rescan_for_lines(buffer);
     rescan_for_wrapped_lines(editor, buffer);
@@ -125,6 +137,7 @@ build_kill_running_command :: () {
 build_system_update :: () {
     assert(build_buffer_id >= 0 && build_editor_id >= 0, "Build system is not initialized");
 
+    buffer := *open_buffers[build_buffer_id];
     // Print to build output panel, if we have anything to print
     {
         lock(*build_mutex);
@@ -152,7 +165,6 @@ build_system_update :: () {
         kind: Buffer_Region.Kind = .none;
 
         result := ifx last_command_result.run.finished then last_command_result.run else last_command_result.build;
-        finished_command := ifx last_command_result.run.finished then running_command.run_command else running_command.build_command;
 
         if result.timeout_reached {
             message = tprint("TIMED OUT after % seconds", running_command.timeout_in_seconds);
@@ -161,8 +173,9 @@ build_system_update :: () {
             if #complete result.process_result.type == {
                 case .UNSTARTED; #through;
                 case .FAILED_TO_LAUNCH;
-                    message = tprint("ERROR: couldn't launch '%'", finished_command);
-                    if !is_absolute_path(finished_command) then message = tprint("%. Try specifying a full path to the executable.", message);
+                    command := ifx last_command_result.run.finished then running_command.run_command else running_command.build_command;
+                    message = tprint("ERROR: couldn't launch '%'", command);
+                    if !is_absolute_path(command) then message = tprint("%. Try specifying a full path to the executable.", message);
                     kind = .error;
                 case .STILL_RUNNING;
                     message = "ERROR: the command is still running. This is a bug.";
@@ -535,16 +548,37 @@ parse_build_errors :: (error_regex: string) {
 
     // Maybe highlight code samples.
     for error : build_errors {
-        lang     := get_lang_from_path(error.file);
-        tokenize := get_tokenize_function(lang);
-        if tokenize == null continue;
+        lang := get_lang_from_path(error.file);
 
         // Assume that code samples might be somewhere in between the error data we've parsed
-        code_start := error.error_info_end_offset;
-        code_end   := buffer.bytes.count;
-        if it_index < build_errors.count - 1 then code_end = build_errors[build_errors.count-1].error_info_start_offset;
+        start := cast(s64) error.error_info_end_offset;
+        end   := buffer.bytes.count;
+        if it_index < build_errors.count - 1 then end = build_errors[build_errors.count-1].error_info_start_offset;
 
-        tokenize(buffer, code_start, code_end - code_start);
+        potential_code_block := cast(string) array_view(buffer.bytes, start, end - start);
+
+        if lang == .Jai {
+            #if OS == .WINDOWS {
+                sep_start := "\r\n    ";
+                sep_end   := "\r\n\r\n";
+            } else {
+                sep_start := "\n    ";
+                sep_end   := "\n\n";
+            }
+
+            // In the Jai compiler output, sample code blocks should be separated by double newlines + spaces
+            last_double_newline := find_index_from_right(potential_code_block, sep_end);
+            if last_double_newline >= 0 then end = start + last_double_newline;
+
+            first_double_newline := find_index_from_left(potential_code_block, sep_start);
+            if first_double_newline >= 0 then start += first_double_newline;
+        } else {
+            continue;  // don't attempt to highlight other languages until we figure out a robust way to parse out code samples
+        }
+
+        tokenize := get_tokenize_function(lang);
+        if tokenize == null continue;
+        tokenize(buffer, start, end - start);
     }
 
     #if DEBUG_BUILD_ERRORS for build_errors print("%\n", it);
