@@ -203,6 +203,10 @@ build_system_update :: () {
             if last_command_result.build.finished then parse_build_errors(finished_command.error_regex, finished_command.current_build_buffer_offset, last_command_result.build.num_bytes_printed);
         }
 
+        // Print elapsed time
+        if last_command_result.build.finished then message = tprint("%  [Build took %s]", message, formatFloat(last_command_result.build.elapsed_seconds, trailing_width = 3));
+        if last_command_result.run.finished   then message = tprint("%  [Run took %s]",   message, formatFloat(last_command_result.run.elapsed_seconds,   trailing_width = 3));
+
         print_to_output_panel_from_main_thread(tprint("%\n", message), mark_as = kind, add_newline_if_missing = true);
 
         if kind == .success {
@@ -391,7 +395,7 @@ build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thre
     if command.build_command {
         write_output_from_build_thread(*stdout, tprint("> %\n", command.build_command));
 
-        result, timeout_reached, stdout_bytes, stderr_bytes := run_command_while_monitoring_output(
+        result, timeout_reached, stdout_bytes, stderr_bytes, elapsed_seconds := run_command_while_monitoring_output(
             ..break_command_into_strings(command.build_command),
             working_directory = command.build_working_dir,
             timeout_ms = command.timeout_in_seconds * 1000,
@@ -402,6 +406,7 @@ build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thre
             timeout_reached = timeout_reached,
             process_result = result,
             num_bytes_printed = stdout_bytes + stderr_bytes,
+            elapsed_seconds = elapsed_seconds,
         };
 
         // Don't run the run command if failed
@@ -413,7 +418,7 @@ build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thre
         if command.build_command then write_output_from_build_thread(*stdout, "\n");
         write_output_from_build_thread(*stdout, tprint("> %\n", command.run_command));
 
-        result, timeout_reached, stdout_bytes, stderr_bytes := run_command_while_monitoring_output(
+        result, timeout_reached, stdout_bytes, stderr_bytes, elapsed_seconds := run_command_while_monitoring_output(
             ..break_command_into_strings(command.run_command),
             working_directory = command.run_working_dir,
         );
@@ -422,6 +427,7 @@ build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thre
             timeout_reached = timeout_reached,
             process_result = result,
             num_bytes_printed = stdout_bytes + stderr_bytes,
+            elapsed_seconds = elapsed_seconds,
          };
     }
 
@@ -689,10 +695,11 @@ Build_Thread_Work :: struct {
 }
 
 Command_Result :: struct {
-    finished:        bool;
-    timeout_reached: bool;
-    process_result:  Process_Result;
-    num_bytes_printed:   s64;
+    finished:           bool;
+    timeout_reached:    bool;
+    process_result:     Process_Result;
+    num_bytes_printed:  s64;
+    elapsed_seconds:    float64;
 }
 
 Build_Error :: struct {
@@ -714,7 +721,7 @@ MAX_BUILD_OUTPUT_BUFFER_SIZE :: 6 * 1024 * 1024;
 
 // Adapted the run_command function from the Process module to allow for monitoring output
 
-run_command_while_monitoring_output :: (args: .. string, working_directory := "", timeout_ms := -1, arg_quoting := Process_Argument_Quoting.QUOTE_IF_NEEDED) -> (process_result: Process_Result, timeout_reached := false, stdout_bytes: s64 = 0, stderr_bytes: s64 = 0) {
+run_command_while_monitoring_output :: (args: .. string, working_directory := "", timeout_ms := -1, arg_quoting := Process_Argument_Quoting.QUOTE_IF_NEEDED) -> (process_result: Process_Result, timeout_reached := false, stdout_bytes: s64 = 0, stderr_bytes: s64 = 0, elapsed_seconds: float64 = 0) {
     process  := *running_process;  // accessing a global! NOTE: this is assuming we only ever have one running command
     lock(*build_mutex);
     process.* = Process.{};
@@ -738,7 +745,7 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
     timeout_reached := false;
 
     // A string builder to buffer error output so that we can print it out at the end
-    error_builder:  String_Builder;
+    error_builder: String_Builder;
 
     start_time := current_time_monotonic();
     remaining_timeout_ms := timeout_ms;
@@ -748,7 +755,7 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
     stderr_bytes := 0;
 
     while true {
-        output_buffer, error_buffer: [4096] u8;
+        output_buffer, error_buffer: [4 * 4096] u8;
         success, num_output_bytes, num_error_bytes := read_from_process(process, output_buffer, error_buffer, remaining_timeout_ms);
 
         if num_output_bytes {
@@ -788,6 +795,8 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
         if process.output.eof && process.error.eof break;
     }
 
+    elapsed_seconds := to_float64_seconds(current_time_monotonic() - start_time);
+
     // Print error output
     write_output_from_build_thread(*stderr, builder_to_string(*error_builder));
 
@@ -799,7 +808,7 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
         process_result = .{type = .EXITED, exit_code = 1};
     }
 
-    return process_result, timeout_reached, stdout_bytes, stderr_bytes;
+    return process_result, timeout_reached, stdout_bytes, stderr_bytes, elapsed_seconds;
 }
 
 write_output_from_build_thread :: (builder: *String_Builder, s: string) {
