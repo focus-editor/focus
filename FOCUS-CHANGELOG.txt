@@ -31,6 +31,7 @@
 + Other changes:
     + Column number shown in the footer will now count the number of characters, not the visual offset (previously it would take tab size into account)
     + Configs will be migrated to version [3]. New settings, colors and keybinds will be automatically added.
+    + C highlighting has been slightly improved
 
 
 # RELEASES ==================================================================

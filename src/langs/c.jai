@@ -1,22 +1,26 @@
 highlight_c_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_tokenizer(buffer, start_offset, count);
 
-    last_token: Token;  // to retroactively highlight functions
+    // Allocate temporary space for tracking one previous token
+    tokenizer.prev_tokens[0] = New(Token,, temp);
 
     while true {
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
 
         using tokenizer;
+
+        prev_token := cast(*Token) prev_tokens[0];
+
         // Maybe retroactively highlight a function
-        if token.type == .punctuation && token.punctuation == .l_paren {
+        if prev_token.type == .punctuation && prev_token.punctuation == .l_paren {
             // Handle "func("
-            if last_token.type == .identifier {
-                memset(colors.data + last_token.start, xx Color.CODE_FUNCTION, last_token.len);
+            if prev_token.type == .identifier {
+                memset(colors.data + prev_token.start, xx Color.CODE_FUNCTION, prev_token.len);
             }
         }
 
-        last_token = token;
+        prev_token.* = token;
 
         color := COLOR_MAP[token.type];
         memset(colors.data + token.start, xx color, token.len);
@@ -39,10 +43,12 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
 
     start_t = t;
 
-    // Look at the first char as if it's ASCII (if it isn't, this is just a text line)
-    char := << t;
+    // Look at the first char as if it's ASCII
+    char := t.*;
 
     if is_alpha(char) || char == #char "_" {
+        // Parse identifiers which start with an ASCII letter or _
+        // We'll look at identifiers which start with UTF8 letters later when we've already checked for more probable possibilities
         parse_identifier(tokenizer, *token);
     } else if is_digit(char) {
         parse_number(tokenizer, *token);
@@ -53,7 +59,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "-";  parse_minus                 (tokenizer, *token);
         case #char "+";  parse_plus                  (tokenizer, *token);
         case #char "*";  parse_asterisk              (tokenizer, *token);
-        case #char "<";  parse_less_than             (tokenizer, *token);
+        case #char "<";  parse_less_than_or_include  (tokenizer, *token);
         case #char ">";  parse_greater_than          (tokenizer, *token);
         case #char "!";  parse_bang                  (tokenizer, *token);
         case #char "#";  parse_preprocessor_directive(tokenizer, *token);
@@ -79,7 +85,14 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "~";  token.type = .operation;   token.operation   = .tilde;     t += 1;
         case #char "`";  token.type = .operation;   token.operation   = .backtick;  t += 1;
 
-        case;            token.type = .invalid; t += 1;
+        case;
+            // It could still be an identifier which starts with a UTF8 character
+            utf32 := character_utf8_to_utf32(t, max_t - t);
+            if is_utf32_letter(utf32) {
+                parse_identifier(tokenizer, *token);
+            } else {
+                token.type = .invalid; t += 1;  // give up
+            }
     }
 
     if t >= max_t then t = max_t;
@@ -193,7 +206,7 @@ parse_equal :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";  token.operation = .equal_equal; t += 1;
     }
 }
@@ -205,7 +218,7 @@ parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .minus_equal;
             t += 1;
@@ -216,7 +229,7 @@ parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
             token.operation = .minus_minus;
             t += 1;
         case;
-            if is_digit(<< t) parse_number(tokenizer, token);
+            if is_digit(t.*) parse_number(tokenizer, token);
     }
 }
 
@@ -227,7 +240,7 @@ parse_plus :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .plus_equal;
             t += 1;
@@ -244,21 +257,31 @@ parse_asterisk :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .asterisk_equal;
             t += 1;
     }
 }
 
-parse_less_than :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_less_than_or_include :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .less_than;
 
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    prev_token := cast(*Token) prev_tokens[0];
+    if prev_token.type == .preprocessor_directive && prev_token.preprocessor_directive == .di_include {
+        // Parse an #include <...> statement
+        token.type = .string_literal;
+        while t < max_t && t.* != #char "\n" && t.* != #char ">"  t += 1;
+        if t >= max_t return;
+        t += 1;
+        return;
+    }
+
+    if t.* == {
         case #char "=";
             token.operation = .less_than_equal;
             t += 1;
@@ -275,7 +298,7 @@ parse_greater_than :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .greater_than_equal;
             t += 1;
@@ -289,7 +312,7 @@ parse_bang :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .bang_equal;
             t += 1;
@@ -305,7 +328,7 @@ parse_preprocessor_directive :: (using tokenizer: *Tokenizer, token: *Token) {
 
     directive_str := read_identifier_string(tokenizer);
 
-    while t < max_t && is_alnum(<< t) t += 1;
+    while t < max_t && is_alnum(t.*) t += 1;
     if t >= max_t return;
 
     // Check if it's one of the existing directives
@@ -323,7 +346,7 @@ parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     escape_seen := false;
 
     t += 1;
-    while t < max_t && << t != #char "\n" {
+    while t < max_t && t.* != #char "\n" {
         if <<t == #char "\"" && !escape_seen break;
         escape_seen = !escape_seen && <<t == #char "\\";
         t += 1;
@@ -339,15 +362,15 @@ parse_char_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     escape_seen := false;
 
     t += 1; //
-    if t >= max_t || << t == #char "\n" return;
+    if t >= max_t || t.* == #char "\n" return;
 
-    if << t == #char "\\" {
+    if t.* == #char "\\" {
       escape_seen = true;
       t += 1;
-      if t >= max_t || << t == #char "\n" return;
+      if t >= max_t || t.* == #char "\n" return;
     }
 
-    if << t == #char "'" && !escape_seen {
+    if t.* == #char "'" && !escape_seen {
       // not escaped single quote without a character
       token.type = .invalid;
       t += 1; // the invalid '
@@ -355,7 +378,7 @@ parse_char_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 
     t += 1; // the char
-    if t >= max_t || << t == #char "\n" return;
+    if t >= max_t || t.* == #char "\n" return;
 
     t += 1; // ending '
 }
@@ -367,19 +390,19 @@ parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .slash_equal;
             t += 1;
         case #char "/";
             token.type = .comment;
             t += 1;
-            while t < max_t && << t != #char "\n" t += 1;
+            while t < max_t && t.* != #char "\n" t += 1;
         case #char "*";
             token.type = .multiline_comment;
             t += 1;
             while t + 1 < max_t {
-                if << t == #char "*" && << (t + 1) == #char "/" {
+                if t.* == #char "*" && << (t + 1) == #char "/" {
                   t += 2;
                   break;
                 }
@@ -395,7 +418,7 @@ parse_ampersand :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .ampersand_equal;
             t += 1;
@@ -412,7 +435,7 @@ parse_pipe :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .pipe_equal;
             t += 1;
@@ -429,7 +452,7 @@ parse_percent :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .percent_equal;
             t += 1;
@@ -443,7 +466,7 @@ parse_caret :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .caret_equal;
             t += 1;

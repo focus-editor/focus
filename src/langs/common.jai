@@ -40,12 +40,7 @@ read_utf8_identifier_string :: (using tokenizer: *Tokenizer) -> string {
         // We don't do comprehensive checks because Unicode docs are cryptic and we might not need every possible character anyway
         utf32, length := character_utf8_to_utf32(t, max_t - t);
 
-        if utf32 >= 0xC0  && utf32 <= 0xF6  ||  // Latin-1 Supplement for Western European languages (À-ö)
-           utf32 >= 0xF8  && utf32 <= 0xFF  ||  // continuing Latin-1 Supplement (ø-ÿ), excluding the division sign (÷) and multiplication sign (×)
-           utf32 >= 0x410 && utf32 <= 0x42F ||  // capital cyrillic
-           utf32 >= 0x430 && utf32 <= 0x44F ||  // lowercase cyrillic
-           utf32 >= 0x100 && utf32 <= 0x17F     // Latin Extended-A for Central European languages (Ā-ſ)
-        {
+        if is_utf32_letter(utf32) {
             t += length;
             continue;
         }
@@ -57,6 +52,14 @@ read_utf8_identifier_string :: (using tokenizer: *Tokenizer) -> string {
     identifier.count = t - identifier.data;
 
     return identifier;
+}
+
+is_utf32_letter :: inline (utf32: u32) -> bool {
+    return utf32 >= 0xC0  && utf32 <= 0xF6  ||  // Latin-1 Supplement for Western European languages (À-ö)
+           utf32 >= 0xF8  && utf32 <= 0xFF  ||  // continuing Latin-1 Supplement (ø-ÿ), excluding the division sign (÷) and multiplication sign (×)
+           utf32 >= 0x410 && utf32 <= 0x42F ||  // capital cyrillic
+           utf32 >= 0x430 && utf32 <= 0x44F ||  // lowercase cyrillic
+           utf32 >= 0x100 && utf32 <= 0x17F;    // Latin Extended-A for Central European languages (Ā-ſ)
 }
 
 eat_until_newline :: (using tokenizer: *Tokenizer) {
@@ -179,6 +182,8 @@ Tokenizer :: struct {
     max_t:   *u8;
     start_t: *u8;  // cursor when we're about to parse a new token
     t:       *u8;  // cursor
+
+    prev_tokens: [3] *void;
 }
 
 Code_Highlight :: struct {
