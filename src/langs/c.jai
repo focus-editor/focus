@@ -13,7 +13,7 @@ highlight_c_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) -
         prev_token := cast(*Token) prev_tokens[0];
 
         // Maybe retroactively highlight a function
-        if prev_token.type == .punctuation && prev_token.punctuation == .l_paren {
+        if token.type == .punctuation && token.punctuation == .l_paren {
             // Handle "func("
             if prev_token.type == .identifier {
                 memset(colors.data + prev_token.start, xx Color.CODE_FUNCTION, prev_token.len);
