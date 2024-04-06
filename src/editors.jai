@@ -847,6 +847,7 @@ do_things_on_editor_close :: (editor_id: s64) {
     buffer_is_still_visible := editors.layout == .Single && editors.active != editor_id && open_editors[editors.active].buffer_id == editor.buffer_id;
     if !buffer_is_still_visible && !buffer.modified {
         array_ordered_remove_by_value(*most_recent_buffers, editor.buffer_id);
+        buffer.num_times_opened = 0;  // deprioritise it in the full file list
     }
 }
 
