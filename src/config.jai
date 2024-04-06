@@ -101,6 +101,11 @@ apply_config :: () {
     clamp_and_warn(*config.settings.build_panel_height_percent, 10,  100,         "Build panel height clamped to % percent");
     clamp_and_warn(*config.settings.build_panel_width_percent,  10,  100,         "Build panel width clamped to % percent");
 
+    if config.settings.window_width  != -1    clamp_and_warn(*config.settings.window_width,  100, 10000, "Window width clamped to %");
+    if config.settings.window_height != -1    clamp_and_warn(*config.settings.window_height, 100, 3000,  "Window height clamped to %");
+    if config.settings.window_x      != -1000 clamp_and_warn(*config.settings.window_x,     -500, 10000, "Window X clamped to %");
+    if config.settings.window_y      != -1000 clamp_and_warn(*config.settings.window_y,     -500, 3000,  "Window Y clamped to %");
+
     build_panel_width  = config.settings.build_panel_width_percent  / 100.0;
     build_panel_height = config.settings.build_panel_height_percent / 100.0;
     build_panel_height_anim.target = build_panel_height;
@@ -477,6 +482,10 @@ Workspace :: struct {
 Settings :: struct {
     maximize_on_start                             := false;
     open_on_the_biggest_monitor                   := true;
+    window_width                                  := -1;
+    window_height                                 := -1;
+    window_x                                      := -1000;  // using -1000 because -1 could be a valid value someone might want
+    window_y                                      := -1000;
     cursor_as_block                               := true;
     cursor_blink_time_in_seconds                  := 5;
     highlight_selection_occurrences               := true;

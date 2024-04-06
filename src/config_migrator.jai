@@ -324,6 +324,9 @@ ADDED_SETTINGS :: Added_Setting.[
     .{ 3, "save_all_file_backed_buffers_on_build",              "false" },
     .{ 3, "disable_viewport_chasing_cursor_near_the_edge",      "false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts" },
     .{ 3, "show_selected_text_length",                          "false" },
+
+    // .{ 4, "window_width",                                       "-1" },
+    // .{ 4, "window_height"                                       "-1" },
 ];
 
 REMOVED_SETTINGS :: Removed_Setting.[

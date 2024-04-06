@@ -27,8 +27,9 @@
     + New Handmade Hero theme (thanks @Sokus)
     + Basic JS highlighting (thanks @simonvallz)
     + It is now possible to use variables in build and run commands: %FILE%, %FILE_DIR%, %FILE_NAME%, %FILE_NAME_NO_EXTENSION%, %BUILD_WORKING_DIR%, %RUN_WORKING_DIR% (see more information in the default config)
+    + New options: `window_width`, `window_height`, `window_x`, `window_y`. Can be used to configure the initial size of the editor window.
 + Bug fixes:
-    + ...
+    + C highlighting now supports identifiers which start with a UTF8 letter
 + Other changes:
     + Column number shown in the footer will now count the number of characters, not the visual offset (previously it would take tab size into account)
     + Configs will be migrated to version [3]. New settings, colors and keybinds will be automatically added.

@@ -46,6 +46,11 @@ main :: () {
 
     window_x, window_y, window_width, window_height = platform_get_centered_window_dimensions(config.settings.open_on_the_biggest_monitor);
 
+    if config.settings.window_width  > 0 then window_width  = xx config.settings.window_width;
+    if config.settings.window_height > 0 then window_height = xx config.settings.window_height;
+    if config.settings.window_x != -1000 then window_x      = xx config.settings.window_x;
+    if config.settings.window_y != -1000 then window_y      = xx config.settings.window_y;
+
     window_generic_title = ifx DEBUG then "Focus (debug mode)" else "Focus";
     platform_create_window();
 

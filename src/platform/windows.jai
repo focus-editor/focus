@@ -29,6 +29,8 @@ platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, 
             if max_area < area {
                 monitor  = it;
                 max_area = area;
+            } else if max_area == area && it.primary {
+                monitor = it;  // prefer primary if there's no biggest monitor
             }
         }
     } else {
