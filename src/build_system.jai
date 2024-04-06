@@ -98,6 +98,8 @@ execute_build_command :: (command: *Build_Command) {
     work.run_working_dir   = copy_string(command.run_working_dir);
     work.error_regex       = copy_string(command.error_regex);
 
+    if command.substitute_variables then substitute_variables(work);
+
     // We never want a timeout of 0 seconds because the command will never run.
     // People probably expect 0 to be no timeout, so we convert it to -1, which means no timeout
     if command.timeout_in_seconds == 0 then work.timeout_in_seconds = -1;
@@ -214,7 +216,9 @@ build_system_update :: () {
             message = tprint("%  [Run took %s]",   message, formatFloat(last_command_result.run.elapsed_seconds,   trailing_width = 3, zero_removal = .NO));
         } else if last_command_result.build.finished || last_command_result.run.finished {
             command := ifx last_command_result.run.finished then last_command_result.run else last_command_result.build;
-            message = tprint("%  [Elapsed: %s]", message, formatFloat(command.elapsed_seconds, trailing_width = 3, zero_removal = .NO));
+            if command.elapsed_seconds > 0 {
+                message = tprint("%  [Elapsed: %s]", message, formatFloat(command.elapsed_seconds, trailing_width = 3, zero_removal = .NO));
+            }
         }
 
         print_to_output_panel_from_main_thread(tprint("%\n", message), mark_as = kind, add_newline_if_missing = true);
@@ -271,7 +275,7 @@ is_build_panel :: inline (editor_id: s64) -> bool {
     return editor_id == build_editor_id;
 }
 
-build_panel_activate :: () {
+build_panel_on_activate :: () {
     previously_active_editor = editors.active;
 }
 
@@ -491,6 +495,53 @@ print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kin
         }
         quick_sort(buffer.regions, compare_regions);
     }
+}
+
+substitute_variables :: (using work: *Build_Thread_Work) {
+    // Figure out the current file
+    file := "";
+    {
+        current_editor_id := editors.active;
+        if is_build_panel(current_editor_id) then current_editor_id = previously_active_editor;
+        if is_build_panel(current_editor_id) then current_editor_id = editors.left;
+        if is_build_panel(current_editor_id) then current_editor_id = editors.right;
+
+        if current_editor_id >= 0 {
+            buffer := open_buffers[open_editors[current_editor_id].buffer_id];
+            if buffer.has_file then file = copy_string(buffer.file.full_path);
+        }
+    }
+
+    file_vars_are_used := false;
+    file_vars := string.["%FILE%", "%FILE_DIR%", "%FILE_NAME%", "%FILE_NAME_NO_EXTENSION%"];
+    for file_vars {
+        if contains(build_command, it) || contains(run_command, it) {
+            file_vars_are_used = true;
+            break;
+        }
+    }
+    if file_vars_are_used {
+        if !file then add_user_warning("Couldn't determine the current file, but variables like \%FILE\% are used in the command", dismiss_in_seconds = 10);
+
+        file_dir, file_name_no_extension, _, file_name := path_decomp(file);
+        file_dir = trim_right(file_dir, "/");
+
+        build_command = replace(build_command, "%FILE%",                   file);
+        build_command = replace(build_command, "%FILE_DIR%",               file_dir);
+        build_command = replace(build_command, "%FILE_NAME%",              file_name);
+        build_command = replace(build_command, "%FILE_NAME_NO_EXTENSION%", file_name_no_extension);
+
+        run_command   = replace(run_command,   "%FILE%",                   file);
+        run_command   = replace(run_command,   "%FILE_DIR%",               file_dir);
+        run_command   = replace(run_command,   "%FILE_NAME%",              file_name);
+        run_command   = replace(run_command,   "%FILE_NAME_NO_EXTENSION%", file_name_no_extension);
+    }
+
+    build_command = replace(build_command, "%BUILD_WORKING_DIR%", build_working_dir);
+    build_command = replace(build_command, "%RUN_WORKING_DIR%",   run_working_dir);
+
+    run_command   = replace(run_command,   "%BUILD_WORKING_DIR%", build_working_dir);
+    run_command   = replace(run_command,   "%RUN_WORKING_DIR%",   run_working_dir);
 }
 
 parse_build_errors :: (error_regex: string, start_offset: s64, num_bytes: s64) {

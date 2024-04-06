@@ -26,6 +26,7 @@
     + Closing an editor will now remove the corresponding file from the open files list (only if it's not modified)
     + New Handmade Hero theme (thanks @Sokus)
     + Basic JS highlighting (thanks @simonvallz)
+    + It is now possible to use variables in build and run commands: %FILE%, %FILE_DIR%, %FILE_NAME%, %FILE_NAME_NO_EXTENSION%, %BUILD_WORKING_DIR%, %RUN_WORKING_DIR% (see more information in the default config)
 + Bug fixes:
     + ...
 + Other changes:

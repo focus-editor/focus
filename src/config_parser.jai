@@ -735,6 +735,23 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         JAI;
                         append(*b, code);
                     }
+
+                    // Highlight variables in the commands, if present
+                    if option.name == "build_command" || option.name == "run_command" {
+                        code := #string JAI
+                            var_names := string.["%FILE%", "%FILE_DIR%", "%FILE_NAME%", "%FILE_NAME_NO_EXTENSION%", "%BUILD_WORKING_DIR%", "%RUN_WORKING_DIR%"];
+                            for var : var_names {
+                                start_index := 0;
+                                while true {
+                                    index := find_index_from_left(setting_value, var, start_index);
+                                    if index < 0 break;
+                                    start_index = index + var.count;
+                                    add_highlight(parser, setting_value.data - line.data + index, var.count, .value);
+                                }
+                            }
+                        JAI;
+                        append(*b, code);
+                    }
             }
         }
 

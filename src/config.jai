@@ -548,11 +548,12 @@ Build_Command :: struct {
     run_working_dir:                    string;
 
     error_regex:                        string;
-    auto_jump_to_error:                 bool;
 
+    auto_jump_to_error:                 bool;
     open_panel_on_build:                bool;
     close_panel_on_success:             bool;
     clear_build_output_before_running:  bool;
+    substitute_variables:               bool = true;
 
     timeout_in_seconds:                 int = -1;
 }

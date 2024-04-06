@@ -84,7 +84,7 @@ save_current_buffer_on_build:           false
 # open_panel_on_build:    true  #  <- any settings specified here will apply to all commands unless overridden
 # close_panel_on_success: false
 # clear_build_output_before_running: false
-# error_regex:            ^(?P<file>.*):(?P<line>\d+),(?P<col>\d+): (?P<type>Error|Warning|Info): (?P<msg>.*)|^(?P<msg>.*error LNK.*)
+# error_regex:            <compiler-specific error regex>  # see examples below
 # auto_jump_to_error:     false
 
 # [Debug Build And Run]   # <- command name. Can be arbitrary
@@ -96,13 +96,28 @@ save_current_buffer_on_build:           false
 # key_binding:            F5
 
 # [Run]                   # <- You could have commands that don't build anything and just run something
-# run_command:            test.exe
+# run_command:            test
 # run_working_dir:        /home/user/test
 # key_binding:            Ctrl-F5
 
 # [Release]
 # build_command:          jai first.jai - release
 # key_binding:            F9
+
+
+# Example error regexes:
+# For jai:  ^(?P<file>.*):(?P<line>\d+),(?P<col>\d+): (?P<type>Error|Warning|Info): (?P<msg>.*)|^(?P<msg>.*error LNK.*)
+# For msvc: ^(?P<file>.*)\((?P<line>\d+),(?P<col>\d+)\): (?P<type>error|warning) (?P<msg>.*)$
+# ... let us know what regex works for you and we'll add it here
+
+# NOTE:
+# You can use the following variables in build_command or run_command:
+# %FILE%      - full path to currenly active file
+# %FILE_DIR%  - the directory of the currently active file
+# %FILE_NAME% - current file name, with extension
+# %FILE_NAME_NO_EXTENSION% - current file name, without extension
+# %BUILD_WORKING_DIR% - working dir of the build command
+# %RUN_WORKING_DIR%   - working dir of the run command
 
 
 [[keymap]]

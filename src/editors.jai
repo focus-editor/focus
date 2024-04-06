@@ -1353,7 +1353,7 @@ restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor) {
 
 make_editor_active :: (editor_id: s64) {
     assert(editor_id < open_editors.count, "Trying to activate editor %, but the last available one is %", editor_id, open_editors.count - 1);
-    if is_build_panel(editor_id) then build_panel_activate();
+    if is_build_panel(editor_id) then build_panel_on_activate();
     editors.active = editor_id;
 
     buffer_id := open_editors[editor_id].buffer_id;
