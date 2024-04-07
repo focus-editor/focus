@@ -9,8 +9,8 @@ RELEASE_DATE :: #run -> string {
 }
 
 // // NOTE: Uncomment when releasing, comment out when not releasing
-// VERSION :: "0.3.3";
-// RELEASE_DATE :: "22 March 2024";
+// VERSION :: "0.3.4";
+// RELEASE_DATE :: "7 April 2024";
 
 #run,stallable build();
 
