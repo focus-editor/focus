@@ -700,7 +700,8 @@ go_to_current_build_error :: (placement: Editor_Placement = .in_place, show_erro
     }
 
     old_layout := editors.layout;
-    editors_open_file(build_error.file, placement);
+    success := editors_open_file(build_error.file, placement);
+    if !success return;
 
     editor, buffer := get_active_editor_and_buffer();
     go_to_line(editor, buffer, build_error.line, build_error.col);

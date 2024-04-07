@@ -437,24 +437,25 @@ adjust_cursors_and_viewport :: (editor: *Editor, buffer: Buffer, current_editor_
     if editor.cursors.count > 1 then organise_cursors(editor);
 }
 
-editors_open_file :: (path: string, placement: Editor_Placement = .in_place) {
+editors_open_file :: (path: string, placement: Editor_Placement = .in_place) -> success: bool {
     full_path, success := get_absolute_path(path);  // returns temporary storage
     path_overwrite_separators(full_path, separator = #char "/");
     if !file_exists(full_path) || !success {
         log_error("Couldn't open file %", path);
         add_user_error("Couldn't open file %", path, dismiss_in_seconds = 60);
-        return;
+        return false;
     }
     buffer_id := find_or_create_buffer(full_path);
     if buffer_id < 0 && full_path.count > 248 {
         log_error("Couldn't open file because path is too long for Windows: %\n", full_path);
         add_user_error("Couldn't open file. Path is too long.");  // not including full path for obvious reasons
-        return;
+        return false;
     }
 
     start_watching_file_if_not_already(full_path);
 
     editors_open_buffer(buffer_id, placement);
+    return true;
 }
 
 editors_open_global_config :: (placement: Editor_Placement) {
