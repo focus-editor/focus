@@ -119,6 +119,9 @@ tokenize_c_like_lang_for_indentation :: (using buffer: Buffer, $get_next_token: 
 
     tokenizer := get_tokenizer(buffer);
 
+    // Allocate temporary space for tracking one previous token
+    tokenizer.prev_tokens[0] = New(Token,, temp);
+
     while true {
         src := get_next_token(*tokenizer);
 
