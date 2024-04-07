@@ -1,7 +1,7 @@
 VERSION      :: #run -> string {
     result, revision := run_command("git", "rev-parse", "--short", "HEAD", capture_and_return_output = true);
-    if revision return sprint("0.3.3-%", trim(revision));
-    return "0.3.3-dev";
+    if revision return sprint("0.3.4-%", trim(revision));
+    return "0.3.4-dev";
 }
 RELEASE_DATE :: #run -> string {
     current_time := to_calendar(current_time_consensus());
