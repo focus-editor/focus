@@ -1366,6 +1366,7 @@ make_editor_active :: (editor_id: s64) {
 
 update_window_title :: (buffer_id: s64 = -1) {
     title := window_generic_title;
+    current_project_name := get_current_project_name();
     if project_config.loaded && current_project_name then title = tprint("% - %", current_project_name, title);
     if buffer_id >= 0 {
         buffer := open_buffers[buffer_id];

@@ -2,9 +2,6 @@ main :: () {
     #if DEBUG {
         UA :: #import "Unmapping_Allocator";
         context.allocator = UA.get_unmapping_allocator();
-
-        // OA :: #import "Overwriting_Allocator";
-        // context.allocator = OA.get_overwriting_allocator();
     }
 
     focus_allocator = context.allocator;  // to be used as a default allocator where we need it
@@ -41,8 +38,6 @@ main :: () {
     init_file_watcher();
     init_buffers();
     load_global_config(fallback_to_default_on_failure = true);
-    init_workspace();
-    init_build_system();
 
     window_x, window_y, window_width, window_height = platform_get_centered_window_dimensions(config.settings.open_on_the_biggest_monitor);
 
@@ -54,40 +49,78 @@ main :: () {
     window_generic_title = ifx DEBUG then "Focus (debug mode)" else "Focus";
     platform_create_window();
 
-    init_session_with_no_guidance :: () #expand {
+    // Process command line parameters
+    focus_executable_args = get_command_line_arguments();
+
+    args := focus_executable_args;
+    if args.count == 3 && args[1] == "-project" {
+        // - `focus.exe -project "Project Name"` or `focus.exe -project <path/to/project>` will load a project. No other arguments are allowed.
+        project := args[2];
+        success: bool;
+        if ends_with(project, ".focus-config") {
+            success = load_project_config_from_path(project);
+        } else {
+            success = load_project_config(project);
+        }
+        if !success then add_user_error("Couldn't load project config '%' provided in the command line arguments", project);
+    }
+    else if args.count >= 2 {
+        // - `focus.exe <path1> <path2> ...` will open files or add directories to the workspace
+        dirs_from_args: [..] string;
+        dirs_from_args.allocator = temp;
+
+        for path : array_view(args, 1, args.count - 1) {
+            if is_directory(path) {
+                dir := trim_right(path, "\\/");
+                project_config_path := tprint("%/.focus-config", dir);
+                if !project_config.loaded && file_exists(project_config_path) {
+                    success := load_project_config_from_path(project_config_path);
+                    if !success then add_user_error("Tried to load project config from % but couldn't due to errors", project_config_path);
+                } else {
+                    array_add(*dirs_from_args, dir);
+                }
+            } else if file_exists(path) {
+                editors_open_file(path);
+            } else {
+                if path == "-project" {
+                    add_user_error("The '-project' command line argument is used incorrectly.\nCorrect usage: focus -project <project name or path>.\nNo other arguments are allowed in this case.");
+                } else if starts_with(path, "-") {
+                    add_user_error("Invalid command line parameter '%'.", path);
+                } else {
+                    add_user_error("Invalid command line parameter '%'.\nAttempted to load it as a file or a directory, but it doesn't exist.", path);
+                }
+            }
+        }
+
+        for < dir : dirs_from_args  add_directory_to_workspace(dir, index = 0);
+    }
+
+    // Maybe load project from a .focus-config file in the current directory
+    if !project_config.loaded {
+        if file_exists(".focus-config") {
+            project_config_path, success := get_absolute_path(".focus-config");
+            if success {
+                success := load_project_config_from_path(project_config_path);
+                if !success then add_user_error("Tried to load project config from % but couldn't due to errors", project_config_path);
+            }
+        }
+    }
+
+    // Maybe load previous session project if we haven't loaded anything yet
+    if !project_config.loaded {
         session = maybe_load_previous_session();
         if session.project {
             success := load_project_config(session.project);
-            if !success then log_error("Couldn't load project config '%'", session.project);
+            if !success then add_user_error("Couldn't load project % from previous session", session.project);
         }
-    }
-
-    focus_executable_args = get_command_line_arguments();
-
-    if focus_executable_args.count >= 2 {
-        session_initialized := false;
-        for < i: focus_executable_args.count - 1..1 {
-            if is_directory(focus_executable_args[i]) {
-                if !session_initialized {
-                    session = start_fresh_session();
-                    session_initialized = true;
-                }
-                add_directory_to_workspace(focus_executable_args[i], index = 0);
-            }
-        }
-        for i: 1..focus_executable_args.count - 1 {
-            if file_exists(focus_executable_args[i]) && !is_directory(focus_executable_args[i]) {
-                if !session_initialized {
-                    session = start_fresh_session();
-                    session_initialized = true;
-                }
-                editors_open_file(focus_executable_args[i]);
-            }
-        }
-        if !session_initialized init_session_with_no_guidance();
     } else {
-        init_session_with_no_guidance();
+        session = start_fresh_session();
     }
+
+    if project_config.loaded then update_window_title();
+
+    init_workspace();
+    init_build_system();
 
     // This may generate window resize events if DPI/scaling settings need to be
     // applied, so make sure to only call it after the window is created.

@@ -573,7 +573,14 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         if value != "default" {
                             file_data, success := read_entire_file(theme_file);
                             if !success return true, tprint("Couldn't read theme file '%'", theme_file);
+
+                            migrated, new_file_data := maybe_migrate_config(theme_file, file_data);
+                            if migrated {
+                                add_success_message("Theme file '%' has been migrated to version [%]", theme_file, CURRENT_CONFIG_VERSION);
+                                file_data = new_file_data;
+                            }
                             theme_parse_result = parse_config(value, theme_file, file_data, as_theme = true);
+                            if theme_parse_result.success && migrated then write_entire_file(theme_file, new_file_data);
                         } else {
                             theme_parse_result = parse_config(value, "default", DEFAULT_CONFIG_FILE_DATA);
                         }

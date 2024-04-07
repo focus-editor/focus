@@ -4,7 +4,6 @@
 - Settings per file type
 - Add the ability to assign syntax to a buffer
 - Basic language definition files for the highlighting of languages we don't yet support
-- Config files for directories (i.e. adding a .focus-config file to your directory and have Focus load it)
 - Identifier search
 - A little bit of semantic highlighting for Jai
 - Backup unsaved changes
@@ -28,6 +27,10 @@
     + Basic JS highlighting (thanks @simonvallz)
     + It is now possible to use variables in build and run commands: %FILE%, %FILE_DIR%, %FILE_NAME%, %FILE_NAME_NO_EXTENSION%, %BUILD_WORKING_DIR%, %RUN_WORKING_DIR% (see more information in the default config)
     + New options: `window_width`, `window_height`, `window_x`, `window_y`. Can be used to configure the initial size of the editor window.
+    + Focus now allows auto loading projects at startup in one of the following ways:
+        + By passing a project name as a parameter: `focus -project "Project Name"` or `focus -project path/to/project.focus-config`.
+        + By passing in a directory path which contains a file named `.focus-config`. This file will be loaded as a Focus project.
+        + By launching Focus from a directory containing a file named `.focus-config`.
 + Bug fixes:
     + C highlighting now supports identifiers which start with a UTF8 letter
 + Other changes:
