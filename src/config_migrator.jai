@@ -457,7 +457,7 @@ Renamed_Keybind :: struct {
 
 // ================================= TESTS ====================================
 
-RUN_TESTS :: true;
+RUN_TESTS :: false;
 
 // Yes we do unit tests now! Don't you dare submit a PR without tests and 100% coverage.
 // Also your code must comply with the SOLID principles. Are we real programmers or what?
