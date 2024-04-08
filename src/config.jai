@@ -332,10 +332,7 @@ load_config :: (path: string, existing: *Loaded_Config, force := false) -> Loade
     allocator := Allocator.{ proc = flat_pool_allocator_proc, data = loaded_config.memory_pool };
     push_allocator(allocator);
 
-    // Convert to absolute path if we can
     file_path := path;
-    abs_path, ok := get_absolute_path(path);
-    if ok then file_path = abs_path;
 
     file_data, success_read := read_entire_file(file_path);
     if !success_read {
@@ -345,7 +342,14 @@ load_config :: (path: string, existing: *Loaded_Config, force := false) -> Loade
         return loaded_config;
     }
 
-    loaded_config.path = copy_string(file_path);
+    // Convert to absolute path if we can
+    file_path = copy_string(path);
+    abs_path, ok := get_absolute_path(path);
+    if ok then file_path = abs_path;
+    path_overwrite_separators(file_path, #char "/");
+    print("CONFIG: %\n", file_path);
+    loaded_config.path = file_path;
+
     loaded_config.hash = calculate_hash(to_bytes(file_data));
     if loaded_config.hash == existing.hash && !force return loaded_config, false;  // unchanged so no need to parse
 

@@ -207,7 +207,7 @@ build_system_update :: () {
                     }
             }
 
-            if last_command_result.build.finished then parse_build_errors(finished_command.error_regex, last_command_result.build.output_range);
+            if last_command_result.build.finished then parse_build_errors(finished_command.error_regex);
         }
 
         // Print elapsed time
@@ -361,7 +361,7 @@ build_panel_set_line_wrap :: (enable: bool) {
 
 go_to_next_build_error :: (placement: Editor_Placement = .in_place) {
     using last_command_result;
-    if !build_errors return;
+    if !can_go_to_build_error() return;
 
     current_build_error_id = (current_build_error_id + 1) % build_errors.count;
     go_to_current_build_error(placement);
@@ -369,7 +369,7 @@ go_to_next_build_error :: (placement: Editor_Placement = .in_place) {
 
 go_to_previous_build_error :: (placement: Editor_Placement = .in_place) {
     using last_command_result;
-    if !build_errors return;
+    if !can_go_to_build_error() return;
 
     current_build_error_id = (current_build_error_id - 1 + build_errors.count) % build_errors.count;
     go_to_current_build_error(placement);
@@ -558,10 +558,10 @@ substitute_variables :: (using work: *Build_Thread_Work) {
     run_command   = replace(run_command,   "%RUN_WORKING_DIR%",   run_working_dir);
 }
 
-parse_build_errors :: (error_regex: string, output_range: Offset_Range) {
-    if !error_regex return;
-
+parse_build_errors :: (error_regex: string) {
     using last_command_result;
+
+    if !error_regex { error_regex_status = .missing; return; }
 
     assert(build.finished);
     assert(!build_errors);  // we should've cleared it by now
@@ -569,14 +569,18 @@ parse_build_errors :: (error_regex: string, output_range: Offset_Range) {
     push_allocator(get_pool_allocator());
 
     editor, buffer := get_build_editor_and_buffer();
+    output_range := build.output_range;
     if output_range.start < 0 || output_range.end <= output_range.start || output_range.end > buffer.bytes.count return;
     build_output := cast(string) array_view(buffer.bytes, output_range.start, output_range.end - output_range.start);
 
     compiled_regex, valid := re.compile(error_regex, .LikePerl & ~.OneLine);
     if !valid {
         log_error("Unable to parse build errors because error_regex is invalid: %\n", error_regex);
+        error_regex_status = .failed_to_compile;
         return;
     }
+
+    error_regex_status = .ok;
 
     while true {
         matched, captures := re.match(build_output, compiled_regex);
@@ -690,15 +694,27 @@ get_pool_allocator :: inline () -> Allocator {
     return Allocator.{ proc = flat_pool_allocator_proc, data = *memory_pool };
 }
 
+can_go_to_build_error :: () -> bool {
+    using last_command_result;
+
+    if !finished { add_user_warning("No finished build command to parse errors from.", dismiss_in_seconds = 3, tag = .build); return false; }
+    if error_regex_status == {
+        case .failed_to_compile;
+            add_user_warning("Error regex in the build command config failed to compile. Can't jump to errors. \nIf you change it, rerun the build command again.", dismiss_in_seconds = 5, tag = .build);
+            return false;
+        case .missing;
+            add_user_warning("Error regex in the build command config is missing. Can't jump to errors.\nIf you add it, rerun the build command again.", dismiss_in_seconds = 5, tag = .build);
+            return false;
+    }
+    if !build_errors { add_user_warning("No build errors found.", dismiss_in_seconds = 3, tag = .build); return false; }
+
+    return true;
+}
+
 go_to_current_build_error :: (placement: Editor_Placement = .in_place, show_error := true) {
     using last_command_result;
 
     clear_user_messages(.build);
-
-    if !build_errors || !finished {
-        add_user_warning("No build errors are found", dismiss_in_seconds = 3, tag = .build);
-        return;
-    }
 
     current_build_error_id = clamp(current_build_error_id, 0, build_errors.count - 1);
 
@@ -710,6 +726,7 @@ go_to_current_build_error :: (placement: Editor_Placement = .in_place, show_erro
         cursor := leave_only_original_cursor(editor);
         cursor.sel = build_error.file_output_range.start;
         cursor.pos = build_error.file_output_range.end;
+        select_line(cursor, buffer);
         editor.cursor_moved = .jumped;
     }
 
@@ -770,6 +787,7 @@ last_command_result: struct {
 
     build_working_dir: string;  // for prepending to relative error paths
     build_errors: [..] Build_Error;  // allocated from pool
+    error_regex_status: enum { ok; failed_to_compile; missing; } = .ok;  // for better error messages
     current_build_error_id := -1;
 };
 

@@ -57,6 +57,7 @@
     + Fixed a crash when trying to jump to error in a file we can't open
     + Fixed build output parsing in some situations
     + Added relative build error path support (relative to the build_working_dir of the build command)
+    + Improved error messages
 
 
 # Version 0.3.3
