@@ -420,6 +420,7 @@ build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thre
 
         output_range.end = output_range.start + num_bytes_printed;
 
+        last_command_result.build_working_dir = copy_string(command.build_working_dir);
         last_command_result.build = .{
             finished = true,
             timeout_reached = timeout_reached,
@@ -694,7 +695,7 @@ go_to_current_build_error :: (placement: Editor_Placement = .in_place, show_erro
 
     clear_user_messages(.build);
 
-    if !build_errors {
+    if !build_errors || !finished {
         add_user_warning("No build errors are found", dismiss_in_seconds = 3, tag = .build);
         return;
     }
@@ -713,7 +714,26 @@ go_to_current_build_error :: (placement: Editor_Placement = .in_place, show_erro
     }
 
     old_layout := editors.layout;
-    success := editors_open_file(build_error.file, placement);
+
+    // Try to open the file, maybe by prepending the build dir and removing the "./" at the start
+    tried_paths: [..] string;
+    tried_paths.allocator = temp;
+    path := copy_temporary_string(build_error.file);
+    path_overwrite_separators(path, #char "/");
+    if starts_with(path, "./") then advance(*path, 2);
+    if !file_exists(path) && build_working_dir {
+        array_add(*tried_paths, path);
+        path = tprint("%/%", build_working_dir, path);
+    }
+    if !file_exists(path) {
+        array_add(*tried_paths, path);
+        message := tprint("Couldn't open %.", build_error.file);
+        if tried_paths.count >= 2 then message = tprint("%\nTried the following paths:%", message, join(..tried_paths, separator = "\n- ", before_first = true));
+        add_user_error(message, dismiss_in_seconds = 10);
+        return;
+    }
+
+    success := editors_open_file(path, placement);
     if !success return;
 
     editor, buffer := get_active_editor_and_buffer();
@@ -748,6 +768,7 @@ last_command_result: struct {
     run:   Command_Result;
     finished := false;
 
+    build_working_dir: string;  // for prepending to relative error paths
     build_errors: [..] Build_Error;  // allocated from pool
     current_build_error_id := -1;
 };

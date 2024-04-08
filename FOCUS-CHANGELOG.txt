@@ -20,7 +20,7 @@
 + New features:
     + ...
 + Bug fixes:
-    + Fixed a crash when trying to jump to error in a file we can't open
+    + ...
 + Other changes:
     + ...
 
@@ -49,6 +49,14 @@
     + Column number shown in the footer will now count the number of characters, not the visual offset (previously it would take tab size into account)
     + Configs will be migrated to version [3]. New settings, colors and keybinds will be automatically added.
     + C highlighting has been slightly improved
+
+    # 0.3.4-1 hotfix
+    + Fixed a crash when trying to autoindent C/C++ code (introduced in 0.3.4)
+
+    # 0.3.4-2 hotfix
+    + Fixed a crash when trying to jump to error in a file we can't open
+    + Fixed build output parsing in some situations
+    + Added relative build error path support (relative to the build_working_dir of the build command)
 
 
 # Version 0.3.3

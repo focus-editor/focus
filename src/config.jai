@@ -325,12 +325,17 @@ get_current_project_name :: () -> string {
 
 #scope_file
 
-load_config :: (file_path: string, existing: *Loaded_Config, force := false) -> Loaded_Config, changed := true {
+load_config :: (path: string, existing: *Loaded_Config, force := false) -> Loaded_Config, changed := true {
     loaded_config: Loaded_Config;
     loaded_config.memory_pool = New(Flat_Pool);
 
     allocator := Allocator.{ proc = flat_pool_allocator_proc, data = loaded_config.memory_pool };
     push_allocator(allocator);
+
+    // Convert to absolute path if we can
+    file_path := path;
+    abs_path, ok := get_absolute_path(path);
+    if ok then file_path = abs_path;
 
     file_data, success_read := read_entire_file(file_path);
     if !success_read {
