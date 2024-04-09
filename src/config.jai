@@ -345,9 +345,8 @@ load_config :: (path: string, existing: *Loaded_Config, force := false) -> Loade
     // Convert to absolute path if we can
     file_path = copy_string(path);
     abs_path, ok := get_absolute_path(path);
-    if ok then file_path = abs_path;
+    if ok then file_path = copy_string(abs_path);
     path_overwrite_separators(file_path, #char "/");
-    print("CONFIG: %\n", file_path);
     loaded_config.path = file_path;
 
     loaded_config.hash = calculate_hash(to_bytes(file_data));
