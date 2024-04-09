@@ -726,6 +726,7 @@ go_to_current_build_error :: (placement: Editor_Placement = .in_place, show_erro
         cursor := leave_only_original_cursor(editor);
         cursor.sel = build_error.file_output_range.start;
         cursor.pos = build_error.file_output_range.end;
+        if buffer.dirty then rescan_for_lines(buffer);
         select_line(cursor, buffer);
         editor.cursor_moved = .jumped;
     }

@@ -9,8 +9,8 @@
 // }
 
 // NOTE: Uncomment when releasing, comment out when not releasing
-VERSION :: "0.3.4-2";
-RELEASE_DATE :: "9 April 2024";
+VERSION :: "0.3.4-3";
+RELEASE_DATE :: "10 April 2024";
 
 #run,stallable build();
 
