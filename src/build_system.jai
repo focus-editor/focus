@@ -659,7 +659,7 @@ parse_build_errors :: (error_regex: string) {
         // Assume that code samples might be somewhere in between the error data we've parsed
         start := cast(s64) error.error_info_end_offset;
         end   := buffer.bytes.count;
-        if it_index < build_errors.count - 1 then end = build_errors[build_errors.count-1].error_info_start_offset;
+        if it_index < build_errors.count - 1 then end = build_errors[it_index + 1].error_info_start_offset;
 
         potential_code_block := cast(string) array_view(buffer.bytes, start, end - start);
 
