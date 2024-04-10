@@ -179,6 +179,7 @@ base_commands := #run -> [] Command {
         cmd( "Autoindent Region",                 .autoindent_region,                .Single ),
 
         cmd( "Open Another Editor Instance",      .open_another_editor_instance,     .None   ),
+        cmd( "Copy Current Line Info",            .copy_current_line_info,           .Single ),
     ];
 
     linux_commands := Command.[

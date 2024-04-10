@@ -197,6 +197,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
 
         case .toggle_line_wrap;                 toggle_line_wrap                    (editor);
         case .toggle_line_numbers;              toggle_line_numbers                 ();
+        case .copy_current_line_info;           copy_current_line_info              (editor, buffer);
         case .delete_current_file;              show_delete_file_dialog(editor);
         case .center_viewport_on_cursor;        center_viewport_on_cursor           (editor, buffer);
         case .move_cursor_to_viewport_center;   move_cursor_to_viewport_center      (editor, buffer);
@@ -3295,6 +3296,15 @@ toggle_line_wrap :: (editor: *Editor) {
 toggle_line_numbers :: () {
     config.settings.show_line_numbers = !config.settings.show_line_numbers;
     redraw_requested = true;
+}
+
+copy_current_line_info :: (using editor: *Editor, buffer: Buffer) {
+    file_path: string = copy_temporary_string(ifx buffer.has_file then buffer.file.full_path else "<in-memory-buffer>");
+    path_overwrite_separators(file_path, PATH_SEPARATOR);  // match the system separator
+    coords := offset_to_real_coords(buffer, cursors[main_cursor].pos);
+    line_info := tprint("%:%:%", file_path, coords.line + 1, coords.col + 1);
+    os_clipboard_set_text(line_info);
+    add_success_message("String '%' copied to clipboard", line_info, dismiss_in_seconds = 5);
 }
 
 free_editor :: (using editor: *Editor) {
