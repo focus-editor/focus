@@ -327,6 +327,7 @@ ADDED_SETTINGS :: Added_Setting.[
 
     // .{ 4, "window_width",                                       "-1" },
     // .{ 4, "window_height"                                       "-1" },
+    // .{ 4, "insert_final_newline_on_save"                        "false" },
 ];
 
 REMOVED_SETTINGS :: Removed_Setting.[

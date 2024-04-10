@@ -645,6 +645,7 @@ save_buffer :: (using buffer: *Buffer, buffer_id: s64) {
     assert(has_file, "Trying to save a buffer without an associated file. This is a bug.");
 
     if config.settings.strip_trailing_whitespace_on_save then strip_trailing_whitespace(buffer, buffer_id);
+    if config.settings.insert_final_newline_on_save      then insert_final_newline(buffer);  // important to do it after stripping
 
     success := write_entire_file(file.full_path, cast(string) bytes);
     if success {
@@ -773,6 +774,20 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
         cursor.pos = real_coords_to_offset(buffer, pos);
         cursor.sel = real_coords_to_offset(buffer, sel);
     }
+}
+
+insert_final_newline :: (using buffer: *Buffer) {
+    if !bytes return;
+    if bytes[bytes.count - 1] == #char "\n" return;  // already there
+
+    new_insert_edit(buffer, bytes.count, "\n");
+
+    lock(*content_lock);
+    array_resize(*bytes, bytes.count + 1);
+    bytes[bytes.count - 1] = cast(u8) #char "\n";
+    unlock(*content_lock);
+
+    rescan_for_lines(buffer);
 }
 
 remember_last_modtime_and_size :: (using buffer: *Buffer) {

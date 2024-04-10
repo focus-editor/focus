@@ -526,6 +526,7 @@ Settings :: struct {
     tab_size                                      := 4;
     insert_spaces_when_pressing_tab               := true;
     strip_trailing_whitespace_on_save             := false;
+    insert_final_newline_on_save                  := false;
     smooth_scrolling                              := true;
     scroll_beyond_last_line                       := true;
     line_height_scale_percent                     := 120;
