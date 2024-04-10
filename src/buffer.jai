@@ -287,7 +287,7 @@ get_selected_string :: (cursor: Cursor, buffer: Buffer) -> string {
     return get_range_as_string(buffer, get_selection(cursor));
 }
 
-remove_crlf_in_place :: (bytes: *[] u8) {
+remove_crlf_in_place :: (bytes: *[] u8) -> bytes_removed: s64 {
     dst := bytes.data;
     src := bytes.data;
     end := bytes.data + bytes.count;
@@ -311,7 +311,15 @@ remove_crlf_in_place :: (bytes: *[] u8) {
     count := cursor - src;
     focus_memcpy(dst, src, count);
 
-    bytes.count = dst + count - bytes.data;
+    new_count := dst + count - bytes.data;
+    bytes_removed := bytes.count - new_count;
+    bytes.count = new_count;
+
+    return bytes_removed;
+}
+
+remove_crlf_in_place :: inline (str: *string) -> bytes_removed: s64 {
+    return remove_crlf_in_place(cast(*[] u8) str);
 }
 
 rescan_for_lines :: (using buffer: *Buffer) {
@@ -879,11 +887,10 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
 
     lock(*buffer.content_lock);
     buffer.bytes = resizable(to_bytes(file_data));
-    old_size := buffer.bytes.count;
-    remove_crlf_in_place(*buffer.bytes);
+    bytes_removed := remove_crlf_in_place(*buffer.bytes);
     unlock(*buffer.content_lock);
 
-    buffer.crlf = buffer.bytes.count != old_size;
+    buffer.crlf = bytes_removed > 0;
     buffer.meow_hash = calculate_hash(buffer.bytes);
     buffer.lang = get_lang_from_path(path);
 
@@ -962,18 +969,17 @@ refresh_buffer_from_disk :: (path: string) {
     if !success { log_error("Couldn't read file '%'\n", path); #if DEBUG_FILE_REFRESH log("Couldn't read file"); return; }
     defer free(file_contents_str);
 
-    file_contents := cast([] u8) file_contents_str;
     lock(*buffer.content_lock);
-    remove_crlf_in_place(*file_contents);
+    bytes_removed := remove_crlf_in_place(*file_contents_str);
     unlock(*buffer.content_lock);
-    file_contents_str = cast(string) file_contents;
 
-    file_hash := calculate_hash(file_contents);
+    file_hash := calculate_hash(cast([] u8) file_contents_str);
     if buffer.meow_hash == file_hash {
         #if DEBUG_FILE_REFRESH log("Meow hash hasn't changed for %", path);
         return;  // file hasn't actually changed
     }
 
+    buffer.crlf = bytes_removed > 0;
     buffer.meow_hash = file_hash;
     buffer.deleted = false;
 

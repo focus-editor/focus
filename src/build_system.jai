@@ -664,19 +664,11 @@ parse_build_errors :: (error_regex: string) {
         potential_code_block := cast(string) array_view(buffer.bytes, start, end - start);
 
         if lang == .Jai {
-            #if OS == .WINDOWS {
-                sep_start := "\r\n    ";
-                sep_end   := "\r\n\r\n";
-            } else {
-                sep_start := "\n    ";
-                sep_end   := "\n\n";
-            }
-
             // In the Jai compiler output, sample code blocks should be separated by double newlines + spaces
-            last_double_newline := find_index_from_right(potential_code_block, sep_end);
+            last_double_newline := find_index_from_right(potential_code_block, "\n\n");
             if last_double_newline >= 0 then end = start + last_double_newline;
 
-            first_double_newline := find_index_from_left(potential_code_block, sep_start);
+            first_double_newline := find_index_from_left(potential_code_block, "\n    ");
             if first_double_newline >= 0 then start += first_double_newline;
         } else {
             continue;  // don't attempt to highlight other languages until we figure out a robust way to parse out code samples
@@ -872,15 +864,14 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
         success, num_output_bytes, num_error_bytes := read_from_process(process, output_buffer, error_buffer, remaining_timeout_ms);
 
         if num_output_bytes {
-            write_output_from_build_thread(*stdout, to_string(output_buffer.data, num_output_bytes));
+            output_str := to_string(output_buffer.data, num_output_bytes);
+            remove_crlf_in_place(*output_str);
+            write_output_from_build_thread(*stdout, output_str);
             platform_wake_up_main_thread();
-            num_bytes_printed += num_output_bytes;
+            num_bytes_printed += output_str.count;
         }
 
-        if num_error_bytes {
-            append(*error_builder, to_string(error_buffer.data, num_error_bytes));
-            num_bytes_printed += num_error_bytes;
-        }
+        if num_error_bytes then append(*error_builder, to_string(error_buffer.data, num_error_bytes));
 
         if !success {
             log_error("Could not read output of command \"%\"", get_quoted_command_string(args));
@@ -910,7 +901,10 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
     elapsed_seconds := to_float64_seconds(current_time_monotonic() - start_time);
 
     // Print error output
-    write_output_from_build_thread(*stderr, builder_to_string(*error_builder));
+    error_str := builder_to_string(*error_builder);
+    remove_crlf_in_place(*error_str);
+    write_output_from_build_thread(*stderr, error_str);
+    num_bytes_printed += error_str.count;
 
     success, process_result := get_process_result(process);
     if !success {
