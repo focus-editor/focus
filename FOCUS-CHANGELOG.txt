@@ -22,7 +22,7 @@
 + Bug fixes:
     + ...
 + Other changes:
-    + ...
+    + Made the fuzzy search in the command dialog more intuitive
 
 
 # RELEASES ==================================================================
@@ -53,7 +53,7 @@
     # 0.3.4-1 hotfix
     + Fixed a crash when trying to autoindent C/C++ code (introduced in 0.3.4)
 
-    # 0.3.4-2 hotfix
+    # 0.3.4-3 hotfix
     + Fixed a crash when trying to jump to error in a file we can't open
     + Fixed build output parsing in some situations
     + Added relative build error path support (relative to the build_working_dir of the build command)

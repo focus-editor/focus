@@ -198,17 +198,22 @@ fuzzy_match :: (str: string, filter: Fuzzy_Filter, only_exact := false) -> score
     return xx score, highlights;
 }
 
-construct_fuzzy_filter :: (filter_str: string, treat_slashes_as_spaces := false) -> Fuzzy_Filter {
+construct_fuzzy_filter :: (filter_str: string, multi_chunk_search := false) -> Fuzzy_Filter {
     str := copy_temporary_string(trim(filter_str));
     if !str return .{};
 
     chunks: [..] Fuzzy_Filter.Chunk;
     chunks.allocator = temp;
 
-    // Split into strings separated by spaces or slashes
-    space := cast(u8) #char " ";
-    if treat_slashes_as_spaces then replace_chars(str, "\\/", space);
-    strings := split(str, space,, allocator = temp);
+    // Maybe split into strings separated by spaces or slashes (useful for the open file dialog)
+    strings: [] string;
+    if multi_chunk_search {
+        space := cast(u8) #char " ";
+        replace_chars(str, "\\/", space);
+        strings = split(str, space,, allocator = temp);
+    } else {
+        strings = .[str];  // treat the whole search string as one (useful for commands etc)
+    }
 
     for s : strings {
         if !s continue;

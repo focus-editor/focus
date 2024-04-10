@@ -333,7 +333,7 @@ refresh_entries :: (clear_input := true) {
         if buffer.modified_on_disk then { entry.flags |= .MODIFIED_ON_DISK; entry.sort_key |= top_priority_bit; }
     }
 
-    filter := construct_fuzzy_filter(cast(string) input.text, treat_slashes_as_spaces = true);
+    filter := construct_fuzzy_filter(cast(string) input.text, multi_chunk_search = true);
 
     if #complete mode == {
         case .save; #through;
