@@ -122,13 +122,15 @@ build_clear_output :: () {
 
     push_allocator(focus_allocator);
 
-    lock(*buffer.content_lock);
-    array_reset_keeping_memory(*buffer.regions);
-    unlock(*buffer.content_lock);
-
     delete_range_raw(buffer, 0, buffer.bytes.count);
     rescan_for_lines(buffer);
-    rescan_for_wrapped_lines(editor, buffer);
+    if editor.line_wrap == .on then rescan_for_wrapped_lines(editor, buffer);
+
+    lock(*buffer.content_lock);
+    array_reset_keeping_memory(*buffer.regions);
+    array_resize(*buffer.colors, buffer.bytes.count);
+    memset(buffer.colors.data, 0, buffer.colors.count);
+    unlock(*buffer.content_lock);
 }
 
 build_command_is_running :: () -> bool {
