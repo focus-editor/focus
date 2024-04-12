@@ -624,7 +624,7 @@ leave_only_main_cursor :: (using editor: *Editor) -> *Cursor {
     return *cursors[0];
 }
 
-organise_cursors :: (using editor: *Editor, selection_mode: *Selection_Mode = xx 0) {
+organise_cursors :: (using editor: *Editor, selection_mode: *Selection_Mode = null) {
     compare_cursors :: (c1: Cursor, c2: Cursor) -> s64 {
         return min(c1.pos, c1.sel) - min(c2.pos, c2.sel);
     }
@@ -1677,6 +1677,7 @@ select_all_occurrences :: (using editor: *Editor, buffer: Buffer, search_str := 
         offset += selected_text.count;
     }
 
+    organise_cursors(editor);
     cursors_start_blinking();
 
     return editor.search_whole_words;
