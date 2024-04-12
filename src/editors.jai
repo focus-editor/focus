@@ -2929,6 +2929,7 @@ copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false, 
             delete_range(buffer, selection);
             cursor.col_wanted = -1;
             cursor.pos = selection.start;
+            cursor.sel = cursor.pos;
             offset_delta += selection.end - selection.start;
         }
         editor.cursor_moved = .refresh_only;
