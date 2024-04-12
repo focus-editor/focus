@@ -91,7 +91,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         // Handle editor actions which make sense while the search bar is open
         editor_action := map_event_to_action(event, Action_Editors);
         if editor_action == {
-            case .select_all_occurrences;           select_all_occurrences(editor, buffer); close_search_bar(editor);                   return true;
+            case .select_all_occurrences;           select_all_occurrences(editor, buffer, cast(string) input.text); close_search_bar(editor); return true;
         }
 
         // Handle search dialog actions
@@ -1627,11 +1627,11 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) 
     return editor.search_whole_words;
 }
 
-select_all_occurrences :: (using editor: *Editor, buffer: Buffer) -> whole_words: bool {
+select_all_occurrences :: (using editor: *Editor, buffer: Buffer, search_str := "") -> whole_words: bool {
     editor.cursor_moved = .has_not_moved;
 
     // If main_cursor don't have selection check if it can select a word
-    if !has_selection(cursors[main_cursor]) {
+    if !search_str && !has_selection(cursors[main_cursor]) {
         copy := cursors[main_cursor];
         select_word(buffer, *copy);
         text := get_selected_string(copy, buffer);
@@ -1648,17 +1648,21 @@ select_all_occurrences :: (using editor: *Editor, buffer: Buffer) -> whole_words
 
     // Begin search from the main cursor downwards with a wraparound
     buffer_str    := cast(string) buffer.bytes;
-    selected_text := get_selected_string(cursors[main_cursor], buffer);
-    search_func   := ifx search_whole_words && is_all_word_chars(selected_text) then find_index_from_left_whole_word else find_index_from_left;
+    selected_text := ifx !search_str then get_selected_string(cursors[main_cursor], buffer) else search_str;
+    search_func   := ifx !search_str && search_whole_words && is_all_word_chars(selected_text) then find_index_from_left_whole_word else find_index_from_left;
     initial       := get_selection(cursors[main_cursor]);
     offset        := cast(s64) initial.end;
+    wrapped       := false;
 
     while true {
         offset = search_func(buffer_str, selected_text, offset);
 
         if offset == initial.start break;  // We found all occurrences in the file, exit loop
 
-        if offset == -1 { offset = 0; continue; }  // We reached eof, wrap around
+        if offset == -1 {
+            // Maybe wrap around
+            if !wrapped { offset = 0; wrapped = true; continue; } else break;
+        }
 
         new_cursor := array_add(*cursors);
         new_cursor.sel = cast(s32) offset;
