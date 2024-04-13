@@ -470,6 +470,7 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
         case .Js;           return tokenize_c_like_lang_for_indentation(buffer, get_next_js_token);
         case .CSharp;       return tokenize_csharp_for_indentation(buffer);
         case .Glsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_glsl_token);
+        case .Hlsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_hlsl_token);
         case .Zig;          return tokenize_c_like_lang_for_indentation(buffer, get_next_zig_token);
         case .Html;         #through;
         case .Xml;          return tokenize_xml_for_indentation(buffer);
@@ -1179,6 +1180,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .Focus_Config; return highlight_focus_config_syntax;
         case .Focus_Theme;  return highlight_focus_config_syntax;
         case .Glsl;         return highlight_glsl_syntax;
+        case .Hlsl;         return highlight_hlsl_syntax;
         case .Golang;       return highlight_golang_syntax;
         case .Js;           return highlight_js_syntax;
         case .Lua;          return highlight_lua_syntax;
@@ -1365,6 +1367,7 @@ Buffer :: struct {
         Focus_Config;
         Focus_Theme;
         Glsl;
+        Hlsl;
         Golang;
         Js;
         Lua;

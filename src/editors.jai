@@ -1160,6 +1160,10 @@ get_lang_from_path :: (path: string) -> Buffer.Lang {
             case "glsl";
                 lang = .Glsl;
 
+            case "hlsl"; #through;
+            case "fx";
+                lang = .Hlsl;
+
             case "c";   #through;
             case "h";   #through;
             case "inl"; #through;
@@ -3018,6 +3022,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
         case .CSharp;       comment = "//";
         case .Golang;       comment = "//";
         case .Glsl;         comment = "//";
+        case .Hlsl;         comment = "//";
         case .Jai;          comment = "//";
         case .Js;           comment = "//";
         case .Lua;          comment = "--";

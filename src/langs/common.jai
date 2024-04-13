@@ -163,6 +163,7 @@ get_lang_from_name :: (lang_name: string) -> Buffer.Lang {
     // if ends_with_nocase(lang_name, "focus_config") return .Focus_Config;  // disabled for now
     // if ends_with_nocase(lang_name, "focus_theme")  return .Focus_Theme;
     if ends_with_nocase(lang_name, "glsl")         return .Glsl;
+    if ends_with_nocase(lang_name, "hlsl")         return .Hlsl;
     if ends_with_nocase(lang_name, "golang")       return .Golang;
     if ends_with_nocase(lang_name, "js")           return .Js;
     if ends_with_nocase(lang_name, "ts")           return .Js;
