@@ -165,7 +165,7 @@ should_ignore_file :: (path: string) -> bool {
     // Ignore binary files - it's not a 100% guarantee but a good heuristic.
     // We're not using read_entire_file here because this function is used when scanning workspace
     // and obtaining file lists in the Navigate to File dialog, so large binary files could really trip us up here
-    found_zeroes := read_file_in_chunks_and_scan_for_zeroes(path);
+    found_zeroes := read_a_chunk_of_file_and_scan_for_zeroes(path);
     if found_zeroes return true;
 
     return false;
@@ -201,7 +201,7 @@ get_parent_dir_path :: (file_path: string) -> string {
     return path;
 }
 
-read_file_in_chunks_and_scan_for_zeroes :: (path: string) -> found_zeroes: bool {
+read_a_chunk_of_file_and_scan_for_zeroes :: (path: string) -> found_zeroes: bool {
     push_allocator(temp);
     auto_release_temp();
 
@@ -212,12 +212,10 @@ read_file_in_chunks_and_scan_for_zeroes :: (path: string) -> found_zeroes: bool 
     CHUNK_SIZE :: 4 * 1024;
     buf: [CHUNK_SIZE] u8;
 
-    while true {
-        success, bytes_read := file_read(file, buf.data, buf.count);
-        if bytes_read <= 0 return false;  // success could be false but that could indicate a successful read near the end of the file
-        chunk := cast(string) array_view(buf, 0, bytes_read);
-        if find_index_from_left(chunk, byte = 0) >= 0 return true;
-    }
+    _, bytes_read := file_read(file, buf.data, buf.count);
+    if bytes_read <= 0 return false;  // success could be false but that could indicate a successful read near the end of the file
+    chunk := cast(string) array_view(buf, 0, bytes_read);
+    if find_index_from_left(chunk, byte = 0) >= 0 return true;
 
     return false;
 }
