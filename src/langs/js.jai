@@ -467,11 +467,10 @@ OPERATIONS :: string.[
 ];
 
 KEYWORDS :: string.[
-    "async", "abstract", "arguments", "await", "boolean", "break", "byte", "case", "catch", "char", "class", "const", "continue",
-    "debugger", "default", "delete", "do", "double", "else", "enum", "eval", "export", "extends", "final", "finally",
-    "float", "for", "function", "goto", "if", "implements", "import", "in", "instanceof", "int", "interface", "let", "long",
-    "native", "new", "package", "private", "protected", "public", "return", "short", "static", "super", "switch", "synchronized",
-    "throw", "throws", "transient", "try", "typeof", "var", "void", "volatile", "while", "with", "yield",
+    "async", "abstract", "arguments", "await", "boolean", "break", "case", "catch", "class", "const", "continue", "debugger",
+    "default", "delete", "do", "else", "enum", "eval", "export", "extends", "finally", "for", "function", "if", "import",
+    "in", "instanceof", "interface", "let", "new", "private", "protected", "public", "return", "static", "super", "switch",
+    "throw", "try", "typeof", "var", "void", "while", "with", "yield",
 ];
 
 TYPE_KEYWORDS :: string.[
