@@ -427,8 +427,8 @@ compute_byte_map :: (using prog: *Prog) {
 	for id: 0..inst.count - 1 {
 		ip := *inst[id];
 		if get_opcode(<<ip) == .kInstByteRange {
-			lo := ip.lo;
-			hi := ip.hi;
+            lo: s32 = ip.lo;
+            hi: s32 = ip.hi;
 			mark(*builder, lo, hi);
 			if get_foldcase(<<ip) && lo <= #char "z" && hi >= #char "a" {
 				foldlo := lo;
@@ -440,8 +440,8 @@ compute_byte_map :: (using prog: *Prog) {
 					foldhi = #char "z";
 				}
 				if (foldlo <= foldhi) {
-					foldlo += cast(u8)#char "A" - #char "a";
-					foldhi += cast(u8)#char "A" - #char "a";
+					foldlo += #char "A" - #char "a";
+					foldhi += #char "A" - #char "a";
 					mark(*builder, foldlo, foldhi);
 				}
 			}
@@ -526,7 +526,7 @@ init :: (using b: *ByteMapBuilder) {
 	nextcolor = 257;
 }
 
-mark :: (using builder: *ByteMapBuilder, lo: u8, hi: u8) {
+mark :: (using builder: *ByteMapBuilder, lo: s32, hi: s32) {
 	assert(lo <= hi);
 
 	// Ignore any [0-255] ranges. They cause us to recolor every range, which
@@ -534,8 +534,8 @@ mark :: (using builder: *ByteMapBuilder, lo: u8, hi: u8) {
 	if lo == 0 && hi == 255		return;
 
 	r: Range;
-	r.lo = lo;
-	r.hi = hi;
+	r.lo = cast(u8) lo;
+	r.hi = cast(u8) hi;
 	array_add(*ranges, r);
 }
 
@@ -993,8 +993,8 @@ compute_hints :: (using prog: *Prog, flat: *[..] Inst, begin: int, end: int) {
 		first := end;
 
 		ip := *(<<flat)[id];
-		lo := ip.lo;
-		hi := ip.hi;
+		lo: s32 = ip.lo;
+		hi: s32 = ip.hi;
 		recolor(*splits, *colors, lo, hi, *first, id);
 		if get_foldcase(<<ip) && lo <= #char "z" && hi >= #char "a" {
 			foldlo := lo;
@@ -1006,8 +1006,8 @@ compute_hints :: (using prog: *Prog, flat: *[..] Inst, begin: int, end: int) {
 				foldhi = #char "z";
 			}
 			if (foldlo <= foldhi) {
-				foldlo += cast(u8)#char "A" - #char "a";
-				foldhi += cast(u8)#char "A" - #char "a";
+				foldlo += #char "A" - #char "a";
+				foldhi += #char "A" - #char "a";
 				recolor(*splits, *colors, foldlo, foldhi, *first, id);
 			}
 		}
