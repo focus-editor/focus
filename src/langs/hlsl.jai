@@ -98,6 +98,19 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
         kw_token, ok := table_find(*KEYWORD_MAP, identifier_str);
         if ok { token.type = kw_token.type; token.keyword = kw_token.keyword; return; }
     }
+
+    // Or maybe it's a semantic
+    if identifier_str.count <= MAX_SEMANTIC_LENGTH {
+        // Semantics may have an index in the end
+        pure_semantic_name := trim_right(identifier_str, "0123456789");
+        if !pure_semantic_name return;
+
+        // They are also case insensitive
+        pure_semantic_name = to_lower_copy_new(pure_semantic_name,, allocator = temp);
+
+        semantic, ok := table_find(*SEMANTICS_MAP, pure_semantic_name);
+        if ok { token.type = .semantic; token.semantic = semantic; return; }
+    }
 }
 
 // TODO: simplify (this was copied from C). Also simplify for GLSL
@@ -463,6 +476,7 @@ Token :: struct {
         punctuation:            Punctuation;
         operation:              Operation;
         preprocessor_directive: Preprocessor_Directive;
+        semantic:               Semantic;
     }
 
     Type :: enum u16 {
@@ -480,7 +494,7 @@ Token :: struct {
         modifier_keyword;
         type_keyword;
         value_keyword;
-        builtin_keyword;
+        semantic;
         preprocessor_directive;
         invalid;
     }
@@ -501,7 +515,7 @@ COLOR_MAP :: Color.[
     .CODE_KEYWORD,       // modifier_keyword
     .CODE_TYPE,          // type_keyword
     .CODE_VALUE,         // value_keyword
-    .CODE_VALUE,         // builtin_keyword
+    .CODE_KEYWORD,       // semantic
     .CODE_KEYWORD,       // preprocessor_directive
     .CODE_ERROR,         // invalid
 ];
@@ -518,36 +532,152 @@ OPERATIONS :: string.[
 ];
 
 KEYWORDS :: string.[
-    // "unroll", "loop", "flatten", "branch", "numthreads",  // NOTE: these are in brackets, but we don't parse them with brackets yet
     "struct", "technique", "pass", "while", "for", "do", "if", "else", "switch", "case", "default", "break", "continue",
-    "return", "discard", "static", "inline", "extern", "volatile", "uniform", "shared", "groupshared", "register", "packoffset",
-    "numthreads", "branch", "flatten", "unroll", "loop", "nointerpolation", "linear", "sample", "centroid", "noperspective",
-    "cbuffer", "tbuffer",
+    "return", "discard", "typedef", "cbuffer", "tbuffer",
 ];
 
-TYPE_KEYWORDS :: string.[
-    "bool", "int", "uint", "half", "float", "double", "min16float", "min10float", "min16int", "min12int", "min16uint",
-    "bool1", "bool2", "bool3", "bool4", "int1", "int2", "int3", "int4", "uint1", "uint2", "uint3", "uint4",
-    "half1", "half2", "half3", "half4", "float1", "float2", "float3", "float4", "double1", "double2", "double3", "double4",
-    "min16float1", "min16float2", "min16float3", "min16float4", "min10float1", "min10float2", "min10float3", "min10float4",
-    "min16int1", "min16int2", "min16int3", "min16int4", "min12int1", "min12int2", "min12int3", "min12int4", "min16uint1",
-    "min16uint2", "min16uint3", "min16uint4", "matrix", "float1x1", "float1x2", "float1x3", "float1x4", "float2x1", "float2x2",
-    "float2x3", "float2x4", "float3x1", "float3x2", "float3x3", "float3x4", "float4x1", "float4x2", "float4x3", "float4x4",
-    "double1x1", "double1x2", "double1x3", "double1x4", "double2x1", "double2x2", "double2x3", "double2x4", "double3x1",
-    "double3x2", "double3x3", "double3x4", "double4x1", "double4x2", "double4x3", "double4x4", "Texture1D", "Texture1DArray",
-    "Texture2D", "Texture2DArray", "Texture3D", "TextureCube", "TextureCubeArray", "Buffer", "StructuredBuffer",
-    "ByteAddressBuffer", "RWTexture1D", "RWTexture1DArray", "RWTexture2D", "RWTexture2DArray", "RWTexture3D", "RWBuffer",
-    "RWStructuredBuffer", "RWByteAddressBuffer", "AppendStructuredBuffer", "ConsumeStructuredBuffer", "SamplerState", "SamplerComparisonState",
+MODIFIER_KEYWORDS :: string.[
+    "extern", "precise", "shared", "groupshared", "static", "uniform", "volatile", "inline",
+    "const", "row_major", "column_major",
+    "packoffset", "register",
+    "linear", "centroid", "nointerpolation", "noperspective", "sample",
+    "in", "inout", "out",
     "snorm", "unorm",
-    "SV_POSITION", "SV_TARGET", "SV_DEPTH", "SV_COVERAGE", "SV_VERTEXID", "SV_PRIMITIVEID", "SV_INSTANCEID",
-    "SV_DISPATCHTHREADID", "SV_GROUPTHREADID", "SV_GROUPID", "SV_DOMAINLOCATION", "SV_ISFRONTFACE", "SV_SAMPLEINDEX",
-    "SV_VIEWPORTARRAYINDEX", "SV_RENDERTARGETARRAYINDEX", "SV_DEPTHGREATEREQUAL", "SV_DEPTHLESSEQUAL",
-    "SV_VertexID", "SV_InstanceID", "SV_PrimitiveID", "SV_DomainLocation", "SV_Position", "SV_IsFrontFace", "SV_Depth", "SV_Target",
-    "SV_Coverage", "SV_SampleIndex", "SV_DispatchThreadID", "SV_GroupID", "SV_GroupIndex", "SV_GroupThreadID",
+    // NOTE: these are in brackets, but we don't parse them with brackets yet
+    "numthreads", "branch", "flatten", "unroll", "loop",
+];
+
+#insert -> string {
+    builder : String_Builder;
+    append(*builder, "TYPE_KEYWORDS :: string.[\n");
+
+    SCALAR_TYPES :: string.[
+        "bool", "int", "uint", "dword", "half", "float", "double",
+        "min16float", "min10float", "min16int", "min12int", "min16uint",
+        "int16_t", "int32_t", "int64_t", "uint16_t", "uint32_t", "uint64_t", "float16_t", "float32_t", "float64_t",
+    ];
+    for SCALAR_TYPES print(*builder, "    \"%\",\n", it);
+
+VOID_AND_STRING :: #string END
+    "void",
+    "string",
+
+END;
+    append(*builder, VOID_AND_STRING);
+
+    append(*builder, "    \"vector\",\n");
+    for scalar : SCALAR_TYPES {
+        append(*builder, "   ");
+        for 1 .. 4 {
+            print(*builder, " \"%0%\",", scalar, it);
+        }
+        append(*builder, "\n");
+    }
+    append(*builder, "\n");
+
+    append(*builder, "    \"matrix\",\n");
+    for scalar : SCALAR_TYPES {
+        for i : 1 .. 4 {
+            append(*builder, "   ");
+            for j : 1 .. 4 {
+                print(*builder, " \"%0%x%\",", scalar, i, j);
+            }
+            append(*builder, "\n");
+        }
+    }
+    append(*builder, "\n");
+
+BUFFER_TYPES :: #string END
+    "Buffer",
+    "ConstantBuffer",
+    "StructuredBuffer",
+    "ByteAddressBuffer",
+    "RWBuffer",
+    "RWStructuredBuffer",
+    "RWByteAddressBuffer",
+    "AppendStructuredBuffer",
+    "ConsumeStructuredBuffer",
+
+END;
+    append(*builder, BUFFER_TYPES);
+
+TEXTURE_TYPES :: #string END
+    "texture",
+    "Texture1D", "Texture1DArray",
+    "Texture2D", "Texture2DArray",
+    "Texture3D",
+    "TextureCube", "TextureCubeArray",
+    "Texture2DMS", "Texture2DMSArray",
+    "RWTexture1D", "RWTexture1DArray",
+    "RWTexture2D", "RWTexture2DArray",
+    "RWTexture3D",
+
+END;
+    append(*builder, TEXTURE_TYPES);
+
+SAMPLER_TYPES :: #string END
+    "sampler", "sampler1D", "sampler2D", "sampler3D", "samplerCUBE",
+    "sampler_state",
+    "SamplerState", "SamplerComparisonState",
+
+END;
+    append(*builder, SAMPLER_TYPES);
+
+STATE_TYPES :: #string END
+    "StateObjectConfig",
+    "GlobalRootSignature",
+    "LocalRootSignature",
+    "SubobjectToExportsAssocation",
+    "RaytracingShaderConfig",
+    "RaytracingPipelineConfig",
+    "TriangleHitGroup",
+    "ProceduralPrimitiveHitGroup",
+
+END;
+    append(*builder, STATE_TYPES);
+
+RTX_TYPES :: #string END
+    "RaytracingAccelerationStructure",
+END;
+    append(*builder, RTX_TYPES);
+
+    append(*builder, "];");
+    return builder_to_string(*builder);
+}
+
+// @Important: Should be in lower case since they are case insensitive
+SYSTEM_VALUE_SEMANTICS :: string.[
+    "sv_clipdistance",
+    "sv_culldistance",
+    "sv_coverage",
+    "sv_depth",
+    "sv_depthgreaterequal",
+    "sv_depthlessequal",
+    "sv_dispatchthreadid",
+    "sv_domainlocation",
+    "sv_groupid",
+    "sv_groupindex",
+    "sv_groupthreadid",
+    "sv_gsinstanceid",
+    "sv_innercoverage",
+    "sv_insidetessfactor",
+    "sv_instanceid",
+    "sv_isfrontface",
+    "sv_outputcontrolpointid",
+    "sv_position",
+    "sv_primitiveid",
+    "sv_rendertargetarrayindex",
+    "sv_sampleindex",
+    "sv_stencilref",
+    "sv_target",
+    "sv_tessfactor",
+    "sv_vertexid",
+    "sv_viewportarrayindex",
+    "sv_shadingrate",
 ];
 
 VALUE_KEYWORDS :: string.[
-    "true", "false", "null", "void",
+    "true", "false", "null",
 ];
 
 PREPROCESSOR_DIRECTIVES :: string.[
@@ -556,20 +686,26 @@ PREPROCESSOR_DIRECTIVES :: string.[
 
 #insert -> string {
     b: String_Builder;
-    init_string_builder(*b);
 
-    define_enum :: (b: *String_Builder, enum_name: string, prefix: string, value_lists: [][] string) {
-        print_to_builder(b, "% :: enum u16 {\n", enum_name);
-        for values : value_lists {
-            for v : values print_to_builder(b, "    %0%;\n", prefix, v);
+    Prefix_And_Values :: struct {
+        prefix : string;
+        values : [] string;
+    }
+
+    define_enum :: (b: *String_Builder, enum_name: string, prefix_and_values: [] Prefix_And_Values) {
+        print_to_builder(b, "% :: enum u16 {", enum_name);
+        for pav : prefix_and_values {
+            append(b, "\n");
+            for pav.values print(b, "    %0%;\n", pav.prefix, it);
         }
         print_to_builder(b, "}\n");
     }
 
-    define_enum(*b, "Punctuation",            "",           .[PUNCTUATION]);
-    define_enum(*b, "Operation",              "",           .[OPERATIONS]);
-    define_enum(*b, "Keyword",                "kw_",        .[KEYWORDS, TYPE_KEYWORDS, VALUE_KEYWORDS]);
-    define_enum(*b, "Preprocessor_Directive", "directive_", .[PREPROCESSOR_DIRECTIVES]);
+    define_enum(*b, "Punctuation",            .[.{"", PUNCTUATION}]);
+    define_enum(*b, "Operation",              .[.{"", OPERATIONS}]);
+    define_enum(*b, "Keyword",                .[.{"kw_", KEYWORDS}, .{"kwm_", MODIFIER_KEYWORDS}, .{"kwt_", TYPE_KEYWORDS}, .{"kwv_", VALUE_KEYWORDS}]);
+    define_enum(*b, "Preprocessor_Directive", .[.{"directive_", PREPROCESSOR_DIRECTIVES}]);
+    define_enum(*b, "Semantic",               .[.{"", SYSTEM_VALUE_SEMANTICS}]);
 
     return builder_to_string(*b);
 }
@@ -579,16 +715,30 @@ Keyword_Token :: struct {
     keyword: Keyword;
 }
 
-KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
+KEYWORD_MAP :: #run,stallable -> Table(string, Keyword_Token) {
     table: Table(string, Keyword_Token);
     size := 10 * (KEYWORDS.count + TYPE_KEYWORDS.count + VALUE_KEYWORDS.count);
     init(*table, size);
 
     #insert -> string {
         b: String_Builder;
-        for KEYWORDS        append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword,       keyword = .kw_%1 });\n", it));
-        for TYPE_KEYWORDS   append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .type_keyword,  keyword = .kw_%1 });\n", it));
-        for VALUE_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value_keyword, keyword = .kw_%1 });\n", it));
+        for KEYWORDS          print(*b, "table_add(*table, \"%1\", Keyword_Token.{ type = .keyword,          keyword = .kw_%1  });\n", it);
+        for MODIFIER_KEYWORDS print(*b, "table_add(*table, \"%1\", Keyword_Token.{ type = .modifier_keyword, keyword = .kwm_%1 });\n", it);
+        for TYPE_KEYWORDS     print(*b, "table_add(*table, \"%1\", Keyword_Token.{ type = .type_keyword,     keyword = .kwt_%1 });\n", it);
+        for VALUE_KEYWORDS    print(*b, "table_add(*table, \"%1\", Keyword_Token.{ type = .value_keyword,    keyword = .kwv_%1 });\n", it);
+        return builder_to_string(*b);
+    }
+
+    return table;
+}
+
+SEMANTICS_MAP :: #run -> Table(string, Semantic) {
+    table: Table(string, Semantic);
+    init(*table, 10 * SYSTEM_VALUE_SEMANTICS.count);
+
+    #insert -> string {
+        b: String_Builder;
+        for SYSTEM_VALUE_SEMANTICS print(*b, "table_add(*table, \"%1\", .%1);\n", it);
         return builder_to_string(*b);
     }
 
@@ -602,21 +752,26 @@ PREPROCESSOR_DIRECTIVES_MAP :: #run -> Table(string, Preprocessor_Directive) {
 
     #insert -> string {
         b: String_Builder;
-        init_string_builder(*b);
-        for PREPROCESSOR_DIRECTIVES {
-            print_to_builder(*b, "table_add(*table, \"%1\", .directive_%1);\n", it);
-        }
+        for PREPROCESSOR_DIRECTIVES print(*b, "table_add(*table, \"%1\", .directive_%1);\n", it);
         return builder_to_string(*b);
     }
 
     return table;
 }
 
-MAX_KEYWORD_LENGTH :: #run -> s32 {
+MAX_KEYWORD_LENGTH :: #run,stallable -> s32 {
     result: s64;
-    for KEYWORDS       { if it.count > result then result = it.count; }
-    for TYPE_KEYWORDS  { if it.count > result then result = it.count; }
-    for VALUE_KEYWORDS { if it.count > result then result = it.count; }
+    for KEYWORDS          { if it.count > result then result = it.count; }
+    for MODIFIER_KEYWORDS { if it.count > result then result = it.count; }
+    for TYPE_KEYWORDS     { if it.count > result then result = it.count; }
+    for VALUE_KEYWORDS    { if it.count > result then result = it.count; }
+    return xx result;
+}
+
+MAX_SEMANTIC_LENGTH :: #run -> s32 {
+    result: s64;
+    // +2 because semantics may have two-digit number in the end
+    for SYSTEM_VALUE_SEMANTICS { if it.count + 2 > result then result = it.count + 2; }
     return xx result;
 }
 
