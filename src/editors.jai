@@ -1160,8 +1160,10 @@ get_lang_from_path :: (path: string) -> Buffer.Lang {
             case "glsl";
                 lang = .Glsl;
 
-            case "hlsl"; #through;
-            case "fx";
+            case "hlsl";  #through;
+            case "hlsli"; #through;
+            case "fx";    #through;
+            case "fxh";
                 lang = .Hlsl;
 
             case "c";   #through;
