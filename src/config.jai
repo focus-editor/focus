@@ -543,6 +543,7 @@ Settings :: struct {
     draw_indent_guides                            := false;
     auto_surround_with_brackets_and_quotes        := false;
     auto_close_brackets                           := false;
+    auto_skip_closing_brackets                    := false;
     prefer_system_file_dialogs                    := false;
     show_cursors_off_screen                       := true;
     persist_local_search_results                  := false;

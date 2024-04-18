@@ -346,6 +346,7 @@ active_editor_type_char :: (char: u32) {
 
     should_surround_selection     := config.settings.auto_surround_with_brackets_and_quotes && all_cursors_have_selection(editor) && is_balanceable_char(char);
     should_insert_closing_bracket := config.settings.auto_close_brackets && all_cursors_can_auto_insert_closing_bracket(editor, buffer) && is_auto_closeable_char(char);
+    should_skip_closing_bracket   := config.settings.auto_skip_closing_brackets && all_cursors_can_auto_skip_closing_bracket(editor, buffer) && is_auto_skippable_char(char);
 
     for * cursor : editor.cursors {
         new_len := cast(s32) buffer.bytes.count;
@@ -367,6 +368,9 @@ active_editor_type_char :: (char: u32) {
             insert_char_at_offset(buffer, cursor.pos, convert_utf32_to_utf8(get_balancing_char(char)));
             insert_char_at_offset(buffer, cursor.pos, utf8_char);
 
+            cursor.pos = next_char_offset(buffer.bytes, cursor.pos);
+            cursor.sel = cursor.pos;
+        } else if should_skip_closing_bracket {
             cursor.pos = next_char_offset(buffer.bytes, cursor.pos);
             cursor.sel = cursor.pos;
         } else {
@@ -754,6 +758,18 @@ all_cursors_can_auto_insert_closing_bracket :: (using editor: Editor, buffer: Bu
         ch := get_char_at_offset(buffer, it.pos);
 
         if !is_whitespace_char(xx ch) && !(is_non_word_char(ch) && !is_auto_closeable_char(ch)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+all_cursors_can_auto_skip_closing_bracket :: (using editor: Editor, buffer: Buffer) -> bool {
+    for editor.cursors {
+        if has_selection(it)  return false;
+        ch := get_char_at_offset(buffer, it.pos);
+
+        if !is_auto_skippable_char(ch) {
             return false;
         }
     }
