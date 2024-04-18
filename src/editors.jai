@@ -1145,6 +1145,8 @@ get_lang_from_path :: (path: string) -> Buffer.Lang {
             case "go";             lang = .Golang;
 
             case "ts";             #through;
+            case "tsx";            #through;
+            case "jsx";            #through;
             case "js";             lang = .Js;
 
             case "lua";            lang = .Lua;
