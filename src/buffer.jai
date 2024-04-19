@@ -468,6 +468,7 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
         case .Jai;          return tokenize_jai_for_indentation(buffer);
         case .C;            return tokenize_c_like_lang_for_indentation(buffer, get_next_c_token);
         case .Js;           return tokenize_c_like_lang_for_indentation(buffer, get_next_js_token);
+        case .Json;         return tokenize_c_like_lang_for_indentation(buffer, get_next_json_token);
         case .CSharp;       return tokenize_csharp_for_indentation(buffer);
         case .Glsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_glsl_token);
         case .Hlsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_hlsl_token);
@@ -1370,6 +1371,7 @@ Buffer :: struct {
         Hlsl;
         Golang;
         Js;
+        Json;
         Lua;
         Odin;
         Python;
