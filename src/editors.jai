@@ -1149,6 +1149,8 @@ get_lang_from_path :: (path: string) -> Buffer.Lang {
             case "jsx";            #through;
             case "js";             lang = .Js;
 
+            case "json";           lang = .Json;
+
             case "lua";            lang = .Lua;
             case "odin";           lang = .Odin;
             case "py";             lang = .Python;
@@ -3029,6 +3031,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
         case .Hlsl;         comment = "//";
         case .Jai;          comment = "//";
         case .Js;           comment = "//";
+        case .Json;         comment = "//";
         case .Lua;          comment = "--";
         case .Odin;         comment = "//";
         case .Focus_Config; comment = "#";
@@ -3201,6 +3204,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
         case .Glsl;         comment_start = "/*"; comment_end = "*/";
         case .Jai;          comment_start = "/*"; comment_end = "*/";
         case .Js;           comment_start = "/*"; comment_end = "*/";
+        case .Json;         comment_start = "/*"; comment_end = "*/";
         case .Odin;         comment_start = "/*"; comment_end = "*/";
         case .Lua;          comment_start = "--[["; comment_end = "]]";
         case .Html;         comment_start = "<!--"; comment_end = "-->";
