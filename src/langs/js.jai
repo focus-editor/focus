@@ -479,7 +479,7 @@ OPERATIONS :: string.[
 KEYWORDS :: string.[
     "async", "abstract", "arguments", "await", "boolean", "break", "case", "catch", "class", "const", "continue", "debugger",
     "default", "delete", "do", "else", "enum", "eval", "export", "extends", "finally", "for", "function", "if", "import",
-    "in", "instanceof", "interface", "let", "new", "private", "protected", "public", "return", "static", "super", "switch",
+    "in", "instanceof", "interface", "let", "new", "of", "private", "protected", "public", "return", "static", "super", "switch",
     "throw", "try", "typeof", "var", "void", "while", "with", "yield",
 ];
 
