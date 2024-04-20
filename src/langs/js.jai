@@ -409,7 +409,7 @@ parse_private_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
 
     t += 1;
-    if t < max_t && !is_alpha(<<t) return;
+    if t < max_t && !is_alpha(<<t) && <<t != #char "_" return;
 
     identifier_str := read_utf8_identifier_string(tokenizer);
 }
