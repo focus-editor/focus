@@ -65,6 +65,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "%";  parse_percent                     (tokenizer, *token);
         case #char "^";  parse_caret                       (tokenizer, *token);
         case #char "#";  parse_private_identifier          (tokenizer, *token);
+        case #char "@";  parse_decorator                   (tokenizer, *token);
 
         case #char ";";  token.type = .punctuation; token.punctuation = .semicolon; t += 1;
         case #char "\\"; token.type = .punctuation; token.punctuation = .backslash; t += 1;
@@ -406,6 +407,15 @@ parse_caret :: (using tokenizer: *Tokenizer, token: *Token) {
 }
 
 parse_private_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .identifier;
+
+    t += 1;
+    if t < max_t && !is_alpha(<<t) && <<t != #char "_" return;
+
+    identifier_str := read_utf8_identifier_string(tokenizer);
+}
+
+parse_decorator :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
 
     t += 1;
