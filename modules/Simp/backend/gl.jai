@@ -123,11 +123,28 @@ Shader_Platform :: struct {
     alpha_blend := false;
 }
 
-set_parameter :: (shader: *Shader, name: *u8, m: Matrix4) {
-    loc := glGetUniformLocation(shader.gl_handle, name);
-    if loc < 0   log_error("Unknown parameter: '%'\n", to_string(name));
+set_parameter :: (shader: *Shader, name: string, m: Matrix4) {
+    loc := get_uniform_location(shader.gl_handle, name);
+    if loc < 0   log_error("Unknown parameter: '%'\n", name);
     if loc >= 0  glUniformMatrix4fv(loc, 1, GL_TRUE, *m._11);
 }
+
+get_uniform_location :: (gl_handle: GLuint, name: string) -> GLint {
+    // Asking OpenGL for the location can be an incredibly expensive operation on some systems, so we cache it
+    key := tprint("%,%", gl_handle, name);
+    loc, found := table_find(*uniform_location_cache, key);
+    if !found {
+        loc = glGetUniformLocation(gl_handle, temp_c_string(name));
+        table_set(*uniform_location_cache, copy_string(key), loc);
+    }
+    return loc;
+}
+
+#scope_file
+
+uniform_location_cache: Table(string, GLint);
+
+#scope_export
 
 clear_render_target :: (r: float, g: float, b: float, a: float) {
     glClearColor(r, g, b, a);
@@ -465,7 +482,7 @@ draw_generated_quads :: (font: *Dynamic_Font, color: u8) {
             last_texture = map.gl_handle;
 
             shader := state.current_shader;
-            loc := glGetUniformLocation(shader.gl_handle, "text_sampler");
+            loc := get_uniform_location(shader.gl_handle, "text_sampler");
             if loc < 0  log_error("Unable to find text_sampler in shader_text!");
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, map.gl_handle);  // Bind handle to slot 0.
@@ -721,7 +738,7 @@ backend_use_shader :: (s: *Shader) {
 }
 
 backend_set_texture :: (shader: *Shader, texture: *Texture) {
-    loc := glGetUniformLocation(shader.gl_handle, "diffuse_texture");
+    loc := get_uniform_location(shader.gl_handle, "diffuse_texture");
 
     if loc < 0 {
         log_error("Unable to find 'diffuse_texture' in the current shader.");

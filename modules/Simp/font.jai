@@ -200,7 +200,7 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_x_advance: float, line_h
                 last_texture = texture.gl_handle;
 
                 shader := state.current_shader;
-                loc := glGetUniformLocation(shader.gl_handle, "text_sampler");
+                loc := get_uniform_location(shader.gl_handle, "text_sampler");
                 if loc < 0  log_error("Unable to find text_sampler in shader_text!");
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, texture.gl_handle);  // Bind handle to slot 0.
@@ -315,7 +315,7 @@ draw_text_with_highlights :: (font: *Dynamic_Font, x: s64, y: s64, text: string,
             last_texture = texture.gl_handle;
 
             shader := state.current_shader;
-            loc := glGetUniformLocation(shader.gl_handle, "text_sampler");
+            loc := get_uniform_location(shader.gl_handle, "text_sampler");
             if loc < 0  log_error("Unable to find text_sampler in shader_text!");
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, texture.gl_handle);  // Bind handle to slot 0.

@@ -20,7 +20,7 @@
 + New features:
     + New option: `insert_final_newline_on_save`. Set to `true` to auto-add missing final newlines to saved files.
     + New command: `copy_current_line_info`. Copies a string `<current-file-path>:<line>:<col>` to clipboard. Useful for setting breakpoints.
-    + Basic HLSL highlighting
+    + Basic HLSL highlighting (thanks @Roman-Skabin for many improvements)
 + Bug fixes:
     + Fixed the Jai code samples highlighting in build output in some cases
     + Fixed build output highlighting glitch when using the clear build output option
