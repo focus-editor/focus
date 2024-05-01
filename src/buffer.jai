@@ -1184,6 +1184,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .Hlsl;         return highlight_hlsl_syntax;
         case .Golang;       return highlight_golang_syntax;
         case .Js;           return highlight_js_syntax;
+        case .Json;         return highlight_json_syntax;
         case .Lua;          return highlight_lua_syntax;
         case .Odin;         return highlight_odin_syntax;
         case .Python;       return highlight_python_syntax;
