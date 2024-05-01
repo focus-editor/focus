@@ -3472,7 +3472,10 @@ open_buffers_lock: Mutex;  // must hold while adding a new buffer
 
 open_buffers: Simple_Bucket_Array(Buffer, items_per_bucket = 1024, max_buckets = 1024);  // 8 Kb for pointer array, ~1 million buffers is the maximum
 open_editors: [..] Editor;
-buffers_table: Table(string, s64);  // a map from full buffer path to buffer id (only for the open buffers, obviously)
+
+buffers_table: Table(string, s64,
+                     given_hash_function = x => Hash.get_hash(to_lower_copy_new(x,, temp)),
+                     given_compare_function = platform_path_equals);  // a map from full buffer path to buffer id (only for the open buffers, obviously)
 
 most_recent_buffers: [..] s64;  // updated when an editor is activated, used to switch between open files
 

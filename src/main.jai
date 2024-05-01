@@ -955,7 +955,8 @@ _ :: #import "Linux_Display"()(VALIDATE_USAGE = DEBUG);
 #import "Unicode";
 #import "Window_Creation";
 
-re :: #import "uniform";
+re   :: #import "uniform";
+Hash :: #import "Hash";
 
 // NOTE to future self: remove `.NeverCapture` from `BASE_REGEX_FLAGS` if we ever want to have
 //                      find-and-replace with regex capture support

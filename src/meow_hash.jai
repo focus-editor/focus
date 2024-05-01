@@ -14,5 +14,3 @@ fallback_hash :: (bytes: [] u8) -> u64 {
 #scope_file
 
 #import "meow_hash";
-
-Hash :: #import "Hash";
