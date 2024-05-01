@@ -3317,7 +3317,7 @@ copy_current_line_info :: (using editor: *Editor, buffer: Buffer) {
     file_path: string = copy_temporary_string(ifx buffer.has_file then buffer.file.full_path else "<in-memory-buffer>");
     path_overwrite_separators(file_path, PATH_SEPARATOR);  // match the system separator
     coords := offset_to_real_coords(buffer, cursors[main_cursor].pos);
-    line_info := tprint("%:%:%", file_path, coords.line + 1, coords.col + 1);
+    line_info := tprint("%:%", file_path, coords.line + 1);
     os_clipboard_set_text(line_info);
     add_success_message("String '%' copied to clipboard", line_info, dismiss_in_seconds = 5);
 }
