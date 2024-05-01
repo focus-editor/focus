@@ -173,7 +173,10 @@ Token :: struct {
     start, len: s32;
     type: Type;
 
-    punctuation: Punctuation;
+    union {
+        keyword:            Keyword;
+        punctuation:        Punctuation;
+    }
 
     Type :: enum u16 {
         eof;
@@ -203,7 +206,7 @@ COLOR_MAP :: Color.[
 ];
 
 PUNCTUATION :: string.[
-    "l_brace", "r_brace", "l_bracket", "r_bracket", "comma", "minus", "colon",
+    "l_brace", "r_brace", "l_bracket", "r_bracket", "comma", "minus", "colon", "slash", "l_paren", "r_paren",
 ];
 
 VALUE_KEYWORDS :: string.[

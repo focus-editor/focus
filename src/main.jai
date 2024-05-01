@@ -898,7 +898,7 @@ dont_ignore_next_window_resize := false;
 #load "langs/hlsl.jai";
 #load "langs/golang.jai";
 #load "langs/js.jai";
-#load "lang/json.jai";
+#load "langs/json.jai";
 #load "langs/lua.jai";
 #load "langs/odin.jai";
 #load "langs/python.jai";
