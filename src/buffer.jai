@@ -753,6 +753,7 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
     bytes.count = stripped.count;
     unlock(*content_lock);
 
+    dirty = true;
     rescan_for_lines(buffer);
 
     for * editor, editor_id : open_editors {
