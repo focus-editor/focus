@@ -1055,7 +1055,7 @@ parse_key_combo :: (using parser: *Config_Parser, combo_str: string, line: strin
 
         if (key_code >= #char "a") && (key_code <= #char "z") {
             // Uppercase it, since our keyboard codes are uppercase.
-            key_code += cast,trunc(u32) (#char "A" - #char "a");  // This is a negative number; but we cast it to u32 and get the same result, because, twos-complement. The trunc is to make this legal.
+            key_code += (#char "a" - #char "A");
         }
 
         if s.count > 0 {
