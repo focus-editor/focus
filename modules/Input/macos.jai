@@ -304,10 +304,12 @@ update_cocoa_window_events :: () {
                 array_add(*events_this_frame, event);
             case NSEventTypeKeyDown;
                 keycode := NSEvent.keyCode(nsevent);
-                characters := NSEvent.characters(nsevent);
                 modifiers := NSEvent.modifierFlags(nsevent);
+                characters := NSEvent.characters(nsevent);
                 charslen := ifx characters then NSString.length(characters) else 0;
-                first := ifx charslen > 0 then NSString.characterAtIndex(characters, 0) else 128;
+                charactersNoMods := NSEvent.charactersIgnoringModifiers(nsevent);
+                charslenNoMods := ifx charactersNoMods then NSString.length(charactersNoMods) else 0;
+                first := ifx charslenNoMods > 0 then NSString.characterAtIndex(charactersNoMods, 0) else 128;
 
                 shift_state := (modifiers & NSEventModifierFlagShift) != 0;
                 ctrl_state  := (modifiers & NSEventModifierFlagControl) != 0;
@@ -362,8 +364,10 @@ update_cocoa_window_events :: () {
                 // continue;
             case NSEventTypeKeyUp;
                 keycode := NSEvent.keyCode(nsevent);
-                characters := NSEvent.characters(nsevent);
                 modifiers := NSEvent.modifierFlags(nsevent);
+                charactersNoMods := NSEvent.charactersIgnoringModifiers(nsevent);
+                charslenNoMods := ifx charactersNoMods then NSString.length(charactersNoMods) else 0;
+                first := ifx charslenNoMods > 0 then NSString.characterAtIndex(charactersNoMods, 0) else 128;
 
                 shift_state := (modifiers & NSEventModifierFlagShift) != 0;
                 ctrl_state  := (modifiers & NSEventModifierFlagControl) != 0;
@@ -373,7 +377,7 @@ update_cocoa_window_events :: () {
                 event: Event;
                 event.type = .KEYBOARD;
                 event.key_pressed = 0;
-                event.key_code = get_key_code(keycode);
+                event.key_code = get_key_code(keycode, first);
                 event.packed = 0;  // @Temporary: Unions not currently initialized.
                 event.shift_pressed    = shift_state;
                 event.ctrl_pressed     = ctrl_state;
