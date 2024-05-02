@@ -28,6 +28,7 @@
     + Fixed a crash in some cases when selecting all occurrences with the search bar open
     + Fixed a massive slowdown on some systems due to problematic OpenGL drivers
     + Fixed buffer duplication when jumping to build errors on Windows
+    + Fixed editor freeze on large workspace reloads
 + Other changes:
     + Made the fuzzy search in the command dialog more intuitive
     + CRLF is now stripped from build output before displaying

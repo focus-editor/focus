@@ -84,6 +84,7 @@ workspace_update :: () {
 
                 // Start the actual scanning of the workspace
                 num_jobs_to_complete = 0;
+                num_jobs_completed   = 0;
 
                 num_cpus := get_num_cpus();
                 num_threads := max(num_cpus - 1, 1);
