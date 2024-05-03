@@ -96,44 +96,44 @@ to_string :: (str: *NSString) -> string {
 }
 
 objc_alloc :: (class: Class) -> id #no_context {
-    return objc_msgSend(class, _sel.alloc);
+    return objc_msgSend_typed(class, _sel.alloc);
 }
 
 objc_copy :: (self: *$instancetype) -> *instancetype #no_context {
-    return xx objc_msgSend(self, _sel.copy);
+    return xx objc_msgSend_typed(self, _sel.copy);
 }
 
 autorelease :: (self: *$instancetype) -> id #no_context {
-    return cast(id) objc_msgSend(self, _sel.autorelease);
+    return objc_msgSend_typed(self, _sel.autorelease);
 }
 
 release :: (self: *$instancetype) -> id #no_context {
-    return cast(id) objc_msgSend(self, _sel.release);
+    return objc_msgSend_typed(self, _sel.release);
 }
 
 retain :: (self: *$instancetype) -> *instancetype #no_context {
-    return xx objc_msgSend(self, _sel.retain);
+    return xx objc_msgSend_typed(self, _sel.retain);
 }
 
 class :: (self: id) -> Class #no_context {
     // I'm pretty sure this is just id.isa
     // but this is the "correct" way to do this.
-    return cast(Class) objc_msgSend(self, _sel.class);
+    return cast(Class) objc_msgSend_typed(self, _sel.class);
 }
 
 superclass :: (self: id) -> Class #no_context {
-    return cast(Class) objc_msgSend(self, _sel.superclass);
+    return cast(Class) objc_msgSend_typed(self, _sel.superclass);
 }
 
 isEqual :: (self: id, object: id) -> bool #no_context {
-    return objc_msgSend(self, _sel.isEqual_, object) != null;
+    return objc_msgSend_typed(self, _sel.isEqual_, object) != null;
 }
 
 // helper functions so we don't need to have messy
 // user code
 
 objc_init :: (self: *$type) -> *type #no_context {
-    return cast(*type) objc_msgSend(self, _sel.init);
+    return cast(*type) objc_msgSend_typed(self, _sel.init);
 }
 
 objc_alloc :: ($type: Type) -> *type #no_context {
@@ -211,20 +211,33 @@ selector :: (sel_str: string) -> Selector {
 // Use this to make sure that our struct declarations of Objective-C classes match the size of their current
 // implementations on whatever macOS you run this.
 // This is a lame workaround for the "fragile instance variables" problem. :ObjectiveCFragile:
-create_objc_class_member_stub :: (class_name: string) -> string {
-    #import "Basic";
-    #import "String";
+create_objc_class_member_stub :: (class_name: string, framework_name: string) -> string {
+    Basic :: #import "Basic";
+    String :: #import "String";
+    Posix :: #import "POSIX";
 
     init_objective_c();
 
+    // The class is only known to Objective C after the library that contains it has been loaded!
+    // If we’re cross-compiling then the libraries won’t be auto-loaded by the compiler, so we have to manually find & load them here, to be safe.
+    // @Hack: We should probably look up the framework paths from somewhere and then we should be reading the framework’s Info.plist
+    // to check what the framework's linking executable is.
+    // But by convention all the standard frameworks just have FrameworkName.framework/FrameworkName
+    // -rluba, 2024-01-25
+    framework_path := tprint("/System/Library/Frameworks/%1.framework/%1\0", framework_name);
+    handle := Posix.dlopen(framework_path.data, Posix.RTLD_LAZY | Posix.RTLD_LOCAL);
+    defer {
+        if handle Posix.dlclose(handle);
+    }
+
     class := objc_getClass(class_name.data); // @Stability: This better be null-terminated
-    assert(class != null, "Unknown Objective-C class \"%\"", class_name);
+    Basic.assert(class != null, "Unknown Objective-C class \"%\"", class_name);
     instance_size := cast(s64) class_getInstanceSize(class);
     super := superclass(class);
-    assert(super != null, "Couldn’t get Objective-C superclass of \"%\"", class_name);
+    Basic.assert(super != null, "Couldn’t get Objective-C superclass of \"%\"", class_name);
     super_size := cast(s64) class_getInstanceSize(super);
     // log("%: % super: %", class_name, instance_size, super_size);
-    return sprint("_%_data: [%] u8; // size of % minus size of parent class", to_lower_copy_new(class_name,, temp), instance_size - super_size, class_name);
+    return Basic.sprint("_%_data: [%] u8; // size of % minus size of parent class", String.to_lower_copy_new(class_name,, temp), instance_size - super_size, class_name);
 }
 
 
@@ -643,15 +656,37 @@ Objective_C_Block_Basic :: struct {
 _NSConcreteStackBlock  :: () #foreign libSystem;
 _NSConcreteGlobalBlock :: () #foreign libSystem;
 
-#load "bindings/runtime.jai";
-#load "bindings/message.jai";
+#if CPU == .X64 {
+    #load "bindings/x64/runtime.jai";
+    #load "bindings/x64/message.jai";
+
+    // The SDK we use for the x64 bindings still has typed objc_msgSend declarations,
+    // so the declarations below are almost the same as the orignals, but with target and result changed to *void to avoid some casts. :ObjectiveCMsgSendTypes:
+    objc_msgSend_typed       :: (target: *void, selector: Selector, args: ..Any) -> *void #foreign libobjc "objc_msgSend";
+    objc_msgSend_stret_typed :: (target: *void, selector: Selector, args: ..Any) -> void #foreign libobjc "objc_msgSend_stret";
+} else {
+    #load "bindings/arm64/runtime.jai";
+    #load "bindings/arm64/message.jai";
+
+    // In newer SDKs, Apple dropped the type arguments from objc_msgSend and its cousins,
+    // so we re-define them here to avoid painful casting everywhere. :ObjectiveCMsgSendTypes:
+    objc_msgSend_typed :: (target: *void, selector: Selector, args: ..Any) -> *void #foreign libobjc "objc_msgSend";
+    objc_msgSend_stret_typed :: objc_msgSend_typed;
+
+    // Arm64 does not have separate *_stret variants because its ABI does not need them.
+    objc_msgSend_stret                  :: objc_msgSend;
+    objc_msgSendSuper_stret             :: objc_msgSendSuper;
+    method_invoke_stret                 :: method_invoke;
+    _objc_msgForward_stret              :: _objc_msgForward;
+    class_getMethodImplementation_stret :: class_getMethodImplementation;
+}
+
 
 #load "Foundation.jai";
 
 #scope_module
 
 ptrdiff_t :: s64;
-size_t :: u64;
 
 
 #import "macos";
@@ -677,3 +712,4 @@ _sel: struct #type_info_no_size_complaint {
 
 libc :: #system_library "libc";
 c_free :: (memory: *void) #foreign libc "free";
+libobjc :: #library,system "libobjc";

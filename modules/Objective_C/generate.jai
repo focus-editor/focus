@@ -8,12 +8,15 @@ GENERATE_COMPILE_TIME_STRUCT_CHECKS :: false;
 
 DECLARATIONS_TO_OMIT :: string.[
     "BOOL",
+    "objc_setMultithreaded", // Only exists in 10.13, not in later SDKs.
 ];
 
 #if AT_COMPILE_TIME {
     #run,stallable {
         set_build_options_dc(.{do_output=false});
-        if !generate_bindings() {
+        options := get_build_options();
+        args := options.compile_time_command_line;
+        if !generate_bindings(args) {
             compiler_set_workspace_status(.FAILED);
         }
     }
@@ -22,26 +25,37 @@ DECLARATIONS_TO_OMIT :: string.[
 
     main :: () {
         set_working_directory(path_strip_filename(get_path_of_running_executable()));
-        if !generate_bindings() {
+        args := get_command_line_arguments();
+        if !generate_bindings(args) {
             exit(1);
         }
     }
 }
 
-BINDINGS_DIRECTORY :: "bindings";
+generate_bindings :: (args: [] string) -> bool {
+    cpu := CPU;
+    if array_find(args, "-arm64") {
+        cpu = .ARM64;
+    }
 
-generate_bindings :: () -> bool {
-    make_directory_if_it_does_not_exist(BINDINGS_DIRECTORY, recursive = true);
+    bindings_directory: string;
+    if cpu == {
+        case .X64;   bindings_directory = "bindings/x64";
+        case .ARM64; bindings_directory = "bindings/arm64";
+        case; assert(false);
+    }
 
-    success := generate_runtime();
-    success &= generate_message();
+    make_directory_if_it_does_not_exist(bindings_directory, recursive = true);
+
+    success := generate_runtime(cpu, bindings_directory);
+    success &= generate_message(cpu, bindings_directory);
     // success &= generate_appkit();
     return success;
 }
 
-generate_runtime :: () -> bool {
-    output_path := tprint("%/runtime.jai", BINDINGS_DIRECTORY);
-    options := get_common_options();
+generate_runtime :: (cpu: CPU_Tag, bindings_directory: string) -> bool {
+    output_path := tprint("%/runtime.jai", bindings_directory);
+    options := get_common_options(cpu);
     libc_path := get_libc_paths();
 
     array_add(*options.source_files,
@@ -57,9 +71,9 @@ generate_runtime :: () -> bool {
     return generate_bindings(options, output_path);
 }
 
-generate_message :: () -> bool {
-    output_path := tprint("%/message.jai", BINDINGS_DIRECTORY);
-    options := get_common_options();
+generate_message :: (cpu: CPU_Tag, bindings_directory: string) -> bool {
+    output_path := tprint("%/message.jai", bindings_directory);
+    options := get_common_options(cpu);
     libc_path := get_libc_paths();
 
     array_add(*options.source_files,
@@ -74,7 +88,7 @@ generate_message :: () -> bool {
 }
 
 // generate_appkit :: () -> bool {
-//     output_path := tprint("%/appkit_objc.jai", BINDINGS_DIRECTORY);
+//     output_path := tprint("%/appkit_objc.jai", bindings_directory);
 //     builder: String_Builder;
 //     selectors: [..] string;
 //     define(*builder, "NSApplication", *selectors);
@@ -87,14 +101,21 @@ generate_message :: () -> bool {
 //     return write_entire_file(output_path, content);
 // }
 
-get_common_options :: () -> Generate_Bindings_Options {
+get_common_options :: (cpu: CPU_Tag) -> Generate_Bindings_Options {
+    sdk_path := get_macos_sdk_path();
+    build_options := get_build_options(); // @Incomplete: run-time version
+    target_triple_with_sdk := get_macos_target_triple(cpu, build_options.minimum_os_version.major, build_options.minimum_os_version.minor);
+
     options: Generate_Bindings_Options;
-    array_add(*options.libpaths, "macos");
+    options.cpu = cpu;
+    array_add(*options.system_library_names, "libobjc");
 
-    array_add(*options.libnames, "libobjc");
-
-    array_add(*options.extra_clang_arguments, "-x", "c");
-    array_add(*options.extra_clang_arguments, "-isysroot", get_macos_sdk_path());
+    array_add(*options.extra_clang_arguments,
+        "-x", "c",
+        "-target", target_triple_with_sdk,
+        "-isysroot", sdk_path,
+    );
+    array_add(*options.system_library_paths, tprint("%/usr/lib", sdk_path));
 
     options.log_stripped_declarations = true;
     options.generate_compile_time_struct_checks = GENERATE_COMPILE_TIME_STRUCT_CHECKS;
@@ -127,6 +148,17 @@ objc_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration_V
         if array_find(DECLARATIONS_TO_OMIT, decl.name) {
             decl.decl_flags |= .OMIT_FROM_OUTPUT;
             return .STOP;
+        }
+
+        if context.generator_options.cpu == .ARM64 {
+            // Workaround for incorrect symbol information for libobjc on ARM64 in SDKs 11.x-13.x:
+            // Apple claims that the *_stret functions exist, but when you then open up the DLL, they’re missing.
+            // You can’t make this stuff up…
+            //  -rluba, 2024-02-23
+            if ends_with(decl.name, "_stret") {
+                decl.decl_flags |= .OMIT_FROM_OUTPUT;
+                return .STOP;
+            }
         }
 
         if decl.name == "objc_object" {
@@ -187,3 +219,4 @@ objc_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration_V
 #import "Compiler";
 #import "File";
 #import "String";
+#import "Toolchains/macOS";

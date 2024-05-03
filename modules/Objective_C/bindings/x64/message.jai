@@ -89,4 +89,4 @@ marg_list :: *void;
 
 #scope_file
 
-libobjc :: #system_library "libobjc";
+libobjc :: #library,system "libobjc";

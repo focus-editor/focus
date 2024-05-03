@@ -49,10 +49,6 @@ NSApplication :: struct {
         objc_msgSend(self, _sel.sendEvent_, event);
     }
 
-    postEvent :: (self: *NSApplication, event: *NSEvent, atStart: BOOL) #no_context {
-        objc_msgSend(self, _sel.postEvent_atStart_, event, atStart);
-    }
-
     updateWindows :: (self: *NSApplication) #no_context {
         objc_msgSend(self, _sel.updateWindows);
     }
@@ -101,6 +97,11 @@ NSApplication :: struct {
         return xx objc_msgSend(self, _sel.requestUserAttention_, requestType);
     }
 
+    // Added for Focus
+    postEvent :: (self: *NSApplication, event: *NSEvent, atStart: BOOL) #no_context {
+        objc_msgSend(self, _sel.postEvent_atStart_, event, atStart);
+    }
+
     replyToOpenOrPrint :: (self: *NSApplication, reply: NSUInteger) #no_context {
         objc_msgSend(self, _sel.replyToOpenOrPrint_, reply);
     }
@@ -110,19 +111,6 @@ NSApplication :: struct {
 
 NSEvent :: struct {
     using #as super: NSObject;
-
-    otherEventWithType :: (type: NSEventType, location: NSPoint, modifierFlags: NSEventModifierFlags, timestamp: NSTimeInterval, windowNumber: u64, ctx: *void, subtype: u16, data1: u64, data2: u64) -> *NSEvent #c_call {
-        func: (*void, Selector, NSEventType, NSPoint, NSEventModifierFlags, NSTimeInterval, u64, *void, u16, u64, u64) -> *NSEvent #c_call;
-        func = xx objc_msgSend;
-        return xx func(
-            class(NSEvent),
-            _sel.otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2_,
-            type, location, modifierFlags, timestamp, windowNumber, ctx, subtype, data1, data2);
-    }
-
-    window :: (self: *NSEvent) -> *NSWindow {
-        return xx objc_msgSend(self, _sel.window);
-    }
 
     mouseLocation :: () -> NSPoint {
         func: (*void, Selector) -> NSPoint #c_call;
@@ -200,6 +188,20 @@ NSEvent :: struct {
         return func(self, _sel.deltaZ);
     }
 
+    // Added for Focus
+    otherEventWithType :: (type: NSEventType, location: NSPoint, modifierFlags: NSEventModifierFlags, timestamp: NSTimeInterval, windowNumber: u64, ctx: *void, subtype: u16, data1: u64, data2: u64) -> *NSEvent #c_call {
+        func: (*void, Selector, NSEventType, NSPoint, NSEventModifierFlags, NSTimeInterval, u64, *void, u16, u64, u64) -> *NSEvent #c_call;
+        func = xx objc_msgSend;
+        return xx func(
+            class(NSEvent),
+            _sel.otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2_,
+            type, location, modifierFlags, timestamp, windowNumber, ctx, subtype, data1, data2);
+    }
+
+    window :: (self: *NSEvent) -> *NSWindow {
+        return xx objc_msgSend(self, _sel.window);
+    }
+
     scrollingDeltaX :: (self: *NSEvent) -> CGFloat {
         func: (self: *void, op: Selector) -> CGFloat #c_call;
         func = xx objc_msgSend;
@@ -231,6 +233,7 @@ NSEvent :: struct {
     }
 }
 
+// Added for Focus
 using NSEventPhase :: enum NSUInteger {
     NSEventPhaseNone       ::  0;
     NSEventPhaseBegan      ::  1;
@@ -420,13 +423,13 @@ using NSBackingStoreType :: enum NSUInteger {
 NSResponder :: struct {
     using #as super: NSObject;
 
-    #insert #run,stallable create_objc_class_member_stub("NSResponder");
+    #insert #run,stallable create_objc_class_member_stub("NSResponder", "AppKit");
 }
 
 NSWindowController :: struct {
     using #as responder: NSResponder;
 
-    #insert #run,stallable create_objc_class_member_stub("NSWindowController");
+    #insert #run,stallable create_objc_class_member_stub("NSWindowController", "AppKit");
 }
 
 NSColor :: struct {
@@ -528,9 +531,6 @@ NSWindow :: struct {
     frame :: NSView.frame;
     setFrame :: (self: *NSWindow, frame: NSRect, display: BOOL) {
         objc_msgSend(self, _sel.setFrame_display_, frame, display);
-    }
-    setFrame :: (self: *NSWindow, frame: NSRect, display: BOOL, animate: BOOL) {
-        objc_msgSend(self, _sel.setFrame_display_animate_, frame, display, animate);
     }
 
     level :: (self: *NSWindow) -> NSWindowLevel {
@@ -643,6 +643,19 @@ NSWindow :: struct {
         objc_msgSend(self, _sel.toggleFullScreen_, sender);
     }
 
+    // helper functions
+    setTitle :: (self: *NSWindow, title: string) -> id {
+        nsstring := NSString.initWithString(objc_alloc(NSString), title);
+        defer release(nsstring);
+
+        return setTitle(self, nsstring);
+    }
+
+    // Added for Focus
+    setFrame :: (self: *NSWindow, frame: NSRect, display: BOOL, animate: BOOL) {
+        objc_msgSend(self, _sel.setFrame_display_animate_, frame, display, animate);
+    }
+
     screen :: (self: *NSWindow) -> *NSScreen {
         return xx objc_msgSend(self, _sel.screen);
     }
@@ -653,14 +666,6 @@ NSWindow :: struct {
 
     setAppearance :: (self: *NSWindow, appearance: *NSAppearance) {
         objc_msgSend(self, _sel.setAppearance_, appearance);
-    }
-
-    // helper functions
-    setTitle :: (self: *NSWindow, title: string) -> id {
-        nsstring := NSString.initWithString(objc_alloc(NSString), title);
-        defer release(nsstring);
-
-        return setTitle(self, nsstring);
     }
 
     maximize :: (self: *NSWindow) {
@@ -903,7 +908,7 @@ NSView :: struct {
 NSViewController :: struct {
     using #as responder: NSResponder;
 
-    #insert #run,stallable create_objc_class_member_stub("NSViewController");
+    #insert #run,stallable create_objc_class_member_stub("NSViewController", "AppKit");
 }
 
 NSOpenGLContext :: struct {
@@ -1012,6 +1017,10 @@ NSOpenGLPixelFormat :: struct {
 
     initWithAttributes :: (self: id, attrs: *NSOpenGLPixelFormatAttribute) -> *NSOpenGLPixelFormat {
         return xx objc_msgSend(self, _sel.initWithAttributes_, attrs);
+    }
+
+    getValues :: (self: id, values: *s32 /*GLint*/, forAttribute: NSOpenGLPixelFormatAttribute, forVirtualScreen: s32 /*GLint*/) {
+        objc_msgSend(self, _sel.getValues_forAttribute_forVirtualScreen_, values, forAttribute, forVirtualScreen);
     }
 }
 
@@ -1244,11 +1253,6 @@ NSAppearance :: struct {
 #scope_module
 
 _sel: struct #type_info_no_size_complaint {
-    appearanceNamed_: Selector;
-    colorWithRed_green_blue_alpha_: Selector;
-    setTitlebarAppearsTransparent_: Selector;
-    setAppearance_: Selector;
-    replyToOpenOrPrint_: Selector;
     characters: Selector;
     run: Selector;
     keyCode: Selector;
@@ -1257,7 +1261,6 @@ _sel: struct #type_info_no_size_complaint {
     sharedApplication: Selector;
     mainWindow: Selector;
     sendEvent_: Selector;
-    postEvent_atStart_: Selector;
     updateWindows: Selector;
     activateIgnoringOtherApps_: Selector;
     setActivationPolicy_: Selector;
@@ -1286,7 +1289,6 @@ _sel: struct #type_info_no_size_complaint {
     initWithFormat_shareContext_: Selector;
     makeCurrentContext: Selector;
     initWithAttributes_: Selector;
-    window: Selector;
     type: Selector;
     mouseLocation: Selector;
     generalPasteboard: Selector;
@@ -1300,12 +1302,6 @@ _sel: struct #type_info_no_size_complaint {
     deltaX: Selector;
     deltaY: Selector;
     deltaZ: Selector;
-    scrollingDeltaX: Selector;
-    scrollingDeltaY: Selector;
-    hasPreciseScrollingDeltas: Selector;
-    phase: Selector;
-    momentumPhase: Selector;
-    otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2_: Selector;
     associatedEventsMask: Selector;
     buttonNumber: Selector;
     clickCount: Selector;
@@ -1315,14 +1311,12 @@ _sel: struct #type_info_no_size_complaint {
     frame: Selector;
     setFrame_: Selector;
     setFrame_display_: Selector;
-    setFrame_display_animate_: Selector;
     center: Selector;
     convertRectToBacking_: Selector;
     convertRectFromBacking_: Selector;
     convertPointToBacking_: Selector;
     convertPointFromBacking_: Selector;
     backingScaleFactor: Selector;
-    visibleFrame: Selector;
     setWantsBestResolutionOpenGLSurface_: Selector;
     mainScreen: Selector;
     hide: Selector;
@@ -1342,13 +1336,13 @@ _sel: struct #type_info_no_size_complaint {
     enterFullScreenMode_withOptions_: Selector;
     exitFullScreenModeWithOptions_: Selector;
     toggleFullScreen_: Selector;
-    screen: Selector;
     setCollectionBehavior_: Selector;
     setContentSize_: Selector;
     setFrameOrigin_: Selector;
     level: Selector;
     setLevel_: Selector;
     setValues_forParameter_: Selector;
+    getValues_forAttribute_forVirtualScreen_: Selector;
     currentContext: Selector;
     view: Selector;
     URL: Selector;
@@ -1416,10 +1410,28 @@ _sel: struct #type_info_no_size_complaint {
     registerForDraggedTypes_: Selector;
     draggingSourceOperationMask: Selector;
     draggingPasteboard: Selector;
+
+    // Added for Focus
+    appearanceNamed_: Selector;
+    colorWithRed_green_blue_alpha_: Selector;
+    setTitlebarAppearsTransparent_: Selector;
+    setAppearance_: Selector;
+    replyToOpenOrPrint_: Selector;
+    window: Selector;
+    scrollingDeltaX: Selector;
+    scrollingDeltaY: Selector;
+    hasPreciseScrollingDeltas: Selector;
+    phase: Selector;
+    momentumPhase: Selector;
+    setFrame_display_animate_: Selector;
+    visibleFrame: Selector;
+    screen: Selector;
+    postEvent_atStart_: Selector;
+    otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2_: Selector;
 }
 
 #import "Objective_C";
-Cocoa   :: #system_library "Cocoa";
+Cocoa  :: #system_library "Cocoa";
 AppKit :: #system_library "AppKit";
 
 #load "CoreGraphics.jai";

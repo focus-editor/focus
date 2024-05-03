@@ -4,7 +4,7 @@
 
     MACOS_VERSION_ARG :: #run -> string {
         using options := get_build_options();
-        return tprint("-mmacosx-version-min=%.%", minimum_os_version.major, minimum_os_version.minor);
+        return tprint("-mmacos-version-min=%.%", minimum_os_version.major, minimum_os_version.minor);
     }
 
     success :=  build_cpp_dynamic_lib("libLightweightRenderingView", "LightweightRenderingView.m", extra = .["-framework", "AppKit", "-framework", "QuartzCore", MACOS_VERSION_ARG]);

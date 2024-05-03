@@ -18,11 +18,11 @@ NSAutoreleasePool :: struct {
     using #as super: NSObject;
 
     drain :: (self: *NSAutoreleasePool) {
-        objc_msgSend(self, _sel.drain);
+        objc_msgSend_typed(self, _sel.drain);
     }
 
     showPools :: () {
-        objc_msgSend(class(NSAutoreleasePool), _sel.showPools);
+        objc_msgSend_typed(class(NSAutoreleasePool), _sel.showPools);
     }
 }
 
@@ -35,11 +35,11 @@ NSBundle :: struct {
     using #as super: NSObject;
 
     resourcePath :: (self: *NSBundle) -> *NSString {
-        return xx objc_msgSend(self, _sel.resourcePath);
+        return xx objc_msgSend_typed(self, _sel.resourcePath);
     }
 
     mainBundle :: () -> *NSBundle {
-        return xx objc_msgSend(class(NSBundle), _sel.mainBundle);
+        return xx objc_msgSend_typed(class(NSBundle), _sel.mainBundle);
     }
 }
 
@@ -47,11 +47,11 @@ NSDate :: struct {
     using #as super: NSObject;
 
     distantPast :: () -> *NSDate {
-        return xx objc_msgSend(class(NSDate), _sel.distantPast);
+        return xx objc_msgSend_typed(class(NSDate), _sel.distantPast);
     }
 
     distantFuture :: () -> *NSDate {
-        return xx objc_msgSend(class(NSDate), _sel.distantFuture);
+        return xx objc_msgSend_typed(class(NSDate), _sel.distantFuture);
     }
 }
 
@@ -107,25 +107,25 @@ NSString :: struct {
     using #as super: NSObject;
 
     initWithBytes :: (self: *NSString, bytes: *void, length: NSUInteger, encoding: NSStringEncoding) -> *NSString {
-        return xx objc_msgSend(self, _sel.initWithBytes_length_encoding_, bytes, length, encoding);
+        return xx objc_msgSend_typed(self, _sel.initWithBytes_length_encoding_, bytes, length, encoding);
     }
 
     UTF8String :: (self: *NSString) -> *u8 {
-        return xx objc_msgSend(self, _sel.UTF8String);
+        return xx objc_msgSend_typed(self, _sel.UTF8String);
     }
 
     dataUsingEncoding :: (self: *NSString, encoding: NSStringEncoding, allowLossyConversion := NO) -> *NSData {
-        return xx objc_msgSend(self, _sel.dataUsingEncoding_allowLossyConversion_, encoding, allowLossyConversion);
+        return xx objc_msgSend_typed(self, _sel.dataUsingEncoding_allowLossyConversion_, encoding, allowLossyConversion);
     }
 
     stringByExpandingTildeInPath :: (self: *NSString) -> *NSString {
-        return xx objc_msgSend(self, _sel.stringByExpandingTildeInPath);
+        return xx objc_msgSend_typed(self, _sel.stringByExpandingTildeInPath);
     }
 
     length :: (self: *NSString) -> NSUInteger {
-        return xx objc_msgSend(self, _sel.length);
+        return xx objc_msgSend_typed(self, _sel.length);
     }
-    
+
     characterAtIndex :: (self: *NSString, at: int) -> u16 {
         return xx objc_msgSend(self, _sel.characterAtIndex_, at);
     }
@@ -167,11 +167,11 @@ NSTimer :: struct {
     using #as super: NSObject;
 
     scheduledTimerWithTimeInterval :: (interval: NSTimeInterval, target: id, selector: Selector, userInfo: id, repeats: BOOL) -> *NSTimer {
-        return xx objc_msgSend(class(NSTimer), _sel.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_, interval, target, selector, userInfo, repeats);
+        return xx objc_msgSend_typed(class(NSTimer), _sel.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_, interval, target, selector, userInfo, repeats);
     }
-    
+
     invalidate :: (self: *NSTimer) {
-        objc_msgSend(self, _sel.invalidate);
+        objc_msgSend_typed(self, _sel.invalidate);
     }
 }
 
@@ -179,15 +179,16 @@ NSRunLoop :: struct {
     using #as super: NSObject;
 
     currentRunLoop :: () -> *NSRunLoop {
-        return xx objc_msgSend(objc_getClass("NSRunLoop"), _sel.currentRunLoop);
+        return xx objc_msgSend_typed(objc_getClass("NSRunLoop"), _sel.currentRunLoop);
     }
 
     run :: (self: *NSRunLoop) {
-        objc_msgSend(self, _sel.run);
+        objc_msgSend_typed(self, _sel.run);
     }
-    
+
+    // Added for Focus
     addTimer :: (self: *NSRunLoop, timer: *NSTimer, run_mode: NSRunLoopMode) {
-        objc_msgSend(self, _sel.addTimer_forMode_, timer, run_mode);
+        objc_msgSend_typed(self, _sel.addTimer_forMode_, timer, run_mode);
     }
 }
 
@@ -202,140 +203,134 @@ NSProcessInfo :: struct {
     automaticTerminationOptOutCounter: NSInteger;
 
     operatingSystem :: (self: *NSProcessInfo) -> NSUInteger {
-        _func: (obj: *void, selector: Selector) -> NSUInteger #c_call;
-        _func = xx objc_msgSend;
-        return _func(self, _sel.operatingSystem);
+        return xx objc_msgSend_typed(self, _sel.operatingSystem);
     }
 
     operatingSystemName :: (self: *NSProcessInfo) -> *NSString {
-        _func: (obj: *void, selector: Selector) -> *NSString #c_call;
-        _func = xx objc_msgSend;
-        return _func(self, _sel.operatingSystemName);
+        return xx objc_msgSend_typed(self, _sel.operatingSystemName);
     }
 
     isOperatingSystemAtLeastVersion :: (self: *NSProcessInfo, version: NSOperatingSystemVersion) -> BOOL {
-        _func: (obj: *void, selector: Selector, version: NSOperatingSystemVersion) -> BOOL #c_call;
-        _func = xx objc_msgSend;
-        return _func(self, _sel.isOperatingSystemAtLeastVersion_, version);
+        return xx objc_msgSend_typed(self, _sel.isOperatingSystemAtLeastVersion_, version);
     }
 
     disableSuddenTermination :: (self: *NSProcessInfo) -> () {
         _func: (obj: *void, selector: Selector) -> () #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         _func(self, _sel.disableSuddenTermination);
     }
 
     enableSuddenTermination :: (self: *NSProcessInfo) -> () {
         _func: (obj: *void, selector: Selector) -> () #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         _func(self, _sel.enableSuddenTermination);
     }
 
     disableAutomaticTermination :: (self: *NSProcessInfo, reason: *NSString) -> () {
         _func: (obj: *void, selector: Selector, reason: *NSString) -> () #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         _func(self, _sel.disableAutomaticTermination_, reason);
     }
 
     enableAutomaticTermination :: (self: *NSProcessInfo, reason: *NSString) -> () {
         _func: (obj: *void, selector: Selector, reason: *NSString) -> () #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         _func(self, _sel.enableAutomaticTermination_, reason);
     }
 
     processInfo :: () -> *NSProcessInfo {
         _func: (obj: *void, selector: Selector) -> *NSProcessInfo #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         return _func(objc_getClass("NSProcessInfo"), _sel.processInfo);
     }
 
     environment :: (self: *NSProcessInfo) -> *NSDictionary {
         _func: (obj: *void, selector: Selector) -> *NSDictionary #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         return _func(self, _sel.environment);
     }
 
     arguments :: (self: *NSProcessInfo) -> *NSArray(*NSString) {
         _func: (obj: *void, selector: Selector) -> *NSArray(*NSString) #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         return _func(self, _sel.arguments);
     }
 
     hostName :: (self: *NSProcessInfo) -> *NSString {
         _func: (obj: *void, selector: Selector) -> *NSString #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         return _func(self, _sel.hostName);
     }
 
     processName :: (self: *NSProcessInfo) -> *NSString {
         _func: (obj: *void, selector: Selector) -> *NSString #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         return _func(self, _sel.processName);
     }
 
     setProcessName :: (self: *NSProcessInfo, processName: *NSString) -> () {
         _func: (obj: *void, selector: Selector, processName: *NSString) -> () #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         _func(self, _sel.setProcessName_, processName);
     }
 
     processIdentifier :: (self: *NSProcessInfo) -> s32 {
         _func: (obj: *void, selector: Selector) -> s32 #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         return _func(self, _sel.processIdentifier);
     }
 
     globallyUniqueString :: (self: *NSProcessInfo) -> *NSString {
         _func: (obj: *void, selector: Selector) -> *NSString #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         return _func(self, _sel.globallyUniqueString);
     }
 
     operatingSystemVersionString :: (self: *NSProcessInfo) -> *NSString {
         _func: (obj: *void, selector: Selector) -> *NSString #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         return _func(self, _sel.operatingSystemVersionString);
     }
 
     operatingSystemVersion :: (self: *NSProcessInfo) -> NSOperatingSystemVersion {
         _func: (obj: *void, selector: Selector) -> NSOperatingSystemVersion #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         return _func(self, _sel.operatingSystemVersion);
     }
 
     processorCount :: (self: *NSProcessInfo) -> NSUInteger {
         _func: (obj: *void, selector: Selector) -> NSUInteger #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         return _func(self, _sel.processorCount);
     }
 
     activeProcessorCount :: (self: *NSProcessInfo) -> NSUInteger {
         _func: (obj: *void, selector: Selector) -> NSUInteger #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         return _func(self, _sel.activeProcessorCount);
     }
 
     physicalMemory :: (self: *NSProcessInfo) -> u64 {
         _func: (obj: *void, selector: Selector) -> u64 #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         return _func(self, _sel.physicalMemory);
     }
 
     systemUptime :: (self: *NSProcessInfo) -> NSTimeInterval {
         _func: (obj: *void, selector: Selector) -> NSTimeInterval #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         return _func(self, _sel.systemUptime);
     }
 
     automaticTerminationSupportEnabled :: (self: *NSProcessInfo) -> BOOL {
         _func: (obj: *void, selector: Selector) -> BOOL #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         return _func(self, _sel.automaticTerminationSupportEnabled);
     }
 
     setAutomaticTerminationSupportEnabled :: (self: *NSProcessInfo, automaticTerminationSupportEnabled: BOOL) -> () {
         _func: (obj: *void, selector: Selector, automaticTerminationSupportEnabled: BOOL) -> () #c_call;
-        _func = xx objc_msgSend;
+        _func = xx objc_msgSend_typed;
         _func(self, _sel.setAutomaticTerminationSupportEnabled_, automaticTerminationSupportEnabled);
     }
 
@@ -365,11 +360,11 @@ NSThread :: struct {
     _nsobject: NSObject;
 
     detachNewThreadSelectorToTargetWithObject :: (sel: Selector, toTarget: id, withObject: id) {
-        objc_msgSend(class(NSThread), _sel.detachNewThreadSelector_toTarget_withObject_, sel, toTarget, withObject);
+        objc_msgSend_typed(class(NSThread), _sel.detachNewThreadSelector_toTarget_withObject_, sel, toTarget, withObject);
     }
 
     isMultiThreaded :: () -> BOOL {
-        return xx objc_msgSend(class(NSThread), _sel.isMultiThreaded);
+        return xx objc_msgSend_typed(class(NSThread), _sel.isMultiThreaded);
     }
 }
 
@@ -377,7 +372,7 @@ NSNotification :: struct {
     using #as super: NSObject;
 
     object :: (self: *NSNotification) -> *NSObject {
-        return xx objc_msgSend(self, _sel.object);
+        return xx objc_msgSend_typed(self, _sel.object);
     }
 }
 
@@ -385,12 +380,12 @@ NSNotificationCenter :: struct {
     using #as super: NSObject;
 
     defaultCenter :: () -> *NSNotificationCenter {
-        return xx objc_msgSend(objc_getClass("NSNotificationCenter"), _sel.defaultCenter);
+        return xx objc_msgSend_typed(objc_getClass("NSNotificationCenter"), _sel.defaultCenter);
     }
 
 
     addObserver :: (self: *NSNotificationCenter, observer: id, selector: Selector, name: NSNotificationName, object: id) {
-        objc_msgSend(self, _sel.addObserver_selector_name_object_, observer, selector, name, object);
+        objc_msgSend_typed(self, _sel.addObserver_selector_name_object_, observer, selector, name, object);
     }
 }
 
@@ -400,36 +395,36 @@ NSURL :: struct {
     using #as super: NSObject;
 
     URLWithString :: (str: *NSString) -> *NSURL {
-        return xx objc_msgSend(class(NSURL), _sel.URLWithString_, str);
+        return xx objc_msgSend_typed(class(NSURL), _sel.URLWithString_, str);
     }
 
     fileURLWithPath :: (path: *NSString) -> *NSURL {
-        return xx objc_msgSend(class(NSURL), _sel.fileURLWithPath_, path);
+        return xx objc_msgSend_typed(class(NSURL), _sel.fileURLWithPath_, path);
     }
 
     fileURLWithPath :: (path: *NSString, isDirectory: BOOL) -> *NSURL {
-        return xx objc_msgSend(class(NSURL), _sel.fileURLWithPath_isDirectory_, path, isDirectory);
+        return xx objc_msgSend_typed(class(NSURL), _sel.fileURLWithPath_isDirectory_, path, isDirectory);
     }
 
     // instance
     path :: (self: *NSURL) -> *NSString {
-        return xx objc_msgSend(self, _sel.path);
+        return xx objc_msgSend_typed(self, _sel.path);
     }
 
     URLByDeletingLastPathComponent :: (self: *NSURL) -> *NSURL {
-        return xx objc_msgSend(self, _sel.URLByDeletingLastPathComponent);
+        return xx objc_msgSend_typed(self, _sel.URLByDeletingLastPathComponent);
     }
 
     hasDirectoryPath :: (self: *NSURL) -> BOOL {
-        return xx objc_msgSend(self, _sel.hasDirectoryPath);
+        return xx objc_msgSend_typed(self, _sel.hasDirectoryPath);
     }
 
     URLByAppendingPathComponent :: (self: *NSURL, comp: *NSString) -> *NSURL {
-        return xx objc_msgSend(self, _sel.URLByAppendingPathComponent_, comp);
+        return xx objc_msgSend_typed(self, _sel.URLByAppendingPathComponent_, comp);
     }
 
     lastPathComponent :: (self: *NSURL) -> *NSString {
-        return xx objc_msgSend(self, _sel.lastPathComponent);
+        return xx objc_msgSend_typed(self, _sel.lastPathComponent);
     }
 }
 
@@ -437,11 +432,11 @@ NSData :: struct {
     using #as super: NSObject;
 
     bytes :: (self: *NSData) -> *void {
-        return xx objc_msgSend(self, _sel.bytes);
+        return xx objc_msgSend_typed(self, _sel.bytes);
     }
 
     length :: (self: *NSData) -> NSUInteger {
-        return xx objc_msgSend(self, _sel.length);
+        return xx objc_msgSend_typed(self, _sel.length);
     }
 }
 
@@ -454,10 +449,10 @@ NSArray :: struct (Object_Type: Type) {
 
     // static
     arrayWithObject :: (obj: Object_Type) -> *NSArray(Object_Type) {
-        return xx objc_msgSend(objc_getClass("NSArray"), _sel.arrayWithObject_, obj);
+        return xx objc_msgSend_typed(objc_getClass("NSArray"), _sel.arrayWithObject_, obj);
     }
     arrayWithObjects :: (objs: *Object_Type, count: NSUInteger) -> *NSArray(Object_Type) {
-        return xx objc_msgSend(objc_getClass("NSArray"), _sel.arrayWithObjects_count_, objs, count);
+        return xx objc_msgSend_typed(objc_getClass("NSArray"), _sel.arrayWithObjects_count_, objs, count);
     }
 
     // instance
@@ -465,15 +460,15 @@ NSArray :: struct (Object_Type: Type) {
     // @Cleanup it would be nice if we had light generics so that only one version of these functions is generated
     // when NSArray is instantiated with several different types
     containsObject :: (self: *NSArray(Object_Type), anObject: Object_Type) -> BOOL {
-        return xx objc_msgSend(self, _sel.containsObject_, anObject);
+        return xx objc_msgSend_typed(self, _sel.containsObject_, anObject);
     }
 
     objectAtIndex :: (self: *NSArray(Object_Type), index: NSUInteger) -> Object_Type {
-        return xx objc_msgSend(self, _sel.objectAtIndex_, index);
+        return xx objc_msgSend_typed(self, _sel.objectAtIndex_, index);
     }
 
     count :: (self: *NSArray(Object_Type)) -> NSUInteger {
-        return xx objc_msgSend(self, _sel.count);
+        return xx objc_msgSend_typed(self, _sel.count);
     }
 }
 
@@ -481,13 +476,13 @@ NSFileManager :: struct {
     using #as super: NSObject;
 
     defaultManager :: () -> *NSFileManager {
-        return xx objc_msgSend(class(NSFileManager), _sel.defaultManager);
+        return xx objc_msgSend_typed(class(NSFileManager), _sel.defaultManager);
     }
 
     // instance
     // MACOS 10.6+
     URLForDirectory :: (self: *NSFileManager, dir: NSSearchPathDirectory, inDomain: NSSearchPathDomainMask, appropriateForURL: *NSURL, create: BOOL, error: **NSError) -> *NSURL {
-        return xx objc_msgSend(self, _sel.URLForDirectory_inDomain_appropriateForURL_create_error_, dir, inDomain, appropriateForURL, create, error);
+        return xx objc_msgSend_typed(self, _sel.URLForDirectory_inDomain_appropriateForURL_create_error_, dir, inDomain, appropriateForURL, create, error);
     }
 }
 
@@ -533,7 +528,7 @@ NSError :: struct {
     using #as super: NSObject;
 
     localizedDescription :: (self: *NSError) -> *NSString {
-        return xx objc_msgSend(self, _sel.localizedDescription);
+        return xx objc_msgSend_typed(self, _sel.localizedDescription);
     }
 }
 
@@ -541,11 +536,11 @@ NSHost :: struct {
     using #as super: NSObject;
 
     currentHost :: () -> *NSHost {
-        return xx objc_msgSend(objc_getClass("NSHost"), _sel.currentHost);
+        return xx objc_msgSend_typed(objc_getClass("NSHost"), _sel.currentHost);
     }
 
     localizedName :: (self: *NSHost) -> *NSString {
-        return xx objc_msgSend(self, _sel.localizedName);
+        return xx objc_msgSend_typed(self, _sel.localizedName);
     }
 }
 
@@ -579,10 +574,8 @@ _sel: struct {
     dataUsingEncoding_allowLossyConversion_:                          Selector;
     stringByExpandingTildeInPath:                                     Selector;
     scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_: Selector;
-    invalidate:                                                       Selector;
     currentRunLoop:                                                   Selector;
     run:                                                              Selector;
-    addTimer_forMode_:                                                Selector;
     operatingSystem:                                                  Selector;
     operatingSystemName:                                              Selector;
     isOperatingSystemAtLeastVersion_:                                 Selector;
@@ -621,7 +614,6 @@ _sel: struct {
     lastPathComponent:                                                Selector;
     bytes:                                                            Selector;
     length:                                                           Selector;
-    characterAtIndex_:                                                Selector;
     arrayWithObject_:                                                 Selector;
     arrayWithObjects_count_:                                          Selector;
     containsObject_:                                                  Selector;
@@ -632,6 +624,11 @@ _sel: struct {
     currentHost:                                                      Selector;
     localizedName:                                                    Selector;
     localizedDescription:                                             Selector;
+
+    // Added for Focus
+    characterAtIndex_:                                                Selector;
+    invalidate:                                                       Selector;
+    addTimer_forMode_:                                                Selector;
 }
 
 

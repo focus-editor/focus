@@ -1,16 +1,22 @@
 //
 // This file was auto-generated using the following command:
 //
-// jai modules/Objective_C/generate.jai
+// jai modules/Objective_C/generate.jai - -arm64
 //
 
 
 
-OBJC_BOOL_IS_BOOL :: 0;
-
-OBJC_BOOL_IS_CHAR :: 1;
+OBJC_BOOL_IS_BOOL :: 1;
 
 ARITH_SHIFT :: 32;
+
+OBJC_GETCLASSHOOK_DEFINED :: 1;
+
+OBJC_ADDLOADIMAGEFUNC_DEFINED :: 1;
+
+OBJC_SETHOOK_LAZYCLASSNAMER_DEFINED :: 1;
+
+OBJC_REALIZECLASSFROMSWIFT_DEFINED :: 1;
 
 CLS_CLASS :: 0x1;
 
@@ -66,7 +72,7 @@ objc_selector :: struct {}
 /// An opaque type that represents a method selector.
 SEL :: *objc_selector;
 
-IMP :: #type (unknown0: id, unknown1: SEL, __args: ..Any) -> id #c_call;
+IMP :: #type () -> void #c_call;
 
 /**
 * Returns the name of the method specified by a given selector.
@@ -589,18 +595,6 @@ class_getClassMethod :: (cls: Class, name: SEL) -> Method #foreign libobjc;
 *  the selector, the function pointer returned will be part of the runtime's message forwarding machinery.
 */
 class_getMethodImplementation :: (cls: Class, name: SEL) -> IMP #foreign libobjc;
-
-/**
-* Returns the function pointer that would be called if a particular
-* message were sent to an instance of a class.
-*
-* @param cls The class you want to inspect.
-* @param name A selector.
-*
-* @return The function pointer that would be called if \c [object name] were called
-*  with an instance of the class, or \c NULL if \e cls is \c Nil.
-*/
-class_getMethodImplementation_stret :: (cls: Class, name: SEL) -> IMP #foreign libobjc;
 
 /**
 * Returns a Boolean value that indicates whether instances of a class respond to a particular selector.
@@ -1141,7 +1135,7 @@ protocol_isEqual :: (proto: *Protocol, other: *Protocol) -> BOOL #foreign libobj
 /**
 * Returns the name of a protocol.
 *
-* @param p A protocol.
+* @param proto A protocol.
 *
 * @return The name of the protocol \e p as a C string.
 */
@@ -1150,7 +1144,7 @@ protocol_getName :: (proto: *Protocol) -> *u8 #foreign libobjc;
 /**
 * Returns a method description structure for a specified method of a given protocol.
 *
-* @param p A protocol.
+* @param proto A protocol.
 * @param aSel A selector.
 * @param isRequiredMethod A Boolean value that indicates whether aSel is a required method.
 * @param isInstanceMethod A Boolean value that indicates whether aSel is an instance method.
@@ -1167,7 +1161,7 @@ protocol_getMethodDescription :: (proto: *Protocol, aSel: SEL, isRequiredMethod:
 /**
 * Returns an array of method descriptions of methods meeting a given specification for a given protocol.
 *
-* @param p A protocol.
+* @param proto A protocol.
 * @param isRequiredMethod A Boolean value that indicates whether returned methods should
 *  be required methods (pass YES to specify required methods).
 * @param isInstanceMethod A Boolean value that indicates whether returned methods should
@@ -1229,7 +1223,7 @@ protocol_copyPropertyList2 :: (proto: *Protocol, outCount: *u32, isRequiredPrope
 *
 * @return A C array of protocols adopted by \e proto. The array contains \e *outCount pointers
 *  followed by a \c NULL terminator. You must free the array with \c free().
-*  If the protocol declares no properties, \c NULL is returned and \c *outCount is \c 0.
+*  If the protocol adopts no other protocols, \c NULL is returned and \c *outCount is \c 0.
 */
 protocol_copyProtocolList :: (proto: *Protocol, outCount: *u32) -> **Protocol #foreign libobjc;
 
@@ -1482,6 +1476,78 @@ objc_getAssociatedObject :: (object: id, key: *void) -> id #foreign libobjc;
 */
 objc_removeAssociatedObjects :: (object: id) -> void #foreign libobjc;
 
+/**
+* Function type for a hook that intercepts class_getImageName().
+*
+* @param cls The class whose image name is being looked up.
+* @param outImageName On return, the result of the image name lookup.
+* @return YES if an image name for this class was found, NO otherwise.
+*
+* @see class_getImageName
+* @see objc_setHook_getImageName
+*/
+objc_hook_getImageName :: #type (cls: Class, outImageName: **u8) -> BOOL #c_call;
+
+/**
+* Install a hook for class_getImageName().
+*
+* @param newValue The hook function to install.
+* @param outOldValue The address of a function pointer variable. On return,
+*  the old hook function is stored in the variable.
+*
+* @note The store to *outOldValue is thread-safe: the variable will be
+*  updated before class_getImageName() calls your new hook to read it,
+*  even if your new hook is called from another thread before this
+*  setter completes.
+* @note The first hook in the chain is the native implementation of
+*  class_getImageName(). Your hook should call the previous hook for
+*  classes that you do not recognize.
+*
+* @see class_getImageName
+* @see objc_hook_getImageName
+*/
+objc_setHook_getImageName :: (newValue: objc_hook_getImageName, outOldValue: *objc_hook_getImageName) -> void #foreign libobjc;
+
+/**
+* Function type for a hook that assists objc_getClass() and related functions.
+*
+* @param name The class name to look up.
+* @param outClass On return, the result of the class lookup.
+* @return YES if a class with this name was found, NO otherwise.
+*
+* @see objc_getClass
+* @see objc_setHook_getClass
+*/
+objc_hook_getClass :: #type (name: *u8, outClass: *Class) -> BOOL #c_call;
+
+objc_setHook_getClass :: (newValue: objc_hook_getClass, outOldValue: *objc_hook_getClass) -> void #foreign libobjc;
+
+/**
+* Function type for a function that is called when an image is loaded.
+*
+* @param header The newly loaded header.
+*/
+mach_header :: struct {}
+objc_func_loadImage :: #type (header: *mach_header) -> void #c_call;
+
+objc_addLoadImageFunc :: (func: objc_func_loadImage) -> void #foreign libobjc;
+
+/**
+* Function type for a hook that provides a name for lazily named classes.
+*
+* @param cls The class to generate a name for.
+* @return The name of the class, or NULL if the name isn't known or can't me generated.
+*
+* @see objc_setHook_lazyClassNamer
+*/
+objc_hook_lazyClassNamer :: #type (cls: Class) -> *u8 #c_call;
+
+objc_setHook_lazyClassNamer :: (newValue: objc_hook_lazyClassNamer, oldOutValue: *objc_hook_lazyClassNamer) -> void #foreign libobjc;
+
+_objc_swiftMetadataInitializer :: #type (cls: Class, arg: *void) -> Class #c_call;
+
+_objc_realizeClassFromSwift :: (cls: Class, previously: *void) -> Class #foreign libobjc;
+
 objc_method_description_list :: struct {
     count: s32;
     list:  [1] objc_method_description;
@@ -1575,4 +1641,4 @@ class_createInstanceFromZone :: (unknown0: Class, idxIvars: u64, z: *void) -> id
 
 #scope_file
 
-libobjc :: #system_library "libobjc";
+libobjc :: #library,system "libobjc";
