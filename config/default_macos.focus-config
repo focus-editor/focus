@@ -98,7 +98,7 @@ build_panel_height_percent:             50
 
 
 # Example error regexes:
-# For jai:  ^(?P<file>.*):(?P<line>\d+),(?P<col>\d+): (?P<type>Error|Warning|Info): (?P<msg>.*)|^(?P<msg>.*error LNK.*)
+# For jai:  ^(?P<file>.*):(?P<line>\d+),(?P<col>\d+): (?P<type>Error|Warning|Info|...):* (?P<msg>.*)|^(?P<msg1>.*error LNK.*)
 # ... let us know what regex works for you and we'll add it here
 
 # NOTE:

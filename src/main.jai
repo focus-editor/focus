@@ -908,6 +908,7 @@ dont_ignore_next_window_resize := false;
 #load "langs/yang.jai";
 #load "langs/zig.jai";
 #load "langs/uxntal.jai";
+#load "langs/rust.jai";
 
 #if OS == .WINDOWS {
     #load "platform/windows.jai";

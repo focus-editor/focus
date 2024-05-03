@@ -477,6 +477,7 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
         case .Xml;          return tokenize_xml_for_indentation(buffer);
         case .Lua;          return tokenize_lua_for_indentation(buffer);
         case .Odin;         return tokenize_odin_for_indentation(buffer);
+        case .Rust;         return tokenize_rust_for_indentation(buffer);
     }
 
     return .[];
@@ -1190,6 +1191,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .Odin;         return highlight_odin_syntax;
         case .Python;       return highlight_python_syntax;
         case .RenPy;        return highlight_renpy_syntax;
+        case .Rust;         return highlight_rust_syntax;
         case .Html;         return highlight_xml_syntax;
         case .Xml;          return highlight_xml_syntax;
         case .Worklog;      return highlight_worklog;
@@ -1378,6 +1380,7 @@ Buffer :: struct {
         Odin;
         Python;
         RenPy;
+        Rust;
         Xml;
         Html;
         Worklog;

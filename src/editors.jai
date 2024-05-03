@@ -1155,6 +1155,7 @@ get_lang_from_path :: (path: string) -> Buffer.Lang {
             case "odin";           lang = .Odin;
             case "py";             lang = .Python;
             case "rpy";            lang = .RenPy;
+            case "rs";             lang = .Rust;
 
             case "vert"; #through;
             case "frag"; #through;

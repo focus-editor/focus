@@ -174,6 +174,7 @@ get_lang_from_name :: (lang_name: string) -> Buffer.Lang {
     if ends_with_nocase(lang_name, "odin")         return .Odin;
     if ends_with_nocase(lang_name, "python")       return .Python;
     if ends_with_nocase(lang_name, "renpy")        return .RenPy;
+    if ends_with_nocase(lang_name, "rust")         return .Rust;
     if ends_with_nocase(lang_name, "html")         return .Html;
     if ends_with_nocase(lang_name, "xml")          return .Xml;
     if ends_with_nocase(lang_name, "worklog")      return .Worklog;
