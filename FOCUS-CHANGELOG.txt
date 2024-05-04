@@ -18,6 +18,18 @@
 # Main Git Branch
 
 + New features:
+    + ...
++ Bug fixes:
+    + ...
++ Other changes:
+    + ...
+
+
+# RELEASES ==================================================================
+
+# Version 0.3.5
+
++ New features:
     + New option: `insert_final_newline_on_save`. Set to `true` to auto-add missing final newlines to saved files.
     + New command: `copy_current_line_info`. Copies a string `<current-file-path>:<line>` to clipboard. Useful for setting breakpoints.
     + Basic HLSL highlighting (thanks @Roman-Skabin for many improvements)
@@ -35,8 +47,6 @@
     + Made the fuzzy search in the command dialog more intuitive
     + CRLF is now stripped from build output before displaying
 
-
-# RELEASES ==================================================================
 
 # Version 0.3.4
 
