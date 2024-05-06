@@ -868,6 +868,20 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
                         }
                     END;
                     print_to_builder(*b, code, setting.name);
+
+                case .ENUM;
+                    code := #string END
+                        enum_info := type_info(type_of(Settings.%1));
+                        found, idx := array_find(enum_info.names, value);
+                        if found {
+                            add_highlight(parser, cast(s64)(setting_value.data - line.data), setting_value.count, .value);
+                            result.config.settings.%1 = xx enum_info.values[idx];
+                        } else {
+                            add_highlight(parser, cast(s64)(setting_value.data - line.data), setting_value.count, .error);
+                            return true, tprint("Couldn't parse '%1' - valid values: %%", enum_info.names);
+                        }
+                    END;
+                    print_to_builder(*b, code, setting.name);
             }
         }
 

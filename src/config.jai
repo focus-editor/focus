@@ -556,9 +556,16 @@ Settings :: struct {
     save_current_buffer_on_build                  := false;
     save_all_file_backed_buffers_on_build         := false;
 
+    status_bar_position                           := Status_Bar_Position.bottom;
+
     // TODO
     // convert_tabs_to_spaces_on_load:     false
     // load_last_session_on_start:         true
+}
+
+Status_Bar_Position :: enum {
+    bottom;
+    top;
 }
 
 Keymap :: struct {

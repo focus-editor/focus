@@ -10,7 +10,7 @@ draw_frame :: () {
     // Check whether we need to deactivate elements before drawing
     if (!mouse.left.is_down || mouse.left.just_released) && (!mouse.middle.is_down || mouse.middle.just_released) then ui.active = .none;
 
-    footer_height := font_ui_line_height * 1.6;
+    status_bar_height := font_ui_line_height * 1.6;
 
     active_pane_rect: Rect = ---;
 
@@ -22,7 +22,7 @@ draw_frame :: () {
 
         case .Single;
             editors_snap_splitter(0.5);
-            draw_editor(editors.left, screen, footer_height, .editor_single);
+            draw_editor(editors.left, screen, status_bar_height, .editor_single);
             active_pane_rect = screen;
 
         case .Double;
@@ -51,12 +51,13 @@ draw_frame :: () {
                 just_dropped_file = "";
             }
 
-            draw_editor(editors.left,  left_rect,  footer_height, .editor_left,  screen);
-            draw_editor(editors.right, right_rect, footer_height, .editor_right, screen);
+            draw_editor(editors.left,  left_rect,  status_bar_height, .editor_left,  screen);
+            draw_editor(editors.right, right_rect, status_bar_height, .editor_right, screen);
 
             active_pane_rect = ifx editors.active == editors.left then left_rect else right_rect;
 
-            splitter_rect := make_rect(left_rect.x + left_rect.w, left_rect.y + footer_height, 2, left_rect.h - footer_height);
+            splitter_y := ifx config.settings.status_bar_position == .bottom then left_rect.y + status_bar_height else 0;
+            splitter_rect := make_rect(left_rect.x + left_rect.w, splitter_y, 2, left_rect.h - status_bar_height);
             draw_splitter(splitter_rect, split_x, .editor_splitter);
     }
 
@@ -75,7 +76,7 @@ draw_frame :: () {
         case .theme_dialog;             draw_theme_dialog();
     }
 
-    draw_user_messages(screen, footer_height);
+    draw_user_messages(screen, status_bar_height);
 
     // Reset UI state after drawing
     if (!mouse.left.is_down || mouse.left.just_released) && (!mouse.middle.is_down || mouse.middle.just_released) {
@@ -236,7 +237,7 @@ draw_welcome_screen :: (main_area: Rect) {
 
 }
 
-draw_user_messages :: (main_area: Rect, footer_height: float) {
+draw_user_messages :: (main_area: Rect, status_bar_height: float) {
     user_messages := get_user_messages(frame_time);
     if !user_messages return;
 
@@ -248,7 +249,7 @@ draw_user_messages :: (main_area: Rect, footer_height: float) {
     message_rect_src := shrink(main_area, margin);
     if !is_valid(message_rect_src) return;
 
-    message_rect_src.y += footer_height;
+    if config.settings.status_bar_position == .bottom then message_rect_src.y += status_bar_height;
 
     for < * user_messages {
         // Figure out message height
@@ -382,10 +383,15 @@ draw_build_panel :: () {
     draw_editor(editor_id, build_output_rect, 0, get_ui_id_from_loc(), as_build_panel = true);
 }
 
-draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui_Id, total_editor_area := Rect.{}, as_build_panel := false) {
+draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id: Ui_Id, total_editor_area := Rect.{}, as_build_panel := false) {
     scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
 
-    footer_rect, rect := cut_bottom(main_area, footer_height);
+    status_bar_rect, rect : Rect;
+    if config.settings.status_bar_position == .bottom {
+        status_bar_rect, rect = cut_bottom(main_area, status_bar_height);
+    } else {
+        status_bar_rect, rect = cut_top(main_area, status_bar_height);
+    }
     max_width := cast(float) config.settings.max_editor_width * dpi_scale;
     if max_width > 0 && rect.w > max_width {
         rect.x += (rect.w - max_width) / 2;
@@ -1492,23 +1498,26 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
     }
 
-    // Draw footer
+    // Draw status bar
     if !as_build_panel {
         footer_color := Color.BACKGROUND_4;
-        draw_rect(footer_rect, footer_color);
-        draw_top_shadow(footer_rect);
+        draw_rect(status_bar_rect, footer_color);
+        if #complete config.settings.status_bar_position == {
+            case .bottom; draw_top_shadow(status_bar_rect);
+            case .top; draw_bottom_shadow(status_bar_rect);
+        }
 
-        push_scissor(footer_rect);
+        push_scissor(status_bar_rect);
         defer pop_scissor();
 
-        footer_rect = shrink_x(footer_rect, text_offset.x);
+        status_bar_rect = shrink_x(status_bar_rect, text_offset.x);
 
         width   := 0.0;
         padding := floor(4 * dpi_scale);
 
         pen := Vector2.{
-            footer_rect.x,
-            footer_rect.y + (footer_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+            status_bar_rect.x,
+            status_bar_rect.y + (status_bar_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
         };
 
         // Draw file name and path
@@ -1516,9 +1525,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
 
         // Draw line, column numbers, and selection length
         {
-            cut_rect := footer_rect;
+            cut_rect := status_bar_rect;
             cut_rect.x = pen.x + padding;
-            cut_rect.w = footer_rect.x + footer_rect.w - cut_rect.x;
+            cut_rect.w = status_bar_rect.x + status_bar_rect.w - cut_rect.x;
             push_scissor(cut_rect);
             defer pop_scissor();
 
@@ -1541,7 +1550,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
             } else {
                 width = xx Simp.prepare_text(font_ui_bold, tprint("Line: %  Col: %", line + 1, col + 1));
             }
-            line_col_start_x := footer_rect.x + footer_rect.w - width;
+            line_col_start_x := status_bar_rect.x + status_bar_rect.w - width;
             Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = xx Color.UI_DIM);
 
             // Draw length of selected text if any text is currently selected
@@ -1549,7 +1558,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 label := tprint("Selected: % chars  ", num_selected_chars);
                 if num_selected_bytes != num_selected_chars then label = tprint("Selected: % chars, % bytes  ", num_selected_chars, num_selected_bytes);
                 width += xx Simp.prepare_text(font_ui_bold, label);
-                line_col_start_x = footer_rect.x + footer_rect.w - width;
+                line_col_start_x = status_bar_rect.x + status_bar_rect.w - width;
                 Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = xx Color.UI_DIM);
             }
 
@@ -1560,12 +1569,12 @@ draw_editor :: (editor_id: s64, main_area: Rect, footer_height: float, ui_id: Ui
                 Simp.draw_prepared_text(font_ui_bold, xx cursor_indicator_x, xx pen.y, color = xx Color.CURSOR);
 
                 cursor_width := ifx config.settings.cursor_as_block then char_x_advance else 2 * dpi_scale;
-                cursor_y := footer_rect.y + (footer_rect.h - line_height) / 2;
+                cursor_y := status_bar_rect.y + (status_bar_rect.h - line_height) / 2;
                 cursor_rect := align_to_grid(make_rect(cursor_indicator_x - cursor_width - padding, cursor_y, cursor_width, line_height));
 
                 if should_draw_cursors() then draw_rounded_rect(cursor_rect, Color.CURSOR, radius = rounding_radius_small, set_shader = true);
 
-                hover_rect := Rect.{ cursor_rect.x - padding, footer_rect.y, cursor_rect.w + padding + width + 2 * padding, footer_rect.h };
+                hover_rect := Rect.{ cursor_rect.x - padding, status_bar_rect.y, cursor_rect.w + padding + width + 2 * padding, status_bar_rect.h };
                 cursor_number_id := get_ui_id_from_loc();
                 maybe_set_hot_or_active(cursor_number_id, hover_rect, .NORMAL);
                 if is_hovering_over(cursor_number_id) {
@@ -3224,6 +3233,13 @@ draw_top_shadow :: (using rect: Rect, size: float = 10.0) {
     s := map_color_to_vec4(Color.SHADOW_DARK);
     t := map_color_to_vec4(Color.SHADOW_TRANSPARENT);
     Simp.immediate_quad(x, y + h, x + w, y + h + size * dpi_scale, c00 = s, c01 = t, c10 = s, c11 = t);
+}
+
+draw_bottom_shadow :: (using rect: Rect, size: float = 10.0) {
+    Simp.set_shader_for_color(enable_blend = true);
+    s := map_color_to_vec4(Color.SHADOW_DARK);
+    t := map_color_to_vec4(Color.SHADOW_TRANSPARENT);
+    Simp.immediate_quad(x, y, x + w, y - size * dpi_scale, c00 = s, c01 = t, c10 = s, c11 = t);
 }
 
 get_new_scroll_target_from_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id) -> new_scroll_target: s32 {
