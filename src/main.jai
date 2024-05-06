@@ -1,5 +1,5 @@
 main :: () {
-    #if DEBUG {
+    #if DEBUG && OS != .LINUX {
         UA :: #import "Unmapping_Allocator";
         context.allocator = UA.get_unmapping_allocator();
     }
