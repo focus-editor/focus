@@ -68,7 +68,7 @@ draw_frame :: () {
         case .open_file_dialog;         draw_open_file_dialog();
         case .delete_file_dialog;       draw_delete_file_dialog();
         case .finder;                   draw_finder();
-        case .go_to_line_dialog;        draw_go_to_line_dialog(active_pane_rect);
+        case .go_to_line_dialog;        draw_go_to_line_dialog(active_pane_rect, status_bar_height);
         case .open_project_dialog;      draw_open_project_dialog();
         case .unsaved_buffers_dialog;   draw_unsaved_buffers_dialog();
         case .confirm_overwrite_dialog; draw_confirm_overwrite_dialog();
@@ -1233,6 +1233,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         bar_rect := cut_top(main_area, bar_rect_height);
         bar_rect = cut_right(bar_rect, bar_rect.w * width_percentage);
         bar_rect.x -= 2 * char_x_advance;
+        if config.settings.status_bar_position == .top bar_rect.y -= status_bar_height;
 
         top_rect, results_rect := cut_top(bar_rect, top_rect_height);
 
@@ -2802,7 +2803,7 @@ draw_finder :: () {
     }
 }
 
-draw_go_to_line_dialog :: (active_editor_rect: Rect) {
+draw_go_to_line_dialog :: (active_editor_rect: Rect, status_bar_height: float) {
     input_id := get_ui_id_from_loc();
 
     margin  := floor(8 * dpi_scale);
@@ -2815,6 +2816,7 @@ draw_go_to_line_dialog :: (active_editor_rect: Rect) {
     bar_rect := cut_top(active_editor_rect, height);
     bar_rect = cut_right(bar_rect, width);
     bar_rect.x -= 2 * char_x_advance;
+    if config.settings.status_bar_position == .top bar_rect.y -= status_bar_height;
 
     maybe_set_hot_or_active(input_id, bar_rect, .NORMAL);
 
