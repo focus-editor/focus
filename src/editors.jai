@@ -1180,6 +1180,7 @@ get_lang_from_path :: (path: string) -> Buffer.Lang {
             case "hpp"; #through;
             case "ipp"; #through;
             case "cc";  #through;
+            case "hh";  #through;
             case "m";   #through;
             case "mm";
                 lang = .C;
