@@ -624,7 +624,7 @@ parse_slash_comment_or_filetag :: (using tokenizer: *Odin_Tokenizer, token: *Tok
             t += 1;
 
             if t.* == #char "+" {
-                token.type = .file_tag;
+                token.type = .string_literal;  // file tag (not worth a separate token type)
                 t += 1;
             }
 
@@ -725,7 +725,6 @@ Token :: struct {
         number;
         comment;
         multiline_comment;
-        file_tag;
         operation;
         punctuation;
         keyword;
@@ -746,7 +745,6 @@ COLOR_MAP :: Color.[
     .CODE_VALUE,         // number
     .CODE_COMMENT,       // comment
     .CODE_COMMENT,       // multiline_comment
-    .CODE_STRING,        // file_tag
     .CODE_OPERATION,     // operation
     .CODE_PUNCTUATION,   // punctuation
     .CODE_KEYWORD,       // keyword
@@ -758,7 +756,7 @@ COLOR_MAP :: Color.[
 ];
 
 PUNCTUATION :: string.[
-    "attribute", "caret", "comma", "dollar", "period", "question", "semicolon", "file_tag",
+    "attribute", "caret", "comma", "dollar", "period", "question", "semicolon",
 
     "l_paren", "r_paren",
     "l_brace", "r_brace",

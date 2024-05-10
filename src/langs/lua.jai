@@ -436,7 +436,6 @@ Token :: struct {
 
         identifier;
         string_literal;
-        long_string_literal;
         number;
         comment;
         multiline_comment;
@@ -453,7 +452,6 @@ COLOR_MAP :: Color.[
     .CODE_COMMENT,       // eof - obviously not used
     .CODE_DEFAULT,       // identifier
     .CODE_STRING,        // string_literal
-    .CODE_STRING,        // long_string_literal
     .CODE_VALUE,         // number
     .CODE_COMMENT,       // comment
     .CODE_COMMENT,       // multiline_comment

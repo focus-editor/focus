@@ -269,7 +269,7 @@ parse_bang :: (using tokenizer: *Tokenizer, token: *Token) {
 }
 
 parse_double_quote_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .double_quote_string_literal;
+    token.type = .string_literal;
 
     escape_seen := false;
 
@@ -285,7 +285,7 @@ parse_double_quote_string_literal :: (using tokenizer: *Tokenizer, token: *Token
 }
 
 parse_single_quote_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .single_quote_string_literal;
+    token.type = .string_literal;
 
     escape_seen := false;
 
@@ -301,7 +301,7 @@ parse_single_quote_string_literal :: (using tokenizer: *Tokenizer, token: *Token
 }
 
 parse_template_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .template_string_literal;
+    token.type = .string_literal;
 
     escape_seen := false;
 
@@ -438,9 +438,7 @@ Token :: struct {
         eof;
 
         identifier;
-        double_quote_string_literal;
-        single_quote_string_literal;
-        template_string_literal;
+        string_literal;
         char_literal;
         number;
         comment;
@@ -459,9 +457,7 @@ Token :: struct {
 COLOR_MAP :: Color.[
     .CODE_COMMENT,       // eof - obviously not used
     .CODE_DEFAULT,       // identifier
-    .CODE_STRING,        // double_quote_string_literal
-    .CODE_STRING,        // single_quote_string_literal
-    .CODE_STRING,        // template_string_literal
+    .CODE_STRING,        // string_literal
     .CODE_STRING,        // char_literal
     .CODE_VALUE,         // number
     .CODE_COMMENT,       // comment

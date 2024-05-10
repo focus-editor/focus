@@ -41,21 +41,21 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
 }
 
 parse_done_line :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .done;
+    token.type = .function;  // not great, but we want to avoid language-specific tokens here
 
     t += 1;
     eat_until_newline(tokenizer);
 }
 
 parse_todo_line :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .todo;
+    token.type = .default;
 
     t += 1;
     eat_until_newline(tokenizer);
 }
 
 parse_current_task_line :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .current_task;
+    token.type = .value;
 
     t += 1;
     eat_until_newline(tokenizer);
@@ -83,10 +83,10 @@ Token :: struct {
         eof;
 
         line;
-        done;
-        todo;
+        function;
+        default;
         header;
-        current_task;
+        value;
     }
 }
 
@@ -94,8 +94,8 @@ Token :: struct {
 COLOR_MAP :: Color.[
     .CODE_COMMENT,       // eof - obviously not used
     .CODE_DEFAULT,       // line
-    .CODE_FUNCTION,      // done
-    .CODE_DEFAULT,       // todo
+    .CODE_FUNCTION,      // function
+    .CODE_DEFAULT,       // default
     .CODE_KEYWORD,       // header
-    .CODE_VALUE,         // current_task
+    .CODE_VALUE,         // value
 ];

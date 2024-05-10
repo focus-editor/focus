@@ -129,7 +129,7 @@ parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
 }
 
 parse_string :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .double_quote_string_literal;
+    token.type = .string_literal;
 
     escape_seen := false;
 
@@ -182,7 +182,7 @@ Token :: struct {
         eof;
 
         identifier;
-        double_quote_string_literal;
+        string_literal;
         number;
         comment;
         multiline_comment;
@@ -196,7 +196,7 @@ Token :: struct {
 COLOR_MAP :: Color.[
     .CODE_COMMENT,       // eof - obviously not used
     .CODE_DEFAULT,       // identifier
-    .CODE_STRING,        // double_quote_string_literal
+    .CODE_STRING,        // string_literal
     .CODE_VALUE,         // number
     .CODE_COMMENT,       // comment
     .CODE_COMMENT,       // multiline_comment

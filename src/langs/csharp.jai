@@ -107,7 +107,7 @@ get_next_token :: (using tokenizer: *CSharp_Tokenizer) -> Token {
         case #char "<";  parse_less_than             (tokenizer, *token);
         case #char ">";  parse_greater_than          (tokenizer, *token);
         case #char "!";  parse_bang                  (tokenizer, *token);
-        case #char "#";  parse_preprocessor_directive(tokenizer, *token);
+        case #char "#";  parse_compiler_directive    (tokenizer, *token);
         case #char "\""; parse_string_literal        (tokenizer, *token);
         case #char "'";  parse_char_literal          (tokenizer, *token);
         case #char "/";  parse_slash_or_comment      (tokenizer, *token);
@@ -355,7 +355,7 @@ parse_bang :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_preprocessor_directive :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_compiler_directive :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
 
     t += 1;
@@ -369,10 +369,10 @@ parse_preprocessor_directive :: (using tokenizer: *Tokenizer, token: *Token) {
 
     // Check if it's one of the existing directives
     if directive.count > MAX_DIRECTIVE_LENGTH return;
-    token_directive, ok := table_find(*PREPROCESSOR_DIRECTIVES_MAP, directive);
+    token_directive, ok := table_find(*COMPILER_DIRECTIVES_MAP, directive);
     if ok {
-        token.type = .preprocessor_directive;
-        token.preprocessor_directive = token_directive;
+        token.type = .compiler_directive;
+        token.compiler_directive = token_directive;
     }
 }
 
@@ -676,7 +676,7 @@ Token :: struct {
         keyword:            Keyword;
         punctuation:        Punctuation;
         operation:          Operation;
-        preprocessor_directive: Directive;
+        compiler_directive: Directive;
     }
 
     Type :: enum u16 {
@@ -694,7 +694,7 @@ Token :: struct {
         keyword;
         type_keyword;
         value_keyword;
-        preprocessor_directive;
+        compiler_directive;
         invalid;
     }
 }
@@ -715,7 +715,7 @@ COLOR_MAP :: Color.[
     .CODE_KEYWORD,       // modifier_keyword (currently no specific color available for modifiers)
     .CODE_TYPE,          // type_keyword
     .CODE_VALUE,         // value_keyword
-    .CODE_KEYWORD,       // preprocessor_directive
+    .CODE_KEYWORD,       // compiler_directive
     .CODE_ERROR,         // invalid
 ];
 
@@ -971,7 +971,7 @@ MAX_KEYWORD_LENGTH :: #run -> s32 {
     return xx max;
 }
 
-PREPROCESSOR_DIRECTIVES_MAP :: #run -> Table(string, Directive) {
+COMPILER_DIRECTIVES_MAP :: #run -> Table(string, Directive) {
     table: Table(string, Directive);
     init(*table, type_info(Directive).values.count * size_of(Directive));
 

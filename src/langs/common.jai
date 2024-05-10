@@ -199,3 +199,60 @@ Code_Highlight :: struct {
     count: s32;
     color_num: u8;
 }
+
+// This enum is supposed to list all possible code tokens we might have, for all languages
+Token_Type :: enum u8 {
+    eof;
+    invalid;
+    default;
+
+    string_literal;
+    multiline_string;
+    raw_string;
+    char_literal;
+
+    identifier;
+    note;
+    number;
+
+    error;
+    warning;
+
+    comment;
+    multiline_comment;
+
+    operation;
+    punctuation;
+
+    keyword;
+    type;
+    value;
+    modifier;
+    attribute;
+    enum_variant;
+    macro;
+
+    builtin_variable;
+    builtin_function;
+    builtin_exception;
+
+    directive;
+    directive_modifier;
+
+    header;
+    header2;
+    header3;
+    header4;
+    header5;
+    header6;
+
+    // Language-specific tokens below
+
+    config_modifier_key;
+    config_key_string;
+    config_action;
+
+    hlsl_semantic;
+
+    rust_lifetime;
+}

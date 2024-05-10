@@ -122,13 +122,12 @@ Token :: struct {
         opcode;
         identifier;
         number;
-        padding;
         comment;
-        ascii_literal;
+        string_literal;
         punctuation;
         label;
         macro;
-        include;
+        operation;
         invalid;
     }
 }
@@ -138,13 +137,12 @@ COLOR_MAP :: Color.[
     .CODE_KEYWORD,     // opcode
     .CODE_DEFAULT,     // identifier
     .CODE_VALUE,       // number
-    .CODE_OPERATION,   // paddding
     .CODE_COMMENT,     // comment
-    .CODE_STRING,      // ascii_literal
+    .CODE_STRING,      // string_literal
     .CODE_PUNCTUATION, // punctuation
     .CODE_FUNCTION,    // label
     .CODE_TYPE,        // macro
-    .CODE_OPERATION,   // include
+    .CODE_OPERATION,   // operation
     .CODE_ERROR,       // invalid
 ];
 
@@ -251,7 +249,7 @@ parse_padding :: (using tokenizer: *Tokenizer, token: *Token) {
         t += 1;
     }
 
-    token.type = .padding;
+    token.type = .operation;
 }
 
 parse_ascii_literal :: (using tokenizer: *Tokenizer, token: *Token) {
@@ -261,7 +259,7 @@ parse_ascii_literal :: (using tokenizer: *Tokenizer, token: *Token) {
         t += 1;
     }
 
-    token.type = .ascii_literal;
+    token.type = .string_literal;
 }
 
 parse_comment :: (using tokenizer: *Tokenizer, token: *Token) {
@@ -296,7 +294,7 @@ parse_include :: (using tokenizer: *Tokenizer, token: *Token) {
     while t < max_t && (is_alnum(t.*) || is_char_allowed_within_name(t.*)) {
         t += 1;
     }
-    token.type = .include;
+    token.type = .operation;
 }
 
 is_hex_digit :: inline (char: u8) -> bool {

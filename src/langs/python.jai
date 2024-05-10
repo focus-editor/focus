@@ -396,7 +396,6 @@ Token :: struct {
         multiline_comment;
         operation;
         punctuation;
-        modifier_keyword;
         keyword;
         type_keyword;
         value_keyword;
@@ -418,7 +417,6 @@ COLOR_MAP :: Color.[
     .CODE_OPERATION,     // operation
     .CODE_PUNCTUATION,   // punctuation
     .CODE_KEYWORD,       // keyword
-    .CODE_KEYWORD,       // modifier_keyword
     .CODE_TYPE,          // type_keyword
     .CODE_VALUE,         // value_keyword
     .CODE_OPERATION,     // builtin_function

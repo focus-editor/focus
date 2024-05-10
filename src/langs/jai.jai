@@ -68,7 +68,7 @@ tokenize_jai_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* tem
                 }
 
             case .multiline_comment;    token.type = .maybe_multiline;
-            case .here_string;          token.type = .maybe_multiline;
+            case .multiline_string;     token.type = .maybe_multiline;
             case .eof;                  token.type = .eof;  // to guarantee we always have indentation tokens
             case;                       token.type = .unimportant;
         }
@@ -192,7 +192,7 @@ parse_identifier :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
     prev, before_prev := last_tokens[1], last_tokens[0];
     if prev.type == .compiler_directive && prev.compiler_directive == .directive_string {
         // Here-string
-        token.type = .here_string;
+        token.type = .multiline_string;
         start := cast(s32) (t - buf.data);
         end := find_index_from_left(buf, identifier_str, start_index = start);
         if end < 0 {
@@ -226,7 +226,7 @@ parse_identifier :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
                     case .kw_cast;    is_modifier = array_find(string.["no_check", "trunc", "force"], identifier_str);
                 }
         }
-        if is_modifier then token.type = .modifier;
+        if is_modifier then token.type = .directive_modifier;
     }
 }
 
@@ -646,19 +646,18 @@ Token :: struct {
 
         identifier;
         string_literal;
-        here_string;
+        multiline_string;
         note;
         number;
         comment;
         multiline_comment;
         operation;
         punctuation;
-        modifier_keyword;
         keyword;
         type_keyword;
         value_keyword;
         compiler_directive;
-        modifier;
+        directive_modifier;
         invalid;
     }
 }
@@ -668,7 +667,7 @@ COLOR_MAP :: Color.[
     .CODE_COMMENT,       // eof - obviously not used
     .CODE_DEFAULT,       // identifier
     .CODE_STRING,        // string_literal
-    .CODE_STRING,        // here_string
+    .CODE_STRING,        // multiline_string
     .CODE_OPERATION,     // note
     .CODE_VALUE,         // number
     .CODE_COMMENT,       // comment
@@ -676,11 +675,10 @@ COLOR_MAP :: Color.[
     .CODE_OPERATION,     // operation
     .CODE_PUNCTUATION,   // punctuation
     .CODE_KEYWORD,       // keyword
-    .CODE_KEYWORD,       // modifier_keyword
     .CODE_TYPE,          // type_keyword
     .CODE_VALUE,         // value_keyword
     .CODE_KEYWORD,       // compiler_directive
-    .CODE_KEYWORD,       // modifier
+    .CODE_KEYWORD,       // directive_modifier
     .CODE_ERROR,         // invalid
 ];
 

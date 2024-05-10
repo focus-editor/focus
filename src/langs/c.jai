@@ -62,7 +62,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "<";  parse_less_than_or_include  (tokenizer, *token);
         case #char ">";  parse_greater_than          (tokenizer, *token);
         case #char "!";  parse_bang                  (tokenizer, *token);
-        case #char "#";  parse_preprocessor_directive(tokenizer, *token);
+        case #char "#";  parse_directive             (tokenizer, *token);
         case #char "\""; parse_string_literal        (tokenizer, *token);
         case #char "'";  parse_char_literal          (tokenizer, *token);
         case #char "/";  parse_slash_or_comment      (tokenizer, *token);
@@ -272,7 +272,7 @@ parse_less_than_or_include :: (using tokenizer: *Tokenizer, token: *Token) {
     if t >= max_t return;
 
     prev_token := cast(*Token) prev_tokens[0];
-    if prev_token.type == .preprocessor_directive && prev_token.preprocessor_directive == .di_include {
+    if prev_token.type == .directive && prev_token.directive == .di_include {
         // Parse an #include <...> statement
         token.type = .string_literal;
         while t < max_t && t.* != #char "\n" && t.* != #char ">"  t += 1;
@@ -319,7 +319,7 @@ parse_bang :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_preprocessor_directive :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_directive :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
 
     t += 1;
@@ -333,10 +333,10 @@ parse_preprocessor_directive :: (using tokenizer: *Tokenizer, token: *Token) {
 
     // Check if it's one of the existing directives
     if directive_str.count > MAX_DIRECTIVE_LENGTH return;
-    directive, ok := table_find(*PREPROCESSOR_DIRECTIVES_MAP, directive_str);
+    directive, ok := table_find(*DIRECTIVES_MAP, directive_str);
     if ok {
-        token.type = .preprocessor_directive;
-        token.preprocessor_directive = directive;
+        token.type = .directive;
+        token.directive = directive;
     }
 }
 
@@ -478,10 +478,10 @@ Token :: struct {
     type: Type;
 
     union {
-        keyword:                Keyword;
-        punctuation:            Punctuation;
-        operation:              Operation;
-        preprocessor_directive: Directive;
+        keyword:        Keyword;
+        punctuation:    Punctuation;
+        operation:      Operation;
+        directive:      Directive;
     }
 
     Type :: enum u16 {
@@ -499,7 +499,7 @@ Token :: struct {
         keyword;
         type_keyword;
         value_keyword;
-        preprocessor_directive;
+        directive;
         invalid;
     }
 }
@@ -519,7 +519,7 @@ COLOR_MAP :: Color.[
     .CODE_KEYWORD,       // modifier_keyword
     .CODE_TYPE,          // type_keyword
     .CODE_VALUE,         // value_keyword
-    .CODE_KEYWORD,       // preprocessor_directive
+    .CODE_KEYWORD,       // directive
     .CODE_ERROR,         // invalid
 ];
 
@@ -818,7 +818,7 @@ MAX_KEYWORD_LENGTH :: #run -> s32 {
     return xx max_len;
 }
 
-PREPROCESSOR_DIRECTIVES_MAP :: #run -> Table(string, Directive) {
+DIRECTIVES_MAP :: #run -> Table(string, Directive) {
     table: Table(string, Directive);
     temp, keywords_count := enum_range(Keyword);
     size := 2 * (keywords_count);
