@@ -113,7 +113,7 @@ is_white_space :: inline (char : u8) -> bool #no_aoc {
     return cast,no_check(bool) result;
 }
 
-tokenize_c_like_lang_for_indentation :: (using buffer: Buffer, $get_next_token: (*Tokenizer) -> $Token) -> [] Indentation_Token /* temp */ {
+tokenize_c_like_lang_for_indentation :: (buffer: Buffer, $get_next_token: (*Tokenizer) -> $Token) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 

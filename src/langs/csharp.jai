@@ -8,19 +8,19 @@ highlight_csharp_syntax :: (using buffer: *Buffer, start_offset := -1, count := 
         // Maybe retroactively highlight a "method("
         last := tokenizer.last_token;
         if token.type == .punctuation && token.punctuation == .l_paren && last.type == .identifier {
-            memset(colors.data + last.start, xx Color.CODE_FUNCTION, last.len);
+            memset(tokens.data + last.start, xx Color.CODE_FUNCTION, last.len);
         }
 
         tokenizer.last_token = token;
 
         color := COLOR_MAP[token.type];
-        memset(colors.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx color, token.len);
     }
 
     return .[];
 }
 
-tokenize_csharp_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_csharp_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 

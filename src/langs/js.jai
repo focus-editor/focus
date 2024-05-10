@@ -12,14 +12,14 @@ highlight_js_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) 
         if token.type == .punctuation && token.punctuation == .l_paren {
             // Handle "func("
             if last_token.type == .identifier {
-                memset(colors.data + last_token.start, xx Color.CODE_FUNCTION, last_token.len);
+                memset(tokens.data + last_token.start, xx Color.CODE_FUNCTION, last_token.len);
             }
         }
 
         last_token = token;
 
         color := COLOR_MAP[token.type];
-        memset(colors.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx color, token.len);
     }
 
     return .[];

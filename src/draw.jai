@@ -400,7 +400,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
     using editor := *open_editors[editor_id];
     buffer := *open_buffers[buffer_id];
-    if buffer_needs_coloring(buffer) then recalculate_colors(buffer);  // right before drawing
+    if buffer_needs_tokenizing(buffer) then retokenize(buffer);  // right before drawing
 
     line_number_panel: Rect;
     if config.settings.show_line_numbers && !as_build_panel {
@@ -1031,8 +1031,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             line, tab_spaces = advance_by_chars(line, hidden_chars_on_the_left);
             line = take_first_n_chars(line, max_chars_horizontally);
             line = trim_right(line, " \r\n");
-            colors := ifx line then array_view(buffer.colors, line.data - buffer.bytes.data, line.count) else .[];
-            code_lines[line_num-visible_lines_start] = .{ line = line, start_offset = line_start, tab_spaces = xx tab_spaces, colors = colors };
+            tokens := ifx line then array_view(buffer.tokens, line.data - buffer.bytes.data, line.count) else .[];
+            code_lines[line_num-visible_lines_start] = .{ line = line, start_offset = line_start, tab_spaces = xx tab_spaces, tokens = tokens };
         }
 
         selections: [..] Offset_Range;
@@ -1044,7 +1044,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             array_add(*selections, selection);
         }
 
-        draw_code(font, pen, code_lines, selections, start_col = hidden_chars_on_the_left, is_colored = buffer.colors.count > 0);
+        draw_code(font, pen, code_lines, selections, start_col = hidden_chars_on_the_left, is_colored = buffer.tokens.count > 0);
 
         // Draw continuation markers for wrapped lines
         if line_wrap_is_active(editor) && !config.settings.show_line_numbers && !as_build_panel {
@@ -1476,10 +1476,10 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                     };
                     line_str := get_range_as_string(buffer, visible_offset_range);
                     if line_str.count > 0 {
-                        colors   := array_view(buffer.colors, visible_offset_range.start, line_str.count);
+                        tokens := array_view(buffer.tokens, visible_offset_range.start, line_str.count);
                         code_lines: [1] Simp.Code_Line;
-                        code_lines[0] = .{ line = line_str, tab_spaces = 0, colors = colors };
-                        draw_code(font, pen, code_lines, is_colored = buffer.colors.count > 0);
+                        code_lines[0] = .{ line = line_str, tab_spaces = 0, tokens = tokens };
+                        draw_code(font, pen, code_lines, is_colored = buffer.tokens.count > 0);
                     }
                 }
             }
@@ -2740,7 +2740,7 @@ draw_finder :: () {
                     Simp.draw_text(font, xx pen.x, xx pen.y, "…", color = xx Color.UI_DIM);
                     pen.x += char_x_advance;
                 }
-                if buffer_needs_coloring(buffer) then recalculate_colors(buffer);  // right before drawing
+                if buffer_needs_tokenizing(buffer) then retokenize(buffer);  // right before drawing
 
                 // Draw highlight
                 highlight_rect := entry_rect;
@@ -2755,10 +2755,10 @@ draw_finder :: () {
                 };
                 line_str := get_range_as_string(buffer, visible_range);
                 if line_str.count > 0 {
-                    colors   := array_view(buffer.colors, visible_range.start, line_str.count);
+                    tokens := array_view(buffer.tokens, visible_range.start, line_str.count);
                     code_lines: [1] Simp.Code_Line;
-                    code_lines[0] = .{ line = line_str, tab_spaces = 0, colors = colors };
-                    draw_code(font, pen, code_lines, is_colored = buffer.colors.count > 0);
+                    code_lines[0] = .{ line = line_str, tab_spaces = 0, tokens = tokens };
+                    draw_code(font, pen, code_lines, is_colored = buffer.tokens.count > 0);
                 }
             }
         }

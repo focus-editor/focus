@@ -16,14 +16,14 @@ highlight_c_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) -
         if token.type == .punctuation && token.punctuation == .l_paren {
             // Handle "func("
             if prev_token.type == .identifier {
-                memset(colors.data + prev_token.start, xx Color.CODE_FUNCTION, prev_token.len);
+                memset(tokens.data + prev_token.start, xx Color.CODE_FUNCTION, prev_token.len);
             }
         }
 
         prev_token.* = token;
 
         color := COLOR_MAP[token.type];
-        memset(colors.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx color, token.len);
     }
 
     return .[];

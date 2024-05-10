@@ -12,7 +12,7 @@ refresh_open_buffers :: () {
         if buffer.dirty rescan_for_lines(buffer);
 
         buffer.was_dirty_during_frame = false;
-        buffer.needs_coloring = true;
+        buffer.needs_tokenizing = true;
         buffer.last_edit_time = frame_time;
 
         refresh_all_editors_for_buffer(editor.buffer_id);
@@ -424,20 +424,20 @@ rescan_for_wrapped_lines :: (editor: *Editor, buffer: Buffer) {
     array_add(*editor.wrapped_line_starts, cast(s32) buffer.bytes.count);  // last line
 }
 
-recalculate_colors :: (buffer: *Buffer) {
+retokenize :: (buffer: *Buffer) {
     lock(*buffer.content_lock);
     defer unlock(*buffer.content_lock);
 
     assert(!buffer.dirty);
-    buffer.needs_coloring = false;
+    buffer.needs_tokenizing = false;
 
-    tokenize := get_tokenize_function(buffer.lang);
+    tokenize_func := get_tokenize_function(buffer.lang);
 
-    // Resize colors if we ever changed the color array
-    if buffer.colors || tokenize != null then array_resize(*buffer.colors, buffer.bytes.count);  // this will reset colors to 0
-    if tokenize == null return;
+    // Resize tokens if we ever changed the token array
+    if buffer.tokens || tokenize_func != null then array_resize(*buffer.tokens, buffer.bytes.count);  // this will reset tokens to 0
+    if tokenize_func == null return;
 
-    new_regions := tokenize(buffer);
+    new_regions := tokenize_func(buffer);
 
     // Clear buffer regions
     for buffer.regions free(it.note);
@@ -450,30 +450,30 @@ recalculate_colors :: (buffer: *Buffer) {
 
         // Maybe tokenize heredocs
         if region.kind == .heredoc {
-            tokenize := get_tokenize_function(region.lang);
-            if tokenize != null then tokenize(buffer, region.start, region.end - region.start);  // ignore subregions here
+            tokenize_func := get_tokenize_function(region.lang);
+            if tokenize_func != null then tokenize_func(buffer, region.start, region.end - region.start);  // ignore subregions here
         }
     }
 }
 
-buffer_needs_coloring :: (buffer: Buffer) -> bool {
+buffer_needs_tokenizing :: (buffer: Buffer) -> bool {
     return
-        (buffer.needs_coloring || buffer.colors.count != buffer.bytes.count) &&
-        (get_tokenize_function(buffer.lang) != null || buffer.colors.count > 0);
+        (buffer.needs_tokenizing || buffer.tokens.count != buffer.bytes.count) &&
+        (get_tokenize_function(buffer.lang) != null || buffer.tokens.count > 0);
 }
 
 tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */ {
     // NOTE: all tokenizers here must return temporary storage!
     if buffer.lang == {
         case .Jai;          return tokenize_jai_for_indentation(buffer);
+        case .CSharp;       return tokenize_csharp_for_indentation(buffer);
         case .C;            return tokenize_c_like_lang_for_indentation(buffer, get_next_c_token);
         case .Js;           return tokenize_c_like_lang_for_indentation(buffer, get_next_js_token);
         case .Json;         return tokenize_c_like_lang_for_indentation(buffer, get_next_json_token);
-        case .CSharp;       return tokenize_csharp_for_indentation(buffer);
         case .Glsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_glsl_token);
         case .Hlsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_hlsl_token);
         case .Zig;          return tokenize_c_like_lang_for_indentation(buffer, get_next_zig_token);
-        case .Html;         #through;
+        case .Html;         return tokenize_xml_for_indentation(buffer);
         case .Xml;          return tokenize_xml_for_indentation(buffer);
         case .Lua;          return tokenize_lua_for_indentation(buffer);
         case .Odin;         return tokenize_odin_for_indentation(buffer);
@@ -599,7 +599,7 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
         buffer.has_file = true;
         buffer.file = get_file_info_from_full_path(file_path);
         buffer.lang = get_lang_from_path(file_path);
-        buffer.needs_coloring = true;
+        buffer.needs_tokenizing = true;
 
         lock(*open_buffers_lock);
         {
@@ -864,7 +864,7 @@ find_or_create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
     buffer.has_file = false;
 
     rescan_for_lines(buffer);
-    recalculate_colors(buffer);
+    retokenize(buffer);
 
     return buffer_id, true;
 }
@@ -914,7 +914,7 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     buffer.lang = get_lang_from_path(path);
 
     rescan_for_lines(buffer);
-    recalculate_colors(buffer);
+    retokenize(buffer);
 
     return buffer_id, true;
 }
@@ -1022,7 +1022,7 @@ refresh_buffer_from_disk :: (path: string) {
         new_replace_edit(buffer, 0, xx buffer.bytes.count, cast(string) buffer.bytes, file_contents_str);
         replace_range_raw(buffer, 0, xx buffer.bytes.count, file_contents_str);
         rescan_for_lines(buffer);
-        recalculate_colors(buffer);
+        retokenize(buffer);
 
         // Save edits and put cursors in correct places
         for * editor : open_editors {
@@ -1060,7 +1060,7 @@ free_buffer :: (using buffer: *Buffer) {
     // We don't do it often so it's ok to be slow here
     array_free(bytes);
     array_free(line_starts);
-    array_free(colors);
+    array_free(tokens);
 
     for * undos deinit(it);
     for * redos deinit(it);
@@ -1171,8 +1171,8 @@ process_buffer_save_queue :: () {
 
 manually_mark_range_as_token :: (buffer: *Buffer, range: Offset_Range, color: Color) {
     assert(range.start >= 0 && range.end <= buffer.bytes.count);
-    array_resize(*buffer.colors, buffer.bytes.count);
-    memset(buffer.colors.data + range.start, xx color, range.end - range.start);
+    array_resize(*buffer.tokens, buffer.bytes.count);
+    memset(buffer.tokens.data + range.start, xx color, range.end - range.start);
 }
 
 get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
@@ -1294,7 +1294,7 @@ Buffer :: struct {
     bytes: [..] u8;
     line_starts: [..] s32;       // real offsets of newlines in the bytes array
 
-    colors: [..] u8;             // we color each byte (even for multi-byte chars).
+    tokens: [..] u8;             // we assign a token to each byte (even for multi-byte chars).
 
     regions: [..] Buffer_Region; // for highlighting parts of buffer
 
@@ -1305,7 +1305,7 @@ Buffer :: struct {
     modified               := false;
     modified_on_disk       := false;
     deleted                := false;
-    needs_coloring         := false;
+    needs_tokenizing         := false;
     readonly               := false;
     binary                 := false;
     error_when_saving      := false;

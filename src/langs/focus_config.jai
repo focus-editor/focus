@@ -1,5 +1,5 @@
 highlight_focus_config_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
-    memset(colors.data, xx COLOR_MAP[Focus_Config_Token.comment], colors.count);
+    memset(tokens.data, xx COLOR_MAP[Focus_Config_Token.comment], tokens.count);
 
     push_allocator(temp);  // we don't care about anything it might allocate
 
@@ -7,7 +7,7 @@ highlight_focus_config_syntax :: (using buffer: *Buffer, start_offset := -1, cou
     result := parse_config(name, name, cast(string) bytes, for_highlighting = true, as_theme = lang == .Focus_Theme);
 
     for result.highlights {
-        memset(colors.data + it.offset, xx COLOR_MAP[it.color_num], it.count);
+        memset(tokens.data + it.offset, xx COLOR_MAP[it.color_num], it.count);
     }
 
     return .[];

@@ -12,7 +12,7 @@ highlight_rust_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1
         if token.type == .punctuation && token.punctuation == .l_paren {
             if prev.type == .identifier {
                 // Handle "func("
-                memset(colors.data + prev.start, xx Color.CODE_FUNCTION, prev.len);
+                memset(tokens.data + prev.start, xx Color.CODE_FUNCTION, prev.len);
             }
         }
 
@@ -21,7 +21,7 @@ highlight_rust_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1
         tokenizer.last_tokens[1] = token;
 
         color := COLOR_MAP[token.type];
-        memset(colors.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx color, token.len);
     }
 
     end_scope(*tokenizer, tokenizer.t - tokenizer.buf.data);
@@ -29,7 +29,7 @@ highlight_rust_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1
     return tokenizer.regions;
 }
 
-tokenize_rust_for_indentation :: (using buffer: *Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_rust_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 

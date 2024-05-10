@@ -69,7 +69,7 @@ Code_Line :: struct {
     line:   string;
     start_offset: s32;
     tab_spaces: s32;
-    colors: [] u8;
+    tokens: [] u8;
 }
 
 Offset_Range :: struct {
@@ -174,7 +174,7 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_x_advance: float, line_h
     // Draw all lines
     for visible_lines {
         line   := it.line;
-        colors := it.colors;
+        tokens := it.tokens;
         start_offset := it.start_offset;
 
         sx  := cast(float) (x + it.tab_spaces * char_x_advance);
@@ -233,7 +233,7 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_x_advance: float, line_h
                 quad.v1 = (cast(float) glyph.y0 + glyph.height) / texture.height;
 
                 #if is_colored {
-                    token := colors[t - line.data];
+                    token := tokens[t - line.data];
                     color := COLOR_MAP[token];
                 } else {
                     color := COLOR_MAP[0];  // default

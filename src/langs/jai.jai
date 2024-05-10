@@ -12,15 +12,15 @@ highlight_jai_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1)
         if token.type == .punctuation && token.punctuation == .l_paren {
             if prev.type == .identifier {
                 // Handle "func("
-                memset(colors.data + prev.start, xx Color.CODE_FUNCTION, prev.len);
+                memset(tokens.data + prev.start, xx Color.CODE_FUNCTION, prev.len);
             } else if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
                 // Handle "func :: ("
-                memset(colors.data + before_prev.start, xx Color.CODE_FUNCTION, before_prev.len);
+                memset(tokens.data + before_prev.start, xx Color.CODE_FUNCTION, before_prev.len);
             }
         } else if (token.type == .keyword && token.keyword == .kw_inline) || (token.type == .compiler_directive && token.compiler_directive == .directive_bake_arguments) {
             // Handle "func :: inline" and "func :: #bake_arguments"
             if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
-                memset(colors.data + before_prev.start, xx Color.CODE_FUNCTION, before_prev.len);
+                memset(tokens.data + before_prev.start, xx Color.CODE_FUNCTION, before_prev.len);
             }
         }
 
@@ -29,7 +29,7 @@ highlight_jai_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1)
         tokenizer.last_tokens[1] = token;
 
         color := COLOR_MAP[token.type];
-        memset(colors.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx color, token.len);
     }
 
     end_scope(*tokenizer, tokenizer.t - tokenizer.buf.data);
@@ -37,7 +37,7 @@ highlight_jai_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1)
     return tokenizer.regions;
 }
 
-tokenize_jai_for_indentation :: (using buffer: *Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_jai_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 

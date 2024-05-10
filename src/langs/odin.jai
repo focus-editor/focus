@@ -77,10 +77,10 @@ highlight_odin_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1
         }
 
         if should_highlight_last_token_as_proc(tokenizer, token) {
-            memset(colors.data + tokenizer.last_tokens[0].start, xx Color.CODE_FUNCTION, tokenizer.last_tokens[0].len);
+            memset(tokens.data + tokenizer.last_tokens[0].start, xx Color.CODE_FUNCTION, tokenizer.last_tokens[0].len);
         }
         if should_highlight_second_last_token_as_proc(tokenizer, token) {
-            memset(colors.data + tokenizer.last_tokens[1].start, xx Color.CODE_FUNCTION, tokenizer.last_tokens[1].len);
+            memset(tokens.data + tokenizer.last_tokens[1].start, xx Color.CODE_FUNCTION, tokenizer.last_tokens[1].len);
         }
 
         // Remember last 3 tokens
@@ -89,13 +89,13 @@ highlight_odin_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1
         tokenizer.last_tokens[0] = token;
 
         color := COLOR_MAP[token.type];
-        memset(colors.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx color, token.len);
     }
 
     return .[];
 }
 
-tokenize_odin_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_odin_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 

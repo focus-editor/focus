@@ -6,7 +6,7 @@ highlight_worklog :: (using buffer: *Buffer, start_offset := -1, count := -1) ->
         if token.type == .eof break;
 
         color := COLOR_MAP[token.type];
-        memset(colors.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx color, token.len);
     }
 
     return .[];
