@@ -1177,27 +1177,27 @@ manually_mark_range_as_token :: (buffer: *Buffer, range: Offset_Range, color: Co
 
 get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
     if lang == {
-        case .Jai;          return highlight_jai_syntax;
-        case .C;            return highlight_c_syntax;
-        case .CSharp;       return highlight_csharp_syntax;
-        case .Focus_Config; return highlight_focus_config_syntax;
-        case .Focus_Theme;  return highlight_focus_config_syntax;
-        case .Glsl;         return highlight_glsl_syntax;
-        case .Hlsl;         return highlight_hlsl_syntax;
-        case .Golang;       return highlight_golang_syntax;
-        case .Js;           return highlight_js_syntax;
-        case .Json;         return highlight_json_syntax;
-        case .Lua;          return highlight_lua_syntax;
-        case .Odin;         return highlight_odin_syntax;
-        case .Python;       return highlight_python_syntax;
-        case .RenPy;        return highlight_renpy_syntax;
-        case .Rust;         return highlight_rust_syntax;
-        case .Html;         return highlight_xml_syntax;
-        case .Xml;          return highlight_xml_syntax;
-        case .Worklog;      return highlight_worklog;
-        case .Yang;         return highlight_yang_syntax;
-        case .Zig;          return highlight_zig_syntax;
-        case .Uxntal;       return highlight_uxntal_syntax;
+        case .Jai;          return tokenize_jai;
+        case .C;            return tokenize_c;
+        case .CSharp;       return tokenize_csharp;
+        case .Focus_Config; return tokenize_focus_config;
+        case .Focus_Theme;  return tokenize_focus_config;
+        case .Glsl;         return tokenize_glsl;
+        case .Hlsl;         return tokenize_hlsl;
+        case .Golang;       return tokenize_golang;
+        case .Js;           return tokenize_js;
+        case .Json;         return tokenize_json;
+        case .Lua;          return tokenize_lua;
+        case .Odin;         return tokenize_odin;
+        case .Python;       return tokenize_python;
+        case .RenPy;        return tokenize_renpy;
+        case .Rust;         return tokenize_rust;
+        case .Html;         return tokenize_xml;
+        case .Xml;          return tokenize_xml;
+        case .Worklog;      return tokenize_worklog;
+        case .Yang;         return tokenize_yang;
+        case .Zig;          return tokenize_zig;
+        case .Uxntal;       return tokenize_uxntal;
     }
     return null;
 }

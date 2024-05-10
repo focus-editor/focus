@@ -1,4 +1,4 @@
-highlight_jai_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_jai :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_jai_tokenizer(buffer, start_offset, count);
 
     start_scope(*tokenizer, tokenizer.t - tokenizer.buf.data, .scope_export);

@@ -1,4 +1,4 @@
-highlight_xml_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_xml :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_xml_tokenizer(buffer, start_offset, count);
 
     while true {

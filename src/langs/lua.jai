@@ -1,6 +1,6 @@
 // Based on https://www.lua.org/manual/5.4/manual.html#3
 
-highlight_lua_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_lua :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_lua_tokenizer(buffer, start_offset, count);
 
     while true {

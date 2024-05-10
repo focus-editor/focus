@@ -1,4 +1,4 @@
-highlight_odin_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_odin :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_odin_tokenizer(buffer, start_offset, count);
     inside_attribute := false;
 

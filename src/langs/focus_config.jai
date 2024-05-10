@@ -1,4 +1,4 @@
-highlight_focus_config_syntax :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_focus_config :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
     memset(tokens.data, xx COLOR_MAP[Focus_Config_Token.comment], tokens.count);
 
     push_allocator(temp);  // we don't care about anything it might allocate
