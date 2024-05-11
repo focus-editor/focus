@@ -108,7 +108,7 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
         pure_semantic_name = to_lower_copy_new(pure_semantic_name,, allocator = temp);
 
         semantic, ok := table_find(*SEMANTICS_MAP, pure_semantic_name);
-        if ok { token.type = .hlsl_semantic; token.semantic = semantic; return; }
+        if ok { token.type = .keyword; token.semantic = semantic; return; }
     }
 }
 

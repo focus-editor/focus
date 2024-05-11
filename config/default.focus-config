@@ -433,10 +433,3 @@ code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF
 code_header5:                           E0AD82FF
 code_header6:                           E0AD82FF
-
-# Language-specific colors
-code_config_modifier_key:               D699B5FF
-code_config_key_string:                 BFC9DBFF
-code_config_action:                     BFC9DBFF
-code_hlsl_semantic:                     E67D74FF
-code_rust_lifetime:                     D699B5FF

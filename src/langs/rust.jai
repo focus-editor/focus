@@ -409,7 +409,7 @@ parse_caret :: (using tokenizer: *Rust_Tokenizer, token: *Token) {
 }
 
 parse_single_quote :: (using tokenizer: *Rust_Tokenizer, token: *Token) {
-    token.type = .rust_lifetime;  // by default assuming it's a lifetime
+    token.type = .value;  // by default assuming it's a lifetime (using a generic token here)
 
     t += 1;
     if t >= max_t return;

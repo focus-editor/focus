@@ -247,14 +247,4 @@ Token_Type :: enum u8 {
     header4;
     header5;
     header6;
-
-    // Language-specific tokens below
-
-    config_modifier_key;
-    config_key_string;
-    config_action;
-
-    hlsl_semantic;
-
-    rust_lifetime;
 }

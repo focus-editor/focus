@@ -392,11 +392,6 @@ ADDED_COLORS :: Added_Color.[
     .{ 4, "code_header4",                     "code_operation",         "E0AD82FF" },
     .{ 4, "code_header5",                     "code_operation",         "E0AD82FF" },
     .{ 4, "code_header6",                     "code_operation",         "E0AD82FF" },
-    .{ 4, "code_config_modifier_key",         "code_value",             "D699B5FF" },
-    .{ 4, "code_config_key_string",           "code_default",           "BFC9DBFF" },
-    .{ 4, "code_config_action",               "code_default",           "BFC9DBFF" },
-    .{ 4, "code_hlsl_semantic",               "code_keyword",           "E67D74FF" },
-    .{ 4, "code_rust_lifetime",               "code_value",             "D699B5FF" },
 ];
 
 COLOR_VALUES_INDENT :: #run -> int {

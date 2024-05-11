@@ -1041,7 +1041,7 @@ parse_key_combo :: (using parser: *Config_Parser, combo_str: string, line: strin
         }
         modifier_string = remainder;
 
-        if valid_mod_key then add_highlight(parser, cast(s64)(mod_key.data - line.data), mod_key.count, .config_modifier_key);
+        if valid_mod_key then add_highlight(parser, cast(s64)(mod_key.data - line.data), mod_key.count, .value);
     }
 
     key_string := modifier_string;
