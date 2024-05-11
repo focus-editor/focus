@@ -197,14 +197,14 @@ Tokenizer :: struct {
 Code_Highlight :: struct {
     offset: s32;
     count: s32;
-    color_num: u8;
+    token_type: Token_Type;
 }
 
 // This enum is supposed to list all possible code tokens we might have, for all languages
 Token_Type :: enum u8 {
+    default :: 0;   // must be first
     eof;
     invalid;
-    default;
 
     string_literal;
     multiline_string;
@@ -217,6 +217,7 @@ Token_Type :: enum u8 {
 
     error;
     warning;
+    highlight;
 
     comment;
     multiline_comment;
@@ -231,6 +232,7 @@ Token_Type :: enum u8 {
     attribute;
     enum_variant;
     macro;
+    function;
 
     builtin_variable;
     builtin_function;

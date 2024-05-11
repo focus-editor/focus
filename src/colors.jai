@@ -1,18 +1,12 @@
 Color :: enum u8 {
-    CODE_DEFAULT;
-    CODE_COMMENT;
-    CODE_TYPE;
-    CODE_FUNCTION;
-    CODE_PUNCTUATION;
-    CODE_OPERATION;
-    CODE_STRING;
-    CODE_VALUE;
-    CODE_HIGHLIGHT;
-    CODE_ERROR;
-    CODE_WARNING;
-    CODE_KEYWORD;
+    CODE_DEFAULT :: 0;  // must be first
 
-    BACKGROUND_0;
+    // ...
+    // The space between CODE_DEFAULT and BACKGROUND_0 is reserved for the code colors,
+    // which are defined by the Token_Type enum.
+    // ...
+
+    BACKGROUND_0 :: #run enum_highest_value(Token_Type) + 1;
     BACKGROUND_1;
     BACKGROUND_2;
     BACKGROUND_3;

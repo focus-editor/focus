@@ -383,21 +383,60 @@ ui_error:                               772222FF
 ui_error_bright:                        FF0000FF
 ui_success:                             227722FF
 
-code_default:                           BFC9DBFF
-code_comment:                           87919DFF
-code_type:                              82AAA3FF
-code_function:                          D0C5A9FF
-code_punctuation:                       BFC9DBFF
-code_operation:                         E0AD82FF
-code_string:                            D4BC7DFF
-code_value:                             D699B5FF
-code_highlight:                         D89B75FF
-code_error:                             FF0000FF
-code_warning:                           E4D97DFF
-code_keyword:                           E67D74FF
-
 build_panel_background:                 1A2831FF
 build_panel_scrollbar:                  33CCCC19
 build_panel_scrollbar_hover:            33CCCC4C
 build_panel_scrollbar_background:       10191F4C
 build_panel_title_bar:                  1C303AFF
+
+code_default:                           BFC9DBFF
+code_invalid:                           FF0000FF
+
+code_string_literal:                    D4BC7DFF
+code_multiline_string:                  D4BC7DFF
+code_raw_string:                        D4BC7DFF
+code_char_literal:                      D4BC7DFF
+
+code_identifier:                        BFC9DBFF
+code_note:                              E0AD82FF
+code_number:                            D699B5FF
+
+code_error:                             FF0000FF
+code_warning:                           E4D97DFF
+code_highlight:                         E4D97DFF
+
+code_comment:                           87919DFF
+code_multiline_comment:                 87919DFF
+
+code_operation:                         E0AD82FF
+code_punctuation:                       BFC9DBFF
+
+code_keyword:                           E67D74FF
+code_type:                              82AAA3FF
+code_value:                             D699B5FF
+code_modifier:                          E67D74FF
+code_attribute:                         E67D74FF
+code_enum_variant:                      BFC9DBFF
+code_macro:                             E0AD82FF
+code_function:                          D0C5A9FF
+
+code_builtin_variable:                  D699B5FF
+code_builtin_function:                  E0AD82FF
+code_builtin_exception:                 E0AD82FF
+
+code_directive:                         E67D74FF
+code_directive_modifier:                E67D74FF
+
+code_header:                            E67D74FF
+code_header2:                           E0AD82FF
+code_header3:                           E0AD82FF
+code_header4:                           E0AD82FF
+code_header5:                           E0AD82FF
+code_header6:                           E0AD82FF
+
+# Language-specific colors
+code_config_modifier_key:               D699B5FF
+code_config_key_string:                 BFC9DBFF
+code_config_action:                     BFC9DBFF
+code_hlsl_semantic:                     E67D74FF
+code_rust_lifetime:                     D699B5FF

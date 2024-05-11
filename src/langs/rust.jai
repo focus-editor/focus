@@ -12,7 +12,7 @@ tokenize_rust :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] 
         if token.type == .punctuation && token.punctuation == .l_paren {
             if prev.type == .identifier {
                 // Handle "func("
-                memset(tokens.data + prev.start, xx Color.CODE_FUNCTION, prev.len);
+                memset(tokens.data + prev.start, xx Token_Type.function, prev.len);
             }
         }
 
@@ -20,8 +20,7 @@ tokenize_rust :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] 
         tokenizer.last_tokens[0] = tokenizer.last_tokens[1];
         tokenizer.last_tokens[1] = token;
 
-        color := COLOR_MAP[token.type];
-        memset(tokens.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx token.type, token.len);
     }
 
     end_scope(*tokenizer, tokenizer.t - tokenizer.buf.data);
@@ -410,7 +409,7 @@ parse_caret :: (using tokenizer: *Rust_Tokenizer, token: *Token) {
 }
 
 parse_single_quote :: (using tokenizer: *Rust_Tokenizer, token: *Token) {
-    token.type = .lifetime;  // by default assuming it's a lifetime
+    token.type = .rust_lifetime;  // by default assuming it's a lifetime
 
     t += 1;
     if t >= max_t return;
@@ -611,7 +610,7 @@ Rust_Tokenizer :: struct {
 
 Token :: struct {
     start, len: s32;
-    type: Type = .invalid;
+    type: Token_Type = .invalid;
 
     // Additional info to distinguish between keywords/punctuation
     union {
@@ -619,45 +618,7 @@ Token :: struct {
         punctuation:        Punctuation;
         operation:          Operation;
     }
-
-    Type :: enum u16 {
-        eof;
-
-        identifier;
-        string_literal;
-        multiline_string;
-        number;
-        comment;
-        multiline_comment;
-        operation;
-        punctuation;
-        keyword;
-        type_keyword;
-        value_keyword;
-        lifetime;
-        macro;
-        invalid;
-    }
 }
-
-// Must match the order of the types in the enum
-COLOR_MAP :: Color.[
-    .CODE_COMMENT,       // eof - obviously not used
-    .CODE_DEFAULT,       // identifier
-    .CODE_STRING,        // string_literal
-    .CODE_STRING,        // multiline_string
-    .CODE_VALUE,         // number
-    .CODE_COMMENT,       // comment
-    .CODE_COMMENT,       // multiline_comment
-    .CODE_OPERATION,     // operation
-    .CODE_PUNCTUATION,   // punctuation
-    .CODE_KEYWORD,       // keyword
-    .CODE_TYPE,          // type_keyword
-    .CODE_VALUE,         // value_keyword
-    .CODE_VALUE,         // lifetime
-    .CODE_OPERATION,     // macro
-    .CODE_ERROR,         // invalid
-];
 
 PUNCTUATION :: string.[
     "dollar", "semicolon", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket",
@@ -713,7 +674,7 @@ VALUE_KEYWORDS :: string.[
 }
 
 Keyword_Token :: struct {
-    type: Token.Type;
+    type: Token_Type;
     keyword: Keyword;
 }
 
@@ -725,8 +686,8 @@ KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
     #insert -> string {
         b: String_Builder;
         for KEYWORDS        append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword,       keyword = .kw_%1 });\n", it));
-        for TYPE_KEYWORDS   append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .type_keyword,  keyword = .kw_%1 });\n", it));
-        for VALUE_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value_keyword, keyword = .kw_%1 });\n", it));
+        for TYPE_KEYWORDS   append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .type,  keyword = .kw_%1 });\n", it));
+        for VALUE_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value, keyword = .kw_%1 });\n", it));
         return builder_to_string(*b);
     }
 

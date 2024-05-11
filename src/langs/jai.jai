@@ -12,15 +12,15 @@ tokenize_jai :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] B
         if token.type == .punctuation && token.punctuation == .l_paren {
             if prev.type == .identifier {
                 // Handle "func("
-                memset(tokens.data + prev.start, xx Color.CODE_FUNCTION, prev.len);
+                memset(tokens.data + prev.start, xx Token_Type.function, prev.len);
             } else if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
                 // Handle "func :: ("
-                memset(tokens.data + before_prev.start, xx Color.CODE_FUNCTION, before_prev.len);
+                memset(tokens.data + before_prev.start, xx Token_Type.function, before_prev.len);
             }
-        } else if (token.type == .keyword && token.keyword == .kw_inline) || (token.type == .compiler_directive && token.compiler_directive == .directive_bake_arguments) {
+        } else if (token.type == .keyword && token.keyword == .kw_inline) || (token.type == .directive && token.directive == .directive_bake_arguments) {
             // Handle "func :: inline" and "func :: #bake_arguments"
             if before_prev.type == .identifier && prev.type == .operation && prev.operation == .double_colon {
-                memset(tokens.data + before_prev.start, xx Color.CODE_FUNCTION, before_prev.len);
+                memset(tokens.data + before_prev.start, xx Token_Type.function, before_prev.len);
             }
         }
 
@@ -28,8 +28,7 @@ tokenize_jai :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] B
         tokenizer.last_tokens[0] = tokenizer.last_tokens[1];
         tokenizer.last_tokens[1] = token;
 
-        color := COLOR_MAP[token.type];
-        memset(tokens.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx token.type, token.len);
     }
 
     end_scope(*tokenizer, tokenizer.t - tokenizer.buf.data);
@@ -145,7 +144,7 @@ get_next_token :: (using tokenizer: *Jai_Tokenizer) -> Token {
         case #char "<";  parse_less_than         (tokenizer, *token);
         case #char ">";  parse_greater_than      (tokenizer, *token);
         case #char "!";  parse_bang              (tokenizer, *token);
-        case #char "#";  parse_compiler_directive(tokenizer, *token);
+        case #char "#";  parse_directive         (tokenizer, *token);
         case #char "\""; parse_string_literal    (tokenizer, *token);
         case #char "\t"; parse_tab               (tokenizer, *token);
         case #char "/";  parse_slash_or_comment  (tokenizer, *token);
@@ -190,7 +189,7 @@ parse_identifier :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
 
     // Check for here-string and directive modifiers
     prev, before_prev := last_tokens[1], last_tokens[0];
-    if prev.type == .compiler_directive && prev.compiler_directive == .directive_string {
+    if prev.type == .directive && prev.directive == .directive_string {
         // Here-string
         token.type = .multiline_string;
         start := cast(s32) (t - buf.data);
@@ -211,8 +210,8 @@ parse_identifier :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
     } else if prev.type == .punctuation && prev.punctuation == .comma {
         is_modifier := false;
         if before_prev.type == {
-            case .compiler_directive;
-                if before_prev.compiler_directive == {
+            case .directive;
+                if before_prev.directive == {
                     case .directive_type;           is_modifier = array_find(string.["isa", "distinct"], identifier_str);
                     case .directive_import;         is_modifier = array_find(string.["file", "dir", "string"], identifier_str);
                     case .directive_insert;         is_modifier = array_find(string.["scope"], identifier_str);
@@ -280,7 +279,7 @@ parse_number :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
     }
 }
 
-parse_compiler_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
+parse_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
     token.type = .identifier;
 
     t += 1;
@@ -294,10 +293,10 @@ parse_compiler_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
 
     // Check if it's one of the existing directives
     if directive_str.count > MAX_DIRECTIVE_LENGTH return;
-    directive, ok := table_find(*COMPILER_DIRECTIVES_MAP, directive_str);
+    directive, ok := table_find(*DIRECTIVES_MAP, directive_str);
     if ok {
-        token.type = .compiler_directive;
-        token.compiler_directive = directive;
+        token.type = .directive;
+        token.directive = directive;
 
         if directive == {
             case .directive_scope_export;     start_scope(tokenizer, start_offset, .scope_export);
@@ -631,56 +630,16 @@ Jai_Tokenizer :: struct {
 
 Token :: struct {
     start, len: s32;
-    type: Type = .invalid;
+    type: Token_Type = .invalid;
 
     // Additional info to distinguish between keywords/punctuation
     union {
         keyword:            Keyword;
         punctuation:        Punctuation;
         operation:          Operation;
-        compiler_directive: Compiler_Directive;
-    }
-
-    Type :: enum u16 {
-        eof;
-
-        identifier;
-        string_literal;
-        multiline_string;
-        note;
-        number;
-        comment;
-        multiline_comment;
-        operation;
-        punctuation;
-        keyword;
-        type_keyword;
-        value_keyword;
-        compiler_directive;
-        directive_modifier;
-        invalid;
+        directive: Directive;
     }
 }
-
-// Must match the order of the types in the enum
-COLOR_MAP :: Color.[
-    .CODE_COMMENT,       // eof - obviously not used
-    .CODE_DEFAULT,       // identifier
-    .CODE_STRING,        // string_literal
-    .CODE_STRING,        // multiline_string
-    .CODE_OPERATION,     // note
-    .CODE_VALUE,         // number
-    .CODE_COMMENT,       // comment
-    .CODE_COMMENT,       // multiline_comment
-    .CODE_OPERATION,     // operation
-    .CODE_PUNCTUATION,   // punctuation
-    .CODE_KEYWORD,       // keyword
-    .CODE_TYPE,          // type_keyword
-    .CODE_VALUE,         // value_keyword
-    .CODE_KEYWORD,       // compiler_directive
-    .CODE_KEYWORD,       // directive_modifier
-    .CODE_ERROR,         // invalid
-];
 
 PUNCTUATION :: string.[
     "dollar", "semicolon", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket",
@@ -710,7 +669,7 @@ VALUE_KEYWORDS :: string.[
     "context", "it", "it_index", "null", "true", "false", "temp",
 ];
 
-COMPILER_DIRECTIVES :: string.[
+DIRECTIVES :: string.[
     "add_context", "align", "as", "asm", "assert", "bake_arguments", "bake_constants", "bytes", "c_call", "caller_code",
     "caller_location", "char", "code", "compiler", "complete", "cpp_method", "cpp_return_type_is_non_pod", "deprecated",
     "dump", "dynamic_specialize", "elsewhere", "expand", "file", "filepath", "foreign", "library", "system_library",
@@ -734,16 +693,16 @@ COMPILER_DIRECTIVES :: string.[
         print_to_builder(b, "}\n");
     }
 
-    define_enum(*b, "Punctuation",        "",           .[PUNCTUATION]);
-    define_enum(*b, "Operation",          "",           .[OPERATIONS]);
-    define_enum(*b, "Keyword",            "kw_",        .[KEYWORDS, TYPE_KEYWORDS, VALUE_KEYWORDS]);
-    define_enum(*b, "Compiler_Directive", "directive_", .[COMPILER_DIRECTIVES]);
+    define_enum(*b, "Punctuation",  "",           .[PUNCTUATION]);
+    define_enum(*b, "Operation",    "",           .[OPERATIONS]);
+    define_enum(*b, "Keyword",      "kw_",        .[KEYWORDS, TYPE_KEYWORDS, VALUE_KEYWORDS]);
+    define_enum(*b, "Directive",    "directive_", .[DIRECTIVES]);
 
     return builder_to_string(*b);
 }
 
 Keyword_Token :: struct {
-    type: Token.Type;
+    type: Token_Type;
     keyword: Keyword;
 }
 
@@ -754,24 +713,24 @@ KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
 
     #insert -> string {
         b: String_Builder;
-        for KEYWORDS        append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword,       keyword = .kw_%1 });\n", it));
-        for TYPE_KEYWORDS   append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .type_keyword,  keyword = .kw_%1 });\n", it));
-        for VALUE_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value_keyword, keyword = .kw_%1 });\n", it));
+        for KEYWORDS        append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword, keyword = .kw_%1 });\n", it));
+        for TYPE_KEYWORDS   append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .type,    keyword = .kw_%1 });\n", it));
+        for VALUE_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value,   keyword = .kw_%1 });\n", it));
         return builder_to_string(*b);
     }
 
     return table;
 }
 
-COMPILER_DIRECTIVES_MAP :: #run -> Table(string, Compiler_Directive) {
-    table: Table(string, Compiler_Directive);
-    size := 2 * COMPILER_DIRECTIVES.count;
+DIRECTIVES_MAP :: #run -> Table(string, Directive) {
+    table: Table(string, Directive);
+    size := 2 * DIRECTIVES.count;
     init(*table, size);
 
     #insert -> string {
         b: String_Builder;
         init_string_builder(*b);
-        for COMPILER_DIRECTIVES {
+        for DIRECTIVES {
             print_to_builder(*b, "table_add(*table, \"%1\", .directive_%1);\n", it);
         }
         return builder_to_string(*b);
@@ -790,6 +749,6 @@ MAX_KEYWORD_LENGTH :: #run -> s32 {
 
 MAX_DIRECTIVE_LENGTH :: #run -> s32 {
     result: s64;
-    for COMPILER_DIRECTIVES { if it.count > result then result = it.count; }
+    for DIRECTIVES { if it.count > result then result = it.count; }
     return xx result;
 }

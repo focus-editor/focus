@@ -493,7 +493,7 @@ print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kin
         lock(*buffer.content_lock);
         array_resize(*buffer.tokens, buffer.bytes.count);  // resize first before we delete
         delete_range_raw(buffer, 0, bytes_to_forget);
-        array_delete_bytes(*buffer.tokens, 0, bytes_to_forget);
+        array_delete_bytes(xx *buffer.tokens, 0, bytes_to_forget);
         unlock(*buffer.content_lock);
 
         for * last_command_result.build_errors {
@@ -611,7 +611,7 @@ parse_build_errors :: (error_regex: string) {
         };
 
         // Highlight file paths for easier recognition that an error has been detected
-        manually_mark_range_as_token(buffer, build_error.file_output_range, .CODE_HIGHLIGHT);
+        manually_mark_range_as_token(buffer, build_error.file_output_range, xx Token_Type.highlight);
 
         type := table_find_or_default(*named_captures, "type");
         if type {

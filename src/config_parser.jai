@@ -159,6 +159,14 @@ keymap_map_key_code_to_string :: (key_code: u32) -> string /* temp */ {
 }
 
 map_name_to_color :: (name: string) -> Color {
+    if begins_with(name, "code_") {
+        // Use the Token_Type enum to validate the name and map into Color
+        advance(*name, "code_".count);
+        valid_token_names := type_info(Token_Type).names;
+        found, idx := array_find(valid_token_names, name);
+        if found return xx idx;
+    }
+
     if name == {
         case "background0";                             return .BACKGROUND_0;
         case "background1";                             return .BACKGROUND_1;
@@ -195,19 +203,6 @@ map_name_to_color :: (name: string) -> Color {
         case "ui_error_bright";                         return .UI_ERROR_BRIGHT;
         case "ui_success";                              return .UI_SUCCESS;
 
-        case "code_default";                            return .CODE_DEFAULT;
-        case "code_comment";                            return .CODE_COMMENT;
-        case "code_type";                               return .CODE_TYPE;
-        case "code_function";                           return .CODE_FUNCTION;
-        case "code_punctuation";                        return .CODE_PUNCTUATION;
-        case "code_operation";                          return .CODE_OPERATION;
-        case "code_string";                             return .CODE_STRING;
-        case "code_value";                              return .CODE_VALUE;
-        case "code_highlight";                          return .CODE_HIGHLIGHT;
-        case "code_error";                              return .CODE_ERROR;
-        case "code_warning";                            return .CODE_WARNING;
-        case "code_keyword";                            return .CODE_KEYWORD;
-
         case "region_scope_export";                     return .REGION_SCOPE_EXPORT;
         case "region_scope_file";                       return .REGION_SCOPE_FILE;
         case "region_scope_module";                     return .REGION_SCOPE_MODULE;
@@ -235,7 +230,7 @@ get_theme_file_from_name :: (name: string) -> string /* temp */ {
 
 #scope_file
 
-add_highlight :: inline (parser: *Config_Parser, offset_from_line_start: s64, count: s64, type: Focus_Config_Token, line_start_offset := -1) {
+add_highlight :: inline (parser: *Config_Parser, offset_from_line_start: s64, count: s64, type: Token_Type, line_start_offset := -1) {
     if !parser.parse_for_highlighting return;
 
     offset := parser.line_start_offset + offset_from_line_start;
@@ -243,7 +238,7 @@ add_highlight :: inline (parser: *Config_Parser, offset_from_line_start: s64, co
 
     array_add(
         *parser.result.highlights,
-        Code_Highlight.{ offset = cast(s32) offset, count = cast(s32) count, color_num = cast(u8) type },
+        Code_Highlight.{ offset = cast(s32) offset, count = cast(s32) count, token_type = type },
     );
 }
 
@@ -366,7 +361,7 @@ maybe_switch_section :: (using parser: *Config_Parser, line: string, fix_section
             append(*b, "}\n");
             return builder_to_string(*b);
         }
-        add_highlight(parser, 0, line.count, .header_top_level);
+        add_highlight(parser, 0, line.count, .header);
 
         if active_section == .style then result.config.offsets.style_section = line_start_offset;
 
@@ -408,7 +403,7 @@ maybe_switch_section :: (using parser: *Config_Parser, line: string, fix_section
 
         if parse_as_theme && active_subsection != .style_colors return true, "";  // don't highlight any subsections other than colors
 
-        add_highlight(parser, 0, line.count, .header);
+        add_highlight(parser, 0, line.count, .header2);
     }
 
     return true, "";
@@ -647,7 +642,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
             return true, tprint("Command name can't be empty: %", line);
         }
 
-        add_highlight(parser, 0, line.count, .header);
+        add_highlight(parser, 0, line.count, .header2);
 
         command := array_add(*commands);
         command.* = defaults;  // inherit everything from defaults
@@ -1046,7 +1041,7 @@ parse_key_combo :: (using parser: *Config_Parser, combo_str: string, line: strin
         }
         modifier_string = remainder;
 
-        if valid_mod_key then add_highlight(parser, cast(s64)(mod_key.data - line.data), mod_key.count, .modifier_key);
+        if valid_mod_key then add_highlight(parser, cast(s64)(mod_key.data - line.data), mod_key.count, .config_modifier_key);
     }
 
     key_string := modifier_string;

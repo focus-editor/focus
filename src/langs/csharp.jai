@@ -8,13 +8,12 @@ tokenize_csharp :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [
         // Maybe retroactively highlight a "method("
         last := tokenizer.last_token;
         if token.type == .punctuation && token.punctuation == .l_paren && last.type == .identifier {
-            memset(tokens.data + last.start, xx Color.CODE_FUNCTION, last.len);
+            memset(tokens.data + last.start, xx Token_Type.function, last.len);
         }
 
         tokenizer.last_token = token;
 
-        color := COLOR_MAP[token.type];
-        memset(tokens.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx token.type, token.len);
     }
 
     return .[];
@@ -371,8 +370,8 @@ parse_compiler_directive :: (using tokenizer: *Tokenizer, token: *Token) {
     if directive.count > MAX_DIRECTIVE_LENGTH return;
     token_directive, ok := table_find(*COMPILER_DIRECTIVES_MAP, directive);
     if ok {
-        token.type = .compiler_directive;
-        token.compiler_directive = token_directive;
+        token.type = .directive;
+        token.directive = token_directive;
     }
 }
 
@@ -670,54 +669,15 @@ CSharp_Tokenizer :: struct {
 
 Token :: struct {
     start, len: s32;
-    type: Type;
+    type: Token_Type;
 
     union {
-        keyword:            Keyword;
-        punctuation:        Punctuation;
-        operation:          Operation;
-        compiler_directive: Directive;
-    }
-
-    Type :: enum u16 {
-        eof;
-
-        identifier;
-        string_literal;
-        char_literal;
-        number;
-        comment;
-        multiline_comment;
-        operation;
-        punctuation;
-        modifier_keyword;
-        keyword;
-        type_keyword;
-        value_keyword;
-        compiler_directive;
-        invalid;
+        keyword:        Keyword;
+        punctuation:    Punctuation;
+        operation:      Operation;
+        directive:      Directive;
     }
 }
-
-// Must match the order of the types in the enum above
-COLOR_MAP :: Color.[
-    .CODE_COMMENT,       // eof - color unused
-
-    .CODE_DEFAULT,       // identifier
-    .CODE_STRING,        // string_literal
-    .CODE_STRING,        // char_literal
-    .CODE_VALUE,         // number
-    .CODE_COMMENT,       // comment
-    .CODE_COMMENT,       // multiline_comment
-    .CODE_OPERATION,     // operation
-    .CODE_PUNCTUATION,   // punctuation
-    .CODE_KEYWORD,       // keyword
-    .CODE_KEYWORD,       // modifier_keyword (currently no specific color available for modifiers)
-    .CODE_TYPE,          // type_keyword
-    .CODE_VALUE,         // value_keyword
-    .CODE_KEYWORD,       // compiler_directive
-    .CODE_ERROR,         // invalid
-];
 
 // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords
 Keyword :: enum u16 {
@@ -930,7 +890,7 @@ Directive :: enum u16 {
 }
 
 Keyword_Token :: struct {
-    type: Token.Type;
+    type: Token_Type;
     keyword: Keyword;
 }
 
@@ -941,11 +901,11 @@ KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
     for enum_values_as_enum(Keyword) {
         name := enum_value_to_name(it);
         if starts_with(name, "kwt") {
-            table_add(*table, slice(name, 4, name.count - 4), .{.type_keyword, it});
+            table_add(*table, slice(name, 4, name.count - 4), .{.type, it});
         } else if starts_with(name, "kwm") {
-            table_add(*table, slice(name, 4, name.count - 4), .{.modifier_keyword, it});
+            table_add(*table, slice(name, 4, name.count - 4), .{.modifier, it});
         } else if starts_with(name, "kwv") {
-            table_add(*table, slice(name, 4, name.count - 4), .{.value_keyword, it});
+            table_add(*table, slice(name, 4, name.count - 4), .{.value, it});
         } else {
             table_add(*table, slice(name, 3, name.count - 3), .{.keyword, it});
         }
@@ -994,4 +954,3 @@ MAX_DIRECTIVE_LENGTH :: #run -> s32 {
     return xx max;
 }
 
-#run assert(type_info(Token.Type).values.count == COLOR_MAP.count);

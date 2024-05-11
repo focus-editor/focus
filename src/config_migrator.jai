@@ -348,6 +348,8 @@ RENAMED_COLORS :: Renamed_Color.[
     .{ 2, "background_highlight", "background2" },
     .{ 2, "background_light",     "background3" },
     .{ 2, "background_bright",    "background4" },
+
+    .{ 4, "code_string",          "code_string_literal" },
 ];
 
 ADDED_COLORS :: Added_Color.[
@@ -366,6 +368,35 @@ ADDED_COLORS :: Added_Color.[
     .{ 2, "build_panel_title_bar",            "",                       "1C303AFF" },
 
     .{ 3, "region_heredoc",                   "background1",            "090e12FF" },
+
+    .{ 4, "code_invalid",                     "code_error",             "FF0000FF" },
+    .{ 4, "code_multiline_string",            "code_string_literal",    "D4BC7DFF" },
+    .{ 4, "code_raw_string",                  "code_string_literal",    "D4BC7DFF" },
+    .{ 4, "code_char_literal",                "code_string_literal",    "D4BC7DFF" },
+    .{ 4, "code_identifier",                  "code_default",           "BFC9DBFF" },
+    .{ 4, "code_note",                        "code_operation",         "E0AD82FF" },
+    .{ 4, "code_number",                      "code_value",             "D699B5FF" },
+    .{ 4, "code_multiline_comment",           "code_comment",           "87919DFF" },
+    .{ 4, "code_modifier",                    "code_keyword",           "E67D74FF" },
+    .{ 4, "code_attribute",                   "code_keyword",           "E67D74FF" },
+    .{ 4, "code_enum_variant",                "code_default",           "BFC9DBFF" },
+    .{ 4, "code_macro",                       "code_operation",         "E0AD82FF" },
+    .{ 4, "code_builtin_variable",            "code_value",             "D699B5FF" },
+    .{ 4, "code_builtin_function",            "code_operation",         "E0AD82FF" },
+    .{ 4, "code_builtin_exception",           "code_operation",         "E0AD82FF" },
+    .{ 4, "code_directive",                   "code_keyword",           "E67D74FF" },
+    .{ 4, "code_directive_modifier",          "code_keyword",           "E67D74FF" },
+    .{ 4, "code_header",                      "code_keyword",           "E67D74FF" },
+    .{ 4, "code_header2",                     "code_operation",         "E0AD82FF" },
+    .{ 4, "code_header3",                     "code_operation",         "E0AD82FF" },
+    .{ 4, "code_header4",                     "code_operation",         "E0AD82FF" },
+    .{ 4, "code_header5",                     "code_operation",         "E0AD82FF" },
+    .{ 4, "code_header6",                     "code_operation",         "E0AD82FF" },
+    .{ 4, "code_config_modifier_key",         "code_value",             "D699B5FF" },
+    .{ 4, "code_config_key_string",           "code_default",           "BFC9DBFF" },
+    .{ 4, "code_config_action",               "code_default",           "BFC9DBFF" },
+    .{ 4, "code_hlsl_semantic",               "code_keyword",           "E67D74FF" },
+    .{ 4, "code_rust_lifetime",               "code_value",             "D699B5FF" },
 ];
 
 COLOR_VALUES_INDENT :: #run -> int {
