@@ -5,8 +5,7 @@ tokenize_worklog :: (using buffer: *Buffer, start_offset := -1, count := -1) -> 
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
 
-        color := COLOR_MAP[token.type];
-        memset(tokens.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx token.type, token.len);
     }
 
     return .[];
@@ -69,7 +68,7 @@ parse_header :: (using tokenizer: *Tokenizer, token: *Token) {
 }
 
 parse_line :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .line;
+    token.type = .default;
 
     t += 1;
     eat_until_newline(tokenizer);
@@ -77,25 +76,5 @@ parse_line :: (using tokenizer: *Tokenizer, token: *Token) {
 
 Token :: struct {
     start, len: s32;
-    type: Type;
-
-    Type :: enum u16 {
-        eof;
-
-        line;
-        function;
-        default;
-        header;
-        value;
-    }
+    type: Token_Type;
 }
-
-// Must match the order of the types in the enum above
-COLOR_MAP :: Color.[
-    .CODE_COMMENT,       // eof - obviously not used
-    .CODE_DEFAULT,       // line
-    .CODE_FUNCTION,      // function
-    .CODE_DEFAULT,       // default
-    .CODE_KEYWORD,       // header
-    .CODE_VALUE,         // value
-];

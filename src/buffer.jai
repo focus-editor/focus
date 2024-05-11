@@ -468,15 +468,15 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
         case .Jai;          return tokenize_jai_for_indentation(buffer);
         case .CSharp;       return tokenize_csharp_for_indentation(buffer);
         case .C;            return tokenize_c_like_lang_for_indentation(buffer, get_next_c_token);
-        // case .Js;           return tokenize_c_like_lang_for_indentation(buffer, get_next_js_token);
-        // case .Json;         return tokenize_c_like_lang_for_indentation(buffer, get_next_json_token);
-        // case .Glsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_glsl_token);
-        // case .Hlsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_hlsl_token);
-        // case .Zig;          return tokenize_c_like_lang_for_indentation(buffer, get_next_zig_token);
-        // case .Html;         return tokenize_xml_for_indentation(buffer);
-        // case .Xml;          return tokenize_xml_for_indentation(buffer);
-        // case .Lua;          return tokenize_lua_for_indentation(buffer);
-        // case .Odin;         return tokenize_odin_for_indentation(buffer);
+        case .Js;           return tokenize_c_like_lang_for_indentation(buffer, get_next_js_token);
+        case .Json;         return tokenize_c_like_lang_for_indentation(buffer, get_next_json_token);
+        case .Glsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_glsl_token);
+        case .Hlsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_hlsl_token);
+        case .Zig;          return tokenize_c_like_lang_for_indentation(buffer, get_next_zig_token);
+        case .Html;         return tokenize_xml_for_indentation(buffer);
+        case .Xml;          return tokenize_xml_for_indentation(buffer);
+        case .Lua;          return tokenize_lua_for_indentation(buffer);
+        case .Odin;         return tokenize_odin_for_indentation(buffer);
         case .Rust;         return tokenize_rust_for_indentation(buffer);
     }
 
@@ -1182,22 +1182,22 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .CSharp;       return tokenize_csharp;
         case .Focus_Config; return tokenize_focus_config;
         case .Focus_Theme;  return tokenize_focus_config;
-        // case .Glsl;         return tokenize_glsl;
-        // case .Hlsl;         return tokenize_hlsl;
-        // case .Golang;       return tokenize_golang;
-        // case .Js;           return tokenize_js;
-        // case .Json;         return tokenize_json;
-        // case .Lua;          return tokenize_lua;
-        // case .Odin;         return tokenize_odin;
-        // case .Python;       return tokenize_python;
-        // case .RenPy;        return tokenize_renpy;
+        case .Glsl;         return tokenize_glsl;
+        case .Hlsl;         return tokenize_hlsl;
+        case .Golang;       return tokenize_golang;
+        case .Js;           return tokenize_js;
+        case .Json;         return tokenize_json;
+        case .Lua;          return tokenize_lua;
+        case .Odin;         return tokenize_odin;
+        case .Python;       return tokenize_python;
+        case .RenPy;        return tokenize_renpy;
         case .Rust;         return tokenize_rust;
-        // case .Html;         return tokenize_xml;
-        // case .Xml;          return tokenize_xml;
-        // case .Worklog;      return tokenize_worklog;
-        // case .Yang;         return tokenize_yang;
-        // case .Zig;          return tokenize_zig;
-        // case .Uxntal;       return tokenize_uxntal;
+        case .Html;         return tokenize_xml;
+        case .Xml;          return tokenize_xml;
+        case .Worklog;      return tokenize_worklog;
+        case .Yang;         return tokenize_yang;
+        case .Zig;          return tokenize_zig;
+        case .Uxntal;       return tokenize_uxntal;
     }
     return null;
 }

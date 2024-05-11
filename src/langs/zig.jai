@@ -12,14 +12,13 @@ tokenize_zig :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] B
         if token.type == .punctuation && token.punctuation == .l_paren {
             // Handle "func("
             if last_token.type == .identifier {
-                memset(tokens.data + last_token.start, xx Color.CODE_FUNCTION, last_token.len);
+                memset(tokens.data + last_token.start, xx Token_Type.function, last_token.len);
             }
         }
 
         last_token = token;
 
-        color := COLOR_MAP[token.type];
-        memset(tokens.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx token.type, token.len);
     }
 
     return .[];
@@ -267,7 +266,7 @@ parse_char_literal :: (using tokenizer: *Tokenizer, token: *Token) {
 
 Token :: struct {
     start, len: s32;
-    type: Type = .invalid;
+    type: Token_Type = .invalid;
 
     // Additional info to distinguish between keywords/punctuation
     union {
@@ -276,47 +275,7 @@ Token :: struct {
         operation:      Operation;
         directive:      Directive;
     }
-
-    Type :: enum u16 {
-        eof;
-
-        identifier;
-        string_literal;
-        char_literal;
-        multiline_string;
-        note;
-        number;
-        comment;
-        multiline_comment;
-        operation;
-        punctuation;
-        keyword;
-        type;
-        value;
-        directive;
-        invalid;
-    }
 }
-
-// Must match the order of the types in the enum
-COLOR_MAP :: Color.[
-    .CODE_COMMENT,       // eof - obviously not used
-    .CODE_DEFAULT,       // identifier
-    .CODE_STRING,        // string_literal
-    .CODE_STRING,        // char_literal
-    .CODE_STRING,        // multiline_string
-    .CODE_OPERATION,     // note
-    .CODE_VALUE,         // number
-    .CODE_COMMENT,       // comment
-    .CODE_COMMENT,       // multiline_comment
-    .CODE_OPERATION,     // operation
-    .CODE_PUNCTUATION,   // punctuation
-    .CODE_KEYWORD,       // keyword
-    .CODE_TYPE,          // type
-    .CODE_VALUE,         // value
-    .CODE_KEYWORD,       // directive
-    .CODE_ERROR,         // invalid
-];
 
 PUNCTUATION :: string.[
     "colon", "semicolon", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket",
@@ -384,7 +343,7 @@ DIRECTIVES :: string.[
 }
 
 Keyword_Token :: struct {
-    type: Token.Type;
+    type: Token_Type;
     keyword: Keyword;
 }
 

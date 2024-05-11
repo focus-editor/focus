@@ -12,14 +12,13 @@ tokenize_js :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Bu
         if token.type == .punctuation && token.punctuation == .l_paren {
             // Handle "func("
             if last_token.type == .identifier {
-                memset(tokens.data + last_token.start, xx Color.CODE_FUNCTION, last_token.len);
+                memset(tokens.data + last_token.start, xx Token_Type.function, last_token.len);
             }
         }
 
         last_token = token;
 
-        color := COLOR_MAP[token.type];
-        memset(tokens.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx token.type, token.len);
     }
 
     return .[];
@@ -426,50 +425,14 @@ parse_decorator :: (using tokenizer: *Tokenizer, token: *Token) {
 
 Token :: struct {
     start, len: s32;
-    type: Type;
+    type: Token_Type;
 
     union {
         keyword:                Keyword;
         punctuation:            Punctuation;
         operation:              Operation;
     }
-
-    Type :: enum u16 {
-        eof;
-
-        identifier;
-        string_literal;
-        char_literal;
-        number;
-        comment;
-        multiline_comment;
-        operation;
-        punctuation;
-        modifier_keyword;
-        keyword;
-        type_keyword;
-        value_keyword;
-        invalid;
-    }
 }
-
-// Must match the order of the types in the enum above
-COLOR_MAP :: Color.[
-    .CODE_COMMENT,       // eof - obviously not used
-    .CODE_DEFAULT,       // identifier
-    .CODE_STRING,        // string_literal
-    .CODE_STRING,        // char_literal
-    .CODE_VALUE,         // number
-    .CODE_COMMENT,       // comment
-    .CODE_COMMENT,       // multiline_comment
-    .CODE_OPERATION,     // operation
-    .CODE_PUNCTUATION,   // punctuation
-    .CODE_KEYWORD,       // keyword
-    .CODE_KEYWORD,       // modifier_keyword
-    .CODE_TYPE,          // type_keyword
-    .CODE_VALUE,         // value_keyword
-    .CODE_ERROR,         // invalid
-];
 
 PUNCTUATION :: string.[
     "semicolon", "backslash", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", "period", "comma",
@@ -517,7 +480,7 @@ VALUE_KEYWORDS :: string.[
 }
 
 Keyword_Token :: struct {
-    type: Token.Type;
+    type: Token_Type;
     keyword: Keyword;
 }
 
@@ -528,9 +491,9 @@ KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
 
     #insert -> string {
         b: String_Builder;
-        for KEYWORDS        append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword,       keyword = .kw_%1 });\n", it));
-        for TYPE_KEYWORDS   append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .type_keyword,  keyword = .kw_%1 });\n", it));
-        for VALUE_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value_keyword, keyword = .kw_%1 });\n", it));
+        for KEYWORDS        append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword, keyword = .kw_%1 });\n", it));
+        for TYPE_KEYWORDS   append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .type,    keyword = .kw_%1 });\n", it));
+        for VALUE_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value,   keyword = .kw_%1 });\n", it));
         return builder_to_string(*b);
     }
 
@@ -545,4 +508,3 @@ MAX_KEYWORD_LENGTH :: #run -> s32 {
     return xx result;
 }
 
-#run assert(enum_highest_value(Token.Type) == COLOR_MAP.count - 1);

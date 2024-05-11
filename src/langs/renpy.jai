@@ -13,13 +13,12 @@ tokenize_renpy :: (using buffer: *Buffer, start_offset := -1, count := -1) -> []
 
         // Maybe highlight a function
         if token.type == .punctuation && token.punctuation == .l_paren && last_token.type == .identifier {
-            memset(tokens.data + last_token.start, xx Color.CODE_FUNCTION, last_token.len);
+            memset(tokens.data + last_token.start, xx Token_Type.function, last_token.len);
         }
 
         last_token = token;
 
-        color := COLOR_MAP[token.type];
-        memset(tokens.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx token.type, token.len);
     }
 
     return .[];
@@ -377,7 +376,7 @@ parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token, quote := #c
 
 Token :: struct {
     start, len: s32;
-    type: Type;
+    type: Token_Type;
 
     // Additional info to distinguish between keywords/punctuation
     union {
@@ -385,45 +384,7 @@ Token :: struct {
         punctuation:        Punctuation;
         operation:          Operation;
     }
-
-    Type :: enum u16 {
-        eof;
-
-        identifier;
-        string_literal;
-        multiline_string;
-        number;
-        comment;
-        multiline_comment;
-        operation;
-        punctuation;
-        keyword;
-        type_keyword;
-        value_keyword;
-        builtin_function;
-        builtin_exception;
-        invalid;
-    }
 }
-
-// Must match the order of the types in the enum
-COLOR_MAP :: Color.[
-    .CODE_COMMENT,       // eof - obviously not used
-    .CODE_DEFAULT,       // identifier
-    .CODE_STRING,        // string_literal
-    .CODE_STRING,        // multiline_string
-    .CODE_VALUE,         // number
-    .CODE_COMMENT,       // comment
-    .CODE_COMMENT,       // multiline_comment
-    .CODE_OPERATION,     // operation
-    .CODE_PUNCTUATION,   // punctuation
-    .CODE_KEYWORD,       // keyword
-    .CODE_TYPE,          // type_keyword
-    .CODE_VALUE,         // value_keyword
-    .CODE_OPERATION,     // builtin_function
-    .CODE_OPERATION,     // builtin_exception
-    .CODE_ERROR,         // invalid
-];
 
 PUNCTUATION :: string.[
     "dollar", "semicolon", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", "period", "comma",
@@ -501,7 +462,7 @@ VALUE_KEYWORDS :: string.[
 }
 
 Keyword_Token :: struct {
-    type: Token.Type;
+    type: Token_Type;
     keyword: Keyword;
 }
 
@@ -513,8 +474,8 @@ KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
     #insert -> string {
         b: String_Builder;
         for KEYWORDS           append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .keyword,           keyword = .kw_% });\n", it, it));
-        for TYPE_KEYWORDS      append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .type_keyword,      keyword = .kw_% });\n", it, it));
-        for VALUE_KEYWORDS     append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .value_keyword,     keyword = .kw_% });\n", it, it));
+        for TYPE_KEYWORDS      append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .type,              keyword = .kw_% });\n", it, it));
+        for VALUE_KEYWORDS     append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .value,             keyword = .kw_% });\n", it, it));
         for BUILTIN_FUNCTIONS  append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .builtin_function,  keyword = .kw_% });\n", it, it));
         for BUILTIN_EXCEPTIONS append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .builtin_exception, keyword = .kw_% });\n", it, it));
         return builder_to_string(*b);

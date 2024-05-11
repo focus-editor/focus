@@ -12,14 +12,13 @@ tokenize_golang :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [
         if token.type == .punctuation && token.punctuation == .l_paren {
             // Handle "func("
             if last_token.type == .identifier {
-                memset(tokens.data + last_token.start, xx Color.CODE_FUNCTION, last_token.len);
+                memset(tokens.data + last_token.start, xx Token_Type.function, last_token.len);
             }
         }
 
         last_token = token;
 
-        color := COLOR_MAP[token.type];
-        memset(tokens.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx token.type, token.len);
     }
 
     return .[];
@@ -429,50 +428,14 @@ parse_caret :: (using tokenizer: *Tokenizer, token: *Token) {
 
 Token :: struct {
     start, len: s32;
-    type: Type;
+    type: Token_Type;
 
     union {
         keyword:                Keyword;
         punctuation:            Punctuation;
         operation:              Operation;
     }
-
-    Type :: enum u16 {
-        eof;
-
-        identifier;
-        string_literal;
-        char_literal;
-        number;
-        comment;
-        multiline_comment;
-        operation;
-        punctuation;
-        modifier_keyword;
-        keyword;
-        type_keyword;
-        value_keyword;
-        invalid;
-    }
 }
-
-// Must match the order of the types in the enum above
-COLOR_MAP :: Color.[
-    .CODE_COMMENT,       // eof - obviously not used
-    .CODE_DEFAULT,       // identifier
-    .CODE_STRING,        // string_literal
-    .CODE_STRING,        // char_literal
-    .CODE_VALUE,         // number
-    .CODE_COMMENT,       // comment
-    .CODE_COMMENT,       // multiline_comment
-    .CODE_OPERATION,     // operation
-    .CODE_PUNCTUATION,   // punctuation
-    .CODE_KEYWORD,       // keyword
-    .CODE_KEYWORD,       // modifier_keyword
-    .CODE_TYPE,          // type_keyword
-    .CODE_VALUE,         // value_keyword
-    .CODE_ERROR,         // invalid
-];
 
 Keyword :: enum u16 {
     kw_break;
@@ -582,7 +545,7 @@ Punctuation :: enum u16 {
 
 //- Keyword Specifics
 Keyword_Token :: struct {
-    type: Token.Type;
+    type: Token_Type;
     keyword: Keyword;
 }
 // KEYWORD_MAP: Table(string, Keyword_Token);
@@ -600,13 +563,13 @@ KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
         curr_slice_count := 3;
         for enum_names(Keyword) {
             if starts_with(it, "kwt") {
-                curr_type = "type_keyword";
+                curr_type = "type";
                 curr_slice_count = 4;
             } else if starts_with(it, "kwm") {
-                curr_type = "modifier_keyword";
+                curr_type = "modifier";
                 curr_slice_count = 4;
             } else if starts_with(it, "kwv") {
-                curr_type = "value_keyword";
+                curr_type = "value";
                 curr_slice_count = 4;
             } else {
                 curr_type = "keyword";
@@ -639,4 +602,3 @@ MAX_KEYWORD_LENGTH :: #run -> s32 {
     return xx max_len;
 }
 
-#run assert(enum_highest_value(Token.Type) == COLOR_MAP.count - 1);

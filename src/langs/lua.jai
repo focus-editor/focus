@@ -9,15 +9,13 @@ tokenize_lua :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] B
 
         prev := tokenizer.last_token;
         if (token.type == .punctuation && token.punctuation == .l_paren) && prev.type == .identifier {
-            memset(tokens.data + prev.start, xx Color.CODE_FUNCTION, prev.len);
+            memset(tokens.data + prev.start, xx Token_Type.function, prev.len);
         }
 
         if token.type == .identifier && (prev.type == .keyword && prev.keyword == .kw_function) {
-            memset(tokens.data + token.start, xx Color.CODE_FUNCTION, token.len);
-        }
-        else {
-            color := COLOR_MAP[token.type];
-            memset(tokens.data + token.start, xx color, token.len);
+            memset(tokens.data + token.start, xx Token_Type.function, token.len);
+        } else {
+            memset(tokens.data + token.start, xx token.type, token.len);
         }
 
         tokenizer.last_token = token;
@@ -422,7 +420,7 @@ Lua_Tokenizer :: struct {
 
 Token :: struct {
     start, len: s32;
-    type: Type;
+    type: Token_Type;
 
     // Additional info to distinguish between keywords/punctuation
     union {
@@ -430,37 +428,7 @@ Token :: struct {
         punctuation: Punctuation;
         operation:   Operation;
     }
-
-    Type :: enum u16 {
-        eof;
-
-        identifier;
-        string_literal;
-        number;
-        comment;
-        multiline_comment;
-        operation;
-        punctuation;
-        keyword;
-        value_keyword;
-        invalid;
-    }
 }
-
-// Must match the order of the types in the enum
-COLOR_MAP :: Color.[
-    .CODE_COMMENT,       // eof - obviously not used
-    .CODE_DEFAULT,       // identifier
-    .CODE_STRING,        // string_literal
-    .CODE_VALUE,         // number
-    .CODE_COMMENT,       // comment
-    .CODE_COMMENT,       // multiline_comment
-    .CODE_OPERATION,     // operation
-    .CODE_PUNCTUATION,   // punctuation
-    .CODE_KEYWORD,       // keyword
-    .CODE_VALUE,         // value_keyword
-    .CODE_ERROR,         // invalid
-];
 
 KEYWORDS :: string.[
     "and", "break", "do", "else", "elseif", "end", "for",
@@ -508,7 +476,7 @@ PUNCTUATION :: string.[
 }
 
 Keyword_Token :: struct {
-    type: Token.Type;
+    type: Token_Type;
     keyword: Keyword;
 }
 
@@ -519,8 +487,8 @@ KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
 
     #insert -> string {
         b: String_Builder;
-        for KEYWORDS        append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword,       keyword = .kw_%1 });\n", it));
-        for VALUE_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value_keyword, keyword = .kw_%1 });\n", it));
+        for KEYWORDS        append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword, keyword = .kw_%1 });\n", it));
+        for VALUE_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value,   keyword = .kw_%1 });\n", it));
         return builder_to_string(*b);
     }
 

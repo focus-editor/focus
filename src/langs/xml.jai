@@ -4,8 +4,7 @@ tokenize_xml :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] B
     while true {
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
-        color := COLOR_MAP[token.type];
-        memset(tokens.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx TOKEN_MAP[token.type], token.len);
     }
 
     return .[];
@@ -585,49 +584,53 @@ Xml_Token :: struct {
     }
 }
 
-// Must match the order of the types in the enum above
-COLOR_MAP :: Color.[
-    .CODE_COMMENT,       // eof - obviously not used
 
-    .CODE_ERROR,         // error
-    .CODE_DEFAULT,       // default
+// Must match the order of the types in the enum above.
+// We're translating very specific token types into the generic token types
+// to avoid adding too many tokens to the default token list, where we
+// don't really need this granularity
+TOKEN_MAP :: Token_Type.[
+    .eof,       // eof - obviously not used
 
-    .CODE_FUNCTION,      // tag_start
-    .CODE_FUNCTION,      // tag_end
-    .CODE_FUNCTION,      // tag_closing_slash
-    .CODE_FUNCTION,      // tag_exclamation_point
-    .CODE_KEYWORD,       // tag_name
-    .CODE_DEFAULT,       // tag_content
+    .error,             // error
+    .default,           // default
 
-    .CODE_TYPE,          // attribute_name
-    .CODE_VALUE,         // attribute_value
-    .CODE_STRING,        // attribute_string_value
-    .CODE_DEFAULT,       // attribute_equals
+    .function,          // tag_start
+    .function,          // tag_end
+    .function,          // tag_closing_slash
+    .function,          // tag_exclamation_point
+    .keyword,           // tag_name
+    .default,           // tag_content
 
-    .CODE_COMMENT,       // comment_start
-    .CODE_COMMENT,       // comment_end
-    .CODE_COMMENT,       // comment_content
+    .type,              // attribute_name
+    .value,             // attribute_value
+    .string_literal,    // attribute_string_value
+    .default,           // attribute_equals
 
-    .CODE_COMMENT,       // processing_instruction_start
-    .CODE_COMMENT,       // processing_instruction_end
-    .CODE_COMMENT,       // processing_instruction_target
-    .CODE_COMMENT,       // processing_instruction_content
+    .comment,           // comment_start
+    .comment,           // comment_end
+    .comment,           // comment_content
 
-    .CODE_COMMENT,       // cdata_start
-    .CODE_COMMENT,       // cdata_end
-    .CODE_VALUE,         // cdata_content
+    .comment,           // processing_instruction_start
+    .comment,           // processing_instruction_end
+    .comment,           // processing_instruction_target
+    .comment,           // processing_instruction_content
 
-    .CODE_PUNCTUATION,   // dtd_parenthesis_open
-    .CODE_PUNCTUATION,   // dtd_parenthesis_close
-    .CODE_PUNCTUATION,   // dtd_bracket_open
-    .CODE_PUNCTUATION,   // dtd_bracket_close
-    .CODE_OPERATION,     // dtd_infix_operator
-    .CODE_OPERATION,     // dtd_postfix_operator
-    .CODE_OPERATION,     // dtd_percent
-    .CODE_PUNCTUATION,   // dtd_comma
-    .CODE_VALUE,         // dtd_parameter_entity
-    .CODE_COMMENT,       // dtd_conditional_section_start
-    .CODE_COMMENT,       // dtd_conditional_section_end
+    .comment,           // cdata_start
+    .comment,           // cdata_end
+    .value,             // cdata_content
+
+    .punctuation,       // dtd_parenthesis_open
+    .punctuation,       // dtd_parenthesis_close
+    .punctuation,       // dtd_bracket_open
+    .punctuation,       // dtd_bracket_close
+    .operation,         // dtd_infix_operator
+    .operation,         // dtd_postfix_operator
+    .operation,         // dtd_percent
+    .punctuation,       // dtd_comma
+    .value,             // dtd_parameter_entity
+    .comment,           // dtd_conditional_section_start
+    .comment,           // dtd_conditional_section_end
 ];
 
 // HTML elements that should not have a closing tag, and have an *optional* forward slash at the end of the tag.

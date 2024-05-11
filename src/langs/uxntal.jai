@@ -5,8 +5,7 @@ tokenize_uxntal :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [
         token := get_next_token(*tokenizer);
         if token.type == .eof then break;
 
-        color := COLOR_MAP[token.type];
-        memset(tokens.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx token.type, token.len);
     }
 
     return .[];
@@ -109,43 +108,13 @@ OPCODES :: string.[
 
 Token :: struct {
     start, len: s32;
-    type: Type;
+    type: Token_Type;
 
     union {
         punctuation: Punctuation;
         opcode:      Opcode;
     }
-
-    Type :: enum u16 {
-        eof;
-
-        opcode;
-        identifier;
-        number;
-        comment;
-        string_literal;
-        punctuation;
-        label;
-        macro;
-        operation;
-        invalid;
-    }
 }
-
-COLOR_MAP :: Color.[
-    .CODE_COMMENT,     // eof - obviously not used
-    .CODE_KEYWORD,     // opcode
-    .CODE_DEFAULT,     // identifier
-    .CODE_VALUE,       // number
-    .CODE_COMMENT,     // comment
-    .CODE_STRING,      // string_literal
-    .CODE_PUNCTUATION, // punctuation
-    .CODE_FUNCTION,    // label
-    .CODE_TYPE,        // macro
-    .CODE_OPERATION,   // operation
-    .CODE_ERROR,       // invalid
-];
-
 
 OPCODE_MAP :: #run -> Table(string, Opcode) {
     table: Table(string, Opcode);
@@ -217,7 +186,7 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     if ident.count <= MAX_OPCODE_LENGTH {
         opcode, ok := table_find(*OPCODE_MAP, ident);
         if ok {
-            token.type = .opcode;
+            token.type = .keyword;
             token.opcode = opcode;
             return;
         }
@@ -230,7 +199,7 @@ parse_label :: (using tokenizer: *Tokenizer, token: *Token) {
     while t < max_t && (is_alnum(t.*) || is_char_allowed_within_name(t.*)) {
         t += 1;
     }
-    token.type = .label;
+    token.type = .function;  // to avoid creating a language-specific token type
 }
 
 parse_macro :: (using tokenizer: *Tokenizer, token: *Token) {

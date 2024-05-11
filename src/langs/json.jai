@@ -7,8 +7,7 @@ tokenize_json :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] 
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
 
-        color := COLOR_MAP[token.type];
-        memset(tokens.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx token.type, token.len);
     }
 
     return .[];
@@ -171,39 +170,13 @@ parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
 
 Token :: struct {
     start, len: s32;
-    type: Type;
+    type: Token_Type;
 
     union {
         keyword:            Keyword;
         punctuation:        Punctuation;
     }
-
-    Type :: enum u16 {
-        eof;
-
-        identifier;
-        string_literal;
-        number;
-        comment;
-        multiline_comment;
-        punctuation;
-        value_keyword;
-        invalid;
-    }
 }
-
-// Must match the order of the types in the enum above
-COLOR_MAP :: Color.[
-    .CODE_COMMENT,       // eof - obviously not used
-    .CODE_DEFAULT,       // identifier
-    .CODE_STRING,        // string_literal
-    .CODE_VALUE,         // number
-    .CODE_COMMENT,       // comment
-    .CODE_COMMENT,       // multiline_comment
-    .CODE_PUNCTUATION,   // punctuation
-    .CODE_VALUE,         // value_keyword
-    .CODE_ERROR,         // invalid
-];
 
 PUNCTUATION :: string.[
     "l_brace", "r_brace", "l_bracket", "r_bracket", "comma", "minus", "colon", "slash", "l_paren", "r_paren",
@@ -232,7 +205,7 @@ VALUE_KEYWORDS :: string.[
 }
 
 Keyword_Token :: struct {
-    type: Token.Type;
+    type: Token_Type;
     keyword: Keyword;
 }
 
@@ -243,7 +216,7 @@ KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
 
     #insert -> string {
         b: String_Builder;
-        for VALUE_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value_keyword, keyword = .kw_%1 });\n", it));
+        for VALUE_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value, keyword = .kw_%1 });\n", it));
         return builder_to_string(*b);
     }
 
@@ -256,4 +229,3 @@ MAX_KEYWORD_LENGTH :: #run -> s32 {
     return xx result;
 }
 
-#run assert(enum_highest_value(Token.Type) == COLOR_MAP.count - 1);
