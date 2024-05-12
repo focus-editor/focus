@@ -19,6 +19,9 @@
 
 + New features:
     + New option: `status_bar_position`. Allows changing the position of the status bar to either the `top` or `bottom` of the editor window. Defaults to `bottom`.
+    + Code colors have been revamped. There are now more colors available in the config, which roughly correspond to the code tokens produced by language tokenizers.
+        + Configs and themes will be migrated to version [4] with the new colors automatically derived from the old colors
+        + You can always check the default config for the full list of available colors (use the `Show Default Config` command)
 + Bug fixes:
     + ...
 + Other changes:

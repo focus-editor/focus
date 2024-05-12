@@ -131,6 +131,9 @@ parse_config :: (name: string, filename: string, file_data: string, for_highligh
         if success && error_msg then array_add(*result.warnings, error_msg);
     }
 
+    // Detect color reference loops and highlight them
+    // TODO: @colorref
+
     // Mix the common key mappings into every keymap to support common actions
     array_add(*result.config.keymap_editors,          ..result.config.keymap_common);
     array_add(*result.config.keymap_open_file_dialog, ..result.config.keymap_common);
@@ -157,6 +160,14 @@ keymap_map_key_code_to_string :: (key_code: u32) -> string /* temp */ {
 
     return "??";
 }
+
+get_theme_file_from_name :: (name: string) -> string /* temp */ {
+    theme_name := to_lower_copy_new(name,, allocator = temp);
+    return tprint("%/%.focus-theme", themes_dir, theme_name);
+}
+
+
+#scope_file
 
 map_name_to_color :: (name: string) -> Color {
     if begins_with(name, "code_") {
@@ -221,14 +232,6 @@ map_name_to_color :: (name: string) -> Color {
 
     return .NONE;
 }
-
-get_theme_file_from_name :: (name: string) -> string /* temp */ {
-    theme_name := to_lower_copy_new(name,, allocator = temp);
-    return tprint("%/%.focus-theme", themes_dir, theme_name);
-}
-
-
-#scope_file
 
 add_highlight :: inline (parser: *Config_Parser, offset_from_line_start: s64, count: s64, type: Token_Type, line_start_offset := -1) {
     if !parser.parse_for_highlighting return;
@@ -519,22 +522,47 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
 
             color_name, value := break_by_spaces(line);
             color_name = trim_right(color_name, ":");
+
+            // Translate color name to color id
             color_id := map_name_to_color(color_name);
             if color_id == .NONE {
                 add_highlight(parser, 0, color_name.count, .error);
                 return true, tprint("Unknown color '%'", color_name);
             }
-            color, success := hex_to_color_vec4(value);
-            if !success {
-                add_highlight(parser, value.data - line.data, value.count, .error);
-                return true, tprint("Couldn't parse '%'. Expected a color in the form RRGGBB or RRGGBBAA, got '%'", color_name, value);
-            }
-            array_add(*result.config.colors, Parsed_Color.{ color_name, color });
 
+            if begins_with(value, "$") {
+                // This color refers to another color @colorref
+                ref_color_name := value;
+                advance(*ref_color_name, 1);
+                ref_color_id := map_name_to_color(ref_color_name);
+                if ref_color_id == .NONE {
+                    add_highlight(parser, value.data - line.data, value.count, .error);
+                    return true, tprint("Attempted to reference an unknown color '$%'", ref_color_name);
+                }
+                add_highlight(parser, value.data - line.data, value.count, .value);
+                array_add(*result.config.color_refs, .{
+                    color_name = color_name,
+                    color = color_id,
+                    wants_to_use = ref_color_id,
+                    line_start_offset = line_start_offset,
+                    line_length = xx line.count,
+                    section_offset = section_offset,
+                });
+            } else {
+                // Try to parse the hex value
+                color, success := hex_to_color_vec4(value);
+                if !success {
+                    add_highlight(parser, value.data - line.data, value.count, .error);
+                    return true, tprint("Couldn't parse '%'. Expected a color in the form RRGGBB or RRGGBBAA, got '%'", color_name, value);
+                }
+                array_add(*result.config.colors, Parsed_Color.{ color_id, color });
+            }
+
+            // Detect duplicates
             is_duplicate := false;
             for seen_colors {
                 if color_id != it.color continue;
-                add_highlight(parser, 0, it.line_length,   .comment, line_start_offset = it.line_start_offset);
+                add_highlight(parser, 0, it.line_length,   .warning, line_start_offset = it.line_start_offset);
                 add_highlight(parser, 0, color_name.count, .warning, line_start_offset = it.line_start_offset);
                 is_duplicate = true;
             }
@@ -1161,7 +1189,8 @@ Parsed_Config :: struct {
     theme: string;
     font: string;
     font_size: int;
-    colors:    [..] Parsed_Color;
+    colors:     [..] Parsed_Color;
+    color_refs: [..] Color_Reference;  // @colorref: not finished
 
     // Build commands
     build: Build_Config;
@@ -1187,7 +1216,7 @@ Config_Parse_Result :: struct {
 }
 
 Parsed_Color :: struct {
-    color_name: string;
+    color_id: Color;
     color: Vector4;
 }
 
@@ -1287,7 +1316,15 @@ Seen_Color :: struct {
 Seen_Line :: struct {
     line_start_offset: s32;
     line_length:       s32;  // for highlighting the whole line if needed
-    section_offset: s32;
+    section_offset:    s32;
+}
+
+// @colorref: not finished
+Color_Reference :: struct {
+    color_name: string;
+    color: Color;
+    wants_to_use: Color;
+    using seen_line: Seen_Line;  // to highlight invalid references
 }
 
 

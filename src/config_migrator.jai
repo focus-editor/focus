@@ -79,7 +79,7 @@ maybe_migrate_config :: (name: string, file_data: string, assume_section := "") 
 
             there_are_settings_to_add := false;
             for added : ADDED_SETTINGS {
-                if !table_contains(*config_info.settings_present, added.name) && added.version > config_info.version { there_are_settings_to_add = true; break; }
+                if !table_contains(*config_info.settings_present, added.name) && valid_version(added.version, config_info.version) { there_are_settings_to_add = true; break; }
             }
             if there_are_settings_to_add {
                 heading := tprint("\n# Added after migration to version [%]\n", CURRENT_CONFIG_VERSION);
@@ -87,7 +87,7 @@ maybe_migrate_config :: (name: string, file_data: string, assume_section := "") 
                 inserted_bytes += heading.count;
             }
             for added : ADDED_SETTINGS {
-                if !table_contains(*config_info.settings_present, added.name) && added.version > config_info.version {
+                if !table_contains(*config_info.settings_present, added.name) && valid_version(added.version, config_info.version) {
                     padding := get_tmp_spaces(SETTING_VALUES_INDENT - added.name.count - 1);
                     setting := tprint("%1:%2%3\n", added.name, padding, added.value);
                     array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) setting);
@@ -108,7 +108,7 @@ maybe_migrate_config :: (name: string, file_data: string, assume_section := "") 
 
             there_are_colors_to_add := false;
             for added : ADDED_COLORS {
-                if !table_contains(*config_info.colors_present, added.name) && added.version > config_info.version { there_are_colors_to_add = true; break; }
+                if !table_contains(*config_info.colors_present, added.name) && valid_version(added.version, config_info.version) { there_are_colors_to_add = true; break; }
             }
             if there_are_colors_to_add {
                 heading := tprint("\n# Added after migration to version [%]\n", CURRENT_CONFIG_VERSION);
@@ -116,7 +116,7 @@ maybe_migrate_config :: (name: string, file_data: string, assume_section := "") 
                 inserted_bytes += heading.count;
             }
             for added : ADDED_COLORS {
-                if !table_contains(*config_info.colors_present, added.name) && added.version > config_info.version {
+                if !table_contains(*config_info.colors_present, added.name) && valid_version(added.version, config_info.version) {
                     value := added.default;
                     if added.value_from {
                         source_value, success := table_find(*config_info.colors_present, added.value_from);
@@ -143,7 +143,7 @@ maybe_migrate_config :: (name: string, file_data: string, assume_section := "") 
             // Maybe print a heading
             for added : ADDED_KEYBINDS {
                 if added.subsection != SUBSECTION continue;
-                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) && added.version > config_info.version {
+                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) && valid_version(added.version, config_info.version) {
                     heading := tprint("\n# Added after migration to version [%]\n", CURRENT_CONFIG_VERSION);
                     array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) heading);
                     inserted_bytes += heading.count;
@@ -153,7 +153,7 @@ maybe_migrate_config :: (name: string, file_data: string, assume_section := "") 
 
             for added : ADDED_KEYBINDS {
                 if added.subsection != SUBSECTION continue;
-                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) && added.version > config_info.version {
+                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) && valid_version(added.version, config_info.version) {
                     key_combo := added.key_combo;
                     if OS == .MACOS then key_combo = added.key_combo_mac;
                     padding := get_tmp_spaces(KEYBINDS_INDENT - key_combo.count);
@@ -176,7 +176,7 @@ maybe_migrate_config :: (name: string, file_data: string, assume_section := "") 
             // Maybe print a heading
             for added : ADDED_KEYBINDS {
                 if added.subsection != SUBSECTION continue;
-                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) && added.version > config_info.version {
+                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) && valid_version(added.version, config_info.version) {
                     heading := tprint("\n# Added after migration to version [%]\n", CURRENT_CONFIG_VERSION);
                     array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) heading);
                     inserted_bytes += heading.count;
@@ -186,7 +186,7 @@ maybe_migrate_config :: (name: string, file_data: string, assume_section := "") 
 
             for added : ADDED_KEYBINDS {
                 if added.subsection != SUBSECTION continue;
-                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) && added.version > config_info.version {
+                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) && valid_version(added.version, config_info.version) {
                     key_combo := added.key_combo;
                     if OS == .MACOS then key_combo = added.key_combo_mac;
                     padding := get_tmp_spaces(KEYBINDS_INDENT - key_combo.count);
@@ -293,6 +293,10 @@ maybe_migrate_config :: (name: string, file_data: string, assume_section := "") 
 
 #scope_file
 
+valid_version :: inline (added_version: int, config_version: int) -> bool {
+    return added_version <= CURRENT_CONFIG_VERSION && added_version > config_version;
+}
+
 replace_line :: (buffer: *[..] u8, line_start_offset: s64, str: string) -> difference: s64 {
     length := get_line_length(buffer.*, line_start_offset);
     // print("Replacing '%' with '%'\n", to_string(buffer.data + line_start_offset, length), str);
@@ -325,9 +329,10 @@ ADDED_SETTINGS :: Added_Setting.[
     .{ 3, "disable_viewport_chasing_cursor_near_the_edge",      "false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts" },
     .{ 3, "show_selected_text_length",                          "false" },
 
-    // .{ 4, "window_width",                                       "-1" },
-    // .{ 4, "window_height"                                       "-1" },
-    // .{ 4, "insert_final_newline_on_save"                        "false" },
+    .{ 4, "window_width",                                       "-1" },
+    .{ 4, "window_height",                                      "-1" },
+    .{ 4, "insert_final_newline_on_save",                       "false" },
+    .{ 4, "status_bar_position",                                "bottom" },
 ];
 
 REMOVED_SETTINGS :: Removed_Setting.[
@@ -490,15 +495,15 @@ RUN_TESTS :: false;
 // Also your code must comply with the SOLID principles. Are we real programmers or what?
 
 #if RUN_TESTS #run,stallable {
-    run_test("Settings migration [1] to [3]",   "global.focus-config",  SETTINGS_1_TO_3,               SETTINGS_1_TO_3_EXPECTED);
-    run_test("Settings migration [2] to [3]",   "global.focus-config",  SETTINGS_2_TO_3,               SETTINGS_2_TO_3_EXPECTED);
-    run_test("Project settings [1] to [3]",     "project.focus-config", PROJECT_SETTINGS_1_TO_3,       PROJECT_SETTINGS_1_TO_3_EXPECTED);
-    run_test("Сolors [1] to [3]",               "global.focus-config",  COLORS_1_TO_3,                 COLORS_1_TO_3_EXPECTED);
-    run_test("Сolors [2] to [3]",               "global.focus-config",  COLORS_2_TO_3,                 COLORS_2_TO_3_EXPECTED);
-    run_test("Settings and colors [1] to [3]",  "global.focus-config",  COLORS_AND_SETTINGS_1_TO_3,    COLORS_AND_SETTINGS_1_TO_3_EXPECTED);
-    run_test("Keybinds [1] to [3]",             "global.focus-config",  KEYBINDS_1_TO_3,               KEYBINDS_1_TO_3_EXPECTED);
-    run_test("Keybinds [2] to [3]",             "global.focus-config",  KEYBINDS_2_TO_3,               KEYBINDS_2_TO_3_EXPECTED);
-    run_test("Theme [1] to [3]",                "nord.focus-theme",     THEME_1_TO_3,                  THEME_1_TO_3_EXPECTED, assume_section = "style");
+    run_test("Settings migration [1] to [4]",   "global.focus-config",  SETTINGS_1_TO_4,               SETTINGS_1_TO_4_EXPECTED);
+    run_test("Settings migration [2] to [4]",   "global.focus-config",  SETTINGS_2_TO_4,               SETTINGS_2_TO_4_EXPECTED);
+    run_test("Project settings [1] to [4]",     "project.focus-config", PROJECT_SETTINGS_1_TO_4,       PROJECT_SETTINGS_1_TO_4_EXPECTED);
+    run_test("Сolors [1] to [4]",               "global.focus-config",  COLORS_1_TO_4,                 COLORS_1_TO_4_EXPECTED);
+    run_test("Сolors [2] to [4]",               "global.focus-config",  COLORS_2_TO_4,                 COLORS_2_TO_4_EXPECTED);
+    run_test("Settings and colors [1] to [4]",  "global.focus-config",  COLORS_AND_SETTINGS_1_TO_4,    COLORS_AND_SETTINGS_1_TO_4_EXPECTED);
+    run_test("Keybinds [1] to [4]",             "global.focus-config",  KEYBINDS_1_TO_4,               KEYBINDS_1_TO_4_EXPECTED);
+    run_test("Keybinds [2] to [4]",             "global.focus-config",  KEYBINDS_2_TO_4,               KEYBINDS_2_TO_4_EXPECTED);
+    run_test("Theme [1] to [4]",                "nord.focus-theme",     THEME_1_TO_4,                  THEME_1_TO_4_EXPECTED, assume_section = "style");
 }
 
 run_test :: (test_name: string, file_name: string, config_data: string, expected_data: string, assume_section := "") {
@@ -516,7 +521,7 @@ run_test :: (test_name: string, file_name: string, config_data: string, expected
 
 // Test that settings are added and removed correctly
 
-SETTINGS_1_TO_3 :: #string FOCUS_CONFIG
+SETTINGS_1_TO_4 :: #string FOCUS_CONFIG
 
 [1]  # Version number. Do not delete.
 
@@ -543,8 +548,8 @@ persist_local_search_results:           false
 
 FOCUS_CONFIG
 
-SETTINGS_1_TO_3_EXPECTED :: #string FOCUS_CONFIG
-[3]  # Version number. Do not delete.
+SETTINGS_1_TO_4_EXPECTED :: #string FOCUS_CONFIG
+[4]  # Version number. Do not delete.
 
 [[workspace]]
 
@@ -556,7 +561,7 @@ SETTINGS_1_TO_3_EXPECTED :: #string FOCUS_CONFIG
 [common]
 Ctrl-P                      open_file_by_name
 
-# Added after migration to version [3]
+# Added after migration to version [4]
 Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
@@ -576,7 +581,7 @@ prefer_system_file_dialogs:             false  # Windows only
 show_cursors_off_screen:                true
 persist_local_search_results:           false
 
-# Added after migration to version [3]
+# Added after migration to version [4]
 build_panel_height_percent:                    50
 build_panel_stays_in_one_place:                false  # if false, the build panel will flip to the inactive pane in two pane layouts
 build_panel_line_wrap_always_on:               true
@@ -588,10 +593,14 @@ save_current_buffer_on_build:                  false
 save_all_file_backed_buffers_on_build:         false
 disable_viewport_chasing_cursor_near_the_edge: false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts
 show_selected_text_length:                     false
+window_width:                                  -1
+window_height:                                 -1
+insert_final_newline_on_save:                  false
+status_bar_position:                           bottom
 
 FOCUS_CONFIG
 
-SETTINGS_2_TO_3 :: #string FOCUS_CONFIG
+SETTINGS_2_TO_4 :: #string FOCUS_CONFIG
 [2]  # Version number. Do not delete.
 
 [[workspace]]
@@ -627,8 +636,8 @@ scroll_beyond_last_line:                true
 
 FOCUS_CONFIG
 
-SETTINGS_2_TO_3_EXPECTED :: #string FOCUS_CONFIG
-[3]  # Version number. Do not delete.
+SETTINGS_2_TO_4_EXPECTED :: #string FOCUS_CONFIG
+[4]  # Version number. Do not delete.
 
 [[workspace]]
 
@@ -645,7 +654,7 @@ Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 
-# Added after migration to version [3]
+# Added after migration to version [4]
 Ctrl-Shift-Alt-N            open_another_editor_instance
 F8                          go_to_next_build_error
 Ctrl-F8                     go_to_next_build_error_on_the_side
@@ -668,17 +677,21 @@ draw_indent_guides:                     false
 auto_surround_with_brackets_and_quotes: false
 scroll_beyond_last_line:                true
 
-# Added after migration to version [3]
+# Added after migration to version [4]
 save_current_buffer_on_build:                  false
 save_all_file_backed_buffers_on_build:         false
 disable_viewport_chasing_cursor_near_the_edge: false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts
 show_selected_text_length:                     false
+window_width:                                  -1
+window_height:                                 -1
+insert_final_newline_on_save:                  false
+status_bar_position:                           bottom
 
 FOCUS_CONFIG
 
 // Settings should not be added to project configs, only removed
 
-PROJECT_SETTINGS_1_TO_3 :: #string FOCUS_CONFIG
+PROJECT_SETTINGS_1_TO_4 :: #string FOCUS_CONFIG
 
 [1]  # Version number. Do not delete.
 
@@ -705,8 +718,8 @@ persist_local_search_results:           false
 
 FOCUS_CONFIG
 
-PROJECT_SETTINGS_1_TO_3_EXPECTED :: #string FOCUS_CONFIG
-[3]  # Version number. Do not delete.
+PROJECT_SETTINGS_1_TO_4_EXPECTED :: #string FOCUS_CONFIG
+[4]  # Version number. Do not delete.
 
 [[workspace]]
 
@@ -718,7 +731,7 @@ PROJECT_SETTINGS_1_TO_3_EXPECTED :: #string FOCUS_CONFIG
 [common]
 Ctrl-P                      open_file_by_name
 
-# Added after migration to version [3]
+# Added after migration to version [4]
 Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
@@ -743,7 +756,7 @@ FOCUS_CONFIG
 
 // Test that new colors are added correctly
 
-COLORS_1_TO_3 :: #string FOCUS_CONFIG
+COLORS_1_TO_4 :: #string FOCUS_CONFIG
   [1]   # Version number. Do not delete.
 
 [[style]]
@@ -764,8 +777,8 @@ scrollbar_background:                   FF191F4C
 
 FOCUS_CONFIG
 
-COLORS_1_TO_3_EXPECTED :: #string FOCUS_CONFIG
-[3]   # Version number. Do not delete.
+COLORS_1_TO_4_EXPECTED :: #string FOCUS_CONFIG
+[4]   # Version number. Do not delete.
 
 [[style]]
 
@@ -783,7 +796,7 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
-# Added after migration to version [3]
+# Added after migration to version [4]
 code_warning:                           E4D97DFF
 region_scope_export:                    15212AFF
 region_scope_file:                      15212AFF
@@ -798,11 +811,34 @@ build_panel_scrollbar_hover:            33CCCC4C
 build_panel_scrollbar_background:       10191F4C
 build_panel_title_bar:                  1C303AFF
 region_heredoc:                         10191FFF
+code_invalid:                           FF0000FF
+code_multiline_string:                  D4BC7DFF
+code_raw_string:                        D4BC7DFF
+code_char_literal:                      D4BC7DFF
+code_identifier:                        BFC9DBFF
+code_note:                              E0AD82FF
+code_number:                            D699B5FF
+code_multiline_comment:                 87919DFF
+code_modifier:                          E67D74FF
+code_attribute:                         E67D74FF
+code_enum_variant:                      BFC9DBFF
+code_macro:                             E0AD82FF
+code_builtin_variable:                  D699B5FF
+code_builtin_function:                  E0AD82FF
+code_builtin_exception:                 E0AD82FF
+code_directive:                         E67D74FF
+code_directive_modifier:                E67D74FF
+code_header:                            E67D74FF
+code_header2:                           E0AD82FF
+code_header3:                           E0AD82FF
+code_header4:                           E0AD82FF
+code_header5:                           E0AD82FF
+code_header6:                           E0AD82FF
 
 FOCUS_CONFIG
 
 
-COLORS_2_TO_3 :: #string FOCUS_CONFIG
+COLORS_2_TO_4 :: #string FOCUS_CONFIG
   [2]   # Version number. Do not delete.
 
 [[style]]
@@ -823,8 +859,8 @@ scrollbar_background:                   FF191F4C
 
 FOCUS_CONFIG
 
-COLORS_2_TO_3_EXPECTED :: #string FOCUS_CONFIG
-[3]   # Version number. Do not delete.
+COLORS_2_TO_4_EXPECTED :: #string FOCUS_CONFIG
+[4]   # Version number. Do not delete.
 
 [[style]]
 
@@ -842,15 +878,38 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
-# Added after migration to version [3]
+# Added after migration to version [4]
 region_heredoc:                         10191FFF
+code_invalid:                           FF0000FF
+code_multiline_string:                  D4BC7DFF
+code_raw_string:                        D4BC7DFF
+code_char_literal:                      D4BC7DFF
+code_identifier:                        BFC9DBFF
+code_note:                              E0AD82FF
+code_number:                            D699B5FF
+code_multiline_comment:                 87919DFF
+code_modifier:                          E67D74FF
+code_attribute:                         E67D74FF
+code_enum_variant:                      BFC9DBFF
+code_macro:                             E0AD82FF
+code_builtin_variable:                  D699B5FF
+code_builtin_function:                  E0AD82FF
+code_builtin_exception:                 E0AD82FF
+code_directive:                         E67D74FF
+code_directive_modifier:                E67D74FF
+code_header:                            E67D74FF
+code_header2:                           E0AD82FF
+code_header3:                           E0AD82FF
+code_header4:                           E0AD82FF
+code_header5:                           E0AD82FF
+code_header6:                           E0AD82FF
 
 FOCUS_CONFIG
 
 
 // Test that new colors and settings are added correctly when they are both present
 
-COLORS_AND_SETTINGS_1_TO_3 :: #string FOCUS_CONFIG
+COLORS_AND_SETTINGS_1_TO_4 :: #string FOCUS_CONFIG
   [1]   # Version number. Do not delete.
 
 [[workspace]]
@@ -890,8 +949,8 @@ scrollbar_background:                   FF191F4C
 
 FOCUS_CONFIG
 
-COLORS_AND_SETTINGS_1_TO_3_EXPECTED :: #string FOCUS_CONFIG
-[3]   # Version number. Do not delete.
+COLORS_AND_SETTINGS_1_TO_4_EXPECTED :: #string FOCUS_CONFIG
+[4]   # Version number. Do not delete.
 
 [[workspace]]
 
@@ -908,7 +967,7 @@ insert_spaces_when_pressing_tab:        true
 prefer_system_file_dialogs:             false  # Windows only
 show_cursors_off_screen:                true
 
-# Added after migration to version [3]
+# Added after migration to version [4]
 build_panel_height_percent:                    50
 build_panel_stays_in_one_place:                false  # if false, the build panel will flip to the inactive pane in two pane layouts
 build_panel_line_wrap_always_on:               true
@@ -921,6 +980,10 @@ save_current_buffer_on_build:                  false
 save_all_file_backed_buffers_on_build:         false
 disable_viewport_chasing_cursor_near_the_edge: false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts
 show_selected_text_length:                     false
+window_width:                                  -1
+window_height:                                 -1
+insert_final_newline_on_save:                  false
+status_bar_position:                           bottom
 
 [[keymap]]
 # ...
@@ -941,7 +1004,7 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
-# Added after migration to version [3]
+# Added after migration to version [4]
 code_warning:                           E4D97DFF
 region_scope_export:                    15212AFF
 region_scope_file:                      15212AFF
@@ -956,11 +1019,34 @@ build_panel_scrollbar_hover:            33CCCC4C
 build_panel_scrollbar_background:       10191F4C
 build_panel_title_bar:                  1C303AFF
 region_heredoc:                         FF191FFF
+code_invalid:                           FF0000FF
+code_multiline_string:                  D4BC7DFF
+code_raw_string:                        D4BC7DFF
+code_char_literal:                      D4BC7DFF
+code_identifier:                        BFC9DBFF
+code_note:                              E0AD82FF
+code_number:                            D699B5FF
+code_multiline_comment:                 87919DFF
+code_modifier:                          E67D74FF
+code_attribute:                         E67D74FF
+code_enum_variant:                      BFC9DBFF
+code_macro:                             E0AD82FF
+code_builtin_variable:                  D699B5FF
+code_builtin_function:                  E0AD82FF
+code_builtin_exception:                 E0AD82FF
+code_directive:                         E67D74FF
+code_directive_modifier:                E67D74FF
+code_header:                            E67D74FF
+code_header2:                           E0AD82FF
+code_header3:                           E0AD82FF
+code_header4:                           E0AD82FF
+code_header5:                           E0AD82FF
+code_header6:                           E0AD82FF
 
 FOCUS_CONFIG
 
 
-KEYBINDS_1_TO_3 :: #string FOCUS_CONFIG
+KEYBINDS_1_TO_4 :: #string FOCUS_CONFIG
 [1]  # Version number. Do not delete.
 
 [[style]]
@@ -1008,8 +1094,8 @@ Ctrl-Alt-P                  switch_to_project
 
 FOCUS_CONFIG
 
-KEYBINDS_1_TO_3_EXPECTED :: #string FOCUS_CONFIG
-[3]  # Version number. Do not delete.
+KEYBINDS_1_TO_4_EXPECTED :: #string FOCUS_CONFIG
+[4]  # Version number. Do not delete.
 
 [[style]]
 
@@ -1027,7 +1113,7 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
-# Added after migration to version [3]
+# Added after migration to version [4]
 code_warning:                           E4D97DFF
 region_scope_export:                    15212AFF
 region_scope_file:                      15212AFF
@@ -1042,6 +1128,29 @@ build_panel_scrollbar_hover:            33CCCC4C
 build_panel_scrollbar_background:       10191F4C
 build_panel_title_bar:                  1C303AFF
 region_heredoc:                         10191FFF
+code_invalid:                           FF0000FF
+code_multiline_string:                  D4BC7DFF
+code_raw_string:                        D4BC7DFF
+code_char_literal:                      D4BC7DFF
+code_identifier:                        BFC9DBFF
+code_note:                              E0AD82FF
+code_number:                            D699B5FF
+code_multiline_comment:                 87919DFF
+code_modifier:                          E67D74FF
+code_attribute:                         E67D74FF
+code_enum_variant:                      BFC9DBFF
+code_macro:                             E0AD82FF
+code_builtin_variable:                  D699B5FF
+code_builtin_function:                  E0AD82FF
+code_builtin_exception:                 E0AD82FF
+code_directive:                         E67D74FF
+code_directive_modifier:                E67D74FF
+code_header:                            E67D74FF
+code_header2:                           E0AD82FF
+code_header3:                           E0AD82FF
+code_header4:                           E0AD82FF
+code_header5:                           E0AD82FF
+code_header6:                           E0AD82FF
 
 [[keymap]]
 
@@ -1056,7 +1165,7 @@ Ctrl-Escape                 remove_additional_cursors
 Ctrl-D                      select_word_or_create_another_cursor
 Ctrl-Shift-A                select_all_occurrences
 
-# Added after migration to version [3]
+# Added after migration to version [4]
 Alt-Shift-I                 add_cursors_to_line_ends
 Alt-Shift-Ctrl-I            add_cursors_to_line_starts
 Alt-A                       align_cursors
@@ -1075,7 +1184,7 @@ Ctrl-Tab                    switch_between_open_files
 
 Ctrl-Alt-P                  switch_to_project
 
-# Added after migration to version [3]
+# Added after migration to version [4]
 Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
@@ -1088,7 +1197,7 @@ Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
 FOCUS_CONFIG
 
 
-KEYBINDS_2_TO_3 :: #string FOCUS_CONFIG
+KEYBINDS_2_TO_4 :: #string FOCUS_CONFIG
 [2]  # Version number. Do not delete.
 
 [[keymap]]
@@ -1120,8 +1229,8 @@ Ctrl-Alt-P                  switch_to_project
 
 FOCUS_CONFIG
 
-KEYBINDS_2_TO_3_EXPECTED :: #string FOCUS_CONFIG
-[3]  # Version number. Do not delete.
+KEYBINDS_2_TO_4_EXPECTED :: #string FOCUS_CONFIG
+[4]  # Version number. Do not delete.
 
 [[keymap]]
 
@@ -1150,7 +1259,7 @@ Ctrl-Tab                    switch_between_open_files
 
 Ctrl-Alt-P                  switch_to_project
 
-# Added after migration to version [3]
+# Added after migration to version [4]
 Ctrl-Shift-Alt-N            open_another_editor_instance
 F8                          go_to_next_build_error
 Ctrl-F8                     go_to_next_build_error_on_the_side
@@ -1161,7 +1270,7 @@ FOCUS_CONFIG
 
 // Test that themes can be migrated properly
 
-THEME_1_TO_3 :: #string FOCUS_CONFIG
+THEME_1_TO_4 :: #string FOCUS_CONFIG
   [1]   # Version number. Do not delete.
 
 [user interface]
@@ -1180,8 +1289,8 @@ scrollbar_background:                   FF191F4C
 
 FOCUS_CONFIG
 
-THEME_1_TO_3_EXPECTED :: #string FOCUS_CONFIG
-[3]   # Version number. Do not delete.
+THEME_1_TO_4_EXPECTED :: #string FOCUS_CONFIG
+[4]   # Version number. Do not delete.
 
 [fonts]
 font:       default
@@ -1197,7 +1306,7 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
-# Added after migration to version [3]
+# Added after migration to version [4]
 code_warning:                           E4D97DFF
 region_scope_export:                    15212AFF
 region_scope_file:                      15212AFF
@@ -1212,6 +1321,29 @@ build_panel_scrollbar_hover:            33CCCC4C
 build_panel_scrollbar_background:       10191F4C
 build_panel_title_bar:                  1C303AFF
 region_heredoc:                         10191FFF
+code_invalid:                           FF0000FF
+code_multiline_string:                  D4BC7DFF
+code_raw_string:                        D4BC7DFF
+code_char_literal:                      D4BC7DFF
+code_identifier:                        BFC9DBFF
+code_note:                              E0AD82FF
+code_number:                            D699B5FF
+code_multiline_comment:                 87919DFF
+code_modifier:                          E67D74FF
+code_attribute:                         E67D74FF
+code_enum_variant:                      BFC9DBFF
+code_macro:                             E0AD82FF
+code_builtin_variable:                  D699B5FF
+code_builtin_function:                  E0AD82FF
+code_builtin_exception:                 E0AD82FF
+code_directive:                         E67D74FF
+code_directive_modifier:                E67D74FF
+code_header:                            E67D74FF
+code_header2:                           E0AD82FF
+code_header3:                           E0AD82FF
+code_header4:                           E0AD82FF
+code_header5:                           E0AD82FF
+code_header6:                           E0AD82FF
 
 FOCUS_CONFIG
 

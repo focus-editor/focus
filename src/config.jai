@@ -1,4 +1,4 @@
-CURRENT_CONFIG_VERSION :: 3;
+CURRENT_CONFIG_VERSION :: 4;
 
 load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
     config_path := tprint("%/global.focus-config", config_dir);
@@ -298,13 +298,9 @@ apply_style :: (parsed: Parsed_Config) {
 
     // Colors
     for parsed.colors {
-        color := map_name_to_color(it.color_name);
-        if color != .NONE {
-            COLOR_MAP[color] = it.color;
-        } else {
-            log_error("Couldn't map color name '%' to color enum value. This is a bug", it.color_name);
-        }
+        COLOR_MAP[it.color_id] = it.color;
     }
+    // TODO: @colorref - resolve references
 
     platform_set_border_color();
 }
