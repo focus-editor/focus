@@ -83,7 +83,7 @@ LightweightRenderingView :: struct {
     #as using nsview: NSView;
 
     swapBuffers :: (self: *void) {
-        objc_msgSend(self, _sel.swapBuffers);
+        objc_msgSend_typed(self, _sel.swapBuffers);
     }
 }
 
@@ -91,11 +91,12 @@ LightweightOpenGLView :: struct {
     #as using lightweightrenderingview: LightweightRenderingView;
 
     glContext :: (self: *LightweightOpenGLView) -> *NSOpenGLContext {
-        return xx objc_msgSend(self, _sel.glContext);
+        return xx objc_msgSend_typed(self, _sel.glContext);
     }
 
     setGlContext :: (self: *LightweightOpenGLView, glc: *NSOpenGLContext) {
-        objc_msgSend(self, _sel.setGlContext_, glc);
+        func :: #type (*void, Selector, *NSOpenGLContext) -> void #c_call;
+        (cast(func) objc_msgSend)(self, _sel.setGlContext_, glc);
     }
 }
 

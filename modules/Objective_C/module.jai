@@ -78,8 +78,8 @@ init_objective_c_selector_struct :: (selectors: *$T) {
     BOOL :: bool;
 }
 
-YES :: 1;
-NO  :: 0;
+YES: BOOL : 1;
+NO:  BOOL : 0;
 
 NSUInteger :: u64;
 NSUIntegerMax :: 0xFFFFFFFFFFFFFFFF;
@@ -126,7 +126,8 @@ superclass :: (self: id) -> Class #no_context {
 }
 
 isEqual :: (self: id, object: id) -> bool #no_context {
-    return objc_msgSend_typed(self, _sel.isEqual_, object) != null;
+    func :: #type (*void, Selector, id) -> BOOL #c_call;
+    return (cast(func) objc_msgSend)(self, _sel.isEqual_, object) == YES;
 }
 
 // helper functions so we don't need to have messy
@@ -660,18 +661,9 @@ _NSConcreteGlobalBlock :: () #foreign libSystem;
     #load "bindings/x64/runtime.jai";
     #load "bindings/x64/message.jai";
 
-    // The SDK we use for the x64 bindings still has typed objc_msgSend declarations,
-    // so the declarations below are almost the same as the orignals, but with target and result changed to *void to avoid some casts. :ObjectiveCMsgSendTypes:
-    objc_msgSend_typed       :: (target: *void, selector: Selector, args: ..Any) -> *void #foreign libobjc "objc_msgSend";
-    objc_msgSend_stret_typed :: (target: *void, selector: Selector, args: ..Any) -> void #foreign libobjc "objc_msgSend_stret";
 } else {
     #load "bindings/arm64/runtime.jai";
     #load "bindings/arm64/message.jai";
-
-    // In newer SDKs, Apple dropped the type arguments from objc_msgSend and its cousins,
-    // so we re-define them here to avoid painful casting everywhere. :ObjectiveCMsgSendTypes:
-    objc_msgSend_typed :: (target: *void, selector: Selector, args: ..Any) -> *void #foreign libobjc "objc_msgSend";
-    objc_msgSend_stret_typed :: objc_msgSend_typed;
 
     // Arm64 does not have separate *_stret variants because its ABI does not need them.
     objc_msgSend_stret                  :: objc_msgSend;
@@ -679,6 +671,17 @@ _NSConcreteGlobalBlock :: () #foreign libSystem;
     method_invoke_stret                 :: method_invoke;
     _objc_msgForward_stret              :: _objc_msgForward;
     class_getMethodImplementation_stret :: class_getMethodImplementation;
+}
+
+// The SDK we use for the x64 bindings still has typed objc_msgSend declarations.
+// But in newer SDKs Apple dropped the type arguments from objc_msgSend and its cousins,
+// so we re-define a basic version here to avoid painful casting everywhere.
+// But we can’t add the old x64 varargs argument because that changes the ABI rules on ARM64 (and we can’t forward varargs to #c_call even on x64 for now anyways).
+// :ObjectiveCMsgSendTypes:
+//  -rluba, 2024-04-23
+objc_msgSend_typed :: inline (target: *void, selector: Selector) -> *void #no_context {
+    func :: #type (*void, Selector) -> *void #c_call;
+    return (cast(func) objc_msgSend)(target, selector);
 }
 
 

@@ -1,7 +1,7 @@
 //
 // This file was auto-generated using the following command:
 //
-// jai modules/Objective_C/generate.jai
+// jai modules/Objective_C/generate.jai - -x64
 //
 
 

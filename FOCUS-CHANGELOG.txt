@@ -23,7 +23,7 @@
         + Configs and themes will be migrated to version [4] with the new colors automatically derived from the old colors
         + You can always check the default config for the full list of available colors (use the `Show Default Config` command)
 + Bug fixes:
-    + ...
+    + Linux: Fixed a bug that caused inconsistent trackpad scrolling on Wayland (thanks @Mythique)
 + Other changes:
     + ...
 
