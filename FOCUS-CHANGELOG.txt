@@ -20,7 +20,7 @@
 + New features:
     + New option: `status_bar_position`. Allows changing the position of the status bar to either the `top` or `bottom` of the editor window. Defaults to `bottom`.
 + Bug fixes:
-    + ...
+    + Linux: Fixed a bug that caused inconsistent trackpad scrolling on Wayland (thanks @Mythique)
 + Other changes:
     + ...
 

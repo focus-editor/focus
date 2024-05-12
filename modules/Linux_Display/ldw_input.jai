@@ -156,7 +156,7 @@ pointer_listener :: wl_pointer_listener.{
         ctx: Context;
         push_context ctx {
             d: *Wayland_Display = wl_proxy_get_user_data(self);
-            sign := ifx (wl_fixed_to_int(value) < 0) then cast(s32)-1 else 1;
+            sign := ifx (wl_fixed_to_double(value) < 0) then cast(s32)-1 else 1;
             delta := (WHEEL_DELTA / 2); // @TODO: this is set on a "feels good on my machine" basis, should be calculated some other way (perhaps based on the height of a line?)
             if !d.pointer_axis_accumulator[axis] {
                 d.pointer_axis_accumulator[axis] = d.pointer_axis_multiplier[axis] * sign * delta;
