@@ -174,7 +174,7 @@ parse_identifier_or_raw_string :: (using tokenizer: *Rust_Tokenizer, token: *Tok
     // Check for raw strings r#"..."# and br#"..."#
     if (t + 2 < max_t && t.* == #char "r" && (t+1).* == #char "#") ||
        (t + 3 < max_t && t.* == #char "b" && (t+1).* == #char "r" && (t+2).* == #char "#") {
-        token.type = .string_literal;
+        token.type = .raw_string;
 
         if t.* == #char "b" then t += 1;
         t += 2;  // skip the first r#
@@ -416,7 +416,7 @@ parse_single_quote :: (using tokenizer: *Rust_Tokenizer, token: *Token) {
 
     // Maybe it's a char literal like '\n' or '\u{...}'
     if t.* == #char "\\" {
-        token.type = .string_literal;
+        token.type = .char_literal;
         while t < max_t && t.* != #char "'" && t.* != #char "\n"  t += 1;  // just allow however many characters they want. We're not meant to check syntax.
         return;
     }
@@ -424,7 +424,7 @@ parse_single_quote :: (using tokenizer: *Rust_Tokenizer, token: *Token) {
     // Maybe it's a char literal like '<some unicode char>'
     next_char := unicode_next_character(t);
     if next_char < max_t && next_char.* == #char "'" {
-        token.type = .string_literal;
+        token.type = .char_literal;
         t = next_char;
         t += 1;
         return;
