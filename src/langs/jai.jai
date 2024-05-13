@@ -101,10 +101,19 @@ get_jai_tokenizer :: (using buffer: *Buffer, start_offset := -1, count := -1) ->
     return tokenizer;
 }
 
+peek_next_token :: (using tokenizer: Jai_Tokenizer, skip_white_space := true) -> Token {
+    tokenizer_copy := tokenizer;
+    if skip_white_space then eat_white_space(*tokenizer_copy);
+    token := get_next_token(*tokenizer_copy);
+    return token;
+}
+
 eat_white_space :: (using tokenizer: *Jai_Tokenizer) {
+    old_t := t;
     while t < max_t && is_white_space(t.*) {
         t += 1;
     }
+    had_white_space_to_skip = t != old_t;
 }
 
 get_next_token :: (using tokenizer: *Jai_Tokenizer) -> Token {
@@ -405,6 +414,16 @@ parse_period :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
             token.type      = .operation;
             token.operation = .period_asterisk;
             t += 1;
+
+        case;
+            // Maybe it's an enum variant
+            if last_tokens[1].type != .identifier && tokenizer.had_white_space_to_skip {
+                next_token := peek_next_token(tokenizer);
+                if next_token.type == .identifier {
+                    token.type = .enum_variant;
+                    t = buf.data + next_token.start + next_token.len;  // fast-forward
+                }
+            }
     }
 }
 

@@ -22,6 +22,7 @@
     + Code colors have been revamped. There are now more colors available in the config, which roughly correspond to the code tokens produced by language tokenizers.
         + Configs and themes will be migrated to version [4] with the new colors automatically derived from the old colors
         + You can always check the default config for the full list of available colors (use the `Show Default Config` command)
+        + Do note that not all tokens are present in all languages. For example, `code_enum_variant` only works with Jai, Odin and Zig at the moment.
 + Bug fixes:
     + Linux: Fixed a bug that caused inconsistent trackpad scrolling on Wayland (thanks @Mythique)
 + Other changes:

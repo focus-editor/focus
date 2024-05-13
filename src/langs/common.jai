@@ -69,9 +69,18 @@ eat_until_newline :: (using tokenizer: *Tokenizer) {
 }
 
 eat_white_space :: (using tokenizer: *Tokenizer) {
+    t_old := t;
     while t < max_t && is_white_space(t.*) {
         t += 1;
     }
+    had_white_space_to_skip = t != t_old;
+}
+
+peek_next_token :: (using tokenizer: Tokenizer, skip_white_space := true, $Token: Type, $get_next_token: (*Tokenizer) -> Token) -> Token {
+    tokenizer_copy := tokenizer;
+    if skip_white_space then eat_white_space(*tokenizer_copy);
+    token := get_next_token(*tokenizer_copy);
+    return token;
 }
 
 is_hex :: inline (c: u8) -> bool {
@@ -192,6 +201,7 @@ Tokenizer :: struct {
     t:       *u8;  // cursor
 
     prev_tokens: [3] *void;
+    had_white_space_to_skip := false;  // to indicate whether any white space was on the left of the current token
 }
 
 Code_Highlight :: struct {

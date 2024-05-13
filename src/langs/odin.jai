@@ -476,6 +476,16 @@ parse_period :: (using tokenizer: *Odin_Tokenizer, token: *Token) {
                     token.operation = .double_period_less_than;
                     t += 1;
             }
+
+        case;
+            // Maybe it's an enum variant
+            if last_tokens[0].type != .identifier && tokenizer.had_white_space_to_skip {
+                next_token := peek_next_token(tokenizer);
+                if next_token.type == .identifier {
+                    token.type = .enum_variant;
+                    t = buf.data + next_token.start + next_token.len;  // fast-forward
+                }
+            }
     }
 }
 
@@ -700,6 +710,7 @@ Odin_Tokenizer :: struct {
     t:       *u8;  // cursor
 
     last_tokens: [3] Token;  // to retroactively highlight procedures
+    had_white_space_to_skip := false;
 }
 
 Token :: struct {
@@ -935,10 +946,18 @@ MAX_DIRECTIVE_LENGTH :: #run -> s32 {
 }
 
 eat_white_space :: (using tokenizer: *Odin_Tokenizer) {
+    old_t := t;
     while t < max_t {
         if t.* == #char "\n"    then break;  // Make newlines a token
         if !is_white_space(t.*) then break;
         t += 1;
     }
+    had_white_space_to_skip = t != old_t;
 }
 
+peek_next_token :: (using tokenizer: Odin_Tokenizer, skip_white_space := true) -> Token {
+    tokenizer_copy := tokenizer;
+    if skip_white_space then eat_white_space(*tokenizer_copy);
+    token := get_next_token(*tokenizer_copy);
+    return token;
+}

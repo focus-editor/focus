@@ -1,22 +1,26 @@
 tokenize_zig :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_tokenizer(buffer, start_offset, count);
 
-    last_token: Token;  // to retroactively highlight functions
+    // Allocate temporary space for tracking one previous token
+    tokenizer.prev_tokens[0] = New(Token,, temp);
 
     while true {
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
 
         using tokenizer;
+
+        prev_token := cast(*Token) prev_tokens[0];
+
         // Maybe retroactively highlight a function
         if token.type == .punctuation && token.punctuation == .l_paren {
             // Handle "func("
-            if last_token.type == .identifier {
-                memset(tokens.data + last_token.start, xx Token_Type.function, last_token.len);
+            if prev_token.type == .identifier {
+                memset(tokens.data + prev_token.start, xx Token_Type.function, prev_token.len);
             }
         }
 
-        last_token = token;
+        prev_token.* = token;
 
         memset(tokens.data + token.start, xx token.type, token.len);
     }
@@ -202,6 +206,17 @@ parse_period :: (using tokenizer: *Tokenizer, token: *Token) {
             token.type      = .operation;
             token.operation = .period_asterisk;
             t += 1;
+
+        case;
+            // Maybe it's an enum variant
+            prev_token := cast(*Token) prev_tokens[0];
+            if prev_token.type != .identifier && tokenizer.had_white_space_to_skip {
+                next_token := peek_next_token(tokenizer, skip_white_space = true, Token, get_next_token);
+                if next_token.type == .identifier {
+                    token.type = .enum_variant;
+                    t = buf.data + next_token.start + next_token.len;  // fast-forward
+                }
+            }
     }
 }
 
