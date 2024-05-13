@@ -1,13 +1,16 @@
 // We have a crappy parser here which only does some very superficial parsing.
 // The reason is because it's much simpler than keeping valid parsers for each historical version.
 
-maybe_migrate_config :: (name: string, file_data: string, assume_section := "") -> migrated: bool, modified_data := "" {
+maybe_migrate_config :: (name: string, file_data: string) -> migrated: bool, modified_data := "" {
     trimmed_data := trim_left(file_data, " \t\n\r");  // skip empty lines, otherwise the handler will crash!
     start_from_memory(*handler, name, name, trimmed_data);
     if handler.failed return false;
     if handler.version >= CURRENT_CONFIG_VERSION || handler.version <= 0 return false;
 
     is_global_config := contains_nocase(name, "global.focus-config");
+
+    assume_section := "";
+    if ends_with_nocase(name, ".focus-theme") then assume_section = "style";
 
     // Do one full pass to collect information, not touching anything
     config_info: Config_Info;
@@ -503,11 +506,12 @@ RUN_TESTS :: false;
     run_test("Settings and colors [1] to [4]",  "global.focus-config",  COLORS_AND_SETTINGS_1_TO_4,    COLORS_AND_SETTINGS_1_TO_4_EXPECTED);
     run_test("Keybinds [1] to [4]",             "global.focus-config",  KEYBINDS_1_TO_4,               KEYBINDS_1_TO_4_EXPECTED);
     run_test("Keybinds [2] to [4]",             "global.focus-config",  KEYBINDS_2_TO_4,               KEYBINDS_2_TO_4_EXPECTED);
-    run_test("Theme [1] to [4]",                "nord.focus-theme",     THEME_1_TO_4,                  THEME_1_TO_4_EXPECTED, assume_section = "style");
+    run_test("Theme [1] to [4]",                "nord.focus-theme",     THEME_1_TO_4,                  THEME_1_TO_4_EXPECTED);
+    run_test("Theme [3] to [4]",                "zenburn.focus-theme",  THEME_3_TO_4,                  THEME_3_TO_4_EXPECTED);
 }
 
-run_test :: (test_name: string, file_name: string, config_data: string, expected_data: string, assume_section := "") {
-    migrated, modified_data := maybe_migrate_config(file_name, config_data, assume_section = assume_section);
+run_test :: (test_name: string, file_name: string, config_data: string, expected_data: string) {
+    migrated, modified_data := maybe_migrate_config(file_name, config_data);
     assert(migrated, "%: unexpectedly did not migrate successfully", test_name);
     if modified_data != expected_data {
         print("EXPECTED DATA ========================\n");
@@ -1347,3 +1351,70 @@ code_header6:                           E0AD82FF
 
 FOCUS_CONFIG
 
+
+THEME_3_TO_4 :: #string FOCUS_CONFIG
+  [3]   # Version number. Do not delete.
+
+[user interface]
+font:       default
+font_size:  14
+
+[colors]
+background:                             15212AFF
+background_dark:                        10191FFF
+background_highlight:                   18262FFF
+background_light:                       1A2831FF
+background_bright:                      21333FFF
+
+code_string:                            213344FF
+
+scrollbar_hover:                        FFCCCC4C
+scrollbar_background:                   FF191F4C
+
+FOCUS_CONFIG
+
+THEME_3_TO_4_EXPECTED :: #string FOCUS_CONFIG
+[4]   # Version number. Do not delete.
+
+[fonts]
+font:       default
+font_size:  14
+
+[colors]
+background0:                            15212AFF
+background1:                            10191FFF
+background2:                            18262FFF
+background3:                            1A2831FF
+background4:                            21333FFF
+
+code_string_literal:                    213344FF
+
+scrollbar_hover:                        FFCCCC4C
+scrollbar_background:                   FF191F4C
+
+# Added after migration to version [4]
+code_invalid:                           FF0000FF
+code_multiline_string:                  213344FF
+code_raw_string:                        213344FF
+code_char_literal:                      213344FF
+code_identifier:                        BFC9DBFF
+code_note:                              E0AD82FF
+code_number:                            D699B5FF
+code_multiline_comment:                 87919DFF
+code_modifier:                          E67D74FF
+code_attribute:                         E67D74FF
+code_enum_variant:                      BFC9DBFF
+code_macro:                             E0AD82FF
+code_builtin_variable:                  D699B5FF
+code_builtin_function:                  E0AD82FF
+code_builtin_exception:                 E0AD82FF
+code_directive:                         E67D74FF
+code_directive_modifier:                E67D74FF
+code_header:                            E67D74FF
+code_header2:                           E0AD82FF
+code_header3:                           E0AD82FF
+code_header4:                           E0AD82FF
+code_header5:                           E0AD82FF
+code_header6:                           E0AD82FF
+
+FOCUS_CONFIG

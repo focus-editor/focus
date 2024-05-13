@@ -107,7 +107,7 @@ preview_selected_theme :: () {
         return;
     }
 
-    migrated, new_file_data := maybe_migrate_config(theme.path, file_data, assume_section = "style");
+    migrated, new_file_data := maybe_migrate_config(theme.path, file_data);
     if migrated {
         success := write_entire_file(theme.path, new_file_data);
         if !success then add_user_error("We migrated theme file '%' to version [%],\nbut could't save the file. Is it writable?", theme.path, CURRENT_CONFIG_VERSION);

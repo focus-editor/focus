@@ -35,19 +35,6 @@ ui_error:                               e0211dFF
 ui_error_bright:                        FF0000FF # TODO
 ui_success:                             42ae2cFF
 
-code_default:                           655370FF
-code_comment:                           2aa1aeFF
-code_type:                              ba2f59FF
-code_function:                          6c3163FF
-code_punctuation:                       655370FF
-code_operation:                         655370FF
-code_string:                            2d9574FF
-code_value:                             4e3163FF
-code_highlight:                         ba2f59FF
-code_error:                             e0211dFF
-code_keyword:                           3a81c3FF
-code_warning:                           E4D97DFF
-
 region_scope_export:                    fbf8efFF
 region_scope_file:                      fbf8efFF
 region_scope_module:                    fbf8efFF
@@ -62,3 +49,39 @@ build_panel_scrollbar:                  33CCCC19
 build_panel_scrollbar_hover:            33CCCC4C
 build_panel_scrollbar_background:       10191F4C
 build_panel_title_bar:                  d2cedaFF
+
+code_default:                           655370FF
+code_comment:                           2aa1aeFF
+code_type:                              ba2f59FF
+code_function:                          6c3163FF
+code_punctuation:                       655370FF
+code_operation:                         655370FF
+code_string_literal:                    2d9574FF
+code_value:                             4e3163FF
+code_highlight:                         ba2f59FF
+code_error:                             e0211dFF
+code_keyword:                           3a81c3FF
+code_warning:                           E4D97DFF
+code_invalid:                           FF0000FF
+code_multiline_string:                  2d9574FF
+code_raw_string:                        2d9574FF
+code_char_literal:                      2d9574FF
+code_identifier:                        BFC9DBFF
+code_note:                              E0AD82FF
+code_number:                            D699B5FF
+code_multiline_comment:                 87919DFF
+code_modifier:                          E67D74FF
+code_attribute:                         E67D74FF
+code_enum_variant:                      BFC9DBFF
+code_macro:                             E0AD82FF
+code_builtin_variable:                  D699B5FF
+code_builtin_function:                  E0AD82FF
+code_builtin_exception:                 E0AD82FF
+code_directive:                         E67D74FF
+code_directive_modifier:                E67D74FF
+code_header:                            E67D74FF
+code_header2:                           E0AD82FF
+code_header3:                           E0AD82FF
+code_header4:                           E0AD82FF
+code_header5:                           E0AD82FF
+code_header6:                           E0AD82FF
