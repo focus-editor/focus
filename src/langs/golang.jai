@@ -437,148 +437,70 @@ Token :: struct {
     }
 }
 
-Keyword :: enum u16 {
-    kw_break;
-    kw_case;
-    kw_chan;
-    kw_continue;
-    kw_default;
-    kw_defer;
-    kw_else;
-    kw_fallthrough;
-    kw_for;
-    kw_func;
-    kw_go;
-    kw_goto;
-    kw_if;
-    kw_import;
-    kw_interface;
-    kw_map;
-    kw_package;
-    kw_range;
-    kw_return;
-    kw_select;
-    kw_struct;
-    kw_switch;
-    kw_type;
-    kw_var;
+PUNCTUATION :: string.[
+    "semicolon", "backslash", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", "period", "comma",
+];
 
-    kwv_false;
-    kwv_true;
-    kwv_nil;
+OPERATIONS :: string.[
+    "arrow", "bang", "backtick", "pipe", "double_pipe", "pipe_equal", "equal", "equal_equal", "bang_equal", "percent",
+    "percent_equal", "less_than", "double_less_than", "less_than_equal", "greater_than", "greater_than_equal", "minus",
+    "minus_equal", "minus_minus", "asterisk", "asterisk_equal", "colon", "slash", "plus", "plus_equal", "plus_plus",
+    "slash_equal", "ampersand", "double_ampersand", "ampersand_equal", "tilde", "question", "unknown", "caret", "caret_equal",
+];
 
-    kwm_const;
+KEYWORDS :: string.[
+    "break", "case", "chan", "continue", "default", "defer", "else", "fallthrough", "for", "func", "go", "goto", "if",
+    "import", "interface", "map", "package", "range", "return", "select", "struct", "switch", "type", "var",
+];
 
-    // built-in types
-    kwt_bool;
-    kwt_string;
-    kwt_int8;
-    kwt_uint8;
-    kwt_byte;
-    kwt_int16;
-    kwt_uint16;
-    kwt_int32;
-    kwt_rune;
-    kwt_uint32;
-    kwt_int64;
-    kwt_uint64;
-    kwt_int;
-    kwt_uint;
-    kwt_uintptr;
-    kwt_float32;
-    kwt_float64;
-    kwt_complex64;
-    kwt_complex128;
-    kwt_error;
+TYPE_KEYWORDS :: string.[
+    "bool", "string", "int8", "uint8", "byte", "int16", "uint16", "int32", "rune", "uint32", "int64", "uint64", "int", "uint",
+    "uintptr", "float32", "float64", "complex64", "complex128", "error",
+];
+
+VALUE_KEYWORDS :: string.[
+    "false", "true", "nil",
+];
+
+MODIFIER_KEYWORDS :: string.[
+    "const",
+];
+
+#insert -> string {
+    b: String_Builder;
+    init_string_builder(*b);
+
+    define_enum :: (b: *String_Builder, enum_name: string, prefix: string, value_lists: [][] string) {
+        print_to_builder(b, "% :: enum u16 {\n", enum_name);
+        for values : value_lists {
+            for v : values print_to_builder(b, "    %0%;\n", prefix, v);
+        }
+        print_to_builder(b, "}\n");
+    }
+
+    define_enum(*b, "Punctuation",  "",    .[PUNCTUATION]);
+    define_enum(*b, "Operation",    "",    .[OPERATIONS]);
+    define_enum(*b, "Keyword",      "kw_", .[KEYWORDS, TYPE_KEYWORDS, VALUE_KEYWORDS, MODIFIER_KEYWORDS]);
+
+    return builder_to_string(*b);
 }
 
-Operation :: enum u16 {
-    arrow;
-    bang;
-    backtick;
-    pipe;
-    double_pipe;
-    pipe_equal;
-    equal;
-    equal_equal;
-    bang_equal;
-    percent;
-    percent_equal;
-    less_than;
-    double_less_than;
-    less_than_equal;
-    greater_than;
-    greater_than_equal;
-    minus;
-    minus_equal;
-    minus_minus;
-    asterisk;
-    asterisk_equal;
-    colon;
-    slash;
-    plus;
-    plus_equal;
-    plus_plus;
-    slash_equal;
-    ampersand;
-    double_ampersand;
-    ampersand_equal;
-    tilde;
-    question;
-    unknown;
-    caret;
-    caret_equal;
-}
-
-Punctuation :: enum u16 {
-    semicolon;
-    backslash;
-    l_paren;
-    r_paren;
-    l_brace;
-    r_brace;
-    l_bracket;
-    r_bracket;
-    period;
-    comma;
-}
-
-//- Keyword Specifics
 Keyword_Token :: struct {
     type: Token_Type;
     keyword: Keyword;
 }
-// KEYWORD_MAP: Table(string, Keyword_Token);
+
 KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
     table: Table(string, Keyword_Token);
-    // _, keywords_count := enum_range(Keyword);
-    keywords_count := 100;
-    size := 2 * (keywords_count);
+    size := 10 * (KEYWORDS.count + TYPE_KEYWORDS.count + VALUE_KEYWORDS.count);
     init(*table, size);
 
     #insert -> string {
         b: String_Builder;
-        init_string_builder(*b);
-        curr_type := "keyword";
-        curr_slice_count := 3;
-        for enum_names(Keyword) {
-            if starts_with(it, "kwt") {
-                curr_type = "type";
-                curr_slice_count = 4;
-            } else if starts_with(it, "kwm") {
-                curr_type = "modifier";
-                curr_slice_count = 4;
-            } else if starts_with(it, "kwv") {
-                curr_type = "value";
-                curr_slice_count = 4;
-            } else {
-                curr_type = "keyword";
-                curr_slice_count = 3;
-            }
-
-            print_to_builder(*b, "table_add(*table, \"%\", Keyword_Token.{type = .%, keyword = .%});\n",
-                            slice(it, curr_slice_count, it.count - curr_slice_count), curr_type, it);
-        }
+        for KEYWORDS           append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword,  keyword = .kw_%1 });\n", it));
+        for TYPE_KEYWORDS      append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .type,     keyword = .kw_%1 });\n", it));
+        for VALUE_KEYWORDS     append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value,    keyword = .kw_%1 });\n", it));
+        for MODIFIER_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .modifier, keyword = .kw_%1 });\n", it));
         return builder_to_string(*b);
     }
 
@@ -586,19 +508,11 @@ KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
 }
 
 MAX_KEYWORD_LENGTH :: #run -> s32 {
-    max_len := 0;
-
-    curr_slice_count := 3;
-
-    for enum_names(Keyword) {
-        if starts_with(it, "kwt") curr_slice_count = 4;
-        else if starts_with(it, "kwm") curr_slice_count = 4;
-        else if starts_with(it, "kwv") curr_slice_count = 4;
-        else curr_slice_count = 3;
-
-        actual := slice(it, curr_slice_count, it.count - curr_slice_count);
-        if actual.count > max_len max_len = actual.count;
-    }
-    return xx max_len;
+    result: s64;
+    for KEYWORDS          { if it.count > result then result = it.count; }
+    for TYPE_KEYWORDS     { if it.count > result then result = it.count; }
+    for VALUE_KEYWORDS    { if it.count > result then result = it.count; }
+    for MODIFIER_KEYWORDS { if it.count > result then result = it.count; }
+    return xx result;
 }
 

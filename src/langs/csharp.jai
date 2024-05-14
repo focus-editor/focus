@@ -147,6 +147,7 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token, check_for_keywo
 
     if check_for_keyword && identifier.count <= MAX_KEYWORD_LENGTH {
         kw_token, ok := table_find(*KEYWORD_MAP, identifier);
+
         if ok { token.type = kw_token.type; token.keyword = kw_token.keyword; return; }
     }
 }
@@ -368,7 +369,7 @@ parse_compiler_directive :: (using tokenizer: *Tokenizer, token: *Token) {
 
     // Check if it's one of the existing directives
     if directive.count > MAX_DIRECTIVE_LENGTH return;
-    token_directive, ok := table_find(*COMPILER_DIRECTIVES_MAP, directive);
+    token_directive, ok := table_find(*DIRECTIVES_MAP, directive);
     if ok {
         token.type = .directive;
         token.directive = token_directive;
@@ -679,214 +680,64 @@ Token :: struct {
     }
 }
 
-// https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords
-Keyword :: enum u16 {
-    // Reserved identifiers
-    kw_as;
-    kw_base;
-    kw_break;
-    kw_case;
-    kw_catch;
-    kw_checked;
-    kw_class;
-    kw_continue;
-    kw_delegate;
-    kw_do;
-    kw_else;
-    kw_enum;
-    kw_explicit;
-    kw_finally;
-    kw_fixed;
-    kw_for;
-    kw_foreach;
-    kw_goto;
-    kw_if;
-    kw_implicit;
-    kw_in; // Used in other contexts besides modifier
-    kw_interface;
-    kw_is;
-    kw_lock;
-    kw_namespace;
-    kw_new; // Used in other contexts besides modifier
-    kw_operator;
-    kw_out; // Used in other contexts besides modifier
-    kw_params;
-    kw_ref;
-    kw_return;
-    kw_sizeof;
-    kw_stackalloc;
-    kw_struct;
-    kw_switch;
-    kw_this;
-    kw_throw;
-    kw_try;
-    kw_typeof;
-    kw_unchecked;
-    kw_using;
-    kw_while;
+PUNCTUATION :: string.[
+    "semicolon", "backslash", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", "period", "comma",
+];
 
-    kwv_default;
-    kwv_false;
-    kwv_null;
-    kwv_true;
+OPERATIONS :: string.[
+    "arrow", "bang", "pipe", "double_pipe", "pipe_equal", "equal", "equal_equal", "bang_equal", "percent", "percent_equal",
+    "less_than", "double_less_than", "less_than_equal", "greater_than", "greater_than_equal", "minus", "minus_equal",
+    "minus_minus", "asterisk", "asterisk_equal", "colon", "slash", "plus", "plus_equal", "plus_plus", "slash_equal",
+    "ampersand", "double_ampersand", "ampersand_equal", "tilde", "question", "unknown", "caret", "caret_equal",
+];
 
-    kwm_abstract;
-    kwm_const;
-    kwm_event;
-    kwm_extern;
-    kwm_file;
-    kwm_internal;
-    kwm_override;
-    kwm_private;
-    kwm_protected;
-    kwm_public;
-    kwm_readonly;
-    kwm_sealed;
-    kwm_static;
-    kwm_unsafe;
-    kwm_virtual;
-    kwm_volatile;
+KEYWORDS :: string.[
+    "token", "as", "base", "break", "case", "catch", "checked", "class", "continue", "delegate", "do", "else", "enum",
+    "explicit", "finally", "fixed", "for", "foreach", "goto", "if", "implicit", "in", "interface", "is", "lock", "namespace",
+    "new", "operator", "out", "params", "ref", "return", "sizeof", "stackalloc", "struct", "switch", "this", "throw", "try",
+    "typeof", "unchecked", "using", "while", "add", "and", "alias", "ascending", "args", "await", "by", "descending",
+    "dynamic", "equals", "file", "from", "get", "global", "group", "init", "into", "join", "let", "managed", "nameof", "not",
+    "notnull", "on", "or", "orderby", "partial", "record", "remove", "required", "scoped", "select", "set", "unmanaged",
+    "value", "var", "when", "where", "with", "yield",
+];
 
-    kwt_bool;
-    kwt_byte;
-    kwt_char;
-    kwt_decimal;
-    kwt_double;
-    kwt_float;
-    kwt_int;
-    kwt_long;
-    kwt_object;
-    kwt_sbyte;
-    kwt_short;
-    kwt_string;
-    kwt_uint;
-    kwt_ulong;
-    kwt_ushort;
-    kwt_void;
-    // Type aliases
-    // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/built-in-types
-    kwt_Boolean;
-    kwt_Byte;
-    kwt_Char;
-    kwt_Decimal;
-    kwt_Double;
-    kwt_Single;
-    kwt_Int32;
-    kwt_Int64;
-    kwt_Object;
-    kwt_SByte;
-    kwt_Int16;
-    kwt_String;
-    kwt_Uint32;
-    kwt_UInt64;
-    kwt_UInt16;
-    kwt_Void;
+TYPE_KEYWORDS :: string.[
+    "bool", "byte", "char", "decimal", "double", "float", "int", "long", "object", "sbyte", "short", "string", "uint",
+    "ulong", "ushort", "void", "Boolean", "Byte", "Char", "Decimal", "Double", "Single", "Int32", "Int64", "Object", "SByte",
+    "Int16", "String", "Uint32", "UInt64", "UInt16", "Void", "nint", "nuint",
+];
 
-    // Contextual keywords
-    kw_add;
-    kw_and;
-    kw_alias;
-    kw_ascending;
-    kw_args;
-    kw_await;
-    kw_by;
-    kw_descending;
-    kw_dynamic;
-    kw_equals;
-    kw_file;
-    kw_from;
-    kw_get;
-    kw_global;
-    kw_group;
-    kw_init;
-    kw_into;
-    kw_join;
-    kw_let;
-    kw_managed;
-    kw_nameof;
-    kw_not;
-    kw_notnull;
-    kw_on;
-    kw_or;
-    kw_orderby;
-    kw_partial;
-    kw_record;
-    kw_remove;
-    kw_required;
-    kw_scoped;
-    kw_select;
-    kw_set;
-    kw_unmanaged;
-    kw_value;
-    kw_var;
-    kw_when;
-    kw_where;
-    kw_with;
-    kw_yield;
+VALUE_KEYWORDS :: string.[
+    "default", "false", "null", "true",
+];
 
-    kwm_async;
+MODIFIER_KEYWORDS :: string.[
+    "abstract", "const", "event", "extern", "internal", "override", "private", "protected", "public", "readonly",
+    "sealed", "static", "unsafe", "virtual", "volatile", "async",
+];
 
-    kwt_nint;
-    kwt_nuint;
-}
+DIRECTIVES :: string.[
+    "nullable", "if", "elif", "else", "endif",
+];
 
-Operation :: enum u16 {
-    arrow;
-    bang;
-    pipe;
-    double_pipe;
-    pipe_equal;
-    equal;
-    equal_equal;
-    bang_equal;
-    percent;
-    percent_equal;
-    less_than;
-    double_less_than;
-    less_than_equal;
-    greater_than;
-    greater_than_equal;
-    minus;
-    minus_equal;
-    minus_minus;
-    asterisk;
-    asterisk_equal;
-    colon;
-    slash;
-    plus;
-    plus_equal;
-    plus_plus;
-    slash_equal;
-    ampersand;
-    double_ampersand;
-    ampersand_equal;
-    tilde;
-    question;
-    unknown;
-    caret;
-    caret_equal;
-}
+#insert -> string {
+    b: String_Builder;
+    init_string_builder(*b);
 
-Punctuation :: enum u16 {
-    semicolon;
-    backslash;
-    l_paren;
-    r_paren;
-    l_brace;
-    r_brace;
-    l_bracket;
-    r_bracket;
-    period;
-    comma;
-}
+    define_enum :: (b: *String_Builder, enum_name: string, prefix: string, value_lists: [][] string) {
+        print_to_builder(b, "% :: enum u16 {\n", enum_name);
+        for values : value_lists {
+            for v : values print_to_builder(b, "    %0%;\n", prefix, v);
+        }
+        print_to_builder(b, "}\n");
+    }
 
-// https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/preprocessor-directives
-Directive :: enum u16 {
-    di_nullable;
-    di_if;
-    di_elif;
-    di_else;
-    di_endif;
+    define_enum(*b, "Punctuation",  "",    .[PUNCTUATION]);
+    define_enum(*b, "Operation",    "",    .[OPERATIONS]);
+    define_enum(*b, "Keyword",      "kw_", .[KEYWORDS, TYPE_KEYWORDS, VALUE_KEYWORDS, MODIFIER_KEYWORDS]);
+    define_enum(*b, "Directive",    "di_", .[DIRECTIVES]);
+
+    return builder_to_string(*b);
 }
 
 Keyword_Token :: struct {
@@ -896,61 +747,50 @@ Keyword_Token :: struct {
 
 KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
     table: Table(string, Keyword_Token);
-    init(*table, type_info(Keyword).values.count * size_of(Keyword));
+    size := 10 * (KEYWORDS.count + TYPE_KEYWORDS.count + VALUE_KEYWORDS.count);
+    init(*table, size);
 
-    for enum_values_as_enum(Keyword) {
-        name := enum_value_to_name(it);
-        if starts_with(name, "kwt") {
-            table_add(*table, slice(name, 4, name.count - 4), .{.type, it});
-        } else if starts_with(name, "kwm") {
-            table_add(*table, slice(name, 4, name.count - 4), .{.modifier, it});
-        } else if starts_with(name, "kwv") {
-            table_add(*table, slice(name, 4, name.count - 4), .{.value, it});
-        } else {
-            table_add(*table, slice(name, 3, name.count - 3), .{.keyword, it});
+    #insert -> string {
+        b: String_Builder;
+        for KEYWORDS           append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword,  keyword = .kw_%1 });\n", it));
+        for TYPE_KEYWORDS      append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .type,     keyword = .kw_%1 });\n", it));
+        for VALUE_KEYWORDS     append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value,    keyword = .kw_%1 });\n", it));
+        for MODIFIER_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .modifier, keyword = .kw_%1 });\n", it));
+        return builder_to_string(*b);
+    }
+
+    return table;
+}
+
+DIRECTIVES_MAP :: #run -> Table(string, Directive) {
+    table: Table(string, Directive);
+    size := 2 * DIRECTIVES.count;
+    init(*table, size);
+
+    #insert -> string {
+        b: String_Builder;
+        init_string_builder(*b);
+        for DIRECTIVES {
+            print_to_builder(*b, "table_add(*table, \"%1\", .di_%1);\n", it);
         }
+        return builder_to_string(*b);
     }
 
     return table;
 }
 
 MAX_KEYWORD_LENGTH :: #run -> s32 {
-    max: s64;
-    prefix_count: s64;
-
-    for enum_names(Keyword) {
-        if starts_with(it, "kwt") prefix_count = 4;
-        else if starts_with(it, "kwm") prefix_count = 4;
-        else if starts_with(it, "kwv") prefix_count = 4;
-        else prefix_count = 3;
-
-        length := it.count - prefix_count;
-        if length > max max = length;
-    }
-
-    return xx max;
-}
-
-COMPILER_DIRECTIVES_MAP :: #run -> Table(string, Directive) {
-    table: Table(string, Directive);
-    init(*table, type_info(Directive).values.count * size_of(Directive));
-
-    for enum_values_as_enum(Directive) {
-        name := enum_value_to_name(it);
-        table_add(*table, slice(name, 3, name.count - 3), it);
-    }
-
-    return table;
+    result: s64;
+    for KEYWORDS          { if it.count > result then result = it.count; }
+    for TYPE_KEYWORDS     { if it.count > result then result = it.count; }
+    for VALUE_KEYWORDS    { if it.count > result then result = it.count; }
+    for MODIFIER_KEYWORDS { if it.count > result then result = it.count; }
+    return xx result;
 }
 
 MAX_DIRECTIVE_LENGTH :: #run -> s32 {
-    max: s64;
-
-    for enum_names(Directive) {
-        length := it.count - 3;
-        if length > max max = length;
-    }
-
-    return xx max;
+    result: s64;
+    for DIRECTIVES { if it.count > result then result = it.count; }
+    return xx result;
 }
 

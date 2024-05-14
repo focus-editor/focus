@@ -653,10 +653,10 @@ Token :: struct {
 
     // Additional info to distinguish between keywords/punctuation
     union {
-        keyword:            Keyword;
-        punctuation:        Punctuation;
-        operation:          Operation;
-        directive: Directive;
+        keyword:        Keyword;
+        punctuation:    Punctuation;
+        operation:      Operation;
+        directive:      Directive;
     }
 }
 

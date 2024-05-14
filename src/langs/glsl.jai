@@ -464,438 +464,121 @@ Token :: struct {
     }
 }
 
-Keyword :: enum u16 {
-    kw_break;
-    kw_case;
-    kw_compatibility;
-    kw_continue;
-    kw_core;
-    kw_default;
-    kw_defined;
-    kw_disable;
-    kw_discard;
-    kw_else;
-    kw_enable;
-    kw_enum;
-    kw_for;
-    kw_if;
-    kw_in;
-    kw_inout;
-    kw_layout;
-    kw_out;
-    kw_require;
-    kw_restrict;
-    kw_return;
-    kw_sizeof;
-    kw_struct;
-    kw_switch;
-    kw_typedef;
-    kw_union;
-    kw_uniform;
-    kw_warn;
-    kw_while;
+PUNCTUATION :: string.[
+    "semicolon", "backslash", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", "period", "comma",
+];
 
-    kwv_false;
-    kwv_true;
+OPERATIONS :: string.[
+    "arrow", "bang", "backtick", "pipe", "double_pipe", "pipe_equal", "equal", "equal_equal", "bang_equal", "percent",
+    "percent_equal", "less_than", "double_less_than", "less_than_equal", "greater_than", "greater_than_equal", "minus",
+    "minus_equal", "minus_minus", "asterisk", "asterisk_equal", "colon", "slash", "plus", "plus_equal", "plus_plus",
+    "slash_equal", "ampersand", "double_ampersand", "ampersand_equal", "tilde", "question", "unknown", "caret", "caret_equal",
+];
 
-    // modifiers
-    kwm_buffer;
-    kwm_centroid;
-    kwm_coherent;
-    kwm_const;
-    kwm_flat;
-    kwm_highp;
-    kwm_in;
-    kwm_inout;
-    kwm_invariant;
-    kwm_lowp;
-    kwm_mediump;
-    kwm_noperspective;
-    kwm_out;
-    kwm_patch;
-    kwm_precise;
-    kwm_precision;
-    kwm_readonly;
-    kwm_restrict;
-    kwm_sample;
-    kwm_shared;
-    kwm_smooth;
-    kwm_uniform;
-    kwm_volatile;
-    kwm_writeonly;
+KEYWORDS :: string.[
+    "break", "case", "compatibility", "continue", "core", "default", "defined", "disable", "discard", "else", "enable",
+    "enum", "for", "if", "layout", "require", "restrict", "return", "sizeof", "struct", "switch",
+    "typedef", "union", "uniform", "warn", "while",
+];
 
+TYPE_KEYWORDS :: string.[
     // built-in types
-    kwt_atomic_uint;
-    kwt_bool;
-    kwt_double;
-    kwt_float;
-    kwt_int;
-    kwt_uint;
-    kwt_void;
+    "atomic_uint", "bool", "double", "float", "int", "uint", "void",
 
     // vector types
-    kwt_bvec2;
-    kwt_bvec3;
-    kwt_bvec4;
-    kwt_dvec2;
-    kwt_dvec3;
-    kwt_dvec4;
-    kwt_ivec2;
-    kwt_ivec3;
-    kwt_ivec4;
-    kwt_uvec2;
-    kwt_uvec3;
-    kwt_uvec4;
-    kwt_vec2;
-    kwt_vec3;
-    kwt_vec4;
+    "bvec2", "bvec3", "bvec4", "dvec2", "dvec3", "dvec4", "ivec2", "ivec3", "ivec4", "uvec2", "uvec3", "uvec4", "vec2", "vec3", "vec4",
 
     // matrix types
-    kwt_mat2;
-    kwt_mat3;
-    kwt_mat4;
-    kwt_mat2x2;
-    kwt_mat2x3;
-    kwt_mat2x4;
-    kwt_mat3x2;
-    kwt_mat3x3;
-    kwt_mat3x4;
-    kwt_mat4x2;
-    kwt_mat4x3;
-    kwt_mat4x4;
-    kwt_dmat2;
-    kwt_dmat3;
-    kwt_dmat4;
-    kwt_dmat2x2;
-    kwt_dmat2x3;
-    kwt_dmat2x4;
-    kwt_dmat3x2;
-    kwt_dmat3x3;
-    kwt_dmat3x4;
-    kwt_dmat4x2;
-    kwt_dmat4x3;
-    kwt_dmat4x4;
+    "mat2", "mat3", "mat4", "mat2x2", "mat2x3", "mat2x4", "mat3x2", "mat3x3", "mat3x4", "mat4x2", "mat4x3", "mat4x4", "dmat2", "dmat3", "dmat4", "dmat2x2", "dmat2x3", "dmat2x4", "dmat3x2", "dmat3x3", "dmat3x4", "dmat4x2", "dmat4x3", "dmat4x4",
 
     // image types
-    kwt_image1D;
-    kwt_image2D;
-    kwt_image3D;
-    kwt_imageCube;
-    kwt_image2DRect;
-    kwt_image1DArray;
-    kwt_image2DArray;
-    kwt_imageCubeArray;
-    kwt_imageBuffer;
-    kwt_image2DMS;
-    kwt_image2DMSArray;
-
-    kwt_iimage1D;
-    kwt_iimage2D;
-    kwt_iimage3D;
-    kwt_iimageCube;
-    kwt_iimage2DRect;
-    kwt_iimage1DArray;
-    kwt_iimage2DArray;
-    kwt_iimageCubeArray;
-    kwt_iimageBuffer;
-    kwt_iimage2DMS;
-    kwt_iimage2DMSArray;
-
-    kwt_uimage1D;
-    kwt_uimage2D;
-    kwt_uimage3D;
-    kwt_uimageCube;
-    kwt_uimage2DRect;
-    kwt_uimage1DArray;
-    kwt_uimage2DArray;
-    kwt_uimageCubeArray;
-    kwt_uimageBuffer;
-    kwt_uimage2DMS;
-    kwt_uimage2DMSArray;
+    "image1D", "image2D", "image3D", "imageCube", "image2DRect", "image1DArray", "image2DArray", "imageCubeArray", "imageBuffer", "image2DMS", "image2DMSArray",
+    "iimage1D", "iimage2D", "iimage3D", "iimageCube", "iimage2DRect", "iimage1DArray", "iimage2DArray", "iimageCubeArray", "iimageBuffer", "iimage2DMS", "iimage2DMSArray",
+    "uimage1D", "uimage2D", "uimage3D", "uimageCube", "uimage2DRect", "uimage1DArray", "uimage2DArray", "uimageCubeArray", "uimageBuffer", "uimage2DMS", "uimage2DMSArray",
 
     // GL_KHR_vulkan_glsl texture types
-    kwt_texture1D;
-    kwt_texture2D;
-    kwt_texture3D;
-    kwt_textureCube;
-    kwt_texture1DArray;
-    kwt_texture2DArray;
-    kwt_textureCubeArray;
-    kwt_textureBuffer;
-    kwt_texture2DMS;
-    kwt_texture2DMSArray;
-
-    kwt_itexture1D;
-    kwt_itexture2D;
-    kwt_itexture3D;
-    kwt_itextureCube;
-    kwt_itexture1DArray;
-    kwt_itexture2DArray;
-    kwt_itextureCubeArray;
-    kwt_itextureBuffer;
-    kwt_itexture2DMS;
-    kwt_itexture2DMSArray;
-
-    kwt_utexture1D;
-    kwt_utexture2D;
-    kwt_utexture3D;
-    kwt_utextureCube;
-    kwt_utexture1DArray;
-    kwt_utexture2DArray;
-    kwt_utextureCubeArray;
-    kwt_utextureBuffer;
-    kwt_utexture2DMS;
-    kwt_utexture2DMSArray;
+    "texture1D", "texture2D", "texture3D", "textureCube", "texture1DArray", "texture2DArray", "textureCubeArray", "textureBuffer", "texture2DMS", "texture2DMSArray",
+    "itexture1D", "itexture2D", "itexture3D", "itextureCube", "itexture1DArray", "itexture2DArray", "itextureCubeArray", "itextureBuffer", "itexture2DMS", "itexture2DMSArray",
+    "utexture1D", "utexture2D", "utexture3D", "utextureCube", "utexture1DArray", "utexture2DArray", "utextureCubeArray", "utextureBuffer", "utexture2DMS", "utexture2DMSArray",
 
     // sampler types
-    kwt_sampler; // GL_KHR_vulkan_glsl
-    kwt_sampler1D;
-    kwt_sampler2D;
-    kwt_sampler3D;
-    kwt_samplerCube;
-    kwt_sampler2DRect;
-    kwt_sampler1DArray;
-    kwt_sampler2DArray;
-    kwt_samplerCubeArray;
-    kwt_samplerBuffer;
-    kwt_sampler2DMS;
-    kwt_sampler2DMSArray;
-    kwt_isampler1D;
-    kwt_isampler2D;
-    kwt_isampler3D;
-    kwt_isamplerCube;
-    kwt_isampler2DRect;
-    kwt_isampler1DArray;
-    kwt_isampler2DArray;
-    kwt_isamplerCubeArray;
-    kwt_isamplerBuffer;
-    kwt_isampler2DMS;
-    kwt_isampler2DMSArray;
-    kwt_usampler1D;
-    kwt_usampler2D;
-    kwt_usampler3D;
-    kwt_usamplerCube;
-    kwt_usampler2DRect;
-    kwt_usampler1DArray;
-    kwt_usampler2DArray;
-    kwt_usamplerCubeArray;
-    kwt_usamplerBuffer;
-    kwt_usampler2DMS;
-    kwt_usampler2DMSArray;
+    "sampler", "sampler1D", "sampler2D", "sampler3D", "samplerCube", "sampler2DRect", "sampler1DArray", "sampler2DArray", "samplerCubeArray", "samplerBuffer", "sampler2DMS", "sampler2DMSArray",
+    "isampler1D", "isampler2D", "isampler3D", "isamplerCube", "isampler2DRect", "isampler1DArray", "isampler2DArray", "isamplerCubeArray", "isamplerBuffer", "isampler2DMS", "isampler2DMSArray",
+    "usampler1D", "usampler2D", "usampler3D", "usamplerCube", "usampler2DRect", "usampler1DArray", "usampler2DArray", "usamplerCubeArray", "usamplerBuffer", "usampler2DMS", "usampler2DMSArray",
 
     // shadow sampler types
-    kwt_samplerShadow; // GL_KHR_vulkan_glsl
-    kwt_sampler1DShadow;
-    kwt_sampler2DShadow;
-    kwt_samplerCubeShadow;
-    kwt_sampler2DRectShadow;
-    kwt_sampler1DArrayShadow;
-    kwt_sampler2DArrayShadow;
-    kwt_samplerCubeArrayShadow;
+    "samplerShadow", "sampler1DShadow", "sampler2DShadow", "samplerCubeShadow", "sampler2DRectShadow", "sampler1DArrayShadow", "sampler2DArrayShadow", "samplerCubeArrayShadow",
 
     // GL_KHR_vulkan_glsl input attachment types
-    kwt_subpassInput;
-    kwt_isubpassInput;
-    kwt_usubpassInput;
-    kwt_subpassInputMS;
-    kwt_isubpassInputMS;
-    kwt_usubpassInputMS;
+    "subpassInput", "isubpassInput", "usubpassInput", "subpassInputMS", "isubpassInputMS", "usubpassInputMS",
+];
 
-    // built-in variables
-    kwb_gl_in;
-    kwb_gl_out;
-    kwb_gl_BaseVertex;
-    kwb_gl_BaseInstance;
-    kwb_gl_ClipDistance;
-    kwb_gl_CullDistance;
-    kwb_gl_DrawID;
-    kwb_gl_DepthRangeParameters;
-    kwb_gl_DepthRange;
-    kwb_gl_FragCoord;
-    kwb_gl_FragDepth;
-    kwb_gl_FrontFacing;
-    kwb_gl_GlobalInvocationID;
-    kwb_gl_HelperInvocation;
-    kwb_gl_InstanceID;
-    kwb_gl_InvocationID;
-    kwb_gl_Layer;
-    kwb_gl_LocalInvocationID;
-    kwb_gl_LocalInvocationIndex;
-    kwb_gl_NumSamples;
-    kwb_gl_NumWorkGroups;
-    kwb_gl_PatchVerticesIn;
-    kwb_gl_PerVertex;
-    kwb_gl_Position;
-    kwb_gl_PointCoord;
-    kwb_gl_PointSize;
-    kwb_gl_PrimitiveID;
-    kwb_gl_PrimitiveIDIn;
-    kwb_gl_SampleID;
-    kwb_gl_SamplePosition;
-    kwb_gl_SampleMask;
-    kwb_gl_SampleMaskIn;
-    kwb_gl_TessLevelOuter;
-    kwb_gl_TessLevelInner;
-    kwb_gl_TessCoord;
-    kwb_gl_VertexID;
-    kwb_gl_ViewportIndex;
-    kwb_gl_WorkGroupID;
-    kwb_gl_WorkGroupSize;
+VALUE_KEYWORDS :: string.[
+    "true", "false",
+];
+
+MODIFIER_KEYWORDS :: string.[
+    "buffer", "centroid", "coherent", "const", "flat", "highp", "in", "inout", "invariant", "lowp", "mediump", "noperspective",
+    "out", "patch", "precise", "precision", "readonly", "sample", "shared", "smooth", "volatile", "writeonly",
+];
+
+BUILTIN_VARS :: string.[
+    "gl_in", "gl_out", "gl_BaseVertex", "gl_BaseInstance", "gl_ClipDistance", "gl_CullDistance", "gl_DrawID", "gl_DepthRangeParameters",
+    "gl_DepthRange", "gl_FragCoord", "gl_FragDepth", "gl_FrontFacing", "gl_GlobalInvocationID", "gl_HelperInvocation", "gl_InstanceID",
+    "gl_InvocationID", "gl_Layer", "gl_LocalInvocationID", "gl_LocalInvocationIndex", "gl_NumSamples", "gl_NumWorkGroups",
+    "gl_PatchVerticesIn", "gl_PerVertex", "gl_Position", "gl_PointCoord", "gl_PointSize", "gl_PrimitiveID", "gl_PrimitiveIDIn",
+    "gl_SampleID", "gl_SamplePosition", "gl_SampleMask", "gl_SampleMaskIn", "gl_TessLevelOuter", "gl_TessLevelInner", "gl_TessCoord",
+    "gl_VertexID", "gl_ViewportIndex", "gl_WorkGroupID", "gl_WorkGroupSize",
 
     // GL_KHR_vulkan_glsl built-in variables
-    kwb_gl_VertexIndex;   // replaces OpenGL's gl_VertexID
-    kwb_gl_InstanceIndex; // replaces OpenGL's gl_InstanceID
+    "gl_VertexIndex", "gl_InstanceIndex",
 
     // built-in constants
-    kwb_gl_MaxClipDistances;
-    kwb_gl_MaxDrawBuffers;
-    kwb_gl_MaxImageSamples;
-    kwb_gl_MaxImageUnits;
-    kwb_gl_MaxPatchVertices;
-    kwb_gl_MinProgramTexelOffset;
-    kwb_gl_MaxProgramTexelOffset;
-    kwb_gl_MaxTessGenLevel;
-    kwb_gl_MaxTessPatchComponents;
-    kwb_gl_MaxTextureImageUnits;
-    kwb_gl_MaxTransformFeedbackBuffers;
-    kwb_gl_MaxTransformFeedbackInterleavedComponents;
-    kwb_gl_MaxVaryingVectors;
-    kwb_gl_MaxViewports;
+    "gl_MaxClipDistances", "gl_MaxDrawBuffers", "gl_MaxImageSamples", "gl_MaxImageUnits", "gl_MaxPatchVertices", "gl_MinProgramTexelOffset",
+    "gl_MaxProgramTexelOffset", "gl_MaxTessGenLevel", "gl_MaxTessPatchComponents", "gl_MaxTextureImageUnits",
+    "gl_MaxTransformFeedbackBuffers", "gl_MaxTransformFeedbackInterleavedComponents", "gl_MaxVaryingVectors", "gl_MaxViewports",
+    "gl_MaxAtomicCounterBindings", "gl_MaxAtomicCounterBufferSize", "gl_MaxCombinedAtomicCounters", "gl_MaxCombinedAtomicCounterBuffers",
+    "gl_MaxCombinedImageUniforms", "gl_MaxCombinedImageUnitsAndFragmentOutputs", "gl_MaxCombinedTextureImageUnits",
+    "gl_MaxComputeWorkGroupCount", "gl_MaxComputeWorkGroupSize", "gl_MaxComputeUniformComponents", "gl_MaxComputeTextureImageUnits",
+    "gl_MaxComputeImageUniforms", "gl_MaxComputeAtomicCounters", "gl_MaxComputeAtomicCounterBuffers", "gl_MaxFragmentAtomicCounters",
+    "gl_MaxFragmentAtomicCounterBuffers", "gl_MaxFragmentImageUniforms", "gl_MaxFragmentInputComponents", "gl_MaxFragmentUniformComponents",
+    "gl_MaxFragmentUniformVectors", "gl_MaxGeometryAtomicCounters", "gl_MaxGeometryAtomicCounterBuffers", "gl_MaxGeometryImageUniforms",
+    "gl_MaxGeometryInputComponents", "gl_MaxGeometryOutputComponents", "gl_MaxGeometryOutputVertices", "gl_MaxGeometryTextureImageUnits",
+    "gl_MaxGeometryTotalOutputComponents", "gl_MaxGeometryUniformComponents", "gl_MaxGeometryVaryingComponents",
+    "gl_MaxTessControlAtomicCounterBuffers", "gl_MaxTessControlAtomicCounters", "gl_MaxTessControlImageUniforms",
+    "gl_MaxTessControlInputComponents", "gl_MaxTessControlOutputComponents", "gl_MaxTessControlUniformComponents",
+    "gl_MaxTessControlTextureImageUnits", "gl_MaxTessControlTotalOutputComponents", "gl_MaxTessEvaluationAtomicCounters",
+    "gl_MaxTessEvaluationAtomicCounterBuffers", "gl_MaxTessEvaluationImageUniforms", "gl_MaxTessEvaluationInputComponents",
+    "gl_MaxTessEvaluationOutputComponents", "gl_MaxTessEvaluationUniformComponents", "gl_MaxTessEvaluationTextureImageUnits",
+    "gl_MaxVertexAtomicCounters", "gl_MaxVertexAtomicCounterBuffers", "gl_MaxVertexAttribs", "gl_MaxVertexImageUniforms",
+    "gl_MaxVertexOutputComponents", "gl_MaxVertexTextureImageUnits", "gl_MaxVertexUniformComponents", "gl_MaxVertexUniformVectors",
+];
 
-    kwb_gl_MaxAtomicCounterBindings;
-    kwb_gl_MaxAtomicCounterBufferSize;
+DIRECTIVES :: string.[
+    "define", "elif", "elifdef", "elifndef", "else", "endif", "error", "extension", "if", "ifdef", "ifndef", "line", "pragma",
+    "undef", "warning", "version",
+];
 
-    kwb_gl_MaxCombinedAtomicCounters;
-    kwb_gl_MaxCombinedAtomicCounterBuffers;
-    kwb_gl_MaxCombinedImageUniforms;
-    kwb_gl_MaxCombinedImageUnitsAndFragmentOutputs;
-    kwb_gl_MaxCombinedTextureImageUnits;
+#insert -> string {
+    b: String_Builder;
+    init_string_builder(*b);
 
-    kwb_gl_MaxComputeWorkGroupCount;
-    kwb_gl_MaxComputeWorkGroupSize;
-    kwb_gl_MaxComputeUniformComponents;
-    kwb_gl_MaxComputeTextureImageUnits;
-    kwb_gl_MaxComputeImageUniforms;
-    kwb_gl_MaxComputeAtomicCounters;
-    kwb_gl_MaxComputeAtomicCounterBuffers;
+    define_enum :: (b: *String_Builder, enum_name: string, prefix: string, value_lists: [][] string) {
+        print_to_builder(b, "% :: enum u16 {\n", enum_name);
+        for values : value_lists {
+            for v : values print_to_builder(b, "    %0%;\n", prefix, v);
+        }
+        print_to_builder(b, "}\n");
+    }
 
-    kwb_gl_MaxFragmentAtomicCounters;
-    kwb_gl_MaxFragmentAtomicCounterBuffers;
-    kwb_gl_MaxFragmentImageUniforms;
-    kwb_gl_MaxFragmentInputComponents;
-    kwb_gl_MaxFragmentUniformComponents;
-    kwb_gl_MaxFragmentUniformVectors;
+    define_enum(*b, "Punctuation",  "",    .[PUNCTUATION]);
+    define_enum(*b, "Operation",    "",    .[OPERATIONS]);
+    define_enum(*b, "Keyword",      "kw_", .[KEYWORDS, TYPE_KEYWORDS, VALUE_KEYWORDS, MODIFIER_KEYWORDS, BUILTIN_VARS]);
+    define_enum(*b, "Directive",    "di_", .[DIRECTIVES]);
 
-    kwb_gl_MaxGeometryAtomicCounters;
-    kwb_gl_MaxGeometryAtomicCounterBuffers;
-    kwb_gl_MaxGeometryImageUniforms;
-    kwb_gl_MaxGeometryInputComponents;
-    kwb_gl_MaxGeometryOutputComponents;
-    kwb_gl_MaxGeometryOutputVertices;
-    kwb_gl_MaxGeometryTextureImageUnits;
-    kwb_gl_MaxGeometryTotalOutputComponents;
-    kwb_gl_MaxGeometryUniformComponents;
-    kwb_gl_MaxGeometryVaryingComponents;
-
-    kwb_gl_MaxTessControlAtomicCounterBuffers;
-    kwb_gl_MaxTessControlAtomicCounters;
-    kwb_gl_MaxTessControlImageUniforms;
-    kwb_gl_MaxTessControlInputComponents;
-    kwb_gl_MaxTessControlOutputComponents;
-    kwb_gl_MaxTessControlUniformComponents;
-    kwb_gl_MaxTessControlTextureImageUnits;
-    kwb_gl_MaxTessControlTotalOutputComponents;
-
-    kwb_gl_MaxTessEvaluationAtomicCounters;
-    kwb_gl_MaxTessEvaluationAtomicCounterBuffers;
-    kwb_gl_MaxTessEvaluationImageUniforms;
-    kwb_gl_MaxTessEvaluationInputComponents;
-    kwb_gl_MaxTessEvaluationOutputComponents;
-    kwb_gl_MaxTessEvaluationUniformComponents;
-    kwb_gl_MaxTessEvaluationTextureImageUnits;
-
-    kwb_gl_MaxVertexAtomicCounters;
-    kwb_gl_MaxVertexAtomicCounterBuffers;
-    kwb_gl_MaxVertexAttribs;
-    kwb_gl_MaxVertexImageUniforms;
-    kwb_gl_MaxVertexOutputComponents;
-    kwb_gl_MaxVertexTextureImageUnits;
-    kwb_gl_MaxVertexUniformComponents;
-    kwb_gl_MaxVertexUniformVectors;
+    return builder_to_string(*b);
 }
 
-Operation :: enum u16 {
-    arrow;
-    bang;
-    backtick;
-    pipe;
-    double_pipe;
-    pipe_equal;
-    equal;
-    equal_equal;
-    bang_equal;
-    percent;
-    percent_equal;
-    less_than;
-    double_less_than;
-    less_than_equal;
-    greater_than;
-    greater_than_equal;
-    minus;
-    minus_equal;
-    minus_minus;
-    asterisk;
-    asterisk_equal;
-    colon;
-    slash;
-    plus;
-    plus_equal;
-    plus_plus;
-    slash_equal;
-    ampersand;
-    double_ampersand;
-    ampersand_equal;
-    tilde;
-    question;
-    unknown;
-    caret;
-    caret_equal;
-}
-
-Punctuation :: enum u16 {
-    semicolon;
-    backslash;
-    l_paren;
-    r_paren;
-    l_brace;
-    r_brace;
-    l_bracket;
-    r_bracket;
-    period;
-    comma;
-}
-
-Directive :: enum u16 {
-    di_define;
-    di_elif;
-    di_elifdef;
-    di_elifndef;
-    di_else;
-    di_endif;
-    di_error;
-    di_extension;
-    di_if;
-    di_ifdef;
-    di_ifndef;
-    // di_include;
-    di_line;
-    di_pragma;
-    di_undef;
-    di_warning;
-    di_version;
-}
-
-//- Keyword Specifics
 Keyword_Token :: struct {
     type: Token_Type;
     keyword: Keyword;
@@ -903,160 +586,51 @@ Keyword_Token :: struct {
 
 KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
     table: Table(string, Keyword_Token);
-    _, keywords_count := enum_range(Keyword);
-    size := 2 * (keywords_count);
+    size := 10 * (KEYWORDS.count + TYPE_KEYWORDS.count + VALUE_KEYWORDS.count);
     init(*table, size);
 
-    // NOTE:
-    // These #inserts need to be split here because trying to generate cases
-    // for all 277 (!) keyword values makes the compiler crap itself:
-    //
-    // ```
-    // Error: Jai encountered an exception running the program and is terminating.
-    //
-    // Command line arguments:
-    //   jai.exe first.jai
-    //
-    // This happened outside compile-time execution, so it is likely the compiler's fault.
-    //
-    // Stack trace of the compiler:
-    //
-    //   unknown(C1D87614) : BaseThreadInitThunk
-    // ```
-    //
-    // When testing, this happens when keywords_count >= 267.
-    // With split #inserts, the compiler can handle them just fine.
-
     #insert -> string {
-        curr_slice_count := 3;
-        curr_type := "keyword";
-
         b: String_Builder;
-        init_string_builder(*b);
-        for enum_names(Keyword) {
-            if !starts_with(it, "kw_") {
-                continue;
-            }
-
-            print_to_builder(*b, "table_add(*table, \"%\", Keyword_Token.{type = .%, keyword = .%});\n",
-                            slice(it, curr_slice_count, it.count - curr_slice_count), curr_type, it);
-        }
-        return builder_to_string(*b);
-    }
-
-    #insert -> string {
-        curr_slice_count := 4;
-        curr_type := "type";
-
-        b: String_Builder;
-        init_string_builder(*b);
-        for enum_names(Keyword) {
-            if !starts_with(it, "kwt_") {
-                continue;
-            }
-
-            print_to_builder(*b, "table_add(*table, \"%\", Keyword_Token.{type = .%, keyword = .%});\n",
-                            slice(it, curr_slice_count, it.count - curr_slice_count), curr_type, it);
-        }
-        return builder_to_string(*b);
-    }
-
-    #insert -> string {
-        curr_slice_count := 4;
-        curr_type := "modifier";
-
-        b: String_Builder;
-        init_string_builder(*b);
-        for enum_names(Keyword) {
-            if !starts_with(it, "kwm_") {
-                continue;
-            }
-
-            print_to_builder(*b, "table_add(*table, \"%\", Keyword_Token.{type = .%, keyword = .%});\n",
-                            slice(it, curr_slice_count, it.count - curr_slice_count), curr_type, it);
-        }
-        return builder_to_string(*b);
-    }
-
-    #insert -> string {
-        curr_slice_count := 4;
-        curr_type := "value";
-
-        b: String_Builder;
-        init_string_builder(*b);
-        for enum_names(Keyword) {
-            if !starts_with(it, "kwv_") {
-                continue;
-            }
-
-            print_to_builder(*b, "table_add(*table, \"%\", Keyword_Token.{type = .%, keyword = .%});\n",
-                            slice(it, curr_slice_count, it.count - curr_slice_count), curr_type, it);
-        }
-        return builder_to_string(*b);
-    }
-
-    #insert -> string {
-        curr_slice_count := 4;
-        curr_type := "builtin_variable";
-
-        b: String_Builder;
-        init_string_builder(*b);
-        for enum_names(Keyword) {
-            if !starts_with(it, "kwb_") {
-                continue;
-            }
-
-            print_to_builder(*b, "table_add(*table, \"%\", Keyword_Token.{type = .%, keyword = .%});\n",
-                            slice(it, curr_slice_count, it.count - curr_slice_count), curr_type, it);
-        }
+        for KEYWORDS           append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword,          keyword = .kw_%1 });\n", it));
+        for TYPE_KEYWORDS      append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .type,             keyword = .kw_%1 });\n", it));
+        for VALUE_KEYWORDS     append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value,            keyword = .kw_%1 });\n", it));
+        for MODIFIER_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .modifier,         keyword = .kw_%1 });\n", it));
+        for BUILTIN_VARS       append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .builtin_variable, keyword = .kw_%1 });\n", it));
         return builder_to_string(*b);
     }
 
     return table;
-}
-MAX_KEYWORD_LENGTH :: #run -> s32 {
-    max_len := 0;
-
-    curr_slice_count := 3;
-
-    for enum_names(Keyword) {
-        if starts_with(it, "kwt") curr_slice_count = 4;
-        else if starts_with(it, "kwm") curr_slice_count = 4;
-        else if starts_with(it, "kwv") curr_slice_count = 4;
-        else if starts_with(it, "kwb") curr_slice_count = 4;
-        else curr_slice_count = 3;
-
-        actual := slice(it, curr_slice_count, it.count - curr_slice_count);
-        if actual.count > max_len max_len = actual.count;
-    }
-    return xx max_len;
 }
 
 DIRECTIVES_MAP :: #run -> Table(string, Directive) {
     table: Table(string, Directive);
-    temp, keywords_count := enum_range(Keyword);
-    size := 2 * (keywords_count);
+    size := 2 * DIRECTIVES.count;
     init(*table, size);
 
     #insert -> string {
         b: String_Builder;
         init_string_builder(*b);
-        for enum_names(Directive) {
-            print_to_builder(*b, "table_add(*table, \"%\", .%);\n",
-                            slice(it, 3, it.count - 3), it);
+        for DIRECTIVES {
+            print_to_builder(*b, "table_add(*table, \"%1\", .di_%1);\n", it);
         }
         return builder_to_string(*b);
     }
 
     return table;
 }
-MAX_DIRECTIVE_LENGTH :: #run -> s32 {
-    max_len := 0;
 
-    for enum_names(Directive) {
-        actual := slice(it, 3, it.count - 3);
-        if actual.count > max_len max_len = actual.count;
-    }
-    return xx max_len;
+MAX_KEYWORD_LENGTH :: #run -> s32 {
+    result: s64;
+    for KEYWORDS          { if it.count > result then result = it.count; }
+    for TYPE_KEYWORDS     { if it.count > result then result = it.count; }
+    for VALUE_KEYWORDS    { if it.count > result then result = it.count; }
+    for MODIFIER_KEYWORDS { if it.count > result then result = it.count; }
+    for BUILTIN_VARS      { if it.count > result then result = it.count; }
+    return xx result;
 }
 
+MAX_DIRECTIVE_LENGTH :: #run -> s32 {
+    result: s64;
+    for DIRECTIVES { if it.count > result then result = it.count; }
+    return xx result;
+}
