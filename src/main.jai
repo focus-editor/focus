@@ -355,6 +355,8 @@ main :: () {
 
 handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placement = .in_place) -> handled: bool {
     if action == {
+        case .close_all_editors_and_buffers;                    close_all_editors_and_buffers();                    return true;
+        case .close_other_buffers;                              close_other_buffers();                              return true;
         case .quit;                                             should_quit = true;                                 return true;
 
         case .open_another_editor_instance;                     open_another_editor_instance();                     return true;

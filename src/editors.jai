@@ -830,6 +830,38 @@ close_other_editor :: () {
     }
 }
 
+close_other_buffers :: () {
+    array_reset(*most_recent_buffers);
+    
+    editor_active := *open_editors[editors.active];
+   
+    if editors.layout == {
+        case .None; return;
+        case .Single;
+            array_add(*most_recent_buffers, editor_active.buffer_id);
+        case .Double;
+            editor_left := *open_editors[editors.left];            
+            editor_right := *open_editors[editors.right];
+            buffer_left := *open_buffers[editor_left.buffer_id];
+            buffer_right := *open_buffers[editor_right.buffer_id];
+            
+            if buffer_left == buffer_right {
+                array_add(*most_recent_buffers, editor_active.buffer_id);
+            } else {
+                array_add(*most_recent_buffers, editor_left.buffer_id);
+                array_add(*most_recent_buffers, editor_right.buffer_id);            
+            }
+    }
+}
+
+close_all_editors_and_buffers :: () {
+    if editors.layout == .None return;
+    
+    editors.layout = .None;
+    array_reset(*most_recent_buffers);
+    update_window_title();
+}
+
 finish_closing_editor :: () {
     if editors.layout == .Double {
         editors.layout = .Single;
