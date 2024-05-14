@@ -110,6 +110,8 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
             case .move_up_fast;                     search_bar_move_cursor(editor, buffer, -5);                                         return true;
             case .move_down_fast;                   search_bar_move_cursor(editor, buffer,  5);                                         return true;
 
+            case .close_all_editors_and_buffers;    close_search_bar(editor); close_all_editors_and_buffers();                                                    return true;
+            case .close_other_buffers;              close_search_bar(editor); close_other_buffers();                                                              return true;
             case .close_current_editor;             close_search_bar(editor); close_editor(.current);                                   return true;
             case .close_other_editor;               close_editor(.other);                                                               return true;
             case .close_left_editor;                if editors.active == editors.left  close_search_bar(editor); close_editor(.left);   return true;
@@ -160,6 +162,8 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .toggle_expand;                    toggle_expand();
         case .search_in_buffer;                 open_search_bar(editor, buffer);
         case .search_in_buffer_dropdown_mode;   open_search_bar(editor, buffer, .dropdown);
+        case .close_all_editors_and_buffers;    close_all_editors_and_buffers();
+        case .close_other_buffers;              close_other_buffers();
         case .close_current_editor;             close_editor(.current);
         case .close_other_editor;               close_editor(.other);
         case .close_left_editor;                close_editor(.left);
@@ -830,9 +834,30 @@ close_other_editor :: () {
     }
 }
 
+finish_closing_editor :: () {
+    if editors.layout == .Double {
+        editors.layout = .Single;
+        editors.left  = editors.active;  // editor history needs it for comparison
+        editors.right = editors.active;
+    }
+    do_things_on_editor_close(editor_closing_id);
+    editor_closing_id = -1;
+}
+
+do_things_on_editor_close :: (editor_id: s64) {
+    editor := *open_editors[editor_id];
+    buffer := *open_buffers[editor.buffer_id];
+
+    // Remove buffer from the open buffers if it's not unsaved and if there's no editor with this buffer currently visible
+    assert(editors.layout != .Double, "An editor just closed but layout is still .Double. This is a bug.");
+    buffer_is_still_visible := editors.layout == .Single && editors.active != editor_id && open_editors[editors.active].buffer_id == editor.buffer_id;
+    if !buffer_is_still_visible && !buffer.modified {
+        array_ordered_remove_by_value(*most_recent_buffers, editor.buffer_id);
+        buffer.num_times_opened = 0;  // deprioritise it in the full file list
+    }
+}
+
 close_other_buffers :: () {
-    if editors.layout == .None return;
-    
     array_reset(*most_recent_buffers);
     
     editor_active := *open_editors[editors.active];
@@ -856,34 +881,9 @@ close_other_buffers :: () {
 }
 
 close_all_editors_and_buffers :: () {
-    if editors.layout == .None return;
-    
     editors.layout = .None;
     array_reset(*most_recent_buffers);
     update_window_title();
-}
-
-finish_closing_editor :: () {
-    if editors.layout == .Double {
-        editors.layout = .Single;
-        editors.left  = editors.active;  // editor history needs it for comparison
-        editors.right = editors.active;
-    }
-    do_things_on_editor_close(editor_closing_id);
-    editor_closing_id = -1;
-}
-
-do_things_on_editor_close :: (editor_id: s64) {
-    editor := *open_editors[editor_id];
-    buffer := *open_buffers[editor.buffer_id];
-
-    // Remove buffer from the open buffers if it's not unsaved and if there's no editor with this buffer currently visible
-    assert(editors.layout != .Double, "An editor just closed but layout is still .Double. This is a bug.");
-    buffer_is_still_visible := editors.layout == .Single && editors.active != editor_id && open_editors[editors.active].buffer_id == editor.buffer_id;
-    if !buffer_is_still_visible && !buffer.modified {
-        array_ordered_remove_by_value(*most_recent_buffers, editor.buffer_id);
-        buffer.num_times_opened = 0;  // deprioritise it in the full file list
-    }
 }
 
 search_bar_is_open :: inline (using editor: *Editor) -> bool {
