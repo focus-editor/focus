@@ -484,326 +484,127 @@ Token :: struct {
     }
 }
 
-Keyword :: enum u16 {
-    kw_alignas;
-    kw_alignof;
-    kw_and;
-    kw_and_eq;
-    kw_asm;
-    kw_auto;
-    kw_bitand;
-    kw_bitor;
-    kw_break;
-    kw_case;
-    kw_catch;
-    kw_class;
-    kw_compl;
-    kw_concept;
-    kw_const_cast;
-    kw_continue;
-    kw_co_await;
-    kw_co_return;
-    kw_co_yield;
-    kw_decltype;
-    kw_default;
-    kw_defined;
-    kw_delete;
-    kw_do;
-    kw_dynamic_cast;
-    kw_else;
-    kw_enum;
-    kw_explicit;
-    kw_export;
-    kw_for;
-    kw_friend;
-    kw_goto;
-    kw_if;
-    kw_namespace;
-    kw_new;
-    kw_not;
-    kw_not_eq;
-    kw_operator;
-    kw_or;
-    kw_or_eq;
-    kw_private;
-    kw_protected;
-    kw_public;
-    kw_reinterpret_cast;
-    kw_requires;
-    kw_return;
-    kw_sizeof;
-    kw_static_assert;
-    kw_static_cast;
-    kw_struct;
-    kw_switch;
-    kw_template;
-    kw_throw;
-    kw_try;
-    kw_typedef;
-    kw_typeid;
-    kw_typename;
-    kw_union;
-    kw_using;
-    kw_while;
-    kw_xor;
-    kw_xor_eq;
-    kw__Alignas;
-    kw__Alignof;
-    kw__Atomic;
-    kw__Generic;
-    kw__Noreturn;
-    kw__Static_assert;
-    kw___asm;
-    kw___asm__;
-    kw___except;
-    kw___finally;
-    kw___leave;
-    kw___try;
+PUNCTUATION :: string.[
+    "semicolon", "backslash", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", "period", "comma",
+];
 
-    kwv_false;
-    kwv_nullptr;
-    kwv_this;
-    kwv_true;
+OPERATIONS :: string.[
+    "arrow", "bang", "backtick", "pipe", "double_pipe", "pipe_equal", "equal", "equal_equal", "bang_equal", "percent",
+    "percent_equal", "less_than", "double_less_than", "less_than_equal", "greater_than", "greater_than_equal", "minus",
+    "minus_equal", "minus_minus", "asterisk", "asterisk_equal", "colon", "slash", "plus", "plus_equal", "plus_plus",
+    "slash_equal", "ampersand", "double_ampersand", "ampersand_equal", "tilde", "question", "unknown", "caret", "caret_equal",
+];
 
-    kwm_const;
-    kwm_consteval;
-    kwm_constexpr;
-    kwm_constinit;
-    kwm_extern;
-    kwm_final;
-    kwm_inline;
-    kwm_mutable;
-    kwm_noexcept;
-    kwm_override;
-    kwm_register;
-    kwm_restrict;
-    kwm_signed;
-    kwm_static;
-    kwm_thread_local;
-    kwm_unsigned;
-    kwm_virtual;
-    kwm_volatile;
-    kwm__Thread_local;
+KEYWORDS :: string.[
+    "alignas", "alignof", "and", "and_eq", "asm", "auto", "bitand", "bitor", "break", "case", "catch", "class", "compl",
+    "concept", "const_cast", "continue", "co_await", "co_return", "co_yield", "decltype", "default", "defined", "delete",
+    "do", "dynamic_cast", "else", "enum", "explicit", "export", "for", "friend", "goto", "if", "namespace", "new", "not",
+    "not_eq", "operator", "or", "or_eq", "private", "protected", "public", "reinterpret_cast", "requires", "return", "sizeof",
+    "static_assert", "static_cast", "struct", "switch", "template", "throw", "try", "typedef", "typeid", "typename", "union",
+    "using", "while", "xor", "xor_eq",
+    "_Alignas", "_Alignof", "_Atomic", "_Generic", "_Noreturn", "_Static_assert", "__asm", "__asm__", "__except", "__finally",
+    "__leave", "__try",
+];
 
+TYPE_KEYWORDS :: string.[
     // built-in types
-    kwt_bool;
-    kwt_char;
-    kwt_char8_t;
-    kwt_char16_t;
-    kwt_char32_t;
-    kwt_double;
-    kwt_float;
-    kwt_int;
-    kwt_long;
-    kwt_short;
-    kwt_void;
-    kwt_wchar_t;
-    kwt__Bool;
-    kwt__Complex;
-    kwt__Imaginary;
+    "bool", "char", "char8_t", "char16_t", "char32_t", "double", "float", "int", "long", "short", "void", "wchar_t", "_Bool",
+    "_Complex", "_Imaginary",
 
     // stdint types
-    kwt_int8_t;
-    kwt_int16_t;
-    kwt_int32_t;
-    kwt_int64_t;
-    kwt_uint8_t;
-    kwt_uint16_t;
-    kwt_uint32_t;
-    kwt_uint64_t;
-    kwt_int_least8_t;
-    kwt_int_least16_t;
-    kwt_int_least32_t;
-    kwt_int_least64_t;
-    kwt_uint_least8_t;
-    kwt_uint_least16_t;
-    kwt_uint_least32_t;
-    kwt_uint_least64_t;
-    kwt_int_fast8_t;
-    kwt_int_fast16_t;
-    kwt_int_fast32_t;
-    kwt_int_fast64_t;
-    kwt_uint_fast8_t;
-    kwt_uint_fast16_t;
-    kwt_uint_fast32_t;
-    kwt_uint_fast64_t;
-    kwt_intptr_t;
-    kwt_uintptr_t;
-    kwt_intmax_t;
-    kwt_uintmax_t;
-    kwt_wint_t;
-    kwt_size_t;
-    kwt_ptrdiff_t;
-    kwt_sig_atomic_t;
-    kwt_time_t;
-    kwt_clock_t;
+    "int8_t", "int16_t", "int32_t", "int64_t", "uint8_t", "uint16_t", "uint32_t", "uint64_t", "int_least8_t", "int_least16_t",
+    "int_least32_t", "int_least64_t", "uint_least8_t", "uint_least16_t", "uint_least32_t", "uint_least64_t", "int_fast8_t",
+    "int_fast16_t", "int_fast32_t", "int_fast64_t", "uint_fast8_t", "uint_fast16_t", "uint_fast32_t", "uint_fast64_t", "intptr_t",
+    "uintptr_t", "intmax_t", "uintmax_t", "wint_t", "size_t", "ptrdiff_t", "sig_atomic_t", "time_t", "clock_t",
 
     // some STL types
-    kwt_vector;
-    kwt_atomic;
-    kwt_atomic_flag;
-    kwt_array;
-    kwt_map;
-    kwt_unordered_map;
-    kwt_set;
-    kwt_unordered_set;
-    kwt_queue;
-    kwt_deque;
-    kwt_tree;
-    kwt_thread;
+    "vector", "atomic", "atomic_flag", "array", "map", "unordered_map", "set", "unordered_set", "queue", "deque", "tree", "thread",
+];
+
+VALUE_KEYWORDS :: string.[
+    "false", "nullptr", "this", "true",
+];
+
+MODIFIER_KEYWORDS :: string.[
+    "const", "consteval", "constexpr", "constinit", "extern", "final", "inline", "mutable", "noexcept", "override", "register",
+    "restrict", "signed", "static", "thread_local", "unsigned", "virtual", "volatile", "_Thread_local",
+];
+
+DIRECTIVES :: string.[
+    "define", "elif", "elifdef", "elifndef", "else", "end", "endif", "error", "if", "ifdef", "ifndef",
+    "include", "line", "pragma", "undef", "warning",
+];
+
+#insert -> string {
+    b: String_Builder;
+    init_string_builder(*b);
+
+    define_enum :: (b: *String_Builder, enum_name: string, prefix: string, value_lists: [][] string) {
+        print_to_builder(b, "% :: enum u16 {\n", enum_name);
+        for values : value_lists {
+            for v : values print_to_builder(b, "    %0%;\n", prefix, v);
+        }
+        print_to_builder(b, "}\n");
+    }
+
+    define_enum(*b, "Punctuation",  "",    .[PUNCTUATION]);
+    define_enum(*b, "Operation",    "",    .[OPERATIONS]);
+    define_enum(*b, "Keyword",      "kw_", .[KEYWORDS, TYPE_KEYWORDS, VALUE_KEYWORDS, MODIFIER_KEYWORDS]);
+    define_enum(*b, "Directive",    "di_", .[DIRECTIVES]);
+
+    return builder_to_string(*b);
 }
 
-Operation :: enum u16 {
-    arrow;
-    bang;
-    backtick;
-    pipe;
-    double_pipe;
-    pipe_equal;
-    equal;
-    equal_equal;
-    bang_equal;
-    percent;
-    percent_equal;
-    less_than;
-    double_less_than;
-    less_than_equal;
-    greater_than;
-    greater_than_equal;
-    minus;
-    minus_equal;
-    minus_minus;
-    asterisk;
-    asterisk_equal;
-    colon;
-    slash;
-    plus;
-    plus_equal;
-    plus_plus;
-    slash_equal;
-    ampersand;
-    double_ampersand;
-    ampersand_equal;
-    tilde;
-    question;
-    unknown;
-    caret;
-    caret_equal;
-}
-
-Punctuation :: enum u16 {
-    semicolon;
-    backslash;
-    l_paren;
-    r_paren;
-    l_brace;
-    r_brace;
-    l_bracket;
-    r_bracket;
-    period;
-    comma;
-}
-
-Directive :: enum u16 {
-    di_define;
-    di_elif;
-    di_elifdef;
-    di_elifndef;
-    di_else;
-    di_end;
-    di_endif;
-    di_error;
-    di_if;
-    di_ifdef;
-    di_ifndef;
-    di_include;
-    di_line;
-    di_pragma;
-    di_undef;
-    di_warning;
-}
-
-//- Keyword Specifics
 Keyword_Token :: struct {
     type: Token_Type;
     keyword: Keyword;
 }
+
 KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
     table: Table(string, Keyword_Token);
-    temp, keywords_count := enum_range(Keyword);
-    size := 2 * (keywords_count);
+    size := 10 * (KEYWORDS.count + TYPE_KEYWORDS.count + VALUE_KEYWORDS.count);
     init(*table, size);
 
     #insert -> string {
         b: String_Builder;
-        init_string_builder(*b);
-        curr_type := "keyword";
-        curr_slice_count := 3;
-        for enum_names(Keyword) {
-            if starts_with(it, "kwt") {
-                curr_type = "type";
-                curr_slice_count = 4;
-            } else if starts_with(it, "kwm") {
-                curr_type = "modifier";
-                curr_slice_count = 4;
-            } else if starts_with(it, "kwv") {
-                curr_type = "value";
-                curr_slice_count = 4;
-            } else {
-                curr_type = "keyword";
-                curr_slice_count = 3;
-            }
-
-            print_to_builder(*b, "table_add(*table, \"%\", Keyword_Token.{type = .%, keyword = .%});\n",
-                            slice(it, curr_slice_count, it.count - curr_slice_count), curr_type, it);
-        }
+        for KEYWORDS           append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword,  keyword = .kw_%1 });\n", it));
+        for TYPE_KEYWORDS      append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .type,     keyword = .kw_%1 });\n", it));
+        for VALUE_KEYWORDS     append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value,    keyword = .kw_%1 });\n", it));
+        for MODIFIER_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .modifier, keyword = .kw_%1 });\n", it));
         return builder_to_string(*b);
     }
 
     return table;
-}
-MAX_KEYWORD_LENGTH :: #run -> s32 {
-    max_len := 0;
-
-    curr_slice_count := 3;
-
-    for enum_names(Keyword) {
-        if starts_with(it, "kwt") curr_slice_count = 4;
-        else if starts_with(it, "kwm") curr_slice_count = 4;
-        else if starts_with(it, "kwv") curr_slice_count = 4;
-        else curr_slice_count = 3;
-
-        actual := slice(it, curr_slice_count, it.count - curr_slice_count);
-        if actual.count > max_len max_len = actual.count;
-    }
-    return xx max_len;
 }
 
 DIRECTIVES_MAP :: #run -> Table(string, Directive) {
     table: Table(string, Directive);
-    temp, keywords_count := enum_range(Keyword);
-    size := 2 * (keywords_count);
+    size := 2 * DIRECTIVES.count;
     init(*table, size);
 
     #insert -> string {
         b: String_Builder;
         init_string_builder(*b);
-        for enum_names(Directive) {
-            print_to_builder(*b, "table_add(*table, \"%\", .%);\n",
-                            slice(it, 3, it.count - 3), it);
+        for DIRECTIVES {
+            print_to_builder(*b, "table_add(*table, \"%1\", .di_%1);\n", it);
         }
         return builder_to_string(*b);
     }
 
     return table;
 }
-MAX_DIRECTIVE_LENGTH :: #run -> s32 {
-    max_len := 0;
 
-    for enum_names(Directive) {
-        actual := slice(it, 3, it.count - 3);
-        if actual.count > max_len max_len = actual.count;
-    }
-    return xx max_len;
+MAX_KEYWORD_LENGTH :: #run -> s32 {
+    result: s64;
+    for KEYWORDS          { if it.count > result then result = it.count; }
+    for TYPE_KEYWORDS     { if it.count > result then result = it.count; }
+    for VALUE_KEYWORDS    { if it.count > result then result = it.count; }
+    for MODIFIER_KEYWORDS { if it.count > result then result = it.count; }
+    return xx result;
 }
 
+MAX_DIRECTIVE_LENGTH :: #run -> s32 {
+    result: s64;
+    for DIRECTIVES { if it.count > result then result = it.count; }
+    return xx result;
+}
