@@ -831,12 +831,13 @@ close_other_editor :: () {
 }
 
 close_other_buffers :: () {
+    if editors.layout == .None return;
+    
     array_reset(*most_recent_buffers);
     
     editor_active := *open_editors[editors.active];
    
     if editors.layout == {
-        case .None; return;
         case .Single;
             array_add(*most_recent_buffers, editor_active.buffer_id);
         case .Double;
