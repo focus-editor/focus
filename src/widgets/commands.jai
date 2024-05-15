@@ -119,8 +119,8 @@ base_commands := #run -> [] Command {
 
         cmd( "Go To Line",                        .go_to_line,                       .Single ),
 
-        cmd( "Close All Files",                   .close_all_editors_and_buffers,    .None   ),
-        cmd( "Close Other Buffers",               .close_other_buffers,              .None   ),
+        cmd( "Close All Files",                   .close_all_editors,                .Single ),
+        cmd( "Close Other Editors",               .close_other_editors,              .Single ),
         cmd( "Close File",                        .close_current_editor,             .Single ),
         cmd( "Close Other File",                  .close_other_editor,               .Double ),
         cmd( "Close Left File",                   .close_left_editor,                .Double ),
