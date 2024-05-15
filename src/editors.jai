@@ -858,10 +858,14 @@ do_things_on_editor_close :: (editor_id: s64) {
 }
 
 close_other_editors :: () {
-    array_reset_keeping_memory(*most_recent_buffers);
+    if editors.left > open_editors.count || editors.right > open_editors.count {
+        return;
+    }
 
     left_buffer_id := open_editors[editors.left].buffer_id;
     right_buffer_id := open_editors[editors.right].buffer_id;
+
+    array_reset_keeping_memory(*most_recent_buffers);
 
     array_add_if_unique(*most_recent_buffers, left_buffer_id);
     array_add_if_unique(*most_recent_buffers, right_buffer_id);
