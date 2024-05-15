@@ -52,6 +52,10 @@ Minimum Jai version: `0.1.088` (the language is currently in closed beta, but it
 
 `xattr -d -r com.apple.quarantine /path/to/your/jai/distribution`
 
+**NOTE**: starting with Jai `0.1.090`, `AArch64` became the default platform when building on Apple Sillicon macs. However, some of the modules used by the editor are not fully ported to support it. You will need to use the `x86_64` compiler to build for macOS (for now):
+
+`arch -x86_64 /path/to/jai-macos first.jai - release`
+
 
 ## Disclaimer
 
