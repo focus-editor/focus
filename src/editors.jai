@@ -110,8 +110,8 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
             case .move_up_fast;                     search_bar_move_cursor(editor, buffer, -5);                                         return true;
             case .move_down_fast;                   search_bar_move_cursor(editor, buffer,  5);                                         return true;
 
-            case .close_all_editors_and_buffers;    close_search_bar(editor); close_all_editors_and_buffers();                                                    return true;
-            case .close_other_buffers;              close_search_bar(editor); close_other_buffers();                                                              return true;
+            case .close_all_editors;                close_search_bar(editor); close_all_editors();                                      return true;
+            case .close_other_editors;              close_search_bar(editor); close_other_editors();                                    return true;
             case .close_current_editor;             close_search_bar(editor); close_editor(.current);                                   return true;
             case .close_other_editor;               close_editor(.other);                                                               return true;
             case .close_left_editor;                if editors.active == editors.left  close_search_bar(editor); close_editor(.left);   return true;
@@ -162,8 +162,8 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .toggle_expand;                    toggle_expand();
         case .search_in_buffer;                 open_search_bar(editor, buffer);
         case .search_in_buffer_dropdown_mode;   open_search_bar(editor, buffer, .dropdown);
-        case .close_all_editors_and_buffers;    close_all_editors_and_buffers();
-        case .close_other_buffers;              close_other_buffers();
+        case .close_all_editors;                close_all_editors();
+        case .close_other_editors;              close_other_editors();
         case .close_current_editor;             close_editor(.current);
         case .close_other_editor;               close_editor(.other);
         case .close_left_editor;                close_editor(.left);
@@ -857,32 +857,19 @@ do_things_on_editor_close :: (editor_id: s64) {
     }
 }
 
-close_other_buffers :: () {
-    array_reset(*most_recent_buffers);
-    
-    editor_active := *open_editors[editors.active];
-   
-    if editors.layout == {
-        case .Single;
-            array_add(*most_recent_buffers, editor_active.buffer_id);
-        case .Double;
-            editor_left := *open_editors[editors.left];            
-            editor_right := *open_editors[editors.right];
-            buffer_left := *open_buffers[editor_left.buffer_id];
-            buffer_right := *open_buffers[editor_right.buffer_id];
-            
-            if buffer_left == buffer_right {
-                array_add(*most_recent_buffers, editor_active.buffer_id);
-            } else {
-                array_add(*most_recent_buffers, editor_left.buffer_id);
-                array_add(*most_recent_buffers, editor_right.buffer_id);            
-            }
-    }
+close_other_editors :: () {
+    array_reset_keeping_memory(*most_recent_buffers);
+
+    left_buffer_id := open_editors[editors.left].buffer_id;
+    right_buffer_id := open_editors[editors.right].buffer_id;
+
+    array_add_if_unique(*most_recent_buffers, left_buffer_id);
+    array_add_if_unique(*most_recent_buffers, right_buffer_id);
 }
 
-close_all_editors_and_buffers :: () {
+close_all_editors :: () {
     editors.layout = .None;
-    array_reset(*most_recent_buffers);
+    array_reset_keeping_memory(*most_recent_buffers);
     update_window_title();
 }
 
