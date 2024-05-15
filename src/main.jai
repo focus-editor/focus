@@ -39,16 +39,6 @@ main :: () {
     init_buffers();
     load_global_config(fallback_to_default_on_failure = true);
 
-    window_x, window_y, window_width, window_height = platform_get_centered_window_dimensions(config.settings.open_on_the_biggest_monitor);
-
-    if config.settings.window_width  > 0 then window_width  = xx config.settings.window_width;
-    if config.settings.window_height > 0 then window_height = xx config.settings.window_height;
-    if config.settings.window_x != -1000 then window_x      = xx config.settings.window_x;
-    if config.settings.window_y != -1000 then window_y      = xx config.settings.window_y;
-
-    window_generic_title = ifx DEBUG then "Focus (debug mode)" else "Focus";
-    platform_create_window();
-
     // Process command line parameters
     focus_executable_args = get_command_line_arguments();
 
@@ -117,6 +107,16 @@ main :: () {
         session = start_fresh_session();
     }
 
+    window_x, window_y, window_width, window_height = platform_get_centered_window_dimensions(config.settings.open_on_the_biggest_monitor);
+
+    if config.settings.window_width  > 0 then window_width  = xx config.settings.window_width;
+    if config.settings.window_height > 0 then window_height = xx config.settings.window_height;
+    if config.settings.window_x != -1000 then window_x      = xx config.settings.window_x;
+    if config.settings.window_y != -1000 then window_y      = xx config.settings.window_y;
+
+    window_generic_title = ifx DEBUG then "Focus (debug mode)" else "Focus";
+    platform_create_window();
+
     if project_config.loaded then update_window_title();
 
     init_workspace();
@@ -132,6 +132,13 @@ main :: () {
         should_maximize := config.settings.maximize_on_start;
     } else {
         if config.settings.maximize_on_start then platform_maximize_window(window);
+    }
+    #if OS == .WINDOWS {
+        // A hacky workaround to display the dark title bar properly. Nothing else we've tried worked
+        if config.settings.dark_titlebar && !config.settings.maximize_on_start {
+            ShowWindow(window, SW_HIDE);
+            ShowWindow(window, SW_SHOW);
+        }
     }
 
     platform_enable_drag_and_drop(window);
