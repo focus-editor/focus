@@ -858,24 +858,13 @@ do_things_on_editor_close :: (editor_id: s64) {
 }
 
 close_other_editors :: () {
+    array_reset_keeping_memory(*most_recent_buffers);
+
     using editors;
-
-    left_valid := left >= 0 && left < open_editors.count;
+    left_valid  := left  >= 0 && left  < open_editors.count;
     right_valid := right >= 0 && right < open_editors.count;
-
-    if left_valid || right_valid {
-        array_reset_keeping_memory(*most_recent_buffers);
-
-        if left_valid {
-            left_buffer_id := open_editors[left].buffer_id;
-            array_add_if_unique(*most_recent_buffers, left_buffer_id);
-        }
-
-        if right_valid {
-            right_buffer_id := open_editors[right].buffer_id;
-            array_add_if_unique(*most_recent_buffers, right_buffer_id);
-        }
-    }
+    if left_valid  then array_add_if_unique(*most_recent_buffers, open_editors[left].buffer_id);
+    if right_valid then array_add_if_unique(*most_recent_buffers, open_editors[right].buffer_id);
 }
 
 close_all_editors :: () {
