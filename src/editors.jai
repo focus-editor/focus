@@ -865,6 +865,8 @@ close_other_editors :: () {
     right_valid := right >= 0 && right < open_editors.count;
     if left_valid  then array_add_if_unique(*most_recent_buffers, open_editors[left].buffer_id);
     if right_valid then array_add_if_unique(*most_recent_buffers, open_editors[right].buffer_id);
+
+    close_other_editor();
 }
 
 close_all_editors :: () {
@@ -3389,6 +3391,7 @@ Editor :: struct {
     last_width_in_chars: s32 = S32_MAX;
     wrapped_line_starts: [..] s32;  // empty when line wrap is off
 
+    // TODO: make a global array instead
     paste_animations: [..] Paste_Animation;
 }
 

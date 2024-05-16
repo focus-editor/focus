@@ -23,6 +23,7 @@
         + Configs and themes will be migrated to version [4] with the new colors automatically derived from the old colors
         + You can always check the default config for the full list of available colors (use the `Show Default Config` command)
         + Do note that not all tokens are present in all languages. For example, `code_enum_variant` only works with Jai, Odin and Zig at the moment.
+    + New commands: `close_all_editors` and `close_other_editors`. Can be used to clean up the most recent files dialog (`Ctrl-Tab` by default). (thanks @maxamundsen)
 + Bug fixes:
     + Linux: Fixed a bug that caused inconsistent trackpad scrolling on Wayland (thanks @Mythique)
 + Other changes:
