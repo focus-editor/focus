@@ -74,6 +74,7 @@ draw_frame :: () {
         case .confirm_overwrite_dialog; draw_confirm_overwrite_dialog();
         case .commands_dialog;          draw_commands_dialog();
         case .theme_dialog;             draw_theme_dialog();
+        case .language_dialog;          draw_language_dialog();
     }
 
     draw_user_messages(screen, status_bar_height);
@@ -2275,6 +2276,11 @@ draw_theme_dialog :: () {
     draw_generic_choice_dialog(*theme_dialog, Ui_Id.theme_dialog, label);
 }
 
+draw_language_dialog :: () {
+    label := ifx language_dialog.filtered then " Choose Language Syntax" else " Language not found";
+    draw_generic_choice_dialog(*language_dialog, Ui_Id.language_dialog, label);
+}
+
 draw_unsaved_buffers_dialog :: () {
     ui_id := Ui_Id.unsaved_buffers;
 
@@ -3466,6 +3472,7 @@ Ui_Id :: enum s64 {
     confirm_overwrite       :: -14;
     build_panel_title_bar   :: -15;
     theme_dialog            :: -16;
+    language_dialog         :: -17;
 
     // The rest will be derived from loc
 }

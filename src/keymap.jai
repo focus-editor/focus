@@ -277,6 +277,8 @@ ACTIONS_COMMON :: string.[
     "choose_theme",
     "edit_current_theme",
 
+    "choose_language",
+
     "open_projects_directory",
     "open_global_config",
     "open_project_config",
