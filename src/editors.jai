@@ -116,6 +116,8 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
             case .close_other_editor;               close_editor(.other);                                                               return true;
             case .close_left_editor;                if editors.active == editors.left  close_search_bar(editor); close_editor(.left);   return true;
             case .close_right_editor;               if editors.active == editors.right close_search_bar(editor); close_editor(.right);  return true;
+
+            case .choose_language;                  close_search_bar(editor); show_dialog(*language_dialog);                            return true;
         }
 
         if mode == .classic {
@@ -212,6 +214,8 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .select_all;                       select_all                          (editor, buffer);         keep_selection = true;
         case .create_cursor_above;              create_cursor                       (editor, buffer, .above); keep_selection = true;
         case .create_cursor_below;              create_cursor                       (editor, buffer, .below); keep_selection = true;
+
+        case .choose_language;                  show_dialog(*language_dialog);
 
         // Actions that do something per cursor
         case .move_left;                        move_cursors_left                   (editor, buffer, by = .char,      shift_pressed);

@@ -182,6 +182,8 @@ base_commands := #run -> [] Command {
 
         cmd( "Open Another Editor Instance",      .open_another_editor_instance,     .None   ),
         cmd( "Copy Current Line Info",            .copy_current_line_info,           .Single ),
+
+        cmd( "Choose Language",                   .choose_language,                  .Single ),
     ];
 
     linux_commands := Command.[
