@@ -42,10 +42,10 @@ language_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
         entry.sort_key = cast(u64) score;
 
         // Sort current language on top when we first open the dialog
-        // editor := *open_editors[editors.active];
-        // current_lang := *open_buffers[editor.buffer_id].Lang;
+        editor := *open_editors[editors.active];
+        current_lang := *open_buffers[editor.buffer_id].lang;
 
-        // if !filter.full_string && lang.value == current_lang then entry.sort_key |= cast(u64) 1 << 62;
+        if !filter.full_string && lang.value == << current_lang then entry.sort_key |= cast(u64) 1 << 62;
     }
 }
 
