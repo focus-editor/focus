@@ -204,7 +204,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .toggle_line_wrap;                 toggle_line_wrap                    (editor);
         case .toggle_line_numbers;              toggle_line_numbers                 ();
         case .copy_current_line_info;           copy_current_line_info              (editor, buffer);
-        case .delete_current_file;              show_delete_file_dialog(editor);
+        case .delete_current_file;              show_delete_file_dialog             (editor);
         case .center_viewport_on_cursor;        center_viewport_on_cursor           (editor, buffer);
         case .move_cursor_to_viewport_center;   move_cursor_to_viewport_center      (editor, buffer);
         case .remove_additional_cursors;        remove_additional_cursors           (editor);
@@ -216,7 +216,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .create_cursor_below;              create_cursor                       (editor, buffer, .below);   keep_selection = true;
         case .strip_trailing_whitespace;        strip_trailing_whitespace           (buffer, editor.buffer_id); keep_selection = true;
 
-        case .choose_language;                  show_dialog(*language_dialog);
+        case .choose_language;                  show_dialog                         (*language_dialog);
 
         // Actions that do something per cursor
         case .move_left;                        move_cursors_left                   (editor, buffer, by = .char,      shift_pressed);
