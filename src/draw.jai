@@ -1999,6 +1999,30 @@ draw_open_file_dialog :: () {
     }
 }
 
+draw_language_dialog :: () {
+    draw_extra_entry_stuff :: (entry_ptr: *void, entry_rect: Rect, name_width: float, pen: Vector2, margin: float, padding: float) {
+        entry := cast(*Language_Dialog.Entry) entry_ptr;
+
+        active_text := "Current selected language";
+
+        if entry.active {
+            active_rect := shrink_x(entry_rect, margin);
+
+            active_rect.x += name_width;
+            active_rect.w -= name_width + padding;
+
+            active_text_width := cast(float) Simp.prepare_text(font_ui_small, active_text);
+
+            if is_valid(active_rect) && active_text_width < active_rect.w {
+                x := active_rect.x + active_rect.w - active_text_width;
+                Simp.draw_prepared_text(font_ui_small, xx x, xx pen.y, color = xx Color.UI_DIM);
+            }
+        }
+    }
+
+    draw_generic_choice_dialog(*language_dialog, Ui_Id.language_dialog, " Choose language syntax", draw_extra_entry_stuff);
+}
+
 draw_commands_dialog :: () {
 
     draw_extra_entry_stuff :: (entry_ptr: *void, entry_rect: Rect, name_width: float, pen: Vector2, margin: float, padding: float) {
@@ -2274,11 +2298,6 @@ draw_open_project_dialog :: () {
 draw_theme_dialog :: () {
     label := ifx theme_dialog.filtered then " Choose theme" else tprint(" No themes found in %", themes_dir);
     draw_generic_choice_dialog(*theme_dialog, Ui_Id.theme_dialog, label);
-}
-
-draw_language_dialog :: () {
-    label := ifx language_dialog.filtered then " Choose Language Syntax" else " Language not found";
-    draw_generic_choice_dialog(*language_dialog, Ui_Id.language_dialog, label);
 }
 
 draw_unsaved_buffers_dialog :: () {
