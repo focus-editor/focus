@@ -1198,6 +1198,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .Yang;         return tokenize_yang;
         case .Zig;          return tokenize_zig;
         case .Uxntal;       return tokenize_uxntal;
+        case .Plain_Text;   return tokenize_plain_text;
     }
     return null;
 }
