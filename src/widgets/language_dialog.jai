@@ -15,37 +15,46 @@ Language_Dialog :: struct {
 
 apply_selected_language :: () {
     using language_dialog;
+    defer hide_dialog(*language_dialog);
+
+    if build_panel_is_active() {
+        add_user_warning("Changing language syntax for the build window is not supported.", dismiss_in_seconds = 5);
+        return;
+    }
+
     if selected >= filtered.count return;
 
-    editor := *open_editors[editors.active];
-    buffer := *open_buffers[editor.buffer_id];
+    _, buffer := get_active_editor_and_buffer();
+    if !buffer return;
 
     result := filtered[selected];
     buffer.lang = result.details.value;
     retokenize(buffer);
-
-    hide_dialog(*language_dialog);
 }
 
 language_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
     using language_dialog;
 
-    langs :: #run get_languages();
+    langs := #run get_languages();
 
-    for lang: langs {
+    editor, buffer := get_active_editor_and_buffer();
+    if !editor || !buffer then return;
+
+    for * lang: langs {
         score, highlights := fuzzy_match(lang.name, filter);
         if score <= 0 && filter.full_string continue;
 
         entry := array_add(*filtered);
-        entry.details = lang;
         entry.highlights = highlights;
         entry.sort_key = cast(u64) score;
 
         // Sort current language on top when we first open the dialog
-        editor := *open_editors[editors.active];
-        current_lang := *open_buffers[editor.buffer_id].lang;
+        if !filter.full_string && lang.value == buffer.lang {
+            lang.active = true;
+            entry.sort_key |= cast(u64) 1 << 62;
+        }
 
-        if !filter.full_string && lang.value == << current_lang then entry.sort_key |= cast(u64) 1 << 62;
+        entry.details = lang;
     }
 }
 
@@ -55,15 +64,13 @@ get_languages :: () -> [] Language {
     lang_names := enum_names(Buffer.Lang);
     lang_values := enum_values_as_enum(Buffer.Lang);
 
-    // unwrap type_info members into struct containing both the enum, and the enum string
-    for lang_names {
-        array_add(*languages, .{name = it, value = lang_values[it_index]});
-    }
+    for lang_names array_add(*languages, .{name = it, value = lang_values[it_index]});
 
     return languages;
 }
 
 Language :: struct {
+    active: bool = false;
     name: string;
     value: Buffer.Lang;
 }
