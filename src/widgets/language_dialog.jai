@@ -31,7 +31,13 @@ apply_selected_language :: () {
     buffer.lang = result.details.value;
 
     // No need to create a tokenizer for plaintext, just reset the token array
-    if buffer.lang == .Plain_Text then array_reset_keeping_memory(*buffer.tokens);
+    if buffer.lang == .Plain_Text {
+        lock(*buffer.content_lock);
+        array_reset_keeping_memory(*buffer.regions);
+        array_resize(*buffer.tokens, buffer.bytes.count);
+        memset(buffer.tokens.data, 0, buffer.tokens.count);
+        unlock(*buffer.content_lock);
+    }
 
     retokenize(buffer);
 }
