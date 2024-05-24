@@ -45,10 +45,10 @@ apply_selected_language :: () {
 language_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
     using language_dialog;
 
-    langs := #run get_languages();
-
     editor, buffer := get_active_editor_and_buffer();
     if !editor || !buffer then return;
+
+    langs := #run get_languages();
 
     for * lang: langs {
         score, highlights := fuzzy_match(lang.name, filter);
