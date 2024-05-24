@@ -3068,6 +3068,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
         case .Python;       comment = "#";
         case .RenPy;        comment = "#";
         case .Yang;         comment = "//";
+        case .Rust;         comment = "//";
         case;               return;
     }
 
@@ -3235,6 +3236,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
         case .Js;           comment_start = "/*"; comment_end = "*/";
         case .Json;         comment_start = "/*"; comment_end = "*/";
         case .Odin;         comment_start = "/*"; comment_end = "*/";
+        case .Rust;         comment_start = "/*"; comment_end = "*/";
         case .Lua;          comment_start = "--[["; comment_end = "]]";
         case .Html;         comment_start = "<!--"; comment_end = "-->";
         case .Xml;          comment_start = "<!--"; comment_end = "-->";
