@@ -9,6 +9,7 @@ Language_Dialog :: struct {
     generic_dialog.global_widget_id    = .language_dialog;
     generic_dialog.refresh_entries     = language_dialog_refresh_entries;
     generic_dialog.open_entry_in_place = apply_selected_language;
+    generic_dialog.on_show             = language_dialog_on_show;
 }
 
 #scope_file
@@ -17,10 +18,7 @@ apply_selected_language :: () {
     using language_dialog;
     defer hide_dialog(*language_dialog);
 
-    if build_panel_is_active() {
-        add_user_warning("Changing language syntax for the build window is not supported.", dismiss_in_seconds = 5);
-        return;
-    }
+    if build_panel_is_active() return;  // shouldn't ever be active
 
     if selected >= filtered.count return;
 
@@ -40,6 +38,10 @@ apply_selected_language :: () {
     }
 
     retokenize(buffer);
+}
+
+language_dialog_on_show :: () {
+    hide_build_panel();
 }
 
 language_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
@@ -74,7 +76,7 @@ language_dialog_get_languages :: () -> [] Language {
     lang_names := enum_names(Buffer.Lang);
     lang_values := enum_values_as_enum(Buffer.Lang);
 
-    for lang_names array_add(*languages, .{name = it, value = lang_values[it_index]});
+    for lang_names array_add(*languages, .{name = replace(it, "_", " "), value = lang_values[it_index]});
 
     return languages;
 }
