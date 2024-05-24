@@ -208,11 +208,11 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .remove_additional_cursors;        remove_additional_cursors           (editor);
         case .add_cursors_to_line_ends;         add_cursors_to_line_ends            (editor, buffer);
         case .add_cursors_to_line_starts;       add_cursors_to_line_starts          (editor, buffer);
-        case .swap_selections;                  swap_selections                     (editor, buffer);         keep_selection = true;
-        case .select_all;                       select_all                          (editor, buffer);         keep_selection = true;
-        case .create_cursor_above;              create_cursor                       (editor, buffer, .above); keep_selection = true;
-        case .create_cursor_below;              create_cursor                       (editor, buffer, .below); keep_selection = true;
-        case .strip_trailing_whitespace;        strip_trailing_whitespace           (buffer, editor.buffer_id);
+        case .swap_selections;                  swap_selections                     (editor, buffer);           keep_selection = true;
+        case .select_all;                       select_all                          (editor, buffer);           keep_selection = true;
+        case .create_cursor_above;              create_cursor                       (editor, buffer, .above);   keep_selection = true;
+        case .create_cursor_below;              create_cursor                       (editor, buffer, .below);   keep_selection = true;
+        case .strip_trailing_whitespace;        strip_trailing_whitespace           (buffer, editor.buffer_id); keep_selection = true;
 
         // Actions that do something per cursor
         case .move_left;                        move_cursors_left                   (editor, buffer, by = .char,      shift_pressed);
