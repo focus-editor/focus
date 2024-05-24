@@ -44,7 +44,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     if is_alpha(char) || char == #char "_" {
         parse_identifier(tokenizer, *token);
     } else if is_digit(char) {
-        parse_number(tokenizer, *token);
+        parse_number_c_like(tokenizer, *token);
     } else if char == {
         case #char ":";  parse_colon                 (tokenizer, *token);
         case #char "?";  parse_question              (tokenizer, *token);
@@ -112,84 +112,6 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-// TODO: simplify (this was copied from C). Also simplify for GLSL
-parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .number;
-
-    t += 1;
-    if t >= max_t return;
-
-    if is_digit(t.*) {
-        // Decimal
-        t += 1;
-        seen_decimal_point := false;
-        while t < max_t && (is_digit(t.*) || t.* == #char ".") {
-            if t.* == #char "." {
-                if seen_decimal_point break;
-                seen_decimal_point = true;
-            }
-            t += 1;
-        }
-        if t >= max_t return;
-        // t += 1;
-        // if t >= max_t return;
-
-        // exponent
-        if t.* == #char "e" || t.* == #char "E" {
-            t += 1;
-            if t >= max_t return;
-
-            if t.* == #char "+" || t.* == #char "-" {
-              t += 1;
-              if t >= max_t return;
-            }
-
-            while t < max_t && is_digit(t.*) {
-                t += 1;
-            }
-            if t >= max_t return;
-        }
-
-        // suffixes
-        if seen_decimal_point {
-            if t.* == #char "f" || t.* == #char "F" || t.* == #char "d" || t.* == #char "D" {
-              t += 1;
-            }
-        } else {
-
-          // This is getting kindof hard to follow...
-          if t.* == #char "l" || t.* == #char "L" {             // l
-              t += 1;
-              if t >= max_t return;
-
-              if t.* == #char "l" || t.* == #char "L" {         // ll
-                  t += 1;
-                  if t >= max_t return;
-
-                  if t.* == #char "u" || t.* == #char "U" {     // llu
-                    t += 1;
-                  }
-              } else if t.* == #char "u" || t.* == #char "U" {  // lu
-                t += 1;
-              }
-          } else if  t.* == #char "u" || t.* == #char "U" {     // u
-              t += 1;
-          }
-
-        }
-
-    } else if t.* == #char "x" || t.* == #char "X" {
-        // Hex
-        t += 1;
-        while t < max_t && (is_hex(t.*)) t += 1;
-
-    } else if t.* == #char "b" || t.* == #char "B" {
-        // Binary
-        t += 1;
-        while t < max_t && (t.* == #char "1" || t.* == #char "0") t += 1;
-    }
-}
-
 parse_colon :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .colon;
@@ -232,7 +154,7 @@ parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
             token.operation = .minus_minus;
             t += 1;
         case;
-            if is_digit(t.*) parse_number(tokenizer, token);
+            if is_digit(t.*) parse_number_c_like(tokenizer, token);
     }
 }
 
