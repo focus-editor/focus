@@ -2003,9 +2003,8 @@ draw_language_dialog :: () {
     draw_extra_entry_stuff :: (entry_ptr: *void, entry_rect: Rect, name_width: float, pen: Vector2, margin: float, padding: float) {
         entry := cast(*Language_Dialog.Entry) entry_ptr;
 
-        active_text := "Current selected language";
-
         if entry.active {
+            active_text :: "Current selected language";
             active_rect := shrink_x(entry_rect, margin);
 
             active_rect.x += name_width;
