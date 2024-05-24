@@ -211,8 +211,10 @@ window_calculate_buffer_size :: inline (w: *Wayland_Window) {
 }
 
 wl_window_resize_viewport :: (w: *Wayland_Window) {
-    f0 :: #run wl_fixed_from_int(0);
-    wp_viewport.set_source(w.viewport, f0, f0, wl_fixed_from_int(w.buffer_width), wl_fixed_from_int(w.buffer_height));
+    // f0 :: #run wl_fixed_from_int(0);
+    // wp_viewport.set_source(w.viewport, f0, f0, wl_fixed_from_int(w.buffer_width), wl_fixed_from_int(w.buffer_height));
+    fm1 :: #run wl_fixed_from_int(-1);
+    wp_viewport.set_source(w.viewport, fm1, fm1, fm1, fm1); // this is some bullshit
     wp_viewport.set_destination(w.viewport, w.window_width, w.window_height);
 }
 
