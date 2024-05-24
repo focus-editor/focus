@@ -334,6 +334,7 @@ ACTIONS_COMMON :: string.[
     "increase_font_size",
     "decrease_font_size",
     "reset_font_size_to_default",
+    "strip_trailing_whitespace",
     "close_all_editors",
     "close_current_editor",
     "close_other_editors",
