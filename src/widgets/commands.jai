@@ -159,6 +159,8 @@ base_commands := #run -> [] Command {
         cmd( "New Line Below Without Breaking",   .new_line_below_without_breaking,  .Single ),
         cmd( "New Line Above Without Breaking",   .new_line_above_without_breaking,  .Single ),
 
+        cmd( "Strip Trailing Whitespace",         .strip_trailing_whitespace,        .Single ),
+
         cmd( "Switch To Left Pane",               .switch_to_left_editor,            .Double ),
         cmd( "Switch To Right Pane",              .switch_to_right_editor,           .Double ),
         cmd( "Switch To Other Pane",              .switch_to_other_editor,           .Double ),
