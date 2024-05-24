@@ -205,9 +205,9 @@ pointer_listener :: wl_pointer_listener.{
     axis_relative_direction = (data: *void, self: *wl_pointer, axis: u32, direction: u32) -> void #c_call {
         d: *Wayland_Display = wl_proxy_get_user_data(self);
         if direction == wl_pointer.axis_relative_direction_identical {
-            d.pointer_axis_multiplier[axis] = 1;
-        } else {
             d.pointer_axis_multiplier[axis] = -1;
+        } else {
+            d.pointer_axis_multiplier[axis] = 1;
         }
     },
 };
