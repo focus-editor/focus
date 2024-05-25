@@ -7,6 +7,7 @@ CONFIG_SECTIONS :: Config_Section.[
             "ignore dirs",
             "allow file extensions",
             "ignore file extensions",
+            "file associations",
         ],
         parse_function = "parse_workspace_line",
     },
@@ -162,7 +163,7 @@ keymap_map_key_code_to_string :: (key_code: u32) -> string /* temp */ {
 }
 
 get_theme_file_from_name :: (name: string) -> string /* temp */ {
-    theme_name := to_lower_copy_new(name,, allocator = temp);
+    theme_name := to_lower_copy_new(name,, temp);
     return tprint("%/%.focus-theme", themes_dir, theme_name);
 }
 
@@ -379,7 +380,7 @@ maybe_switch_section :: (using parser: *Config_Parser, line: string, fix_section
         section := CONFIG_SECTIONS[active_section];
         if !array_find(section.subsections, subsection_name) {
             if section.subsections {
-                return true, tprint("Unknown subsection of [[%]]: '%'.\nAvailable options: [%].", section.name, line, join(..section.subsections, "], [",, allocator = temp));
+                return true, tprint("Unknown subsection of [[%]]: '%'.\nAvailable options: [%].", section.name, line, join(..section.subsections, "], [",, temp));
             } else {
                 return true, tprint("Unexpected subsection of [[%]]: '%'. This section doesn't allow any subsections.", section.name, line);
             }
@@ -433,7 +434,7 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
             } else {
                 if parse_for_highlighting {
                     // Highlight the bad chunk
-                    for chunk : split(dir_path, "/",, allocator = temp) {
+                    for chunk : split(dir_path, "/",, temp) {
                         dir_prefix := slice(dir_path, 0, chunk.data - dir_path.data + chunk.count);
                         if !file_exists(dir_prefix) {
                             add_highlight(parser, chunk.data - dir_path.data, chunk.count, .error);
@@ -444,14 +445,14 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
                 return true, tprint("Directory '%' doesn't exist.", dir_path);
             }
         case .workspace_ignore_dirs;
-            dirs := split(line, cast(u8) #char " ",, allocator = temp);
+            dirs := split(line, cast(u8) #char " ",, temp);
             for dir : dirs {
                 if !dir continue;
                 path_overwrite_separators(dir, #char "/");
                 array_add(*result.config.ignore_dirs, dir);
             }
         case .workspace_allow_file_extensions;
-            extensions := split(line, cast(u8) #char " ",, allocator = temp);
+            extensions := split(line, cast(u8) #char " ",, temp);
             for extensions {
                 if !it continue;
                 if contains_any_character(it, "*?") {
@@ -461,7 +462,7 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
                 }
             }
         case .workspace_ignore_file_extensions;
-            extensions := split(line, cast(u8) #char " ",, allocator = temp);
+            extensions := split(line, cast(u8) #char " ",, temp);
             for extensions {
                 if !it continue;
                 if contains_any_character(it, "*?") {
@@ -469,6 +470,22 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
                 } else {
                     array_add(*result.config.ignore_file_extensions, trim_left(it, "\t "));
                 }
+            }
+        case .workspace_file_associations;
+            found, wildcards, lang_name := split_from_left(line, cast(u8) #char ":");
+            wildcards, lang_name = trim(wildcards), trim(lang_name);
+            if !found || !wildcards || !lang_name {
+                add_highlight(parser, 0, line.count, .comment);  // don't scream at the user while they're typing
+                return true, tprint("Invalid file association: '%'\nThe correct format is: '<wildcard1> <wildcard2> ... : <language>'", line);
+            }
+            lang, matched := get_lang_from_name(lang_name);
+            if !matched {
+                add_highlight(parser, lang_name.data - line.data, lang_name.count, .error);
+                available_langs := #run get_supported_buffer_langs_lowercase();
+                return true, tprint("Unknown language name: '%'\nAvailable languages:\n%", lang_name, join(..available_langs, ", ",, temp));
+            }
+            for split(wildcards, cast(u8) #char " ",, temp) {
+                array_add(*result.config.file_associations, .{ wildcard = trim(it), lang = lang, });
             }
     }
     return true, "";
@@ -489,7 +506,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
             font_settings := string.[ "font", "font_size" ];
             if !array_find(font_settings, setting) {
                 add_highlight(parser, 0, setting.count, .error);
-                return true, tprint("Unknown font option '%'. Available options: ", setting, join(..font_settings, ", ",, allocator = temp));
+                return true, tprint("Unknown font option '%'. Available options: ", setting, join(..font_settings, ", ",, temp));
             }
 
             if setting == {
@@ -753,7 +770,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                                 return true, "";
                             } else {
                                 // Highlight the bad chunk
-                                for chunk : split(dir_path, "/",, allocator = temp) {
+                                for chunk : split(dir_path, "/",, temp) {
                                     dir_prefix := slice(dir_path, 0, chunk.data - dir_path.data + chunk.count);
                                     if !file_exists(dir_prefix) {
                                         add_highlight(parser, setting_value.data - line.data + chunk.data - dir_path.data, chunk.count, .error);
@@ -1044,7 +1061,7 @@ parse_key_combo :: (using parser: *Config_Parser, combo_str: string, line: strin
 
         valid_mod_key := true;
 
-        if to_lower_copy_new(mod_key,, allocator = temp) == {
+        if to_lower_copy_new(mod_key,, temp) == {
             case "ctrl";    combo.mods.ctrl_pressed       = true;
             case "shift";   combo.mods.shift_pressed      = true;
             case "alt";     combo.mods.alt_pressed        = true;
@@ -1174,6 +1191,7 @@ Parsed_Config :: struct {
     allow_file_extension_wildcards:  [..] string;
     ignore_file_extensions:          [..] string;
     ignore_file_extension_wildcards: [..] string;
+    file_associations:               [..] File_Association;
 
     // Keymap
     keymap_common:           [..] Key_Mapping;

@@ -34,6 +34,12 @@ __pycache__
 .pyc .rpyc
 .DS_Store .dmg
 
+[file associations]
+# Optional file associations in the format `<wildcard1> <wildcard2> ... : <language>`
+# Example:
+# *.hpp *.hh *.h : cpp
+# todo.txt : todo
+
 
 [[settings]]
 

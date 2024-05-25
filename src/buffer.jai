@@ -431,11 +431,19 @@ retokenize :: (buffer: *Buffer) {
     assert(!buffer.dirty);
     buffer.needs_tokenizing = false;
 
+    if buffer.lang == .Plain_Text {
+        // We don't store tokens for plain text buffers
+        array_reset(*buffer.tokens);
+        for buffer.regions free(it.note);
+        array_reset(*buffer.regions);
+        return;
+    }
+
     tokenize_func := get_tokenize_function(buffer.lang);
 
     // Resize tokens if we ever changed the token array
     if buffer.tokens || tokenize_func != null then array_resize(*buffer.tokens, buffer.bytes.count);  // this will reset tokens to 0
-    if tokenize_func == null return;
+    if !tokenize_func return;  // this could be the case for e.g. the build panel
 
     new_regions := tokenize_func(buffer);
 
@@ -1176,30 +1184,41 @@ manually_mark_range_as_token :: (buffer: *Buffer, range: Offset_Range, color: Co
 }
 
 get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
-    if lang == {
-        case .Jai;          return tokenize_jai;
-        case .C;            return tokenize_c;
-        case .CSharp;       return tokenize_csharp;
-        case .Focus_Config; return tokenize_focus_config;
-        case .Focus_Theme;  return tokenize_focus_config;
-        case .Glsl;         return tokenize_glsl;
-        case .Hlsl;         return tokenize_hlsl;
-        case .Golang;       return tokenize_golang;
-        case .Js;           return tokenize_js;
-        case .Json;         return tokenize_json;
-        case .Lua;          return tokenize_lua;
-        case .Odin;         return tokenize_odin;
-        case .Python;       return tokenize_python;
-        case .RenPy;        return tokenize_renpy;
-        case .Rust;         return tokenize_rust;
-        case .Html;         return tokenize_xml;
-        case .Xml;          return tokenize_xml;
-        case .Worklog;      return tokenize_worklog;
-        case .Yang;         return tokenize_yang;
-        case .Zig;          return tokenize_zig;
-        case .Uxntal;       return tokenize_uxntal;
+    if #complete lang == {
+        case .Jai;                  return tokenize_jai;
+        case .C;                    return tokenize_c;
+        case .CSharp;               return tokenize_csharp;
+        case .Glsl;                 return tokenize_glsl;
+        case .Hlsl;                 return tokenize_hlsl;
+        case .Golang;               return tokenize_golang;
+        case .Js;                   return tokenize_js;
+        case .Json;                 return tokenize_json;
+        case .Lua;                  return tokenize_lua;
+        case .Odin;                 return tokenize_odin;
+        case .Python;               return tokenize_python;
+        case .RenPy;                return tokenize_renpy;
+        case .Rust;                 return tokenize_rust;
+        case .Html;                 return tokenize_xml;
+        case .Xml;                  return tokenize_xml;
+        case .Todo;                 return tokenize_todo;
+        case .Yang;                 return tokenize_yang;
+        case .Zig;                  return tokenize_zig;
+        case .Uxntal;               return tokenize_uxntal;
+        case .Focus_Config;         return tokenize_focus_config;
+        case .Focus_Theme;          return tokenize_focus_config;
+        case .Focus_Build_Panel;    return null;
+        case .Plain_Text;           return null;
     }
-    return null;
+}
+
+get_supported_buffer_langs_lowercase :: () -> [] string /* intended to be run at compile time */ {
+    lang_names: [..] string;
+    for enum_names(Buffer.Lang) {
+        if begins_with_nocase(it, "focus") continue;  // filter out "internal" languages
+        array_add(*lang_names, to_lower_copy_new(it));
+    }
+    quick_sort(lang_names, compare_strings);
+    return lang_names;
 }
 
 #scope_file
@@ -1369,8 +1388,6 @@ Buffer :: struct {
         Jai;
         C;
         CSharp;
-        Focus_Config;
-        Focus_Theme;
         Glsl;
         Hlsl;
         Golang;
@@ -1383,10 +1400,13 @@ Buffer :: struct {
         Rust;
         Xml;
         Html;
-        Worklog;
+        Todo;
         Yang;
         Zig;
         Uxntal;
+        Focus_Config;
+        Focus_Theme;
+        Focus_Build_Panel;  // a fake lang to be assigned to the build panel instead of Plain_Text so that its tokens are preserved
     };
 }
 

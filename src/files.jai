@@ -76,7 +76,7 @@ get_file_icon :: (name: string, extension: string) -> Icon {
     }
 
     // Special cases
-    if icon == .text && equal_nocase(name, "log.md") then icon = .worklog;
+    if icon == .text && equal_nocase(name, "log.md") then icon = .todo;
     if icon == .text || icon == .file_unknown {
         if contains_nocase(name, "license") || contains_nocase(name, "licence")  || contains_nocase(name, "key") {
             icon = .key;

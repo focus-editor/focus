@@ -1159,90 +1159,79 @@ init_buffers :: () {
     global_troubleshooting_buffer_id = -1;
 }
 
-get_lang_from_path :: (path: string) -> Buffer.Lang {
+get_lang_from_path :: (full_path: string) -> Buffer.Lang {
     lang: Buffer.Lang = .Plain_Text;
 
-    extension, found_extension := get_lowercase_extension(path, greedy = false);
-    if found_extension {
-        if extension == {
-            case "jai";            lang = .Jai;
-            case "cs";             lang = .CSharp;
-            case "focus-config";   lang = .Focus_Config;
-            case "focus-theme";    lang = .Focus_Theme;
-            case "go";             lang = .Golang;
+    path_, basename, extension, basename_with_extension := path_decomp(full_path);
 
-            case "ts";             #through;
-            case "tsx";            #through;
-            case "jsx";            #through;
-            case "js";             lang = .Js;
-
-            case "json";           lang = .Json;
-
-            case "lua";            lang = .Lua;
-            case "odin";           lang = .Odin;
-            case "py";             lang = .Python;
-            case "rpy";            lang = .RenPy;
-            case "rs";             lang = .Rust;
-
-            case "vert"; #through;
-            case "frag"; #through;
-            case "geom"; #through;
-            case "tese"; #through;
-            case "tesc"; #through;
-            case "glsl";
-                lang = .Glsl;
-
-            case "hlsl";  #through;
-            case "hlsli"; #through;
-            case "fx";    #through;
-            case "fxh";
-                lang = .Hlsl;
-
-            case "c";   #through;
-            case "h";   #through;
-            case "inl"; #through;
-            case "cpp"; #through;
-            case "cxx"; #through;
-            case "c++"; #through;
-            case "hpp"; #through;
-            case "ipp"; #through;
-            case "cc";  #through;
-            case "hh";  #through;
-            case "m";   #through;
-            case "mm";
-                lang = .C;
-
-            case "html"; #through;
-            case "htm";  #through;
-            case "xhtml";
-                lang = .Html;
-
-            case "xml";     #through;
-            case "xsd";     #through;
-            case "dtd";     #through;
-            case "xaml";    #through;
-            case "svg";     #through;
-            case "vcproj";  #through;
-            case "vcxproj"; #through;
-            case "csproj";
-                lang = .Xml;
-
-            case "yang";
-                lang = .Yang;
-
-            case "zig";
-                lang = .Zig;
-
-            case "tal";
-                lang = .Uxntal;
-        }
+    // Try to get lang from the user-provided mapping first
+    for config.workspace.file_associations {
+        if wildcard_match(basename_with_extension, it.wildcard) return it.lang;
     }
 
-    path_, basename, _, basename_with_extension := path_decomp(path);
+    // Get lang from the builtin mapping
+    lowercase_extension := to_lower_copy_new(extension,, temp);
+    if lowercase_extension == {
+        case "jai";             lang = .Jai;
+        case "cs";              lang = .CSharp;
+        case "focus-config";    lang = .Focus_Config;
+        case "focus-theme";     lang = .Focus_Theme;
+        case "go";              lang = .Golang;
+        case "lua";             lang = .Lua;
+        case "odin";            lang = .Odin;
+        case "py";              lang = .Python;
+        case "rpy";             lang = .RenPy;
+        case "rs";              lang = .Rust;
+        case "json";            lang = .Json;
+        case "yang";            lang = .Yang;
+        case "zig";             lang = .Zig;
+        case "tal";             lang = .Uxntal;
 
-    if equal_nocase(basename, "todo") || equal_nocase(basename_with_extension, "FOCUS-CHANGELOG.txt") {
-        lang = .Worklog;
+        case "ts";              lang = .Js;
+        case "tsx";             lang = .Js;
+        case "jsx";             lang = .Js;
+        case "js";              lang = .Js;
+
+        case "vert";            lang = .Glsl;
+        case "frag";            lang = .Glsl;
+        case "geom";            lang = .Glsl;
+        case "tese";            lang = .Glsl;
+        case "tesc";            lang = .Glsl;
+        case "glsl";            lang = .Glsl;
+
+        case "hlsl";            lang = .Hlsl;
+        case "hlsli";           lang = .Hlsl;
+        case "fx";              lang = .Hlsl;
+        case "fxh";             lang = .Hlsl;
+
+        case "c";               lang = .C;
+        case "h";               lang = .C;
+        case "inl";             lang = .C;
+        case "cpp";             lang = .C;
+        case "cxx";             lang = .C;
+        case "c++";             lang = .C;
+        case "hpp";             lang = .C;
+        case "ipp";             lang = .C;
+        case "cc";              lang = .C;
+        case "hh";              lang = .C;
+        case "m";               lang = .C;
+        case "mm";              lang = .C;
+
+        case "html";            lang = .Html;
+        case "htm";             lang = .Html;
+        case "xhtml";           lang = .Html;
+
+        case "xml";             lang = .Xml;
+        case "xsd";             lang = .Xml;
+        case "dtd";             lang = .Xml;
+        case "xaml";            lang = .Xml;
+        case "svg";             lang = .Xml;
+        case "vcproj";          lang = .Xml;
+        case "vcxproj";         lang = .Xml;
+        case "csproj";          lang = .Xml;
     }
+
+    if equal_nocase(basename_with_extension, "FOCUS-CHANGELOG.txt") then lang = .Todo;
 
     return lang;
 }

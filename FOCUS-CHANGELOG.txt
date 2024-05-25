@@ -23,10 +23,12 @@
         + You can always check the default config for the full list of available colors (use the `Show Default Config` command)
         + Do note that not all tokens are present in all languages. For example, `code_enum_variant` only works with Jai, Odin and Zig at the moment.
     + New commands: `close_all_editors` and `close_other_editors`. Can be used to clean up the most recent files dialog (`Ctrl-Tab` by default). (thanks @maxamundsen)
-    + New command: `choose_language`. Allows to select a language for a buffer (thanks @maxamundsen)
     + New command: `strip_trailing_whitespace`. Use to strip trailing whitespace in the currently open file (thanks @maxamundsen)
+    + New command: `choose_language`. Allows to select a language for a buffer (thanks @maxamundsen)
+    + New config subsection under `[[workspace]]`: `[file associations]`. Can be used to assign syntax to buffers using wildcards. See the default config for examples
 + Bug fixes:
     + Linux: Fixed a bug that caused inconsistent trackpad scrolling on Wayland (thanks @Mythique)
+    + Rust: enabled comment toggling that was missing initially
 + Other changes:
     + ...
 

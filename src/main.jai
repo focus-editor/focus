@@ -698,11 +698,11 @@ dpi_scale := 1.0;
 fullscreen: bool;
 fullscreen_state: Saved_Window_Info;
 
-redraw_requested        := true;  // set to true to render the first frame
-should_quit             := false;
-force_quit              := false;
-should_reload_workspace := false;
-automatic_workspace_reload := false;
+redraw_requested            := true;  // set to true to render the first frame
+should_quit                 := false;
+force_quit                  := false;
+should_reload_workspace     := false;
+automatic_workspace_reload  := false;
 
 frame_time: Apollo_Time;          // ever-increasing time since start in seconds
 frame_dt:   Time = MAX_FRAME_DT;  // time delta since the last frame
@@ -914,7 +914,7 @@ dont_ignore_next_window_resize := false;
 #load "langs/python.jai";
 #load "langs/renpy.jai";
 #load "langs/xml.jai";
-#load "langs/worklog.jai";
+#load "langs/todo.jai";
 #load "langs/yang.jai";
 #load "langs/zig.jai";
 #load "langs/uxntal.jai";

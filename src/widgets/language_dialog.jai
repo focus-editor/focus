@@ -28,14 +28,6 @@ apply_selected_language :: () {
     result := filtered[selected];
     buffer.lang = result.details.value;
 
-    // No need to create a tokenizer for plaintext, just reset the token array
-    if buffer.lang == .Plain_Text {
-        lock(*buffer.content_lock);
-        array_reset(*buffer.regions);
-        array_reset(*buffer.tokens);  // plain text files don't need to store any tokens
-        unlock(*buffer.content_lock);
-    }
-
     retokenize(buffer);
 }
 

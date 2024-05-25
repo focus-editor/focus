@@ -239,33 +239,40 @@ parse_number_c_like :: (using tokenizer: *Tokenizer, token: *$Token) {
     }
 }
 
-get_lang_from_name :: (lang_name: string) -> Buffer.Lang {
-    if ends_with_nocase(lang_name, "jai")          return .Jai;
-    if ends_with_nocase(lang_name, "c")            return .C;
-    if ends_with_nocase(lang_name, "csharp")       return .CSharp;
-    // if ends_with_nocase(lang_name, "focus_config") return .Focus_Config;  // disabled for now
-    // if ends_with_nocase(lang_name, "focus_theme")  return .Focus_Theme;
-    if ends_with_nocase(lang_name, "glsl")         return .Glsl;
-    if ends_with_nocase(lang_name, "hlsl")         return .Hlsl;
-    if ends_with_nocase(lang_name, "golang")       return .Golang;
-    if ends_with_nocase(lang_name, "js")           return .Js;
-    if ends_with_nocase(lang_name, "jsx")          return .Js;
-    if ends_with_nocase(lang_name, "json")         return .Json;
-    if ends_with_nocase(lang_name, "ts")           return .Js;
-    if ends_with_nocase(lang_name, "tsx")          return .Js;
-    if ends_with_nocase(lang_name, "lua")          return .Lua;
-    if ends_with_nocase(lang_name, "odin")         return .Odin;
-    if ends_with_nocase(lang_name, "python")       return .Python;
-    if ends_with_nocase(lang_name, "renpy")        return .RenPy;
-    if ends_with_nocase(lang_name, "rust")         return .Rust;
-    if ends_with_nocase(lang_name, "html")         return .Html;
-    if ends_with_nocase(lang_name, "xml")          return .Xml;
-    if ends_with_nocase(lang_name, "worklog")      return .Worklog;
-    if ends_with_nocase(lang_name, "yang")         return .Yang;
-    if ends_with_nocase(lang_name, "zig")          return .Zig;
-    if ends_with_nocase(lang_name, "uxntal")       return .Uxntal;
+get_lang_from_name :: (lang_name: string) -> Buffer.Lang, found: bool {
+    lowercase_name := to_lower_copy_new(lang_name,, temp);
+    if lowercase_name == {
+        case "jai";          return .Jai,        true;
+        case "c";            return .C,          true;
+        case "cpp";          return .C,          true;
+        case "csharp";       return .CSharp,     true;
+        case "glsl";         return .Glsl,       true;
+        case "hlsl";         return .Hlsl,       true;
+        case "go";           return .Golang,     true;
+        case "golang";       return .Golang,     true;
+        case "js";           return .Js,         true;
+        case "jsx";          return .Js,         true;
+        case "json";         return .Json,       true;
+        case "ts";           return .Js,         true;
+        case "tsx";          return .Js,         true;
+        case "lua";          return .Lua,        true;
+        case "odin";         return .Odin,       true;
+        case "python";       return .Python,     true;
+        case "renpy";        return .RenPy,      true;
+        case "rust";         return .Rust,       true;
+        case "html";         return .Html,       true;
+        case "xml";          return .Xml,        true;
+        case "todo";         return .Todo,       true;
+        case "yang";         return .Yang,       true;
+        case "zig";          return .Zig,        true;
+        case "uxntal";       return .Uxntal,     true;
+        case "plain_text";   return .Plain_Text, true;
 
-    return .Plain_Text;
+        // case "focus_config"; return .Focus_Config, true;  // disabled for now
+        // case "focus_theme";  return .Focus_Theme,  true;
+    }
+
+    return .Plain_Text, false;
 }
 
 Tokenizer :: struct {

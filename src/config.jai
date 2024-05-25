@@ -152,6 +152,11 @@ refresh_config :: (path: string) {
     old_workspace_dirs.allocator = temp;
     for config.workspace.workspace_dirs array_add(*old_workspace_dirs, copy_temporary_string(it));
 
+    // Remember old file associations
+    old_file_associations: [..] File_Association;
+    old_file_associations.allocator = temp;
+    for config.workspace.file_associations array_add(*old_file_associations, .{ copy_temporary_string(it.wildcard), it.lang });
+
     if platform_path_equals(path, global_config.path) {
         success, changed, there_were_warnings := load_global_config();
         if success && changed && !there_were_warnings {
@@ -197,6 +202,29 @@ refresh_config :: (path: string) {
             add_user_warning("Workspace directories have changed in the config.\nWorkspace will need to reload, however there are unsaved changes.");
             should_reload_workspace = false;
         }
+    }
+
+    // Detect changes in file associations
+    file_associations_changed := config.workspace.file_associations.count != old_file_associations.count;
+    if !file_associations_changed {
+        for 0 .. old_file_associations.count - 1 {
+            if config.workspace.file_associations[it] != old_file_associations[it] {
+                file_associations_changed = true;
+                break;
+            }
+        }
+    }
+    if file_associations_changed && !should_reload_workspace {
+        // Reassign languages for all buffers in the workspace
+        for * buffer : open_buffers {
+            if !buffer.has_file continue;
+            lang := get_lang_from_path(buffer.file.full_path);
+            if lang != buffer.lang {
+                buffer.lang = lang;
+                retokenize(buffer);
+            }
+        }
+        add_success_message("File associations have been refreshed", dismiss_in_seconds = 3);
     }
 
     commands_refresh_after_config_change();
@@ -403,6 +431,7 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
         dst.workspace.ignore_file_extensions          = parsed.ignore_file_extensions;
         dst.workspace.ignore_file_extension_wildcards = parsed.ignore_file_extension_wildcards;
     }
+    if parsed.file_associations then dst.workspace.file_associations = parsed.file_associations;
 
     // Build config completely overrides the previous config if present
     if parsed.build.commands then dst.build = parsed.build;
@@ -503,6 +532,7 @@ Workspace :: struct {
     ignore_file_extensions:          [] string;
     allow_file_extension_wildcards:  [] string;
     ignore_file_extension_wildcards: [] string;
+    file_associations:               [] File_Association;
 }
 
 Settings :: struct {
@@ -571,6 +601,15 @@ Keymap :: struct {
     search_dialog:    [] Key_Mapping;
 
     build:            [] Key_Mapping;  // treated specially, it's not in the keymap config, but in the build config for convenience
+}
+
+File_Association :: struct {
+    wildcard: string;
+    lang: Buffer.Lang;
+}
+
+operator== :: (a: File_Association, b: File_Association) -> bool {
+    return a.wildcard == b.wildcard && a.lang == b.lang;
 }
 
 Build_Config :: struct {

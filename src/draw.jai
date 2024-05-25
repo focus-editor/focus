@@ -3444,7 +3444,7 @@ Icon :: enum u16 {
     jai          :: 0xf574;
     cpp          :: 0xf1c9;
     cs           :: 0xf1c9;
-    worklog      :: 0xf46d;
+    todo         :: 0xf46d;
     git          :: 0xf387;
     image        :: 0xf1c5;
     audio        :: 0xf1c7;

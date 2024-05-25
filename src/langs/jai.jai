@@ -211,7 +211,13 @@ parse_identifier :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
         }
 
         // Maybe add a heredoc region for deferred highlighting
-        lang := get_lang_from_name(identifier_str);
+        potential_lang_name := identifier_str;
+        {
+            // Extract lang from heredoc names like BLAH_BLAH_lang
+            found, _, lang := split_from_right(identifier_str, cast(u8) #char "_");
+            if found then potential_lang_name = lang;
+        }
+        lang := get_lang_from_name(potential_lang_name);
         if lang != .Plain_Text {
             array_add(*regions, Buffer_Region.{ start = start + 1, end = xx end, kind = .heredoc, lang = lang });  // start + 1 to not include the newline
         }
