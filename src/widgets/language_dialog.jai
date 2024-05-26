@@ -64,10 +64,13 @@ language_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
 language_dialog_get_languages :: () -> [] Language {
     languages: [..] Language;
 
-    lang_names := enum_names(Buffer.Lang);
+    lang_names  := enum_names(Buffer.Lang);
     lang_values := enum_values_as_enum(Buffer.Lang);
 
-    for lang_names array_add(*languages, .{name = replace(it, "_", " "), value = lang_values[it_index]});
+    for lang_names {
+        if equal_nocase(it, "focus_build_panel") continue;  // filter out "internal" languages
+        array_add(*languages, .{name = replace(it, "_", " "), value = lang_values[it_index]});
+    }
 
     return languages;
 }

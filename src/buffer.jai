@@ -1214,7 +1214,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
 get_supported_buffer_langs_lowercase :: () -> [] string /* intended to be run at compile time */ {
     lang_names: [..] string;
     for enum_names(Buffer.Lang) {
-        if begins_with_nocase(it, "focus") continue;  // filter out "internal" languages
+        if equal_nocase(it, "focus_build_panel") continue;  // filter out "internal" languages
         array_add(*lang_names, to_lower_copy_new(it));
     }
     quick_sort(lang_names, compare_strings);
