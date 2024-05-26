@@ -5,7 +5,7 @@ init_workspace :: () {
 }
 
 add_directory_to_workspace :: (path: string, index := -1) {
-    full_path, success := get_absolute_path(path);
+    full_path, success := get_absolute_path(path,, temp);
     full_path = copy_string(full_path);
     path_overwrite_separators(full_path, #char "/");
 
@@ -108,7 +108,9 @@ workspace_update :: () {
                     if count <= 0 break;
                     << file_range = array_view(files_to_scan, start, count);
 
-                    add_work(*scanner_thread_group, file_range, sprint("Scan [%:%]", start, start + count));
+                    logging_name := sprint("Scan [%:%]", start, start + count);
+                    this_allocation_is_not_a_leak(logging_name.data);  // this is actually a leak, but Thread_Group won't free it and we can't seem to be able to either
+                    add_work(*scanner_thread_group, file_range, logging_name);
 
                     num_jobs_to_complete += 1;
                 }
@@ -327,7 +329,7 @@ start_watching_file_if_not_already :: (file_path: string) {
         }
         log("Started watching external directory '%'", parent_dir);
     }
-    full_path, success := get_absolute_path(file_path);
+    full_path, success := get_absolute_path(file_path,, temp);
     if !success {
         log_error("Couldn't start watching file % because it's not found", file_path);
         return;
@@ -338,7 +340,7 @@ start_watching_file_if_not_already :: (file_path: string) {
 }
 
 stop_watching_file :: (file_path: string) {
-    full_path, success := get_absolute_path(file_path);
+    full_path, success := get_absolute_path(file_path,, temp);
     if !success then return;
     path_overwrite_separators(full_path, #char "/");
 
@@ -380,6 +382,7 @@ deinit_file_watcher :: () {
     if !watchers.initialized return;
     deinit(watchers.project_watcher);
     deinit(watchers.external_watcher);
+    for watch_files  free(it);
     array_reset_keeping_memory(*watch_files);
     watchers.initialized = false;
 }

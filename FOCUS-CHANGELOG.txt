@@ -29,6 +29,7 @@
 + Bug fixes:
     + Linux: Fixed a bug that caused inconsistent trackpad scrolling on Wayland (thanks @Mythique)
     + Rust: enabled comment toggling that was missing initially
+    + Fixed a few memory leaks
 + Other changes:
     + ...
 

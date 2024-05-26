@@ -448,7 +448,7 @@ adjust_cursors_and_viewport :: (editor: *Editor, buffer: Buffer, current_editor_
 }
 
 editors_open_file :: (path: string, placement: Editor_Placement = .in_place) -> success: bool {
-    full_path, success := get_absolute_path(path);  // returns temporary storage
+    full_path, success := get_absolute_path(path,, temp);
     path_overwrite_separators(full_path, separator = #char "/");
     if !file_exists(full_path) || !success {
         log_error("Couldn't open file %", path);

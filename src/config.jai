@@ -2,7 +2,6 @@ CURRENT_CONFIG_VERSION :: 4;
 
 load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
     config_path := tprint("%/global.focus-config", config_dir);
-    if !global_config.path then global_config.path = copy_string(config_path);
     start_watching_file_if_not_already(config_path);
 
     if !file_exists(config_path) {
@@ -368,7 +367,7 @@ load_config :: (path: string, existing: *Loaded_Config, force := false) -> Loade
 
     // Convert to absolute path if we can
     file_path = copy_string(path);
-    abs_path, ok := get_absolute_path(path);
+    abs_path, ok := get_absolute_path(path,, temp);
     if ok then file_path = copy_string(abs_path);
     path_overwrite_separators(file_path, #char "/");
     loaded_config.path = file_path;

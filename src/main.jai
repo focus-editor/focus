@@ -36,6 +36,8 @@ main :: () {
     fill_in_missing_default_themes();
 
     init_file_watcher();
+    defer deinit_file_watcher();
+
     init_buffers();
     load_global_config(fallback_to_default_on_failure = true);
 
@@ -88,7 +90,7 @@ main :: () {
     // Maybe load project from a .focus-config file in the current directory
     if !project_config.loaded {
         if file_exists(".focus-config") {
-            project_config_path, success := get_absolute_path(".focus-config");
+            project_config_path, success := get_absolute_path(".focus-config",, temp);
             if success {
                 success := load_project_config_from_path(project_config_path);
                 if !success then add_user_error("Tried to load project config from % but couldn't due to errors", project_config_path);
@@ -350,8 +352,12 @@ main :: () {
         }
     }
 
-    // report := make_leak_report();
-    // log_leak_report(report);
+    #if DEBUG_MEMORY_LEAKS {
+        log("========= LEAK REPORT =========\n");
+        report := make_leak_report();
+        log_leak_report(report);
+        log("========= END OF REPORT =======\n");
+    }
 }
 
 handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placement = .in_place) -> handled: bool {
@@ -1030,6 +1036,8 @@ Embedded_Font :: struct {
 }
 
 DEBUG_FILE_REFRESH :: false;  // TODO: remove when done debugging
+DEBUG_MEMORY_LEAKS :: false;
+
 
 #if OS == .LINUX {
     /*

@@ -419,7 +419,7 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
 
     if active_subsection == {
         case .workspace_workspace_dirs;
-            dir_path, success := get_absolute_path(line);
+            dir_path, success := get_absolute_path(line,, temp);
             original_path := copy_temporary_string(line);
             path_overwrite_separators(original_path, #char "/");
             path_overwrite_separators(dir_path,      #char "/");
@@ -758,7 +758,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                     // Validate working directories
                     if option.name == "build_working_dir" || option.name == "run_working_dir" {
                         code := #string JAI
-                            dir_path, success := get_absolute_path(setting_value);
+                            dir_path, success := get_absolute_path(setting_value,, temp);
                             original_path := copy_temporary_string(setting_value);
                             path_overwrite_separators(original_path, #char "/");
                             path_overwrite_separators(dir_path,      #char "/");

@@ -138,6 +138,7 @@ finder_update :: () {
 
             quick_sort(results, compare_search_results);
 
+            if needle then free(needle);
             needle = copy_string(request.needle);
 
             // Clean up task data
@@ -306,8 +307,6 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
         if buffer.modified || buffer.modified_on_disk then dir_id_part = 0;  // make sure modified buffers are on top
         buffer_sort_key: u64 = dir_id_part | buffer_id_part;
 
-        buffer_str := cast(string) buffer.bytes;
-
         if regex_search {
             find_all_using_regex(task, regex, buffer, buffer_id, buffer_sort_key);
         } else {
@@ -325,6 +324,8 @@ find_all_using_regex :: (using task: *Search_Task, regex: re.Regexp, buffer: Buf
 
     while true {
         if buffer_str.count <= 0 break;
+
+        auto_release_temp();  // this is very important because the regex library allocates a lot and we need to throw it away immediately
 
         matched, captures := re.match(buffer_str, regex,, allocator = temp);
         if !matched break;
