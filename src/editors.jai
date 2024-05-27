@@ -949,7 +949,9 @@ search_bar_toggle_whole_word :: (using editor: *Editor, buffer: Buffer) {
 
     if !active return;
     whole_word = !whole_word;
+
     search_and_update_results(editor, buffer);
+    redraw_requested = true;
 }
 
 search_bar_toggle_case_sensitive :: (using editor: *Editor, buffer: Buffer) {
@@ -957,7 +959,9 @@ search_bar_toggle_case_sensitive :: (using editor: *Editor, buffer: Buffer) {
 
     if !active return;
     case_sensitive = !case_sensitive;
+
     search_and_update_results(editor, buffer);
+    redraw_requested = true;
 }
 
 search_bar_toggle_regex_search :: (using editor: *Editor, buffer: Buffer) {
@@ -965,7 +969,9 @@ search_bar_toggle_regex_search :: (using editor: *Editor, buffer: Buffer) {
 
     if !active return;
     regex_search = !regex_search;
+
     search_and_update_results(editor, buffer);
+    redraw_requested = true;
 }
 
 search_bar_move_cursor :: (using editor: *Editor, buffer: Buffer, delta: s64, wrap := false, snap := true) {

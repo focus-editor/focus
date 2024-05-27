@@ -1261,26 +1261,17 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         pressed, hover_match_case, hover_match_word, hover_regex_search := false, false, false, false;
 
         pressed, hover_match_case = draw_text_input_modifier_button(input_id, input_rect, button_width, case_sensitive, CASE_SENSITIVE_ICON);
-        if pressed {
-            search_bar_toggle_case_sensitive(editor, buffer);
-            redraw_requested = true;
-        }
+        if pressed then search_bar_toggle_case_sensitive(editor, buffer);
 
         input_rect.w -= button_width - 4 * dpi_scale;
 
         pressed, hover_match_word = draw_text_input_modifier_button(input_id, input_rect, button_width, whole_word, WHOLE_WORD_ICON);
-        if pressed {
-            search_bar_toggle_whole_word(editor, buffer);
-            redraw_requested = true;
-        }
+        if pressed then search_bar_toggle_whole_word(editor, buffer);
 
         input_rect.w -= button_width - 4 * dpi_scale;
 
         pressed, hover_regex_search = draw_text_input_modifier_button(input_id, input_rect, button_width, regex_search, REGEX_SEARCH_ICON);
-        if pressed {
-            search_bar_toggle_regex_search(editor, buffer);
-            redraw_requested = true;
-        }
+        if pressed then search_bar_toggle_regex_search(editor, buffer);
 
         // Draw tooltips last
         tooltip := "";
@@ -1313,8 +1304,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             {
                 // Scrollbar
                 content_height := results.count * entry_height;
-                max_y_scroll := content_height - results_rect.h;
-                new_scroll_target := get_new_scroll_target_from_scrollbar(results_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, search_scrollbar_id);
+                max_y_scroll := max(cast(s32)(content_height - results_rect.h), 0);
+                new_scroll_target := get_new_scroll_target_from_scrollbar(results_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, max_y_scroll, search_scrollbar_id);
                 if new_scroll_target != scroll_anim.target {
                     scroll_y = new_scroll_target;
                     scroll_anim.target = new_scroll_target;
@@ -1329,7 +1320,6 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                     selected_bottom := selected_top + entry_height;
                     if selected_top < entry_height then target = cast(s32) (selected_result * entry_height);
                     if selected_bottom > results_rect.h then target = cast(s32) ((selected_result + 1) * entry_height - results_rect.h);
-                    if content_height - target < results_rect.h then target = cast(s32) (content_height - results_rect.h);
                     if target != scroll_anim.target {
                         if scroll_to_selected == .yes {
                             start_animation(*scroll_anim, scroll_y, target);
@@ -1345,7 +1335,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 if (ui.hot_last_frame == results_id || ui.hot_last_frame == search_scrollbar_id) && mouse_pointer_is_within(results_rect) {
                     if is_hovering_over(results_id) then set_pointer_image(.PRESSABLE);
                     if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
-                        target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
+                        target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, max_y_scroll);
                         if mouse.smooth_scroll {
                             start_animation(*scroll_anim, scroll_y, target);
                         } else {
@@ -1361,7 +1351,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 }
 
                 // The above operations could've updated scrollbar position, so drawing it here
-                draw_scrollbar(results_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, search_scrollbar_id);
+                draw_scrollbar(results_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, max_y_scroll, search_scrollbar_id);
             }
 
             visible_start := clamp(cast(s64) (scroll_y / entry_height), 0, results.count);
@@ -1858,8 +1848,8 @@ draw_open_file_dialog :: () {
         {
             // Scrollbar
             content_height := filtered.count * entry_height;
-            max_y_scroll := content_height - files_rect.h;
-            new_scroll_target := get_new_scroll_target_from_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
+            max_y_scroll := max(cast(s32)(content_height - files_rect.h), 0);
+            new_scroll_target := get_new_scroll_target_from_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
             if new_scroll_target != scroll_anim.target {
                 scroll_y = new_scroll_target;
                 scroll_anim.target = new_scroll_target;
@@ -1889,7 +1879,7 @@ draw_open_file_dialog :: () {
             if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(files_rect) {
                 if is_hovering_over(ui_id) then set_pointer_image(.PRESSABLE);
                 if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
-                    target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
+                    target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, max_y_scroll);
                     if mouse.smooth_scroll {
                         start_animation(*scroll_anim, scroll_y, target);
                     } else {
@@ -1905,7 +1895,7 @@ draw_open_file_dialog :: () {
             }
 
             // The above operations could've updated scrollbar position, so drawing it here
-            draw_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
+            draw_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
         }
 
         visible_start := clamp(cast(s64) (scroll_y / entry_height), 0, filtered.count);
@@ -2102,8 +2092,8 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
         {
             // Scrollbar
             content_height := filtered.count * entry_height;
-            max_y_scroll := content_height - entries_rect.h;
-            new_scroll_target := get_new_scroll_target_from_scrollbar(entries_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
+            max_y_scroll := max(cast(s32)(content_height - entries_rect.h), 0);
+            new_scroll_target := get_new_scroll_target_from_scrollbar(entries_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
             if new_scroll_target != scroll_anim.target {
                 scroll_y = new_scroll_target;
                 scroll_anim.target = new_scroll_target;
@@ -2133,7 +2123,7 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
             if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(entries_rect) {
                 if is_hovering_over(ui_id) then set_pointer_image(.PRESSABLE);
                 if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
-                    target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
+                    target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, max_y_scroll);
                     if mouse.smooth_scroll {
                         start_animation(*scroll_anim, scroll_y, target);
                     } else {
@@ -2149,7 +2139,7 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
             }
 
             // The above operations could've updated scrollbar position, so drawing it here
-            draw_scrollbar(entries_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
+            draw_scrollbar(entries_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
         }
 
         visible_start := clamp(cast(s64) (scroll_y / entry_height), 0, filtered.count);
@@ -2613,8 +2603,8 @@ draw_finder :: () {
 
         // Scrollbar
         content_height := results.count * entry_height;
-        max_y_scroll := content_height - files_rect.h;
-        new_scroll_target := get_new_scroll_target_from_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
+        max_y_scroll := max(cast(s32)(content_height - files_rect.h), 0);
+        new_scroll_target := get_new_scroll_target_from_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
         if new_scroll_target != scroll_anim.target {
             scroll_y = new_scroll_target;
             scroll_anim.target = new_scroll_target;
@@ -2645,7 +2635,7 @@ draw_finder :: () {
         if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(files_rect) {
             if is_hovering_over(ui_id) then set_pointer_image(.PRESSABLE);
             if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
-                target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, xx max_y_scroll);
+                target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, max_y_scroll);
                 if mouse.smooth_scroll {
                     start_animation(*scroll_anim, scroll_y, target);
                 } else {
@@ -2788,7 +2778,7 @@ draw_finder :: () {
         }
 
         // Drawing the scrollbar here so that scopes don't cover it
-        draw_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, xx max_y_scroll, scrollbar_id);
+        draw_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
 
         if finder.input.text && !results {
             label := "Searching...";
@@ -3273,6 +3263,8 @@ get_new_scroll_target_from_scrollbar :: (main_rect: Rect, width: float, content_
 }
 
 draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id, for_build_panel := false, $draw := true) -> new_scroll_target: s32 {
+    scroll_target = clamp(scroll_target, 0, max_scroll);
+
     if max_scroll <= 0 return scroll_target;
 
     area := cut_right(main_rect, width);  // the scrollbar area of the main rect
@@ -3321,12 +3313,10 @@ draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll:
         }
         new_scrollbar_pos_from_top := (area.h - (mouse.pointer.y - scrollbar_grab_point - area.y)) - scrollbar.h / 2;
         new_scroll_percentage := new_scrollbar_pos_from_top / (area.h - scrollbar.h);
-        new_scroll_target: = max_scroll * new_scroll_percentage;
-
-        scroll_target = clamp(cast(s32) new_scroll_target, 0, max_scroll);
+        scroll_target = cast(s32) (max_scroll * new_scroll_percentage);
     }
 
-    return scroll_target;
+    return clamp(scroll_target, 0, max_scroll);
 }
 
 draw_button :: (font: *Simp.Dynamic_Font, label: string, color: Color, text_color: Color, parent_id: Ui_Id, row_rect: Rect, align: enum { left; right; } = .right, padding_v: float, padding_h: float, loc := #caller_location) -> pressed: bool, width: float {
