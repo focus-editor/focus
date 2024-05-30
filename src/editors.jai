@@ -1204,6 +1204,7 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
         case "tese";            lang = .Glsl;
         case "tesc";            lang = .Glsl;
         case "glsl";            lang = .Glsl;
+        case "comp";            lang = .Glsl;
 
         case "hlsl";            lang = .Hlsl;
         case "hlsli";           lang = .Hlsl;
