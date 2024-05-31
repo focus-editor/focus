@@ -47,14 +47,13 @@ maybe_migrate_config :: (name: string, file_data: string) -> migrated: bool, mod
 
                         config_info.last_color_offset = line_start_offset;
 
+                        table_set(*config_info.colors_present, color_name, color_value);
+
                         for RENAMED_COLORS {
                             if color_name == it.old_name || color_name == it.new_name {
                                 table_set(*config_info.colors_present, it.old_name, color_value);
                                 table_set(*config_info.colors_present, it.new_name, color_value);
                             }
-                        }
-                        for ADDED_COLORS {
-                            if color_name == it.name then table_set(*config_info.colors_present, color_name, color_value);
                         }
                     }
                 case "keymap";
@@ -440,8 +439,8 @@ handler: Text_File_Handler;
 Config_Info :: struct {
     version: int;
 
-    settings_present: Table(string, bool);  // e.g. build_panel_width_percent -> true means it's present
-    colors_present: Table(string, string);  // e.g. code_warning -> E4D97DFF (store a value we've seen)
+    settings_present: Table(string, bool);    // e.g. build_panel_width_percent -> true means it's present
+    colors_present:   Table(string, string);  // e.g. code_warning -> E4D97DFF (store a value we've seen)
     keybinds_present: Table(string, bool);
 
     last_setting_offset := -1;
@@ -494,7 +493,7 @@ Renamed_Keybind :: struct {
 
 RUN_TESTS :: false;
 
-// Yes we do unit tests now! Don't you dare submit a PR without tests and 100% coverage.
+// Yes we do unit tests now! Don't you dare submit a PR without tests and a 100% coverage.
 // Also your code must comply with the SOLID principles. Are we real programmers or what?
 
 #if RUN_TESTS #run,stallable {
@@ -503,11 +502,11 @@ RUN_TESTS :: false;
     run_test("Project settings [1] to [4]",     "project.focus-config", PROJECT_SETTINGS_1_TO_4,       PROJECT_SETTINGS_1_TO_4_EXPECTED);
     run_test("Сolors [1] to [4]",               "global.focus-config",  COLORS_1_TO_4,                 COLORS_1_TO_4_EXPECTED);
     run_test("Сolors [2] to [4]",               "global.focus-config",  COLORS_2_TO_4,                 COLORS_2_TO_4_EXPECTED);
-    run_test("Settings and colors [1] to [4]",  "global.focus-config",  COLORS_AND_SETTINGS_1_TO_4,    COLORS_AND_SETTINGS_1_TO_4_EXPECTED);
+    run_test("Colors and settings [1] to [4]",  "global.focus-config",  COLORS_AND_SETTINGS_1_TO_4,    COLORS_AND_SETTINGS_1_TO_4_EXPECTED);
     run_test("Keybinds [1] to [4]",             "global.focus-config",  KEYBINDS_1_TO_4,               KEYBINDS_1_TO_4_EXPECTED);
     run_test("Keybinds [2] to [4]",             "global.focus-config",  KEYBINDS_2_TO_4,               KEYBINDS_2_TO_4_EXPECTED);
     run_test("Theme [1] to [4]",                "nord.focus-theme",     THEME_1_TO_4,                  THEME_1_TO_4_EXPECTED);
-    run_test("Theme [3] to [4]",                "zenburn.focus-theme",  THEME_3_TO_4,                  THEME_3_TO_4_EXPECTED);
+    run_test("Theme [3] to [4]",                "handmade.focus-theme", THEME_3_TO_4,                  THEME_3_TO_4_EXPECTED);
 }
 
 run_test :: (test_name: string, file_name: string, config_data: string, expected_data: string) {
@@ -811,8 +810,8 @@ region_warning:                         986032FF
 region_error:                           772222FF
 build_panel_background:                 1A2831FF
 build_panel_scrollbar:                  33CCCC19
-build_panel_scrollbar_hover:            33CCCC4C
-build_panel_scrollbar_background:       10191F4C
+build_panel_scrollbar_hover:            FFCCCC4C
+build_panel_scrollbar_background:       FF191F4C
 build_panel_title_bar:                  1C303AFF
 region_heredoc:                         10191FFF
 code_invalid:                           FF0000FF
@@ -1019,8 +1018,8 @@ region_warning:                         986032FF
 region_error:                           772222FF
 build_panel_background:                 1A2831FF
 build_panel_scrollbar:                  33CCCC19
-build_panel_scrollbar_hover:            33CCCC4C
-build_panel_scrollbar_background:       10191F4C
+build_panel_scrollbar_hover:            FFCCCC4C
+build_panel_scrollbar_background:       FF191F4C
 build_panel_title_bar:                  1C303AFF
 region_heredoc:                         FF191FFF
 code_invalid:                           FF0000FF
@@ -1128,8 +1127,8 @@ region_warning:                         986032FF
 region_error:                           772222FF
 build_panel_background:                 1A2831FF
 build_panel_scrollbar:                  33CCCC19
-build_panel_scrollbar_hover:            33CCCC4C
-build_panel_scrollbar_background:       10191F4C
+build_panel_scrollbar_hover:            FFCCCC4C
+build_panel_scrollbar_background:       FF191F4C
 build_panel_title_bar:                  1C303AFF
 region_heredoc:                         10191FFF
 code_invalid:                           FF0000FF
@@ -1321,8 +1320,8 @@ region_warning:                         986032FF
 region_error:                           772222FF
 build_panel_background:                 1A2831FF
 build_panel_scrollbar:                  33CCCC19
-build_panel_scrollbar_hover:            33CCCC4C
-build_panel_scrollbar_background:       10191F4C
+build_panel_scrollbar_hover:            FFCCCC4C
+build_panel_scrollbar_background:       FF191F4C
 build_panel_title_bar:                  1C303AFF
 region_heredoc:                         10191FFF
 code_invalid:                           FF0000FF
@@ -1353,68 +1352,166 @@ FOCUS_CONFIG
 
 
 THEME_3_TO_4 :: #string FOCUS_CONFIG
-  [3]   # Version number. Do not delete.
-
-[user interface]
-font:       default
-font_size:  14
+[3]  # Version number. Do not delete
 
 [colors]
-background:                             15212AFF
-background_dark:                        10191FFF
-background_highlight:                   18262FFF
-background_light:                       1A2831FF
-background_bright:                      21333FFF
 
-code_string:                            213344FF
+background0:                            161616FF
+background1:                            141414FF
+background2:                            18262FFF # unused
+background3:                            121212FF
+background4:                            121212FF
+selection_active:                       0100CDFF
+selection_inactive:                     0100CD7F
+selection_highlight:                    FCEDFC26 # todo
+search_result_active:                   B55F75FF
+search_result_inactive:                 B55F754C
+scrollbar:                              CDAA7D19
+scrollbar_hover:                        CDAA7D4C
+scrollbar_background:                   CDAA7D11
+cursor:                                 40FF40FF
+cursor_inactive:                        40FF4011
+paste_animation:                        0100CDFF
+splitter:                               CDAA7D19
+splitter_hover:                         CDAA7D4C
+letter_highlight:                       B8860BFF
+list_cursor_lite:                       CDAA7D19
+list_cursor:                            CDAA7D4C
+shadow_dark:                            1010107F
+shadow_transparent:                     10101000
+text_input_label:                       7F7F7FFF
+char_under_cursor:                      161616FF
 
-scrollbar_hover:                        FFCCCC4C
-scrollbar_background:                   FF191F4C
+ui_default:                             CDAA7DFF
+ui_dim:                                 7F7F7FFF
+ui_neutral:                             7F7F7FFF
+ui_warning:                             FFAD34FF # todo
+ui_warning_dim:                         986032FF # todo
+ui_error:                               772222FF # todo
+ui_error_bright:                        FF0000FF # todo
+ui_success:                             227722FF # todo
+
+code_default:                           CDAA7DFF
+code_comment:                           7F7F7FFF
+code_type:                              B8860BFF
+code_function:                          CDAA7DFF
+code_punctuation:                       CDAA7DFF
+code_operation:                         CDAA7DFF
+code_string:                            6B8E23FF
+code_value:                             6B8E23FF
+code_highlight:                         D89B75FF # unused
+code_error:                             FF0000FF # todo
+code_warning:                           E4D97DFF # todo
+code_keyword:                           B8860BFF
+
+region_scope_export:                    161616FF
+region_scope_file:                      161616FF
+region_scope_module:                    161616FF
+region_header:                          161616FF
+region_success:                         227722FF # todo
+region_warning:                         986032FF # todo
+region_error:                           772222FF # todo
+region_heredoc:                         121212FF
+
+build_panel_background:                 161616FF
+build_panel_scrollbar:                  CDAA7D19
+build_panel_scrollbar_hover:            CDAA7D4C
+build_panel_scrollbar_background:       CDAA7D11
+build_panel_title_bar:                  121212FF
 
 FOCUS_CONFIG
 
 THEME_3_TO_4_EXPECTED :: #string FOCUS_CONFIG
-[4]   # Version number. Do not delete.
-
-[fonts]
-font:       default
-font_size:  14
+[4]  # Version number. Do not delete
 
 [colors]
-background0:                            15212AFF
-background1:                            10191FFF
-background2:                            18262FFF
-background3:                            1A2831FF
-background4:                            21333FFF
 
-code_string_literal:                    213344FF
+background0:                            161616FF
+background1:                            141414FF
+background2:                            18262FFF # unused
+background3:                            121212FF
+background4:                            121212FF
+selection_active:                       0100CDFF
+selection_inactive:                     0100CD7F
+selection_highlight:                    FCEDFC26 # todo
+search_result_active:                   B55F75FF
+search_result_inactive:                 B55F754C
+scrollbar:                              CDAA7D19
+scrollbar_hover:                        CDAA7D4C
+scrollbar_background:                   CDAA7D11
+cursor:                                 40FF40FF
+cursor_inactive:                        40FF4011
+paste_animation:                        0100CDFF
+splitter:                               CDAA7D19
+splitter_hover:                         CDAA7D4C
+letter_highlight:                       B8860BFF
+list_cursor_lite:                       CDAA7D19
+list_cursor:                            CDAA7D4C
+shadow_dark:                            1010107F
+shadow_transparent:                     10101000
+text_input_label:                       7F7F7FFF
+char_under_cursor:                      161616FF
 
-scrollbar_hover:                        FFCCCC4C
-scrollbar_background:                   FF191F4C
+ui_default:                             CDAA7DFF
+ui_dim:                                 7F7F7FFF
+ui_neutral:                             7F7F7FFF
+ui_warning:                             FFAD34FF # todo
+ui_warning_dim:                         986032FF # todo
+ui_error:                               772222FF # todo
+ui_error_bright:                        FF0000FF # todo
+ui_success:                             227722FF # todo
+
+code_default:                           CDAA7DFF
+code_comment:                           7F7F7FFF
+code_type:                              B8860BFF
+code_function:                          CDAA7DFF
+code_punctuation:                       CDAA7DFF
+code_operation:                         CDAA7DFF
+code_string_literal:                    6B8E23FF
+code_value:                             6B8E23FF
+code_highlight:                         D89B75FF # unused
+code_error:                             FF0000FF # todo
+code_warning:                           E4D97DFF # todo
+code_keyword:                           B8860BFF
+
+region_scope_export:                    161616FF
+region_scope_file:                      161616FF
+region_scope_module:                    161616FF
+region_header:                          161616FF
+region_success:                         227722FF # todo
+region_warning:                         986032FF # todo
+region_error:                           772222FF # todo
+region_heredoc:                         121212FF
+
+build_panel_background:                 161616FF
+build_panel_scrollbar:                  CDAA7D19
+build_panel_scrollbar_hover:            CDAA7D4C
+build_panel_scrollbar_background:       CDAA7D11
+build_panel_title_bar:                  121212FF
 
 # Added after migration to version [4]
 code_invalid:                           FF0000FF
-code_multiline_string:                  213344FF
-code_raw_string:                        213344FF
-code_char_literal:                      213344FF
-code_identifier:                        BFC9DBFF
-code_note:                              E0AD82FF
-code_number:                            D699B5FF
-code_multiline_comment:                 87919DFF
-code_modifier:                          E67D74FF
-code_attribute:                         E67D74FF
-code_enum_variant:                      BFC9DBFF
-code_macro:                             E0AD82FF
-code_builtin_variable:                  D699B5FF
-code_builtin_function:                  E0AD82FF
-code_builtin_exception:                 E0AD82FF
-code_directive:                         E67D74FF
-code_directive_modifier:                E67D74FF
-code_header:                            E67D74FF
-code_header2:                           E0AD82FF
-code_header3:                           E0AD82FF
-code_header4:                           E0AD82FF
-code_header5:                           E0AD82FF
-code_header6:                           E0AD82FF
+code_multiline_string:                  6B8E23FF
+code_raw_string:                        6B8E23FF
+code_char_literal:                      6B8E23FF
+code_identifier:                        CDAA7DFF
+code_note:                              CDAA7DFF
+code_number:                            6B8E23FF
+code_multiline_comment:                 7F7F7FFF
+code_modifier:                          B8860BFF
+code_attribute:                         B8860BFF
+code_enum_variant:                      CDAA7DFF
+code_macro:                             CDAA7DFF
+code_builtin_variable:                  6B8E23FF
+code_builtin_function:                  CDAA7DFF
+code_builtin_exception:                 CDAA7DFF
+code_directive:                         B8860BFF
+code_directive_modifier:                B8860BFF
+code_header:                            B8860BFF
+code_header2:                           CDAA7DFF
+code_header3:                           CDAA7DFF
+code_header4:                           CDAA7DFF
+code_header5:                           CDAA7DFF
+code_header6:                           CDAA7DFF
 
 FOCUS_CONFIG
