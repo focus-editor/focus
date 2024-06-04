@@ -1,16 +1,4 @@
-PLATFORM_CONFIG_SECTION :: "[[macos]]";
-PLATFORM_SUBSECTION_ENUM :: enum {}
-PLATFORM_SUBSECTION_NAMES :: string.[];
-Platform_Config :: struct {}
-
-platform_parse_config_line :: (config: *Platform_Config, section: PLATFORM_SUBSECTION_ENUM, line: string) -> success: bool, error_msg: string {
-    return true, "";
-}
-
-platform_apply_config :: inline (config: *Platform_Config) {
-}
-
-platform_copy_config :: (src: *Platform_Config, dst: *Platform_Config) {
+platform_apply_config :: inline () {
 }
 
 platform_setup :: inline () {
@@ -43,17 +31,15 @@ platform_get_centered_window_dimensions :: (open_on_biggest: bool) -> s32, s32, 
 
 platform_create_window :: inline () {
     window = create_window(window_width, window_height, window_generic_title, window_x, window_y);
+    platform_set_border_color();
 }
 
 platform_maximize_window :: inline (window: Window_Type) {
-    // On macOS, we do not do this.
-    // Maximized (fullscreen) text editor windows on launch would feel jarring
-    // and out of place. It also comes with a cumbersome fullscreening animation.
+    NSWindow.maximize(window);
 }
 
 platform_enable_drag_and_drop :: inline (window: Window_Type) {
-    types := NSArray(NSPasteboardType).arrayWithObject(NSPasteboardTypeFileURL);
-    NSView.registerForDraggedTypes(window, types);
+    NSView.registerForDraggedTypes(window, NSArray(NSPasteboardType).arrayWithObject(NSPasteboardTypeFileURL));
 }
 
 platform_get_dpi_scale :: (window: Window_Type) -> float {
@@ -65,15 +51,31 @@ platform_set_window_title :: inline (title: string) {
 }
 
 platform_wait_message :: inline () {
+    Input.macos_wait_for_event();
+}
 
+platform_wake_up_main_thread :: () {
+    nsev := NSEvent.otherEventWithType(
+        type = NSEventTypeApplicationDefined,
+        location = .{},
+        modifierFlags = 0,
+        timestamp = 0,
+        windowNumber = 0,
+        ctx = null,
+        subtype = 0,
+        data1 = 0,
+        data2 = 0);
+    NSApplication.postEvent(NSApp, nsev, YES);
 }
 
 platform_set_refresh_timer :: inline (window: Window_Type) {
-
+    destroy_timer(platform_timer);
+    platform_timer = create_timer(50, true);
 }
 
 platform_kill_refresh_timer :: inline (window: Window_Type) {
-
+    destroy_timer(platform_timer);
+    platform_timer = null;
 }
 
 platform_enumerate_logical_drives :: inline () -> [] string {
@@ -97,6 +99,51 @@ platform_open_in_explorer :: (path: string, reveal := false) {
     else      run_command("open", path);
 }
 
+platform_path_equals :: inline (path_a: string, path_b: string) -> bool {
+    return path_a == path_b;
+}
+
+platform_path_contains :: inline (path: string, subpath: string) -> bool {
+    return contains(path, subpath);
+}
+
+platform_set_border_color :: inline () {
+    // NOTE: this gets called during compile-time parsing of the default config file which
+    //       causes the meta-program to crash.
+    if #compile_time return;
+
+    bg := map_color_to_vec4(.BACKGROUND_0);
+
+    // There is no way to set the color of the title bar directly. Instead we set the titlebar as
+    // "transparent" and the window's color background to the active theme's background color.
+    color := NSColor.colorWithRed(bg.x, bg.y, bg.z, 1.0);
+    defer release(color);
+    NSWindow.setTitlebarAppearsTransparent(window, YES);
+    NSWindow.setBackgroundColor(window, color);
+
+    // There is no way to change the color of the title bar text directly. As a result we do
+    // the following:
+    //   1. classify the active theme's background color as either "dark" or "light". We do this
+    //      by applying the algorithm described on this page: http://alienryderflex.com/hsp.html
+    //   2. we set the window appearance to be either the "dark" on "light" macOS theme based on
+    //      the result of the classification from step 1, which indirectly set a (hopefully)
+    //      appropriate titlebar text color.
+    hsp := sqrt(bg.x * bg.x * .299 + bg.y * bg.y * .587 + bg.z * bg.z * .114) * 256.0;
+    appearance_name := ifx hsp < 130 then "NSAppearanceNameDarkAqua" else "NSAppearanceNameAqua";
+    NSWindow.setAppearance(window, NSAppearance.appearanceNamed(NSString.getTempString(appearance_name)));
+}
+
+platform_show_cursor :: (show: bool) {
+    if show
+        NSCursor.unhide();
+    else
+        NSCursor.hide();
+}
+
+platform_get_troubleshooting_info :: () -> string {
+    return "<not implemented>";
+}
+
 #scope_file
 
 Monitor :: struct {
@@ -111,3 +158,67 @@ monitors : [..] Monitor;
 #import "Objective_C";
 #import "Objective_C/AppKit";
 #import "Process";
+#import "Hash_Table";
+#import "Math";
+
+// We need to store the association between `Focus_Timer` instances and `NSTimer` instances externally
+// since currently we can't properly do instance variables for Cocoa classes (see the warning at the
+// top of `modules/Objective_C/module.jai` for more details). Granted this platform layer only ever
+// uses a single timer but I've implemented the "generic" way in case we ever want to move this
+// implementation to some macOS support module (similar to how `Linux_Display` works).
+//
+//  - @ileonte 23.01.2024
+//
+native_timers: Table(*Focus_Timer, *NSTimer);
+platform_timer: *Focus_Timer;
+
+timer_class_registered := false;
+Focus_Timer :: struct {
+    using #as base: NSObject;
+
+    timerFired :: (using self: *Focus_Timer, _sel: Selector, notification: *NSNotification) #c_call {
+        event := NSEvent.otherEventWithType(
+            type = NSEventTypeApplicationDefined,
+            location = .{},
+            modifierFlags = 0,
+            timestamp = 0,
+            windowNumber = 0,
+            ctx = null,
+            subtype = 0,
+            data1 = 0,
+            data2 = 0);
+        NSApplication.postEvent(NSApp, event, YES);
+    } @selector(timerFired:)
+}
+
+create_timer :: (timeout_ms: u64, repeat := true) -> *Focus_Timer {
+    if !timer_class_registered {
+        timer_class_registered = true;
+        init(*native_timers);
+
+        cls := objc_create_class(Focus_Timer, NSObject);
+        objc_add_instance_method(cls, Focus_Timer.timerFired, "timerFired:");
+        objc_finalize_class(cls);
+    }
+    ret := objc_new(Focus_Timer);
+    ns_timer := NSTimer.scheduledTimerWithTimeInterval(
+        interval = cast(float64)timeout_ms * 0.01,
+        target = ret,
+        selector = selector("timerFired:"),
+        userInfo = null,
+        repeats = YES);
+    table_add(*native_timers, ret, ns_timer);
+    NSRunLoop.addTimer(NSRunLoop.currentRunLoop(), ns_timer, NSRunLoopCommonModes);
+    return ret;
+}
+
+destroy_timer :: (timer: *Focus_Timer) {
+    if (timer) {
+        ns_timer, found := table_find(*native_timers, timer);
+        if found {
+            NSTimer.invalidate(ns_timer);
+            table_remove(*native_timers, timer);
+        }
+        release(timer);
+    }
+}

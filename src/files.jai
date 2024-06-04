@@ -25,16 +25,23 @@ get_file_info_from_full_path :: (abs_path: string, proj_prefix_len := -1) -> Fil
     return info;
 }
 
-get_file_icon :: (name: string, extension: string) -> File_Icon {
-    icon := File_Icon.unknown;
+get_file_icon :: (name: string, extension: string) -> Icon {
+    icon := Icon.file_unknown;
 
     if extension == {
         case "jai";
             icon = .jai;
-        case "cpp";  #through;
-        case "hpp";  #through;
-        case "h";    #through;
-        case "c";
+        case "c";   #through;
+        case "h";   #through;
+        case "inl"; #through;
+        case "cpp"; #through;
+        case "cxx"; #through;
+        case "c++"; #through;
+        case "hpp"; #through;
+        case "ipp"; #through;
+        case "cc";  #through;
+        case "m";   #through;
+        case "mm";
             icon = .cpp;
         case "cs";
             icon = .cs;
@@ -65,13 +72,12 @@ get_file_icon :: (name: string, extension: string) -> File_Icon {
         case "otf";
             icon = .font;
         case "js";
-            icon = .js;  // the javascript people probably won't ever use this editor anyway :)
-                         // if they do we'll stop making fun of js
+            icon = .js;
     }
 
     // Special cases
-    if icon == .text && equal_nocase(name, "log.md") then icon = .worklog;
-    if icon == .text || icon == .unknown {
+    if icon == .text && equal_nocase(name, "log.md") then icon = .todo;
+    if icon == .text || icon == .file_unknown {
         if contains_nocase(name, "license") || contains_nocase(name, "licence")  || contains_nocase(name, "key") {
             icon = .key;
         } else if contains_nocase(name, ".git") {
@@ -98,7 +104,7 @@ get_lowercase_extension :: (path: string, greedy := true) -> string /* temp */, 
     extension := advance(basename_with_extension, index + 1);
     if !extension return "", false;
 
-    return to_lower_copy(extension), true;
+    return to_lower_copy_new(extension,, allocator = temp), true;
 }
 
 is_file_binary :: (file_data: string) -> bool {
@@ -131,11 +137,42 @@ should_ignore_file :: (path: string) -> bool {
     }
     if begins_with_nocase(path, temp_dir) return true;  // explicitly ignore our own temp dir
 
+    #if OS != .WINDOWS {
+        /*
+         * Even if a certain path is not ignored we still only really want to know about
+         * **regular** files.
+         *
+         * The `File_Visit_Info` structs that `visit_files()` generates as parameters to
+         * the visitor callback would idealy have all the info we need to filter things at
+         * a higher level. However, this is not currently the case - they only have information
+         * on wether a certain path is a directory or a symlink, with anything that is not one
+         * of those things being assumed to be a file. This is not the case on non-Windows OSes
+         * (the filesystem can contain pipes (FIFOs), sockets, device files, etc).
+         *
+         * We could fork the `File_Utilities` module and add the info we need there. That,
+         * however, requires more effort than I'm willing to put in right now. Instead,
+         * I'm going to do an extra `stat()` here and simply ignore anything that's not a
+         * regular file.
+         */
+
+        POSIX :: #import "POSIX";
+
+        stats: POSIX.stat_t;
+        if POSIX.stat(temp_c_string(path), *stats) < 0 return true;
+        if !POSIX.S_ISREG(stats.st_mode) return true;
+    }
+
+    // Ignore binary files - it's not a 100% guarantee but a good heuristic.
+    // We're not using read_entire_file here because this function is used when scanning workspace
+    // and obtaining file lists in the Navigate to File dialog, so large binary files could really trip us up here
+    found_zeroes := read_a_chunk_of_file_and_scan_for_zeroes(path);
+    if found_zeroes return true;
+
     return false;
 }
 
 should_ignore_dir :: (path: string) -> bool {
-    path_chunks := split(path, "/");
+    path_chunks := split(path, "/",, allocator = temp);
     for config.workspace.ignore_dirs {
         if contains(it, cast(u8) #char "/") {
             // Match whole path
@@ -153,7 +190,7 @@ should_ignore_dir :: (path: string) -> bool {
 
 dir_is_within_project :: (dir_path: string) -> bool, Project_Dir {
     for project_dirs {
-        if equal_nocase(dir_path, it.path) || contains_nocase(dir_path, tprint("%/", it.path)) return true, it;
+        if platform_path_equals(dir_path, it.path) || platform_path_contains(dir_path, tprint("%/", it.path)) return true, it;
     }
     return false, Project_Dir.{};
 }
@@ -164,32 +201,29 @@ get_parent_dir_path :: (file_path: string) -> string {
     return path;
 }
 
+read_a_chunk_of_file_and_scan_for_zeroes :: (path: string) -> found_zeroes: bool {
+    push_allocator(temp);
+    auto_release_temp();
+
+    file, success := file_open(path);
+    if !success return true;  // assuming a file we can't open here is something we should not worry about
+    defer file_close(*file);
+
+    CHUNK_SIZE :: 4 * 1024;
+    buf: [CHUNK_SIZE] u8;
+
+    _, bytes_read := file_read(file, buf.data, buf.count);
+    if bytes_read <= 0 return false;  // success could be false but that could indicate a successful read near the end of the file
+    chunk := cast(string) array_view(buf, 0, bytes_read);
+    if find_index_from_left(chunk, byte = 0) >= 0 return true;
+
+    return false;
+}
+
 File_Info :: struct {
     full_path: string;
     name: string;
     path: string;
-    icon: File_Icon;
+    icon: Icon;
     project_dir_id: s8 = 0;  // to be used for sorting
-}
-
-File_Icon :: enum u16 {
-    // These are character codes for the font-awesome font
-    unknown :: 0xf15b;
-    text    :: 0xf15c;
-    jai     :: 0xf574;
-    cpp     :: 0xf1c9;
-    cs      :: 0xf1c9;
-    worklog :: 0xf46d;
-    git     :: 0xf387;
-    image   :: 0xf1c5;
-    audio   :: 0xf1c7;
-    font    :: 0xf031;
-    key     :: 0xf084;
-    gear    :: 0xf013;
-    folder  :: 0xe185;
-    drive   :: 0xf0a0;
-    js      :: 0xf2fe;
-    shell   :: 0xf2d0;
-
-    dots    :: 0xf141;
 }

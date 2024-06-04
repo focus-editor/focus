@@ -19,7 +19,7 @@ fc_find_font :: (name: string, allocator := temp) -> success: bool, path: string
         }
     }
 
-    match_string := sprint("%:spacing=100", to_string(escaped_name.data, escaped_name.count));
+    match_string := sprint("%:spacing=100\0", to_string(escaped_name.data, escaped_name.count));
     defer free(match_string);
 
     pat := FcNameParse(match_string.data); defer FcPatternDestroy(pat);
@@ -48,7 +48,7 @@ fc_find_font :: (name: string, allocator := temp) -> success: bool, path: string
         defer FcStrFree(s);
         tmp := to_string(s);
         if starts_with(tmp, ":file=") then advance(*tmp, 6);
-        ret := copy_string(tmp, allocator);
+        ret := copy_string(tmp,, allocator);
 
         escaped := true;
         size := 0;

@@ -24,41 +24,41 @@ zwp_fullscreen_shell_v1 :: struct {
     error_role           : u32 : 1;
 
     set_user_data :: inline (self: *zwp_fullscreen_shell_v1, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *zwp_fullscreen_shell_v1) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *zwp_fullscreen_shell_v1) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *zwp_fullscreen_shell_v1) #c_call {
-        wl_proxy.destroy(self);
+        wl_proxy_destroy(self);
     }
 
     release :: inline (self: *zwp_fullscreen_shell_v1) #c_call {
-        wl_proxy.marshal(self, ZWP_FULLSCREEN_SHELL_V1_RELEASE);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, ZWP_FULLSCREEN_SHELL_V1_RELEASE);
+        wl_proxy_destroy(self);
     }
 
     present_surface :: inline (self: *zwp_fullscreen_shell_v1, surface: *wl_surface, method: u32, output: *wl_output) #c_call {
-        wl_proxy.marshal(self, ZWP_FULLSCREEN_SHELL_V1_PRESENT_SURFACE,
+        wl_proxy_marshal(self, ZWP_FULLSCREEN_SHELL_V1_PRESENT_SURFACE,
             surface, method, output);
     }
 
     present_surface_for_mode :: inline (self: *zwp_fullscreen_shell_v1, surface: *wl_surface, output: *wl_output, framerate: s32) -> *zwp_fullscreen_shell_mode_feedback_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
+        ret: *wl_proxy = wl_proxy_marshal_constructor_versioned(
             self, ZWP_FULLSCREEN_SHELL_V1_PRESENT_SURFACE_FOR_MODE,
-            *zwp_fullscreen_shell_mode_feedback_v1_interface, wl_proxy.get_version(self),
+            *zwp_fullscreen_shell_mode_feedback_v1_interface, wl_proxy_get_version(self),
             surface, output, framerate, null);
         return cast(*zwp_fullscreen_shell_mode_feedback_v1) ret;
     }
 
     add_listener :: inline (self: *zwp_fullscreen_shell_v1, listener: *zwp_fullscreen_shell_v1_listener, data: *void) -> s32 #c_call {
-        return wl_proxy.add_listener(self, cast(*generic_c_call) listener, data);
+        return wl_proxy_add_listener(self, cast(*generic_c_call) listener, data);
     }
 }
 
@@ -86,23 +86,23 @@ zwp_fullscreen_shell_mode_feedback_v1 :: struct {
     _interface_ :: *zwp_fullscreen_shell_mode_feedback_v1_interface;
 
     set_user_data :: inline (self: *zwp_fullscreen_shell_mode_feedback_v1, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *zwp_fullscreen_shell_mode_feedback_v1) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *zwp_fullscreen_shell_mode_feedback_v1) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *zwp_fullscreen_shell_mode_feedback_v1) #c_call {
-        wl_proxy.destroy(self);
+        wl_proxy_destroy(self);
     }
 
     add_listener :: inline (self: *zwp_fullscreen_shell_mode_feedback_v1, listener: *zwp_fullscreen_shell_mode_feedback_v1_listener, data: *void) -> s32 #c_call {
-        return wl_proxy.add_listener(self, cast(*generic_c_call) listener, data);
+        return wl_proxy_add_listener(self, cast(*generic_c_call) listener, data);
     }
 }
 ZWP_FULLSCREEN_SHELL_MODE_FEEDBACK_V1_MODE_SUCCESSFUL_SINCE   : u32 : 1;

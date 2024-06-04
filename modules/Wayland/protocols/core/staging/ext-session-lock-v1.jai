@@ -9,26 +9,26 @@ ext_session_lock_manager_v1 :: struct {
     _interface_ :: *ext_session_lock_manager_v1_interface;
 
     set_user_data :: inline (self: *ext_session_lock_manager_v1, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *ext_session_lock_manager_v1) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *ext_session_lock_manager_v1) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *ext_session_lock_manager_v1) #c_call {
-        wl_proxy.marshal(self, EXT_SESSION_LOCK_MANAGER_V1_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, EXT_SESSION_LOCK_MANAGER_V1_DESTROY);
+        wl_proxy_destroy(self);
     }
 
     lock :: inline (self: *ext_session_lock_manager_v1) -> *ext_session_lock_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
+        ret: *wl_proxy = wl_proxy_marshal_constructor_versioned(
             self, EXT_SESSION_LOCK_MANAGER_V1_LOCK,
-            *ext_session_lock_v1_interface, wl_proxy.get_version(self),
+            *ext_session_lock_v1_interface, wl_proxy_get_version(self),
             null);
         return cast(*ext_session_lock_v1) ret;
     }
@@ -52,37 +52,37 @@ ext_session_lock_v1 :: struct {
     error_already_constructed : u32 : 4;
 
     set_user_data :: inline (self: *ext_session_lock_v1, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *ext_session_lock_v1) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *ext_session_lock_v1) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *ext_session_lock_v1) #c_call {
-        wl_proxy.marshal(self, EXT_SESSION_LOCK_V1_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, EXT_SESSION_LOCK_V1_DESTROY);
+        wl_proxy_destroy(self);
     }
 
     get_lock_surface :: inline (self: *ext_session_lock_v1, surface: *wl_surface, output: *wl_output) -> *ext_session_lock_surface_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
+        ret: *wl_proxy = wl_proxy_marshal_constructor_versioned(
             self, EXT_SESSION_LOCK_V1_GET_LOCK_SURFACE,
-            *ext_session_lock_surface_v1_interface, wl_proxy.get_version(self),
+            *ext_session_lock_surface_v1_interface, wl_proxy_get_version(self),
             null, surface, output);
         return cast(*ext_session_lock_surface_v1) ret;
     }
 
     unlock_and_destroy :: inline (self: *ext_session_lock_v1) #c_call {
-        wl_proxy.marshal(self, EXT_SESSION_LOCK_V1_UNLOCK_AND_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, EXT_SESSION_LOCK_V1_UNLOCK_AND_DESTROY);
+        wl_proxy_destroy(self);
     }
 
     add_listener :: inline (self: *ext_session_lock_v1, listener: *ext_session_lock_v1_listener, data: *void) -> s32 #c_call {
-        return wl_proxy.add_listener(self, cast(*generic_c_call) listener, data);
+        return wl_proxy_add_listener(self, cast(*generic_c_call) listener, data);
     }
 }
 
@@ -119,29 +119,29 @@ ext_session_lock_surface_v1 :: struct {
     error_invalid_serial          : u32 : 3;
 
     set_user_data :: inline (self: *ext_session_lock_surface_v1, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *ext_session_lock_surface_v1) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *ext_session_lock_surface_v1) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *ext_session_lock_surface_v1) #c_call {
-        wl_proxy.marshal(self, EXT_SESSION_LOCK_SURFACE_V1_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, EXT_SESSION_LOCK_SURFACE_V1_DESTROY);
+        wl_proxy_destroy(self);
     }
 
     ack_configure :: inline (self: *ext_session_lock_surface_v1, serial: u32) #c_call {
-        wl_proxy.marshal(self, EXT_SESSION_LOCK_SURFACE_V1_ACK_CONFIGURE,
+        wl_proxy_marshal(self, EXT_SESSION_LOCK_SURFACE_V1_ACK_CONFIGURE,
             serial);
     }
 
     add_listener :: inline (self: *ext_session_lock_surface_v1, listener: *ext_session_lock_surface_v1_listener, data: *void) -> s32 #c_call {
-        return wl_proxy.add_listener(self, cast(*generic_c_call) listener, data);
+        return wl_proxy_add_listener(self, cast(*generic_c_call) listener, data);
     }
 }
 

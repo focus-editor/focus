@@ -15,12 +15,13 @@
 
 Event_Type :: enum u32 {  // If we set this to u8, our packing will stop matching C's.
     UNINITIALIZED :: 0;
-    KEYBOARD    :: 1;
-    TEXT_INPUT  :: 2;
-    WINDOW      :: 3;
-    MOUSE_WHEEL :: 4;
-    QUIT        :: 5;
-    DRAG_AND_DROP_FILES :: 6;
+    KEYBOARD      :: 1;
+    TEXT_INPUT    :: 2;
+    WINDOW        :: 3;
+    MOUSE_V_WHEEL :: 4;
+    MOUSE_H_WHEEL :: 5;
+    QUIT          :: 6;
+    DRAG_AND_DROP_FILES :: 7;
 }
 
 Key_Current_State :: enum_flags u32 {
@@ -100,6 +101,23 @@ Key_Code :: enum u32 {
 
     PRINT_SCREEN;
 
+    NUMPAD_0;
+    NUMPAD_1;
+    NUMPAD_2;
+    NUMPAD_3;
+    NUMPAD_4;
+    NUMPAD_5;
+    NUMPAD_6;
+    NUMPAD_7;
+    NUMPAD_8;
+    NUMPAD_9;
+    NUMPAD_MULTIPLY;
+    NUMPAD_DIVIDE;
+    NUMPAD_ADD;
+    NUMPAD_SUBTRACT;
+    NUMPAD_DECIMAL;
+    NUMPAD_ENTER;
+
     MOUSE_BUTTON_LEFT;
     MOUSE_BUTTON_MIDDLE;
     MOUSE_BUTTON_RIGHT;
@@ -163,13 +181,18 @@ Event :: struct {
     typical_wheel_delta: s32;  // Used only for mouse events.
     wheel_delta: s32;          // Used only for mouse events.
 
-    files: [] string;  // Used only for drag and drop events. Both the array and its contents are heap-allocated, lives until events are reset for the next frame.
+    files: [..] string;  // Used only for drag and drop events. Both the array and its contents are heap-allocated, lives until events are reset for the next frame.
+}
+
+Wheel_Delta :: struct {
+    vertical: s32;
+    horizontal: s32;
 }
 
 // Per-frame mouse deltas:
 mouse_delta_x: int;
 mouse_delta_y: int;
-mouse_delta_z: int;
+mouse_wheel_delta: Wheel_Delta;
 
 events_this_frame:   [..] Event;
 input_button_states: [NUM_BUTTON_STATES] Key_Current_State;
@@ -221,9 +244,6 @@ input_per_frame_event_and_flag_update :: () {
     // Called once per frame, probably.
 
     for events_this_frame {
-        for file: it.files {
-            free(file);
-        }
         array_free(it.files);
     }
     array_reset(*events_this_frame);
@@ -232,7 +252,7 @@ input_per_frame_event_and_flag_update :: () {
     end_mask := ~(Key_Current_State.END | .DOWN | .START);
     // @Speed: Could just keep a list of who is not currently set.
     for * input_button_states {
-        if (<<it & .END) {
+        if (<<it & .END || !input_application_has_focus) {
             <<it &= end_mask;
         } else {
             <<it &= mask;
@@ -241,7 +261,7 @@ input_per_frame_event_and_flag_update :: () {
 
     mouse_delta_x = 0;
     mouse_delta_y = 0;
-    mouse_delta_z = 0;
+    mouse_wheel_delta = .{};
 }
 
 #scope_module

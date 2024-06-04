@@ -1,0 +1,428 @@
+[4]  # Version number. Do not delete.
+
+[[workspace]]
+
+[workspace dirs]
+# These directories will be scanned when a workspace is opened so that search etc. works.
+# Example:
+# /Users/my_name/projects/my_project
+# /Users/my_name/jai
+
+[ignore dirs]
+# The workspace scanner will not descend into the dirs that match these names.
+.svn
+.git
+__pycache__
+
+[allow file extensions]
+# These files are explicitly allowed so that the editor doesn't waste time figuring out
+# whether it should ignore these or not (if a file is not explicitly allowed or ignored,
+# it will be read to determine if it's binary or not).
+.jai .c .cpp .h .hpp .cc .cs .txt .md .focus-* .ini .csv .log .sql .py .m .html .xml .plist .js .jsx .ts .tsx .json .yml .yaml .toml .zig .odin
+
+[ignore file extensions]
+# Files with the following extensions will not appear in the file open dialog and won't be indexed.
+# It makes sense to add all known binary file extensions here.
+.exe .pdb .ttf .otf .eot .woff *woff? .dll .lib .dylib .so *so.* .a .o .pdf
+.jpg .png .gif .jpeg .ico .tif .tiff .tga .bmp .webp  # maybe someday we'll support opening images
+.mp3 .wav .ogg .wma
+.blend .obj .fbx .dae .3ds .dat .msh2
+.mpg .mpeg .psd .codex .webm .wma
+.zip .rar .7z
+.bin .sys .iso
+.nib .exp
+.pyc .rpyc
+.DS_Store .dmg
+
+[file associations]
+# Optional file associations in the format `<wildcard1> <wildcard2> ... : <language>`
+# Example:
+# *.hpp *.hh *.h : cpp
+# todo.txt : todo
+
+
+[[settings]]
+
+maximize_on_start:                      false
+open_on_the_biggest_monitor:            false
+cursor_as_block:                        true
+cursor_blink_time_in_seconds:           5
+highlight_selection_occurrences:        true
+disable_that_annoying_paste_effect:     false
+disable_file_open_close_animations:     false
+insert_spaces_when_pressing_tab:        true
+strip_trailing_whitespace_on_save:      false
+smooth_scrolling:                       true
+scroll_beyond_last_line:                true
+double_shift_to_search_in_workspace:    false
+can_cancel_go_to_line:                  true
+copy_whole_line_without_selection:      false
+tab_size:                               4
+line_height_scale_percent:              120
+max_editor_width:                       -1
+editor_history_size:                    1024
+line_wrap_is_on_by_default:             false
+show_line_numbers:                      false
+hide_mouse_when_typing:                 false
+highlight_line_with_cursor:             false
+draw_indent_guides:                     false
+auto_surround_with_brackets_and_quotes: false
+auto_close_brackets:                    false
+show_cursors_off_screen:                true
+persist_local_search_results:           false  # if true, search results will stay highlighted and you have to dismiss them using the `escape` action
+
+build_panel_stays_in_one_place:         false  # if true, the build panel will flip to the inactive pane in two pane layouts
+build_panel_line_wrap_always_on:        true
+build_panel_width_percent:              50
+build_panel_height_percent:             50
+
+status_bar_position:                    bottom # valid positions: top, bottom
+
+
+# [[build commands]]
+# build_working_dir:      <build working dir for all commands>
+# open_panel_on_build:    true  #  <- any settings specified here will apply to all commands unless overridden
+# close_panel_on_success: false
+# clear_build_output_before_running: false
+# error_regex:            <compiler-specific error regex>  # see examples below
+# auto_jump_to_error:     false
+
+# [Debug Build And Run]   # <- command name. Can be arbitrary
+# build_command:          jai main.jai  # should be an executable or a script
+# build_working_dir:      <build working dir for this command only>
+# timeout_in_seconds:     5             # if you don't want a timeout, don't specify it
+# run_command:            test.exe      # will be run if build succeeds
+# run_working_dir:        /Users/user   # working dir for the run command
+# key_binding:            F5
+
+# [Run]                   # <- You could have commands that don't build anything and just run something
+# run_command:            test
+# run_working_dir:        /Users/user/test
+# key_binding:            Ctrl-F5
+
+# [Release]
+# build_command:          jai first.jai - release
+# key_binding:            F9
+
+
+# Example error regexes:
+# For jai:  ^(?P<file>.*):(?P<line>\d+),(?P<col>\d+): (?P<type>Error|Warning|Info|...):* (?P<msg>.*)|^(?P<msg1>.*error LNK.*)
+# ... let us know what regex works for you and we'll add it here
+
+# NOTE:
+# You can use the following variables in build_command or run_command:
+# %FILE%      - full path to currenly active file
+# %FILE_DIR%  - the directory of the currently active file
+# %FILE_NAME% - current file name, with extension
+# %FILE_NAME_NO_EXTENSION% - current file name, without extension
+# %BUILD_WORKING_DIR% - working dir of the build command
+# %RUN_WORKING_DIR%   - working dir of the run command
+
+
+[[keymap]]
+
+# - The first matching combination will be used, so order matters
+
+[editors]   # <- this means that the following key combos will apply only when editing text
+
+# Key combination                 Action
+
+Cmd-D                           select_word_or_create_another_cursor
+Cmd-Shift-A                     select_all_occurrences
+
+Cmd-Shift-D                     duplicate_lines
+
+# These shortcuts can be annoying to accidentally use, so they are commented out by default
+# Shift-Backspace                 delete_line_and_go_up
+# Shift-Delete                    delete_line
+
+Cmd-K                           delete_to_end_of_line
+Cmd-Delete                      delete_to_end_of_line
+Cmd-Backspace                   delete_to_start_of_line
+
+Opt-ArrowUp                     move_selected_lines_up
+Opt-ArrowDown                   move_selected_lines_down
+
+Cmd-J                           join_lines
+Cmd-Shift-J                     join_lines_no_spaces_in_between
+
+Tab                             indent_or_go_to_next_tabstop
+Shift-Tab                       unindent
+
+Cmd-]                           indent
+Cmd-[                           unindent
+
+Cmd-S                           save
+Cmd-Shift-S                     save_as
+
+Cmd-Opt-Minus                   move_to_previous_editor_history
+Cmd-Opt-Plus                    move_to_next_editor_history
+
+Cmd-Shift-Minus                 move_to_previous_buffer
+Cmd-Shift-Plus                  move_to_next_buffer
+
+Cmd-/                           toggle_comment
+Cmd-L                           select_line
+
+Ctrl-Cmd-ArrowUp                scroll_viewport_up
+Ctrl-Cmd-ArrowDown              scroll_viewport_down
+Ctrl-Cmd-ArrowLeft              scroll_viewport_left
+Ctrl-Cmd-ArrowRight             scroll_viewport_right
+
+Cmd-Shift-C                     move_cursor_to_viewport_center
+
+{Shift}-Ctrl-Opt-Cmd-ArrowUp    move_up_to_empty_line
+{Shift}-Ctrl-Opt-Cmd-ArrowDown  move_down_to_empty_line
+
+Opt-Shift-I                     add_cursors_to_line_ends
+Opt-Shift-Ctrl-I                add_cursors_to_line_starts
+
+Enter                           break_line
+Cmd-Enter                       new_line_below_without_breaking
+Cmd-Shift-Enter                 new_line_above_without_breaking
+
+NumpadEnter                     break_line
+Cmd-NumpadEnter                 new_line_below_without_breaking
+Cmd-Shift-NumpadEnter           new_line_above_without_breaking
+
+Cmd-1                           switch_to_left_editor
+Cmd-2                           switch_to_right_editor
+Cmd-,                           switch_to_other_editor
+Cmd-Shift-,                     duplicate_editor
+
+Ctrl-Cmd-Shift-ArrowLeft        move_editor_to_the_left
+Ctrl-Cmd-Shift-ArrowRight       move_editor_to_the_right
+
+Cmd-N                           create_new_file
+Cmd-Shift-N                     create_new_file_on_the_side
+
+Opt-Shift-ArrowUp               create_cursor_above
+Opt-Shift-ArrowDown             create_cursor_below
+Opt-Cmd-A                       align_cursors
+
+Opt-Cmd-Z                       toggle_line_wrap
+Opt-Cmd-L                       toggle_line_numbers
+
+Opt-Cmd-Shift-N                 open_another_editor_instance
+
+
+[open file dialog]
+
+Enter                           open_entry_in_place
+Cmd-1                           open_entry_on_the_left
+Cmd-Enter                       open_entry_on_the_side
+Cmd-2                           open_entry_on_the_right
+Shift-Enter                     open_entry_in_explorer
+
+Tab                             open_directory
+
+Backspace                       pop_directory
+
+
+[search dialog]
+
+Enter                           open_entry_in_place
+Cmd-Enter                       open_entry_on_the_side
+Cmd-1                           open_entry_on_the_left
+Cmd-2                           open_entry_on_the_right
+
+Shift-Enter                     move_up  # an alternative way to move
+
+Cmd-Opt-C                       toggle_case_sensitive
+Cmd-Opt-W                       toggle_whole_word
+Cmd-Opt-R                       toggle_regex_search
+
+[common]
+
+# Common key combos may be used as a fallback if they are not defined in more specific sections.
+# For example, if "move_up" is not defined in [editors], the one in the [common] section will be matched.
+
+Cmd-Shift-P                     show_commands
+
+Cmd-F                           search_in_buffer
+Cmd-Opt-F                       search_in_buffer_dropdown_mode
+Cmd-Shift-F                     search_in_project
+
+Cmd-Opt-P                       switch_to_project
+
+Cmd-P                           open_file_by_name
+Cmd-O                           navigate_to_file
+Cmd-Shift-O                     navigate_to_file_from_root
+Ctrl-Tab                        switch_between_open_files
+
+Cmd-G                           go_to_line
+
+Cmd-C                           copy
+Cmd-X                           cut
+Cmd-V                           paste
+
+Cmd-Z                           undo
+Cmd-Shift-Z                     redo
+
+Cmd-D                           select_word
+Cmd-A                           select_all
+
+Cmd-W                           close_current_editor
+Cmd-Shift-W                     close_other_editor
+
+Escape                          escape  # combines close_dialog and remove_additional_cursors
+
+Cmd-Shift-L                     toggle_expand
+
+Cmd-B                           toggle_build_panel
+
+# Ctrl-Cmd-F will always toggle fullscreen on macOS (like most other apps), but you can uncomment this to use something else.
+# F11                             toggle_fullscreen
+
+# {Shift}- means shift is optional, the key combination will still be matched.
+# NOTE: in this editor the Shift key is hard-coded to extend selection when held
+{Shift}-ArrowUp                 move_up
+{Shift}-Opt-Cmd-ArrowUp         move_up_fast
+{Shift}-PageUp                  move_up_one_page
+
+{Shift}-ArrowDown               move_down
+{Shift}-Opt-Cmd-ArrowDown       move_down_fast
+{Shift}-PageDown                move_down_one_page
+
+{Shift}-ArrowLeft               move_left
+{Shift}-Opt-ArrowLeft           move_left_by_word
+{Shift}-Opt-Cmd-ArrowLeft       move_left_by_word_ends
+{Shift}-Cmd-ArrowLeft           jump_to_line_start
+
+{Shift}-ArrowRight              move_right
+{Shift}-Opt-ArrowRight          move_right_by_word
+{Shift}-Opt-Cmd-ArrowRight      move_right_by_word_ends
+{Shift}-Cmd-ArrowRight          jump_to_line_end
+
+{Shift}-Cmd-ArrowUp             jump_to_file_start
+{Shift}-Cmd-ArrowDown           jump_to_file_end
+
+{Shift}-Home                    jump_to_line_start
+{Shift}-End                     jump_to_line_end
+{Shift}-Cmd-Home                jump_to_file_start
+{Shift}-Cmd-End                 jump_to_file_end
+
+{Shift}-Backspace               delete_left_char
+{Shift}-Delete                  delete_right_char
+{Shift}-Opt-Backspace           delete_word_left_no_underscore
+{Shift}-Opt-Delete              delete_word_right_no_underscore
+{Shift}-Opt-Cmd-Backspace       delete_word_left
+{Shift}-Opt-Cmd-Delete          delete_word_right
+
+Cmd-Plus                        increase_font_size
+Cmd-Minus                       decrease_font_size
+Cmd-0                           reset_font_size_to_default
+Cmd-MouseMiddle                 reset_font_size_to_default
+
+F8                              go_to_next_build_error
+Cmd-F8                          go_to_next_build_error_on_the_side
+Shift-F8                        go_to_previous_build_error
+Shift-Cmd-F8                    go_to_previous_build_error_on_the_side
+
+
+[[style]]
+
+[fonts]
+font:       default
+font_size:  14
+
+[colors]
+background0:                            15212AFF
+background1:                            10191FFF
+background2:                            18262FFF
+background3:                            1A2831FF
+background4:                            21333FFF
+
+# NOTE: for Jai region_scope colors define background colors for blocks of code that fall into those scopes,
+#       so make sure to override those as well if you change the background.
+#       Those regions are likely to be used for languages other than Jai in the future
+region_scope_export:                    15212AFF
+region_scope_file:                      131C22FF
+region_scope_module:                    1A2831FF
+region_header:                          1A5152FF
+region_success:                         226022FF
+region_warning:                         986032FF
+region_error:                           772222FF
+region_heredoc:                         090e12FF
+
+selection_active:                       1C4449FF
+selection_inactive:                     1C44497F
+selection_highlight:                    FCEDFC26
+search_result_active:                   8E772EFF
+search_result_inactive:                 FCEDFC26
+scrollbar:                              33CCCC19
+scrollbar_hover:                        33CCCC4C
+scrollbar_background:                   10191F4C
+cursor:                                 26B2B2FF
+cursor_inactive:                        196666FF
+paste_animation:                        1C4449FF
+splitter:                               21333FFF
+splitter_hover:                         1C4449FF
+letter_highlight:                       599999FF
+list_cursor_lite:                       33CCCC19
+list_cursor:                            33CCCC4C
+shadow_dark:                            0E161C7F
+shadow_transparent:                     0E161C00
+text_input_label:                       3B4450FF
+char_under_cursor:                      FFFFFFFF
+
+ui_default:                             BFC9DBFF
+ui_dim:                                 87919DFF
+ui_neutral:                             4C4C4CFF
+ui_warning:                             F8AD34FF
+ui_warning_dim:                         986032FF
+ui_error:                               772222FF
+ui_error_bright:                        FF0000FF
+ui_success:                             227722FF
+
+build_panel_background:                 1A2831FF
+build_panel_scrollbar:                  33CCCC19
+build_panel_scrollbar_hover:            33CCCC4C
+build_panel_scrollbar_background:       10191F4C
+build_panel_title_bar:                  1C303AFF
+
+code_default:                           BFC9DBFF
+code_invalid:                           FF0000FF
+
+code_string_literal:                    D4BC7DFF
+code_multiline_string:                  D4BC7DFF
+code_raw_string:                        D4BC7DFF
+code_char_literal:                      D4BC7DFF
+
+code_identifier:                        BFC9DBFF
+code_note:                              E0AD82FF
+code_number:                            D699B5FF
+
+code_error:                             FF0000FF
+code_warning:                           E4D97DFF
+code_highlight:                         E4D97DFF
+
+code_comment:                           87919DFF
+code_multiline_comment:                 87919DFF
+
+code_operation:                         E0AD82FF
+code_punctuation:                       BFC9DBFF
+
+code_keyword:                           E67D74FF
+code_type:                              82AAA3FF
+code_value:                             D699B5FF
+code_modifier:                          E67D74FF
+code_attribute:                         E67D74FF
+code_enum_variant:                      BFC9DBFF
+code_macro:                             E0AD82FF
+code_function:                          D0C5A9FF
+
+code_builtin_variable:                  D699B5FF
+code_builtin_function:                  E0AD82FF
+code_builtin_exception:                 E0AD82FF
+
+code_directive:                         E67D74FF
+code_directive_modifier:                E67D74FF
+
+code_header:                            E67D74FF
+code_header2:                           E0AD82FF
+code_header3:                           E0AD82FF
+code_header4:                           E0AD82FF
+code_header5:                           E0AD82FF
+code_header6:                           E0AD82FF
+

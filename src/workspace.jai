@@ -5,7 +5,7 @@ init_workspace :: () {
 }
 
 add_directory_to_workspace :: (path: string, index := -1) {
-    full_path, success := get_absolute_path(path);
+    full_path, success := get_absolute_path(path,, temp);
     full_path = copy_string(full_path);
     path_overwrite_separators(full_path, #char "/");
 
@@ -73,16 +73,18 @@ get_workspace_scan_progress :: () -> float {
     return clamp(cast(float) num_jobs_completed / num_jobs_to_complete, 0.0, 1.0);
 }
 
-maybe_update_workspace_buffers :: () {
+workspace_update :: () {
     if !workspace_scan_complete {
         if !file_list_ready {
             results := get_completed_work(*file_list_thread_group);
             if results {
                 file_list_ready = true;
                 shutdown(*file_list_thread_group);
+                file_list_thread_group = Thread_Group.{};
 
                 // Start the actual scanning of the workspace
                 num_jobs_to_complete = 0;
+                num_jobs_completed   = 0;
 
                 num_cpus := get_num_cpus();
                 num_threads := max(num_cpus - 1, 1);
@@ -97,7 +99,7 @@ maybe_update_workspace_buffers :: () {
 
                 files_per_thread := min((files_to_scan.count / num_threads) + 1, MAX_FILES_PER_JOB);
                 num_ranges  := (files_to_scan.count / files_per_thread) + 1;
-                file_ranges := NewArray(num_ranges, [] string, allocator = get_scan_pool_allocator());
+                file_ranges := NewArray(num_ranges, [] string,, allocator = get_scan_pool_allocator());
 
                 for 0..num_ranges-1 {
                     file_range := *file_ranges[it];
@@ -106,7 +108,9 @@ maybe_update_workspace_buffers :: () {
                     if count <= 0 break;
                     << file_range = array_view(files_to_scan, start, count);
 
-                    add_work(*scanner_thread_group, file_range, sprint("Scan [%:%]", start, start + count));
+                    logging_name := sprint("Scan [%:%]", start, start + count);
+                    this_allocation_is_not_a_leak(logging_name.data);  // this is actually a leak, but Thread_Group won't free it and we can't seem to be able to either
+                    add_work(*scanner_thread_group, file_range, logging_name);
 
                     num_jobs_to_complete += 1;
                 }
@@ -122,6 +126,7 @@ maybe_update_workspace_buffers :: () {
         if num_jobs_completed >= num_jobs_to_complete {
             workspace_scan_complete = true;
             shutdown(*scanner_thread_group);
+            scanner_thread_group = Thread_Group.{};
 
             reset(*scan_memory_pool);
 
@@ -133,11 +138,17 @@ maybe_update_workspace_buffers :: () {
     }
 
     // Check for any changes to the files we care about
-    files_changed := process_changes(*file_watcher);
+    files_changed := process_changes(*watchers.project_watcher);
+    files_changed |= process_changes(*watchers.external_watcher);
     if files_changed {
-        if watcher_file_modified.count > 0 && (!should_ignore_file(watcher_file_modified) || is_our_config_file(watcher_file_modified)) {
-            #if DEBUG_FILE_REFRESH log("Attempting to refresh based on watcher_file_modified: %\n", watcher_file_modified);
-            refresh_buffer_from_disk(path = watcher_file_modified);
+        // NOTE: these count comparisons are intentional because count can be -1
+        if watchers.project_file_modified.count > 0 && (!should_ignore_file(watchers.project_file_modified) || is_our_config_file(watchers.project_file_modified)) {
+            #if DEBUG_FILE_REFRESH log("Attempting to refresh based on project_file_modified: %\n", watchers.project_file_modified);
+            refresh_buffer_from_disk(path = watchers.project_file_modified);
+        }
+        if watchers.external_file_modified.count > 0 && (!should_ignore_file(watchers.external_file_modified) || is_our_config_file(watchers.external_file_modified)) {
+            #if DEBUG_FILE_REFRESH log("Attempting to refresh based on external_file_modified: %\n", watchers.external_file_modified);
+            refresh_buffer_from_disk(path = watchers.external_file_modified);
         }
 
         visitor_func :: (file: *File_Visit_Info, userdata: *void) {
@@ -178,15 +189,17 @@ maybe_update_workspace_buffers :: () {
     }
 
     array_reset(*dirs_to_rescan);
-    watcher_file_modified = "";
+    watchers.project_file_modified = "";
+    watchers.external_file_modified = "";
 }
 
 hard_reload_workspace :: () {
     // Make sure no threads are running
-    if !file_list_ready           shutdown(*file_list_thread_group);
-    if !workspace_scan_complete   shutdown(*scanner_thread_group);
+    if file_list_thread_group.initted then shutdown(*file_list_thread_group);
+    if scanner_thread_group.initted   then shutdown(*scanner_thread_group);
 
     deinit_finder();
+    deinit_build_system();
     deinit_open_file_dialog();
     deinit_file_watcher();
 
@@ -201,17 +214,23 @@ hard_reload_workspace :: () {
     array_reset_keeping_memory(*project_dirs);
     init_workspace();
     init_buffers();
-    reopen_visible_editors(old_editor_state);
+    init_build_system();
+    update_window_title();
+    if automatic_workspace_reload {
+        reopen_visible_editors(old_editor_state);
+    } else {
+        show_open_file_dialog(.search);
+    }
     start_initial_workspace_scan();
-;
+
     add_success_message("Workspace has been reloaded", dismiss_in_seconds=3);
 }
 
 remember_visible_editors_and_buffers :: () -> Visible_Editor_State {
     save_editor_state :: (state: *Visible_Editor_State.State, editor: *Editor, buffer: *Buffer) {
         state.file_path = copy_temporary_string(buffer.file.full_path);
-        state.cursors = NewArray(editor.cursors.count, Cursor.State, initialized = false);
-        for * cursor, i : state.cursors { <<cursor = editor.cursors[i].state; }
+        state.cursors = NewArray(editor.cursors.count, Cursor, initialized = false);
+        for * cursor, i : state.cursors { cursor.* = editor.cursors[i]; }
         state.main_cursor = editor.main_cursor;
         state.viewport = editor.viewport;
     }
@@ -228,7 +247,7 @@ remember_visible_editors_and_buffers :: () -> Visible_Editor_State {
             if buffer.has_file && !buffer.modified {
                 save_editor_state(*left, editor, buffer);
             } else {
-                layout = .None;  // we don't reopen unmodified buffers, at least for now
+                layout = .None;  // we don't reopen modified buffers, at least for now
             }
         case .Double;
             left_editor  := *open_editors[editors.left];
@@ -263,7 +282,7 @@ reopen_visible_editors :: (using old_state: Visible_Editor_State) {
         restore_cursor_state(editor, state.cursors);
         editor.main_cursor = state.main_cursor;
         editor.viewport = state.viewport;
-        if !file_is_watched(state.file_path) then start_watching_file(state.file_path);
+        start_watching_file_if_not_already(state.file_path);
     }
 
     editors = Editor_State.{};
@@ -289,20 +308,28 @@ Visible_Editor_State :: struct {
 
     State :: struct {
         file_path: string;
-        cursors: [] Cursor.State;
+        cursors: [] Cursor;
         main_cursor: s64;
         viewport: Viewport;
     }
 }
 
-start_watching_file :: (file_path: string) {
+start_watching_file_if_not_already :: (file_path: string) {
+    assert(context.allocator.proc == focus_allocator.proc, "Unexpected context allocator for start_watching_file_if_not_already. This is a bug.");
+    if file_is_watched(file_path) return;
+
     parent_dir := get_parent_dir_path(file_path);
     if !array_find(watch_dirs, parent_dir) {
         parent_dir = copy_string(parent_dir);
         array_add(*watch_dirs, parent_dir);
-        add_directories(*file_watcher, parent_dir);
+        added := add_directories(*watchers.external_watcher, parent_dir);
+        if !added {
+            log_error("Couldn't start watching the directory '%' containing file %", parent_dir, file_path);
+            return;
+        }
+        log("Started watching external directory '%'", parent_dir);
     }
-    full_path, success := get_absolute_path(file_path);
+    full_path, success := get_absolute_path(file_path,, temp);
     if !success {
         log_error("Couldn't start watching file % because it's not found", file_path);
         return;
@@ -312,31 +339,52 @@ start_watching_file :: (file_path: string) {
     array_add_if_unique(*watch_files, full_path);
 }
 
+stop_watching_file :: (file_path: string) {
+    full_path, success := get_absolute_path(file_path,, temp);
+    if !success then return;
+    path_overwrite_separators(full_path, #char "/");
+
+    found, index := array_find(watch_files, full_path);
+    if found then array_unordered_remove_by_index(*watch_files, index);
+}
+
 file_is_watched :: (file_path: string) -> bool {
     parent_dir := get_parent_dir_path(file_path);
     if dir_is_within_project(parent_dir) return true;  // project dirs are watched
     for watch_files {
-        if equal_nocase(it, file_path) return true;
+        if platform_path_equals(it, file_path) return true;
     }
     return false;
 }
 
 init_file_watcher :: () {
-    assert(!file_watcher_initted);
-    file_watcher = File_Watcher.{};
-    if !init(*file_watcher, file_change_callback) {
+    if watchers.initialized return;
+
+    watchers.project_watcher = File_Watcher.{};
+    if !init(*watchers.project_watcher, file_change_callback, watch_recursively = true) {
         add_user_error("Could not initialize the workspace file watcher. Files won't be reloaded. This is likely a bug.");
-        file_watcher_initted = false;
-    } else {
-        file_watcher_initted = true;
+        watchers.initialized = false;
+        return;
     }
+
+    watchers.external_watcher = File_Watcher.{};
+    if !init(*watchers.external_watcher, file_change_callback, watch_recursively = false) {
+        add_user_error("Could not initialize the workspace file watcher. Files won't be reloaded. This is likely a bug.");
+        watchers.initialized = false;
+        deinit(*watchers.project_watcher);
+        return;
+    }
+
+    watchers.initialized = true;
 }
 
 deinit_file_watcher :: () {
-    if !file_watcher_initted return;
-    deinit(file_watcher);
+    if !watchers.initialized return;
+    deinit(watchers.project_watcher);
+    deinit(watchers.external_watcher);
+    for watch_files  free(it);
     array_reset_keeping_memory(*watch_files);
-    file_watcher_initted = false;
+    watchers.initialized = false;
 }
 
 #scope_file
@@ -372,21 +420,22 @@ directory_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void
     file_range := cast(*[] string) work;
 
     for path : << file_range {
-        if !should_ignore_file(path) {
-            find_or_create_buffer(path);
-        }
+        if !should_ignore_file(path) then find_or_create_buffer(path);
     }
 
     return .CONTINUE;
 }
 
 start_file_watcher :: () {
-    if !file_watcher_initted {
+    if !watchers.initialized {
         log_error("Trying to start the file watcher, but it's not initialized. This is a bug.\n");
         return;
     }
 
-    for project_dirs add_directories(*file_watcher, it.path);
+    for project_dirs {
+        added := add_directories(*watchers.project_watcher, it.path);
+        if !added log_error("Couldn't start watching directory '%'", it.path);
+    }
     dirs_to_rescan.allocator = temp;
 
     // Add directories that contain standalone files which we want to watch
@@ -395,7 +444,8 @@ start_file_watcher :: () {
             remove it;
             continue;
         }
-        add_directories(*file_watcher, it);
+        added := add_directories(*watchers.external_watcher, it);
+        if !added log_error("Couldn't start watching directory '%'", it);
     }
 }
 
@@ -404,20 +454,9 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
         b: String_Builder;
         b.allocator = temp;
         print_to_builder(*b, "%", <<change);
-        defer log("File change: %\n", builder_to_string(*b));
-    }
-
-    // If the change is in one of the ignored dirs, ignore it
-    if should_ignore_dir(change.full_path) && !is_our_config_file(change.full_path) {
-        #if DEBUG_FILE_REFRESH append(*b, " - ignore because of dir");
-        return;
-    }
-
-    // If the change is caused by watching a dir containing a standalone file, ignore it
-    parent_dir := get_parent_dir_path(change.full_path);
-    if !dir_is_within_project(parent_dir) && !file_is_watched(change.full_path) {
-        #if DEBUG_FILE_REFRESH append(*b, " - ignore because of parent dir");
-        return;
+        change_kind := "Project file";
+        if watcher == *watchers.external_watcher change_kind = "External file";
+        defer log("% change: %\n", change_kind, builder_to_string(*b,, allocator = temp));
     }
 
     maybe_add_to_queue :: (dir: string) {
@@ -432,30 +471,51 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
         if add_to_queue array_add(*dirs_to_rescan, dir);
     }
 
-    // Most commonly we will receive only a single MODIFIED event for a single file (after saving a buffer)
-    // In this case we don't want to rescan anything, but only if no other events were received in the same frame
-    if change.events == .MODIFIED && watcher_file_modified.count == 0 {
-        watcher_file_modified = copy_temporary_string(change.full_path);
-    } else {
-        // There are other events - maybe rollback and add dir to the rescan queue
-        if watcher_file_modified.count > 0 {
-            dir := get_parent_dir_path(watcher_file_modified);
-            maybe_add_to_queue(dir);
-            watcher_file_modified.count = -1;  // to indicate that we have seen and rejected a MODIFIED event this frame already
+    // If the change is in one of the ignored dirs, ignore it
+    if should_ignore_dir(change.full_path) && !is_our_config_file(change.full_path) {
+        #if DEBUG_FILE_REFRESH append(*b, " - ignore because of dir");
+        return;
+    }
+
+    if watcher == *watchers.external_watcher {
+        // If the change is caused by watching a dir containing a standalone file, ignore it
+        if !is_directory(change.full_path) {
+            parent_dir := get_parent_dir_path(change.full_path);
+            if !dir_is_within_project(parent_dir) && !file_is_watched(change.full_path) {
+                #if DEBUG_FILE_REFRESH append(*b, " - ignore because of parent dir");
+                return;
+            }
         }
 
-        // Figure
-        dir: string = ---;
-        if change.events & .SCAN_CHILDREN {
-            dir = copy_temporary_string(change.full_path);
+        watchers.external_file_modified = copy_temporary_string(change.full_path);
+    } else {
+        assert(watcher == *watchers.project_watcher);
+
+        // Most commonly we will receive only a single MODIFIED event for a single file (after saving a buffer)
+        // In this case we don't want to rescan anything, but only if no other events were received in the same frame
+        if change.events == .MODIFIED && !watchers.project_file_modified {
+            watchers.project_file_modified = copy_temporary_string(change.full_path);
         } else {
-            dir = get_parent_dir_path(change.full_path);
+            // There are other events - maybe rollback and add dir to the rescan queue
+            if watchers.project_file_modified.count > 0 {  // NOTE: this count comparison is intentional because count can be -1
+                dir := get_parent_dir_path(watchers.project_file_modified);
+                maybe_add_to_queue(dir);
+                watchers.project_file_modified.count = -1;  // to indicate that we have seen and rejected a MODIFIED event this frame already
+            }
+
+            dir: string = ---;
+            if change.events & .SCAN_CHILDREN {
+                dir = copy_temporary_string(change.full_path);
+            } else {
+                dir = get_parent_dir_path(change.full_path);
+            }
+            if dir_is_within_project(dir) then maybe_add_to_queue(dir);
         }
-        maybe_add_to_queue(dir);
     }
 
     #if DEBUG_FILE_REFRESH {
-        if watcher_file_modified print_to_builder(*b, " | watcher_file_modified: %", watcher_file_modified);
+        if watchers.project_file_modified  print_to_builder(*b, " | watchers.project_file_modified: %",  watchers.project_file_modified);
+        if watchers.external_file_modified print_to_builder(*b, " | watchers.external_file_modified: %", watchers.external_file_modified);
         if dirs_to_rescan append(*b, " | dirs_to_rescan: ");
         else append(*b, " | dirs_to_rescan: none");
         for dirs_to_rescan print_to_builder(*b, "% | ", it);
@@ -490,12 +550,19 @@ get_scan_pool_allocator :: () -> Allocator {
     return a;
 }
 
-file_watcher: File_Watcher;
-file_watcher_initted := false;
+watchers : struct {
+    initialized := false;
+
+    project_watcher:   File_Watcher;  // recursive
+    external_watcher: File_Watcher;   // non-recursive
+
+    project_file_modified: string;  // will contain the path of a file if if was modified and it was the only event in a group,
+                                    // otherwise it won't be used and a scan will be done instead
+
+    external_file_modified: string;
+}
 
 dirs_to_rescan: [..] string;    // will use temporary storage
-watcher_file_modified: string;  // will contain the path of a file if if was modified and it was the only event in a group,
-                                // otherwise it won't be used and a scan will be done instead
 
 watch_dirs:  [..] string;       // dirs we watch which are not project dirs
 watch_files: [..] string;       // files outside of projects that we want to watch

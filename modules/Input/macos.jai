@@ -219,40 +219,47 @@ init_input_system :: () {
 
     // input_vk_translation_table[OSX_VK_NUMLOCK]   = UNKNOWN;
     // input_vk_translation_table[OSX_VK_NUMPAD_EQUALS] = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_DIVIDE] = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_MULT]   = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_7]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_8]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_9]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_MINUS]  = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_4]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_5]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_6]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_PLUS]   = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_1]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_2]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_3]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_ENTER]  = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_0]      = UNKNOWN;
-    // input_vk_translation_table[OSX_VK_NUMPAD_PERIOD] = UNKNOWN;
+    input_vk_translation_table[OSX_VK_NUMPAD_DIVIDE] = NUMPAD_DIVIDE;
+    input_vk_translation_table[OSX_VK_NUMPAD_MULT]   = NUMPAD_MULTIPLY;
+    input_vk_translation_table[OSX_VK_NUMPAD_7]      = NUMPAD_7;
+    input_vk_translation_table[OSX_VK_NUMPAD_8]      = NUMPAD_8;
+    input_vk_translation_table[OSX_VK_NUMPAD_9]      = NUMPAD_9;
+    input_vk_translation_table[OSX_VK_NUMPAD_MINUS]  = NUMPAD_SUBTRACT;
+    input_vk_translation_table[OSX_VK_NUMPAD_4]      = NUMPAD_4;
+    input_vk_translation_table[OSX_VK_NUMPAD_5]      = NUMPAD_5;
+    input_vk_translation_table[OSX_VK_NUMPAD_6]      = NUMPAD_6;
+    input_vk_translation_table[OSX_VK_NUMPAD_PLUS]   = NUMPAD_ADD;
+    input_vk_translation_table[OSX_VK_NUMPAD_1]      = NUMPAD_1;
+    input_vk_translation_table[OSX_VK_NUMPAD_2]      = NUMPAD_2;
+    input_vk_translation_table[OSX_VK_NUMPAD_3]      = NUMPAD_3;
+    input_vk_translation_table[OSX_VK_NUMPAD_ENTER]  = NUMPAD_ENTER;
+    input_vk_translation_table[OSX_VK_NUMPAD_0]      = NUMPAD_0;
+    input_vk_translation_table[OSX_VK_NUMPAD_PERIOD] = NUMPAD_DECIMAL;
 }
 
-get_key_code :: (param: u16) -> Key_Code {
-    if param < 128 return input_vk_translation_table[param];
-
-    return .UNKNOWN;
+get_key_code :: (keycode: u16, char: u16 = 128) -> Key_Code {
+    if char >= 127 {
+        return ifx keycode < 128 then input_vk_translation_table[keycode] else .UNKNOWN;
+    }
+    if char == {
+        case 25; return .TAB;   // Shift-Tab
+        case; return cast(Key_Code) (char - (ifx char >= #char "a" && char <= #char "z" then 32 else 0));
+    }
 }
-
 
 update_cocoa_window_events :: () {
     using Key_Current_State;
 
     input_per_frame_event_and_flag_update();
 
-    past := NSDate.distantPast();
-
     while true {
-        nsevent := NSApplication.nextEventMatchingMask(NSApp, NSEventMaskAny, past, NSDefaultRunLoopMode, YES);
+        nsevent: *NSEvent;
+        if queued_event {
+            nsevent = queued_event;
+            queued_event = null;
+        } else {
+            nsevent = NSApplication.nextEventMatchingMask(NSApp, NSEventMaskAny, NSDate.distantPast(), NSDefaultRunLoopMode, YES);
+        }
         if !nsevent then break;
 
         NSApplication.sendEvent(NSApp, nsevent);
@@ -297,8 +304,12 @@ update_cocoa_window_events :: () {
                 array_add(*events_this_frame, event);
             case NSEventTypeKeyDown;
                 keycode := NSEvent.keyCode(nsevent);
-                characters := NSEvent.characters(nsevent);
                 modifiers := NSEvent.modifierFlags(nsevent);
+                characters := NSEvent.characters(nsevent);
+                charslen := ifx characters then NSString.length(characters) else 0;
+                charactersNoMods := NSEvent.charactersIgnoringModifiers(nsevent);
+                charslenNoMods := ifx charactersNoMods then NSString.length(charactersNoMods) else 0;
+                first := ifx charslenNoMods > 0 then NSString.characterAtIndex(charactersNoMods, 0) else 128;
 
                 shift_state := (modifiers & NSEventModifierFlagShift) != 0;
                 ctrl_state  := (modifiers & NSEventModifierFlagControl) != 0;
@@ -310,7 +321,7 @@ update_cocoa_window_events :: () {
                 event: Event;
                 event.type = .KEYBOARD;
                 event.key_pressed = 1;
-                event.key_code = get_key_code(keycode);
+                event.key_code = get_key_code(keycode, first);
                 event.packed = 0;
                 event.shift_pressed    = shift_state;
                 event.ctrl_pressed     = ctrl_state;
@@ -323,7 +334,7 @@ update_cocoa_window_events :: () {
                 // Length will be 0 if this was a dead key.
                 // @Incomplete: How do we handle diacritics entered via dead keys?
                 // For example for "¨ + a => ä", if we ignore the dead key for ¨ here and then only handle the "a", people won’t be able to assemble the "ä".
-                if characters && NSString.length(characters) {
+                if characters && charslen > 0 {
                     utf32_data := NSString.dataUsingEncoding(characters, NSUTF32LittleEndianStringEncoding);
                     // defer release(utf32_data);
                     utf32 := cast(*u32) NSData.bytes(utf32_data);
@@ -353,8 +364,10 @@ update_cocoa_window_events :: () {
                 // continue;
             case NSEventTypeKeyUp;
                 keycode := NSEvent.keyCode(nsevent);
-                characters := NSEvent.characters(nsevent);
                 modifiers := NSEvent.modifierFlags(nsevent);
+                charactersNoMods := NSEvent.charactersIgnoringModifiers(nsevent);
+                charslenNoMods := ifx charactersNoMods then NSString.length(charactersNoMods) else 0;
+                first := ifx charslenNoMods > 0 then NSString.characterAtIndex(charactersNoMods, 0) else 128;
 
                 shift_state := (modifiers & NSEventModifierFlagShift) != 0;
                 ctrl_state  := (modifiers & NSEventModifierFlagControl) != 0;
@@ -364,7 +377,7 @@ update_cocoa_window_events :: () {
                 event: Event;
                 event.type = .KEYBOARD;
                 event.key_pressed = 0;
-                event.key_code = get_key_code(keycode);
+                event.key_code = get_key_code(keycode, first);
                 event.packed = 0;  // @Temporary: Unions not currently initialized.
                 event.shift_pressed    = shift_state;
                 event.ctrl_pressed     = ctrl_state;
@@ -434,26 +447,43 @@ update_cocoa_window_events :: () {
                 mouse_delta_y += cast(int) NSEvent.deltaY(nsevent);
 
             case NSEventTypeScrollWheel;
-                // delx := NSEvent.deltaX(nsevent);
-                dely := NSEvent.deltaY(nsevent);
-                // delz := NSEvent.deltaZ(nsevent);
-                // print("del: %, %, %\n", delx, dely, delz);
+                /*
+                 * A lot of the various factors we use to multiply/divide stuff here are basically
+                 * determined by what felt good on my Macbook trackpad at the time this was written.
+                 *
+                 * The main goal here is to translate from the "scrolling units" that macOS uses
+                 * for `scrollingDeltaX`/`scrollingDeltaY` to the "multiple-of-120" style of units
+                 * that are used in Windows applications (which the whole `Input` module is built
+                 * around). I couldn't find any official documentation on how exactly to correctly
+                 * do this translation so I just experimented until things felt right (as far as I
+                 * can tell there really is no official way to perform this conversion; we may want
+                 * to make these configurable somehow).
+                 *
+                 *  - @ileonte 24.01.2024
+                 */
+                deltaX := NSEvent.scrollingDeltaX(nsevent);
+                deltaY := NSEvent.scrollingDeltaY(nsevent);
+                has_precise_scrolling := ifx NSEvent.hasPreciseScrollingDeltas(nsevent) == YES then true else false;
 
-                // it seems that OSX does scroll wheel acceleration.
-                // the smallest step I'm seeing with a Razer mouse is 0.1 for 1 bump
-                // but just quickly going past about 3 bumps yeilds ~0.6. Spinning
-                // the wheel a bit more quickly starts hitting above 15.0, sigh.
-                // In any case for now we're just multiplying by 10 since we probably
-                // as least want to register a single scroll bump. We'll likely need to
-                // tune WHEEL_DELTA at some point. -josh 6 November 2018
+                if !has_precise_scrolling {
+                    deltaX *= 10.0;
+                    deltaY *= 20.0;
+                }
 
                 event: Event;
-                event.type = .MOUSE_WHEEL;
-                event.typical_wheel_delta = WHEEL_DELTA;
-                event.wheel_delta = cast(s32) (dely * 10.0);
-                array_add(*events_this_frame, event);
-
-                mouse_delta_z += event.wheel_delta;
+                if abs(deltaX) > abs(deltaY) {
+                    event.type = .MOUSE_H_WHEEL;
+                    event.typical_wheel_delta = WHEEL_DELTA;
+                    event.wheel_delta = cast(s32) ((deltaX / 100.0) * WHEEL_DELTA * NSWindow.backingScaleFactor(NSEvent.window(nsevent)));
+                    array_add(*events_this_frame, event);
+                    mouse_wheel_delta.horizontal += event.wheel_delta;
+                } else if deltaY != 0.0 {
+                    event.type = .MOUSE_V_WHEEL;
+                    event.typical_wheel_delta = WHEEL_DELTA;
+                    event.wheel_delta = cast(s32) ((deltaY / 100.0) * WHEEL_DELTA * NSWindow.backingScaleFactor(NSEvent.window(nsevent)));
+                    array_add(*events_this_frame, event);
+                    mouse_wheel_delta.vertical += event.wheel_delta;
+                }
         }
     }
 
@@ -463,9 +493,17 @@ update_cocoa_window_events :: () {
     array_reset(*osx_externally_generated_events);
 }
 
+
+
 WHEEL_DELTA :: 120;
 
+queued_event: *NSEvent;
+
 #scope_export
+
+macos_wait_for_event :: () {
+    queued_event = NSApplication.nextEventMatchingMask(NSApp, NSEventMaskAny, NSDate.distantFuture(), NSDefaultRunLoopMode, YES);
+}
 
 update_window_events :: () {
     if !input_vk_table_initialized {
@@ -497,6 +535,8 @@ add_resize_record :: (hwnd: Window_Type, width: s32, height: s32) {
 
 #scope_file
 
+#import "Math";
+
 // :DecoupleWindowCreationAndInput:
 #add_context _macos_create_app_delegate    :: create_app_delegate;
 #add_context _macos_create_window_delegate :: create_window_delegate;
@@ -518,6 +558,7 @@ create_app_delegate :: () -> *App_Delegate {
         objc_add_instance_method(ad_class, App_Delegate.applicationDidResignActive, "applicationDidResignActive:");
         objc_add_instance_method(ad_class, App_Delegate.applicationDidBecomeActive, "applicationDidBecomeActive:");
         objc_add_instance_method(ad_class, App_Delegate.applicationDidFinishLaunching, "applicationDidFinishLaunching:");
+        objc_add_instance_method(ad_class, App_Delegate.applicationOpenFiles, "application:openFiles:");
         objc_finalize_class(ad_class);
     }
 
@@ -585,6 +626,41 @@ App_Delegate :: struct {
             NSApplication.setActivationPolicy(NSApp, NSApplicationActivationPolicyRegular);
             NSApplication.activateIgnoringOtherApps(NSApp, YES);
             NSApp.stop(NSApp, null);
+        }
+    }
+
+    applicationOpenFiles :: (self: *App_Delegate, _sel: Selector, sender: *NSApplication, nsfiles: *NSArray(*NSString)) #c_call {
+        ctx: Context;
+        push_context ctx {
+            count := nsfiles.count(nsfiles);
+
+            files: [..] string;
+            array_reserve(*files, xx count);
+
+            for i: 0..count -1 {
+                nspath := nsfiles.objectAtIndex(nsfiles, xx i);
+                path := to_string(nspath);
+                array_add(*files, copy_string(path));
+            }
+
+            event: Event;
+            event.type  = .DRAG_AND_DROP_FILES;
+            event.files = files;
+            array_add(*osx_externally_generated_events, event);
+
+            nsev := NSEvent.otherEventWithType(
+                type = NSEventTypeApplicationDefined,
+                location = .{},
+                modifierFlags = 0,
+                timestamp = 0,
+                windowNumber = 0,
+                ctx = null,
+                subtype = 0,
+                data1 = 0,
+                data2 = 0);
+            NSApplication.postEvent(sender, nsev, YES);
+
+            NSApplication.replyToOpenOrPrint(sender, 0);
         }
     }
 }

@@ -15,6 +15,8 @@ init_finder :: () {
 
 deinit_finder :: () {
     if finder.initted shutdown(*thread_group);
+    reset_results();
+    text_input_fully_clear(*finder.input);
     finder.initted = false;
 }
 
@@ -30,6 +32,7 @@ finder_handle_event :: (event: Input.Event) -> handled: bool {
             case .toggle_expand;            toggle_expand();                                        return true;
             case .toggle_case_sensitive;    finder_toggle_case_sensitive();                         return true;
             case .toggle_whole_word;        finder_toggle_whole_word();                             return true;
+            case .toggle_regex_search;      finder_toggle_regex_search();                           return true;
 
             case .move_up;                  move_cursor(-1, wrap = true);                           return true;
             case .move_down;                move_cursor( 1, wrap = true);                           return true;
@@ -38,7 +41,9 @@ finder_handle_event :: (event: Input.Event) -> handled: bool {
             case .move_up_one_page;         move_cursor(-per_page);                                 return true;
             case .move_down_one_page;       move_cursor( per_page);                                 return true;
 
+            case .escape;                   #through;
             case .close_dialog;             finder_close();                                         return true;
+
             case .open_entry_in_place;      finder_open_selected_result(selected, .in_place);       return true;
             case .open_entry_on_the_side;   finder_open_selected_result(selected, .on_the_side);    return true;
             case .open_entry_on_the_left;   finder_open_selected_result(selected, .left);           return true;
@@ -47,12 +52,7 @@ finder_handle_event :: (event: Input.Event) -> handled: bool {
         return false;
 
     } else if event.type == .TEXT_INPUT {
-        char := event.utf32;
-        if char == 127 return true;  // there seems to be a bug in the Input module
-                                     // which generates a TEXT_INPUT event for DEL
-                                     // when Ctrl+Backspace is pressed
-
-        text_input_type_char(*finder.input, char);
+        text_input_type_char(*finder.input, event.utf32);
         start_new_search();
         return true;
     }
@@ -65,9 +65,16 @@ finder_is_open :: () -> bool {
 
 finder_open :: () {
     active_global_widget = .finder;
+
     using finder;
     input.cursor.sel = 0;
     input.cursor.pos = xx input.text.count;
+
+    if need_to_refresh_results {
+        need_to_refresh_results = false;
+        reset_results();
+        start_new_search(force = true);
+    }
 }
 
 finder_close :: () {
@@ -81,10 +88,10 @@ finder_open_from_editor :: () {
     if editor && editor.cursors.count == 1 {
         cursor := editor.cursors[0];
         selected_text := get_selected_string(cursor, buffer);
-        if selected_text && offset_to_line(buffer, cursor.pos) == offset_to_line(buffer, cursor.sel) {
+        if selected_text && selected_text != cast(string) finder.input.text && offset_to_line(editor, buffer, cursor.pos) == offset_to_line(editor, buffer, cursor.sel) {
             replace_text(*finder.input, selected_text);
             reset_results();
-            start_new_search(force = true);
+            start_new_search();
         }
     }
 
@@ -95,14 +102,11 @@ finder_update :: () {
     using finder;
     if !initted return;
 
-    if need_to_refresh_results {
-        // A buffer has been modified
+    // If a buffer has changed while we have the finder window open, we have to refresh
+    if finder_is_open() && need_to_refresh_results {
         need_to_refresh_results = false;
-
-        if results {
-            reset_results();
-            start_new_search(force = true);
-        }
+        reset_results();
+        start_new_search(force = true);
     }
 
     tasks := get_completed_work(*thread_group);
@@ -124,7 +128,7 @@ finder_update :: () {
             array_resize(*results, total_results, initialize = false);
             i := 0;
             for request.completed_tasks {
-                memcpy(results.data + i, it.results.data, it.num_results * size_of(Search_Result));
+                focus_memcpy(results.data + i, it.results.data, it.num_results * size_of(Search_Result));
                 i += it.num_results;
             }
 
@@ -134,6 +138,7 @@ finder_update :: () {
 
             quick_sort(results, compare_search_results);
 
+            if needle then free(needle);
             needle = copy_string(request.needle);
 
             // Clean up task data
@@ -165,8 +170,8 @@ finder_open_selected_result :: (selected_num := -1, placement: Editor_Placement)
 
     // Select the search result
     editor, buffer := get_active_editor_and_buffer();
-    match_start := min(result.match_offset,                xx buffer.bytes.count);  // buffer could've changed, so offset may not be valid any more
-    match_end   := min(result.match_offset + needle.count, xx buffer.bytes.count);
+    match_start := min(result.match_offset,                      xx buffer.bytes.count);  // buffer could've changed, so offset may not be valid any more
+    match_end   := min(result.match_offset + result.match_count, xx buffer.bytes.count);
     cursor := leave_only_original_cursor(editor);
     cursor.sel = xx match_start;
     cursor.pos = xx match_end;
@@ -191,6 +196,13 @@ finder_toggle_case_sensitive :: () {
     using finder;
 
     case_sensitive = !case_sensitive;
+    start_new_search(force = true);
+}
+
+finder_toggle_regex_search :: () {
+    using finder;
+
+    regex_search = !regex_search;
     start_new_search(force = true);
 }
 
@@ -221,12 +233,24 @@ start_new_search :: (force := false) {
         reset_results();
         return;
     }
-    if request.needle == to_string(input.text) && !force return;  // needle hasn't changed, no need to repeat
+    if request.needle == cast(string) input.text && !force return;  // needle hasn't changed, no need to repeat
 
     request.case_sensitive = case_sensitive;
     request.whole_word     = whole_word;
+    request.regex_search   = regex_search;
+    if regex_search {
+        regex: re.Regexp;
 
-    reset_search_request(*request, new_needle = to_string(input.text));
+        flags := BASE_REGEX_FLAGS;
+        if !case_sensitive flags |= .FoldCase;
+
+        regex, regex_is_valid = re.compile(cast(string) input.text, flags);
+        if !regex_is_valid return;  // only search if the regex is valid
+
+        re.uninit(*regex);
+    }
+
+    reset_search_request(*request, new_needle = cast(string) input.text);
     request.in_progress = true;
 
     num_threads := thread_group.worker_info.count;
@@ -244,16 +268,29 @@ start_new_search :: (force := false) {
         task.buffer_end_index   = cast(s32) min(buffer_start_index + buffers_per_thread - 1, open_buffers.count - 1);
         task.case_sensitive = request.case_sensitive;
         task.whole_word = request.whole_word;
+        task.regex_search = request.regex_search;
 
         add_work(*thread_group, task, needle);
         request.num_tasks_left += 1;  // only modified in the main thread so no atomics needed
 
         buffer_start_index += buffers_per_thread;
     }
+
+    if regex_search && regex_is_valid  reset_results();
 }
 
 search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
     using task := cast(*Search_Task) work;
+
+    regex: re.Regexp;
+    if regex_search {
+        // Compile the regex for each threadproc for thread safety
+        re_text := ifx whole_word then tprint("\\w%\\w", needle) else needle;
+        flags := BASE_REGEX_FLAGS;
+        if !case_sensitive then flags |= .FoldCase;
+        regex = re.compile(re_text, flags);  // NOTE: the validity of this regex has been determined by previous code
+    }
+    defer if regex_search then re.uninit(*regex);
 
     for buffer_id : buffer_start_index .. buffer_end_index {
         // Search in buffer
@@ -264,43 +301,88 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
         lock(*buffer.content_lock);
         defer unlock(*buffer.content_lock);
 
-        contents := to_string(buffer.bytes);
-
         // Sort key parts
         dir_id_part:    u64 = (cast,trunc(u64) (buffer.file.project_dir_id + 1)) << 56;
         buffer_id_part: u64 = (cast,trunc(u64) buffer_id)                        << 32;
         if buffer.modified || buffer.modified_on_disk then dir_id_part = 0;  // make sure modified buffers are on top
+        buffer_sort_key: u64 = dir_id_part | buffer_id_part;
 
-        file_end := contents.data + contents.count;
-        offset := 0;
-        while true {
-            if case_sensitive {
-                offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table, case_sensitive = true);
-            } else {
-                offset = inline bmh_find_index_from_left(contents, needle, start_index = offset, skip_table, case_sensitive = false);
-            }
-            if offset < 0 break;
-
-            if !whole_word || (whole_word && match_whole_word(contents, offset, needle.count)) {
-                result := *results[num_results];
-                result.buffer_id    = buffer_id;
-                result.match_offset = xx offset;
-
-                offset_part: u64 = (cast,trunc(u64) offset) << 0;
-                result.sort_key = dir_id_part | buffer_id_part | offset_part;
-
-                num_results += 1;
-                if num_results >= MAX_RESULTS_PER_WORKER break buffer_id;
-            }
-
-            offset += needle.count;
+        if regex_search {
+            find_all_using_regex(task, regex, buffer, buffer_id, buffer_sort_key);
+        } else {
+            find_all(task, buffer, buffer_id, buffer_sort_key);
         }
+
+        if num_results >= MAX_RESULTS_PER_WORKER break;
     }
 
     return .CONTINUE;  // we want to reuse this thread for future searches
 }
 
-reset_search_request :: (using request: *Search_Request, new_needle: string) { //@nocheckin: add whole_word / case sensitive parameters
+find_all_using_regex :: (using task: *Search_Task, regex: re.Regexp, buffer: Buffer, buffer_id: s32, buffer_sort_key: u64) {
+    buffer_str := cast(string) buffer.bytes;
+
+    while true {
+        if buffer_str.count <= 0 break;
+
+        auto_release_temp();  // this is very important because the regex library allocates a lot and we need to throw it away immediately
+
+        matched, captures := re.match(buffer_str, regex,, allocator = temp);
+        if !matched break;
+
+        c := captures[0];
+        offset := c.data - buffer.bytes.data;
+        count  := c.count;
+        if offset < 0 || offset >= buffer.bytes.count break;
+
+        advance_amount := c.data - buffer_str.data + count;
+        if advance_amount > 0 then advance(*buffer_str, advance_amount);
+
+        if count == 0 || starts_with(buffer_str, #char "\n") then advance_to_next_line(*buffer_str);  // some matches could be of 0 length, which is valid, skip to the next line in this case, because otherwise we could have to look at every byte and that takes too long
+
+        // Valid result, add to the list
+        result := *results[num_results];
+        result.buffer_id    = buffer_id;
+        result.match_offset = xx offset;
+        result.match_count  = xx count;
+
+        offset_part: u64 = (cast,trunc(u64) offset) << 0;
+        result.sort_key = buffer_sort_key | offset_part;
+
+        num_results += 1;
+        if num_results >= MAX_RESULTS_PER_WORKER break;
+    }
+}
+
+find_all :: (using task: *Search_Task, buffer: Buffer, buffer_id: s32, buffer_sort_key: u64) {
+    buffer_str := cast(string) buffer.bytes;
+    offset := 0;
+
+    while true {
+        if case_sensitive {
+            offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = true);
+        } else {
+            offset = inline bmh_find_index_from_left(buffer_str, needle, start_index = offset, skip_table, case_sensitive = false);
+        }
+        if offset < 0 break;
+        if whole_word && !match_whole_word(buffer_str, offset, needle.count) { offset += needle.count; continue; }
+
+        result := *results[num_results];
+        result.buffer_id    = buffer_id;
+        result.match_offset = xx offset;
+        result.match_count  = xx needle.count;
+
+        offset_part: u64 = (cast,trunc(u64) offset) << 0;
+        result.sort_key = buffer_sort_key | offset_part;
+
+        num_results += 1;
+        if num_results >= MAX_RESULTS_PER_WORKER break;
+
+        offset += needle.count;
+    }
+}
+
+reset_search_request :: (using request: *Search_Request, new_needle: string) {
     id += 1;
     for completed_tasks free_task(it);
     array_reset_keeping_memory(*completed_tasks);
@@ -330,11 +412,8 @@ free_task :: (task: *Search_Task) {
 toggle_expand :: () {
     using finder;
 
-    if width_percentage != WIDTH_EXPANDED {
-        start_animation(*width_anim, width_percentage, WIDTH_EXPANDED, snappy = true);
-    } else {
-        start_animation(*width_anim, width_percentage, WIDTH_NORMAL, snappy = true);
-    }
+    target_width := ifx width_percentage != WIDTH_EXPANDED then WIDTH_EXPANDED else WIDTH_NORMAL;
+    start_animation(*width_anim, width_percentage, target_width);
 }
 
 #scope_export
@@ -352,6 +431,8 @@ Finder :: struct {
 
     case_sensitive: bool;
     whole_word: bool;
+    regex_search: bool;
+    regex_is_valid: bool;
 
     selected: s64;
     selected_by_mouse: s64 = -1;  // to remember which entry the left mouse button went down on. Do we need it?
@@ -377,6 +458,7 @@ Search_Result :: struct {
     // as they require doing an additional search in buffer.
     buffer_id:    s32;
     match_offset: s32;
+    match_count:  s32;
     sort_key:     u64;
 }
 
@@ -391,6 +473,7 @@ Search_Request :: struct {
     in_progress: bool;
     case_sensitive: bool;
     whole_word: bool;
+    regex_search: bool;
 }
 
 // A task received by a worker thread
@@ -400,6 +483,7 @@ Search_Task :: struct {
     skip_table: [] s32;
     case_sensitive: bool;
     whole_word: bool;
+    regex_search: bool;
 
     // Will search in these buffers
     buffer_start_index: s32;

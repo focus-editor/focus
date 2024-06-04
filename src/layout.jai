@@ -87,7 +87,7 @@ cut_left :: (rect: Rect, amount: float, $margin := 0) -> (left: Rect,  remainder
     return left, remainder;
 }
 
-cut_right :: (rect: Rect, amount: float) -> (right: Rect, remainder: Rect) {
+cut_right :: (rect: Rect, amount: float, $margin := 0) -> (right: Rect, remainder: Rect) {
     amount = floor(amount);
 
     remainder := rect;
@@ -97,6 +97,14 @@ cut_right :: (rect: Rect, amount: float) -> (right: Rect, remainder: Rect) {
     right := rect;
     right.x = remainder.x + remainder.w;
     right.w = amount;
+
+    #if margin > 0 {
+        #assert margin % 2 == 0;
+        half_margin := margin / 2;
+        remainder.x -= margin;
+        remainder.w += half_margin;
+        right.w     -= half_margin;
+    }
 
     return right, remainder;
 }
@@ -131,27 +139,27 @@ cut_top :: (rect: Rect, amount: float) -> (top: Rect, remainder: Rect) {
 
 bottom_left :: inline (using rect: Rect) -> Vector2 {
     assert(is_valid(rect));
-    return make_vector2(x, y);
+    return .{x, y};
 }
 
 bottom_right :: inline (using rect: Rect) -> Vector2 {
     assert(is_valid(rect));
-    return make_vector2(x + w, y);
+    return .{x + w, y};
 }
 
 top_left :: inline (using rect: Rect) -> Vector2 {
     assert(is_valid(rect));
-    return make_vector2(x, y + h);
+    return .{x, y + h};
 }
 
 top_right :: inline (using rect: Rect) -> Vector2 {
     assert(is_valid(rect));
-    return make_vector2(x + w, y + h);
+    return .{x + w, y + h};
 }
 
 center_of :: inline (using rect: Rect) -> Vector2 {
     assert(is_valid(rect));
-    return make_vector2(x + w / 2, y + h / 2);
+    return .{x + w / 2, y + h / 2};
 }
 
 get_rect_sides :: (using rect: Rect) -> (left: float, top: float, right: float, bottom: float) {
@@ -163,7 +171,7 @@ get_rect_sides :: (using rect: Rect) -> (left: float, top: float, right: float, 
 }
 
 point_within :: (p: Vector2, using rect: Rect) -> bool {
-    assert(w >= 0 && h >= 0);
+    if w < 0 || h < 0 return false;
     return x <= p.x && p.x < x + w && y <= p.y && p.y < y + h;
 }
 

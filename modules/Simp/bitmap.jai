@@ -105,8 +105,8 @@ bitmap_save :: (bitmap: *Bitmap, filepath: string, save_alpha := false) -> bool 
             return stbi_write_tga(name, bitmap.width, bitmap.height, components, data) != 0;
         case "bmp";
             return stbi_write_bmp(name, bitmap.width, bitmap.height, components, data) != 0;
-        case "hdr";
-            return stbi_write_hdr(name, bitmap.width, bitmap.height, components, data) != 0;
+        // case "hdr";
+        //    return stbi_write_hdr(name, bitmap.width, bitmap.height, components, data) != 0;
         case "jpg";
             return stbi_write_jpg(name, bitmap.width, bitmap.height, components, data, quality=80) != 0;
         case;

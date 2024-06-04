@@ -12,26 +12,26 @@ wp_viewporter :: struct {
     error_viewport_exists : u32 : 0;
 
     set_user_data :: inline (self: *wp_viewporter, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *wp_viewporter) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *wp_viewporter) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *wp_viewporter) #c_call {
-        wl_proxy.marshal(self, WP_VIEWPORTER_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, WP_VIEWPORTER_DESTROY);
+        wl_proxy_destroy(self);
     }
 
     get_viewport :: inline (self: *wp_viewporter, surface: *wl_surface) -> *wp_viewport #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
+        ret: *wl_proxy = wl_proxy_marshal_constructor_versioned(
             self, WP_VIEWPORTER_GET_VIEWPORT,
-            *wp_viewport_interface, wl_proxy.get_version(self),
+            *wp_viewport_interface, wl_proxy_get_version(self),
             null, surface);
         return cast(*wp_viewport) ret;
     }
@@ -54,29 +54,29 @@ wp_viewport :: struct {
     error_no_surface    : u32 : 3;
 
     set_user_data :: inline (self: *wp_viewport, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *wp_viewport) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *wp_viewport) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *wp_viewport) #c_call {
-        wl_proxy.marshal(self, WP_VIEWPORT_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, WP_VIEWPORT_DESTROY);
+        wl_proxy_destroy(self);
     }
 
     set_source :: inline (self: *wp_viewport, x: wl_fixed_t, y: wl_fixed_t, width: wl_fixed_t, height: wl_fixed_t) #c_call {
-        wl_proxy.marshal(self, WP_VIEWPORT_SET_SOURCE,
+        wl_proxy_marshal(self, WP_VIEWPORT_SET_SOURCE,
             x, y, width, height);
     }
 
     set_destination :: inline (self: *wp_viewport, width: s32, height: s32) #c_call {
-        wl_proxy.marshal(self, WP_VIEWPORT_SET_DESTINATION,
+        wl_proxy_marshal(self, WP_VIEWPORT_SET_DESTINATION,
             width, height);
     }
 }

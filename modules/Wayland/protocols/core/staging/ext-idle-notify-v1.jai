@@ -9,26 +9,26 @@ ext_idle_notifier_v1 :: struct {
     _interface_ :: *ext_idle_notifier_v1_interface;
 
     set_user_data :: inline (self: *ext_idle_notifier_v1, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *ext_idle_notifier_v1) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *ext_idle_notifier_v1) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *ext_idle_notifier_v1) #c_call {
-        wl_proxy.marshal(self, EXT_IDLE_NOTIFIER_V1_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, EXT_IDLE_NOTIFIER_V1_DESTROY);
+        wl_proxy_destroy(self);
     }
 
     get_idle_notification :: inline (self: *ext_idle_notifier_v1, timeout: u32, seat: *wl_seat) -> *ext_idle_notification_v1 #c_call {
-        ret: *wl_proxy = wl_proxy.marshal_constructor_versioned(
+        ret: *wl_proxy = wl_proxy_marshal_constructor_versioned(
             self, EXT_IDLE_NOTIFIER_V1_GET_IDLE_NOTIFICATION,
-            *ext_idle_notification_v1_interface, wl_proxy.get_version(self),
+            *ext_idle_notification_v1_interface, wl_proxy_get_version(self),
             null, timeout, seat);
         return cast(*ext_idle_notification_v1) ret;
     }
@@ -45,24 +45,24 @@ ext_idle_notification_v1 :: struct {
     _interface_ :: *ext_idle_notification_v1_interface;
 
     set_user_data :: inline (self: *ext_idle_notification_v1, user_data: *void) #c_call {
-        wl_proxy.set_user_data(self, user_data);
+        wl_proxy_set_user_data(self, user_data);
     }
 
     get_user_data :: inline (self: *ext_idle_notification_v1) -> *void #c_call {
-        return wl_proxy.get_user_data(self);
+        return wl_proxy_get_user_data(self);
     }
 
     get_version :: inline (self: *ext_idle_notification_v1) -> u32 #c_call {
-        return wl_proxy.get_version(self);
+        return wl_proxy_get_version(self);
     }
 
     destroy :: inline (self: *ext_idle_notification_v1) #c_call {
-        wl_proxy.marshal(self, EXT_IDLE_NOTIFICATION_V1_DESTROY);
-        wl_proxy.destroy(self);
+        wl_proxy_marshal(self, EXT_IDLE_NOTIFICATION_V1_DESTROY);
+        wl_proxy_destroy(self);
     }
 
     add_listener :: inline (self: *ext_idle_notification_v1, listener: *ext_idle_notification_v1_listener, data: *void) -> s32 #c_call {
-        return wl_proxy.add_listener(self, cast(*generic_c_call) listener, data);
+        return wl_proxy_add_listener(self, cast(*generic_c_call) listener, data);
     }
 }
 

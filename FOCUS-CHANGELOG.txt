@@ -1,50 +1,303 @@
 # ROUGH ROADMAP
 
-- Line wrap
-- Optional line numbers
-- Config files for directories (i.e. adding a .focus-config file to your directory and have Focus load it)
-- Global search improvements (the ability to filter additionally by filename)
-- Backup unsaved changes
-- Highlight other languages
-- Improve smooth scrolling for fancy mice
+- Workspace search improvements (the ability to filter additionally by filename, global replace etc)
+- Settings per file type
+- Basic language definition files for the highlighting of languages we don't yet support
 - Identifier search
 - A little bit of semantic highlighting for Jai
-- Settings per file type
-- Custom title bar on Windows
+- Backup unsaved changes
 - Proper highlighting for C++
 - ...
 
 
 # KNOWN BUGS
 
-- (IMPORTANT) Sometimes when pulling changes via Git, the editor won't notice the files changing (NOTE: if you have a repro please send it to us!)
-- [Current file watcher limitation] If you open a file in a large folder, the file watcher might scan the whole folder in order to watch for the changes to the file.
+- See https://github.com/focus-editor/focus/issues
+
+# Main Git Branch
+
++ New features:
+    + New option: `status_bar_position`. Allows changing the position of the status bar to either the `top` or `bottom` of the editor window. Defaults to `bottom`.
+    + Code colors have been revamped. There are now more colors available in the config, which roughly correspond to the code tokens produced by language tokenizers.
+        + Configs and themes will be migrated to version [4] with the new colors automatically derived from the old colors
+        + You can always check the default config for the full list of available colors (use the `Show Default Config` command)
+        + Do note that not all tokens are present in all languages. For example, `code_enum_variant` only works with Jai, Odin and Zig at the moment.
+    + New commands: `close_all_editors` and `close_other_editors`. Can be used to clean up the most recent files dialog (`Ctrl-Tab` by default). (thanks @maxamundsen)
+    + New command: `strip_trailing_whitespace`. Use to strip trailing whitespace in the currently open file (thanks @maxamundsen)
+    + New command: `choose_language`. Allows to select a language for a buffer (thanks @maxamundsen)
+    + New config subsection under `[[workspace]]`: `[file associations]`. Can be used to assign syntax to buffers using wildcards. See the default config for examples
++ Bug fixes:
+    + Linux: Fixed a bug that caused inconsistent trackpad scrolling on Wayland (thanks @Mythique)
+    + Rust: enabled comment toggling that was missing initially
+    + Fixed a few memory leaks
+    + Fixed an out-of-bounds scroll position in scrollable panels in some cases
++ Other changes:
+    + ...
 
 
 # RELEASES ==================================================================
 
-# Version 0.1.11 (UNRELEASED)
+# Version 0.3.5
 
-+ Linux: The "Open Projects Directory" command as well as shift-clicking files/directories in the "open file" dialogs (Ctrl+O, Ctrl+Shift+O, Ctrl+P) should now work.
-  By default the editor will try to auto-detect the prefered file manager using the XDG utilities.
-  In case the auto-detection fails you can manually set the commands to run via the "explorer_command" and "explorer_reveal_command" options in the "[[linux]]" section of the config file.
-  Example:
++ New features:
+    + New option: `insert_final_newline_on_save`. Set to `true` to auto-add missing final newlines to saved files.
+    + New command: `copy_current_line_info`. Copies a string `<current-file-path>:<line>` to clipboard. Useful for setting breakpoints.
+    + Basic HLSL highlighting (thanks @Roman-Skabin for many improvements)
+    + Basic JSON highlighting (thanks @simonvallz)
+    + Rust highlighting
++ Bug fixes:
+    + Fixed the Jai code samples highlighting in build output in some cases
+    + Fixed build output highlighting glitch when using the clear build output option
+    + Fixed a crash in some cases when selecting all occurrences with the search bar open
+    + Fixed a massive slowdown on some systems due to problematic OpenGL drivers
+    + Fixed buffer duplication when jumping to build errors on Windows
+    + Fixed editor freeze on large workspace reloads
+    + Fixed wrong local search results after stripping trailing whitespace in some cases
++ Other changes:
+    + Made the fuzzy search in the command dialog more intuitive
+    + CRLF is now stripped from build output before displaying
 
-    [[linux]]
-    # '%s' is replaced with the path of the file/directory to open
-    explorer_command:         konsole -e mc "%s"      # this command is used when opening a directory
-    explorer_reveal_command:  nautilus --select "%s"  # this command is used when highlighting a specific file in a directory
 
-+ Mac: Focus no longer collects window events when another window is active. This eliminates several bugs (Cmd+Tab spawning cursors, I-Beam cursor when using other apps) at the cost of no longer being able to vertically scroll unless Focus is active. For now.
-+ `copy` will now copy whole lines to clipboard if the config option `copy_whole_line_without_selection` is enabled in config
-+ Fixed a bug with the Navigate to file dialog being empty
-+ Added #ifdef/#ifndef highlighting to C/C++
-+ Added #compile_time/#no_debug highlighting to Jai
-+ Multi-cursor line cuts will no longer include extra newlines
-+ Added a notification about match case or match whole word toggles active when no search results found
-+ BREAKING: default config is no longer used as a fallback for missing keymaps, so anything you haven't listed explicitly in the global config won't be included
-+ When editor width is limited in settings, the non-editor part of the window will be colored using the `background_dark` color
-+ Fixed a bug with global search not finding everything when case sensitive or whole word toggles are just turned on
+# Version 0.3.4
+
++ New features:
+    + Jumping to build errors is now supported. See the default config for examples and more information (thanks @jlami for the initial implementation)
+        + Use the new commands `go_to_next_build_error` (F8 by default) and `go_to_previous_build_error` (Shift-F8 by default)
+        + Double-clicking the file name in the build output will also jump to the error location (provided it matched the error regex)
+        + You can add Ctrl to your key combo or double-click to open on the side, as usual (when the default keybinds are used)
+    + Closing an editor will now remove the corresponding file from the open files list (only if it's not modified)
+    + New Handmade Hero theme (thanks @Sokus)
+    + Basic JS highlighting (thanks @simonvallz)
+    + It is now possible to use variables in build and run commands: %FILE%, %FILE_DIR%, %FILE_NAME%, %FILE_NAME_NO_EXTENSION%, %BUILD_WORKING_DIR%, %RUN_WORKING_DIR% (see more information in the default config)
+    + New options: `window_width`, `window_height`, `window_x`, `window_y`. Can be used to configure the initial size of the editor window.
+    + Focus now allows auto loading projects at startup in one of the following ways:
+        + By passing a project name as a parameter: `focus -project "Project Name"` or `focus -project path/to/project.focus-config`.
+        + By passing in a directory path which contains a file named `.focus-config`. This file will be loaded as a Focus project.
+        + By launching Focus from a directory containing a file named `.focus-config`.
++ Bug fixes:
+    + C highlighting now supports identifiers which start with a UTF8 letter
++ Other changes:
+    + Column number shown in the footer will now count the number of characters, not the visual offset (previously it would take tab size into account)
+    + Configs will be migrated to version [3]. New settings, colors and keybinds will be automatically added.
+    + C highlighting has been slightly improved
+
+    # 0.3.4-1 hotfix
+    + Fixed a crash when trying to autoindent C/C++ code (introduced in 0.3.4)
+
+    # 0.3.4-3 hotfix
+    + Fixed a crash when trying to jump to error in a file we can't open
+    + Fixed build output parsing in some situations
+    + Added relative build error path support (relative to the build_working_dir of the build command)
+    + Improved error messages
+
+
+# Version 0.3.3
+
++ New features:
+    + macOS: Drag files into the window to open them.
+    + C/C++ highlighter will now accept most common unicode letter characters in identifiers
+    + Added highlighting for the Uxntal language (thanks @LainLayer)
+    + C# highlighting: support nested string interpolation (thanks @audV)
+    + New option: `show_selected_text_length`. Set to `true` to display the number of selected chars (and bytes) in the footer (thanks @CELLTH)
+    + New command: `open_another_editor_instance`. Defaults to Ctrl-Shift-Alt-N. Opens a new editor instance as a subprocess. Thanks @LainLayer
+    + In Jai, `#string` literals will now support highlighting text. E.g. `#string STR_PYTHON` will highlight the contents as python. The name needs to end with the desired language name. The string block can have a special background color (called `region_heredoc` in the config)
++ Bug fixes:
+    + Fixed a bug with cursor positioning when using the align_cursors action through the command dialog
+    + Fixed a visual glitch when attempting to draw tabs as characters in a new buffer name
+    + After switching to a new project the Navigate to File dialog should no longer persist paths from the previous project
+    + Fixed a crash when opening the global search widget immediately after switching projects
+    + Fixed incorrect cursor positioning when redoing with multiple cursors in some cases
++ Other changes:
+    + Improved the scanning speed by ignoring large binary files quicker
+    + Windows: improved the startup times by avoiding the use of heavy Win32 API calls
+    + It is now possible to select all occurrences of the selected text while the search bar is open
+    + Build commands will now appear in the command palette. There's no need to assign each command a key binding any more.
+
+
+# Version 0.3.2
+
++ New features:
+    + New build option: `clear_build_output_before_running`. Set to `true` to clear the build output window every time a command is run.
+    + New option: `disable_viewport_chasing_cursor_near_the_edge`. Set to `true` to prevent the viewport from smoothly scrolling to the new cursor position when it moved near the edge by a small amount.
+    + macOS: `Opt` is now allowed in keybinds rather than `Alt`.
+    + macOS: colored title bars are now used by default
++ Bug fixes:
+    + macOS: added `NSHighResolutionCapable` to `Info.plist` which should fix blurry rendering when installing Focus via the `.dmg` package.
+    + macOS: keyboard shortcuts should now work correctly on non-QWERTY layouts (https://github.com/focus-editor/focus/issues/29)
+        - NOTE: key composition still does not work correctly, this fix is only about the base keyboard layout being respected
+    + Fixed a crash when attempting to override key mappings in a project config
+    + Fixed the double shift search action not registering on Linux consistently
+    + It shouldn't now be allowed to switch projects while a build command is running, to prevent freezing
+    + Go-to-line now works when you press enter to jump to an already entered line number
++ Other changes:
+    + macOS: Installing the editor from the `.dmg` package will register it as a handler for text files. This means that:
+        1. you will see Focus as an entry in the "Open With" list in the context menu for text files in Finder
+        2. you can use Focus to open files from the terminal by running `open -a Focus file`
+    + macOS: Some default keyboard shortcuts were changed to remove conflicts with system shortcuts.
+    + macOS: The oldest OS that can launch Focus is now macOS 10.13 High Sierra.
+    + Continuous scroll actions such as `scroll_viewport_up`, `scroll_viewport_down` etc. now should work with multipart combos.
+    + Cursor positioning when undoing/redoing has been improved. You should now be able to use undo/redo to jump to the position of the last edit without actually applying it.
+
+
+# Version 0.3.1
+
++ New features:
+    + New options: `save_current_buffer_on_build` and `save_all_file_backed_buffers_on_build`. Enable to auto-save files before running build commands (thanks @jlami)
+    + Zig highlighting
++ Bug fixes:
+    + Previewing themes will now change window border color as well as it should (thanks @jmpstar)
+    + Regex search should no longer crash the editor on certain inputs
+    + Close current editor when animations are disabled should now focus the remaining editor
+    + Binary files should now be auto-ignored again
+    + Fixed a memcpy-related memory corruption bug which manifested in some rare Linux distros
++ Other changes:
+    + Various theme improvements (thanks @jmpstar, @Leonader, @maxamundsen)
+    + Crash reports now print stack traces in release mode where possible (thanks @Sanian-Creations)
+    + Upgraded to Jai 0.1.83+ (thanks @valignatev)
+    + C highlighting improvements
+    + Linux: the editor now uses libxcb to interact with an X11 server by default. The old X11 backend (Xlib) is still around and can be activated by running the editor with `FOCUS_LD_BACKEND=x11` set in the environment
+        + NOTE: the xcb backend is currently missing drag-and-drop support. If that is important to you please use the old Xlib backend as described above.
+    + Platform support enchancements for macOS:
+        + the editor no longer consumes CPU when idle
+        + implemented the refresh timer (2024, year of the blinking cursor)
+        + smoother trackpad scrolling
+        + the `maximize_on_start` option now actually maximizes the main window instead of making it full-screen
+
+
+# Version 0.3.0
+
++ New features:
+    + An automatic config migration system. All configs will be bumped to version [2], with new things added or renamed where needed.
+    + Windows 11+: New config option: `colored_titlebar`. Sets the color of the title bar to the background color (thanks @amasondev)
+    + New option: `hide_mouse_when_typing` (currently Windows/Mac only). Set to `true` to hide the mouse cursor when entering text (thanks @amasondev)
+    + New commands: `add_cursors_to_line_ends` (Alt-Shift-I) and `add_cursors_to_line_starts` (Alt-Shift-Ctrl-I)
+    + New command: `align_cursors` (Alt-A). Can be used to align the indentation for multiple cursors (thanks @hfr4)
+    + New command: `show_default_config`. Can be used to view the default editor config for your reference (readonly)
+    + New command: `select_all_occurrences`. Used to create a cursor on each selection occurrence (thanks @hfr4)
+    + New command: `toggle_fullscreen`. Defaults to F11 (thanks @ustance)
+    + New command: `close_project`. Can be used to (surprise!) close the active project
+    + New command: `swap_selections`. Can swap two selected pieces of text (thanks @hfr4)
+    + New command: `escape`. Tries to close dialogs, remove additional cursors, etc. You can just bind it to `Escape` in `[common]` and forget.
+    + New option: `highlight_line_with_cursor` (thanks @SentientCoffee)
+    + New option: `draw_indent_guides`. Set to `true` to draw a vertical guide line at every indent level (determined by tab size)
+    + New option: `auto_surround_with_brackets_and_quotes` to enable auto-surrounding (thanks @hfr4)
+    + New option: `scroll_beyond_last_line` (defaults to `true`). Disable to prevent scrolling past the editor's last line
+    + New option: `show_cursors_off_screen` (defaults to `true`). If enabled, displays a warning in the footer if there are cursors off screen (only when more than one is used)
+    + New option: `persist_local_search_results` (defaults to `false`). If enabled, search highlights will persist even when the search bar is closed. Press escape to dismiss (you might need to bind the `escape` action for it to work). (thanks @amasondev)
+    + Added support for regular expressions in file/project search
+    + Added a built-in 'save file' dialog (it will be on by default). To use the system dialogs on Windows, use `prefer_system_file_dialogs: true`
+    + Dragging with the middle mouse button will create cursors (thanks @hfr4)
+    + Added an indicator showing if there are any cursors off screen (if you have more than one)
+    + Mac: You can now set `maximize_on_start` in your global config to `true`, and Focus will launch in fullscreen.
+    + New syntax highlighting:
+        + Python
+        + HTML/XML (thanks @arjenwitteveen)
+        + Odin (thanks @SentientCoffee)
+        + Yang (thanks @jmpstar)
+        + Lua (thanks @SentientCoffee)
+    + Numpad keys can now be used in key mappings.
+      The editor now recognizes the following new key names:
+        Numpad0 - Numpad9
+        NumpadMultiply
+        NumpadDivide
+        NumpadAdd
+        NumpadSubtract
+        NumpadDecimal
+        NumpadEnter
+    + Scopes in Jai are now highlighted. See the default config for the new color options (`region_scope_*`)
+    + Build system:
+        + New config options:
+            + `build_panel_width_percent`, `build_panel_height_percent` - how much space the build panel occupies. Both default to 50%.
+            + `build_panel_stays_in_one_place`. Defaults to `false`. If disabled, then the panel will flip to the other side of the active pane.
+        + Check an example build configuration in the example project or in the default config (use the show default config command)
+        + Thanks to the Jai beta user Jakob for writing the first version of the build system
+    + New code color: `code_warning`. Used to highlight things such as duplicate key binding etc.
+    + New dialog: Switch Between Open Files (defaults to Ctrl-Tab)
+    + Support horizontal scrolling with trackpads/mice with horizontal scroll wheels.
+
++ Bug fixes:
+    + Mac: Fixed intermittent crashing on launch
+    + It should now be possible to scroll the viewport by dragging outside it in all cases (previously it wasn't always possible - see issue #101)
+    + Duplicating a line near the end now duplicates a line as expected
+    + Fixed a bug with multi-cursor copying/pasting when some of the cursors don't have a selection
+    + Fixed a bug with multi-cursor range replace by typing
+    + Fixed a bug with move_lines_up/down near EOF whilst using multi-cursor
+    + Fixed visual bug where tabs would align to the wrong columns
+    + Fix `toggle_comment` command when tabs are enabled (thanks @Sanian-Creations)
+    + Linux: fixed selection while scrolling due to "stuck" START and END states of the mouse button presses.
+    + Linux: Clipboard handling should become way faster on X11 because we let event loop to handle more requests before drawing.
+    + Linux: fix drag-n-drop crash caused by calling Basic.free on the memory allocated with temp allocator
+    + Fix for stuck keys when the editor loses window focus (such as alt-tabbing or moving to other workspaces on Linux)
+    + Improved scrolling smoothness (thanks @Sanian-Creations)
+    + Parent directories of files outside of project directories are no longer recursively watched for changes. The editor should no longer hang for a long time when opening a file inside a large directory.
+    + Directories created within the project shouldn't get themselves any buffers any more
+    + Newer user messages will stop dismissing older ones which have a longer lifetime
+    + Fixed a crash when trying to rewind editor history after reloading workspace
+    + Fixed a crash when searching with whole word match on
+    + Aligned missing shortcuts on the welcome screen
+
++ Other changes:
+    + When the workspace is done scanning, the open file dialog input will no longer be cleared
+    + Limited Windows 7 support (no dpi awareness)
+    + Better word detection by commands that move cursors by word
+    + Config highlighting has become smarter and hopefully more helpful
+    + Improved CPU usage when selecting text by mouse
+    + Tab characters are now only shown when they are within selection
+    + Windows: better handling of Unicode input (thanks @ostef)
+    + Fuzzy match improvements in dialogs
+
+
+# Version 0.2.0
+
++ BREAKING CHANGE: the default config is no longer used as a fallback for missing keymaps, so anything you haven't listed explicitly in the global config won't be included. It's best to start with a fresh config if possible to ensure you have all the most recent options. In the future the plan is to have a config migration system which will add new options or rename/remove existing ones
+
++ New features:
+    + Line numbers can now be enabled (default shortcut is Alt-Shift-L). To enable permanently, use `show_line_numbers: true` in the config
+    + Line wrap is now supported (use the toggle_line_wrap command - the default shortcut on Windows is Alt-Z). If you want line wrap to be on by default, use `line_wrap_is_on_by_default: true`. There is currently no way to enable line wrap for certain file types only, but that's coming later.
+    + New command: toggle_block_comment (for the supported languages)
+    + New command: autoindent_region (bound to Ctrl-Tab by default on Windows/Linux, Option-Tab on Mac). Works with the C-like languages we have syntax highlighting for. Should work similarly to Emacs.
+    + New command: delete_current_file. Not bound to anything by default, but can be used from the commands dialog (thanks @SentientCoffee)
+    + New command: save_as. Also not bound to any key combination by default (thanks @SentientCoffee)
+    + New commands: move_to_previous_buffer, move_to_next_buffer. They work like normal editor history, but skip the cursor movements and jump right to the next buffer or layout change
+    + New config option: cursor_blink_time_in_seconds (5 by default). Set to 0 if you don't want the cursors to blink at all.
+    + It is now possible to paste whatever was copied with N cursors into another file as long as the number of cursors there is also N (thanks @hfr4)
+    + Syntax highlighting for GLSL (thanks @SentientCoffee)
+    + Syntax highlighting for Golang (thanks @OlyaIvanovs)
+    + Linux: The "Open Projects Directory" command as well as shift-clicking files/directories in the "open file" dialogs (Ctrl+O, Ctrl+Shift+O, Ctrl+P) should now work.
+      By default the editor will try to auto-detect the preferred file manager using the XDG utilities.
+      In case the auto-detection fails you can manually set the commands to run via the "explorer_command" and "explorer_reveal_command" options in the "[[linux]]" section of the config file.
+      Example:
+
+        [[linux]]
+        # '%s' is replaced with the path of the file/directory to open
+        explorer_command:         konsole -e mc "%s"      # this command is used when opening a directory
+        explorer_reveal_command:  nautilus --select "%s"  # this command is used when highlighting a specific file in a directory
+
++ Bug fixes:
+    + Focus will fall back to a slower hash function on CPUs which don't support AES instructions instead of crashing
+    + When opening a file outside of workspace the editor should no longer scan its parent folder and its subfolders (but tell us if it still does)
+    + Mac: Focus no longer collects window events when another window is active. This eliminates several bugs (Cmd+Tab spawning cursors, I-Beam cursor when using other apps) at the cost of no longer being able to vertically scroll unless Focus is active. For now.
+    + Fixed a bug with the Navigate to file dialog being empty
+    + Fixed a bug with global search not finding everything when case sensitive or whole word toggles are just turned on
+    + Fixed several issues in the editor history
+    + Linux: fixed a bug related to mouse cursor handling which caused slowdowns and cursor flickering on X11 (thanks @valignatev)
+    + Linux: there's now a VERY basic save file dialog for new files (thanks @rexim)
+
++ Other changes:
+    + `copy` will now copy whole lines to clipboard if the config option `copy_whole_line_without_selection` is enabled in config
+    + Delete-to-start/end-of-line commands now copy whatever was deleted
+    + Added #ifdef/#ifndef highlighting to C/C++
+    + Added #compile_time/#no_debug/#no_aoc highlighting to Jai
+    + Multi-cursor line cuts will no longer include extra newlines
+    + When adding cursors above/below it's now possible to easily remove the last added cursor by executing the opposite command (thanks @WWilliams741)
+    + Added a notification about match case or match whole word toggles active when no search results found
+    + When editor width is limited in settings, the non-editor part of the window will be colored using the `background_dark` color
+    + Linux: The editor shoudn't use any CPU while idle.
+    + Linux: timers are now supported. As a result some animations (such as the text cursor blinking) should now actually work as expected.
+    + Linux: More robust and resilent mechanism to get user's locale and input method for X11 backend. Fix locale-related segfaults
+    + Linux: Improve smooth scrolling performance.
+    + Global search will now try to preserve search results and cursor position when searching using the same query
+    + Windows: The editor window should open on the primary monitor by default
 
 
 # Version 0.1.10

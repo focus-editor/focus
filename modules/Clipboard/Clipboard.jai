@@ -166,6 +166,7 @@
 #if OS == .LINUX {
     #scope_file
     LD :: #import "Linux_Display";
+    #assert(LD.JAI_STDLIB_INTEROP);
 
     #scope_export
 

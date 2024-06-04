@@ -27,7 +27,7 @@ Immediate_Vertex :: struct {
     position:    Vector2;
     color_scale: Vector4;
     uv0:         Vector2;
-    
+
     // The following values are for rendering rounded rects - most of the time they are not used, but it's ok
     // because it's simpler than the alternatives and the performance is good enough for our purposes
     rect_center: Vector2;
@@ -59,16 +59,6 @@ immediate_set_shader :: (s: *Shader) {
     if state.current_shader && (state.current_shader != s) {
         immediate_flush();
     }
-
-    p := s.gl_handle;
-    s.position_loc    = glGetAttribLocation(p, "vert_position");
-    s.color_scale_loc = glGetAttribLocation(p, "vert_color");
-    s.uv_0_loc        = glGetAttribLocation(p, "vert_uv0");
-    
-    s.rect_center_loc        = glGetAttribLocation(p, "vert_rect_center");
-    s.rect_size_loc          = glGetAttribLocation(p, "vert_rect_size");
-    s.rect_corner_radius_loc = glGetAttribLocation(p, "vert_rect_corner_radius");
-    s.rect_edge_softness_loc = glGetAttribLocation(p, "vert_rect_edge_softness");
 
     state.current_shader = s;
     backend_use_shader(s);
@@ -157,13 +147,13 @@ set_vertex_format :: (shader: *Shader) {
         glEnableVertexAttribArray(xx shader.rect_size_loc);
         DumpGLErrors("rect_size");
     }
-    
+
     if shader.rect_corner_radius_loc != -1 {
         glVertexAttribPointer(xx shader.rect_corner_radius_loc, 1, GL_FLOAT, xx false, stride, xx *offset.rect_corner_radius);
         glEnableVertexAttribArray(xx shader.rect_corner_radius_loc);
         DumpGLErrors("rect_corner_radius");
     }
-    
+
     if shader.rect_edge_softness_loc != -1 {
         glVertexAttribPointer(xx shader.rect_edge_softness_loc, 1, GL_FLOAT, xx false, stride, xx *offset.rect_edge_softness);
         glEnableVertexAttribArray(xx shader.rect_edge_softness_loc);
@@ -218,13 +208,13 @@ put_vertex :: inline (using vertex: *Immediate_Vertex, p: Vector2, color: Vector
 immediate_quad :: (x0: float, y0: float, x1: float, y1: float, color: Vector4) {
     CheckSpace(6);
 
-    put_vertex(*v[0], make_vector2(x1, y0), color,  1, 0);
-    put_vertex(*v[1], make_vector2(x0, y0), color,  0, 0);
-    put_vertex(*v[2], make_vector2(x1, y1), color,  1, 1);
+    put_vertex(*v[0], .{x1, y0}, color,  1, 0);
+    put_vertex(*v[1], .{x0, y0}, color,  0, 0);
+    put_vertex(*v[2], .{x1, y1}, color,  1, 1);
 
-    put_vertex(*v[3], make_vector2(x1, y1), color,  1, 1);
-    put_vertex(*v[4], make_vector2(x0, y0), color,  0, 0);
-    put_vertex(*v[5], make_vector2(x0, y1), color,  0, 1);
+    put_vertex(*v[3], .{x1, y1}, color,  1, 1);
+    put_vertex(*v[4], .{x0, y0}, color,  0, 0);
+    put_vertex(*v[5], .{x0, y1}, color,  0, 1);
 }
 
 // Four 2D points making an arbitrary quad, plus a color,
@@ -262,19 +252,19 @@ immediate_quad :: (x0: float, y0: float, x1: float, y1: float,
                    c00: Vector4, c01: Vector4, c10: Vector4, c11: Vector4) {
     CheckSpace(6);
 
-    put_vertex(*v[0], make_vector2(x1, y0), c10,  1, 0);
-    put_vertex(*v[1], make_vector2(x0, y0), c00,  0, 0);
-    put_vertex(*v[2], make_vector2(x1, y1), c11,  1, 1);
+    put_vertex(*v[0], .{x1, y0}, c10,  1, 0);
+    put_vertex(*v[1], .{x0, y0}, c00,  0, 0);
+    put_vertex(*v[2], .{x1, y1}, c11,  1, 1);
 
-    put_vertex(*v[3], make_vector2(x1, y1), c11,  1, 1);
-    put_vertex(*v[4], make_vector2(x0, y0), c00,  0, 0);
-    put_vertex(*v[5], make_vector2(x0, y1), c01,  0, 1);
+    put_vertex(*v[3], .{x1, y1}, c11,  1, 1);
+    put_vertex(*v[4], .{x0, y0}, c00,  0, 0);
+    put_vertex(*v[5], .{x0, y1}, c01,  0, 1);
 }
 
 // p0 = bottom left, p2 = top right
 immediate_rounded_rect :: (p0: Vector2, p2: Vector2, color: Vector4, center: Vector2, size: Vector2, radius: float, softness := 1.0) {
     CheckSpace(6);
-    
+
     p1 := Vector2.{ x = p0.x, y = p2.y };
     p3 := Vector2.{ x = p2.x, y = p0.y };
 

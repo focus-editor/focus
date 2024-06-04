@@ -19,7 +19,7 @@ set_custom_cursor_handling :: (is_custom: bool) {
 
 //#scope_export
 
-get_key_code :: (wParam: WPARAM) -> Key_Code {
+get_key_code :: (wParam: WPARAM, extended := false) -> Key_Code {
     if (wParam >= 48) && (wParam <= 90) return cast(Key_Code) wParam;
 
     using Key_Code;
@@ -67,7 +67,7 @@ get_key_code :: (wParam: WPARAM) -> Key_Code {
     if wParam == VK_ESCAPE
         return ESCAPE;
     if wParam == VK_RETURN
-        return ENTER;
+        return ifx extended then NUMPAD_ENTER else ENTER;
     if wParam == VK_TAB
         return TAB;
 
@@ -97,6 +97,23 @@ get_key_code :: (wParam: WPARAM) -> Key_Code {
     }
     if wParam == VK_SNAPSHOT
         return PRINT_SCREEN;
+
+    // Numpad keys
+    if wParam == VK_NUMPAD0  return NUMPAD_0;
+    if wParam == VK_NUMPAD1  return NUMPAD_1;
+    if wParam == VK_NUMPAD2  return NUMPAD_2;
+    if wParam == VK_NUMPAD3  return NUMPAD_3;
+    if wParam == VK_NUMPAD4  return NUMPAD_4;
+    if wParam == VK_NUMPAD5  return NUMPAD_5;
+    if wParam == VK_NUMPAD6  return NUMPAD_6;
+    if wParam == VK_NUMPAD7  return NUMPAD_7;
+    if wParam == VK_NUMPAD8  return NUMPAD_8;
+    if wParam == VK_NUMPAD9  return NUMPAD_9;
+    if wParam == VK_MULTIPLY return NUMPAD_MULTIPLY;
+    if wParam == VK_ADD      return NUMPAD_ADD;
+    if wParam == VK_SUBTRACT return NUMPAD_SUBTRACT;
+    if wParam == VK_DECIMAL  return NUMPAD_DECIMAL;
+    if wParam == VK_DIVIDE   return NUMPAD_DIVIDE;
 
     return UNKNOWN;
 }
@@ -161,11 +178,15 @@ get_vk :: (key: Key_Code) -> VK: u64 {
 
 #add_context _windows_windowproc :: MyWindowProc;
 
+#scope_file
+
+wm_char_high_surrogate : u32;
+
+#scope_export
+
 MyWindowProc :: (hwnd: HWND, message: u32,
                  wParam: WPARAM, lParam: LPARAM) -> s64 #c_call {
     new_context: Context;
-    new_context.allocator = Context.default_allocator;
-    new_context.logger    = Context.default_logger;
 
     push_context new_context {
         using Key_Code;
@@ -211,54 +232,74 @@ MyWindowProc :: (hwnd: HWND, message: u32,
           case WM_SYSKEYDOWN; #through;
           case WM_KEYDOWN;
 
+            extended := ((cast(u16)((cast(u32)lParam >> 16) & 0xffff)) & 0x0100 == 0x0100);  // (HIWORD(lParam) & KF_EXTENDED) == KF_EXTENDED
             repeat := ((cast (s32) lParam) & 0x40000000) != 0;
-            maybe_send_vkey_event(wParam, true, repeat);
+            maybe_send_vkey_event(wParam, true, repeat, extended = extended);
 
           case WM_SYSKEYUP; #through;
           case WM_KEYUP;
 
-            maybe_send_vkey_event(wParam, false);
+            extended := ((cast(u16)((cast(u32)lParam >> 16) & 0xffff)) & 0x0100 == 0x0100);  // (HIWORD(lParam) & KF_EXTENDED) == KF_EXTENDED
+            maybe_send_vkey_event(wParam, false, extended = extended);
 
           case WM_SYSCHAR;
               // This is here to prevent beeps when a Alt key combo is pressed. If we don't return 0, windows helpfully emits a beep sound to
               // indicate the user that the key wasn't handled.
 
           case WM_CHAR;
-            keycode := wParam;
+            HIGH_SURROGATE_START  :: 0xd800;
+            HIGH_SURROGATE_END    :: 0xdbff;
+            LOW_SURROGATE_START   :: 0xdc00;
+            LOW_SURROGATE_END     :: 0xdfff;
 
-            if keycode > 31 {
+            if wParam >= HIGH_SURROGATE_START && wParam <= HIGH_SURROGATE_END {
+                wm_char_high_surrogate = cast (u32) wParam;
+            } else {
+                codepoint := cast (u32) wParam;
+
+                if codepoint >= LOW_SURROGATE_START && codepoint <= LOW_SURROGATE_END {
+                    low_surrogate := cast (u32) wParam;
+                    codepoint = (wm_char_high_surrogate - HIGH_SURROGATE_START) << 10;
+                    codepoint += (low_surrogate - LOW_SURROGATE_START);
+                    codepoint += 0x10000;
+                }
+
                 // Control characters generate key codes < 32, but these are redundant
                 // with KEYDOWN events and are also ambiguous (ctrl-m generates 13, but
                 // so does RETURN.)
-                event: Event;
-                event.type = .TEXT_INPUT;
-                event.utf32 = xx keycode;
+                if codepoint > 31 && codepoint != 127 {
+                    event: Event;
+                    event.type = .TEXT_INPUT;
+                    event.utf32 = codepoint;
 
-                array_add(*events_this_frame, event);
+                    array_add(*events_this_frame, event);
+                }
             }
 
           case WM_SETFOCUS;
             input_application_has_focus = true;
           case WM_KILLFOCUS;
             input_application_has_focus = false;
-          case WM_PAINT;
-		    ValidateRect(hwnd, null);
-	        return DefWindowProcW(hwnd, message, wParam, lParam);
+
+          // case WM_PAINT;
+          // NOTE: we don't handle WM_PAINT, see the discussion here https://github.com/focus-editor/focus/pull/228
 
           case WM_LBUTTONDOWN; #through;
           case WM_LBUTTONUP;
             maybe_send_vkey_event(VK_LBUTTON, message == WM_LBUTTONDOWN);
-
-            if message == WM_LBUTTONDOWN SetCapture(hwnd);
-            else ReleaseCapture();
+            if message == WM_LBUTTONDOWN SetCapture(hwnd); else ReleaseCapture();
 
           case WM_RBUTTONDOWN; #through;
           case WM_RBUTTONUP;
             maybe_send_vkey_event(VK_RBUTTON, message == WM_RBUTTONDOWN);
+            if message == WM_RBUTTONDOWN SetCapture(hwnd); else ReleaseCapture();
+
 
          case WM_MBUTTONDOWN; #through;
          case WM_MBUTTONUP;
             maybe_send_vkey_event(VK_MBUTTON, message == WM_MBUTTONDOWN);
+            if message == WM_MBUTTONDOWN SetCapture(hwnd); else ReleaseCapture();
+
 
           case WM_MOUSEMOVE;
             // We don't have mouse move events yet, but we'll record the delta.
@@ -276,19 +317,29 @@ MyWindowProc :: (hwnd: HWND, message: u32,
 */
           case WM_MOUSEWHEEL;
             event: Event;
-            event.type = .MOUSE_WHEEL;
+            event.type = .MOUSE_V_WHEEL;
             event.typical_wheel_delta = WHEEL_DELTA;
             event.wheel_delta = xx cast,trunc(s16)(wParam >> 16);
             array_add(*events_this_frame, event);
+            mouse_wheel_delta.vertical += event.wheel_delta;
 
-            mouse_delta_z += event.wheel_delta;
+          case WM_MOUSEHWHEEL;
+            event: Event;
+            event.type = .MOUSE_H_WHEEL;
+            event.typical_wheel_delta = WHEEL_DELTA;
+            event.wheel_delta = xx -cast,trunc(s16)(wParam >> 16);
+            array_add(*events_this_frame, event);
+            mouse_wheel_delta.horizontal += event.wheel_delta;
 
           case WM_CLOSE; #through;
           case WM_QUIT;
             event: Event;
             event.type = .QUIT;
             array_add(*events_this_frame, event);
-         // return DefWindowProcW(hwnd, message, wParam, lParam);
+
+            // NOTE: we're not calling the default proc here because it would just close the window,
+            // while we might want to show a confirmation dialog when there are unsaved files
+            // return DefWindowProcW(hwnd, message, wParam, lParam);
 
           case WM_INPUT;
             extra := GetMessageExtraInfo();
@@ -342,15 +393,15 @@ MyWindowProc :: (hwnd: HWND, message: u32,
             array_reserve(*files, file_paths_count);
 
  	 	    for i: 0..file_paths_count-1 {
- 	 	        // If nulll as the third parameter: return the length of the path, not counting the trailing '\0'.
+ 	 	        // If null as the third parameter: return the length of the path, not counting the trailing '\0'.
  	 	        file_name_wide_count := DragQueryFileW(drop, i, null, 0) + 2;
  	 	        assert(file_name_wide_count > 0);
 
- 	  	        file_name_wide := cast(*u16) alloc(file_name_wide_count * size_of(u16), __temporary_allocator);
+		        file_name_wide := cast(*u16) alloc(file_name_wide_count * size_of(u16));
  	 	        ok := DragQueryFileW(drop, i, file_name_wide, file_name_wide_count);
  	 	        assert(ok > 0); // means success
 
- 	  	        file_name := wide_to_utf8(file_name_wide);
+		        file_name := wide_to_utf8_new(file_name_wide,, allocator = temp);
  	 	        array_add(*files, file_name);
  	 	    }
 
@@ -679,7 +730,7 @@ set_key_down_state :: (vkey : u32, is_down: bool) -> was_down:bool {
     return was_down;
 }
 
-maybe_send_vkey_event :: (vkey: u64, key_down: bool, repeat := false) {
+maybe_send_vkey_event :: (vkey: u64, key_down: bool, repeat := false, extended := false) {
     was_down := set_key_down_state(cast,trunc(u32) vkey, key_down);
     if !key_down && !was_down {
         // redundant key_up event
@@ -692,7 +743,7 @@ maybe_send_vkey_event :: (vkey: u64, key_down: bool, repeat := false) {
         repeat = false;
     }
 
-    send_key_event(get_key_code(vkey), key_down, repeat);
+    send_key_event(get_key_code(vkey, extended), key_down, repeat);
 }
 
 send_key_event :: (key_code: Key_Code, key_down: bool, repeat := false) {
@@ -709,6 +760,11 @@ send_key_event :: (key_code: Key_Code, key_down: bool, repeat := false) {
     event.ctrl_pressed  = ctrl_state;
     event.alt_pressed   = alt_state;
     event.repeat = repeat;
+
+    utf32 := cast(u32) key_code;
+    is_printable := ((utf32 >= 32) && (utf32 != 127));
+    event.text_input_count = xx is_printable;
+
     array_add(*events_this_frame, event);
 
     input_button_states[key_code] |= ifx key_down then (Key_Current_State.DOWN | .START) else .END;

@@ -4,7 +4,14 @@ A simple editor whose goal is to get out of your way and let you do work.
 
 This editor is for people who value simplicity, are sensitive to input latency and do not require heavy language support in their editor.
 
-![focus](https://user-images.githubusercontent.com/119373822/236081314-45d53952-7a6c-4d6b-8773-e5b49d1dbdab.gif)
+![focus-0 3 0](https://github.com/focus-editor/focus/assets/119373822/49a80c5a-f24a-469e-bbbb-88c315f9b391)
+
+
+## What do we mean by "simple" and "fast"
+
+Simple: the editor's functionality and code design. It doesn't include a lot of features, and the source code should be simple enough so that people can easily add features if they want to. It is configured using a single simple config file.
+
+Fast: we try to minimize input latency and maximize responsiveness. We also include relatively fast project search, which should work well for reasonably sized projects.
 
 
 ## Quick start
@@ -13,7 +20,7 @@ This editor is for people who value simplicity, are sensitive to input latency a
 
 2. Launch the executable. Once launched, it will generate its configuration files.
     * On **Windows**, it will create a `global.focus-config` file and a `projects` folder next to itself.
-    * On **Mac**, these files will be found in `/Users/YOURNAME/Library/Application Support/dev.focus-editor/`.
+    * On **macOS**, these files will be found in `/Users/YOURNAME/Library/Application Support/dev.focus-editor/`.
     * On **Linux**, these files will be found in `${XDG_CONFIG_HOME}/focus-editor/` (which usually expands to `${HOME}/.config/focus-editor`).
 
 3. Open the global config file by using the command `Open Global Config` - you can find the shortcut to show commands on the welcome screen.
@@ -22,17 +29,19 @@ This editor is for people who value simplicity, are sensitive to input latency a
 
 5. A project in this editor is just a config file that lives in `projects/Project Name.focus-config`. There's an example project config file provided. You just edit the file and then activate the project by using the `Switch To Project` command.
 
-Basic tips and tricks: https://www.youtube.com/watch?v=UZQpQ1wgXCY
 
-Official Discord server - https://discord.gg/eSXquAzTmW
+## Official Discord server
+
+https://discord.gg/eSXquAzTmW
+
 
 ## How to compile
 
 `$ jai first.jai - release`
 
-Required Jai version: `0.1.063`
+Minimum Jai version: `0.1.088` (the language is currently in closed beta, but it will hopefully go into open beta soon)
 
-**On MacOS:**
+**On macOS:**
 
 1. Full XCode must be installed
 
@@ -43,6 +52,10 @@ Required Jai version: `0.1.063`
 
 `xattr -d -r com.apple.quarantine /path/to/your/jai/distribution`
 
+**NOTE**: starting with Jai `0.1.090`, `AArch64` became the default platform when building on Apple Sillicon macs. However, some of the modules used by the editor are not fully ported to support it. You will need to use the `x86_64` compiler to build for macOS (for now):
+
+`arch -x86_64 /path/to/jai-macos first.jai - release`
+
 
 ## Disclaimer
 
@@ -52,7 +65,7 @@ The editor is in beta. This means you may encounter some bugs here and there, an
 ## Limitations
 
 - Only 64-bit systems are supported, Windows 8+, Linux (WIP), macOS (WIP).
-- This editor is not designed for editing very large files.
+- This editor is not designed for editing very large files (it is expected that editing might start lagging upwards of 100K LOC). 2GB files is a hard limit right now.
 - CRLF will be converted to LF on save. It's time to move on.
 - Multi-codepoint Unicode symbols are not supported.
 - Currently only RGB monitor panels are supported. If your text looks funny or blurry, please open an issue.
