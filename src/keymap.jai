@@ -45,7 +45,6 @@ map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mappin
     return invalid_action, invalid_mapping;
 }
 
-
 dump_key_mappings :: () {
     dump_keys :: (title: string, key_mapping: []Key_Mapping, action_type: Type) #expand {
         print("\n%\n", title);

@@ -8,6 +8,7 @@ load_global_config :: () -> success: bool, changed: bool, there_were_warnings: b
     }
 
     success, changed, there_were_warnings := load_and_merge_config(global_config_path, into = Config.{}, hash = *global_config_hash);
+    if success then saved_global_config = config;
 
     return success, changed, there_were_warnings;
 }
@@ -20,7 +21,7 @@ load_project_config :: (project: string = "") -> success: bool, changed: bool, t
     project_name := ifx project then project else current_project_name;
     config_path  := sprint("%/%.focus-config", projects_dir, project_name);
 
-    success, changed, there_were_warnings := load_and_merge_config(config_path, into = config, hash = *project_config_hash);
+    success, changed, there_were_warnings := load_and_merge_config(config_path, into = saved_global_config, hash = *project_config_hash);
     if success {
         current_project_name = project_name;
         project_config_path  = config_path;
@@ -135,8 +136,18 @@ find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp *
 #scope_file
 
 load_and_merge_config :: (file_path: string, into: Config, hash: *u64) -> success: bool, changed: bool, there_were_warnings: bool {
-    new_config, success, changed, error_msg, warnings := load_config(file_path, hash);
-    if !success {
+
+    file_data, success_read := read_entire_file(file_path);
+    // NOTE: we're not freeing because the config will take ownership of it (and if you reload it'll leak the old data, which we should probably fix at some point)
+    if !success_read {
+        error_msg := tprint("Couldn't read the config file file '%'", file_path);
+        log_error(error_msg);
+        add_user_error(error_msg);
+        return false, false, false;
+    }
+
+    parsed_config, success_parse, error_msg, warnings := parse_config(file_path, file_path, file_data);
+    if !success_parse {
         if !error_msg assert(false, "No error message on a config error. This is a bug.");
         log_error(error_msg);
         add_user_error(error_msg);
@@ -147,112 +158,96 @@ load_and_merge_config :: (file_path: string, into: Config, hash: *u64) -> succes
         for warnings add_user_error(it, dismiss_in_seconds = 60);
     }
 
-    config = into;
-    merge_configs(*config, new_config);
+    // Maybe update hash if changed
+    new_hash := calculate_meow_hash(file_data);
+    changed := new_hash != <<hash;
+    if changed then <<hash = new_hash;
 
-    TAB_SIZE = clamp(cast(s32) config.settings.tab_size, 1, 100);  // be reasonable, even though 100 is unreasonable
+    // Merge configs
+    config = into;
+    merge_configs(*config, parsed_config);
+
+    // Apply colors
+    Colors = config.colors;
+    CODE_COLOR_MAP = refresh_code_color_map();
+
+    // Make sure the values are within the acceptable range
+    TAB_SIZE = clamp(cast(s32) config.settings.tab_size, 1, 100);  // be reasonable (though 100 is unreasonable)
+    config.settings.line_height_scale_percent = clamp(config.settings.line_height_scale_percent, 50, 1000);
+
+    // Must do after the validation
+    init_fonts_and_dependent_things();
 
     if !file_is_watched(file_path) start_watching_file(file_path);
 
     return true, changed, warnings.count > 0;
 }
 
-// NOTE: I don't like how the config is currently loaded, passing stuff from function to function,
-//       this code should probably be simplified at some point
-load_config :: (file_path: string, hash: *u64) -> Config, success: bool, changed: bool, error_msg: string /* tmp */, warnings: [] string /* temp */ {
-    empty: Config;
+merge_configs :: (dst: *Config, parsed: Parsed_Config) {
+    // Completely replace the workspace subsections if present
+    if parsed.workspace_dirs then dst.workspace.workspace_dirs = parsed.workspace_dirs;
+    if parsed.ignore_dirs    then dst.workspace.ignore_dirs    = parsed.ignore_dirs;
 
-    file_data, success_read := read_entire_file(file_path);
-    // NOTE: we're not freeing because the config will take ownership of it
-    // (and if you reload it'll leak the old data, which we should fix at some point!)
-    if !success_read return empty, false, false, tprint("Couldn't read the config file file '%'", file_path), .[];
-
-    config, success_parse, error_msg, warnings := parse_config(file_path, file_path, file_data);
-    if !success_parse return empty, false, false, tprint("Error when loading config file '%'.\n%", file_path, error_msg), .[];
-
-    new_hash := calculate_meow_hash(file_data);
-    changed := new_hash != <<hash;
-    if changed then <<hash = new_hash;
-
-    return config, true, changed, "", warnings;
-}
-
-merge_configs :: (dst: *Config, src: Config) {
-    // Workspace
-    if src.workspace.workspace_dirs then dst.workspace.workspace_dirs = src.workspace.workspace_dirs;
-    if src.workspace.ignore_dirs    then dst.workspace.ignore_dirs    = src.workspace.ignore_dirs;
-
-    if src.workspace.allow_file_extensions || src.workspace.allow_file_extension_wildcards {
-        dst.workspace.allow_file_extensions          = src.workspace.allow_file_extensions;
-        dst.workspace.allow_file_extension_wildcards = src.workspace.allow_file_extension_wildcards;
+    if parsed.allow_file_extensions || parsed.allow_file_extension_wildcards {
+        dst.workspace.allow_file_extensions          = parsed.allow_file_extensions;
+        dst.workspace.allow_file_extension_wildcards = parsed.allow_file_extension_wildcards;
     }
-    if src.workspace.ignore_file_extensions || src.workspace.ignore_file_extension_wildcards {
-        dst.workspace.ignore_file_extensions          = src.workspace.ignore_file_extensions;
-        dst.workspace.ignore_file_extension_wildcards = src.workspace.ignore_file_extension_wildcards;
+    if parsed.ignore_file_extensions || parsed.ignore_file_extension_wildcards {
+        dst.workspace.ignore_file_extensions          = parsed.ignore_file_extensions;
+        dst.workspace.ignore_file_extension_wildcards = parsed.ignore_file_extension_wildcards;
     }
 
     // Keymap
-    merge_keymaps :: (dst_keymap: *[] Key_Mapping, src_keymap: [] Key_Mapping) #expand {
+    merge_keymaps :: (dst_keymap: *[] Key_Mapping, src_keymap: *[..] Key_Mapping) #expand {
         if !src_keymap return;
-        result := resizable(src_keymap);  // the source goes first, because it needs to have priority
-        array_extend(*result, <<dst_keymap);
-        <<dst_keymap = result;
+        array_extend(src_keymap, <<dst_keymap);
+        <<dst_keymap = <<src_keymap;
     }
-    merge_keymaps(*dst.keymap.common,           src.keymap.common);
-    merge_keymaps(*dst.keymap.editors,          src.keymap.editors);
-    merge_keymaps(*dst.keymap.open_file_dialog, src.keymap.open_file_dialog);
-    merge_keymaps(*dst.keymap.search_dialog,    src.keymap.search_dialog);
+    merge_keymaps(*dst.keymap.common,           *parsed.keymap_common);
+    merge_keymaps(*dst.keymap.editors,          *parsed.keymap_editors);
+    merge_keymaps(*dst.keymap.open_file_dialog, *parsed.keymap_open_file_dialog);
+    merge_keymaps(*dst.keymap.search_dialog,    *parsed.keymap_search_dialog);
 
     // Settings
     #insert -> string {
         b: String_Builder;
-
-        for setting : SETTINGS {
-            code := #string END
-                if src.settings.%1 != DEFAULT_CONFIG.settings.%1 {
-                    dst.settings.%1 = src.settings.%1;
-                }
-            END
-            print_to_builder(*b, code, setting.name);
+        for setting : type_info(Settings).members {
+            print_to_builder(*b, "if array_find(parsed.set_settings, \"%1\") { dst.settings.%1 = parsed.settings.%1; }\n", setting.name);
         }
-
         return builder_to_string(*b);
     }
 
     // Fonts
-    if src.style.font {
-        dst.style.font = ifx src.style.font then src.style.font else "default";
+    if parsed.font {
+        dst.style.font = parsed.font;
 
-        loaded_data, success := load_font_by_name(src.style.font);
+        loaded_data, success := load_font_by_name(parsed.font);
         if success {
             main_font_data = loaded_data;
-            main_font_name = src.style.font;
+            main_font_name = parsed.font;
         } else {
             // NOTE: this error will be removed by the config success message. Should do something about it
-            add_user_error(tprint("Couldn't load font %", src.style.font));
+            add_user_error(tprint("Couldn't load font %", parsed.font));
         }
     }
-    if src.style.font_size > 0 {
-        dst.style.font_size = src.style.font_size;
-        font_size = src.style.font_size;
+    if parsed.font_size > 0 {
+        dst.style.font_size = parsed.font_size;
+        font_size = parsed.font_size;
         default_font_size = font_size;
     }
 
-    init_fonts_and_dependent_things();
-
     // Colors
-    for src.style.parsed_colors {
-        color_ptr, success := map_color_name_to_color_struct(it.color_name);
-        if success {
+    for parsed.colors {
+        color_ptr := map_color_name_to_color_struct(dst, it.color_name);
+        if color_ptr {
             <<color_ptr = it.color;
         } else {
             log_error("Couldn't map color name '%' to color pointer. This is a bug", it.color_name);
         }
     }
-    CODE_COLOR_MAP = refresh_code_color_map();
 
     // Platform config
-    platform_copy_config(*src.platform, *dst.platform);
+    platform_copy_config(*parsed.platform, *dst.platform);
 }
 
 load_font_by_name :: (name: string) -> font_data: string, success: bool {
@@ -277,11 +272,16 @@ current_project_name: string;
 
 config: Config;
 
+// Used to remember the global settings to then apply the project config on top
+// when it's reloaded to avoid losing the original global settings
+saved_global_config: Config;
+
 Config :: struct {
     workspace: Workspace;
     keymap:    Keymap;
     settings:  Settings;
     style:     Style;
+    colors:    Color_Values;
     platform:  Platform_Config;
 }
 
@@ -325,153 +325,17 @@ Keymap :: struct {
     search_dialog:    [] Key_Mapping;
 }
 
-Color :: struct {
-    #as vec4 : Vector4 = ---;
-
-    #place vec4;
-    using components : struct { r, g, b, a : float = 1; };
-
-    #place vec4;
-    floats : [4] float = ---;
-}
-
 Style :: struct {
     font      := "";
     font_size := -1;
-
-    parsed_colors: [] Parsed_Color;
 }
 
 style: Style;
-
-Color_Values :: struct {
-    NONE :: Color.{ r = -1, g = -1, b = -1, a = -1 };  // an invalid color to denote no color
-
-    BACKGROUND              := Color.{ r = 0.086, g = 0.133, b = 0.165 };
-    BACKGROUND_DARK         := Color.{ r = 0.065, g = 0.101, b = 0.125 };
-    BACKGROUND_HIGHLIGHT    := Color.{ r = 0.097, g = 0.15, b = 0.185 };
-    BACKGROUND_LIGHT        := Color.{ r = 0.102, g = 0.158, b = 0.195 };
-    BACKGROUND_BRIGHT       := Color.{ r = 0.131, g = 0.202, b = 0.25 };
-    SELECTION_ACTIVE        := Color.{ r = 0.11, g = 0.267, b = 0.29 };
-    SELECTION_INACTIVE      := Color.{ r = 0.11, g = 0.267, b = 0.29, a = 0.5 };
-    SELECTION_HIGHLIGHT     := Color.{ r = 0.99, g = 0.93, b = 0.99, a = 0.15 };
-    SEARCH_RESULT_ACTIVE    := Color.{ r = 0.559, g = 0.469, b = 0.184 };
-    SEARCH_RESULT_INACTIVE  := Color.{ r = 0.99, g = 0.93, b = 0.99, a = 0.15 };
-    SCROLLBAR               := Color.{ r = 0.20, g = 0.80, b = 0.80, a = 0.1 };
-    SCROLLBAR_HOVER         := Color.{ r = 0.20, g = 0.80, b = 0.80, a = 0.3 };
-    SCROLLBAR_BACKGROUND    := Color.{ r = 0.065, g = 0.101, b = 0.125, a = 0.3 };
-    CURSOR                  := Color.{ r = 0.15, g = 0.7, b = 0.7 };
-    CURSOR_INACTIVE         := Color.{ r = 0.10, g = 0.4, b = 0.4 };
-    PASTE_ANIMATION         := Color.{ r = 0.11, g = 0.267, b = 0.29 };
-    SPLITTER                := Color.{ r = 0.131, g = 0.202, b = 0.25 };
-    SPLITTER_HOVER          := Color.{ r = 0.110, g = 0.267, b = 0.29 };
-    LETTER_HIGHLIGHT        := Color.{ r = 0.35, g = 0.6, b = 0.6 };
-    LIST_CURSOR_LITE        := Color.{ r = 0.20, g = 0.80, b = 0.80, a = 0.1 };  // @TODO: do without alpha?
-    LIST_CURSOR             := Color.{ r = 0.20, g = 0.80, b = 0.80, a = 0.3 };
-    SHADOW_DARK             := Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0.5 };
-    SHADOW_TRANSPARENT      := Color.{ r = 0.057, g = 0.089, b = 0.11, a = 0 };  // for interpolation
-    TEXT_INPUT_LABEL        := Color.{ r = 0.233, g = 0.269, b = 0.316, a = 1.0 };
-
-    UI_DEFAULT              := Color.{ r = 0.75, g = 0.79, b = 0.86, a = 1.0 };
-    UI_DIM                  := Color.{ r = 0.533, g = 0.569, b = 0.616, a = 1.0 };
-    UI_NEUTRAL              := Color.{ r = 0.3, g = 0.3, b = 0.3, a = 1.0 };
-    UI_WARNING              := Color.{ r = 0.85, g = 0.68, b = 0.33, a = 1.0 };
-    UI_WARNING_DIM          := Color.{ r = 0.59, g = 0.37, b = 0.19, a = 1.0 };
-    UI_ERROR                := Color.{ r = 0.46, g = 0.13, b = 0.13, a = 1.0 };
-    UI_ERROR_BRIGHT         := Color.{ r = 1.00, g = 0.00, b = 0.00, a = 1.0 };
-    UI_SUCCESS              := Color.{ r = 0.00, g = 0.80, b = 0.00, a = 1.0 };
-
-    CODE_DEFAULT            := Color.{ r = 0.75, g = 0.79, b = 0.86, a = 1.0 };
-    CODE_COMMENT            := Color.{ r = 0.533, g = 0.569, b = 0.616, a = 1.0 };
-    CODE_TYPE               := Color.{ r = 0.51, g = 0.67, b = 0.64, a = 1.0 };
-    CODE_FUNCTION           := Color.{ r = 0.816, g = 0.776, b = 0.663, a = 1.0 };
-    CODE_PUNCTUATION        := Color.{ r = 0.75, g = 0.79, b = 0.86, a = 1.0 };
-    CODE_OPERATION          := Color.{ r = 0.88, g = 0.68, b = 0.51, a = 1.0 };
-    CODE_STRING             := Color.{ r = 0.835, g = 0.74, b = 0.494, a = 1.0 };
-    CODE_VALUE              := Color.{ r = 0.84, g = 0.60, b = 0.71, a = 1.0 };
-    CODE_HIGHLIGHT          := Color.{ r = 0.85, g = 0.61, b = 0.46, a = 1.0 };
-    CODE_ERROR              := Color.{ r = 1.00, g = 0.00, b = 0.00, a = 1.0 };
-    CODE_KEYWORD            := Color.{ r = 0.902, g = 0.493, b = 0.457, a = 1.0 };
-};
-
-Colors: Color_Values;  // a hack to avoid replacing a lot of code
-
-Code_Color :: enum u8 {
-    DEFAULT;
-    COMMENT;
-    TYPE;
-    KEYWORD;
-    VALUE_KEYWORD;
-    VALUE;
-    FUNCTION;
-    PUNCTUATION;
-    STRING;
-    ERROR;
-    OPERATION;
-
-    NUM_COLORS;
-}
-
-CODE_COLOR_MAP: [Code_Color.NUM_COLORS] Vector4;
-
-refresh_code_color_map :: () -> [Code_Color.NUM_COLORS] Vector4 {
-    using Code_Color;
-
-    result: [NUM_COLORS] Vector4;
-
-    result[DEFAULT]         = Colors.CODE_DEFAULT;
-    result[COMMENT]         = Colors.CODE_COMMENT;
-    result[TYPE]            = Colors.CODE_TYPE;
-    result[FUNCTION]        = Colors.CODE_FUNCTION;
-    result[PUNCTUATION]     = Colors.CODE_PUNCTUATION;
-    result[STRING]          = Colors.CODE_STRING;
-    result[VALUE]           = Colors.CODE_VALUE;
-    result[VALUE_KEYWORD]   = Colors.CODE_VALUE;
-    result[ERROR]           = Colors.CODE_ERROR;
-    result[KEYWORD]         = Colors.CODE_KEYWORD;
-    result[OPERATION]       = Colors.CODE_OPERATION;
-
-    return result;
-}
-
-
-as_3_floats :: (color: Color) -> [3] float {
-    result : [3] float = ---;
-    result[0] = color.r;
-    result[1] = color.g;
-    result[2] = color.b;
-    return result;
-}
-
-is_none :: (using color: Color) -> bool {
-    return r < 0 || g < 0 || b < 0 || a < 0;
-}
 
 Setting :: struct {
     name: string;
     type: enum { boolean; integer; };
 }
-
-SETTINGS :: Setting.[
-    .{ "maximize_on_start",                   .boolean },
-    .{ "open_on_the_biggest_monitor",         .boolean },
-    .{ "cursor_as_block",                     .boolean },
-    .{ "highlight_selection_occurrences",     .boolean },
-    .{ "disable_that_annoying_paste_effect",  .boolean },
-    .{ "disable_file_open_close_animations",  .boolean },
-    .{ "double_shift_to_search_in_workspace", .boolean },
-    .{ "insert_spaces_when_pressing_tab",     .boolean },
-    .{ "strip_trailing_whitespace_on_save",   .boolean },
-    .{ "smooth_scrolling",                    .boolean },
-    .{ "can_cancel_go_to_line",               .boolean },
-    .{ "copy_whole_line_without_selection",   .boolean },
-
-    .{ "max_entries_in_open_file_dialog",     .integer },
-    .{ "tab_size",                            .integer },
-    .{ "line_height_scale_percent",           .integer },
-    .{ "max_editor_width",                    .integer },
-    .{ "editor_history_size",                 .integer },
-];
 
 DEFAULT_CONFIG_FILE_DATA  :: #run read_entire_file(DEFAULT_CONFIG_NAME);
 EXAMPLE_PROJECT_FILE_DATA :: #run read_entire_file(EXAMPLE_PROJECT_CONFIG_NAME);
@@ -479,17 +343,19 @@ EXAMPLE_PROJECT_FILE_DATA :: #run read_entire_file(EXAMPLE_PROJECT_CONFIG_NAME);
 #scope_file
 
 #if OS == .MACOS {
-    DEFAULT_CONFIG_NAME         :: "default_macos.focus-config";
+    DEFAULT_CONFIG_NAME :: "default_macos.focus-config";
 } else {
-    DEFAULT_CONFIG_NAME         :: "default.focus-config";
+    DEFAULT_CONFIG_NAME :: "default.focus-config";
 }
 EXAMPLE_PROJECT_CONFIG_NAME :: "example-project.focus-config";
 
 
 DEFAULT_CONFIG :: #run -> Config {
-    config, success := parse_config("Default Config", DEFAULT_CONFIG_NAME, DEFAULT_CONFIG_FILE_DATA);
+    parsed_config, success := parse_config("Default Config", DEFAULT_CONFIG_NAME, DEFAULT_CONFIG_FILE_DATA);
     assert(success, "Couldn't parse the default config file '%'", DEFAULT_CONFIG_NAME);
-    return config;
+    default_config: Config;
+    merge_configs(*default_config, parsed_config);
+    return default_config;
 };
 
 // Validate the example project config
