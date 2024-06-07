@@ -1204,6 +1204,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .Yang;                 return tokenize_yang;
         case .Zig;                  return tokenize_zig;
         case .Uxntal;               return tokenize_uxntal;
+        case .Markdown;             return tokenize_markdown;
         case .Focus_Config;         return tokenize_focus_config;
         case .Focus_Theme;          return tokenize_focus_config;
         case .Focus_Build_Panel;    return null;
@@ -1404,6 +1405,7 @@ Buffer :: struct {
         Yang;
         Zig;
         Uxntal;
+        Markdown;
         Focus_Config;
         Focus_Theme;
         Focus_Build_Panel;  // a fake lang to be assigned to the build panel instead of Plain_Text so that its tokens are preserved
