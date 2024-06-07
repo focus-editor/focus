@@ -1,6 +1,3 @@
-/* ToDo:     
-    - Indentation on list points.
-*/
 tokenize_markdown ::  (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_md_tokenizer(buffer, start_offset, count);
         
