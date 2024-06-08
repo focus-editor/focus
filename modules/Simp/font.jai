@@ -140,10 +140,11 @@ convert_to_temporary_glyphs :: (font: *Dynamic_Font, s: string) -> width_in_pixe
             // FreeType returns glyph index 0 for undefined glyphs... just signal
             // the condition that this happened.
             if glyph.glyph_index_within_font == 0 font.glyph_conversion_failed = true;
+
+            prev_glyph = glyph.glyph_index_within_font;
         }
 
         t = unicode_next_character(t);
-        prev_glyph = glyph.glyph_index_within_font;
     }
 
     return width_in_pixels;
@@ -324,6 +325,15 @@ draw_text_with_highlights :: (font: *Dynamic_Font, x: s64, y: s64, text: string,
 
         // Draw glyph
         {
+            if use_kerning && prev_glyph {
+                delta: FT_Vector = ---;
+                error := FT_Get_Kerning(font.face, prev_glyph, glyph.glyph_index_within_font, xx FT_Kerning_Mode.DEFAULT, *delta);
+                if !error {
+                    sx += cast(float) (delta.x >> 6);
+                    width_in_pixels += (delta.x >> 6);
+                }
+            }
+
             x1 := sx + cast(float) glyph.offset_x;
             x2 := x1 + cast(float) glyph.width;
 
@@ -333,15 +343,6 @@ draw_text_with_highlights :: (font: *Dynamic_Font, x: s64, y: s64, text: string,
             sx += cast(float) glyph.advance;
 
             width_in_pixels += glyph.advance;
-
-            if use_kerning && prev_glyph {
-                delta: FT_Vector = ---;
-                error := FT_Get_Kerning(font.face, prev_glyph, glyph.glyph_index_within_font, xx FT_Kerning_Mode.DEFAULT, *delta);
-                if !error {
-                    sx += cast(float) (delta.x >> 6);
-                    width_in_pixels += (delta.x >> 6);
-                }
-            }
 
             // Create quad
             quad: Font_Quad = ---;
