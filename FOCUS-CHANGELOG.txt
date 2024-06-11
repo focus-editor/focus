@@ -32,6 +32,7 @@
     + Fixed a few memory leaks
     + Fixed an out-of-bounds scroll position in scrollable panels in some cases
 + Other changes:
+    + macOS: add support for dead keys/key composition
     + ...
 
 

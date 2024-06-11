@@ -146,6 +146,15 @@ NSString :: struct {
         func :: #type (*void, Selector, int) -> u16 #c_call;
         return (cast(func) objc_msgSend)(self, _sel.characterAtIndex_, at);
     }
+
+    stringWithCharacters :: (chars: *u16, count: NSUInteger) -> *NSString {
+        func :: #type (*void, Selector, *u16, NSUInteger) -> *NSString #c_call;
+        self := objc_alloc(NSString);
+        autorelease(self);
+        ret := (cast(func) objc_msgSend)(self, _sel.initWithCharacters_length_, chars, count);
+        autorelease(ret);
+        return ret;
+    }
 }
 
 NSRunLoopMode    :: *NSString;
@@ -651,4 +660,5 @@ _sel: struct {
     characterAtIndex_:                                                Selector;
     invalidate:                                                       Selector;
     addTimer_forMode_:                                                Selector;
+    initWithCharacters_length_:                                       Selector;
 }

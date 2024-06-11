@@ -302,10 +302,12 @@ update_cocoa_window_events :: () {
                 input_button_states[event.key_code] |= button_state_flags;
 
                 array_add(*events_this_frame, event);
+
             case NSEventTypeKeyDown;
                 keycode := NSEvent.keyCode(nsevent);
                 modifiers := NSEvent.modifierFlags(nsevent);
-                characters := NSEvent.characters(nsevent);
+                characters := event_characters(keycode, modifiers);
+                if !characters  characters = NSEvent.characters(nsevent);
                 charslen := ifx characters then NSString.length(characters) else 0;
                 charactersNoMods := NSEvent.charactersIgnoringModifiers(nsevent);
                 charslenNoMods := ifx charactersNoMods then NSString.length(charactersNoMods) else 0;
@@ -331,22 +333,16 @@ update_cocoa_window_events :: () {
 
                 input_button_states[event.key_code] |= (DOWN | START);
 
-                // Length will be 0 if this was a dead key.
-                // @Incomplete: How do we handle diacritics entered via dead keys?
-                // For example for "¨ + a => ä", if we ignore the dead key for ¨ here and then only handle the "a", people won’t be able to assemble the "ä".
                 if characters && charslen > 0 {
-                    utf32_data := NSString.dataUsingEncoding(characters, NSUTF32LittleEndianStringEncoding);
-                    // defer release(utf32_data);
-                    utf32 := cast(*u32) NSData.bytes(utf32_data);
-                    count := NSData.length(utf32_data) / size_of(u32);
+                    count := cast(u16) charslen;
 
-                    event.text_input_count = xx count;
+                    event.text_input_count = count;
                     array_add(*events_this_frame, event);
 
                     for 0..count-1 {
                         event: Event;
                         event.type = .TEXT_INPUT;
-                        event.utf32 = utf32[it];
+                        event.utf32 = NSString.characterAtIndex(characters, it);
 
                         // filter out control characters
                         if event.utf32 <= 31   then continue;
@@ -361,7 +357,6 @@ update_cocoa_window_events :: () {
                     array_add(*events_this_frame, event);
                 }
 
-                // continue;
             case NSEventTypeKeyUp;
                 keycode := NSEvent.keyCode(nsevent);
                 modifiers := NSEvent.modifierFlags(nsevent);
@@ -534,6 +529,83 @@ add_resize_record :: (hwnd: Window_Type, width: s32, height: s32) {
 }
 
 #scope_file
+
+/*
+ * After a whole bunch of googling this is the best I could come up with in order to handle
+ * key composition/dead keys. As far as I can tell this seems to *technically* be deprecated,
+ * however I couldn't find any equivalent way of doing this with "current" APIs.
+ *
+ * These should probably be part of the `macos` module however I don't really feel like
+ * copying that into our local module directory as well.
+ *
+ * References:
+ *   - https://github.com/TigerVNC/tigervnc/blob/master/vncviewer/cocoa.mm#L328-L344
+ *   - https://github.com/TigerVNC/tigervnc/blob/master/vncviewer/cocoa.mm#L475-L485
+ *   - https://chromium.googlesource.com/chromium/src/+/master/ui/events/keycodes/keyboard_code_conversion_mac.mm#224
+ *   - https://gist.github.com/ArthurYidi/3af4ccd7edc87739530476fc80a22e12
+ *   - `Events.h` and `UnicodeUtilities.h` in the `Carbon` framework
+ *
+ *  - @ileonte, 2024.06.11
+ */
+#import "macos";
+
+kCmdKey     : u16 = 1 << 8;
+kShiftKey   : u16 = 1 << 9;
+kAlphaLock  : u16 = 1 << 10;
+kOptionKey  : u16 = 1 << 11;
+kControlKey : u16 = 1 << 12;
+
+kUCKeyActionDown : u16 = 0;
+
+kTISPropertyUnicodeKeyLayoutData : *NSString #elsewhere;
+
+TISCopyCurrentKeyboardLayoutInputSource :: () -> *void #foreign;
+TISGetInputSourceProperty :: (keyboard: *void, prop: *NSString) -> CFDataRef #foreign;
+LMGetKbdType :: () -> u8 #foreign;
+UCKeyTranslate :: (
+    keyboardLayout: *u8,
+    virtualKeyCode: u16,
+    keyAction:      u16,
+    modifierState:  u32,
+    keyboardType:   u32,
+    options:        u32,
+    deadKeyState:   *u32,
+    maxLength:      u64,
+    actualLength:   *u64,
+    unicodeString:  *u16) -> s32 #foreign;
+
+dead_key_state : u32;   // this needs to persist across calls to `event_characters`
+
+event_characters :: (keycode: u16, modifiers: NSEventModifierFlags) -> *NSString {
+    characters: *NSString;
+    layout: *u8;
+
+    keyboard := TISCopyCurrentKeyboardLayoutInputSource();
+    uchr := TISGetInputSourceProperty(keyboard, kTISPropertyUnicodeKeyLayoutData);
+    if uchr  layout = CFDataGetBytePtr(uchr);
+    if layout {
+        str: [256]u16;
+        len: u64;
+
+        mods: u32;
+        if (modifiers & NSEventModifierFlagCapsLock) != 0  mods |= kAlphaLock;
+        if (modifiers & NSEventModifierFlagShift) != 0     mods |= kShiftKey;
+        if (modifiers & NSEventModifierFlagControl) != 0   mods |= kControlKey;
+        if (modifiers & NSEventModifierFlagOption) != 0    mods |= kOptionKey;
+        if (modifiers & NSEventModifierFlagCommand) != 0   mods |= kCmdKey;
+        mods = (mods >> 8) & 0xff;
+
+        err := UCKeyTranslate(layout, keycode, kUCKeyActionDown, mods, LMGetKbdType(),
+                              0, *dead_key_state, str.count, *len, str.data);
+
+        if !err && len  characters = NSString.stringWithCharacters(str.data, len);
+    }
+
+    return characters;
+}
+
+Carbon :: #library,system "Carbon";
+
 
 #import "Math";
 
