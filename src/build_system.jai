@@ -665,6 +665,8 @@ parse_build_errors :: (error_regex: string) {
         end   := buffer.bytes.count;
         if it_index < build_errors.count - 1 then end = build_errors[it_index + 1].error_info_start_offset;
 
+        if end < start continue;  // TODO: investigate why this might be happening before we implement other languages. See https://github.com/focus-editor/focus/issues/379
+
         potential_code_block := cast(string) array_view(buffer.bytes, start, end - start);
 
         if lang == .Jai {

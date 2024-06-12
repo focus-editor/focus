@@ -31,6 +31,7 @@
     + Rust: enabled comment toggling that was missing initially
     + Fixed a few memory leaks
     + Fixed an out-of-bounds scroll position in scrollable panels in some cases
+    + Fixed a crash when parsing build output with certain regexes
 + Other changes:
     + macOS: add support for dead keys/key composition
     + ...
