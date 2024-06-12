@@ -604,7 +604,8 @@ event_characters :: (keycode: u16, modifiers: NSEventModifierFlags) -> *NSString
     return characters;
 }
 
-Carbon :: #library,system "Carbon";
+Carbon :: #library,system,link_always "Carbon";
+QuartzCore :: #library,system,link_always "QuartzCore";
 
 
 #import "Math";
