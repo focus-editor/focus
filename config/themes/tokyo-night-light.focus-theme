@@ -20,8 +20,8 @@ paste_animation:                        CFCFE4FF
 splitter:                               C1C2C7FF
 splitter_hover:                         C1C2C7FF
 letter_highlight:                       343B58FF
-list_cursor_lite:                       D5D6DBFF
-list_cursor:                            D5D6DBFF
+list_cursor_lite:                       C8C9DEFF
+list_cursor:                            C8C9DEFF
 shadow_dark:                            18181809
 shadow_transparent:                     0E161C00
 text_input_label:                       9699A3FF
@@ -31,7 +31,7 @@ ui_default:                             343B58FF
 ui_dim:                                 9DA0ABFF
 ui_neutral:                             9DA0ABFF
 ui_warning:                             D28822FF
-ui_warning_dim:                         9B6519FF
+ui_warning_dim:                         D28822FF
 ui_error:                               BD4040FF
 ui_error_bright:                        DD4E52FF
 ui_success:                             9ECE6AFF
