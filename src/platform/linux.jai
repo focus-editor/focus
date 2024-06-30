@@ -425,9 +425,14 @@ platform_get_troubleshooting_info :: () -> string /* temp */ {
     return ret;
 }
 
+/*
+ * `Linux_Display` is empty on platforms other than Linux, so importing it should be basically
+ * free on Windows/MacOS.
+ */
+LD :: #import "Linux_Display"()(VALIDATE_USAGE = DEBUG);
+
 #scope_file
 
-LD  :: #import "Linux_Display";
 XDG :: #import "XDG";
 
 #import "POSIX";
