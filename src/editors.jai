@@ -1192,6 +1192,7 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
         case "yang";            lang = .Yang;
         case "zig";             lang = .Zig;
         case "tal";             lang = .Uxntal;
+        case "md";              lang = .Markdown;
 
         case "ts";              lang = .Js;
         case "tsx";             lang = .Js;

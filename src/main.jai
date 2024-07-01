@@ -926,6 +926,7 @@ dont_ignore_next_window_resize := false;
 #load "langs/zig.jai";
 #load "langs/uxntal.jai";
 #load "langs/rust.jai";
+#load "langs/markdown.jai";
 
 #if OS == .WINDOWS {
     #load "platform/windows.jai";
