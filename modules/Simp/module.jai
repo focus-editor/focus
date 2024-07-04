@@ -22,7 +22,7 @@
 
 #if render_api == .OPENGL {
     #if OS != .LINUX {
-        #import "GL";
+        #import "GL"(DEFAULT_MSAA = 0);
     } else {
         GL :: #import "Linux_Display/GL";
         using GL.gl_procs;
