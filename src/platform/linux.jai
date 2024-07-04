@@ -111,25 +111,21 @@ DONE;
 
 platform_data_dir :: () -> string {
     data_dir := sprint("%/focus-editor", XDG.get_path(.DATA_HOME));
-    make_directory_if_it_does_not_exist(data_dir);
-    
     #if DEBUG {
         data_dir = sprint("%/debug", data_dir);
-        make_directory_if_it_does_not_exist(data_dir);
     }
-    
+    make_directory_if_it_does_not_exist(data_dir);
+
     return data_dir;
 }
 
 platform_config_dir :: () -> string {
     config_dir := sprint("%/focus-editor", XDG.get_path(.CONFIG_HOME));
-    make_directory_if_it_does_not_exist(config_dir);
-    
     #if DEBUG {
         config_dir = sprint("%/debug", config_dir);
-        make_directory_if_it_does_not_exist(config_dir);
     }
-    
+    make_directory_if_it_does_not_exist(config_dir);
+
     return config_dir;
 }
 

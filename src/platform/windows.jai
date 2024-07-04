@@ -6,13 +6,7 @@ platform_setup :: () {
 }
 
 platform_data_dir :: () -> string {
-    #if DEBUG {
-        dir := tprint("%/debug", trim_right(path_strip_filename(get_path_of_running_executable()), "/"));
-        make_directory_if_it_does_not_exist(dir);
-    } else {
-        dir := trim_right(path_strip_filename(get_path_of_running_executable()), "/");
-    }
-    
+    dir := trim_right(path_strip_filename(get_path_of_running_executable()), "/");
     return copy_string(dir);
 }
 
