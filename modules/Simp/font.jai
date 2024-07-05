@@ -538,10 +538,11 @@ get_text_width :: (font: *Dynamic_Font, s: string) -> width: s64 {
                 error := FT_Get_Kerning(font.face, prev_glyph, glyph.glyph_index_within_font, xx FT_Kerning_Mode.DEFAULT, *delta);
                 if !error then width_in_pixels += (delta.x >> 6);
             }
+
+            prev_glyph = glyph.glyph_index_within_font;
         }
 
         t = unicode_next_character(t);
-        prev_glyph = glyph.glyph_index_within_font;
     }
 
     return width_in_pixels;
