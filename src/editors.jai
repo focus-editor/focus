@@ -1214,16 +1214,16 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
 
         case "c";               lang = .C;
         case "h";               lang = .C;
-        case "inl";             lang = .C;
-        case "cpp";             lang = .C;
-        case "cxx";             lang = .C;
-        case "c++";             lang = .C;
-        case "hpp";             lang = .C;
-        case "ipp";             lang = .C;
-        case "cc";              lang = .C;
-        case "hh";              lang = .C;
-        case "m";               lang = .C;
-        case "mm";              lang = .C;
+        case "inl";             lang = .Cpp;
+        case "cpp";             lang = .Cpp;
+        case "cxx";             lang = .Cpp;
+        case "c++";             lang = .Cpp;
+        case "hpp";             lang = .Cpp;
+        case "ipp";             lang = .Cpp;
+        case "cc";              lang = .Cpp;
+        case "hh";              lang = .Cpp;
+        case "m";               lang = .Cpp;
+        case "mm";              lang = .Cpp;
 
         case "html";            lang = .Html;
         case "htm";             lang = .Html;

@@ -27,6 +27,7 @@
     + New command: `choose_language`. Allows to select a language for a buffer (thanks @maxamundsen)
     + New config subsection under `[[workspace]]`: `[file associations]`. Can be used to assign syntax to buffers using wildcards. See the default config for examples
     + Basic highlighting for Markdown (thanks @jakwolf) - however it's not complete and not always correct
+    + C and C++ highlighters are now separate from each other
 + Bug fixes:
     + Linux: Fixed a bug that caused inconsistent trackpad scrolling on Wayland (thanks @Mythique)
     + Rust: enabled comment toggling that was missing initially

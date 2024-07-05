@@ -909,6 +909,7 @@ dont_ignore_next_window_resize := false;
 #load "langs/common.jai";
 #load "langs/jai.jai";
 #load "langs/c.jai";
+#load "langs/cpp.jai";
 #load "langs/csharp.jai";
 #load "langs/focus_config.jai";
 #load "langs/glsl.jai";

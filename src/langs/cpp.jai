@@ -1,4 +1,4 @@
-tokenize_c :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+tokenize_cpp :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
     tokenizer := get_tokenizer(buffer, start_offset, count);
 
     // Allocate temporary space for tracking one previous token
@@ -28,7 +28,7 @@ tokenize_c :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buf
     return .[];
 }
 
-get_next_c_token :: get_next_token;  // export for indent tokenization
+get_next_cpp_token :: get_next_token;  // export for indent tokenization
 
 #scope_file
 
@@ -422,28 +422,36 @@ OPERATIONS :: string.[
 ];
 
 KEYWORDS :: string.[
-    "break", "case", "continue", "default", "do", "else", "enum", "for", "goto", "if", "return", "sizeof", "struct", "switch",
-    "typedef", "union", "while","_Atomic", "_Generic", "_Noreturn", "_Static_assert", "__asm", "__asm__", "__except",
-    "__finally", "__leave", "__try",
+    "alignas", "alignof", "and", "and_eq", "asm", "auto", "bitand", "bitor", "break", "case", "catch", "class", "compl",
+    "concept", "const_cast", "continue", "co_await", "co_return", "co_yield", "decltype", "default", "defined", "delete",
+    "do", "dynamic_cast", "else", "enum", "explicit", "export", "for", "friend", "goto", "if", "namespace", "new", "not",
+    "not_eq", "operator", "or", "or_eq", "private", "protected", "public", "reinterpret_cast", "requires", "return", "sizeof",
+    "static_assert", "static_cast", "struct", "switch", "template", "throw", "try", "typedef", "typeid", "typename", "union",
+    "using", "while", "xor", "xor_eq",
 ];
 
 TYPE_KEYWORDS :: string.[
     // built-in types
-    "char", "double", "float", "int", "long", "short", "void", "_Bool", "_Complex", "_Imaginary",
+    "bool", "char", "char8_t", "char16_t", "char32_t", "double", "float", "int", "long", "short", "void", "wchar_t", "_Bool",
+    "_Complex", "_Imaginary",
 
     // stdint types
     "int8_t", "int16_t", "int32_t", "int64_t", "uint8_t", "uint16_t", "uint32_t", "uint64_t", "int_least8_t", "int_least16_t",
     "int_least32_t", "int_least64_t", "uint_least8_t", "uint_least16_t", "uint_least32_t", "uint_least64_t", "int_fast8_t",
     "int_fast16_t", "int_fast32_t", "int_fast64_t", "uint_fast8_t", "uint_fast16_t", "uint_fast32_t", "uint_fast64_t", "intptr_t",
     "uintptr_t", "intmax_t", "uintmax_t", "wint_t", "size_t", "ptrdiff_t", "sig_atomic_t", "time_t", "clock_t",
+
+    // some STL types
+    "vector", "atomic", "atomic_flag", "array", "map", "unordered_map", "set", "unordered_set", "queue", "deque", "tree", "thread",
 ];
 
 VALUE_KEYWORDS :: string.[
-    "false", "true",
+    "false", "nullptr", "this", "true",
 ];
 
 MODIFIER_KEYWORDS :: string.[
-    "const", "extern", "register", "signed", "static", "unsigned", "volatile", "_Thread_local",
+    "const", "consteval", "constexpr", "constinit", "extern", "final", "inline", "mutable", "noexcept", "override", "register",
+    "restrict", "signed", "static", "thread_local", "unsigned", "virtual", "volatile", "_Thread_local",
 ];
 
 DIRECTIVES :: string.[
