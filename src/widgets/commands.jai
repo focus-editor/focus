@@ -92,6 +92,8 @@ base_commands := #run -> [] Command {
     }
 
     common_commands := Command.[
+        cmd( "Quit",                              .quit,                             .None   ),
+
         cmd( "Open File By Name",                 .open_file_by_name,                .None   ),
         cmd( "Navigate To File",                  .navigate_to_file,                 .None   ),
         cmd( "Navigate To File From Root",        .navigate_to_file_from_root,       .None   ),
