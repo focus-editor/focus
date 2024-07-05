@@ -115,7 +115,7 @@ get_char_at_offset_as_string :: (using buffer: Buffer, offset: s32) -> string {
     if offset >= bytes.count return "";
     char: string = ---;
     char.data  = *bytes[offset];
-    char.count = 1 + trailingBytesForUTF8[bytes[offset]];
+    char.count = clamp(cast(s64)(1 + trailingBytesForUTF8[bytes[offset]]), 0, bytes.count - offset);
     return char;
 }
 

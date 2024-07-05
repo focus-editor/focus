@@ -48,10 +48,10 @@ advance_by_chars :: (s: string, num_chars: s64) -> string #must, remainder: s64 
     while result && col < num_chars {
         byte := result[0];
         if byte != #char "\t" {
-            advance(*result, 1 + trailingBytesForUTF8[byte]);
+            safe_advance(*result, 1 + trailingBytesForUTF8[byte]);
             col += 1;
         } else {
-            advance(*result, 1);
+            safe_advance(*result, 1);
             col += TAB_SIZE - col % TAB_SIZE;
         }
     }
@@ -66,30 +66,37 @@ take_first_n_chars :: (s: string, num_chars: s64) -> string #must {
 
 num_chars_in_string :: (s: string) -> s32 {
     num_chars: s32 = 0;
-    
+
     while s {
         byte := s[0];
         if byte != #char "\t" {
-            advance(*s, 1 + trailingBytesForUTF8[byte]);
+            safe_advance(*s, 1 + trailingBytesForUTF8[byte]);
             num_chars += 1;
         } else {
-            advance(*s, 1);
+            safe_advance(*s, 1);
             num_chars += TAB_SIZE - num_chars % TAB_SIZE;
         }
     }
-    
+
     return num_chars;
+}
+
+safe_advance :: inline (s: *string, amount: s64 = 1) {
+    // Doesn't crash if amount is incorrect for any reason
+    amount = clamp(amount, 0, s.count);
+    s.count -= amount;
+    s.data  += amount;
 }
 
 next_char_offset :: inline (bytes: [] u8, offset: s32) -> s32 {
     assert(offset <= bytes.count-1);
-    return offset + 1 + trailingBytesForUTF8[bytes[offset]];
+    return clamp(offset + 1 + trailingBytesForUTF8[bytes[offset]], 0, cast(s32)bytes.count);
 }
 
 prev_char_offset :: (bytes: [] u8, offset: s32) -> s32, byte: u8 {
     new_offset := offset - 1;
     byte := bytes[new_offset];
-    while (byte & 0b1100_0000) == 0b1000_0000 { 
+    while (byte & 0b1100_0000) == 0b1000_0000 {
         new_offset -= 1;
         byte = bytes[new_offset];
     }
@@ -99,7 +106,7 @@ prev_char_offset :: (bytes: [] u8, offset: s32) -> s32, byte: u8 {
 unicode_prev_character :: (s: *u8) -> new_s: *u8, char: u32 {  // NOTE: assuming the memory is valid utf-8, no checks are done!
     t := s - 1;
     while (<<t & 0b1100_0000) == 0b1000_0000 t -= 1;  // rewind to the first byte of a utf-8 sequence (all non-first bytes start with 10)
-    
+
     char, _, result := character_utf8_to_utf32(t, s - t);
     return t, char;
 }

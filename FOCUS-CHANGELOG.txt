@@ -32,6 +32,7 @@
     + Fixed a few memory leaks
     + Fixed an out-of-bounds scroll position in scrollable panels in some cases
     + Fixed a crash when parsing build output with certain regexes
+    + Fixed a crash when outputting invalid UTF-8 in build commands
 + Other changes:
     + macOS: add support for dead keys/key composition
     + ...

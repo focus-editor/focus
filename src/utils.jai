@@ -59,9 +59,9 @@ to_owned_array :: (array: *[..]$T, free_memory := false) -> []T {
 
 pos_to_offset :: (str: string, pos: s64) -> s64 {
     assert(pos >= 0, "Negative char position\n");
-    result := -1;
-    char_index  := 0;
-    offset := 0;
+    result     := -1;
+    char_index := 0;
+    offset     := 0;
 
     while offset < str.count {
         if pos == char_index {
@@ -72,7 +72,8 @@ pos_to_offset :: (str: string, pos: s64) -> s64 {
         offset += 1 + trailingBytesForUTF8[byte];
         char_index += 1;
     }
-    if pos == char_index then result = offset;
+
+    if pos == char_index then result = clamp(offset, 0, str.count);
     assert(result >= 0, "Char position outside string\n");
 
     return result;
@@ -374,7 +375,7 @@ count_bytes_knowing_number_of_chars :: (bytes: [] u8, start_offset: s64, max_off
     s := cast(string) array_view(bytes, start_offset, max_offset - start_offset);
     while s && num_chars {
         byte := s[0];
-        num_bytes := 1 + trailingBytesForUTF8[byte];
+        num_bytes := clamp(1 + cast(s32) trailingBytesForUTF8[byte], 1, cast(s32) s.count);
         advance(*s, num_bytes);
         count += num_bytes;
         num_chars -= 1;
