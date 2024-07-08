@@ -410,6 +410,7 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .toggle_build_panel;                               toggle_build_panel();                               return true;
 
         case .build_kill_running_command;                       build_kill_running_command();                       return true;
+        case .build_clear_output;                               build_clear_output();                               return true;
 
         // TODO: search_in_buffer
         case .search_in_project;

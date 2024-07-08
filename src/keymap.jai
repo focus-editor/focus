@@ -283,10 +283,11 @@ ACTIONS_COMMON :: string.[
     "open_global_config",
     "open_project_config",
     "show_default_config",
-    // "open_error_log",  // todo
+
     "toggle_fullscreen",
     "toggle_build_panel",
     "build_kill_running_command",
+    "build_clear_output",
     "show_troubleshooting_info",
 
     "show_commands",

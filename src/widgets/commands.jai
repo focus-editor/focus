@@ -181,6 +181,7 @@ base_commands := #run -> [] Command {
         cmd( "Toggle Build Panel",                .toggle_build_panel,               .None   ),
 
         cmd( "Build: Kill Running Command",       .build_kill_running_command,       .None   ),
+        cmd( "Build: Clear Build Output",         .build_clear_output,               .None   ),
 
         cmd( "Autoindent Region",                 .autoindent_region,                .Single ),
 

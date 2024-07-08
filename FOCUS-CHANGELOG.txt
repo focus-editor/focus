@@ -25,6 +25,7 @@
     + New commands: `close_all_editors` and `close_other_editors`. Can be used to clean up the most recent files dialog (`Ctrl-Tab` by default). (thanks @maxamundsen)
     + New command: `strip_trailing_whitespace`. Use to strip trailing whitespace in the currently open file (thanks @maxamundsen)
     + New command: `choose_language`. Allows to select a language for a buffer (thanks @maxamundsen)
+    + New command: `build_clear_output`. Use to manually clear the build output panel. Note that there's already a build option to clear it on every run, which may be preferable.
     + New config subsection under `[[workspace]]`: `[file associations]`. Can be used to assign syntax to buffers using wildcards. See the default config for examples
     + Basic highlighting for Markdown (thanks @jakwolf) - however it's not complete and not always correct
     + C and C++ highlighters are now separate from each other

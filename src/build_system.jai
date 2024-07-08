@@ -118,6 +118,9 @@ execute_build_command :: (command: *Build_Command) {
 }
 
 build_clear_output :: () {
+    // It's ok not to lock build_mutex here because we're only supposed to be writing to buffers from the main thread
+    // (and this should only be called from the main thread)
+
     if build_buffer_id < 0 return;
     editor, buffer := get_build_editor_and_buffer();
 
