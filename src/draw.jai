@@ -735,11 +735,6 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             cursors_start_blinking();
         }
 
-        // If we're past the max scrolling point for any reason (e.g. just deleted some text),
-        // snap back into the allowed range immediately.
-        // Do it after we've handled cursor_moved, because it uses viewport.top
-        if viewport.top > max_y_scroll || viewport.scroll_y.target > max_y_scroll then snap_viewport_top_to_target(editor, buffer, max_y_scroll);
-
         // With line wrap enabled we never want to scroll horizontally, so just snap to left always
         if line_wrap_is_active(editor) {
             viewport.scroll_x.target = 0;
@@ -782,13 +777,6 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
         editor.refresh_selection = false;  // should probably move this to some central place where we reset stuff
 
-        // Update scrollbar without drawing to get the new scrolling position (scrollbar will be drawn later)
-        new_scroll_target := get_new_scroll_target_from_scrollbar(rect, scrollbar_size, content_height, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
-        if new_scroll_target != viewport.scroll_y.target {
-            // Jump immediately to the scroll point when dragging or clicking scrollbar
-            snap_viewport_top_to_target(editor, buffer, new_scroll_target);
-        }
-
         // Keyboard smooth scrolling - vertical
         // As mentioned above, we can properly perform horizontal scrolling only once vertical
         // scrolling is done, allowing us to determine the longest visible line.
@@ -811,6 +799,21 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             redraw_requested = true;
             viewport.top = get_animation_value(viewport.scroll_y);
             viewport_remember_glue_point(editor, buffer);
+        }
+
+        // If we're past the max scrolling point for any reason (e.g. just deleted some text),
+        // snap back into the allowed range immediately.
+        // Do it after we've handled cursor_moved AND after calculating the next scroll_y animation value, because it uses viewport.top
+        if viewport.top > max_y_scroll || viewport.scroll_y.target > max_y_scroll {
+            snap_viewport_top_to_target(editor, buffer, max_y_scroll);
+        }
+
+        // Update scrollbar without drawing to get the new scrolling position (scrollbar will be drawn later)
+        // Do it after we've handled cursor_moved AND after calculating the next scroll_y animation value, because it uses viewport.top
+        new_scroll_target := get_new_scroll_target_from_scrollbar(rect, scrollbar_size, content_height, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
+        if new_scroll_target != viewport.scroll_y.target {
+            // Jump immediately to the scroll point when dragging or clicking scrollbar
+            snap_viewport_top_to_target(editor, buffer, new_scroll_target);
         }
 
         // Horizontal scrolling
