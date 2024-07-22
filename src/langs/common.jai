@@ -244,7 +244,7 @@ get_lang_from_name :: (lang_name: string) -> Buffer.Lang, found: bool {
     if lowercase_name == {
         case "jai";          return .Jai,        true;
         case "c";            return .C,          true;
-        case "cpp";          return .C,          true;
+        case "cpp";          return .Cpp,        true;
         case "csharp";       return .CSharp,     true;
         case "glsl";         return .Glsl,       true;
         case "hlsl";         return .Hlsl,       true;
