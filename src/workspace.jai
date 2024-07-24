@@ -53,7 +53,7 @@ add_directory_to_workspace :: (path: string, index := -1) {
     }
 }
 
-start_initial_workspace_scan :: () {
+start_workspace_scan :: () {
     file_list_ready = false;
     workspace_scan_complete = false;
     array_reset(*files_to_scan);
@@ -193,125 +193,106 @@ workspace_update :: () {
     watchers.external_file_modified = "";
 }
 
-hard_reload_workspace :: () {
+reload_workspace :: () {
     // Make sure no threads are running
     if file_list_thread_group.initted then shutdown(*file_list_thread_group);
     if scanner_thread_group.initted   then shutdown(*scanner_thread_group);
 
+    // Deinit things
     deinit_finder();
     deinit_build_system();
     deinit_open_file_dialog();
     deinit_file_watcher();
+    deinit_buffers();
+    editor_history.initted = false;
 
-    old_editor_state := remember_visible_editors_and_buffers();
-
-    // Remove all editors and buffers (safe to do now without any threads)
-    remove_all_editors();
-    remove_all_buffers();
-
-    // Start again
+    // Reinit things
     init_file_watcher();
     array_reset_keeping_memory(*project_dirs);
     init_workspace();
     init_buffers();
-    init_build_system();
-    update_window_title();
+
+    left_editor_preserved  := false;
+    right_editor_preserved := false;
+
+    // Preserve all editors whose buffers belong to the new workspace. Remove the rest.
+    new_open_editors: [..] Editor;
+    new_open_buffers: Simple_Bucket_Array(Buffer, items_per_bucket = 1024, max_buckets = 1024);
+    new_most_recent_buffers: [..] s64;
+
+    for * editor, editor_id : open_editors {
+        buffer := *open_buffers[editor.buffer_id];
+        if should_keep_buffer_when_reloading_workspace(buffer) {
+            new_buffer_id := new_open_buffers.count;
+            bucket_array_add(*new_open_buffers, buffer.*);
+            if buffer.has_file {
+                table_add(*buffers_table, copy_string(buffer.file.full_path), new_buffer_id);
+                start_watching_file_if_not_already(buffer.file.full_path);
+            }
+
+            if array_unordered_remove_by_value(*most_recent_buffers, editor.buffer_id, stop_after_first = true) {
+                array_add(*new_most_recent_buffers, new_buffer_id);
+            }
+
+            editor.buffer_id = new_buffer_id;
+            new_editor_id := new_open_editors.count;
+            array_add(*new_open_editors, editor.*);
+
+            // Check whether this is one of the visible editors
+            if editors.active == editor_id { editors.active = new_editor_id; }
+            if editors.left   == editor_id { editors.left   = new_editor_id; left_editor_preserved  = true; }
+            if editors.right  == editor_id { editors.right  = new_editor_id; right_editor_preserved = true; }
+        } else {
+            free_editor(editor);
+        }
+    }
+    array_reset(*open_editors);
+    open_editors = new_open_editors;
+
+    array_reset(*most_recent_buffers);
+    most_recent_buffers = new_most_recent_buffers;
+
+    // Free all the buffers which don't belong to the workspace
+    for * buffer, buffer_id : open_buffers {
+        buffer := *open_buffers[buffer_id];
+        if !should_keep_buffer_when_reloading_workspace(buffer) free_buffer(buffer);
+    }
+    bucket_array_reset(*open_buffers);
+    open_buffers = new_open_buffers;
+
     if automatic_workspace_reload {
-        reopen_visible_editors(old_editor_state);
+        // Reopen visible editors, if any of them are preserved
+        if left_editor_preserved && right_editor_preserved {
+            // Keep the layout
+        } else if left_editor_preserved {
+            editors.layout = .Single;
+            editors.right = -1;
+        } else if right_editor_preserved {
+            editors.layout = .Single;
+            editors.left = editors.right;
+            editors.right = -1;
+        } else {
+            editors = Editor_State.{};  // reset everything
+        }
     } else {
+        editors = Editor_State.{};
         show_open_file_dialog(.search);
     }
-    start_initial_workspace_scan();
 
+    init_build_system();  // must do after we've cleared editors and buffers
+    update_window_title();
+
+    start_workspace_scan();
+
+    clear_user_messages(.workspace);
     add_success_message("Workspace has been reloaded", dismiss_in_seconds=3);
 }
 
-remember_visible_editors_and_buffers :: () -> Visible_Editor_State {
-    save_editor_state :: (state: *Visible_Editor_State.State, editor: *Editor, buffer: *Buffer) {
-        state.file_path = copy_temporary_string(buffer.file.full_path);
-        state.cursors = NewArray(editor.cursors.count, Cursor, initialized = false);
-        for * cursor, i : state.cursors { cursor.* = editor.cursors[i]; }
-        state.main_cursor = editor.main_cursor;
-        state.viewport = editor.viewport;
-    }
+should_keep_buffer_when_reloading_workspace :: (using buffer: Buffer) -> bool {
+    if !has_file return false;  // if this is a special buffer we can recreate it later
 
-    using state: Visible_Editor_State;
-
-    layout = editors.layout;
-
-    if editors.layout == {
-        case .None;     // nothing to do
-        case .Single;
-            editor := *open_editors[editors.active];
-            buffer := *open_buffers[editor.buffer_id];
-            if buffer.has_file && !buffer.modified {
-                save_editor_state(*left, editor, buffer);
-            } else {
-                layout = .None;  // we don't reopen modified buffers, at least for now
-            }
-        case .Double;
-            left_editor  := *open_editors[editors.left];
-            left_buffer  := *open_buffers[left_editor.buffer_id];
-
-            right_editor := *open_editors[editors.right];
-            right_buffer := *open_buffers[right_editor.buffer_id];
-
-            if left_buffer.has_file && !left_buffer.modified && right_buffer.has_file && !right_buffer.modified {
-                save_editor_state(*left,  left_editor, left_buffer);
-                save_editor_state(*right, right_editor, right_buffer);
-            } else if left_buffer.has_file && !left_buffer.modified {
-                save_editor_state(*left, left_editor, left_buffer);
-                layout = .Single;
-            } else if right_buffer.has_file && !right_buffer.modified {
-                save_editor_state(*left, right_editor, right_buffer);
-                layout = .Single;
-            } else {
-                layout = .None;
-            }
-
-            state.left_active = editors.active == editors.left;
-    }
-
-    return state;
-}
-
-reopen_visible_editors :: (using old_state: Visible_Editor_State) {
-    restore_editor_state :: (state: Visible_Editor_State.State, placement: Editor_Placement) {
-        editors_open_file(state.file_path, placement);
-        editor := *open_editors[editors.active];
-        restore_cursor_state(editor, state.cursors);
-        editor.main_cursor = state.main_cursor;
-        editor.viewport = state.viewport;
-        start_watching_file_if_not_already(state.file_path);
-    }
-
-    editors = Editor_State.{};
-    editors.layout = layout;
-
-    if layout == {
-        case .None; return;
-        case .Single;
-            restore_editor_state(left, .in_place);
-        case .Double;
-            restore_editor_state(left,  .left);
-            restore_editor_state(right, .right);
-            if left_active then make_editor_active(editors.left);;
-    }
-    redraw_requested = true;
-}
-
-Visible_Editor_State :: struct {
-    layout: Editor_State.Layout;
-    left_active: bool;
-    left: State;
-    right: State;
-
-    State :: struct {
-        file_path: string;
-        cursors: [] Cursor;
-        main_cursor: s64;
-        viewport: Viewport;
-    }
+    // TODO: when we're able to add single files to project, check for that here as well!
+    return dir_is_within_project(get_parent_dir_path(file.full_path)) || is_our_config_file(file.full_path);
 }
 
 start_watching_file_if_not_already :: (file_path: string) {

@@ -69,6 +69,7 @@ User_Message :: struct {
 Tag :: enum_flags {
     none;
     config;
+    workspace;
     build;
 }
 

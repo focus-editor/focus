@@ -29,6 +29,8 @@
     + New config subsection under `[[workspace]]`: `[file associations]`. Can be used to assign syntax to buffers using wildcards. See the default config for examples
     + Basic highlighting for Markdown (thanks @jakwolf) - however it's not complete and not always correct
     + C and C++ highlighters are now separate from each other
+    + Workspace changes:
+        + Workspace will now reload in a non-destructive way. Wherever possible it will try to preserve open editors unless they don't belong to the workspace any more
 + Bug fixes:
     + Linux: Fixed a bug that caused inconsistent trackpad scrolling on Wayland (thanks @Mythique)
     + Rust: enabled comment toggling that was missing initially

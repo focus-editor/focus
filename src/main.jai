@@ -156,7 +156,7 @@ main :: () {
     if !check_feature(cpu_info.feature_leaves, x86_Feature_Flag.AES) then log_error("CPU doesn't support AES instructions. A slower hash function will be used.");
 
     // Requires the session to be created and the configs to be loaded
-    start_initial_workspace_scan();
+    start_workspace_scan();
 
     dpi_scale = platform_get_dpi_scale(window);
     init_fonts_and_dependent_things();
@@ -184,7 +184,6 @@ main :: () {
         for Input.get_window_resizes() {
             Simp.update_window(it.window);
             if (it.window == window) {
-                log("RESIZE: %", it);
                 should_reinit := dont_ignore_next_window_resize || ((it.width != window_width) || (it.height != window_height));
                 window_width = it.width;
                 window_height = it.height;
@@ -331,7 +330,7 @@ main :: () {
         maybe_save_editor_history();
 
         if should_reload_workspace {
-            hard_reload_workspace();
+            reload_workspace();
             should_reload_workspace = false;
             redraw_requested = true;
         }

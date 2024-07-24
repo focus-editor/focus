@@ -1114,8 +1114,8 @@ init_buffer :: (buffer: *Buffer) {
 
 unsaved_buffers_exist :: () -> bool {
     // Linear search, hmmmm, that sounds slow.
-    // Perhaps I should write an unsaved buffers http service,
-    // which would tell me if they exist in a O(1) time?
+    // Perhaps we should create an unsaved buffers microservice,
+    // which would tell us if they exist in a O(1) time?
     for open_buffers {
         if it.modified return true;
     }
@@ -1327,7 +1327,7 @@ Buffer :: struct {
     modified               := false;
     modified_on_disk       := false;
     deleted                := false;
-    needs_tokenizing         := false;
+    needs_tokenizing       := false;
     readonly               := false;
     binary                 := false;
     error_when_saving      := false;

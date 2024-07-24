@@ -1042,6 +1042,14 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
     if search_bar.selected_result >= 0 && jump then jump_to_search_result(editor, buffer);
 }
 
+free_editor :: (using editor: *Editor) {
+    array_reset(*cursors);
+    array_reset(*paste_animations);
+    array_reset(*highlights);
+    array_reset(*search_bar.results);
+    array_reset(*wrapped_line_starts);
+}
+
 #scope_file
 
 find_all_using_regex :: (using search_bar: *Search_Bar, needle: string, buffer: Buffer) {
@@ -1163,6 +1171,13 @@ init_buffers :: () {
 
     global_config_buffer_id = -1;
     global_troubleshooting_buffer_id = -1;
+}
+
+deinit_buffers :: () {
+    for buffer_id, buffer_path : buffers_table {
+        free(buffer_path);
+    }
+    deinit(*buffers_table);
 }
 
 get_lang_from_path :: (full_path: string) -> Buffer.Lang {
@@ -1341,13 +1356,6 @@ should_draw_cursors :: inline () -> bool {
     return (ms_since_start / CURSOR_BLINK_SPEED_MS) % 2 == 0;
 }
 
-remove_all_editors :: () {
-    editors = Editor_State.{};
-    for * open_editors free_editor(it);
-    array_reset_keeping_memory(*open_editors);
-    editor_history.initted = false;
-}
-
 viewport_remember_glue_point :: (using editor: *Editor, buffer: Buffer) {
     viewport.glue_point.buffer_pos = get_line_start_offset(editor, buffer, viewport.top / cast(s32) line_height);
     viewport.glue_point.offset_within_line = viewport.top % cast(s32) line_height;
@@ -1425,9 +1433,10 @@ line_wrap_is_active :: inline (editor: Editor) -> bool {
 
 find_or_create_editor :: (buffer_id: s64, unwanted_existing_editor: s64 = -1) -> editor_id: s64, created: bool {
     assert(buffer_id >= 0 && buffer_id < open_buffers.count, "Attempt to create editor for nonexistent buffer");
-    for open_editors
+    for open_editors {
         if it.buffer_id == buffer_id && it_index != unwanted_existing_editor
             return it_index, false;
+    }
 
     editor_id := open_editors.count;
     editor := array_add(*open_editors);
@@ -3354,14 +3363,6 @@ copy_current_line_info :: (using editor: *Editor, buffer: Buffer) {
     add_success_message("String '%' copied to clipboard", line_info, dismiss_in_seconds = 5);
 }
 
-free_editor :: (using editor: *Editor) {
-    array_reset(*cursors);
-    array_reset(*paste_animations);
-    array_reset(*highlights);
-    array_reset(*search_bar.results);
-    array_reset(*wrapped_line_starts);
-}
-
 #scope_export
 
 Editor :: struct {
@@ -3506,9 +3507,10 @@ open_buffers_lock: Mutex;  // must hold while adding a new buffer
 open_buffers: Simple_Bucket_Array(Buffer, items_per_bucket = 1024, max_buckets = 1024);  // 8 Kb for pointer array, ~1 million buffers is the maximum
 open_editors: [..] Editor;
 
+// A map from full buffer path to buffer id (only for the open buffers, obviously)
 buffers_table: Table(string, s64,
                      given_hash_function = x => Hash.get_hash(to_lower_copy_new(x,, temp)),
-                     given_compare_function = platform_path_equals);  // a map from full buffer path to buffer id (only for the open buffers, obviously)
+                     given_compare_function = platform_path_equals);
 
 most_recent_buffers: [..] s64;  // updated when an editor is activated, used to switch between open files
 

@@ -198,7 +198,7 @@ refresh_config :: (path: string) {
         if unsaved_buffers_exist() {
             show_unsaved_buffers_dialog(.reload_workspace);
             clear_user_messages();
-            add_user_warning("Workspace directories have changed in the config.\nWorkspace will need to reload, however there are unsaved changes.");
+            add_user_warning("Workspace directories have changed in the config.\nWorkspace will need to reload, however there are unsaved changes.", tag = .workspace);
             should_reload_workspace = false;
         }
     }

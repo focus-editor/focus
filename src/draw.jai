@@ -2301,7 +2301,7 @@ draw_unsaved_buffers_dialog :: () {
     // Additional message is assumed to be 1 line only
     additional_message := "";
     if unsaved_buffers_dialog.mode == .reload_workspace {
-        additional_message = "Workspace needs to reload. Unsaved files will be lost.";
+        additional_message = "Workspace needs to reload. Unsaved files could be lost.";
     }
 
     margin  := floor(12 * dpi_scale);
