@@ -3055,27 +3055,48 @@ paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
     editor.cursor_moved = .large_edit;
 }
 
-toggle_comment :: (editor: *Editor, buffer: *Buffer) {
-
+toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
     comment: string = ---;
-    if buffer.lang == {
-        case .C;            comment = "//";
-        case .CSharp;       comment = "//";
-        case .Golang;       comment = "//";
-        case .Glsl;         comment = "//";
-        case .Hlsl;         comment = "//";
-        case .Jai;          comment = "//";
-        case .Js;           comment = "//";
-        case .Json;         comment = "//";
-        case .Lua;          comment = "--";
-        case .Odin;         comment = "//";
-        case .Focus_Config; comment = "#";
-        case .Focus_Theme;  comment = "#";
-        case .Python;       comment = "#";
-        case .RenPy;        comment = "#";
-        case .Yang;         comment = "//";
-        case .Rust;         comment = "//";
-        case;               return;
+
+    if #complete buffer.lang == {
+        case .Jai;    #through;
+        case .C;      #through;
+        case .Cpp;    #through;
+        case .CSharp; #through;
+        case .Glsl;   #through;
+        case .Hlsl;   #through;
+        case .Golang; #through;
+        case .Js;     #through;
+        case .Json;   #through;
+        case .Odin;   #through;
+        case .Rust;   #through;
+        case .Yang;   #through;
+        case .Zig;
+            comment = "//";
+
+        case .Lua;
+            comment = "--";
+
+        case .Python;       #through;
+        case .RenPy;        #through;
+        case .Focus_Config; #through;
+        case .Focus_Theme;
+            comment = "#";
+
+        // Single-line comments are not supported, fallback to multi-line comment
+        case .Xml;      #through;
+        case .Html;     #through;
+        case .Uxntal;   #through;
+        case .Markdown;
+            assert(!is_fallback, "Infinite recursion");
+            toggle_block_comment(editor, buffer, true);
+            return;
+
+        // No support for comments at all
+        case .Plain_Text;        #through;
+        case .Todo;              #through;
+        case .Focus_Build_Panel;
+            return;
     }
 
     // Get the affected lines
@@ -3229,25 +3250,59 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer) {
     editor.cursor_moved = .unimportant;
 }
 
-toggle_block_comment :: (editor: *Editor, buffer: *Buffer) {
-    comment_start: string;
-    comment_end:   string;
+toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
+    comment_start: string = ---;
+    comment_end:   string = ---;
 
-    if buffer.lang == {
-        case .C;            comment_start = "/*"; comment_end = "*/";
-        case .CSharp;       comment_start = "/*"; comment_end = "*/";
-        case .Golang;       comment_start = "/*"; comment_end = "*/";
-        case .Glsl;         comment_start = "/*"; comment_end = "*/";
-        case .Jai;          comment_start = "/*"; comment_end = "*/";
-        case .Js;           comment_start = "/*"; comment_end = "*/";
-        case .Json;         comment_start = "/*"; comment_end = "*/";
-        case .Odin;         comment_start = "/*"; comment_end = "*/";
-        case .Rust;         comment_start = "/*"; comment_end = "*/";
-        case .Lua;          comment_start = "--[["; comment_end = "]]";
-        case .Html;         comment_start = "<!--"; comment_end = "-->";
-        case .Xml;          comment_start = "<!--"; comment_end = "-->";
-        case .Yang;         comment_start = "/*"; comment_end = "*/";
-        case;               toggle_comment(editor, buffer); return;  // fallback to toggle_comment for the rest.
+    if #complete buffer.lang == {
+        case .Jai;    #through;
+        case .C;      #through;
+        case .Cpp;    #through;
+        case .CSharp; #through;
+        case .Glsl;   #through;
+        case .Hlsl;   #through;
+        case .Golang; #through;
+        case .Js;     #through;
+        case .Json;   #through;
+        case .Odin;   #through;
+        case .Rust;   #through;
+        case .Yang;
+            comment_start = "/*";
+            comment_end   = "*/";
+
+        case .Lua;
+            comment_start = "--[[";
+            comment_end   = "]]";
+
+        case .Xml;  #through;
+        case .Html;
+            comment_start = "<!--";
+            comment_end   = "-->";
+
+        case .Uxntal;
+            comment_start = "(";
+            comment_end   = ")";
+
+        // Available with extensions
+        case .Markdown;
+            comment_start = "<!---";
+            comment_end   = "--->";
+
+        // Muilti-line comments are not supported, fallback to multiple single-line comments
+        case .Python;       #through; // Yes, we could use multi-line strings but they have to be properly indented, so let's just fallback to several single-line comments and not to create more headache
+        case .RenPy;        #through; // Yeah, there is a trick but meh (https://lemmasoft.renai.us/forums/viewtopic.php?p=299664#p299664 in case someone would like to implement it)
+        case .Zig;          #through;
+        case .Focus_Config; #through;
+        case .Focus_Theme;
+            assert(!is_fallback, "Infinite recursion");
+            toggle_comment(editor, buffer, true);
+            return;
+
+        // No support for comments at all
+        case .Plain_Text;        #through;
+        case .Todo;              #through;
+        case .Focus_Build_Panel;
+            return;
     }
 
     remove_comment := true;
