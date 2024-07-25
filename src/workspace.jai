@@ -200,6 +200,7 @@ reload_workspace :: () {
 
     // Deinit things
     deinit_finder();
+    hide_build_panel();
     deinit_build_system();
     deinit_open_file_dialog();
     deinit_file_watcher();
