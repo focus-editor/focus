@@ -215,69 +215,70 @@ reload_workspace :: () {
     left_editor_preserved  := false;
     right_editor_preserved := false;
 
-    // Preserve all editors whose buffers belong to the new workspace. Remove the rest.
+    // Preserve all editors and buffers which belong to the new workspace. Remove the rest.
     new_open_editors: [..] Editor;
     new_open_buffers: Simple_Bucket_Array(Buffer, items_per_bucket = 1024, max_buckets = 1024);
     new_most_recent_buffers: [..] s64;
 
-    for * editor, editor_id : open_editors {
-        buffer := *open_buffers[editor.buffer_id];
+    for * buffer, old_buffer_id : open_buffers {
+        buffer := *open_buffers[old_buffer_id];
         if should_keep_buffer_when_reloading_workspace(buffer) {
             new_buffer_id := new_open_buffers.count;
             bucket_array_add(*new_open_buffers, buffer.*);
+
             if buffer.has_file {
                 table_add(*buffers_table, copy_string(buffer.file.full_path), new_buffer_id);
                 start_watching_file_if_not_already(buffer.file.full_path);
             }
 
-            if array_unordered_remove_by_value(*most_recent_buffers, editor.buffer_id, stop_after_first = true) {
+            if array_unordered_remove_by_value(*most_recent_buffers, old_buffer_id, stop_after_first = true) {
                 array_add(*new_most_recent_buffers, new_buffer_id);
             }
 
-            editor.buffer_id = new_buffer_id;
-            new_editor_id := new_open_editors.count;
-            array_add(*new_open_editors, editor.*);
+            // @speed: O(n*m) here. Hopefully OK because people don't create as many editors as there are buffers
+            for editor, old_editor_id : open_editors {
+                if editor.buffer_id != old_buffer_id continue;
 
-            // Check whether this is one of the visible editors
-            if editors.active == editor_id { editors.active = new_editor_id; }
-            if editors.left   == editor_id { editors.left   = new_editor_id; left_editor_preserved  = true; }
-            if editors.right  == editor_id { editors.right  = new_editor_id; right_editor_preserved = true; }
+                new_editor := editor;
+                new_editor.buffer_id = new_buffer_id;
+                new_editor_id := new_open_editors.count;
+                array_add(*new_open_editors, new_editor);
+
+                // Check whether this is one of the visible editors
+                if editors.active == old_editor_id { editors.active = new_editor_id; }
+                if editors.left   == old_editor_id { editors.left   = new_editor_id; left_editor_preserved  = true; }
+                if editors.right  == old_editor_id { editors.right  = new_editor_id; right_editor_preserved = true; }
+            }
+
         } else {
-            free_editor(editor);
+            free_buffer(buffer);
         }
     }
+
     array_reset(*open_editors);
     open_editors = new_open_editors;
 
     array_reset(*most_recent_buffers);
     most_recent_buffers = new_most_recent_buffers;
 
-    // Free all the buffers which don't belong to the workspace
-    for * buffer, buffer_id : open_buffers {
-        buffer := *open_buffers[buffer_id];
-        if !should_keep_buffer_when_reloading_workspace(buffer) free_buffer(buffer);
-    }
     bucket_array_reset(*open_buffers);
     open_buffers = new_open_buffers;
 
-    if automatic_workspace_reload {
-        // Reopen visible editors, if any of them are preserved
-        if left_editor_preserved && right_editor_preserved {
-            // Keep the layout
-        } else if left_editor_preserved {
-            editors.layout = .Single;
-            editors.right = -1;
-        } else if right_editor_preserved {
-            editors.layout = .Single;
-            editors.left = editors.right;
-            editors.right = -1;
-        } else {
-            editors = Editor_State.{};  // reset everything
-        }
+    // Reopen visible editors, if any of them are preserved
+    if left_editor_preserved && right_editor_preserved {
+        // Keep the layout
+    } else if left_editor_preserved {
+        editors.layout = .Single;
+        editors.right = -1;
+    } else if right_editor_preserved {
+        editors.layout = .Single;
+        editors.left = editors.right;
+        editors.right = -1;
     } else {
-        editors = Editor_State.{};
-        show_open_file_dialog(.search);
+        editors = Editor_State.{};  // reset everything
     }
+
+    if !automatic_workspace_reload then show_open_file_dialog(.search);
 
     init_build_system();  // must do after we've cleared editors and buffers
     update_window_title();
