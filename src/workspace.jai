@@ -270,10 +270,12 @@ reload_workspace :: () {
         // Keep the layout
     } else if left_editor_preserved {
         editors.layout = .Single;
+        editors.active = editors.left;
         editors.right = -1;
     } else if right_editor_preserved {
         editors.layout = .Single;
         editors.left = editors.right;
+        editors.active = editors.left;
         editors.right = -1;
     } else {
         editors = Editor_State.{};  // reset everything
