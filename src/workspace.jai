@@ -1,5 +1,6 @@
 init_workspace :: () {
-    for path : config.workspace.workspace_dirs {
+    for path : config.workspace.members {
+        // TODO: support individual files here!!!!!!!!!!!!!!!
         add_directory_to_workspace(path);
     }
 }
@@ -153,7 +154,7 @@ workspace_update :: () {
 
         visitor_func :: (file: *File_Visit_Info, userdata: *void) {
             if file.is_directory {
-                if should_ignore_dir(file.full_name) {
+                if should_ignore_path(file.full_name) {
                     file.descend_into_directory = false;
                     #if DEBUG_FILE_REFRESH log("% - not descending into the directory", file.full_name);
                     return;
@@ -293,10 +294,13 @@ reload_workspace :: () {
 }
 
 should_keep_buffer_when_reloading_workspace :: (using buffer: Buffer) -> bool {
-    if !has_file return false;  // if this is a special buffer we can recreate it later
+    if !has_file return false;  // if this is a special buffer we can recreate it later. If the buffer is unsaved, we're throwing it away (because the user decided not to save it)
+
+    if is_our_config_file(file.full_path) return true;
+    if should_ignore_file(file.full_path) return false;
 
     // TODO: when we're able to add single files to project, check for that here as well!
-    return dir_is_within_project(get_parent_dir_path(file.full_path)) || is_our_config_file(file.full_path);
+    return dir_is_within_project(get_parent_dir_path(file.full_path));
 }
 
 start_watching_file_if_not_already :: (file_path: string) {
@@ -381,7 +385,7 @@ file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> 
 
     maybe_add_file_to_scan_list :: (file: *File_Visit_Info, userdata: *void) {
         if file.is_directory {
-            if should_ignore_dir(file.full_name) {
+            if should_ignore_path(file.full_name) {
                 file.descend_into_directory = false;
                 return;
             }
@@ -457,7 +461,7 @@ file_change_callback :: (watcher: *File_Watcher(void), change: *File_Change, use
     }
 
     // If the change is in one of the ignored dirs, ignore it
-    if should_ignore_dir(change.full_path) && !is_our_config_file(change.full_path) {
+    if should_ignore_path(change.full_path) && !is_our_config_file(change.full_path) {
         #if DEBUG_FILE_REFRESH append(*b, " - ignore because of dir");
         return;
     }

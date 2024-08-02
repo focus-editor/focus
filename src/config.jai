@@ -1,4 +1,4 @@
-CURRENT_CONFIG_VERSION :: 4;
+CURRENT_CONFIG_VERSION :: 5;
 
 load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
     config_path := tprint("%/global.focus-config", config_dir);
@@ -146,10 +146,18 @@ refresh_config :: (path: string) {
         return;
     }
 
-    // Deep copy old workspace dirs (they will be freed by the load config function otherwise)
-    old_workspace_dirs: [..] string;
-    old_workspace_dirs.allocator = temp;
-    for config.workspace.workspace_dirs array_add(*old_workspace_dirs, copy_temporary_string(it));
+    // Deep copy old workspace members and allow/ignore lists (they will be freed by the load config function otherwise)
+    old_workspace_members: [..] string;
+    old_workspace_members.allocator = temp;
+    for config.workspace.members array_add(*old_workspace_members, copy_temporary_string(it));
+
+    old_allow_list: [..] string;
+    old_allow_list.allocator = temp;
+    for config.workspace.allow array_add(*old_allow_list, copy_temporary_string(it));
+
+    old_ignore_list: [..] string;
+    old_ignore_list.allocator = temp;
+    for config.workspace.ignore array_add(*old_ignore_list, copy_temporary_string(it));
 
     // Remember old file associations
     old_file_associations: [..] File_Association;
@@ -179,26 +187,46 @@ refresh_config :: (path: string) {
         return;
     }
 
-    // Detect changes in workspace dirs
-    dirs_added   := false;
-    dirs_removed := false;
+    // Detect changes in workspace members or allow_ignore_lists
+    members_changed := false;
+    allow_ignore_changed := false;
 
-    for new_dir : config.workspace.workspace_dirs {
-        exists := array_find(old_workspace_dirs, new_dir);
-        if !exists { dirs_added = true; break; }
+    for new_member : config.workspace.members {
+        exists := array_find(old_workspace_members, new_member);
+        if !exists { members_changed = true; break; }
     }
-    for old_dir : old_workspace_dirs {
-        exists := array_find(config.workspace.workspace_dirs, old_dir);
-        if !exists { dirs_removed = true; break; }
+    for old_member : old_workspace_members {
+        exists := array_find(config.workspace.members, old_member);
+        if !exists { members_changed = true; break; }
     }
 
-    if dirs_added || dirs_removed {
+    for config.workspace.allow {
+        exists := array_find(old_allow_list, it);
+        if !exists { allow_ignore_changed = true; break; }
+    }
+    for old_allow_list {
+        exists := array_find(config.workspace.allow, it);
+        if !exists { allow_ignore_changed = true; break; }
+    }
+
+    for config.workspace.ignore {
+        exists := array_find(old_ignore_list, it);
+        if !exists { allow_ignore_changed = true; break; }
+    }
+    for old_ignore_list {
+        exists := array_find(config.workspace.ignore, it);
+        if !exists { allow_ignore_changed = true; break; }
+    }
+
+    if members_changed || allow_ignore_changed {
         should_reload_workspace = true;
         automatic_workspace_reload = true;
         if unsaved_buffers_exist() {
             show_unsaved_buffers_dialog(.reload_workspace);
             clear_user_messages();
-            add_user_warning("Workspace directories have changed in the config.\nWorkspace will need to reload, however there are unsaved changes.", tag = .workspace);
+
+            if members_changed      then add_user_warning("Workspace members have changed in the config.\nWorkspace will need to reload, however there are unsaved changes.", tag = .workspace);
+            if allow_ignore_changed then add_user_warning("Workspace ignore rules have changed in the config.\nWorkspace will need to reload, however there are unsaved changes.", tag = .workspace);
             should_reload_workspace = false;
         }
     }
@@ -213,7 +241,7 @@ refresh_config :: (path: string) {
             }
         }
     }
-    if file_associations_changed && !should_reload_workspace {
+    if file_associations_changed {
         // Reassign languages for all buffers in the workspace
         for * buffer : open_buffers {
             if !buffer.has_file continue;
@@ -419,17 +447,9 @@ load_config :: (path: string, existing: *Loaded_Config, force := false) -> Loade
 
 merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     // Completely replace the workspace subsections if present
-    if parsed.workspace_dirs then dst.workspace.workspace_dirs = parsed.workspace_dirs;
-    if parsed.ignore_dirs    then dst.workspace.ignore_dirs    = parsed.ignore_dirs;
-
-    if parsed.allow_file_extensions || parsed.allow_file_extension_wildcards {
-        dst.workspace.allow_file_extensions          = parsed.allow_file_extensions;
-        dst.workspace.allow_file_extension_wildcards = parsed.allow_file_extension_wildcards;
-    }
-    if parsed.ignore_file_extensions || parsed.ignore_file_extension_wildcards {
-        dst.workspace.ignore_file_extensions          = parsed.ignore_file_extensions;
-        dst.workspace.ignore_file_extension_wildcards = parsed.ignore_file_extension_wildcards;
-    }
+    if parsed.members           then dst.workspace.members = parsed.members;
+    if parsed.ignore            then dst.workspace.ignore  = parsed.ignore;
+    if parsed.allow             then dst.workspace.allow   = parsed.allow;
     if parsed.file_associations then dst.workspace.file_associations = parsed.file_associations;
 
     // Build config completely overrides the previous config if present
@@ -525,13 +545,10 @@ Linux_Config :: struct {
 }
 
 Workspace :: struct {
-    workspace_dirs:                  [] string;
-    ignore_dirs:                     [] string;
-    allow_file_extensions:           [] string;
-    ignore_file_extensions:          [] string;
-    allow_file_extension_wildcards:  [] string;
-    ignore_file_extension_wildcards: [] string;
-    file_associations:               [] File_Association;
+    members:            [] string;
+    ignore:             [] string;
+    allow:              [] string;
+    file_associations:  [] File_Association;
 }
 
 Settings :: struct {

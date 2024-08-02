@@ -3,13 +3,12 @@ CONFIG_SECTIONS :: Config_Section.[
     .{
         name = "workspace",
         subsections = .[
-            "workspace dirs",
-            "ignore dirs",
-            "allow file extensions",
-            "ignore file extensions",
+            "ignore",
+            "allow",
             "file associations",
         ],
         parse_function = "parse_workspace_line",
+        allow_lines_outside_subsection = true,
     },
     .{
         name = "settings",
@@ -418,7 +417,8 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
     add_highlight(parser, 0, line.count, .default);
 
     if active_subsection == {
-        case .workspace_workspace_dirs;
+        case .none;
+            // TODO: support individual files here !!!!!!!!!!!!!!!!!!!!!!!!!!!
             dir_path, success := get_absolute_path(line,, temp);
             original_path := copy_temporary_string(line);
             path_overwrite_separators(original_path, #char "/");
@@ -430,7 +430,7 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
 
             dir_path = copy_string(dir_path);
             if file_exists(dir_path) {
-                array_add(*result.config.workspace_dirs, dir_path);
+                array_add(*result.config.members, dir_path);
             } else {
                 if parse_for_highlighting {
                     // Highlight the bad chunk
@@ -444,32 +444,19 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
                 }
                 return true, tprint("Directory '%' doesn't exist.", dir_path);
             }
-        case .workspace_ignore_dirs;
-            dirs := split(line, cast(u8) #char " ",, temp);
-            for dir : dirs {
-                if !dir continue;
-                path_overwrite_separators(dir, #char "/");
-                array_add(*result.config.ignore_dirs, dir);
+        case .workspace_ignore;
+            items := split(line, cast(u8) #char " ",, temp);
+            for item : items {
+                if !item continue;
+                path_overwrite_separators(item, #char "/");
+                array_add(*result.config.ignore, trim(item, "\t "));
             }
-        case .workspace_allow_file_extensions;
-            extensions := split(line, cast(u8) #char " ",, temp);
-            for extensions {
-                if !it continue;
-                if contains_any_character(it, "*?") {
-                    array_add(*result.config.allow_file_extension_wildcards, trim_left(it, ".\t "));
-                } else {
-                    array_add(*result.config.allow_file_extensions, trim_left(it, "\t "));
-                }
-            }
-        case .workspace_ignore_file_extensions;
-            extensions := split(line, cast(u8) #char " ",, temp);
-            for extensions {
-                if !it continue;
-                if contains_any_character(it, "*?") {
-                    array_add(*result.config.ignore_file_extension_wildcards, trim_left(it, ".\t "));
-                } else {
-                    array_add(*result.config.ignore_file_extensions, trim_left(it, "\t "));
-                }
+        case .workspace_allow;
+            items := split(line, cast(u8) #char " ",, temp);
+            for item : items {
+                if !item continue;
+                path_overwrite_separators(item, #char "/");
+                array_add(*result.config.allow, trim(item, "\t "));
             }
         case .workspace_file_associations;
             found, wildcards, lang_name := split_from_left(line, cast(u8) #char ":");
@@ -1185,13 +1172,10 @@ Parsed_Config :: struct {
     version: int;
 
     // Workspace
-    workspace_dirs:                  [..] string;
-    ignore_dirs:                     [..] string;
-    allow_file_extensions:           [..] string;
-    allow_file_extension_wildcards:  [..] string;
-    ignore_file_extensions:          [..] string;
-    ignore_file_extension_wildcards: [..] string;
-    file_associations:               [..] File_Association;
+    members:            [..] string;
+    ignore:             [..] string;
+    allow:              [..] string;
+    file_associations:  [..] File_Association;
 
     // Keymap
     keymap_common:           [..] Key_Mapping;

@@ -1,38 +1,23 @@
-[4]  # Version number. Do not delete.
+[5]  # Version number. Do not delete.
 
 [[workspace]]
-
-[workspace dirs]
-# These directories will be scanned when a workspace is opened so that search etc. works.
+# These directories and files will be scanned when a workspace is opened so that search etc. works.
 # Example:
 # /Users/my_name/projects/my_project
 # /Users/my_name/jai
 
-[ignore dirs]
-# The workspace scanner will not descend into the dirs that match these names.
+[ignore]
+# Files and directories matching the following wildcards will not be loaded or descended into
+# Example:
+# *.js - will ignore all files with a '.js' extension
+# tmp* - will ignore any files or directories which start with 'tmp'
+# /Users/my_name/project/dirname/* - will ignore everything under a specific directory
 .svn
 .git
-__pycache__
 
-[allow file extensions]
-# These files are explicitly allowed so that the editor doesn't waste time figuring out
-# whether it should ignore these or not (if a file is not explicitly allowed or ignored,
-# it will be read to determine if it's binary or not).
-.jai .c .cpp .h .hpp .cc .cs .txt .md .focus-* .ini .csv .log .sql .py .m .html .xml .plist .js .jsx .ts .tsx .json .yml .yaml .toml .zig .odin
-
-[ignore file extensions]
-# Files with the following extensions will not appear in the file open dialog and won't be indexed.
-# It makes sense to add all known binary file extensions here.
-.exe .pdb .ttf .otf .eot .woff *woff? .dll .lib .dylib .so *so.* .a .o .pdf
-.jpg .png .gif .jpeg .ico .tif .tiff .tga .bmp .webp  # maybe someday we'll support opening images
-.mp3 .wav .ogg .wma
-.blend .obj .fbx .dae .3ds .dat .msh2
-.mpg .mpeg .psd .codex .webm .wma
-.zip .rar .7z
-.bin .sys .iso
-.nib .exp
-.pyc .rpyc
-.DS_Store .dmg
+[allow]
+# Files and directories matching the wildcards in this section will be loaded, even if they are ignored in the previous section.
+# NOTE: known binary file extensions are ignored by default (*.so, *.pdb etc.). If this is not what you want, you can explicitly allow them here.
 
 [file associations]
 # Optional file associations in the format `<wildcard1> <wildcard2> ... : <language>`
@@ -50,6 +35,7 @@ cursor_blink_time_in_seconds:           5
 highlight_selection_occurrences:        true
 disable_that_annoying_paste_effect:     false
 disable_file_open_close_animations:     false
+tab_size:                               4
 insert_spaces_when_pressing_tab:        true
 strip_trailing_whitespace_on_save:      false
 smooth_scrolling:                       true
@@ -57,7 +43,6 @@ scroll_beyond_last_line:                true
 double_shift_to_search_in_workspace:    false
 can_cancel_go_to_line:                  true
 copy_whole_line_without_selection:      false
-tab_size:                               4
 line_height_scale_percent:              120
 max_editor_width:                       -1
 editor_history_size:                    1024

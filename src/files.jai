@@ -116,26 +116,16 @@ is_file_binary :: (file_data: string) -> bool {
 }
 
 should_ignore_file :: (path: string) -> bool {
+    should_ignore, explicitly_allowed := should_ignore_path(path);
+    if should_ignore return true;
+    if explicitly_allowed return false;
+
+    // If we haven't decided yet whether to ignore or allow, do some extra checks
     extension, found_extension := get_lowercase_extension(path);
-
     if found_extension {
-        // Allow known text file extensions since they are the most common
-        for config.workspace.allow_file_extensions {
-            if ends_with_nocase(path, it) return false;
-        }
-        for config.workspace.allow_file_extension_wildcards {
-            if wildcard_match(extension, it) return false;
-        }
-
-        // Then check for common known binary file extensions
-        for config.workspace.ignore_file_extensions {
-            if ends_with_nocase(path, it) return true;
-        }
-        for config.workspace.ignore_file_extension_wildcards {
-            if wildcard_match(extension, it) return true;
-        }
+        if is_known_text_file_extension  (extension) return false;
+        if is_known_binary_file_extension(extension) return true;
     }
-    if begins_with_nocase(path, temp_dir) return true;  // explicitly ignore our own temp dir
 
     #if OS != .WINDOWS {
         /*
@@ -171,9 +161,120 @@ should_ignore_file :: (path: string) -> bool {
     return false;
 }
 
-should_ignore_dir :: (path: string) -> bool {
+is_known_text_file_extension :: (extension: string) -> bool {
+    if extension == {
+        case "jai";     #through;
+        case "c";       #through;
+        case "cpp";     #through;
+        case "h";       #through;
+        case "hpp";     #through;
+        case "cc";      #through;
+        case "cs";      #through;
+        case "txt";     #through;
+        case "md";      #through;
+        case "ini";     #through;
+        case "csv";     #through;
+        case "log";     #through;
+        case "sql";     #through;
+        case "py";      #through;
+        case "m";       #through;
+        case "html";    #through;
+        case "xml";     #through;
+        case "plist";   #through;
+        case "js";      #through;
+        case "jsx";     #through;
+        case "ts";      #through;
+        case "tsx";     #through;
+        case "json";    #through;
+        case "yml";     #through;
+        case "yaml";    #through;
+        case "toml";    #through;
+        case "zig";     #through;
+        case "odin";    #through;
+        case "focus-config"; #through;
+        case "focus-theme";
+            return true;
+    }
+    return false;
+}
+
+is_known_binary_file_extension :: (extension: string) -> bool {
+    if extension == {
+        case "exe";      #through;
+        case "pdb";      #through;
+        case "ttf";      #through;
+        case "otf";      #through;
+        case "eot";      #through;
+        case "woff";     #through;
+        case "dll";      #through;
+        case "lib";      #through;
+        case "dylib";    #through;
+        case "so";       #through;
+        case "a";        #through;
+        case "o";        #through;
+        case "pdf";      #through;
+        case "jpg";      #through;
+        case "png";      #through;
+        case "gif";      #through;
+        case "jpeg";     #through;
+        case "ico";      #through;
+        case "tif";      #through;
+        case "tiff";     #through;
+        case "tga";      #through;
+        case "bmp";      #through;
+        case "webp";     #through;
+        case "mp3";      #through;
+        case "wav";      #through;
+        case "ogg";      #through;
+        case "wma";      #through;
+        case "blend";    #through;
+        case "blend1";   #through;
+        case "obj";      #through;
+        case "fbx";      #through;
+        case "dae";      #through;
+        case "3ds";      #through;
+        case "dat";      #through;
+        case "msh2";     #through;
+        case "mpg";      #through;
+        case "mpeg";     #through;
+        case "psd";      #through;
+        case "codex";    #through;
+        case "webm";     #through;
+        case "zip";      #through;
+        case "rar";      #through;
+        case "7z";       #through;
+        case "bin";      #through;
+        case "sys";      #through;
+        case "iso";      #through;
+        case "nib";      #through;
+        case "exp";      #through;
+        case "pyc";      #through;
+        case "rpyc";     #through;
+        case "DS_Store"; #through;
+        case "dmg";
+            return true;
+    }
+    return false;
+}
+
+should_ignore_path :: (path: string) -> ignore: bool, explicitly_allowed: bool = false {
     path_chunks := split(path, "/",, allocator = temp);
-    for config.workspace.ignore_dirs {
+
+    // Allow list has priority
+    for config.workspace.allow {
+        if contains(it, cast(u8) #char "/") {
+            // Match whole path
+            if wildcard_match(path, it) return false, true;
+        } else {
+            // Match partial path
+            for chunk : path_chunks {
+                if wildcard_match(chunk, it) return false, true;
+            }
+        }
+    }
+
+    // Then check the user-specified ignore list
+    for config.workspace.ignore {
         if contains(it, cast(u8) #char "/") {
             // Match whole path
             if wildcard_match(path, it) return true;
@@ -184,7 +285,8 @@ should_ignore_dir :: (path: string) -> bool {
             }
         }
     }
-    if begins_with_nocase(path, temp_dir) return true;  // explicitly ignore our own temp dir
+    if begins_with_nocase(path, temp_dir) return true;  // ignore our own temp dir
+
     return false;
 }
 
