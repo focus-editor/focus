@@ -446,15 +446,17 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
             }
         case .workspace_ignore;
             items := split(line, cast(u8) #char " ",, temp);
-            for item : items {
-                if !item continue;
+            for items {
+                if !it continue;
+                item := copy_string(trim(it, "\t "));
                 path_overwrite_separators(item, #char "/");
-                array_add(*result.config.ignore, trim(item, "\t "));
+                array_add(*result.config.ignore, item);
             }
         case .workspace_allow;
             items := split(line, cast(u8) #char " ",, temp);
-            for item : items {
-                if !item continue;
+            for items {
+                if !it continue;
+                item := copy_string(trim(it, "\t "));
                 path_overwrite_separators(item, #char "/");
                 array_add(*result.config.allow, trim(item, "\t "));
             }
