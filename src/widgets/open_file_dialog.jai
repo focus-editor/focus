@@ -477,7 +477,7 @@ scan_current_folder :: () {
         if file.is_directory {
             if !should_descend_into_dir(file.full_name) return;
         } else {
-            if should_ignore_file(file.full_name) return;
+            if should_ignore_path(file.full_name) return;
         }
 
         full_path := copy_string(file.full_name);  // one allocation in the pool, the rest are views into it
