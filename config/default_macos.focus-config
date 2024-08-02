@@ -11,7 +11,8 @@
 # Example:
 # *.js - will ignore all files with a '.js' extension
 # tmp* - will ignore any files or directories which start with 'tmp'
-# /Users/my_name/project/dirname/* - will ignore everything under a specific directory
+# /Users/my_name/project/dirname/** - will ignore everything under `dirname`
+# /Users/my_name/project/dirname/*  - will ignore all files under `dirname`, but not recursively
 .svn
 .git
 

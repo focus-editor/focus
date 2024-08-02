@@ -261,27 +261,17 @@ should_ignore_path :: (path: string) -> ignore: bool, explicitly_allowed: bool =
     path_chunks := split(path, "/",, allocator = temp);
 
     // Allow list has priority
-    for config.workspace.allow {
-        if contains(it, cast(u8) #char "/") {
-            // Match whole path
-            if wildcard_match(path, it) return false, true;
-        } else {
-            // Match partial path
-            for chunk : path_chunks {
-                if wildcard_match(chunk, it) return false, true;
-            }
-        }
-    }
+    if path_is_explicitly_allowed(path) return false, true;
 
     // Then check the user-specified ignore list
     for config.workspace.ignore {
         if contains(it, cast(u8) #char "/") {
             // Match whole path
-            if wildcard_match(path, it) return true;
+            if path_wildcard_match(path, it) return true;
         } else {
             // Match partial path
             for chunk : path_chunks {
-                if wildcard_match(chunk, it) return true;
+                if path_wildcard_match(chunk, it) return true;
             }
         }
     }
@@ -289,6 +279,186 @@ should_ignore_path :: (path: string) -> ignore: bool, explicitly_allowed: bool =
 
     return false;
 }
+
+should_descend_into_dir :: (path: string) -> bool {
+    if path_is_explicitly_allowed(path) return true;
+
+    // We want to look inside dirs even if they match some ignore wildcards,
+    // so that the user can do a catch-all ignore wildcard like '*'
+    // and then explicitly unignore some of the files inside.
+    // If we don't descend into the dir we won't know what's inside!
+
+    // But if there's a matching non-wildcard rule, then we want to skip the dir altogether
+    path_chunks := split(path, "/",, allocator = temp);
+
+    for config.workspace.ignore {
+        if contains_any_character(it, "*?") continue;  // ignore wildcards
+
+        if contains(it, cast(u8) #char "/") {
+            if platform_path_begins_with(path, it) return false;
+        } else {
+            // Match partial path
+            for chunk : path_chunks {
+                if platform_path_equals(chunk, it) return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+path_is_explicitly_allowed :: (path: string) -> bool {
+    path_chunks := split(path, "/",, allocator = temp);
+
+    for config.workspace.allow {
+        if contains(it, cast(u8) #char "/") {
+            // Match whole path
+            if platform_path_begins_with(path, it) || path_wildcard_match(path, it) return true;
+        } else {
+            // Match partial path
+            for chunk : path_chunks {
+                if path_wildcard_match(chunk, it) return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+// Match simple wildcard patterns. Supports `*`, `**` and `?` only.
+path_wildcard_match :: (path: string, pattern: string) -> bool {
+    // Path wildcards are slightly different from usual wildcards, because:
+    // 1. On Windows they are case-insensitive, while everywhere else they are case-sensitive
+    // 2. For paths, * will match until the next path separator, while ** will match everything
+
+    // NOTE: assuming all paths passed to this function will have their path separators normalised to '/'
+
+    #if OS == .WINDOWS {
+        // TODO: support case-insensitive Unicode paths
+        return _wildcard_match(to_lower_copy_new(path,, temp), to_lower_copy_new(pattern,, temp));
+    }
+    return _wildcard_match(path, pattern);
+}
+
+#scope_file
+
+_wildcard_match :: (s: string, pat: string) -> bool {
+    while true {
+        // If pattern is over, string must be over too.
+        if !pat.count return !s.count;
+
+        // If string is over and pattern not over, then it must be *
+        if !s.count && pat[0] != #char "*" return false;
+
+        // Handle wildcard.
+        if pat[0] == #char "*" {
+            advance(*pat);
+            if pat && pat[0] == #char "*" {
+                // Handle **
+                while pat && pat[0] == #char "*" advance(*pat);  // skip all *****'s if present
+                if !pat.count return true;
+                while true {
+                    if _wildcard_match(s, pat) return true;
+                    if !s.count return false;
+                    advance(*s);
+                }
+            } else {
+                if !pat.count return !contains(s, "/");
+                // Handle *
+                while true {
+                    if _wildcard_match(s, pat) return true;
+                    if !s.count return false;
+                    if s[0] != #char "/" then advance(*s); else return false;
+                }
+            }
+        }
+
+        // Skip one character.
+        if pat[0] == #char "?" {
+            advance(*pat);
+            advance(*s);
+            continue;
+        }
+
+        // Skip if match.
+        if pat[0] != s[0] return false;
+        advance(*pat);
+        advance(*s);
+    }
+
+    return false; // To silence the warning.
+}
+
+RUN_WILDCARD_TESTS :: false;
+
+#if RUN_WILDCARD_TESTS #run {
+    Test_Pattern :: struct { pattern: string; path: string; should_match: bool; }
+
+    TEST_PATTERNS :: Test_Pattern.[
+        .{ "C:/bin/*.exe", "C:/bin/focus.exe", true },
+        .{ "C:/bin/*.exe", "C:/bin/some.exe", true },
+        .{ "C:/bin/*.exe", "C:/bin/some-long-exe-name.exe", true },
+        .{ "C:/bin/*.exe", "C:/bin/subfolder/file.exe", false },
+        .{ "C:/bin/*.exe", "C:/bin/focus.exe/file.exe", false },
+
+        .{ "C:/bin/**/focus.exe", "C:/bin/some/long/path/focus.exe", true },
+        .{ "C:/bin/**/focus.exe", "C:/bin/some/long/path/file.exe", false },
+
+        .{ "C:/bin/**/*.exe", "C:/bin/some/long/path/file.exe", true },
+        .{ "C:/bin/**/*.exe", "C:/nib/some/long/path/file.exe", false },
+        .{ "C:/bin/**/*.exe", "C:/bin/some/long/path/file.bin", false },
+
+        .{ "?:/bin/**/*.exe", "C:/bin/some/long/path/file.exe", true },
+        .{ "?:/bin/**/*.exe", "D:/bin/some/long/path/file.exe", true },
+        .{ "?:/bin/**/*.exe", "E:/bin/some/long/path/file.exe", true },
+
+        .{ "?:/bin/*****/file.exe", "C:/bin/some/long/path/file.exe", true },
+        .{ "?:/bin/*****/file.exe", "D:/bin/some/long/path/file.exe", true },
+        .{ "?:/bin/*****/file.exe", "E:/bin/some/long/path/file.exe", true },
+
+        .{ "/usr/bin/*", "/usr/bin/file.o", true },
+        .{ "/usr/bin/*", "/usr/bin/file.txt", true },
+        .{ "/usr/bin/*", "/usr/nib/file.txt", false },
+        .{ "/usr/bin/*", "/usr/bin/subfolder/file.o", false },
+
+        .{ "/usr/bin/*/*.o", "/usr/bin/subfolder/file.o", true },
+        .{ "/usr/bin/*/*.o", "/usr/bin/subfolder/file.a", false },
+        .{ "/usr/bin/*/*.o", "/usr/bin/sub/folder/file.o", false },
+
+        .{ "/usr/bin/**", "/usr/bin/file.o", true },
+        .{ "/usr/bin/**", "/usr/bin/file.txt", true },
+        .{ "/usr/bin/**", "/usr/bin/subfolder/file.o", true },
+
+        .{ "/usr/bin/**/*.a", "/usr/bin/subfolder/file.a", true },
+        .{ "/usr/bin/**/*.a", "/usr/bin/sub/folder/file.a", true },
+        .{ "/usr/bin/**/*.a", "/usr/bin/sub/folder/.a", true },
+        .{ "/usr/bin/**/*.a", "/usr/bin/sub/sub/folder/.a", true },
+        .{ "/usr/bin/**/*.a", "/usr/bin/sub/folder/file.o", false },
+
+        .{ "/usr/???/**/*.a", "/usr/bin/sub/folder/file.a", true },
+        .{ "/usr/???/**/*.a", "/usr/nib/sub/folder/file.a", true },
+        .{ "/usr/???/**/*.a", "/usr/nib/sub/folder/file.o", false },
+
+        .{ "/usr/???/**/*.?", "/usr/nib/sub/folder/file.o", true },
+        .{ "/usr/???/**/*.?", "/usr/bin1/sub/folder/file.o", false },
+
+        .{ "/usr/???*/**/*.?", "/usr/bin1/sub/folder/file.o", true },
+        .{ "/usr/???*/**/*.?", "/usr/bi/subfolder/file.o", false },
+        .{ "/usr/???*/**/*.?", "/usr/bin/sub/folder/file.o", true },
+        .{ "/usr/???*/**/*.?", "/usr/bin/sub/folder/file", false },
+    ];
+
+    for TEST_PATTERNS {
+        matches := path_wildcard_match(it.path, it.pattern);
+        if matches && !it.should_match {
+            assert(false, "WILDCARD TEST FAILED: `%` shouldn't match `%` but it does", it.path, it.pattern);
+        } else if !matches && it.should_match {
+            assert(false, "WILDCARD TEST FAILED: `%` should match `%` but it doesn't", it.path, it.pattern);
+        }
+    }
+}
+
+#scope_export
 
 dir_is_within_project :: (dir_path: string) -> bool, Project_Dir {
     for project_dirs {

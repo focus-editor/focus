@@ -253,6 +253,10 @@ platform_path_equals :: inline (path_a: string, path_b: string) -> bool {
     return path_a == path_b;
 }
 
+platform_path_begins_with :: inline (path: string, subpath: string) -> bool {
+    return begins_with(path, subpath);
+}
+
 platform_path_contains :: inline (path: string, subpath: string) -> bool {
     return contains(path, subpath);
 }

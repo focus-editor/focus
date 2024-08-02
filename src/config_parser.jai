@@ -449,6 +449,7 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
             for items {
                 if !it continue;
                 item := copy_string(trim(it, "\t "));
+                item = trim_right(item, "/");
                 path_overwrite_separators(item, #char "/");
                 array_add(*result.config.ignore, item);
             }
@@ -457,6 +458,7 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
             for items {
                 if !it continue;
                 item := copy_string(trim(it, "\t "));
+                item = trim_right(item, "/");
                 path_overwrite_separators(item, #char "/");
                 array_add(*result.config.allow, trim(item, "\t "));
             }

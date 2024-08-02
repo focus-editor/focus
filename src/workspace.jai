@@ -154,7 +154,7 @@ workspace_update :: () {
 
         visitor_func :: (file: *File_Visit_Info, userdata: *void) {
             if file.is_directory {
-                if should_ignore_path(file.full_name) {
+                if !should_descend_into_dir(file.full_name) {
                     file.descend_into_directory = false;
                     #if DEBUG_FILE_REFRESH log("% - not descending into the directory", file.full_name);
                     return;
@@ -385,10 +385,7 @@ file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> 
 
     maybe_add_file_to_scan_list :: (file: *File_Visit_Info, userdata: *void) {
         if file.is_directory {
-            if should_ignore_path(file.full_name) {
-                file.descend_into_directory = false;
-                return;
-            }
+            if !should_descend_into_dir(file.full_name) then file.descend_into_directory = false;
             return;
         }
         if file.is_symlink return;

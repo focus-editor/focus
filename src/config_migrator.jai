@@ -160,7 +160,8 @@ DONE
 # Example:
 # *.js - will ignore all files with a '.js' extension
 # tmp* - will ignore any files or directories which start with 'tmp'
-# C:/project/dirname/* - will ignore everything under a specific directory
+# C:/project/dirname/** - will ignore everything under `dirname`
+# C:/project/dirname/*  - will ignore all files under `dirname`, but not recursively
 %
 
 DONE
@@ -733,7 +734,8 @@ C:/projects/project1
 # Example:
 # *.js - will ignore all files with a '.js' extension
 # tmp* - will ignore any files or directories which start with 'tmp'
-# C:/project/dirname/* - will ignore everything under a specific directory
+# C:/project/dirname/** - will ignore everything under `dirname`
+# C:/project/dirname/*  - will ignore all files under `dirname`, but not recursively
 .svn
 .git
 __pycache__
@@ -815,7 +817,8 @@ C:/projects/project1
 # Example:
 # *.js - will ignore all files with a '.js' extension
 # tmp* - will ignore any files or directories which start with 'tmp'
-# C:/project/dirname/* - will ignore everything under a specific directory
+# C:/project/dirname/** - will ignore everything under `dirname`
+# C:/project/dirname/*  - will ignore all files under `dirname`, but not recursively
 .svn
 .git
 __pycache__
