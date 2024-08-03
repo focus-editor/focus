@@ -956,8 +956,6 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 else if cursors_active && config.settings.highlight_line_with_cursor && !as_build_panel {
                     // Draw current line highlight
                     coords := cursor_coords[it_index];
-                    line_start_offset := get_line_start_offset(editor, buffer, coords.pos.line);
-                    line_start_coords := offset_to_coords(editor, buffer, line_start_offset);
 
                     // @Note: modified from hidden_chars_on_the_left below, get the x offset if we are scrolled horizontally
                     x_offset := max((viewport.left / char_x_advance) - 1, 0);
@@ -965,7 +963,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                     line_rect := Rect.{
                         x = text_origin.x + (x_offset * char_x_advance),
                         y = text_origin.y - coords.pos.line * line_height,
-                        w = rect.w - scrollbar_size - ifx x_offset == 0 then char_x_advance,   // @Note: text_origin.x is 1 char_x_advance in, so if we can see the beginning of the line, shorten the rect
+                        w = rect.w - ifx x_offset == 0 then char_x_advance,   // @Note: text_origin.x is 1 char_x_advance in, so if we can see the beginning of the line, shorten the rect
                         h = line_height,
                     };
                     draw_rect(line_rect, Color.BACKGROUND_4);
