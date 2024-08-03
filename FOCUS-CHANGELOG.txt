@@ -6,7 +6,6 @@
 - Identifier search
 - A little bit of semantic highlighting for Jai
 - Backup unsaved changes
-- Proper highlighting for C++
 - ...
 
 
