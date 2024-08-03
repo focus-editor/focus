@@ -226,12 +226,14 @@ reload_workspace :: () {
         buffer := *open_buffers[old_buffer_id];
         if should_keep_buffer_when_reloading_workspace(buffer) {
             new_buffer_id := new_open_buffers.count;
-            bucket_array_add(*new_open_buffers, buffer.*);
 
             if buffer.has_file {
                 table_add(*buffers_table, copy_string(buffer.file.full_path), new_buffer_id);
                 start_watching_file_if_not_already(buffer.file.full_path);
+                buffer.file = get_file_info_from_full_path(buffer.file.full_path);  // refresh file info to reflect new project dirs
             }
+
+            bucket_array_add(*new_open_buffers, buffer.*);
 
             if array_unordered_remove_by_value(*most_recent_buffers, old_buffer_id, stop_after_first = true) {
                 array_add(*new_most_recent_buffers, new_buffer_id);
