@@ -428,6 +428,7 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
                     // Highlight the bad chunk
                     for chunk : split(path, "/",, temp) {
                         dir_prefix := slice(path, 0, chunk.data - path.data + chunk.count);
+                        if !dir_prefix continue;
                         if !file_exists(dir_prefix) {
                             add_highlight(parser, chunk.data - path.data, chunk.count, .error);
                             break;
@@ -741,26 +742,21 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                     // Validate working directories
                     if option.name == "build_working_dir" || option.name == "run_working_dir" {
                         code := #string JAI
-                            dir_path, success := get_absolute_path(setting_value,, temp);
-                            original_path := copy_temporary_string(setting_value);
-                            path_overwrite_separators(original_path, #char "/");
-                            path_overwrite_separators(dir_path,      #char "/");
-                            if !success || !platform_path_equals(original_path, dir_path) {
-                                add_highlight(parser, setting_value.data - line.data, setting_value.count, .error);
-                                return true, tprint("Invalid directory '%'. Maybe it's not an absolute path or has a double slash?", setting_value);
-                            }
+                            dir_path := copy_temporary_string(setting_value);
+                            path_overwrite_separators(dir_path, #char "/");
                             if file_exists(dir_path) {
                                 return true, "";
                             } else {
                                 // Highlight the bad chunk
                                 for chunk : split(dir_path, "/",, temp) {
                                     dir_prefix := slice(dir_path, 0, chunk.data - dir_path.data + chunk.count);
+                                    if !dir_prefix continue;
                                     if !file_exists(dir_prefix) {
                                         add_highlight(parser, setting_value.data - line.data + chunk.data - dir_path.data, chunk.count, .error);
                                         break;
                                     }
                                 }
-                                return true, tprint("Directory '%' doesn't exist.", dir_path);
+                                return true, tprint("Tried to use '%' as a working dir, but it doesn't exist.", dir_path);
                             }
                         JAI;
                         append(*b, code);
