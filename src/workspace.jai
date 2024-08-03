@@ -10,17 +10,24 @@ init_workspace :: () {
 
 add_file_to_workspace :: (path: string) {
     full_path, success := get_absolute_path(path,, temp);
-    full_path = copy_string(full_path);
-    path_overwrite_separators(full_path, #char "/");
 
-    if !file_exists(full_path) || !success {
+    if !success || !file_exists(full_path) {
         error_msg := tprint("Couldn't add % to workspace. File doesn't exist or is invalid.", path);
         add_user_error(error_msg, dismiss_in_seconds = 10);
         log_error(error_msg);
         return;
     }
 
-    array_add_if_unique(*project_files, full_path);
+    path_overwrite_separators(full_path, #char "/");
+
+    already_exists := false;
+    for project_files {
+        if platform_path_equals(full_path, it) {
+            already_exists = true;
+            break;
+        }
+    }
+    if !already_exists then array_add(*project_files, copy_string(full_path));
 }
 
 add_directory_to_workspace :: (path: string, index := -1) {
@@ -312,12 +319,17 @@ reload_workspace :: () {
     if !automatic_workspace_reload then show_open_file_dialog(.search);
 
     init_build_system();  // must do after we've cleared editors and buffers
-    update_window_title();
+
+    if editors.layout == .None {
+        update_window_title();
+    } else {
+        make_editor_active(editors.active);
+    }
 
     start_workspace_scan();
 
     clear_user_messages(.workspace);
-    add_success_message("Workspace has been reloaded", dismiss_in_seconds=3);
+    add_success_message("Workspace has been reloaded", dismiss_in_seconds = 3);
 }
 
 should_keep_buffer_when_reloading_workspace :: (using buffer: Buffer) -> bool {
