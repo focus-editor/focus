@@ -360,6 +360,27 @@ refresh_entries :: (clear_input := true) {
                     score_part:  u64 = (cast,trunc(u64) score)                        << 16;
                     entry.sort_key = dir_id_part | score_part;
                 }
+                for project_files {
+                    path, _, extension, name := path_decomp(it);
+                    score, name_highlights := fuzzy_match(name, filter);
+                    if score <= 0 && filter.full_string continue;
+                    if filter.full_string then score -= xx name.count;  // prefer shorter name all other things being equal
+
+                    entry := array_add(*entries.filtered);
+                    entry.type = .file;
+                    entry.full_path = it;
+                    entry.name = name;
+                    entry.entry_name = name;
+                    entry.path = path;
+                    entry.icon = get_file_icon(name, extension);
+                    entry.project_dir_id = xx (it_index + 1 + project_dirs.count);
+                    entry.name_highlights = name_highlights;
+                    entry.path_highlights = NewArray(entry.path.count, bool);
+
+                    dir_id_part: u64 = (cast,trunc(u64) (127 - entry.project_dir_id)) << 56;
+                    score_part:  u64 = (cast,trunc(u64) score)                        << 16;
+                    entry.sort_key = dir_id_part | score_part;
+                }
                 for platform_enumerate_logical_drives() {
                     name := copy_string(it);
 

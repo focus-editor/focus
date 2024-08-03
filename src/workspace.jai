@@ -1,8 +1,26 @@
 init_workspace :: () {
     for path : config.workspace.members {
-        // TODO: support individual files here!!!!!!!!!!!!!!!
-        add_directory_to_workspace(path);
+        if file_exists(path) && !is_directory(path) {
+            add_file_to_workspace(path);
+        } else {
+            add_directory_to_workspace(path);
+        }
     }
+}
+
+add_file_to_workspace :: (path: string) {
+    full_path, success := get_absolute_path(path,, temp);
+    full_path = copy_string(full_path);
+    path_overwrite_separators(full_path, #char "/");
+
+    if !file_exists(full_path) {
+        error_msg := tprint("Couldn't add % to workspace. File doesn't exist or is invalid.", path);
+        add_user_error(error_msg, dismiss_in_seconds = 10);
+        log_error(error_msg);
+        return;
+    }
+
+    array_add_if_unique(*project_files, full_path);
 }
 
 add_directory_to_workspace :: (path: string, index := -1) {
@@ -58,6 +76,7 @@ start_workspace_scan :: () {
     file_list_ready = false;
     workspace_scan_complete = false;
     array_reset(*files_to_scan);
+    array_add(*files_to_scan, ..project_files);
 
     // Get the list of all files in the project asynchronously (depending on the size it can cause a startup delay otherwise)
     file_list_thread_group = Thread_Group.{};  // if we don't do this it can't be reused
@@ -211,6 +230,8 @@ reload_workspace :: () {
     // Reinit things
     init_file_watcher();
     array_reset_keeping_memory(*project_dirs);
+    for project_files  free(it);
+    array_reset_keeping_memory(*project_files);
     init_workspace();
     init_buffers();
 
@@ -283,6 +304,10 @@ reload_workspace :: () {
     } else {
         editors = Editor_State.{};  // reset everything
     }
+    if editors.left == editors.right && editors.layout == .Double {
+        editors.active = editors.left;
+        editors.layout = .Single;
+    }
 
     if !automatic_workspace_reload then show_open_file_dialog(.search);
 
@@ -301,7 +326,8 @@ should_keep_buffer_when_reloading_workspace :: (using buffer: Buffer) -> bool {
     if is_our_config_file(file.full_path) return true;
     if should_ignore_file(file.full_path) return false;
 
-    // TODO: when we're able to add single files to project, check for that here as well!
+    for project_files  if platform_path_equals(file.full_path, it) return true;
+
     return dir_is_within_project(get_parent_dir_path(file.full_path));
 }
 
