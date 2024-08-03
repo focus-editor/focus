@@ -418,31 +418,23 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
 
     if active_subsection == {
         case .none;
-            // TODO: support individual files here !!!!!!!!!!!!!!!!!!!!!!!!!!!
-            dir_path, success := get_absolute_path(line,, temp);
-            original_path := copy_temporary_string(line);
-            path_overwrite_separators(original_path, #char "/");
-            path_overwrite_separators(dir_path,      #char "/");
-            if !success || !platform_path_equals(original_path, dir_path) {
-                add_highlight(parser, 0, line.count, .error);
-                return true, tprint("Invalid directory '%'. Maybe it's not an absolute path or has a double slash?", line);
-            }
+            path := copy_temporary_string(line);
+            path_overwrite_separators(path, #char "/");
 
-            dir_path = copy_string(dir_path);
-            if file_exists(dir_path) {
-                array_add(*result.config.members, dir_path);
+            if file_exists(path) {
+                array_add(*result.config.members, copy_string(get_absolute_path(path)));
             } else {
                 if parse_for_highlighting {
                     // Highlight the bad chunk
-                    for chunk : split(dir_path, "/",, temp) {
-                        dir_prefix := slice(dir_path, 0, chunk.data - dir_path.data + chunk.count);
+                    for chunk : split(path, "/",, temp) {
+                        dir_prefix := slice(path, 0, chunk.data - path.data + chunk.count);
                         if !file_exists(dir_prefix) {
-                            add_highlight(parser, chunk.data - dir_path.data, chunk.count, .error);
+                            add_highlight(parser, chunk.data - path.data, chunk.count, .error);
                             break;
                         }
                     }
                 }
-                return true, tprint("Directory '%' doesn't exist.", dir_path);
+                return true, tprint("Attempted to load '%', but it doesn't exist", path);
             }
         case .workspace_ignore;
             items := split(line, cast(u8) #char " ",, temp);
