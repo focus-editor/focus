@@ -242,13 +242,13 @@ reload_workspace :: () {
     init_workspace();
     init_buffers();
 
-    left_editor_preserved  := false;
-    right_editor_preserved := false;
-
     // Preserve all editors and buffers which belong to the new workspace. Remove the rest.
     new_open_editors: [..] Editor;
     new_open_buffers: Simple_Bucket_Array(Buffer, items_per_bucket = 1024, max_buckets = 1024);
     new_most_recent_buffers: [..] s64;
+
+    editor_id_map: Table(s64, s64);
+    editor_id_map.allocator = temp;
 
     for * buffer, old_buffer_id : open_buffers {
         buffer := *open_buffers[old_buffer_id];
@@ -276,10 +276,7 @@ reload_workspace :: () {
                 new_editor_id := new_open_editors.count;
                 array_add(*new_open_editors, new_editor);
 
-                // Check whether this is one of the visible editors
-                if editors.active == old_editor_id { editors.active = new_editor_id; }
-                if editors.left   == old_editor_id { editors.left   = new_editor_id; left_editor_preserved  = true; }
-                if editors.right  == old_editor_id { editors.right  = new_editor_id; right_editor_preserved = true; }
+                table_add(*editor_id_map, old_editor_id, new_editor_id);
             }
 
         } else {
@@ -297,23 +294,34 @@ reload_workspace :: () {
     open_buffers = new_open_buffers;
 
     // Reopen visible editors, if any of them are preserved
-    if left_editor_preserved && right_editor_preserved {
-        // Keep the layout
-    } else if left_editor_preserved {
-        editors.layout = .Single;
-        editors.active = editors.left;
-        editors.right = -1;
-    } else if right_editor_preserved {
-        editors.layout = .Single;
-        editors.left = editors.right;
-        editors.active = editors.left;
-        editors.right = -1;
-    } else {
-        editors = Editor_State.{};  // reset everything
-    }
-    if editors.left == editors.right && editors.layout == .Double {
-        editors.active = editors.left;
-        editors.layout = .Single;
+    if editors.layout != .None {
+        new_active, active_preserved := table_find(*editor_id_map, editors.active);
+        new_left,   left_preserved   := table_find(*editor_id_map, editors.left);
+        new_right,  right_preserved  := table_find(*editor_id_map, editors.right);
+
+        if active_preserved then editors.active = new_active;
+
+        if left_preserved && right_preserved {
+            // Keep the layout
+            editors.left  = new_left;
+            editors.right = new_right;
+        } else if left_preserved {
+            editors.layout = .Single;
+            editors.left   = new_left;
+            editors.right  = new_left;
+            editors.active = new_left;
+        } else if right_preserved {
+            editors.layout = .Single;
+            editors.left   = new_right;
+            editors.right  = new_right;
+            editors.active = new_right;
+        } else {
+            editors = Editor_State.{};  // reset everything
+        }
+        if editors.left == editors.right && editors.layout == .Double {
+            editors.active = editors.left;
+            editors.layout = .Single;
+        }
     }
 
     if !automatic_workspace_reload then show_open_file_dialog(.search);
