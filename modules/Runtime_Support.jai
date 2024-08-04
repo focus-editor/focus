@@ -819,9 +819,22 @@ report_error_in_yer_face :: (message: string, args: .. Any, from_no_context := f
     }
     crash_report := builder_to_string(*builder);
 
-    // Log it in a crash report file next to the exe
-    exe_dir := path_strip_filename(get_path_of_running_executable());
-    crash_report_file_path := tprint("%/focus-crash-report.txt", exe_dir);
+    // Create a crash report file
+    data_dir := path_strip_filename(get_path_of_running_executable());
+
+    #if OS == .LINUX {
+        XDG :: #import "XDG";
+        data_dir = sprint("%/focus-editor", XDG.get_path(.DATA_HOME));
+    }
+    #if OS == .MACOS {
+        using _ :: #import "Objective_C";
+        application_support := to_string(NSURL.path(NSFileManager.URLForDirectory(NSFileManager.defaultManager(), NSApplicationSupportDirectory, NSUserDomainMask, null, YES, null)));
+        data_dir = sprint("%/dev.focus-editor", application_support);
+    }
+
+    data_dir = trim_right(data_dir, "/");
+    make_directory_if_it_does_not_exist(data_dir);
+    crash_report_file_path := tprint("%/focus-crash-report.txt", data_dir);
     write_entire_file(crash_report_file_path, crash_report);
 
     // The crash report is overwritten every new crash, so we also print it to the session log for safekeeping.
