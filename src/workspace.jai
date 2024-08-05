@@ -429,9 +429,8 @@ deinit_file_watcher :: () {
 file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thread_Continue_Status {
     reset(*scan_memory_pool);
     scan_pool_allocator := get_scan_pool_allocator();
-    push_allocator(scan_pool_allocator);
 
-    maybe_add_file_to_scan_list :: (file: *File_Visit_Info, userdata: *void) {
+    maybe_add_file_to_scan_list :: (file: *File_Visit_Info, userdata: Allocator) {
         if file.is_directory {
             if !should_descend_into_dir(file.full_name) then file.descend_into_directory = false;
             return;
@@ -442,10 +441,10 @@ file_list_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> 
         // because it may involve reading the file and checking for zeroes,
         // and we'd rather it's done in threads (also if later we find there are no
         // zeroes in the file then the file data will be in cache ready to use)
-        array_add(*files_to_scan, copy_string(file.full_name));
+        array_add(*files_to_scan, copy_string(file.full_name,, allocator=userdata));
     }
 
-    for project_dirs visit_files(it.path, recursive = true, null, maybe_add_file_to_scan_list, visit_directories = true);
+    for project_dirs visit_files(it.path, recursive = true, scan_pool_allocator, maybe_add_file_to_scan_list, visit_directories = true);
 
     return .STOP;  // don't need you no mo
 }
