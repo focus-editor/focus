@@ -262,7 +262,7 @@ show_build_panel :: () {
         case .delete_file_dialog;       #through;
         case .finder;                   #through;
         case .go_to_line_dialog;        #through;
-        case .open_project_dialog;      #through;
+        case .switch_to_project_dialog; #through;
         case .theme_dialog;             #through;
         case .language_dialog;          #through;
         case .commands_dialog;          active_global_widget = .editors;

@@ -69,7 +69,7 @@ draw_frame :: () {
         case .delete_file_dialog;       draw_delete_file_dialog();
         case .finder;                   draw_finder();
         case .go_to_line_dialog;        draw_go_to_line_dialog(active_pane_rect, status_bar_height);
-        case .open_project_dialog;      draw_open_project_dialog();
+        case .switch_to_project_dialog; draw_switch_to_project_dialog();
         case .unsaved_buffers_dialog;   draw_unsaved_buffers_dialog();
         case .confirm_overwrite_dialog; draw_confirm_overwrite_dialog();
         case .commands_dialog;          draw_commands_dialog();
@@ -2280,9 +2280,9 @@ draw_delete_file_dialog :: () {
     }
 }
 
-draw_open_project_dialog :: () {
-    label := ifx open_project_dialog.filtered then " Select project to switch to" else tprint(" No projects found in %", projects_dir);
-    draw_generic_choice_dialog(*open_project_dialog, Ui_Id.open_project_dialog, label);
+draw_switch_to_project_dialog :: () {
+    label := ifx switch_to_project_dialog.filtered then " Select project to switch to" else tprint(" No projects found in %", projects_dir);
+    draw_generic_choice_dialog(*switch_to_project_dialog, Ui_Id.switch_to_project_dialog, label);
 }
 
 draw_theme_dialog :: () {
@@ -3464,24 +3464,24 @@ ui: struct {
 }
 
 Ui_Id :: enum s64 {
-    none                    :: -1;
-    unavailable             :: -2;
+    none                        :: -1;
+    unavailable                 :: -2;
 
-    editor_single           :: -3;
-    editor_left             :: -4;
-    editor_right            :: -5;
-    editor_splitter         :: -6;
-    open_file_dialog        :: -7;
-    finder                  :: -8;
-    splash_screen           :: -9;
-    unsaved_buffers         :: -10;
-    commands_dialog         :: -11;
-    open_project_dialog     :: -12;
-    delete_file_dialog      :: -13;
-    confirm_overwrite       :: -14;
-    build_panel_title_bar   :: -15;
-    theme_dialog            :: -16;
-    language_dialog         :: -17;
+    editor_single               :: -3;
+    editor_left                 :: -4;
+    editor_right                :: -5;
+    editor_splitter             :: -6;
+    open_file_dialog            :: -7;
+    finder                      :: -8;
+    splash_screen               :: -9;
+    unsaved_buffers             :: -10;
+    commands_dialog             :: -11;
+    switch_to_project_dialog    :: -12;
+    delete_file_dialog          :: -13;
+    confirm_overwrite           :: -14;
+    build_panel_title_bar       :: -15;
+    theme_dialog                :: -16;
+    language_dialog             :: -17;
 
     // The rest will be derived from loc
 }

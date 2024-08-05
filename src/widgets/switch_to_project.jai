@@ -1,5 +1,5 @@
-open_project_dialog_handle_event :: (event: Input.Event) -> handled: bool {
-    return dialog_handle_event(*open_project_dialog, event);
+switch_to_project_dialog_handle_event :: (event: Input.Event) -> handled: bool {
+    return dialog_handle_event(*switch_to_project_dialog, event);
 }
 
 open_selected_project :: () {
@@ -8,9 +8,9 @@ open_selected_project :: () {
         return;
     }
 
-    hide_dialog(*open_project_dialog);
+    hide_dialog(*switch_to_project_dialog);
 
-    using open_project_dialog;
+    using switch_to_project_dialog;
     if selected >= filtered.count return;
 
     entry := filtered[selected];
@@ -28,20 +28,20 @@ open_selected_project :: () {
     }
 }
 
-open_project_dialog: Open_Project_Dialog;
+switch_to_project_dialog: Switch_To_Project_Dialog;
 
-Open_Project_Dialog :: struct {
+Switch_To_Project_Dialog :: struct {
     using #as generic_dialog: Generic_Choice_Dialog(Project_Config);
-    generic_dialog.global_widget_id    = .open_project_dialog;
-    generic_dialog.refresh_entries     = open_project_refresh_entries;
+    generic_dialog.global_widget_id    = .switch_to_project_dialog;
+    generic_dialog.refresh_entries     = switch_to_project_refresh_entries;
     generic_dialog.open_entry_in_place = open_selected_project;
 };
 
 #scope_file
 
 // NOTE: assuming we're allocating from a pool
-open_project_refresh_entries :: (filter: Fuzzy_Filter) {
-    using open_project_dialog;
+switch_to_project_refresh_entries :: (filter: Fuzzy_Filter) {
+    using switch_to_project_dialog;
 
     project_configs: [..] Project_Config;
 

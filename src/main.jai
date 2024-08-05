@@ -288,7 +288,7 @@ main :: () {
                 case .open_file_dialog;         handled = open_file_dialog_handle_event(event);
                 case .delete_file_dialog;       handled = delete_file_dialog_handle_event(event);
                 case .go_to_line_dialog;        handled = go_to_line_dialog_handle_event(event);
-                case .open_project_dialog;      handled = open_project_dialog_handle_event(event);
+                case .switch_to_project_dialog; handled = switch_to_project_dialog_handle_event(event);
                 case .unsaved_buffers_dialog;   handled = unsaved_buffers_dialog_handle_event(event);
                 case .confirm_overwrite_dialog; handled = confirm_overwrite_dialog_handle_event(event);
                 case .commands_dialog;          handled = commands_dialog_handle_event(event);
@@ -370,8 +370,8 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .decrease_font_size;                               decrease_font_size();                               return true;
         case .reset_font_size_to_default;                       reset_font_size_to_default();                       return true;
 
-        case .open_project;                                     #through;
-        case .switch_to_project;                                show_dialog(*open_project_dialog);                  return true;
+        case .open_project;                                     print("UNIMPLEMENTED\n");  /* !!!!!!!!!!!! */       return true;
+        case .switch_to_project;                                show_dialog(*switch_to_project_dialog);             return true;
         case .close_project;                                    close_project();                                    return true;
 
         case .choose_theme;                                     show_dialog(*theme_dialog);                         return true;
@@ -827,7 +827,7 @@ Active_Global_Widget :: enum {
     delete_file_dialog;
     go_to_line_dialog;
     commands_dialog;
-    open_project_dialog;
+    switch_to_project_dialog;
     unsaved_buffers_dialog;
     confirm_overwrite_dialog;
     theme_dialog;
@@ -902,7 +902,7 @@ dont_ignore_next_window_resize := false;
 #load "widgets/finder.jai";
 #load "widgets/unsaved_buffers.jai";
 #load "widgets/commands.jai";
-#load "widgets/open_project.jai";
+#load "widgets/switch_to_project.jai";
 #load "widgets/confirm_overwrite.jai";
 #load "widgets/theme_dialog.jai";
 #load "widgets/language_dialog.jai";

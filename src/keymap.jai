@@ -271,7 +271,7 @@ ACTIONS_COMMON :: string.[
     "open_another_editor_instance",
 
     "open_project",
-    "switch_to_project",  // alias of open_project
+    "switch_to_project",
     "close_project",
 
     "choose_theme",
