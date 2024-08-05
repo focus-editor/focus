@@ -40,7 +40,7 @@
     + Fixed a crash when parsing build output with certain regexes
     + Fixed a crash when outputting invalid UTF-8 in build commands
     + Fixed a glitch with changing scroll position in some cases (thanks @Sanian-Creations)
-    + linux/macos: invalid directories in the config should now highlight the incorrect chunk, not the whole path (on windows is has always worked like this)
+    + linux/macos: invalid directories in the config should now highlight the incorrect chunk, not the whole path (on windows it has always worked like this)
 + Other changes:
     + macOS: add support for dead keys/key composition
     + ...

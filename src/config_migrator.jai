@@ -195,8 +195,10 @@ DONE
                 print_to_builder(*b, ALLOW_SECTION, allow_contents);
             }
 
-            print_to_builder(*b, FILE_ASSOCIATIONS_SECTION, join(..file_associations, separator = "\n"));  // add even if not present
-            if file_associations then append(*b, "\n");
+            if is_global_config {
+                print_to_builder(*b, FILE_ASSOCIATIONS_SECTION, join(..file_associations, separator = "\n"));  // add even if not present
+                if file_associations then append(*b, "\n");
+            }
 
             new_section := builder_to_string(*b);
 
@@ -649,6 +651,7 @@ RUN_TESTS :: false;
     run_test("Settings migration from [1]",   "global.focus-config",  SETTINGS_1,               SETTINGS_1_EXPECTED);
     run_test("Settings migration from [2]",   "global.focus-config",  SETTINGS_2,               SETTINGS_2_EXPECTED);
     run_test("Project settings from [1]",     "project.focus-config", PROJECT_SETTINGS_1,       PROJECT_SETTINGS_1_EXPECTED);
+    run_test("Project workspace from [3]",    "project.focus-config", PROJECT_WORKSPACE_3,      PROJECT_WORKSPACE_3_EXPECTED);
     run_test("Сolors from [1]",               "global.focus-config",  COLORS_1,                 COLORS_1_EXPECTED);
     run_test("Сolors from [2]",               "global.focus-config",  COLORS_2,                 COLORS_2_EXPECTED);
     run_test("Colors and settings from [1]",  "global.focus-config",  COLORS_AND_SETTINGS_1,    COLORS_AND_SETTINGS_1_EXPECTED);
@@ -760,6 +763,41 @@ todo.txt : todo
 
 
 [[keymap]]
+
+FOCUS_CONFIG
+
+PROJECT_WORKSPACE_3 :: #string FOCUS_CONFIG
+[3]  # Version number. Do not delete.
+
+[[workspace]]
+
+[ignore dirs]
+.svn
+.git
+
+[workspace dirs]
+# These directories will be scanned when a workspace is opened so that search etc. works.
+# Example:
+C:/projects/project1
+
+FOCUS_CONFIG
+
+PROJECT_WORKSPACE_3_EXPECTED :: #string FOCUS_CONFIG
+[5]  # Version number. Do not delete.
+
+[[workspace]]
+# These directories and files will be scanned when a workspace is opened so that search etc. works.
+C:/projects/project1
+
+[ignore]
+# Files and directories matching the following wildcards will not be loaded or descended into
+# Example:
+# *.js - will ignore all files with a '.js' extension
+# tmp* - will ignore any files or directories which start with 'tmp'
+# C:/project/dirname/** - will ignore everything under `dirname`
+# C:/project/dirname/*  - will ignore all files under `dirname`, but not recursively
+.svn
+.git
 
 FOCUS_CONFIG
 
@@ -1053,13 +1091,6 @@ PROJECT_SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
 
 [[workspace]]
 # These directories and files will be scanned when a workspace is opened so that search etc. works.
-
-[file associations]
-# Optional file associations in the format `<wildcard1> <wildcard2> ... : <language>`
-# Example:
-# *.hpp *.hh *.h : cpp
-# todo.txt : todo
-
 
 [[keymap]]
 [common]
