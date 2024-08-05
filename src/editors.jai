@@ -2496,7 +2496,7 @@ unindent_lines :: (editor: *Editor, buffer: *Buffer) {
     editor.cursor_moved = .unimportant;
 }
 
-autoindent_region :: (editor: *Editor, buffer: *Buffer, fallback := true) {
+autoindent_region :: (editor: *Editor, buffer: *Buffer) {
     // We assume that any {, [ or ( left unclosed means that the next line should be indented.
     // This is not true for Python, for example, we might handle other cases later
 
@@ -2506,8 +2506,7 @@ autoindent_region :: (editor: *Editor, buffer: *Buffer, fallback := true) {
     tokens := tokenize_for_indentation(buffer);
 
     if !tokens {
-        // Unsupported - fall back to normal indentation
-        if fallback indent_lines(editor, buffer);
+        add_user_warning("Autoindenting is not supported for % files", buffer.lang, dismiss_in_seconds = 3);
         return;
     }
 
