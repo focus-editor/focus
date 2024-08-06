@@ -11,30 +11,39 @@ text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> han
     extend_selection := event.shift_pressed;
 
     if action == {
-        case .copy;                     copy(input);
-        case .cut;                      delete_selection(input, copy_to_clipboard = true);
-        case .paste;                    paste(input);
-        case .undo;                     undo(input);
-        case .redo;                     redo(input);
-        case .select_word;              select_word(input);
-        case .select_all;               select_all(input);
-        case .move_left;                move_cursor_left(input,  by = .char,      extend_selection);
-        case .move_left_by_word;        move_cursor_left(input,  by = .word,      extend_selection);
-        case .move_left_by_word_ends;   move_cursor_left(input,  by = .word_ends, extend_selection);
-        case .move_right;               move_cursor_right(input, by = .char,      extend_selection);
-        case .move_right_by_word;       move_cursor_right(input, by = .word,      extend_selection);
-        case .move_right_by_word_ends;  move_cursor_right(input, by = .word_ends, extend_selection);
-        case .jump_to_line_start; #through;
-        case .jump_to_file_start;       move_home(input, extend_selection);
-        case .jump_to_line_end; #through;
-        case .jump_to_file_end;         move_end (input, extend_selection);
-        case .delete_left_char;         delete_left_char (input);
-        case .delete_right_char;        delete_right_char(input);
-        case .delete_word_left;         delete_word_left(input);
-        case .delete_word_right;        delete_word_right(input);
-        case .delete_to_start_of_line;  delete_to_start_of_line(input);
-        case .delete_to_end_of_line;    delete_to_end_of_line(input);
-        case;                           return false;
+        case .copy;                             copy                                (input);
+        case .cut;                              delete_selection                    (input, copy_to_clipboard = true);
+        case .paste;                            paste                               (input);
+
+        case .undo;                             undo                                (input);
+        case .redo;                             redo                                (input);
+
+        case .select_word;                      select_word                         (input);
+        case .select_all;                       select_all                          (input);
+
+        case .move_left;                        move_cursor_left                    (input, by = .char,      extend_selection);
+        case .move_left_by_word;                move_cursor_left                    (input, by = .word,      extend_selection);
+        case .move_left_by_word_ends;           move_cursor_left                    (input, by = .word_ends, extend_selection);
+        case .move_right;                       move_cursor_right                   (input, by = .char,      extend_selection);
+        case .move_right_by_word;               move_cursor_right                   (input, by = .word,      extend_selection);
+        case .move_right_by_word_ends;          move_cursor_right                   (input, by = .word_ends, extend_selection);
+
+        case .jump_to_line_start;               #through;
+        case .jump_to_file_start;               move_home                           (input, extend_selection);
+        case .jump_to_line_end;                 #through;
+        case .jump_to_file_end;                 move_end                            (input, extend_selection);
+
+        case .delete_left_char;                 delete_left_char                    (input);
+        case .delete_right_char;                delete_right_char                   (input);
+        case .delete_word_left;                 delete_word_left                    (input);
+        case .delete_word_right;                delete_word_right                   (input);
+        case .delete_word_left_no_underscore;   delete_word_left                    (input,, underscore_is_part_of_word = false);
+        case .delete_word_right_no_underscore;  delete_word_right                   (input,, underscore_is_part_of_word = false);
+
+        case .delete_to_start_of_line;          delete_to_start_of_line             (input);
+        case .delete_to_end_of_line;            delete_to_end_of_line               (input);
+
+        case;                                   return false;
     }
 
     if old_text != cast(string) text then last_edit_time = frame_time;
