@@ -1,33 +1,34 @@
 // Based on https://www.lua.org/manual/5.4/manual.html#3
 
-highlight_lua_syntax :: (using buffer: *Buffer) {
-    tokenizer := get_tokenizer(buffer);
+tokenize_lua :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+    tokenizer := get_lua_tokenizer(buffer, start_offset, count);
+
     while true {
         token := get_next_token(*tokenizer);
         if token.type == .eof then break;
 
         prev := tokenizer.last_token;
         if (token.type == .punctuation && token.punctuation == .l_paren) && prev.type == .identifier {
-            memset(colors.data + prev.start, xx Code_Color.FUNCTION, prev.len);
+            memset(tokens.data + prev.start, xx Token_Type.function, prev.len);
         }
 
         if token.type == .identifier && (prev.type == .keyword && prev.keyword == .kw_function) {
-            memset(colors.data + token.start, xx Code_Color.FUNCTION, token.len);
-        }
-        else {
-            color := COLOR_MAP[token.type];
-            memset(colors.data + token.start, xx color, token.len);
+            memset(tokens.data + token.start, xx Token_Type.function, token.len);
+        } else {
+            memset(tokens.data + token.start, xx token.type, token.len);
         }
 
         tokenizer.last_token = token;
     }
+
+    return .[];
 }
 
-tokenize_lua_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_lua_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
-    tokenizer := get_tokenizer(buffer);
+    tokenizer := get_lua_tokenizer(buffer);
 
     while true {
         src := get_next_token(*tokenizer);
@@ -80,12 +81,19 @@ tokenize_lua_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
 }
 
 #scope_file
-get_tokenizer :: (using buffer: Buffer) -> Lua_Tokenizer {
+get_lua_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> Lua_Tokenizer {
     tokenizer: Lua_Tokenizer;
 
     tokenizer.buf   = cast(string) bytes;
     tokenizer.max_t = bytes.data + bytes.count;
     tokenizer.t     = bytes.data;
+
+    if start_offset >= 0 {
+        start_offset = clamp(start_offset, 0, bytes.count - 1);
+        count        = clamp(count,        0, bytes.count - 1);
+        tokenizer.t += start_offset;
+        tokenizer.max_t = tokenizer.t + count;
+    }
 
     return tokenizer;
 }
@@ -412,7 +420,7 @@ Lua_Tokenizer :: struct {
 
 Token :: struct {
     start, len: s32;
-    type: Type;
+    type: Token_Type;
 
     // Additional info to distinguish between keywords/punctuation
     union {
@@ -420,39 +428,7 @@ Token :: struct {
         punctuation: Punctuation;
         operation:   Operation;
     }
-
-    Type :: enum u16 {
-        eof;
-
-        identifier;
-        string_literal;
-        long_string_literal;
-        number;
-        comment;
-        multiline_comment;
-        operation;
-        punctuation;
-        keyword;
-        value_keyword;
-        invalid;
-    }
 }
-
-// Must match the order of the types in the enum
-COLOR_MAP :: Code_Color.[
-    .COMMENT,       // eof - obviously not used
-    .DEFAULT,       // identifier
-    .STRING,        // string_literal
-    .STRING,        // long_string_literal
-    .VALUE,         // number
-    .COMMENT,       // comment
-    .COMMENT,       // multiline_comment
-    .OPERATION,     // operation
-    .PUNCTUATION,   // punctuation
-    .KEYWORD,       // keyword
-    .VALUE_KEYWORD, // value_keyword
-    .ERROR,         // invalid
-];
 
 KEYWORDS :: string.[
     "and", "break", "do", "else", "elseif", "end", "for",
@@ -500,7 +476,7 @@ PUNCTUATION :: string.[
 }
 
 Keyword_Token :: struct {
-    type: Token.Type;
+    type: Token_Type;
     keyword: Keyword;
 }
 
@@ -511,8 +487,8 @@ KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
 
     #insert -> string {
         b: String_Builder;
-        for KEYWORDS        append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword,       keyword = .kw_%1 });\n", it));
-        for VALUE_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value_keyword, keyword = .kw_%1 });\n", it));
+        for KEYWORDS        append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword, keyword = .kw_%1 });\n", it));
+        for VALUE_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value,   keyword = .kw_%1 });\n", it));
         return builder_to_string(*b);
     }
 

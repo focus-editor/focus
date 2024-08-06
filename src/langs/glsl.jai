@@ -1,5 +1,5 @@
-highlight_glsl_syntax :: (using buffer: *Buffer) {
-    tokenizer := get_tokenizer(buffer);
+tokenize_glsl :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+    tokenizer := get_tokenizer(buffer, start_offset, count);
 
     last_token: Token;
 
@@ -12,15 +12,16 @@ highlight_glsl_syntax :: (using buffer: *Buffer) {
         if token.type == .punctuation && token.punctuation == .l_paren {
             // Handle "func("
             if last_token.type == .identifier {
-                memset(colors.data + last_token.start, xx Code_Color.FUNCTION, last_token.len);
+                memset(tokens.data + last_token.start, xx Token_Type.function, last_token.len);
             }
         }
 
         last_token = token;
 
-        color := COLOR_MAP[token.type];
-        memset(colors.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx token.type, token.len);
     }
+
+    return .[];
 }
 
 get_next_glsl_token :: get_next_token;  // export for indent tokenization
@@ -43,7 +44,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     if is_alpha(char) || char == #char "_" {
         parse_identifier(tokenizer, *token);
     } else if is_digit(char) {
-        parse_number(tokenizer, *token);
+        parse_number_c_like(tokenizer, *token);
     } else if char == {
         case #char ":";  parse_colon                 (tokenizer, *token);
         case #char "?";  parse_question              (tokenizer, *token);
@@ -54,7 +55,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "<";  parse_less_than             (tokenizer, *token);
         case #char ">";  parse_greater_than          (tokenizer, *token);
         case #char "!";  parse_bang                  (tokenizer, *token);
-        case #char "#";  parse_preprocessor_directive(tokenizer, *token);
+        case #char "#";  parse_directive             (tokenizer, *token);
         case #char "\""; parse_string_literal        (tokenizer, *token);
         case #char "'";  parse_char_literal          (tokenizer, *token);
         case #char "/";  parse_slash_or_comment      (tokenizer, *token);
@@ -95,83 +96,6 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     if identifier_str.count <= MAX_KEYWORD_LENGTH {
         kw_token, ok := table_find(*KEYWORD_MAP, identifier_str);
         if ok { token.type = kw_token.type; token.keyword = kw_token.keyword; return; }
-    }
-}
-
-parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .number;
-
-    t += 1;
-    if t >= max_t return;
-
-    if is_digit(t.*) {
-        // Decimal
-        t += 1;
-        seen_decimal_point := false;
-        while t < max_t && (is_digit(t.*) || t.* == #char ".") {
-            if t.* == #char "." {
-                if seen_decimal_point break;
-                seen_decimal_point = true;
-            }
-            t += 1;
-        }
-        if t >= max_t return;
-        // t += 1;
-        // if t >= max_t return;
-
-        // exponent
-        if t.* == #char "e" || t.* == #char "E" {
-            t += 1;
-            if t >= max_t return;
-
-            if t.* == #char "+" || t.* == #char "-" {
-              t += 1;
-              if t >= max_t return;
-            }
-
-            while t < max_t && is_digit(t.*) {
-                t += 1;
-            }
-            if t >= max_t return;
-        }
-
-        // suffixes
-        if seen_decimal_point {
-            if t.* == #char "f" || t.* == #char "F" || t.* == #char "d" || t.* == #char "D" {
-              t += 1;
-            }
-        } else {
-
-          // This is getting kindof hard to follow...
-          if t.* == #char "l" || t.* == #char "L" {             // l
-              t += 1;
-              if t >= max_t return;
-
-              if t.* == #char "l" || t.* == #char "L" {         // ll
-                  t += 1;
-                  if t >= max_t return;
-
-                  if t.* == #char "u" || t.* == #char "U" {     // llu
-                    t += 1;
-                  }
-              } else if t.* == #char "u" || t.* == #char "U" {  // lu
-                t += 1;
-              }
-          } else if  t.* == #char "u" || t.* == #char "U" {     // u
-              t += 1;
-          }
-
-        }
-
-    } else if t.* == #char "x" || t.* == #char "X" {
-        // Hex
-        t += 1;
-        while t < max_t && (is_hex(t.*)) t += 1;
-
-    } else if t.* == #char "b" || t.* == #char "B" {
-        // Binary
-        t += 1;
-        while t < max_t && (t.* == #char "1" || t.* == #char "0") t += 1;
     }
 }
 
@@ -217,7 +141,7 @@ parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
             token.operation = .minus_minus;
             t += 1;
         case;
-            if is_digit(t.*) parse_number(tokenizer, token);
+            if is_digit(t.*) parse_number_c_like(tokenizer, token);
     }
 }
 
@@ -297,7 +221,7 @@ parse_bang :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_preprocessor_directive :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_directive :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
 
     t += 1;
@@ -311,10 +235,10 @@ parse_preprocessor_directive :: (using tokenizer: *Tokenizer, token: *Token) {
 
     // Check if it's one of the existing directives
     if directive_str.count > MAX_DIRECTIVE_LENGTH return;
-    directive, ok := table_find(*PREPROCESSOR_DIRECTIVES_MAP, directive_str);
+    directive, ok := table_find(*DIRECTIVES_MAP, directive_str);
     if ok {
-        token.type = .preprocessor_directive;
-        token.preprocessor_directive = directive;
+        token.type = .directive;
+        token.directive = directive;
     }
 }
 
@@ -453,600 +377,196 @@ parse_caret :: (using tokenizer: *Tokenizer, token: *Token) {
 
 Token :: struct {
     start, len: s32;
-    type: Type;
+    type: Token_Type;
 
     union {
-        keyword:            Keyword;
-        punctuation:        Punctuation;
-        operation:          Operation;
-        preprocessor_directive: Directive;
-    }
-
-    Type :: enum u16 {
-        eof;
-
-        identifier;
-        string_literal;
-        char_literal;
-        number;
-        comment;
-        multiline_comment;
-        operation;
-        punctuation;
-        keyword;
-        modifier_keyword;
-        type_keyword;
-        value_keyword;
-        builtin_keyword;
-        preprocessor_directive;
-        invalid;
+        keyword:        Keyword;
+        punctuation:    Punctuation;
+        operation:      Operation;
+        directive:      Directive;
     }
 }
 
-// Must match the order of the types in the enum above
-COLOR_MAP :: Code_Color.[
-    .COMMENT,       // eof - obviously not used
-    .DEFAULT,       // identifier
-    .STRING,        // string_literal
-    .STRING,        // char_literal
-    .VALUE,         // number
-    .COMMENT,       // comment
-    .COMMENT,       // multiline_comment
-    .OPERATION,     // operation
-    .PUNCTUATION,   // punctuation
-    .KEYWORD,       // keyword
-    .KEYWORD,       // modifier_keyword
-    .TYPE,          // type_keyword
-    .VALUE_KEYWORD, // value_keyword
-    .VALUE_KEYWORD, // builtin_keyword
-    .KEYWORD,       // preprocessor_directive
-    .ERROR,         // invalid
+PUNCTUATION :: string.[
+    "semicolon", "backslash", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", "period", "comma",
 ];
 
-Keyword :: enum u16 {
-    kw_break;
-    kw_case;
-    kw_compatibility;
-    kw_continue;
-    kw_core;
-    kw_default;
-    kw_defined;
-    kw_disable;
-    kw_discard;
-    kw_else;
-    kw_enable;
-    kw_enum;
-    kw_for;
-    kw_if;
-    kw_in;
-    kw_inout;
-    kw_layout;
-    kw_out;
-    kw_require;
-    kw_restrict;
-    kw_return;
-    kw_sizeof;
-    kw_struct;
-    kw_switch;
-    kw_typedef;
-    kw_union;
-    kw_uniform;
-    kw_warn;
-    kw_while;
+OPERATIONS :: string.[
+    "arrow", "bang", "backtick", "pipe", "double_pipe", "pipe_equal", "equal", "equal_equal", "bang_equal", "percent",
+    "percent_equal", "less_than", "double_less_than", "less_than_equal", "greater_than", "greater_than_equal", "minus",
+    "minus_equal", "minus_minus", "asterisk", "asterisk_equal", "colon", "slash", "plus", "plus_equal", "plus_plus",
+    "slash_equal", "ampersand", "double_ampersand", "ampersand_equal", "tilde", "question", "unknown", "caret", "caret_equal",
+];
 
-    kwv_false;
-    kwv_true;
+KEYWORDS :: string.[
+    "break", "case", "compatibility", "continue", "core", "default", "defined", "disable", "discard", "else", "enable",
+    "enum", "for", "if", "layout", "require", "restrict", "return", "sizeof", "struct", "switch",
+    "typedef", "union", "uniform", "warn", "while",
+];
 
-    // modifiers
-    kwm_buffer;
-    kwm_centroid;
-    kwm_coherent;
-    kwm_const;
-    kwm_flat;
-    kwm_highp;
-    kwm_in;
-    kwm_inout;
-    kwm_invariant;
-    kwm_lowp;
-    kwm_mediump;
-    kwm_noperspective;
-    kwm_out;
-    kwm_patch;
-    kwm_precise;
-    kwm_precision;
-    kwm_readonly;
-    kwm_restrict;
-    kwm_sample;
-    kwm_shared;
-    kwm_smooth;
-    kwm_uniform;
-    kwm_volatile;
-    kwm_writeonly;
-
+TYPE_KEYWORDS :: string.[
     // built-in types
-    kwt_atomic_uint;
-    kwt_bool;
-    kwt_double;
-    kwt_float;
-    kwt_int;
-    kwt_uint;
-    kwt_void;
+    "atomic_uint", "bool", "double", "float", "int", "uint", "void",
 
     // vector types
-    kwt_bvec2;
-    kwt_bvec3;
-    kwt_bvec4;
-    kwt_dvec2;
-    kwt_dvec3;
-    kwt_dvec4;
-    kwt_ivec2;
-    kwt_ivec3;
-    kwt_ivec4;
-    kwt_uvec2;
-    kwt_uvec3;
-    kwt_uvec4;
-    kwt_vec2;
-    kwt_vec3;
-    kwt_vec4;
+    "bvec2", "bvec3", "bvec4", "dvec2", "dvec3", "dvec4", "ivec2", "ivec3", "ivec4", "uvec2", "uvec3", "uvec4", "vec2", "vec3", "vec4",
 
     // matrix types
-    kwt_mat2;
-    kwt_mat3;
-    kwt_mat4;
-    kwt_mat2x2;
-    kwt_mat2x3;
-    kwt_mat2x4;
-    kwt_mat3x2;
-    kwt_mat3x3;
-    kwt_mat3x4;
-    kwt_mat4x2;
-    kwt_mat4x3;
-    kwt_mat4x4;
-    kwt_dmat2;
-    kwt_dmat3;
-    kwt_dmat4;
-    kwt_dmat2x2;
-    kwt_dmat2x3;
-    kwt_dmat2x4;
-    kwt_dmat3x2;
-    kwt_dmat3x3;
-    kwt_dmat3x4;
-    kwt_dmat4x2;
-    kwt_dmat4x3;
-    kwt_dmat4x4;
+    "mat2", "mat3", "mat4", "mat2x2", "mat2x3", "mat2x4", "mat3x2", "mat3x3", "mat3x4", "mat4x2", "mat4x3", "mat4x4", "dmat2", "dmat3", "dmat4", "dmat2x2", "dmat2x3", "dmat2x4", "dmat3x2", "dmat3x3", "dmat3x4", "dmat4x2", "dmat4x3", "dmat4x4",
 
     // image types
-    kwt_image1D;
-    kwt_image2D;
-    kwt_image3D;
-    kwt_imageCube;
-    kwt_image2DRect;
-    kwt_image1DArray;
-    kwt_image2DArray;
-    kwt_imageCubeArray;
-    kwt_imageBuffer;
-    kwt_image2DMS;
-    kwt_image2DMSArray;
+    "image1D", "image2D", "image3D", "imageCube", "image2DRect", "image1DArray", "image2DArray", "imageCubeArray", "imageBuffer", "image2DMS", "image2DMSArray",
+    "iimage1D", "iimage2D", "iimage3D", "iimageCube", "iimage2DRect", "iimage1DArray", "iimage2DArray", "iimageCubeArray", "iimageBuffer", "iimage2DMS", "iimage2DMSArray",
+    "uimage1D", "uimage2D", "uimage3D", "uimageCube", "uimage2DRect", "uimage1DArray", "uimage2DArray", "uimageCubeArray", "uimageBuffer", "uimage2DMS", "uimage2DMSArray",
 
-    kwt_iimage1D;
-    kwt_iimage2D;
-    kwt_iimage3D;
-    kwt_iimageCube;
-    kwt_iimage2DRect;
-    kwt_iimage1DArray;
-    kwt_iimage2DArray;
-    kwt_iimageCubeArray;
-    kwt_iimageBuffer;
-    kwt_iimage2DMS;
-    kwt_iimage2DMSArray;
-
-    kwt_uimage1D;
-    kwt_uimage2D;
-    kwt_uimage3D;
-    kwt_uimageCube;
-    kwt_uimage2DRect;
-    kwt_uimage1DArray;
-    kwt_uimage2DArray;
-    kwt_uimageCubeArray;
-    kwt_uimageBuffer;
-    kwt_uimage2DMS;
-    kwt_uimage2DMSArray;
+    // GL_KHR_vulkan_glsl texture types
+    "texture1D", "texture2D", "texture3D", "textureCube", "texture1DArray", "texture2DArray", "textureCubeArray", "textureBuffer", "texture2DMS", "texture2DMSArray",
+    "itexture1D", "itexture2D", "itexture3D", "itextureCube", "itexture1DArray", "itexture2DArray", "itextureCubeArray", "itextureBuffer", "itexture2DMS", "itexture2DMSArray",
+    "utexture1D", "utexture2D", "utexture3D", "utextureCube", "utexture1DArray", "utexture2DArray", "utextureCubeArray", "utextureBuffer", "utexture2DMS", "utexture2DMSArray",
 
     // sampler types
-    kwt_sampler1D;
-    kwt_sampler2D;
-    kwt_sampler3D;
-    kwt_samplerCube;
-    kwt_sampler2DRect;
-    kwt_sampler1DArray;
-    kwt_sampler2DArray;
-    kwt_samplerCubeArray;
-    kwt_samplerBuffer;
-    kwt_sampler2DMS;
-    kwt_sampler2DMSArray;
-    kwt_isampler1D;
-    kwt_isampler2D;
-    kwt_isampler3D;
-    kwt_isamplerCube;
-    kwt_isampler2DRect;
-    kwt_isampler1DArray;
-    kwt_isampler2DArray;
-    kwt_isamplerCubeArray;
-    kwt_isamplerBuffer;
-    kwt_isampler2DMS;
-    kwt_isampler2DMSArray;
-    kwt_usampler1D;
-    kwt_usampler2D;
-    kwt_usampler3D;
-    kwt_usamplerCube;
-    kwt_usampler2DRect;
-    kwt_usampler1DArray;
-    kwt_usampler2DArray;
-    kwt_usamplerCubeArray;
-    kwt_usamplerBuffer;
-    kwt_usampler2DMS;
-    kwt_usampler2DMSArray;
+    "sampler", "sampler1D", "sampler2D", "sampler3D", "samplerCube", "sampler2DRect", "sampler1DArray", "sampler2DArray", "samplerCubeArray", "samplerBuffer", "sampler2DMS", "sampler2DMSArray",
+    "isampler1D", "isampler2D", "isampler3D", "isamplerCube", "isampler2DRect", "isampler1DArray", "isampler2DArray", "isamplerCubeArray", "isamplerBuffer", "isampler2DMS", "isampler2DMSArray",
+    "usampler1D", "usampler2D", "usampler3D", "usamplerCube", "usampler2DRect", "usampler1DArray", "usampler2DArray", "usamplerCubeArray", "usamplerBuffer", "usampler2DMS", "usampler2DMSArray",
 
     // shadow sampler types
-    kwt_sampler1DShadow;
-    kwt_sampler2DShadow;
-    kwt_samplerCubeShadow;
-    kwt_sampler2DRectShadow;
-    kwt_sampler1DArrayShadow;
-    kwt_sampler2DArrayShadow;
-    kwt_samplerCubeArrayShadow;
+    "samplerShadow", "sampler1DShadow", "sampler2DShadow", "samplerCubeShadow", "sampler2DRectShadow", "sampler1DArrayShadow", "sampler2DArrayShadow", "samplerCubeArrayShadow",
 
-    // builtin variables
-    kwb_gl_in;
-    kwb_gl_out;
-    kwb_gl_BaseVertex;
-    kwb_gl_BaseInstance;
-    kwb_gl_ClipDistance;
-    kwb_gl_DrawID;
-    kwb_gl_DepthRangeParameters;
-    kwb_gl_DepthRange;
-    kwb_gl_FragCoord;
-    kwb_gl_FragDepth;
-    kwb_gl_FrontFacing;
-    kwb_gl_GlobalInvocationID;
-    kwb_gl_InstanceID;
-    kwb_gl_InvocationID;
-    kwb_gl_Layer;
-    kwb_gl_LocalInvocationID;
-    kwb_gl_LocalInvocationIndex;
-    kwb_gl_NumSamples;
-    kwb_gl_NumWorkGroups;
-    kwb_gl_PatchVerticesIn;
-    kwb_gl_PerVertex;
-    kwb_gl_Position;
-    kwb_gl_PointCoord;
-    kwb_gl_PointSize;
-    kwb_gl_PrimitiveID;
-    kwb_gl_PrimitiveIDIn;
-    kwb_gl_SampleID;
-    kwb_gl_SamplePosition;
-    kwb_gl_SampleMask;
-    kwb_gl_SampleMaskIn;
-    kwb_gl_TessLevelOuter;
-    kwb_gl_TessLevelInner;
-    kwb_gl_TessCoord;
-    kwb_gl_VertexID;
-    kwb_gl_ViewportIndex;
-    kwb_gl_WorkGroupID;
-    kwb_gl_WorkGroupSize;
+    // GL_KHR_vulkan_glsl input attachment types
+    "subpassInput", "isubpassInput", "usubpassInput", "subpassInputMS", "isubpassInputMS", "usubpassInputMS",
 
-    // builtin constants
-    kwb_gl_MaxClipDistances;
-    kwb_gl_MaxDrawBuffers;
-    kwb_gl_MaxImageSamples;
-    kwb_gl_MaxImageUnits;
-    kwb_gl_MaxPatchVertices;
-    kwb_gl_MinProgramTexelOffset;
-    kwb_gl_MaxProgramTexelOffset;
-    kwb_gl_MaxTessGenLevel;
-    kwb_gl_MaxTessPatchComponents;
-    kwb_gl_MaxTextureImageUnits;
-    kwb_gl_MaxTransformFeedbackBuffers;
-    kwb_gl_MaxTransformFeedbackInterleavedComponents;
-    kwb_gl_MaxVaryingVectors;
-    kwb_gl_MaxViewports;
+    // GL_EXT_shader_explicit_arithmetic_types
+    "float64_t", "f64vec2", "f64vec3", "f64vec4", "f64mat2", "f64mat3", "f64mat4", "f64mat2x2", "f64mat2x3", "f64mat2x4", "f64mat3x2", "f64mat3x3", "f64mat3x4", "f64mat4x2", "f64mat4x3", "f64mat4x4",
+    "float32_t", "f32vec2", "f32vec3", "f32vec4", "f32mat2", "f32mat3", "f32mat4", "f32mat2x2", "f32mat2x3", "f32mat2x4", "f32mat3x2", "f32mat3x3", "f32mat3x4", "f32mat4x2", "f32mat4x3", "f32mat4x4",
+    "float16_t", "f16vec2", "f16vec3", "f16vec4", "f16mat2", "f16mat3", "f16mat4", "f16mat2x2", "f16mat2x3", "f16mat2x4", "f16mat3x2", "f16mat3x3", "f16mat3x4", "f16mat4x2", "f16mat4x3", "f16mat4x4",
+    "int64_t",   "i64vec2", "i64vec3", "i64vec4",
+    "uint64_t",  "u64vec2", "u64vec3", "u64vec4",
+    "int32_t",   "i32vec2", "i32vec3", "i32vec4",
+    "uint32_t",  "u32vec2", "u32vec3", "u32vec4",
+    "int16_t",   "i16vec2", "i16vec3", "i16vec4",
+    "uint16_t",  "u16vec2", "u16vec3", "u16vec4",
+    "int8_t",    "i8vec2",  "i8vec3",  "i8vec4",
+    "uint8_t",   "u8vec2",  "u8vec3",  "u8vec4",
+];
 
-    kwb_gl_MaxAtomicCounterBindings;
-    kwb_gl_MaxAtomicCounterBufferSize;
+VALUE_KEYWORDS :: string.[
+    "true", "false",
+];
 
-    kwb_gl_MaxCombinedAtomicCounters;
-    kwb_gl_MaxCombinedAtomicCounterBuffers;
-    kwb_gl_MaxCombinedImageUniforms;
-    kwb_gl_MaxCombinedImageUnitsAndFragmentOutputs;
-    kwb_gl_MaxCombinedTextureImageUnits;
+MODIFIER_KEYWORDS :: string.[
+    "buffer", "centroid", "coherent", "const", "flat", "highp", "in", "inout", "invariant", "lowp", "mediump", "noperspective",
+    "out", "patch", "precise", "precision", "readonly", "sample", "shared", "smooth", "volatile", "writeonly",
+];
 
-    kwb_gl_MaxComputeWorkGroupCount;
-    kwb_gl_MaxComputeWorkGroupSize;
-    kwb_gl_MaxComputeUniformComponents;
-    kwb_gl_MaxComputeTextureImageUnits;
-    kwb_gl_MaxComputeImageUniforms;
-    kwb_gl_MaxComputeAtomicCounters;
-    kwb_gl_MaxComputeAtomicCounterBuffers;
+BUILTIN_VARS :: string.[
+    "gl_in", "gl_out", "gl_BaseVertex", "gl_BaseInstance", "gl_ClipDistance", "gl_CullDistance", "gl_DrawID", "gl_DepthRangeParameters",
+    "gl_DepthRange", "gl_FragCoord", "gl_FragDepth", "gl_FrontFacing", "gl_GlobalInvocationID", "gl_HelperInvocation", "gl_InstanceID",
+    "gl_InvocationID", "gl_Layer", "gl_LocalInvocationID", "gl_LocalInvocationIndex", "gl_NumSamples", "gl_NumWorkGroups",
+    "gl_PatchVerticesIn", "gl_PerVertex", "gl_Position", "gl_PointCoord", "gl_PointSize", "gl_PrimitiveID", "gl_PrimitiveIDIn",
+    "gl_SampleID", "gl_SamplePosition", "gl_SampleMask", "gl_SampleMaskIn", "gl_TessLevelOuter", "gl_TessLevelInner", "gl_TessCoord",
+    "gl_VertexID", "gl_ViewportIndex", "gl_WorkGroupID", "gl_WorkGroupSize",
 
-    kwb_gl_MaxFragmentAtomicCounters;
-    kwb_gl_MaxFragmentAtomicCounterBuffers;
-    kwb_gl_MaxFragmentImageUniforms;
-    kwb_gl_MaxFragmentInputComponents;
-    kwb_gl_MaxFragmentUniformComponents;
-    kwb_gl_MaxFragmentUniformVectors;
+    // GL_KHR_vulkan_glsl built-in variables
+    "gl_VertexIndex", "gl_InstanceIndex",
 
-    kwb_gl_MaxGeometryAtomicCounters;
-    kwb_gl_MaxGeometryAtomicCounterBuffers;
-    kwb_gl_MaxGeometryImageUniforms;
-    kwb_gl_MaxGeometryInputComponents;
-    kwb_gl_MaxGeometryOutputComponents;
-    kwb_gl_MaxGeometryOutputVertices;
-    kwb_gl_MaxGeometryTextureImageUnits;
-    kwb_gl_MaxGeometryTotalOutputComponents;
-    kwb_gl_MaxGeometryUniformComponents;
-    kwb_gl_MaxGeometryVaryingComponents;
+    // built-in constants
+    "gl_MaxClipDistances", "gl_MaxDrawBuffers", "gl_MaxImageSamples", "gl_MaxImageUnits", "gl_MaxPatchVertices", "gl_MinProgramTexelOffset",
+    "gl_MaxProgramTexelOffset", "gl_MaxTessGenLevel", "gl_MaxTessPatchComponents", "gl_MaxTextureImageUnits",
+    "gl_MaxTransformFeedbackBuffers", "gl_MaxTransformFeedbackInterleavedComponents", "gl_MaxVaryingVectors", "gl_MaxViewports",
+    "gl_MaxAtomicCounterBindings", "gl_MaxAtomicCounterBufferSize", "gl_MaxCombinedAtomicCounters", "gl_MaxCombinedAtomicCounterBuffers",
+    "gl_MaxCombinedImageUniforms", "gl_MaxCombinedImageUnitsAndFragmentOutputs", "gl_MaxCombinedTextureImageUnits",
+    "gl_MaxComputeWorkGroupCount", "gl_MaxComputeWorkGroupSize", "gl_MaxComputeUniformComponents", "gl_MaxComputeTextureImageUnits",
+    "gl_MaxComputeImageUniforms", "gl_MaxComputeAtomicCounters", "gl_MaxComputeAtomicCounterBuffers", "gl_MaxFragmentAtomicCounters",
+    "gl_MaxFragmentAtomicCounterBuffers", "gl_MaxFragmentImageUniforms", "gl_MaxFragmentInputComponents", "gl_MaxFragmentUniformComponents",
+    "gl_MaxFragmentUniformVectors", "gl_MaxGeometryAtomicCounters", "gl_MaxGeometryAtomicCounterBuffers", "gl_MaxGeometryImageUniforms",
+    "gl_MaxGeometryInputComponents", "gl_MaxGeometryOutputComponents", "gl_MaxGeometryOutputVertices", "gl_MaxGeometryTextureImageUnits",
+    "gl_MaxGeometryTotalOutputComponents", "gl_MaxGeometryUniformComponents", "gl_MaxGeometryVaryingComponents",
+    "gl_MaxTessControlAtomicCounterBuffers", "gl_MaxTessControlAtomicCounters", "gl_MaxTessControlImageUniforms",
+    "gl_MaxTessControlInputComponents", "gl_MaxTessControlOutputComponents", "gl_MaxTessControlUniformComponents",
+    "gl_MaxTessControlTextureImageUnits", "gl_MaxTessControlTotalOutputComponents", "gl_MaxTessEvaluationAtomicCounters",
+    "gl_MaxTessEvaluationAtomicCounterBuffers", "gl_MaxTessEvaluationImageUniforms", "gl_MaxTessEvaluationInputComponents",
+    "gl_MaxTessEvaluationOutputComponents", "gl_MaxTessEvaluationUniformComponents", "gl_MaxTessEvaluationTextureImageUnits",
+    "gl_MaxVertexAtomicCounters", "gl_MaxVertexAtomicCounterBuffers", "gl_MaxVertexAttribs", "gl_MaxVertexImageUniforms",
+    "gl_MaxVertexOutputComponents", "gl_MaxVertexTextureImageUnits", "gl_MaxVertexUniformComponents", "gl_MaxVertexUniformVectors",
+];
 
-    kwb_gl_MaxTessControlAtomicCounterBuffers;
-    kwb_gl_MaxTessControlAtomicCounters;
-    kwb_gl_MaxTessControlImageUniforms;
-    kwb_gl_MaxTessControlInputComponents;
-    kwb_gl_MaxTessControlOutputComponents;
-    kwb_gl_MaxTessControlUniformComponents;
-    kwb_gl_MaxTessControlTextureImageUnits;
-    kwb_gl_MaxTessControlTotalOutputComponents;
+DIRECTIVES :: string.[
+    "define", "elif", "elifdef", "elifndef", "else", "endif", "error", "extension", "if", "ifdef", "ifndef", "line", "pragma",
+    "undef", "warning", "version",
+];
 
-    kwb_gl_MaxTessEvaluationAtomicCounters;
-    kwb_gl_MaxTessEvaluationAtomicCounterBuffers;
-    kwb_gl_MaxTessEvaluationImageUniforms;
-    kwb_gl_MaxTessEvaluationInputComponents;
-    kwb_gl_MaxTessEvaluationOutputComponents;
-    kwb_gl_MaxTessEvaluationUniformComponents;
-    kwb_gl_MaxTessEvaluationTextureImageUnits;
+#insert -> string {
+    b: String_Builder;
+    init_string_builder(*b);
 
-    kwb_gl_MaxVertexAtomicCounters;
-    kwb_gl_MaxVertexAtomicCounterBuffers;
-    kwb_gl_MaxVertexAttribs;
-    kwb_gl_MaxVertexImageUniforms;
-    kwb_gl_MaxVertexOutputComponents;
-    kwb_gl_MaxVertexTextureImageUnits;
-    kwb_gl_MaxVertexUniformComponents;
-    kwb_gl_MaxVertexUniformVectors;
+    define_enum :: (b: *String_Builder, enum_name: string, prefix: string, value_lists: [][] string) {
+        print_to_builder(b, "% :: enum u16 {\n", enum_name);
+        for values : value_lists {
+            for v : values print_to_builder(b, "    %0%;\n", prefix, v);
+        }
+        print_to_builder(b, "}\n");
+    }
+
+    define_enum(*b, "Punctuation",  "",    .[PUNCTUATION]);
+    define_enum(*b, "Operation",    "",    .[OPERATIONS]);
+    define_enum(*b, "Keyword",      "kw_", .[KEYWORDS, TYPE_KEYWORDS, VALUE_KEYWORDS, MODIFIER_KEYWORDS, BUILTIN_VARS]);
+    define_enum(*b, "Directive",    "di_", .[DIRECTIVES]);
+
+    return builder_to_string(*b);
 }
 
-Operation :: enum u16 {
-    arrow;
-    bang;
-    backtick;
-    pipe;
-    double_pipe;
-    pipe_equal;
-    equal;
-    equal_equal;
-    bang_equal;
-    percent;
-    percent_equal;
-    less_than;
-    double_less_than;
-    less_than_equal;
-    greater_than;
-    greater_than_equal;
-    minus;
-    minus_equal;
-    minus_minus;
-    asterisk;
-    asterisk_equal;
-    colon;
-    slash;
-    plus;
-    plus_equal;
-    plus_plus;
-    slash_equal;
-    ampersand;
-    double_ampersand;
-    ampersand_equal;
-    tilde;
-    question;
-    unknown;
-    caret;
-    caret_equal;
-}
-
-Punctuation :: enum u16 {
-    semicolon;
-    backslash;
-    l_paren;
-    r_paren;
-    l_brace;
-    r_brace;
-    l_bracket;
-    r_bracket;
-    period;
-    comma;
-}
-
-Directive :: enum u16 {
-    di_define;
-    di_elif;
-    di_elifdef;
-    di_elifndef;
-    di_else;
-    di_endif;
-    di_error;
-    di_extension;
-    di_if;
-    di_ifdef;
-    di_ifndef;
-    // di_include;
-    di_line;
-    di_pragma;
-    di_undef;
-    di_warning;
-    di_version;
-}
-
-//- Keyword Specifics
 Keyword_Token :: struct {
-    type: Token.Type;
+    type: Token_Type;
     keyword: Keyword;
 }
 
 KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
     table: Table(string, Keyword_Token);
-    _, keywords_count := enum_range(Keyword);
-    size := 2 * (keywords_count);
+    size := 10 * (KEYWORDS.count + TYPE_KEYWORDS.count + VALUE_KEYWORDS.count);
     init(*table, size);
 
-    // NOTE:
-    // These #inserts need to be split here because trying to generate cases
-    // for all 277 (!) keyword values makes the compiler crap itself:
-    //
-    // ```
-    // Error: Jai encountered an exception running the program and is terminating.
-    //
-    // Command line arguments:
-    //   jai.exe first.jai
-    //
-    // This happened outside compile-time execution, so it is likely the compiler's fault.
-    //
-    // Stack trace of the compiler:
-    //
-    //   unknown(C1D87614) : BaseThreadInitThunk
-    // ```
-    //
-    // When testing, this happens when keywords_count >= 267.
-    // With split #inserts, the compiler can handle them just fine.
-
     #insert -> string {
-        curr_slice_count := 3;
-        curr_type := "keyword";
-
         b: String_Builder;
-        init_string_builder(*b);
-        for enum_names(Keyword) {
-            if !starts_with(it, "kw_") {
-                continue;
-            }
-
-            print_to_builder(*b, "table_add(*table, \"%\", Keyword_Token.{type = .%, keyword = .%});\n",
-                            slice(it, curr_slice_count, it.count - curr_slice_count), curr_type, it);
-        }
-        return builder_to_string(*b);
-    }
-
-    #insert -> string {
-        curr_slice_count := 4;
-        curr_type := "type_keyword";
-
-        b: String_Builder;
-        init_string_builder(*b);
-        for enum_names(Keyword) {
-            if !starts_with(it, "kwt_") {
-                continue;
-            }
-
-            print_to_builder(*b, "table_add(*table, \"%\", Keyword_Token.{type = .%, keyword = .%});\n",
-                            slice(it, curr_slice_count, it.count - curr_slice_count), curr_type, it);
-        }
-        return builder_to_string(*b);
-    }
-
-    #insert -> string {
-        curr_slice_count := 4;
-        curr_type := "modifier_keyword";
-
-        b: String_Builder;
-        init_string_builder(*b);
-        for enum_names(Keyword) {
-            if !starts_with(it, "kwm_") {
-                continue;
-            }
-
-            print_to_builder(*b, "table_add(*table, \"%\", Keyword_Token.{type = .%, keyword = .%});\n",
-                            slice(it, curr_slice_count, it.count - curr_slice_count), curr_type, it);
-        }
-        return builder_to_string(*b);
-    }
-
-    #insert -> string {
-        curr_slice_count := 4;
-        curr_type := "value_keyword";
-
-        b: String_Builder;
-        init_string_builder(*b);
-        for enum_names(Keyword) {
-            if !starts_with(it, "kwv_") {
-                continue;
-            }
-
-            print_to_builder(*b, "table_add(*table, \"%\", Keyword_Token.{type = .%, keyword = .%});\n",
-                            slice(it, curr_slice_count, it.count - curr_slice_count), curr_type, it);
-        }
-        return builder_to_string(*b);
-    }
-
-    #insert -> string {
-        curr_slice_count := 4;
-        curr_type := "builtin_keyword";
-
-        b: String_Builder;
-        init_string_builder(*b);
-        for enum_names(Keyword) {
-            if !starts_with(it, "kwb_") {
-                continue;
-            }
-
-            print_to_builder(*b, "table_add(*table, \"%\", Keyword_Token.{type = .%, keyword = .%});\n",
-                            slice(it, curr_slice_count, it.count - curr_slice_count), curr_type, it);
-        }
+        for KEYWORDS           append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword,          keyword = .kw_%1 });\n", it));
+        for TYPE_KEYWORDS      append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .type,             keyword = .kw_%1 });\n", it));
+        for VALUE_KEYWORDS     append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value,            keyword = .kw_%1 });\n", it));
+        for MODIFIER_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .modifier,         keyword = .kw_%1 });\n", it));
+        for BUILTIN_VARS       append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .builtin_variable, keyword = .kw_%1 });\n", it));
         return builder_to_string(*b);
     }
 
     return table;
 }
-MAX_KEYWORD_LENGTH :: #run -> s32 {
-    max_len := 0;
 
-    curr_slice_count := 3;
-
-    for enum_names(Keyword) {
-        if starts_with(it, "kwt") curr_slice_count = 4;
-        else if starts_with(it, "kwm") curr_slice_count = 4;
-        else if starts_with(it, "kwv") curr_slice_count = 4;
-        else if starts_with(it, "kwb") curr_slice_count = 4;
-        else curr_slice_count = 3;
-
-        actual := slice(it, curr_slice_count, it.count - curr_slice_count);
-        if actual.count > max_len max_len = actual.count;
-    }
-    return xx max_len;
-}
-
-PREPROCESSOR_DIRECTIVES_MAP :: #run -> Table(string, Directive) {
+DIRECTIVES_MAP :: #run -> Table(string, Directive) {
     table: Table(string, Directive);
-    temp, keywords_count := enum_range(Keyword);
-    size := 2 * (keywords_count);
+    size := 2 * DIRECTIVES.count;
     init(*table, size);
 
     #insert -> string {
         b: String_Builder;
         init_string_builder(*b);
-        for enum_names(Directive) {
-            print_to_builder(*b, "table_add(*table, \"%\", .%);\n",
-                            slice(it, 3, it.count - 3), it);
+        for DIRECTIVES {
+            print_to_builder(*b, "table_add(*table, \"%1\", .di_%1);\n", it);
         }
         return builder_to_string(*b);
     }
 
     return table;
 }
-MAX_DIRECTIVE_LENGTH :: #run -> s32 {
-    max_len := 0;
 
-    for enum_names(Directive) {
-        actual := slice(it, 3, it.count - 3);
-        if actual.count > max_len max_len = actual.count;
-    }
-    return xx max_len;
+MAX_KEYWORD_LENGTH :: #run -> s32 {
+    result: s64;
+    for KEYWORDS          { if it.count > result then result = it.count; }
+    for TYPE_KEYWORDS     { if it.count > result then result = it.count; }
+    for VALUE_KEYWORDS    { if it.count > result then result = it.count; }
+    for MODIFIER_KEYWORDS { if it.count > result then result = it.count; }
+    for BUILTIN_VARS      { if it.count > result then result = it.count; }
+    return xx result;
 }
 
-#run assert(enum_highest_value(Token.Type) == COLOR_MAP.count - 1);
+MAX_DIRECTIVE_LENGTH :: #run -> s32 {
+    result: s64;
+    for DIRECTIVES { if it.count > result then result = it.count; }
+    return xx result;
+}

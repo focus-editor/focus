@@ -1,5 +1,5 @@
-highlight_golang_syntax :: (using buffer: *Buffer) {
-    tokenizer := get_tokenizer(buffer);
+tokenize_golang :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+    tokenizer := get_tokenizer(buffer, start_offset, count);
 
     last_token: Token;
 
@@ -12,15 +12,16 @@ highlight_golang_syntax :: (using buffer: *Buffer) {
         if token.type == .punctuation && token.punctuation == .l_paren {
             // Handle "func("
             if last_token.type == .identifier {
-                memset(colors.data + last_token.start, xx Code_Color.FUNCTION, last_token.len);
+                memset(tokens.data + last_token.start, xx Token_Type.function, last_token.len);
             }
         }
 
         last_token = token;
 
-        color := COLOR_MAP[token.type];
-        memset(colors.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx token.type, token.len);
     }
+
+    return .[];
 }
 
 #scope_file
@@ -427,193 +428,79 @@ parse_caret :: (using tokenizer: *Tokenizer, token: *Token) {
 
 Token :: struct {
     start, len: s32;
-    type: Type;
+    type: Token_Type;
 
     union {
         keyword:                Keyword;
         punctuation:            Punctuation;
         operation:              Operation;
     }
-
-    Type :: enum u16 {
-        eof;
-
-        identifier;
-        string_literal;
-        char_literal;
-        number;
-        comment;
-        multiline_comment;
-        operation;
-        punctuation;
-        modifier_keyword;
-        keyword;
-        type_keyword;
-        value_keyword;
-        invalid;
-    }
 }
 
-// Must match the order of the types in the enum above
-COLOR_MAP :: Code_Color.[
-    .COMMENT,       // eof - obviously not used
-    .DEFAULT,       // identifier
-    .STRING,        // string_literal
-    .STRING,        // char_literal
-    .VALUE,         // number
-    .COMMENT,       // comment
-    .COMMENT,       // multiline_comment
-    .OPERATION,     // operation
-    .PUNCTUATION,   // punctuation
-    .KEYWORD,       // keyword
-    .KEYWORD,       // modifier_keyword
-    .TYPE,          // type_keyword
-    .VALUE_KEYWORD, // value_keyword
-    .ERROR,         // invalid
+PUNCTUATION :: string.[
+    "semicolon", "backslash", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", "period", "comma",
 ];
 
-Keyword :: enum u16 {
-    kw_break;
-    kw_case;
-    kw_chan;
-    kw_continue;
-    kw_default;
-    kw_defer;
-    kw_else;
-    kw_fallthrough;
-    kw_for;
-    kw_func;
-    kw_go;
-    kw_goto;
-    kw_if;
-    kw_import;
-    kw_interface;
-    kw_map;
-    kw_package;
-    kw_range;
-    kw_return;
-    kw_select;
-    kw_struct;
-    kw_switch;
-    kw_type;
-    kw_var;
+OPERATIONS :: string.[
+    "arrow", "bang", "backtick", "pipe", "double_pipe", "pipe_equal", "equal", "equal_equal", "bang_equal", "percent",
+    "percent_equal", "less_than", "double_less_than", "less_than_equal", "greater_than", "greater_than_equal", "minus",
+    "minus_equal", "minus_minus", "asterisk", "asterisk_equal", "colon", "slash", "plus", "plus_equal", "plus_plus",
+    "slash_equal", "ampersand", "double_ampersand", "ampersand_equal", "tilde", "question", "unknown", "caret", "caret_equal",
+];
 
-    kwv_false;
-    kwv_true;
-    kwv_nil;
+KEYWORDS :: string.[
+    "break", "case", "chan", "continue", "default", "defer", "else", "fallthrough", "for", "func", "go", "goto", "if",
+    "import", "interface", "map", "package", "range", "return", "select", "struct", "switch", "type", "var",
+];
 
-    kwm_const;
+TYPE_KEYWORDS :: string.[
+    "bool", "string", "int8", "uint8", "byte", "int16", "uint16", "int32", "rune", "uint32", "int64", "uint64", "int", "uint",
+    "uintptr", "float32", "float64", "complex64", "complex128", "error",
+];
 
-    // built-in types
-    kwt_bool;
-    kwt_string;
-    kwt_int8;
-    kwt_uint8;
-    kwt_byte;
-    kwt_int16;
-    kwt_uint16;
-    kwt_int32;
-    kwt_rune;
-    kwt_uint32;
-    kwt_int64;
-    kwt_uint64;
-    kwt_int;
-    kwt_uint;
-    kwt_uintptr;
-    kwt_float32;
-    kwt_float64;
-    kwt_complex64;
-    kwt_complex128;
-    kwt_error;
+VALUE_KEYWORDS :: string.[
+    "false", "true", "nil",
+];
+
+MODIFIER_KEYWORDS :: string.[
+    "const",
+];
+
+#insert -> string {
+    b: String_Builder;
+    init_string_builder(*b);
+
+    define_enum :: (b: *String_Builder, enum_name: string, prefix: string, value_lists: [][] string) {
+        print_to_builder(b, "% :: enum u16 {\n", enum_name);
+        for values : value_lists {
+            for v : values print_to_builder(b, "    %0%;\n", prefix, v);
+        }
+        print_to_builder(b, "}\n");
+    }
+
+    define_enum(*b, "Punctuation",  "",    .[PUNCTUATION]);
+    define_enum(*b, "Operation",    "",    .[OPERATIONS]);
+    define_enum(*b, "Keyword",      "kw_", .[KEYWORDS, TYPE_KEYWORDS, VALUE_KEYWORDS, MODIFIER_KEYWORDS]);
+
+    return builder_to_string(*b);
 }
 
-Operation :: enum u16 {
-    arrow;
-    bang;
-    backtick;
-    pipe;
-    double_pipe;
-    pipe_equal;
-    equal;
-    equal_equal;
-    bang_equal;
-    percent;
-    percent_equal;
-    less_than;
-    double_less_than;
-    less_than_equal;
-    greater_than;
-    greater_than_equal;
-    minus;
-    minus_equal;
-    minus_minus;
-    asterisk;
-    asterisk_equal;
-    colon;
-    slash;
-    plus;
-    plus_equal;
-    plus_plus;
-    slash_equal;
-    ampersand;
-    double_ampersand;
-    ampersand_equal;
-    tilde;
-    question;
-    unknown;
-    caret;
-    caret_equal;
-}
-
-Punctuation :: enum u16 {
-    semicolon;
-    backslash;
-    l_paren;
-    r_paren;
-    l_brace;
-    r_brace;
-    l_bracket;
-    r_bracket;
-    period;
-    comma;
-}
-
-//- Keyword Specifics
 Keyword_Token :: struct {
-    type: Token.Type;
+    type: Token_Type;
     keyword: Keyword;
 }
-// KEYWORD_MAP: Table(string, Keyword_Token);
+
 KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
     table: Table(string, Keyword_Token);
-    // _, keywords_count := enum_range(Keyword);
-    keywords_count := 100;
-    size := 2 * (keywords_count);
+    size := 10 * (KEYWORDS.count + TYPE_KEYWORDS.count + VALUE_KEYWORDS.count);
     init(*table, size);
 
     #insert -> string {
         b: String_Builder;
-        init_string_builder(*b);
-        curr_type := "keyword";
-        curr_slice_count := 3;
-        for enum_names(Keyword) {
-            if starts_with(it, "kwt") {
-                curr_type = "type_keyword";
-                curr_slice_count = 4;
-            } else if starts_with(it, "kwm") {
-                curr_type = "modifier_keyword";
-                curr_slice_count = 4;
-            } else if starts_with(it, "kwv") {
-                curr_type = "value_keyword";
-                curr_slice_count = 4;
-            } else {
-                curr_type = "keyword";
-                curr_slice_count = 3;
-            }
-
-            print_to_builder(*b, "table_add(*table, \"%\", Keyword_Token.{type = .%, keyword = .%});\n",
-                            slice(it, curr_slice_count, it.count - curr_slice_count), curr_type, it);
-        }
+        for KEYWORDS           append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword,  keyword = .kw_%1 });\n", it));
+        for TYPE_KEYWORDS      append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .type,     keyword = .kw_%1 });\n", it));
+        for VALUE_KEYWORDS     append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value,    keyword = .kw_%1 });\n", it));
+        for MODIFIER_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .modifier, keyword = .kw_%1 });\n", it));
         return builder_to_string(*b);
     }
 
@@ -621,20 +508,11 @@ KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
 }
 
 MAX_KEYWORD_LENGTH :: #run -> s32 {
-    max_len := 0;
-
-    curr_slice_count := 3;
-
-    for enum_names(Keyword) {
-        if starts_with(it, "kwt") curr_slice_count = 4;
-        else if starts_with(it, "kwm") curr_slice_count = 4;
-        else if starts_with(it, "kwv") curr_slice_count = 4;
-        else curr_slice_count = 3;
-
-        actual := slice(it, curr_slice_count, it.count - curr_slice_count);
-        if actual.count > max_len max_len = actual.count;
-    }
-    return xx max_len;
+    result: s64;
+    for KEYWORDS          { if it.count > result then result = it.count; }
+    for TYPE_KEYWORDS     { if it.count > result then result = it.count; }
+    for VALUE_KEYWORDS    { if it.count > result then result = it.count; }
+    for MODIFIER_KEYWORDS { if it.count > result then result = it.count; }
+    return xx result;
 }
 
-#run assert(enum_highest_value(Token.Type) == COLOR_MAP.count - 1);

@@ -16,9 +16,9 @@
 #load "egl.jai";
 
 wl_global_init :: () -> bool {
-    if !wayland_lib_load(*wayland_core_procs)   return false;
-    if !wayland_lib_load(*wayland_egl_procs)    return false;
-    if !wayland_lib_load(*wayland_cursor_procs) return false;
+    if !wayland_lib_load(*wayland_core_procs,   .["libwayland-client.so.0", "libwayland-client.so"]) return false;
+    if !wayland_lib_load(*wayland_egl_procs,    .["libwayland-egl.so.1", "libwayland-egl.so"])       return false;
+    if !wayland_lib_load(*wayland_cursor_procs, .["libwayland-cursor.so.0", "libwayland-cursor.so"]) return false;
 
     wayland_protocol_init();
     presentation_time_protocol_init();
@@ -47,52 +47,34 @@ wl_jext_bind :: (object: **$T/wl_proxy, registry: *wl_registry, id: u32, version
 
 generic_c_call :: #type () #c_call;
 
-wayland_lib_load :: (intf: *$T, $lib_name: string = "") -> bool #modify {
-    struct_info := cast(*Type_Info_Struct) T;
-    assert(struct_info.type == .STRUCT);
-
-    found := false;
-    for n: struct_info.notes {
-        if !starts_with(n, "lib(") continue;
-        assert(ends_with(n, ")"));
-
-        lib := n;
-        advance(*lib, "lib(".count);
-        lib.count -= 1;
-        lib_name = tprint("%\0", lib);
-        found = true;
-        break;
-    }
-    assert(found, "Please tag your struct with `@lib(name-of-your.so)`");
-
-    return true;
-}
-{
-    dlerror();
-    lib := dlopen(lib_name.data, RTLD_NOW | RTLD_NOLOAD);
-    if lib {
-        log_error("Library '%' already loaded!", lib_name);
-    } else {
-        lib = dlopen(lib_name.data, RTLD_NOW);
+wayland_lib_load :: (intf: *$T, sonames: []string) -> bool {
+    for soname : sonames {
+        lib := dlopen(temp_c_string(soname), RTLD_NOW);
         if !lib {
-            log_error("Failed to load '%s': %", lib_name, to_string(dlerror()));
+            log_error("Failed to load '%s': %", soname, to_string(dlerror()));
             return false;
         }
+
+        tis := cast(*Type_Info_Struct) type_info(T);
+        for m : tis.members {
+            if m.type.type != .PROCEDURE continue;
+            if m.flags & .CONSTANT continue;
+
+            pi := cast(*Type_Info_Procedure) m.type;
+            if !(pi.procedure_flags & .IS_C_CALL) continue;
+
+            dlerror();
+            ppfn := cast(*generic_c_call)((cast(*u8) intf) + m.offset_in_bytes);
+            ppfn.* = cast(generic_c_call) dlsym(lib, m.name.data);
+            if !ppfn.* {
+                log("Failed to resolve function '%' in '%': %", m.name, soname, to_string(dlerror()));
+                continue soname;
+            }
+        }
+
+        log("WAYLAND: loaded %", soname);
+        return true;
     }
 
-    tis := cast(*Type_Info_Struct) type_info(T);
-    for m : tis.members {
-        if m.type.type != .PROCEDURE continue;
-        if m.flags & .CONSTANT continue;
-
-        pi := cast(*Type_Info_Procedure) m.type;
-        if !(pi.procedure_flags & .IS_C_CALL) continue;
-
-        dlerror();
-        ppfn := cast(*generic_c_call)((cast(*u8) intf) + m.offset_in_bytes);
-        ppfn.* = cast(generic_c_call) dlsym(lib, m.name.data);
-        assert(!!(ppfn.*), "Failed to resolve function '%': %", m.name, to_string(dlerror()));
-    }
-
-    return true;
+    return false;
 }

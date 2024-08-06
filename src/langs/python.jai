@@ -1,5 +1,5 @@
-highlight_python_syntax :: (using buffer: *Buffer) {
-    tokenizer := get_tokenizer(buffer);
+tokenize_python :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+    tokenizer := get_tokenizer(buffer, start_offset, count);
 
     last_token: Token;
 
@@ -11,14 +11,15 @@ highlight_python_syntax :: (using buffer: *Buffer) {
 
         // Maybe highlight a function
         if token.type == .punctuation && token.punctuation == .l_paren && last_token.type == .identifier {
-            memset(colors.data + last_token.start, xx Code_Color.FUNCTION, last_token.len);
+            memset(tokens.data + last_token.start, xx Token_Type.function, last_token.len);
         }
 
         last_token = token;
 
-        color := COLOR_MAP[token.type];
-        memset(colors.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx token.type, token.len);
     }
+
+    return .[];
 }
 
 #scope_file
@@ -61,19 +62,20 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "%";  parse_percent           (tokenizer, *token);
         case #char "^";  parse_caret             (tokenizer, *token);
 
-        case #char ";";  token.type = .punctuation; token.punctuation = .semicolon; t += 1;
-        case #char ",";  token.type = .punctuation; token.punctuation = .comma;     t += 1;
-        case #char ".";  token.type = .punctuation; token.punctuation = .period;    t += 1;
-        case #char "{";  token.type = .punctuation; token.punctuation = .l_brace;   t += 1;
-        case #char "}";  token.type = .punctuation; token.punctuation = .r_brace;   t += 1;
-        case #char "(";  token.type = .punctuation; token.punctuation = .l_paren;   t += 1;
-        case #char ")";  token.type = .punctuation; token.punctuation = .r_paren;   t += 1;
-        case #char "[";  token.type = .punctuation; token.punctuation = .l_bracket; t += 1;
-        case #char "]";  token.type = .punctuation; token.punctuation = .r_bracket; t += 1;
-        case #char "$";  token.type = .punctuation; token.punctuation = .dollar;    t += 1;
+        case #char ";";  token.type = .punctuation; token.punctuation = .semicolon;  t += 1;
+        case #char ",";  token.type = .punctuation; token.punctuation = .comma;      t += 1;
+        case #char ".";  token.type = .punctuation; token.punctuation = .period;     t += 1;
+        case #char "{";  token.type = .punctuation; token.punctuation = .l_brace;    t += 1;
+        case #char "}";  token.type = .punctuation; token.punctuation = .r_brace;    t += 1;
+        case #char "(";  token.type = .punctuation; token.punctuation = .l_paren;    t += 1;
+        case #char ")";  token.type = .punctuation; token.punctuation = .r_paren;    t += 1;
+        case #char "[";  token.type = .punctuation; token.punctuation = .l_bracket;  t += 1;
+        case #char "]";  token.type = .punctuation; token.punctuation = .r_bracket;  t += 1;
+        case #char "$";  token.type = .punctuation; token.punctuation = .dollar;     t += 1;
+        case #char "\\"; token.type = .punctuation; token.punctuation = .back_slash; t += 1;
 
-        case #char "~";  token.type = .operation;   token.operation   = .tilde;     t += 1;
-        case #char "`";  token.type = .operation;   token.operation   = .backtick;  t += 1;
+        case #char "~";  token.type = .operation;   token.operation   = .tilde;      t += 1;
+        case #char "`";  token.type = .operation;   token.operation   = .backtick;   t += 1;
 
         case;            token.type = .invalid; t += 1;
     }
@@ -373,7 +375,7 @@ parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token, quote := #c
 
 Token :: struct {
     start, len: s32;
-    type: Type;
+    type: Token_Type;
 
     // Additional info to distinguish between keywords/punctuation
     union {
@@ -381,50 +383,10 @@ Token :: struct {
         punctuation:        Punctuation;
         operation:          Operation;
     }
-
-    Type :: enum u16 {
-        eof;
-
-        identifier;
-        string_literal;
-        multiline_string;
-        number;
-        comment;
-        multiline_comment;
-        operation;
-        punctuation;
-        modifier_keyword;
-        keyword;
-        type_keyword;
-        value_keyword;
-        builtin_function;
-        builtin_exception;
-        invalid;
-    }
 }
 
-// Must match the order of the types in the enum
-COLOR_MAP :: Code_Color.[
-    .COMMENT,       // eof - obviously not used
-    .DEFAULT,       // identifier
-    .STRING,        // string_literal
-    .STRING,        // multiline_string
-    .VALUE,         // number
-    .COMMENT,       // comment
-    .COMMENT,       // multiline_comment
-    .OPERATION,     // operation
-    .PUNCTUATION,   // punctuation
-    .KEYWORD,       // keyword
-    .KEYWORD,       // modifier_keyword
-    .TYPE,          // type_keyword
-    .VALUE_KEYWORD, // value_keyword
-    .OPERATION,     // builtin_function
-    .OPERATION,     // builtin_exception
-    .ERROR,         // invalid
-];
-
 PUNCTUATION :: string.[
-    "dollar", "semicolon", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", "period", "comma",
+    "dollar", "semicolon", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", "period", "comma", "back_slash"
 ];
 
 OPERATIONS :: string.[
@@ -487,7 +449,7 @@ VALUE_KEYWORDS :: string.[
 }
 
 Keyword_Token :: struct {
-    type: Token.Type;
+    type: Token_Type;
     keyword: Keyword;
 }
 
@@ -499,8 +461,8 @@ KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
     #insert -> string {
         b: String_Builder;
         for KEYWORDS           append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .keyword,           keyword = .kw_% });\n", it, it));
-        for TYPE_KEYWORDS      append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .type_keyword,      keyword = .kw_% });\n", it, it));
-        for VALUE_KEYWORDS     append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .value_keyword,     keyword = .kw_% });\n", it, it));
+        for TYPE_KEYWORDS      append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .type,              keyword = .kw_% });\n", it, it));
+        for VALUE_KEYWORDS     append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .value,             keyword = .kw_% });\n", it, it));
         for BUILTIN_FUNCTIONS  append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .builtin_function,  keyword = .kw_% });\n", it, it));
         for BUILTIN_EXCEPTIONS append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .builtin_exception, keyword = .kw_% });\n", it, it));
         return builder_to_string(*b);
@@ -519,4 +481,3 @@ MAX_KEYWORD_LENGTH :: #run -> s32 {
     return xx result;
 }
 
-#import "Hash_Table";

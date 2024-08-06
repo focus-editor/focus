@@ -1,18 +1,22 @@
 VERSION      :: #run -> string {
     result, revision := run_command("git", "rev-parse", "--short", "HEAD", capture_and_return_output = true);
-    if revision return sprint("0.2.0-%", trim(revision));
-    return "0.2.0-dev";
+    if revision return sprint("0.3.6-%", trim(revision));
+    return "0.3.6-dev";
 }
 RELEASE_DATE :: #run -> string {
     current_time := to_calendar(current_time_consensus());
     return calendar_to_string(current_time);
 }
 
+// NOTE: Uncomment when releasing, comment out when not releasing
+// VERSION :: "0.3.5";
+// RELEASE_DATE :: "5 May 2024";
+
 #run,stallable build();
 
 build :: () {
     options := get_build_options();
-    options.minimum_macos_version = .{12, 0};
+    options.minimum_os_version = .{10, 13};
     args := options.compile_time_command_line;
 
     import_path: [..] string;
@@ -26,7 +30,7 @@ build :: () {
     optimized := false;
     windows7  := false;
     set_optimization(*options, .DEBUG);
-    // options.arithmetic_overflow_check = .FATAL; Try uncommenting this line in 0.1.072. Doesn't work correctly on 0.1.071.
+    options.arithmetic_overflow_check = .FATAL;
     build_dir := "build_debug";
     options.output_executable_name = "focus";
 
@@ -187,6 +191,49 @@ build :: () {
 
         <key>NSHumanReadableCopyright</key>
         <string>© 2023 Ivan Ivanov</string>
+
+        <key>NSHighResolutionCapable</key>
+        <true/>
+
+        <key>CFBundleDocumentTypes</key>
+        <array>
+            <dict>
+                <key>CFBundleTypeName</key>
+                <string>Text Document</string>
+                <key>CFBundleTypeRole</key>
+                <string>Editor</string>
+                <key>LSItemContentTypes</key>
+                <array>
+                    <string>public.text</string>
+                </array>
+                <key>NSDocumentClass</key>
+                <string>Document</string>
+            </dict>
+            <dict>
+                <key>CFBundleTypeName</key>
+                <string>Text Document</string>
+                <key>CFBundleTypeRole</key>
+                <string>Editor</string>
+                <key>LSItemContentTypes</key>
+                <array>
+                    <string>public.plain-text</string>
+                </array>
+                <key>NSDocumentClass</key>
+                <string>Document</string>
+            </dict>
+            <dict>
+                <key>CFBundleTypeName</key>
+                <string>Unknown document</string>
+                <key>CFBundleTypeRole</key>
+                <string>Editor</string>
+                <key>LSItemContentTypes</key>
+                <array>
+                    <string>public.data</string>
+                </array>
+                <key>NSDocumentClass</key>
+                <string>Document</string>
+            </dict>
+        </array>
     </dict>
 </plist>
 STRING

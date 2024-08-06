@@ -1,17 +1,22 @@
 Saved_Window_Info :: struct {}
 
+Init_Flags :: enum_flags {
+    XCB_Pure;
+    XCB_Force_Core_Events;
+}
+
 Display :: union {
     #as base: Base_Display;
     #as x11: X11_Display;
+    #as xcb: XCB_Display;
     #as wld: Wayland_Display;
-    /* TODO: add `xcb` here */
 }
 
 Window :: union {
     #as base: Base_Window;
     #as x11: X11_Window;
+    #as xcb: XCB_Window;
     #as wld: Wayland_Window;
-    /* TODO: add `xcb` here */
 }
 
 INVALID_WINDOW : *Window : null;
@@ -22,16 +27,18 @@ BACKEND_CHOICE :: enum {
     PREFER_X11;
     FORCE_WAYLAND;
     FORCE_X11;
+    FORCE_XCB;
 }
 
 ACTIVE_BACKEND :: enum {
     UNINITIALIZED;
     WAYLAND;
     X11;
+    XCB;
 }
 
 
-init_display :: (display: *Display, desired_backend := BACKEND_CHOICE.PREFER_BEST_USER_EXPERIENCE, desired_gl_backend := GL_BACKEND_CHOICE.AUTOSELECT, app_id := "com.jai.application") -> bool {
+init_display :: (display: *Display, desired_backend := BACKEND_CHOICE.PREFER_BEST_USER_EXPERIENCE, desired_gl_backend := GL_BACKEND_CHOICE.AUTOSELECT, flags: Init_Flags = 0, app_id := "com.jai.application") -> bool {
     timers_init();
 
     if display.base.type != Base_Display return true;
@@ -41,8 +48,29 @@ init_display :: (display: *Display, desired_backend := BACKEND_CHOICE.PREFER_BES
     bd: *Base_Display = display;
     if bd.app_id free(bd.app_id);
     bd.app_id = copy_string(app_id);
+    bd.init_flags = flags;
     bd.desired_gl_backend = desired_gl_backend;
     bd.loop_wakeup_event = eventfd(0, EFD_CLOEXEC);
+
+    X11_init :: inline (display: *Display) -> bool {
+        base := display.base;
+        if !xcb_init_display(display) {
+            display.* = .{};
+            display.base = base;
+            return x11_init_display(display);
+        }
+        return true;
+    }
+
+    WL_init :: inline (display: *Display) -> bool {
+        base := display.base;
+        if !wl_init_display(display) {
+            display.* = .{};
+            display.base = base;
+            return false;
+        }
+        return true;
+    }
 
     if #complete desired_backend == {
         case .PREFER_BEST_USER_EXPERIENCE; {
@@ -53,27 +81,34 @@ init_display :: (display: *Display, desired_backend := BACKEND_CHOICE.PREFER_BES
              * supported. We fall back to X11 if we don't like the way the
              * Wayland display looks.
              */
+            base := display.base;
+
             if wl_init_display(display) {
                 wld := *display.wld;
                 if !wld.decoration_manager {
                     wl_uninit_display(display);
-                    return x11_init_display(display);
+                    display.* = .{};
+                    display.base = base;
+                    return X11_init(display);
                 }
                 return true;
             }
 
-            return x11_init_display(display);
+            display.* = .{};
+            display.base = base;
+            return X11_init(display);
         }
         case .PREFER_WAYLAND; {
-            if wl_init_display(display) return true;
-            return x11_init_display(display);
+            if WL_init(display) return true;
+            return X11_init(display);
         }
         case .PREFER_X11; {
-            if x11_init_display(display) return true;
-            return wl_init_display(display);
+            if X11_init(display) return true;
+            return WL_init(display);
         }
         case .FORCE_WAYLAND; return wl_init_display(display);
         case .FORCE_X11; return x11_init_display(display);
+        case .FORCE_XCB; return xcb_init_display(display);
     }
 
     return false;
@@ -84,6 +119,7 @@ active_backend :: (display: *Display) -> ACTIVE_BACKEND {
     if bd.type == {
         case Wayland_Display; return .WAYLAND;
         case X11_Display; return .X11;
+        case XCB_Display; return .XCB;
         case; return .UNINITIALIZED;
     }
 }
@@ -219,13 +255,13 @@ update_window_events :: (display: *Display) {
 
         memcpy(Input.input_button_states.data, bd.input_button_states.data, bd.input_button_states.count * size_of(Input.Key_Current_State));
 
-        Input.mouse_delta_x = bd.mouse_delta_x;
-        Input.mouse_delta_y = bd.mouse_delta_y;
-        Input.mouse_delta_z = bd.mouse_delta_z;
+        Input.mouse_delta_x     = bd.mouse_delta_x;
+        Input.mouse_delta_y     = bd.mouse_delta_y;
+        Input.mouse_wheel_delta = bd.mouse_wheel_delta;
 
-        bd.mouse_delta_x = 0;
-        bd.mouse_delta_y = 0;
-        bd.mouse_delta_z = 0;
+        bd.mouse_delta_x     = 0;
+        bd.mouse_delta_y     = 0;
+        bd.mouse_wheel_delta = .{};
 
         // A little copypaste from `input_per_frame_event_and_flag_update`
         // Basically, we also need to reset "just clicked" and "just released"
@@ -270,7 +306,25 @@ find_font :: (name: string, allocator := temp) -> bool, string {
     #load "stdlib_interop.jai";
 }
 
+// Misc
+dump_debug_info :: (display: *Display, sb: *String_Builder) {
+    sfmt := context.print_style.default_format_struct;
+    defer context.print_style.default_format_struct = sfmt;
+
+    context.print_style.default_format_struct.use_long_form_if_more_than_this_many_members = -1;
+    context.print_style.default_format_struct.use_newlines_if_long_form = true;
+    if display.base.type == {
+        case Wayland_Display; print_to_builder(sb, "%.%\n", display.base.type, display.wld);
+        case X11_Display;     print_to_builder(sb, "%.%\n", display.base.type, display.x11);
+        case XCB_Display;     print_to_builder(sb, "%.%\n", display.base.type, display.xcb);
+        case;                 print_to_builder(sb, "%.%\n", display.base.type, display.base);
+    }
+}
+
 #scope_module;
+
+#import "POSIX";
+#import "Linux";
 
 #import "String";
 #import "Hash_Table";
@@ -284,11 +338,13 @@ Input :: #import "Input";
 
 #load "missing.jai";
 #load "fontconfig.jai";
+#load "ld_xcb.jai";
 #load "ldx_display.jai";
 #load "ldx_input.jai";
 #load "ldw_display.jai";
 #load "ldw_input.jai";
 #load "ld_gl.jai";
+#load "xkb.jai";
 
 X11: X11_Lib;
 EGL: GL.EGL_Lib;
@@ -298,13 +354,15 @@ Base_Display :: struct {
     type: Type = Base_Display;
     app_id: string;
 
+    init_flags: Init_Flags;
+
     desired_gl_backend := GL_BACKEND_CHOICE.AUTOSELECT;
 
     windows: [..] Window;
 
     mouse_delta_x: int;
     mouse_delta_y: int;
-    mouse_delta_z: int;
+    mouse_wheel_delta: Input.Wheel_Delta;
 
     events_this_frame: [..]Input.Event;
     input_button_states: [Input.NUM_BUTTON_STATES] Input.Key_Current_State;
@@ -312,6 +370,8 @@ Base_Display :: struct {
     loop_wakeup_event : s32;
 
     gl: GL_Display;
+
+    xkb_state: LD_XKB_State;
 
     create_window: (
         display: *Display,
@@ -356,7 +416,7 @@ Base_Window :: struct {
 
 #if VALIDATE_USAGE {
     check_usage :: ($type: Type = Base_Display, display: *Display, windows: ..*Window, loc := #caller_location) #expand #no_debug {
-        #assert(type == Wayland_Display || type == X11_Display);
+        #assert(type == Wayland_Display || type == X11_Display || type == XCB_Display);
 
         bd: *Base_Display = display;
 
@@ -364,6 +424,7 @@ Base_Window :: struct {
         if type == {
             case Wayland_Display; window_type = Wayland_Window;
             case X11_Display;     window_type = X11_Window;
+            case XCB_Display;     window_type = XCB_Window;
         }
 
         if bd then assert(bd.type == type, "Expected display type %, got % (%)", type, bd.type, bd, loc=loc);
@@ -391,6 +452,7 @@ Base_Window :: struct {
 
 wl_check_usage :: #bake_arguments check_usage(type=Wayland_Display);
 x11_check_usage :: #bake_arguments check_usage(type=X11_Display);
+xcb_check_usage :: #bake_arguments check_usage(type=XCB_Display);
 
 WHEEL_DELTA : s32 : 120;
 

@@ -1,26 +1,31 @@
-highlight_c_syntax :: (using buffer: *Buffer) {
-    tokenizer := get_tokenizer(buffer);
+tokenize_c :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+    tokenizer := get_tokenizer(buffer, start_offset, count);
 
-    last_token: Token;  // to retroactively highlight functions
+    // Allocate temporary space for tracking one previous token
+    tokenizer.prev_tokens[0] = New(Token,, temp);
 
     while true {
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
 
         using tokenizer;
+
+        prev_token := cast(*Token) prev_tokens[0];
+
         // Maybe retroactively highlight a function
         if token.type == .punctuation && token.punctuation == .l_paren {
             // Handle "func("
-            if last_token.type == .identifier {
-                memset(colors.data + last_token.start, xx Code_Color.FUNCTION, last_token.len);
+            if prev_token.type == .identifier {
+                memset(tokens.data + prev_token.start, xx Token_Type.function, prev_token.len);
             }
         }
 
-        last_token = token;
+        prev_token.* = token;
 
-        color := COLOR_MAP[token.type];
-        memset(colors.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx token.type, token.len);
     }
+
+    return .[];
 }
 
 get_next_c_token :: get_next_token;  // export for indent tokenization
@@ -37,13 +42,15 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
 
     start_t = t;
 
-    // Look at the first char as if it's ASCII (if it isn't, this is just a text line)
-    char := << t;
+    // Look at the first char as if it's ASCII
+    char := t.*;
 
     if is_alpha(char) || char == #char "_" {
+        // Parse identifiers which start with an ASCII letter or _
+        // We'll look at identifiers which start with UTF8 letters later when we've already checked for more probable possibilities
         parse_identifier(tokenizer, *token);
     } else if is_digit(char) {
-        parse_number(tokenizer, *token);
+        parse_number_c_like(tokenizer, *token);
     } else if char == {
         case #char ":";  parse_colon                 (tokenizer, *token);
         case #char "?";  parse_question              (tokenizer, *token);
@@ -51,10 +58,10 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "-";  parse_minus                 (tokenizer, *token);
         case #char "+";  parse_plus                  (tokenizer, *token);
         case #char "*";  parse_asterisk              (tokenizer, *token);
-        case #char "<";  parse_less_than             (tokenizer, *token);
+        case #char "<";  parse_less_than_or_include  (tokenizer, *token);
         case #char ">";  parse_greater_than          (tokenizer, *token);
         case #char "!";  parse_bang                  (tokenizer, *token);
-        case #char "#";  parse_preprocessor_directive(tokenizer, *token);
+        case #char "#";  parse_directive             (tokenizer, *token);
         case #char "\""; parse_string_literal        (tokenizer, *token);
         case #char "'";  parse_char_literal          (tokenizer, *token);
         case #char "/";  parse_slash_or_comment      (tokenizer, *token);
@@ -77,7 +84,14 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "~";  token.type = .operation;   token.operation   = .tilde;     t += 1;
         case #char "`";  token.type = .operation;   token.operation   = .backtick;  t += 1;
 
-        case;            token.type = .invalid; t += 1;
+        case;
+            // It could still be an identifier which starts with a UTF8 character
+            utf32 := character_utf8_to_utf32(t, max_t - t);
+            if is_utf32_letter(utf32) {
+                parse_identifier(tokenizer, *token);
+            } else {
+                token.type = .invalid; t += 1;  // give up
+            }
     }
 
     if t >= max_t then t = max_t;
@@ -89,88 +103,12 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
 parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
 
-    identifier_str := read_identifier_string(tokenizer);
+    identifier_str := read_utf8_identifier_string(tokenizer);
 
     // Maybe it's a keyword
     if identifier_str.count <= MAX_KEYWORD_LENGTH {
         kw_token, ok := table_find(*KEYWORD_MAP, identifier_str);
         if ok { token.type = kw_token.type; token.keyword = kw_token.keyword; return; }
-    }
-}
-
-parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .number;
-
-    t += 1;
-    if t >= max_t return;
-
-    if is_digit(<< t) {
-        // Decimal
-        t += 1;
-        seen_decimal_point := false;
-        while t < max_t && (is_digit(<< t) || << t == #char ".") {
-            if << t == #char "." {
-                if seen_decimal_point break;
-                seen_decimal_point = true;
-            }
-            t += 1;
-        }
-        if t >= max_t return;
-        // t += 1;
-        // if t >= max_t return;
-
-        // exponent
-        if << t == #char "e" || << t == #char "E" {
-            t += 1;
-            if t >= max_t return;
-
-            if << t == #char "+" || << t == #char "-" {
-              t += 1;
-              if t >= max_t return;
-            }
-
-            while t < max_t && is_digit(<< t) {
-                t += 1;
-            }
-            if t >= max_t return;
-        }
-
-        // suffixes
-        if seen_decimal_point {
-            if << t == #char "f" || << t == #char "F" || << t == #char "d" || << t == #char "D" {
-              t += 1;
-            }
-        } else {
-
-          // This is getting kindof hard to follow...
-          if << t == #char "l" || << t == #char "L" {             // l
-              t += 1;
-              if t >= max_t return;
-
-              if << t == #char "l" || << t == #char "L" {         // ll
-                  t += 1;
-                  if t >= max_t return;
-
-                  if << t == #char "u" || << t == #char "U" {     // llu
-                    t += 1;
-                  }
-              } else if << t == #char "u" || << t == #char "U" {  // lu
-                t += 1;
-              }
-          } else if  << t == #char "u" || << t == #char "U" {     // u
-              t += 1;
-          }
-
-        }
-
-    } else if << t == #char "x" || << t == #char "X" {
-        t += 1;
-        while t < max_t && (is_hex(<< t)) t += 1;
-
-    } else if << t == #char "b" || << t == #char "B" {
-        // Binary
-        t += 1;
-        while t < max_t && (<< t == #char "1" || << t == #char "0") t += 1;
     }
 }
 
@@ -193,7 +131,7 @@ parse_equal :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";  token.operation = .equal_equal; t += 1;
     }
 }
@@ -205,7 +143,7 @@ parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .minus_equal;
             t += 1;
@@ -216,7 +154,7 @@ parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
             token.operation = .minus_minus;
             t += 1;
         case;
-            if is_digit(<< t) parse_number(tokenizer, token);
+            if is_digit(t.*) parse_number_c_like(tokenizer, token);
     }
 }
 
@@ -227,7 +165,7 @@ parse_plus :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .plus_equal;
             t += 1;
@@ -244,21 +182,31 @@ parse_asterisk :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .asterisk_equal;
             t += 1;
     }
 }
 
-parse_less_than :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_less_than_or_include :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .less_than;
 
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    prev_token := cast(*Token) prev_tokens[0];
+    if prev_token.type == .directive && prev_token.directive == .di_include {
+        // Parse an #include <...> statement
+        token.type = .string_literal;
+        while t < max_t && t.* != #char "\n" && t.* != #char ">"  t += 1;
+        if t >= max_t return;
+        t += 1;
+        return;
+    }
+
+    if t.* == {
         case #char "=";
             token.operation = .less_than_equal;
             t += 1;
@@ -275,7 +223,7 @@ parse_greater_than :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .greater_than_equal;
             t += 1;
@@ -289,31 +237,31 @@ parse_bang :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .bang_equal;
             t += 1;
     }
 }
 
-parse_preprocessor_directive :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_directive :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
 
     t += 1;
     eat_white_space(tokenizer);  // there may be spaces between the # and the name
-    if !is_alpha(<<t) return;
+    if t < max_t && !is_alpha(<<t) return;
 
     directive_str := read_identifier_string(tokenizer);
 
-    while t < max_t && is_alnum(<< t) t += 1;
+    while t < max_t && is_alnum(t.*) t += 1;
     if t >= max_t return;
 
     // Check if it's one of the existing directives
     if directive_str.count > MAX_DIRECTIVE_LENGTH return;
-    directive, ok := table_find(*PREPROCESSOR_DIRECTIVES_MAP, directive_str);
+    directive, ok := table_find(*DIRECTIVES_MAP, directive_str);
     if ok {
-        token.type = .preprocessor_directive;
-        token.preprocessor_directive = directive;
+        token.type = .directive;
+        token.directive = directive;
     }
 }
 
@@ -323,7 +271,7 @@ parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     escape_seen := false;
 
     t += 1;
-    while t < max_t && << t != #char "\n" {
+    while t < max_t && t.* != #char "\n" {
         if <<t == #char "\"" && !escape_seen break;
         escape_seen = !escape_seen && <<t == #char "\\";
         t += 1;
@@ -339,15 +287,15 @@ parse_char_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     escape_seen := false;
 
     t += 1; //
-    if t >= max_t || << t == #char "\n" return;
+    if t >= max_t || t.* == #char "\n" return;
 
-    if << t == #char "\\" {
+    if t.* == #char "\\" {
       escape_seen = true;
       t += 1;
-      if t >= max_t || << t == #char "\n" return;
+      if t >= max_t || t.* == #char "\n" return;
     }
 
-    if << t == #char "'" && !escape_seen {
+    if t.* == #char "'" && !escape_seen {
       // not escaped single quote without a character
       token.type = .invalid;
       t += 1; // the invalid '
@@ -355,7 +303,7 @@ parse_char_literal :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 
     t += 1; // the char
-    if t >= max_t || << t == #char "\n" return;
+    if t >= max_t || t.* == #char "\n" return;
 
     t += 1; // ending '
 }
@@ -367,19 +315,19 @@ parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .slash_equal;
             t += 1;
         case #char "/";
             token.type = .comment;
             t += 1;
-            while t < max_t && << t != #char "\n" t += 1;
+            while t < max_t && t.* != #char "\n" t += 1;
         case #char "*";
             token.type = .multiline_comment;
             t += 1;
             while t + 1 < max_t {
-                if << t == #char "*" && << (t + 1) == #char "/" {
+                if t.* == #char "*" && << (t + 1) == #char "/" {
                   t += 2;
                   break;
                 }
@@ -395,7 +343,7 @@ parse_ampersand :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .ampersand_equal;
             t += 1;
@@ -412,7 +360,7 @@ parse_pipe :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .pipe_equal;
             t += 1;
@@ -429,7 +377,7 @@ parse_percent :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .percent_equal;
             t += 1;
@@ -443,7 +391,7 @@ parse_caret :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t return;
 
-    if << t == {
+    if t.* == {
         case #char "=";
             token.operation = .caret_equal;
             t += 1;
@@ -452,373 +400,127 @@ parse_caret :: (using tokenizer: *Tokenizer, token: *Token) {
 
 Token :: struct {
     start, len: s32;
-    type: Type;
+    type: Token_Type;
 
     union {
-        keyword:                Keyword;
-        punctuation:            Punctuation;
-        operation:              Operation;
-        preprocessor_directive: Directive;
-    }
-
-    Type :: enum u16 {
-        eof;
-
-        identifier;
-        string_literal;
-        char_literal;
-        number;
-        comment;
-        multiline_comment;
-        operation;
-        punctuation;
-        modifier_keyword;
-        keyword;
-        type_keyword;
-        value_keyword;
-        preprocessor_directive;
-        invalid;
+        keyword:        Keyword;
+        punctuation:    Punctuation;
+        operation:      Operation;
+        directive:      Directive;
     }
 }
 
-// Must match the order of the types in the enum above
-COLOR_MAP :: Code_Color.[
-    .COMMENT,       // eof - obviously not used
-    .DEFAULT,       // identifier
-    .STRING,        // string_literal
-    .STRING,        // char_literal
-    .VALUE,         // number
-    .COMMENT,       // comment
-    .COMMENT,       // multiline_comment
-    .OPERATION,     // operation
-    .PUNCTUATION,   // punctuation
-    .KEYWORD,       // keyword
-    .KEYWORD,       // modifier_keyword
-    .TYPE,          // type_keyword
-    .VALUE_KEYWORD, // value_keyword
-    .KEYWORD,       // preprocessor_directive
-    .ERROR,         // invalid
+PUNCTUATION :: string.[
+    "semicolon", "backslash", "l_paren", "r_paren", "l_brace", "r_brace", "l_bracket", "r_bracket", "period", "comma",
 ];
 
-Keyword :: enum u16 {
-    kw_alignas;
-    kw_alignof;
-    kw_and;
-    kw_and_eq;
-    kw_asm;
-    kw_auto;
-    kw_bitand;
-    kw_bitor;
-    kw_break;
-    kw_case;
-    kw_catch;
-    kw_class;
-    kw_compl;
-    kw_concept;
-    kw_const_cast;
-    kw_continue;
-    kw_co_await;
-    kw_co_return;
-    kw_co_yield;
-    kw_decltype;
-    kw_default;
-    kw_defined;
-    kw_delete;
-    kw_do;
-    kw_dynamic_cast;
-    kw_else;
-    kw_enum;
-    kw_explicit;
-    kw_export;
-    kw_for;
-    kw_friend;
-    kw_goto;
-    kw_if;
-    kw_namespace;
-    kw_new;
-    kw_not;
-    kw_not_eq;
-    kw_operator;
-    kw_or;
-    kw_or_eq;
-    kw_private;
-    kw_protected;
-    kw_public;
-    kw_reinterpret_cast;
-    kw_requires;
-    kw_return;
-    kw_sizeof;
-    kw_static_assert;
-    kw_static_cast;
-    kw_struct;
-    kw_switch;
-    kw_template;
-    kw_throw;
-    kw_try;
-    kw_typedef;
-    kw_typeid;
-    kw_typename;
-    kw_union;
-    kw_using;
-    kw_while;
-    kw_xor;
-    kw_xor_eq;
-    kw__Alignas;
-    kw__Alignof;
-    kw__Atomic;
-    kw__Generic;
-    kw__Noreturn;
-    kw__Static_assert;
-    kw___asm;
-    kw___asm__;
-    kw___except;
-    kw___finally;
-    kw___leave;
-    kw___try;
+OPERATIONS :: string.[
+    "arrow", "bang", "backtick", "pipe", "double_pipe", "pipe_equal", "equal", "equal_equal", "bang_equal", "percent",
+    "percent_equal", "less_than", "double_less_than", "less_than_equal", "greater_than", "greater_than_equal", "minus",
+    "minus_equal", "minus_minus", "asterisk", "asterisk_equal", "colon", "slash", "plus", "plus_equal", "plus_plus",
+    "slash_equal", "ampersand", "double_ampersand", "ampersand_equal", "tilde", "question", "unknown", "caret", "caret_equal",
+];
 
-    kwv_false;
-    kwv_nullptr;
-    kwv_this;
-    kwv_true;
+KEYWORDS :: string.[
+    "break", "case", "continue", "default", "do", "else", "enum", "for", "goto", "if", "return", "sizeof", "struct", "switch",
+    "typedef", "union", "while","_Atomic", "_Generic", "_Noreturn", "_Static_assert", "__asm", "__asm__", "__except",
+    "__finally", "__leave", "__try",
+];
 
-    kwm_const;
-    kwm_consteval;
-    kwm_constexpr;
-    kwm_constinit;
-    kwm_extern;
-    kwm_final;
-    kwm_inline;
-    kwm_mutable;
-    kwm_noexcept;
-    kwm_override;
-    kwm_register;
-    kwm_restrict;
-    kwm_signed;
-    kwm_static;
-    kwm_thread_local;
-    kwm_unsigned;
-    kwm_virtual;
-    kwm_volatile;
-    kwm__Thread_local;
-
+TYPE_KEYWORDS :: string.[
     // built-in types
-    kwt_bool;
-    kwt_char;
-    kwt_char8_t;
-    kwt_char16_t;
-    kwt_char32_t;
-    kwt_double;
-    kwt_float;
-    kwt_int;
-    kwt_long;
-    kwt_short;
-    kwt_void;
-    kwt_wchar_t;
-    kwt__Bool;
-    kwt__Complex;
-    kwt__Imaginary;
+    "char", "double", "float", "int", "long", "short", "void", "_Bool", "_Complex", "_Imaginary",
 
     // stdint types
-    kwt_int8_t;
-    kwt_int16_t;
-    kwt_int32_t;
-    kwt_int64_t;
-    kwt_uint8_t;
-    kwt_uint16_t;
-    kwt_uint32_t;
-    kwt_uint64_t;
-    kwt_int_least8_t;
-    kwt_int_least16_t;
-    kwt_int_least32_t;
-    kwt_int_least64_t;
-    kwt_uint_least8_t;
-    kwt_uint_least16_t;
-    kwt_uint_least32_t;
-    kwt_uint_least64_t;
-    kwt_int_fast8_t;
-    kwt_int_fast16_t;
-    kwt_int_fast32_t;
-    kwt_int_fast64_t;
-    kwt_uint_fast8_t;
-    kwt_uint_fast16_t;
-    kwt_uint_fast32_t;
-    kwt_uint_fast64_t;
-    kwt_intptr_t;
-    kwt_uintptr_t;
-    kwt_intmax_t;
-    kwt_uintmax_t;
-    kwt_wint_t;
-    kwt_size_t;
-    kwt_ptrdiff_t;
-    kwt_sig_atomic_t;
+    "int8_t", "int16_t", "int32_t", "int64_t", "uint8_t", "uint16_t", "uint32_t", "uint64_t", "int_least8_t", "int_least16_t",
+    "int_least32_t", "int_least64_t", "uint_least8_t", "uint_least16_t", "uint_least32_t", "uint_least64_t", "int_fast8_t",
+    "int_fast16_t", "int_fast32_t", "int_fast64_t", "uint_fast8_t", "uint_fast16_t", "uint_fast32_t", "uint_fast64_t", "intptr_t",
+    "uintptr_t", "intmax_t", "uintmax_t", "wint_t", "size_t", "ptrdiff_t", "sig_atomic_t", "time_t", "clock_t",
+];
 
-    // some STL types
-    kwt_vector;
-    kwt_atomic;
-    kwt_atomic_flag;
-    kwt_array;
-    kwt_map;
-    kwt_unordered_map;
-    kwt_set;
-    kwt_unordered_set;
-    kwt_queue;
-    kwt_deque;
-    kwt_tree;
-    kwt_thread;
+VALUE_KEYWORDS :: string.[
+    "false", "true",
+];
+
+MODIFIER_KEYWORDS :: string.[
+    "const", "extern", "register", "signed", "static", "unsigned", "volatile", "_Thread_local",
+];
+
+DIRECTIVES :: string.[
+    "define", "elif", "elifdef", "elifndef", "else", "end", "endif", "error", "if", "ifdef", "ifndef",
+    "include", "line", "pragma", "undef", "warning",
+];
+
+#insert -> string {
+    b: String_Builder;
+    init_string_builder(*b);
+
+    define_enum :: (b: *String_Builder, enum_name: string, prefix: string, value_lists: [][] string) {
+        print_to_builder(b, "% :: enum u16 {\n", enum_name);
+        for values : value_lists {
+            for v : values print_to_builder(b, "    %0%;\n", prefix, v);
+        }
+        print_to_builder(b, "}\n");
+    }
+
+    define_enum(*b, "Punctuation",  "",    .[PUNCTUATION]);
+    define_enum(*b, "Operation",    "",    .[OPERATIONS]);
+    define_enum(*b, "Keyword",      "kw_", .[KEYWORDS, TYPE_KEYWORDS, VALUE_KEYWORDS, MODIFIER_KEYWORDS]);
+    define_enum(*b, "Directive",    "di_", .[DIRECTIVES]);
+
+    return builder_to_string(*b);
 }
 
-Operation :: enum u16 {
-    arrow;
-    bang;
-    backtick;
-    pipe;
-    double_pipe;
-    pipe_equal;
-    equal;
-    equal_equal;
-    bang_equal;
-    percent;
-    percent_equal;
-    less_than;
-    double_less_than;
-    less_than_equal;
-    greater_than;
-    greater_than_equal;
-    minus;
-    minus_equal;
-    minus_minus;
-    asterisk;
-    asterisk_equal;
-    colon;
-    slash;
-    plus;
-    plus_equal;
-    plus_plus;
-    slash_equal;
-    ampersand;
-    double_ampersand;
-    ampersand_equal;
-    tilde;
-    question;
-    unknown;
-    caret;
-    caret_equal;
-}
-
-Punctuation :: enum u16 {
-    semicolon;
-    backslash;
-    l_paren;
-    r_paren;
-    l_brace;
-    r_brace;
-    l_bracket;
-    r_bracket;
-    period;
-    comma;
-}
-
-Directive :: enum u16 {
-    di_define;
-    di_elif;
-    di_elifdef;
-    di_elifndef;
-    di_else;
-    di_end;
-    di_endif;
-    di_error;
-    di_if;
-    di_ifdef;
-    di_ifndef;
-    di_include;
-    di_line;
-    di_pragma;
-    di_undef;
-    di_warning;
-}
-
-//- Keyword Specifics
 Keyword_Token :: struct {
-    type: Token.Type;
+    type: Token_Type;
     keyword: Keyword;
 }
+
 KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
     table: Table(string, Keyword_Token);
-    temp, keywords_count := enum_range(Keyword);
-    size := 2 * (keywords_count);
+    size := 10 * (KEYWORDS.count + TYPE_KEYWORDS.count + VALUE_KEYWORDS.count);
     init(*table, size);
 
     #insert -> string {
         b: String_Builder;
-        init_string_builder(*b);
-        curr_type := "keyword";
-        curr_slice_count := 3;
-        for enum_names(Keyword) {
-            if starts_with(it, "kwt") {
-                curr_type = "type_keyword";
-                curr_slice_count = 4;
-            } else if starts_with(it, "kwm") {
-                curr_type = "modifier_keyword";
-                curr_slice_count = 4;
-            } else if starts_with(it, "kwv") {
-                curr_type = "value_keyword";
-                curr_slice_count = 4;
-            } else {
-                curr_type = "keyword";
-                curr_slice_count = 3;
-            }
-
-            print_to_builder(*b, "table_add(*table, \"%\", Keyword_Token.{type = .%, keyword = .%});\n",
-                            slice(it, curr_slice_count, it.count - curr_slice_count), curr_type, it);
-        }
+        for KEYWORDS           append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword,  keyword = .kw_%1 });\n", it));
+        for TYPE_KEYWORDS      append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .type,     keyword = .kw_%1 });\n", it));
+        for VALUE_KEYWORDS     append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value,    keyword = .kw_%1 });\n", it));
+        for MODIFIER_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .modifier, keyword = .kw_%1 });\n", it));
         return builder_to_string(*b);
     }
 
     return table;
 }
-MAX_KEYWORD_LENGTH :: #run -> s32 {
-    max_len := 0;
 
-    curr_slice_count := 3;
-
-    for enum_names(Keyword) {
-        if starts_with(it, "kwt") curr_slice_count = 4;
-        else if starts_with(it, "kwm") curr_slice_count = 4;
-        else if starts_with(it, "kwv") curr_slice_count = 4;
-        else curr_slice_count = 3;
-
-        actual := slice(it, curr_slice_count, it.count - curr_slice_count);
-        if actual.count > max_len max_len = actual.count;
-    }
-    return xx max_len;
-}
-
-PREPROCESSOR_DIRECTIVES_MAP :: #run -> Table(string, Directive) {
+DIRECTIVES_MAP :: #run -> Table(string, Directive) {
     table: Table(string, Directive);
-    temp, keywords_count := enum_range(Keyword);
-    size := 2 * (keywords_count);
+    size := 2 * DIRECTIVES.count;
     init(*table, size);
 
     #insert -> string {
         b: String_Builder;
         init_string_builder(*b);
-        for enum_names(Directive) {
-            print_to_builder(*b, "table_add(*table, \"%\", .%);\n",
-                            slice(it, 3, it.count - 3), it);
+        for DIRECTIVES {
+            print_to_builder(*b, "table_add(*table, \"%1\", .di_%1);\n", it);
         }
         return builder_to_string(*b);
     }
 
     return table;
 }
-MAX_DIRECTIVE_LENGTH :: #run -> s32 {
-    max_len := 0;
 
-    for enum_names(Directive) {
-        actual := slice(it, 3, it.count - 3);
-        if actual.count > max_len max_len = actual.count;
-    }
-    return xx max_len;
+MAX_KEYWORD_LENGTH :: #run -> s32 {
+    result: s64;
+    for KEYWORDS          { if it.count > result then result = it.count; }
+    for TYPE_KEYWORDS     { if it.count > result then result = it.count; }
+    for VALUE_KEYWORDS    { if it.count > result then result = it.count; }
+    for MODIFIER_KEYWORDS { if it.count > result then result = it.count; }
+    return xx result;
 }
 
-#run assert(enum_highest_value(Token.Type) == COLOR_MAP.count - 1);
+MAX_DIRECTIVE_LENGTH :: #run -> s32 {
+    result: s64;
+    for DIRECTIVES { if it.count > result then result = it.count; }
+    return xx result;
+}

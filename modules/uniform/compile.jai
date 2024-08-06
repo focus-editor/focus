@@ -30,7 +30,8 @@ compile :: (pattern: string, parse_flags := ParseFlags.LikePerl) -> Regexp, succ
 	regexp.prog = compile(regexp.suffix_regexp, *regexp.pool);
 	if !regexp.prog {
 		log_error("Could not compile regexp \"%\"", pattern);
-		return regexp, false;
+		uninit(*regexp);
+		return .{}, false;
 	}
 	#if REGEXP_DEBUG	print("Compiled suffix:\n%\n", to_string(<<regexp.prog));
 

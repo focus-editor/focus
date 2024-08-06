@@ -1,5 +1,12 @@
 #scope_module
 
+/*
+ * TODO: currently we associate `Display`/`Window` pointers with Wayland proxy objects.
+ *       This is a ticking time bomb! If ever we have more than one Display/Window we cannot
+ *       count on these pointers not being invalidated (by resizing the `Display.windows` array
+ *       for example). This needs to be fixed!
+ */
+
 Wayland_Display :: struct {
     #as base: Base_Display;
 
@@ -27,17 +34,6 @@ Wayland_Display :: struct {
     pointer_axis_accumulator: [2]s32 = .[0, 0];
 
     keyboard: *wl_keyboard;
-    kb_context: *xkb_context;
-    kb_keymap : *xkb_keymap;
-    kb_state  : *xkb_state;
-    kb_compose_table: *xkb_compose_table;
-    kb_compose_state: *xkb_compose_state;
-    mod_idx_shift     : u32;
-    mod_idx_ctrl      : u32;
-    mod_idx_alt       : u32;
-    mod_idx_caps_lock : u32;
-    mod_idx_super     : u32;
-    mod_idx_alt_gr    : u32;
 
     data_device_manager: *wl_data_device_manager;
     data_device: *wl_data_device;
@@ -60,6 +56,8 @@ Wayland_Display :: struct {
     scale_factor_override: s32;
 
     current_hovered_window: *Wayland_Window;
+
+    no_loop_mime: string;
 }
 
 Wayland_Window :: struct {
@@ -104,13 +102,19 @@ Wayland_Window :: struct {
 
     // dumb stuff
     pre_configure_desired_state: WLDesiredPreconfigureState;
+
+    initial_max_width: s32;
+    initial_max_height: s32;
 }
 
 wl_init_display :: (display: *Display) -> bool {
-    if !xkb_load(*libxkb_procs) return false;
+    if !xkbcommon_load() return false;
     if !wl_global_init() return false;
 
+    base_copy := display.base;
     d: *Wayland_Display = display;
+    d.* = .{};
+    d.base = base_copy;
 
     d.handle = wl_display_connect(null);
     if !d.handle return false;
@@ -147,6 +151,7 @@ wl_init_display :: (display: *Display) -> bool {
     }
 
     d.key_repeat_timer = timer_create(cb = wl_key_repeat_cb, user_data = d);
+    d.no_loop_mime = sprint("text/x-plain-do-not-loop-on-self;charset=utf-8;pid=%", getpid());
 
     bd: *Base_Display = display;
     bd.type = Wayland_Display;
@@ -206,8 +211,10 @@ window_calculate_buffer_size :: inline (w: *Wayland_Window) {
 }
 
 wl_window_resize_viewport :: (w: *Wayland_Window) {
-    f0 :: #run wl_fixed_from_int(0);
-    wp_viewport.set_source(w.viewport, f0, f0, wl_fixed_from_int(w.buffer_width), wl_fixed_from_int(w.buffer_height));
+    // f0 :: #run wl_fixed_from_int(0);
+    // wp_viewport.set_source(w.viewport, f0, f0, wl_fixed_from_int(w.buffer_width), wl_fixed_from_int(w.buffer_height));
+    fm1 :: #run wl_fixed_from_int(-1);
+    wp_viewport.set_source(w.viewport, fm1, fm1, fm1, fm1); // this is some bullshit
     wp_viewport.set_destination(w.viewport, w.window_width, w.window_height);
 }
 
@@ -381,7 +388,7 @@ data_device_listener :: wl_data_device_listener.{
                     if i == -1  break;
 
                     file_name := "";
-                    file_name_bytes := cast(*u8) alloc(i, __temporary_allocator);
+                    file_name_bytes := cast(*u8) alloc(i,, allocator = temp);
                     memcpy(file_name_bytes, p.data, i);
                     p.data = p.data + i + 2;
                     p.count = p.count - i - 2;
@@ -452,7 +459,7 @@ wl_clipboard_set_text :: (display: *Display, text: string) {
     wl_proxy_set_user_data(d.clipboard_source, d);
 
     wl_data_source.offer(d.clipboard_source, MIME_TYPE_TEXT.data);
-    wl_data_source.offer(d.clipboard_source, MIME_TYPE_TEXT_NOLOOP.data);
+    wl_data_source.offer(d.clipboard_source, d.no_loop_mime.data);
 
     wl_data_device.set_selection(d.data_device, d.clipboard_source, d.input_serial);
 }
@@ -485,6 +492,12 @@ x_toplevel_listener :: xdg_toplevel_listener.{
 
             wl_window_handle_resize(w, width, height);
         }
+    },
+
+    configure_bounds = (data: *void, self: *xdg_toplevel, width: s32, height: s32) -> void #c_call {
+        w: *Wayland_Window = wl_proxy_get_user_data(self);
+        w.initial_max_width = width;
+        w.initial_max_height = height;
     },
 
     close = (data: *void, toplevel: *xdg_toplevel) -> void #c_call {
@@ -551,7 +564,6 @@ wl_create_window :: (display: *Display, window: *Window, width: int, height: int
 
     w.window_width = xx width;
     w.window_height = xx height;
-    window_calculate_buffer_size(w);
 
     cursor, found := table_find(*d.cursors, "default");
     if !found {
@@ -587,8 +599,6 @@ wl_create_window :: (display: *Display, window: *Window, width: int, height: int
         wp_fractional_scale_v1.add_listener(w.fractional_scale_proxy, *fractional_scale_listener, w);
     }
 
-    wl_window_resize_viewport(w);
-
     wl_surface.damage(w.handle, 0, 0, w.window_width, w.window_height);
     wl_surface.commit(w.handle);
 
@@ -596,6 +606,13 @@ wl_create_window :: (display: *Display, window: *Window, width: int, height: int
     while !(w.native_state & configured) {
         wl_display_dispatch(d.handle);
     }
+
+    if w.initial_max_height > 10 && w.initial_max_width > 10 {
+        w.window_width = min(w.window_width, w.initial_max_width - 10);
+        w.window_height = min(w.window_height, w.initial_max_height - 10);
+    }
+    window_calculate_buffer_size(w);
+    wl_window_resize_viewport(w);
 
     bw: *Base_Window = window;
     bw.type    = Wayland_Window;
@@ -725,7 +742,6 @@ wl_set_fixed_scaling :: (display: *Display, factor: float) {
 #scope_file
 
 MIME_TYPE_TEXT        :: "text/plain;charset=utf-8";
-MIME_TYPE_TEXT_NOLOOP :: "text/x-plain-do-not-loop-on-self;charset=utf-8";
 MIME_TYPE_FILE_LIST   :: "text/uri-list";
 
 DATA_OFFER_READ_SIZE :: 2048;
@@ -748,7 +764,7 @@ data_offer_has_mime_type :: (d: *Wayland_Display, mime: string) -> bool {
 }
 
 data_offer_read_data :: (d: *Wayland_Display, mime_type: string, sb: *String_Builder) {
-    if data_offer_has_mime_type(d, MIME_TYPE_TEXT_NOLOOP) {
+    if data_offer_has_mime_type(d, d.no_loop_mime) {
         /* Do not block on read when we're the source of clipboard data */
         if mime_type == MIME_TYPE_TEXT append(sb, d.clipboard_send_data);
         return;
@@ -779,7 +795,7 @@ data_offer_read_data :: (d: *Wayland_Display, mime_type: string, sb: *String_Bui
 }
 
 data_offer_read_data :: (d: *Wayland_Display, mime_type: string, dst: *[..]u8) {
-    if data_offer_has_mime_type(d, MIME_TYPE_TEXT_NOLOOP) {
+    if data_offer_has_mime_type(d, d.no_loop_mime) {
         /* Do not block on read when we're the source of clipboard data */
         if mime_type == MIME_TYPE_TEXT {
             old_count := dst.count;

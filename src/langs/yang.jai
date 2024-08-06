@@ -1,5 +1,5 @@
-highlight_yang_syntax :: (using buffer: *Buffer) {
-    tokenizer := get_tokenizer(buffer);
+tokenize_yang :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+    tokenizer := get_tokenizer(buffer, start_offset, count);
 
     while true {
         token := get_next_token(*tokenizer);
@@ -7,9 +7,10 @@ highlight_yang_syntax :: (using buffer: *Buffer) {
 
         using tokenizer;
 
-        color := COLOR_MAP[token.type];
-        memset(colors.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx token.type, token.len);
     }
+
+    return .[];
 }
 
 #scope_file
@@ -147,41 +148,14 @@ read_identifier_string :: (using tokenizer: *Tokenizer) -> string {
 
 Token :: struct {
     start, len: s32;
-    type: Type;
+    type: Token_Type;
 
     // Additional info to distinguish between keywords/punctuation
     union {
         keyword:            Keyword;
         punctuation:        Punctuation;
     }
-
-    Type :: enum u16 {
-        eof;            // End of file
-        identifier;     // Variable names, etc.
-        string_literal; // String values
-        multiline_string; // Multiline string values
-        number;         // Numeric values
-        comment;        // Comments
-        punctuation;    // Punctuation characters
-        keyword;        // Key language constructs
-        type_keyword;   // Types
-        invalid;        // invalid / anything else
-    }
 }
-
-// Must match the order of the types in the enum
-COLOR_MAP :: Code_Color.[
-    .COMMENT,       // eof - obviously not used
-    .DEFAULT,       // identifier
-    .STRING,        // string_literal
-    .STRING,        // multiline_string
-    .VALUE,         // number
-    .COMMENT,       // comment
-    .PUNCTUATION,   // punctuation
-    .KEYWORD,       // keyword
-    .DEFAULT,       // type_keyword
-    .DEFAULT        // invalid / anything else
-];
 
 // https://datatracker.ietf.org/doc/html/rfc7950
 KEYWORDS :: string.[
@@ -226,7 +200,7 @@ PUNCTUATION :: string.[
 }
 
 Keyword_Token :: struct {
-    type: Token.Type;
+    type: Token_Type;
     keyword: Keyword;
 }
 
@@ -237,8 +211,8 @@ KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
 
     #insert -> string {
         b: String_Builder;
-        for KEYWORDS       append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .keyword,           keyword = .kw_% });\n", it, it));
-        for TYPE_KEYWORDS  append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .type_keyword,           keyword = .kw_% });\n", it, it));
+        for KEYWORDS       append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .keyword, keyword = .kw_% });\n", it, it));
+        for TYPE_KEYWORDS  append(*b, sprint("table_add(*table, \"%\", Keyword_Token.{ type = .type,    keyword = .kw_% });\n", it, it));
         return builder_to_string(*b);
     }
 
@@ -252,4 +226,3 @@ MAX_KEYWORD_LENGTH :: #run -> s32 {
     return xx result;
 }
 
-#import "Hash_Table";

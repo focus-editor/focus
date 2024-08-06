@@ -40,7 +40,7 @@ wl_display_add_listener :: inline (self: *wl_display, listener: *wl_display_list
 
 #scope_module
 
-Core_Procs :: struct @lib(libwayland-client.so) {
+Core_Procs :: struct {
     wl_proxy_marshal                             : (p: *wl_proxy, opcode: u32, args: ..Any) -> void #c_call;
     wl_proxy_marshal_array                       : (p: *wl_proxy, opcode: u32, args: *wl_argument) -> void #c_call;
     wl_proxy_create                              : (factory: *wl_proxy, intf: *wl_interface) -> *wl_proxy #c_call;

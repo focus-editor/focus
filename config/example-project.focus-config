@@ -1,29 +1,55 @@
-[1]  # Version number. Do not delete.
+[5]  # Version number. Do not delete.
 
 [[workspace]]
-
-[workspace dirs]
-# These directories will be scanned when a workspace is opened so that search etc. works.
+# These directories and files will be scanned when a workspace is opened so that search etc. works.
 # Example:
 # C:/projects/my-project
 # C:/jai
 
 
-# IMPORTANT:
-# You can override any section from the global config in your project and it will be used when your project is active.
-# Please note that some of the sections will completely replace the ones in the global config, while other sections
-# will try to merge with the global config. E.g. the workspace sections such as [ignore dirs] will completely
-# override the global [ignore dirs], which allows you to "unignore" some dirs just for your project!
-# Empty sections are ignored.
+[[build commands]]
+# build_working_dir:      <build working dir for all commands>
+# open_panel_on_build:    true  #  <- any settings specified here will apply to all commands unless overridden
+# close_panel_on_success: false
+# clear_build_output_before_running: false
+# error_regex:            <compiler-specific error regex>  # see examples below
+# auto_jump_to_error:     false
 
-[ignore dirs]
+# [Debug Build And Run]   # <- command name. Can be arbitrary
+# build_command:          jai main.jai  # should be an executable or a script
+# build_working_dir:      <build working dir for this command only>
+# timeout_in_seconds:     5             # if you don't want a timeout, don't specify it
+# run_command:            test.exe      # will be run if build succeeds
+# run_working_dir:        W:/focus      # working dir for the run command
+# key_binding:            F5
+
+# [Run]                   # <- You could have commands that don't build anything and just run something
+# run_command:            test
+# run_working_dir:        /home/user/test
+# key_binding:            Ctrl-F5
+
+# [Release]
+# build_command:          jai first.jai - release
+# key_binding:            F9
 
 
-[allow file extensions]
+# Example error regexes:
+# For jai:  ^(?P<file>.*):(?P<line>\d+),(?P<col>\d+): (?P<type>Error|Warning|Info): (?P<msg>.*)|^(?P<msg>.*error LNK.*)
+# For msvc: ^(?P<file>.*)\((?P<line>\d+),(?P<col>\d+)\): (?P<type>error|warning) (?P<msg>.*)$
+# ... let us know what regex works for you and we'll add it here
+
+# NOTE:
+# You can use the following variables in build_command or run_command:
+# %FILE%      - full path to currenly active file
+# %FILE_DIR%  - the directory of the currently active file
+# %FILE_NAME% - current file name, with extension
+# %FILE_NAME_NO_EXTENSION% - current file name, without extension
+# %BUILD_WORKING_DIR% - working dir of the build command
+# %RUN_WORKING_DIR%   - working dir of the run command
 
 
-[ignore file extensions]
 
-
-
-
+# NOTE: You can override any section from the global config in your project and it will be used when your project is active.
+#       Some sections, such as [[workspace]] or [[build commands]], will completely replace those in the global config,
+#       while other sections such as [[keymap]] or [[style]] will try to merge with the corresponding sections in the global
+#       config, allowing to override only some of the keys or colors.

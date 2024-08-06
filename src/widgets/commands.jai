@@ -1,246 +1,213 @@
 commands_dialog_handle_event :: (event: Input.Event) -> handled: bool {
-    using commands_dialog;
-
-    if event.type == .KEYBOARD && event.key_pressed {
-        action, mapping := map_event_to_action(event, Action_Open_File_Dialog);
-        if action == {
-            case .escape;                   #through;
-            case .close_dialog;             hide_commands_dialog();                     return true;
-
-            case .open_entry_in_place;      commands_execute_selected(.in_place);       return true;
-            case .open_entry_on_the_side;   commands_execute_selected(.on_the_side);    return true;
-            case .open_entry_on_the_left;   commands_execute_selected(.left);           return true;
-            case .open_entry_on_the_right;  commands_execute_selected(.right);          return true;
-
-            case .move_up;                  move_cursor(-1, wrap = true);               return true;
-            case .move_down;                move_cursor( 1, wrap = true);               return true;
-            case .move_up_fast;             move_cursor(-5);                            return true;
-            case .move_down_fast;           move_cursor( 5);                            return true;
-            case .move_up_one_page;         move_cursor(-per_page);                     return true;
-            case .move_down_one_page;       move_cursor( per_page);                     return true;
-        }
-
-        handled := maybe_handle_text_input_event(*input, event);
-        return handled;
-
-    } else if event.type == .TEXT_INPUT {
-        char := event.utf32;
-        text_input_type_char(*commands_dialog.input, char);
-        refresh_entries();
-        return true;
-    }
-    return false;
-}
-
-show_commands_dialog :: () {
-    active_global_widget = .commands_dialog;
-
-    text_input_fully_clear(*commands_dialog.input);
-
-    refresh_entries();
-}
-
-hide_commands_dialog :: () {
-    activate_editors();
+    return dialog_handle_event(*commands_dialog, event);
 }
 
 commands_execute_selected :: (placement: Editor_Placement = .in_place) {
-    hide_commands_dialog();
+    hide_dialog(*commands_dialog);
 
     using commands_dialog;
     if selected >= filtered.count return;
 
-    command := filtered[selected].command;
+    command := filtered[selected].details;
     for * commands { if command.action == it.action { it.num_times_used += 1; break; } }
 
-    if command.action == .do_nothing return;
+    if command.is_build_command {
+        action := cast(Action_Build) command.action;
+        maybe_execute_a_build_command(action);
+    } else {
+        action := cast(Action_Editors) command.action;
 
-    handled := handle_common_editor_action(command.action, placement);
-    if !handled {
-        editor, buffer := get_active_editor_and_buffer();
-        if editor then active_editor_handle_event(editor, buffer, Input.Event.{}, command.action);
+        if action == .do_nothing return;
+
+        handled := handle_common_editor_action(action, placement);
+        if !handled {
+            editor, buffer := get_active_editor_and_buffer();
+            if editor then active_editor_handle_event(editor, buffer, Input.Event.{}, action);
+        }
     }
 }
 
+commands_refresh_after_config_change :: () {
+    // Add base commands first (should only do it once)
+    if !commands then array_add(*commands, ..base_commands);
+
+    // Free previous build commands
+    for base_commands.count .. commands.count - 1 {
+        free(commands[it].name);
+    }
+    array_resize(*commands, base_commands.count);
+
+    // Add build commands on top of that
+    for config.build.commands {
+        array_add(*commands, Command.{
+            action = cast(u16) (it_index + 1),
+            name = sprint("Build: %", it.name),
+            is_build_command = true,
+        });
+    }
+
+    refresh_dialog_entries(*commands_dialog);
+}
+
+commands_dialog: Commands_Dialog;
+
+Commands_Dialog :: struct {
+    using #as generic_dialog: Generic_Choice_Dialog(Command);
+    generic_dialog.global_widget_id = .commands_dialog;
+    generic_dialog.refresh_entries  = commands_refresh_entries;
+    generic_dialog.open_entry_in_place     = #bake_arguments commands_execute_selected(placement = .in_place);
+    generic_dialog.open_entry_on_the_side  = #bake_arguments commands_execute_selected(placement = .on_the_side);
+    generic_dialog.open_entry_on_the_left  = #bake_arguments commands_execute_selected(placement = .left);
+    generic_dialog.open_entry_on_the_right = #bake_arguments commands_execute_selected(placement = .right);
+};
+
 #scope_file
 
-refresh_entries :: () {
+commands_refresh_entries :: (filter: Fuzzy_Filter) {
     using commands_dialog;
-
-    for filtered array_free(it.highlights);
-    array_reset_keeping_memory(*filtered);
-
-    editor, buffer := get_active_editor_and_buffer();
-
-    scroll_to_cursor = .snap;
-    scroll_y = 0;
-    selected = 0;
-
-    filter := construct_fuzzy_filter(cast(string) input.text);
 
     for command : commands {
         if command.requires_layout == .Single && editors.layout == .None   continue;
         if command.requires_layout == .Double && editors.layout != .Double continue;
-        if !project_config.loaded && (command.action == .open_project_config || command.action == .close_project) continue;
+        if !project_config.loaded && (command.action == xx Action_Editors.open_project_config || command.action == xx Action_Editors.close_project) continue;
 
         score, highlights := fuzzy_match(command.name, filter);
-        if score < 0 continue;
+        if score <= 0 && filter.full_string continue;
 
         entry := array_add(*filtered);
-        entry.command    = command;
+        entry.details    = command;
         entry.highlights = highlights;
 
         score_part: u64 = (cast,trunc(u64) score) << 32;
-        used_part:  u64 = (cast,trunc(u64) command.num_times_used) << 0;
+        used_part: u64  = (cast,trunc(u64) command.num_times_used);
         entry.sort_key = score_part | used_part;
     }
-
-    compare_entries :: (e1: Entry, e2: Entry) -> s64 {
-        key_diff := cast,no_check(s64) e2.sort_key - cast,no_check(s64) e1.sort_key;
-        if key_diff != 0 return key_diff;
-        return memcmp(e1.name.data, e2.name.data, min(e1.name.count, e2.name.count));
-    }
-
-    quick_sort(filtered, compare_entries);
 }
 
-move_cursor :: (delta: s64, wrap := false, snap := true) {
-    using commands_dialog;
+commands: [..] Command;
 
-    selected += delta;
-
-    if wrap {
-        if selected < 0 then selected = max(0, filtered.count - 1);
-        if selected >= filtered.count then selected = 0;
-    } else {
-        if selected < 0 then selected = 0;
-        if selected >= filtered.count then selected = filtered.count - 1;
+base_commands := #run -> [] Command {
+    cmd :: inline (name: string, action: Action_Editors, requires_layout: Editor_State.Layout = .None) -> Command {
+        return Command.{ action = xx action, name = name, requires_layout = requires_layout };
     }
-    scroll_to_cursor = ifx snap then Scroll_Mode.snap else .yes;
+
+    common_commands := Command.[
+        cmd( "Quit",                              .quit,                             .None   ),
+
+        cmd( "Open File By Name",                 .open_file_by_name,                .None   ),
+        cmd( "Navigate To File",                  .navigate_to_file,                 .None   ),
+        cmd( "Navigate To File From Root",        .navigate_to_file_from_root,       .None   ),
+        cmd( "Switch Between Open Files" ,        .switch_between_open_files,        .None   ),
+
+        cmd( "Switch To Project",                 .switch_to_project,                .None   ),
+        cmd( "Close Project",                     .close_project,                    .None   ),
+        cmd( "Open Directory With Project Files", .open_projects_directory,          .None   ),
+        cmd( "Open Project Config",               .open_project_config,              .None   ),
+        cmd( "Open Global Config",                .open_global_config,               .None   ),
+        cmd( "Show Default Config (readonly)",    .show_default_config,              .None   ),
+
+        cmd( "Choose Theme",                      .choose_theme,                     .None   ),
+        cmd( "Edit Current Theme",                .edit_current_theme,               .None   ),
+
+        cmd( "Create New File",                   .create_new_file,                  .None   ),
+        cmd( "Create New File On The Side",       .create_new_file_on_the_side,      .Single ),
+
+        cmd( "Search In Workspace",               .search_in_project,                .None   ),
+
+        cmd( "Select All",                        .select_all,                       .Single ),
+        cmd( "Select Line",                       .select_line,                      .Single ),
+        cmd( "Select All Occurrences",            .select_all_occurrences,           .Single ),
+        cmd( "Swap Selections",                   .swap_selections,                  .Single ),
+
+        cmd( "Go To Line",                        .go_to_line,                       .Single ),
+
+        cmd( "Close All Files",                   .close_all_editors,                .Single ),
+        cmd( "Close Other Files",                 .close_other_editors,              .Single ),
+        cmd( "Close File",                        .close_current_editor,             .Single ),
+        cmd( "Close Other File",                  .close_other_editor,               .Double ),
+        cmd( "Close Left File",                   .close_left_editor,                .Double ),
+        cmd( "Close Right File",                  .close_right_editor,               .Double ),
+
+        cmd( "Save",                              .save,                             .Single ),
+        cmd( "Save As",                           .save_as,                          .Single ),
+        cmd( "Save All",                          .save_all,                         .Single ),
+
+        cmd( "Delete Current File",               .delete_current_file,              .Single ),
+
+        cmd( "Join Lines",                        .join_lines,                       .Single ),
+        cmd( "Join Lines (no spaces in between)", .join_lines_no_spaces_in_between,  .Single ),
+
+        cmd( "Duplicate Lines",                   .duplicate_lines,                  .Single ),
+        cmd( "Delete Line",                       .delete_line,                      .Single ),
+        cmd( "Delete Line And Go Up",             .delete_line_and_go_up,            .Single ),
+        cmd( "Delete To Start Of Line",           .delete_to_start_of_line,          .Single ),
+        cmd( "Delete To End Of Line",             .delete_to_end_of_line,            .Single ),
+        cmd( "Move Selected Lines Up",            .move_selected_lines_up,           .Single ),
+        cmd( "Move Selected Lines Down",          .move_selected_lines_down,         .Single ),
+        cmd( "Move Up To Empty Line",             .move_up_to_empty_line,            .Single ),
+        cmd( "Move Down To Empty Line",           .move_down_to_empty_line,          .Single ),
+
+        cmd( "Center View On Cursor",             .center_viewport_on_cursor,        .Single ),
+        cmd( "Move Cursor To Screen Center",      .move_cursor_to_viewport_center,   .Single ),
+        cmd( "Remove Additional Cursors",         .remove_additional_cursors,        .Single ),
+
+        cmd( "Add Cursors To Line Ends",          .add_cursors_to_line_ends,         .Single ),
+        cmd( "Add Cursors To Line Starts",        .add_cursors_to_line_starts,       .Single ),
+        cmd( "Align Cursors",                     .align_cursors,                    .Single ),
+
+        cmd( "Move To Previous Cursor Position",  .move_to_previous_editor_history,  .None   ),
+        cmd( "Move To Next Cursor Position",      .move_to_next_editor_history,      .None   ),
+
+        cmd( "New Line Below Without Breaking",   .new_line_below_without_breaking,  .Single ),
+        cmd( "New Line Above Without Breaking",   .new_line_above_without_breaking,  .Single ),
+
+        cmd( "Strip Trailing Whitespace",         .strip_trailing_whitespace,        .Single ),
+
+        cmd( "Switch To Left Pane",               .switch_to_left_editor,            .Double ),
+        cmd( "Switch To Right Pane",              .switch_to_right_editor,           .Double ),
+        cmd( "Switch To Other Pane",              .switch_to_other_editor,           .Double ),
+
+        cmd( "Duplicate File On The Side",        .duplicate_editor,                 .Single ),
+        cmd( "Duplicate File To The Left",        .duplicate_editor_to_the_left,     .Single ),
+        cmd( "Duplicate File To The Right",       .duplicate_editor_to_the_right,    .Single ),
+
+        cmd( "Move Pane To The Left",             .move_editor_to_the_left,          .Double ),
+        cmd( "Move Pane To The Right",            .move_editor_to_the_right,         .Double ),
+
+        cmd( "Toggle Block Comment",              .toggle_block_comment,             .Single ),
+        cmd( "Toggle Line Wrap",                  .toggle_line_wrap,                 .Single ),
+        cmd( "Toggle Line Numbers",               .toggle_line_numbers,              .Single ),
+        cmd( "Toggle Fullscreen",                 .toggle_fullscreen,                .None   ),
+        cmd( "Toggle Build Panel",                .toggle_build_panel,               .None   ),
+
+        cmd( "Build: Kill Running Command",       .build_kill_running_command,       .None   ),
+        cmd( "Build: Clear Build Output",         .build_clear_output,               .None   ),
+
+        cmd( "Autoindent Region",                 .autoindent_region,                .Single ),
+
+        cmd( "Open Another Editor Instance",      .open_another_editor_instance,     .None   ),
+        cmd( "Copy Current Line Info",            .copy_current_line_info,           .Single ),
+
+        cmd( "Choose Language Syntax",            .choose_language,                  .Single ),
+    ];
+
+    linux_commands := Command.[
+        cmd( "Show Troubleshooting Information",  .show_troubleshooting_info,        .None   ),
+    ];
+
+    result: [..] Command;
+
+    array_add(*result, ..common_commands);
+    #if OS == .LINUX then array_add(*result, ..linux_commands);
+
+    return result;
 }
-
-maybe_handle_text_input_event :: (using input: *Text_Input, event: Input.Event) -> handled: bool {
-    input_text := copy_temporary_string(cast(string) text);
-    handled := text_input_handle_event(input, event);
-    if handled {
-        if input_text != cast(string) input.text then refresh_entries();
-        return true;
-    }
-    return false;
-}
-
-
-#scope_export
-
-commands_dialog: Commands_Dialog;
-
-
-#scope_file
-
-commands := #run Command.[
-    .{ .show_open_file_dialog_in_search_mode,               "Open File By Name",                  0, .None },
-    .{ .show_open_file_dialog_in_navigate_mode,             "Navigate To File",                   0, .None },
-    .{ .show_open_file_dialog_in_navigate_mode_from_root,   "Navigate To File From Root",         0, .None },
-    .{ .show_open_file_dialog_in_open_editors_mode,         "Switch Between Open Files" ,         0, .None },
-
-    .{ .switch_to_project,                                  "Switch To Project",                  0, .None },
-    .{ .close_project,                                      "Close Project",                      0, .None },
-    .{ .open_projects_directory,                            "Open Directory With Project Files",  0, .None },
-    .{ .open_project_config,                                "Open Project Config",                0, .None },
-    .{ .open_global_config,                                 "Open Global Config",                 0, .None },
-    .{ .show_default_config,                                "Show Default Config (readonly)",     0, .None },
-    .{ .show_troubleshooting_info,                          "Show Troubleshooting Information",   0, .None },
-
-    .{ .create_new_file,                                    "Create New File",                    0, .None },
-    .{ .create_new_file_on_the_side,                        "Create New File On The Side",        0, .Single },
-
-    .{ .search_in_project,                                  "Search In Workspace",                0, .None },
-
-    .{ .select_all,                                         "Select All",                         0, .Single },
-    .{ .select_line,                                        "Select Line",                        0, .Single },
-    .{ .select_all_occurrences,                             "Select All Occurrences",             0, .Single },
-    .{ .swap_selections,                                    "Swap Selections",                    0, .Single },
-
-    .{ .go_to_line,                                         "Go To Line",                         0, .Single },
-
-    .{ .close_current_editor,                               "Close File",                         0, .Single },
-    .{ .close_other_editor,                                 "Close Other File",                   0, .Double },
-    .{ .close_left_editor,                                  "Close Left File",                    0, .Double },
-    .{ .close_right_editor,                                 "Close Right File",                   0, .Double },
-
-    .{ .save,                                               "Save",                               0, .Single },
-    .{ .save_as,                                            "Save As",                            0, .Single },
-    .{ .save_all,                                           "Save All",                           0, .Single },
-
-    .{ .delete_current_file,                                "Delete Current File",                0, .Single },
-
-    .{ .join_lines,                                         "Join Lines",                         0, .Single },
-    .{ .join_lines_no_spaces_in_between,                    "Join Lines (no spaces in between)",  0, .Single },
-
-    .{ .duplicate_lines,                                    "Duplicate Lines",                    0, .Single },
-    .{ .delete_line,                                        "Delete Line",                        0, .Single },
-    .{ .delete_line_and_go_up,                              "Delete Line And Go Up",              0, .Single },
-    .{ .delete_to_start_of_line,                            "Delete To Start Of Line",            0, .Single },
-    .{ .delete_to_end_of_line,                              "Delete To End Of Line",              0, .Single },
-    .{ .move_selected_lines_up,                             "Move Selected Lines Up",             0, .Single },
-    .{ .move_selected_lines_down,                           "Move Selected Lines Down",           0, .Single },
-    .{ .move_up_to_empty_line,                              "Move Up To Empty Line",              0, .Single },
-    .{ .move_down_to_empty_line,                            "Move Down To Empty Line",            0, .Single },
-
-    .{ .center_viewport_on_cursor,                          "Center View On Cursor",              0, .Single },
-    .{ .move_cursor_to_viewport_center,                     "Move Cursor To Screen Center",       0, .Single },
-    .{ .remove_additional_cursors,                          "Remove Additional Cursors",          0, .Single },
-
-    .{ .add_cursors_to_line_ends,                           "Add Cursors To Line Ends",           0, .Single },
-    .{ .add_cursors_to_line_starts,                         "Add Cursors To Line Starts",         0, .Single },
-    .{ .align_cursors,                                      "Align Cursors",                      0, .Single },
-
-    .{ .move_to_previous_editor_history,                    "Move To Previous Cursor Position",   0, .None },
-    .{ .move_to_next_editor_history,                        "Move To Next Cursor Position",       0, .None },
-
-    .{ .new_line_below_without_breaking,                    "New Line Below Without Breaking",    0, .Single },
-    .{ .new_line_above_without_breaking,                    "New Line Above Without Breaking",    0, .Single },
-
-    .{ .switch_to_left_editor,                              "Switch To Left Pane",                0, .Double },
-    .{ .switch_to_right_editor,                             "Switch To Right Pane",               0, .Double },
-    .{ .switch_to_other_editor,                             "Switch To Other Pane",               0, .Double },
-
-    .{ .duplicate_editor,                                   "Duplicate File On The Side",         0, .Single },
-    .{ .duplicate_editor_to_the_left,                       "Duplicate File To The Left",         0, .Single },
-    .{ .duplicate_editor_to_the_right,                      "Duplicate File To The Right",        0, .Single },
-
-    .{ .move_editor_to_the_left,                            "Move Pane To The Left",              0, .Double },
-    .{ .move_editor_to_the_right,                           "Move Pane To The Right",             0, .Double },
-
-    .{ .toggle_line_wrap,                                   "Toggle Line Wrap",                   0, .Single },
-    .{ .toggle_line_numbers,                                "Toggle Line Numbers",                0, .Single },
-    .{ .toggle_fullscreen,                                  "Toggle Fullscreen",                  0, .None },
-
-    .{ .autoindent_region,                                  "Autoindent Region",                  0, .Single },
-];
 
 Command :: struct {
-    action: Action_Editors = .do_nothing;
+    action: u16 = xx Action_Editors.do_nothing;
     name: string;
-    num_times_used  := 0;
     requires_layout: Editor_State.Layout = .None;
+    num_times_used := 0;
+    is_build_command := false;
 }
 
-Commands_Dialog :: struct {
-    input: Text_Input;
-    filtered: [..] Entry;
-    selected: s64;
-    selected_by_mouse: s64 = -1;  // to remember which entry the left mouse button went down on
-
-    scroll_y: s32;
-    scroll_anim := #run Tween_Animation(s32).{ speed = xx 0.1, func = .lerp };
-    per_page: s64 = 10;
-
-    scroll_to_cursor: Scroll_Mode = .no;
-};
-
-Entry :: struct {
-    using command: Command;
-    highlights: [] bool;
-    sort_key: u64;
-}

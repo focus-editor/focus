@@ -1,0 +1,88 @@
+[4]  # Version number. Do not delete
+
+[colors]
+background0:                            181818FF
+background1:                            181818FF
+background2:                            383838FF
+background3:                            181818FB
+background4:                            181818FB
+selection_active:                       BFC9DB38
+selection_inactive:                     BFC9DB38
+selection_highlight:                    FCEDFC26
+search_result_active:                   8E772EFF
+search_result_inactive:                 FCEDFC26
+scrollbar:                              28282850
+scrollbar_hover:                        282828FF
+scrollbar_background:                   181818FF
+cursor:                                 BFC9DBFF
+cursor_inactive:                        BFC9DBFF
+paste_animation:                        1C4449FF
+splitter:                               8296c120
+splitter_hover:                         8296c130
+letter_highlight:                       BFC9DBFF
+list_cursor_lite:                       BFC9DB38
+list_cursor:                            FCEDFC26
+shadow_dark:                            8296c103
+shadow_transparent:                     0E161C00
+text_input_label:                       3B4450FF
+
+ui_default:                             BFC9DBFF
+ui_dim:                                 87919DFF
+ui_neutral:                             4C4C4CFF
+ui_warning:                             F8AD34FF
+ui_warning_dim:                         986032FF
+ui_error:                               772222FF
+ui_error_bright:                        FF0000FF
+ui_success:                             18181850
+
+region_scope_export:                    181818FF
+region_scope_file:                      181818FF
+region_scope_module:                    181818FF
+region_header:                          227722FF
+region_success:                         227722FF
+region_warning:                         227722FF
+region_error:                           227722FF
+region_heredoc:                         101010FF
+
+build_panel_background:                 202020FF
+build_panel_scrollbar:                  33CCCC19
+build_panel_scrollbar_hover:            33CCCC4C
+build_panel_scrollbar_background:       10191F4C
+build_panel_title_bar:                  383838FF
+
+code_default:                           BFC9DBFF
+code_comment:                           536371FF
+code_type:                              6e8eb8FF
+code_function:                          6e8eb8FF
+code_punctuation:                       BFC9DBFF
+code_operation:                         FFFFFFFF
+code_string_literal:                    D4BC7DFF
+code_value:                             3aa982FF
+code_highlight:                         D89B75FF
+code_error:                             FF0000FF
+code_keyword:                           3aa982FF
+code_warning:                           E4D97DFF
+code_invalid:                           FF0000FF
+code_multiline_string:                  D4BC7DFF
+code_raw_string:                        D4BC7DFF
+code_char_literal:                      D4BC7DFF
+code_identifier:                        BFC9DBFF
+code_note:                              E0AD82FF
+code_number:                            D699B5FF
+code_multiline_comment:                 87919DFF
+code_modifier:                          E67D74FF
+code_attribute:                         E67D74FF
+code_enum_variant:                      BFC9DBFF
+code_macro:                             E0AD82FF
+code_builtin_variable:                  D699B5FF
+code_builtin_function:                  E0AD82FF
+code_builtin_exception:                 E0AD82FF
+code_directive:                         E67D74FF
+code_directive_modifier:                E67D74FF
+code_header:                            E67D74FF
+code_header2:                           E0AD82FF
+code_header3:                           E0AD82FF
+code_header4:                           E0AD82FF
+code_header5:                           E0AD82FF
+code_header6:                           E0AD82FF
+

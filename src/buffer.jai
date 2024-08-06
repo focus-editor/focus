@@ -12,7 +12,7 @@ refresh_open_buffers :: () {
         if buffer.dirty rescan_for_lines(buffer);
 
         buffer.was_dirty_during_frame = false;
-        buffer.needs_coloring = true;
+        buffer.needs_tokenizing = true;
         buffer.last_edit_time = frame_time;
 
         refresh_all_editors_for_buffer(editor.buffer_id);
@@ -25,18 +25,6 @@ refresh_open_buffers :: () {
 
         finder.need_to_refresh_results = true;
     }
-}
-
-get_buffer_ids_with_open_editors :: () -> [] s64 /* temp */ {
-    buffer_ids: [..] s64;
-    buffer_ids.allocator = temp;
-    array_reserve(*buffer_ids, open_editors.count);
-
-    for open_editors {
-        array_add_if_unique(*buffer_ids, it.buffer_id);  // aaaa linear search oh no the program is slow now
-    }
-
-    return buffer_ids;
 }
 
 put_cursor_in_valid_spot :: (using cursor: *Cursor, buffer: Buffer) {
@@ -127,7 +115,7 @@ get_char_at_offset_as_string :: (using buffer: Buffer, offset: s32) -> string {
     if offset >= bytes.count return "";
     char: string = ---;
     char.data  = *bytes[offset];
-    char.count = 1 + trailingBytesForUTF8[bytes[offset]];
+    char.count = clamp(cast(s64)(1 + trailingBytesForUTF8[bytes[offset]]), 0, bytes.count - offset);
     return char;
 }
 
@@ -141,34 +129,21 @@ get_line_starts :: (editor: Editor, buffer: Buffer) -> [] s32 {
 
 offset_to_coords :: (editor: Editor, buffer: Buffer, offset: s64) -> Coords {
     line := offset_to_line(editor, buffer, offset);
-    col  := _find_col_by_scanning_line(buffer, line, offset, get_line_starts(editor, buffer));
+    col  := _get_visual_col_by_scanning_line(buffer, line, offset, get_line_starts(editor, buffer));
 
     return Coords.{ line = line, col = col };
 }
 
 offset_to_real_coords :: (buffer: Buffer, offset: s64) -> Coords {
     line := offset_to_real_line(buffer, offset);
-    col  := _find_col_by_scanning_line(buffer, line, offset, buffer.line_starts);
+    col  := _get_visual_col_by_scanning_line(buffer, line, offset, buffer.line_starts);
 
     return Coords.{ line = line, col = col };
 }
 
-_find_col_by_scanning_line :: (buffer: Buffer, line_num: s32, offset: s64, line_starts: [] s32) -> col: s32 {
-    col: s32 = 0;
-
-    i := line_starts[line_num];
-    while i < offset {
-        byte := buffer.bytes[i];
-        if byte != #char "\t" {  // I hate tabs
-            col += 1;
-            i += 1 + trailingBytesForUTF8[byte];
-        } else {
-            col += TAB_SIZE - col % TAB_SIZE;
-            i += 1;
-        }
-    }
-
-    return col;
+// This function counts visual indent, taking tab size into account
+_get_visual_col_by_scanning_line :: (buffer: Buffer, line_num: s32, offset: s64, line_starts: [] s32) -> col: s32 {
+    return num_chars_in_string(xx array_view(buffer.bytes, line_starts[line_num], offset - line_starts[line_num]));
 }
 
 get_cursor_coords :: (editor: Editor, buffer: Buffer, using cursor: Cursor) -> Cursor_Coords {
@@ -312,7 +287,7 @@ get_selected_string :: (cursor: Cursor, buffer: Buffer) -> string {
     return get_range_as_string(buffer, get_selection(cursor));
 }
 
-remove_crlf_in_place :: (bytes: *[] u8) {
+remove_crlf_in_place :: (bytes: *[] u8) -> bytes_removed: s64 {
     dst := bytes.data;
     src := bytes.data;
     end := bytes.data + bytes.count;
@@ -324,7 +299,7 @@ remove_crlf_in_place :: (bytes: *[] u8) {
         byte := <<cursor;
         if byte == #char "\r" {
             count := cursor - src;
-            memcpy(dst, src, count);
+            focus_memcpy(dst, src, count);
             dst += count;
             cursor += 1;
             src = cursor;
@@ -334,9 +309,17 @@ remove_crlf_in_place :: (bytes: *[] u8) {
     }
     // Copy the remaining bit
     count := cursor - src;
-    memcpy(dst, src, count);
+    focus_memcpy(dst, src, count);
 
-    bytes.count = dst + count - bytes.data;
+    new_count := dst + count - bytes.data;
+    bytes_removed := bytes.count - new_count;
+    bytes.count = new_count;
+
+    return bytes_removed;
+}
+
+remove_crlf_in_place :: inline (str: *string) -> bytes_removed: s64 {
+    return remove_crlf_in_place(cast(*[] u8) str);
 }
 
 rescan_for_lines :: (using buffer: *Buffer) {
@@ -441,37 +424,69 @@ rescan_for_wrapped_lines :: (editor: *Editor, buffer: Buffer) {
     array_add(*editor.wrapped_line_starts, cast(s32) buffer.bytes.count);  // last line
 }
 
-recalculate_colors :: (buffer: *Buffer) {
+retokenize :: (buffer: *Buffer) {
     lock(*buffer.content_lock);
     defer unlock(*buffer.content_lock);
 
     assert(!buffer.dirty);
-    buffer.needs_coloring = false;
+    buffer.needs_tokenizing = false;
 
-    highlighter_function := get_highlighter_function(buffer.lang);
-    if highlighter_function == null return;
+    if buffer.lang == .Plain_Text {
+        // We don't store tokens for plain text buffers
+        array_reset(*buffer.tokens);
+        for buffer.regions free(it.note);
+        array_reset(*buffer.regions);
+        return;
+    }
 
-    array_resize(*buffer.colors, buffer.bytes.count);  // this will reset colors to 0
-    highlighter_function(buffer);
+    tokenize_func := get_tokenize_function(buffer.lang);
+
+    // Resize tokens if we ever changed the token array
+    if buffer.tokens || tokenize_func != null then array_resize(*buffer.tokens, buffer.bytes.count);  // this will reset tokens to 0
+    if !tokenize_func return;  // this could be the case for e.g. the build panel
+
+    new_regions := tokenize_func(buffer);
+
+    // Clear buffer regions
+    for buffer.regions free(it.note);
+    array_reset_keeping_memory(*buffer.regions);
+
+    for * region : new_regions {
+        // Add regions into buffer
+        if region.note then region.note = copy_string(region.note);
+        array_add(*buffer.regions, region.*);
+
+        // Maybe tokenize heredocs
+        if region.kind == .heredoc {
+            tokenize_func := get_tokenize_function(region.lang);
+            if tokenize_func != null then tokenize_func(buffer, region.start, region.end - region.start);  // ignore subregions here
+        }
+    }
 }
 
-buffer_needs_coloring :: (buffer: Buffer) -> bool {
+buffer_needs_tokenizing :: (buffer: Buffer) -> bool {
     return
-        (buffer.needs_coloring || buffer.colors.count != buffer.bytes.count) &&
-        get_highlighter_function(buffer.lang) != null;
+        (buffer.needs_tokenizing || buffer.tokens.count != buffer.bytes.count) &&
+        (get_tokenize_function(buffer.lang) != null || buffer.tokens.count > 0);
 }
 
 tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */ {
     // NOTE: all tokenizers here must return temporary storage!
     if buffer.lang == {
         case .Jai;          return tokenize_jai_for_indentation(buffer);
+        case .CSharp;       return tokenize_csharp_for_indentation(buffer);
         case .C;            return tokenize_c_like_lang_for_indentation(buffer, get_next_c_token);
-        case .CSharp;       return tokenize_c_like_lang_for_indentation(buffer, get_next_csharp_token);
+        case .Cpp;          return tokenize_c_like_lang_for_indentation(buffer, get_next_cpp_token);
+        case .Js;           return tokenize_c_like_lang_for_indentation(buffer, get_next_js_token);
+        case .Json;         return tokenize_c_like_lang_for_indentation(buffer, get_next_json_token);
         case .Glsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_glsl_token);
-        case .Html;         #through;
+        case .Hlsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_hlsl_token);
+        case .Zig;          return tokenize_c_like_lang_for_indentation(buffer, get_next_zig_token);
+        case .Html;         return tokenize_xml_for_indentation(buffer);
         case .Xml;          return tokenize_xml_for_indentation(buffer);
         case .Lua;          return tokenize_lua_for_indentation(buffer);
         case .Odin;         return tokenize_odin_for_indentation(buffer);
+        case .Rust;         return tokenize_rust_for_indentation(buffer);
     }
 
     return .[];
@@ -592,8 +607,8 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
         // We're saving a new buffer into a file (and the path has been chosen already)
         buffer.has_file = true;
         buffer.file = get_file_info_from_full_path(file_path);
-        set_lang_from_path(buffer, file_path);
-        buffer.needs_coloring = true;
+        buffer.lang = get_lang_from_path(file_path);
+        buffer.needs_tokenizing = true;
 
         lock(*open_buffers_lock);
         {
@@ -642,6 +657,7 @@ save_buffer :: (using buffer: *Buffer, buffer_id: s64) {
     assert(has_file, "Trying to save a buffer without an associated file. This is a bug.");
 
     if config.settings.strip_trailing_whitespace_on_save then strip_trailing_whitespace(buffer, buffer_id);
+    if config.settings.insert_final_newline_on_save      then insert_final_newline(buffer);  // important to do it after stripping
 
     success := write_entire_file(file.full_path, cast(string) bytes);
     if success {
@@ -657,11 +673,12 @@ save_buffer :: (using buffer: *Buffer, buffer_id: s64) {
         error_when_saving = true;
     }
     remember_last_modtime_and_size(buffer);
-    update_window_title(open_editors[editors.active].buffer_id);
+    if editors.active >= 0 && editors.active < open_editors.count then update_window_title(open_editors[editors.active].buffer_id);
 
     // The config will attempt to refresh again on a file watcher message, but it should exit early because it will be unchanged.
     // We're doing it here because this way we always refresh right away, without waiting for a message to wake us up
     if is_our_config_file(buffer.file.full_path) refresh_config(buffer.file.full_path);
+    if is_current_theme(buffer.file.full_path) refresh_current_theme();
 
     redraw_requested = true;
 }
@@ -716,12 +733,12 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
     b: String_Builder;
     b.allocator = temp;
     init_string_builder(*b, buffer_size = bytes.count + size_of(String_Builder.Buffer));
-    lines := split(cast(string) bytes, cast(u8) #char "\n");
+    lines := split(cast(string) bytes, cast(u8) #char "\n",, allocator = temp);
     for line, i : lines {
         append(*b, trim_right(line));
         if i < lines.count - 1 then append(*b, "\n");
     }
-    stripped := builder_to_string(*b, allocator = temp);
+    stripped := builder_to_string(*b,, allocator = temp);
 
     if stripped.count == bytes.count return;  // nothing stripped
 
@@ -731,7 +748,7 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
     cursor_states.allocator = temp;
     for * editor, editor_id : open_editors {
         if editor.buffer_id != buffer_id continue;
-        editor.refresh_highlights = true;
+        editor.refresh_selection = true;
 
         for cursor, cursor_id : editor.cursors {
             array_add(*cursor_states, Editor_Cursor_State.{ editor_id, cursor_id, get_real_cursor_coords(buffer, cursor) });
@@ -742,10 +759,11 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
     new_replace_edit(buffer, 0, xx bytes.count, cast(string) bytes, stripped);
 
     lock(*content_lock);
-    memcpy(bytes.data, stripped.data, stripped.count);
+    focus_memcpy(bytes.data, stripped.data, stripped.count);
     bytes.count = stripped.count;
     unlock(*content_lock);
 
+    dirty = true;
     rescan_for_lines(buffer);
 
     for * editor, editor_id : open_editors {
@@ -769,6 +787,20 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
         cursor.pos = real_coords_to_offset(buffer, pos);
         cursor.sel = real_coords_to_offset(buffer, sel);
     }
+}
+
+insert_final_newline :: (using buffer: *Buffer) {
+    if !bytes return;
+    if bytes[bytes.count - 1] == #char "\n" return;  // already there
+
+    new_insert_edit(buffer, bytes.count, "\n");
+
+    lock(*content_lock);
+    array_resize(*bytes, bytes.count + 1);
+    bytes[bytes.count - 1] = cast(u8) #char "\n";
+    unlock(*content_lock);
+
+    rescan_for_lines(buffer);
 }
 
 remember_last_modtime_and_size :: (using buffer: *Buffer) {
@@ -841,7 +873,7 @@ find_or_create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
     buffer.has_file = false;
 
     rescan_for_lines(buffer);
-    recalculate_colors(buffer);
+    retokenize(buffer);
 
     return buffer_id, true;
 }
@@ -883,18 +915,15 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
 
     lock(*buffer.content_lock);
     buffer.bytes = resizable(to_bytes(file_data));
-    old_size := buffer.bytes.count;
-    remove_crlf_in_place(*buffer.bytes);
+    bytes_removed := remove_crlf_in_place(*buffer.bytes);
     unlock(*buffer.content_lock);
 
-    buffer.crlf = buffer.bytes.count != old_size;
-
+    buffer.crlf = bytes_removed > 0;
     buffer.meow_hash = calculate_hash(buffer.bytes);
-
-    set_lang_from_path(buffer, path);
+    buffer.lang = get_lang_from_path(path);
 
     rescan_for_lines(buffer);
-    recalculate_colors(buffer);
+    retokenize(buffer);
 
     return buffer_id, true;
 }
@@ -906,7 +935,8 @@ get_buffer_name :: (buffer: Buffer) -> string {
 
     for 0..buffer.line_starts.count-2 {
         line := trim(get_real_line_as_string(buffer, xx it), "\t \r\n");
-        if line return take_first_n_chars(line, min(50, line.count));
+        name := replace(line, "\t", " ");  // remove tabs from the middle
+        if name return take_first_n_chars(name, min(50, name.count));
     }
 
     return "<new file>";
@@ -934,6 +964,7 @@ refresh_buffer_from_disk :: (path: string) {
     }
 
     if is_our_config_file(path) refresh_config(path);
+    if is_current_theme(path)   refresh_current_theme();
 
     buffer_id, created := find_or_create_buffer(path);
     if created return;
@@ -966,18 +997,17 @@ refresh_buffer_from_disk :: (path: string) {
     if !success { log_error("Couldn't read file '%'\n", path); #if DEBUG_FILE_REFRESH log("Couldn't read file"); return; }
     defer free(file_contents_str);
 
-    file_contents := cast([] u8) file_contents_str;
     lock(*buffer.content_lock);
-    remove_crlf_in_place(*file_contents);
+    bytes_removed := remove_crlf_in_place(*file_contents_str);
     unlock(*buffer.content_lock);
-    file_contents_str = cast(string) file_contents;
 
-    file_hash := calculate_hash(file_contents);
+    file_hash := calculate_hash(cast([] u8) file_contents_str);
     if buffer.meow_hash == file_hash {
         #if DEBUG_FILE_REFRESH log("Meow hash hasn't changed for %", path);
         return;  // file hasn't actually changed
     }
 
+    buffer.crlf = bytes_removed > 0;
     buffer.meow_hash = file_hash;
     buffer.deleted = false;
 
@@ -1001,7 +1031,7 @@ refresh_buffer_from_disk :: (path: string) {
         new_replace_edit(buffer, 0, xx buffer.bytes.count, cast(string) buffer.bytes, file_contents_str);
         replace_range_raw(buffer, 0, xx buffer.bytes.count, file_contents_str);
         rescan_for_lines(buffer);
-        recalculate_colors(buffer);
+        retokenize(buffer);
 
         // Save edits and put cursors in correct places
         for * editor : open_editors {
@@ -1039,7 +1069,7 @@ free_buffer :: (using buffer: *Buffer) {
     // We don't do it often so it's ok to be slow here
     array_free(bytes);
     array_free(line_starts);
-    array_free(colors);
+    array_free(tokens);
 
     for * undos deinit(it);
     for * redos deinit(it);
@@ -1084,8 +1114,8 @@ init_buffer :: (buffer: *Buffer) {
 
 unsaved_buffers_exist :: () -> bool {
     // Linear search, hmmmm, that sounds slow.
-    // Perhaps I should write an unsaved buffers http service,
-    // which would tell me if they exist in a O(1) time?
+    // Perhaps we should create an unsaved buffers microservice,
+    // which would tell us if they exist in a O(1) time?
     for open_buffers {
         if it.modified return true;
     }
@@ -1093,6 +1123,7 @@ unsaved_buffers_exist :: () -> bool {
 }
 
 remove_all_buffers :: () {
+    array_reset_keeping_memory(*most_recent_buffers);
     deinit(*buffers_table);
     for * open_buffers free_buffer(it);
     bucket_array_reset(*open_buffers);
@@ -1147,34 +1178,55 @@ process_buffer_save_queue :: () {
     }
 }
 
-clear_buffer_regions :: (using buffer: *Buffer) {
-    for regions free(it.note);
-    array_reset_keeping_memory(*regions);
+manually_mark_range_as_token :: (buffer: *Buffer, range: Offset_Range, color: Color) {
+    assert(range.start >= 0 && range.end <= buffer.bytes.count);
+    array_resize(*buffer.tokens, buffer.bytes.count);
+    memset(buffer.tokens.data + range.start, xx color, range.end - range.start);
+}
+
+get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
+    if #complete lang == {
+        case .Jai;                  return tokenize_jai;
+        case .C;                    return tokenize_c;
+        case .Cpp;                  return tokenize_cpp;
+        case .CSharp;               return tokenize_csharp;
+        case .Glsl;                 return tokenize_glsl;
+        case .Hlsl;                 return tokenize_hlsl;
+        case .Golang;               return tokenize_golang;
+        case .Js;                   return tokenize_js;
+        case .Json;                 return tokenize_json;
+        case .Lua;                  return tokenize_lua;
+        case .Odin;                 return tokenize_odin;
+        case .Python;               return tokenize_python;
+        case .RenPy;                return tokenize_renpy;
+        case .Rust;                 return tokenize_rust;
+        case .Html;                 return tokenize_xml;
+        case .Xml;                  return tokenize_xml;
+        case .Todo;                 return tokenize_todo;
+        case .Yang;                 return tokenize_yang;
+        case .Zig;                  return tokenize_zig;
+        case .Uxntal;               return tokenize_uxntal;
+        case .Markdown;             return tokenize_markdown;
+        case .Focus_Config;         return tokenize_focus_config;
+        case .Focus_Theme;          return tokenize_focus_config;
+        case .Focus_Build_Panel;    return null;
+        case .Plain_Text;           return null;
+    }
+}
+
+get_supported_buffer_langs_lowercase :: () -> [] string /* intended to be run at compile time */ {
+    lang_names: [..] string;
+    for enum_names(Buffer.Lang) {
+        if equal_nocase(it, "focus_build_panel") continue;  // filter out "internal" languages
+        array_add(*lang_names, to_lower_copy_new(it));
+    }
+    quick_sort(lang_names, compare_strings);
+    return lang_names;
 }
 
 #scope_file
 
-Highlighter_Function :: #type (buffer: *Buffer);
-
-get_highlighter_function :: (lang: Buffer.Lang) -> Highlighter_Function {
-    if lang == {
-        case .Jai;          return highlight_jai_syntax;
-        case .C;            return highlight_c_syntax;
-        case .CSharp;       return highlight_csharp_syntax;
-        case .Focus_Config; return highlight_focus_config_syntax;
-        case .Glsl;         return highlight_glsl_syntax;
-        case .Golang;       return highlight_golang_syntax;
-        case .Lua;          return highlight_lua_syntax;
-        case .Odin;         return highlight_odin_syntax;
-        case .Python;       return highlight_python_syntax;
-        case .RenPy;        return highlight_renpy_syntax;
-        case .Html;         return highlight_xml_syntax;
-        case .Xml;          return highlight_xml_syntax;
-        case .Worklog;      return highlight_worklog;
-        case .Yang;         return highlight_yang_syntax;
-    }
-    return null;
-}
+Tokenize_Function :: #type (buffer: *Buffer, start_offset: s64 = -1, count: s64 = -1) -> [] Buffer_Region /* temp */;
 
 add_edit_notification :: (using buffer: *Buffer, offset: s64, old_count: s64, new_count: s64) {
     if num_editors_open < 2 return;
@@ -1243,7 +1295,8 @@ deinit :: (using edit_group: *Buffer.Edit_Group) {
         }
     }
     array_free(edits);
-    array_free(cursors);
+    array_free(cursors_before);
+    array_free(cursors_after);
 }
 
 #scope_export
@@ -1263,7 +1316,7 @@ Buffer :: struct {
     bytes: [..] u8;
     line_starts: [..] s32;       // real offsets of newlines in the bytes array
 
-    colors: [..] u8;             // we color each byte (even for multi-byte chars).
+    tokens: [..] Token_Type;     // we assign a token to each byte (even for multi-byte chars).
 
     regions: [..] Buffer_Region; // for highlighting parts of buffer
 
@@ -1274,7 +1327,7 @@ Buffer :: struct {
     modified               := false;
     modified_on_disk       := false;
     deleted                := false;
-    needs_coloring         := false;
+    needs_tokenizing       := false;
     readonly               := false;
     binary                 := false;
     error_when_saving      := false;
@@ -1282,19 +1335,22 @@ Buffer :: struct {
 
     content_lock: Mutex;  // must hold while modifying content (or reading in a non-main thread)
 
-    last_edit_time: Time;  // for creating new edit groups
+    last_edit_time: Apollo_Time;  // for creating new edit groups
 
+    // @Memory: all of these are allocated on the heap, which is not great, but it works fine right now.
+    // Eventually we'll want to revisit all this and make it not allocate as much.
     undos: [..] Edit_Group;
     redos: [..] Edit_Group;
     edits: [..] Edit;  // current edits, not in a group yet
     cursors: [..] Cursor;  // cursor state before any current edits were made
-    edit_notifications: [..] Edit_Notification;
+    edit_notifications: [..] Edit_Notification;  // TODO: make it a global array for all buffers instead
 
     lang: Lang = .Plain_Text;
 
     Edit_Group :: struct {
         edits: [] Edit;
-        cursors: [] Cursor;
+        cursors_before: [] Cursor;  // have to remember where the cursors were both before and after
+        cursors_after:  [] Cursor;  // because otherwise the redo behaviour can't be properly implemented
     }
 
     // All strings in this struct are owned
@@ -1334,18 +1390,28 @@ Buffer :: struct {
         Plain_Text :: 0;
         Jai;
         C;
+        Cpp;
         CSharp;
-        Focus_Config;
         Glsl;
+        Hlsl;
         Golang;
+        Js;
+        Json;
         Lua;
         Odin;
         Python;
         RenPy;
+        Rust;
         Xml;
         Html;
-        Worklog;
+        Todo;
         Yang;
+        Zig;
+        Uxntal;
+        Markdown;
+        Focus_Config;
+        Focus_Theme;
+        Focus_Build_Panel;  // a fake lang to be assigned to the build panel instead of Plain_Text so that its tokens are preserved
     };
 }
 
@@ -1373,6 +1439,7 @@ Buffer_Region :: struct {
     using range: Offset_Range;
     note: string;
     kind: Kind;
+    lang: Buffer.Lang;
 
     Kind :: enum u8 {
         none :: 0;
@@ -1380,9 +1447,12 @@ Buffer_Region :: struct {
         warning;
         success;
         header;
+
         scope_export;
         scope_file;
         scope_module;
+
+        heredoc;
     }
 }
 

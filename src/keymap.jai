@@ -44,10 +44,10 @@ map_event_to_action :: (event: Input.Event, $Action: Type) -> Action, Key_Mappin
     return invalid_action, .{};
 }
 
+// This function just remembers that a hold action is now active, so that we can deactivate it on key release.
+// The action itself is done elsewhere.
 activate_hold_action :: (action: $Action_Type, event: Input.Event) {
     _, matched_mapping := map_event_to_action(event, Action_Type);  // we map it here again to avoid passing it in through multiple functions
-
-    if matched_mapping.key_sequence.count != 1  return; // Don't support hold actions for multipart key sequences.
 
     hold_action := Hold_Action.{ action_type = Action_Type, matched_mapping = matched_mapping };
 
@@ -61,6 +61,15 @@ activate_hold_action :: (action: $Action_Type, event: Input.Event) {
     array_add(*active_hold_actions, hold_action);
 }
 
+is_hold_action :: inline (action: Action_Editors) -> bool {
+    return action == .scroll_viewport_up ||
+           action == .scroll_viewport_up_fast ||
+           action == .scroll_viewport_down ||
+           action == .scroll_viewport_down_fast ||
+           action == .scroll_viewport_left ||
+           action == .scroll_viewport_right;
+}
+
 map_key_release_to_hold_actions :: (event: Input.Event, $Action: Type) -> [] Action /* temporary storage */ {
     if event.type != .KEYBOARD || event.key_pressed return .[];
 
@@ -69,7 +78,7 @@ map_key_release_to_hold_actions :: (event: Input.Event, $Action: Type) -> [] Act
 
     for active_hold_actions {
         if it.action_type != Action continue;
-        combo := it.matched_mapping.key_sequence[0];
+        combo := it.matched_mapping.key_sequence[it.matched_mapping.key_sequence.count-1];
 
         if combo.key_code == cast(u32) event.key_code ||
           (event.key_code == .SHIFT && combo.mods.shift_pressed    && !combo.ignore.shift_pressed)    ||
@@ -79,6 +88,7 @@ map_key_release_to_hold_actions :: (event: Input.Event, $Action: Type) -> [] Act
         {
             // We have released a button that's part of the key combo which activated this action
             array_add(*actions, cast(Action) it.matched_mapping.action);
+            remove it;  // actually remove the action from the active actions
         }
     }
 
@@ -150,7 +160,7 @@ key_sequence_for_action_as_string :: (action: $T) -> string /* temp */ {
         if it_index < key_sequence.count - 1  print_to_builder(*b, "  ");
     }
 
-    return builder_to_string(*b, allocator = temp);
+    return builder_to_string(*b,, allocator = temp);
 }
 
 key_sequence_input_process_event :: (event: Input.Event, handled: bool) {
@@ -258,16 +268,26 @@ ACTIONS_COMMON :: string.[
 
     "quit",
 
+    "open_another_editor_instance",
+
     "open_project",
-    "switch_to_project",  // same as open_project, renaming for consistency
+    "switch_to_project",
     "close_project",
+
+    "choose_theme",
+    "edit_current_theme",
+
+    "choose_language",
+
     "open_projects_directory",
     "open_global_config",
     "open_project_config",
     "show_default_config",
-    // "open_error_log",  // todo
+
     "toggle_fullscreen",
     "toggle_build_panel",
+    "build_kill_running_command",
+    "build_clear_output",
     "show_troubleshooting_info",
 
     "show_commands",
@@ -275,10 +295,12 @@ ACTIONS_COMMON :: string.[
     "search_in_buffer_dropdown_mode",
     "search_in_project",
     "go_to_line",
-    "show_open_file_dialog_in_search_mode",
-    "show_open_file_dialog_in_navigate_mode",
-    "show_open_file_dialog_in_navigate_mode_from_root",
-    "show_open_file_dialog_in_open_editors_mode",
+
+    "open_file_by_name",
+    "navigate_to_file",
+    "navigate_to_file_from_root",
+    "switch_between_open_files",
+
     "copy",
     "cut",
     "paste",
@@ -315,12 +337,20 @@ ACTIONS_COMMON :: string.[
     "increase_font_size",
     "decrease_font_size",
     "reset_font_size_to_default",
+    "strip_trailing_whitespace",
+    "close_all_editors",
     "close_current_editor",
+    "close_other_editors",
     "close_other_editor",
     "close_left_editor",
     "close_right_editor",
     "close_dialog",
     "escape",
+
+    "go_to_next_build_error",
+    "go_to_next_build_error_on_the_side",
+    "go_to_previous_build_error",
+    "go_to_previous_build_error_on_the_side",
 ];
 
 ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
@@ -382,6 +412,7 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "word_completion_next",
     "word_completion_previous",
     "word_completion_subword"
+    "copy_current_line_info",
 ]);
 
 ACTIONS_OPEN_FILE_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[
@@ -404,7 +435,6 @@ ACTIONS_SEARCH_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[
     "toggle_regex_search",
 ]);
 
-#scope_file
 
 active_hold_actions: [..] Hold_Action;
 

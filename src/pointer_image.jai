@@ -80,8 +80,6 @@ Pointer_Image :: enum u16 {
 
     pointers: [NUM_POINTERS] *NSCursor;
 } else #if OS == .LINUX {
-    LD :: #import "Linux_Display";
-
     set_pointer_image :: (image: Pointer_Image) {
         if (image >= 0) && (image <= cast(Pointer_Image) NUM_POINTERS) {
             current_pointer_image = image;

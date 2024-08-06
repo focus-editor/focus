@@ -4,7 +4,7 @@ A simple editor whose goal is to get out of your way and let you do work.
 
 This editor is for people who value simplicity, are sensitive to input latency and do not require heavy language support in their editor.
 
-![focus](https://user-images.githubusercontent.com/119373822/236081314-45d53952-7a6c-4d6b-8773-e5b49d1dbdab.gif)
+![focus-0 3 0](https://github.com/focus-editor/focus/assets/119373822/49a80c5a-f24a-469e-bbbb-88c315f9b391)
 
 
 ## What do we mean by "simple" and "fast"
@@ -20,7 +20,7 @@ Fast: we try to minimize input latency and maximize responsiveness. We also incl
 
 2. Launch the executable. Once launched, it will generate its configuration files.
     * On **Windows**, it will create a `global.focus-config` file and a `projects` folder next to itself.
-    * On **Mac**, these files will be found in `/Users/YOURNAME/Library/Application Support/dev.focus-editor/`.
+    * On **macOS**, these files will be found in `/Users/YOURNAME/Library/Application Support/dev.focus-editor/`.
     * On **Linux**, these files will be found in `${XDG_CONFIG_HOME}/focus-editor/` (which usually expands to `${HOME}/.config/focus-editor`).
 
 3. Open the global config file by using the command `Open Global Config` - you can find the shortcut to show commands on the welcome screen.
@@ -39,9 +39,9 @@ https://discord.gg/eSXquAzTmW
 
 `$ jai first.jai - release`
 
-Minimum Jai version: `0.1.078` (the language is currently in closed beta, but it will hopefully go into open beta soon)
+Minimum Jai version: `0.1.090` (the language is currently in closed beta, but it will hopefully go into open beta soon)
 
-**On MacOS:**
+**On macOS:**
 
 1. Full XCode must be installed
 
@@ -51,6 +51,10 @@ Minimum Jai version: `0.1.078` (the language is currently in closed beta, but it
 ... run the following command:
 
 `xattr -d -r com.apple.quarantine /path/to/your/jai/distribution`
+
+**NOTE**: starting with Jai `0.1.090`, `AArch64` became the default platform when building on Apple Sillicon macs. However, some of the modules used by the editor are not fully ported to support it. You will need to use the `x86_64` compiler to build for macOS (for now):
+
+`arch -x86_64 /path/to/jai-macos first.jai - release`
 
 
 ## Disclaimer

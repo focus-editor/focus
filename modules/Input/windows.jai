@@ -317,12 +317,19 @@ MyWindowProc :: (hwnd: HWND, message: u32,
 */
           case WM_MOUSEWHEEL;
             event: Event;
-            event.type = .MOUSE_WHEEL;
+            event.type = .MOUSE_V_WHEEL;
             event.typical_wheel_delta = WHEEL_DELTA;
             event.wheel_delta = xx cast,trunc(s16)(wParam >> 16);
             array_add(*events_this_frame, event);
+            mouse_wheel_delta.vertical += event.wheel_delta;
 
-            mouse_delta_z += event.wheel_delta;
+          case WM_MOUSEHWHEEL;
+            event: Event;
+            event.type = .MOUSE_H_WHEEL;
+            event.typical_wheel_delta = WHEEL_DELTA;
+            event.wheel_delta = xx -cast,trunc(s16)(wParam >> 16);
+            array_add(*events_this_frame, event);
+            mouse_wheel_delta.horizontal += event.wheel_delta;
 
           case WM_CLOSE; #through;
           case WM_QUIT;
@@ -390,11 +397,11 @@ MyWindowProc :: (hwnd: HWND, message: u32,
  	 	        file_name_wide_count := DragQueryFileW(drop, i, null, 0) + 2;
  	 	        assert(file_name_wide_count > 0);
 
- 	  	        file_name_wide := cast(*u16) alloc(file_name_wide_count * size_of(u16));
+		        file_name_wide := cast(*u16) alloc(file_name_wide_count * size_of(u16));
  	 	        ok := DragQueryFileW(drop, i, file_name_wide, file_name_wide_count);
  	 	        assert(ok > 0); // means success
 
- 	  	        file_name := wide_to_utf8(file_name_wide);
+		        file_name := wide_to_utf8_new(file_name_wide,, allocator = temp);
  	 	        array_add(*files, file_name);
  	 	    }
 

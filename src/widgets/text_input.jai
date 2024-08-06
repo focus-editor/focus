@@ -4,7 +4,7 @@ text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> han
         // Always remember cursor before any edits
         cursor_before_edits = cursor;
     }
-    if frame_time - last_edit_time >= EDIT_GROUP_TIMEOUT then new_edit_group(input);
+    if to_float64_seconds(frame_time - last_edit_time) >= EDIT_GROUP_TIMEOUT then new_edit_group(input);
 
     action := map_event_to_action(event, Action_Common);
 
@@ -50,7 +50,7 @@ text_input_type_char :: (using input: *Text_Input, char: u32) {
         cursor_before_edits = cursor;
     } else {
         // If we're replacing any selection, we always want a new edit group
-        if has_selection(cursor) || frame_time - last_edit_time >= EDIT_GROUP_TIMEOUT then new_edit_group(input);
+        if has_selection(cursor) || to_float64_seconds(frame_time - last_edit_time) >= EDIT_GROUP_TIMEOUT then new_edit_group(input);
     }
 
     cursor.pos = clamp(cursor.pos, 0, xx text.count);  // make sure cursor is in the correct position
@@ -512,7 +512,7 @@ Text_Input :: struct {
     redos: [..] Edit_Group;
     edits: [..] Edit;
     cursor_before_edits: Cursor;
-    last_edit_time: Time;
+    last_edit_time: Apollo_Time;
 
     scroll_x: s32;
     scroll_anim: Tween_Animation(s32);

@@ -1,104 +1,111 @@
-x11_translate_key_code :: (key: X11.KeySym) -> Input.Key_Code {
+x11_translate_key_code :: (xkey: X11.KeySym) -> Input.Key_Code {
     using Input.Key_Code;
+    using X11.Known_Keysyms;
 
-    if key == 32 || key == X11.XK_KP_Space return SPACEBAR;
+    key := cast(X11.Known_Keysyms)xkey;
 
-    if key == X11.XK_Left || key == X11.XK_KP_Left
+    if key == 32 || key == XK_KP_Space return SPACEBAR;
+
+    if key == XK_Left || key == XK_KP_Left
         return ARROW_LEFT;
-    if key == X11.XK_Right || key == X11.XK_KP_Right
+    if key == XK_Right || key == XK_KP_Right
         return ARROW_RIGHT;
-    if key == X11.XK_Up || key == X11.XK_KP_Up
+    if key == XK_Up || key == XK_KP_Up
         return ARROW_UP;
-    if key == X11.XK_Down || key == X11.XK_KP_Down
+    if key == XK_Down || key == XK_KP_Down
         return ARROW_DOWN;
-    if (key == X11.XK_Shift_L) || (key == X11.XK_Shift_R)
+    if (key == XK_Shift_L) || (key == XK_Shift_R)
         return SHIFT;
-    if key == X11.XK_Escape
+    if key == XK_Escape
         return ESCAPE;
-    if key == X11.XK_Return
+    if key == XK_Return
         return ENTER;
-    if (key == X11.XK_Control_L) || (key == X11.XK_Control_R)
+    if (key == XK_Control_L) || (key == XK_Control_R)
         return CTRL;
-    if key == X11.XK_BackSpace
+    if (key == XK_Alt_L) || (key == XK_Alt_R) || (key == XK_ISO_Level3_Shift)
+        return .ALT;
+    if (key == XK_Meta_L) || (key == XK_Meta_R)
+        return .META;
+    if key == XK_BackSpace
         return BACKSPACE;
-    if key == X11.XK_Delete || key == X11.XK_KP_Delete
+    if key == XK_Delete || key == XK_KP_Delete
         return DELETE;
-    if key == X11.XK_Tab || key == X11.XK_KP_Tab || key == X11.XK_ISO_Left_Tab
+    if key == XK_Tab || key == XK_KP_Tab || key == XK_ISO_Left_Tab
         return TAB;
-    if key == X11.XK_F1
+    if key == XK_F1
         return F1;
-    if key == X11.XK_F2
+    if key == XK_F2
         return F2;
-    if key == X11.XK_F3
+    if key == XK_F3
         return F3;
-    if key == X11.XK_F4
+    if key == XK_F4
         return F4;
-    if key == X11.XK_F5
+    if key == XK_F5
         return F5;
-    if key == X11.XK_F6
+    if key == XK_F6
         return F6;
-    if key == X11.XK_F7
+    if key == XK_F7
         return F7;
-    if key == X11.XK_F8
+    if key == XK_F8
         return F8;
-    if key == X11.XK_F9
+    if key == XK_F9
         return F9;
-    if key == X11.XK_F10
+    if key == XK_F10
         return F10;
-    if key == X11.XK_F11
+    if key == XK_F11
         return F11;
-    if key == X11.XK_F12
+    if key == XK_F12
         return F12;
-    if key == X11.XK_F13
+    if key == XK_F13
         return F13;
-    if key == X11.XK_F14
+    if key == XK_F14
         return F14;
-    if key == X11.XK_F15
+    if key == XK_F15
         return F15;
-    if key == X11.XK_F16
+    if key == XK_F16
         return F16;
-    if key == X11.XK_Home || key == X11.XK_KP_Home
+    if key == XK_Home || key == XK_KP_Home
         return HOME;
-    if key == X11.XK_End || key == X11.XK_KP_End
+    if key == XK_End || key == XK_KP_End
         return END;
-    if key == X11.XK_Insert || key == X11.XK_KP_Insert
+    if key == XK_Insert || key == XK_KP_Insert
         return INSERT;
-    if key == X11.XK_Page_Up || key == X11.XK_KP_Page_Up
+    if key == XK_Page_Up || key == XK_KP_Page_Up
         return PAGE_UP;
-    if key == X11.XK_Page_Down || key == X11.XK_KP_Page_Down
+    if key == XK_Page_Down || key == XK_KP_Page_Down
         return PAGE_DOWN;
 
-    if key == X11.XK_KP_Enter
+    if key == XK_KP_Enter
         return NUMPAD_ENTER;
-    if key == X11.XK_KP_Multiply
+    if key == XK_KP_Multiply
         return NUMPAD_MULTIPLY;
-    if key == X11.XK_KP_Add
+    if key == XK_KP_Add
         return NUMPAD_ADD;
-    if key == X11.XK_KP_Subtract
+    if key == XK_KP_Subtract
         return NUMPAD_SUBTRACT;
-    if key == X11.XK_KP_Decimal
+    if key == XK_KP_Decimal
         return NUMPAD_DECIMAL;
-    if key == X11.XK_KP_Divide
+    if key == XK_KP_Divide
         return NUMPAD_DIVIDE;
-    if key == X11.XK_KP_0
+    if key == XK_KP_0
         return NUMPAD_0;
-    if key == X11.XK_KP_1
+    if key == XK_KP_1
         return NUMPAD_1;
-    if key == X11.XK_KP_2
+    if key == XK_KP_2
         return NUMPAD_2;
-    if key == X11.XK_KP_3
+    if key == XK_KP_3
         return NUMPAD_3;
-    if key == X11.XK_KP_4
+    if key == XK_KP_4
         return NUMPAD_4;
-    if key == X11.XK_KP_5
+    if key == XK_KP_5
         return NUMPAD_5;
-    if key == X11.XK_KP_6
+    if key == XK_KP_6
         return NUMPAD_6;
-    if key == X11.XK_KP_7
+    if key == XK_KP_7
         return NUMPAD_7;
-    if key == X11.XK_KP_8
+    if key == XK_KP_8
         return NUMPAD_8;
-    if key == X11.XK_KP_9
+    if key == XK_KP_9
         return NUMPAD_9;
 
     key = key & 0xFF;
@@ -199,7 +206,7 @@ x11_update_window_events :: (display: *Display) {
     // that doesn't expect other events, or at most after a second,
     // so some buggy program doesn't hang the editor while handling our clipboard response.
     expect_more_events := false;
-    start_time := get_time();
+    start_time := seconds_since_init();
     elapsed_time := start_time;
 
     while X11.XPending(x11_display.handle) || (expect_more_events && elapsed_time < 1.0) {
@@ -208,7 +215,7 @@ x11_update_window_events :: (display: *Display) {
             expect_more_events = x11_handle_event(x11_display, *xev);
             timers_tick();
         }
-        elapsed_time = get_time() - start_time;
+        elapsed_time = seconds_since_init() - start_time;
     }
 }
 
@@ -271,6 +278,14 @@ x11_handle_event :: (x11_display: *X11_Display, xev: *X11.XEvent) -> expect_more
                     utf32 := text[it];
                     if utf32 >= 32 && utf32 != 127 event.text_input_count += 1;
                 }
+
+                if event.key_code == {
+                    case .SHIFT; event.shift_pressed = true;
+                    case .CTRL;  event.ctrl_pressed = true;
+                    case .ALT;   event.alt_pressed = true;
+                    case .META;  event.cmd_meta_pressed = true;
+                }
+
                 array_add(*x11_display.base.events_this_frame, event);
 
                 x11_display.base.input_button_states[event.key_code] = (Input.Key_Current_State.START | Input.Key_Current_State.DOWN);
@@ -319,6 +334,14 @@ x11_handle_event :: (x11_display: *X11_Display, xev: *X11.XEvent) -> expect_more
                 event.type = .KEYBOARD;
                 event.key_pressed = 0;
                 event.key_code = x11_translate_key_code(keysym);
+
+                if event.key_code == {
+                    case .SHIFT; event.shift_pressed = true;
+                    case .CTRL;  event.ctrl_pressed = true;
+                    case .ALT;   event.alt_pressed = true;
+                    case .META;  event.cmd_meta_pressed = true;
+                }
+
                 array_add(*x11_display.base.events_this_frame, event);
 
                 x11_display.base.input_button_states[event.key_code] = Input.Key_Current_State.END;
@@ -328,19 +351,24 @@ x11_handle_event :: (x11_display: *X11_Display, xev: *X11.XEvent) -> expect_more
             event: Input.Event;
             button := xev.xbutton.button;
 
-            //  - buttons 6/7 will be used for the forward/backward direction of the second scroll wheel
-            // But we don't handle horizontal scroll for now
-            if button > 5 return;
+            if button == {
+                case 4; #through;
+                case 5;
+                    event.type = .MOUSE_V_WHEEL;
+                    event.typical_wheel_delta = WHEEL_DELTA;
+                    event.wheel_delta = WHEEL_DELTA * (ifx (button & 0x01) then cast(s32) -1 else 1);
+                    array_add(*x11_display.base.events_this_frame, event);
+                    x11_display.base.mouse_wheel_delta.vertical += event.wheel_delta;
+                    return;
 
-            if button >= 4 {
-                // Buttons 4 and above are 'synthetic' events for scroll wheels:
-                //  - 4/5 will be used for the forward/backward direction of the first scroll wheel
-                event.type = .MOUSE_WHEEL;
-                event.typical_wheel_delta = WHEEL_DELTA;
-                event.wheel_delta = WHEEL_DELTA * (ifx (button & 0x01) then cast(s32) -1 else 1);
-                array_add(*x11_display.base.events_this_frame, event);
-                x11_display.base.mouse_delta_z += event.wheel_delta;
-                return;
+                case 6; #through;
+                case 7;
+                    event.type = .MOUSE_H_WHEEL;
+                    event.typical_wheel_delta = WHEEL_DELTA;
+                    event.wheel_delta = WHEEL_DELTA * (ifx (button & 0x01) then cast(s32) -1 else 1);
+                    array_add(*x11_display.base.events_this_frame, event);
+                    x11_display.base.mouse_wheel_delta.horizontal += event.wheel_delta;
+                    return;
             }
 
             event.type = .KEYBOARD;
@@ -698,14 +726,14 @@ get_selection :: (x11_display: *X11_Display, from: X11.Window, prop: X11.Atom, i
     X11.XDeleteProperty(display, insert, prop);
 
     /* @Cleanup: Get rid of fd_set stuff.
-    time_start := get_time();
+    time_start := seconds_since_init();
     while true {
         r: fd_set;
         xe: XEvent;
         if XCheckMaskEvent(display, PropertyChangeMask, *xe) {
             if xe.type == PropertyNotify && xe.xproperty.state == PropertyNewValue {
                 // time between arrivals of data
-                time_start = get_time();
+                time_start = seconds_since_init();
                 if paste_property(display, from, insert, prop, True)  break;
             }
         } else {
@@ -715,7 +743,7 @@ get_selection :: (x11_display: *X11_Display, from: X11.Window, prop: X11.Atom, i
 
             if FD_ISSET(ConnectionNumber(display), *r)  continue;
         }
-        end := get_time();
+        end := seconds_since_init();
 
         // no data for five seconds, so quit
         if end - start > 5000000  return false;
@@ -907,7 +935,7 @@ maybe_handle_xdnd_drop_events :: (x11_display: *X11_Display, xevent: *X11.XEvent
 
             file_name := "";
             // Heap allocated like on Windows.
-            file_name_bytes := cast(*u8) alloc(i, __temporary_allocator);
+            file_name_bytes := cast(*u8) alloc(i,, allocator = temp);
             memcpy(file_name_bytes, p.data, i);
             p.data = p.data + i + 2;
             p.count = p.count - i - 2;

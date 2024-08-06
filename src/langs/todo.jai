@@ -1,13 +1,14 @@
-highlight_worklog :: (using buffer: *Buffer) {
-    tokenizer := get_tokenizer(buffer);
+tokenize_todo :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+    tokenizer := get_tokenizer(buffer, start_offset, count);
 
     while true {
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
 
-        color := COLOR_MAP[token.type];
-        memset(colors.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx token.type, token.len);
     }
+
+    return .[];
 }
 
 #scope_file
@@ -39,21 +40,21 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
 }
 
 parse_done_line :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .done;
+    token.type = .function;  // not great, but we want to avoid language-specific tokens here
 
     t += 1;
     eat_until_newline(tokenizer);
 }
 
 parse_todo_line :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .todo;
+    token.type = .default;
 
     t += 1;
     eat_until_newline(tokenizer);
 }
 
 parse_current_task_line :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .current_task;
+    token.type = .value;
 
     t += 1;
     eat_until_newline(tokenizer);
@@ -67,7 +68,7 @@ parse_header :: (using tokenizer: *Tokenizer, token: *Token) {
 }
 
 parse_line :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .line;
+    token.type = .default;
 
     t += 1;
     eat_until_newline(tokenizer);
@@ -75,26 +76,5 @@ parse_line :: (using tokenizer: *Tokenizer, token: *Token) {
 
 Token :: struct {
     start, len: s32;
-    type: Type;
-
-    Type :: enum u16 {
-        eof;
-
-        line;
-        done;
-        todo;
-        header;
-        current_task;
-    }
+    type: Token_Type;
 }
-
-// Must match the order of the types in the enum above
-COLOR_MAP :: Code_Color.[
-    .COMMENT,       // eof - obviously not used
-
-    .DEFAULT,       // line
-    .FUNCTION,      // done
-    .DEFAULT,       // todo
-    .KEYWORD,       // header
-    .VALUE_KEYWORD, // current_task
-];

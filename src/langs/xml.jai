@@ -1,19 +1,20 @@
-highlight_xml_syntax :: (using buffer: *Buffer) {
-    tokenizer := get_tokenizer(buffer);
+tokenize_xml :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
+    tokenizer := get_xml_tokenizer(buffer, start_offset, count);
 
     while true {
         token := get_next_token(*tokenizer);
         if token.type == .eof break;
-        color := COLOR_MAP[token.type];
-        memset(colors.data + token.start, xx color, token.len);
+        memset(tokens.data + token.start, xx TOKEN_MAP[token.type], token.len);
     }
+
+    return .[];
 }
 
-tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /* temp */ {
+tokenize_xml_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;
 
-    tokenizer := get_tokenizer(buffer);
+    tokenizer := get_xml_tokenizer(buffer);
 
     while true {
         src := get_next_token(*tokenizer);
@@ -70,12 +71,21 @@ tokenize_xml_for_indentation :: (using buffer: Buffer) -> [] Indentation_Token /
 
 #scope_file
 
-get_tokenizer :: (using buffer: Buffer) -> Xml_Tokenizer {
+get_xml_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> Xml_Tokenizer {
     tokenizer: Xml_Tokenizer;
+
     tokenizer.buf       = cast(string) bytes;
     tokenizer.max_t     = bytes.data + bytes.count;
     tokenizer.t         = bytes.data;
     tokenizer.html_mode = buffer.lang == .Html;
+
+    if start_offset >= 0 {
+        start_offset = clamp(start_offset, 0, bytes.count - 1);
+        count        = clamp(count,        0, bytes.count - 1);
+        tokenizer.t += start_offset;
+        tokenizer.max_t = tokenizer.t + count;
+    }
+
     return tokenizer;
 }
 
@@ -574,49 +584,53 @@ Xml_Token :: struct {
     }
 }
 
-// Must match the order of the types in the enum above
-COLOR_MAP :: Code_Color.[
-    .COMMENT,       // eof - obviously not used
 
-    .ERROR,         // error
-    .DEFAULT,       // default
+// Must match the order of the types in the enum above.
+// We're translating very specific token types into the generic token types
+// to avoid adding too many tokens to the default token list, where we
+// don't really need this granularity
+TOKEN_MAP :: Token_Type.[
+    .eof,       // eof - obviously not used
 
-    .FUNCTION,      // tag_start
-    .FUNCTION,      // tag_end
-    .FUNCTION,      // tag_closing_slash
-    .FUNCTION,      // tag_exclamation_point
-    .KEYWORD,       // tag_name
-    .DEFAULT,       // tag_content
+    .error,             // error
+    .default,           // default
 
-    .TYPE,          // attribute_name
-    .VALUE,         // attribute_value
-    .STRING,        // attribute_string_value
-    .DEFAULT,       // attribute_equals
+    .function,          // tag_start
+    .function,          // tag_end
+    .function,          // tag_closing_slash
+    .function,          // tag_exclamation_point
+    .keyword,           // tag_name
+    .default,           // tag_content
 
-    .COMMENT,       // comment_start
-    .COMMENT,       // comment_end
-    .COMMENT,       // comment_content
+    .type,              // attribute_name
+    .value,             // attribute_value
+    .string_literal,    // attribute_string_value
+    .default,           // attribute_equals
 
-    .COMMENT,       // processing_instruction_start
-    .COMMENT,       // processing_instruction_end
-    .COMMENT,       // processing_instruction_target
-    .COMMENT,       // processing_instruction_content
+    .comment,           // comment_start
+    .comment,           // comment_end
+    .comment,           // comment_content
 
-    .COMMENT,       // cdata_start
-    .COMMENT,       // cdata_end
-    .VALUE,         // cdata_content
+    .comment,           // processing_instruction_start
+    .comment,           // processing_instruction_end
+    .comment,           // processing_instruction_target
+    .comment,           // processing_instruction_content
 
-    .PUNCTUATION,   // dtd_parenthesis_open
-    .PUNCTUATION,   // dtd_parenthesis_close
-    .PUNCTUATION,   // dtd_bracket_open
-    .PUNCTUATION,   // dtd_bracket_close
-    .OPERATION,     // dtd_infix_operator
-    .OPERATION,     // dtd_postfix_operator
-    .OPERATION,     // dtd_percent
-    .PUNCTUATION,   // dtd_comma
-    .VALUE_KEYWORD, // dtd_parameter_entity
-    .COMMENT,       // dtd_conditional_section_start
-    .COMMENT,       // dtd_conditional_section_end
+    .comment,           // cdata_start
+    .comment,           // cdata_end
+    .value,             // cdata_content
+
+    .punctuation,       // dtd_parenthesis_open
+    .punctuation,       // dtd_parenthesis_close
+    .punctuation,       // dtd_bracket_open
+    .punctuation,       // dtd_bracket_close
+    .operation,         // dtd_infix_operator
+    .operation,         // dtd_postfix_operator
+    .operation,         // dtd_percent
+    .punctuation,       // dtd_comma
+    .value,             // dtd_parameter_entity
+    .comment,           // dtd_conditional_section_start
+    .comment,           // dtd_conditional_section_end
 ];
 
 // HTML elements that should not have a closing tag, and have an *optional* forward slash at the end of the tag.

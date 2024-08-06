@@ -1,0 +1,88 @@
+[4]  # Version number. Do not delete
+
+[colors]
+
+region_scope_export                     2c2c2c80
+region_scope_file                       40404080
+region_scope_module                     30303080
+region_header:                          34a2a480 # Debug build header message background
+region_success:                         44c04480 # Debug Panel success message background
+region_warning:                         ffc04480
+region_error:                           ee444480
+region_heredoc:                         101010FF
+
+# Build panel colours (self-explanatory)
+build_panel_title_bar:                  ffffff03
+build_panel_background:                 000000e8
+build_panel_scrollbar:                  ffffff40
+build_panel_scrollbar_hover:            ffffff30
+build_panel_scrollbar_background:       ffffff20
+
+background0:                            00000060 # Body and dialog text area background
+background1:                            000000ff # Bottom layer
+background2:                            ff0000ff
+background3:                            000000aa # Dialog background
+background4:                            ffffff02 # Status bar
+selection_active:                       4000ff80 # Selection and file dialog current directory
+selection_inactive:                     3e02b580 # Background of selection on other side
+selection_highlight:                    ffffff20 # Background of other occurences of selection
+paste_animation:                        4000ffc0 # Background colour during paste animation
+search_result_active:                   4000ff80 # Background of highlighted occurence
+search_result_inactive:                 ffffff30 # Background of unhighlighted occurences
+scrollbar:                              ffffff40 # Actual scrollbar
+scrollbar_background:                   ffffff20 # Scrollbar curb
+scrollbar_hover:                        ffffff30 # Whole scrollbar groove when hovered
+cursor:                                 4020ffff # Text cursor background in body area
+splitter:                               ffffff20 # Splitter between right and left body
+splitter_hover:                         ffffff40 # Splitter while hovered
+list_cursor:                            4000ffa0 # Cursor in dialog
+list_cursor_lite:                       4000ff80 # Mouse cursor in dialog
+shadow_dark:                            ffffff08 # Shadow at the edge of status bar and dialog
+shadow_transparent:                     ffffff00 # Statusbar inverse shadow
+cursor_inactive:                        4000ffa0 # Search dialog text area outline
+text_input_label:                       ffffff90 # Dialog input prompt
+letter_highlight:                       ffffffff # Highlighted letters in dialog
+ui_default:                             ffffffe0 # normal letters in dialog
+ui_dim:                                 ffffff80
+ui_neutral:                             ffffff40
+ui_warning:                             ffc044e0
+ui_warning_dim:                         ffc04480
+ui_error:                               ee4444e0
+ui_error_bright:                        ee4444ff
+ui_success:                             44c044e0
+
+code_default:                           ffffffe0
+code_comment:                           ffffff80
+code_type:                              00ff88e0
+code_function:                          0060ffe0
+code_punctuation:                       ffffff60
+code_operation:                         ffffff70
+code_string_literal:                    ff6000e0
+code_value:                             ff6060e0
+code_highlight:                         d89b75e0
+code_error:                             ff0000e0
+code_keyword:                           8860ffe0
+code_warning:                           ffff60e0
+code_invalid:                           FF0000FF
+code_multiline_string:                  ff6000e0
+code_raw_string:                        ff6000e0
+code_char_literal:                      ff6000e0
+code_identifier:                        BFC9DBFF
+code_note:                              E0AD82FF
+code_number:                            D699B5FF
+code_multiline_comment:                 87919DFF
+code_modifier:                          E67D74FF
+code_attribute:                         E67D74FF
+code_enum_variant:                      BFC9DBFF
+code_macro:                             E0AD82FF
+code_builtin_variable:                  D699B5FF
+code_builtin_function:                  E0AD82FF
+code_builtin_exception:                 E0AD82FF
+code_directive:                         E67D74FF
+code_directive_modifier:                E67D74FF
+code_header:                            E67D74FF
+code_header2:                           E0AD82FF
+code_header3:                           E0AD82FF
+code_header4:                           E0AD82FF
+code_header5:                           E0AD82FF
+code_header6:                           E0AD82FF

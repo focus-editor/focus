@@ -51,15 +51,14 @@ deinit_open_file_dialog :: () {
 
     initted = false;
 
-    pool_allocator := get_pool_allocator();
-    push_allocator(pool_allocator);
+    clear_path_chunks();
 
     reset(*memory_pool);
 
     scroll_to_cursor = .snap;
     entries.scroll_y = 0;
     entries.selected = 0;
-    array_reset(*entries.filtered);
+    array_reset(*entries.filtered,, allocator = Allocator.{ proc = flat_pool_allocator_proc, data = *memory_pool });
 }
 
 show_open_file_dialog :: (mode: Open_File_Dialog.Mode, buffer_id_to_save: s64 = -1, from_root := false) {
@@ -74,6 +73,14 @@ show_open_file_dialog :: (mode: Open_File_Dialog.Mode, buffer_id_to_save: s64 = 
     active_global_widget = .open_file_dialog;
     open_file_dialog.mode = mode;
     open_file_dialog.buffer_id_to_save = buffer_id_to_save;
+
+    if mode == .open_editors && most_recent_buffers.count >= 2 && editors.active >= 0 {
+        active_buffer_id := open_editors[editors.active].buffer_id;
+        if active_buffer_id == most_recent_buffers[0] {
+            // Swap the first 2 buffers so that we don't show the current buffer first
+            Swap(*most_recent_buffers[0], *most_recent_buffers[1]);
+        }
+    }
 
     refresh_entries();
 }
@@ -255,7 +262,7 @@ set_path_chunks_from_file :: (file_path: string) {
 
     advance(*parent_dir, project_dir.path.count);
 
-    for chunk : split(parent_dir, cast(u8) #char "/") {
+    for chunk : split(parent_dir, cast(u8) #char "/",, allocator = temp) {
         trimmed := trim(chunk);
         if !trimmed continue;
         array_add(*path_chunks, copy_string(trimmed));
@@ -273,8 +280,8 @@ refresh_entries :: (clear_input := true) {
     // Do it before pushing the pool allocator because the input uses use the global heap
     if clear_input then text_input_fully_clear(*input);
 
-    pool_allocator := get_pool_allocator();
-    push_allocator(pool_allocator);
+    entries_allocator := Allocator.{ proc = flat_pool_allocator_proc, data = *memory_pool };
+    push_allocator(entries_allocator);
 
     reset(*memory_pool);  // to avoid having to free each string
 
@@ -299,10 +306,10 @@ refresh_entries :: (clear_input := true) {
                                                          // still want to see it here
 
         buffer_name := get_buffer_name(buffer);
-        name_score, name_highlights := fuzzy_match(buffer_name,      filter);
-        path_score, path_highlights := fuzzy_match(buffer.file.path, filter);
+        name_score, name_highlights, exact_match := fuzzy_match(buffer_name,      filter);
+        path_score, path_highlights              := fuzzy_match(buffer.file.path, filter, only_exact=exact_match);
         score := 200 * name_score + path_score;  // name score is much more important
-        if score < 0 continue;
+        if score <= 0 && filter.full_string continue;
 
         entry := array_add(*entries.filtered);
         entry.buffer_id = buffer_id;
@@ -315,16 +322,18 @@ refresh_entries :: (clear_input := true) {
         entry.name_highlights = name_highlights;
         entry.path_highlights = path_highlights;
         // NOTE: there's space left in the sort key in case we need to add more parameters
-        dir_id_part:     u64 = (cast,trunc(u64) (63 - buffer.file.project_dir_id))  << 55;
-        score_part:      u64 = (cast,trunc(u64) score)                              << 16;
+        score_part:      u64 = (cast,trunc(u64) score)                              << 22;
+        dir_id_part:     u64 = (cast,trunc(u64) (63 - buffer.file.project_dir_id))  << 16;
+        length_part:     u64 = (cast,trunc(u64) (400 - buffer_name.count))          <<  8;
         times_open_part: u64 = (cast,trunc(u64) buffer.num_times_opened)            <<  0;
-        entry.sort_key = dir_id_part | score_part | times_open_part;
+        if !filter.full_string then length_part = 0;  // don't sort by length when no filtering is applied
+        entry.sort_key = dir_id_part | score_part | length_part | times_open_part;
 
         if buffer.modified         then { entry.flags |= .MODIFIED;         entry.sort_key |= top_priority_bit; }
         if buffer.modified_on_disk then { entry.flags |= .MODIFIED_ON_DISK; entry.sort_key |= top_priority_bit; }
     }
 
-    filter := construct_fuzzy_filter(cast(string) input.text);
+    filter := construct_fuzzy_filter(cast(string) input.text, multi_chunk_search = true);
 
     if #complete mode == {
         case .save; #through;
@@ -333,7 +342,8 @@ refresh_entries :: (clear_input := true) {
                 // Display project dirs and drives
                 for project_dirs {
                     score, name_highlights := fuzzy_match(it.name, filter);
-                    if score < 0 continue;
+                    if score <= 0 && filter.full_string continue;
+                    if filter.full_string then score -= xx it.name.count;  // prefer shorter name all other things being equal
 
                     entry := array_add(*entries.filtered);
                     entry.type = .project_dir;
@@ -350,11 +360,33 @@ refresh_entries :: (clear_input := true) {
                     score_part:  u64 = (cast,trunc(u64) score)                        << 16;
                     entry.sort_key = dir_id_part | score_part;
                 }
+                for project_files {
+                    path, _, extension, name := path_decomp(it);
+                    score, name_highlights := fuzzy_match(name, filter);
+                    if score <= 0 && filter.full_string continue;
+                    if filter.full_string then score -= xx name.count;  // prefer shorter name all other things being equal
+
+                    entry := array_add(*entries.filtered);
+                    entry.type = .file;
+                    entry.full_path = it;
+                    entry.name = name;
+                    entry.entry_name = name;
+                    entry.path = path;
+                    entry.icon = get_file_icon(name, extension);
+                    entry.project_dir_id = xx (it_index + 1 + project_dirs.count);
+                    entry.name_highlights = name_highlights;
+                    entry.path_highlights = NewArray(entry.path.count, bool);
+
+                    dir_id_part: u64 = (cast,trunc(u64) (127 - entry.project_dir_id)) << 56;
+                    score_part:  u64 = (cast,trunc(u64) score)                        << 16;
+                    entry.sort_key = dir_id_part | score_part;
+                }
                 for platform_enumerate_logical_drives() {
                     name := copy_string(it);
 
                     score, name_highlights := fuzzy_match(name, filter);
-                    if score < 0 continue;
+                    if score <= 0 && filter.full_string continue;
+                    if filter.full_string then score -= xx name.count;  // prefer shorter name all other things being equal
 
                     entry := array_add(*entries.filtered);
                     entry.type = .drive;
@@ -375,7 +407,8 @@ refresh_entries :: (clear_input := true) {
                 // Filter current files
                 for current_files {
                     score, name_highlights := fuzzy_match(it.name, filter);
-                    if score < 0 continue;
+                    if score <= 0 && filter.full_string continue;
+                    if filter.full_string then score -= xx it.name.count;  // prefer shorter name all other things being equal
 
                     entry := array_add(*entries.filtered);
                     <<entry = it;
@@ -396,20 +429,22 @@ refresh_entries :: (clear_input := true) {
             }
 
         case .open_editors;
-            open_buffer_ids := get_buffer_ids_with_open_editors();
-            for buffer_id : open_buffer_ids {
+            for buffer_id : most_recent_buffers {
                 buffer := *open_buffers[buffer_id];
                 maybe_add_a_buffer_entry(buffer, buffer_id);
             }
     }
 
-    compare_entries :: (e1: Entry, e2: Entry) -> s64 {
-        key_diff := cast,no_check(s64) e2.sort_key - cast,no_check(s64) e1.sort_key;
-        if key_diff != 0 return key_diff;
-        return memcmp(e1.name.data, e2.name.data, min(e1.name.count, e2.name.count));
-    }
+    if !(mode == .open_editors && !input.text) {  // don't sort most recent buffers if no filters are used
 
-    quick_sort(entries.filtered, compare_entries);
+        compare_entries :: (e1: Entry, e2: Entry) -> s64 {
+            key_diff := cast,no_check(s64) e2.sort_key - cast,no_check(s64) e1.sort_key;
+            if key_diff != 0 return key_diff;
+            return memcmp(e1.name.data, e2.name.data, min(e1.name.count, e2.name.count));
+        }
+
+        quick_sort(entries.filtered, compare_entries);
+    }
 
     if mode == .save && input.text && path_chunks {
         array_add(*entries.filtered, Entry.{
@@ -461,32 +496,12 @@ scan_current_folder :: () {
     visitor_func :: (file: *File_Visit_Info, userdata: *void) {
         if file.had_error || file.is_symlink return;
         if file.is_directory {
-            if should_ignore_dir(file.full_name) return;
+            if !should_descend_into_dir(file.full_name) return;
         } else {
-            if should_ignore_file(file.full_name) return;
+            if should_ignore_path(file.full_name) return;
         }
 
-        full_path: string = ---;   // one allocation in the pool, the rest are views into it
-        #if OS == .WINDOWS {
-            // Fix an extra slash in Windows (ugh)
-            b: String_Builder;
-            previous_char_was_slash := false;
-            for 0..file.full_name.count - 1 {
-                c := file.full_name.data[it];
-                if c == #char "/" {
-                    if previous_char_was_slash continue; // Ignore double slashes
-                    previous_char_was_slash = true;
-                } else {
-                    previous_char_was_slash = false;
-                }
-
-                append(*b, c);
-            }
-
-            full_path = builder_to_string(*b);
-        } else {
-            full_path = copy_string(file.full_name);
-        }
+        full_path := copy_string(file.full_name);  // one allocation in the pool, the rest are views into it
 
         path, basename, extension, name := path_decomp(full_path);
 
@@ -513,13 +528,6 @@ toggle_expand :: () {
 
     target_width := ifx width_percentage != WIDTH_EXPANDED then WIDTH_EXPANDED else WIDTH_NORMAL;
     start_animation(*width_anim, width_percentage, target_width);
-}
-
-get_pool_allocator :: () -> Allocator {
-    a: Allocator;
-    a.proc = flat_pool_allocator_proc;
-    a.data = *memory_pool;
-    return a;
 }
 
 memory_pool: Flat_Pool;

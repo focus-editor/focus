@@ -78,12 +78,18 @@ EGL_Lib :: struct {
         minor: s32;
     }
 
-    create_context :: (using egl: *EGL_Lib, native_display: *void, major_version := 0, minor_version := 0, compatibility := false, debug := false) -> *void, *void, *void {
+    create_context :: (using egl: *EGL_Lib, native_display: *void, platform: s32, attrib_list: *s32, major_version := 0, minor_version := 0, compatibility := false, debug := false) -> *void, *void, *void {
         assert(_meta.loaded);
 
         n: s32;
 
-        egl_dpy := GetDisplay(native_display);
+        egl_dpy: *void;
+        if !platform && !attrib_list {
+            egl_dpy = GetDisplay(native_display);
+        } else {
+            assert(GetPlatformDisplayEXT != null);
+            egl_dpy = GetPlatformDisplayEXT(platform, native_display, attrib_list);
+        }
         assert(egl_dpy != NO_DISPLAY, "egl_dpy=%, native_display=%", egl_dpy, native_display);
 
         if !Initialize(egl_dpy, *_meta.major, *_meta.minor)
@@ -153,6 +159,8 @@ EGL_Lib :: struct {
     CONTEXT_OPENGL_DEBUG                        : s32 : 0x31B0;
     CONTEXT_MAJOR_VERSION                       : s32 : 0x3098;
     CONTEXT_MINOR_VERSION                       : s32 : 0x30FB;
+    PLATFORM_XCB_EXT                            : s32 : 0x31DC;
+    PLATFORM_XCB_SCREEN_EXT                     : s32 : 0x31DE;
 
     NO_CONTEXT : *void : null;
     NO_DISPLAY : *void : null;
@@ -173,44 +181,50 @@ EGL_Lib :: struct {
         DestroySurface      : (dpy: *void, surface: *void) -> s32 #c_call;
     }
     using _procs: Procs;
+
+    GetPlatformDisplayEXT : (platform: s32, native_display: *void, attrib_list: *s32) -> *void #c_call;
+    CreatePlatformWindowSurfaceEXT: (egl_display: *void, config: *void, native_window: *void, attrib_list: *s32) -> *void #c_call;
 };
 
 wsi_load :: (intf: *EGL_Lib) -> bool {
     if intf._meta.loaded return true;
 
-    soname :: "libEGL.so";
+    sonames :: string.["libEGL.so.1", "libEGL.so"];
 
-    dlerror();
-    lib := dlopen(soname.data, RTLD_NOW | RTLD_NOLOAD);
-    if lib {
-        log_error("% already loaded!", soname);
-    } else {
+    for soname : sonames {
         dlerror();
-        lib = dlopen(soname.data, RTLD_NOW);
+        lib := dlopen(soname.data, RTLD_NOW);
         if !lib {
             log_error("Failed to load %: %", soname, to_string(dlerror()));
-            return false;
+            continue;
         }
+
+        tis := cast(*Type_Info_Struct) type_info(type_of(intf._procs));
+        for m : tis.members {
+            if m.type.type != .PROCEDURE continue;
+            if m.flags & .CONSTANT continue;
+
+            pi := cast(*Type_Info_Procedure) m.type;
+            if !(pi.procedure_flags & .IS_C_CALL) continue;
+
+            dlerror();
+            name := tprint("egl%\0", m.name);
+            ppfn := cast(*generic_c_call)((cast(*u8) *intf._procs) + m.offset_in_bytes);
+            ppfn.* = cast(generic_c_call) dlsym(lib, name.data);
+            if !ppfn.* {
+                log("Failed to resolve function '%' in '%': %", name, soname, to_string(dlerror()));
+                continue soname;
+            }
+        }
+
+        intf.GetPlatformDisplayEXT = xx intf.GetProcAddress("eglGetPlatformDisplayEXT");
+        intf.CreatePlatformWindowSurfaceEXT = xx intf.GetProcAddress("eglCreatePlatformWindowSurfaceEXT");
+        intf._meta.loaded = true;
+        log("EGL: loaded %", soname);
+        return true;
     }
 
-    tis := cast(*Type_Info_Struct) type_info(type_of(intf._procs));
-    for m : tis.members {
-        if m.type.type != .PROCEDURE continue;
-        if m.flags & .CONSTANT continue;
-
-        pi := cast(*Type_Info_Procedure) m.type;
-        if !(pi.procedure_flags & .IS_C_CALL) continue;
-
-        dlerror();
-        name := tprint("egl%\0", m.name);
-        ppfn := cast(*generic_c_call)((cast(*u8) *intf._procs) + m.offset_in_bytes);
-        ppfn.* = cast(generic_c_call) dlsym(lib, name.data);
-        assert(!!(ppfn.*), "Failed to resolve function '%': %", name, to_string(dlerror()));
-    }
-
-    intf._meta.loaded = true;
-
-    return true;
+    return false;
 }
 
 GLX_Lib :: struct {
@@ -316,61 +330,65 @@ GLX_Lib :: struct {
 wsi_load :: (intf: *GLX_Lib) -> bool {
     if intf._meta.loaded return true;
 
-    soname :: "libGLX.so";
+    sonames :: string.["libGLX.so.0", "libGLX.so"];
 
-    dlerror();
-    lib := dlopen(soname.data, RTLD_NOW | RTLD_NOLOAD);
-    if lib {
-        log_error("% already loaded!", soname);
-    } else {
+    for soname : sonames {
         dlerror();
-        lib = dlopen(soname.data, RTLD_NOW);
+        lib := dlopen(soname.data, RTLD_NOW);
         if !lib {
             log_error("Failed to load %: %", soname, to_string(dlerror()));
-            return false;
+            continue;
         }
-    }
 
-    ext_funcs: [..] struct {
-        name: string;
-        call: *generic_c_call;
-        optional: bool;
-    };
+        ext_funcs: [..] struct {
+            name: string;
+            call: *generic_c_call;
+            optional: bool;
+        };
 
-    tis := cast(*Type_Info_Struct) type_info(type_of(intf._procs));
-    for m : tis.members {
-        if m.type.type != .PROCEDURE continue;
-        if m.flags & .CONSTANT continue;
+        tis := cast(*Type_Info_Struct) type_info(type_of(intf._procs));
+        for m : tis.members {
+            if m.type.type != .PROCEDURE continue;
+            if m.flags & .CONSTANT continue;
 
-        pi := cast(*Type_Info_Procedure) m.type;
-        if !(pi.procedure_flags & .IS_C_CALL) continue;
+            pi := cast(*Type_Info_Procedure) m.type;
+            if !(pi.procedure_flags & .IS_C_CALL) continue;
 
-        dlerror();
-        name := tprint("glX%\0", m.name);
-        ppfn := cast(*generic_c_call)((cast(*u8) *intf._procs) + m.offset_in_bytes);
+            dlerror();
+            name := tprint("glX%\0", m.name);
+            ppfn := cast(*generic_c_call)((cast(*u8) *intf._procs) + m.offset_in_bytes);
 
-        optional, _ := array_find(m.notes, "optional");
-        is_extension_func, _ := array_find(m.notes, "GLX_EXT");
+            optional, _ := array_find(m.notes, "optional");
+            is_extension_func, _ := array_find(m.notes, "GLX_EXT");
 
-        if is_extension_func {
-            info := array_add(*ext_funcs);
-            info.name = name;
-            info.call = ppfn;
-            info.optional = optional;
-        } else {
-            ppfn.* = cast(generic_c_call) dlsym(lib, name.data);
-            if !optional  assert(!!(ppfn.*), "Failed to resolve function '%': %", name, to_string(dlerror()));
+            if is_extension_func {
+                info := array_add(*ext_funcs);
+                info.name = name;
+                info.call = ppfn;
+                info.optional = optional;
+            } else {
+                ppfn.* = cast(generic_c_call) dlsym(lib, name.data);
+                if !optional && !ppfn.* {
+                    log("Failed to resolve function '%' in '%': %", name, soname, to_string(dlerror()));
+                    continue soname;
+                }
+            }
         }
+
+        for info: ext_funcs {
+            info.call.* = cast(generic_c_call) intf.GetProcAddress(info.name.data);
+            if !info.optional && !info.call.* {
+                log("Failed to resolve extension function '%'", info.name);
+                continue soname;
+            }
+        }
+
+        intf._meta.loaded = true;
+        log("GLX: loaded %", soname);
+        return true;
     }
 
-    for info: ext_funcs {
-        info.call.* = cast(generic_c_call) intf.GetProcAddress(info.name.data);
-        if !info.optional  assert(!!(info.call.*), "Failed to resolve extension function '%'", info.name);
-    }
-
-    intf._meta.loaded = true;
-
-    return true;
+    return false;
 }
 
 #scope_file
