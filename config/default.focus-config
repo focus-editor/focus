@@ -136,6 +136,10 @@ Ctrl-K                      delete_to_end_of_line
 Ctrl-Shift-Delete           delete_to_end_of_line
 Ctrl-Shift-Backspace        delete_to_start_of_line
 
+Ctrl-E                      word_completion_next
+Ctrl-Q                      word_completion_previous
+Ctrl-R                      word_completion_subword
+
 Alt-ArrowUp                 move_selected_lines_up
 Alt-ArrowDown               move_selected_lines_down
 

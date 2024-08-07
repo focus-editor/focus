@@ -277,6 +277,23 @@ find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) 
     return -1;
 }
 
+
+find_index_from_right_nocase :: (s: string, substring: string, start_index := 0) -> s64 {
+    if !substring return -1;
+    x := s;
+    if start_index {
+        if start_index > s.count return -1; // assert?
+        x.count = start_index;
+    }
+    
+    for < i: x.count-substring.count..0 {
+        t := slice(x, i, substring.count);
+        if equal_nocase(t, substring) return i;
+    }
+
+    return -1;
+}
+
 match_whole_word :: (s: string, offset: int, count: int) -> bool {
     word_ends_on_the_left  := offset <= 0               || !is_word_char(s[offset - 1])     || !is_word_char(s[offset]);
     word_ends_on_the_right := offset + count >= s.count || !is_word_char(s[offset + count]) || !is_word_char(s[offset + count - 1]);
@@ -360,6 +377,11 @@ is_all_whitespace :: (s: string) -> bool {
         if byte != #char " " && byte != #char "\t" && byte != #char "\n" && byte != #char "\r" then return false;
     }
     return true;
+}
+
+is_upper :: inline (byte: u8) -> bool {
+    if byte >= #char "A" && byte <= #char "Z" return true;
+    return false;
 }
 
 count_whitespace :: (bytes: [] u8, start_offset: s64, max_offset: s64, spaces := " \t") -> count: s32 {
