@@ -477,6 +477,7 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
         case .CSharp;       return tokenize_csharp_for_indentation(buffer);
         case .C;            return tokenize_c_like_lang_for_indentation(buffer, get_next_c_token);
         case .Cpp;          return tokenize_c_like_lang_for_indentation(buffer, get_next_cpp_token);
+        case .Css;          return tokenize_c_like_lang_for_indentation(buffer, get_next_css_token);
         case .Js;           return tokenize_c_like_lang_for_indentation(buffer, get_next_js_token);
         case .Json;         return tokenize_c_like_lang_for_indentation(buffer, get_next_json_token);
         case .Glsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_glsl_token);
@@ -1189,6 +1190,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .Jai;                  return tokenize_jai;
         case .C;                    return tokenize_c;
         case .Cpp;                  return tokenize_cpp;
+        case .Css;                  return tokenize_css;
         case .CSharp;               return tokenize_csharp;
         case .Glsl;                 return tokenize_glsl;
         case .Hlsl;                 return tokenize_hlsl;
@@ -1391,6 +1393,7 @@ Buffer :: struct {
         Jai;
         C;
         Cpp;
+        Css;
         CSharp;
         Glsl;
         Hlsl;
