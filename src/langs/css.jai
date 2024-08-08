@@ -79,7 +79,7 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
 
         t += 1;
         next_identifier_part := read_utf8_identifier_string(tokenizer);
-        identifier_str = sprint("%-%", identifier_str, next_identifier_part);
+        identifier_str = tprint("%-%", identifier_str, next_identifier_part);
     }
 
     // Maybe it's a tag
@@ -134,7 +134,7 @@ parse_simple_selector :: (using tokenizer: *Tokenizer, token: *Token) {
     if next_token.type == .punctuation && next_token.punctuation == .minus {
         t += 1;
         next_identifier_part := read_utf8_identifier_string(tokenizer);
-        identifier_str = sprint("%-%", identifier_str, next_identifier_part);
+        identifier_str = tprint("%-%", identifier_str, next_identifier_part);
     }
 }
 
@@ -166,7 +166,7 @@ parse_at :: (using tokenizer: *Tokenizer, token: *Token) {
     if t >= max_t  return;
 
     identifier_str := read_utf8_identifier_string(tokenizer);
-    identifier_str = sprint("@%", identifier_str);
+    identifier_str = tprint("@%", identifier_str);
 
     property_token, ok := table_find(*PROPERTY_MAP, identifier_str);
     if ok {
