@@ -3125,6 +3125,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
 
     min_indent  := -1;
     add_comment := false;
+    only_empty_lines_selected := true;
     for 0..last_line {
         start, end := line_starts[it], line_starts[it+1];
         str := cast(string) array_view(buffer.bytes, start, end-start);
@@ -3152,6 +3153,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
                 case;
                     trimmed_str   = slice(str, it_index, str.count - it_index);
                     is_empty_line = false;
+                    only_empty_lines_selected = false;
                     break c;
             }
         }
@@ -3166,6 +3168,8 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
     // Build a replacement string
     b: String_Builder;  // not using temp because the string may be too large
 
+    if only_empty_lines_selected then add_comment = true;
+   
     if add_comment {
         use_spaces := config.settings.insert_spaces_when_pressing_tab;
         new_whitespace := ifx use_spaces then get_tmp_spaces(min_indent) else {
@@ -3173,13 +3177,16 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
             min_indent = tab_count * TAB_SIZE;  // Update min_indent too. If you use tabs, your comments will align with tab columns.
             get_tmp_tabs(tab_count);
         }
-
+    
         adjustment := 0;
         for 0..last_line {
             start, end := line_starts[it] & LINE_START_MASK, line_starts[it+1] & LINE_START_MASK;
             str        := cast(string) array_view(buffer.bytes, start, end-start);
-            if line_starts[it] & EMPTY_LINE_BIT { append(*b, str); continue; }
-
+            if !only_empty_lines_selected && line_starts[it] & EMPTY_LINE_BIT {
+                append(*b, str); 
+                continue;
+            }
+            
             // Count how many characters are in the minimum indent, then cut off those characters since they will be replaced with new_whitespace
             indent, old_whitespace_count := 0;
             while indent < min_indent {
@@ -3208,6 +3215,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
             for * cursor : editor.cursors {
                 if      cursor.pos > adjusted_old_comment_start then cursor.pos += xx line_length_difference;
                 else if cursor.pos >= adjusted_start            then cursor.pos  = xx adjusted_new_comment_start;
+    
                 if      cursor.sel > adjusted_old_comment_start then cursor.sel += xx line_length_difference;
                 else if cursor.sel >= adjusted_start            then cursor.sel  = xx adjusted_new_comment_start;
             }
@@ -3245,7 +3253,14 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
     replace_range(buffer, range, new_str);
 
     for * cursor : editor.cursors { cursor.col_wanted = -1; }
-
+    
+    if only_empty_lines_selected {
+        first_cursor := *editor.cursors[0];
+        pos := min(first_cursor.pos, first_cursor.sel) + comment.count + 1;
+        first_cursor.pos = xx pos;
+        first_cursor.sel = xx pos;
+    }
+    
     editor.cursor_moved = .unimportant;
 }
 
