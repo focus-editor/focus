@@ -53,8 +53,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "<";  parse_less_than             (tokenizer, *token);
         case #char ">";  parse_greater_than          (tokenizer, *token);
         case #char "!";  parse_bang                  (tokenizer, *token);
-
-        case #char "`";  #through;
+        case #char "`";  parse_raw_string_literal    (tokenizer, *token);
         case #char "\""; parse_string_literal        (tokenizer, *token);
         case #char "'";  parse_char_literal          (tokenizer, *token);
         case #char "/";  parse_slash_or_comment      (tokenizer, *token);
@@ -294,31 +293,31 @@ parse_bang :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
+parse_raw_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .raw_string;
+
+    t += 1;
+    while t < max_t && << t != #char "`" {
+        t += 1;
+    }
+    if t >= max_t return;
+
+    t += 1;
+}
+
 parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
-    delimiter := t.*;   // Could be ' or "
+    token.type = .string_literal;
 
-    if delimiter == #char "`" {
-        // Handle raw_strings
-        token.type = .raw_string;
+    escape_seen := false;
+
+    t += 1;
+    while t < max_t && << t != #char "\n" {
+        if <<t == #char "\"" && !escape_seen break;
+        escape_seen = !escape_seen && <<t == #char "\\";
         t += 1;
-        while t < max_t && t.* != delimiter {
-            t += 1;
-        }
     }
-    else {
-        // Handle normal strings
-        token.type = .string_literal;
-        escape_seen := false;
+    if t >= max_t return;
 
-        t += 1;
-        while t < max_t && t.* != #char "\n" {
-            if t.* == delimiter && !escape_seen break;
-            escape_seen = !escape_seen && t.* == #char "\\";
-            t += 1;
-        }
-    }
-
-    if t >= max_t then return;
     t += 1;
 }
 
