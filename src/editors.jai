@@ -3252,13 +3252,14 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
     range := Offset_Range.{ start = xx line_starts[0] & LINE_START_MASK, end = xx last_line_end_offset };
     replace_range(buffer, range, new_str);
 
-    for * cursor : editor.cursors { cursor.col_wanted = -1; }
-    
-    if only_empty_lines_selected {
-        first_cursor := *editor.cursors[0];
-        pos := min(first_cursor.pos, first_cursor.sel) + comment.count + 1;
-        first_cursor.pos = xx pos;
-        first_cursor.sel = xx pos;
+    for * cursor : editor.cursors {
+        if only_empty_lines_selected {
+            pos := min(cursor.pos, cursor.sel) + comment.count + 1;
+            cursor.pos = xx pos;
+            cursor.sel = xx pos;
+        }
+        
+        cursor.col_wanted = -1;
     }
     
     editor.cursor_moved = .unimportant;
