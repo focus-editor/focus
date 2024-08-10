@@ -33,7 +33,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     if is_alpha(char) {
         parse_identifier(tokenizer, *token);
     } else if is_digit(char) {
-        parse_unit(tokenizer, *token);
+        parse_number(tokenizer, *token);
     } else if char == {
         case #char ".";  parse_simple_selector(tokenizer, *token);
         case #char "#";  parse_hash(tokenizer, *token);
@@ -41,6 +41,7 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "@";  parse_at(tokenizer, *token);
         case #char "\""; parse_double_quote_string_literal(tokenizer, *token);
         case #char "'";  parse_single_quote_string_literal(tokenizer, *token);
+        case #char "!";  parse_bang(tokenizer, *token);
 
         case #char "{";  token.type = .punctuation; token.punctuation = .l_brace;      t += 1;
         case #char "}";  token.type = .punctuation; token.punctuation = .r_brace;      t += 1;
@@ -84,18 +85,24 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
 
     // Maybe it's a tag
     if identifier_str.count <= MAX_TAG_LENGTH {
-        tag_token, ok := table_find(*TAG_MAP, identifier_str);
-        if ok { token.type = tag_token.type; token.tag = tag_token.tag; return; }
+        token_type, ok := table_find(*TAG_MAP, identifier_str);
+        if ok { token.type = token_type; return; }
     }
 
     // Maybe it's a property
     if identifier_str.count <= MAX_PROPERTY_LENGTH {
-        property_token, ok := table_find(*PROPERTY_MAP, identifier_str);
-        if ok { token.type = property_token.type; token.property = property_token.property; return; }
+        token_type, ok := table_find(*PROPERTY_MAP, identifier_str);
+        if ok { token.type = token_type; return; }
+    }
+
+    // Maybe it's a keyword
+    if identifier_str.count <= MAX_KEYWORD_LENGTH {
+        token_type, ok := table_find(*KEYWORD_MAP, identifier_str);
+        if ok { token.type = token_type; return; }
     }
 }
 
-parse_unit :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .number;
 
     start_char := t.*;
@@ -116,9 +123,18 @@ parse_unit :: (using tokenizer: *Tokenizer, token: *Token) {
     if t >= max_t return;
 
     // Unit
-    while is_alpha(<<t) {
+    if <<t == #char "%" {
         t += 1;
-        if t >= max_t  return;
+        return;
+    }
+
+    temp_t := t;
+
+    unit_str := read_utf8_identifier_string(tokenizer);
+
+    if unit_str.count <= MAX_UNIT_LENGTH {
+        _, ok := table_find(*UNIT_MAP, unit_str);
+        if !ok { t = temp_t; }
     }
 }
 
@@ -169,11 +185,7 @@ parse_at :: (using tokenizer: *Tokenizer, token: *Token) {
     identifier_str = tprint("@%", identifier_str);
 
     property_token, ok := table_find(*PROPERTY_MAP, identifier_str);
-    if ok {
-        token.type = property_token.type;
-        token.property = property_token.property;
-        return;
-    }
+    if ok { token.type = property_token.type; return; }
 }
 
 parse_double_quote_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
@@ -238,14 +250,30 @@ parse_hex_color :: (using tokenizer: *Tokenizer, token: *Token) -> bool {
     return false;
 }
 
+parse_bang :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .identifier;
+
+    t += 1;
+    if t >= max_t  return;
+
+    identifier_str := read_utf8_identifier_string(tokenizer);
+
+    // Add the ! to the string
+    identifier_str.data -= 1;
+    identifier_str.count += 1;
+
+    if identifier_str.count <= MAX_KEYWORD_LENGTH {
+        token_type, ok := table_find(*KEYWORD_MAP, identifier_str);
+        if ok { token.type = token_type; return; }
+    }
+}
+
 Token :: struct {
     start, len: s32;
     type: Token_Type;
 
     union {
         punctuation: Punctuation;
-        tag:         Tag;
-        property:    Property;
     }
 }
 
@@ -353,6 +381,46 @@ PROPERTIES :: string.[
     "z-index",
 ];
 
+KEYWORDS :: string.[
+    "!important", "initial", "inherit", "unset", "revert", "white", "black", "red", "green", "blue", "currentcolor", "transparent",
+    "revert-layer", "underline", "bold", "italic", "square", "border-box", "solid", "none",
+];
+
+UNITS :: string.[
+    // Local font-relative lenghts
+    "cap", "ch", "em", "ex", "ic", "lh",
+
+    // Root font-relative lengths
+    "rcap", "rch", "rem", "rex", "ric", "rlh",
+
+    // Viewport units
+    "dvh", "dvw", "lvh", "lvw", "svh", "svw", "vb", "vh", "vi", "vmax", "vmin", "vw",
+
+    // Container units
+    "cqb", "cqh", "cqi", "cqmax", "cqmin", "cqw",
+
+    // Absolute length units
+    "cm", "in", "mm", "pc", "pt", "px", "Q",
+
+    // Angle units
+    "deg", "grad", "rad", "turn",
+
+    // Time units
+    "ms", "s",
+
+    // Frequency units
+    "Hz", "kHz",
+
+    // Flex units
+    "fr",
+
+    // Resolution units
+    "dpcm", "dpi", "dppx", "x",
+
+    // Percentage
+    "%",
+];
+
 #insert -> string {
     b: String_Builder;
     init_string_builder(*b);
@@ -362,37 +430,27 @@ PROPERTIES :: string.[
 
         for values: value_list {
             for v: values {
-                underscored := copy_string(v);
-                replace_chars(underscored, "-@", #char "_");
-
-                print_to_builder(b, "    %0%;\n", prefix, underscored);
+                print_to_builder(b, "    %0%;\n", prefix, v);
             }
         }
 
         print_to_builder(b, "}\n");
     }
 
-    define_enum(*b, "Punctuation", "",          .[PUNCTUATION]);
-    define_enum(*b, "Tag",         "tag_",      .[TAGS]);
-    define_enum(*b, "Property",    "property_", .[PROPERTIES]);
+    define_enum(*b, "Punctuation", "", .[PUNCTUATION]);
 
     return builder_to_string(*b);
 }
 
-Tag_Token :: struct {
-    type: Token_Type;
-    tag: Tag;
-}
-
-TAG_MAP :: #run -> Table(string, Tag_Token) {
-    table: Table(string, Tag_Token);
-    size := TAGS.count;
+TAG_MAP :: #run -> Table(string, Token_Type) {
+    table: Table(string, Token_Type);
+    size := 10 * TAGS.count;
     init(*table, size);
 
     #insert -> string {
         b: String_Builder;
 
-        for TAGS  append(*b, sprint("table_add(*table, \"%1\", Tag_Token.{ type = .keyword, tag = .tag_%1 });\n", it));
+        for TAGS append(*b, sprint("table_add(*table, \"%1\", .keyword);\n", it));
 
         return builder_to_string(*b);
     }
@@ -402,31 +460,19 @@ TAG_MAP :: #run -> Table(string, Tag_Token) {
 
 MAX_TAG_LENGTH :: #run -> s32 {
     result: s64;
-
     for TAGS { if it.count > result then result = it.count; }
-
     return xx result;
 }
 
-Property_Token :: struct {
-    type: Token_Type;
-    property: Property;
-}
-
-PROPERTY_MAP :: #run -> Table(string, Property_Token) {
-    table: Table(string, Property_Token);
-    size := PROPERTIES.count;
+PROPERTY_MAP :: #run -> Table(string, Token_Type) {
+    table: Table(string, Token_Type);
+    size := 10 * PROPERTIES.count;
     init(*table, size);
 
     #insert -> string {
         b: String_Builder;
 
-        for PROPERTIES {
-            without_invalid_chars := copy_string(it);
-            replace_chars(without_invalid_chars, "-@", #char "_");
-
-            append(*b, sprint("table_add(*table, \"%1\", Property_Token.{ type = .function, property = .property_%2 });\n", it, without_invalid_chars));
-        }
+        for PROPERTIES append(*b, sprint("table_add(*table, \"%1\", .function);\n", it));
 
         return builder_to_string(*b);
     }
@@ -436,8 +482,51 @@ PROPERTY_MAP :: #run -> Table(string, Property_Token) {
 
 MAX_PROPERTY_LENGTH :: #run -> s32 {
     result: s64;
-
     for PROPERTIES { if it.count > result then result = it.count; }
+    return xx result;
+}
 
+KEYWORD_MAP :: #run -> Table(string, Token_Type) {
+    table: Table(string, Token_Type);
+    size := 10 * KEYWORDS.count;
+    init(*table, size);
+
+    #insert -> string {
+        b: String_Builder;
+
+        for KEYWORDS append(*b, sprint("table_add(*table, \"%1\", .keyword);\n", it));
+
+        return builder_to_string(*b);
+    }
+
+    return table;
+}
+
+MAX_KEYWORD_LENGTH :: #run -> s32 {
+    result: s64;
+    for KEYWORDS { if it.count > result then result = it.count; }
+    return xx result;
+}
+
+UNIT_MAP :: #run -> Table(string, Token_Type) {
+    table: Table(string, Token_Type);
+    size := 10 * UNITS.count;
+    init(*table, size);
+
+    #insert -> string {
+        b: String_Builder;
+
+        for UNITS append(*b, sprint("table_add(*table, \"%1\", .number);\n", it));
+
+        return builder_to_string(*b);
+    }
+
+    return table;
+}
+
+
+MAX_UNIT_LENGTH :: #run -> s32 {
+    result: s64;
+    for UNITS { if it.count > result then result = it.count; }
     return xx result;
 }
