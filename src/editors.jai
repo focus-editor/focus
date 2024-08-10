@@ -3126,6 +3126,17 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
     min_indent  := -1;
     add_comment := false;
     only_empty_lines_selected := true;
+
+    // We probably want to align those 3 selected line comments above the foo() procedure,
+    // so we should check the maximum indent instead of the minimum. It's going to work only if
+    // we selected empty lines.
+    // y
+    // ^ <- minimum indent
+    // ^        
+    // ^^^| <- maximum indent and the cursor here too
+    //    foo(); 
+    max_empty_line_indent := -1;
+    
     for 0..last_line {
         start, end := line_starts[it], line_starts[it+1];
         str := cast(string) array_view(buffer.bytes, start, end-start);
@@ -3158,17 +3169,26 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
             }
         }
 
-        if is_empty_line { line_starts[it] |= EMPTY_LINE_BIT; continue; }
+        if is_empty_line { 
+            line_starts[it] |= EMPTY_LINE_BIT;
+            if indent > max_empty_line_indent {
+                max_empty_line_indent = indent;
+            }
+            continue; 
+        }
         if min_indent < 0 || indent < min_indent then min_indent = indent;
         if !add_comment && !begins_with(trimmed_str, comment) then add_comment = true;
+    }
+
+    if only_empty_lines_selected {
+        min_indent  = max_empty_line_indent; 
+        add_comment = true;
     }
 
     if min_indent < 0 then min_indent = 0;
 
     // Build a replacement string
     b: String_Builder;  // not using temp because the string may be too large
-
-    if only_empty_lines_selected then add_comment = true;
    
     if add_comment {
         use_spaces := config.settings.insert_spaces_when_pressing_tab;
@@ -3177,7 +3197,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
             min_indent = tab_count * TAB_SIZE;  // Update min_indent too. If you use tabs, your comments will align with tab columns.
             get_tmp_tabs(tab_count);
         }
-    
+
         adjustment := 0;
         for 0..last_line {
             start, end := line_starts[it] & LINE_START_MASK, line_starts[it+1] & LINE_START_MASK;
@@ -3189,22 +3209,34 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
             
             // Count how many characters are in the minimum indent, then cut off those characters since they will be replaced with new_whitespace
             indent, old_whitespace_count := 0;
-            while indent < min_indent {
-                c := str[old_whitespace_count];
-                if c == {
-                    case #char " ";  indent += 1;
-                    case #char "\t"; indent += TAB_SIZE - (indent % TAB_SIZE);
-                    case;            assert(false, "Unexpected character 0x%, (expected only tabs/spaces)\n", formatInt(c, base=16));
-                }
-                old_whitespace_count += 1;
-            }
-            if indent > min_indent then old_whitespace_count -= 1;
-            trimmed_str := advance(str, old_whitespace_count);
+            trimmed_str := str;
 
-            append(*b, new_whitespace);
-            append(*b, comment);
-            append(*b, " ");
-            append(*b, trimmed_str);
+            if only_empty_lines_selected {
+                max_indent := min_indent;
+                whitespace := ifx use_spaces then get_tmp_spaces(max_indent) else get_tmp_tabs(max_indent/TAB_SIZE);
+                append(*b, whitespace);
+                append(*b, comment);
+                append(*b, " ");
+                append(*b, "\n"); // line end
+
+                old_whitespace_count = max_indent;
+            } else {
+                while indent < min_indent {
+                    c := str[old_whitespace_count];
+                    if c == {
+                        case #char " ";  indent += 1;
+                        case #char "\t"; indent += TAB_SIZE - (indent % TAB_SIZE);
+                        case;            assert(false, "Unexpected character 0x%, (expected only tabs/spaces)\n", formatInt(c, base=16));
+                    }
+                    old_whitespace_count += 1;
+                }
+                if indent > min_indent then old_whitespace_count -= 1;
+                trimmed_str = advance(str, old_whitespace_count);
+                append(*b, new_whitespace);
+                append(*b, comment);
+                append(*b, " ");
+                append(*b, trimmed_str);
+            }
 
             adjusted_start             := start + adjustment;
             adjusted_old_comment_start := start + adjustment + old_whitespace_count;
