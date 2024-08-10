@@ -33,7 +33,7 @@ load_global_config :: (fallback_to_default_on_failure := false, force := false) 
     }
 }
 
-load_project_config_from_path :: (file_path: string, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
+load_project_config :: (file_path: string, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
     assert(file_path != "", "Attempting to load project config from an empty path. This is a bug.");
 
     config_path := copy_string(file_path,, temp);
@@ -61,26 +61,14 @@ load_project_config_from_path :: (file_path: string, force := false) -> success:
         free_loaded_config(*project_config);
         project_config = loaded_config;
 
+        add_to_most_recent_projects(file_path);
+
         return true, changed, loaded_config.there_were_warnings;
     } else {
         project_config.hash = loaded_config.hash;
         free_loaded_config(*loaded_config);
         return false, false, false;
     }
-}
-
-load_project_config :: (project_name: string = "", force := false) -> success: bool, changed: bool, there_were_warnings: bool {
-    if !project_name && !(project_config.loaded && project_config.path) {
-        log_error("Attempted to load an empty project config. This is a bug.");
-        return false, false, false;
-    }
-
-    config_path := project_config.path;
-    if project_name then config_path = tprint("%/%.focus-config", projects_dir, project_name);
-
-    success, changed, there_were_warnings := load_project_config_from_path(config_path, force);
-
-    return success, changed, there_were_warnings;
 }
 
 apply_config :: () {
@@ -171,13 +159,13 @@ refresh_config :: (path: string) {
             add_success_message("Global config changes have been applied", dismiss_in_seconds = 3, tag = .config);
         }
         if project_config.loaded {
-            success, changed, there_were_warnings = load_project_config_from_path(project_config.path, force = true);
+            success, changed, there_were_warnings = load_project_config(project_config.path, force = true);
             if success && changed && !there_were_warnings {
                 add_success_message("Config changes for project '%' have been applied", get_current_project_name(), dismiss_in_seconds = 3, tag = .config);
             }
         }
     } else if platform_path_equals(path, project_config.path) {
-        success, changed, there_were_warnings := load_project_config();
+        success, changed, there_were_warnings := load_project_config(project_config.path);
         if success && changed && !there_were_warnings {
             clear_user_messages(.config);
             add_success_message("Config changes for project '%' have been applied", get_current_project_name(), dismiss_in_seconds = 3, tag = .config);
@@ -261,7 +249,7 @@ refresh_config :: (path: string) {
 
 refresh_current_theme :: () {
     if global_config.loaded  then load_global_config(force = true);
-    if project_config.loaded then load_project_config(force = true);
+    if project_config.loaded then load_project_config(project_config.path, force = true);
 }
 
 is_our_config_file :: (path: string) -> bool {

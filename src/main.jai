@@ -50,9 +50,10 @@ main :: () {
         project := args[2];
         success: bool;
         if ends_with(project, ".focus-config") {
-            success = load_project_config_from_path(project);
-        } else {
             success = load_project_config(project);
+        } else {
+            config_path := tprint("%/%.focus-config", projects_dir, project);
+            success = load_project_config(config_path);
         }
         if !success then add_user_error("Couldn't load project config '%' provided in the command line arguments", project);
     }
@@ -66,7 +67,7 @@ main :: () {
                 dir := trim_right(path, "\\/");
                 project_config_path := tprint("%/.focus-config", dir);
                 if !project_config.loaded && file_exists(project_config_path) {
-                    success := load_project_config_from_path(project_config_path);
+                    success := load_project_config(project_config_path);
                     if !success then add_user_error("Tried to load project config from % but couldn't due to errors", project_config_path);
                 } else {
                     array_add(*dirs_from_args, dir);
@@ -92,7 +93,7 @@ main :: () {
         if file_exists(".focus-config") {
             project_config_path, success := get_absolute_path(".focus-config",, temp);
             if success {
-                success := load_project_config_from_path(project_config_path);
+                success := load_project_config(project_config_path);
                 if !success then add_user_error("Tried to load project config from % but couldn't due to errors", project_config_path);
             }
         }
@@ -891,6 +892,7 @@ dont_ignore_next_window_resize := false;
 #load "colors.jai";
 #load "keymap.jai";
 #load "session.jai";
+#load "projects.jai";
 #load "meow_hash.jai";
 #load "user_messages.jai";
 
@@ -942,8 +944,8 @@ dont_ignore_next_window_resize := false;
     #assert false, "Unsupported OS";
 }
 
+using Basic :: #import "Basic"()(MEMORY_DEBUGGER = DEBUG);
 #import "Atomics";
-#import "Basic"()(MEMORY_DEBUGGER = DEBUG);
 #import "Compiler";
 #import "File";
 #import "File_Utilities";

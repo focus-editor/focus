@@ -1254,6 +1254,10 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
         case "vcproj";          lang = .Xml;
         case "vcxproj";         lang = .Xml;
         case "csproj";          lang = .Xml;
+
+        case;
+            // Files named `.focus_config` are assumed to have no extension
+            if equal_nocase(basename_with_extension, ".focus-config") then lang = .Focus_Config;
     }
 
     if equal_nocase(basename_with_extension, "FOCUS-CHANGELOG.txt") then lang = .Todo;

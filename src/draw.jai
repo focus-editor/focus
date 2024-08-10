@@ -2281,8 +2281,17 @@ draw_delete_file_dialog :: () {
 }
 
 draw_switch_to_project_dialog :: () {
+    draw_extra_entry_stuff :: (entry_ptr: *void, entry_rect: Rect, name_width: float, pen: Vector2, margin: float, padding: float) {
+        entry := cast(*Switch_To_Project_Dialog.Entry) entry_ptr;
+        if !entry.config_parent_dir return;
+
+        width := Simp.prepare_text(font_ui_small, entry.config_parent_dir);
+        x := entry_rect.x + entry_rect.w - width - margin;
+        Simp.draw_text(font_ui_small, xx x, xx pen.y, entry.config_parent_dir, color = xx Color.UI_DIM);
+    }
+
     label := ifx switch_to_project_dialog.filtered then " Select project to switch to" else tprint(" No projects found in %", projects_dir);
-    draw_generic_choice_dialog(*switch_to_project_dialog, Ui_Id.switch_to_project_dialog, label);
+    draw_generic_choice_dialog(*switch_to_project_dialog, Ui_Id.switch_to_project_dialog, label, draw_extra_entry_stuff);
 }
 
 draw_theme_dialog :: () {
