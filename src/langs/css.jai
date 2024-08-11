@@ -68,20 +68,28 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     return token;
 }
 
+read_css_identifier_string :: (using tokenizer: *Tokenizer) -> string {
+    identifier: string;
+    identifier.data = t;
+
+    if !is_alnum(<<t) && <<t != #char "@" && <<t != #char "!" return identifier;
+
+    t += 1;
+    if t >= max_t then t = max_t;
+
+    while t < max_t && is_alnum(<<t) || <<t == #char "-" {
+        t += 1;
+    }
+    if t >= max_t then t = max_t;
+    identifier.count = t - identifier.data;
+
+    return identifier;
+}
+
 parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
 
-    identifier_str := read_utf8_identifier_string(tokenizer);
-
-    while true {
-        next_token := peek_next_token(tokenizer, false, Token, get_next_token);
-
-        if next_token.type != .punctuation || next_token.punctuation != .minus  break;
-
-        t += 1;
-        next_identifier_part := read_utf8_identifier_string(tokenizer);
-        identifier_str = tprint("%-%", identifier_str, next_identifier_part);
-    }
+    identifier_str := read_css_identifier_string(tokenizer);
 
     // Maybe it's a tag
     if identifier_str.count <= MAX_TAG_LENGTH {
@@ -130,7 +138,7 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
 
     temp_t := t;
 
-    unit_str := read_utf8_identifier_string(tokenizer);
+    unit_str := read_identifier_string(tokenizer);
 
     if unit_str.count <= MAX_UNIT_LENGTH {
         _, ok := table_find(*UNIT_MAP, unit_str);
@@ -144,14 +152,7 @@ parse_simple_selector :: (using tokenizer: *Tokenizer, token: *Token) {
     t += 1;
     if t >= max_t  return;
 
-    identifier_str := read_utf8_identifier_string(tokenizer);
-
-    next_token := peek_next_token(tokenizer, false, Token, get_next_token);
-    if next_token.type == .punctuation && next_token.punctuation == .minus {
-        t += 1;
-        next_identifier_part := read_utf8_identifier_string(tokenizer);
-        identifier_str = tprint("%-%", identifier_str, next_identifier_part);
-    }
+    identifier_str := read_css_identifier_string(tokenizer);
 }
 
 parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
@@ -178,11 +179,7 @@ parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
 parse_at :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .invalid;
 
-    t += 1;
-    if t >= max_t  return;
-
-    identifier_str := read_utf8_identifier_string(tokenizer);
-    identifier_str = tprint("@%", identifier_str);
+    identifier_str := read_css_identifier_string(tokenizer);
 
     property_token, ok := table_find(*PROPERTY_MAP, identifier_str);
     if ok { token.type = property_token.type; return; }
@@ -253,14 +250,7 @@ parse_hex_color :: (using tokenizer: *Tokenizer, token: *Token) -> bool {
 parse_bang :: (using tokenizer: *Tokenizer, token: *Token) {
     token.type = .identifier;
 
-    t += 1;
-    if t >= max_t  return;
-
-    identifier_str := read_utf8_identifier_string(tokenizer);
-
-    // Add the ! to the string
-    identifier_str.data -= 1;
-    identifier_str.count += 1;
+    identifier_str := read_css_identifier_string(tokenizer);
 
     if identifier_str.count <= MAX_KEYWORD_LENGTH {
         token_type, ok := table_find(*KEYWORD_MAP, identifier_str);
