@@ -3389,8 +3389,19 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
         for * cursor : editor.cursors {
             move_count := cast(s32)it_index * comment_total_length;
 
-            start_pos := min(cursor.pos, cursor.sel) + move_count;
-            end_pos   := max(cursor.pos, cursor.sel) + move_count + comment_start.count;
+            selection := get_selection(cursor);
+
+            // If it's a fallback we want to comment out lines entirely, not just selection (as we do in toggle_comment)
+            if is_fallback {
+                selection_start_line_index := offset_to_real_line(buffer, selection.start);
+                selection_end_line_index   := offset_to_real_line(buffer, selection.end);
+
+                selection.start = get_real_line_start_offset(buffer, selection_start_line_index);
+                selection.end   = get_real_line_end_offset(buffer, selection_end_line_index);
+            }
+
+            start_pos := selection.start + move_count;
+            end_pos   := selection.end   + move_count + comment_start.count;
 
             insert_string_at_offset(buffer, start_pos, comment_start);
             insert_string_at_offset(buffer, end_pos,   comment_end);
