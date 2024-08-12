@@ -75,7 +75,13 @@ update_cached_projects :: (projects: [] string) {
     for cached_projects  free(it);
     array_reset_keeping_memory(*cached_projects);
 
-    for projects  array_add(*cached_projects, copy_string(it));
+    for projects {
+        if !file_exists(it) {
+            log_error("Project file '%' doesn't exist, so it's been removed from most recent projects.");
+            continue;
+        }
+        array_add(*cached_projects, copy_string(it));
+    }
 }
 
 get_recent_projects_file_path :: inline () -> string /* temp */ {
