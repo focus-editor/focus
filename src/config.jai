@@ -356,9 +356,9 @@ get_current_project_name :: () -> string {
     // If the file name is <Project Name>.focus-config, return that
     if basename && basename != ".focus-config" return basename;
 
-    // If the file name is .focus-config, return the name of the parent dir
+    // If the file name is `.focus-config`, return the name of the parent dir
     parent_dir := trim_right(path, "/\\");
-    _, dir_name := path_decomp(parent_dir);
+    _, __, ___, dir_name := path_decomp(parent_dir);
     return dir_name;
 }
 

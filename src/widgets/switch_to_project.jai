@@ -54,6 +54,7 @@ switch_to_project_refresh_entries :: (filter: Fuzzy_Filter) {
         if !extension {
             // For `.focus-config` files, derive the name from the parent dir
             _, basename, extension, name = path_decomp(config_parent_dir);
+            basename = name;  // don't strip away any "extensions" from the dir
         }
         if platform_path_equals(config_parent_dir, projects_dir) then config_parent_dir = "";  // don't specify path for standard projects
         return Project_Config.{ name = basename, path = full_path, config_parent_dir = config_parent_dir };
