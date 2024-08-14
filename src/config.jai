@@ -577,6 +577,7 @@ Settings :: struct {
     show_cursors_off_screen                       := true;
     persist_local_search_results                  := false;
     show_selected_text_length                     := false;
+    load_most_recent_project_on_start             := false;
 
     build_panel_width_percent                     := 50;
     build_panel_height_percent                    := 50;

@@ -109,12 +109,16 @@ main :: () {
         }
     }
 
-    // Maybe load previous session project if we haven't loaded anything yet
     if !project_config.loaded {
         session = maybe_load_previous_session();
-        if session.project {
-            success := load_project_config(session.project);
-            if !success then add_user_error("Couldn't load project % from previous session", session.project);
+
+        // Maybe load most recent project
+        if config.settings.load_most_recent_project_on_start {
+            most_recent_projects := get_most_recent_projects();
+            if most_recent_projects {
+                success := load_project_config(most_recent_projects[0]);
+                if !success then add_user_error("Couldn't load most recent project '%'", most_recent_projects[0]);
+            }
         }
     } else {
         session = start_fresh_session();

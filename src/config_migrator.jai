@@ -473,6 +473,8 @@ ADDED_SETTINGS :: Added_Setting.[
     .{ 4, "window_height",                                      "-1" },
     .{ 4, "insert_final_newline_on_save",                       "false" },
     .{ 4, "status_bar_position",                                "bottom" },
+
+    .{ 5, "load_most_recent_project_on_start",                  "false" },
 ];
 
 REMOVED_SETTINGS :: Removed_Setting.[

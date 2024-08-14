@@ -59,6 +59,7 @@ auto_close_brackets:                    false
 prefer_system_file_dialogs:             false  # Windows only
 show_cursors_off_screen:                true
 persist_local_search_results:           false  # if true, search results will stay highlighted and you have to dismiss them using the `escape` action
+load_most_recent_project_on_start:      false
 
 build_panel_stays_in_one_place:         false  # if false, the build panel will flip to the inactive pane in two pane layouts
 build_panel_line_wrap_always_on:        true
