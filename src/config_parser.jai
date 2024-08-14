@@ -44,24 +44,25 @@ CONFIG_SECTIONS :: Config_Section.[
     },
 ];
 
-parse_config :: (name: string, filename: string, file_data: string, for_highlighting := false, as_theme := false) -> Config_Parse_Result {
+parse_config :: (name: string, file_path: string, file_data: string, for_highlighting := false, as_theme := false) -> Config_Parse_Result {
     // NOTE: This function allocates a lot and never frees.
     //       It expects context.allocator to be either temp or a pool allocator.
 
     using parser: Config_Parser;
     parser.parse_for_highlighting = for_highlighting;
     parser.parse_as_theme = as_theme;
+    if file_path then parser.config_path = get_parent_dir_path(file_path);
 
     trimmed_data := trim_left(file_data, " \t\n\r");  // skip empty lines, otherwise the handler will crash!
-    start_from_memory(*handler, name, filename, trimmed_data);
+    start_from_memory(*handler, name, file_path, trimmed_data);
     if handler.failed {
-        result.error_msg = tprint("Couldn't parse file '%'.\nPlease check that the version number is specified at the top in brackets, otherwise check the error log.", filename);
+        result.error_msg = tprint("Couldn't parse file '%'.\nPlease check that the version number is specified at the top in brackets, otherwise check the error log.", file_path);
         return result;
     }
 
     result.config.version = handler.version;
     if result.config.version != CURRENT_CONFIG_VERSION {
-        result.error_msg = tprint("Invalid version [%] in file '%'. The only supported version is [%].", result.config.version, filename, CURRENT_CONFIG_VERSION);
+        result.error_msg = tprint("Invalid version [%] in file '%'. The only supported version is [%].", result.config.version, file_path, CURRENT_CONFIG_VERSION);
         return result;
     }
 
@@ -420,22 +421,25 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
         case .none;
             path := copy_temporary_string(line);
             path_overwrite_separators(path, #char "/");
+            relative_to_config := !is_absolute_path(path) && config_path;
+            abs_path := ifx relative_to_config then tprint("%/%", config_path, path) else path;
 
-            if file_exists(path) {
-                array_add(*result.config.members, copy_string(get_absolute_path(path)));
+            if file_exists(abs_path) {
+                array_add(*result.config.members, copy_string(abs_path));
             } else {
                 if parse_for_highlighting {
                     // Highlight the bad chunk
                     for chunk : split(path, "/",, temp) {
                         dir_prefix := slice(path, 0, chunk.data - path.data + chunk.count);
                         if !dir_prefix continue;
-                        if !file_exists(dir_prefix) {
+                        abs_dir_prefix := ifx relative_to_config then tprint("%/%", config_path, dir_prefix) else dir_prefix;
+                        if !file_exists(abs_dir_prefix) {
                             add_highlight(parser, chunk.data - path.data, chunk.count, .error);
                             break;
                         }
                     }
                 }
-                return true, tprint("Attempted to load '%', but it doesn't exist", path);
+                return true, tprint("Attempted to load '%', but it doesn't exist", abs_path);
             }
         case .workspace_ignore;
             items := split(line, cast(u8) #char " ",, temp);
@@ -744,22 +748,27 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         code := #string JAI
                             dir_path := copy_temporary_string(setting_value);
                             path_overwrite_separators(dir_path, #char "/");
-                            if file_exists(dir_path) {
+                            relative_to_config := !is_absolute_path(dir_path) && config_path;
+                            abs_path := ifx relative_to_config then tprint("%%/%%", config_path, dir_path) else dir_path;
+
+                            if file_exists(abs_path) {
+                                target.%1 = copy_string(abs_path);
                                 return true, "";
                             } else {
                                 // Highlight the bad chunk
                                 for chunk : split(dir_path, "/",, temp) {
                                     dir_prefix := slice(dir_path, 0, chunk.data - dir_path.data + chunk.count);
                                     if !dir_prefix continue;
-                                    if !file_exists(dir_prefix) {
+                                    abs_dir_prefix := ifx relative_to_config then tprint("%%/%%", config_path, dir_prefix) else dir_prefix;
+                                    if !file_exists(abs_dir_prefix) {
                                         add_highlight(parser, setting_value.data - line.data + chunk.data - dir_path.data, chunk.count, .error);
                                         break;
                                     }
                                 }
-                                return true, tprint("Tried to use '%' as a working dir, but it doesn't exist.", dir_path);
+                                return true, tprint("Tried to use '%%' as a working dir, but it doesn't exist.", abs_path);
                             }
                         JAI;
-                        append(*b, code);
+                        print_to_builder(*b, code, option.name);
                     }
 
                     // Highlight variables in the commands, if present
@@ -1226,6 +1235,8 @@ Config_Section :: struct {
 
 Config_Parser :: struct {
     handler: Text_File_Handler;
+
+    config_path: string;  // to be used for relative paths
 
     line_start_offset: s32;  // holds the start offset of the line being parsed (ignoring any whitespace at the start)
     section_offset:    s32;  // holds the offset of the last seen section header

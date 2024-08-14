@@ -33,6 +33,7 @@
         + Workspace will now reload in a non-destructive way. Whenever possible it will try to preserve open editors unless they don't belong to the workspace any more
         + The [[workspace]] section in the config has changed. It should auto-migrate to version [5]. Please refer to the comments in the default config for more details
         + Individual files can now be added to workspace alongside directories
+        + Paths relative to the config file location can now be used in the workspace and build working directories
     + Any projects opened using any means (e.g. by launching the editor with a `-project` parameter or passing in a dir with a `.focus-config` file) will be remembered, and you can can then switch to them using the Switch to Project dialog (Ctrl-Alt-P by default)
     + New option: `load_most_recent_project_on_start`. Set to `true` to load the last loaded project on startup.
 + Bug fixes:

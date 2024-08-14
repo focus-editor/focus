@@ -71,63 +71,6 @@ load_project_config :: (file_path: string, force := false) -> success: bool, cha
     }
 }
 
-apply_config :: () {
-    // Make sure the values are within the acceptable range
-    old_tab_size := TAB_SIZE;
-    TAB_SIZE = clamp(cast(s32) config.settings.tab_size, 1, 100);  // be reasonable mkay (though even 100 is unreasonable)
-    if config.settings.tab_size != TAB_SIZE then add_user_warning("Tab size clamped to %", TAB_SIZE);
-
-    if old_tab_size != TAB_SIZE {
-        // Refresh all editors which have line wrap on
-        for * editor : open_editors {
-            buffer := *open_buffers[editor.buffer_id];
-            if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
-        }
-    }
-
-    clamp_and_warn :: (setting: *$T, min: T, max: T, message: string) {
-        old := setting.*;
-        clamped := clamp(old, min, max);
-        if clamped != old {
-            add_user_warning(message, clamped);
-            setting.* = clamped;
-        }
-    }
-
-    clamp_and_warn(*config.settings.line_height_scale_percent,  50,  1000,        "Line height scale clamped to % percent");
-    clamp_and_warn(*config.settings.editor_history_size,        4,   1024 * 1024, "Editor history size clamped to %");
-    clamp_and_warn(*config.settings.build_panel_height_percent, 10,  100,         "Build panel height clamped to % percent");
-    clamp_and_warn(*config.settings.build_panel_width_percent,  10,  100,         "Build panel width clamped to % percent");
-
-    if config.settings.window_width  != -1    clamp_and_warn(*config.settings.window_width,  100, 10000, "Window width clamped to %");
-    if config.settings.window_height != -1    clamp_and_warn(*config.settings.window_height, 100, 3000,  "Window height clamped to %");
-    if config.settings.window_x      != -1000 clamp_and_warn(*config.settings.window_x,     -500, 10000, "Window X clamped to %");
-    if config.settings.window_y      != -1000 clamp_and_warn(*config.settings.window_y,     -500, 3000,  "Window Y clamped to %");
-
-    build_panel_width  = config.settings.build_panel_width_percent  / 100.0;
-    build_panel_height = config.settings.build_panel_height_percent / 100.0;
-    build_panel_height_anim.target = build_panel_height;
-    build_panel_set_line_wrap(config.settings.build_panel_line_wrap_always_on);
-
-    // Must do after the validation
-    init_fonts_and_dependent_things();
-
-    platform_apply_config();
-
-    array_reset_keeping_memory(*active_hold_actions);  // NOTE: this doesn't actually stop the actions, it's just here so that we don't
-                                                       //       keep pointers to old keymaps when the config is reloaded
-}
-
-free_loaded_config :: (using loaded_config: *Loaded_Config) {
-    path = "";
-    parsed_config = Parsed_Config.{};
-    if memory_pool {
-        reset(memory_pool);
-        free(memory_pool);
-        memory_pool = null;
-    }
-}
-
 refresh_config :: (path: string) {
     if build_command_is_running() {
         add_user_warning("Couldn't refresh config because a build command is currently running. Please let it finish or kill it before refreshing config.");
@@ -433,6 +376,16 @@ load_config :: (path: string, existing: *Loaded_Config, force := false) -> Loade
     return loaded_config;
 }
 
+free_loaded_config :: (using loaded_config: *Loaded_Config) {
+    path = "";
+    parsed_config = Parsed_Config.{};
+    if memory_pool {
+        reset(memory_pool);
+        free(memory_pool);
+        memory_pool = null;
+    }
+}
+
 merge_configs :: (dst: *Config, parsed: Parsed_Config) {
     // Completely replace the workspace subsections if present
     if parsed.members           then dst.workspace.members = parsed.members;
@@ -469,6 +422,53 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
 
     // Platform config
     dst.linux = parsed.linux;
+}
+
+apply_config :: () {
+    // Make sure the values are within the acceptable range
+    old_tab_size := TAB_SIZE;
+    TAB_SIZE = clamp(cast(s32) config.settings.tab_size, 1, 100);  // be reasonable mkay (though even 100 is unreasonable)
+    if config.settings.tab_size != TAB_SIZE then add_user_warning("Tab size clamped to %", TAB_SIZE);
+
+    if old_tab_size != TAB_SIZE {
+        // Refresh all editors which have line wrap on
+        for * editor : open_editors {
+            buffer := *open_buffers[editor.buffer_id];
+            if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
+        }
+    }
+
+    clamp_and_warn :: (setting: *$T, min: T, max: T, message: string) {
+        old := setting.*;
+        clamped := clamp(old, min, max);
+        if clamped != old {
+            add_user_warning(message, clamped);
+            setting.* = clamped;
+        }
+    }
+
+    clamp_and_warn(*config.settings.line_height_scale_percent,  50,  1000,        "Line height scale clamped to % percent");
+    clamp_and_warn(*config.settings.editor_history_size,        4,   1024 * 1024, "Editor history size clamped to %");
+    clamp_and_warn(*config.settings.build_panel_height_percent, 10,  100,         "Build panel height clamped to % percent");
+    clamp_and_warn(*config.settings.build_panel_width_percent,  10,  100,         "Build panel width clamped to % percent");
+
+    if config.settings.window_width  != -1    clamp_and_warn(*config.settings.window_width,  100, 10000, "Window width clamped to %");
+    if config.settings.window_height != -1    clamp_and_warn(*config.settings.window_height, 100, 3000,  "Window height clamped to %");
+    if config.settings.window_x      != -1000 clamp_and_warn(*config.settings.window_x,     -500, 10000, "Window X clamped to %");
+    if config.settings.window_y      != -1000 clamp_and_warn(*config.settings.window_y,     -500, 3000,  "Window Y clamped to %");
+
+    build_panel_width  = config.settings.build_panel_width_percent  / 100.0;
+    build_panel_height = config.settings.build_panel_height_percent / 100.0;
+    build_panel_height_anim.target = build_panel_height;
+    build_panel_set_line_wrap(config.settings.build_panel_line_wrap_always_on);
+
+    // Must do after the validation
+    init_fonts_and_dependent_things();
+
+    platform_apply_config();
+
+    array_reset_keeping_memory(*active_hold_actions);  // NOTE: this doesn't actually stop the actions, it's just here so that we don't
+                                                       //       keep pointers to old keymaps when the config is reloaded
 }
 
 load_font_by_name :: (name: string) -> font_data: string, success: bool {
