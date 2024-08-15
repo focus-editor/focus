@@ -442,23 +442,17 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
                 return true, tprint("Attempted to load '%', but it doesn't exist", abs_path);
             }
         case .workspace_ignore;
-            items := split(line, cast(u8) #char " ",, temp);
-            for items {
-                if !it continue;
-                item := copy_string(trim(it, "\t "));
-                item = trim_right(item, "/");
-                path_overwrite_separators(item, #char "/");
-                array_add(*result.config.ignore, item);
-            }
+            item := copy_string(trim(line, "\t "));
+            item = trim_right(item, "/");
+            path_overwrite_separators(item, #char "/");
+            array_add(*result.config.ignore, item);
+
         case .workspace_allow;
-            items := split(line, cast(u8) #char " ",, temp);
-            for items {
-                if !it continue;
-                item := copy_string(trim(it, "\t "));
-                item = trim_right(item, "/");
-                path_overwrite_separators(item, #char "/");
-                array_add(*result.config.allow, trim(item, "\t "));
-            }
+            item := copy_string(trim(line, "\t "));
+            item = trim_right(item, "/");
+            path_overwrite_separators(item, #char "/");
+            array_add(*result.config.allow, trim(item, "\t "));
+
         case .workspace_file_associations;
             found, wildcards, lang_name := split_from_left(line, cast(u8) #char ":");
             wildcards, lang_name = trim(wildcards), trim(lang_name);
