@@ -743,9 +743,30 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                     JAI;
                     print_to_builder(*b, code, option.name);
 
-                    // Validate working directories
+                    // Process working directories
                     if option.name == "build_working_dir" || option.name == "run_working_dir" {
                         code := #string JAI
+                            // Exit early if variables are used in path
+                            vars_used := false;
+                            var_names := string.[
+                                "%FILE%", "%FILE_DIR%", "%FILE_NAME%", "%FILE_NAME_NO_EXTENSION%", "%PROJECT_DIR%",
+                            ];
+                            for var : var_names {
+                                start_index := 0;
+                                while true {
+                                    index := find_index_from_left(setting_value, var, start_index);
+                                    if index < 0 break;
+                                    start_index = index + var.count;
+                                    add_highlight(parser, setting_value.data - line.data + index, var.count, .value);
+                                    vars_used = true;
+                                }
+                            }
+                            if vars_used return true, "";  // we're unable to validate it at this point
+                        JAI;
+                        append(*b, code);
+
+                        code = #string JAI
+                            // Validate path and handle relative paths
                             dir_path := copy_temporary_string(setting_value);
                             path_overwrite_separators(dir_path, #char "/");
                             relative_to_config := !is_absolute_path(dir_path) && config_path;
@@ -774,7 +795,10 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                     // Highlight variables in the commands, if present
                     if option.name == "build_command" || option.name == "run_command" {
                         code := #string JAI
-                            var_names := string.["%FILE%", "%FILE_DIR%", "%FILE_NAME%", "%FILE_NAME_NO_EXTENSION%", "%BUILD_WORKING_DIR%", "%RUN_WORKING_DIR%"];
+                            var_names := string.[
+                                "%FILE%", "%FILE_DIR%", "%FILE_NAME%", "%FILE_NAME_NO_EXTENSION%",
+                                "%BUILD_WORKING_DIR%", "%RUN_WORKING_DIR%", "%PROJECT_DIR%",
+                            ];
                             for var : var_names {
                                 start_index := 0;
                                 while true {

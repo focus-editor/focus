@@ -305,6 +305,12 @@ get_current_project_name :: () -> string {
     return dir_name;
 }
 
+get_current_project_dir :: () -> string {
+    if !project_config.loaded return "";
+
+    return trim_right(path_strip_filename(project_config.path), "/");
+}
+
 #scope_file
 
 load_config :: (path: string, existing: *Loaded_Config, force := false) -> Loaded_Config, changed := true {
