@@ -61,6 +61,7 @@ draw_frame :: () {
             draw_splitter(splitter_rect, split_x, .editor_splitter);
     }
 
+    if color_preview_is_shown then draw_color_preview();
     if build_panel_is_shown then draw_build_panel();
 
     if #complete active_global_widget == {
@@ -299,15 +300,96 @@ draw_user_messages :: (main_area: Rect, status_bar_height: float) {
     }
 }
 
+draw_color_preview :: () {
+    // Drag panel title bar first before drawing
+    if ui.active == .color_preview_title_bar {
+        if color_preview_get_position() == .left {
+            color_preview_set_width(((mouse.pointer.x - screen.x) - panel_grab_point.x) / screen.w);
+        } else {
+            color_preview_set_width((screen.x + screen.w - (mouse.pointer.x - panel_grab_point.x)) / screen.w);
+        }
+        color_preview_set_height((mouse.pointer.y - panel_grab_point.y - screen.y) / screen.h);
+    }
+
+    color_preview_rect: Rect;
+    if color_preview_get_position() == .left {
+        color_preview_rect = cut_left(screen, screen.w * color_preview_width, margin = 2);
+    } else {
+        color_preview_rect = cut_right(screen, screen.w * color_preview_width, margin = 2);
+    }
+    color_preview_rect = cut_bottom(color_preview_rect, color_preview_rect.h * color_preview_height);
+
+    if !is_valid(color_preview_rect) return;
+    draw_rounded_rect_with_shadow(color_preview_rect, Color.BACKGROUND_0, radius = 0.1, shadow_size = char_size);
+
+    margin := floor(4 * dpi_scale);
+    title_bar_height := font_ui_line_height + 2 * margin + 4 * dpi_scale;
+    title_bar_rect, panel_body_rect := cut_top(color_preview_rect, title_bar_height);
+
+    if !is_valid(title_bar_rect) return;
+
+    // Draw title bar
+    {
+        started_dragging := maybe_set_hot_or_active(.color_preview_title_bar, title_bar_rect, .NORMAL, .left);
+        if started_dragging {
+            if color_preview_get_position() == .left {
+                panel_grab_point = mouse.pointer - top_right(title_bar_rect);
+            } else {
+                panel_grab_point = mouse.pointer - top_left(title_bar_rect);
+            }
+        }
+        if ui.active == .color_preview_title_bar then set_pointer_image(.DRAGGING_FREE);
+        if ui.hot_last_frame == .color_preview_title_bar && ui.active == .none && mouse.middle.just_pressed then hide_color_preview();
+
+        push_scissor(title_bar_rect);
+        defer pop_scissor();
+
+        draw_rect(title_bar_rect, Color.BUILD_PANEL_TITLE_BAR);
+
+        pen := Vector2.{
+            x = title_bar_rect.x + char_x_advance,
+            y = title_bar_rect.y + (title_bar_rect.h - font_ui_bold.character_height) / 2 + 2,
+        };
+        Simp.draw_text(font_ui_bold, xx pen.x, xx pen.y, "Color Preview", xx Color.UI_DEFAULT);
+
+        // Draw the close button
+        {
+            button_rect := cut_right(title_bar_rect, title_bar_rect.h);
+            button_id := get_ui_id_from_loc();
+            maybe_set_hot_or_active(button_id, button_rect, .PRESSABLE);
+            if ui.hot_last_frame == button_id && mouse.left.just_released && mouse_pointer_is_within(button_rect) {
+                hide_color_preview();
+                redraw_requested = true;
+            }
+
+            color := Color.UI_DIM;
+            if is_hovering_over(button_id) color = Color.UI_DEFAULT;
+            icon_char := convert_utf32_to_utf8(xx Icon.xmark);
+            icon_width := Simp.prepare_text(font_icons, to_string(*icon_char));
+            icon_x := button_rect.x + (button_rect.w - icon_width) / 2 ;
+            Simp.draw_prepared_text(font_icons, xx icon_x, xx pen.y, color = xx color);
+        }
+
+        hr := cut_bottom(title_bar_rect, 1);
+        draw_rect(hr, Color.BACKGROUND_1);
+    }
+
+    if !is_valid(panel_body_rect) return;
+
+    // Draw text
+    editor_id := color_preview_get_editor_id();
+    draw_editor(editor_id, panel_body_rect, 0, get_ui_id_from_loc());
+}
+
 draw_build_panel :: () {
     // Drag build panel title bar first before drawing
     if ui.active == .build_panel_title_bar {
         if build_panel_get_position() == .left {
-            build_panel_set_width(((mouse.pointer.x - screen.x) - build_panel_grab_point.x) / screen.w);
+            build_panel_set_width(((mouse.pointer.x - screen.x) - panel_grab_point.x) / screen.w);
         } else {
-            build_panel_set_width((screen.x + screen.w - (mouse.pointer.x - build_panel_grab_point.x)) / screen.w);
+            build_panel_set_width((screen.x + screen.w - (mouse.pointer.x - panel_grab_point.x)) / screen.w);
         }
-        build_panel_set_height((mouse.pointer.y - build_panel_grab_point.y - screen.y) / screen.h);
+        build_panel_set_height((mouse.pointer.y - panel_grab_point.y - screen.y) / screen.h);
     }
 
     build_panel_rect: Rect;
@@ -336,9 +418,9 @@ draw_build_panel :: () {
         started_dragging := maybe_set_hot_or_active(.build_panel_title_bar, title_bar_rect, .NORMAL, .left);
         if started_dragging {
             if build_panel_get_position() == .left {
-                build_panel_grab_point = mouse.pointer - top_right(title_bar_rect);
+                panel_grab_point = mouse.pointer - top_right(title_bar_rect);
             } else {
-                build_panel_grab_point = mouse.pointer - top_left(title_bar_rect);
+                panel_grab_point = mouse.pointer - top_left(title_bar_rect);
             }
         }
         if ui.active == .build_panel_title_bar then set_pointer_image(.DRAGGING_FREE);
@@ -3489,8 +3571,9 @@ Ui_Id :: enum s64 {
     delete_file_dialog          :: -13;
     confirm_overwrite           :: -14;
     build_panel_title_bar       :: -15;
-    theme_dialog                :: -16;
-    language_dialog             :: -17;
+    color_preview_title_bar     :: -16;
+    theme_dialog                :: -17;
+    language_dialog             :: -18;
 
     // The rest will be derived from loc
 }
@@ -3503,14 +3586,15 @@ Ui_Id :: enum s64 {
 scrollbar_grab_point: float;
 
 // Same as the scrollbar grab point above
-build_panel_grab_point: Vector2;
+panel_grab_point: Vector2;
 
 // What to select when dragging
 selection_mode: Selection_Mode;
 
 scissor_stack: [..] Rect;
 
-// Please keep at the bottom - needed for ui elements parent-child relationships
+GOLDEN_RATIO :: 1.6180339;
+
+// Please keep at the bottom - needed for the parent-child relationships of ui elements
 NUM_LINES_OF_CODE :: #run #location().line_number;
 
-GOLDEN_RATIO :: 1.6180339;

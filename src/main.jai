@@ -912,6 +912,7 @@ dont_ignore_next_window_resize := false;
 #load "widgets/confirm_overwrite.jai";
 #load "widgets/theme_dialog.jai";
 #load "widgets/language_dialog.jai";
+#load "widgets/color_preview.jai";
 
 #load "langs/common.jai";
 #load "langs/jai.jai";

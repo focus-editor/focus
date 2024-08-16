@@ -245,6 +245,7 @@ reload_workspace :: () {
     deinit_finder();
     hide_build_panel();
     deinit_build_system();
+    deinit_color_preview();
     deinit_open_file_dialog();
     deinit_file_watcher();
     deinit_buffers();
