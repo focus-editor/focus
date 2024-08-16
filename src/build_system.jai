@@ -562,16 +562,16 @@ substitute_variables :: (using work: *Build_Thread_Work) {
         run_command       = replace(run_command,       "%FILE_NAME_NO_EXTENSION%", file_name_no_extension);
     }
 
-    // Replace %PROJECT_DIR% if used
-    if contains(build_command, "%PROJECT_DIR%") || contains(run_command, "%PROJECT_DIR%") || contains(build_working_dir, "%PROJECT_DIR%") || contains(run_working_dir, "%PROJECT_DIR%") {
+    // Replace %PROJECT_CONFIG_DIR% if used
+    if contains(build_command, "%PROJECT_CONFIG_DIR%") || contains(run_command, "%PROJECT_CONFIG_DIR%") || contains(build_working_dir, "%PROJECT_CONFIG_DIR%") || contains(run_working_dir, "%PROJECT_CONFIG_DIR%") {
         project_dir := get_current_project_dir();
         if project_dir {
-            build_working_dir = replace(build_working_dir, "%PROJECT_DIR%", project_dir);
-            run_working_dir   = replace(run_working_dir,   "%PROJECT_DIR%", project_dir);
-            build_command     = replace(build_command,     "%PROJECT_DIR%", project_dir);
-            run_command       = replace(run_command,       "%PROJECT_DIR%", project_dir);
+            build_working_dir = replace(build_working_dir, "%PROJECT_CONFIG_DIR%", project_dir);
+            run_working_dir   = replace(run_working_dir,   "%PROJECT_CONFIG_DIR%", project_dir);
+            build_command     = replace(build_command,     "%PROJECT_CONFIG_DIR%", project_dir);
+            run_command       = replace(run_command,       "%PROJECT_CONFIG_DIR%", project_dir);
         } else {
-            add_user_warning("Variable '%PROJECT_DIR%' is used in the build command, but there is no active project", dismiss_in_seconds = 10);
+            add_user_warning("Variable '%PROJECT_CONFIG_DIR%' is used in the build command, but there is no active project", dismiss_in_seconds = 10);
         }
     }
 

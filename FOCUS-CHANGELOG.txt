@@ -38,6 +38,7 @@
         + Paths relative to the config file location can now be used in the workspace member list
     + Any projects opened using any means (e.g. by launching the editor with a `-project` parameter or passing in a dir with a `.focus-config` file) will be remembered, and you can can then switch to them using the Switch to Project dialog (Ctrl-Alt-P by default)
     + New option: `load_most_recent_project_on_start`. Set to `true` to load the last loaded project on startup.
+    + New build command variable: `%PROJECT_CONFIG_DIR%`. Expands to the path of the directory containing the active project config.
 + Bug fixes:
     + Linux: Fixed a bug that caused inconsistent trackpad scrolling on Wayland (thanks @Mythique)
     + Rust: enabled comment toggling that was missing initially

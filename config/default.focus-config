@@ -107,13 +107,14 @@ status_bar_position:                    bottom # valid positions: top, bottom
 # ... let us know what regex works for you and we'll add it here
 
 # NOTE:
-# You can use the following variables in build_command or run_command:
+# You can use the following variables in build commands:
 # %FILE%      - full path to currenly active file
 # %FILE_DIR%  - the directory of the currently active file
 # %FILE_NAME% - current file name, with extension
 # %FILE_NAME_NO_EXTENSION% - current file name, without extension
-# %BUILD_WORKING_DIR% - working dir of the build command
-# %RUN_WORKING_DIR%   - working dir of the run command
+# %BUILD_WORKING_DIR%  - working dir of the build command
+# %RUN_WORKING_DIR%    - working dir of the run command
+# %PROJECT_CONFIG_DIR% - the dir containing the active project config file
 
 
 [[keymap]]

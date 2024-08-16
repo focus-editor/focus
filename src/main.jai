@@ -109,7 +109,7 @@ main :: () {
         }
     }
 
-    if !project_config.loaded {
+    if !project_config.loaded && !project_dirs {
         session = maybe_load_previous_session();
 
         // Maybe load most recent project
