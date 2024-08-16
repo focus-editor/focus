@@ -6,6 +6,22 @@ init_workspace :: () {
             add_directory_to_workspace(path);
         }
     }
+    // Change working directory to the first directory in the list
+    working_dir := get_working_directory_from_workspace(config.workspace.members);
+    if working_dir {
+        set_working_directory(working_dir);
+    } else {
+        set_working_directory(data_dir);
+    }
+}
+
+get_working_directory_from_workspace :: (members: [] string) -> string {
+    if members {
+        first_member := members[0];
+        if is_directory(first_member) return first_member;
+        if file_exists(first_member)  return path_strip_filename(first_member);
+    }
+    return "";
 }
 
 add_file_to_workspace :: (path: string) {

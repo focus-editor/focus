@@ -421,6 +421,7 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
         case .none;
             path := copy_temporary_string(line);
             path_overwrite_separators(path, #char "/");
+            path = trim_right(path, "/");
             relative_to_config := !is_absolute_path(path) && config_path;
             abs_path := ifx relative_to_config then tprint("%/%", config_path, path) else path;
 
@@ -763,8 +764,9 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                             // Validate path and handle relative paths
                             dir_path := copy_temporary_string(setting_value);
                             path_overwrite_separators(dir_path, #char "/");
-                            relative_to_config := !is_absolute_path(dir_path) && config_path;
-                            abs_path := ifx relative_to_config then tprint("%%/%%", config_path, dir_path) else dir_path;
+                            working_dir := get_working_directory_from_workspace(result.config.members);
+                            relative_to_working_dir := !is_absolute_path(dir_path) && working_dir;
+                            abs_path := ifx relative_to_working_dir then tprint("%%/%%", working_dir, dir_path) else dir_path;
 
                             if file_exists(abs_path) {
                                 target.%1 = copy_string(abs_path);
@@ -774,7 +776,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                                 for chunk : split(dir_path, "/",, temp) {
                                     dir_prefix := slice(dir_path, 0, chunk.data - dir_path.data + chunk.count);
                                     if !dir_prefix continue;
-                                    abs_dir_prefix := ifx relative_to_config then tprint("%%/%%", config_path, dir_prefix) else dir_prefix;
+                                    abs_dir_prefix := ifx relative_to_working_dir then tprint("%%/%%", working_dir, dir_prefix) else dir_prefix;
                                     if !file_exists(abs_dir_prefix) {
                                         add_highlight(parser, setting_value.data - line.data + chunk.data - dir_path.data, chunk.count, .error);
                                         break;

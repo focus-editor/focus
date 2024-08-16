@@ -120,17 +120,19 @@ refresh_config :: (path: string) {
 
     // Detect changes in workspace members or allow_ignore_lists
     members_changed := false;
+    if config.workspace.members.count != old_workspace_members.count {
+        members_changed = true;
+    } else {
+        // Even if the workspace members are reordered we still want to refresh workspace
+        for i : 0 .. config.workspace.members.count-1 {
+            if config.workspace.members[i] != old_workspace_members[i] {
+                members_changed = true;
+                break;
+            }
+        }
+    }
+
     allow_ignore_changed := false;
-
-    for new_member : config.workspace.members {
-        exists := array_find(old_workspace_members, new_member);
-        if !exists { members_changed = true; break; }
-    }
-    for old_member : old_workspace_members {
-        exists := array_find(config.workspace.members, old_member);
-        if !exists { members_changed = true; break; }
-    }
-
     for config.workspace.allow {
         exists := array_find(old_allow_list, it);
         if !exists { allow_ignore_changed = true; break; }
