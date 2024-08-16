@@ -3,8 +3,9 @@
 [[workspace]]
 # These directories and files will be scanned when a workspace is opened so that search etc. works.
 # Example:
-# /Users/my_name/projects/my_project
+# /Users/my_name/projects/my_project  # <- the first directory in the list becomes the working directory
 # /Users/my_name/jai
+# src  # <- this would be relative to the config file location
 
 [ignore]
 # Files and directories matching the following wildcards will not be loaded or descended into
@@ -67,7 +68,7 @@ status_bar_position:                    bottom # valid positions: top, bottom
 
 
 # [[build commands]]
-# build_working_dir:      <build working dir for all commands>
+# build_working_dir:      <build working dir for all commands>  # <- paths relative to the workspace working dir (the first one in the list) are allowed
 # open_panel_on_build:    true  #  <- any settings specified here will apply to all commands unless overridden
 # close_panel_on_success: false
 # clear_build_output_before_running: false

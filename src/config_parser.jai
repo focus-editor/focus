@@ -772,6 +772,8 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                                 target.%1 = copy_string(abs_path);
                                 return true, "";
                             } else {
+                                if !is_absolute_path(dir_path) && !working_dir  return true, "";  // if the workspace is empty, don't check relative paths
+
                                 // Highlight the bad chunk
                                 for chunk : split(dir_path, "/",, temp) {
                                     dir_prefix := slice(dir_path, 0, chunk.data - dir_path.data + chunk.count);
@@ -782,7 +784,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                                         break;
                                     }
                                 }
-                                return true, tprint("Tried to use '%%' as a working dir, but it doesn't exist.", abs_path);
+                                return true, tprint("Tried to use '%%' as a working dir in a build command, but it doesn't exist.", abs_path);
                             }
                         JAI;
                         print_to_builder(*b, code, option.name);
