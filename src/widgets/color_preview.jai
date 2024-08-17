@@ -71,6 +71,8 @@ color_preview_begin_draw :: (editor_id: s64) {
     Simp.immediate_flush();
     OLD_COLOR_MAP = COLOR_MAP;
 
+    color_preview_warning = "";  // reset warning
+
     if !is_color_preview_panel(editor_id) {  // we could be focusing on the widget itself
         target_editor := *open_editors[editor_id];
         target_buffer_id = target_editor.buffer_id;  // remember the buffer we're targeting
@@ -79,16 +81,54 @@ color_preview_begin_draw :: (editor_id: s64) {
     }
 
     buffer := *open_buffers[target_buffer_id];
+    assert(buffer.has_file);
 
     config_extra := cast(*Focus_Config_Extra) buffer.extra;
     if !config_extra return;
 
-    for config_extra.parsed_colors  COLOR_MAP[it.color_id] = it.color;
+    // Override the colors temporarily
+    // Try to build it up as it would when the config is actually loaded
+    reset_color_map_to_default();
+
+    if is_current_global_config(buffer.file.full_path) {
+        // Apply the colors we're editing
+        apply_parsed_colors(config_extra.parsed_colors);
+
+        // Apply the colors from the current project, if any
+        if project_config.loaded && project_config.parsed_config.colors {
+            apply_parsed_colors(project_config.parsed_config.colors);
+            color_preview_warning = "There is an active project config that overrides colors from the config you are editing";
+        } else if config.style.theme {
+            color_preview_warning = tprint("There is an active theme '%'. No colors from this config are applied. You can edit the theme using the 'Edit Current Theme' command.", config.style.theme);
+        }
+    } else if is_current_project_config(buffer.file.full_path) {
+        // Apply the existing global config first
+        assert(global_config.loaded);
+        apply_parsed_colors(global_config.parsed_config.colors);
+
+        // Then apply our stuff on top
+        apply_parsed_colors(config_extra.parsed_colors);
+
+        if config.style.theme {
+            color_preview_warning = tprint("There is an active theme '%'. No colors from this config are applied. You can edit the theme using the 'Edit Current Theme' command.", config.style.theme);
+        }
+    } else if is_current_theme(buffer.file.full_path) {
+        // Themes are supposed to override everything, so apply on top of default
+        apply_parsed_colors(config_extra.parsed_colors);
+    } else {
+        // This is not an active config or theme. Apply our stuff on top of the default config but show a warning
+        apply_parsed_colors(config_extra.parsed_colors);
+        color_preview_warning = "This is not an active config or theme, so no changes will be applied when you save the file";
+    }
 }
 
 color_preview_end_draw :: () {
     Simp.immediate_flush();
     COLOR_MAP = OLD_COLOR_MAP;
+}
+
+color_preview_get_warning :: () -> string {
+    return color_preview_warning;
 }
 
 color_preview_get_editor_id :: inline () -> s64 {
@@ -122,6 +162,8 @@ panel_editor_id := -1;
 
 previously_active_editor := -1;
 saved_position := Panel_Position.right;
+
+color_preview_warning: string;
 
 Panel_Position :: enum { left; right; }
 

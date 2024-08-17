@@ -394,13 +394,32 @@ maybe_draw_color_preview_panel :: () {
     // Draw text
     editor_id := color_preview_get_editor_id();
     color_preview_ui_id := get_ui_id_from_loc();
-    draw_editor(editor_id, panel_body_rect, 0, color_preview_ui_id);
+
+    editor_rect, warning_rect: Rect;
+    warning_text := color_preview_get_warning();
+    if warning_text {
+        padding := floor(8 * dpi_scale);
+        height := font_ui_line_height + 2 * padding;
+        warning_rect, editor_rect = cut_top(panel_body_rect, height);
+
+        push_scissor(warning_rect);
+        defer pop_scissor();
+
+        draw_rect(warning_rect, Color.UI_WARNING_DIM);
+        x := cast(s64) (warning_rect.x + padding);
+        y := cast(s64) (warning_rect.y + warning_rect.h - padding) - font_ui.character_height;
+        Simp.draw_text(font_ui, x, y, warning_text, xx Color.UI_DEFAULT);
+    } else {
+        editor_rect = panel_body_rect;
+    }
+
+    draw_editor(editor_id, editor_rect, 0, color_preview_ui_id);
 
     if ui.hot_last_frame == color_preview_ui_id {
         // Draw a tooltip with the correct color name
         editor := *open_editors[editor_id];
         buffer := *open_buffers[editor.buffer_id];
-        text_rect := get_editor_subrects(editor_id, panel_body_rect, 0);
+        text_rect := get_editor_subrects(editor_id, editor_rect, 0);
         mouse_coords := coords_from_mouse_position(editor, text_rect);
         buffer_pos   := coords_to_offset(editor, buffer, mouse_coords);
         if buffer_pos >= 0 && buffer_pos < buffer.tokens.count {
@@ -1772,9 +1791,9 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
 
     if draw_config_warning && buffer.has_file {
         label: string;
-        if platform_path_equals(buffer.file.full_path, global_config.path) {
+        if is_current_global_config(buffer.file.full_path) {
             label = "[current global config]";
-        } else if project_config.loaded && platform_path_equals(buffer.file.full_path, project_config.path) {
+        } else if is_current_project_config(buffer.file.full_path) {
             label = "[current project config]";
         } else if is_current_theme(buffer.file.full_path) {
             label = "[currently active theme]";

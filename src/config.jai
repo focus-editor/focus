@@ -198,7 +198,15 @@ refresh_current_theme :: () {
 }
 
 is_our_config_file :: (path: string) -> bool {
-    return path != "" && (platform_path_equals(path, global_config.path) || platform_path_equals(path, project_config.path));
+    return path != "" && (is_current_global_config(path) || is_current_project_config(path));
+}
+
+is_current_global_config :: inline (path: string) -> bool {
+    return platform_path_equals(path, global_config.path);
+}
+
+is_current_project_config :: inline (path: string) -> bool {
+    return project_config.loaded && platform_path_equals(path, project_config.path);
 }
 
 is_current_theme :: (path: string) -> bool {
@@ -284,13 +292,14 @@ apply_style :: (parsed: Parsed_Config) {
         default_font_size = font_size;
     }
 
-    // Colors
-    for parsed.colors {
-        COLOR_MAP[it.color_id] = it.color;
-    }
-    // TODO: @colorref - resolve references
+    apply_parsed_colors(parsed.colors);
 
     platform_set_border_color();
+}
+
+apply_parsed_colors :: (colors: [] Parsed_Color) {
+    for colors  COLOR_MAP[it.color_id] = it.color;
+    // TODO: @colorref - resolve references
 }
 
 get_current_project_name :: () -> string {
