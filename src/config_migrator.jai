@@ -472,9 +472,10 @@ ADDED_SETTINGS :: Added_Setting.[
     .{ 4, "window_width",                                       "-1" },
     .{ 4, "window_height",                                      "-1" },
     .{ 4, "insert_final_newline_on_save",                       "false" },
-    .{ 4, "status_bar_position",                                "bottom" },
+    .{ 4, "status_bar_position",                                "bottom  # options: top, bottom" },
 
     .{ 5, "load_most_recent_project_on_start",                  "false" },
+    .{ 5, "color_preview_popup",                                "enabled  # options: enabled, minimized, disabled" },
 ];
 
 REMOVED_SETTINGS :: Removed_Setting.[

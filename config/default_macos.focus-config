@@ -64,7 +64,8 @@ build_panel_line_wrap_always_on:        true
 build_panel_width_percent:              50
 build_panel_height_percent:             50
 
-status_bar_position:                    bottom # valid positions: top, bottom
+status_bar_position:                    bottom   # options: top, bottom
+color_preview_popup:                    enabled  # options: enabled, minimized, disabled
 
 
 # [[build commands]]

@@ -301,6 +301,8 @@ draw_user_messages :: (main_area: Rect, status_bar_height: float) {
 }
 
 maybe_draw_color_preview_panel :: () {
+    if config.settings.color_preview_popup == .disabled return;
+
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
     if buffer.lang != .Focus_Config && buffer.lang != .Focus_Theme && !is_color_preview_panel(editors.active) return;

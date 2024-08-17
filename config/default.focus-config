@@ -70,7 +70,8 @@ build_panel_height_percent:             50
 save_all_file_backed_buffers_on_build:  false
 save_current_buffer_on_build:           false
 
-status_bar_position:                    bottom # valid positions: top, bottom
+status_bar_position:                    bottom   # options: top, bottom
+color_preview_popup:                    enabled  # options: enabled, minimized, disabled
 
 
 # This is an example configuration for build commands

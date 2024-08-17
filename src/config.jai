@@ -605,6 +605,7 @@ Settings :: struct {
     save_all_file_backed_buffers_on_build         := false;
 
     status_bar_position                           := Status_Bar_Position.bottom;
+    color_preview_popup                           := Color_Preview_Popup.enabled;
 
     // TODO
     // convert_tabs_to_spaces_on_load:     false
@@ -614,6 +615,12 @@ Settings :: struct {
 Status_Bar_Position :: enum {
     bottom;
     top;
+}
+
+Color_Preview_Popup :: enum {
+    enabled;
+    minimized;
+    disabled;
 }
 
 Keymap :: struct {
