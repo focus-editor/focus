@@ -60,10 +60,10 @@ Color :: enum u8 {
 };
 
 // Will be populated when parsing config
-COLOR_MAP: [NUM_COLORS] Vector4;
+COLOR_MAP: [COLOR_MAP_SIZE] Vector4;
 
 // Will contain the color map of the default config (useful when merging configs)
-#no_reset DEFAULT_COLOR_MAP: [NUM_COLORS] Vector4;
+#no_reset DEFAULT_COLOR_MAP: [COLOR_MAP_SIZE] Vector4;
 
 map_color_to_vec4 :: inline (color: Color) -> Vector4 {
     return COLOR_MAP[cast(s64) color];
@@ -74,6 +74,4 @@ color_as_3_floats :: (color: Color) -> [3] float {
     return .[c.x, c.y, c.z];
 }
 
-#scope_file
-
-NUM_COLORS :: #run enum_highest_value(Color) + 1;
+COLOR_MAP_SIZE :: #run enum_highest_value(Color) + 1;

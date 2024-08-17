@@ -51,6 +51,7 @@
 + Other changes:
     + macOS: add support for dead keys/key composition
     + Text inputs now also support deleting text to underscore (Alt+Backspace, Alt+Delete by default) (thanks @jejikeh)
+    + It is now possible to add a comment to an empty line by using the `toggle_comment` action (thanks @polgartom)
 
 
 # RELEASES ==================================================================

@@ -2,6 +2,8 @@ deinit_color_preview :: () {
     // Assuming that the editor and the buffer will be cleaned up separately
     panel_buffer_id = -1;
     panel_editor_id = -1;
+
+    target_buffer_id = -1;
 }
 
 toggle_color_preview :: () {
@@ -24,7 +26,7 @@ hide_color_preview :: () {
     color_preview_is_shown = false;
 }
 
-is_color_preview :: inline (editor_id: s64) -> bool {
+is_color_preview_panel :: inline (editor_id: s64) -> bool {
     return editor_id == panel_editor_id;
 }
 
@@ -65,6 +67,30 @@ color_preview_is_active :: inline () -> bool {
     return color_preview_is_shown && panel_editor_id >= 0 && editors.active == panel_editor_id;
 }
 
+color_preview_begin_draw :: (editor_id: s64) {
+    Simp.immediate_flush();
+    OLD_COLOR_MAP = COLOR_MAP;
+
+    if !is_color_preview_panel(editor_id) {  // we could be focusing on the widget itself
+        target_editor := *open_editors[editor_id];
+        target_buffer_id = target_editor.buffer_id;  // remember the buffer we're targeting
+    } else {
+        if target_buffer_id < 0 return;  // shouldn't happen
+    }
+
+    buffer := *open_buffers[target_buffer_id];
+
+    config_extra := cast(*Focus_Config_Extra) buffer.extra;
+    if !config_extra return;
+
+    for config_extra.parsed_colors  COLOR_MAP[it.color_id] = it.color;
+}
+
+color_preview_end_draw :: () {
+    Simp.immediate_flush();
+    COLOR_MAP = OLD_COLOR_MAP;
+}
+
 color_preview_get_editor_id :: inline () -> s64 {
     if panel_editor_id < 0 {
         assert(panel_buffer_id < 0, "Code helper panel already has a buffer. This is a bug");
@@ -73,6 +99,10 @@ color_preview_get_editor_id :: inline () -> s64 {
         editor, buffer := *open_editors[panel_editor_id], *open_buffers[panel_buffer_id];
         buffer.readonly = true;
         buffer.deleted  = true;  // so that it doesn't appear in the open file dialog
+        buffer.lang = .Jai;
+        insert_string_at_offset(buffer, 0, SAMPLE_JAI);
+        rescan_for_lines(buffer);
+        if editor.line_wrap == .on then rescan_for_wrapped_lines(editor, buffer);
     }
     return panel_editor_id;
 }
@@ -80,10 +110,12 @@ color_preview_get_editor_id :: inline () -> s64 {
 color_preview_is_shown := false;
 
 color_preview_width:  float = 0.5;
-color_preview_height: float = 0.5;
+color_preview_height: float = 0.7;
 
 
 #scope_file
+
+target_buffer_id := -1;  // the id of the buffer with the color section which triggered the widget
 
 panel_buffer_id := -1;
 panel_editor_id := -1;
@@ -93,3 +125,22 @@ saved_position := Panel_Position.right;
 
 Panel_Position :: enum { left; right; }
 
+OLD_COLOR_MAP: [COLOR_MAP_SIZE] Vector4;
+
+
+SAMPLE_JAI :: #string JAI
+// Comment
+/* Multi-line comment */
+#import "Module";
+
+main :: () {
+    print("%\n", type_of(Address));
+}
+
+Address :: struct {
+    street_number: int;
+    street_name:   string;
+}
+
+Phone_Number :: [9] u8;
+JAI

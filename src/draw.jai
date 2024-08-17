@@ -61,8 +61,8 @@ draw_frame :: () {
             draw_splitter(splitter_rect, split_x, .editor_splitter);
     }
 
-    if color_preview_is_shown then draw_color_preview();
-    if build_panel_is_shown then draw_build_panel();
+    maybe_draw_color_preview_panel();
+    maybe_draw_build_panel();
 
     if #complete active_global_widget == {
         case .editors;                  // already done
@@ -300,7 +300,22 @@ draw_user_messages :: (main_area: Rect, status_bar_height: float) {
     }
 }
 
-draw_color_preview :: () {
+maybe_draw_color_preview_panel :: () {
+    editor, buffer := get_active_editor_and_buffer();
+    if !editor return;
+    if buffer.lang != .Focus_Config && buffer.lang != .Focus_Theme && !is_color_preview_panel(editors.active) return;
+
+    if !is_color_preview_panel(editors.active) {
+        // Only show the panel if the cursor is within the [colors] section of the config
+        using config_extra := cast(*Focus_Config_Extra) buffer.extra;
+        pos := editor.cursors[editor.main_cursor].pos;
+        if !config_extra || (colors_section_start < 0) || (pos < colors_section_start) || (colors_section_end >= 0 && pos > colors_section_end) return;
+    }
+
+    // Switch the color map temporarily and then revert
+    color_preview_begin_draw(editors.active);
+    defer color_preview_end_draw();
+
     // Drag panel title bar first before drawing
     if ui.active == .color_preview_title_bar {
         if color_preview_get_position() == .left {
@@ -344,7 +359,7 @@ draw_color_preview :: () {
         push_scissor(title_bar_rect);
         defer pop_scissor();
 
-        draw_rect(title_bar_rect, Color.BUILD_PANEL_TITLE_BAR);
+        draw_rect(title_bar_rect, Color.BACKGROUND_4);
 
         pen := Vector2.{
             x = title_bar_rect.x + char_x_advance,
@@ -378,10 +393,29 @@ draw_color_preview :: () {
 
     // Draw text
     editor_id := color_preview_get_editor_id();
-    draw_editor(editor_id, panel_body_rect, 0, get_ui_id_from_loc());
+    color_preview_ui_id := get_ui_id_from_loc();
+    draw_editor(editor_id, panel_body_rect, 0, color_preview_ui_id);
+
+    if ui.hot_last_frame == color_preview_ui_id {
+        // Draw a tooltip with the correct color name
+        editor := *open_editors[editor_id];
+        buffer := *open_buffers[editor.buffer_id];
+        text_rect := get_editor_subrects(editor_id, panel_body_rect, 0);
+        mouse_coords := coords_from_mouse_position(editor, text_rect);
+        buffer_pos   := coords_to_offset(editor, buffer, mouse_coords);
+        if buffer_pos >= 0 && buffer_pos < buffer.tokens.count {
+            token_under_cursor := buffer.tokens[buffer_pos];
+            if token_under_cursor != .default {
+                draw_tooltip_bottom_left(tprint("code_%", token_under_cursor), mouse.pointer);
+            }
+        }
+    }
+
 }
 
-draw_build_panel :: () {
+maybe_draw_build_panel :: () {
+    if !build_panel_is_shown return;
+
     // Drag build panel title bar first before drawing
     if ui.active == .build_panel_title_bar {
         if build_panel_get_position() == .left {
@@ -463,37 +497,60 @@ draw_build_panel :: () {
 
     // Draw text
     editor_id := build_panel_get_editor_id();
-    draw_editor(editor_id, build_output_rect, 0, get_ui_id_from_loc(), as_build_panel = true);
+    draw_editor(editor_id, build_output_rect, 0, get_ui_id_from_loc());
 }
 
-draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id: Ui_Id, total_editor_area := Rect.{}, as_build_panel := false) {
-    scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
+get_editor_subrects :: (editor_id: s64, main_area: Rect, status_bar_height: float) -> editor_rect: Rect, status_bar_rect: Rect, line_number_panel: Rect {
+    status_bar_rect, rect, line_number_panel: Rect;
 
-    status_bar_rect, rect : Rect;
     if config.settings.status_bar_position == .bottom {
         status_bar_rect, rect = cut_bottom(main_area, status_bar_height);
     } else {
         status_bar_rect, rect = cut_top(main_area, status_bar_height);
     }
+
     max_width := cast(float) config.settings.max_editor_width * dpi_scale;
     if max_width > 0 && rect.w > max_width {
         rect.x += (rect.w - max_width) / 2;
         rect.w = max_width;
     }
 
-    using editor := *open_editors[editor_id];
-    buffer := *open_buffers[buffer_id];
-    if buffer_needs_tokenizing(buffer) then retokenize(buffer);  // right before drawing
+    if config.settings.show_line_numbers && !is_build_panel(editor_id) {
+        editor := *open_editors[editor_id];
+        buffer := *open_buffers[editor.buffer_id];
 
-    line_number_panel: Rect;
-    if config.settings.show_line_numbers && !as_build_panel {
         max_lines  := get_max_line_num(editor, buffer) + 1;
         num_digits := tprint("%", max_lines).count;
         panel_width := (num_digits + 2) * char_x_advance;
         if rect.w > panel_width then line_number_panel, rect = cut_left(rect, panel_width);
     }
 
-    rect = align_to_grid(rect);
+    return align_to_grid(rect), status_bar_rect, line_number_panel;
+}
+
+get_text_offset :: inline () -> Vector2 {
+    return Vector2.{char_x_advance, -char_x_advance};
+}
+
+coords_from_mouse_position :: (using editor: Editor, rect: Rect) -> Coords {
+    pointer := snap_to_rect(mouse.pointer, rect);  // when we drag outside the editor we still want to interact
+    mouse_pos := pointer - bottom_left(rect) - get_text_offset();
+    mouse_pos.x += viewport.left;
+    mouse_pos.y = rect.h - mouse_pos.y + viewport.top - ifx dpi_scale > 1.0 then 1 else 0;
+    return .{ line = xx (mouse_pos.y / line_height), col = xx ((mouse_pos.x / char_x_advance) + 0.5) };
+}
+
+draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id: Ui_Id, total_editor_area := Rect.{}) {
+    as_build_panel := is_build_panel(editor_id);
+
+    using editor := *open_editors[editor_id];
+    buffer := *open_buffers[buffer_id];
+    if buffer_needs_tokenizing(buffer) then retokenize(buffer);  // right before drawing
+
+    scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
+
+    rect, status_bar_rect, line_number_panel := get_editor_subrects(editor_id, main_area, status_bar_height);
+
     if !is_valid(rect) return;
 
     if !as_build_panel then draw_rect(rect, Color.BACKGROUND_0);
@@ -504,7 +561,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
     editor_is_active := editor_id == editors.active && Input.input_application_has_focus;
 
     // Calculate text origin in screen coordinates
-    text_offset := Vector2.{char_x_advance, -char_x_advance};
+    text_offset := get_text_offset();
     text_origin := top_left(rect) + text_offset - Vector2.{xx viewport.left, line_height - viewport.top};
 
     width_in_chars := clamp(cast(s32) ((rect.w - 1.5 * text_offset.x) / char_x_advance), 1, S32_MAX);
@@ -514,16 +571,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         redraw_requested = true;
     }
 
-    coords_from_mouse_position :: () -> Coords #expand {
-        pointer := snap_to_rect(mouse.pointer, rect);  // when we drag outside the editor we still want to interact
-        mouse_pos := pointer - bottom_left(rect) - text_offset;
-        mouse_pos.x += viewport.left;
-        mouse_pos.y = rect.h - mouse_pos.y + viewport.top - ifx dpi_scale > 1.0 then 1 else 0;
-        return .{ line = xx (mouse_pos.y / line_height), col = xx ((mouse_pos.x / char_x_advance) + 0.5) };
-    }
-
     if ui.active == ui_id && (mouse.left.just_pressed || mouse.left.is_dragging) {
-        mouse_coords := coords_from_mouse_position();
+        mouse_coords := coords_from_mouse_position(editor, rect);
 
         just_jumped_from_build_panel := false;
 
@@ -640,7 +689,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         }
 
     } else if ui.active == ui_id && (mouse.middle.just_pressed || mouse.middle.is_dragging) {
-        mouse_coords := coords_from_mouse_position();
+        mouse_coords := coords_from_mouse_position(editor, rect);
 
         cursors_stop_blinking();
 

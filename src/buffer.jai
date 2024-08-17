@@ -1082,6 +1082,19 @@ free_buffer :: (using buffer: *Buffer) {
     array_free(cursors);
 
     if has_file && file.full_path then free(file.full_path);
+
+    free_buffer_extra(extra);
+    extra = null;
+}
+
+free_buffer_extra :: (extra: *Buffer.Extra) {
+    if !extra return;
+    if #complete extra.type == {
+        case .focus_config;
+            config_extra := cast(*Focus_Config_Extra) extra;
+            array_free(config_extra.parsed_colors);
+    }
+    free(extra);
 }
 
 // NOTE: this works with absolute columns only, with no regard to line wrapping!
@@ -1349,6 +1362,16 @@ Buffer :: struct {
 
     lang: Lang = .Plain_Text;
 
+    // A pointer to arbitrary buffer information.
+    // Would be nice to be able to avoid using it if another way of attaching info to buffers is found. We'll see what the use patterns are.
+    extra: *Extra = null;
+
+    Extra :: struct {
+        type: Extra_Type;
+        // ...
+    }
+    Extra_Type :: enum { focus_config; }
+
     Edit_Group :: struct {
         edits: [] Edit;
         cursors_before: [] Cursor;  // have to remember where the cursors were both before and after
@@ -1416,6 +1439,15 @@ Buffer :: struct {
         Focus_Theme;
         Focus_Build_Panel;  // a fake lang to be assigned to the build panel instead of Plain_Text so that its tokens are preserved
     };
+}
+
+Focus_Config_Extra :: struct {
+    using #as base: Buffer.Extra;
+    base.type = .focus_config;
+
+    parsed_colors: [] Parsed_Color;
+    colors_section_start := -1;
+    colors_section_end   := -1;
 }
 
 Cursor :: struct {

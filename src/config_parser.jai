@@ -369,6 +369,8 @@ maybe_switch_section :: (using parser: *Config_Parser, line: string, fix_section
 
         if active_section == .style then result.config.offsets.style_section = line_start_offset;
 
+        if result.config.offsets.colors_section_start >= 0 && result.config.offsets.colors_section_end < 0 then result.config.offsets.colors_section_end = line_start_offset;
+
     } else {
         // Subsection
         if !ends_with(line, "]") return true, tprint("Invalid subsection '%'. Subsection definitions must end with ]", line);
@@ -403,6 +405,12 @@ maybe_switch_section :: (using parser: *Config_Parser, line: string, fix_section
             }
             append(*b, "}\n");
             return builder_to_string(*b);
+        }
+
+        if active_subsection == .style_colors {
+            result.config.offsets.colors_section_start = line_start_offset;
+        } else if result.config.offsets.colors_section_start >= 0 && result.config.offsets.colors_section_end < 0 {
+            result.config.offsets.colors_section_end = line_start_offset;
         }
 
         if parse_as_theme && active_subsection != .style_colors return true, "";  // don't highlight any subsections other than colors
@@ -1227,6 +1235,9 @@ Parsed_Config :: struct {
     offsets: struct {
         style_section := -1;
         theme_line    := -1;
+
+        colors_section_start := -1;
+        colors_section_end   := -1;
     };
 };
 
@@ -1234,6 +1245,7 @@ Config_Parse_Result :: struct {
     config:     Parsed_Config;
     success:    bool;
     error_msg:  string;  // temp
+
     warnings:   [..] string;
     highlights: [..] Code_Highlight;
     warnings.allocator   = temp;  // I love jai
