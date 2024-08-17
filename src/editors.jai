@@ -3170,18 +3170,14 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
         if !add_comment && !begins_with(trimmed_str, comment) then add_comment = true;
     }
 
-    if line_starts.count == 2 && (line_starts[0] & EMPTY_LINE_BIT) && editor.cursors.count == 1 && editor.cursors[0].pos == editor.cursors[0].sel {
+    if editor.cursors.count == 1 && !has_selection(editor.cursors[0]) && (line_starts[0] & EMPTY_LINE_BIT) {
         // Inserts a comment at the cursor position if there's only one cursor and the current line is empty.
         
         cursor := *editor.cursors[0];
-        pos := max(cursor.pos, cursor.sel);
-        insert_string_at_offset(buffer, pos, comment);
-        pos += xx comment.count;
-        insert_string_at_offset(buffer, pos, cast(string)" ");
-        pos += 1;
+        insert_string_at_offset(buffer, cursor.pos, tprint("% ", comment));
         
-        cursor.pos = xx pos;
-        cursor.sel = xx pos;
+        cursor.pos += xx (comment.count + 1);
+        cursor.sel = cursor.pos;
         cursor.col_wanted = -1;
         
         editor.cursor_moved = .unimportant;
@@ -3193,6 +3189,8 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
     b: String_Builder;  // not using temp because the string may be too large
     
     if add_comment {
+        assert(min_indent > -1);
+        
         use_spaces := config.settings.insert_spaces_when_pressing_tab;
         new_whitespace := ifx use_spaces then get_tmp_spaces(min_indent) else {
             tab_count := min_indent / TAB_SIZE; // Aligns the indentation with tab columns because of integer division.
