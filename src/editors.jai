@@ -1407,7 +1407,6 @@ restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor) {
 make_editor_active :: (editor_id: s64) {
     assert(editor_id < open_editors.count, "Trying to activate editor %, but the last available one is %", editor_id, open_editors.count - 1);
     if is_build_panel(editor_id)         then build_panel_on_activate();
-    if is_color_preview_panel(editor_id) then color_preview_on_activate();  // not very nice to have to list every panel here, yes
 
     editors.active = editor_id;
 
@@ -3164,7 +3163,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
                     break c;
             }
         }
-        
+
         if is_empty_line                                      then { line_starts[it] |= EMPTY_LINE_BIT; continue; }
         if min_indent < 0 || indent < min_indent              then min_indent = indent;
         if !add_comment && !begins_with(trimmed_str, comment) then add_comment = true;
@@ -3172,25 +3171,25 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
 
     if editor.cursors.count == 1 && !has_selection(editor.cursors[0]) && (line_starts[0] & EMPTY_LINE_BIT) {
         // Inserts a comment at the cursor position if there's only one cursor and the current line is empty.
-        
+
         cursor := *editor.cursors[0];
         insert_string_at_offset(buffer, cursor.pos, tprint("% ", comment));
-        
+
         cursor.pos += xx (comment.count + 1);
         cursor.sel = cursor.pos;
         cursor.col_wanted = -1;
-        
+
         editor.cursor_moved = .unimportant;
-    
+
         return;
     }
 
     // Build a replacement string
     b: String_Builder;  // not using temp because the string may be too large
-    
+
     if add_comment {
         assert(min_indent > -1);
-        
+
         use_spaces := config.settings.insert_spaces_when_pressing_tab;
         new_whitespace := ifx use_spaces then get_tmp_spaces(min_indent) else {
             tab_count := min_indent / TAB_SIZE; // Aligns the indentation with tab columns because of integer division.

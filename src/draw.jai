@@ -314,6 +314,20 @@ maybe_draw_color_preview_panel :: () {
         if !config_extra || (colors_section_start < 0) || (pos < colors_section_start) || (colors_section_end >= 0 && pos > colors_section_end) return;
     }
 
+    if !color_preview_is_shown {
+        // Draw a "minimised" button instead of the popup
+        padding := floor(12 * dpi_scale);
+        shrinked_screen := shrink_x(shrink_y(screen, font_ui_line_height + 2 * padding), 2 * padding);
+        buttons_row_rect := cut_bottom(shrinked_screen, font_ui_line_height + 2 * padding);
+
+        button_alignment := Button_Alignment.right;
+        if color_preview_get_position() == .left then button_alignment = .left;
+
+        activated := draw_button(font_ui, "Show Color Preview", Color.BACKGROUND_4, Color.UI_DEFAULT, get_ui_id_from_loc(), buttons_row_rect, button_alignment, padding / 2, padding, shadow_size = char_x_advance);
+        if activated then show_color_preview();
+        if !color_preview_is_shown return;  // if we just activated it, draw it right this frame. John Carmack would be happy
+    }
+
     // Switch the color map temporarily and then revert
     color_preview_begin_draw(editors.active);
     defer color_preview_end_draw();
@@ -328,6 +342,8 @@ maybe_draw_color_preview_panel :: () {
         color_preview_set_height((mouse.pointer.y - panel_grab_point.y - screen.y) / screen.h);
     }
 
+    margin := floor(4 * dpi_scale);
+
     color_preview_rect: Rect;
     if color_preview_get_position() == .left {
         color_preview_rect = cut_left(screen, screen.w * color_preview_width, margin = 2);
@@ -339,7 +355,6 @@ maybe_draw_color_preview_panel :: () {
     if !is_valid(color_preview_rect) return;
     draw_rounded_rect_with_shadow(color_preview_rect, Color.BACKGROUND_0, radius = 0.1, shadow_size = char_size);
 
-    margin := floor(4 * dpi_scale);
     title_bar_height := font_ui_line_height + 2 * margin + 4 * dpi_scale;
     title_bar_rect, panel_body_rect := cut_top(color_preview_rect, title_bar_height);
 
@@ -3481,7 +3496,7 @@ draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll:
     return clamp(scroll_target, 0, max_scroll);
 }
 
-draw_button :: (font: *Simp.Dynamic_Font, label: string, color: Color, text_color: Color, parent_id: Ui_Id, row_rect: Rect, align: enum { left; right; } = .right, padding_v: float, padding_h: float, loc := #caller_location) -> pressed: bool, width: float {
+draw_button :: (font: *Simp.Dynamic_Font, label: string, color: Color, text_color: Color, parent_id: Ui_Id, row_rect: Rect, align: Button_Alignment = .right, padding_v: float, padding_h: float, shadow_size := 0.0, loc := #caller_location) -> pressed: bool, width: float {
     label_width := cast(float) Simp.prepare_text(font, label);
 
     button := row_rect;
@@ -3499,12 +3514,19 @@ draw_button :: (font: *Simp.Dynamic_Font, label: string, color: Color, text_colo
         button.y -= 1;
         rect_color.w = 0.6;
     }
+
+    if shadow_size > 0.0 then draw_rounded_rect_with_shadow(button, Color.BACKGROUND_0, shadow_size = shadow_size);
     draw_rounded_rect_with_raw_color(button, rect_color);
 
     pen := Vector2.{ x = button.x + padding_h, y = button.y + (button.h - font.character_height) / 2 + 3 * dpi_scale };
     Simp.draw_prepared_text(font, xx pen.x, xx pen.y, xx text_color);
 
     return ui.active_last_frame == button_ui_id && mouse_pointer_is_within(button) && mouse.left.just_released, button.w;
+}
+
+Button_Alignment :: enum {
+    left;
+    right;
 }
 
 #scope_file
