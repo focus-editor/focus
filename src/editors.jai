@@ -487,7 +487,7 @@ editors_show_default_config :: (placement: Editor_Placement) {
         replace_range_raw(buffer, 0, xx buffer.bytes.count, DEFAULT_CONFIG_FILE_DATA);
         buffer.meow_hash = calculate_hash(buffer.bytes);
         buffer.readonly = true;
-        buffer.deleted = true;
+        buffer.internal = true;
         buffer.lang = .Focus_Config;
         buffer.file.name = "Default Focus Config";
         buffer.file.icon = .gear;
@@ -502,6 +502,7 @@ editors_show_troubleshooting_info :: (placement: Editor_Placement) {
         global_troubleshooting_buffer_id = find_or_create_an_empty_buffer();
         buffer := *open_buffers[global_troubleshooting_buffer_id];
         buffer.readonly = true;
+        buffer.internal = true;
         buffer.lang = .Plain_Text;
         buffer.file.name = "Troubleshooting Info";
         buffer.file.icon = .debug;
@@ -3817,9 +3818,7 @@ move_to_editor_history_frame :: (frame: Editor_History_Frame, old_frame: Editor_
     } else if old_frame.layout == .Double && frame.layout == .Single {
         // Closing a pane
         if (frame.active == old_frame.left || frame.active == old_frame.right) {
-
             editor_closing_id = frame.active;
-
             editors.layout = .Double;  // will change when the animation finishes
             if frame.active == old_frame.left {
                 editors.right = old_frame.right;  // make sure we're drawing the correct buffer while it closes

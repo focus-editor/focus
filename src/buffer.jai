@@ -442,7 +442,10 @@ retokenize :: (buffer: *Buffer) {
     tokenize_func := get_tokenize_function(buffer.lang);
 
     // Resize tokens if we ever changed the token array
-    if buffer.tokens || tokenize_func != null then array_resize(*buffer.tokens, buffer.bytes.count);  // this will reset tokens to 0
+    if buffer.tokens || tokenize_func != null {
+        array_resize(*buffer.tokens, buffer.bytes.count, initialize = false);
+        memset(buffer.tokens.data, 0, buffer.tokens.count);
+    }
     if !tokenize_func return;  // this could be the case for e.g. the build panel
 
     new_regions := tokenize_func(buffer);
@@ -1131,7 +1134,7 @@ unsaved_buffers_exist :: () -> bool {
     // Perhaps we should create an unsaved buffers microservice,
     // which would tell us if they exist in a O(1) time?
     for open_buffers {
-        if it.modified return true;
+        if it.modified && !it.internal return true;
     }
     return false;
 }
@@ -1342,6 +1345,7 @@ Buffer :: struct {
     modified               := false;
     modified_on_disk       := false;
     deleted                := false;
+    internal               := false;  // e.g. build panel, default config etc.
     needs_tokenizing       := false;
     readonly               := false;
     binary                 := false;

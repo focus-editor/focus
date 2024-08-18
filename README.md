@@ -7,13 +7,6 @@ This editor is for people who value simplicity, are sensitive to input latency a
 ![focus-0 3 0](https://github.com/focus-editor/focus/assets/119373822/49a80c5a-f24a-469e-bbbb-88c315f9b391)
 
 
-## What do we mean by "simple" and "fast"
-
-Simple: the editor's functionality and code design. It doesn't include a lot of features, and the source code should be simple enough so that people can easily add features if they want to. It is configured using a single simple config file.
-
-Fast: we try to minimize input latency and maximize responsiveness. We also include relatively fast project search, which should work well for reasonably sized projects.
-
-
 ## Quick start
 
 1. [Download the executable](https://github.com/focus-editor/focus/releases) and put it somewhere where it will live.

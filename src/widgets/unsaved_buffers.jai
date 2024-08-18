@@ -20,7 +20,7 @@ show_unsaved_buffers_dialog :: (requested_mode: Mode = .exit_program) {
     array_reset_keeping_memory(*modified_buffers);
 
     for buffer, buffer_id : open_buffers {
-        if buffer.modified && !buffer.readonly array_add(*modified_buffers, buffer_id);
+        if buffer.modified && !buffer.readonly && !buffer.internal array_add(*modified_buffers, buffer_id);
     }
 }
 

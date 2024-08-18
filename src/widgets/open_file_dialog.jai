@@ -299,11 +299,7 @@ refresh_entries :: (clear_input := true) {
 
     maybe_add_a_buffer_entry :: (buffer: Buffer, buffer_id: s64) #expand {
         // @MEMORY SAFETY: if we ever delete buffers from open_buffers and free memory, this will have to copy everything!
-        if buffer.deleted && !buffer.modified continue;  // NOTE: we might still want to see externally deleted buffers.
-                                                         // Maybe use 'deleted' and 'modified_on_disk' to distingiush the buffers
-                                                         // we haven't deleted ourselves?
-                                                         // Alternatively, if there's an editor for a deleted buffer we probably
-                                                         // still want to see it here
+        if (buffer.deleted && !buffer.modified) || buffer.internal continue;
 
         buffer_name := get_buffer_name(buffer);
         name_score, name_highlights, exact_match := fuzzy_match(buffer_name,      filter);

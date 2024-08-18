@@ -3,8 +3,7 @@ init_color_preview :: () {
     panel_buffer_id = find_or_create_an_empty_buffer();
     panel_editor_id = find_or_create_editor(panel_buffer_id);
     editor, buffer := *open_editors[panel_editor_id], *open_buffers[panel_buffer_id];
-    buffer.readonly = true;
-    buffer.deleted  = true;  // so that it doesn't appear in the open file dialog
+    buffer.internal = true;
     buffer.lang = .Jai;
     insert_string_at_offset(buffer, 0, SAMPLE_JAI);
     rescan_for_lines(buffer);
@@ -89,7 +88,7 @@ color_preview_begin_draw :: (editor_id: s64) {
     reset_color_map_to_default();
 
     if config.style.theme {
-        color_preview_warning = tprint("There is an active theme '%'. No colors from this config are applied. You can edit the theme using the 'Edit Current Theme' command.", config.style.theme);
+        color_preview_warning = tprint("There is an active theme '%'. Colors from this config are not applied. You can edit the theme using the 'Edit Current Theme' command.", config.style.theme);
     }
 
     if is_current_global_config(buffer.file.full_path) {
@@ -99,7 +98,7 @@ color_preview_begin_draw :: (editor_id: s64) {
         // Apply the colors from the current project, if any
         if project_config.loaded && project_config.parsed_config.colors {
             apply_parsed_colors(project_config.parsed_config.colors);
-            color_preview_warning = "There is an active project config that overrides colors from the config you are editing";
+            color_preview_warning = "An active project config is overriding the colors from the config you are editing. Your changes may not be visible.";
         }
     } else if is_current_project_config(buffer.file.full_path) {
         // Apply the existing global config first
@@ -115,7 +114,7 @@ color_preview_begin_draw :: (editor_id: s64) {
     } else {
         // This is not an active config or theme. Apply our stuff on top of the default config but show a warning
         apply_parsed_colors(config_extra.parsed_colors);
-        color_preview_warning = "This is not an active config or theme, so no changes will be applied when you save the file";
+        color_preview_warning = "The current config or theme is not active, so no changes will be applied when you save the file.";
     }
 }
 

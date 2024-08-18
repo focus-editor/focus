@@ -5,7 +5,7 @@ init_build_system :: () {
     build_editor_id = find_or_create_editor(build_buffer_id);
     editor, buffer := *open_editors[build_editor_id], *open_buffers[build_buffer_id];
     buffer.readonly = true;
-    buffer.deleted  = true;  // so that it doesn't appear in the open file dialog
+    buffer.internal = true;
     buffer.lang = .Focus_Build_Panel;
     if config.settings.build_panel_line_wrap_always_on then editor.line_wrap = .on; else editor.line_wrap = .off;
 
