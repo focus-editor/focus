@@ -822,17 +822,19 @@ VALUE_KEYWORDS :: string.[
 
 // https://odin-lang.org/docs/overview/#attributes
 ATTRIBUTES :: string.[
-    "private", "builtin",
-    "require", "require_results",
-    "link_name", "link_prefix", "link_section", "linkage", "export", "extra_linker_flags",
-    "default_calling_convention",
-    "deferred_in", "deferred_out", "deferred_in_out", "deferred_none",
-    "deprecated", "warning", "disabled",
-    "init", "cold",
+    "private", "builtin", "test",
+    "require_results",
+    "export", "require", "entry_point_only",
+    "link_name", "link_prefix", "link_suffix", "link_section", "linkage",
+    "extra_linker_flags", "default_calling_convention", "priority_index",
+    "deferred_none", "deferred_in", "deferred_out", "deferred_in_out", "deferred_in_by_ptr", "deferred_out_by_ptr", "deferred_in_out_by_ptr",
+    "deprecated", "warning", "disabled", "cold",
+    "init", "fini",
     "optimization_mode",
-    "static", "thread_local",
+    "static", "thread_local", "rodata",
     "objc_name", "objc_class", "objc_type", "objc_is_class_method",
-    "require_target_feature", "enable_target_feature",
+    "enable_target_feature", "require_target_feature",
+    "instrumentation_enter", "instrumentation_exit", "no_instrumentation",
 ];
 
 // https://odin-lang.org/docs/overview/#directives
@@ -840,17 +842,17 @@ DIRECTIVES :: string.[
     "packed", "sparse", "raw_union", "align",
     "shared_nil", "no_nil",
     "type", "subtype",
-    "partial", "unroll",
-    "no_alias", "any_int", "caller_location", "c_vararg", "by_ptr",
+    "partial", "unroll", "reverse",
+    "no_alias", "any_int", "c_vararg", "by_ptr", "const",
     "optional_ok", "optional_allocator_error",
     "bounds_check", "no_bounds_check",
     "force_inline", "no_force_inline",
     "assert", "panic",
-    "config", "defined",
-    "file", "line", "procedure", "location",
-    "load", "load_or", "load_hash",
-    "soa", "relative",
-    "reverse",
+    "config", "defined", "exists",
+    "location", "caller_location",
+    "file", "line", "procedure", "directory", "hash",
+    "load", "load_or", "load_directory", "load_hash",
+    "soa", "relative", "simd",
 ];
 
 #insert -> string {
