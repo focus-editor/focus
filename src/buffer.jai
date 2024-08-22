@@ -491,6 +491,7 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
         case .Lua;          return tokenize_lua_for_indentation(buffer);
         case .Odin;         return tokenize_odin_for_indentation(buffer);
         case .Rust;         return tokenize_rust_for_indentation(buffer);
+        case .Shell;        return tokenize_shell_for_indentation(buffer);
     }
 
     return .[];
@@ -1218,6 +1219,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .Python;               return tokenize_python;
         case .RenPy;                return tokenize_renpy;
         case .Rust;                 return tokenize_rust;
+        case .Shell;                return tokenize_shell;
         case .Html;                 return tokenize_xml;
         case .Xml;                  return tokenize_xml;
         case .Todo;                 return tokenize_todo;
@@ -1439,6 +1441,7 @@ Buffer :: struct {
         Zig;
         Uxntal;
         Markdown;
+        Shell;
         Focus_Config;
         Focus_Theme;
         Focus_Build_Panel;  // a fake lang to be assigned to the build panel instead of Plain_Text so that its tokens are preserved

@@ -260,6 +260,7 @@ get_lang_from_name :: (lang_name: string) -> Buffer.Lang, found: bool {
         case "python";       return .Python,     true;
         case "renpy";        return .RenPy,      true;
         case "rust";         return .Rust,       true;
+        case "shell";        return .Shell,      true;
         case "html";         return .Html,       true;
         case "xml";          return .Xml,        true;
         case "todo";         return .Todo,       true;
