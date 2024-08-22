@@ -473,7 +473,12 @@ get_current_folder_path :: () -> string {
         path_chunks_trimmed := array_view(path_chunks, 1, path_chunks.count - 1);
         dir_path = sprint("%/%", root_dir, join(..path_chunks_trimmed, separator = "/"));
     } else {
-        dir_path = join(..path_chunks, separator = "/");
+        if path_chunks[0] == "/" {
+            path_chunks_trimmed := array_view(path_chunks, 1, path_chunks.count - 1);
+            dir_path = sprint("/%", join(..path_chunks_trimmed, separator = "/"));
+        } else {
+            dir_path = join(..path_chunks, separator = "/");
+        }
     }
     while dir_path != "/" && ends_with(dir_path, #char "/") dir_path.count -= 1;
 
