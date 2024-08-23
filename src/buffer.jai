@@ -650,6 +650,9 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
 
         reroute_active_editor(buffer_id, new_id);
         update_window_title(open_editors[editors.active].buffer_id);
+
+        array_ordered_remove_by_value(*most_recent_buffers, new_id);
+        array_insert_at(*most_recent_buffers, new_id, 0);
     }
 
     start_watching_file_if_not_already(file_path);
