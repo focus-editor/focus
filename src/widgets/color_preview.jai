@@ -1,13 +1,32 @@
 init_color_preview :: () {
+    // Init the panel buffer
     assert(panel_buffer_id < 0, "Code helper panel already has a buffer. This is a bug");
     panel_buffer_id = find_or_create_an_empty_buffer();
     panel_editor_id = find_or_create_editor(panel_buffer_id);
-    editor, buffer := *open_editors[panel_editor_id], *open_buffers[panel_buffer_id];
+    buffer := *open_buffers[panel_buffer_id];
     buffer.internal = true;
-    buffer.lang = .Jai;
-    insert_string_at_offset(buffer, 0, SAMPLE_JAI);
-    rescan_for_lines(buffer);
-    if editor.line_wrap == .on then rescan_for_wrapped_lines(editor, buffer);
+
+    // Collect stats on most used languages in the workspace
+    array_resize(*languages, NUM_LANGUAGES);
+    for enum_values_as_enum(Buffer.Lang) {
+        languages[xx it].lang = it;
+        languages[xx it].num_buffers = 0;
+    }
+    for open_buffers {
+        languages[xx it.lang].num_buffers += 1;
+    }
+    for * languages {
+        if it.lang == {
+            case .Plain_Text;           #through;
+            case .Focus_Config;         #through;
+            case .Focus_Theme;          #through;
+            case .Focus_Build_Panel;
+                remove it;
+        }
+    }
+    quick_sort(languages, (a, b) => (b.num_buffers - a.num_buffers));
+
+    color_preview_set_language(0);
 
     if config.settings.color_preview_popup != .enabled then color_preview_is_shown = false;
 }
@@ -78,7 +97,7 @@ color_preview_begin_draw :: (editor_id: s64) {
     }
 
     buffer := *open_buffers[target_buffer_id];
-    assert(buffer.has_file);
+    if !buffer.has_file || buffer.readonly return;
 
     config_extra := cast(*Focus_Config_Extra) buffer.extra;
     if !config_extra return;
@@ -123,6 +142,37 @@ color_preview_end_draw :: () {
     COLOR_MAP = OLD_COLOR_MAP;
 }
 
+color_preview_set_language :: (lang_id: int) {
+    selected_language_id = lang_id;
+
+    editor, buffer := *open_editors[panel_editor_id], *open_buffers[panel_buffer_id];
+    buffer.lang = languages[lang_id].lang;
+
+    array_reset_keeping_memory(*buffer.undos);
+    array_reset_keeping_memory(*buffer.redos);
+
+    sample_text := get_language_sample_text(buffer.lang);
+    replace_range_raw(buffer, 0, xx buffer.bytes.count, sample_text);
+    rescan_for_lines(buffer);
+    if editor.line_wrap == .on then rescan_for_wrapped_lines(editor, buffer);
+
+    cursor := leave_only_original_cursor(editor);
+    cursor.pos = 0;
+    cursor.sel = 0;
+    editor.scroll_to_cursor = .yes;
+}
+
+color_preview_get_languages :: () -> [] string /* temp */, selected: int {
+    lang_names: [..] string;
+    lang_names.allocator = temp;
+
+    for languages {
+        array_add(*lang_names, replace(tprint("%", it.lang), "_", " "));
+    }
+
+    return lang_names, selected_language_id;
+}
+
 color_preview_get_warning :: () -> string {
     return color_preview_warning;
 }
@@ -140,9 +190,53 @@ color_preview_height: float = 0.7;
 
 #scope_file
 
+get_language_sample_text :: (lang: Buffer.Lang) -> string {
+    if #complete lang == {
+        case .Jai;               return SAMPLE_Jai;
+        case .C;                 return SAMPLE_C;
+        case .Cpp;               return SAMPLE_Cpp;
+        case .Css;               return SAMPLE_Css;
+        case .CSharp;            return SAMPLE_CSharp;
+        case .Glsl;              return SAMPLE_Glsl;
+        case .Hlsl;              return SAMPLE_Hlsl;
+        case .Golang;            return SAMPLE_Golang;
+        case .Js;                return SAMPLE_Js;
+        case .Json;              return SAMPLE_Json;
+        case .Lua;               return SAMPLE_Lua;
+        case .Odin;              return SAMPLE_Odin;
+        case .Python;            return SAMPLE_Python;
+        case .RenPy;             return SAMPLE_RenPy;
+        case .Rust;              return SAMPLE_Rust;
+        case .Xml;               return SAMPLE_Xml;
+        case .Html;              return SAMPLE_Html;
+        case .Todo;              return SAMPLE_Todo;
+        case .Yang;              return SAMPLE_Yang;
+        case .Zig;               return SAMPLE_Zig;
+        case .Uxntal;            return SAMPLE_Uxntal;
+        case .Markdown;          return SAMPLE_Markdown;
+
+        case .Plain_Text;        #through;
+        case .Focus_Config;      #through;
+        case .Focus_Theme;       #through;
+        case .Focus_Build_Panel;
+            panic("Attempted to get a sample for an unsupported buffer language %. This is a bug.", lang);
+    }
+    return "";
+}
+
+
 // The ids of the editor and buffer with the color section which triggered the widget
 target_editor_id := -1;
 target_buffer_id := -1;
+selected_language_id := 0;
+
+NUM_LANGUAGES :: #run enum_highest_value(Buffer.Lang) + 1;
+languages: [..] Color_Preview_Language;
+
+Color_Preview_Language :: struct {
+    lang: Buffer.Lang;
+    num_buffers: s32;  // the number of buffers in the current workspace which use it
+}
 
 panel_buffer_id := -1;
 panel_editor_id := -1;
@@ -155,20 +249,5 @@ Panel_Position :: enum { left; right; }
 
 OLD_COLOR_MAP: [COLOR_MAP_SIZE] Vector4;
 
+#load "color_preview_samples.jai";
 
-SAMPLE_JAI :: #string JAI
-// Comment
-/* Multi-line comment */
-#import "Module";
-
-main :: () {
-    print("%\n", type_of(Address));
-}
-
-Address :: struct {
-    street_number: int;
-    street_name:   string;
-}
-
-Phone_Number :: [9] u8;
-JAI

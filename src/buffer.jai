@@ -1370,7 +1370,7 @@ Buffer :: struct {
     lang: Lang = .Plain_Text;
 
     // A pointer to arbitrary buffer information.
-    // Would be nice to be able to avoid using it if another way of attaching info to buffers is found. We'll see what the use patterns are.
+    // Would be nice to be able to avoid using it if another way of attaching info to buffers is better. We'll see what the use patterns are.
     extra: *Extra = null;
 
     Extra :: struct {

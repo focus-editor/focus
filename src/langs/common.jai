@@ -246,6 +246,7 @@ get_lang_from_name :: (lang_name: string) -> Buffer.Lang, found: bool {
         case "c";            return .C,          true;
         case "cpp";          return .Cpp,        true;
         case "csharp";       return .CSharp,     true;
+        case "css";          return .Css,        true;
         case "glsl";         return .Glsl,       true;
         case "hlsl";         return .Hlsl,       true;
         case "go";           return .Golang,     true;
@@ -267,6 +268,8 @@ get_lang_from_name :: (lang_name: string) -> Buffer.Lang, found: bool {
         case "zig";          return .Zig,        true;
         case "uxntal";       return .Uxntal,     true;
         case "plain_text";   return .Plain_Text, true;
+        case "md";           return .Markdown,   true;
+        case "markdown";     return .Markdown,   true;
 
         // case "focus_config"; return .Focus_Config, true;  // disabled for now
         // case "focus_theme";  return .Focus_Theme,  true;

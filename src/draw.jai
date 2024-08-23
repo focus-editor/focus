@@ -302,10 +302,12 @@ draw_user_messages :: (main_area: Rect, status_bar_height: float) {
 
 maybe_draw_color_preview_panel :: () {
     if config.settings.color_preview_popup == .disabled return;
+    if !workspace_scan_complete return;  // don't init the popup until all buffers are ready, otherwise we won't know the usage stats
 
     editor, buffer := get_active_editor_and_buffer();
     if !editor return;
     if buffer.lang != .Focus_Config && buffer.lang != .Focus_Theme && !is_color_preview_panel(editors.active) return;
+    if buffer.readonly return;
 
     if !is_color_preview_panel(editors.active) {
         // Only show the panel if the cursor is within the [colors] section of the config
@@ -382,7 +384,7 @@ maybe_draw_color_preview_panel :: () {
             x = title_bar_rect.x + char_x_advance,
             y = title_bar_rect.y + (title_bar_rect.h - font_ui_bold.character_height) / 2 + 2,
         };
-        Simp.draw_text(font_ui_bold, xx pen.x, xx pen.y, "Color Preview", xx Color.UI_DEFAULT);
+        Simp.draw_text(font_ui_bold, xx pen.x, xx pen.y, "Color Preview — hover over text to view color names", xx Color.UI_DEFAULT);
 
         // Draw the close button
         {
@@ -408,6 +410,8 @@ maybe_draw_color_preview_panel :: () {
 
     if !is_valid(panel_body_rect) return;
 
+    padding := floor(8 * dpi_scale);
+
     // Draw text
     editor_id := color_preview_get_editor_id();
     color_preview_ui_id := get_ui_id_from_loc();
@@ -415,7 +419,6 @@ maybe_draw_color_preview_panel :: () {
     editor_rect, warning_rect: Rect;
     warning_text := color_preview_get_warning();
     if warning_text {
-        padding := floor(8 * dpi_scale);
         height := font_ui_line_height + 2 * padding;
         warning_rect, editor_rect = cut_top(panel_body_rect, height);
 
@@ -428,6 +431,41 @@ maybe_draw_color_preview_panel :: () {
         Simp.draw_text(font_ui, x, y, warning_text, xx Color.UI_DEFAULT);
     } else {
         editor_rect = panel_body_rect;
+    }
+
+    langs_rect:, editor_rect = cut_right(editor_rect, editor_rect.w * 0.14);
+
+    // Draw the language list
+    if is_valid(langs_rect) {
+        langs_ui_id := get_ui_id_from_loc();
+        pressed := maybe_set_hot_or_active(langs_ui_id, langs_rect, .NORMAL);
+
+        push_scissor(langs_rect);
+        defer pop_scissor();
+
+        hr:, langs_rect = cut_left(langs_rect, 1);
+        draw_rect(hr, Color.BACKGROUND_1);
+        draw_rect(langs_rect, Color.BACKGROUND_2);
+
+        languages, selected_lang := color_preview_get_languages();
+        entry_height := cast(s64) (font_ui_line_height + padding);
+        entry_rect := cut_top(langs_rect, xx entry_height);
+        entry_rect.y -= padding;
+        x := cast(s64) (entry_rect.x + padding * 1.5);
+        y := cast(s64) (entry_rect.y + (entry_rect.h - font_ui.character_height) / 2.0 + 2);
+        for lang : languages {
+            if mouse_pointer_is_within(entry_rect) && is_hovering_over(langs_ui_id) {
+                draw_rect(entry_rect, Color.LIST_CURSOR_LITE);
+                set_pointer_image(.PRESSABLE);
+                if pressed then color_preview_set_language(it_index);
+            }
+            if it_index == selected_lang {
+                draw_rect(entry_rect, Color.LIST_CURSOR);
+            }
+            Simp.draw_text(font_ui, x, y, lang, xx Color.UI_DEFAULT);
+            y -= entry_height;
+            entry_rect.y -= entry_height;
+        }
     }
 
     draw_editor(editor_id, editor_rect, 0, color_preview_ui_id);
