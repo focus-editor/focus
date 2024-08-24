@@ -167,7 +167,9 @@ color_preview_get_languages :: () -> [] string /* temp */, selected: int {
     lang_names.allocator = temp;
 
     for languages {
-        array_add(*lang_names, replace(tprint("%", it.lang), "_", " "));
+        name := tprint("%", it.lang);
+        replace_chars(name, "_", xx #char " ");
+        array_add(*lang_names, name);
     }
 
     return lang_names, selected_language_id;

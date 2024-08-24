@@ -41,7 +41,7 @@ language_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
     editor, buffer := get_active_editor_and_buffer();
     if !editor || !buffer then return;
 
-    langs := #run language_dialog_get_languages();
+    langs := #run get_available_language_list();
 
     for * lang: langs {
         score, highlights := fuzzy_match(lang.name, filter);
@@ -61,7 +61,7 @@ language_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
     }
 }
 
-language_dialog_get_languages :: () -> [] Language {
+get_available_language_list :: () -> [] Language {  // to be run once at compile time!
     languages: [..] Language;
 
     lang_names  := enum_names(Buffer.Lang);

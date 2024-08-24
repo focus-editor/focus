@@ -477,11 +477,8 @@ maybe_draw_color_preview_panel :: () {
         text_rect := get_editor_subrects(editor_id, editor_rect, 0);
         mouse_coords := coords_from_mouse_position(editor, text_rect);
         buffer_pos   := coords_to_offset(editor, buffer, mouse_coords);
-        if buffer_pos >= 0 && buffer_pos < buffer.tokens.count {
-            token_under_cursor := buffer.tokens[buffer_pos];
-            if token_under_cursor != .default {
-                draw_tooltip_bottom_left(tprint("code_%", token_under_cursor), mouse.pointer);
-            }
+        if buffer_pos >= 0 && buffer_pos < buffer.tokens.count && !is_whitespace_char(buffer.bytes[buffer_pos]) {
+            draw_tooltip_bottom_left(tprint("code_%", buffer.tokens[buffer_pos]), mouse.pointer);
         }
     }
 

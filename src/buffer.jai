@@ -442,10 +442,7 @@ retokenize :: (buffer: *Buffer) {
     tokenize_func := get_tokenize_function(buffer.lang);
 
     // Resize tokens if we ever changed the token array
-    if buffer.tokens || tokenize_func != null {
-        array_resize(*buffer.tokens, buffer.bytes.count, initialize = false);
-        memset(buffer.tokens.data, 0, buffer.tokens.count);
-    }
+    if buffer.tokens || tokenize_func != null then array_resize(*buffer.tokens, buffer.bytes.count, initialize = true);
     if !tokenize_func return;  // this could be the case for e.g. the build panel
 
     new_regions := tokenize_func(buffer);
@@ -942,7 +939,8 @@ get_buffer_name :: (buffer: Buffer) -> string {
 
     for 0..buffer.line_starts.count-2 {
         line := trim(get_real_line_as_string(buffer, xx it), "\t \r\n");
-        name := replace(line, "\t", " ");  // remove tabs from the middle
+        name := copy_temporary_string(line);
+        replace_chars(name, "\t", xx #char " ");  // remove tabs from the middle
         if name return take_first_n_chars(name, min(50, name.count));
     }
 
