@@ -295,7 +295,7 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
     for buffer_id : buffer_start_index .. buffer_end_index {
         // Search in buffer
         buffer := *open_buffers[buffer_id];
-        if (buffer.deleted && !buffer.modified) || buffer.binary continue;  // do not search
+        if (buffer.deleted && !buffer.modified) || buffer.binary || buffer.internal continue;  // do not search
 
         // Make sure the buffer contents doesn't change while we're scanning it
         lock(*buffer.content_lock);
