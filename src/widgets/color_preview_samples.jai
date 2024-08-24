@@ -18,7 +18,7 @@ LANG_C
 
 value :: #run enum_highest_value(Enum);
 
-#scope_export
+#scope_module
 
 Address :: struct {
     street_number: int;
