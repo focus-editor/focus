@@ -107,7 +107,10 @@ color_preview_begin_draw :: (editor_id: s64) {
     reset_color_map_to_default();
 
     if config.style.theme {
-        color_preview_warning = tprint("There is an active theme '%'. Colors from this config are not applied. You can edit the theme using the 'Edit Current Theme' command.", config.style.theme);
+        color_preview_warning = tprint("There is an active theme '%'. Colors from this config are not applied.", config.style.theme);
+        if config.style.theme != "default" {
+            color_preview_warning = tprint("% You can edit the theme using the 'Edit Current Theme' command.", color_preview_warning);
+        }
     }
 
     if is_current_global_config(buffer.file.full_path) {
@@ -133,7 +136,10 @@ color_preview_begin_draw :: (editor_id: s64) {
     } else {
         // This is not an active config or theme. Apply our stuff on top of the default config but show a warning
         apply_parsed_colors(config_extra.parsed_colors);
-        color_preview_warning = "The current config or theme is not active, so no changes will be applied when you save the file.";
+        if buffer.lang == {
+            case .Focus_Config;  color_preview_warning = "The current config is not active, so no changes will be applied when you save the file.";
+            case .Focus_Theme;   color_preview_warning = "The current theme is not active, so no changes will be applied when you save the file.";
+        }
     }
 }
 
