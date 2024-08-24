@@ -958,8 +958,6 @@ LANG_UXNTAL
 SAMPLE_Markdown :: #string MARKDOWN
 # Sample Markdown Document
 
-<!-- Comment -->
-
 ## Heading Level 2
 
 This is a paragraph with **bold text**, *italic text*, and `inline code`.
