@@ -943,37 +943,70 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             viewport.left   = 0;
         }
 
-        // Maybe update selection highlights
-        if editor.refresh_selection && buffer.bytes.count <= MAX_BUFFER_SIZE_FOR_HIGHLIGHTS && config.settings.highlight_selection_occurrences {
+        if editor.refresh_selection && buffer.bytes.count <= MAX_BUFFER_SIZE_FOR_HIGHLIGHTS {
             array_reset_keeping_memory(*editor.highlights);
 
-            selected_text := get_selected_text_all_cursors(editor, buffer);
-            if selected_text.count > 2 && !is_all_whitespace(selected_text) {
-                search_func: (s: string, substring: string, start_index := 0) -> s64;
-                search_func = ifx editor.search_whole_words then find_index_from_left_whole_word else find_index_from_left;
-                buffer_str := cast(string) buffer.bytes;
+            // Maybe update selection highlights
+            if config.settings.highlight_selection_occurrences {
+                selected_text := get_selected_text_all_cursors(editor, buffer);
+                if selected_text.count > 2 && !is_all_whitespace(selected_text) {
+                    search_func: (s: string, substring: string, start_index := 0) -> s64;
+                    search_func = ifx editor.search_whole_words then find_index_from_left_whole_word else find_index_from_left;
+                    buffer_str := cast(string) buffer.bytes;
 
-                cursor_offsets: [..] s32;
-                cursor_offsets.allocator = temp;
-                for editor.cursors  array_add(*cursor_offsets, min(it.pos, it.sel));
+                    cursor_offsets: [..] s32;
+                    cursor_offsets.allocator = temp;
+                    for editor.cursors  array_add(*cursor_offsets, min(it.pos, it.sel));
 
-                offset := 0;
-                while true {
-                    offset = search_func(buffer_str, selected_text, start_index = offset);
-                    if offset < 0 break;
+                    offset := 0;
+                    while true {
+                        offset = search_func(buffer_str, selected_text, start_index = offset);
+                        if offset < 0 break;
 
-                    if !array_find(cursor_offsets, xx offset) {  // @Speed: slow when many cursors
-                        highlight := array_add(*editor.highlights);
-                        highlight.offset = offset;
-                        highlight.count  = selected_text.count;
-                        highlight.line   = offset_to_real_line(buffer, offset);
+                        if !array_find(cursor_offsets, xx offset) {  // @Speed: slow when many cursors
+                            highlight := array_add(*editor.highlights);
+                            highlight.offset = offset;
+                            highlight.count  = selected_text.count;
+                            highlight.line   = offset_to_real_line(buffer, offset);
+                        }
+
+                        offset += selected_text.count;
                     }
-
-                    offset += selected_text.count;
                 }
             }
+
+            // Maybe find matching brackets
+            if config.settings.highlight_matching_brackets {
+                for cursor : cursors {
+                    pos: s32 = -1;
+                    if is_bracket(buffer, cursor.pos) {
+                        pos = cursor.pos;
+                    } else if is_bracket(buffer, cursor.pos - 1) {
+                        pos = cursor.pos - 1;
+                    }
+                    if pos < 0 continue;
+
+                    offset := find_matching_bracket(buffer, pos);
+                    if offset < 0 continue;
+
+                    // Highlight matching bracket
+                    array_add(*editor.highlights, .{
+                        offset = offset,
+                        count  = 1,
+                        line   = offset_to_real_line(buffer, offset),
+                    });
+
+                    // Highlight the bracket we're standing on
+                    array_add(*editor.highlights, .{
+                        offset = pos,
+                        count  = 1,
+                        line   = offset_to_real_line(buffer, pos),
+                    });
+                }
+            }
+
+            quick_sort(editor.highlights, (a, b) => (a.offset - b.offset));
         }
-        if !config.settings.highlight_selection_occurrences then array_reset_keeping_memory(*editor.highlights);
 
         if config.settings.show_selected_text_length && editor.refresh_selection then calculate_selected_text_length(editor, buffer);
 

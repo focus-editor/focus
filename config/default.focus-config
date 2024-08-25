@@ -35,6 +35,8 @@ open_on_the_biggest_monitor:            false
 cursor_as_block:                        true
 cursor_blink_time_in_seconds:           5
 highlight_selection_occurrences:        true
+highlight_line_with_cursor:             false
+highlight_matching_brackets:            false
 disable_that_annoying_paste_effect:     false
 disable_file_open_close_animations:     false
 double_shift_to_search_in_workspace:    false
@@ -53,7 +55,6 @@ show_line_numbers:                      false
 colored_titlebar:                       true   # Windows 11+ only
 dark_titlebar:                          false  # Windows only
 hide_mouse_when_typing:                 false
-highlight_line_with_cursor:             false
 draw_indent_guides:                     false
 auto_surround_with_brackets_and_quotes: false
 auto_close_brackets:                    false

@@ -476,6 +476,7 @@ ADDED_SETTINGS :: Added_Setting.[
 
     .{ 5, "load_most_recent_project_on_start",                  "false" },
     .{ 5, "color_preview_popup",                                "enabled  # options: enabled, minimized, disabled" },
+    .{ 5, "highlight_matching_brackets",                        "false" },
 ];
 
 REMOVED_SETTINGS :: Removed_Setting.[
@@ -963,7 +964,10 @@ show_selected_text_length:                     false
 window_width:                                  -1
 window_height:                                 -1
 insert_final_newline_on_save:                  false
-status_bar_position:                           bottom
+status_bar_position:                           bottom  # options: top, bottom
+load_most_recent_project_on_start:             false
+color_preview_popup:                           enabled  # options: enabled, minimized, disabled
+highlight_matching_brackets:                   false
 
 FOCUS_CONFIG
 
@@ -1056,7 +1060,10 @@ show_selected_text_length:                     false
 window_width:                                  -1
 window_height:                                 -1
 insert_final_newline_on_save:                  false
-status_bar_position:                           bottom
+status_bar_position:                           bottom  # options: top, bottom
+load_most_recent_project_on_start:             false
+color_preview_popup:                           enabled  # options: enabled, minimized, disabled
+highlight_matching_brackets:                   false
 
 FOCUS_CONFIG
 
@@ -1355,7 +1362,10 @@ show_selected_text_length:                     false
 window_width:                                  -1
 window_height:                                 -1
 insert_final_newline_on_save:                  false
-status_bar_position:                           bottom
+status_bar_position:                           bottom  # options: top, bottom
+load_most_recent_project_on_start:             false
+color_preview_popup:                           enabled  # options: enabled, minimized, disabled
+highlight_matching_brackets:                   false
 
 [[keymap]]
 # ...

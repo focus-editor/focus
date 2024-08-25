@@ -310,14 +310,21 @@ is_auto_closeable_char :: (ch: u32) -> bool {
     return ch == #char "{" || ch == #char "(" || ch == #char "[";
 }
 
-get_balancing_char :: (ch: u32) -> u32 {
+get_balancing_char :: (ch: u32, include_closing := false) -> u32 {
     if ch == {
         case #char "{";  return #char "}";
         case #char "(";  return #char ")";
         case #char "[";  return #char "]";
         case #char "\""; return #char "\"";
-        case; return 0;
     }
+    if include_closing {
+        if ch == {
+            case #char "}";  return #char "{";
+            case #char ")";  return #char "(";
+            case #char "]";  return #char "[";
+        }
+    }
+    return 0;
 }
 
 get_char_type :: (ch: u32) -> Char_Type {

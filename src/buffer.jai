@@ -588,6 +588,60 @@ find_next_indentation_token :: (tokens: [] Indentation_Token, offset: s32, limit
     return .{}, -1;
 }
 
+is_bracket :: (using buffer: Buffer, pos: s32) -> bool, direction: int = 0 {
+    if pos < 0 || pos >= bytes.count return false;
+
+    if tokens[pos] != .punctuation return false;
+
+    if bytes[pos] == {
+        case #char "{";  return true,  1;
+        case #char "[";  return true,  1;
+        case #char "(";  return true,  1;
+        case #char "}";  return true, -1;
+        case #char "]";  return true, -1;
+        case #char ")";  return true, -1;
+    }
+
+    return false;
+}
+
+find_matching_bracket :: (using buffer: Buffer, pos: s32) -> index: s32 {
+    valid, direction := is_bracket(buffer, pos);
+    if !valid return -1;
+
+    bracket := bytes[pos];
+    matching_bracket := get_balancing_char(bracket, include_closing = true);
+
+    balance := 0;
+    if direction < 0 {
+        for < i : pos .. 0 {
+            if tokens[i] != .punctuation continue;
+
+            byte := bytes[i];
+            if byte == bracket {
+                balance += 1;
+            } else if byte == matching_bracket {
+                balance -= 1;
+                if balance == 0 return xx i;
+            }
+        }
+    } else if direction > 0 {
+        for i : pos .. bytes.count - 1 {
+            if tokens[i] != .punctuation continue;
+
+            byte := bytes[i];
+            if byte == bracket {
+                balance += 1;
+            } else if byte == matching_bracket {
+                balance -= 1;
+                if balance == 0 return xx i;
+            }
+        }
+    }
+
+    return -1;
+}
+
 offset_is_within_multiline_token :: (tokens: [] Indentation_Token, offset: s32) -> bool {
     token := find_closest_indentation_token(tokens, offset);
     return token.type == .maybe_multiline && (token.start + token.len) >= offset;
