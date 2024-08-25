@@ -319,7 +319,7 @@ maybe_draw_color_preview_panel :: () {
     if !color_preview_is_shown {
         // Draw a "minimised" button instead of the popup
         padding := floor(12 * dpi_scale);
-        shrinked_screen := shrink_x(shrink_y(screen, font_ui_line_height + 2 * padding), 2 * padding);
+        shrinked_screen  := shrink_x(shrink_y(screen, font_ui_line_height + 2 * padding), 2 * padding);
         buttons_row_rect := cut_bottom(shrinked_screen, font_ui_line_height + 2 * padding);
 
         button_alignment := Button_Alignment.right;
@@ -481,13 +481,11 @@ maybe_draw_color_preview_panel :: () {
             color_name_with_colon := "background0:";
             if is_whitespace_char(buffer.bytes[buffer_pos]) {
                 for buffer.regions {
-                    if it.end   <= buffer_pos  continue;
-                    if it.start < buffer_pos
-                        color_name_with_colon = tprint("region_%:", it.kind);
+                    if it.end   <= buffer_pos continue;
+                    if it.start <  buffer_pos then color_name_with_colon = tprint("region_%:", it.kind);
                     break;
                 }
-            }
-            else {
+            } else {
                 color_name_with_colon = tprint("code_%:", buffer.tokens[buffer_pos]);
             }
             color_name := color_name_with_colon;
@@ -503,33 +501,31 @@ maybe_draw_color_preview_panel :: () {
 }
 
 draw_color_picker :: (editor: *Editor, buffer: *Buffer, picker_rect: Rect, range: Offset_Range, on_left: bool) {
-    if !is_valid(picker_rect)
-        return;
+    if !is_valid(picker_rect)  return;
 
     color_change_callback :: (rgba: Vector4, hsl: Vector3, finalize: bool) {
         using buffer_info := cast(*Color_Change_Buffer_Info) color_picker_dialog.color_change_callback_data;
         str := color_to_hex(rgba, exclude_hash=true);
-        for i: 0 .. str.count-1  str[i] = to_upper(str[i]);
+        for i : 0 .. str.count-1  str[i] = to_upper(str[i]);
         old_str := cast(string) array_view(buffer.bytes, range.start, range.end - range.start);
-        if old_str != str
-            add_paste_animation(editor, .{ range.start, range.end});
+        if old_str != str then add_paste_animation(editor, .{ range.start, range.end});
         replace_range(buffer, range, str);
     }
+
     color_picker_dialog.color_change_callback = color_change_callback;
     color_change_callback_data := Color_Change_Buffer_Info.{editor, buffer, range};
     color_picker_dialog.color_change_callback_data = *color_change_callback_data;
 
-    ui_id := Ui_Id.color_picker_dialog;
-    axis_id := get_ui_id_from_loc(parent_id = ui_id);
+    ui_id    := Ui_Id.color_picker_dialog;
+    axis_id  := get_ui_id_from_loc(parent_id = ui_id);
     alpha_id := get_ui_id_from_loc(parent_id = ui_id);
-    main_id := get_ui_id_from_loc(parent_id = ui_id);
+    main_id  := get_ui_id_from_loc(parent_id = ui_id);
 
-    if ui.active != axis_id && ui.active != alpha_id && ui.active != main_id
-        color_picker_set_color(buffer, range);
+    if ui.active != axis_id && ui.active != alpha_id && ui.active != main_id then color_picker_set_color(buffer, range);
 
     rect := picker_rect;
     if rect.w > rect.h {
-        if on_left  rect = cut_left(rect, rect.h);
+        if on_left  rect = cut_left (rect, rect.h);
         else        rect = cut_right(rect, rect.h);
     }
     if rect.h > rect.w {
@@ -541,9 +537,8 @@ draw_color_picker :: (editor: *Editor, buffer: *Buffer, picker_rect: Rect, range
     draw_rounded_rect_with_shadow(rect, Color.BACKGROUND_0, radius = 0.1, shadow_size = char_size);
     widget_size := line_height;
     bottom, top := cut_bottom(rect, widget_size);
-    axis_rect, main_rect := cut_left(top, widget_size);
+    axis_rect, main_rect  := cut_left(top,    widget_size);
     mode_rect, alpha_rect := cut_left(bottom, widget_size);
-
 
     maybe_set_hot_or_active(axis_id, axis_rect, .PRESSABLE);
     if ui.active == axis_id && mouse.left.is_down {
@@ -567,7 +562,7 @@ draw_color_picker :: (editor: *Editor, buffer: *Buffer, picker_rect: Rect, range
     // Shrink the sliders a little so a gap is drawn between them and the main panel.
     // We do this after the UI interactions above, so the user can't accidentally click
     // in the gap (which would register in the editor window and move the cursor)
-    axis_rect.w -= dpi_scale;
+    axis_rect.w  -= dpi_scale;
     alpha_rect.h -= dpi_scale;
 
     draw_gradient_rect(axis_rect, color_picker_dialog.mode | .vertical_1d, color_picker_dialog.hsl.x);
@@ -601,7 +596,7 @@ draw_color_picker :: (editor: *Editor, buffer: *Buffer, picker_rect: Rect, range
     draw_rect_with_raw_color(inner, .{1, 1, 1, 1});
 
     mode_id := get_ui_id_from_loc(parent_id = ui_id);
-    label := slice("RGBHSL", xx color_picker_dialog.mode, 1);
+    label   := slice("RGBHSL", xx color_picker_dialog.mode, 1);
     pressed := draw_icon_button(mode_id, mode_rect, label, .square);
     if pressed  color_picker_set_mode(color_picker_dialog.mode + 1);
 
@@ -3440,14 +3435,14 @@ draw_icon_button :: (ui_id: Ui_Id, rect: Rect, icon: string, style : enum { none
 
     if style == {
         case .rounded;
-        if hover then draw_rounded_rect(shrink(btn, 1), bg_color);
-        draw_rounded_rect(shrink(btn, 1), Color.CURSOR_INACTIVE);
-        draw_rounded_rect(shrink(btn, 2), bg_color);
+            if hover then draw_rounded_rect(shrink(btn, 1), bg_color);
+            draw_rounded_rect(shrink(btn, 1), Color.CURSOR_INACTIVE);
+            draw_rounded_rect(shrink(btn, 2), bg_color);
 
         case .square;
-        if hover then draw_rect(shrink(btn, 1), bg_color);
-        draw_rect(shrink(btn, 1), Color.CURSOR_INACTIVE);
-        draw_rect(shrink(btn, 2), bg_color);
+            if hover then draw_rect(shrink(btn, 1), bg_color);
+            draw_rect(shrink(btn, 1), Color.CURSOR_INACTIVE);
+            draw_rect(shrink(btn, 2), bg_color);
     }
 
     text_w := cast(float) Simp.prepare_text(font_icons_small, icon);
@@ -3649,7 +3644,7 @@ draw_rect_translucent_on_the_right :: (using rect: Rect, color: Color) {
 }
 
 draw_gradient_rect :: (rect: Rect, mode: Gradient_Mode, value: float, color_vec4 := Vector4.{1, 1, 1, 1}) {
-    Simp.set_shader_for_gradient(cast,force(Vector4)rect, xx mode, value);
+    Simp.set_shader_for_gradient(cast,force(Vector4) rect, xx mode, value);
     draw_rect_with_raw_color(rect, color_vec4);
     Simp.immediate_flush();
 }

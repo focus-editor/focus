@@ -279,7 +279,7 @@ void main () {
 GLSL
 
 
-SHADER_COLOR :: #string END
+SHADER_COLOR :: #string GLSL
 OUT_IN vec4 iterated_color;
 
 #ifdef VERTEX_SHADER
@@ -301,10 +301,10 @@ void main () {
     color = iterated_color;
 }
 #endif // FRAGMENT_SHADER
-END
+GLSL
 
 
-SHADER_GRADIENT :: #string glsl
+SHADER_GRADIENT :: #string GLSL
 OUT_IN vec4 iterated_color;
 
 #ifdef VERTEX_SHADER
@@ -452,13 +452,13 @@ void main () {
     color.a = iterated_color.a;
 }
 #endif // FRAGMENT_SHADER
-glsl
+GLSL
 
 
 // @Cleanup:
 // shader_sprite is 1-v from shader_text. Do we pack the text texture upside down,
 // or what?
-SHADER_SPRITE :: #string END
+SHADER_SPRITE :: #string GLSL
 OUT_IN vec2 TexCoords;
 OUT_IN vec4 iterated_color;
 
@@ -488,9 +488,9 @@ void main () {
     color = color_tex;
 }
 #endif // FRAGMENT_SHADER
-END
+GLSL
 
-SHADER_ROUNDED_RECT :: #string END
+SHADER_ROUNDED_RECT :: #string GLSL
 OUT_IN vec4 iterated_color;
 flat OUT_IN vec2 rect_center;
 flat OUT_IN vec2 rect_size;
@@ -533,7 +533,7 @@ void main () {
 }
 
 #endif // FRAGMENT_SHADER
-END
+GLSL
 
 get_shader_program :: (shader_text: string) -> GLuint {
     LOG_BUFFER_SIZE :: 512;
@@ -567,17 +567,17 @@ get_shader_program :: (shader_text: string) -> GLuint {
         return shader_object;
     }
 
-    PREFIX_V :: #string END
+    PREFIX_V :: #string GLSL
     #version 330 core
     #define VERTEX_SHADER
     #define OUT_IN out
-    END
+    GLSL
 
-    PREFIX_F :: #string END
+    PREFIX_F :: #string GLSL
     #version 330 core
     #define FRAGMENT_SHADER
     #define OUT_IN in
-    END
+    GLSL
 
     shader_v := make_shader_object(shader_text, PREFIX_V, GL_VERTEX_SHADER);
     shader_f := make_shader_object(shader_text, PREFIX_F, GL_FRAGMENT_SHADER);

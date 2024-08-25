@@ -570,14 +570,13 @@ hsl_from_rgb :: (color: Vector3) -> hsl: Vector3 {
     c := _max - _min;
     l = (_min + _max) / 2;
 
-    if c < 0.00001 || _max <= 0.0
-        return .{h, s, l};
+    if c < 0.00001 || _max <= 0.0 return .{h, s, l};
 
     s = ifx l >= 0.5
         then c / (2 - _max - _min)
         else c / (_max + _min);
 
-    if _max == r       h = (g - b) / c + (ifx g < b then 6 else 0);
+    if      _max == r  h = (g - b) / c + (ifx g < b then 6 else 0);
     else if _max == g  h = (b - r) / c + 2;
     else               h = (r - g) / c + 4;
 
