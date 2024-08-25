@@ -636,39 +636,6 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
     return true, "";
 }
 
-#scope_export
-
-hex_to_color_vec4 :: (src_hex: string) -> Vector4, success: bool {
-    hex := src_hex;
-    if hex.count == 6 then hex = tprint("%FF", hex);
-    if hex.count != 8 return Vector4.{}, false;
-
-    r := slice(hex, 0, 2);
-    g := slice(hex, 2, 2);
-    b := slice(hex, 4, 2);
-    a := slice(hex, 6, 2);
-
-    to_float :: (byte_str: string) -> float {
-        hex_digit_to_int :: (char: u8) -> int {
-            char = to_upper(char);
-            if #char "0" <= char && char <= #char "9" return char - #char "0";
-            if #char "A" <= char && char <= #char "F" return 10 + char - #char "A";
-            return -1;
-        }
-
-        d1, d0 := cast(float)hex_digit_to_int(byte_str[0]), cast(float) hex_digit_to_int(byte_str[1]);
-        if d1 < 0 || d0 < 0 return -1;
-
-        return (16 * d1 + d0) / 255;
-    }
-
-    c := Vector4.{ to_float(r), to_float(g), to_float(b), to_float(a) };
-
-    return c, c.x >= 0 && c.y >= 0 && c.z >= 0 && c.w >= 0;
-}
-
-#scope_file
-
 parse_build_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
     using result.config.build;
 
