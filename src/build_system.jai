@@ -188,7 +188,11 @@ build_system_update :: () {
                 case .FAILED_TO_LAUNCH;
                     command := ifx last_command_result.run.finished then finished_command.run_command else finished_command.build_command;
                     message = tprint("ERROR: couldn't launch '%'", command);
-                    if !is_absolute_path(command) then message = tprint("%. Try specifying a full path to the executable.", message);
+                    if is_common_windows_shell_command(command) {
+                        message = tprint("%.\nLooks like you're trying to execute a shell command. Try doing 'cmd /C \"%\"' to launch a shell explicitly.", message, command);
+                    } else if !is_absolute_path(command) {
+                        message = tprint("%. Try specifying a full path to the executable.", message);
+                    }
                     kind = .error;
                 case .STILL_RUNNING;
                     message = "ERROR: the command is still running. This is a bug.";
@@ -580,6 +584,20 @@ substitute_variables :: (using work: *Build_Thread_Work) {
 
     run_command   = replace(run_command,   "%BUILD_WORKING_DIR%", build_working_dir);
     run_command   = replace(run_command,   "%RUN_WORKING_DIR%",   run_working_dir);
+}
+
+is_common_windows_shell_command :: (command: string) -> bool {
+    #if OS == .WINDOWS {
+        COMMON_CMD_COMMANDS :: string.[
+            "echo ", "call ", "copy", "cd ", "chdir ", "del ", "rd ", "rmdir ", "md ", "mkdir ", "path ", "xcopy ", "move ", "ren ", "rename ",
+        ];
+        for COMMON_CMD_COMMANDS {
+            if begins_with_nocase(command, it) return true;
+        }
+        return false;
+    } else {
+        return false;
+    }
 }
 
 check_working_dirs :: (using work: *Build_Thread_Work) {

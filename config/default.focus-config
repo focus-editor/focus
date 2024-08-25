@@ -35,6 +35,8 @@ open_on_the_biggest_monitor:            false
 cursor_as_block:                        true
 cursor_blink_time_in_seconds:           5
 highlight_selection_occurrences:        true
+highlight_line_with_cursor:             false
+highlight_matching_brackets:            false
 disable_that_annoying_paste_effect:     false
 disable_file_open_close_animations:     false
 double_shift_to_search_in_workspace:    false
@@ -50,10 +52,10 @@ copy_whole_line_without_selection:      false
 editor_history_size:                    1024
 line_wrap_is_on_by_default:             false
 show_line_numbers:                      false
+show_selected_text_length:              false
 colored_titlebar:                       true   # Windows 11+ only
 dark_titlebar:                          false  # Windows only
 hide_mouse_when_typing:                 false
-highlight_line_with_cursor:             false
 draw_indent_guides:                     false
 auto_surround_with_brackets_and_quotes: false
 auto_close_brackets:                    false
@@ -104,7 +106,7 @@ color_preview_popup:                    enabled  # options: enabled, minimized, 
 
 # Example error regexes:
 # For jai:  ^(?P<file>.*):(?P<line>\d+),(?P<col>\d+): (?P<type>Error|Warning|Info|...):* (?P<msg>.*)|^(?P<msg1>.*error LNK.*)
-# For msvc: ^(?P<file>.*)\((?P<line>\d+),(?P<col>\d+)\): (?P<type>error|warning) (?P<msg>.*)$
+# For msvc: ^(?P<file>.*)\((?P<line>\d+),?(?P<col>\d+)?\)[ ]?: (?P<type>error|warning) (?P<msg>.*)$
 # ... let us know what regex works for you and we'll add it here
 
 # NOTE:
@@ -305,6 +307,7 @@ F11                         toggle_fullscreen
 {Shift}-End                 jump_to_line_end
 {Shift}-Ctrl-Home           jump_to_file_start
 {Shift}-Ctrl-End            jump_to_file_end
+{Shift}-Ctrl-M              jump_to_matching_bracket
 
 {Shift}-Backspace           delete_left_char
 {Shift}-Delete              delete_right_char

@@ -476,6 +476,7 @@ ADDED_SETTINGS :: Added_Setting.[
 
     .{ 5, "load_most_recent_project_on_start",                  "false" },
     .{ 5, "color_preview_popup",                                "enabled  # options: enabled, minimized, disabled" },
+    .{ 5, "highlight_matching_brackets",                        "false" },
 ];
 
 REMOVED_SETTINGS :: Removed_Setting.[
@@ -551,19 +552,21 @@ COLOR_VALUES_INDENT :: #run -> int {
 }
 
 ADDED_KEYBINDS :: Added_Keybind.[
-    .{ 2, "editors", "add_cursors_to_line_ends",        "Alt-Shift-I",      "Alt-Shift-I"      },
-    .{ 2, "editors", "add_cursors_to_line_starts",      "Alt-Shift-Ctrl-I", "Alt-Shift-Ctrl-I" },
-    .{ 2, "editors", "align_cursors",                   "Alt-A",            "Alt-Cmd-A"        },
-    .{ 2, "editors", "select_all_occurrences",          "Ctrl-Shift-A",     "Cmd-Shift-A"      },
-    .{ 2, "common",  "toggle_build_panel",              "Ctrl-B",           "Cmd-B"            },
-    .{ 2, "common",  "toggle_fullscreen",               "F11",              "F11"              },
-    .{ 2, "common",  "switch_between_open_files",       "Ctrl-Tab",         "Ctrl-Tab"         },
+    .{ 2, "editors", "add_cursors_to_line_ends",                  "Alt-Shift-I",        "Alt-Shift-I"      },
+    .{ 2, "editors", "add_cursors_to_line_starts",                "Alt-Shift-Ctrl-I",   "Alt-Shift-Ctrl-I" },
+    .{ 2, "editors", "align_cursors",                             "Alt-A",              "Alt-Cmd-A"        },
+    .{ 2, "editors", "select_all_occurrences",                    "Ctrl-Shift-A",       "Cmd-Shift-A"      },
+    .{ 2, "common",  "toggle_build_panel",                        "Ctrl-B",             "Cmd-B"            },
+    .{ 2, "common",  "toggle_fullscreen",                         "F11",                "F11"              },
+    .{ 2, "common",  "switch_between_open_files",                 "Ctrl-Tab",           "Ctrl-Tab"         },
 
-    .{ 3, "common",  "open_another_editor_instance",              "Ctrl-Shift-Alt-N",   "Cmd-Shift-Alt-N" },
-    .{ 3, "common",  "go_to_next_build_error",                    "F8",                 "F8"              },
-    .{ 3, "common",  "go_to_next_build_error_on_the_side",        "Ctrl-F8",            "Cmd-F8"          },
-    .{ 3, "common",  "go_to_previous_build_error",                "Shift-F8",           "Shift-F8"        },
-    .{ 3, "common",  "go_to_previous_build_error_on_the_side",    "Shift-Ctrl-F8",      "Shift-Cmd-F8"    },
+    .{ 3, "common",  "open_another_editor_instance",              "Ctrl-Shift-Alt-N",   "Cmd-Shift-Alt-N"  },
+    .{ 3, "common",  "go_to_next_build_error",                    "F8",                 "F8"               },
+    .{ 3, "common",  "go_to_next_build_error_on_the_side",        "Ctrl-F8",            "Cmd-F8"           },
+    .{ 3, "common",  "go_to_previous_build_error",                "Shift-F8",           "Shift-F8"         },
+    .{ 3, "common",  "go_to_previous_build_error_on_the_side",    "Shift-Ctrl-F8",      "Shift-Cmd-F8"     },
+
+    .{ 5, "common", "jump_to_matching_bracket",                   "{Shift}-Ctrl-M",     "{Shift}-Cmd-M"    },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
@@ -937,6 +940,7 @@ F8                          go_to_next_build_error
 Ctrl-F8                     go_to_next_build_error_on_the_side
 Shift-F8                    go_to_previous_build_error
 Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
+{Shift}-Ctrl-M              jump_to_matching_bracket
 
 [[settings]]
 
@@ -963,7 +967,10 @@ show_selected_text_length:                     false
 window_width:                                  -1
 window_height:                                 -1
 insert_final_newline_on_save:                  false
-status_bar_position:                           bottom
+status_bar_position:                           bottom  # options: top, bottom
+load_most_recent_project_on_start:             false
+color_preview_popup:                           enabled  # options: enabled, minimized, disabled
+highlight_matching_brackets:                   false
 
 FOCUS_CONFIG
 
@@ -1031,6 +1038,7 @@ F8                          go_to_next_build_error
 Ctrl-F8                     go_to_next_build_error_on_the_side
 Shift-F8                    go_to_previous_build_error
 Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
+{Shift}-Ctrl-M              jump_to_matching_bracket
 
 [[settings]]
 
@@ -1056,7 +1064,10 @@ show_selected_text_length:                     false
 window_width:                                  -1
 window_height:                                 -1
 insert_final_newline_on_save:                  false
-status_bar_position:                           bottom
+status_bar_position:                           bottom  # options: top, bottom
+load_most_recent_project_on_start:             false
+color_preview_popup:                           enabled  # options: enabled, minimized, disabled
+highlight_matching_brackets:                   false
 
 FOCUS_CONFIG
 
@@ -1108,6 +1119,7 @@ F8                          go_to_next_build_error
 Ctrl-F8                     go_to_next_build_error_on_the_side
 Shift-F8                    go_to_previous_build_error
 Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
+{Shift}-Ctrl-M              jump_to_matching_bracket
 
 [[settings]]
 
@@ -1355,7 +1367,10 @@ show_selected_text_length:                     false
 window_width:                                  -1
 window_height:                                 -1
 insert_final_newline_on_save:                  false
-status_bar_position:                           bottom
+status_bar_position:                           bottom  # options: top, bottom
+load_most_recent_project_on_start:             false
+color_preview_popup:                           enabled  # options: enabled, minimized, disabled
+highlight_matching_brackets:                   false
 
 [[keymap]]
 # ...
@@ -1565,6 +1580,7 @@ F8                          go_to_next_build_error
 Ctrl-F8                     go_to_next_build_error_on_the_side
 Shift-F8                    go_to_previous_build_error
 Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
+{Shift}-Ctrl-M              jump_to_matching_bracket
 
 FOCUS_CONFIG
 
@@ -1637,6 +1653,7 @@ F8                          go_to_next_build_error
 Ctrl-F8                     go_to_next_build_error_on_the_side
 Shift-F8                    go_to_previous_build_error
 Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
+{Shift}-Ctrl-M              jump_to_matching_bracket
 
 FOCUS_CONFIG
 

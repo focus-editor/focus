@@ -566,6 +566,8 @@ Settings :: struct {
     cursor_as_block                               := true;
     cursor_blink_time_in_seconds                  := 5;
     highlight_selection_occurrences               := true;
+    highlight_line_with_cursor                    := false;
+    highlight_matching_brackets                   := false;
     disable_that_annoying_paste_effect            := false;
     disable_file_open_close_animations            := false;
     disable_viewport_chasing_cursor_near_the_edge := false;
@@ -586,7 +588,6 @@ Settings :: struct {
     dark_titlebar                                 := false;
     colored_titlebar                              := true;
     hide_mouse_when_typing                        := true;
-    highlight_line_with_cursor                    := false;
     draw_indent_guides                            := false;
     auto_surround_with_brackets_and_quotes        := false;
     auto_close_brackets                           := false;

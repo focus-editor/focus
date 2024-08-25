@@ -1068,37 +1068,70 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             viewport.left   = 0;
         }
 
-        // Maybe update selection highlights
-        if editor.refresh_selection && buffer.bytes.count <= MAX_BUFFER_SIZE_FOR_HIGHLIGHTS && config.settings.highlight_selection_occurrences {
+        if editor.refresh_selection && buffer.bytes.count <= MAX_BUFFER_SIZE_FOR_HIGHLIGHTS {
             array_reset_keeping_memory(*editor.highlights);
 
-            selected_text := get_selected_text_all_cursors(editor, buffer);
-            if selected_text.count > 2 && !is_all_whitespace(selected_text) {
-                search_func: (s: string, substring: string, start_index := 0) -> s64;
-                search_func = ifx editor.search_whole_words then find_index_from_left_whole_word else find_index_from_left;
-                buffer_str := cast(string) buffer.bytes;
+            // Maybe update selection highlights
+            if config.settings.highlight_selection_occurrences {
+                selected_text := get_selected_text_all_cursors(editor, buffer);
+                if selected_text.count > 2 && !is_all_whitespace(selected_text) {
+                    search_func: (s: string, substring: string, start_index := 0) -> s64;
+                    search_func = ifx editor.search_whole_words then find_index_from_left_whole_word else find_index_from_left;
+                    buffer_str := cast(string) buffer.bytes;
 
-                cursor_offsets: [..] s32;
-                cursor_offsets.allocator = temp;
-                for editor.cursors  array_add(*cursor_offsets, min(it.pos, it.sel));
+                    cursor_offsets: [..] s32;
+                    cursor_offsets.allocator = temp;
+                    for editor.cursors  array_add(*cursor_offsets, min(it.pos, it.sel));
 
-                offset := 0;
-                while true {
-                    offset = search_func(buffer_str, selected_text, start_index = offset);
-                    if offset < 0 break;
+                    offset := 0;
+                    while true {
+                        offset = search_func(buffer_str, selected_text, start_index = offset);
+                        if offset < 0 break;
 
-                    if !array_find(cursor_offsets, xx offset) {  // @Speed: slow when many cursors
-                        highlight := array_add(*editor.highlights);
-                        highlight.offset = offset;
-                        highlight.count  = selected_text.count;
-                        highlight.line   = offset_to_real_line(buffer, offset);
+                        if !array_find(cursor_offsets, xx offset) {  // @Speed: slow when many cursors
+                            highlight := array_add(*editor.highlights);
+                            highlight.offset = offset;
+                            highlight.count  = selected_text.count;
+                            highlight.line   = offset_to_real_line(buffer, offset);
+                        }
+
+                        offset += selected_text.count;
                     }
-
-                    offset += selected_text.count;
                 }
             }
+
+            // Maybe find matching brackets
+            if config.settings.highlight_matching_brackets {
+                for cursor : cursors {
+                    pos: s32 = -1;
+                    if is_bracket(buffer, cursor.pos) {
+                        pos = cursor.pos;
+                    } else if is_bracket(buffer, cursor.pos - 1) {
+                        pos = cursor.pos - 1;
+                    }
+                    if pos < 0 continue;
+
+                    offset := find_matching_bracket(buffer, pos);
+                    if offset < 0 continue;
+
+                    // Highlight matching bracket
+                    array_add(*editor.highlights, .{
+                        offset = offset,
+                        count  = 1,
+                        line   = offset_to_real_line(buffer, offset),
+                    });
+
+                    // Highlight the bracket we're standing on
+                    array_add(*editor.highlights, .{
+                        offset = pos,
+                        count  = 1,
+                        line   = offset_to_real_line(buffer, pos),
+                    });
+                }
+            }
+
+            quick_sort(editor.highlights, (a, b) => (a.offset - b.offset));
         }
-        if !config.settings.highlight_selection_occurrences then array_reset_keeping_memory(*editor.highlights);
 
         if config.settings.show_selected_text_length && editor.refresh_selection then calculate_selected_text_length(editor, buffer);
 
@@ -1168,7 +1201,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             length     := get_line_start_offset(editor, buffer, line_num+1) - line_start;
             line := array_view(buffer.bytes, line_start, length);
 
-            line_pixel_width := cast(s32) ((get_num_chars(line) + min_visible_chars) * char_x_advance);
+            line_pixel_width := cast(s32) ((num_cols_in_string(cast(string) line) + min_visible_chars) * char_x_advance);
             max_line_pixel_width = max(max_line_pixel_width, line_pixel_width);
         }
 
@@ -1754,29 +1787,30 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                     match_start := entry.offset;
                     match_end   := min(entry.offset + entry.count, line_range.end);  // if we have a multi-line match, we will still show only the first line
                     line_start  := ifx text_start <= match_start then text_start else line_range.start;
-                    chars_until_match_start := get_num_chars(array_view(buffer.bytes, line_start, match_start - line_start));
-                    chars_until_match_end   := get_num_chars(array_view(buffer.bytes, line_start, match_end   - line_start));
+                    line_indent := get_visual_indent_in_spaces(cast(string) array_view(buffer.bytes, line_range.start, line_start));
+                    cols_until_match_start := num_cols_in_string(cast(string) array_view(buffer.bytes, line_start, match_start - line_start));
+                    cols_until_match_end   := num_cols_in_string(cast(string) array_view(buffer.bytes, line_start, match_end   - line_start));
 
                     // Figure out whether we need to cut the line so that the match is visible
-                    char_offset := 0;
+                    col_offset  := 0;
                     byte_offset := 0;
-                    pad_chars := 2;
-                    if chars_until_match_end > max_code_chars {
-                        if (chars_until_match_end - chars_until_match_start) >= max_code_chars {
+                    pad_cols := 2;
+                    if cols_until_match_end > max_code_chars {
+                        if (cols_until_match_end - cols_until_match_start) >= max_code_chars {
                             // The match won't fit on the screen anyway - stick it to the left
-                            char_offset = xx max(0, chars_until_match_start - pad_chars);
+                            col_offset = xx max(0, cols_until_match_start - pad_cols);
                         } else {
                             // Stick the match to the right
-                            char_offset = chars_until_match_end - xx (max_code_chars - pad_chars);
+                            col_offset = cols_until_match_end - xx (max_code_chars - pad_cols);
                         }
                     }
-                    if char_offset > 0 {
+                    if col_offset > 0 {
                         line_str := cast(string) array_view(buffer.bytes, line_start, line_range.end);
-                        byte_offset = slice_chars(line_str, 0, xx char_offset).count;
+                        byte_offset, col_offset = visual_col_to_byte_offset(line_str, col_offset, line_indent);
                     }
 
                     pen.x = text_x;
-                    if char_offset > 0 {
+                    if col_offset > 0 {
                         // Line was cut on the left, draw an ellipsis
                         Simp.draw_text(font, xx pen.x, xx pen.y, "…", color = xx Color.UI_DIM);
                         pen.x += char_x_advance;
@@ -1784,8 +1818,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
                     // Draw highlight
                     highlight_rect := entry_rect;
-                    highlight_rect.x = pen.x + char_x_advance * (chars_until_match_start - char_offset);
-                    highlight_rect.w = char_x_advance * (chars_until_match_end - chars_until_match_start);
+                    highlight_rect.x = pen.x + char_x_advance * (cols_until_match_start - col_offset);
+                    highlight_rect.w = char_x_advance * (cols_until_match_end - cols_until_match_start);
                     draw_rect(shrink_y(highlight_rect, padding), Color.SEARCH_RESULT_INACTIVE);
 
                     // Draw line
@@ -1798,7 +1832,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                         tokens := array_view(buffer.tokens, visible_offset_range.start, line_str.count);
                         code_lines: [1] Simp.Code_Line;
                         code_lines[0] = .{ line = line_str, tab_spaces = 0, tokens = xx tokens };
-                        draw_code(font, pen, code_lines, is_colored = buffer.tokens.count > 0);
+                        draw_code(font, pen, code_lines, is_colored = buffer.tokens.count > 0, start_col = line_indent + col_offset);
                     }
                 }
             }
@@ -3064,29 +3098,30 @@ draw_finder :: () {
                 match_start := entry.match_offset;
                 match_end   := min(entry.match_offset + entry.match_count, line_range.end);  // if we have a multi-line match, we will still show only the first line
                 line_start  := ifx text_start <= match_start then text_start else line_range.start;
-                chars_until_match_start := get_num_chars(array_view(buffer.bytes, line_start, match_start - line_start));
-                chars_until_match_end   := get_num_chars(array_view(buffer.bytes, line_start, match_end   - line_start));
+                line_indent := get_visual_indent_in_spaces(cast(string) array_view(buffer.bytes, line_range.start, line_start));
+                cols_until_match_start := num_cols_in_string(cast(string) array_view(buffer.bytes, line_start, match_start - line_start));
+                cols_until_match_end   := num_cols_in_string(cast(string) array_view(buffer.bytes, line_start, match_end   - line_start));
 
                 // Figure out whether we need to cut the line so that the match is visible
-                char_offset := 0;
+                col_offset  := 0;
                 byte_offset := 0;
-                pad_chars := 2;
-                if chars_until_match_end > max_code_chars {
-                    if (chars_until_match_end - chars_until_match_start) >= max_code_chars {
+                pad_cols := 2;
+                if cols_until_match_end > max_code_chars {
+                    if (cols_until_match_end - cols_until_match_start) >= max_code_chars {
                         // The match won't fit on the screen anyway - stick it to the left
-                        char_offset = xx max(0, chars_until_match_start - pad_chars);
+                        col_offset = xx max(0, cols_until_match_start - pad_cols);
                     } else {
                         // Stick the match to the right
-                        char_offset = chars_until_match_end - xx (max_code_chars - pad_chars);
+                        col_offset = cols_until_match_end - xx (max_code_chars - pad_cols);
                     }
                 }
-                if char_offset > 0 {
+                if col_offset > 0 {
                     line_str := cast(string) array_view(buffer.bytes, line_start, line_range.end);
-                    byte_offset = slice_chars(line_str, 0, xx char_offset).count;
+                    byte_offset, col_offset = visual_col_to_byte_offset(line_str, col_offset, line_indent);
                 }
 
                 pen.x = text_x;
-                if char_offset > 0 {
+                if col_offset > 0 {
                     // Line was cut on the left, draw an ellipsis
                     Simp.draw_text(font, xx pen.x, xx pen.y, "…", color = xx Color.UI_DIM);
                     pen.x += char_x_advance;
@@ -3095,8 +3130,8 @@ draw_finder :: () {
 
                 // Draw highlight
                 highlight_rect := entry_rect;
-                highlight_rect.x = pen.x + char_x_advance * (chars_until_match_start - char_offset);
-                highlight_rect.w = char_x_advance * (chars_until_match_end - chars_until_match_start);
+                highlight_rect.x = pen.x + char_x_advance * (cols_until_match_start - col_offset);
+                highlight_rect.w = char_x_advance * (cols_until_match_end - cols_until_match_start);
                 draw_rect(shrink_y(highlight_rect, padding), Color.SEARCH_RESULT_INACTIVE);
 
                 // Draw line
@@ -3109,7 +3144,7 @@ draw_finder :: () {
                     tokens := array_view(buffer.tokens, visible_range.start, line_str.count);
                     code_lines: [1] Simp.Code_Line;
                     code_lines[0] = .{ line = line_str, tab_spaces = 0, tokens = xx tokens };
-                    draw_code(font, pen, code_lines, is_colored = buffer.tokens.count > 0);
+                    draw_code(font, pen, code_lines, is_colored = buffer.tokens.count > 0, start_col = line_indent + col_offset);
                 }
             }
         }
@@ -3202,7 +3237,7 @@ draw_range :: (range: Coords_Range, editor: Editor, buffer: Buffer, visible_star
 
     for start..end {
         s := get_line_as_string(editor, buffer, xx it);
-        array_add(*range_chars, num_chars_in_string(s));  // we need to refer to prev/next line, so storing it in an array
+        array_add(*range_chars, num_cols_in_string(s));  // we need to refer to prev/next line, so storing it in an array
     }
 
     for line_num : start..end {

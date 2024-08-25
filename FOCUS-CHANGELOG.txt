@@ -39,8 +39,10 @@
         + The first directory in the workspace member list will be considered the working directory
         + Paths relative to the config file location can now be used in the workspace member list
     + Any projects opened using any means (e.g. by launching the editor with a `-project` parameter or passing in a dir with a `.focus-config` file) will be remembered, and you can can then switch to them using the Switch to Project dialog (Ctrl-Alt-P by default)
-    + New option: `load_most_recent_project_on_start`. Set to `true` to load the last loaded project on startup.
     + New build command variable: `%PROJECT_CONFIG_DIR%`. Expands to the path of the directory containing the active project config.
+    + New option: `load_most_recent_project_on_start`. Set to `true` to load the last loaded project on startup.
+    + New option: `highlight_matching_brackets`. Set to `true` to highlight the bracket matching the one the cursor is on.
+    + New command: `jump_to_matching_bracket`. Defaults to Ctrl-M.
 + Bug fixes:
     + Linux: Fixed a bug that caused inconsistent trackpad scrolling on Wayland (thanks @Mythique)
     + Rust: enabled comment toggling that was missing initially
@@ -49,6 +51,7 @@
     + Fixed a crash when parsing build output with certain regexes
     + Fixed a crash when outputting invalid UTF-8 in the build output window
     + Fixed a glitch with changing scroll position in some cases (thanks @Sanian-Creations)
+    + Fixed search result highlighting when there are tab characters used for alignment in the middle of text
     + linux/macos: invalid directories in the config should now highlight the incorrect chunk, not the whole path (on windows it has always worked like this)
 + Other changes:
     + macOS: add support for dead keys/key composition

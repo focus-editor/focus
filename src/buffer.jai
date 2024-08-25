@@ -143,7 +143,7 @@ offset_to_real_coords :: (buffer: Buffer, offset: s64) -> Coords {
 
 // This function counts visual indent, taking tab size into account
 _get_visual_col_by_scanning_line :: (buffer: Buffer, line_num: s32, offset: s64, line_starts: [] s32) -> col: s32 {
-    return num_chars_in_string(xx array_view(buffer.bytes, line_starts[line_num], offset - line_starts[line_num]));
+    return num_cols_in_string(xx array_view(buffer.bytes, line_starts[line_num], offset - line_starts[line_num]));
 }
 
 get_cursor_coords :: (editor: Editor, buffer: Buffer, using cursor: Cursor) -> Cursor_Coords {
@@ -588,6 +588,60 @@ find_next_indentation_token :: (tokens: [] Indentation_Token, offset: s32, limit
     return .{}, -1;
 }
 
+is_bracket :: (using buffer: Buffer, pos: s32) -> bool, direction: int = 0 {
+    if pos < 0 || pos >= bytes.count return false;
+
+    if !tokens || tokens[pos] != .punctuation return false;
+
+    if bytes[pos] == {
+        case #char "{";  return true,  1;
+        case #char "[";  return true,  1;
+        case #char "(";  return true,  1;
+        case #char "}";  return true, -1;
+        case #char "]";  return true, -1;
+        case #char ")";  return true, -1;
+    }
+
+    return false;
+}
+
+find_matching_bracket :: (using buffer: Buffer, pos: s32) -> index: s32 {
+    valid, direction := is_bracket(buffer, pos);
+    if !valid return -1;
+
+    bracket := bytes[pos];
+    matching_bracket := get_balancing_char(bracket, include_closing = true);
+
+    balance := 0;
+    if direction < 0 {
+        for < i : pos .. 0 {
+            if tokens[i] != .punctuation continue;
+
+            byte := bytes[i];
+            if byte == bracket {
+                balance += 1;
+            } else if byte == matching_bracket {
+                balance -= 1;
+                if balance == 0 return xx i;
+            }
+        }
+    } else if direction > 0 {
+        for i : pos .. bytes.count - 1 {
+            if tokens[i] != .punctuation continue;
+
+            byte := bytes[i];
+            if byte == bracket {
+                balance += 1;
+            } else if byte == matching_bracket {
+                balance -= 1;
+                if balance == 0 return xx i;
+            }
+        }
+    }
+
+    return -1;
+}
+
 offset_is_within_multiline_token :: (tokens: [] Indentation_Token, offset: s32) -> bool {
     token := find_closest_indentation_token(tokens, offset);
     return token.type == .maybe_multiline && (token.start + token.len) >= offset;
@@ -783,9 +837,9 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
 
         pos, sel := coords.pos, coords.sel;
         pos.line = clamp(pos.line, 0, max_line);
-        pos.col  = clamp(pos.col,  0, num_chars_in_string(get_real_line_as_string(buffer, pos.line)));
+        pos.col  = clamp(pos.col,  0, num_cols_in_string(get_real_line_as_string(buffer, pos.line)));
         sel.line = clamp(sel.line, 0, max_line);
-        sel.col  = clamp(sel.col,  0, num_chars_in_string(get_real_line_as_string(buffer, sel.line)));
+        sel.col  = clamp(sel.col,  0, num_cols_in_string(get_real_line_as_string(buffer, sel.line)));
 
         cursor := *editor.cursors[cursor_id];
         cursor.pos = real_coords_to_offset(buffer, pos);

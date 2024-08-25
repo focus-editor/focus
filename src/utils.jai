@@ -57,37 +57,22 @@ to_owned_array :: (array: *[..]$T, free_memory := false) -> []T {
     return new_array;
 }
 
-pos_to_offset :: (str: string, pos: s64) -> s64 {
-    assert(pos >= 0, "Negative char position\n");
-    result     := -1;
-    char_index := 0;
-    offset     := 0;
+visual_col_to_byte_offset :: (str: string, target_col: s64, line_indent: s64) -> offset: s64, new_col: s64 {
+    s := str;
+    col := 0;
 
-    while offset < str.count {
-        if pos == char_index {
-            result = offset;
-            break;
+    while s && col < target_col {
+        byte := s[0];
+        if byte != #char "\t" {
+            safe_advance(*s, 1 + trailingBytesForUTF8[byte]);
+            col += 1;
+        } else {
+            safe_advance(*s, 1);
+            col += TAB_SIZE - (col + line_indent) % TAB_SIZE;
         }
-        byte := str.data[offset];
-        offset += 1 + trailingBytesForUTF8[byte];
-        char_index += 1;
     }
 
-    if pos == char_index then result = clamp(offset, 0, str.count);
-    assert(result >= 0, "Char position outside string\n");
-
-    return result;
-}
-
-// Slices the string using char indices, not byte indices
-slice_chars :: (str: string, pos1: s32, pos2: s32) -> string {
-    if pos2 <= pos1 || !str return "";
-
-    offset1 := pos_to_offset(str, pos1);
-    remaining_str := slice(str, offset1, str.count - offset1);
-    offset2 := offset1 + pos_to_offset(remaining_str, pos2 - pos1);
-
-    return slice(str, offset1, offset2 - offset1);
+    return (s.data - str.data), col;
 }
 
 advance_to_next_line :: inline (s: *string) {
@@ -325,14 +310,21 @@ is_auto_closeable_char :: (ch: u32) -> bool {
     return ch == #char "{" || ch == #char "(" || ch == #char "[";
 }
 
-get_balancing_char :: (ch: u32) -> u32 {
+get_balancing_char :: (ch: u32, include_closing := false) -> u32 {
     if ch == {
         case #char "{";  return #char "}";
         case #char "(";  return #char ")";
         case #char "[";  return #char "]";
         case #char "\""; return #char "\"";
-        case; return 0;
     }
+    if include_closing {
+        if ch == {
+            case #char "}";  return #char "{";
+            case #char ")";  return #char "(";
+            case #char "]";  return #char "[";
+        }
+    }
+    return 0;
 }
 
 get_char_type :: (ch: u32) -> Char_Type {
