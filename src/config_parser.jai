@@ -636,6 +636,8 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
     return true, "";
 }
 
+#scope_export
+
 hex_to_color_vec4 :: (src_hex: string) -> Vector4, success: bool {
     hex := src_hex;
     if hex.count == 6 then hex = tprint("%FF", hex);
@@ -664,6 +666,8 @@ hex_to_color_vec4 :: (src_hex: string) -> Vector4, success: bool {
 
     return c, c.x >= 0 && c.y >= 0 && c.z >= 0 && c.w >= 0;
 }
+
+#scope_file
 
 parse_build_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
     using result.config.build;

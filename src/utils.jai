@@ -528,3 +528,74 @@ Fuzzy_Filter :: struct {
         chars: [] string;
     }
 }
+
+rgb_from_hsl :: (hsl: Vector3) -> Vector3 {
+    h := hsl.x;
+    s := hsl.y;
+    l := hsl.z;
+    r, g, b: float;
+
+    if s == 0 {
+        r, g, b = l, l, l; // achromatic
+    }
+    else {
+        rgb_from_hue :: (p: float, q: float, t: float) -> float {
+            if t < 0  t += 1;
+            if t > 1  t -= 1;
+            if t < 1.0/6.0  return p + (q - p) * 6 * t;
+            if t < 1.0/2.0  return q;
+            if t < 2.0/3.0  return p + (q - p) * (2.0/3.0 - t) * 6;
+            return p;
+        }
+
+        q := ifx l < 0.5 then l * (1 + s) else l + s - l * s;
+        p := 2 * l - q;
+        r = rgb_from_hue(p, q, h + 1.0/3.0);
+        g = rgb_from_hue(p, q, h);
+        b = rgb_from_hue(p, q, h - 1.0/3.0);
+    }
+
+    return .{r, g, b};
+}
+
+hsl_from_rgb :: (color: Vector3) -> hsl: Vector3 {
+    r := color.x;
+    g := color.y;
+    b := color.z;
+    h, s, l: float;
+
+    _min := min(min(r, g), b);
+    _max := max(max(r, g), b);
+
+    c := _max - _min;
+    l = (_min + _max) / 2;
+
+    if c < 0.00001 || _max <= 0.0
+        return .{h, s, l};
+
+    s = ifx l >= 0.5
+        then c / (2 - _max - _min)
+        else c / (_max + _min);
+
+    if _max == r       h = (g - b) / c + (ifx g < b then 6 else 0);
+    else if _max == g  h = (b - r) / c + 2;
+    else               h = (r - g) / c + 4;
+
+    h /= 6.0;
+    if h < 0.0  h += 1.0;
+
+    return .{h, s, l};
+}
+
+color_to_hex :: (using color: Vector4, exclude_hash := false) -> string /* temp */ {
+    r_u8 := cast(u8)(255 * x);
+    g_u8 := cast(u8)(255 * y);
+    b_u8 := cast(u8)(255 * z);
+    a_u8 := cast(u8)(255 * w);
+
+    h :: #bake_arguments formatInt(base=16, minimum_digits=2);
+    format := "#%1%2%3%4";
+    if exclude_hash advance(*format, 1);
+
+    return tprint(format, h(r_u8), h(g_u8), h(b_u8), h(a_u8));
+}
