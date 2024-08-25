@@ -55,11 +55,11 @@ set_shader_for_gradient :: (rect: Vector4, mode: u8, value: float) {
     CheckInit();
     immediate_set_shader(*shader_gradient);
     set_projection();
-    loc := glGetUniformLocation(shader_gradient.gl_handle, "rect");
+    loc := get_uniform_location(shader_gradient.gl_handle, "rect");
     glUniform4f(loc, rect.x, rect.y, rect.z, rect.w);
-    loc = glGetUniformLocation(shader_gradient.gl_handle, "mode");
+    loc = get_uniform_location(shader_gradient.gl_handle, "mode");
     glUniform1i(loc, mode);
-    loc = glGetUniformLocation(shader_gradient.gl_handle, "value");
+    loc = get_uniform_location(shader_gradient.gl_handle, "value");
     glUniform1f(loc, value);
 }
 
