@@ -52,6 +52,7 @@ copy_whole_line_without_selection:      false
 editor_history_size:                    1024
 line_wrap_is_on_by_default:             false
 show_line_numbers:                      false
+show_selected_text_length:              false
 colored_titlebar:                       true   # Windows 11+ only
 dark_titlebar:                          false  # Windows only
 hide_mouse_when_typing:                 false
