@@ -143,7 +143,7 @@ offset_to_real_coords :: (buffer: Buffer, offset: s64) -> Coords {
 
 // This function counts visual indent, taking tab size into account
 _get_visual_col_by_scanning_line :: (buffer: Buffer, line_num: s32, offset: s64, line_starts: [] s32) -> col: s32 {
-    return num_chars_in_string(xx array_view(buffer.bytes, line_starts[line_num], offset - line_starts[line_num]));
+    return num_cols_in_string(xx array_view(buffer.bytes, line_starts[line_num], offset - line_starts[line_num]));
 }
 
 get_cursor_coords :: (editor: Editor, buffer: Buffer, using cursor: Cursor) -> Cursor_Coords {
@@ -783,9 +783,9 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
 
         pos, sel := coords.pos, coords.sel;
         pos.line = clamp(pos.line, 0, max_line);
-        pos.col  = clamp(pos.col,  0, num_chars_in_string(get_real_line_as_string(buffer, pos.line)));
+        pos.col  = clamp(pos.col,  0, num_cols_in_string(get_real_line_as_string(buffer, pos.line)));
         sel.line = clamp(sel.line, 0, max_line);
-        sel.col  = clamp(sel.col,  0, num_chars_in_string(get_real_line_as_string(buffer, sel.line)));
+        sel.col  = clamp(sel.col,  0, num_cols_in_string(get_real_line_as_string(buffer, sel.line)));
 
         cursor := *editor.cursors[cursor_id];
         cursor.pos = real_coords_to_offset(buffer, pos);

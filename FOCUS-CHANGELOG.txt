@@ -49,6 +49,7 @@
     + Fixed a crash when parsing build output with certain regexes
     + Fixed a crash when outputting invalid UTF-8 in the build output window
     + Fixed a glitch with changing scroll position in some cases (thanks @Sanian-Creations)
+    + Fixed search result highlighting when there are tab characters used for alignment in the middle of text
     + linux/macos: invalid directories in the config should now highlight the incorrect chunk, not the whole path (on windows it has always worked like this)
 + Other changes:
     + macOS: add support for dead keys/key composition

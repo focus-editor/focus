@@ -64,7 +64,8 @@ take_first_n_chars :: (s: string, num_chars: s64) -> string #must {
     return result;
 }
 
-num_chars_in_string :: (s: string) -> s32 {
+// Counts the number of chars, each tab is counted as the number of cols needed for the visual indent
+num_cols_in_string :: (s: string) -> s32 {
     num_chars: s32 = 0;
 
     while s {
@@ -76,6 +77,18 @@ num_chars_in_string :: (s: string) -> s32 {
             safe_advance(*s, 1);
             num_chars += TAB_SIZE - num_chars % TAB_SIZE;
         }
+    }
+
+    return num_chars;
+}
+
+num_chars_in_string :: (s: string) -> s32 {
+    num_chars: s32 = 0;
+
+    while s {
+        byte := s[0];
+        safe_advance(*s, 1 + trailingBytesForUTF8[byte]);
+        num_chars += 1;
     }
 
     return num_chars;
