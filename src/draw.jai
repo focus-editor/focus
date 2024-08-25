@@ -304,15 +304,15 @@ maybe_draw_color_preview_panel :: () {
     if config.settings.color_preview_popup == .disabled return;
     if !workspace_scan_complete return;  // don't init the popup until all buffers are ready, otherwise we won't know the usage stats
 
-    editor, buffer := get_active_editor_and_buffer();
-    if !editor return;
-    if buffer.lang != .Focus_Config && buffer.lang != .Focus_Theme && !is_color_preview_panel(editors.active) return;
-    if buffer.readonly return;
+    active_editor, active_buffer := get_active_editor_and_buffer();
+    if !active_editor return;
+    if active_buffer.lang != .Focus_Config && active_buffer.lang != .Focus_Theme && !is_color_preview_panel(editors.active) return;
+    if active_buffer.readonly return;
 
     if !is_color_preview_panel(editors.active) {
         // Only show the panel if the cursor is within the [colors] section of the config
-        using config_extra := cast(*Focus_Config_Extra) buffer.extra;
-        pos := editor.cursors[editor.main_cursor].pos;
+        using config_extra := cast(*Focus_Config_Extra) active_buffer.extra;
+        pos := active_editor.cursors[active_editor.main_cursor].pos;
         if !config_extra || (colors_section_start < 0) || (pos < colors_section_start) || (colors_section_end >= 0 && pos > colors_section_end) return;
     }
 
@@ -352,9 +352,9 @@ maybe_draw_color_preview_panel :: () {
     } else {
         color_preview_rect = cut_right(screen, screen.w * color_preview_width, margin = 2);
     }
-    color_preview_rect = cut_bottom(color_preview_rect, color_preview_rect.h * color_preview_height);
-
+    color_preview_rect=, color_picker_rect := cut_bottom(color_preview_rect, color_preview_rect.h * color_preview_height);
     if !is_valid(color_preview_rect) return;
+
     draw_rounded_rect_with_shadow(color_preview_rect, Color.BACKGROUND_0, radius = 0.1, shadow_size = char_size);
 
     title_bar_height := font_ui_line_height + 2 * margin + 4 * dpi_scale;
@@ -477,11 +477,136 @@ maybe_draw_color_preview_panel :: () {
         text_rect := get_editor_subrects(editor_id, editor_rect, 0);
         mouse_coords := coords_from_mouse_position(editor, text_rect);
         buffer_pos   := coords_to_offset(editor, buffer, mouse_coords);
-        if buffer_pos >= 0 && buffer_pos < buffer.tokens.count && !is_whitespace_char(buffer.bytes[buffer_pos]) {
-            draw_tooltip_bottom_left(tprint("code_%", buffer.tokens[buffer_pos]), mouse.pointer);
+        if buffer_pos >= 0 && buffer_pos < buffer.tokens.count {
+            color_name_with_colon := "background0:";
+            if is_whitespace_char(buffer.bytes[buffer_pos]) {
+                for buffer.regions {
+                    if it.end   <= buffer_pos  continue;
+                    if it.start < buffer_pos
+                        color_name_with_colon = tprint("region_%:", it.kind);
+                    break;
+                }
+            }
+            else {
+                color_name_with_colon = tprint("code_%:", buffer.tokens[buffer_pos]);
+            }
+            color_name := color_name_with_colon;
+            color_name.count -= 1;
+            draw_tooltip_bottom_left(color_name, mouse.pointer);
+            if mouse.left.just_double_clicked
+                color_preview_jump_to_color_name(color_name_with_colon);
         }
     }
 
+    color_picker_rect = shrink_y(color_picker_rect, font_ui_line_height / 2);
+    color_preview_draw_color_picker(color_picker_rect);
+}
+
+draw_color_picker :: (editor: *Editor, buffer: *Buffer, picker_rect: Rect, range: Offset_Range, on_left: bool) {
+    if !is_valid(picker_rect)
+        return;
+
+    color_change_callback :: (rgba: Vector4, hsl: Vector3, finalize: bool) {
+        using buffer_info := cast(*Color_Change_Buffer_Info) color_picker_dialog.color_change_callback_data;
+        str := color_to_hex(rgba, exclude_hash=true);
+        for i: 0 .. str.count-1  str[i] = to_upper(str[i]);
+        old_str := cast(string) array_view(buffer.bytes, range.start, range.end - range.start);
+        if old_str != str
+            add_paste_animation(editor, .{ range.start, range.end});
+        replace_range(buffer, range, str);
+    }
+    color_picker_dialog.color_change_callback = color_change_callback;
+    color_change_callback_data := Color_Change_Buffer_Info.{editor, buffer, range};
+    color_picker_dialog.color_change_callback_data = *color_change_callback_data;
+
+    ui_id := Ui_Id.color_picker_dialog;
+    axis_id := get_ui_id_from_loc(parent_id = ui_id);
+    alpha_id := get_ui_id_from_loc(parent_id = ui_id);
+    main_id := get_ui_id_from_loc(parent_id = ui_id);
+
+    if ui.active != axis_id && ui.active != alpha_id && ui.active != main_id
+        color_picker_set_color(buffer, range);
+
+    rect := picker_rect;
+    if rect.w > rect.h {
+        if on_left  rect = cut_left(rect, rect.h);
+        else        rect = cut_right(rect, rect.h);
+    }
+    if rect.h > rect.w {
+        rect = cut_bottom(rect, rect.w);
+    }
+
+    Simp.immediate_flush();
+
+    draw_rounded_rect_with_shadow(rect, Color.BACKGROUND_0, radius = 0.1, shadow_size = char_size);
+    widget_size := line_height;
+    bottom, top := cut_bottom(rect, widget_size);
+    axis_rect, main_rect := cut_left(top, widget_size);
+    mode_rect, alpha_rect := cut_left(bottom, widget_size);
+
+
+    maybe_set_hot_or_active(axis_id, axis_rect, .PRESSABLE);
+    if ui.active == axis_id && mouse.left.is_down {
+        v := clamp(mouse.pointer.y - axis_rect.y, 0, axis_rect.h) / axis_rect.h;
+        color_picker_set_value(v, mouse.left.just_released);
+    }
+
+    maybe_set_hot_or_active(alpha_id, alpha_rect, .PRESSABLE);
+    if ui.active == alpha_id && mouse.left.is_down {
+        v := clamp(mouse.pointer.x - alpha_rect.x, 0, alpha_rect.w) / alpha_rect.w;
+        color_picker_set_alpha(v, mouse.left.just_released);
+    }
+
+    maybe_set_hot_or_active(main_id, main_rect, .PRESSABLE);
+    if ui.active == main_id && mouse.left.is_down {
+        x := clamp(mouse.pointer.x - main_rect.x, 0, main_rect.w) / main_rect.w;
+        y := clamp(mouse.pointer.y - main_rect.y, 0, main_rect.h) / main_rect.h;
+        color_picker_set_point(.{x, y}, mouse.left.just_released);
+    }
+
+    // Shrink the sliders a little so a gap is drawn between them and the main panel.
+    // We do this after the UI interactions above, so the user can't accidentally click
+    // in the gap (which would register in the editor window and move the cursor)
+    axis_rect.w -= dpi_scale;
+    alpha_rect.h -= dpi_scale;
+
+    draw_gradient_rect(axis_rect, color_picker_dialog.mode | .vertical_1d, color_picker_dialog.hsl.x);
+    draw_gradient_rect(alpha_rect, .alpha_horizontal_1d, 1.0);
+    draw_gradient_rect(main_rect, color_picker_dialog.mode, color_picker_dialog.value);
+
+    Simp.set_shader_for_color(enable_blend = true);
+
+    inner := axis_rect;
+    inner.y += inner.h * color_picker_dialog.value - dpi_scale;
+    inner.h = 3 * dpi_scale;
+    inner = expand_x(inner, 1 * dpi_scale);
+    outer := expand(inner, 1 * dpi_scale);
+    draw_rect_with_raw_color(outer, .{0, 0, 0, 1});
+    draw_rect_with_raw_color(inner, .{1, 1, 1, 1});
+
+    inner = alpha_rect;
+    inner.x += inner.w * color_picker_dialog.rgba.w - dpi_scale;
+    inner.w = 3 * dpi_scale;
+    inner = expand_y(inner, 1 * dpi_scale);
+    outer = expand(inner, 1 * dpi_scale);
+    draw_rect_with_raw_color(outer, .{0, 0, 0, 1});
+    draw_rect_with_raw_color(inner, .{1, 1, 1, 1});
+
+    inner = main_rect;
+    inner.x += inner.w * color_picker_dialog.point.x - dpi_scale;
+    inner.y += inner.h * color_picker_dialog.point.y - dpi_scale;
+    inner.w = 3 * dpi_scale; inner.h = 3 * dpi_scale;
+    outer = expand(inner, 1 * dpi_scale);
+    draw_rect_with_raw_color(outer, .{0, 0, 0, 1});
+    draw_rect_with_raw_color(inner, .{1, 1, 1, 1});
+
+    mode_id := get_ui_id_from_loc(parent_id = ui_id);
+    mode_chars :: "RGBHSL";
+    label := string.{count=1, data=mode_chars.data+cast(u8)color_picker_dialog.mode};
+    pressed := draw_icon_button(mode_id, mode_rect, label, .square);
+    if pressed  color_picker_set_mode(color_picker_dialog.mode + 1);
+
+    Simp.immediate_flush();
 }
 
 maybe_draw_build_panel :: () {
@@ -3270,6 +3395,39 @@ draw_text_input_modifier_button :: (input_id: Ui_Id, input_rect: Rect, width: fl
     return hover && mouse.left.just_pressed, hover;
 }
 
+
+draw_icon_button :: (ui_id: Ui_Id, rect: Rect, icon: string, style : enum { none; rounded; square; } = .rounded, loc := #caller_location) -> pressed: bool, hover: bool {
+    btn := align_to_grid(rect);
+
+    maybe_set_hot_or_active(ui_id, btn, .PRESSABLE);
+
+    hover := is_hovering_over(ui_id);
+    bg_color := ifx hover then Color.BACKGROUND_4 else Color.BACKGROUND_3;
+
+    if style == {
+        case .rounded;
+        if hover then draw_rounded_rect(shrink(btn, 1), bg_color);
+        draw_rounded_rect(shrink(btn, 1), Color.CURSOR_INACTIVE);
+        draw_rounded_rect(shrink(btn, 2), bg_color);
+
+        case .square;
+        if hover then draw_rect(shrink(btn, 1), bg_color);
+        draw_rect(shrink(btn, 1), Color.CURSOR_INACTIVE);
+        draw_rect(shrink(btn, 2), bg_color);
+    }
+
+    text_w := cast(float) Simp.prepare_text(font_icons_small, icon);
+    text_h := font_icons_small.character_height;
+    text_x := btn.x + btn.w / 2 - text_w / 2 + 1;
+    text_y := btn.y + btn.h / 2 - text_h / 2 + 1;
+    text_color := ifx hover then Color.UI_DEFAULT else Color.UI_DIM;
+
+    Simp.draw_prepared_text(font_icons_small, xx text_x, xx text_y, xx text_color);
+
+    return hover && mouse.left.just_pressed, hover;
+}
+
+
 draw_tooltip_bottom_left :: (text: string, pos: Vector2) {
     padding := 4 * dpi_scale;
 
@@ -3455,6 +3613,13 @@ draw_rect_translucent_on_the_right :: (using rect: Rect, color: Color) {
     Simp.set_shader_for_color(enable_blend = true);
     Simp.immediate_quad(x, y, x + w, y + h, c, c, trans, trans);
 }
+
+draw_gradient_rect :: (rect: Rect, mode: Gradient_Mode, value: float, color_vec4 := Vector4.{1, 1, 1, 1}) {
+    Simp.set_shader_for_gradient(cast,force(Vector4)rect, xx mode, value);
+    draw_rect_with_raw_color(rect, color_vec4);
+    Simp.immediate_flush();
+}
+
 
 draw_top_shadow :: (using rect: Rect, size: float = 10.0) {
     Simp.set_shader_for_color(enable_blend = true);
@@ -3701,6 +3866,7 @@ Ui_Id :: enum s64 {
     color_preview_title_bar     :: -16;
     theme_dialog                :: -17;
     language_dialog             :: -18;
+    color_picker_dialog         :: -19;
 
     // The rest will be derived from loc
 }

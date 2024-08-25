@@ -190,6 +190,100 @@ color_preview_get_editor_id :: inline () -> s64 {
     return panel_editor_id;
 }
 
+color_preview_draw_color_picker :: (rect: Rect) {
+    if target_editor_id < 0 || target_buffer_id < 0
+        return;
+
+    editor := *open_editors[target_editor_id];
+    buffer := *open_buffers[target_buffer_id];
+    assert(buffer.lang == .Focus_Config || buffer.lang == .Focus_Theme);
+
+    offset := editor.cursors[editor.main_cursor].pos;
+    if offset > buffer.bytes.count - 1  offset = cast(s32)buffer.bytes.count - 1;
+    using config_extra := cast(*Focus_Config_Extra) buffer.extra;
+    if (colors_section_start < 0 || offset < colors_section_start) || (colors_section_end >= 0 && offset >= colors_section_end)
+        return;
+
+    // Try and find a color hex value on the cursor line.
+    // Go to start of line, go forward to colon, go forward past whitespace, check value.
+
+    if buffer.bytes[offset] == #char "\n"
+        offset -= 1;
+
+    while buffer.bytes[offset] != #char "\n" {
+        offset -= 1;
+        if offset <= colors_section_start
+            return;
+    }
+
+    while is_unicode_space(buffer.bytes[offset]) {
+        offset += 1;
+        if offset >= buffer.bytes.count || buffer.bytes[offset] == #char "\n"
+            return;
+    }
+
+    if buffer.bytes[offset] == #char "#"
+        return;
+
+    while buffer.bytes[offset] != #char ":" {
+        offset += 1;
+        if offset >= buffer.bytes.count || buffer.bytes[offset] == #char "\n"
+            return;
+    }
+
+    offset += 1;
+    while is_unicode_space(buffer.bytes[offset]) {
+        offset += 1;
+        if offset >= buffer.bytes.count || buffer.bytes[offset] == #char "\n"
+            return;
+    }
+
+    color_start := offset;
+    offset += 1;
+    while offset < buffer.bytes.count && is_hex(buffer.bytes[offset]) {
+        offset += 1;
+        if offset - color_start > 8
+            return;
+    }
+
+    color_end := offset;
+    count := color_end - color_start;
+    if count != 6 && count != 8
+        return;
+
+    on_left := saved_position == .left;
+    draw_color_picker(editor, buffer, rect, .{color_start, color_end}, on_left);
+}
+
+color_preview_jump_to_color_name :: (color_name_with_colon: string) {
+    assert(target_editor_id >= 0 && target_buffer_id >= 0);
+    editor := *open_editors[target_editor_id];
+    buffer := *open_buffers[target_buffer_id];
+    assert(buffer.lang == .Focus_Config || buffer.lang == .Focus_Theme);
+
+    using config_extra := cast(*Focus_Config_Extra) buffer.extra;
+    offset := colors_section_start;
+    buffer_str := cast(string) buffer.bytes;
+    case_sensitive :: true;
+    skip_table := bmh_prepare_skip_table(color_name_with_colon, case_sensitive);
+    offset = inline bmh_find_index_from_left(buffer_str, color_name_with_colon, start_index = offset, skip_table, case_sensitive = case_sensitive);
+
+    if (colors_section_start < 0 || offset < colors_section_start) || (colors_section_end >= 0 && offset >= colors_section_end)
+        return;
+
+    offset += color_name_with_colon.count;
+    while offset < buffer_str.count && is_unicode_space(buffer_str[offset])
+        offset += 1;
+
+    cursor := leave_only_original_cursor(editor);
+    cursor.pos = cast(s32) offset;
+    cursor.sel = cursor.pos;
+    add_paste_animation(editor, .{cursor.pos, cursor.sel});
+    editor.cursor_moved = .jumped;
+    editor.scroll_to_cursor = .yes;
+    make_editor_active(target_editor_id);
+}
+
 color_preview_is_shown := true;
 
 color_preview_width:  float = 0.5;

@@ -224,6 +224,14 @@ backend_init_shaders :: () {
         s.rect_edge_softness_loc = 5;
         s.alpha_blend = true;
     }
+
+    s = *shader_gradient;
+    {
+        s.gl_handle   = get_shader_program(SHADER_GRADIENT);
+        s.position_loc           = 0;
+        s.color_scale_loc        = 1;
+        s.alpha_blend = true;
+    }
 }
 
 #scope_file
@@ -294,6 +302,157 @@ void main () {
 }
 #endif // FRAGMENT_SHADER
 END
+
+
+SHADER_GRADIENT :: #string glsl
+OUT_IN vec4 iterated_color;
+
+#ifdef VERTEX_SHADER
+in vec2 vert_position;
+in vec4 vert_color;
+
+uniform mat4 projection;
+
+void main() {
+    gl_Position = projection * vec4(vert_position, 0.0, 1.0);
+    iterated_color = vert_color;
+}
+#endif // VERTEX_SHADER
+
+#ifdef FRAGMENT_SHADER
+uniform vec4 rect;
+uniform int mode; // See Gradient_Mode enum.
+uniform float value;
+
+out vec4 color;
+
+float random (in vec2 _st) {
+    return fract(sin(dot(_st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+}
+
+vec4 random4(vec2 co) {
+    vec4 result;
+    result.x = random(co); co *= 2;
+    result.y = random(co); co *= 2;
+    result.z = random(co); co *= 2;
+    result.w = random(co);
+    return result;
+}
+
+vec3 hsl2rgb( in vec3 c )
+{
+    vec3 rgb = clamp( abs(mod(c.x*6.0+vec3(0.0,4.0,2.0),6.0)-3.0)-1.0, 0.0, 1.0 );
+    return c.z + c.y * (rgb-0.5)*(1.0-abs(2.0*c.z-1.0));
+}
+
+void main () {
+    vec2 uv = vec2((gl_FragCoord.x - rect.x) / rect.z, (gl_FragCoord.y - rect.y) / rect.w);
+    // This is line 44
+    switch (mode) {
+        case 0x00:  // 2d controlled by red
+        color.r = value;
+        color.gb = uv.xy;
+        break;
+
+        case 0x01: // 2d controlled by green
+        color.g = value;
+        color.rb = uv.xy;
+        break;
+
+        case 0x02: // 2d controlled by blue
+        color.b = value;
+        color.rg = uv.xy;
+        break;
+
+        case 0x03:  // 2d controlled by hue
+        color.rgb = hsl2rgb(vec3(value, uv.x, uv.y));
+        break;
+
+        case 0x04:  // 2d controlled by saturation
+        color.rgb = hsl2rgb(vec3(uv.x, value, uv.y));
+        break;
+
+        case 0x05:  // 2d controlled by lightness
+        color.rgb = hsl2rgb(vec3(uv.x, uv.y, value));
+        break;
+
+        case 0x10: // 1d vertical displaying red
+        color.r = uv.y;
+        color.g = 0;
+        color.b = 0;
+        break;
+
+        case 0x11: // 1d vertical displaying green
+        color.r = 0;
+        color.g = uv.y;
+        color.b = 0;
+        break;
+
+        case 0x12: // 1d vertical displaying blue
+        color.r = 0;
+        color.g = 0;
+        color.b = uv.y;
+        break;
+
+        case 0x13: // 1d vertical displaying hue
+        color.rgb = hsl2rgb(vec3(uv.y, 1, 0.5));
+        break;
+
+        case 0x14: // 1d vertical displaying saturation
+        color.rgb = hsl2rgb(vec3(value, uv.y, 0.5));
+        break;
+
+        case 0x15: // 1d vertical displaying lightness
+        color.rgb = hsl2rgb(vec3(value, 1, uv.y));
+        break;
+
+        case 0x16: // 1d vertical displaying alpha
+        color.rgb = vec3(uv.y);
+        break;
+
+        case 0x20: // 1d horizontal displaying red
+        color.r = uv.x;
+        color.g = 0;
+        color.b = 0;
+        break;
+
+        case 0x21: // 1d horizontal displaying green
+        color.r = 0;
+        color.g = uv.x;
+        color.b = 0;
+        break;
+
+        case 0x22: // 1d horizontal displaying blue
+        color.r = 0;
+        color.g = 0;
+        color.b = uv.x;
+        break;
+
+        case 0x23: // 1d horizontal displaying hue
+        color.rgb = hsl2rgb(vec3(uv.x, 1, 0.5));
+        break;
+
+        case 0x24: // 1d horizontal displaying saturation
+        color.rgb = hsl2rgb(vec3(value, uv.x, 0.5));
+        break;
+
+        case 0x25: // 1d horizontal displaying lightness
+        color.rgb = hsl2rgb(vec3(value, 1, uv.x));
+        break;
+
+        case 0x26: // 1d horizontal displaying alpha
+        color.rgb = vec3(uv.x);
+        break;
+    }
+
+    // When color is between two displayable values dither it to avoid banding; round it up or down randomly,
+    // proportionate to which it is nearer to.
+    vec4 remainder = fract(color * 255.0);
+    color = color - (remainder / 255.0) + (1.0 / 255.0) - (step(remainder, random4(uv)) / 255.0);
+    color.a = iterated_color.a;
+}
+#endif // FRAGMENT_SHADER
+glsl
 
 
 // @Cleanup:
