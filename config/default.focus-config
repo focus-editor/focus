@@ -306,6 +306,7 @@ F11                         toggle_fullscreen
 {Shift}-End                 jump_to_line_end
 {Shift}-Ctrl-Home           jump_to_file_start
 {Shift}-Ctrl-End            jump_to_file_end
+{Shift}-Ctrl-M              jump_to_matching_bracket
 
 {Shift}-Backspace           delete_left_char
 {Shift}-Delete              delete_right_char

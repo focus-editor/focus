@@ -42,6 +42,7 @@
     + New build command variable: `%PROJECT_CONFIG_DIR%`. Expands to the path of the directory containing the active project config.
     + New option: `load_most_recent_project_on_start`. Set to `true` to load the last loaded project on startup.
     + New option: `highlight_matching_brackets`. Set to `true` to highlight the bracket matching the one the cursor is on.
+    + New command: `jump_to_matching_bracket`. Defaults to Ctrl-M.
 + Bug fixes:
     + Linux: Fixed a bug that caused inconsistent trackpad scrolling on Wayland (thanks @Mythique)
     + Rust: enabled comment toggling that was missing initially

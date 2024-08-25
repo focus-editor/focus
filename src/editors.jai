@@ -237,6 +237,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .jump_to_line_end;                 move_cursors_end                    (editor, buffer);
         case .jump_to_file_start;               move_to_file_start                  (editor, buffer);
         case .jump_to_file_end;                 move_to_file_end                    (editor, buffer);
+        case .jump_to_matching_bracket;         move_to_matching_bracket            (editor, buffer, shift_pressed); keep_selection = true;
 
         case .select_line;                      select_lines                        (editor, buffer); keep_selection = true;
         case .copy;                             copy_selection_to_clipboard         (editor, buffer);
@@ -2142,6 +2143,27 @@ move_to_file_end :: (editor: *Editor, buffer: Buffer) {
     cursor := leave_only_original_cursor(editor);
     cursor.pos = cast(s32) buffer.bytes.count;
     cursor.col_wanted = -1;
+    editor.cursor_moved = .jumped;
+}
+
+move_to_matching_bracket :: (using editor: *Editor, buffer: Buffer, keep_selection: bool) {
+    for * cursor : cursors {
+        pos: s32 = -1;
+        if is_bracket(buffer, cursor.pos) {
+            pos = cursor.pos;
+        } else if is_bracket(buffer, cursor.pos - 1) {
+            pos = cursor.pos - 1;
+        }
+        if pos < 0 continue;
+
+        offset := find_matching_bracket(buffer, pos);
+        if offset < 0 continue;
+
+        if keep_selection then cursor.sel = cursor.pos;
+        cursor.pos = offset;
+        if !keep_selection then cursor.sel = offset;
+    }
+
     editor.cursor_moved = .jumped;
 }
 

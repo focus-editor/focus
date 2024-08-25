@@ -591,7 +591,7 @@ find_next_indentation_token :: (tokens: [] Indentation_Token, offset: s32, limit
 is_bracket :: (using buffer: Buffer, pos: s32) -> bool, direction: int = 0 {
     if pos < 0 || pos >= bytes.count return false;
 
-    if tokens[pos] != .punctuation return false;
+    if !tokens || tokens[pos] != .punctuation return false;
 
     if bytes[pos] == {
         case #char "{";  return true,  1;
