@@ -589,7 +589,7 @@ substitute_variables :: (using work: *Build_Thread_Work) {
 is_common_windows_shell_command :: (command: string) -> bool {
     #if OS == .WINDOWS {
         COMMON_CMD_COMMANDS :: string.[
-            "echo ", "call ", "copy", "cd ", "chdir ", "del ", "rmdir ", "md ", "mkdir ", "path ", "xcopy ", "move ", "ren ", "rename ",
+            "echo ", "call ", "copy", "cd ", "chdir ", "del ", "rd ", "rmdir ", "md ", "mkdir ", "path ", "xcopy ", "move ", "ren ", "rename ",
         ];
         for COMMON_CMD_COMMANDS {
             if begins_with_nocase(command, it) return true;
