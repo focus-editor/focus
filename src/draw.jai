@@ -601,8 +601,7 @@ draw_color_picker :: (editor: *Editor, buffer: *Buffer, picker_rect: Rect, range
     draw_rect_with_raw_color(inner, .{1, 1, 1, 1});
 
     mode_id := get_ui_id_from_loc(parent_id = ui_id);
-    mode_chars :: "RGBHSL";
-    label := string.{count=1, data=mode_chars.data+cast(u8)color_picker_dialog.mode};
+    label := slice("RGBHSL", xx color_picker_dialog.mode, 1);
     pressed := draw_icon_button(mode_id, mode_rect, label, .square);
     if pressed  color_picker_set_mode(color_picker_dialog.mode + 1);
 
