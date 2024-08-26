@@ -508,7 +508,12 @@ draw_color_picker :: (editor: *Editor, buffer: *Buffer, picker_rect: Rect, range
         for i : 0 .. str.count-1  str[i] = to_upper(str[i]);
         old_str := cast(string) array_view(buffer.bytes, range.start, range.end - range.start);
         if old_str != str then add_paste_animation(editor, .{ range.start, range.end});
-        replace_range(buffer, range, str);
+        if finalize {
+            new_edit_group(buffer, editor);
+            replace_range(buffer, range, str);
+        } else {
+            replace_range_raw(buffer, range.start, range.end, str);
+        }
     }
 
     color_picker_dialog.color_change_callback = color_change_callback;
@@ -540,22 +545,22 @@ draw_color_picker :: (editor: *Editor, buffer: *Buffer, picker_rect: Rect, range
     mode_rect, alpha_rect := cut_left(bottom, widget_size);
 
     maybe_set_hot_or_active(axis_id, axis_rect, .PRESSABLE);
-    if ui.active == axis_id && mouse.left.is_down {
+    if ui.active == axis_id || (ui.hot_last_frame == axis_id && mouse.left.just_released) {
         v := clamp(mouse.pointer.y - axis_rect.y, 0, axis_rect.h) / axis_rect.h;
-        color_picker_set_value(v, mouse.left.just_released);
+        color_picker_set_value(v, mouse.left.just_pressed || mouse.left.just_released);
     }
 
     maybe_set_hot_or_active(alpha_id, alpha_rect, .PRESSABLE);
-    if ui.active == alpha_id && mouse.left.is_down {
+    if ui.active == alpha_id || (ui.hot_last_frame == alpha_id && mouse.left.just_released) {
         v := clamp(mouse.pointer.x - alpha_rect.x, 0, alpha_rect.w) / alpha_rect.w;
-        color_picker_set_alpha(v, mouse.left.just_released);
+        color_picker_set_alpha(v, mouse.left.just_pressed || mouse.left.just_released);
     }
 
     maybe_set_hot_or_active(main_id, main_rect, .PRESSABLE);
-    if ui.active == main_id && mouse.left.is_down {
+    if ui.active == main_id || (ui.hot_last_frame == main_id && mouse.left.just_released) {
         x := clamp(mouse.pointer.x - main_rect.x, 0, main_rect.w) / main_rect.w;
         y := clamp(mouse.pointer.y - main_rect.y, 0, main_rect.h) / main_rect.h;
-        color_picker_set_point(.{x, y}, mouse.left.just_released);
+        color_picker_set_point(.{x, y}, mouse.left.just_pressed || mouse.left.just_released);
     }
 
     // Shrink the sliders a little so a gap is drawn between them and the main panel.
