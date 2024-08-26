@@ -117,7 +117,7 @@ color_preview_begin_draw :: (editor_id: s64) {
     // Try to build it up as it would when the config is actually loaded
     reset_color_map_to_default();
 
-    if config.style.theme {
+    if config.style.theme && !is_current_theme(buffer.file.full_path) {
         color_preview_warning = tprint("There is an active theme '%'. Colors from this config are not applied.", config.style.theme);
         if config.style.theme != "default" {
             color_preview_warning = tprint("% You can edit the theme using the 'Edit Current Theme' command.", color_preview_warning);
