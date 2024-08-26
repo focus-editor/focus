@@ -1205,26 +1205,31 @@ remove_all_buffers :: () {
     bucket_array_reset(*open_buffers);
 }
 
-add_buffer_to_save_queue :: (buffer_id: s64, action: Save_Action = .save, after_save: After_Save_Action = .do_nothing) {
-    added := array_add_if_unique(*buffer_save_queue.buffer_ids, buffer_id);
-    if added then array_add(*buffer_save_queue.buffer_save_actions, action);
+add_buffer_to_save_queue :: (buffer_id: s64, type: Save_Action_Type = .save, after_save: After_Save_Action = .do_nothing) {
+    action: Save_Action;
+    action.buffer_id = buffer_id;
+    action.type = type;
+
+    array_add_if_unique(*buffer_save_queue.save_actions, action);
 
     buffer_save_queue.pending = true;
     buffer_save_queue.after_save = after_save;
 }
 
 remove_buffer_from_save_queue :: (buffer_id: s64, reset_after_save := false) {
-    found, index := array_find(buffer_save_queue.buffer_ids, buffer_id);
-    if found {
-        array_ordered_remove_by_index(*buffer_save_queue.buffer_ids, index);
-        array_ordered_remove_by_index(*buffer_save_queue.buffer_save_actions, index);
+    index := -1;
+
+    for buffer_save_queue.save_actions {
+        if it.buffer_id == buffer_id then index = it_index;
     }
+
+    if index != -1 then array_ordered_remove_by_index(*buffer_save_queue.save_actions, index);
 
     if reset_after_save then buffer_save_queue.after_save = .do_nothing;
 }
 
 clear_buffer_save_queue :: () {
-    array_reset_keeping_memory(*buffer_save_queue.buffer_ids);
+    array_reset_keeping_memory(*buffer_save_queue.save_actions);
     buffer_save_queue.pending = false;
 }
 
@@ -1234,25 +1239,26 @@ process_buffer_save_queue :: () {
     if !pending return;
 
     if config.settings.prefer_system_file_dialogs && OS == .WINDOWS {
-        for buffer_id : buffer_ids {
-            buffer := *open_buffers[buffer_id];
+        for action: save_actions {
+            buffer := *open_buffers[action.buffer_id];
             file_path, success := platform_get_save_file_name(get_buffer_name(buffer));
             if file_path && success {
-                save_buffer_to_file(buffer, buffer_id, file_path);
+                save_buffer_to_file(buffer, action.buffer_id, file_path);
             } else {
                 pending = false;  // don't execute the after save action
             }
-            remove buffer_id;
+            remove action;
         }
     }
 
-    if buffer_ids {
+    if save_actions {
         if active_global_widget != .open_file_dialog && active_global_widget != .confirm_overwrite_dialog {
-            if buffer_save_actions[0] == {
+            action := save_actions[0];
+            if action.type == {
                 case .save;
-                    show_open_file_dialog(.save, buffer_ids[0]);
+                    show_open_file_dialog(.save, action.buffer_id);
                 case .move;
-                    show_open_file_dialog(.move, buffer_ids[0]);
+                    show_open_file_dialog(.move, action.buffer_id);
             }
         }
     } else if pending {
@@ -1600,12 +1606,16 @@ Indentation_Token :: struct {
 // TODO: consider using a more generic action queue if we have more deferred actions later
 buffer_save_queue: struct {
     pending := false;
-    buffer_ids: [..] s64;
-    buffer_save_actions: [..] Save_Action;
+    save_actions: [..] Save_Action;
     after_save: After_Save_Action = .do_nothing;
 };
 
-Save_Action :: enum {
+Save_Action :: struct {
+    buffer_id: s64;
+    type: Save_Action_Type;
+}
+
+Save_Action_Type :: enum {
     save;
     move;
 }
@@ -1615,3 +1625,9 @@ After_Save_Action :: enum {
     exit_program;
     reload_workspace;
 }
+
+operator == :: (a: Save_Action, b: Save_Action) -> bool {
+    return a.buffer_id == b.buffer_id;
+}
+
+#poke_name Basic operator==;
