@@ -245,24 +245,17 @@ color_preview_draw_color_picker :: (rect: Rect) {
     draw_color_picker(editor, buffer, rect, .{color_start, color_end}, on_left);
 }
 
-color_preview_jump_to_color_name :: (color_name_with_colon: string) {
+color_preview_jump_to_color_name :: (color_name: string) {
     assert(target_editor_id >= 0 && target_buffer_id >= 0);
     editor := *open_editors[target_editor_id];
     buffer := *open_buffers[target_buffer_id];
     assert(buffer.lang == .Focus_Config || buffer.lang == .Focus_Theme);
 
-    using config_extra := cast(*Focus_Config_Extra) buffer.extra;
-    offset := colors_section_start;
-    buffer_str := cast(string) buffer.bytes;
-    case_sensitive :: true;
-    skip_table := bmh_prepare_skip_table(color_name_with_colon, case_sensitive);
-    offset = inline bmh_find_index_from_left(buffer_str, color_name_with_colon, start_index = offset, skip_table, case_sensitive = case_sensitive);
-
-    if (colors_section_start < 0 || offset < colors_section_start) || (colors_section_end >= 0 && offset >= colors_section_end) return;
-
-    offset += color_name_with_colon.count;
-    while offset < buffer_str.count && is_unicode_space(buffer_str[offset]) {
-        offset += 1;
+    offset := parse_config_and_get_offset_of_color_value(buffer, color_name);
+    if offset < 0 {
+        clear_user_messages(.config);
+        add_user_warning("Color '%' is not found in config", color_name, tag = .config, dismiss_in_seconds = 5);
+        return;
     }
 
     cursor := leave_only_original_cursor(editor);
@@ -313,6 +306,39 @@ get_language_sample_text :: (lang: Buffer.Lang) -> string {
             panic("Attempted to get a sample for an unsupported buffer language %. This is a bug.", lang);
     }
     return "";
+}
+
+parse_config_and_get_offset_of_color_value :: (buffer: Buffer, color_name: string) -> offset: s32 {
+    // Do some very superficial parsing, not super robust but better than plain search
+    handler: Text_File_Handler;
+    trimmed_data := trim_left(cast(string) buffer.bytes, " \t\n\r");  // skip empty lines, otherwise the handler will crash!
+    start_from_memory(*handler, "colors", "colors", trimmed_data);
+    if handler.failed return -1;
+
+    colors_section := false;
+
+    while true {
+        line, found := consume_next_line(*handler);
+        if !found break;
+
+        if begins_with(line, "[[") && ends_with(line, "]]") {
+            colors_section = false;
+        } else if begins_with(line, "[") && ends_with(line, "]") {
+            if equal_nocase(trim(line, " \t[]"), "colors") {
+                colors_section = true;
+            } else {
+                colors_section = false;
+            }
+        }
+        if !colors_section continue;
+
+        color, value := break_by_spaces(line);
+        color = trim_right(color, ":");
+
+        if equal_nocase(color, color_name)  return cast(s32) (value.data - buffer.bytes.data);
+    }
+
+    return -1;
 }
 
 

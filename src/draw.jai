@@ -478,20 +478,18 @@ maybe_draw_color_preview_panel :: () {
         mouse_coords := coords_from_mouse_position(editor, text_rect);
         buffer_pos   := coords_to_offset(editor, buffer, mouse_coords);
         if buffer_pos >= 0 && buffer_pos < buffer.tokens.count {
-            color_name_with_colon := "background0:";
+            color_name := "background0";
             if is_whitespace_char(buffer.bytes[buffer_pos]) {
                 for buffer.regions {
                     if it.end   <= buffer_pos continue;
-                    if it.start <  buffer_pos then color_name_with_colon = tprint("region_%:", it.kind);
+                    if it.start <  buffer_pos then color_name = tprint("region_%", it.kind);
                     if it.start >  buffer_pos break;
                 }
             } else {
-                color_name_with_colon = tprint("code_%:", buffer.tokens[buffer_pos]);
+                color_name = tprint("code_%", buffer.tokens[buffer_pos]);
             }
-            color_name := color_name_with_colon;
-            color_name.count -= 1;
             draw_tooltip_bottom_left(color_name, mouse.pointer);
-            if mouse.left.just_pressed then color_preview_jump_to_color_name(color_name_with_colon);
+            if mouse.left.just_pressed then color_preview_jump_to_color_name(color_name);
         }
     }
 

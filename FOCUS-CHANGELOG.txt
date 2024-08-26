@@ -22,6 +22,7 @@
         + You can always check the default config for the full list of available colors (use the `Show Default Config` command)
         + Do note that not all tokens are present in all languages. For example, `code_enum_variant` only works with Jai, Odin and Zig at the moment.
         + A new color preview widget will be automatically displayed to help with color selection (code samples contributed by Numina)
+            + The color preview widget now has a color picker (thanks to @onelivesleft)
         + New option `color_preview_popup` was added to control the popup behaviour. Variants: `enabled`, `minimized`, `disabled` (defaults to `enabled`)
     + New commands: `close_all_editors` and `close_other_editors`. Can be used to clean up the most recent files dialog (`Ctrl-Tab` by default). (thanks @maxamundsen)
     + New command: `strip_trailing_whitespace`. Use to strip trailing whitespace in the currently open file (thanks @maxamundsen)
