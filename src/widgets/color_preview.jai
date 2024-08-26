@@ -7,10 +7,16 @@ init_color_preview :: () {
     buffer.internal = true;
 
     // Collect stats on most used languages in the workspace
-    array_resize(*languages, NUM_LANGUAGES);
+    array_resize(*languages, NUM_LANGUAGES, initialize = true);
     for enum_values_as_enum(Buffer.Lang) {
-        languages[xx it].lang = it;
-        languages[xx it].num_buffers = 0;
+        language := *languages[xx it];
+
+        language.lang = it;
+        language.num_buffers = 0;
+
+        if language.name then free(language.name);
+        language.name = sprint("%", it);
+        replace_chars(language.name, "_", xx #char " ");
     }
     for open_buffers {
         languages[xx it.lang].num_buffers += 1;
@@ -24,7 +30,12 @@ init_color_preview :: () {
                 remove it;
         }
     }
-    quick_sort(languages, (a, b) => (b.num_buffers - a.num_buffers));
+    compare_languages :: (a: Color_Preview_Language, b: Color_Preview_Language) -> s64 {
+        usage_diff := b.num_buffers - a.num_buffers;
+        if usage_diff != 0 return usage_diff;
+        return compare_strings(a.name, b.name);
+    }
+    quick_sort(languages, compare_languages);
 
     color_preview_set_language(0);
 
@@ -172,11 +183,7 @@ color_preview_get_languages :: () -> [] string /* temp */, selected: int {
     lang_names: [..] string;
     lang_names.allocator = temp;
 
-    for languages {
-        name := tprint("%", it.lang);
-        replace_chars(name, "_", xx #char " ");
-        array_add(*lang_names, name);
-    }
+    for languages  array_add(*lang_names, it.name);
 
     return lang_names, selected_language_id;
 }
@@ -353,6 +360,7 @@ languages: [..] Color_Preview_Language;
 Color_Preview_Language :: struct {
     lang: Buffer.Lang;
     num_buffers: s32;  // the number of buffers in the current workspace which use it
+    name: string;
 }
 
 panel_buffer_id := -1;
