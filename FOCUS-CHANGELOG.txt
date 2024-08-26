@@ -16,6 +16,19 @@
 # Main Git Branch
 
 + New features:
+    + ...
++ Bug fixes:
+    + ...
++ Other changes:
+    + ...
+
+
+
+# RELEASES ==================================================================
+
+# Version 0.3.6
+
++ New features:
     + New option: `status_bar_position`. Allows changing the position of the status bar to either the `top` or `bottom` of the editor window. Defaults to `bottom`.
     + Code colors have been revamped. There are now more colors available in the config, which roughly correspond to the code tokens produced by language tokenizers.
         + Configs and themes will be migrated to version [5] with the new colors automatically derived from the old colors
@@ -59,8 +72,6 @@
     + Text inputs now also support deleting text to underscore (Alt+Backspace, Alt+Delete by default) (thanks @jejikeh)
     + It is now possible to add a comment to an empty line by using the `toggle_comment` action (thanks @polgartom)
 
-
-# RELEASES ==================================================================
 
 # Version 0.3.5
 
