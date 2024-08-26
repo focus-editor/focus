@@ -181,6 +181,8 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .save_as;                          save_as (editor.buffer_id);
         case .save_all;                         save_all();
 
+        case .move_current_file;                move_current_file(editor.buffer_id);
+
         case .switch_to_left_editor;            switch_to_editor(.left);
         case .switch_to_right_editor;           switch_to_editor(.right);
         case .switch_to_other_editor;           switch_to_editor(.other);
@@ -1758,6 +1760,14 @@ save_all :: () {
     for * buffer, buffer_id : open_buffers {
         if buffer.modified  save(buffer_id);
     }
+}
+
+move_current_file :: (buffer_id: s64) {
+    buffer := *open_buffers[buffer_id];
+    if !buffer.has_file return; // Do not try to move files that don't exist.
+
+    add_buffer_to_save_queue(buffer_id, .move, after_save = .do_nothing);
+    redraw_requested = true;
 }
 
 switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := false) {

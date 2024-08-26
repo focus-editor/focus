@@ -13,11 +13,12 @@ confirm_overwrite_dialog_handle_event :: (event: Input.Event) -> bool {
     return false;
 }
 
-show_confirm_overwrite_dialog :: (buffer_id: s64, path: string) {
+show_confirm_overwrite_dialog :: (buffer_id: s64, path: string, delete_buffer_after_save := false) {
     active_global_widget = .confirm_overwrite_dialog;
 
     confirm_overwrite_dialog.buffer_id = buffer_id;
     confirm_overwrite_dialog.path = path;
+    confirm_overwrite_dialog.delete_buffer_after_save = delete_buffer_after_save;
 }
 
 close_confirm_overwrite_dialog :: () {
@@ -33,6 +34,11 @@ confirm_overwrite_dialog_proceed :: () {
 
     remove_buffer_from_save_queue(buffer_id);
 
+    if delete_buffer_after_save {
+        deleted := delete_buffer_from_disk(buffer);
+        if !deleted {} // Maybe show a notification?
+    }
+
     close_confirm_overwrite_dialog();
 }
 
@@ -41,4 +47,5 @@ confirm_overwrite_dialog_proceed :: () {
 confirm_overwrite_dialog: struct {
     buffer_id: s64;
     path: string;
+    delete_buffer_after_save: bool;
 };
