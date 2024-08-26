@@ -1118,3 +1118,54 @@ myCar.startEngine()
 myCar.stopEngine()
 
 SWIFT
+
+SAMPLE_Shell :: #string LANG_SHELL
+#!/bin/bash
+
+shopt -s nocaseglob
+set -xe
+
+# This is a comment.
+
+function usage () {
+    echo "Usage: ${0##*/} <name>" >&2
+}
+
+NAME=${1}
+if [[ -z ${NAME} ]]; then
+    echo "Sir, we cannot procceed without your name!" >&2
+    usage
+    exit 1
+elif [[ "${NAME}" = "poop" ]]; then
+    echo "...There's no way your name is \"poop.\" Try again." >&2
+    exit 1
+fi
+
+echo "Hello, ${NAME}! Nice to meet you."
+
+COUNTER=$(( ${RANDOM} % 200 ))  # Random number in [0, 200)
+COUNTER=$(( ${COUNTER} + 1 ))   # Change number to [1, 200]
+
+echo -ne "----- Counting down from $COUNTER... -----\n"
+
+for (( i = $COUNTER ; i >= 0 ; i-- )); do
+    echo "${i}..."
+done
+
+echo -e "\n----- Displaying some fruits... -----"
+
+FRUITS=("apple" "mango" "elderberry")
+for fruit in "${FRUITS[@]}"; do
+    echo "We have a(n) ${fruit:-missing fruit??}!"
+done
+
+printf "\n"
+
+cat << DONE
+----- Mutiline strings... ------
+This is a multiline string!
+This is what inspired Jai's #string functionality.
+Isn't it neat?
+DONE
+
+LANG_SHELL

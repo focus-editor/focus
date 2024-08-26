@@ -1336,6 +1336,11 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
         case "vcxproj";         lang = .Xml;
         case "csproj";          lang = .Xml;
 
+        case "sh";              lang = .Shell;
+        case "shlib";           lang = .Shell;
+        case "bash";            lang = .Shell;
+        case "zsh";             lang = .Shell;
+
         case;
             // Files named `.focus_config` are assumed to have no extension
             if equal_nocase(basename_with_extension, ".focus-config") then lang = .Focus_Config;
@@ -3420,6 +3425,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
 
         case .Python;       #through;
         case .RenPy;        #through;
+        case .Shell;        #through;
         case .Focus_Config; #through;
         case .Focus_Theme;
             comment = "#";
@@ -3656,6 +3662,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
         case .Batch;        #through;
         case .Python;       #through; // Yes, we could use multi-line strings but they have to be properly indented, so let's just fallback to several single-line comments and not to create more headache
         case .RenPy;        #through; // Yeah, there is a trick but meh (https://lemmasoft.renai.us/forums/viewtopic.php?p=299664#p299664 in case someone would like to implement it)
+        case .Shell;        #through; // You could with herestrings but it runs into having to use specific identifiers like #string in Jai so let's not
         case .Zig;          #through;
         case .Focus_Config; #through;
         case .Focus_Theme;

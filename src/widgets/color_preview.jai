@@ -321,6 +321,7 @@ get_language_sample_text :: (lang: Buffer.Lang) -> string {
         case .Markdown;          return SAMPLE_Markdown;
         case .Batch;             return SAMPLE_Batch;
         case .Swift;             return SAMPLE_Swift;
+        case .Shell;             return SAMPLE_Shell;
 
         case .Plain_Text;        #through;
         case .Focus_Config;      #through;

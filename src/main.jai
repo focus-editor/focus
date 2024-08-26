@@ -998,6 +998,7 @@ focus_allocator: Allocator;
 #load "langs/odin.jai";
 #load "langs/python.jai";
 #load "langs/renpy.jai";
+#load "langs/shell.jai";
 #load "langs/xml.jai";
 #load "langs/todo.jai";
 #load "langs/yang.jai";
