@@ -502,7 +502,7 @@ draw_color_picker :: (editor: *Editor, buffer: *Buffer, picker_rect: Rect, range
 
     color_change_callback :: (rgba: Vector4, hsl: Vector3, finalize: bool) {
         using buffer_info := cast(*Color_Change_Buffer_Info) color_picker_dialog.color_change_callback_data;
-        str := color_to_hex(rgba, exclude_hash=true);
+        str := color_to_hex(rgba, exclude_hash = true);
         for i : 0 .. str.count-1  str[i] = to_upper(str[i]);
         old_str := cast(string) array_view(buffer.bytes, range.start, range.end - range.start);
         if old_str != str then add_paste_animation(editor, .{ range.start, range.end});
@@ -512,6 +512,8 @@ draw_color_picker :: (editor: *Editor, buffer: *Buffer, picker_rect: Rect, range
         } else {
             replace_range_raw(buffer, range.start, range.end, str);
         }
+        rescan_for_lines(buffer);
+        if editor.line_wrap == .on then rescan_for_wrapped_lines(editor, buffer);
     }
 
     color_picker_dialog.color_change_callback = color_change_callback;
