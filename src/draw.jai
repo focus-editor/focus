@@ -483,7 +483,7 @@ maybe_draw_color_preview_panel :: () {
                 for buffer.regions {
                     if it.end   <= buffer_pos continue;
                     if it.start <  buffer_pos then color_name_with_colon = tprint("region_%:", it.kind);
-                    break;
+                    if it.start >  buffer_pos break;
                 }
             } else {
                 color_name_with_colon = tprint("code_%:", buffer.tokens[buffer_pos]);
@@ -491,8 +491,7 @@ maybe_draw_color_preview_panel :: () {
             color_name := color_name_with_colon;
             color_name.count -= 1;
             draw_tooltip_bottom_left(color_name, mouse.pointer);
-            if mouse.left.just_double_clicked
-                color_preview_jump_to_color_name(color_name_with_colon);
+            if mouse.left.just_double_clicked then color_preview_jump_to_color_name(color_name_with_colon);
         }
     }
 

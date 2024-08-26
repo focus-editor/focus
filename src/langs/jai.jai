@@ -33,6 +33,8 @@ tokenize_jai :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] B
 
     end_scope(*tokenizer, tokenizer.t - tokenizer.buf.data);
 
+    quick_sort(tokenizer.regions, (a, b) => (a.start - b.start));
+
     return tokenizer.regions;
 }
 

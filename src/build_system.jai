@@ -509,10 +509,7 @@ print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kin
             region.end   -= bytes_to_forget;
             if region.start < 0 || region.end < 0 then remove region;  // will have to sort later because they must be sorted
         }
-        compare_regions :: (r1: Buffer_Region, r2: Buffer_Region) -> s64 {
-            return r1.start - r2.start;
-        }
-        quick_sort(buffer.regions, compare_regions);
+        quick_sort(buffer.regions, (a, b) => (a.start - b.start));
     }
 }
 
