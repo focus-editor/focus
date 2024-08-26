@@ -1769,7 +1769,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 };
                 width: float;
 
-                line_range := Offset_Range.{ start = get_real_line_start_offset(buffer, entry.line), end = get_real_line_end_offset(buffer, entry.line) };
+                line_range := get_real_line_range(buffer, entry.line);
                 text_start := line_range.start + count_whitespace(buffer.bytes, line_range.start, line_range.end);
 
                 // Line number
@@ -3072,7 +3072,7 @@ draw_finder :: () {
             // or do it once when searching, but for every resuls (and bloat the search result size).
             // Chose the first option at least for now.
             line_num := offset_to_real_line(buffer, min(entry.match_offset, xx buffer.bytes.count));
-            line_range := Offset_Range.{ start = get_real_line_start_offset(buffer, line_num), end = get_real_line_end_offset(buffer, line_num) };
+            line_range := get_real_line_range(buffer, line_num);
             text_start := line_range.start + count_whitespace(buffer.bytes, line_range.start, line_range.end);
 
             // Draw file info

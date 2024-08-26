@@ -268,7 +268,7 @@ color_preview_jump_to_color_name :: (color_name_with_colon: string) {
     cursor := leave_only_original_cursor(editor);
     cursor.pos = cast(s32) offset;
     cursor.sel = cursor.pos;
-    add_paste_animation(editor, .{cursor.pos, cursor.sel});
+    add_paste_animation(editor, get_real_line_range(buffer, offset_to_real_line(buffer, cursor.pos)));
     editor.cursor_moved = .jumped;
     editor.scroll_to_cursor = .yes;
     make_editor_active(target_editor_id);

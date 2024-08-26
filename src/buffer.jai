@@ -251,6 +251,10 @@ is_last_real_line :: (using buffer: Buffer, line: s32) -> bool {
     return line >= line_starts.count - 2;
 }
 
+get_real_line_range :: inline (buffer: Buffer, line: s32) -> Offset_Range {
+    return .{ start = get_real_line_start_offset(buffer, line), end = get_real_line_end_offset(buffer, line) };
+}
+
 get_real_line_start_offset :: inline (using buffer: Buffer, line: s32) -> s32 {
     return line_starts[clamp(line, 0, cast(s32) line_starts.count - 1)];
 }
