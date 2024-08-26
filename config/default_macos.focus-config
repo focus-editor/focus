@@ -96,8 +96,8 @@ color_preview_popup:                    enabled  # options: enabled, minimized, 
 # key_binding:            F9
 
 
-# Example error regexes:
-# For jai:  ^(?P<file>.*):(?P<line>\d+),(?P<col>\d+): (?P<type>Error|Warning|Info|...):* (?P<msg>.*)|^(?P<msg1>.*error LNK.*)
+# For jai:    ^(?P<file>.*):(?P<line>\d+),(?P<col>\d+): (?P<type>Error|Warning|Info|...):* (?P<msg>.*)|^(?P<msg1>.*error LNK.*)
+# For golang: ^(?P<file>.*):(?P<line>\d+):(?P<col>\d+): (?P<msg>.*)$
 # ... let us know what regex works for you and we'll add it here
 
 # NOTE:
