@@ -384,7 +384,7 @@ maybe_draw_color_preview_panel :: () {
             x = title_bar_rect.x + char_x_advance,
             y = title_bar_rect.y + (title_bar_rect.h - font_ui_bold.character_height) / 2 + 2,
         };
-        Simp.draw_text(font_ui_bold, xx pen.x, xx pen.y, "Color Preview — hover over text to view color names", xx Color.UI_DEFAULT);
+        Simp.draw_text(font_ui_bold, xx pen.x, xx pen.y, "Color Preview — hover over text to view color names, click to jump to color definition", xx Color.UI_DEFAULT);
 
         // Draw the close button
         {
@@ -491,7 +491,7 @@ maybe_draw_color_preview_panel :: () {
             color_name := color_name_with_colon;
             color_name.count -= 1;
             draw_tooltip_bottom_left(color_name, mouse.pointer);
-            if mouse.left.just_double_clicked then color_preview_jump_to_color_name(color_name_with_colon);
+            if mouse.left.just_pressed then color_preview_jump_to_color_name(color_name_with_colon);
         }
     }
 
