@@ -1201,14 +1201,21 @@ remove_all_buffers :: () {
     bucket_array_reset(*open_buffers);
 }
 
-add_buffer_to_save_queue :: (buffer_id: s64, after_save: After_Save_Action = .do_nothing) {
-    array_add_if_unique(*buffer_save_queue.buffer_ids, buffer_id);
+add_buffer_to_save_queue :: (buffer_id: s64, action: Save_Action = .save, after_save: After_Save_Action = .do_nothing) {
+    added := array_add_if_unique(*buffer_save_queue.buffer_ids, buffer_id);
+    if added then array_add(*buffer_save_queue.buffer_save_actions, action);
+
     buffer_save_queue.pending = true;
     buffer_save_queue.after_save = after_save;
 }
 
 remove_buffer_from_save_queue :: (buffer_id: s64, reset_after_save := false) {
-    array_ordered_remove_by_value(*buffer_save_queue.buffer_ids, buffer_id);
+    found, index := array_find(buffer_save_queue.buffer_ids, buffer_id);
+    if found {
+        array_ordered_remove_by_index(*buffer_save_queue.buffer_ids, index);
+        array_ordered_remove_by_index(*buffer_save_queue.buffer_save_actions, index);
+    }
+
     if reset_after_save then buffer_save_queue.after_save = .do_nothing;
 }
 
@@ -1237,7 +1244,12 @@ process_buffer_save_queue :: () {
 
     if buffer_ids {
         if active_global_widget != .open_file_dialog && active_global_widget != .confirm_overwrite_dialog {
-            show_open_file_dialog(.save, buffer_ids[0]);
+            if buffer_save_actions[0] == {
+                case .save;
+                    show_open_file_dialog(.save, buffer_ids[0]);
+                case .move;
+                    show_open_file_dialog(.move, buffer_ids[0]);
+            }
         }
     } else if pending {
         // Nothing left to save, execute the after save action
@@ -1585,8 +1597,14 @@ Indentation_Token :: struct {
 buffer_save_queue: struct {
     pending := false;
     buffer_ids: [..] s64;
+    buffer_save_actions: [..] Save_Action;
     after_save: After_Save_Action = .do_nothing;
 };
+
+Save_Action :: enum {
+    save;
+    move;
+}
 
 After_Save_Action :: enum {
     do_nothing;

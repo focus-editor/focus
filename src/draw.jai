@@ -2009,6 +2009,7 @@ draw_open_file_dialog :: () {
             draw_text_input(*open_file_dialog.input, input_rect, ui_id = input_id, active = true, label = label);
 
         case .navigate;     #through;
+        case .move;         #through;
         case .save;
             label: string;
             if mode == {
@@ -2016,6 +2017,8 @@ draw_open_file_dialog :: () {
                     label = ifx !path_chunks then " Navigate to file" else "";
                 case .save;
                     label = tprint(" Choose where to save '%'", get_buffer_name(*open_buffers[buffer_id_to_save]));
+                case .move;
+                    label = " Move to";
             }
 
             half_padding := floor(padding / 2);
@@ -2197,7 +2200,7 @@ draw_open_file_dialog :: () {
 
             // Draw name
             pen.x += xx font_icons.em_width + padding * 1.5;
-            if entry.type != .save {
+            if entry.type != .save && entry.type != .move {
                 width = xx Simp.draw_text_with_highlights(font_ui, xx pen.x, xx pen.y, entry.entry_name, entry.name_highlights, color = xx name_color, highlight_color = xx Color.LETTER_HIGHLIGHT);
             } else {
                 width = xx Simp.draw_text(font_ui, xx pen.x, xx pen.y, entry.entry_name, color = xx name_color);

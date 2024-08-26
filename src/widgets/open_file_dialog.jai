@@ -88,7 +88,7 @@ show_open_file_dialog :: (mode: Open_File_Dialog.Mode, buffer_id_to_save: s64 = 
 hide_open_file_dialog :: (manual := false) {
     using open_file_dialog;
 
-    if mode == .save && buffer_id_to_save >= 0 {
+    if (mode == .save || mode == .move) && buffer_id_to_save >= 0 {
         // If we were in the middle of saving something and closed the dialog, we don't want to save that,
         // but also we don't want to proceed with whatever after-save action we had if we closed it ourselves
         remove_buffer_from_save_queue(buffer_id_to_save, reset_after_save = manual);
@@ -132,11 +132,32 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
             }
             return true;
 
+        case .move;
+            if folder_only return true;
+
+            if mode == .move {
+                full_path := tprint("%/%", get_current_folder_path(), cast(string) input.text);
+                buffer := *open_buffers[buffer_id_to_save];
+                save_buffer_to_file(buffer, buffer_id_to_save, full_path);
+                remove_buffer_from_save_queue(buffer_id_to_save);
+
+                deleted := delete_buffer_from_disk(buffer);
+                if !deleted {} // Maybe show a notification?
+
+                hide_open_file_dialog();
+            }
+            return true;
+
         case .file;
             if folder_only return true;
 
             if mode == .save {
                 show_confirm_overwrite_dialog(buffer_id_to_save, entry.full_path);
+                return true;
+            }
+
+            if mode == .move {
+                show_confirm_overwrite_dialog(buffer_id_to_save, entry.full_path, delete_buffer_after_save = true);
                 return true;
             }
 
@@ -234,7 +255,7 @@ move_cursor :: (delta: s64, wrap := false, snap := true) {
 
 pop_directory :: () -> handled: bool {
     using open_file_dialog;
-    if (mode != .navigate && mode != .save) || input.text || !path_chunks return false;
+    if (mode != .navigate && mode != .save && mode != .move) || input.text || !path_chunks return false;
 
     last := pop(*path_chunks);
     free(last);
@@ -333,6 +354,7 @@ refresh_entries :: (clear_input := true) {
 
     if #complete mode == {
         case .save; #through;
+        case .move; #through;
         case .navigate;
             if !path_chunks {
                 // Display project dirs and drives
@@ -452,6 +474,16 @@ refresh_entries :: (clear_input := true) {
         });
     }
 
+    if mode == .move && input.text && path_chunks {
+        array_add(*entries.filtered, Entry.{
+            file = File_Info.{ full_path = "", name = "", path = "", icon = .save },
+            entry_name = sprint("Move to %/%", get_current_folder_path(), cast(string) input.text),
+            type = .move,
+            name_highlights = .[],
+            path_highlights = .[],
+        });
+    }
+
     if !entries.filtered {
         array_add(*entries.filtered, Entry.{
             file = File_Info.{ full_path = "", name = "", path = "", icon = .dots, },
@@ -487,7 +519,7 @@ get_current_folder_path :: () -> string {
 
 scan_current_folder :: () {
     using open_file_dialog;
-    if (mode != .navigate && mode != .save) || !path_chunks return;
+    if (mode != .navigate && mode != .save && mode != .move) || !path_chunks return;
 
     dir_path := get_current_folder_path();
 
@@ -574,6 +606,7 @@ Open_File_Dialog :: struct {
         open_editors;
         navigate;
         save;
+        move;
     }
 }
 
@@ -584,7 +617,7 @@ Entry :: struct {
         MODIFIED;
         MODIFIED_ON_DISK;
     }
-    type: enum u8 { file; folder; drive; project_dir; save; nothing; } = .file;
+    type: enum u8 { file; folder; drive; project_dir; save; move; nothing; } = .file;
     entry_name: string;
     name_highlights: [] bool;
     path_highlights: [] bool;
