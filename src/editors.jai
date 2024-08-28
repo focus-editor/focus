@@ -172,7 +172,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .close_right_editor;               close_editor(.right);
 
         case .close_dialog;                     hide_build_panel();
-        case .escape;                           hide_build_panel();
+        case .escape;                           if editor.cursors.count == 1 hide_build_panel();
                                                 remove_additional_cursors(editor);
                                                 reset_search_results(*editor.search_bar);
                                                 editor.refresh_selection = true;
