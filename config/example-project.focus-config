@@ -37,6 +37,7 @@
 # For jai:    ^(?P<file>.*):(?P<line>\d+),(?P<col>\d+): (?P<type>Error|Warning|Info|...):* (?P<msg>.*)|^(?P<msg1>.*error LNK.*)
 # For msvc:   ^(?P<file>.*)\((?P<line>\d+),?(?P<col>\d+)?\)[ ]?: (?P<type>error|warning) (?P<msg>.*)$
 # For golang: ^(?P<file>.*):(?P<line>\d+):(?P<col>\d+): (?P<msg>.*)$
+# For gcc:    ^(?P<file>.*):(?P<line>\d+):(?P<col>\d+): (?P<type>error|warning): (?P<msg>.*) (\[(?P<msg1>.*)\])?$
 # ... let us know what regex works for you and we'll add it here
 
 # NOTE:
