@@ -932,6 +932,7 @@ focus_allocator: Allocator;
 #load "langs/uxntal.jai";
 #load "langs/rust.jai";
 #load "langs/markdown.jai";
+#load "langs/batch.jai";
 
 #if OS == .WINDOWS {
     #load "platform/windows.jai";
