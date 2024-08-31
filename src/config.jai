@@ -259,7 +259,7 @@ reset_color_map_to_default :: () {
 apply_style :: (parsed: Parsed_Config) {
     // Fonts
     if parsed.font {
-        loaded_data, success := load_font_by_name(parsed.font);
+        loaded_data, success := load_font_by_name(parsed.font, .font);
         if success {
             main_font_data = loaded_data;
             main_font_name = parsed.font;
@@ -267,9 +267,31 @@ apply_style :: (parsed: Parsed_Config) {
             add_user_error("Couldn't load font %", parsed.font);
         }
     }
+    if parsed.font_ui {
+        loaded_data, success := load_font_by_name(parsed.font_ui, .font_ui);
+        if success {
+            font_ui_data = loaded_data;
+            font_ui_name = parsed.font_ui;
+        } else {
+            add_user_error("Couldn't load font %", parsed.font_ui);
+        }
+    }
+    if parsed.font_ui_bold {
+        loaded_data, success := load_font_by_name(parsed.font_ui_bold, .font_ui_bold);
+        if success {
+            font_ui_bold_data = loaded_data;
+            font_ui_bold_name = parsed.font_ui_bold;
+        } else {
+            add_user_error("Couldn't load font %", parsed.font_ui_bold);
+        }
+    }
     if parsed.font_size > 0 {
         font_size = parsed.font_size;
         default_font_size = font_size;
+    }
+    if parsed.font_ui_size > 0 {
+        font_ui_size = parsed.font_ui_size;
+        default_font_ui_size = font_ui_size;
     }
 
     apply_parsed_colors(parsed.colors);
@@ -468,9 +490,15 @@ apply_config :: () {
                                                        //       keep pointers to old keymaps when the config is reloaded
 }
 
-load_font_by_name :: (name: string) -> font_data: string, success: bool {
-    if name == "default" return FONT.data, true;
-
+load_font_by_name :: (name: string, kind: enum { font; font_ui; font_ui_bold; }) -> font_data: string, success: bool {
+    if name == "default" {
+        if kind == {
+            case .font;         return FONT.data, true;
+            case .font_ui;      return FONT_UI.data, true;
+            case .font_ui_bold; return FONT_UI_BOLD.data, true;
+        }
+    }
+        
     push_allocator(focus_allocator);  // we sometimes call this from within a temp allocator, but we will always want to persist fonts
 
     font_path := find_font_by_name(name);

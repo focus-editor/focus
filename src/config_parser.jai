@@ -494,7 +494,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
             setting, value := break_by_spaces(line);
             setting = trim_right(setting, ":");
 
-            font_settings := string.[ "font", "font_size" ];
+            font_settings := string.[ "font", "font_ui", "font_ui_bold", "font_size", "font_ui_size" ];
             if !array_find(font_settings, setting) {
                 add_highlight(parser, 0, setting.count, .error);
                 return true, tprint("Unknown font option '%'. Available options: ", setting, join(..font_settings, ", ",, temp));
@@ -510,6 +510,24 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         result.config.font = "default";
                         return true, error_msg;
                     }
+                case "font_ui";
+                    found, error_msg := find_font_by_name(value);
+                    if found {
+                        result.config.font_ui = value;
+                    } else {
+                        add_highlight(parser, value.data - line.data, value.count, .error);
+                        result.config.font_ui = "default";
+                        return true, error_msg;
+                    }
+                case "font_ui_bold";
+                    found, error_msg := find_font_by_name(value);
+                    if found {
+                        result.config.font_ui_bold = value;
+                    } else {
+                        add_highlight(parser, value.data - line.data, value.count, .error);
+                        result.config.font_ui_bold = "default";
+                        return true, error_msg;
+                    }
                 case "font_size";
                     value_copy := value;
                     int_val, success := parse_int(*value_copy);
@@ -518,6 +536,16 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                     } else {
                         add_highlight(parser, value.data - line.data, value.count, .error);
                         result.config.font_size = DEFAULT_FONT_SIZE;
+                        return false, tprint("Couldn't parse '%' - expected a valid integer, got '%'", setting, value);
+                    }
+                case "font_ui_size";
+                    value_copy := value;
+                    int_val, success := parse_int(*value_copy);
+                    if success {
+                        result.config.font_ui_size = int_val;
+                    } else {
+                        add_highlight(parser, value.data - line.data, value.count, .error);
+                        result.config.font_ui_size = DEFAULT_FONT_UI_SIZE;
                         return false, tprint("Couldn't parse '%' - expected a valid integer, got '%'", setting, value);
                     }
             }
@@ -620,12 +648,18 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
 
                         // Copy colors and font data (it points into the theme file data)
                         array_add(*result.config.colors, ..theme_parse_result.config.colors);
-                        result.config.font      = theme_parse_result.config.font;
-                        result.config.font_size = theme_parse_result.config.font_size;
+                        result.config.font         = theme_parse_result.config.font;
+                        result.config.font_ui      = theme_parse_result.config.font_ui;
+                        result.config.font_ui_bold = theme_parse_result.config.font_ui_bold;
+                        result.config.font_size    = theme_parse_result.config.font_size;
+                        result.config.font_ui_size = theme_parse_result.config.font_ui_size;
 
                         // If font details are not specified in the theme, assume default
-                        if !result.config.font      then result.config.font = "default";
-                        if !result.config.font_size then result.config.font_size = DEFAULT_FONT_SIZE;
+                        if !result.config.font         then result.config.font         = "default";
+                        if !result.config.font_ui      then result.config.font_ui      = "default";
+                        if !result.config.font_ui_bold then result.config.font_ui_bold = "default";
+                        if !result.config.font_size    then result.config.font_size    = DEFAULT_FONT_SIZE;
+                        if !result.config.font_ui_size then result.config.font_ui_size = DEFAULT_FONT_UI_SIZE;
                     }
                 case;
                     add_highlight(parser, 0, setting.count, .error);
@@ -1193,6 +1227,9 @@ Parsed_Config :: struct {
     theme: string;
     font: string;
     font_size: int;
+    font_ui: string;
+    font_ui_bold: string;
+    font_ui_size: int;
     colors:     [..] Parsed_Color;
     color_refs: [..] Color_Reference;  // @colorref: not finished
 
