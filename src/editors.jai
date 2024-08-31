@@ -1238,6 +1238,8 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
         case "zig";             lang = .Zig;
         case "tal";             lang = .Uxntal;
         case "md";              lang = .Markdown;
+        case "bat";             lang = .Batch;
+        case "cmd";             lang = .Batch;
 
         case "ts";              lang = .Js;
         case "tsx";             lang = .Js;
@@ -3153,6 +3155,9 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
         case .Focus_Theme;
             comment = "#";
 
+        case .Batch;
+            comment = "rem";
+
         // Single-line comments are not supported, fallback to multi-line comment
         case .Css;      #through;
         case .Xml;      #through;
@@ -3376,6 +3381,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
             comment_end   = "--->";
 
         // Muilti-line comments are not supported, fallback to multiple single-line comments
+        case .Batch;        #through;
         case .Python;       #through; // Yes, we could use multi-line strings but they have to be properly indented, so let's just fallback to several single-line comments and not to create more headache
         case .RenPy;        #through; // Yeah, there is a trick but meh (https://lemmasoft.renai.us/forums/viewtopic.php?p=299664#p299664 in case someone would like to implement it)
         case .Zig;          #through;

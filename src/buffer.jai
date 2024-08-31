@@ -488,6 +488,7 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
         case .Lua;          return tokenize_lua_for_indentation(buffer);
         case .Odin;         return tokenize_odin_for_indentation(buffer);
         case .Rust;         return tokenize_rust_for_indentation(buffer);
+        case .Batch;        return tokenize_batch_for_indentation(buffer);
     }
 
     return .[];
@@ -1302,6 +1303,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .Zig;                  return tokenize_zig;
         case .Uxntal;               return tokenize_uxntal;
         case .Markdown;             return tokenize_markdown;
+        case .Batch;                return tokenize_batch;
         case .Focus_Config;         return tokenize_focus_config;
         case .Focus_Theme;          return tokenize_focus_config;
         case .Focus_Build_Panel;    return null;
@@ -1529,6 +1531,7 @@ Buffer :: struct {
         Zig;
         Uxntal;
         Markdown;
+        Batch;
         Focus_Config;
         Focus_Theme;
         Focus_Build_Panel;  // a fake lang to be assigned to the build panel instead of Plain_Text so that its tokens are preserved
