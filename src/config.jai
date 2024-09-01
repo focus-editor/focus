@@ -259,10 +259,10 @@ reset_color_map_to_default :: () {
 apply_style :: (parsed: Parsed_Config) {
     // Fonts
     if parsed.font {
-        loaded_data, success := load_font_by_name(parsed.font, .font);
+        loaded_data, success := load_font_by_name(parsed.font, .font_main);
         if success {
-            main_font_data = loaded_data;
-            main_font_name = parsed.font;
+            font_main_data = loaded_data;
+            font_main_name = parsed.font;
         } else {
             add_user_error("Couldn't load font %", parsed.font);
         }
@@ -286,8 +286,8 @@ apply_style :: (parsed: Parsed_Config) {
         }
     }
     if parsed.font_size > 0 {
-        font_size = parsed.font_size;
-        default_font_size = font_size;
+        font_main_size = parsed.font_size;
+        default_font_main_size = font_main_size;
     }
     if parsed.font_ui_size > 0 {
         font_ui_size = parsed.font_ui_size;
@@ -490,10 +490,10 @@ apply_config :: () {
                                                        //       keep pointers to old keymaps when the config is reloaded
 }
 
-load_font_by_name :: (name: string, kind: enum { font; font_ui; font_ui_bold; }) -> font_data: string, success: bool {
+load_font_by_name :: (name: string, kind: enum { font_main; font_ui; font_ui_bold; }) -> font_data: string, success: bool {
     if name == "default" {
         if kind == {
-            case .font;         return FONT.data, true;
+            case .font_main;    return FONT_MAIN.data, true;
             case .font_ui;      return FONT_UI.data, true;
             case .font_ui_bold; return FONT_UI_BOLD.data, true;
         }

@@ -535,7 +535,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         result.config.font_size = int_val;
                     } else {
                         add_highlight(parser, value.data - line.data, value.count, .error);
-                        result.config.font_size = DEFAULT_FONT_SIZE;
+                        result.config.font_size = DEFAULT_FONT_MAIN_SIZE;
                         return false, tprint("Couldn't parse '%' - expected a valid integer, got '%'", setting, value);
                     }
                 case "font_ui_size";
@@ -658,7 +658,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         if !result.config.font         then result.config.font         = "default";
                         if !result.config.font_ui      then result.config.font_ui      = "default";
                         if !result.config.font_ui_bold then result.config.font_ui_bold = "default";
-                        if !result.config.font_size    then result.config.font_size    = DEFAULT_FONT_SIZE;
+                        if !result.config.font_size    then result.config.font_size    = DEFAULT_FONT_MAIN_SIZE;
                         if !result.config.font_ui_size then result.config.font_ui_size = DEFAULT_FONT_UI_SIZE;
                     }
                 case;

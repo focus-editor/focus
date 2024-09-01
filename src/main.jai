@@ -441,21 +441,21 @@ maybe_execute_a_build_command :: (action: Action_Build) -> handled: bool {
 init_fonts_and_dependent_things :: () {
     push_allocator(focus_allocator);  // we sometimes call this from within a temp allocator
 
-    font_size    = clamp(font_size   , MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_ui_size = clamp(font_ui_size, MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_main_size = clamp(font_main_size, MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_ui_size   = clamp(font_ui_size  , MIN_FONT_SIZE, MAX_FONT_SIZE);
 
     delta := font_ui_size - DEFAULT_FONT_UI_SIZE;
 
-    font_icons_size         = clamp(DEFAULT_FONT_ICONS_SIZE         + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_icons_small_size   = clamp(DEFAULT_FONT_ICONS_SMALL_SIZE   + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
-    font_icons_tiny_size    = clamp(DEFAULT_FONT_ICONS_TINY_SIZE    + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_ui_big_size        = clamp(DEFAULT_FONT_UI_BIG_SIZE        + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_ui_medium_size     = clamp(DEFAULT_FONT_UI_MEDIUM_SIZE     + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_ui_small_size      = clamp(DEFAULT_FONT_UI_SMALL_SIZE      + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_ui_very_small_size = clamp(DEFAULT_FONT_UI_VERY_SMALL_SIZE + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_icons_size         = clamp(DEFAULT_FONT_ICONS_SIZE         + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_icons_small_size   = clamp(DEFAULT_FONT_ICONS_SMALL_SIZE   + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
+    font_icons_tiny_size    = clamp(DEFAULT_FONT_ICONS_TINY_SIZE    + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
 
-    font = Simp.get_font_at_size(main_font_name, main_font_data, cast(int) (font_size * dpi_scale));
-    assert(font != null, "Couldn't init main text font\n");
+    font_main = Simp.get_font_at_size(font_main_name, font_main_data, cast(int) (font_main_size * dpi_scale));
+    assert(font_main != null, "Couldn't init main text font\n");
 
     font_ui = Simp.get_font_at_size(font_ui_name, font_ui_data, cast(int) (font_ui_size * dpi_scale));
     assert(font_ui != null, "Couldn't init main ui font\n");
@@ -492,7 +492,7 @@ init_fonts_and_dependent_things :: () {
     // we have all the font atlases loaded in the GPU memory once
     // (TODO: maybe there's an easy way for Simp to only update textures on flush?)
     COMMON_CHARS :: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789… ~!@#$%^&*()-|\"':;_+={}[]\\/`,.<>?АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчщъыьэюя¶•";
-    Simp.prepare_text(font,             COMMON_CHARS);
+    Simp.prepare_text(font_main,        COMMON_CHARS);
     Simp.prepare_text(font_ui,          COMMON_CHARS);
     Simp.prepare_text(font_ui_bold,     COMMON_CHARS);
     Simp.prepare_text(font_ui_small,    COMMON_CHARS);
@@ -509,16 +509,16 @@ init_fonts_and_dependent_things :: () {
     append(*common_icons, XMARK_ICON);
     icons_string := builder_to_string(*common_icons,, allocator = temp);
 
-    Simp.prepare_text(font_icons,       icons_string);
+    Simp.prepare_text(font_icons,      icons_string);
     Simp.prepare_text(font_icons_tiny, icons_string);
 
     // Things that depend on char size
-    char_size       = cast(float) font.em_width;
-    char_x_advance  = cast(float) font.x_advance;
+    char_size       = cast(float) font_main.em_width;
+    char_x_advance  = cast(float) font_main.x_advance;
     old_line_height = line_height;
-    line_height     = floor(cast(float) font.default_line_spacing * cast(float)config.settings.line_height_scale_percent / 100.0);
+    line_height     = floor(cast(float) font_main.default_line_spacing * cast(float) config.settings.line_height_scale_percent / 100.0);
     scrollbar_size  = floor(1.5 * char_size);
-    rounding_radius = floor(char_size / 2);
+    rounding_radius       = floor(char_size / 2);
     rounding_radius_large = floor(char_size / 1.5);
     rounding_radius_small = floor(char_size / 3);
 }
@@ -622,8 +622,8 @@ open_another_editor_instance :: () {
 
 increase_font_size :: () {
     should_reinit_fonts: bool;
-    if (font_size + 1) <= MAX_FONT_SIZE {
-        font_size += 1;
+    if (font_main_size + 1) <= MAX_FONT_SIZE {
+        font_main_size += 1;
         should_reinit_fonts = true;
     }
     if (font_ui_size + 1) <= MAX_FONT_SIZE {
@@ -635,8 +635,8 @@ increase_font_size :: () {
 
 decrease_font_size :: () {
     should_reinit_fonts: bool;
-    if (font_size - 1) >= MIN_FONT_SIZE {
-        font_size -= 1;
+    if (font_main_size - 1) >= MIN_FONT_SIZE {
+        font_main_size -= 1;
         should_reinit_fonts = true;
     }
     if (font_ui_size - 1) >= MIN_FONT_SIZE {
@@ -647,8 +647,8 @@ decrease_font_size :: () {
 }
 
 reset_font_size_to_default :: () {
-    font_size    = default_font_size;
-    font_ui_size = default_font_ui_size;
+    font_main_size = default_font_main_size;
+    font_ui_size   = default_font_ui_size;
     init_fonts_and_dependent_things();
 }
 
@@ -807,7 +807,7 @@ XMARK_ICON          :: #run to_string(*convert_utf32_to_utf8(0xf057));
 
 TAB_SIZE: s32 = 4;
 
-font:               *Simp.Dynamic_Font;
+font_main:          *Simp.Dynamic_Font;
 font_ui:            *Simp.Dynamic_Font;
 font_ui_bold:       *Simp.Dynamic_Font;
 font_ui_big:        *Simp.Dynamic_Font;
@@ -818,7 +818,7 @@ font_icons:         *Simp.Dynamic_Font;
 font_icons_small:   *Simp.Dynamic_Font;
 font_icons_tiny:    *Simp.Dynamic_Font;
 
-DEFAULT_FONT_SIZE               :: 14;
+DEFAULT_FONT_MAIN_SIZE          :: 14;
 DEFAULT_FONT_UI_SIZE            :: 15;
 DEFAULT_FONT_UI_BIG_SIZE        :: 28;
 DEFAULT_FONT_UI_MEDIUM_SIZE     :: 18;
@@ -828,8 +828,8 @@ DEFAULT_FONT_ICONS_SIZE         :: 16;
 DEFAULT_FONT_ICONS_SMALL_SIZE   :: 12;
 DEFAULT_FONT_ICONS_TINY_SIZE    :: 8;
 
-main_font_name := "default";
-main_font_data := #run FONT.data;
+font_main_name := "default";
+font_main_data := #run FONT_MAIN.data;
 
 font_ui_name := "default";
 font_ui_data := #run FONT_UI.data;
@@ -838,11 +838,11 @@ font_ui_bold_name := "default";
 font_ui_bold_data := #run FONT_UI_BOLD.data;
 
 // can be changed in the config file
-default_font_size       := DEFAULT_FONT_SIZE;
+default_font_main_size  := DEFAULT_FONT_MAIN_SIZE;
 default_font_ui_size    := DEFAULT_FONT_UI_SIZE;
 
-// when changing font size, we change just font_size and font_ui_size and then derive the other ones from it
-font_size               := DEFAULT_FONT_SIZE;  
+// when changing font size, we change font_main_size and font_ui_size and then derive the other ones from it
+font_main_size          := DEFAULT_FONT_MAIN_SIZE;  
 font_ui_size            := DEFAULT_FONT_UI_SIZE;
 font_ui_big_size        := DEFAULT_FONT_UI_BIG_SIZE;
 font_ui_medium_size     := DEFAULT_FONT_UI_MEDIUM_SIZE;
@@ -1063,7 +1063,7 @@ DOUBLE_CLICK_SPEED     :: 0.3;  // how many seconds between clicks to consider i
 DOUBLE_CLICK_TOLERANCE :: 2;    // how many pixels between the click locations are allowed
 
 // Embed default fonts
-FONT         :: #run load_font("FiraCode-Retina.ttf");
+FONT_MAIN    :: #run load_font("FiraCode-Retina.ttf");
 FONT_UI      :: #run load_font("OpenSans-Regular.ttf");
 FONT_UI_BOLD :: #run load_font("OpenSans-SemiBold.ttf");
 FONT_ICONS   :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
