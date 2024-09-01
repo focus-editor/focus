@@ -42,12 +42,12 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "\""; parse_double_quote_string_literal(tokenizer, *token);
         case #char "'";  parse_single_quote_string_literal(tokenizer, *token);
         case #char "!";  parse_bang(tokenizer, *token);
+        case #char "-";  parse_dash(tokenizer, *token);
 
         case #char "{";  token.type = .punctuation; token.punctuation = .l_brace;      t += 1;
         case #char "}";  token.type = .punctuation; token.punctuation = .r_brace;      t += 1;
         case #char ":";  token.type = .punctuation; token.punctuation = .colon;        t += 1;
         case #char ";";  token.type = .punctuation; token.punctuation = .semicolon;    t += 1;
-        case #char "-";  token.type = .punctuation; token.punctuation = .minus;        t += 1;
         case #char ",";  token.type = .punctuation; token.punctuation = .comma;        t += 1;
         case #char "*";  token.type = .punctuation; token.punctuation = .star;         t += 1;
         case #char ">";  token.type = .punctuation; token.punctuation = .greater_than; t += 1;
@@ -177,12 +177,15 @@ parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
 }
 
 parse_at :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .invalid;
+    token.type = .identifier;
 
     identifier_str := read_css_identifier_string(tokenizer);
 
-    property_token, ok := table_find(*PROPERTY_MAP, identifier_str);
-    if ok { token.type = property_token.type; return; }
+    property_token_type, ok1 := table_find(*PROPERTY_MAP, identifier_str);
+    if ok1 { token.type = property_token_type; return; }
+
+    keyword_token_type, ok2 := table_find(*KEYWORD_MAP, identifier_str);
+    if ok2 { token.type = keyword_token_type; return; }
 }
 
 parse_double_quote_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
@@ -255,6 +258,24 @@ parse_bang :: (using tokenizer: *Tokenizer, token: *Token) {
     if identifier_str.count <= MAX_KEYWORD_LENGTH {
         token_type, ok := table_find(*KEYWORD_MAP, identifier_str);
         if ok { token.type = token_type; return; }
+    }
+}
+
+parse_dash :: (using tokenizer: *Tokenizer, token: *Token) {
+    token.type = .punctuation;
+    token.punctuation = .minus;
+
+    t += 1;
+    if t >= max_t  return;
+
+    // CSS variable
+    if <<t == #char "-" {
+        token.type = .identifier;
+
+        t += 1;
+        if t >= max_t  return;
+
+        read_css_identifier_string(tokenizer);
     }
 }
 
@@ -373,7 +394,7 @@ PROPERTIES :: string.[
 
 KEYWORDS :: string.[
     "!important", "initial", "inherit", "unset", "revert", "white", "black", "red", "green", "blue", "currentcolor", "transparent",
-    "revert-layer", "underline", "bold", "italic", "square", "border-box", "solid", "none",
+    "revert-layer", "underline", "bold", "italic", "square", "border-box", "solid", "none", "@import",
 ];
 
 UNITS :: string.[
