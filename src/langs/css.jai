@@ -43,11 +43,11 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
         case #char "'";  parse_single_quote_string_literal(tokenizer, *token);
         case #char "!";  parse_bang(tokenizer, *token);
         case #char "-";  parse_dash(tokenizer, *token);
-        case #char ":";  parse_colon(tokenizer, *token);
 
         case #char "{";  token.type = .punctuation; token.punctuation = .l_brace;      t += 1;
         case #char "}";  token.type = .punctuation; token.punctuation = .r_brace;      t += 1;
         case #char ";";  token.type = .punctuation; token.punctuation = .semicolon;    t += 1;
+        case #char ":";  token.type = .punctuation; token.punctuation = .colon;        t += 1;
         case #char ",";  token.type = .punctuation; token.punctuation = .comma;        t += 1;
         case #char "*";  token.type = .punctuation; token.punctuation = .star;         t += 1;
         case #char ">";  token.type = .punctuation; token.punctuation = .greater_than; t += 1;
@@ -265,14 +265,6 @@ parse_dash :: (using tokenizer: *Tokenizer, token: *Token) {
 
         read_css_identifier_string(tokenizer);
     }
-}
-
-parse_colon :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .punctuation;
-    token.punctuation = .colon;
-
-    t += 1;
-    if t >= max_t  return;
 }
 
 Token :: struct {
