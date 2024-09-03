@@ -446,14 +446,14 @@ OPERATIONS :: string.[
 ];
 
 KEYWORDS :: string.[
-    "async", "abstract", "arguments", "await", "boolean", "break", "case", "catch", "class", "const", "continue", "debugger",
-    "default", "delete", "do", "else", "enum", "eval", "export", "extends", "finally", "for", "from", "function", "if", "import",
-    "in", "instanceof", "interface", "let", "new", "of", "private", "protected", "public", "return", "static", "super", "switch",
-    "throw", "try", "type", "typeof", "var", "void", "while", "with", "yield",
+    "as", "async", "abstract", "arguments", "await", "break", "case", "catch", "class", "const", "continue", "debugger", "default",
+    "delete", "do", "else", "enum", "eval", "export", "extends", "finally", "for", "from", "function", "if", "import", "in",
+    "instanceof", "interface", "let", "new", "of", "private", "protected", "public", "return", "static", "super", "switch",
+    "throw", "try", "type", "typeof", "var", "while", "with", "yield",
 ];
 
 TYPE_KEYWORDS :: string.[
-    // this is not typescript
+    "any", "bigint", "boolean", "number", "object", "string", "unknown", "void",
 ];
 
 VALUE_KEYWORDS :: string.[
