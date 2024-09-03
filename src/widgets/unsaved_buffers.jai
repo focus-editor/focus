@@ -28,6 +28,7 @@ close_unsaved_buffers_dialog :: () {
     array_reset_keeping_memory(*unsaved_buffers_dialog.modified_buffers);
 
     activate_editors();
+    redraw_requested = true;
 }
 
 unsaved_buffers_save_all :: () {

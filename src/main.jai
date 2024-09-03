@@ -311,6 +311,15 @@ main :: () {
             }
 
             if handled && event.type == .KEYBOARD then num_text_input_events_to_ignore = event.text_input_count;
+            #if OS == .MACOS {
+                // @Hack:
+                // On macOS the shortcut Cmd-Q seems to be handled by the system.
+                // If the user presses Cmd-Q, we first get a normal .KEYBOARD and a .TEXT_INPUT events, then a .QUIT event.
+                // Since we're not handling the .KEYBOARD event, we're not ignoring the following .TEXT_INPUT, which
+                // sometimes results in the letter q being pressed.
+                // Unless there's a good simple way to avoid that we have to filter it out ourselves
+                if event.type == .KEYBOARD && event.key_code == #char "Q" && event.key_pressed && event.cmd_meta_pressed then num_text_input_events_to_ignore += 1;
+            }
 
             key_sequence_input_process_event(event, handled);
         }
