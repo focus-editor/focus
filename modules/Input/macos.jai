@@ -644,7 +644,8 @@ create_window_delegate :: () -> *Window_Delegate {
     if !window_delegate_registered {
         window_delegate_registered = true;
         wd_class := objc_create_class(Window_Delegate, NSObject);
-        objc_add_instance_method(wd_class, Window_Delegate.windowWillClose, "windowWillClose:");
+        objc_add_instance_method(wd_class, Window_Delegate.windowShouldClose, "windowShouldClose:");
+        objc_add_instance_method(wd_class, Window_Delegate.windowWillClose,   "windowWillClose:");
         // objc_add_instance_method(wd_class, Window_Delegate.windowWillResize, "windowWillResize:toSize:");
         objc_add_instance_method(wd_class, Window_Delegate.windowDidResize, "windowDidResize:");
         objc_add_instance_method(wd_class, Window_Delegate.windowDidMiniaturize, "windowDidMiniaturize:");
@@ -740,6 +741,16 @@ App_Delegate :: struct {
 
 Window_Delegate :: struct {
     using #as nsobject: NSObject;
+
+    windowShouldClose :: (using self: *Window_Delegate, _sel: Selector, notification: *NSNotification) -> BOOL #c_call {
+        jai_context: Context;
+        push_context jai_context {
+            event: Event;
+            event.type = .QUIT;
+            array_add(*osx_externally_generated_events, event);
+        }
+        return NO;  // prevent the window from closing
+    } @selector(windowShouldClose:)
 
     windowWillClose :: (using self: *Window_Delegate, _sel: Selector, notification: *NSNotification) #c_call {
         jai_context: Context;

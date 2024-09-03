@@ -2768,12 +2768,6 @@ draw_unsaved_buffers_dialog :: () {
         activated, width = draw_button(font_ui, save_label, Color.UI_WARNING, Color.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
         if activated unsaved_buffers_save_all();
     }
-
-    if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
-        // Close the dialog on clicks elsewhere
-        close_unsaved_buffers_dialog();
-        return;
-    }
 }
 
 draw_confirm_overwrite_dialog :: () {
