@@ -16,11 +16,11 @@
 # Main Git Branch
 
 + New features:
-    + ...
+    + New command: `move_current_file`. Works as `save_as`, but removes the old file (thanks @simonvallz)
 + Bug fixes:
     + ...
 + Other changes:
-    + ...
+    + Various highlighting improvements (thanks @simonvallz)
 
 
 
