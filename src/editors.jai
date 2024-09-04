@@ -157,6 +157,9 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
     keep_selection := false;
     enabled_whole_words := false;
 
+    word_complete.should_abort = true;
+    defer { if word_complete.should_abort && word_complete.active then word_complete_abort(); }
+
     handled := true;
 
     if action == {
@@ -289,6 +292,10 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
 
             case .delete_to_start_of_line;          delete_to_start_of_line             (editor, buffer);
             case .delete_to_end_of_line;            delete_to_end_of_line               (editor, buffer);
+
+            case .word_completion_next;             word_completion();                  
+            case .word_completion_previous;         word_completion(forwards = false);
+            case .word_completion_subword;          word_completion(subwords = true);
 
             case;                                   return false;
         }
@@ -3485,7 +3492,208 @@ copy_current_line_info :: (using editor: *Editor, buffer: Buffer) {
     add_success_message("String '%' copied to clipboard", line_info, dismiss_in_seconds = 5);
 }
 
+word_completion :: (forwards := true, subwords := false) {
+    using word_complete;
+    should_abort = false;
+    
+    if !active {
+        search_for_subwords = subwords;        
+        
+        context.underscore_is_part_of_word = !subwords;
+        word_complete_search();
+        context.underscore_is_part_of_word = true;
+        
+        if results.count == 0 then return;
+        active = true;
+    }
+
+   if forwards word_completion_next();
+   else        word_completion_previous();
+}
+
+word_completion_next :: () {
+    using word_complete;
+        
+    selected_result_index = (selected_result_index + 1) % results.count;
+
+    start := scroll_top;
+    end   := start + max_visible_item_at_once;
+
+    if selected_result_index+1 > end  {
+        scroll_top += 1;
+    } else if selected_result_index == 0 {
+        scroll_top = 0;
+    }
+    
+    word_complete_apply();
+}
+
+word_completion_previous :: () {
+    using word_complete;
+
+    if selected_result_index - 1 < 0 {
+        selected_result_index = results.count-1;
+        if selected_result_index - (max_visible_item_at_once-1) > -1 {
+            scroll_top = selected_result_index - (max_visible_item_at_once-1);
+        }
+    } else {
+        selected_result_index -= 1;
+        if selected_result_index < scroll_top {
+            scroll_top -= 1;
+        }
+    }
+    
+    word_complete_apply();    
+}
+
+word_complete_abort :: () {
+    using word_complete;
+    active = false;
+    scroll_top = 0;
+    if !results.count return;
+    for results { free(it.word); }
+    array_reset(*results);
+    selected_result_index = -1;
+}
+
+word_complete_search :: () {
+    // hmm...
+    UNDERSCORE_PENALTY     :: 1000000000;
+    CASE_SENSITIVE_PENALTY :: 100000000;
+
+    editor, buffer := get_active_editor_and_buffer();
+
+    cursor := *editor.cursors[0];
+    right := cursor.pos;
+    left  := scan_through_similar_chars_on_the_left(buffer, cursor.pos, Char_Type.word, skip_one_space = false);
+    start_subword := get_range_as_string(buffer, Offset_Range.{left, right});
+    if start_subword.count == 0 then return;
+    
+    buffer_str := cast(string)buffer.bytes;
+
+    add_new_result_or_update_delta :: inline (new_result: string, delta: s64) {
+        if word_complete.search_for_subwords {
+            for 0..new_result.count-1 {
+                if new_result[it] == #char "_" {
+                    delta += UNDERSCORE_PENALTY;
+                    break;
+                }
+            }
+        }
+        
+        for * word_complete.results {
+            if it.word == new_result {
+                // found a closer one
+                if delta < it.cursor_delta then it.cursor_delta = xx delta;
+                return;
+            } 
+        }
+        
+        result := Word_Result.{word = new_result, cursor_delta = xx delta}; 
+        array_add(*word_complete.results, result);
+    }
+
+    pos := 0;
+    while pos != buffer_str.count-1 {
+        pos = find_index_from_left_nocase(buffer_str, start_subword, pos);
+        if pos == -1 break;
+        
+        defer pos += start_subword.count;
+        if pos == left || (pos > 0 && is_word_char(buffer_str[pos-1])) {
+            // Exclude results that are part of another word. For instance, if your subword is 'ine' and you have a word like 'wine' elsewhere, it will not include the result 'ine' from 'w[ine]'.
+            continue;
+        }
+        
+        for i: pos..buffer_str.count-1 {
+            c := buffer_str[i];
+            if !is_word_char(c) || i == buffer_str.count-1 {
+                is_subword := c == #char "_";
+                
+                s := advance(buffer_str, pos); 
+                s.count = i - pos;
+                if s != start_subword {
+                    // Now, we're going left to right, so the distance between the word and the cursor will 
+                    // always be closer than in right-to-left searching; thus, we need to apply some corrections to it.
+                    cursor_delta := cursor.pos - pos;
+                    if pos >= right then cursor_delta = i - cursor.pos;
+                    if is_upper(start_subword[0]) != is_upper(buffer_str[pos]) then cursor_delta += CASE_SENSITIVE_PENALTY;
+                    add_new_result_or_update_delta(s, cursor_delta);
+                }
+                
+                if !is_subword then break;
+            }
+        }
+        
+    }
+
+    if !word_complete.results.count then return;
+    
+    bubble_sort(word_complete.results, (a, b) => cast(s64) ((a.cursor_delta) - (b.cursor_delta)));
+
+    add_new_result_or_update_delta(start_subword, delta = 0);
+    for * word_complete.results { it.word = copy_string(it.word); }
+
+    return;
+}
+
+word_complete_apply :: () {
+    using word_complete;
+
+    if !results || !open_editors[editors.active].cursors.count return;
+    editor, buffer := get_active_editor_and_buffer();
+
+    result := results[selected_result_index];
+    word   := result.word;
+    
+    offset_delta: s32 = 0;
+    buf_len := cast(s32) buffer.bytes.count;
+
+    for *cursor: editor.cursors {
+        left  := scan_through_similar_chars_on_the_left(buffer, cursor.pos, Char_Type.word, skip_one_space = false);
+        cursor.sel = left;
+    }
+    
+    for *cursor: editor.cursors {
+        new_len := cast(s32) buffer.bytes.count;
+        if new_len != buf_len {
+            offset_delta += new_len - buf_len;
+            cursor.pos += offset_delta;
+            cursor.sel += offset_delta;
+            buf_len = new_len;
+        }
+    
+        range := get_selection(cursor);
+        replace_range(buffer, range, word);
+        
+        end := cast(s32)(range.start+word.count);
+        add_paste_animation(editor, Offset_Range.{range.start, end});
+        
+        cursor.pos = end;
+        cursor.sel = end;
+    } 
+}
+
 #scope_export
+
+Word_Completion :: struct {
+    DEFAULT_MAX_VISIBLE_ITEM :: 3;
+    MAX_TOTAL_RESULT :: 30;
+
+    active := false;
+    should_abort := false;
+    selected_result_index := -1;
+    search_for_subwords := false;
+    results: [..] Word_Result;
+    scroll_top := 0;
+    max_visible_item_at_once := DEFAULT_MAX_VISIBLE_ITEM;
+}
+
+Word_Result :: struct {
+    word:         string;
+    cursor_delta: s32;
+}
+
+word_complete: Word_Completion;
 
 Editor :: struct {
     buffer_id: s64;
