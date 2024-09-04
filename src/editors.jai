@@ -892,6 +892,7 @@ open_search_bar :: (using editor: *Editor, buffer: Buffer, requested_mode: Searc
     using editor.search_bar;
     active = true;
     mode = requested_mode;
+    case_sensitive_toggled_manually = false;  // forget when reopening
 
     // If there was some text selected that doesn't span more than one line, use it for search
     if cursors.count == 1 {
@@ -963,6 +964,7 @@ search_bar_toggle_case_sensitive :: (using editor: *Editor, buffer: Buffer) {
 
     if !active return;
     case_sensitive = !case_sensitive;
+    case_sensitive_toggled_manually = true;
 
     search_and_update_results(editor, buffer);
     redraw_requested = true;
@@ -1033,6 +1035,10 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
 
     needle := cast(string) search_bar.input.text;
     if !needle return;
+
+    if config.settings.search_is_case_sensitive_when_uppercase_present && !search_bar.case_sensitive_toggled_manually {
+        search_bar.case_sensitive = contains_uppercase_ascii(needle);
+    }
 
     assert(buffer.bytes.count < S32_MAX && needle.count < S32_MAX);
 
@@ -3562,6 +3568,7 @@ Search_Bar :: struct {
     selected_result: s64 = -1;
     search_point_offset: s32;  // the point used to determine the next search result. Fixed so that we can set cursor without jumping around
     case_sensitive: bool;
+    case_sensitive_toggled_manually: bool;
     whole_word: bool;
     regex_search: bool;
     regex_is_valid: bool;

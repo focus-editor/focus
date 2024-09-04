@@ -17,6 +17,7 @@
 
 + New features:
     + New command: `move_current_file`. Works as `save_as`, but removes the old file (thanks @simonvallz)
+    + New option: `search_is_case_sensitive_when_uppercase_present`. Set to `true` to automatically make local search case sensitive when there are uppercase chars in the search bar. Currently only works with ASCII.
 + Bug fixes:
     + macOS:
         + Fixed an issue with not being able to exit the editor if there are unsaved buffers

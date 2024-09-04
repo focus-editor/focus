@@ -262,6 +262,15 @@ find_index_from_left_nocase :: (s: string, substring: string, start_index := 0) 
     return -1;
 }
 
+contains_uppercase_ascii :: (s: string) -> bool {
+    // TODO: support unicode too when we support case insensitive search for unicode strings
+    for 0 .. s.count-1 {
+        char := s[it];  // we don't care if it's part of a larger unicode char
+        if (char >= #char "A" && char <= #char "Z") return true;
+    }
+    return false;
+}
+
 match_whole_word :: (s: string, offset: int, count: int) -> bool {
     word_ends_on_the_left  := offset <= 0               || !is_word_char(s[offset - 1])     || !is_word_char(s[offset]);
     word_ends_on_the_right := offset + count >= s.count || !is_word_char(s[offset + count]) || !is_word_char(s[offset + count - 1]);
