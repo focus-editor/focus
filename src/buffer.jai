@@ -711,7 +711,7 @@ save_buffer :: (using buffer: *Buffer, buffer_id: s64) {
 
     assert(has_file, "Trying to save a buffer without an associated file. This is a bug.");
 
-    if config.settings.strip_trailing_whitespace_on_save then strip_trailing_whitespace(buffer, buffer_id);
+    if config.settings.strip_trailing_whitespace_on_save then strip_trailing_whitespace(buffer, buffer_id, on_save = true);
     if config.settings.insert_final_newline_on_save      then insert_final_newline(buffer);  // important to do it after stripping
 
     success := write_entire_file(file.full_path, cast(string) bytes);
@@ -782,7 +782,7 @@ delete_buffer_from_disk :: (using buffer: *Buffer) -> deleted: bool {
     return true;
 }
 
-strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
+strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64, on_save := false) {
     auto_release_temp();
 
     // Get active cursor positions if we're saving the active buffer
@@ -805,23 +805,26 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
         line := string.{ count = line_end - line_start, data = bytes.data + line_start };
 
         pos_of_rightmost_cursor_on_this_line := -1;
-        c := active_cursors;
-        for pos : c {
-            if pos < line_start {
-                // Don't check this cursor for subsequent lines
-                active_cursors.count -= 1;
-                active_cursors.data  += 1;
-            } else if pos < line_end {
-                pos_of_rightmost_cursor_on_this_line = pos;
-            } else {
-                break;  // no need to check any other cursors for this line
+        if on_save {
+            // Keep cursors where they are
+            c := active_cursors;
+            for pos : c {
+                if pos < line_start {
+                    // Don't check this cursor for subsequent lines
+                    active_cursors.count -= 1;
+                    active_cursors.data  += 1;
+                } else if pos < line_end {
+                    pos_of_rightmost_cursor_on_this_line = pos;
+                } else {
+                    break;  // no need to check any other cursors for this line
+                }
             }
-        }
-        if pos_of_rightmost_cursor_on_this_line >= 0 {
-            length := pos_of_rightmost_cursor_on_this_line - line_start;
-            line_until_cursor := slice(line, 0, length);
-            append(*b, line_until_cursor);  // preserve the line up to the rightmost cursor even if it's all whitespace
-            safe_advance(*line, length);
+            if pos_of_rightmost_cursor_on_this_line >= 0 {
+                length := pos_of_rightmost_cursor_on_this_line - line_start;
+                line_until_cursor := slice(line, 0, length);
+                append(*b, line_until_cursor);  // preserve the line up to the rightmost cursor even if it's all whitespace
+                safe_advance(*line, length);
+            }
         }
 
         append(*b, trim_right(line));

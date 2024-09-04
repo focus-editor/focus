@@ -23,7 +23,7 @@
         + Fixed a bug with typing the letter 'q' when trying to exit the editor via Cmd-Q
 + Other changes:
     + Various highlighting improvements (thanks @simonvallz)
-    + When you strip trailing whitespace the cursors will now stay where they are
+    + When you strip trailing whitespace on save the cursors will now stay where they are. Use the explicit command `strip_trailing_whitespace` if you want to strip all trailing whitespace even if there is a cursor on it
 
 
 # RELEASES ==================================================================
