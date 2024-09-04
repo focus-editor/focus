@@ -18,10 +18,12 @@
 + New features:
     + New command: `move_current_file`. Works as `save_as`, but removes the old file (thanks @simonvallz)
 + Bug fixes:
-    + ...
+    + macOS:
+        + Fixed an issue with not being able to exit the editor if there are unsaved buffers
+        + Fixed a bug with typing the letter 'q' when trying to exit the editor via Cmd-Q
 + Other changes:
     + Various highlighting improvements (thanks @simonvallz)
-
+    + When you strip trailing whitespace the cursors will now stay where they are
 
 
 # RELEASES ==================================================================

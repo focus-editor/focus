@@ -160,13 +160,6 @@ get_real_cursor_coords :: (buffer: Buffer, using cursor: Cursor) -> Cursor_Coord
 
 offset_to_line :: (editor: Editor, buffer: Buffer, offset: s64) -> line_num: s32 {
     assert(!buffer.dirty, "buffer is dirty, can't calculate line from offset");
-    if buffer.bytes.count < offset {
-        if buffer.has_file {
-            print("Buffer: %\n", buffer.file.full_path);
-        } else {
-            print("Buffer has no file\n");
-        }
-    }
     assert(offset <= buffer.bytes.count, "offset exceeds buffer size, can't calculate line");
 
     if line_wrap_is_active(editor) {
@@ -792,15 +785,53 @@ delete_buffer_from_disk :: (using buffer: *Buffer) -> deleted: bool {
 strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64) {
     auto_release_temp();
 
+    // Get active cursor positions if we're saving the active buffer
+    active_cursors: [] s32;
+    {
+        editor, _ := get_active_editor_and_buffer();
+        if editor && editor.buffer_id == buffer_id {
+            active_cursors = NewArray(editor.cursors.count, s32,, allocator = temp);
+            for * active_cursors  it.* = editor.cursors[it_index].pos;
+        }
+    }
+
+    // Prepare the stripped buffer contents
     b: String_Builder;
     b.allocator = temp;
     init_string_builder(*b, buffer_size = bytes.count + size_of(String_Builder.Buffer));
-    lines := split(cast(string) bytes, cast(u8) #char "\n",, allocator = temp);
-    for line, i : lines {
+
+    line_start := line_starts[0];
+    for line_end : array_view(line_starts, 1, line_starts.count - 1) {
+        line := string.{ count = line_end - line_start, data = bytes.data + line_start };
+
+        pos_of_rightmost_cursor_on_this_line := -1;
+        c := active_cursors;
+        for pos : c {
+            if pos < line_start {
+                // Don't check this cursor for subsequent lines
+                active_cursors.count -= 1;
+                active_cursors.data  += 1;
+            } else if pos < line_end {
+                pos_of_rightmost_cursor_on_this_line = pos;
+            } else {
+                break;  // no need to check any other cursors for this line
+            }
+        }
+        if pos_of_rightmost_cursor_on_this_line >= 0 {
+            length := pos_of_rightmost_cursor_on_this_line - line_start;
+            line_until_cursor := slice(line, 0, length);
+            append(*b, line_until_cursor);  // preserve the line up to the rightmost cursor even if it's all whitespace
+            safe_advance(*line, length);
+        }
+
         append(*b, trim_right(line));
-        if i < lines.count - 1 then append(*b, "\n");
+        append(*b, "\n");
+
+        line_start = line_end;
     }
+
     stripped := builder_to_string(*b,, allocator = temp);
+    if stripped then stripped.count -= 1;  // remove the trailing newline we've added
 
     if stripped.count == bytes.count return;  // nothing stripped
 
