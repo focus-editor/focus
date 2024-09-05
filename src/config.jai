@@ -608,6 +608,7 @@ Settings :: struct {
 
     status_bar_position                                     := Status_Bar_Position.bottom;
     color_preview_popup                                     := Color_Preview_Popup.enabled;
+    projects_sorting_order                                  := Projects_Sorting_Order.most_recent_first;
 
     // TODO
     // convert_tabs_to_spaces_on_load:     false
@@ -623,6 +624,11 @@ Color_Preview_Popup :: enum {
     enabled;
     minimized;
     disabled;
+}
+
+Projects_Sorting_Order :: enum {
+    most_recent_first;
+    alphabetical;
 }
 
 Keymap :: struct {

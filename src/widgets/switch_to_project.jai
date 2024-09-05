@@ -63,6 +63,11 @@ switch_to_project_refresh_entries :: (filter: Fuzzy_Filter) {
     // Load the list of most recent projects
     for get_most_recent_projects()  array_add(*project_configs, _entry_from_path(it));
 
+    if #complete config.settings.projects_sorting_order == {
+        case .most_recent_first;    // already sorted this way
+        case .alphabetical;         quick_sort(project_configs, (a, b) => compare_strings(a.name, b.name));
+    }
+
     // Load the list of projects from the global projects dir
     visitor :: (info: *File_Visit_Info, project_configs: *[..] Project_Config) {
         if !ends_with_nocase(info.full_name, ".focus-config") return;

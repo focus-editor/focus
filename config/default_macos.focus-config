@@ -30,44 +30,46 @@
 
 [[settings]]
 
-maximize_on_start:                      false
-open_on_the_biggest_monitor:            false
-cursor_as_block:                        true
-cursor_blink_time_in_seconds:           5
-highlight_selection_occurrences:        true
-highlight_line_with_cursor:             false
-highlight_matching_brackets:            false
-disable_that_annoying_paste_effect:     false
-disable_file_open_close_animations:     false
-tab_size:                               4
-insert_spaces_when_pressing_tab:        true
-strip_trailing_whitespace_on_save:      false
-smooth_scrolling:                       true
-scroll_beyond_last_line:                true
-double_shift_to_search_in_workspace:    false
-can_cancel_go_to_line:                  true
-copy_whole_line_without_selection:      false
-line_height_scale_percent:              120
-max_editor_width:                       -1
-editor_history_size:                    1024
-line_wrap_is_on_by_default:             false
-show_line_numbers:                      false
-show_selected_text_length:              false
-hide_mouse_when_typing:                 false
-draw_indent_guides:                     false
-auto_surround_with_brackets_and_quotes: false
-auto_close_brackets:                    false
-show_cursors_off_screen:                true
-persist_local_search_results:           false  # if true, search results will stay highlighted and you have to dismiss them using the `escape` action
-load_most_recent_project_on_start:      false
+maximize_on_start:                                  false
+open_on_the_biggest_monitor:                        false
+cursor_as_block:                                    true
+cursor_blink_time_in_seconds:                       5
+highlight_selection_occurrences:                    true
+highlight_line_with_cursor:                         false
+highlight_matching_brackets:                        false
+disable_that_annoying_paste_effect:                 false
+disable_file_open_close_animations:                 false
+tab_size:                                           4
+insert_spaces_when_pressing_tab:                    true
+strip_trailing_whitespace_on_save:                  false
+smooth_scrolling:                                   true
+scroll_beyond_last_line:                            true
+double_shift_to_search_in_workspace:                false
+can_cancel_go_to_line:                              true
+copy_whole_line_without_selection:                  false
+line_height_scale_percent:                          120
+max_editor_width:                                   -1
+editor_history_size:                                1024
+line_wrap_is_on_by_default:                         false
+show_line_numbers:                                  false
+show_selected_text_length:                          false
+hide_mouse_when_typing:                             false
+draw_indent_guides:                                 false
+auto_surround_with_brackets_and_quotes:             false
+auto_close_brackets:                                false
+show_cursors_off_screen:                            true
+persist_local_search_results:                       false  # if true, search results will stay highlighted and you have to dismiss them using the `escape` action
+load_most_recent_project_on_start:                  false
+projects_sorting_order:                             most_recent_first
 
-build_panel_stays_in_one_place:         false  # if true, the build panel will flip to the inactive pane in two pane layouts
-build_panel_line_wrap_always_on:        true
-build_panel_width_percent:              50
-build_panel_height_percent:             50
+build_panel_stays_in_one_place:                     false  # if true, the build panel will flip to the inactive pane in two pane layouts
+build_panel_line_wrap_always_on:                    true
+build_panel_width_percent:                          50
+build_panel_height_percent:                         50
 
-status_bar_position:                    bottom   # options: top, bottom
-color_preview_popup:                    enabled  # options: enabled, minimized, disabled
+status_bar_position:                                bottom   # options: top, bottom
+color_preview_popup:                                enabled  # options: enabled, minimized, disabled
+search_is_case_sensitive_when_uppercase_present:    true
 
 
 # [[build commands]]
