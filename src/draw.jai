@@ -510,6 +510,8 @@ draw_color_picker :: (editor: *Editor, buffer: *Buffer, picker_rect: Rect, range
             new_edit_group(buffer, editor);
             replace_range(buffer, range, str);
         } else {
+            range_len := range.end - range.start;
+            if str.count > range_len then str = slice(str, 0, range_len);  // don't replace with a bigger string unless we're adding to history too
             replace_range_raw(buffer, range.start, range.end, str);
         }
         rescan_for_lines(buffer);
