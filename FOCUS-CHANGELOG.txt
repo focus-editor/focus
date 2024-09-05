@@ -17,7 +17,10 @@
 
 + New features:
     + New command: `move_current_file`. Works as `save_as`, but removes the old file (thanks @simonvallz)
-    + New option: `search_is_case_sensitive_when_uppercase_present`. Set to `true` to automatically make local search case sensitive when there are uppercase chars in the search bar. Currently only works with ASCII.
+    + New config options:
+        + `search_is_case_sensitive_when_uppercase_present`. Set to `true` to automatically make local search case sensitive when there are uppercase chars in the search bar. Currently only works with ASCII.
+        + `projects_sorting_order`: `most_recent_first` (default) or `alphabetical`. Determines the sorting order for projects in the Switch To Project dialog.
+    + Pressing the close active editor shortcut in the Open Files dialog will close the selected file
 + Bug fixes:
     + Fixed a problem with undoing auto-modified colors using the color picker
     + macOS:

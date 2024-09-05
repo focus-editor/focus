@@ -6,6 +6,7 @@ open_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
         if action == {
             case .escape;                   #through;
             case .close_dialog;             hide_open_file_dialog(manual = true);                                          return true;
+            case .close_current_editor;     maybe_close_file_under_cursor();                                               return true;
 
             case .open_entry_in_place;      open_file_dialog_open_entry(entries.selected, .in_place);                      return true;
             case .open_entry_on_the_side;   if mode != .save  open_file_dialog_open_entry(entries.selected, .on_the_side); return true;
@@ -236,6 +237,24 @@ maybe_handle_text_input_event :: (using input: *Text_Input, event: Input.Event) 
         return true;
     }
     return false;
+}
+
+maybe_close_file_under_cursor :: () {
+    using open_file_dialog;
+
+    if mode == .search then add_user_warning("Closing buffers in this dialog is not supported", dismiss_in_seconds=3);
+    if mode != .open_editors return;
+
+    if !entries.filtered return;
+
+    buffer_id  := entries.filtered[entries.selected].buffer_id;
+
+    for editor, editor_id : open_editors {
+        if editor.buffer_id != buffer_id continue;
+        close_editor_by_id(editor_id, skip_animation = true);
+    }
+
+    refresh_entries(clear_input = false);
 }
 
 move_cursor :: (delta: s64, wrap := false, snap := true) {

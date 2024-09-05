@@ -802,28 +802,8 @@ close_editor :: (position: enum { current; other; left; right; }) {
 }
 
 close_current_editor :: () {
-    if build_panel_is_active() {
-        toggle_build_panel();
-        return;
-    }
-    if editors.layout == {
-        case .None;     return;
-        case .Single;
-            editors.layout = .None;  // close immediately
-            update_window_title();
-            do_things_on_editor_close(editors.active);
-
-        case .Double;
-            editor_closing_id = editors.active;
-            if !config.settings.disable_file_open_close_animations {
-                // Start the animation (the layout will change when the animation is finished)
-                editors_start_moving_splitter(ifx editors.active == editors.left then 0.0 else 1.0);
-                make_editor_active(ifx editors.active == editors.left then editors.right else editors.left);
-            } else {
-                make_editor_active(ifx editors.active == editors.left then editors.right else editors.left);
-                finish_closing_editor();
-            }
-    }
+    if build_panel_is_active() { toggle_build_panel(); return; }
+    close_editor_by_id(editors.active);
 }
 
 close_other_editor :: () {
@@ -832,13 +812,35 @@ close_other_editor :: () {
     if editors.layout == {
         case .None;     return;
         case .Single;   return;  // don't do anything
+        case .Double;   close_editor_by_id(ifx editors.active == editors.left then editors.right else editors.left);
+    }
+}
+
+close_editor_by_id :: (editor_id: s64, skip_animation := false) {
+    if editors.layout == {
+        case .None;
+            do_things_on_editor_close(editor_id);
+
+        case .Single;
+            if editor_id == editors.active {
+                editors.layout = .None;
+                update_window_title();
+            }
+            do_things_on_editor_close(editor_id);
+
         case .Double;
-            editor_closing_id = ifx editors.active == editors.left then editors.right else editors.left;
-            if !config.settings.disable_file_open_close_animations {
-                // Start the animation (the layout will change when the animation is finished)
-                editors_start_moving_splitter(ifx editors.active == editors.left then 1.0 else 0.0);
+            if editor_id == editors.left || editor_id == editors.right {
+                editor_closing_id = editor_id;
+                if !config.settings.disable_file_open_close_animations && !skip_animation {
+                    // Start the animation (the layout will change when the animation is finished)
+                    editors_start_moving_splitter(ifx editor_id == editors.left then 0.0 else 1.0);
+                    make_editor_active(ifx editor_id == editors.left then editors.right else editors.left);
+                } else {
+                    make_editor_active(ifx editor_id == editors.left then editors.right else editors.left);
+                    finish_closing_editor();
+                }
             } else {
-                finish_closing_editor();
+                do_things_on_editor_close(editor_id);
             }
     }
 }
@@ -854,15 +856,19 @@ finish_closing_editor :: () {
 }
 
 do_things_on_editor_close :: (editor_id: s64) {
+    if editor_id < 0 return;
     editor := *open_editors[editor_id];
     buffer := *open_buffers[editor.buffer_id];
 
-    // Remove buffer from the open buffers if it's not unsaved and if there's no editor with this buffer currently visible
-    assert(editors.layout != .Double, "An editor just closed but layout is still .Double. This is a bug.");
-    buffer_is_still_visible := editors.layout == .Single && editors.active != editor_id && open_editors[editors.active].buffer_id == editor.buffer_id;
-    if !buffer_is_still_visible && !buffer.modified {
+    buffer_is_still_visible := false;
+    if #complete editors.layout == {
+        case .None;
+        case .Single; buffer_is_still_visible = open_editors[editors.active].buffer_id == editor.buffer_id;
+        case .Double; buffer_is_still_visible = open_editors[editors.left].buffer_id == editor.buffer_id || open_editors[editors.right].buffer_id == editor.buffer_id;
+    }
+    if !buffer_is_still_visible {
         array_ordered_remove_by_value(*most_recent_buffers, editor.buffer_id);
-        buffer.num_times_opened = 0;  // deprioritise it in the full file list
+        if !buffer.modified then buffer.num_times_opened = 0;  // deprioritise it in the full file list
     }
 }
 
@@ -1401,19 +1407,6 @@ viewport_glue_to_point :: (editor: *Editor, buffer: Buffer) -> changed: bool {
     return top != old_top;
 }
 
-restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor) {
-    if cursor_state.count == 0 return;
-
-    array_resize(*cursors, cursor_state.count);
-    for * cursor, i : cursors {
-        cursor.* = cursor_state[i];
-        cursor.col_wanted = -1;
-    }
-    if main_cursor >= cursors.count then main_cursor = cursors.count - 1;  // maybe we should remember it too
-
-    editor.cursor_moved = .jumped;
-}
-
 make_editor_active :: (editor_id: s64) {
     assert(editor_id < open_editors.count, "Trying to activate editor %, but the last available one is %", editor_id, open_editors.count - 1);
     if is_build_panel(editor_id)         then build_panel_on_activate();
@@ -1547,6 +1540,19 @@ create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; be
     organise_cursors(editor);
 
     cursor_moved = .refresh_only;
+}
+
+restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor) {
+    if cursor_state.count == 0 return;
+
+    array_resize(*cursors, cursor_state.count);
+    for * cursor, i : cursors {
+        cursor.* = cursor_state[i];
+        cursor.col_wanted = -1;
+    }
+    if main_cursor >= cursors.count then main_cursor = cursors.count - 1;  // maybe we should remember it too
+
+    editor.cursor_moved = .jumped;
 }
 
 // @TODO: have another look at the code and at the very least avoid rescanning for each cursor.
