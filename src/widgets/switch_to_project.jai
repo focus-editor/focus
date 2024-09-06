@@ -41,9 +41,10 @@ open_selected_project :: () {
     }
 }
 
-// NOTE: assuming we're allocating from a pool
 switch_to_project_refresh_entries :: (filter: Fuzzy_Filter) {
     using switch_to_project_dialog;
+
+    assert(context.allocator.proc == flat_pool_allocator_proc, "Non-pool allocator is used in switch_to_project dialog. This is a bug.");
 
     project_configs: [..] Project_Config;
 

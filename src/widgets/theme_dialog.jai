@@ -128,9 +128,10 @@ preview_selected_theme :: () {
     apply_style(result.config);
 }
 
-// NOTE: assuming we're allocating from a pool
 theme_dialog_refresh_entries :: (filter: Fuzzy_Filter) {
     using theme_dialog;
+
+    assert(context.allocator.proc == flat_pool_allocator_proc, "Non-pool allocator is used in theme dialog. This is a bug.");
 
     themes: [..] Theme;
 

@@ -46,7 +46,7 @@ CONFIG_SECTIONS :: Config_Section.[
 
 parse_config :: (name: string, file_path: string, file_data: string, for_highlighting := false, as_theme := false) -> Config_Parse_Result {
     // NOTE: This function allocates a lot and never frees.
-    //       It expects context.allocator to be either temp or a pool allocator.
+    if !#compile_time  assert(context.allocator.proc == flat_pool_allocator_proc || context.allocator.proc == temp.proc, "parse_config must use a pool or a temp allocator");
 
     using parser: Config_Parser;
     parser.parse_for_highlighting = for_highlighting;
