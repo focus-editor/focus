@@ -869,6 +869,7 @@ do_things_on_editor_close :: (editor_id: s64) {
     if !buffer_is_still_visible {
         array_ordered_remove_by_value(*most_recent_buffers, editor.buffer_id);
         if !buffer.modified then buffer.num_times_opened = 0;  // deprioritise it in the full file list
+        if !buffer.has_file { buffer.deleted = true; buffer.modified = false; }  // get rid of newly created buffers we're closing
     }
 }
 
@@ -3840,9 +3841,8 @@ move_to_editor_history_frame :: (frame: Editor_History_Frame, old_frame: Editor_
         return;
     }
 
+    make_editor_active(editors.active);
     editor := *open_editors[editors.active];
-
-    update_window_title(editor.buffer_id);
 
     // Animations
     if old_frame.layout == .Single && frame.layout == .Double {

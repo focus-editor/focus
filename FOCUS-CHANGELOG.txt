@@ -1,18 +1,3 @@
-# ROUGH ROADMAP
-
-- Workspace search improvements (the ability to filter additionally by filename, global replace etc)
-- Settings per file type
-- Basic language definition files for the highlighting of languages we don't yet support
-- Identifier search
-- A little bit of semantic highlighting for Jai
-- Backup unsaved changes
-- ...
-
-
-# KNOWN BUGS
-
-- See https://github.com/focus-editor/focus/issues
-
 # Main Git Branch
 
 + New features:
@@ -29,6 +14,7 @@
 + Other changes:
     + Various highlighting improvements (thanks @simonvallz)
     + When you strip trailing whitespace on save the cursors will now stay where they are. Use the explicit command `strip_trailing_whitespace` if you want to strip all trailing whitespace even if there is a cursor on it
+    + Temporary unsaved buffers will disappear from file lists when closed. If you need it back, go back in editor history
 
 
 # RELEASES ==================================================================
