@@ -2957,9 +2957,21 @@ delete_line :: (editor: *Editor, buffer: *Buffer, go_up := false) {
 
 delete_to_start_of_line :: (editor: *Editor, buffer: *Buffer) {
     for * cursor : editor.cursors {
-        selection := get_selection(cursor);
-        cursor.sel = selection.end;
-        cursor.pos = get_real_line_start_offset(buffer, offset_to_real_line(buffer, selection.start));
+        if has_selection(cursor) continue;
+
+        line := offset_to_real_line(buffer, cursor.pos);
+        start, end := get_real_line_start_offset(buffer, line), get_real_line_end_offset(buffer, line);
+
+        text_start_col: s32 = 0;
+        i := start;
+        while i < end {
+            byte := buffer.bytes[i];
+            if byte != #char " " && byte != #char "\t" break;
+            text_start_col += 1;
+            i += 1 + trailingBytesForUTF8[byte];
+        }
+        if cursor.pos > i then cursor.pos = i; else cursor.pos = start;
+        cursor.col_wanted = -1;
     }
     organise_cursors(editor);  // resolve overlapping selections
     copy_selection_to_clipboard(editor, buffer, cut = true, cut_lines_without_selection = false);
@@ -2967,9 +2979,8 @@ delete_to_start_of_line :: (editor: *Editor, buffer: *Buffer) {
 
 delete_to_end_of_line :: (editor: *Editor, buffer: *Buffer) {
     for * cursor : editor.cursors {
-        selection := get_selection(cursor);
-        cursor.sel = selection.start;
-        cursor.pos = get_real_line_end_offset(buffer, offset_to_real_line(buffer, selection.end));
+        if has_selection(cursor) continue;
+        cursor.pos = get_real_line_end_offset(buffer, offset_to_real_line(buffer, cursor.pos));
     }
     organise_cursors(editor);  // resolve overlapping selections
     copy_selection_to_clipboard(editor, buffer, cut = true, cut_lines_without_selection = false);

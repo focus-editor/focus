@@ -14,7 +14,8 @@
 + Other changes:
     + Various highlighting improvements (thanks @simonvallz)
     + When you strip trailing whitespace on save the cursors will now stay where they are. Use the explicit command `strip_trailing_whitespace` if you want to strip all trailing whitespace even if there is a cursor on it
-    + Temporary unsaved buffers will disappear from file lists when closed. If you need it back, go back in editor history
+    + Temporary unsaved buffers will disappear from file lists when closed. If you accidentally closed one, go back in editor history
+    + The `delete_to_start_of_line` command will now delete to the indentation level first, not to the very start of the line right away
 
 
 # RELEASES ==================================================================
