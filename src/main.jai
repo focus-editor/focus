@@ -176,7 +176,7 @@ main :: () {
         press_count := 0;
     };
 
-    while !should_quit {
+    while true {
         if !redraw_requested platform_wait_message();
 
         Input.update_window_events();
@@ -207,9 +207,6 @@ main :: () {
         if window_width < MIN_WINDOW_WIDTH || window_height < MIN_WINDOW_HEIGHT continue;
 
         update_mouse_state();
-
-        screen_with_title_bar := screen;
-        screen_with_title_bar.h += 200;  // should be enough to include the title bar
 
         redraw_requested = false;
         window_resized   = false;
@@ -330,6 +327,7 @@ main :: () {
         }
 
         process_buffer_save_queue();
+
         build_system_update();
         maybe_revert_temporary_theme();
         refresh_open_buffers();
@@ -359,6 +357,8 @@ main :: () {
         }
 
         // #if DEBUG FrameMark();
+
+        if should_quit break;
 
         if cast(Time) to_float64_seconds(current_time_monotonic() - frame_time) <= QUICK_FRAME_DT {
             // It should be ok to sleep a bit after a quick frame to avoid pegging the core.
@@ -825,6 +825,12 @@ scrollbar_size:             float;
 
 dont_scroll_this_frame := false;  // because e.g. a mouse wheel event has been handled
 
+// This will be set to `true` in `refresh_config()` to signal that the
+// next window resize event should be handled even if the window doesn't actually
+// change size. This is needed when changing DPI/scaling options which require
+// a full repaint.
+dont_ignore_next_window_resize := false;
+
 Mods :: Input.Event.Modifier_Flags;
 
 Time :: #type,isa float64;
@@ -881,12 +887,6 @@ just_dropped_file := "";
 cpu_info: Cpu_X86;
 
 focus_allocator: Allocator;
-
-// This will be set to `true` in `refresh_config()` to signal that the
-// next window resize event should be handled even if the window doesn't actually
-// change size. This is needed when changing DPI/scaling options which require
-// a full repaint.
-dont_ignore_next_window_resize := false;
 
 
 #load "layout.jai";
