@@ -45,6 +45,8 @@ build :: () {
             options.null_pointer_check = .ON;
             options.arithmetic_overflow_check = .OFF;
           case "debug";
+          case "no_output";
+            options.output_type = .NO_OUTPUT;
           case "windows7";
             windows7 = true;
             options.output_executable_name = "focus_windows7";
@@ -91,7 +93,12 @@ build :: () {
     while true {
         message := compiler_wait_for_message();
         if message.workspace != w continue;
-        if message.kind == .COMPLETE {
+        if message.kind == .PHASE {
+            phase_message := cast(*Message_Phase) message;
+            if phase_message.phase == .ALL_TARGET_CODE_BUILT {
+                if options.output_type == .NO_OUTPUT  exit(0);
+            }
+        } else if message.kind == .COMPLETE {
             m := cast(*Message_Complete) message;
             if m.error_code == .COMPILATION_FAILED then failed = true;
             break;
