@@ -177,11 +177,10 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
                                                 reset_search_results(*editor.search_bar);
                                                 editor.refresh_selection = true;
 
-        case .save;                             save    (editor.buffer_id);
-        case .save_as;                          save_as (editor.buffer_id);
+        case .save;                             save(editor.buffer_id);
         case .save_all;                         save_all();
-
-        case .move_current_file;                move_current_file(editor.buffer_id);
+        case .save_as;                          defer_action_save_as(editor.buffer_id);
+        case .move_current_file;                defer_action_move   (editor.buffer_id);
 
         case .switch_to_left_editor;            switch_to_editor(.left);
         case .switch_to_right_editor;           switch_to_editor(.right);
@@ -1478,6 +1477,12 @@ new_edit_group :: (buffer: *Buffer, editor: *Editor) {
     for * cursor, i : buffer.cursors { cursor.* = editor.cursors[i]; }
 }
 
+save_all :: () {
+    for * buffer, buffer_id : open_buffers {
+        if buffer.modified  save(buffer_id);
+    }
+}
+
 #scope_file
 
 delete_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; below; }) {
@@ -1754,33 +1759,13 @@ select_all_occurrences :: (using editor: *Editor, buffer: Buffer, search_str := 
 
 save :: (buffer_id: s64) {
     buffer := *open_buffers[buffer_id];
-    if buffer.readonly return;
+    if buffer.readonly || buffer.internal return;
 
     if buffer.has_file {
         save_buffer(buffer, buffer_id);
     } else {
-        add_buffer_to_save_queue(buffer_id, after_save = .do_nothing);
-        redraw_requested = true;
+        defer_action_save_as(buffer_id);
     }
-}
-
-save_as :: (buffer_id: s64) {
-    add_buffer_to_save_queue(buffer_id, after_save = .do_nothing);
-    redraw_requested = true;
-}
-
-save_all :: () {
-    for * buffer, buffer_id : open_buffers {
-        if buffer.modified  save(buffer_id);
-    }
-}
-
-move_current_file :: (buffer_id: s64) {
-    buffer := *open_buffers[buffer_id];
-    if !buffer.has_file return; // Do not try to move files that don't exist.
-
-    add_buffer_to_save_queue(buffer_id, .move, after_save = .do_nothing);
-    redraw_requested = true;
 }
 
 switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := false) {

@@ -2084,7 +2084,7 @@ draw_open_file_dialog :: () {
 
     if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
         // Close the dialog on clicks elsewhere
-        hide_open_file_dialog(manual = true);
+        close_open_file_dialog(.CANCEL);
         return;
     }
 
@@ -2325,7 +2325,7 @@ draw_open_file_dialog :: () {
 
             // Draw name
             pen.x += xx font_icons.em_width + padding * 1.5;
-            if entry.type != .save && entry.type != .move {
+            if entry.type != .save {
                 width = xx Simp.draw_text_with_highlights(font_ui, xx pen.x, xx pen.y, entry.entry_name, entry.name_highlights, color = xx name_color, highlight_color = xx Color.LETTER_HIGHLIGHT);
             } else {
                 width = xx Simp.draw_text(font_ui, xx pen.x, xx pen.y, entry.entry_name, color = xx name_color);
@@ -2666,14 +2666,15 @@ draw_theme_dialog :: () {
 draw_unsaved_buffers_dialog :: () {
     ui_id := Ui_Id.unsaved_buffers;
 
-    unsaved_buffers := unsaved_buffers_dialog.modified_buffers;
+    unsaved_buffers := unsaved_buffers_dialog_get_buffer_ids();
     if !unsaved_buffers then panic_messagebox("Unsaved buffers dialog is attempted to be drawn, but no unsaved buffers present. This is a bug. Closing...");
 
     // Additional message is assumed to be 1 line only
     additional_message := "";
-    if unsaved_buffers_dialog.mode == .reload_workspace {
-        additional_message = "Workspace needs to reload. Unsaved files could be lost.";
-    }
+    // TODO: show this again
+    // if unsaved_buffers_dialog.mode == .reload_workspace {
+    //     additional_message = "Workspace needs to reload. Unsaved files could be lost.";
+    // }
 
     margin  := floor(12 * dpi_scale);
     padding := floor( 4 * dpi_scale);
@@ -2757,18 +2758,18 @@ draw_unsaved_buffers_dialog :: () {
         cancel_button, dont_save_button, save_all_button: Rect;
 
         activated, width := draw_button(font_ui, "Cancel", Color.UI_NEUTRAL, Color.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
-        if activated close_unsaved_buffers_dialog();
+        if activated close_unsaved_buffers_dialog(.CANCEL);
 
         buttons_row_rect.w -= width + margin;
 
         activated, width = draw_button(font_ui, "Don't Save", Color.UI_WARNING, Color.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
-        if activated unsaved_buffers_dialog_proceed();
+        if activated close_unsaved_buffers_dialog(.DONT_SAVE);
 
         buttons_row_rect.w -= width + margin;
 
         save_label := ifx unsaved_buffers.count == 1 then "    Save    " else "  Save All  ";
         activated, width = draw_button(font_ui, save_label, Color.UI_WARNING, Color.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
-        if activated unsaved_buffers_save_all();
+        if activated close_unsaved_buffers_dialog(.SAVE_ALL);
     }
 }
 
@@ -2834,7 +2835,7 @@ draw_confirm_overwrite_dialog :: () {
 
         // TODO: draw file name
         // file_name_font := ifx bold then font_ui_bold else font_ui;
-        width := xx Simp.prepare_text(font_ui_bold, confirm_overwrite_dialog.path);
+        width := xx Simp.prepare_text(font_ui_bold, confirm_overwrite_dialog_get_path());
         Simp.draw_prepared_text(
             font_ui_bold,
             xx (entry_rect.x + margin),
@@ -2849,18 +2850,18 @@ draw_confirm_overwrite_dialog :: () {
         cancel_button, dont_save_button, save_all_button: Rect;
 
         activated, width := draw_button(font_ui, "Cancel", Color.UI_NEUTRAL, Color.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
-        if activated close_unsaved_buffers_dialog();
+        if activated close_confirm_overwrite_dialog(.NO);
 
         buttons_row_rect.w -= width + margin;
 
         save_label := "Overwrite";
         activated, width = draw_button(font_ui, save_label, Color.UI_WARNING, Color.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
-        if activated confirm_overwrite_dialog_proceed();
+        if activated close_confirm_overwrite_dialog(.YES);
     }
 
     if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
         // Close the dialog on clicks elsewhere
-        close_unsaved_buffers_dialog();
+        close_confirm_overwrite_dialog(.NO);
         return;
     }
 }

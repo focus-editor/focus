@@ -15,11 +15,6 @@ Switch_To_Project_Dialog :: struct {
 #scope_file
 
 open_selected_project :: () {
-    if build_command_is_running() {
-        add_user_warning("A build command is currently running. Please kill it or let it finish before switching projects.", dismiss_in_seconds = 5, tag = .build);
-        return;
-    }
-
     hide_dialog(*switch_to_project_dialog);
 
     using switch_to_project_dialog;
@@ -27,18 +22,7 @@ open_selected_project :: () {
 
     entry := filtered[selected];
 
-    success := load_project_config(entry.path, force = true);
-    if success {
-        should_reload_workspace = true;
-        automatic_workspace_reload = false;
-        if unsaved_buffers_exist() {
-            show_unsaved_buffers_dialog(.reload_workspace);
-            should_reload_workspace = false;
-        }
-        add_to_most_recent_projects(entry.path);
-    } else {
-        add_user_error("Couldn't load project config for %", entry.name, dismiss_in_seconds = 10, tag = .config);
-    }
+    defer_action_switch_to_project(entry.path);
 }
 
 switch_to_project_refresh_entries :: (filter: Fuzzy_Filter) {

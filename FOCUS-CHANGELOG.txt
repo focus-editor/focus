@@ -8,6 +8,7 @@
     + Pressing the close active editor shortcut in the Open Files dialog will close the selected file
 + Bug fixes:
     + Fixed a problem with undoing auto-modified colors using the color picker
+    + Made dialog chains more robust. We no longer leave the editor in an inconsistent state if a switch to project is cancelled halfway.
     + macOS:
         + Fixed an issue with not being able to exit the editor if there are unsaved buffers
         + Fixed a bug with typing the letter 'q' when trying to exit the editor via Cmd-Q

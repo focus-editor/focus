@@ -73,6 +73,7 @@ load_project_config :: (file_path: string, force := false) -> success: bool, cha
 
 refresh_config :: (path: string) {
     if build_command_is_running() {
+        // TODO: show another dialog here
         add_user_warning("Couldn't refresh config because a build command is currently running. Please let it finish or kill it before refreshing config.");
         return;
     }
@@ -152,16 +153,12 @@ refresh_config :: (path: string) {
     }
 
     if members_changed || allow_ignore_changed {
-        should_reload_workspace = true;
-        automatic_workspace_reload = true;
         if unsaved_buffers_exist() {
-            show_unsaved_buffers_dialog(.reload_workspace);
             clear_user_messages();
-
             if members_changed      then add_user_warning("Workspace members have changed in the config.\nWorkspace will need to reload, however there are unsaved changes.", tag = .workspace);
             if allow_ignore_changed then add_user_warning("Workspace ignore rules have changed in the config.\nWorkspace will need to reload, however there are unsaved changes.", tag = .workspace);
-            should_reload_workspace = false;
         }
+        defer_action_reload_workspace(automatic = true);
     }
 
     // Detect changes in file associations
@@ -219,18 +216,7 @@ close_project :: () {
         return;
     }
 
-    success := load_global_config(force = true);
-    if success {
-        project_config.loaded = false;
-        if unsaved_buffers_exist() {
-            show_unsaved_buffers_dialog(.reload_workspace);
-        } else {
-            should_reload_workspace = true;
-        }
-        automatic_workspace_reload = false;
-    } else {
-        add_user_error("Couldn't close project because the global config failed to load", dismiss_in_seconds = 10);
-    }
+    defer_action_close_project();
 }
 
 find_font_by_name :: (name: string) -> path: string, error_msg: string /* temp */ {

@@ -232,12 +232,10 @@ main :: () {
         num_text_input_events_to_ignore := 0;
 
         for event : Input.events_this_frame {
-            if should_quit break;  // don't process any other events we might have in this frame if the previous one set this to true
-
             // General events
             if event.type == {
                 case .QUIT;
-                    should_quit = true;
+                    defer_action_quit();
 
                 case .KEYBOARD;
                     // Double shift click
@@ -321,12 +319,7 @@ main :: () {
             key_sequence_input_process_event(event, handled);
         }
 
-        if should_quit && unsaved_buffers_exist() && !force_quit {
-            show_unsaved_buffers_dialog();
-            should_quit = false;
-        }
-
-        process_buffer_save_queue();
+        execute_deferred_actions();
 
         build_system_update();
         maybe_revert_temporary_theme();
@@ -336,16 +329,7 @@ main :: () {
 
         pointer_end_frame();
 
-        // TODO:
-        // maybe_save_editor_state_into_session();
-
         maybe_save_editor_history();
-
-        if should_reload_workspace {
-            reload_workspace();
-            should_reload_workspace = false;
-            redraw_requested = true;
-        }
 
         reset_temporary_storage();
 
@@ -376,7 +360,7 @@ main :: () {
 
 handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placement = .in_place) -> handled: bool {
     if action == {
-        case .quit;                                             should_quit = true;                                 return true;
+        case .quit;                                             defer_action_quit();                                return true;
 
         case .open_another_editor_instance;                     open_another_editor_instance();                     return true;
 
@@ -721,15 +705,11 @@ fullscreen_state: Saved_Window_Info;
 
 redraw_requested            := true;  // set to true to render the first frame
 should_quit                 := false;
-force_quit                  := false;
-should_reload_workspace     := false;
-automatic_workspace_reload  := false;
 
 frame_time: Apollo_Time;          // ever-increasing time since start in seconds
 frame_dt:   Time = MAX_FRAME_DT;  // time delta since the last frame
 MAX_FRAME_DT:   Time : xx (1.0 / 60);
 QUICK_FRAME_DT: Time : xx (1.0 / 300);  // sorry 300Hz monitor users
-// MAX_TIME_BEFORE_RESETTING: Time : xx (60 * 60 * 24 * 7);  // reset timer after a week to avoid losing timer precision
 
 EDIT_GROUP_TIMEOUT :: 0.3;  // for undo/redo
 
@@ -908,6 +888,7 @@ focus_allocator: Allocator;
 #load "projects.jai";
 #load "meow_hash.jai";
 #load "user_messages.jai";
+#load "deferred_actions.jai";
 
 #load "widgets/generic_choice_dialog.jai";
 #load "widgets/text_input.jai";

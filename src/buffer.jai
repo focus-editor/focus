@@ -688,6 +688,7 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
         // We're "saving as", in which case we want to create a new buffer and also keep the current buffer
         success := write_entire_file(file_path, cast(string) buffer.bytes);
         if !success {
+            buffer.error_when_saving = true;
             log_error("Couldn't write to file %", file_path);
             return;
         }
@@ -1239,73 +1240,6 @@ remove_all_buffers :: () {
     bucket_array_reset(*open_buffers);
 }
 
-add_buffer_to_save_queue :: (buffer_id: s64, type: Save_Action_Type = .save, after_save: After_Save_Action = .do_nothing) {
-    action: Save_Action;
-    action.buffer_id = buffer_id;
-    action.type = type;
-
-    array_add_if_unique(*buffer_save_queue.save_actions, action);
-
-    buffer_save_queue.pending = true;
-    buffer_save_queue.after_save = after_save;
-}
-
-remove_buffer_from_save_queue :: (buffer_id: s64, reset_after_save := false) {
-    index := -1;
-
-    for buffer_save_queue.save_actions {
-        if it.buffer_id == buffer_id then index = it_index;
-    }
-
-    if index != -1 then array_ordered_remove_by_index(*buffer_save_queue.save_actions, index);
-
-    if reset_after_save then buffer_save_queue.after_save = .do_nothing;
-}
-
-clear_buffer_save_queue :: () {
-    array_reset_keeping_memory(*buffer_save_queue.save_actions);
-    buffer_save_queue.pending = false;
-}
-
-process_buffer_save_queue :: () {
-    using buffer_save_queue;
-
-    if !pending return;
-
-    if config.settings.prefer_system_file_dialogs && OS == .WINDOWS {
-        for action: save_actions {
-            buffer := *open_buffers[action.buffer_id];
-            file_path, success := platform_get_save_file_name(get_buffer_name(buffer));
-            if file_path && success {
-                save_buffer_to_file(buffer, action.buffer_id, file_path);
-            } else {
-                pending = false;  // don't execute the after save action
-            }
-            remove action;
-        }
-    }
-
-    if save_actions {
-        if active_global_widget != .open_file_dialog && active_global_widget != .confirm_overwrite_dialog {
-            action := save_actions[0];
-            if action.type == {
-                case .save;
-                    show_open_file_dialog(.save, action.buffer_id);
-                case .move;
-                    show_open_file_dialog(.move, action.buffer_id);
-            }
-        }
-    } else if pending {
-        // Nothing left to save, execute the after save action
-        pending = false;
-        if #complete after_save == {
-            case .do_nothing;           // yay, do nothing
-            case .exit_program;         should_quit = true;
-            case .reload_workspace;     should_reload_workspace = true;
-        }
-    }
-}
-
 manually_mark_range_as_token :: (buffer: *Buffer, range: Offset_Range, color: Color) {
     assert(range.start >= 0 && range.end <= buffer.bytes.count);
     array_resize(*buffer.tokens, buffer.bytes.count);
@@ -1632,36 +1566,3 @@ Indentation_Token :: struct {
         brace;
     };
 }
-
-
-#scope_file
-
-// A queue to allow us to use the in-editor save dialog for multiple buffers.
-// TODO: consider using a more generic action queue if we have more deferred actions later
-buffer_save_queue: struct {
-    pending := false;
-    save_actions: [..] Save_Action;
-    after_save: After_Save_Action = .do_nothing;
-};
-
-Save_Action :: struct {
-    buffer_id: s64;
-    type: Save_Action_Type;
-}
-
-Save_Action_Type :: enum {
-    save;
-    move;
-}
-
-After_Save_Action :: enum {
-    do_nothing;
-    exit_program;
-    reload_workspace;
-}
-
-operator == :: (a: Save_Action, b: Save_Action) -> bool {
-    return a.buffer_id == b.buffer_id;
-}
-
-#poke_name Basic operator==;

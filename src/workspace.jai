@@ -236,7 +236,7 @@ workspace_update :: () {
     watchers.external_file_modified = "";
 }
 
-reload_workspace :: () {
+reload_workspace :: (automatic := false) {
     // Make sure no threads are running
     if file_list_thread_group.initted then shutdown(*file_list_thread_group);
     if scanner_thread_group.initted   then shutdown(*scanner_thread_group);
@@ -341,7 +341,7 @@ reload_workspace :: () {
         }
     }
 
-    if !automatic_workspace_reload then show_open_file_dialog(.search);
+    if !automatic then show_open_file_dialog(.search);
 
     init_build_system();  // must do after we've cleared editors and buffers
 
