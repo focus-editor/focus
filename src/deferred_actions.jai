@@ -34,24 +34,20 @@ defer_action_close_project :: () {
 }
 
 defer_action_quit :: () {
-    clear_action_queue();
     push_action(.quit);
     push_action(.kill_running_command);
     push_action(.save_all_buffers);
 }
 
 defer_action_save_as :: (buffer_id: s64) {
-    clear_action_queue();
     push_action(.save_as, .{ save_as = .{ buffer_id = buffer_id } });
 }
 
 defer_action_move :: (buffer_id: s64) {
-    clear_action_queue();
     push_action(.save_as, .{ save_as = .{ buffer_id = buffer_id, is_move = true } });
 }
 
 defer_action_delete :: (buffer_id: s64) {
-    clear_action_queue();
     push_action(.delete, .{ delete = .{ buffer_id = buffer_id } });
 }
 
