@@ -286,12 +286,12 @@ main :: () {
                 case .editors;                  handled = editors_handle_event(event);
                 case .finder;                   handled = finder_handle_event(event);
                 case .open_file_dialog;         handled = open_file_dialog_handle_event(event);
-                case .delete_file_dialog;       handled = delete_file_dialog_handle_event(event);
+                case .delete_file_dialog;       handled = dialog_handle_event(*delete_file_dialog, event);
                 case .go_to_line_dialog;        handled = go_to_line_dialog_handle_event(event);
                 case .switch_to_project_dialog; handled = switch_to_project_dialog_handle_event(event);
                 case .unsaved_buffers_dialog;   handled = unsaved_buffers_dialog_handle_event(event);
-                case .confirm_overwrite_dialog; handled = confirm_overwrite_dialog_handle_event(event);
-                case .commands_dialog;          handled = commands_dialog_handle_event(event);
+                case .confirm_overwrite_dialog; handled = dialog_handle_event(*confirm_overwrite_dialog, event);
+                case .commands_dialog;          handled = dialog_handle_event(*commands_dialog, event);
                 case .theme_dialog;             handled = theme_dialog_handle_event(event);
                 case .language_dialog;          handled = language_dialog_handle_event(event);
             }
@@ -891,6 +891,7 @@ focus_allocator: Allocator;
 #load "deferred_actions.jai";
 
 #load "widgets/generic_choice_dialog.jai";
+#load "widgets/generic_confirm_dialog.jai";
 #load "widgets/text_input.jai";
 #load "widgets/open_file_dialog.jai";
 #load "widgets/delete_file_dialog.jai";

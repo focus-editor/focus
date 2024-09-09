@@ -181,6 +181,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .save_all;                         save_all();
         case .save_as;                          defer_action_save_as(editor.buffer_id);
         case .move_current_file;                defer_action_move   (editor.buffer_id);
+        case .delete_current_file;              defer_action_delete (editor.buffer_id);
 
         case .switch_to_left_editor;            switch_to_editor(.left);
         case .switch_to_right_editor;           switch_to_editor(.right);
@@ -205,7 +206,6 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .toggle_line_wrap;                 toggle_line_wrap                    (editor);
         case .toggle_line_numbers;              toggle_line_numbers                 ();
         case .copy_current_line_info;           copy_current_line_info              (editor, buffer);
-        case .delete_current_file;              show_delete_file_dialog             (editor);
         case .center_viewport_on_cursor;        center_viewport_on_cursor           (editor, buffer);
         case .move_cursor_to_viewport_center;   move_cursor_to_viewport_center      (editor, buffer);
         case .remove_additional_cursors;        remove_additional_cursors           (editor);

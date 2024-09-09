@@ -779,6 +779,8 @@ delete_buffer_from_disk :: (using buffer: *Buffer) -> deleted: bool {
     }
     unlock(*open_buffers_lock);
 
+    finder.need_to_refresh_results = true;
+
     if file_is_watched(file_path) then stop_watching_file(file_path);
     return true;
 }

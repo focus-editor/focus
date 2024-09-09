@@ -5,46 +5,54 @@ execute_deferred_actions :: () {
             case .WAIT;     break;      // continue the main editor loop
             case .NEXT;                 // proceed without removing top action
             case .DONE;     remove_top_action();
-            case .CANCEL;   cancel_action_queue();
+            case .CANCEL;   clear_action_queue();
         }
     }
 }
 
 defer_action_switch_to_project :: (path: string) {
+    clear_action_queue();
     push_action(.reload_workspace, .{ reload_workspace = .{ automatic = false } });
     push_action(.load_project_config, .{ load_project_config = .{ path = copy_string(path) } });
-    push_action(.save_all_buffers);
     push_action(.kill_running_command);
+    push_action(.save_all_buffers);
 }
 
 defer_action_reload_workspace :: (automatic: bool) {
+    clear_action_queue();
     push_action(.reload_workspace, .{ reload_workspace = .{ automatic = automatic } });
-    push_action(.save_all_buffers);
     push_action(.kill_running_command);
+    push_action(.save_all_buffers);
 }
 
 defer_action_close_project :: () {
+    clear_action_queue();
     push_action(.reload_workspace, .{ reload_workspace = .{ automatic = false } });
     push_action(.close_project);
-    push_action(.save_all_buffers);
     push_action(.kill_running_command);
+    push_action(.save_all_buffers);
 }
 
 defer_action_quit :: () {
+    clear_action_queue();
     push_action(.quit);
-    push_action(.save_all_buffers);
     push_action(.kill_running_command);
-    redraw_requested = true;
+    push_action(.save_all_buffers);
 }
 
 defer_action_save_as :: (buffer_id: s64) {
+    clear_action_queue();
     push_action(.save_as, .{ save_as = .{ buffer_id = buffer_id } });
-    redraw_requested = true;
 }
 
 defer_action_move :: (buffer_id: s64) {
+    clear_action_queue();
     push_action(.save_as, .{ save_as = .{ buffer_id = buffer_id, is_move = true } });
-    redraw_requested = true;
+}
+
+defer_action_delete :: (buffer_id: s64) {
+    clear_action_queue();
+    push_action(.delete, .{ delete = .{ buffer_id = buffer_id } });
 }
 
 
@@ -57,6 +65,8 @@ push_action :: (kind: Deferred_Action.Kind, details: Deferred_Action.Details = .
     last_action_id += 1;
 
     array_add(*actions, .{ id = last_action_id, kind = kind, details = details});
+
+    redraw_requested = true;  // if we push an action during drawing we have to redraw
 }
 
 execute_top_action :: () -> Action_Result {
@@ -67,6 +77,7 @@ execute_top_action :: () -> Action_Result {
         case .quit;                     return execute_quit(action);
         case .save_as;                  return execute_save_as(action);
         case .save_all_buffers;         return execute_save_all_buffers(action);
+        case .delete;                   return execute_delete(action);
         case .confirm_overwrite;        return execute_confirm_overwrite(action);
         case .kill_running_command;     return execute_kill_running_command(action);
         case .load_project_config;      return execute_load_project_config(action);
@@ -76,7 +87,6 @@ execute_top_action :: () -> Action_Result {
 }
 
 remove_top_action :: () {
-    // actions.count = max(actions.count - 1, 0);
     action := pop(*actions);
 
     if #complete action.kind == {
@@ -92,13 +102,14 @@ remove_top_action :: () {
         case .quit;
         case .save_as;
         case .save_all_buffers;
+        case .delete;
         case .kill_running_command;
         case .reload_workspace;
         case .close_project;
     }
 }
 
-cancel_action_queue :: () {
+clear_action_queue :: () {
     while actions  remove_top_action();
 }
 
@@ -113,6 +124,7 @@ Deferred_Action :: struct {
     Details :: union {
         save_as:                struct { buffer_id: s64; is_move: bool; }
         confirm_overwrite:      struct { buffer_id: s64; is_move: bool; file_path: string; }
+        delete:                 struct { buffer_id: s64; }
         load_project_config:    struct { path: string; }
         reload_workspace:       struct { automatic: bool; }
     }
@@ -121,6 +133,7 @@ Deferred_Action :: struct {
         quit;
         save_as;
         save_all_buffers;
+        delete;
         confirm_overwrite;
         kill_running_command;
         load_project_config;
@@ -213,16 +226,55 @@ execute_save_as :: (action: Deferred_Action) -> Action_Result {
     return .DONE;
 }
 
+execute_delete :: (action: Deferred_Action) -> Action_Result {
+    using action.details.delete;
+
+    buffer := *open_buffers[buffer_id];
+    if buffer.readonly  { add_user_warning("Can't delete a readonly buffer"); return .CANCEL; }
+    if !buffer.has_file { add_user_warning("Buffer doesn't have any associated file"); return .CANCEL; }
+
+    result := dialog_get_result(*delete_file_dialog, action.id);
+    if #complete result == {
+        case .UNINITTED;
+            show_dialog(*delete_file_dialog, action.id, .{ buffer_id = buffer_id });
+            return .WAIT;
+
+        case .OK_ALL; #through;
+        case .OK;
+            deleted := delete_buffer_from_disk(buffer);
+            if !deleted {
+                add_user_error("Couldn't delete file '%'", buffer.file.full_path);
+                return .CANCEL;
+            }
+            add_success_message("File '%' has been deleted", buffer.file.full_path, dismiss_in_seconds = 3);
+
+            should_skip_animation := false;
+            if editors.layout == .Double {
+                left_editor  := *open_editors[editors.left];
+                right_editor := *open_editors[editors.right];
+                should_skip_animation = left_editor.buffer_id == buffer_id && right_editor.buffer_id == buffer_id;
+            }
+            for editor, editor_id : open_editors {
+                if editor.buffer_id == buffer_id then close_editor_by_id(editor_id, skip_animation = should_skip_animation);
+            }
+            return .DONE;
+
+        case .PENDING;   return .WAIT;
+        case .CANCEL;    return .CANCEL;
+    }
+}
+
 execute_confirm_overwrite :: (action: Deferred_Action) -> Action_Result {
     using action.details.confirm_overwrite;
 
-    result := confirm_overwrite_dialog_get_result(action.id);
+    result := dialog_get_result(*confirm_overwrite_dialog, action.id);
     if #complete result == {
         case .UNINITTED;
-            show_confirm_overwrite_dialog(file_path, action.id);
+            show_dialog(*confirm_overwrite_dialog, action.id, .{ path = file_path });
             return .WAIT;
 
-        case .YES;
+        case .OK_ALL; #through;
+        case .OK;
             buffer := *open_buffers[buffer_id];
 
             if buffer.has_file && platform_path_equals(buffer.file.full_path, file_path) {
@@ -242,7 +294,7 @@ execute_confirm_overwrite :: (action: Deferred_Action) -> Action_Result {
             return .DONE;
 
         case .PENDING;   return .WAIT;
-        case .NO;        return .CANCEL;
+        case .CANCEL;    return .CANCEL;
     }
 }
 

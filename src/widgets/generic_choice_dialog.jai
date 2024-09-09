@@ -69,6 +69,8 @@ refresh_dialog_entries :: (using dialog: *Generic_Choice_Dialog) {
     if dialog.after_refresh then dialog.after_refresh();
 }
 
+#scope_file
+
 move_dialog_cursor :: (using dialog: *Generic_Choice_Dialog, delta: s64, wrap := false, snap := true) {
     selected += delta;
 
@@ -93,6 +95,9 @@ maybe_handle_dialog_input_event :: (dialog: *Generic_Choice_Dialog, using input:
     }
     return false;
 }
+
+
+#scope_export
 
 Generic_Choice_Dialog :: struct(Entry_Details: Type) {
     input: Text_Input;

@@ -1,59 +1,25 @@
-confirm_overwrite_dialog_handle_event :: (event: Input.Event) -> bool {
-    if event.type == .KEYBOARD && event.key_pressed {
-        if event.key_code == {
-            case .ESCAPE;       #through;
-            case #char "N";     #through;
-            case #char "C";     close_confirm_overwrite_dialog(.NO);   return true;
+confirm_overwrite_dialog: Confirm_Overwrite_Dialog;
 
-            case .ENTER;        #through;
-            case #char "Y";     #through;
-            case #char "O";     close_confirm_overwrite_dialog(.YES); return true;
-        }
-    }
-    return false;
-}
+Confirm_Overwrite_Dialog :: struct {
+    using #as generic_dialog: Generic_Confirm_Dialog(Confirm_Overwrite_Details);
 
-confirm_overwrite_dialog_get_result :: (action_id: Deferred_Action_Id) -> Confirm_Overwrite_Dialog.Result {
-    if action_id != dialog.triggered_by_action  return .UNINITTED;
-    return dialog.result;
-}
-
-show_confirm_overwrite_dialog :: (path: string, action_id: Deferred_Action_Id) {
-    dialog.result = .PENDING;
-    dialog.triggered_by_action = action_id;
-
-    if dialog.path then free(dialog.path);
-    dialog.path = copy_string(path);
-
-    active_global_widget = .confirm_overwrite_dialog;
-}
-
-close_confirm_overwrite_dialog :: (result: Confirm_Overwrite_Dialog.Result) {
-    dialog.result = result;
-    activate_editors();
-    redraw_requested = true;
-}
-
-confirm_overwrite_dialog_get_path :: () -> string {
-    return dialog.path;
+    global_widget_id = .confirm_overwrite_dialog;
+    set_details = confirm_overwrite_dialog_set_details;
+    get_buttons = confirm_overwrite_dialog_get_buttons;
 }
 
 #scope_file
 
-dialog: Confirm_Overwrite_Dialog;
+Confirm_Overwrite_Details :: struct { path: string; }
 
-Confirm_Overwrite_Dialog :: struct {
-    buffer_id: s64;
-    path: string;
-
-    triggered_by_action: Deferred_Action_Id = -1;
-    result: Result = .UNINITTED;
-
-    Result :: enum {
-        UNINITTED;
-        PENDING;
-        YES;
-        NO;
-    }
+confirm_overwrite_dialog_set_details :: (details: Confirm_Overwrite_Details) {
+    if confirm_overwrite_dialog.path then free(confirm_overwrite_dialog.path);
+    confirm_overwrite_dialog.path = copy_string(details.path);
 }
 
+confirm_overwrite_dialog_get_buttons :: () -> [] Generic_Confirm_Dialog_Button {
+    return .[
+        .{ "Overwrite", .OK,     .[ .ENTER,  #char "Y", #char "O" ], Color.UI_WARNING, Color.UI_DEFAULT },
+        .{ "Cancel",    .CANCEL, .[ .ESCAPE, #char "N", #char "C" ], Color.UI_NEUTRAL, Color.UI_DEFAULT },
+    ];
+}

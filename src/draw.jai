@@ -2558,90 +2558,28 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
 }
 
 draw_delete_file_dialog :: () {
-    ui_id := Ui_Id.delete_file_dialog;
+    draw_extra_file_info :: (extra_rect: Rect, margin: float, padding: float) {
+        buffer := *open_buffers[delete_file_dialog.buffer_id];
 
-    margin  := floor(12 * dpi_scale);
-    padding := floor( 4 * dpi_scale);
-    entry_height  := font_ui_line_height + padding * 2;
-    button_height := font_ui_medium_line_height + 2 * padding;
-    header_height := font_ui_medium_line_height + 2 * margin + 4 * dpi_scale;
-
-    box_rect := Rect.{
-        w = floor(clamp(screen.w * 0.3, 600 * dpi_scale, 1500 * dpi_scale)),
-        h = header_height + (entry_height + margin / 2) + margin + padding + button_height + margin,
-    };
-    box_rect.x = floor((screen.w - box_rect.w) / 2);
-    box_rect.y = screen.h - box_rect.h - floor(clamp(100 * dpi_scale, 0, (screen.h - box_rect.h) / 2));
-
-    maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
-
-    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3);
-
-    header_rect, buffers_rect := cut_top(box_rect, header_height);
-    buffers_rect = shrink(buffers_rect, margin);
-
-     // Header
-    {
-        push_scissor(header_rect);
+        push_scissor(extra_rect);
         defer pop_scissor();
 
-        draw_rounded_rect_with_corners(header_rect, Color.BACKGROUND_4, tl = .in, tr = .in, br = .none, bl = .none);
+        pen := Vector2.{
+            x = extra_rect.x + margin,
+            y = extra_rect.y + margin / 2 + (extra_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+        };
 
-        pen_x := cast(s32) (header_rect.x + 2 * margin);
-        pen_y := cast(s32) (header_rect.y + (header_rect.h - font_ui_medium.character_height) / 2 + 2);
-        header_text := "Are you sure you want to delete this file?";
-        Simp.draw_text(font_ui_medium, pen_x, pen_y, header_text, xx Color.UI_DEFAULT);
-
-        hr := cut_bottom(header_rect, 1);
-        draw_rect(hr, Color.BACKGROUND_1);
+        draw_file_info(buffer, 0, padding, pen);
     }
 
-    // File to delete
-    {
-        push_scissor(buffers_rect);
-        defer pop_scissor();
-
-        // Not locking here because we're not modifying the buffer
-        buffer_id := get_buffer_id_to_delete();
-        buffer    := *open_buffers[buffer_id];
-
-        entry_rect := cut_top(buffers_rect, entry_height);
-        {
-            push_scissor(entry_rect);
-            defer pop_scissor();
-
-            pen := Vector2.{
-                x = entry_rect.x + margin,
-                y = entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
-            };
-            width: float;
-
-            width, _ = draw_file_info(buffer, width, padding, pen);
-        }
-
-        entry_rect.y -= entry_rect.h + margin / 2;
-    }
-
-    // Buttons
-    {
-        buttons_row_rect := cut_bottom(buffers_rect, button_height);
-
-        cancel_button, delete_button: Rect;
-
-        activated, width := draw_button(font_ui, "Cancel", Color.UI_NEUTRAL, Color.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
-        if activated close_delete_file_dialog();
-
-        buttons_row_rect.w -= width + margin;
-
-        activated, width = draw_button(font_ui, "Delete", Color.UI_ERROR, Color.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
-        if activated delete_buffer_file_and_update_editor();
-    }
-
-    if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
-        // Close the dialog on clicks elsewhere
-        close_delete_file_dialog();
-        return;
-    }
+    draw_generic_confirm_dialog(
+        *delete_file_dialog,
+        get_ui_id_from_loc(),
+        "Delete file?",
+        "Please confirm you want to delete the following file:",
+        draw_extra_file_info,
+        extra_height = font_ui_medium_line_height,
+    );
 }
 
 draw_switch_to_project_dialog :: () {
@@ -2755,8 +2693,6 @@ draw_unsaved_buffers_dialog :: () {
     {
         buttons_row_rect := cut_bottom(buffers_rect, button_height);
 
-        cancel_button, dont_save_button, save_all_button: Rect;
-
         activated, width := draw_button(font_ui, "Cancel", Color.UI_NEUTRAL, Color.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
         if activated close_unsaved_buffers_dialog(.CANCEL);
 
@@ -2773,10 +2709,14 @@ draw_unsaved_buffers_dialog :: () {
     }
 }
 
-draw_confirm_overwrite_dialog :: () {
-    ui_id := Ui_Id.confirm_overwrite;
+Draw_Confirm_Dialog_Extra_Fn :: #type (extra_rect: Rect, margin: float, padding: float);
 
-    additional_message := "Please confirm that you want to overwrite the following file:";
+draw_generic_confirm_dialog :: (dialog: *Generic_Confirm_Dialog, ui_id: Ui_Id, header: string, message: string, draw_extra: Draw_Confirm_Dialog_Extra_Fn = null, extra_height := 0.0) {
+    if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
+        // Close the dialog on clicks elsewhere
+        close_dialog(dialog, .CANCEL);
+        return;
+    }
 
     margin  := floor(12 * dpi_scale);
     padding := floor( 4 * dpi_scale);
@@ -2786,9 +2726,9 @@ draw_confirm_overwrite_dialog :: () {
 
     box_rect := Rect.{
         w = floor(clamp(screen.w * 0.3, 600 * dpi_scale, 1500 * dpi_scale)),
-        h = header_height + (entry_height + margin / 2) + margin + padding + button_height + margin,
+        h = header_height + margin + padding + button_height + margin + (extra_height + margin),
     };
-    if additional_message then box_rect.h += entry_height + margin;
+    if message then box_rect.h += entry_height + margin;
     box_rect.x = floor((screen.w - box_rect.w) / 2);
     box_rect.y = screen.h - box_rect.h - floor(clamp(100 * dpi_scale, 0, (screen.h - box_rect.h) / 2));
 
@@ -2808,62 +2748,65 @@ draw_confirm_overwrite_dialog :: () {
 
         pen_x := cast(s32) (header_rect.x + 2 * margin);
         pen_y := cast(s32) (header_rect.y + (header_rect.h - font_ui_medium.character_height) / 2 + 2);
-        header_text := "Overwrite file?";
-        Simp.draw_text(font_ui_medium, pen_x, pen_y, header_text, xx Color.UI_DEFAULT);
+        Simp.draw_text(font_ui_medium, pen_x, pen_y, header, xx Color.UI_DEFAULT);
 
         hr := cut_bottom(header_rect, 1);
         draw_rect(hr, Color.BACKGROUND_1);
     }
 
-    // Message
+    // Message + extra
     {
         push_scissor(buffers_rect);
         defer pop_scissor();
 
         entry_rect := cut_top(buffers_rect, entry_height);
 
-        if additional_message {
+        if message {
             Simp.draw_text(
                 font_ui,
                 xx (entry_rect.x + margin),
                 xx (entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale),
-                additional_message,
+                message,
                 xx Color.UI_DEFAULT,
             );
             entry_rect.y -= entry_rect.h + margin;
         }
 
-        // TODO: draw file name
-        // file_name_font := ifx bold then font_ui_bold else font_ui;
-        width := xx Simp.prepare_text(font_ui_bold, confirm_overwrite_dialog_get_path());
-        Simp.draw_prepared_text(
-            font_ui_bold,
-            xx (entry_rect.x + margin),
-            xx (entry_rect.y + (entry_rect.h + font_ui_bold.character_height) / 2 + 2 * dpi_scale),
-            color = xx Color.UI_WARNING);
+        if draw_extra != null then draw_extra(entry_rect, margin, padding);
     }
 
     // Buttons
     {
         buttons_row_rect := cut_bottom(buffers_rect, button_height);
 
-        cancel_button, dont_save_button, save_all_button: Rect;
+        for < button : dialog.get_buttons() {
+            button_id := cast(s64) get_ui_id_from_loc(parent_id = ui_id) + it_index;  // could theoretically clash with something right below so don't get any ui ids close to here!
+            activated, width := draw_button(font_ui, button.label, button.color, button.text_color, ui_id, buttons_row_rect, .right, margin / 2, margin, button_id = cast(Ui_Id) button_id);
+            if activated close_dialog(dialog, button.result);
+            buttons_row_rect.w -= width + margin;
+        }
+    }
+}
 
-        activated, width := draw_button(font_ui, "Cancel", Color.UI_NEUTRAL, Color.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
-        if activated close_confirm_overwrite_dialog(.NO);
-
-        buttons_row_rect.w -= width + margin;
-
-        save_label := "Overwrite";
-        activated, width = draw_button(font_ui, save_label, Color.UI_WARNING, Color.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
-        if activated close_confirm_overwrite_dialog(.YES);
+draw_confirm_overwrite_dialog :: () {
+    draw_extra_file_info :: (extra_rect: Rect, margin: float, padding: float) {
+        width := xx Simp.prepare_text(font_ui_bold, confirm_overwrite_dialog.path);
+        Simp.draw_prepared_text(
+            font_ui_bold,
+            xx (extra_rect.x + margin),
+            xx (extra_rect.y + (extra_rect.h + font_ui_bold.character_height) / 2 + 2 * dpi_scale),
+            color = xx Color.UI_WARNING,
+        );
     }
 
-    if ui.active != .none && ui.active != ui_id && !is_child(ui.active, ui_id) {
-        // Close the dialog on clicks elsewhere
-        close_confirm_overwrite_dialog(.NO);
-        return;
-    }
+    draw_generic_confirm_dialog(
+        *confirm_overwrite_dialog,
+        get_ui_id_from_loc(),
+        "Overwrite file?",
+        "Please confirm that you want to overwrite the following file:",
+        draw_extra_file_info,
+        extra_height = font_ui_medium_line_height,
+    );
 }
 
 draw_finder :: () {
@@ -3729,7 +3672,7 @@ draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll:
     return clamp(scroll_target, 0, max_scroll);
 }
 
-draw_button :: (font: *Simp.Dynamic_Font, label: string, color: Color, text_color: Color, parent_id: Ui_Id, row_rect: Rect, align: Button_Alignment = .right, padding_v: float, padding_h: float, shadow_size := 0.0, loc := #caller_location) -> pressed: bool, width: float {
+draw_button :: (font: *Simp.Dynamic_Font, label: string, color: Color, text_color: Color, parent_id: Ui_Id, row_rect: Rect, align: Button_Alignment = .right, padding_v: float, padding_h: float, shadow_size := 0.0, button_id := Ui_Id.none, loc := #caller_location) -> pressed: bool, width: float {
     label_width := cast(float) Simp.prepare_text(font, label);
 
     button := row_rect;
@@ -3737,7 +3680,7 @@ draw_button :: (font: *Simp.Dynamic_Font, label: string, color: Color, text_colo
     button.h = cast(float) font.character_height + 2 * padding_v;
     if align == .right then button.x = row_rect.x + row_rect.w - button.w;
 
-    button_ui_id := get_ui_id_from_loc(loc, parent_id = parent_id);
+    button_ui_id := ifx button_id != Ui_Id.none then button_id else get_ui_id_from_loc(loc, parent_id = parent_id);
 
     maybe_set_hot_or_active(button_ui_id, button, .PRESSABLE);
 
@@ -3893,8 +3836,6 @@ Ui_Id :: enum s64 {
     unsaved_buffers             :: -10;
     commands_dialog             :: -11;
     switch_to_project_dialog    :: -12;
-    delete_file_dialog          :: -13;
-    confirm_overwrite           :: -14;
     build_panel_title_bar       :: -15;
     color_preview_title_bar     :: -16;
     theme_dialog                :: -17;
