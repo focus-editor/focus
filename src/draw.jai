@@ -65,17 +65,18 @@ draw_frame :: () {
     maybe_draw_build_panel();
 
     if #complete active_global_widget == {
-        case .editors;                  // already done
-        case .open_file_dialog;         draw_open_file_dialog();
-        case .delete_file_dialog;       draw_delete_file_dialog();
-        case .finder;                   draw_finder();
-        case .go_to_line_dialog;        draw_go_to_line_dialog(active_pane_rect, status_bar_height);
-        case .switch_to_project_dialog; draw_switch_to_project_dialog();
-        case .unsaved_buffers_dialog;   draw_unsaved_buffers_dialog();
-        case .confirm_overwrite_dialog; draw_confirm_overwrite_dialog();
-        case .commands_dialog;          draw_commands_dialog();
-        case .theme_dialog;             draw_theme_dialog();
-        case .language_dialog;          draw_language_dialog();
+        case .editors;                          // already done
+        case .open_file_dialog;                 draw_open_file_dialog();
+        case .delete_file_dialog;               draw_delete_file_dialog();
+        case .finder;                           draw_finder();
+        case .go_to_line_dialog;                draw_go_to_line_dialog(active_pane_rect, status_bar_height);
+        case .switch_to_project_dialog;         draw_switch_to_project_dialog();
+        case .unsaved_buffers_dialog;           draw_unsaved_buffers_dialog();
+        case .confirm_overwrite_dialog;         draw_confirm_overwrite_dialog();
+        case .commands_dialog;                  draw_commands_dialog();
+        case .theme_dialog;                     draw_theme_dialog();
+        case .language_dialog;                  draw_language_dialog();
+        case .kill_running_command_dialog;      draw_kill_running_command_dialog();
     }
 
     draw_user_messages(screen, status_bar_height);
@@ -2805,6 +2806,27 @@ draw_confirm_overwrite_dialog :: () {
         "Overwrite file?",
         "Please confirm that you want to overwrite the following file:",
         draw_extra_file_info,
+        extra_height = font_ui_medium_line_height,
+    );
+}
+
+draw_kill_running_command_dialog :: () {
+    draw_extra_command_info :: (extra_rect: Rect, margin: float, padding: float) {
+        width := xx Simp.prepare_text(font_ui_bold, build_get_running_command_name());
+        Simp.draw_prepared_text(
+            font_ui_bold,
+            xx (extra_rect.x + margin),
+            xx (extra_rect.y + (extra_rect.h + font_ui_bold.character_height) / 2 + 2 * dpi_scale),
+            color = xx Color.UI_WARNING,
+        );
+    }
+
+    draw_generic_confirm_dialog(
+        *kill_running_command_dialog,
+        get_ui_id_from_loc(),
+        "Kill running command?",
+        "The following command is currently running:",
+        draw_extra_command_info,
         extra_height = font_ui_medium_line_height,
     );
 }

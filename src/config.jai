@@ -72,12 +72,6 @@ load_project_config :: (file_path: string, force := false) -> success: bool, cha
 }
 
 refresh_config :: (path: string) {
-    if build_command_is_running() {
-        // TODO: show another dialog here
-        add_user_warning("Couldn't refresh config because a build command is currently running. Please let it finish or kill it before refreshing config.");
-        return;
-    }
-
     // Deep copy old workspace members and allow/ignore lists (they will be freed by the load config function otherwise)
     old_workspace_members: [..] string;
     old_workspace_members.allocator = temp;

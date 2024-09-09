@@ -6,6 +6,7 @@
         + `search_is_case_sensitive_when_uppercase_present`. Set to `true` to automatically make local search case sensitive when there are uppercase chars in the search bar. Currently only works with ASCII.
         + `projects_sorting_order`: `most_recent_first` (default) or `alphabetical`. Determines the sorting order for projects in the Switch To Project dialog.
     + Pressing the close active editor shortcut in the Open Files dialog will close the selected file
+    + When reloading workspace the user will be able to kill any running build command via a confirmation dialog
 + Bug fixes:
     + Fixed a problem with undoing auto-modified colors using the color picker
     + Made dialog chains more robust. We no longer leave the editor in an inconsistent state if a switch to project is cancelled halfway.

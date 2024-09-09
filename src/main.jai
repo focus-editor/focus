@@ -283,17 +283,18 @@ main :: () {
             // Note that the active widget may change during the frame, so the following events
             // will be sent to the new widget, that's why we check global widget for each event.
             if #complete active_global_widget == {
-                case .editors;                  handled = editors_handle_event(event);
-                case .finder;                   handled = finder_handle_event(event);
-                case .open_file_dialog;         handled = open_file_dialog_handle_event(event);
-                case .delete_file_dialog;       handled = dialog_handle_event(*delete_file_dialog, event);
-                case .go_to_line_dialog;        handled = go_to_line_dialog_handle_event(event);
-                case .switch_to_project_dialog; handled = switch_to_project_dialog_handle_event(event);
-                case .unsaved_buffers_dialog;   handled = unsaved_buffers_dialog_handle_event(event);
-                case .confirm_overwrite_dialog; handled = dialog_handle_event(*confirm_overwrite_dialog, event);
-                case .commands_dialog;          handled = dialog_handle_event(*commands_dialog, event);
-                case .theme_dialog;             handled = theme_dialog_handle_event(event);
-                case .language_dialog;          handled = language_dialog_handle_event(event);
+                case .editors;                      handled = editors_handle_event(event);
+                case .finder;                       handled = finder_handle_event(event);
+                case .open_file_dialog;             handled = open_file_dialog_handle_event(event);
+                case .delete_file_dialog;           handled = dialog_handle_event(*delete_file_dialog, event);
+                case .go_to_line_dialog;            handled = go_to_line_dialog_handle_event(event);
+                case .switch_to_project_dialog;     handled = switch_to_project_dialog_handle_event(event);
+                case .unsaved_buffers_dialog;       handled = unsaved_buffers_dialog_handle_event(event);
+                case .confirm_overwrite_dialog;     handled = dialog_handle_event(*confirm_overwrite_dialog, event);
+                case .commands_dialog;              handled = dialog_handle_event(*commands_dialog, event);
+                case .kill_running_command_dialog;  handled = dialog_handle_event(*kill_running_command_dialog, event);
+                case .theme_dialog;                 handled = theme_dialog_handle_event(event);
+                case .language_dialog;              handled = language_dialog_handle_event(event);
             }
 
             if !handled {
@@ -830,6 +831,7 @@ Active_Global_Widget :: enum {
     switch_to_project_dialog;
     unsaved_buffers_dialog;
     confirm_overwrite_dialog;
+    kill_running_command_dialog;
     theme_dialog;
     language_dialog;
 }
@@ -901,6 +903,7 @@ focus_allocator: Allocator;
 #load "widgets/commands.jai";
 #load "widgets/switch_to_project.jai";
 #load "widgets/confirm_overwrite.jai";
+#load "widgets/kill_running_command.jai";
 #load "widgets/theme_dialog.jai";
 #load "widgets/language_dialog.jai";
 #load "widgets/color_preview.jai";

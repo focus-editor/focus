@@ -32,7 +32,7 @@ deinit_build_system :: () {
     // Assuming that the editor and the buffer will be cleaned up separately
     build_buffer_id = -1;
     build_editor_id = -1;
-    running_command = false;
+    running_command = "";
 }
 
 execute_build_command :: (command: *Build_Command) {
@@ -108,7 +108,7 @@ execute_build_command :: (command: *Build_Command) {
     work.current_build_buffer_offset = open_buffers[build_buffer_id].bytes.count;
 
     add_work(*thread_group, work);
-    running_command = true;
+    running_command = work.name;  // work.name should live until a new command is kicked off
 }
 
 build_clear_output :: () {
@@ -131,7 +131,7 @@ build_clear_output :: () {
     unlock(*buffer.content_lock);
 }
 
-build_command_is_running :: () -> bool {
+build_get_running_command_name :: () -> string {
     return running_command;
 }
 
@@ -165,7 +165,7 @@ build_system_update :: () {
     results := get_completed_work(*thread_group);
     if results {
         // We only process one command at a time, so this means our running command has finished
-        assert(running_command != false, "Build thread has finished work, but no command running");
+        assert(running_command != "", "Build thread has finished work, but no command running");
         assert(results.count == 1, "Build thread returned more than 1 result. This is a bug.");
 
         finished_command := cast(*Build_Thread_Work) results[0];
@@ -236,7 +236,7 @@ build_system_update :: () {
             if finished_command.auto_jump_to_error then go_to_next_build_error();
         }
 
-        running_command = false;
+        running_command = "";
     }
 }
 
@@ -256,14 +256,15 @@ show_build_panel :: () {
         case .unsaved_buffers_dialog;   // do nothing, we still want to see them
         case .confirm_overwrite_dialog; // do nothing, we still want to see them
 
-        case .open_file_dialog;         #through;
-        case .delete_file_dialog;       #through;
-        case .finder;                   #through;
-        case .go_to_line_dialog;        #through;
-        case .switch_to_project_dialog; #through;
-        case .theme_dialog;             #through;
-        case .language_dialog;          #through;
-        case .commands_dialog;          active_global_widget = .editors;
+        case .open_file_dialog;                 #through;
+        case .delete_file_dialog;               #through;
+        case .kill_running_command_dialog;      #through;
+        case .finder;                           #through;
+        case .go_to_line_dialog;                #through;
+        case .switch_to_project_dialog;         #through;
+        case .theme_dialog;                     #through;
+        case .language_dialog;                  #through;
+        case .commands_dialog;                  active_global_widget = .editors;
     }
     if !build_panel_is_shown {
         previously_active_editor = editors.active;
@@ -822,7 +823,7 @@ saved_position := Build_Panel_Position.right;
 
 build_panel_is_expanded := false;
 
-running_command := false;
+running_command := "";  // the name of the running command
 running_process: Process;
 
 last_command_result: struct {

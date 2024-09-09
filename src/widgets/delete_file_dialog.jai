@@ -4,14 +4,14 @@ Delete_File_Dialog :: struct {
     using #as generic_dialog: Generic_Confirm_Dialog(Delete_File_Details);
 
     global_widget_id = .delete_file_dialog;
-    get_buttons = delete_file_dialog_get_buttons;
+    get_buttons = dialog_get_buttons;
 }
 
 #scope_file
 
 Delete_File_Details :: struct { buffer_id: s64; }
 
-delete_file_dialog_get_buttons :: () -> [] Generic_Confirm_Dialog_Button {
+dialog_get_buttons :: () -> [] Generic_Confirm_Dialog_Button {
     return .[
         .{ "Delete", .OK,     .[ .ENTER,  #char "Y", #char "D" ], Color.UI_WARNING, Color.UI_DEFAULT },
         .{ "Cancel", .CANCEL, .[ .ESCAPE, #char "N", #char "C" ], Color.UI_NEUTRAL, Color.UI_DEFAULT },

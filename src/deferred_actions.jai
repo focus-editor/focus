@@ -299,12 +299,22 @@ execute_confirm_overwrite :: (action: Deferred_Action) -> Action_Result {
 }
 
 execute_kill_running_command :: (action: Deferred_Action) -> Action_Result {
-    if build_command_is_running() {
-        // TODO: add an option to auto-kill commands without showing a dialog
-        add_user_warning("A build command is currently running. Please kill it or let it finish before proceeding.");
-        return .CANCEL;
+    if !build_get_running_command_name() return .DONE;
+
+    result := dialog_get_result(*kill_running_command_dialog, action.id);
+    if #complete result == {
+        case .UNINITTED;
+            show_dialog(*kill_running_command_dialog, action.id, .{ });
+            return .WAIT;
+
+        case .OK_ALL; #through;
+        case .OK;
+            build_kill_running_command();
+            return .DONE;
+
+        case .PENDING;   return .WAIT;
+        case .CANCEL;    return .CANCEL;
     }
-    return .DONE;
 }
 
 execute_load_project_config :: (action: Deferred_Action) -> Action_Result {
