@@ -227,7 +227,7 @@ execute_delete :: (action: Deferred_Action) -> Action_Result {
 
     buffer := *open_buffers[buffer_id];
     if buffer.readonly  { add_user_warning("Can't delete a readonly buffer"); return .CANCEL; }
-    if !buffer.has_file { add_user_warning("Buffer doesn't have any associated file"); return .CANCEL; }
+    if !buffer.has_file { close_editors_for_buffer(buffer_id); return .DONE; }  // no one cares it doesn't have a file, they just want it gone
 
     result := dialog_get_result(*delete_file_dialog, action.id);
     if #complete result == {
@@ -243,16 +243,7 @@ execute_delete :: (action: Deferred_Action) -> Action_Result {
                 return .CANCEL;
             }
             add_success_message("File '%' has been deleted", buffer.file.full_path, dismiss_in_seconds = 3);
-
-            should_skip_animation := false;
-            if editors.layout == .Double {
-                left_editor  := *open_editors[editors.left];
-                right_editor := *open_editors[editors.right];
-                should_skip_animation = left_editor.buffer_id == buffer_id && right_editor.buffer_id == buffer_id;
-            }
-            for editor, editor_id : open_editors {
-                if editor.buffer_id == buffer_id then close_editor_by_id(editor_id, skip_animation = should_skip_animation);
-            }
+            close_editors_for_buffer(buffer_id);
             return .DONE;
 
         case .PENDING;   return .WAIT;

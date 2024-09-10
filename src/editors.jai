@@ -844,6 +844,18 @@ close_editor_by_id :: (editor_id: s64, skip_animation := false) {
     }
 }
 
+close_editors_for_buffer :: (buffer_id: s64) {
+    should_skip_animation := false;
+    if editors.layout == .Double {
+        left_editor  := *open_editors[editors.left];
+        right_editor := *open_editors[editors.right];
+        should_skip_animation = left_editor.buffer_id == buffer_id && right_editor.buffer_id == buffer_id;
+    }
+    for editor, editor_id : open_editors {
+        if editor.buffer_id == buffer_id then close_editor_by_id(editor_id, skip_animation = should_skip_animation);
+    }
+}
+
 finish_closing_editor :: () {
     if editors.layout == .Double {
         editors.layout = .Single;
