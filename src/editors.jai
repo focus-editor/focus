@@ -81,17 +81,17 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
 
     if editor.search_bar.active {
         using editor.search_bar;
-        old_search_str := copy_temporary_string(cast(string) input.text);
+        old_search_str := copy_temporary_string(to_string(input.text));
         handled := text_input_handle_event(*input, event);
         if handled {
-            if old_search_str != cast(string) input.text then search_and_update_results(editor, buffer, jump = true);
+            if old_search_str != to_string(input.text) then search_and_update_results(editor, buffer, jump = true);
             return true;
         }
 
         // Handle editor actions which make sense while the search bar is open
         editor_action := map_event_to_action(event, Action_Editors);
         if editor_action == {
-            case .select_all_occurrences;           select_all_occurrences(editor, buffer, cast(string) input.text); close_search_bar(editor); return true;
+            case .select_all_occurrences;           select_all_occurrences(editor, buffer, to_string(input.text)); close_search_bar(editor); return true;
         }
 
         // Handle search dialog actions
@@ -1051,7 +1051,7 @@ search_bar_open_selected_result :: (editor: Editor, buffer: Buffer, placement: E
 search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := false) {
     reset_search_results(*search_bar);
 
-    needle := cast(string) search_bar.input.text;
+    needle := to_string(search_bar.input.text);
     if !needle return;
 
     if config.settings.search_is_case_sensitive_when_uppercase_present && !search_bar.case_sensitive_toggled_manually {
@@ -3511,37 +3511,37 @@ copy_current_line_info :: (using editor: *Editor, buffer: Buffer) {
 Editor :: struct {
     buffer_id: s64;
 
+    viewport: Viewport;
+    search_bar: Search_Bar;
+
     cursors: [..] Cursor;
+    highlights: [..] Text_Highlight;
+    wrapped_line_starts: [..] s32;  // empty when line wrap is off
+
     main_cursor: s64;      // newly added cursors become main so that we jump to them
     original_cursor: s64;  // we remember the original cursor when first creating multiple cursors (and go back to it on escape)
 
+    num_selected_chars: s32;  // across all cursors
+    num_selected_bytes: s32;
+
+    last_width_in_chars: s32 = S32_MAX;
+
+    // TODO: make a global array instead
+    paste_animations: [..] Paste_Animation;
+
+    scroll_to_cursor: enum u8 { no; yes; yes_new_editor; }  // trigger a scroll so that the cursor is in the center vertically
+    line_wrap:        enum u8 { off; to_enable; to_disable; on; };
+    refresh_selection  := false;
     search_whole_words := false;  // used when creating new cursors
     cursor_moved := Cursor_Movement.has_not_moved; // this may trigger a scroll so that the cursor is within acceptable bounds
 
     // TODO: use a global flag rather than per editor?
-    new_cursor_just_created_using_mouse := false;  // useful to know in order to handle select-by-drag and select-word with the new cursor
     last_cursor_created_using_mouse_at: Apollo_Time;
-
+    new_cursor_just_created_using_mouse := false;  // useful to know in order to handle select-by-drag and select-word with the new cursor
     initial_middle_mouse_coords: Coords; // used for creating cursors while dragging middle mouse button
-
-    scroll_to_cursor: enum u8 { no; yes; yes_new_editor; }  // trigger a scroll so that the cursor is in the center vertically
-
-    highlights: [..] Text_Highlight;
-    refresh_selection: bool;
-    num_selected_chars: s32;  // across all cursors
-    num_selected_bytes: s32;
-
-    search_bar: Search_Bar;
-
-    viewport: Viewport;
-
-    line_wrap: enum u8 { off; to_enable; to_disable; on; };
-    last_width_in_chars: s32 = S32_MAX;
-    wrapped_line_starts: [..] s32;  // empty when line wrap is off
-
-    // TODO: make a global array instead
-    paste_animations: [..] Paste_Animation;
 }
+
+#run print("SIZE OF EDITOR: %\n", size_of(Editor));
 
 Cursor_Movement :: enum u8 {
     has_not_moved;
@@ -3569,34 +3569,36 @@ Viewport :: struct {
 }
 
 Search_Bar :: struct {
-    active   := false;      // it receives keyboard input when active.
-    mode: Mode = .classic;
+    results: [..] Text_Highlight;
 
-    width_percentage := WIDTH_NORMAL;  // how much of the screen the popup occupies
+    width_percentage: float = WIDTH_NORMAL;  // how much of the screen the popup occupies
     width_anim := #run Tween_Animation(float).{ start = WIDTH_NORMAL, target = WIDTH_NORMAL };
     WIDTH_NORMAL   :: 0.5;
     WIDTH_EXPANDED :: 0.9;
 
     input: Text_Input;
 
-    results: [..] Text_Highlight;
     selected_result: s64 = -1;
     search_point_offset: s32;  // the point used to determine the next search result. Fixed so that we can set cursor without jumping around
+
+    mode: Mode = .classic;
+    active:         bool;  // it receives keyboard input when active.
     case_sensitive: bool;
     case_sensitive_toggled_manually: bool;
-    whole_word: bool;
-    regex_search: bool;
+    whole_word:     bool;
+    regex_search:   bool;
     regex_is_valid: bool;
+    jumped:         bool;
+
+    per_page: s16 = 10;
 
     original_cursor_position: Cursor;  // remember main cursor position so we can go back to it on Esc
-    jumped := false;
 
-    per_page := 10;
     scroll_to_selected: Scroll_Mode = .no;
     scroll_anim := #run Tween_Animation(s32).{ speed = xx 0.1, func = .lerp };
     scroll_y: s32;
 
-    Mode :: enum { classic; dropdown; }
+    Mode :: enum u8 { classic; dropdown; }
 }
 
 // What to select when dragging
@@ -3606,12 +3608,12 @@ Selection_Mode :: struct {
     min_range: Offset_Range;
 }
 
-Scroll_Mode :: enum { no; yes; snap; };
+Scroll_Mode :: enum u8 { no; yes; snap; };
 
 Text_Highlight :: struct {
     offset: s64;    // we'll convert this to position range, but only for the visible highlights
     count: s64;
-    line: s32;      // useful to know line immediately to display in the scrollbar area
+    line: s32;      // useful to know the line number to display in the scrollbar area
 }
 
 Paste_Animation :: struct {

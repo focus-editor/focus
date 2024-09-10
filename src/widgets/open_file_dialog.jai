@@ -134,7 +134,7 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
         case .save;
             if folder_only return true;
             if mode == .save || mode == .move {
-                close_open_file_dialog(.SELECTED_PATH, tprint("%/%", get_current_folder_path(), cast(string) input.text));
+                close_open_file_dialog(.SELECTED_PATH, tprint("%/%", get_current_folder_path(), to_string(input.text)));
             }
 
         case .file;
@@ -209,10 +209,10 @@ open_file_dialog_maybe_expand :: () {
 #scope_file
 
 maybe_handle_text_input_event :: (using input: *Text_Input, event: Input.Event) -> handled: bool {
-    input_text := copy_temporary_string(cast(string) text);
+    input_text := copy_temporary_string(to_string(text));
     handled := text_input_handle_event(input, event);
     if handled {
-        if input_text != cast(string) input.text then refresh_entries(clear_input = false);
+        if input_text != to_string(input.text) then refresh_entries(clear_input = false);
         return true;
     }
     return false;
@@ -253,7 +253,7 @@ move_cursor :: (delta: s64, wrap := false, snap := true) {
 
 pop_directory :: () -> handled: bool {
     using open_file_dialog;
-    if (mode != .navigate && mode != .save && mode != .move) || input.text || !path_chunks return false;
+    if (mode != .navigate && mode != .save && mode != .move) || !is_empty(input.text) || !path_chunks return false;
 
     last := pop(*path_chunks);
     free(last);
@@ -348,7 +348,7 @@ refresh_entries :: (clear_input := true) {
         if buffer.modified_on_disk then { entry.flags |= .MODIFIED_ON_DISK; entry.sort_key |= top_priority_bit; }
     }
 
-    filter := construct_fuzzy_filter(cast(string) input.text, multi_chunk_search = true);
+    filter := construct_fuzzy_filter(to_string(input.text), multi_chunk_search = true);
 
     if #complete mode == {
         case .save; #through;
@@ -462,12 +462,12 @@ refresh_entries :: (clear_input := true) {
         quick_sort(entries.filtered, compare_entries);
     }
 
-    if (mode == .save || mode == .move) && input.text && path_chunks {
+    if (mode == .save || mode == .move) && !is_empty(input.text) && path_chunks {
         entry_name: string;
         if mode == .save {
-            entry_name = sprint("Save as '%/%'", get_current_folder_path(), cast(string) input.text);
+            entry_name = sprint("Save as '%/%'", get_current_folder_path(), to_string(input.text));
         } else {
-            entry_name = sprint("Move to '%/%'", get_current_folder_path(), cast(string) input.text);
+            entry_name = sprint("Move to '%/%'", get_current_folder_path(), to_string(input.text));
         }
         array_add(*entries.filtered, Entry.{
             file = File_Info.{ full_path = "", name = "", path = "", icon = .save },

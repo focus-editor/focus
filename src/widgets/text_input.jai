@@ -1,5 +1,5 @@
 text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> handled: bool {
-    old_text := copy_temporary_string(cast(string) text);
+    old_text := copy_temporary_string(to_string(text));
     if edits.count == 0 {
         // Always remember cursor before any edits
         cursor_before_edits = cursor;
@@ -46,7 +46,7 @@ text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> han
         case;                                   return false;
     }
 
-    if old_text != cast(string) text then last_edit_time = frame_time;
+    if old_text != to_string(text) then last_edit_time = frame_time;
 
     return true;
 }
@@ -86,12 +86,12 @@ text_input_fully_clear :: (using input: *Text_Input) {
     new_edit_group(input);
     clear_undos(input);
     clear_redos(input);
-    array_reset(*text);
+    reset(*text);
     cursor.pos = 0;
     cursor.sel = 0;
 }
 
-get_selected_offsets :: inline (cursor: Text_Input.Cursor) -> left: s64, right: s64 {
+get_selected_offsets :: inline (cursor: Text_Input.Cursor) -> left: s32, right: s32 {
     left  := min(cursor.sel, cursor.pos);
     right := max(cursor.sel, cursor.pos);
     return left, right;
@@ -142,7 +142,7 @@ replace_text :: (using input: *Text_Input, new_text: string) {
 copy :: (using input: Text_Input) {
     if !has_selection(cursor) return;
     left, right := get_selected_offsets(cursor);
-    os_clipboard_set_text(slice(cast(string) text, left, right - left));
+    os_clipboard_set_text(slice(to_string(text), left, right - left));
 }
 
 paste :: (using input: *Text_Input) {
@@ -171,12 +171,12 @@ undo :: (using input: *Text_Input) {
         if #complete e.type == {
             case .delete;  using e.delete;  insert_string_raw(input, offset_range.start, old_bytes);
             case .replace; using e.replace; replace_range_raw(input, offset_range.start, offset_range.start + xx new_bytes.count, old_bytes);
-            case .insert;  using e.insert;  delete_range_raw (input, offset, offset + new_bytes.count);
+            case .insert;  using e.insert;  delete_range_raw (input, offset, offset + cast(s32) new_bytes.count);
             case .insert_char; using e.insert_char;  delete_range_raw (input, offset, offset + char.count);
         }
     }
     // Add a new redo group
-    redo := array_add(*redos);
+    redo := add(*redos);
     redo.edits = edit_group.edits;
     redo.cursor = cursor;
     cursor = edit_group.cursor;
@@ -196,7 +196,7 @@ redo :: (using input: *Text_Input) {
         }
     }
     // Add a new undo group
-    undo := array_add(*undos);
+    undo := add(*undos);
     undo.edits = edit_group.edits;
     undo.cursor = cursor;
     cursor = edit_group.cursor;
@@ -310,7 +310,7 @@ delete_to_end_of_line :: inline (using input: *Text_Input) {
 delete_selection :: inline (using input: *Text_Input, copy_to_clipboard := false) {
     left, right := get_selected_offsets(cursor);
     if right > left {
-        if copy_to_clipboard then os_clipboard_set_text(slice(cast(string) text, left, right - left));
+        if copy_to_clipboard then os_clipboard_set_text(slice(to_string(text), left, right - left));
         delete_range(input, left, right);
     }
 
@@ -321,19 +321,19 @@ delete_selection :: inline (using input: *Text_Input, copy_to_clipboard := false
 new_edit_group :: (using input: *Text_Input) {
     if edits.count == 0 return;
 
-    new_group := array_add(*undos);
+    new_group := add(*undos);
     new_group.edits = to_owned_array(*edits);
     new_group.cursor = cursor_before_edits;
 
     cursor_before_edits = cursor;
 }
 
-insert_string_at_offset :: (using input: *Text_Input, offset: s64, new_str: string) {
+insert_string_at_offset :: (using input: *Text_Input, offset: s32, new_str: string) {
     new_insert_edit(input, offset, new_str);
     insert_string_raw(input, offset, new_str);
 }
 
-replace_range :: (using input: *Text_Input, start: s64, end: s64, new_str: string) {
+replace_range :: (using input: *Text_Input, start: s32, end: s32, new_str: string) {
     old_str := cast(string) array_view(text, start, end - start);
     if new_str == old_str return;
 
@@ -341,33 +341,33 @@ replace_range :: (using input: *Text_Input, start: s64, end: s64, new_str: strin
     replace_range_raw(input, start, end, new_str);
 }
 
-delete_range :: (using input: *Text_Input, start: s64, end: s64) {
+delete_range :: (using input: *Text_Input, start: s32, end: s32) {
     old_str := cast(string) array_view(text, start, end - start);
     new_delete_edit(input, xx start, xx end, old_str);
     delete_range_raw(input, start, end);
 }
 
-delete_range_raw :: (input: *Text_Input, start: s64, end: s64) {
+delete_range_raw :: (input: *Text_Input, start: s32, end: s32) {
     len := end - start;
     if len <= 0 return;
 
-    array_delete_bytes(*input.text, start, len);
+    delete_range(*input.text, start, len);
 }
 
-insert_string_raw :: (input: *Text_Input, offset: s64, str: string) {
+insert_string_raw :: (input: *Text_Input, offset: s32, str: string) {
     bytes: [] u8;
     bytes.data  = str.data;
     bytes.count = str.count;
-    array_insert_bytes_at(*input.text, offset, bytes);
+    insert_at(*input.text, offset, bytes);
 }
 
-replace_range_raw :: (input: *Text_Input, start: s64, end: s64, str: string) {
+replace_range_raw :: (input: *Text_Input, start: s32, end: s32, str: string) {
     delete_range_raw(input, start, end);
     insert_string_raw(input, start, str);
 }
 
 new_replace_edit :: (input: *Text_Input, start: s32, end: s32, old_str: string, new_str: string) {
-    edit := array_add(*input.edits);
+    edit := add(*input.edits);
     edit.type = .replace;
     using edit.replace;
     offset_range.start = start;
@@ -378,8 +378,8 @@ new_replace_edit :: (input: *Text_Input, start: s32, end: s32, old_str: string, 
     clear_redos(input);
 }
 
-new_insert_edit :: (input: *Text_Input, offset: s64, str: string) {
-    edit := array_add(*input.edits);
+new_insert_edit :: (input: *Text_Input, offset: s32, str: string) {
+    edit := add(*input.edits);
     edit.type = .insert;
     edit.insert.offset = offset;
     edit.insert.new_bytes = copy_string(str);
@@ -387,8 +387,8 @@ new_insert_edit :: (input: *Text_Input, offset: s64, str: string) {
     clear_redos(input);
 }
 
-new_insert_char_edit :: (input: *Text_Input, offset: s64, char: Utf8_Char) {
-    edit := array_add(*input.edits);
+new_insert_char_edit :: (input: *Text_Input, offset: s32, char: Utf8_Char) {
+    edit := add(*input.edits);
     edit.type = .insert_char;
     edit.insert_char.offset = offset;
     edit.insert_char.char = char;
@@ -397,7 +397,7 @@ new_insert_char_edit :: (input: *Text_Input, offset: s64, char: Utf8_Char) {
 }
 
 new_delete_edit :: (input: *Text_Input, start: s32, end: s32, old_str: string) {
-    edit := array_add(*input.edits);
+    edit := add(*input.edits);
     edit.type = .delete;
     using edit.delete;
     offset_range.start = start;
@@ -409,12 +409,12 @@ new_delete_edit :: (input: *Text_Input, start: s32, end: s32, old_str: string) {
 
 clear_redos :: (using input: *Text_Input) {
     for * redos deinit(it);
-    array_reset_keeping_memory(*redos);
+    reset_keeping_memory(*redos);
 }
 
 clear_undos :: (using input: *Text_Input) {
     for * undos deinit(it);
-    array_reset_keeping_memory(*undos);
+    reset_keeping_memory(*undos);
 }
 
 deinit :: inline (using edit_group: *Text_Input.Edit_Group) {
@@ -492,7 +492,7 @@ scan_through_similar_chars_on_the_right :: (using input: Text_Input, offset: s32
         if !is_non_word_char(char) { s.data, char = unicode_prev_character(s.data); }
     }
 
-    return cast(s32) min(text.count, s.data - text.data);
+    return min(text.count, cast(s32) (s.data - text.data));
 }
 
 get_char_at_offset :: (using input: Text_Input, offset: s32) -> u32 {
@@ -514,18 +514,19 @@ get_char_at_offset_as_string :: (using input: Text_Input, offset: s32) -> string
 #scope_export
 
 Text_Input :: struct {
-    text: [..] u8;
-    cursor: Cursor;
+    text:  Array(u8);
+    undos: Array(Edit_Group);
+    redos: Array(Edit_Group);
+    edits: Array(Edit);
 
-    undos: [..] Edit_Group;
-    redos: [..] Edit_Group;
-    edits: [..] Edit;
+    cursor: Cursor;
     cursor_before_edits: Cursor;
     last_edit_time: Apollo_Time;
 
     scroll_x: s32;
     scroll_anim: Tween_Animation(s32);
 
+    // TODO: make it a global flag
     mouse_selection_mode: bool;  // to indicate the mouse is being dragged to select text
 
     Cursor :: struct {
@@ -542,11 +543,11 @@ Text_Input :: struct {
         type: enum { insert; insert_char; replace; delete; };
         union {
             insert: struct {
-                offset: s64;
+                offset: s32;
                 new_bytes: string;
             };
             insert_char: struct {
-                offset: s64;
+                offset: s32;
                 char: Utf8_Char;  // same as `insert`, but no need to allocate strings on the heap
                                   // it's probably the most common edit so it's worth it
             };

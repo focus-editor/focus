@@ -54,7 +54,7 @@ refresh_dialog_entries :: (using dialog: *Generic_Choice_Dialog) {
     scroll_y = 0;
     selected = 0;
 
-    filter := construct_fuzzy_filter(cast(string) input.text);
+    filter := construct_fuzzy_filter(to_string(input.text));
 
     dialog.refresh_entries(filter);
 
@@ -87,10 +87,10 @@ move_dialog_cursor :: (using dialog: *Generic_Choice_Dialog, delta: s64, wrap :=
 }
 
 maybe_handle_dialog_input_event :: (dialog: *Generic_Choice_Dialog, using input: *Text_Input, event: Input.Event) -> handled: bool {
-    input_text := copy_temporary_string(cast(string) text);
+    input_text := copy_temporary_string(to_string(text));
     handled := text_input_handle_event(input, event);
     if handled {
-        if input_text != cast(string) input.text then refresh_dialog_entries(dialog);
+        if input_text != to_string(input.text) then refresh_dialog_entries(dialog);
         return true;
     }
     return false;

@@ -871,6 +871,7 @@ cpu_info: Cpu_X86;
 focus_allocator: Allocator;
 
 
+#load "array.jai";
 #load "layout.jai";
 #load "editors.jai";
 #load "buffer.jai";

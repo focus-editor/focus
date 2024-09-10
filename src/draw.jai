@@ -1655,7 +1655,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         // Draw search results
         if results && mode == .dropdown {
             // Remember how many fits per page
-            per_page = cast(s64) (results_rect.h / entry_height);
+            per_page = cast(s16) (results_rect.h / entry_height);
             if per_page <= 0 then per_page = 2;
 
             push_scissor(results_rect);
@@ -3115,7 +3115,7 @@ draw_finder :: () {
         // Drawing the scrollbar here so that scopes don't cover it
         draw_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
 
-        if finder.input.text && !results {
+        if !is_empty(finder.input.text) && !results {
             label := "Searching...";
             if !finder.request.in_progress {
                 label = "No results found.";
@@ -3308,7 +3308,7 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
 
     input_rect = shrink(input_rect, padding);
 
-    input_text := cast(string) text;
+    input_text := to_string(text);
     cursor_width := 2 * dpi_scale;
 
     // Maybe set cursor on mouse click
