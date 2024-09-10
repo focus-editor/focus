@@ -1492,6 +1492,9 @@ Buffer :: struct {
     };
 }
 
+// @Array
+#run print("Size of Buffer: %\n", size_of(Buffer));
+
 Focus_Config_Extra :: struct {
     using #as base: Buffer.Extra;
     base.type = .focus_config;

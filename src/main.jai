@@ -182,8 +182,9 @@ main :: () {
         Input.update_window_events();
 
         current_time := current_time_monotonic();
-        frame_dt   = cast(Time) min(to_float64_seconds(current_time - frame_time), MAX_FRAME_DT);
+        frame_dt   = min(to_float64_seconds(current_time - frame_time), MAX_FRAME_DT);
         frame_time = current_time;
+        frame_time64 = to_float64_seconds(frame_time);
 
         old_line_height = line_height;
         for Input.get_window_resizes() {
@@ -345,7 +346,7 @@ main :: () {
 
         if should_quit break;
 
-        if cast(Time) to_float64_seconds(current_time_monotonic() - frame_time) <= QUICK_FRAME_DT {
+        if to_float64_seconds(current_time_monotonic() - frame_time) <= QUICK_FRAME_DT {
             // It should be ok to sleep a bit after a quick frame to avoid pegging the core.
             sleep_milliseconds(2);
         }
@@ -704,13 +705,14 @@ dpi_scale := 1.0;
 fullscreen: bool;
 fullscreen_state: Saved_Window_Info;
 
-redraw_requested            := true;  // set to true to render the first frame
-should_quit                 := false;
+redraw_requested := true;  // set to true to render the first frame
+should_quit      := false;
 
-frame_time: Apollo_Time;          // ever-increasing time since start in seconds
-frame_dt:   Time = MAX_FRAME_DT;  // time delta since the last frame
-MAX_FRAME_DT:   Time : xx (1.0 / 60);
-QUICK_FRAME_DT: Time : xx (1.0 / 300);  // sorry 300Hz monitor users
+frame_time:   Apollo_Time;          // ever-increasing time since start in seconds
+frame_time64: float64;              // for when we don't need as much precision
+frame_dt: float64 = MAX_FRAME_DT;   // time delta since the last frame
+MAX_FRAME_DT:   float64 : (1.0 / 60);
+QUICK_FRAME_DT: float64 : (1.0 / 300);  // sorry 300Hz monitor users
 
 EDIT_GROUP_TIMEOUT :: 0.3;  // for undo/redo
 
@@ -813,8 +815,6 @@ dont_scroll_this_frame := false;  // because e.g. a mouse wheel event has been h
 dont_ignore_next_window_resize := false;
 
 Mods :: Input.Event.Modifier_Flags;
-
-Time :: #type,isa float64;
 
 project_dirs:  [..] Project_Dir;
 project_files: [..] string;  // individual files added to project

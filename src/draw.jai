@@ -967,7 +967,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         selection_mode.type = .chars;
         selection_mode.min_range.start = 0;
         selection_mode.min_range.end   = 0;
-        if editor.new_cursor_just_created_using_mouse && to_float64_seconds(frame_time - editor.last_cursor_created_using_mouse_at) >= cast(Time) (2 * DOUBLE_CLICK_SPEED) then editor.new_cursor_just_created_using_mouse = false;
+        if editor.new_cursor_just_created_using_mouse && to_float64_seconds(frame_time - editor.last_cursor_created_using_mouse_at) >= (2 * DOUBLE_CLICK_SPEED) then editor.new_cursor_just_created_using_mouse = false;
     }
 
     // Get the coordinates of all cursors
@@ -3316,13 +3316,13 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
         if mouse.left.just_pressed || mouse.left.is_dragging {
             rel_x := cast(s64) (mouse.pointer.x - input_rect.x) + scroll_x;
             cursor.pos = Simp.get_cursor_pos_for_width(font, input_text, rel_x);
-            if !shift_pressed() && !mouse_selection_mode then cursor.sel = cursor.pos;
+            if !shift_pressed() && text_input_selection_by_mouse != ui_id then cursor.sel = cursor.pos;
         }
-        if mouse.left.just_pressed then mouse_selection_mode = true;
+        if mouse.left.just_pressed then text_input_selection_by_mouse = ui_id;
         if mouse.left.just_double_clicked then select_word(input);
         if mouse.left.just_triple_clicked then select_all(input);
     }
-    if mouse.left.just_released || !mouse.left.is_down then mouse_selection_mode = false;
+    if mouse.left.just_released || !mouse.left.is_down then text_input_selection_by_mouse = .none;
 
     // @Speed: we currently don't limit the text size, so if it's too big we'll do a lot of work here every frame
     cursor_pos_x     := Simp.get_text_width(font, slice(input_text, 0, cursor.pos));
@@ -3879,6 +3879,10 @@ panel_grab_point: Vector2;
 
 // What to select when dragging
 selection_mode: Selection_Mode;
+
+// To indicate that we're dragging the mouse to select text in a text input
+// A global variable because we can only do that to one text input at a time
+text_input_selection_by_mouse: Ui_Id = .none;
 
 scissor_stack: [..] Rect;
 

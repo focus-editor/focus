@@ -1,16 +1,16 @@
 add_user_error :: inline (message: string, args: .. Any, dismiss_in_seconds: float64 = 10, tag := Tag.none ) {
-    add_user_message(message, ..args, .error, cast(Time) dismiss_in_seconds, tag);
+    add_user_message(message, ..args, .error, dismiss_in_seconds, tag);
 } @PrintLike
 
 add_user_warning :: inline (message: string, args: .. Any, dismiss_in_seconds: float64 = 10, tag := Tag.none) {
-    add_user_message(message, ..args, .warning, cast(Time) dismiss_in_seconds, tag);
+    add_user_message(message, ..args, .warning, dismiss_in_seconds, tag);
 } @PrintLike
 
 add_success_message :: inline (message: string, args: .. Any, dismiss_in_seconds: float64 = 10, tag := Tag.none) {
-    add_user_message(message, ..args, .success, cast(Time) dismiss_in_seconds, tag);
+    add_user_message(message, ..args, .success, dismiss_in_seconds, tag);
 } @PrintLike
 
-add_user_message :: (message: string, args: .. Any, level: User_Message.Level, dismiss_in_seconds: Time, tag: Tag) {
+add_user_message :: (message: string, args: .. Any, level: User_Message.Level, dismiss_in_seconds: float64, tag: Tag) {
     push_allocator(focus_allocator);  // so that we can call this function from anywhere. We always want to allocate messages using the same allocator
     array_add(*user_messages, User_Message.{
         message            = sprint(message, ..args),
@@ -59,7 +59,7 @@ User_Message :: struct {
     level: Level;
     tag: Tag;
     time: Apollo_Time;
-    dismiss_in_seconds: Time;
+    dismiss_in_seconds: float64;
     dismissed: bool;
 
     Level :: enum { warning; error; success; }

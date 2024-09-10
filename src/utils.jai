@@ -411,18 +411,18 @@ get_tmp_tabs :: (num: int) -> string {
     return tabs;
 }
 
-start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: Time = xx 0.0) {
+start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: float64 = 0.0) {
     anim.start  = start;
     anim.target = target;
     if speed > 0 then anim.speed = speed;
 
     // Pretend the animation started last frame so we start moving right away.
     // If the current frame was t=0, then the movement would simply be delayed one frame.
-    anim.started_at = frame_time - to_apollo(frame_dt);
+    anim.started_at = frame_time64 - frame_dt;
 }
 
 get_animation_value :: (using anim: Tween_Animation($T)) -> T {
-    t := (to_float64_seconds(frame_time - started_at) / speed);
+    t := (frame_time64 - started_at) / speed;
     t = clamp(t, 0, 1);
     if #complete func == {
         case .lerp;       return start + cast(T) (cast(float)(target - start) * t);
@@ -518,8 +518,8 @@ table_find_or_default :: (table: *Table, key: table.Key_Type) -> table.Value_Typ
 
 Tween_Animation :: struct(T: Type) {
     start, target: T;
-    started_at: Apollo_Time;
-    speed : Time = xx 0.1;  // how many seconds to finish
+    started_at: float64;
+    speed : float64 = xx 0.1;  // how many seconds to finish
     func: enum { lerp; smoothstep; } = .smoothstep;
 }
 
