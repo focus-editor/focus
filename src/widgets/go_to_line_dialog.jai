@@ -76,7 +76,7 @@ close_go_to_line_dialog :: (jump_to_original_cursor := false) {
     } else if jumped {
         // We should remove the selection that was only there for demonstration
         cursor := leave_only_original_cursor(editor);
-        add_paste_animation(editor, get_selection(cursor));
+        add_paste_animation(editors.active, get_selection(cursor));
         cursor.sel = cursor.pos;
         editor.cursor_moved = .jumped;
         editor.scroll_to_cursor = .yes;

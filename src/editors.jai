@@ -611,7 +611,7 @@ go_to_line :: (editor: *Editor, buffer: Buffer, line: s64, col: s32 = -1) {
         if cursor.pos > line_end then cursor.pos = line_end;
         cursor.sel = cursor.pos;
     }
-    add_paste_animation(editor, .{ line_start, line_end});
+    add_paste_animation(editors.active, .{ line_start, line_end});
     editor.cursor_moved = .jumped;
     editor.scroll_to_cursor = .yes;
 }
@@ -715,10 +715,11 @@ get_max_y_scroll :: (editor: Editor, buffer: Buffer) -> s32 {
     return max(cast(s32) (get_max_line_num(editor, buffer)  * line_height), 0);
 }
 
-add_paste_animation :: (using editor: *Editor, range: Offset_Range) {
+add_paste_animation :: (editor_id: s64, range: Offset_Range) {
     if config.settings.disable_that_annoying_paste_effect return;
 
-    anim := array_add(*paste_animations);
+    anim := array_add(*editor_paste_animations);
+    anim.editor_id = editor_id;
     anim.range = range;
     anim.started_at = frame_time;
 }
@@ -1072,7 +1073,6 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
 
 free_editor :: (using editor: *Editor) {
     array_reset(*cursors);
-    array_reset(*paste_animations);
     array_reset(*highlights);
     array_reset(*search_bar.results);
     array_reset(*wrapped_line_starts);
@@ -2794,7 +2794,7 @@ duplicate_lines :: (editor: *Editor, buffer: *Buffer) {
         str := copy_temporary_string(get_range_as_string(buffer, line.range));
         if line.is_last then str = tprint("\n%", str);  // make sure duplication works correctly on the last line of the buffer
         insert_string_at_offset(buffer, line.range.end, str);
-        add_paste_animation(editor, .{ start = line.range.end, end = line.range.end + cast(s32)str.count });
+        add_paste_animation(editors.active, .{ start = line.range.end, end = line.range.end + cast(s32)str.count });
 
         for * cursor : editor.cursors {
             if line.range.start <= cursor.pos {  // no need to check for cursor.sel because we have whole line ranges
@@ -2905,7 +2905,7 @@ join_lines :: (editor: *Editor, buffer: *Buffer, in_between := " ") {
 
         new_str := builder_to_string(*b,, allocator = temp);
         replace_range(buffer, range.range, new_str);
-        add_paste_animation(editor, .{ start = range.start + cast(s32)first_line.count, end = range.start + cast(s32)new_str.count });
+        add_paste_animation(editors.active, .{ start = range.start + cast(s32)first_line.count, end = range.start + cast(s32)new_str.count });
 
         offset_delta += new_str.count - range_str.count;
     }
@@ -3082,7 +3082,7 @@ paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
 
             cursor.pos   += xx str.count;
             offset_delta += str.count;
-            add_paste_animation(editor, .{ line_start, line_start + cast(s32) str.count });
+            add_paste_animation(editors.active, .{ line_start, line_start + cast(s32) str.count });
         }
         // If they have the same number of entries paste one slice per cursor
         else if editor.cursors.count == clipboard.slices.count {
@@ -3096,7 +3096,7 @@ paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
 
             cursor.pos    = xx (selection.start + str.count);
             offset_delta += str.count - (selection.end - selection.start);
-            add_paste_animation(editor, .{ selection.start, selection.start + cast(s32) str.count });
+            add_paste_animation(editors.active, .{ selection.start, selection.start + cast(s32) str.count });
         }
         // Paste the entire clipboard for each cursor
         else {
@@ -3107,7 +3107,7 @@ paste_from_clipboard :: (editor: *Editor, buffer: *Buffer) {
 
             cursor.pos    = xx (selection.start + str.count);
             offset_delta += str.count - (selection.end - selection.start);
-            add_paste_animation(editor, .{ selection.start, selection.start + cast(s32) str.count });
+            add_paste_animation(editors.active, .{ selection.start, selection.start + cast(s32) str.count });
         }
     }
 
@@ -3523,9 +3523,6 @@ Editor :: struct {
 
     last_width_in_chars: s32 = S32_MAX;
 
-    // TODO: make a global array instead
-    paste_animations: [..] Paste_Animation;
-
     scroll_to_cursor: enum u8 { no; yes; yes_new_editor; }  // trigger a scroll so that the cursor is in the center vertically
     line_wrap:        enum u8 { off; to_enable; to_disable; on; };
     refresh_selection  := false;
@@ -3617,6 +3614,7 @@ Text_Highlight :: struct {
 }
 
 Paste_Animation :: struct {
+    editor_id: s64;
     range: Offset_Range;
     coords_range: Coords_Range;
     initted := false;
@@ -3662,6 +3660,8 @@ most_recent_buffers: [..] s64;  // updated when an editor is activated, used to 
 
 editors: Editor_State;
 editor_closing_id := -1;  // holds the id of the editor being closed (so that we can change the layout when it's done closing)
+
+editor_paste_animations: [..] Paste_Animation;
 
 editor_history: Editor_History;
 

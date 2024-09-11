@@ -249,7 +249,7 @@ color_preview_draw_color_picker :: (rect: Rect) {
     if count != 6 && count != 8 return;
 
     on_left := saved_position == .left;
-    draw_color_picker(editor, buffer, rect, .{color_start, color_end}, on_left);
+    draw_color_picker(target_editor_id, editor, buffer, rect, .{color_start, color_end}, on_left);
 }
 
 color_preview_jump_to_color_name :: (color_name: string) {
@@ -268,7 +268,7 @@ color_preview_jump_to_color_name :: (color_name: string) {
     cursor := leave_only_original_cursor(editor);
     cursor.pos = cast(s32) offset;
     cursor.sel = cursor.pos;
-    add_paste_animation(editor, get_real_line_range(buffer, offset_to_real_line(buffer, cursor.pos)));
+    add_paste_animation(target_editor_id, get_real_line_range(buffer, offset_to_real_line(buffer, cursor.pos)));
     editor.cursor_moved = .jumped;
     editor.scroll_to_cursor = .yes;
 }

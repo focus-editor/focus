@@ -162,6 +162,7 @@ color_picker_set_color :: (color: Vector4, finalize := false) {
 
 
 Color_Change_Buffer_Info :: struct {
+    editor_id: s64;
     editor: *Editor;
     buffer: *Buffer;
     range: Offset_Range;

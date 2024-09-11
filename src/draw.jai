@@ -498,7 +498,7 @@ maybe_draw_color_preview_panel :: () {
     color_preview_draw_color_picker(color_picker_rect);
 }
 
-draw_color_picker :: (editor: *Editor, buffer: *Buffer, picker_rect: Rect, range: Offset_Range, on_left: bool) {
+draw_color_picker :: (editor_id: s64, editor: *Editor, buffer: *Buffer, picker_rect: Rect, range: Offset_Range, on_left: bool) {
     if !is_valid(picker_rect)  return;
 
     color_change_callback :: (rgba: Vector4, hsl: Vector3, finalize: bool) {
@@ -506,7 +506,7 @@ draw_color_picker :: (editor: *Editor, buffer: *Buffer, picker_rect: Rect, range
         str := color_to_hex(rgba, exclude_hash = true);
         for i : 0 .. str.count-1  str[i] = to_upper(str[i]);
         old_str := cast(string) array_view(buffer.bytes, range.start, range.end - range.start);
-        if old_str != str then add_paste_animation(editor, .{ range.start, range.end});
+        if old_str != str then add_paste_animation(editor_id, .{ range.start, range.end});
         if finalize {
             new_edit_group(buffer, editor);
             replace_range(buffer, range, str);
@@ -520,7 +520,7 @@ draw_color_picker :: (editor: *Editor, buffer: *Buffer, picker_rect: Rect, range
     }
 
     color_picker_dialog.color_change_callback = color_change_callback;
-    color_change_callback_data := Color_Change_Buffer_Info.{editor, buffer, range};
+    color_change_callback_data := Color_Change_Buffer_Info.{editor_id, editor, buffer, range};
     color_picker_dialog.color_change_callback_data = *color_change_callback_data;
 
     ui_id    := Ui_Id.color_picker_dialog;
@@ -1348,21 +1348,21 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         }
 
         // Draw paste animations
-        for * anim : editor.paste_animations {
+        for * anim : editor_paste_animations {
+            t := to_float64_seconds(frame_time - anim.started_at) / Paste_Animation.SPEED;
+            if t >= 1 { remove anim; continue; }
+            if anim.editor_id != editor_id continue;
+
             if !anim.initted {
                 // We can't calculate coords when we're adding the animation, so have to defer to right before drawing
                 anim.initted = true;
                 anim.coords_range.start = offset_to_coords(editor, buffer, anim.range.start);
                 anim.coords_range.end   = offset_to_coords(editor, buffer, anim.range.end);
             }
-            t := to_float64_seconds(frame_time - anim.started_at) / Paste_Animation.SPEED;
-            if t < 1 {
-                draw_range(anim.coords_range, editor, buffer, visible_lines_start, visible_lines_end, text_origin, Color.PASTE_ANIMATION, alpha = xx (1 - t));
-            } else {
-                remove anim;
-            }
+
+            draw_range(anim.coords_range, editor, buffer, visible_lines_start, visible_lines_end, text_origin, Color.PASTE_ANIMATION, alpha = xx (1 - t));
         }
-        if editor.paste_animations.count > 0 then redraw_requested = true;
+        if editor_paste_animations.count > 0 then redraw_requested = true;
 
         // Draw inactive cursors before text
         if !cursors_active && !search_bar_is_open(editor) && config.settings.cursor_as_block && !as_build_panel {
@@ -2636,13 +2636,15 @@ draw_unsaved_buffers_dialog :: () {
         message = "Please decide what to do with the following file:";
     }
 
+    margin  := floor(12 * dpi_scale);
+
     draw_generic_confirm_dialog(
         *unsaved_buffers_dialog,
         get_ui_id_from_loc(),
         header,
         message,
         draw_extra_buffer_names,
-        extra_height = font_ui_medium_line_height * num_unsaved_buffers,
+        extra_height = font_ui_medium_line_height * num_unsaved_buffers + margin,
     );
 }
 
