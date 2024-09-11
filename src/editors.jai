@@ -1490,9 +1490,8 @@ new_edit_group :: (buffer: *Buffer, editor: *Editor) {
 }
 
 save_all :: () {
-    for * buffer, buffer_id : open_buffers {
-        if buffer.modified  save(buffer_id);
-    }
+    unsaved_buffer_ids := get_unsaved_buffer_ids();
+    for < unsaved_buffer_ids  save(it);
 }
 
 #scope_file
@@ -3518,6 +3517,7 @@ Editor :: struct {
     highlights: [..] Text_Highlight;
     wrapped_line_starts: [..] s32;  // empty when line wrap is off
 
+    // TODO: no need for s64. Maybe even s16? How many cursors do we allow?
     main_cursor: s64;      // newly added cursors become main so that we jump to them
     original_cursor: s64;  // we remember the original cursor when first creating multiple cursors (and go back to it on escape)
 
@@ -3535,7 +3535,7 @@ Editor :: struct {
     search_whole_words := false;  // used when creating new cursors
     cursor_moved := Cursor_Movement.has_not_moved; // this may trigger a scroll so that the cursor is within acceptable bounds
 
-    // TODO: use a global flag rather than per editor?
+    // TODO: use a global flag rather than per editor for all of the below?
     last_cursor_created_using_mouse_at: Apollo_Time;
     new_cursor_just_created_using_mouse := false;  // useful to know in order to handle select-by-drag and select-word with the new cursor
     initial_middle_mouse_coords: Coords; // used for creating cursors while dragging middle mouse button

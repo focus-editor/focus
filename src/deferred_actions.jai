@@ -34,6 +34,7 @@ defer_action_close_project :: () {
 }
 
 defer_action_quit :: () {
+    clear_action_queue();
     push_action(.quit);
     push_action(.kill_running_command);
     push_action(.save_all_buffers);
@@ -156,21 +157,23 @@ execute_quit :: (action: Deferred_Action) -> Action_Result {
 }
 
 execute_save_all_buffers :: (action: Deferred_Action) -> Action_Result {
-    result := unsaved_buffers_dialog_get_result(action.id);
+    result := dialog_get_result(*unsaved_buffers_dialog, action.id);
     if #complete result == {
         case .UNINITTED;
             if unsaved_buffers_exist() {
-                show_unsaved_buffers_dialog(action.id);
+                show_dialog(*unsaved_buffers_dialog, action.id, .{});
                 return .WAIT;
             }
             return .DONE;
-        case .SAVE_ALL;
+
+        case .OK_TO_ALL; #through;
+        case .OK;
             remove_top_action();
             save_all();
             return .NEXT;
 
+        case .NO_TO_ALL; return .DONE;
         case .PENDING;   return .WAIT;
-        case .DONT_SAVE; return .DONE;
         case .CANCEL;    return .CANCEL;
     }
 }
@@ -235,8 +238,9 @@ execute_delete :: (action: Deferred_Action) -> Action_Result {
             show_dialog(*delete_file_dialog, action.id, .{ buffer_id = buffer_id });
             return .WAIT;
 
-        case .OK_ALL; #through;
-        case .OK;
+        case .OK_TO_ALL; #through;
+        case .OK;        #through;
+        case .NO_TO_ALL;
             deleted := delete_buffer_from_disk(buffer);
             if !deleted {
                 add_user_error("Couldn't delete file '%'", buffer.file.full_path);
@@ -260,8 +264,9 @@ execute_confirm_overwrite :: (action: Deferred_Action) -> Action_Result {
             show_dialog(*confirm_overwrite_dialog, action.id, .{ path = file_path });
             return .WAIT;
 
-        case .OK_ALL; #through;
-        case .OK;
+        case .OK_TO_ALL; #through;
+        case .OK;        #through;
+        case .NO_TO_ALL;
             buffer := *open_buffers[buffer_id];
 
             if buffer.has_file && platform_path_equals(buffer.file.full_path, file_path) {
@@ -294,8 +299,9 @@ execute_kill_running_command :: (action: Deferred_Action) -> Action_Result {
             show_dialog(*kill_running_command_dialog, action.id, .{ });
             return .WAIT;
 
-        case .OK_ALL; #through;
-        case .OK;
+        case .OK_TO_ALL; #through;
+        case .OK;        #through;
+        case .NO_TO_ALL;
             build_kill_running_command();
             return .DONE;
 

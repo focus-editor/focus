@@ -290,7 +290,7 @@ main :: () {
                 case .delete_file_dialog;           handled = dialog_handle_event(*delete_file_dialog, event);
                 case .go_to_line_dialog;            handled = go_to_line_dialog_handle_event(event);
                 case .switch_to_project_dialog;     handled = switch_to_project_dialog_handle_event(event);
-                case .unsaved_buffers_dialog;       handled = unsaved_buffers_dialog_handle_event(event);
+                case .unsaved_buffers_dialog;       handled = dialog_handle_event(*unsaved_buffers_dialog, event);
                 case .confirm_overwrite_dialog;     handled = dialog_handle_event(*confirm_overwrite_dialog, event);
                 case .commands_dialog;              handled = dialog_handle_event(*commands_dialog, event);
                 case .kill_running_command_dialog;  handled = dialog_handle_event(*kill_running_command_dialog, event);

@@ -2603,75 +2603,14 @@ draw_theme_dialog :: () {
 }
 
 draw_unsaved_buffers_dialog :: () {
-    ui_id := Ui_Id.unsaved_buffers;
-
-    unsaved_buffers := unsaved_buffers_dialog_get_buffer_ids();
-    if !unsaved_buffers then panic_messagebox("Unsaved buffers dialog is attempted to be drawn, but no unsaved buffers present. This is a bug. Closing...");
-
-    // Additional message is assumed to be 1 line only
-    additional_message := "";
-    // TODO: show this again
-    // if unsaved_buffers_dialog.mode == .reload_workspace {
-    //     additional_message = "Workspace needs to reload. Unsaved files could be lost.";
-    // }
-
-    margin  := floor(12 * dpi_scale);
-    padding := floor( 4 * dpi_scale);
-    entry_height  := font_ui_line_height + padding * 2;
-    button_height := font_ui_medium_line_height + 2 * padding;
-    header_height := font_ui_medium_line_height + 2 * margin + 4 * dpi_scale;
-
-    box_rect := Rect.{
-        w = floor(clamp(screen.w * 0.3, 600 * dpi_scale, 1500 * dpi_scale)),
-        h = header_height + (entry_height + margin / 2) * unsaved_buffers.count + margin + padding + button_height + margin,
-    };
-    if additional_message then box_rect.h += entry_height + margin;
-    box_rect.x = floor((screen.w - box_rect.w) / 2);
-    box_rect.y = screen.h - box_rect.h - floor(clamp(100 * dpi_scale, 0, (screen.h - box_rect.h) / 2));
-
-    maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
-
-    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3);
-
-    header_rect, buffers_rect := cut_top(box_rect, header_height);
-    buffers_rect = shrink(buffers_rect, margin);
-
-    // Header
-    {
-        push_scissor(header_rect);
+    draw_extra_buffer_names :: (extra_rect: Rect, margin: float, padding: float) {
+        push_scissor(extra_rect);
         defer pop_scissor();
 
-        draw_rounded_rect_with_corners(header_rect, Color.BACKGROUND_4, tl = .in, tr = .in, br = .none, bl = .none);
+        entry_height  := font_ui_line_height + padding * 2;
+        entry_rect := cut_top(extra_rect, entry_height);
 
-        pen_x := cast(s32) (header_rect.x + 2 * margin);
-        pen_y := cast(s32) (header_rect.y + (header_rect.h - font_ui_medium.character_height) / 2 + 2);
-        header_text := "There are unsaved files. Continue?";
-        if unsaved_buffers.count == 1 then header_text = "There is an unsaved file. Continue?";
-        Simp.draw_text(font_ui_medium, pen_x, pen_y, header_text, xx Color.UI_DEFAULT);
-
-        hr := cut_bottom(header_rect, 1);
-        draw_rect(hr, Color.BACKGROUND_1);
-    }
-
-    // Unsaved buffers
-    {
-        push_scissor(buffers_rect);
-        defer pop_scissor();
-
-        entry_rect := cut_top(buffers_rect, entry_height);
-
-        if additional_message {
-            Simp.draw_text(
-                font_ui,
-                xx (entry_rect.x + margin),
-                xx (entry_rect.y + (entry_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale),
-                additional_message,
-                xx Color.UI_DEFAULT,
-            );
-            entry_rect.y -= entry_rect.h + margin;
-        }
-
-        for unsaved_buffers {
+        for unsaved_buffers_dialog.unsaved_buffer_ids {
             buffer := *open_buffers[it];
             {
                 push_scissor(entry_rect);
@@ -2685,29 +2624,26 @@ draw_unsaved_buffers_dialog :: () {
 
                 width, _ = draw_file_info(buffer, width, padding, pen);
             }
-
             entry_rect.y -= entry_rect.h + margin / 2;
         }
     }
 
-    // Buttons
-    {
-        buttons_row_rect := cut_bottom(buffers_rect, button_height);
-
-        activated, width := draw_button(font_ui, "Cancel", Color.UI_NEUTRAL, Color.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
-        if activated close_unsaved_buffers_dialog(.CANCEL);
-
-        buttons_row_rect.w -= width + margin;
-
-        activated, width = draw_button(font_ui, "Don't Save", Color.UI_WARNING, Color.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
-        if activated close_unsaved_buffers_dialog(.DONT_SAVE);
-
-        buttons_row_rect.w -= width + margin;
-
-        save_label := ifx unsaved_buffers.count == 1 then "    Save    " else "  Save All  ";
-        activated, width = draw_button(font_ui, save_label, Color.UI_WARNING, Color.UI_DEFAULT, ui_id, buttons_row_rect, .right, margin / 2, margin);
-        if activated close_unsaved_buffers_dialog(.SAVE_ALL);
+    num_unsaved_buffers := unsaved_buffers_dialog.unsaved_buffer_ids.count;
+    header  := "Unsaved files exist. Continue?";
+    message := "Please decide what to do with the following files:";
+    if num_unsaved_buffers == 1 {
+        header  = "Unsaved file. Continue?";
+        message = "Please decide what to do with the following file:";
     }
+
+    draw_generic_confirm_dialog(
+        *unsaved_buffers_dialog,
+        get_ui_id_from_loc(),
+        header,
+        message,
+        draw_extra_buffer_names,
+        extra_height = font_ui_medium_line_height * num_unsaved_buffers,
+    );
 }
 
 Draw_Confirm_Dialog_Extra_Fn :: #type (extra_rect: Rect, margin: float, padding: float);

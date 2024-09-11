@@ -1225,14 +1225,29 @@ init_buffer :: (buffer: *Buffer) {
     init(*buffer.content_lock);
 }
 
+get_unsaved_buffer_ids :: () -> [] s64 /* temp */ {
+    result: [..] s64;
+    result.allocator = temp;
+
+    for buffer, buffer_id : open_buffers {
+        if is_unsaved(buffer) array_add(*result, buffer_id);
+    }
+
+    return result;
+}
+
 unsaved_buffers_exist :: () -> bool {
     // Linear search, hmmmm, that sounds slow.
     // Perhaps we should create an unsaved buffers microservice,
     // which would tell us if they exist in a O(1) time?
     for open_buffers {
-        if it.modified && !it.internal return true;
+        if is_unsaved(it) return true;
     }
     return false;
+}
+
+is_unsaved :: (buffer: Buffer) -> bool {
+    return buffer.modified && !buffer.readonly && !buffer.internal;
 }
 
 remove_all_buffers :: () {

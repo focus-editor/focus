@@ -29,6 +29,7 @@ show_dialog :: (dialog: *Generic_Confirm_Dialog($Details), action_id: Deferred_A
         dialog.details = details;
     }
     active_global_widget = dialog.global_widget_id;
+    if dialog.on_show then dialog.on_show();
 }
 
 close_dialog :: (dialog: *Generic_Confirm_Dialog($Details), result: Generic_Confirm_Dialog_Result) {
@@ -49,7 +50,8 @@ Generic_Confirm_Dialog :: struct(Details: Type) {
     using details: Details;
 
     set_details: (details: Details) -> ();
-    get_buttons: () -> [] Generic_Confirm_Dialog_Button;  // this should really be a constant on the struct itself, but the compiler won't allow setting it for some reason, looks like a bug
+    get_buttons: () -> [] Generic_Confirm_Dialog_Button;  // this could've been a constant on the struct itself, but the compiler won't allow setting it for some reason, looks like a bug
+    on_show:     () -> ();
 }
 
 Generic_Confirm_Dialog_Button :: struct {
@@ -60,4 +62,4 @@ Generic_Confirm_Dialog_Button :: struct {
     text_color: Color;
 }
 
-Generic_Confirm_Dialog_Result :: enum { UNINITTED; PENDING; OK_ALL; OK; CANCEL; }
+Generic_Confirm_Dialog_Result :: enum { UNINITTED; PENDING; OK; OK_TO_ALL; NO_TO_ALL; CANCEL; }
