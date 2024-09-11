@@ -56,7 +56,7 @@ apply_selected_theme :: () {
     if buffer.dirty rescan_for_lines(buffer);
 
     // Parse the buffer again because we can't trust the offsets we remembered when we last parsed it
-    result := parse_config(config_to_change.path, config_to_change.path, cast(string) buffer.bytes, for_highlighting = true /* lying */);
+    result := parse_config(config_to_change.path, config_to_change.path, cast(string) buffer.bytes, for_highlighting = true /* lying */,, allocator = temp);
     offsets := result.config.offsets;  // even if it fails to parse, it's OK, the offsets might just be -1
 
     theme := filtered[selected];
