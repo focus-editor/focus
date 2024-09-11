@@ -3510,9 +3510,6 @@ copy_current_line_info :: (using editor: *Editor, buffer: Buffer) {
 Editor :: struct {
     buffer_id: s64;
 
-    viewport: Viewport;
-    search_bar: Search_Bar;
-
     cursors: [..] Cursor;
     highlights: [..] Text_Highlight;
     wrapped_line_starts: [..] s32;  // empty when line wrap is off
@@ -3534,6 +3531,9 @@ Editor :: struct {
     refresh_selection  := false;
     search_whole_words := false;  // used when creating new cursors
     cursor_moved := Cursor_Movement.has_not_moved; // this may trigger a scroll so that the cursor is within acceptable bounds
+
+    viewport: Viewport;
+    search_bar: Search_Bar;
 
     // TODO: use a global flag rather than per editor for all of the below?
     last_cursor_created_using_mouse_at: Apollo_Time;

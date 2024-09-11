@@ -36,15 +36,8 @@ deinit_build_system :: () {
 }
 
 execute_build_command :: (command: *Build_Command) {
-    if !workspace_scan_complete {
-        add_user_warning("The workspace is still being scanned. Please wait for it to complete before executing build commands.", dismiss_in_seconds = 5, tag = .build);
-        return;
-    }
-
-    if running_command {
-        add_user_warning("A build command is still running", dismiss_in_seconds = 5, tag = .build);
-        return;
-    }
+    assert(workspace_scan_complete);
+    assert(!running_command);
 
     clear_user_messages(.build);
 

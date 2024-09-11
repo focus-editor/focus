@@ -435,8 +435,7 @@ maybe_execute_a_build_command :: (action: Action_Build) -> handled: bool {
         if editor && buffer.has_file save_buffer(buffer, editor.buffer_id);
     }
 
-    command := ifx command_id > 0 then *config.build.commands[command_id-1] else *config.build.defaults;
-    execute_build_command(command);
+    defer_action_build_command(command_id);
 
     return true;
 }

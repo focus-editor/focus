@@ -40,6 +40,13 @@ defer_action_quit :: () {
     push_action(.save_all_buffers);
 }
 
+defer_action_build_command :: (command_id: s64) {
+    clear_action_queue();
+    push_action(.build_command, .{ build_command = .{ command_id = command_id } });
+    push_action(.kill_running_command);
+    push_action(.wait_for_workspace_scanning_to_finish);
+}
+
 defer_action_save_as :: (buffer_id: s64) {
     push_action(.save_as, .{ save_as = .{ buffer_id = buffer_id } });
 }
@@ -71,15 +78,17 @@ execute_top_action :: () -> Action_Result {
 
     action := actions[actions.count-1];
     if #complete action.kind == {
-        case .quit;                     return execute_quit(action);
-        case .save_as;                  return execute_save_as(action);
-        case .save_all_buffers;         return execute_save_all_buffers(action);
-        case .delete;                   return execute_delete(action);
-        case .confirm_overwrite;        return execute_confirm_overwrite(action);
-        case .kill_running_command;     return execute_kill_running_command(action);
-        case .load_project_config;      return execute_load_project_config(action);
-        case .close_project;            return execute_close_project(action);
-        case .reload_workspace;         return execute_reload_workspace(action);
+        case .quit;                                     return execute_quit(action);
+        case .save_as;                                  return execute_save_as(action);
+        case .save_all_buffers;                         return execute_save_all_buffers(action);
+        case .delete;                                   return execute_delete(action);
+        case .confirm_overwrite;                        return execute_confirm_overwrite(action);
+        case .kill_running_command;                     return execute_kill_running_command(action);
+        case .load_project_config;                      return execute_load_project_config(action);
+        case .close_project;                            return execute_close_project(action);
+        case .reload_workspace;                         return execute_reload_workspace(action);
+        case .build_command;                            return execute_build_command(action);
+        case .wait_for_workspace_scanning_to_finish;    return execute_wait_for_scanning(action);
     }
 }
 
@@ -103,6 +112,8 @@ remove_top_action :: () {
         case .kill_running_command;
         case .reload_workspace;
         case .close_project;
+        case .build_command;
+        case .wait_for_workspace_scanning_to_finish;
     }
 }
 
@@ -124,6 +135,7 @@ Deferred_Action :: struct {
         delete:                 struct { buffer_id: s64; }
         load_project_config:    struct { path: string; }
         reload_workspace:       struct { automatic: bool; }
+        build_command:          struct { command_id: s64; }
     }
 
     Kind :: enum {
@@ -133,9 +145,11 @@ Deferred_Action :: struct {
         delete;
         confirm_overwrite;
         kill_running_command;
+        build_command;
         load_project_config;
         close_project;
         reload_workspace;
+        wait_for_workspace_scanning_to_finish;
     }
 }
 
@@ -303,7 +317,9 @@ execute_kill_running_command :: (action: Deferred_Action) -> Action_Result {
         case .OK;        #through;
         case .NO_TO_ALL;
             build_kill_running_command();
-            return .DONE;
+            kill_running_command_dialog.result = .PENDING;
+            redraw_requested = true;
+            return .WAIT;
 
         case .PENDING;   return .WAIT;
         case .CANCEL;    return .CANCEL;
@@ -332,7 +348,23 @@ execute_close_project :: (action: Deferred_Action) -> Action_Result {
 
 execute_reload_workspace :: (action: Deferred_Action) -> Action_Result {
     reload_workspace(action.details.reload_workspace.automatic);
-    return .CANCEL;
+    return .CANCEL;  // final command
+}
+
+execute_build_command :: (action: Deferred_Action) -> Action_Result {
+    command_id := action.details.build_command.command_id;
+    command := ifx command_id > 0 then *config.build.commands[command_id-1] else *config.build.defaults;
+    execute_build_command(command);
+    return .CANCEL;  // final command
+}
+
+execute_wait_for_scanning :: (action: Deferred_Action) -> Action_Result {
+    clear_user_messages(.build);
+    if !workspace_scan_complete {
+        add_user_warning("Waiting for the workspace scan to finish...", tag = .build);
+        return .WAIT;
+    }
+    return .DONE;
 }
 
 
