@@ -786,8 +786,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                         array_unordered_remove_by_index(*cursors, i);
                         if main_cursor >= i     then main_cursor -= 1;
                         if original_cursor >= i then original_cursor -= 1;
-                        main_cursor     = clamp(main_cursor,     0, cursors.count - 1);
-                        original_cursor = clamp(original_cursor, 0, cursors.count - 1);
+                        main_cursor     = clamp(main_cursor,     0, cast(s32) cursors.count - 1);
+                        original_cursor = clamp(original_cursor, 0, cast(s32) cursors.count - 1);
                         deleted_cursor = true;
                         break;
                     }
@@ -800,7 +800,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 new_cursor.pos = click_offset;
                 new_cursor.sel = new_cursor.pos;
 
-                main_cursor = cursors.count - 1;
+                main_cursor = cast(s32) cursors.count - 1;
                 new_cursor_just_created_using_mouse = true;
                 last_cursor_created_using_mouse_at = frame_time;
             }

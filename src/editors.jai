@@ -618,7 +618,7 @@ go_to_line :: (editor: *Editor, buffer: Buffer, line: s64, col: s32 = -1) {
 
 leave_only_original_cursor :: (using editor: *Editor) -> *Cursor {
     // Remove all cursors except the original one
-    cursor := cursors[min(original_cursor, cursors.count-1)];
+    cursor := cursors[min(original_cursor, cast(s32)cursors.count-1)];
     cursors.count = 1;
     original_cursor = 0;
     main_cursor = 0;
@@ -628,7 +628,7 @@ leave_only_original_cursor :: (using editor: *Editor) -> *Cursor {
 
 leave_only_main_cursor :: (using editor: *Editor) -> *Cursor {
     // Remove all cursors except the main one
-    cursor := cursors[min(main_cursor, cursors.count-1)];
+    cursor := cursors[min(main_cursor, cast(s32)cursors.count-1)];
     cursors.count = 1;
     original_cursor = 0;
     main_cursor = 0;
@@ -670,8 +670,8 @@ organise_cursors :: (using editor: *Editor, selection_mode: *Selection_Mode = nu
 
     // Adjust main and original cursor indices because they could've moved
     for cursor, i : cursors {
-        if cursor.pos == main_cursor_offset     then main_cursor = i;
-        if cursor.pos == original_cursor_offset then original_cursor = i;
+        if cursor.pos == main_cursor_offset     then main_cursor = cast(s32) i;
+        if cursor.pos == original_cursor_offset then original_cursor = cast(s32) i;
     }
 
     // Merge overlapping cursors
@@ -1519,7 +1519,7 @@ create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; be
         // Should delete the bottom cursor instead
         assert(cursors.count > 1);
         cursors.count -= 1;
-        main_cursor = clamp(main_cursor, 0, cursors.count - 1);
+        main_cursor = clamp(main_cursor, 0, cast(s32)cursors.count - 1);
     } else if where == .below && main_cursor < original_cursor {
         // Should delete the top cursor instead
         assert(cursors.count > 1);
@@ -1551,7 +1551,7 @@ create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; be
         } else {
             cursor.sel = cursor.pos;
         }
-        main_cursor = cursors.count - 1;
+        main_cursor = cast(s32)cursors.count - 1;
     }
 
     organise_cursors(editor);
@@ -1567,7 +1567,7 @@ restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor) {
         cursor.* = cursor_state[i];
         cursor.col_wanted = -1;
     }
-    if main_cursor >= cursors.count then main_cursor = cursors.count - 1;  // maybe we should remember it too
+    if main_cursor >= cursors.count then main_cursor = cast(s32) cursors.count - 1;  // maybe we should remember it too
 
     editor.cursor_moved = .jumped;
 }
@@ -1698,7 +1698,7 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) 
         new_cursor.sel = cast(s32) found_offset;
         new_cursor.pos = cast(s32) (found_offset + selected_text.count);
 
-        main_cursor = cursors.count - 1;
+        main_cursor = cast(s32) cursors.count - 1;
 
     } else {
         // Cursors either don't have anything selected, or the selected text is different
@@ -2689,8 +2689,8 @@ add_cursors_to_line_starts :: (using editor: *Editor, buffer: Buffer) {
 
     if !cursors then array_add(*cursors, Cursor.{ pos = pos, sel = pos, col_wanted = -1 });
 
-    main_cursor     = clamp(main_cursor,     0, cursors.count - 1);
-    original_cursor = clamp(original_cursor, 0, cursors.count - 1);
+    main_cursor     = clamp(main_cursor,     0, cast(s32) cursors.count - 1);
+    original_cursor = clamp(original_cursor, 0, cast(s32) cursors.count - 1);
 
     editor.cursor_moved = .unimportant;
 }
@@ -3514,9 +3514,8 @@ Editor :: struct {
     highlights: [..] Text_Highlight;
     wrapped_line_starts: [..] s32;  // empty when line wrap is off
 
-    // TODO: no need for s64. Maybe even s16? How many cursors do we allow?
-    main_cursor: s64;      // newly added cursors become main so that we jump to them
-    original_cursor: s64;  // we remember the original cursor when first creating multiple cursors (and go back to it on escape)
+    main_cursor: s32;      // newly added cursors become main so that we jump to them
+    original_cursor: s32;  // we remember the original cursor when first creating multiple cursors (and go back to it on escape)
 
     num_selected_chars: s32;  // across all cursors
     num_selected_bytes: s32;
