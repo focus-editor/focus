@@ -69,7 +69,7 @@ to_view :: inline (array: Array($T)) -> [] T {
     return result;
 }
 
-to_view :: inline (array: Array($T), offset: s32, count: s32) -> [] T {
+to_view :: inline (array: Array($T), offset: s64, count: s64) -> [] T {
     assert(offset >= 0, "offset = %", offset);
     assert(count  >= 0, "count = %",  count);
     if offset >= array.count return .[];

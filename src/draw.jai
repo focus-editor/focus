@@ -1394,7 +1394,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             line, tab_spaces = advance_by_chars(line, hidden_chars_on_the_left);
             line = take_first_n_chars(line, max_chars_horizontally);
             line = trim_right(line, " \r\n");
-            tokens := ifx line then array_view(buffer.tokens, line.data - buffer.bytes.data, line.count) else .[];
+            tokens := ifx line then to_view(buffer.tokens, line.data - buffer.bytes.data, line.count) else .[];
             code_lines[line_num-visible_lines_start] = .{ line = line, start_offset = line_start, tab_spaces = xx tab_spaces, tokens = xx tokens };
         }
 
@@ -1830,7 +1830,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                     };
                     line_str := get_range_as_string(buffer, visible_offset_range);
                     if line_str.count > 0 {
-                        tokens := array_view(buffer.tokens, visible_offset_range.start, line_str.count);
+                        tokens := to_view(buffer.tokens, visible_offset_range.start, line_str.count);
                         code_lines: [1] Simp.Code_Line;
                         code_lines[0] = .{ line = line_str, tab_spaces = 0, tokens = xx tokens };
                         draw_code(font, pen, code_lines, is_colored = buffer.tokens.count > 0, start_col = line_indent + col_offset);
@@ -3042,7 +3042,7 @@ draw_finder :: () {
                 };
                 line_str := get_range_as_string(buffer, visible_range);
                 if line_str.count > 0 {
-                    tokens := array_view(buffer.tokens, visible_range.start, line_str.count);
+                    tokens := to_view(buffer.tokens, visible_range.start, line_str.count);
                     code_lines: [1] Simp.Code_Line;
                     code_lines[0] = .{ line = line_str, tab_spaces = 0, tokens = xx tokens };
                     draw_code(font, pen, code_lines, is_colored = buffer.tokens.count > 0, start_col = line_indent + col_offset);

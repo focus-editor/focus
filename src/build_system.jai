@@ -11,7 +11,6 @@ init_build_system :: () {
 
     // Remember allocators, so that we don't accidentally use the pool allocator on any of these arrays.
     // We should really use custom expandable arrays which don't remember allocators on buffers at some point
-    buffer.tokens.allocator  = focus_allocator;
     buffer.regions.allocator = focus_allocator;
     buffer.cursors.allocator = focus_allocator;
 
@@ -118,7 +117,7 @@ build_clear_output :: () {
 
     lock(*buffer.content_lock);
     array_reset_keeping_memory(*buffer.regions);
-    array_resize(*buffer.tokens, buffer.bytes.count);
+    resize(*buffer.tokens, buffer.bytes.count);
     memset(buffer.tokens.data, 0, buffer.tokens.count);
     unlock(*buffer.content_lock);
 }
@@ -487,7 +486,7 @@ print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kin
         bytes_to_forget := cast(s32) (buffer.bytes.count - MAX_BUILD_OUTPUT_BUFFER_SIZE);
 
         lock(*buffer.content_lock);
-        array_resize(*buffer.tokens, buffer.bytes.count);  // resize first before we delete
+        resize(*buffer.tokens, buffer.bytes.count);  // resize first before we delete
         delete_range_raw(buffer, 0, bytes_to_forget);
         array_delete_bytes(xx *buffer.tokens, 0, bytes_to_forget);
         unlock(*buffer.content_lock);

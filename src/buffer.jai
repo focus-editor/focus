@@ -434,7 +434,7 @@ retokenize :: (buffer: *Buffer) {
 
     if buffer.lang == .Plain_Text {
         // We don't store tokens for plain text buffers
-        array_reset(*buffer.tokens);
+        reset(*buffer.tokens);
         for buffer.regions free(it.note);
         array_reset(*buffer.regions);
         return;
@@ -443,7 +443,7 @@ retokenize :: (buffer: *Buffer) {
     tokenize_func := get_tokenize_function(buffer.lang);
 
     // Resize tokens if we ever changed the token array
-    if buffer.tokens || tokenize_func != null then array_resize(*buffer.tokens, buffer.bytes.count, initialize = true);
+    if !is_empty(buffer.tokens) || tokenize_func != null then resize(*buffer.tokens, buffer.bytes.count, initialize = true);
     if !tokenize_func return;  // this could be the case for e.g. the build panel
 
     new_regions := tokenize_func(buffer);
@@ -1173,7 +1173,7 @@ free_buffer :: (using buffer: *Buffer) {
     // We don't do it often so it's ok to be slow here
     free(bytes);
     free(line_starts);
-    array_free(tokens);
+    free(tokens);
 
     for * undos deinit(it);
     for * redos deinit(it);
@@ -1263,7 +1263,7 @@ remove_all_buffers :: () {
 
 manually_mark_range_as_token :: (buffer: *Buffer, range: Offset_Range, color: Color) {
     assert(range.start >= 0 && range.end <= buffer.bytes.count);
-    array_resize(*buffer.tokens, buffer.bytes.count);
+    resize(*buffer.tokens, buffer.bytes.count);
     memset(buffer.tokens.data + range.start, xx color, range.end - range.start);
 }
 
@@ -1389,7 +1389,7 @@ Buffer :: struct {
     content_lock: Mutex;  // must hold while modifying content (or reading in a non-main thread)
     bytes: Array(u8);
     line_starts: Array(s32);       // real offsets of newlines in the bytes array
-    tokens: [..] Token_Type;     // we assign a token to each byte (even for multi-byte chars).
+    tokens: Array(Token_Type);     // we assign a token to each byte (even for multi-byte chars).
     regions: [..] Buffer_Region; // for highlighting parts of buffer
 
     // @Memory: all of these are allocated on the heap, which is not great, but it works fine right now.
