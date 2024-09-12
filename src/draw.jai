@@ -1105,10 +1105,10 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             if config.settings.highlight_matching_brackets {
                 for cursor : cursors {
                     pos: s32 = -1;
-                    if is_bracket(buffer, cursor.pos) {
-                        pos = cursor.pos;
-                    } else if is_bracket(buffer, cursor.pos - 1) {
+                    if is_bracket(buffer, cursor.pos - 1) {
                         pos = cursor.pos - 1;
+                    } else if is_bracket(buffer, cursor.pos) {
+                        pos = cursor.pos;
                     }
                     if pos < 0 continue;
 
