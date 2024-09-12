@@ -3,8 +3,8 @@ refresh_open_buffers :: () {
         buffer := *open_buffers[editor.buffer_id];
 
         if editor.line_wrap == {
-            case .to_disable;   array_reset_keeping_memory(*editor.wrapped_line_starts); editor.line_wrap = .off;
-            case .to_enable;    rescan_for_wrapped_lines(editor, buffer);                editor.line_wrap = .on;
+            case .to_disable;   reset_keeping_memory(*editor.wrapped_line_starts); editor.line_wrap = .off;
+            case .to_enable;    rescan_for_wrapped_lines(editor, buffer);          editor.line_wrap = .on;
         }
 
         if !buffer.dirty && !buffer.was_dirty_during_frame continue;
@@ -121,9 +121,9 @@ get_char_at_offset_as_string :: (using buffer: Buffer, offset: s32) -> string {
 
 get_line_starts :: (editor: Editor, buffer: Buffer) -> [] s32 {
     if line_wrap_is_active(editor) {
-        return editor.wrapped_line_starts;
+        return to_view(editor.wrapped_line_starts);
     } else {
-        return buffer.line_starts;
+        return to_view(buffer.line_starts);
     }
 }
 
@@ -136,7 +136,7 @@ offset_to_coords :: (editor: Editor, buffer: Buffer, offset: s64) -> Coords {
 
 offset_to_real_coords :: (buffer: Buffer, offset: s64) -> Coords {
     line := offset_to_real_line(buffer, offset);
-    col  := _get_visual_col_by_scanning_line(buffer, line, offset, buffer.line_starts);
+    col  := _get_visual_col_by_scanning_line(buffer, line, offset, to_view(buffer.line_starts));
 
     return Coords.{ line = line, col = col };
 }
@@ -162,18 +162,15 @@ offset_to_line :: (editor: Editor, buffer: Buffer, offset: s64) -> line_num: s32
     assert(!buffer.dirty, "buffer is dirty, can't calculate line from offset");
     assert(offset <= buffer.bytes.count, "offset exceeds buffer size, can't calculate line");
 
-    if line_wrap_is_active(editor) {
-        return search_line_num_by_offset(editor.wrapped_line_starts, offset);
-    } else {
-        return search_line_num_by_offset(buffer.line_starts, offset);
-    }
+    line_starts := get_line_starts(editor, buffer);
+    return search_line_num_by_offset(line_starts, offset);
 }
 
 offset_to_real_line :: (using buffer: Buffer, offset: s64) -> line_num: s32 {
     assert(!dirty, "buffer is dirty, can't calculate line from offset");
     assert(offset <= bytes.count, "offset exceeds buffer size, can't calculate line");
 
-    return search_line_num_by_offset(line_starts, offset);
+    return search_line_num_by_offset(to_view(line_starts), offset);
 }
 
 search_line_num_by_offset :: (line_starts: [] s32, offset: s64) -> line_num: s32 {
@@ -210,7 +207,7 @@ coords_to_offset :: (editor: Editor, buffer: Buffer, coords: Coords) -> s32 {
 real_coords_to_offset :: (using buffer: Buffer, coords: Coords) -> s32 {
     assert(!buffer.dirty);
 
-    return _get_offset_by_coords(buffer, buffer.line_starts, coords);
+    return _get_offset_by_coords(buffer, to_view(buffer.line_starts), coords);
 }
 
 _get_offset_by_coords :: (buffer: Buffer, line_starts: [] s32, coords: Coords) -> offset: s32 {
@@ -328,8 +325,8 @@ rescan_for_lines :: (using buffer: *Buffer) {
         dirty = false;
     }
 
-    array_reset_keeping_memory(*line_starts);
-    array_add(*line_starts, 0);  // first line
+    reset_keeping_memory(*line_starts);
+    add(*line_starts, 0);  // first line
 
     s := cast(string) bytes;
 
@@ -358,7 +355,7 @@ rescan_for_lines :: (using buffer: *Buffer) {
                 }
                 mask >>= (bit_id + 1);
                 shift += bit_id + 1;
-                array_add(*line_starts, cast,no_check(s32)(data - bytes.data + shift));
+                add(*line_starts, cast,no_check(s32)(data - bytes.data + shift));
             }
             count -= 16;
             data  += 16;
@@ -374,22 +371,22 @@ rescan_for_lines :: (using buffer: *Buffer) {
         index := inline find_index_from_left(s, 0xA, start_index);
         if index >= 0 {
             start_index = index + 1;
-            array_add(*line_starts, cast,no_check(s32) (processed_with_simd + start_index));
+            add(*line_starts, cast,no_check(s32) (processed_with_simd + start_index));
         } else {
             break;
         }
     }
 
-    array_add(*line_starts, cast(s32) bytes.count);  // last line
+    add(*line_starts, cast(s32) bytes.count);  // last line
 }
 
 rescan_for_wrapped_lines :: (editor: *Editor, buffer: Buffer) {
     // Not locking here because rescanning for wrapped lines should only happen in the main thread
 
-    array_reset_keeping_memory(*editor.wrapped_line_starts);
-    array_reserve(*editor.wrapped_line_starts, buffer.line_starts.count);  // can't be less than that
+    reset_keeping_memory(*editor.wrapped_line_starts);
+    reserve(*editor.wrapped_line_starts, buffer.line_starts.count);  // can't be less than that
 
-    array_add(*editor.wrapped_line_starts, 0);  // first line
+    add(*editor.wrapped_line_starts, 0);  // first line
 
     max_width_in_chars := ifx editor.last_width_in_chars > 0 then editor.last_width_in_chars else S32_MAX;
     current_line_width := 0;
@@ -410,15 +407,15 @@ rescan_for_wrapped_lines :: (editor: *Editor, buffer: Buffer) {
         }
 
         if current_line_width > max_width_in_chars {
-            array_add(*editor.wrapped_line_starts, this_char_index);
+            add(*editor.wrapped_line_starts, this_char_index);
             current_line_width = 1;
         } else if byte == #char "\n" {
-            array_add(*editor.wrapped_line_starts, i);
+            add(*editor.wrapped_line_starts, i);
             current_line_width = 0;
         }
     }
 
-    array_add(*editor.wrapped_line_starts, cast(s32) buffer.bytes.count);  // last line
+    add(*editor.wrapped_line_starts, cast(s32) buffer.bytes.count);  // last line
 }
 
 retokenize :: (buffer: *Buffer) {
@@ -804,7 +801,7 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64, on_save := 
     init_string_builder(*b, buffer_size = bytes.count + size_of(String_Builder.Buffer));
 
     line_start := line_starts[0];
-    for line_end : array_view(line_starts, 1, line_starts.count - 1) {
+    for line_end : to_view(line_starts, 1, line_starts.count - 1) {
         line := string.{ count = line_end - line_start, data = bytes.data + line_start };
 
         pos_of_rightmost_cursor_on_this_line := -1;
@@ -931,7 +928,7 @@ is_empty :: (using buffer: Buffer, line_num: s32) -> bool {
 
 get_real_line_as_string :: (using buffer: Buffer, line_num: s32) -> string {
     assert(!buffer.dirty);
-    return _get_line_as_string(buffer, buffer.line_starts, line_num);
+    return _get_line_as_string(buffer, to_view(buffer.line_starts), line_num);
 }
 
 get_line_as_string :: (editor: Editor, buffer: Buffer, line_num: s32) -> string {
@@ -1168,7 +1165,7 @@ maybe_mark_buffer_as_deleted :: (buffer_id: s64) {
 free_buffer :: (using buffer: *Buffer) {
     // We don't do it often so it's ok to be slow here
     array_free(bytes);
-    array_free(line_starts);
+    free(line_starts);
     array_free(tokens);
 
     for * undos deinit(it);
@@ -1394,7 +1391,7 @@ Buffer :: struct {
     last_size: s64;             // --
 
     bytes: [..] u8;
-    line_starts: [..] s32;       // real offsets of newlines in the bytes array
+    line_starts: Array(s32);       // real offsets of newlines in the bytes array
 
     tokens: [..] Token_Type;     // we assign a token to each byte (even for multi-byte chars).
 

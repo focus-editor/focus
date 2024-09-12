@@ -6,9 +6,9 @@
 // IMPORTANT: All allocations use focus_allocator. If you need an array which uses another allocator, use [..]
 
 Array :: struct(T: Type) {
-    data: *T;
     count: s32;
     allocated: s32;
+    data: *T;
 }
 
 operator ! :: inline (array: Array) -> bool {
@@ -20,32 +20,40 @@ is_empty :: inline (array: Array($T)) -> bool {
 }
 
 operator [] :: inline (array: Array($T), index: int) -> T {
-    return to_array(array)[index];
+    assert(index >= 0);
+    assert(index < array.count);
+    return array.data[index];
 }
 
 operator *[] :: inline (array: Array($T), index: int) -> *T {
-    return *to_array(array)[index];
+    assert(index >= 0);
+    assert(index < array.count);
+    return array.data + index;
 }
 
-operator []= :: inline (array: *Array($T), i: int, value: T) {
-    a := to_array(array);
-    a[i] = value;
+operator []= :: inline (array: *Array($T), index: int, value: T) {
+    assert(index >= 0);
+    assert(index < array.count);
+    array.data[index] = value;
 }
 
 for_expansion :: (array: *Array($T), body: Code, flags: For_Flags) #expand {
     DO_POINTER :: cast(bool)(flags & .POINTER);
     DO_REVERSE :: cast(bool)(flags & .REVERSE);
+    `it_index: s32;
 
-    for <=DO_REVERSE *=DO_POINTER `it, `it_index : to_array(array) {
+    for <=DO_REVERSE *=DO_POINTER `it, i : to_view(array) {
+        it_index = cast(s32) i;
         #insert (remove=#assert(false)) body;
         // TODO: implement remove. Example:
         // #insert (remove={entry.hash=REMOVED_HASH; table.count-=1;}) body;
     }
 }
 
-to_array :: inline (array: Array($T)) -> [] T {
-    result: [] T = ---;
-    result.count = array.count;
+from_view :: inline (array: [] $T) -> Array(T) {
+    result: Array(T) = ---;
+    result.count = cast(s32) array.count;
+    result.allocated = result.count;
     result.data  = array.data;
     return result;
 }
@@ -54,7 +62,14 @@ to_string :: inline (array: Array($T)) -> string {
     return string.{ count = array.count * size_of(T), data = array.data };
 }
 
-array_view :: inline (array: Array($T), offset: s32, count: s32) -> [] T {
+to_view :: inline (array: Array($T)) -> [] T {
+    result: [] T = ---;
+    result.count = array.count;
+    result.data  = array.data;
+    return result;
+}
+
+to_view :: inline (array: Array($T), offset: s32, count: s32) -> [] T {
     assert(offset >= 0, "offset = %", offset);
     assert(count  >= 0, "count = %",  count);
     if offset >= array.count return .[];
@@ -66,9 +81,9 @@ array_view :: inline (array: Array($T), offset: s32, count: s32) -> [] T {
     return result;
 }
 
-add :: (array: *Array($T), item: T) #no_abc {
+add :: (array: *Array($T), item: T) {
     maybe_grow(array);
-    array.data[array.count] = item;  // Note, we don't have an ABC here since we believe maybe_grow does the right thing.
+    array.data[array.count] = item;
     array.count += 1;
 }
 
@@ -104,15 +119,44 @@ insert_at :: (array: *Array($T), offset: s32, src_array: [] T) {
 }
 
 pop :: (array: *Array($T)) -> T {
-    result := to_array(array)[array.count-1];
+    result := to_view(array)[array.count-1];
     array.count -= 1;
     return result;
+}
+
+free :: inline (array: Array($T)) {
+    free(array.data);
 }
 
 delete_range :: (array: *Array($T), offset: s32, count: s32) {
     assert(offset >= 0 && count >= 0 && offset + count <= array.count);
     focus_memcpy(array.data + offset, array.data + offset + count, (array.count - offset - count) * size_of(T));
     array.count -= count;
+}
+
+unordered_remove_by_index :: inline (array: *Array($T), index: s32) {
+    assert(index >= 0);
+    assert(index < array.count);
+
+    last_index := array.count - 1;
+    if index != last_index  array.data[index] = array.data[last_index];
+
+    array.count -= 1;
+}
+
+ordered_remove_by_index :: inline (array: *Array($T), index: s32) {
+    assert(index >= 0);
+    assert(index < array.count);
+
+    for i : index..array.count-2  array.data[i] = array.data[i+1];
+
+    array.count -= 1;
+}
+
+copy :: (array: Array($T)) -> Array(T) {
+    dest := NewArray(array.count, T, initialized=false);
+    memcpy(dest.data, array.data, array.count * size_of(T));
+    return from_view(dest);
 }
 
 reset :: (array: *Array($T)) {
@@ -131,6 +175,14 @@ reserve :: inline (array: *Array($T), desired_items: s32) {
     reserve_(xx array, desired_items, size_of(T));
 }
 
+resize :: (array: *Array($T), new_count: s64, $initialize:=true) {
+    old_count := array.count;
+    reserve_(xx array, cast(s32) new_count, size_of(T));
+    array.count = cast(s32) new_count;
+
+    #if initialize  init_range(array.data, old_count, new_count);
+}
+
 maybe_grow :: inline (array: *Array($T)) {
     if array.count >= array.allocated {
         reserve := 2 * array.allocated;
@@ -141,16 +193,30 @@ maybe_grow :: inline (array: *Array($T)) {
 }
 
 to_owned_array :: (array: *Array($T), $free_memory := false) -> [] T {
-    new_array := array_copy(to_array(array));
+    new_array := copy(array);
     #if free_memory {
         reset(array);
     } else {
         reset_keeping_memory(array);
     }
-    return new_array;
+    return to_view(new_array);
 }
 
 #scope_file
+
+init_range :: (ptr: *$T, begin: s64, end: s64) {
+    ini :: initializer_of(T);
+    #if ini {
+        for begin..end-1  inline ini(ptr + it);  // Really this can be one ini followed by a bunch of memcpy. For long arrays we could power-of-two double the copy out, etc.
+    } else {
+        count := end - begin;
+        if count <= 0  return;
+
+        // Fast path for init to zero.
+        // In the case that we are shrinking an array, count will be negative.
+        memset(ptr + begin, 0, count * size_of(T));
+    }
+}
 
 reserve_ :: (array: *Array(void), desired_items: s32, element_size: s32) {
     if desired_items <= array.allocated return;

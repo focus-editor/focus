@@ -334,7 +334,7 @@ insert_string_at_offset :: (using input: *Text_Input, offset: s32, new_str: stri
 }
 
 replace_range :: (using input: *Text_Input, start: s32, end: s32, new_str: string) {
-    old_str := cast(string) array_view(text, start, end - start);
+    old_str := cast(string) to_view(text, start, end - start);
     if new_str == old_str return;
 
     new_replace_edit(input, xx start, xx end, old_str, new_str);
@@ -342,7 +342,7 @@ replace_range :: (using input: *Text_Input, start: s32, end: s32, new_str: strin
 }
 
 delete_range :: (using input: *Text_Input, start: s32, end: s32) {
-    old_str := cast(string) array_view(text, start, end - start);
+    old_str := cast(string) to_view(text, start, end - start);
     new_delete_edit(input, xx start, xx end, old_str);
     delete_range_raw(input, start, end);
 }

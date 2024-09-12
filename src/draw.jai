@@ -783,7 +783,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             if cursors.count > 1 {
                 for cursor, i : cursors {
                     if cursor.pos == click_offset {
-                        array_unordered_remove_by_index(*cursors, i);
+                        unordered_remove_by_index(*cursors, i);
                         if main_cursor >= i     then main_cursor -= 1;
                         if original_cursor >= i then original_cursor -= 1;
                         main_cursor     = clamp(main_cursor,     0, cursors.count - 1);
@@ -796,7 +796,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
             if !deleted_cursor {
                 // Create new cursor
-                new_cursor := array_add(*cursors);
+                new_cursor := add(*cursors);
                 new_cursor.pos = click_offset;
                 new_cursor.sel = new_cursor.pos;
 
@@ -898,20 +898,20 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             main_cursor.pos = coords_to_offset(editor, buffer, mouse_coords);
             main_cursor.sel = main_cursor.pos;
 
-            initial_middle_mouse_coords = mouse_coords;
+            editor_initial_middle_mouse_coords = mouse_coords;
         } else if mouse.middle.is_dragging {
-            // Move main cursor to initial_middle_mouse_coords
-            main_cursor.pos = coords_to_offset(editor, buffer, initial_middle_mouse_coords);
+            // Move main cursor to editor_initial_middle_mouse_coords
+            main_cursor.pos = coords_to_offset(editor, buffer, editor_initial_middle_mouse_coords);
             main_cursor.sel = main_cursor.pos;
 
             // Check if we need to select some lines
             select_some_lines: bool;
 
-            min_line_number := min(mouse_coords.line, initial_middle_mouse_coords.line);
-            max_line_number := max(mouse_coords.line, initial_middle_mouse_coords.line);
+            min_line_number := min(mouse_coords.line, editor_initial_middle_mouse_coords.line);
+            max_line_number := max(mouse_coords.line, editor_initial_middle_mouse_coords.line);
 
             for min_line_number..max_line_number {
-                if get_char_at_coords(editor, buffer, .{ it, min(mouse_coords.col, initial_middle_mouse_coords.col) }) {
+                if get_char_at_coords(editor, buffer, .{ it, min(mouse_coords.col, editor_initial_middle_mouse_coords.col) }) {
                     select_some_lines = true;
                     break;
                 }
@@ -921,18 +921,18 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 // If there is no line to select we add a cursor at the end of each line
                 for min_line_number..max_line_number {
                     if it == mouse_coords.line continue;
-                    cursor := array_add(*editor.cursors);
+                    cursor := add(*editor.cursors);
                     cursor.pos = get_line_end_offset(editor, buffer, it);
                     cursor.sel = cursor.pos;
                 }
             } else {
                 main_cursor_already_moved: bool;
                 maybe_create_cursor_or_move_main_cursor_to_this_line :: () #expand {
-                    if !get_char_at_coords(editor, buffer, .{ `it, min(mouse_coords.col, initial_middle_mouse_coords.col) }) return;
+                    if !get_char_at_coords(editor, buffer, .{ `it, min(mouse_coords.col, editor_initial_middle_mouse_coords.col) }) return;
 
                     cursor: Cursor;
                     cursor.pos = coords_to_offset(editor, buffer, .{ `it, mouse_coords.col });
-                    cursor.sel = coords_to_offset(editor, buffer, .{ `it, initial_middle_mouse_coords.col });
+                    cursor.sel = coords_to_offset(editor, buffer, .{ `it, editor_initial_middle_mouse_coords.col });
 
                     if !main_cursor_already_moved {
                         main_cursor_already_moved = true;
@@ -942,14 +942,14 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                         // and we can use it to set its new position.
                         main_cursor.* = cursor;
                     } else {
-                        array_add(*editor.cursors, cursor);
+                        add(*editor.cursors, cursor);
                     }
                 }
 
-                if mouse_coords.line >= initial_middle_mouse_coords.line {
-                    for   initial_middle_mouse_coords.line..mouse_coords.line  maybe_create_cursor_or_move_main_cursor_to_this_line();
+                if mouse_coords.line >= editor_initial_middle_mouse_coords.line {
+                    for   editor_initial_middle_mouse_coords.line..mouse_coords.line  maybe_create_cursor_or_move_main_cursor_to_this_line();
                 } else {
-                    for < initial_middle_mouse_coords.line..mouse_coords.line  maybe_create_cursor_or_move_main_cursor_to_this_line();
+                    for < editor_initial_middle_mouse_coords.line..mouse_coords.line  maybe_create_cursor_or_move_main_cursor_to_this_line();
                 }
             }
 
@@ -967,7 +967,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         selection_mode.type = .chars;
         selection_mode.min_range.start = 0;
         selection_mode.min_range.end   = 0;
-        if editor.new_cursor_just_created_using_mouse && to_float64_seconds(frame_time - editor.last_cursor_created_using_mouse_at) >= (2 * DOUBLE_CLICK_SPEED) then editor.new_cursor_just_created_using_mouse = false;
+        if new_cursor_just_created_using_mouse && to_float64_seconds(frame_time - last_cursor_created_using_mouse_at) >= (2 * DOUBLE_CLICK_SPEED) then new_cursor_just_created_using_mouse = false;
     }
 
     // Get the coordinates of all cursors
@@ -1070,7 +1070,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         }
 
         if editor.refresh_selection && buffer.bytes.count <= MAX_BUFFER_SIZE_FOR_HIGHLIGHTS {
-            array_reset_keeping_memory(*editor.highlights);
+            reset_keeping_memory(*editor.highlights);
 
             // Maybe update selection highlights
             if config.settings.highlight_selection_occurrences {
@@ -1090,7 +1090,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                         if offset < 0 break;
 
                         if !array_find(cursor_offsets, xx offset) {  // @Speed: slow when many cursors
-                            highlight := array_add(*editor.highlights);
+                            highlight := add(*editor.highlights);
                             highlight.offset = offset;
                             highlight.count  = selected_text.count;
                             highlight.line   = offset_to_real_line(buffer, offset);
@@ -1116,14 +1116,14 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                     if offset < 0 continue;
 
                     // Highlight matching bracket
-                    array_add(*editor.highlights, .{
+                    add(*editor.highlights, .{
                         offset = offset,
                         count  = 1,
                         line   = offset_to_real_line(buffer, offset),
                     });
 
                     // Highlight the bracket we're standing on
-                    array_add(*editor.highlights, .{
+                    add(*editor.highlights, .{
                         offset = pos,
                         count  = 1,
                         line   = offset_to_real_line(buffer, pos),
@@ -1131,7 +1131,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 }
             }
 
-            quick_sort(editor.highlights, (a, b) => (a.offset - b.offset));
+            quick_sort(to_view(editor.highlights), (a, b) => (a.offset - b.offset));
         }
 
         if config.settings.show_selected_text_length && editor.refresh_selection then calculate_selected_text_length(editor, buffer);
@@ -1333,7 +1333,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         }
 
         // Draw search results
-        if search_bar.results {
+        if !is_empty(search_bar.results) {
             for search_bar.results {
                 start, end := it.offset, it.offset + it.count;
                 if end   < visible_offset_range.start continue;
@@ -1478,7 +1478,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
             total_scrollable_lines := content_height / line_height;
 
-            if search_bar.results {
+            if !is_empty(search_bar.results) {
                 // Search results
                 for search_bar.results {
                     pos_from_top := rect.h * cast(float) it.line / total_scrollable_lines;
@@ -1585,7 +1585,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
         entry_height := font_ui_line_height + padding * 2;
 
-        max_search_results := cast(s64) (rect.h * 0.3 / entry_height);
+        max_search_results := cast(s32) (rect.h * 0.3 / entry_height);
         num_search_results := min(results.count, max_search_results);
 
         if mode == .classic then num_search_results = 0;
@@ -1606,7 +1606,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         maybe_set_hot_or_active(results_id, bar_rect, .NORMAL);
 
         numbers_width := cast(float) Simp.prepare_text(font_ui_small, " No results ");
-        if results {
+        if !is_empty(results) {
             width := cast(float) Simp.prepare_text(font_ui_small, tprint(" % of % ", selected_result + 1, results.count));
             if width > numbers_width then numbers_width = width;
         }
@@ -1653,7 +1653,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         if tooltip then draw_tooltip_bottom_left(tooltip, Vector2.{ x = mouse.pointer.x - input_rect.h / 2, y = input_rect.y + input_rect.h / 3 });
 
         // Draw search results
-        if results && mode == .dropdown {
+        if !is_empty(results) && mode == .dropdown {
             // Remember how many fits per page
             per_page = cast(s16) (results_rect.h / entry_height);
             if per_page <= 0 then per_page = 2;
@@ -1716,9 +1716,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 draw_scrollbar(results_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, max_y_scroll, search_scrollbar_id);
             }
 
-            visible_start := clamp(cast(s64) (scroll_y / entry_height), 0, results.count);
-            visible_count := cast(s64) (results_rect.h / entry_height) + 2;
-            visible_entries := array_view(results, visible_start, visible_count);
+            visible_start := clamp(cast(s32) (scroll_y / entry_height), 0, results.count);
+            visible_count := cast(s32) (results_rect.h / entry_height) + 2;
+            visible_entries := to_view(results, visible_start, visible_count);
 
             // Pre-filter scope regions for easier checks later
             visible_scopes: [..] Buffer_Region;
@@ -1734,7 +1734,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 }
             }
 
-            last_line_num := ifx results then results[results.count-1].line + 1 else 1;
+            last_line_num := ifx !is_empty(results) then results[results.count-1].line + 1 else 1;
             line_num_col_width := char_x_advance * tprint("%", last_line_num).count;
             line_num_x := results_rect.x + margin;
             text_x     := line_num_x + line_num_col_width + 2 * char_x_advance;
@@ -1746,7 +1746,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             if !is_valid(filename_scissor) then filename_scissor = entry_rect;
 
             for entry, i : visible_entries {
-                entry_index := visible_start + i;
+                entry_index := cast(s32) (visible_start + i);
                 entry_rect.y = results_rect.y + results_rect.h - (entry_index + 1) * entry_height + scroll_y;
 
                 // Highlight the entry into the scope color the match is in
@@ -3821,6 +3821,13 @@ selection_mode: Selection_Mode;
 // To indicate that we're dragging the mouse to select text in a text input
 // A global variable because we can only do that to one text input at a time
 text_input_selection_by_mouse: Ui_Id = .none;
+
+// Used for creating cursors while dragging middle mouse button
+editor_initial_middle_mouse_coords: Coords;
+
+// Useful to know in order to handle select-by-drag and select-word with the new cursor
+new_cursor_just_created_using_mouse := false;
+last_cursor_created_using_mouse_at: Apollo_Time;
 
 scissor_stack: [..] Rect;
 

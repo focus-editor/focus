@@ -307,7 +307,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
     if buffer.dirty {
         rescan_for_lines(buffer);
         if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
-        if editor.search_bar.results then search_and_update_results(editor, buffer, jump = false);
+        if !is_empty(editor.search_bar.results) then search_and_update_results(editor, buffer, jump = false);
     }
     for * editor.cursors put_cursor_in_valid_spot(it, buffer);
     if editor.cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
@@ -404,7 +404,7 @@ active_editor_type_char :: (char: u32) {
     buffer.last_edit_time = frame_time;
     editor.cursor_moved = .unimportant;
     cursors_start_blinking();
-    if editor.search_bar.results then search_and_update_results(editor, buffer, jump = false);
+    if !is_empty(editor.search_bar.results) then search_and_update_results(editor, buffer, jump = false);
 }
 
 get_active_editor_and_buffer :: () -> *Editor, *Buffer {
@@ -423,7 +423,7 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
 
         adjust_cursors_and_viewport(editor, buffer, editor_id);
         editor.refresh_selection = true;
-        if editor.search_bar.results then search_and_update_results(editor, buffer);
+        if !is_empty(editor.search_bar.results) then search_and_update_results(editor, buffer);
     }
     array_reset_keeping_memory(*buffer.edit_notifications);
 }
@@ -666,7 +666,7 @@ organise_cursors :: (using editor: *Editor, selection_mode: *Selection_Mode = nu
     main_cursor_offset     := cursors[main_cursor].pos;
     original_cursor_offset := cursors[original_cursor].pos;
 
-    quick_sort(cursors, compare_cursors);
+    quick_sort(to_view(cursors), compare_cursors);
 
     // Adjust main and original cursor indices because they could've moved
     for cursor, i : cursors {
@@ -681,7 +681,7 @@ organise_cursors :: (using editor: *Editor, selection_mode: *Selection_Mode = nu
         next_cursor := cursors[i+1];
         if maybe_subsume(cursor, next_cursor) {
             if selection_mode && (main_cursor == i || main_cursor == i+1) then selection_mode.min_range = get_selection(cursor);  // preserve the selection when dragging
-            array_ordered_remove_by_index(*cursors, i+1);
+            ordered_remove_by_index(*cursors, cast(s32)i+1);
             if main_cursor     > i then main_cursor -= 1;
             if original_cursor > i then original_cursor -= 1;
         } else {
@@ -948,7 +948,7 @@ close_search_bar :: inline (editor: *Editor, jump_to_original_cursor := false, j
         editor.scroll_to_cursor = .yes;
     }
 
-    if jump_to_selected_result && results {
+    if jump_to_selected_result && !is_empty(results) {
         cursor := leave_only_original_cursor(editor);
         cursor.sel = xx results[selected_result].offset;
         cursor.pos = xx (cursor.sel + results[selected_result].count);
@@ -999,13 +999,13 @@ search_bar_toggle_regex_search :: (using editor: *Editor, buffer: Buffer) {
     redraw_requested = true;
 }
 
-search_bar_move_cursor :: (using editor: *Editor, buffer: Buffer, delta: s64, wrap := false, snap := true) {
+search_bar_move_cursor :: (using editor: *Editor, buffer: Buffer, delta: s32, wrap := false, snap := true) {
     using search_bar;
 
     selected_result += delta;
 
     if wrap {
-        if selected_result < 0 then selected_result = max(0, results.count - 1);
+        if selected_result < 0 then selected_result = max(results.count - 1, 0);
         if selected_result >= results.count then selected_result = 0;
     } else {
         if selected_result < 0 then selected_result = 0;
@@ -1072,10 +1072,10 @@ search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := fal
 }
 
 free_editor :: (using editor: *Editor) {
-    array_reset(*cursors);
-    array_reset(*highlights);
-    array_reset(*search_bar.results);
-    array_reset(*wrapped_line_starts);
+    reset(*cursors);
+    reset(*highlights);
+    reset(*search_bar.results);
+    reset(*wrapped_line_starts);
 }
 
 #scope_file
@@ -1111,7 +1111,7 @@ find_all_using_regex :: (using search_bar: *Search_Bar, needle: string, buffer: 
         // Valid result, add it to the list
         if selected_result < 0 && offset >= search_point_offset then selected_result = results.count;
 
-        result := array_add(*results);
+        result := add(*results);
         result.offset = offset;
         result.count  = count;
         result.line   = offset_to_real_line(buffer, offset);
@@ -1138,7 +1138,7 @@ find_all :: (using search_bar: *Search_Bar, needle: string, buffer: Buffer) {
         // Valid result, add it to the list
         if selected_result < 0 && offset >= search_point_offset then selected_result = results.count;
 
-        result := array_add(*results);
+        result := add(*results);
         result.offset = offset;
         result.count  = needle.count;
         result.line   = offset_to_real_line(buffer, offset);
@@ -1169,7 +1169,7 @@ jump_to_search_result :: (using editor: *Editor, buffer: Buffer, move_search_poi
 }
 
 reset_search_results :: (using search_bar: *Search_Bar) {
-    array_reset(*results);
+    reset(*results);
     selected_result = -1;
 }
 
@@ -1463,7 +1463,7 @@ find_or_create_editor :: (buffer_id: s64, unwanted_existing_editor: s64 = -1) ->
     editor_id := open_editors.count;
     editor := array_add(*open_editors);
     editor.buffer_id = buffer_id;
-    array_add(*editor.cursors, Cursor.{});
+    add(*editor.cursors, Cursor.{});
 
     if config.settings.line_wrap_is_on_by_default {
         editor.line_wrap = .to_enable;
@@ -1482,7 +1482,7 @@ new_edit_group :: (buffer: *Buffer, editor: *Editor) {
     new_group := array_add(*buffer.undos);
     new_group.edits = to_owned_array(*buffer.edits);  // @Speed: could group all char inserts into one if needed
     new_group.cursors_before = to_owned_array(*buffer.cursors);
-    new_group.cursors_after  = array_copy(editor.cursors);
+    new_group.cursors_after  = to_view(copy(editor.cursors));
 
     // Remember cursor state
     array_resize(*buffer.cursors, editor.cursors.count);
@@ -1501,7 +1501,7 @@ delete_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; be
     if where == .above { // we shrink upwards
         main_cursor -= 1;
     } else { // we shrink downwards
-        new_cursors: []Cursor = cursors;
+        new_cursors: [] Cursor = to_view(cursors);
         new_cursors.data += 1;
         new_cursors.count -= 1;
         for new_cursors cursors[it_index] = it;
@@ -1523,7 +1523,7 @@ create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; be
     } else if where == .below && main_cursor < original_cursor {
         // Should delete the top cursor instead
         assert(cursors.count > 1);
-        array_ordered_remove_by_index(*cursors, 0);
+        ordered_remove_by_index(*cursors, 0);
         if main_cursor     > 0 then main_cursor -= 1;
         if original_cursor > 0 then original_cursor -= 1;
     } else {
@@ -1533,7 +1533,7 @@ create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; be
         original_pos_coords := offset_to_coords(editor, buffer, original.pos);
         original_sel_coords := offset_to_coords(editor, buffer, original.sel);
 
-        array_add(*cursors, edge_cursor);
+        add(*cursors, edge_cursor);
         cursor := *cursors[cursors.count-1];
 
         pos_coords := offset_to_coords(editor, buffer, cursor.pos);
@@ -1562,7 +1562,7 @@ create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; be
 restore_cursor_state :: (using editor: *Editor, cursor_state: [] Cursor) {
     if cursor_state.count == 0 return;
 
-    array_resize(*cursors, cursor_state.count);
+    resize(*cursors, cursor_state.count);
     for * cursor, i : cursors {
         cursor.* = cursor_state[i];
         cursor.col_wanted = -1;
@@ -1694,7 +1694,7 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) 
             return editor.search_whole_words;  // found no matches
         }
 
-        new_cursor := array_add(*cursors);
+        new_cursor := add(*cursors);
         new_cursor.sel = cast(s32) found_offset;
         new_cursor.pos = cast(s32) (found_offset + selected_text.count);
 
@@ -1749,7 +1749,7 @@ select_all_occurrences :: (using editor: *Editor, buffer: Buffer, search_str := 
             if !wrapped { offset = 0; wrapped = true; continue; } else break;
         }
 
-        new_cursor := array_add(*cursors);
+        new_cursor := add(*cursors);
         new_cursor.sel = cast(s32) offset;
         new_cursor.pos = cast(s32) (offset + selected_text.count);
 
@@ -1835,8 +1835,8 @@ duplicate_active_editor :: () -> s64 {
     duplicated_editor    := *open_editors[duplicated_editor_id];
 
     // Duplicate cursors
-    if duplicated_editor.cursors then array_reset(*duplicated_editor.cursors);
-    for current_editor.cursors { array_add(*duplicated_editor.cursors, it); }
+    if !is_empty(duplicated_editor.cursors) then reset(*duplicated_editor.cursors);
+    for current_editor.cursors { add(*duplicated_editor.cursors, it); }
     duplicated_editor.main_cursor     = current_editor.main_cursor;
     duplicated_editor.original_cursor = current_editor.original_cursor;
 
@@ -1888,7 +1888,7 @@ smooth_scroll :: (editor: Editor, direction: Smooth_Scroll_Direction, fast := fa
     }
 }
 
-cursors_match :: (c1: [] Cursor, c2: [] Cursor) -> bool {
+cursors_match :: (c1: Array(Cursor), c2: [] Cursor) -> bool {
     if c1.count != c2.count return false;
 
     for 0 .. c1.count-1 {
@@ -2673,7 +2673,7 @@ add_cursors_to_line_starts :: (using editor: *Editor, buffer: Buffer) {
     if buffer.bytes.count <= 0 return;
 
     line_ranges := get_whole_line_ranges_for_cursors(editor, buffer);
-    array_reset_keeping_memory(*cursors);  // reset after getting ranges (obviously)
+    reset_keeping_memory(*cursors);  // reset after getting ranges (obviously)
 
     pos: s32;
 
@@ -2682,12 +2682,12 @@ add_cursors_to_line_starts :: (using editor: *Editor, buffer: Buffer) {
         while true {
             pos = buffer.line_starts[line_num];
             if pos >= line_range.end break;
-            array_add(*cursors, Cursor.{ pos = pos, sel = pos, col_wanted = -1 });
+            add(*cursors, Cursor.{ pos = pos, sel = pos, col_wanted = -1 });
             line_num += 1;
         }
     }
 
-    if !cursors then array_add(*cursors, Cursor.{ pos = pos, sel = pos, col_wanted = -1 });
+    if !cursors then add(*cursors, Cursor.{ pos = pos, sel = pos, col_wanted = -1 });
 
     main_cursor     = clamp(main_cursor,     0, cursors.count - 1);
     original_cursor = clamp(original_cursor, 0, cursors.count - 1);
@@ -3510,13 +3510,15 @@ copy_current_line_info :: (using editor: *Editor, buffer: Buffer) {
 Editor :: struct {
     buffer_id: s64;
 
-    cursors: [..] Cursor;
-    highlights: [..] Text_Highlight;
-    wrapped_line_starts: [..] s32;  // empty when line wrap is off
+    viewport:   Viewport;
+    search_bar: Search_Bar;
 
-    // TODO: no need for s64. Maybe even s16? How many cursors do we allow?
-    main_cursor: s64;      // newly added cursors become main so that we jump to them
-    original_cursor: s64;  // we remember the original cursor when first creating multiple cursors (and go back to it on escape)
+    cursors: Array(Cursor);
+    highlights: Array(Text_Highlight);
+    wrapped_line_starts: Array(s32);  // empty when line wrap is off
+
+    main_cursor: s32;      // newly added cursors become main so that we jump to them
+    original_cursor: s32;  // we remember the original cursor when first creating multiple cursors (and go back to it on escape)
 
     num_selected_chars: s32;  // across all cursors
     num_selected_bytes: s32;
@@ -3528,17 +3530,7 @@ Editor :: struct {
     refresh_selection  := false;
     search_whole_words := false;  // used when creating new cursors
     cursor_moved := Cursor_Movement.has_not_moved; // this may trigger a scroll so that the cursor is within acceptable bounds
-
-    viewport: Viewport;
-    search_bar: Search_Bar;
-
-    // TODO: use a global flag rather than per editor for all of the below?
-    last_cursor_created_using_mouse_at: Apollo_Time;
-    new_cursor_just_created_using_mouse := false;  // useful to know in order to handle select-by-drag and select-word with the new cursor
-    initial_middle_mouse_coords: Coords; // used for creating cursors while dragging middle mouse button
 }
-
-#run print("SIZE OF EDITOR: %\n", size_of(Editor));
 
 Cursor_Movement :: enum u8 {
     has_not_moved;
@@ -3556,28 +3548,37 @@ Cursor_Movement :: enum u8 {
 }
 
 Viewport :: struct {
+    scroll_y := #run Tween_Animation(s32).{ speed = 0.1, func = .lerp };
+    scroll_x := #run Tween_Animation(s32).{ speed = 0.1, func = .lerp };
     top:  s32;
     left: s32;
     glue_point: Glue_Point;
-    scroll_y := #run Tween_Animation(s32).{ speed = xx 0.1, func = .lerp };
-    scroll_x := #run Tween_Animation(s32).{ speed = xx 0.1, func = .lerp };
 
     Glue_Point :: struct { buffer_pos: s32; offset_within_line: s32; }
 }
 
 Search_Bar :: struct {
-    results: [..] Text_Highlight;
+    results: Array(Text_Highlight);
+    input: Text_Input;
 
-    width_percentage: float = WIDTH_NORMAL;  // how much of the screen the popup occupies
     width_anim := #run Tween_Animation(float).{ start = WIDTH_NORMAL, target = WIDTH_NORMAL };
     WIDTH_NORMAL   :: 0.5;
     WIDTH_EXPANDED :: 0.9;
 
-    input: Text_Input;
+    scroll_anim := #run Tween_Animation(s32).{ speed = 0.1, func = .lerp };
+    scroll_y: s32;
 
-    selected_result: s64 = -1;
+    width_percentage: float = WIDTH_NORMAL;  // how much of the screen the popup occupies
+
+    selected_result: s32 = -1;
     search_point_offset: s32;  // the point used to determine the next search result. Fixed so that we can set cursor without jumping around
 
+    original_cursor_position: Cursor;  // remember the main cursor position so we can go back to it on Esc
+
+    per_page: s16 = 10;
+
+    // TODO: put into enum_flags
+    scroll_to_selected: Scroll_Mode = .no;
     mode: Mode = .classic;
     active:         bool;  // it receives keyboard input when active.
     case_sensitive: bool;
@@ -3586,14 +3587,6 @@ Search_Bar :: struct {
     regex_search:   bool;
     regex_is_valid: bool;
     jumped:         bool;
-
-    per_page: s16 = 10;
-
-    original_cursor_position: Cursor;  // remember main cursor position so we can go back to it on Esc
-
-    scroll_to_selected: Scroll_Mode = .no;
-    scroll_anim := #run Tween_Animation(s32).{ speed = xx 0.1, func = .lerp };
-    scroll_y: s32;
 
     Mode :: enum u8 { classic; dropdown; }
 }

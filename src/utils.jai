@@ -411,7 +411,7 @@ get_tmp_tabs :: (num: int) -> string {
     return tabs;
 }
 
-start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: float64 = 0.0) {
+start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: float = 0.0) {
     anim.start  = start;
     anim.target = target;
     if speed > 0 then anim.speed = speed;
@@ -517,9 +517,9 @@ table_find_or_default :: (table: *Table, key: table.Key_Type) -> table.Value_Typ
 }
 
 Tween_Animation :: struct(T: Type) {
-    start, target: T;
     started_at: float64;
-    speed : float64 = xx 0.1;  // how many seconds to finish
+    speed : float = xx 0.1;  // how many seconds to finish
+    start, target: T;
     func: enum { lerp; smoothstep; } = .smoothstep;
 }
 

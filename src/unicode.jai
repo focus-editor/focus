@@ -102,7 +102,7 @@ safe_advance :: inline (s: *string, amount: s64 = 1) {
 }
 
 next_char_offset :: inline (bytes: Array(u8), offset: s32) -> s32 {
-    return next_char_offset(to_array(bytes), offset);
+    return next_char_offset(to_view(bytes), offset);
 }
 
 // @Array:
@@ -112,11 +112,11 @@ next_char_offset :: inline (bytes: [] u8, offset: s32) -> s32 {
 }
 
 prev_char_offset :: inline (bytes: Array(u8), offset: s32) -> s32, byte: u8 {
-    new_offset, byte := prev_char_offset(to_array(bytes), offset);
+    new_offset, byte := prev_char_offset(to_view(bytes), offset);
     return new_offset, byte;
 }
 
-// @Array: 
+// @Array:
 prev_char_offset :: (bytes: [] u8, offset: s32) -> s32, byte: u8 {
     new_offset := offset - 1;
     byte := bytes[new_offset];
