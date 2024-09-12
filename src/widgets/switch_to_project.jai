@@ -46,11 +46,10 @@ switch_to_project_refresh_entries :: (filter: Fuzzy_Filter) {
     }
 
     // Load the list of most recent projects
-    for get_most_recent_projects()  array_add(*project_configs, _entry_from_path(it));
-
-    if #complete config.settings.projects_sorting_order == {
-        case .most_recent_first;    // already sorted this way
-        case .alphabetical;         quick_sort(project_configs, (a, b) => compare_strings(a.name, b.name));
+    if config.settings.projects_sorting_order == .most_recent_first {
+        for get_most_recent_projects() {
+            array_add(*project_configs, _entry_from_path(it));
+        }
     }
 
     // Load the list of projects from the global projects dir
@@ -61,6 +60,17 @@ switch_to_project_refresh_entries :: (filter: Fuzzy_Filter) {
     }
     visit_files(projects_dir, recursive = true, *project_configs, visitor, visit_files = true, visit_directories = false);
 
+    if #complete config.settings.projects_sorting_order == {
+        case .most_recent_first;
+            // most_recent_first is handled before visit_files
+
+        case .alphabetical;
+            quick_sort(project_configs, (a, b) => compare_alphabetically(a.name, b.name, false));
+
+        case .alphabetical_no_case;
+            quick_sort(project_configs, (a, b) => compare_alphabetically(a.name, b.name, true));
+    }
+
     for project : project_configs {
         score, highlights := fuzzy_match(project.name, filter);
         if score <= 0 && filter.full_string continue;
@@ -70,6 +80,54 @@ switch_to_project_refresh_entries :: (filter: Fuzzy_Filter) {
         entry.highlights = highlights;
         entry.sort_key = cast(u64) (score + project_configs.count - it_index);  // sort by the list order originally
     }
+}
+
+// Order:
+//     1. symbols
+//     2. digits
+//     3. letters
+compare_alphabetically :: (a : string, b : string, $no_case : bool) -> s64 {
+    // We do not care about length in the first place
+    min_length := min(a.count, b.count);
+    for 0 .. min_length - 1 {
+        a_u8 : u8 = a[it];
+        b_u8 : u8 = b[it];
+
+        a_is_capital := #char "A" <= a_u8 && a_u8 <= #char "Z";
+        b_is_capital := #char "A" <= b_u8 && b_u8 <= #char "Z";
+
+        a_is_symbol := !(a_is_capital || (#char "a" <= a_u8 && a_u8 <= #char "z") || (#char "0" <= a_u8 && a_u8 <= #char "9"));
+        b_is_symbol := !(b_is_capital || (#char "a" <= b_u8 && b_u8 <= #char "z") || (#char "0" <= b_u8 && b_u8 <= #char "9"));
+
+        // first symbols
+        if a_is_symbol {
+            if !b_is_symbol return -1;
+
+            a_s64 : s64 = a_u8;
+            b_s64 : s64 = b_u8;
+
+            diff := a_s64 - b_s64;
+            if diff return diff;
+
+            // both are same symbols, go to the next character
+            continue;
+        }
+        if b_is_symbol return 1;
+
+        // digits goes before letters, so we do not break the order
+        a_s64 : s64 = a_u8;
+        b_s64 : s64 = b_u8;
+        #if no_case {
+            if a_is_capital then a_s64 += #char "a" - #char "A";
+            if b_is_capital then b_s64 += #char "a" - #char "A";
+        }
+
+        diff := a_s64 - b_s64;
+        if diff return diff;
+    }
+
+    // first goes shorter one
+    return a.count - b.count;
 }
 
 Project_Config :: struct {

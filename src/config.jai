@@ -609,6 +609,7 @@ Color_Preview_Popup :: enum {
 Projects_Sorting_Order :: enum {
     most_recent_first;
     alphabetical;
+    alphabetical_no_case;
 }
 
 Keymap :: struct {
