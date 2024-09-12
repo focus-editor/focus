@@ -505,7 +505,7 @@ draw_color_picker :: (editor_id: s64, editor: *Editor, buffer: *Buffer, picker_r
         using buffer_info := cast(*Color_Change_Buffer_Info) color_picker_dialog.color_change_callback_data;
         str := color_to_hex(rgba, exclude_hash = true);
         for i : 0 .. str.count-1  str[i] = to_upper(str[i]);
-        old_str := cast(string) array_view(buffer.bytes, range.start, range.end - range.start);
+        old_str := cast(string) to_view(buffer.bytes, range.start, range.end - range.start);
         if old_str != str then add_paste_animation(editor_id, .{ range.start, range.end});
         if finalize {
             new_edit_group(buffer, editor);
@@ -1078,7 +1078,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 if selected_text.count > 2 && !is_all_whitespace(selected_text) {
                     search_func: (s: string, substring: string, start_index := 0) -> s64;
                     search_func = ifx editor.search_whole_words then find_index_from_left_whole_word else find_index_from_left;
-                    buffer_str := cast(string) buffer.bytes;
+                    buffer_str := to_string(buffer.bytes);
 
                     cursor_offsets: [..] s32;
                     cursor_offsets.allocator = temp;
@@ -1089,10 +1089,10 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                         offset = search_func(buffer_str, selected_text, start_index = offset);
                         if offset < 0 break;
 
-                        if !array_find(cursor_offsets, xx offset) {  // @Speed: slow when many cursors
+                        if !array_find(cursor_offsets, cast(s32) offset) {  // @Speed: slow when many cursors
                             highlight := add(*editor.highlights);
-                            highlight.offset = offset;
-                            highlight.count  = selected_text.count;
+                            highlight.offset = cast(s32) offset;
+                            highlight.count  = cast(s32) selected_text.count;
                             highlight.line   = offset_to_real_line(buffer, offset);
                         }
 
@@ -1200,7 +1200,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         for line_num : visible_lines_start .. visible_lines_end {
             line_start := get_line_start_offset(editor, buffer, line_num);
             length     := get_line_start_offset(editor, buffer, line_num+1) - line_start;
-            line := array_view(buffer.bytes, line_start, length);
+            line       := to_view(buffer.bytes, line_start, length);
 
             line_pixel_width := cast(s32) ((num_cols_in_string(cast(string) line) + min_visible_chars) * char_x_advance);
             max_line_pixel_width = max(max_line_pixel_width, line_pixel_width);
@@ -1389,7 +1389,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         for line_num : visible_lines_start .. visible_lines_end {
             line_start := get_line_start_offset(editor, buffer, line_num);
             length     := get_line_start_offset(editor, buffer, line_num+1) - line_start;
-            line := cast(string) array_view(buffer.bytes, line_start, length);
+            line       := cast(string) to_view(buffer.bytes, line_start, length);
             tab_spaces := 0;
             line, tab_spaces = advance_by_chars(line, hidden_chars_on_the_left);
             line = take_first_n_chars(line, max_chars_horizontally);
@@ -1788,9 +1788,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                     match_start := entry.offset;
                     match_end   := min(entry.offset + entry.count, line_range.end);  // if we have a multi-line match, we will still show only the first line
                     line_start  := ifx text_start <= match_start then text_start else line_range.start;
-                    line_indent := get_visual_indent_in_spaces(cast(string) array_view(buffer.bytes, line_range.start, line_start));
-                    cols_until_match_start := num_cols_in_string(cast(string) array_view(buffer.bytes, line_start, match_start - line_start));
-                    cols_until_match_end   := num_cols_in_string(cast(string) array_view(buffer.bytes, line_start, match_end   - line_start));
+                    line_indent := get_visual_indent_in_spaces(cast(string) to_view(buffer.bytes, line_range.start, line_start));
+                    cols_until_match_start := num_cols_in_string(cast(string) to_view(buffer.bytes, line_start, match_start - line_start));
+                    cols_until_match_end   := num_cols_in_string(cast(string) to_view(buffer.bytes, line_start, match_end   - line_start));
 
                     // Figure out whether we need to cut the line so that the match is visible
                     col_offset  := 0;
@@ -1806,7 +1806,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                         }
                     }
                     if col_offset > 0 {
-                        line_str := cast(string) array_view(buffer.bytes, line_start, line_range.end);
+                        line_str := cast(string) to_view(buffer.bytes, line_start, line_range.end);
                         byte_offset, col_offset = visual_col_to_byte_offset(line_str, col_offset, line_indent);
                     }
 
@@ -1892,7 +1892,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             {
                 // Do not count indented tabs here, only count each tab as one character.
                 start, end := buffer.line_starts[line], editor.cursors[main_cursor].pos;
-                s := cast(string) array_view(buffer.bytes, start, end - start);
+                s := cast(string) to_view(buffer.bytes, start, end - start);
                 while s {
                     byte := s[0];
                     advance(*s, 1 + trailingBytesForUTF8[byte]);
@@ -2999,9 +2999,9 @@ draw_finder :: () {
                 match_start := entry.match_offset;
                 match_end   := min(entry.match_offset + entry.match_count, line_range.end);  // if we have a multi-line match, we will still show only the first line
                 line_start  := ifx text_start <= match_start then text_start else line_range.start;
-                line_indent := get_visual_indent_in_spaces(cast(string) array_view(buffer.bytes, line_range.start, line_start));
-                cols_until_match_start := num_cols_in_string(cast(string) array_view(buffer.bytes, line_start, match_start - line_start));
-                cols_until_match_end   := num_cols_in_string(cast(string) array_view(buffer.bytes, line_start, match_end   - line_start));
+                line_indent := get_visual_indent_in_spaces(cast(string) to_view(buffer.bytes, line_range.start, line_start));
+                cols_until_match_start := num_cols_in_string(cast(string) to_view(buffer.bytes, line_start, match_start - line_start));
+                cols_until_match_end   := num_cols_in_string(cast(string) to_view(buffer.bytes, line_start, match_end   - line_start));
 
                 // Figure out whether we need to cut the line so that the match is visible
                 col_offset  := 0;
@@ -3017,7 +3017,7 @@ draw_finder :: () {
                     }
                 }
                 if col_offset > 0 {
-                    line_str := cast(string) array_view(buffer.bytes, line_start, line_range.end);
+                    line_str := cast(string) to_view(buffer.bytes, line_start, line_range.end);
                     byte_offset, col_offset = visual_col_to_byte_offset(line_str, col_offset, line_indent);
                 }
 

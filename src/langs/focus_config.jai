@@ -14,7 +14,7 @@ tokenize_focus_config :: (using buffer: *Buffer, start_offset := -1, count := -1
 
     name := get_buffer_name(buffer);
     file_path := ifx has_file then file.full_path else "";
-    result := parse_config(name, file_path, cast(string) bytes, for_highlighting = true, as_theme = lang == .Focus_Theme);
+    result := parse_config(name, file_path, to_string(bytes), for_highlighting = true, as_theme = lang == .Focus_Theme);
 
     for result.highlights {
         memset(tokens.data + it.offset, xx it.token_type, it.count);

@@ -330,7 +330,7 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
 }
 
 find_all_using_regex :: (using task: *Search_Task, regex: re.Regexp, buffer: Buffer, buffer_id: s32, buffer_sort_key: u64) {
-    buffer_str := cast(string) buffer.bytes;
+    buffer_str := to_string(buffer.bytes);
 
     while true {
         if buffer_str.count <= 0 break;
@@ -365,7 +365,7 @@ find_all_using_regex :: (using task: *Search_Task, regex: re.Regexp, buffer: Buf
 }
 
 find_all :: (using task: *Search_Task, buffer: Buffer, buffer_id: s32, buffer_sort_key: u64) {
-    buffer_str := cast(string) buffer.bytes;
+    buffer_str := to_string(buffer.bytes);
     offset := 0;
 
     while true {

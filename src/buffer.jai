@@ -20,7 +20,7 @@ refresh_open_buffers :: () {
         session_notify_modified_buffer(editor.buffer_id);
 
         // Maybe mark buffer as not modified if we've made it match the contents on disk
-        if !buffer.readonly then buffer.modified = buffer.meow_hash != calculate_hash(buffer.bytes);
+        if !buffer.readonly then buffer.modified = buffer.meow_hash != calculate_hash(to_view(buffer.bytes));
         if !buffer.modified then buffer.modified_on_disk = false;  // we've verified that the contents matches that on disk
 
         finder.need_to_refresh_results = true;
@@ -32,7 +32,7 @@ put_cursor_in_valid_spot :: (using cursor: *Cursor, buffer: Buffer) {
     sel = clamp(sel, 0, xx buffer.bytes.count);
 }
 
-insert_string_at_offset :: (buffer: *Buffer, offset: s64, str: string) {
+insert_string_at_offset :: (buffer: *Buffer, offset: s32, str: string) {
     new_insert_edit(buffer, offset, str);
     insert_string_raw(buffer, offset, str);
 }
@@ -45,13 +45,13 @@ insert_char_at_offset :: (buffer: *Buffer, offset: s32, char: Utf8_Char) {
 
 delete_range :: (buffer: *Buffer, using range: Offset_Range) {
     if start == end return;
-    old_str := cast(string) array_view(buffer.bytes, start, end - start);
+    old_str := cast(string) to_view(buffer.bytes, start, end - start);
     new_delete_edit(buffer, start, end, old_str);
     delete_range_raw(buffer, start, end);
 }
 
 replace_range :: (buffer: *Buffer, using range: Offset_Range, str: string) {
-    old_str := cast(string) array_view(buffer.bytes, start, end - start);
+    old_str := cast(string) to_view(buffer.bytes, start, end - start);
     if str == old_str return;
 
     new_replace_edit(buffer, start, end, old_str, str);
@@ -59,12 +59,12 @@ replace_range :: (buffer: *Buffer, using range: Offset_Range, str: string) {
     replace_range_raw(buffer, start, end, str);
 }
 
-delete_range_raw :: (using buffer: *Buffer, start: s64, end: s64, $notify := true) {
+delete_range_raw :: (using buffer: *Buffer, start: s32, end: s32, $notify := true) {
     len := end - start;
     if len <= 0 return;
 
     lock(*buffer.content_lock);
-    array_delete_bytes(*bytes, start, len);
+    delete_range(*bytes, start, len);
     unlock(*buffer.content_lock);
 
     #if notify add_edit_notification(buffer, start, end - start, 0);
@@ -72,13 +72,13 @@ delete_range_raw :: (using buffer: *Buffer, start: s64, end: s64, $notify := tru
     buffer.dirty = true;
 }
 
-insert_string_raw :: (buffer: *Buffer, offset: s64, str: string, $notify := true) {
+insert_string_raw :: (buffer: *Buffer, offset: s32, str: string, $notify := true) {
     bytes: [] u8;
     bytes.data  = str.data;
     bytes.count = str.count;
 
     lock(*buffer.content_lock);
-    array_insert_bytes_at(*buffer.bytes, offset, bytes);
+    insert_at(*buffer.bytes, offset, bytes);
     unlock(*buffer.content_lock);
 
     #if notify add_edit_notification(buffer, offset, 0, str.count);
@@ -127,14 +127,14 @@ get_line_starts :: (editor: Editor, buffer: Buffer) -> [] s32 {
     }
 }
 
-offset_to_coords :: (editor: Editor, buffer: Buffer, offset: s64) -> Coords {
+offset_to_coords :: (editor: Editor, buffer: Buffer, offset: s32) -> Coords {
     line := offset_to_line(editor, buffer, offset);
     col  := _get_visual_col_by_scanning_line(buffer, line, offset, get_line_starts(editor, buffer));
 
     return Coords.{ line = line, col = col };
 }
 
-offset_to_real_coords :: (buffer: Buffer, offset: s64) -> Coords {
+offset_to_real_coords :: (buffer: Buffer, offset: s32) -> Coords {
     line := offset_to_real_line(buffer, offset);
     col  := _get_visual_col_by_scanning_line(buffer, line, offset, to_view(buffer.line_starts));
 
@@ -142,8 +142,8 @@ offset_to_real_coords :: (buffer: Buffer, offset: s64) -> Coords {
 }
 
 // This function counts visual indent, taking tab size into account
-_get_visual_col_by_scanning_line :: (buffer: Buffer, line_num: s32, offset: s64, line_starts: [] s32) -> col: s32 {
-    return num_cols_in_string(xx array_view(buffer.bytes, line_starts[line_num], offset - line_starts[line_num]));
+_get_visual_col_by_scanning_line :: (buffer: Buffer, line_num: s32, offset: s32, line_starts: [] s32) -> col: s32 {
+    return num_cols_in_string(xx to_view(buffer.bytes, line_starts[line_num], offset - line_starts[line_num]));
 }
 
 get_cursor_coords :: (editor: Editor, buffer: Buffer, using cursor: Cursor) -> Cursor_Coords {
@@ -312,6 +312,13 @@ remove_crlf_in_place :: (bytes: *[] u8) -> bytes_removed: s64 {
     return bytes_removed;
 }
 
+remove_crlf_in_place :: inline (array: *Array(u8)) -> bytes_removed: s64 {
+    bytes := to_view(array);
+    bytes_removed := remove_crlf_in_place(*bytes);
+    array.count = cast(s32) bytes.count;
+    return bytes_removed;
+}
+
 remove_crlf_in_place :: inline (str: *string) -> bytes_removed: s64 {
     return remove_crlf_in_place(cast(*[] u8) str);
 }
@@ -328,7 +335,7 @@ rescan_for_lines :: (using buffer: *Buffer) {
     reset_keeping_memory(*line_starts);
     add(*line_starts, 0);  // first line
 
-    s := cast(string) bytes;
+    s := to_string(bytes);
 
     // NOTE: this implementation is slightly faster on my machine, but really not by much - need to test on other machines
     if check_feature(cpu_info.feature_leaves, x86_Feature_Flag.AVX2) {
@@ -683,7 +690,7 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
         save_buffer(buffer, buffer_id);
     } else {
         // We're "saving as", in which case we want to create a new buffer and also keep the current buffer
-        success := write_entire_file(file_path, cast(string) buffer.bytes);
+        success := write_entire_file(file_path, to_string(buffer.bytes));
         if !success {
             buffer.error_when_saving = true;
             log_error("Couldn't write to file %", file_path);
@@ -712,13 +719,13 @@ save_buffer :: (using buffer: *Buffer, buffer_id: s64) {
     if config.settings.strip_trailing_whitespace_on_save then strip_trailing_whitespace(buffer, buffer_id, on_save = true);
     if config.settings.insert_final_newline_on_save      then insert_final_newline(buffer);  // important to do it after stripping
 
-    success := write_entire_file(file.full_path, cast(string) bytes);
+    success := write_entire_file(file.full_path, to_string(bytes));
     if success {
         modified = false;
         modified_on_disk = false;
         deleted = false;
 
-        meow_hash = calculate_hash(bytes);
+        meow_hash = calculate_hash(to_view(bytes));
 
         error_when_saving = false;
         crlf = false;
@@ -852,11 +859,11 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64, on_save := 
     }
 
     // Replace buffer contents
-    new_replace_edit(buffer, 0, xx bytes.count, cast(string) bytes, stripped);
+    new_replace_edit(buffer, 0, bytes.count, to_string(bytes), stripped);
 
     lock(*content_lock);
     focus_memcpy(bytes.data, stripped.data, stripped.count);
-    bytes.count = stripped.count;
+    bytes.count = cast(s32) stripped.count;
     unlock(*content_lock);
 
     dirty = true;
@@ -892,7 +899,7 @@ insert_final_newline :: (using buffer: *Buffer) {
     new_insert_edit(buffer, bytes.count, "\n");
 
     lock(*content_lock);
-    array_resize(*bytes, bytes.count + 1);
+    resize(*bytes, bytes.count + 1);
     bytes[bytes.count - 1] = cast(u8) #char "\n";
     unlock(*content_lock);
 
@@ -955,7 +962,7 @@ find_or_create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
         // We have to only do this if the workspace scan is complete, otherwise we'll be in for
         // many surprising thread-related bugs
         for * buffer, buffer_id : open_buffers {
-            if !buffer.has_file && !buffer.deleted && !buffer.readonly && !trim(cast(string) buffer.bytes) return buffer_id, false;
+            if !buffer.has_file && !buffer.deleted && !buffer.readonly && !trim(to_string(buffer.bytes)) return buffer_id, false;
         }
     }
 
@@ -1010,12 +1017,12 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     remember_last_modtime_and_size(buffer);
 
     lock(*buffer.content_lock);
-    buffer.bytes = resizable(to_bytes(file_data));
+    buffer.bytes = from_view(to_bytes(file_data));
     bytes_removed := remove_crlf_in_place(*buffer.bytes);
     unlock(*buffer.content_lock);
 
     buffer.crlf = bytes_removed > 0;
-    buffer.meow_hash = calculate_hash(buffer.bytes);
+    buffer.meow_hash = calculate_hash(to_view(buffer.bytes));
     buffer.lang = get_lang_from_path(path);
 
     rescan_for_lines(buffer);
@@ -1125,8 +1132,8 @@ refresh_buffer_from_disk :: (path: string) {
         }
 
         // Reload its contents
-        new_replace_edit(buffer, 0, xx buffer.bytes.count, cast(string) buffer.bytes, file_contents_str);
-        replace_range_raw(buffer, 0, xx buffer.bytes.count, file_contents_str);
+        new_replace_edit (buffer, 0, buffer.bytes.count, to_string(buffer.bytes), file_contents_str);
+        replace_range_raw(buffer, 0, buffer.bytes.count, file_contents_str);
         rescan_for_lines(buffer);
         retokenize(buffer);
 
@@ -1164,7 +1171,7 @@ maybe_mark_buffer_as_deleted :: (buffer_id: s64) {
 
 free_buffer :: (using buffer: *Buffer) {
     // We don't do it often so it's ok to be slow here
-    array_free(bytes);
+    free(bytes);
     free(line_starts);
     array_free(tokens);
 
@@ -1326,7 +1333,7 @@ new_replace_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string, new
     clear_redos(buffer);
 }
 
-new_insert_edit :: (buffer: *Buffer, offset: s64, str: string) {
+new_insert_edit :: (buffer: *Buffer, offset: s32, str: string) {
     edit := array_add(*buffer.edits);
     edit.type = .insert;
     edit.insert.offset = offset;
@@ -1335,7 +1342,7 @@ new_insert_edit :: (buffer: *Buffer, offset: s64, str: string) {
     clear_redos(buffer);
 }
 
-new_insert_char_edit :: (buffer: *Buffer, offset: s64, char: Utf8_Char) {
+new_insert_char_edit :: (buffer: *Buffer, offset: s32, char: Utf8_Char) {
     edit := array_add(*buffer.edits);
     edit.type = .insert_char;
     edit.insert_char.offset = offset;
@@ -1378,24 +1385,22 @@ deinit :: (using edit_group: *Buffer.Edit_Group) {
 
 #scope_export
 
-// TODO:
-// - reorganise to reduce size
-// - replace all [..] with a custom array type without an allocator (also probably using s32's)
 Buffer :: struct {
-    file: File_Info;
-    num_times_opened: u8;
-    num_editors_open: u8;
-
-    meow_hash: u64;
-    last_modtime: Apollo_Time;  // for detecting whether a file has changed
-    last_size: s64;             // --
-
-    bytes: [..] u8;
+    content_lock: Mutex;  // must hold while modifying content (or reading in a non-main thread)
+    bytes: Array(u8);
     line_starts: Array(s32);       // real offsets of newlines in the bytes array
-
     tokens: [..] Token_Type;     // we assign a token to each byte (even for multi-byte chars).
-
     regions: [..] Buffer_Region; // for highlighting parts of buffer
+
+    // @Memory: all of these are allocated on the heap, which is not great, but it works fine right now.
+    // Eventually we'll want to revisit all this and make it not allocate as much.
+    undos: [..] Edit_Group;
+    redos: [..] Edit_Group;
+    edits: [..] Edit;  // current edits, not in a group yet
+    cursors: [..] Cursor;  // cursor state before any current edits were made
+    edit_notifications: [..] Edit_Notification;  // TODO: make it a global array for all buffers instead
+
+    file: File_Info;
 
     // TODO: put into enum_flags
     has_file               := false;  // a buffer might not have a corresponding file
@@ -1411,19 +1416,17 @@ Buffer :: struct {
     error_when_saving      := false;
     crlf                   := false;
 
-    content_lock: Mutex;  // must hold while modifying content (or reading in a non-main thread)
+    meow_hash: u64;
+    last_size: s64;             // --
+    last_modtime: Apollo_Time;  // for detecting whether a file has changed
 
+    // TODO: check
     last_edit_time: Apollo_Time;  // for creating new edit groups
 
-    // @Memory: all of these are allocated on the heap, which is not great, but it works fine right now.
-    // Eventually we'll want to revisit all this and make it not allocate as much.
-    undos: [..] Edit_Group;
-    redos: [..] Edit_Group;
-    edits: [..] Edit;  // current edits, not in a group yet
-    cursors: [..] Cursor;  // cursor state before any current edits were made
-    edit_notifications: [..] Edit_Notification;  // TODO: make it a global array for all buffers instead
-
     lang: Lang = .Plain_Text;
+
+    num_times_opened: u8;
+    num_editors_open: u8;
 
     // A pointer to arbitrary buffer information.
     // Would be nice to be able to avoid using it if another way of attaching info to buffers is better. We'll see what the use patterns are.
@@ -1446,11 +1449,11 @@ Buffer :: struct {
         type: enum { insert; insert_char; replace; delete; };
         union {
             insert: struct {
-                offset: s64;
+                offset: s32;
                 new_bytes: string;
             };
             insert_char: struct {
-                offset: s64;
+                offset: s32;
                 char: Utf8_Char;  // same as `insert`, but no need to allocate strings on the heap
                                   // it's probably the most common edit so it's worth it
             };
@@ -1533,7 +1536,7 @@ Coords :: struct {
 }
 
 Offset_Range :: struct {
-    start, end: s32;  // we won't open large files anyway
+    start, end: s32;
 }
 
 Buffer_Region :: struct {

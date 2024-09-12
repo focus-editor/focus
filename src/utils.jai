@@ -366,17 +366,17 @@ is_all_whitespace :: (s: string) -> bool {
     return true;
 }
 
-count_whitespace :: (bytes: [] u8, start_offset: s64, max_offset: s64, spaces := " \t") -> count: s32 {
-    subarray := array_view(bytes, start_offset, max_offset - start_offset);
+count_whitespace :: (bytes: Array(u8), start_offset: s32, max_offset: s32, spaces := " \t") -> count: s32 {
+    subarray := to_view(bytes, start_offset, max_offset - start_offset);
     for subarray {
         if !is_any(it, spaces) return cast(s32) it_index;
     }
-    return cast(s32) (max_offset - start_offset);
+    return max_offset - start_offset;
 }
 
-count_bytes_knowing_number_of_chars :: (bytes: [] u8, start_offset: s64, max_offset: s64, num_chars: s32) -> count: s32 {
+count_bytes_knowing_number_of_chars :: (bytes: Array(u8), start_offset: s32, max_offset: s32, num_chars: s32) -> count: s32 {
     count: s32 = 0;
-    s := cast(string) array_view(bytes, start_offset, max_offset - start_offset);
+    s := cast(string) to_view(bytes, start_offset, max_offset - start_offset);
     while s && num_chars {
         byte := s[0];
         num_bytes := clamp(1 + cast(s32) trailingBytesForUTF8[byte], 1, cast(s32) s.count);

@@ -89,7 +89,7 @@ tokenize_jai_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* tem
 get_jai_tokenizer :: (using buffer: *Buffer, start_offset := -1, count := -1) -> Jai_Tokenizer {
     tokenizer: Jai_Tokenizer;
 
-    tokenizer.buf    = cast(string) bytes;
+    tokenizer.buf    = to_string(bytes);
     tokenizer.max_t  = bytes.data + bytes.count;
     tokenizer.t      = bytes.data;
 

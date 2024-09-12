@@ -11,7 +11,6 @@ init_build_system :: () {
 
     // Remember allocators, so that we don't accidentally use the pool allocator on any of these arrays.
     // We should really use custom expandable arrays which don't remember allocators on buffers at some point
-    buffer.bytes.allocator   = focus_allocator;
     buffer.tokens.allocator  = focus_allocator;
     buffer.regions.allocator = focus_allocator;
     buffer.cursors.allocator = focus_allocator;
@@ -615,7 +614,7 @@ parse_build_errors :: (error_regex: string) {
     editor, buffer := get_build_editor_and_buffer();
     output_range := build.output_range;
     if output_range.start < 0 || output_range.end <= output_range.start || output_range.end > buffer.bytes.count return;
-    build_output := cast(string) array_view(buffer.bytes, output_range.start, output_range.end - output_range.start);
+    build_output := cast(string) to_view(buffer.bytes, output_range.start, output_range.end - output_range.start);
 
     compiled_regex, valid := re.compile(error_regex, .LikePerl & ~.OneLine);
     if !valid {
@@ -701,20 +700,20 @@ parse_build_errors :: (error_regex: string) {
         lang := get_lang_from_path(error.file);
 
         // Assume that code samples might be somewhere in between the error data we've parsed
-        start := cast(s64) error.error_info_end_offset;
+        start := error.error_info_end_offset;
         end   := buffer.bytes.count;
         if it_index < build_errors.count - 1 then end = build_errors[it_index + 1].error_info_start_offset;
 
         if end < start continue;  // TODO: investigate why this might be happening before we implement other languages. See https://github.com/focus-editor/focus/issues/379
 
-        potential_code_block := cast(string) array_view(buffer.bytes, start, end - start);
+        potential_code_block := cast(string) to_view(buffer.bytes, start, end - start);
 
         if lang == .Jai {
             // In the Jai compiler output, sample code blocks should be separated by double newlines + spaces
-            last_double_newline := find_index_from_right(potential_code_block, "\n\n");
+            last_double_newline := cast(s32) find_index_from_right(potential_code_block, "\n\n");
             if last_double_newline >= 0 then end = start + last_double_newline;
 
-            first_double_newline := find_index_from_left(potential_code_block, "\n    ");
+            first_double_newline := cast(s32) find_index_from_left(potential_code_block, "\n    ");
             if first_double_newline >= 0 then start += first_double_newline;
         } else {
             continue;  // don't attempt to highlight other languages until we figure out a robust way to parse out code samples

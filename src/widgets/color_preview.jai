@@ -318,7 +318,7 @@ get_language_sample_text :: (lang: Buffer.Lang) -> string {
 parse_config_and_get_offset_of_color_value :: (buffer: Buffer, color_name: string) -> offset: s32 {
     // Do some very superficial parsing, not super robust but better than plain search
     handler: Text_File_Handler;
-    trimmed_data := trim_left(cast(string) buffer.bytes, " \t\n\r");  // skip empty lines, otherwise the handler will crash!
+    trimmed_data := trim_left(to_string(buffer.bytes), " \t\n\r");  // skip empty lines, otherwise the handler will crash!
     start_from_memory(*handler, "colors", "colors", trimmed_data);
     if handler.failed return -1;
 

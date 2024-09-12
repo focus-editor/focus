@@ -144,7 +144,7 @@ tokenize_odin_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* tem
 get_odin_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> Odin_Tokenizer {
     tokenizer: Odin_Tokenizer;
 
-    tokenizer.buf   = cast(string) bytes;
+    tokenizer.buf   = to_string(bytes);
     tokenizer.max_t = bytes.data + bytes.count;
     tokenizer.t     = bytes.data;
 

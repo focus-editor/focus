@@ -79,7 +79,7 @@ tokenize_rust_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* te
 get_rust_tokenizer :: (using buffer: *Buffer, start_offset := -1, count := -1) -> Rust_Tokenizer {
     tokenizer: Rust_Tokenizer;
 
-    tokenizer.buf    = cast(string) bytes;
+    tokenizer.buf    = to_string(bytes);
     tokenizer.max_t  = bytes.data + bytes.count;
     tokenizer.t      = bytes.data;
 

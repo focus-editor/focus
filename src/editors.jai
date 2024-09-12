@@ -487,7 +487,7 @@ editors_show_default_config :: (placement: Editor_Placement) {
         global_config_buffer_id = find_or_create_an_empty_buffer();
         buffer := *open_buffers[global_config_buffer_id];
         replace_range_raw(buffer, 0, xx buffer.bytes.count, DEFAULT_CONFIG_FILE_DATA);
-        buffer.meow_hash = calculate_hash(buffer.bytes);
+        buffer.meow_hash = calculate_hash(to_view(buffer.bytes));
         buffer.readonly = true;
         buffer.internal = true;
         buffer.lang = .Focus_Config;
@@ -513,7 +513,7 @@ editors_show_troubleshooting_info :: (placement: Editor_Placement) {
 
     buffer := *open_buffers[global_troubleshooting_buffer_id];
     replace_range_raw(buffer, 0, xx buffer.bytes.count, platform_get_troubleshooting_info());
-    buffer.meow_hash = calculate_hash(buffer.bytes);
+    buffer.meow_hash = calculate_hash(to_view(buffer.bytes));
     rescan_for_lines(buffer);
 
     editors_open_buffer(global_troubleshooting_buffer_id, placement);
@@ -1090,7 +1090,7 @@ find_all_using_regex :: (using search_bar: *Search_Bar, needle: string, buffer: 
     if !regex_is_valid return;
     defer re.uninit(*regex);
 
-    buffer_str := cast(string) buffer.bytes;
+    buffer_str := to_string(buffer.bytes);
 
     while true {
         if buffer_str.count <= 0 break;
@@ -1112,8 +1112,8 @@ find_all_using_regex :: (using search_bar: *Search_Bar, needle: string, buffer: 
         if selected_result < 0 && offset >= search_point_offset then selected_result = results.count;
 
         result := add(*results);
-        result.offset = offset;
-        result.count  = count;
+        result.offset = cast(s32) offset;
+        result.count  = cast(s32) count;
         result.line   = offset_to_real_line(buffer, offset);
 
         if results.count >= 5000 break;
@@ -1121,7 +1121,7 @@ find_all_using_regex :: (using search_bar: *Search_Bar, needle: string, buffer: 
 }
 
 find_all :: (using search_bar: *Search_Bar, needle: string, buffer: Buffer) {
-    buffer_str := cast(string) buffer.bytes;
+    buffer_str := to_string(buffer.bytes);
 
     offset := 0;
     skip_table := bmh_prepare_skip_table(needle, case_sensitive);
@@ -1139,8 +1139,8 @@ find_all :: (using search_bar: *Search_Bar, needle: string, buffer: Buffer) {
         if selected_result < 0 && offset >= search_point_offset then selected_result = results.count;
 
         result := add(*results);
-        result.offset = offset;
-        result.count  = needle.count;
+        result.offset = cast(s32) offset;
+        result.count  = cast(s32) needle.count;
         result.line   = offset_to_real_line(buffer, offset);
 
         offset += needle.count;
@@ -1363,7 +1363,7 @@ scan_through_similar_chars_on_the_right :: (using buffer: Buffer, offset: s32, o
         if !is_non_word_char(char) { s.data, char = unicode_prev_character(s.data); }
     }
 
-    return cast(s32) min(bytes.count, s.data - bytes.data);
+    return min(bytes.count, cast(s32)(s.data - bytes.data));
 }
 
 cursors_start_blinking :: inline () {
@@ -1663,7 +1663,7 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) 
     selected_text := get_selected_text_all_cursors(editor, buffer);
     if selected_text {
         // Cursors have the same text selected - attempt to create another cursor
-        buffer_str := cast(string) buffer.bytes;
+        buffer_str := to_string(buffer.bytes);
 
         search_func: (s: string, substring: string, start_index := 0) -> s64;
         search_func = ifx search_whole_words && is_all_word_chars(selected_text) then find_index_from_left_whole_word else find_index_from_left;
@@ -1732,7 +1732,7 @@ select_all_occurrences :: (using editor: *Editor, buffer: Buffer, search_str := 
     leave_only_main_cursor(editor);
 
     // Begin search from the main cursor downwards with a wraparound
-    buffer_str    := cast(string) buffer.bytes;
+    buffer_str    := to_string(buffer.bytes);
     selected_text := ifx !search_str then get_selected_string(cursors[main_cursor], buffer) else search_str;
     search_func   := ifx !search_str && search_whole_words && is_all_word_chars(selected_text) then find_index_from_left_whole_word else find_index_from_left;
     initial       := get_selection(cursors[main_cursor]);
@@ -1915,8 +1915,8 @@ undo :: (editor: *Editor, buffer: *Buffer) {
         if #complete e.type == {
             case .delete;      using e.delete;       insert_string_raw(buffer, offset_range.start, old_bytes);
             case .replace;     using e.replace;      replace_range_raw(buffer, offset_range.start, offset_range.start + xx new_bytes.count, old_bytes);
-            case .insert;      using e.insert;       delete_range_raw (buffer, offset, offset + new_bytes.count);
-            case .insert_char; using e.insert_char;  delete_range_raw (buffer, offset, offset + char.count);
+            case .insert;      using e.insert;       delete_range_raw (buffer, offset, offset + cast(s32) new_bytes.count);
+            case .insert_char; using e.insert_char;  delete_range_raw (buffer, offset, offset + cast(s32)char.count);
         }
     }
 
@@ -2204,7 +2204,7 @@ break_line :: (editor: *Editor, buffer: *Buffer) {
         space := *space_per_cursor[it_index];
         prev_space := space_per_cursor[max(it_index-1, 0)];
         if space.original_start == prev_space.original_start then space.start = prev_space.start; else space.start += xx offset_delta;  // handle cursors on the same line well
-        space_str := cast(string) array_view(buffer.bytes, space.start, space.count);
+        space_str := cast(string) to_view(buffer.bytes, space.start, space.count);
         insert_str := tprint("\n%", space_str);
 
         cursor.pos += xx offset_delta;
@@ -2245,7 +2245,7 @@ new_line_below :: (editor: *Editor, buffer: *Buffer) {
         prev_line_info := line_info_per_cursor[max(it_index-1, 0)];
         if line_info.space.original_start == prev_line_info.space.original_start then line_info.space.start = prev_line_info.space.start; else line_info.space.start += xx offset_delta;  // handle cursors on the same line well
         line_info.end += xx offset_delta;
-        whitespace_str := cast(string) array_view(buffer.bytes, line_info.space.start, line_info.space.count);  // construct string from offsets to avoid memory errors on buffer reallocation
+        whitespace_str := cast(string) to_view(buffer.bytes, line_info.space.start, line_info.space.count);  // construct string from offsets to avoid memory errors on buffer reallocation
         insert_str := ifx line_info.last_line then tprint("\n%\n", whitespace_str) else tprint("%\n", whitespace_str);
 
         insert_string_at_offset(buffer, line_info.end, insert_str);
@@ -2278,7 +2278,7 @@ new_line_above :: (editor: *Editor, buffer: *Buffer) {
         prev_line_info := line_info_per_cursor[max(it_index-1, 0)];
         if line_info.space.original_start == prev_line_info.space.original_start then line_info.space.start = prev_line_info.space.start; else line_info.space.start += xx offset_delta;  // handle cursors on the same line well
         line_info.start += xx offset_delta;
-        whitespace_str := cast(string) array_view(buffer.bytes, line_info.space.start, line_info.space.count);  // construct string from offsets to avoid memory errors on buffer reallocation
+        whitespace_str := cast(string) to_view(buffer.bytes, line_info.space.start, line_info.space.count);  // construct string from offsets to avoid memory errors on buffer reallocation
         insert_str := tprint("%\n", whitespace_str);
 
         insert_string_at_offset(buffer, line_info.start, insert_str);
@@ -2445,12 +2445,12 @@ insert_tab_at_each_cursor :: (editor: *Editor, buffer: *Buffer) {
     editor.cursor_moved = .unimportant;
 }
 
-get_line_starts_for_lines_with_cursors_tmp :: (editor: *Editor, buffer: *Buffer) -> [..] s64 /* tmp */, last_line_end_offset: s64 {
-    line_starts: [..] s64;
+get_line_starts_for_lines_with_cursors_tmp :: (editor: *Editor, buffer: *Buffer) -> [..] s32 /* tmp */, last_line_end_offset: s32 {
+    line_starts: [..] s32;
     line_starts.allocator = temp;
 
     last_added := -1;
-    last_line_end_offset := 0;
+    last_line_end_offset: s32 = 0;
     for cursor : editor.cursors {
         selection := get_selection(cursor);
         start_line := offset_to_real_line(buffer, selection.start);
@@ -2492,7 +2492,7 @@ indent_lines :: (editor: *Editor, buffer: *Buffer) {
     for 0..line_starts.count-2 {
         start, end := line_starts[it], line_starts[it+1];
         append(*b, spaces);
-        append(*b, cast(string) array_view(buffer.bytes, start, end-start));
+        append(*b, cast(string) to_view(buffer.bytes, start, end-start));
     }
     new_str := builder_to_string(*b);
     defer free(new_str);
@@ -2515,7 +2515,7 @@ unindent_lines :: (editor: *Editor, buffer: *Buffer) {
     for 0..line_starts.count-2 {
         start, end := line_starts[it], line_starts[it+1];
         if start >= buffer.bytes.count continue;
-        spaces_at_line_start := 0;
+        spaces_at_line_start: s32 = 0;
         if buffer.bytes[start] == #char "\t" {
             // When seeing a tab, just remove it (and do nothing else)
             spaces_at_line_start = 1;
@@ -2531,7 +2531,7 @@ unindent_lines :: (editor: *Editor, buffer: *Buffer) {
             if cursor.sel > adjusted_start then cursor.sel -= xx min(cursor.sel - adjusted_start, spaces_at_line_start);
         }
         new_start := start + spaces_at_line_start;
-        append(*b, cast(string) array_view(buffer.bytes, new_start, end-new_start));
+        append(*b, cast(string) to_view(buffer.bytes, new_start, end-new_start));
         spaces_removed += spaces_at_line_start;
     }
     new_str := builder_to_string(*b);
@@ -2817,7 +2817,7 @@ move_lines_up :: (editor: *Editor, buffer: *Buffer) {
         prev_line_range := Offset_Range.{ start = line.prev_line_start, end = line.range.start };
         view     := get_range_as_string(buffer, prev_line_range);
         prev_str := ifx line.is_last then tprint("\n%", view) else copy_temporary_string(view);
-        length   := view.count;  // this length should *not* include the optional newline character
+        length   := cast(s32) view.count;  // this length should *not* include the optional newline character
 
         delete_range(buffer, prev_line_range);
         insert_string_at_offset(buffer, line.range.end - length, prev_str);
@@ -3181,14 +3181,14 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
     // We're using a single bit on the line start offset to mark lines as empty. This saves us from having to loop over every line *again*
     // once we start adding/removing comments. Since it is the sign bit, this doesn't overwrite any bits that could be part of valid offsets.
     // We set this bit manually instead of multiplying with -1 because this way it also works for offset 0.
-    EMPTY_LINE_BIT  :: (cast(s64) 1) >>> 1;
+    EMPTY_LINE_BIT  :: (cast(s32) 1) >>> 1;
     LINE_START_MASK :: ~EMPTY_LINE_BIT;
 
     min_indent  := -1;
     add_comment := false;
     for 0..last_line {
         start, end := line_starts[it], line_starts[it+1];
-        str := cast(string) array_view(buffer.bytes, start, end-start);
+        str := cast(string) to_view(buffer.bytes, start, end-start);
 
         // NOTE: 'str' may actually be multiple lines! This happens when you have two cursors and they are spaced multiple lines apart.
         //       You get the start offsets of both lines, and with start=[i] and end=[i+1] you are selecting the whole region in between
@@ -3253,7 +3253,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
         adjustment := 0;
         for 0..last_line {
             start, end := line_starts[it] & LINE_START_MASK, line_starts[it+1] & LINE_START_MASK;
-            str        := cast(string) array_view(buffer.bytes, start, end-start);
+            str        := cast(string) to_view(buffer.bytes, start, end-start);
             if line_starts[it] & EMPTY_LINE_BIT { append(*b, str); continue; }
 
             // Count how many characters are in the minimum indent, then cut off those characters since they will be replaced with new_whitespace
@@ -3293,7 +3293,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
         adjustment := 0;
         for 0..last_line {
             start, end := line_starts[it] & LINE_START_MASK, line_starts[it+1] & LINE_START_MASK;
-            str        := cast(string) array_view(buffer.bytes, start, end-start);
+            str        := cast(string) to_view(buffer.bytes, start, end-start);
             if line_starts[it] & EMPTY_LINE_BIT { append(*b, str); continue; }
 
             found, whitespace, after_comment := split_from_left(str, comment);
@@ -3390,10 +3390,10 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
     for cursor : editor.cursors {
         selection := get_selection(cursor);
 
-        split_left := cast(string) buffer.bytes;
+        split_left := to_string(buffer.bytes);
         split_left.count = selection.start;
 
-        split_right := cast(string) buffer.bytes;
+        split_right := to_string(buffer.bytes);
         split_right.data  += selection.end;
         split_right.count -= selection.end;
 
@@ -3470,7 +3470,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
             }
 
             start_pos := selection.start + move_count;
-            end_pos   := selection.end   + move_count + comment_start.count;
+            end_pos   := selection.end   + move_count + cast(s32) comment_start.count;
 
             insert_string_at_offset(buffer, start_pos, comment_start);
             insert_string_at_offset(buffer, end_pos,   comment_end);
@@ -3601,8 +3601,8 @@ Selection_Mode :: struct {
 Scroll_Mode :: enum u8 { no; yes; snap; };
 
 Text_Highlight :: struct {
-    offset: s64;    // we'll convert this to position range, but only for the visible highlights
-    count: s64;
+    offset: s32;    // we'll convert this to position range, but only for the visible highlights
+    count: s32;
     line: s32;      // useful to know the line number to display in the scrollbar area
 }
 
