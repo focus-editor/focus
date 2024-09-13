@@ -46,11 +46,7 @@ switch_to_project_refresh_entries :: (filter: Fuzzy_Filter) {
     }
 
     // Load the list of most recent projects
-    if config.settings.projects_sorting_order == .most_recent_first {
-        for get_most_recent_projects() {
-            array_add(*project_configs, _entry_from_path(it));
-        }
-    }
+    for get_most_recent_projects()  array_add(*project_configs, _entry_from_path(it));
 
     // Load the list of projects from the global projects dir
     visitor :: (info: *File_Visit_Info, project_configs: *[..] Project_Config) {
@@ -62,7 +58,7 @@ switch_to_project_refresh_entries :: (filter: Fuzzy_Filter) {
 
     if #complete config.settings.projects_sorting_order == {
         case .most_recent_first;
-            // most_recent_first is handled before visit_files
+            // already sorted this way
 
         case .alphabetical;
             quick_sort(project_configs, (a, b) => compare_alphabetically(a.name, b.name, false));
