@@ -13,7 +13,7 @@ refresh_open_buffers :: () {
 
         buffer.was_dirty_during_frame = false;
         buffer.needs_tokenizing = true;
-        buffer.last_edit_time = frame_time;
+        buffer.last_edit_time = frame_time64;
 
         refresh_all_editors_for_buffer(editor.buffer_id);
 
@@ -732,7 +732,7 @@ save_buffer :: (using buffer: *Buffer, buffer_id: s64) {
     } else {
         error_when_saving = true;
     }
-    remember_last_modtime_and_size(buffer);
+    remember_last_mod_info(buffer);
     if editors.active >= 0 && editors.active < open_editors.count then update_window_title(open_editors[editors.active].buffer_id);
 
     // The config will attempt to refresh again on a file watcher message, but it should exit early because it will be unchanged.
@@ -906,13 +906,14 @@ insert_final_newline :: (using buffer: *Buffer) {
     rescan_for_lines(buffer);
 }
 
-remember_last_modtime_and_size :: (using buffer: *Buffer) {
+remember_last_mod_info :: (using buffer: *Buffer) {
     assert(has_file, "Trying to remember last modtime and size of a buffer with no file. This is a bug");
 
-    modtime, size, success := file_modtime_and_size(file.full_path);
+    modtime_apollo, size, success := file_modtime_and_size(file.full_path);
     if success {
-        last_modtime = modtime;
-        last_size    = size;
+        // We don't care too much about precision here. We only care about last_modtime being different from the previous one if it changes
+        mod_info.last_modtime = cast,trunc(s32) to_milliseconds(modtime_apollo);
+        mod_info.last_size    = cast(s32) size;
     } else {
         log_error("Couldn't get modtime and size of file %\n", file.full_path);
     }
@@ -920,12 +921,13 @@ remember_last_modtime_and_size :: (using buffer: *Buffer) {
 
 buffer_file_has_changed_on_disk :: (using buffer: *Buffer) -> changed: bool {
     assert(has_file);
-    modtime, size, success := file_modtime_and_size(file.full_path);
+    modtime_apollo, size, success := file_modtime_and_size(file.full_path);
     if !success {
         log_error("Couldn't get modtime and size of %\n", file.full_path);
         return true;  // consider changed
     }
-    return modtime != last_modtime || size != last_size;
+    modtime := cast,trunc(s32) to_milliseconds(modtime_apollo);
+    return modtime != mod_info.last_modtime || size != mod_info.last_size;
 }
 
 is_empty :: (using buffer: Buffer, line_num: s32) -> bool {
@@ -1014,7 +1016,7 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     // Fill in buffer data
     buffer.file = get_file_info_from_full_path(path);
     buffer.has_file = true;
-    remember_last_modtime_and_size(buffer);
+    remember_last_mod_info(buffer);
 
     lock(*buffer.content_lock);
     buffer.bytes = from_view(to_bytes(file_data));
@@ -1120,7 +1122,7 @@ refresh_buffer_from_disk :: (path: string) {
         // TODO: display a dialog prompting to reload
         buffer.modified_on_disk = true;
     } else {
-        remember_last_modtime_and_size(buffer);
+        remember_last_mod_info(buffer);
 
         // Remember cursor state - if we have 2 editors then the last editor's state will be remembered
         for * editor : open_editors {
@@ -1409,6 +1411,11 @@ Buffer :: struct {
 
     file: File_Info;
 
+    meow_hash: u64;
+    last_edit_time: float64;  // for creating new edit groups
+
+    mod_info: Mod_Info;  // for detecting whether a file has changed
+
     // TODO: put into enum_flags
     has_file               := false;  // a buffer might not have a corresponding file
     dirty                  := false;
@@ -1422,13 +1429,6 @@ Buffer :: struct {
     binary                 := false;
     error_when_saving      := false;
     crlf                   := false;
-
-    meow_hash: u64;
-    last_size: s64;             // --
-    last_modtime: Apollo_Time;  // for detecting whether a file has changed
-
-    // TODO: check
-    last_edit_time: Apollo_Time;  // for creating new edit groups
 
     lang: Lang = .Plain_Text;
 
@@ -1444,6 +1444,11 @@ Buffer :: struct {
         // ...
     }
     Extra_Type :: enum { focus_config; }
+
+    Mod_Info :: struct {
+        last_modtime: s32;  // Apollo_Time converted to milliseconds
+        last_size:    s32;
+    }
 
     Edit_Group :: struct {
         edits: [] Edit;

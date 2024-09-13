@@ -146,7 +146,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
     // We always want to put some actions in a separate edit group (e.g. block indent)
     new_group := false;
     for cursor : editor.cursors { if new_edit_group_required_for_action(action, cursor) { new_group = true; break; } }
-    if new_group || to_float64_seconds(frame_time - buffer.last_edit_time) >= EDIT_GROUP_TIMEOUT then new_edit_group(buffer, editor);  // do it before action
+    if new_group || (to_float64_seconds(frame_time) - buffer.last_edit_time) >= EDIT_GROUP_TIMEOUT then new_edit_group(buffer, editor);  // do it before action
 
     // We want to remember where cursors were before we do any edits
     if buffer.edits.count == 0 {
@@ -342,7 +342,7 @@ active_editor_type_char :: (char: u32) {
     new_group := false;  // we always want to remember cursor state when a selection is replaced with anything
     for editor.cursors { if has_selection(it) { new_group = true; break; } }
 
-    if new_group || to_float64_seconds(frame_time - buffer.last_edit_time) >= EDIT_GROUP_TIMEOUT {
+    if new_group || (to_float64_seconds(frame_time) - buffer.last_edit_time) >= EDIT_GROUP_TIMEOUT {
         new_edit_group(buffer, editor);
     }
 
@@ -401,7 +401,7 @@ active_editor_type_char :: (char: u32) {
     if editor.cursors.count > 1 then organise_cursors(editor);
     for * cursor : editor.cursors  cursor.col_wanted = -1;
 
-    buffer.last_edit_time = frame_time;
+    buffer.last_edit_time = frame_time64;
     editor.cursor_moved = .unimportant;
     cursors_start_blinking();
     if !is_empty(editor.search_bar.results) then search_and_update_results(editor, buffer, jump = false);

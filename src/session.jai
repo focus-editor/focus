@@ -386,8 +386,7 @@ dump_buffer_state :: (buffer_id: s64) -> [] u8 #must {
     state.has_file  = buffer.has_file;
     state.unsaved   = buffer.modified;
 
-    state.last_modtime = buffer.last_modtime;
-    state.last_size    = buffer.last_size;
+    state.mod_info  = buffer.mod_info;
 
     // Find editors and remember their state
     editor_states: [2] Buffer_State.Editor = ---;
@@ -505,8 +504,7 @@ Buffer_State :: struct {
     has_file: bool;
     unsaved: bool;
 
-    last_modtime: Apollo_Time;
-    last_size: s64;
+    mod_info: Buffer.Mod_Info;
 
     // Every buffer may have up to 2 editors
     editor1: Editor;
