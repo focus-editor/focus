@@ -64,6 +64,10 @@ is_color_preview_panel :: inline (editor_id: s64) -> bool {
     return editor_id == panel_editor_id;
 }
 
+color_preview_get_target_buffer_id :: inline () -> s64 {
+    return target_buffer_id;
+}
+
 color_preview_lose_focus :: () {
     // Sometimes we might want to make the previously active editor active, e.g. when deciding on new buffer placement
     if editors.active != editors.left && editors.active != editors.right && editors.left >= 0 && editors.right >= 0 {

@@ -22,6 +22,7 @@
     + The `delete_to_start_of_line` command will now delete to the indentation level first, not to the very start of the line right away
     + Many internal changes to reduce the memory footprint and improve the cache friendliness of internal data structures
     + Files larger than the limit of 2,147,483,647 bytes will now no longer be loaded with an error message rather than crashing
+    + Hitting save when in the color preview editor will save the target config file, instead of attempting to save the color preview sample text somewhere
 
 
 # RELEASES ==================================================================

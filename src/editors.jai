@@ -177,7 +177,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
                                                 reset_search_results(*editor.search_bar);
                                                 editor.refresh_selection = true;
 
-        case .save;                             save(editor.buffer_id);
+        case .save;                             save(editor, editors.active);
         case .save_all;                         save_all();
         case .save_as;                          defer_action_save_as(editor.buffer_id);
         case .move_current_file;                defer_action_move   (editor.buffer_id);
@@ -1768,6 +1768,15 @@ select_all_occurrences :: (using editor: *Editor, buffer: Buffer, search_str := 
     cursors_start_blinking();
 
     return editor.search_whole_words;
+}
+
+save :: (editor: Editor, editor_id: s64) {
+    buffer_id := editor.buffer_id;
+
+    // When hitting save while in the color preview panel, save the target config file instead
+    if is_color_preview_panel(editor_id) then buffer_id = color_preview_get_target_buffer_id();
+
+    save(buffer_id);
 }
 
 save :: (buffer_id: s64) {
