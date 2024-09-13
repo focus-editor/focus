@@ -9,10 +9,6 @@ init_build_system :: () {
     buffer.lang = .Focus_Build_Panel;
     if config.settings.build_panel_line_wrap_always_on then editor.line_wrap = .on; else editor.line_wrap = .off;
 
-    // Remember allocators, so that we don't accidentally use the pool allocator on any of these arrays.
-    // We should really use custom expandable arrays which don't remember allocators on buffers at some point
-    buffer.cursors.allocator = focus_allocator;
-
     commands_refresh_after_config_change();
 
     init(*build_mutex);

@@ -150,7 +150,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
 
     // We want to remember where cursors were before we do any edits
     if buffer.edits.count == 0 {
-        array_resize(*buffer.cursors, editor.cursors.count);
+        resize(*buffer.cursors, editor.cursors.count);
         for * cursor, i : buffer.cursors { cursor.* = editor.cursors[i]; }
     }
 
@@ -348,7 +348,7 @@ active_editor_type_char :: (char: u32) {
 
     if buffer.edits.count == 0 {
         // We want to remember where cursors were before we do any edits
-        array_resize(*buffer.cursors, editor.cursors.count);
+        resize(*buffer.cursors, editor.cursors.count);
         for * cursor, i : buffer.cursors { cursor.* = editor.cursors[i]; }
     }
 
@@ -1485,7 +1485,7 @@ new_edit_group :: (buffer: *Buffer, editor: *Editor) {
     new_group.cursors_after  = to_view(copy(editor.cursors));
 
     // Remember cursor state
-    array_resize(*buffer.cursors, editor.cursors.count);
+    resize(*buffer.cursors, editor.cursors.count);
     for * cursor, i : buffer.cursors { cursor.* = editor.cursors[i]; }
 }
 

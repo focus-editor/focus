@@ -1127,7 +1127,7 @@ refresh_buffer_from_disk :: (path: string) {
             if editor.buffer_id != buffer_id continue;
 
             new_edit_group(buffer, editor);
-            array_resize(*buffer.cursors, editor.cursors.count);
+            resize(*buffer.cursors, editor.cursors.count);
             for * cursor, i : buffer.cursors { cursor.* = editor.cursors[i]; }
         }
 
@@ -1182,7 +1182,7 @@ free_buffer :: (using buffer: *Buffer) {
     free(edits);
     array_free(edit_notifications);
 
-    array_free(cursors);
+    free(cursors);
 
     if has_file && file.full_path then free(file.full_path);
 
@@ -1396,7 +1396,9 @@ Buffer :: struct {
     undos: Array(Edit_Group);
     redos: Array(Edit_Group);
     edits: Array(Edit);  // current edits, not in a group yet
-    cursors: [..] Cursor;  // cursor state before any current edits were made
+
+    cursors: Array(Cursor);  // cursor state before any current edits were made
+
     edit_notifications: [..] Edit_Notification;  // TODO: make it a global array for all buffers instead
 
     content_lock: Mutex;  // must hold while modifying content (or reading in a non-main thread)
