@@ -1,4 +1,3 @@
-// @Array:
 array_insert_bytes_at :: (array: *[..] u8, offset: s64, bytes: [] u8) {
     assert(offset >= 0 && offset <= array.count);
     if !bytes return;
@@ -27,7 +26,6 @@ array_add_bytes :: (array: *[..] u8, bytes: [] u8) {
     array.count = new_size;
 }
 
-// @Array:
 array_delete_bytes :: (array: *[..] u8, offset: s64, count: s64) {
     assert(offset >= 0 && count >= 0 && offset + count <= array.count);
     focus_memcpy(array.data + offset, array.data + offset + count, array.count - offset - count);
@@ -47,17 +45,6 @@ arrays_concat :: (array1: [] $T, array2: [] T) -> [] T {
     array_add(*result, ..array1);
     array_add(*result, ..array2);
     return result;
-}
-
-// @Array:
-to_owned_array :: (array: *[..]$T, free_memory := false) -> [] T {
-    new_array := array_copy(<<array);
-    if free_memory {
-        array_reset(array);
-    } else {
-        array_reset_keeping_memory(array);
-    }
-    return new_array;
 }
 
 visual_col_to_byte_offset :: (str: string, target_col: s64, line_indent: s64) -> offset: s64, new_col: s64 {

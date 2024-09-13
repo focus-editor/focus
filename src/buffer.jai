@@ -1524,8 +1524,6 @@ Buffer :: struct {
     };
 }
 
-// @Array
-
 Focus_Config_Extra :: struct {
     using #as base: Buffer.Extra;
     base.type = .focus_config;
