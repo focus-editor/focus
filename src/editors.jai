@@ -416,37 +416,39 @@ get_active_editor_and_buffer :: () -> *Editor, *Buffer {
 
 refresh_all_editors_for_buffer :: (buffer_id: s64) {
     buffer := *open_buffers[buffer_id];
+
     for * editor, editor_id : open_editors {
         if editor.buffer_id != buffer_id continue;
 
         if editor.line_wrap == .on then rescan_for_wrapped_lines(editor, buffer);
 
-        adjust_cursors_and_viewport(editor, buffer, editor_id);
+        // Adjust cursors and viewport.
+        // When edits are made in another editor for the same buffer, this editor's cursors
+        // need to be adjusted. The viewport glue point also needs to move.
+        for edit : buffer_edit_notifications {
+            if edit.buffer_id != buffer_id continue;  // this is a notification for a different buffer
+            if edit.editor_id == editor_id continue;  // this editor's cursors have already moved
+
+            // Adjust viewport
+            using editor.viewport.glue_point;
+            if buffer_pos >= edit.offset then buffer_pos = max(buffer_pos + edit.delta, edit.offset);
+
+            for * cursor : editor.cursors {
+                if cursor.pos >= edit.offset then cursor.pos = max(cursor.pos + edit.delta, edit.offset);
+                if cursor.sel >= edit.offset then cursor.sel = max(cursor.sel + edit.delta, edit.offset);
+            }
+        }
+        for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
+        if editor.cursors.count > 1 then organise_cursors(editor);
+
         editor.refresh_selection = true;
         if !is_empty(editor.search_bar.results) then search_and_update_results(editor, buffer);
     }
-    array_reset_keeping_memory(*buffer.edit_notifications);
-}
 
-adjust_cursors_and_viewport :: (editor: *Editor, buffer: Buffer, current_editor_id: s64) {
-    // When edits are made in another editor for the same buffer, this editor's cursors
-    // need to be adjusted. The viewport glue point also needs to move.
-    for edit : buffer.edit_notifications {
-        if edit.editor_id == current_editor_id continue;  // this editor's cursors have already moved
-
-        // Adjust viewport
-        using edit;
-        using editor.viewport.glue_point;
-        if buffer_pos >= offset then buffer_pos = max(buffer_pos + delta, offset);
-
-        for * cursor : editor.cursors {
-            if cursor.pos >= offset then cursor.pos = max(cursor.pos + delta, offset);
-            if cursor.sel >= offset then cursor.sel = max(cursor.sel + delta, offset);
-        }
+    // Clear applied notifications
+    for buffer_edit_notifications {
+        if it.buffer_id == buffer_id  remove it;
     }
-
-    for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
-    if editor.cursors.count > 1 then organise_cursors(editor);
 }
 
 editors_open_file :: (path: string, placement: Editor_Placement = .in_place) -> success: bool {

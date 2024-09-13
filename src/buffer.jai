@@ -1180,8 +1180,6 @@ free_buffer :: (using buffer: *Buffer) {
     free(undos);
     free(redos);
     free(edits);
-    array_free(edit_notifications);
-
     free(cursors);
 
     if has_file && file.full_path then free(file.full_path);
@@ -1314,8 +1312,13 @@ Tokenize_Function :: #type (buffer: *Buffer, start_offset: s64 = -1, count: s64 
 
 add_edit_notification :: (using buffer: *Buffer, offset: s64, old_count: s64, new_count: s64) {
     if num_editors_open < 2 return;
-    array_add(*edit_notifications, Buffer.Edit_Notification.{
-        editor_id = cast(s32) context.current_editor_id,
+    editor_id := context.current_editor_id;
+    editor := *open_editors[editor_id];
+    assert(buffer == *open_buffers[editor.buffer_id]);  // make sure our editor stored in the context is correct
+
+    add(*buffer_edit_notifications, Buffer.Edit_Notification.{
+        buffer_id = cast(s32) editor.buffer_id,
+        editor_id = cast(s32) editor_id,
         offset    = cast(s32) (offset + min(old_count, new_count)),
         delta     = cast(s32) (new_count - old_count),
     });
@@ -1385,6 +1388,9 @@ deinit :: (using edit_group: *Buffer.Edit_Group) {
 
 #scope_export
 
+buffer_edit_notifications: Array(Buffer.Edit_Notification);
+
+
 Buffer :: struct {
     bytes:       Array(u8);
     line_starts: Array(s32);       // real offsets of newlines in the bytes array
@@ -1398,8 +1404,6 @@ Buffer :: struct {
     edits: Array(Edit);  // current edits, not in a group yet
 
     cursors: Array(Cursor);  // cursor state before any current edits were made
-
-    edit_notifications: [..] Edit_Notification;  // TODO: make it a global array for all buffers instead
 
     content_lock: Mutex;  // must hold while modifying content (or reading in a non-main thread)
 
@@ -1475,6 +1479,7 @@ Buffer :: struct {
     // This is used to notify other editors for a buffer about edits.
     // This field set represents inserts, replaces and deletes in a uniform way
     Edit_Notification :: struct {
+        buffer_id: s32;
         editor_id: s32;
         offset:    s32;
         delta:     s32;
