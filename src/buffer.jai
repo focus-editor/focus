@@ -38,8 +38,8 @@ insert_string_at_offset :: (buffer: *Buffer, offset: s32, str: string) {
 }
 
 insert_char_at_offset :: (buffer: *Buffer, offset: s32, char: Utf8_Char) {
-    new_insert_char_edit(buffer, offset, char);
     str := to_string(*char);
+    new_insert_char_edit(buffer, offset, char);
     insert_string_raw(buffer, offset, str);
 }
 
@@ -55,7 +55,6 @@ replace_range :: (buffer: *Buffer, using range: Offset_Range, str: string) {
     if str == old_str return;
 
     new_replace_edit(buffer, start, end, old_str, str);
-
     replace_range_raw(buffer, start, end, str);
 }
 
@@ -1005,12 +1004,23 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
 
     // Create and load file
     file_data, success := read_entire_file(path);
-    if !success then file_data = sprint("Couldn't load file '%'", path);
-    if is_file_binary(file_data) {
+    load_error := "";
+    if !success {
+        load_error = sprint("Couldn't load file '%'", path);
+    } else if file_data.count > MAX_BUFFER_SIZE {
+        load_error = sprint("Couldn't load file '%' because it exceeds the maximum buffer size of 2,147,483,647 bytes", path);
+    } else if is_file_binary(file_data) {
+        load_error = sprint("Couldn't display file '%' because it's either binary or non-UTF8.", path);
+        buffer.binary = true;
+    }
+
+    if load_error {
         free(file_data);
-        file_data = sprint("Couldn't display file '%' because it's either binary or non-UTF8.", path);
+        file_data = load_error;
         buffer.readonly = true;
-        buffer.binary   = true;
+        buffer.lang = .Plain_Text;
+    } else {
+        buffer.lang = get_lang_from_path(path);
     }
 
     // Fill in buffer data
@@ -1025,7 +1035,6 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
 
     buffer.crlf = bytes_removed > 0;
     buffer.meow_hash = calculate_hash(to_view(buffer.bytes));
-    buffer.lang = get_lang_from_path(path);
 
     rescan_for_lines(buffer);
     retokenize(buffer);
@@ -1600,3 +1609,5 @@ Indentation_Token :: struct {
         brace;
     };
 }
+
+MAX_BUFFER_SIZE :: S32_MAX;
