@@ -4,7 +4,7 @@
     + New command: `move_current_file`. Works as `save_as`, but removes the old file (thanks @simonvallz)
     + New config options:
         + `search_is_case_sensitive_when_uppercase_present`. Set to `true` to automatically make local search case sensitive when there are uppercase chars in the search bar. Currently only works with ASCII.
-        + `projects_sorting_order`: `most_recent_first` (default) or `alphabetical`. Determines the sorting order for projects in the Switch To Project dialog.
+        + `projects_sorting_order`: `most_recent_first` (default), `alphabetical` or `alphabetical_no_case`. Determines the sorting order for projects in the Switch To Project dialog. (thanks @Roman-Skabin for the fix)
     + Pressing the close active editor shortcut in the Open Files dialog will close the selected file
     + When reloading workspace the user will be able to kill any running build command via a confirmation dialog
     + Build commands can be killed and restarted via a confirmation dialog (previously any running commands had to be manually killed before starting another one)
