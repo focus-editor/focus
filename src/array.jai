@@ -135,6 +135,14 @@ pop :: (array: *Array($T)) -> T {
     return result;
 }
 
+peek :: inline (array: Array($T)) -> T {
+    return array[array.count-1];
+}
+
+peek_pointer :: inline (array: Array($T)) -> *T {
+    return *array[array.count-1];
+}
+
 free :: inline (array: Array($T)) {
     free(array.data);
 }

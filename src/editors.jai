@@ -1479,7 +1479,7 @@ find_or_create_editor :: (buffer_id: s64, unwanted_existing_editor: s64 = -1) ->
 new_edit_group :: (buffer: *Buffer, editor: *Editor) {
     if buffer.edits.count == 0 return;
 
-    new_group := array_add(*buffer.undos);
+    new_group := add(*buffer.undos);
     new_group.edits = to_owned_array(*buffer.edits);  // @Speed: could group all char inserts into one if needed
     new_group.cursors_before = to_owned_array(*buffer.cursors);
     new_group.cursors_after  = to_view(copy(editor.cursors));
@@ -1921,7 +1921,7 @@ undo :: (editor: *Editor, buffer: *Buffer) {
     }
 
     pop(*buffer.undos);
-    array_add(*buffer.redos, edit_group);  // push onto the redo stack
+    add(*buffer.redos, edit_group);  // push onto the redo stack
     restore_cursor_state(editor, edit_group.cursors_before);
 
     editor.cursor_moved = .large_edit;
@@ -1949,7 +1949,7 @@ redo :: (editor: *Editor, buffer: *Buffer) {
     }
 
     pop(*buffer.redos);
-    array_add(*buffer.undos, edit_group);  // push onto the undo stack
+    add(*buffer.undos, edit_group);  // push onto the undo stack
     restore_cursor_state(editor, edit_group.cursors_after);
 
     editor.cursor_moved = .large_edit;

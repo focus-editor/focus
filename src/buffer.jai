@@ -1177,9 +1177,9 @@ free_buffer :: (using buffer: *Buffer) {
 
     for * undos deinit(it);
     for * redos deinit(it);
-    array_free(undos);
-    array_free(redos);
-    array_free(edits);
+    free(undos);
+    free(redos);
+    free(edits);
     array_free(edit_notifications);
 
     array_free(cursors);
@@ -1322,7 +1322,7 @@ add_edit_notification :: (using buffer: *Buffer, offset: s64, old_count: s64, ne
 }
 
 new_replace_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string, new_str: string) {
-    edit := array_add(*buffer.edits);
+    edit := add(*buffer.edits);
     edit.type = .replace;
     using edit.replace;
     offset_range.start = start;
@@ -1334,7 +1334,7 @@ new_replace_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string, new
 }
 
 new_insert_edit :: (buffer: *Buffer, offset: s32, str: string) {
-    edit := array_add(*buffer.edits);
+    edit := add(*buffer.edits);
     edit.type = .insert;
     edit.insert.offset = offset;
     edit.insert.new_bytes = copy_string(str);
@@ -1343,7 +1343,7 @@ new_insert_edit :: (buffer: *Buffer, offset: s32, str: string) {
 }
 
 new_insert_char_edit :: (buffer: *Buffer, offset: s32, char: Utf8_Char) {
-    edit := array_add(*buffer.edits);
+    edit := add(*buffer.edits);
     edit.type = .insert_char;
     edit.insert_char.offset = offset;
     edit.insert_char.char = char;
@@ -1352,7 +1352,7 @@ new_insert_char_edit :: (buffer: *Buffer, offset: s32, char: Utf8_Char) {
 }
 
 new_delete_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string) {
-    edit := array_add(*buffer.edits);
+    edit := add(*buffer.edits);
     edit.type = .delete;
     using edit.delete;
     offset_range.start = start;
@@ -1364,7 +1364,7 @@ new_delete_edit :: (buffer: *Buffer, start: s32, end: s32, old_str: string) {
 
 clear_redos :: (using buffer: *Buffer) {
     for * redos  deinit(it);
-    array_reset_keeping_memory(*redos);
+    reset_keeping_memory(*redos);
 }
 
 deinit :: (using edit_group: *Buffer.Edit_Group) {
@@ -1390,15 +1390,16 @@ Buffer :: struct {
     line_starts: Array(s32);       // real offsets of newlines in the bytes array
     tokens:      Array(Token_Type);     // we assign a token to each byte (even for multi-byte chars).
     regions:     Array(Buffer_Region); // for highlighting parts of buffer
-    content_lock: Mutex;  // must hold while modifying content (or reading in a non-main thread)
 
     // @Memory: all of these are allocated on the heap, which is not great, but it works fine right now.
     // Eventually we'll want to revisit all this and make it not allocate as much.
-    undos: [..] Edit_Group;
-    redos: [..] Edit_Group;
-    edits: [..] Edit;  // current edits, not in a group yet
+    undos: Array(Edit_Group);
+    redos: Array(Edit_Group);
+    edits: Array(Edit);  // current edits, not in a group yet
     cursors: [..] Cursor;  // cursor state before any current edits were made
     edit_notifications: [..] Edit_Notification;  // TODO: make it a global array for all buffers instead
+
+    content_lock: Mutex;  // must hold while modifying content (or reading in a non-main thread)
 
     file: File_Info;
 

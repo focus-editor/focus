@@ -165,8 +165,8 @@ color_preview_set_language :: (lang_id: int) {
     editor, buffer := *open_editors[panel_editor_id], *open_buffers[panel_buffer_id];
     buffer.lang = languages[lang_id].lang;
 
-    array_reset_keeping_memory(*buffer.undos);
-    array_reset_keeping_memory(*buffer.redos);
+    reset_keeping_memory(*buffer.undos);
+    reset_keeping_memory(*buffer.redos);
 
     sample_text := get_language_sample_text(buffer.lang);
     replace_range_raw(buffer, 0, xx buffer.bytes.count, sample_text);
