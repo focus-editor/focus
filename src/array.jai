@@ -40,13 +40,24 @@ operator []= :: inline (array: *Array($T), index: int, value: T) {
 for_expansion :: (array: *Array($T), body: Code, flags: For_Flags) #expand {
     DO_POINTER :: cast(bool)(flags & .POINTER);
     DO_REVERSE :: cast(bool)(flags & .REVERSE);
-    `it_index: s32;
 
-    for <=DO_REVERSE *=DO_POINTER `it, i : to_view(array) {
-        it_index = cast(s32) i;
-        #insert (remove=#assert(false)) body;
-        // TODO: implement remove. Example:
-        // #insert (remove={entry.hash=REMOVED_HASH; table.count-=1;}) body;
+    `it_index: s32;
+    #if DO_POINTER { `it: *T; } else {`it: T; }
+
+    #if DO_REVERSE {
+        it_index = array.count;
+        while it_index > 0 {
+            it_index -= 1;
+            #if DO_POINTER { it = *array.data[it_index]; } else { it = array.data[it_index]; }
+            #insert (remove={unordered_remove_by_index(array, it_index); }) body;
+        }
+    } else {
+        it_index = -1;
+        while it_index < array.count - 1 {
+            it_index += 1;
+            #if DO_POINTER { it = *array.data[it_index]; } else { it = array.data[it_index]; }
+            #insert (remove={unordered_remove_by_index(array, it_index); it_index -= 1;}) body;
+        }
     }
 }
 

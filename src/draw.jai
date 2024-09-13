@@ -1722,7 +1722,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
             // Pre-filter scope regions for easier checks later
             visible_scopes: [..] Buffer_Region;
-            if buffer.regions && visible_entries {
+            if !is_empty(buffer.regions) && visible_entries {
                 start_offset := get_real_line_start_offset(buffer, visible_entries[0].line);
                 end_offset   := get_real_line_end_offset  (buffer, visible_entries[visible_entries.count-1].line);
                 for buffer.regions {

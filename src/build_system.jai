@@ -11,7 +11,6 @@ init_build_system :: () {
 
     // Remember allocators, so that we don't accidentally use the pool allocator on any of these arrays.
     // We should really use custom expandable arrays which don't remember allocators on buffers at some point
-    buffer.regions.allocator = focus_allocator;
     buffer.cursors.allocator = focus_allocator;
 
     commands_refresh_after_config_change();
@@ -116,7 +115,7 @@ build_clear_output :: () {
     if editor.line_wrap == .on then rescan_for_wrapped_lines(editor, buffer);
 
     lock(*buffer.content_lock);
-    array_reset_keeping_memory(*buffer.regions);
+    reset_keeping_memory(*buffer.regions);
     resize(*buffer.tokens, buffer.bytes.count);
     memset(buffer.tokens.data, 0, buffer.tokens.count);
     unlock(*buffer.content_lock);
@@ -478,7 +477,7 @@ print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kin
     editor.scroll_to_cursor = .yes;
 
     if mark_as != .none {
-        array_add(*buffer.regions, Buffer_Region.{ start = start, end = end, kind = mark_as });
+        add(*buffer.regions, Buffer_Region.{ start = start, end = end, kind = mark_as });
     }
 
     // Maybe forget some bytes at the beginning
@@ -501,7 +500,7 @@ print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kin
             region.end   -= bytes_to_forget;
             if region.start < 0 || region.end < 0 then remove region;  // will have to sort later because they must be sorted
         }
-        quick_sort(buffer.regions, (a, b) => (a.start - b.start));
+        quick_sort(to_view(buffer.regions), (a, b) => (a.start - b.start));
     }
 }
 

@@ -436,7 +436,7 @@ retokenize :: (buffer: *Buffer) {
         // We don't store tokens for plain text buffers
         reset(*buffer.tokens);
         for buffer.regions free(it.note);
-        array_reset(*buffer.regions);
+        reset(*buffer.regions);
         return;
     }
 
@@ -450,12 +450,12 @@ retokenize :: (buffer: *Buffer) {
 
     // Clear buffer regions
     for buffer.regions free(it.note);
-    array_reset_keeping_memory(*buffer.regions);
+    reset_keeping_memory(*buffer.regions);
 
     for * region : new_regions {
         // Add regions into buffer
         if region.note then region.note = copy_string(region.note);
-        array_add(*buffer.regions, region.*);
+        add(*buffer.regions, region.*);
 
         // Maybe tokenize heredocs
         if region.kind == .heredoc {
@@ -1386,11 +1386,11 @@ deinit :: (using edit_group: *Buffer.Edit_Group) {
 #scope_export
 
 Buffer :: struct {
-    content_lock: Mutex;  // must hold while modifying content (or reading in a non-main thread)
-    bytes: Array(u8);
+    bytes:       Array(u8);
     line_starts: Array(s32);       // real offsets of newlines in the bytes array
-    tokens: Array(Token_Type);     // we assign a token to each byte (even for multi-byte chars).
-    regions: [..] Buffer_Region; // for highlighting parts of buffer
+    tokens:      Array(Token_Type);     // we assign a token to each byte (even for multi-byte chars).
+    regions:     Array(Buffer_Region); // for highlighting parts of buffer
+    content_lock: Mutex;  // must hold while modifying content (or reading in a non-main thread)
 
     // @Memory: all of these are allocated on the heap, which is not great, but it works fine right now.
     // Eventually we'll want to revisit all this and make it not allocate as much.
