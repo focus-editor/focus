@@ -1315,8 +1315,12 @@ Tokenize_Function :: #type (buffer: *Buffer, start_offset: s64 = -1, count: s64 
 add_edit_notification :: (using buffer: *Buffer, offset: s64, old_count: s64, new_count: s64) {
     if num_editors_open < 2 return;
     editor_id := context.current_editor_id;
+    if editor_id < 0 return;
     editor := *open_editors[editor_id];
-    assert(buffer == *open_buffers[editor.buffer_id]);  // make sure our editor stored in the context is correct
+    if buffer != *open_buffers[editor.buffer_id] {
+        log_error("Attempting to send an edit notification from a mismatching editor. Editor id: %, buffer id: %\n", editor_id, editor.buffer_id);
+        return;
+    }
 
     add(*buffer_edit_notifications, Buffer.Edit_Notification.{
         buffer_id = cast(s32) editor.buffer_id,
@@ -1521,7 +1525,6 @@ Buffer :: struct {
 }
 
 // @Array
-#run print("Size of Buffer: %\n", size_of(Buffer));
 
 Focus_Config_Extra :: struct {
     using #as base: Buffer.Extra;
