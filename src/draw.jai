@@ -12,7 +12,7 @@ draw_frame :: () {
 
     status_bar_height := font_ui_line_height * 1.6;
 
-    active_pane_rect: Rect = ---;
+    active_editor_rect: Rect = ---;
 
     // Draw editors
     if #complete editors.layout == {
@@ -23,7 +23,7 @@ draw_frame :: () {
         case .Single;
             editors_snap_splitter(0.5);
             draw_editor(editors.left, screen, status_bar_height, .editor_single);
-            active_pane_rect = screen;
+            active_editor_rect = screen;
 
         case .Double;
             // Drag splitter
@@ -54,22 +54,25 @@ draw_frame :: () {
             draw_editor(editors.left,  left_rect,  status_bar_height, .editor_left,  screen);
             draw_editor(editors.right, right_rect, status_bar_height, .editor_right, screen);
 
-            active_pane_rect = ifx editors.active == editors.left then left_rect else right_rect;
+            active_editor_rect = ifx editors.active == editors.left then left_rect else right_rect;
 
             splitter_y := ifx config.settings.status_bar_position == .bottom then left_rect.y + status_bar_height else 0;
             splitter_rect := make_rect(left_rect.x + left_rect.w, splitter_y, 2, left_rect.h - status_bar_height);
             draw_splitter(splitter_rect, split_x, .editor_splitter);
     }
 
-    maybe_draw_color_preview_panel();
-    maybe_draw_build_panel();
+    panel_is_active, panel_editor_rect := maybe_draw_color_preview_panel();
+    if panel_is_active then active_editor_rect = panel_editor_rect;
+
+    panel_is_active, panel_editor_rect  = maybe_draw_build_panel();
+    if panel_is_active then active_editor_rect = panel_editor_rect;
 
     if #complete active_global_widget == {
         case .editors;                          // already done
         case .open_file_dialog;                 draw_open_file_dialog();
         case .delete_file_dialog;               draw_delete_file_dialog();
         case .finder;                           draw_finder();
-        case .go_to_line_dialog;                draw_go_to_line_dialog(active_pane_rect, status_bar_height);
+        case .go_to_line_dialog;                draw_go_to_line_dialog(active_editor_rect, status_bar_height);
         case .switch_to_project_dialog;         draw_switch_to_project_dialog();
         case .unsaved_buffers_dialog;           draw_unsaved_buffers_dialog();
         case .confirm_overwrite_dialog;         draw_confirm_overwrite_dialog();
@@ -301,7 +304,7 @@ draw_user_messages :: (main_area: Rect, status_bar_height: float) {
     }
 }
 
-maybe_draw_color_preview_panel :: () {
+maybe_draw_color_preview_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
     if config.settings.color_preview_popup == .disabled return;
     if !workspace_scan_complete return;  // don't init the popup until all buffers are ready, otherwise we won't know the usage stats
 
@@ -496,6 +499,8 @@ maybe_draw_color_preview_panel :: () {
 
     color_picker_rect = shrink_y(color_picker_rect, font_ui_line_height / 2);
     color_preview_draw_color_picker(color_picker_rect);
+
+    return is_color_preview_panel(editors.active), editor_rect;
 }
 
 draw_color_picker :: (editor_id: s64, editor: *Editor, buffer: *Buffer, picker_rect: Rect, range: Offset_Range, on_left: bool) {
@@ -610,7 +615,7 @@ draw_color_picker :: (editor_id: s64, editor: *Editor, buffer: *Buffer, picker_r
     Simp.immediate_flush();
 }
 
-maybe_draw_build_panel :: () {
+maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
     if !build_panel_is_shown return;
 
     // Drag build panel title bar first before drawing
@@ -695,6 +700,8 @@ maybe_draw_build_panel :: () {
     // Draw text
     editor_id := build_panel_get_editor_id();
     draw_editor(editor_id, build_output_rect, 0, get_ui_id_from_loc());
+
+    return build_panel_is_active(), build_output_rect;
 }
 
 get_editor_subrects :: (editor_id: s64, main_area: Rect, status_bar_height: float) -> editor_rect: Rect, status_bar_rect: Rect, line_number_panel: Rect {
