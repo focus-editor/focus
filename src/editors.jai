@@ -718,7 +718,7 @@ get_max_y_scroll :: (editor: Editor, buffer: Buffer) -> s32 {
 }
 
 add_paste_animation :: (editor_id: s64, range: Offset_Range) {
-    if config.settings.disable_that_annoying_paste_effect return;
+    if !config.settings.show_paste_effect return;
 
     anim := array_add(*editor_paste_animations);
     anim.editor_id = editor_id;

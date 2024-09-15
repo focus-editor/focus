@@ -378,10 +378,27 @@ DONE
                     setting_name, setting_value := break_by_spaces(line);
                     setting_name = trim_right(setting_name, ":");
 
-                    // TODO: check version when we have version [3]
-                    for removed : REMOVED_SETTINGS {
-                        if setting_name == removed.name {
-                            offset_difference += replace_line(*modified_data, line_start_offset, "");
+                    for setting : RENAMED_SETTINGS {
+                        if setting_name == setting.name && valid_version(setting.version, config_info.version) {
+                            if !setting.new_name {
+                                // Removed setting
+                                offset_difference += replace_line(*modified_data, line_start_offset, "");
+                            } else {
+                                // Renamed setting
+                                indent  := cast(s64) (setting_value.data - setting_name.data);
+                                padding := get_tmp_spaces(indent - setting.new_name.count - 1);
+                                comment := ifx setting.comment then tprint("  # %", setting.comment) else "";
+
+                                value := setting_value;
+                                for map : setting.value_map {
+                                    if setting_value == map.old_value {
+                                        value = map.new_value;
+                                        break;
+                                    }
+                                }
+                                new_line := tprint("%1:%2%3%4\n", setting.new_name, padding, value, comment);
+                                offset_difference += replace_line(*modified_data, line_start_offset, new_line);
+                            }
                         }
                     }
 
@@ -477,10 +494,15 @@ ADDED_SETTINGS :: Added_Setting.[
     .{ 5, "load_most_recent_project_on_start",                  "false" },
     .{ 5, "color_preview_popup",                                "enabled  # options: enabled, minimized, disabled" },
     .{ 5, "highlight_matching_brackets",                        "false" },
+
+    .{ 6, "search_is_case_sensitive_when_uppercase_present",    "false" },
+    .{ 6, "projects_sorting_order",                             "most_recent_first  #options: most_recent_first, alphabetical, alphabetical_no_case" },
 ];
 
-REMOVED_SETTINGS :: Removed_Setting.[
-    .{ 2, "max_entries_in_open_file_dialog" },
+RENAMED_SETTINGS :: Renamed_Setting.[
+    .{ 2, "max_entries_in_open_file_dialog", "", .[], "" },  // removed
+    .{ 6, "strip_trailing_whitespace_on_save", "strip_trailing_whitespace_on_save", .[.{"true", "except_lines_with_cursor"}, .{"false", "disabled"}], "options: all, except_lines_with_cursor, disabled"},
+    .{ 6, "disable_that_annoying_paste_effect", "show_paste_effect", .[.{"true", "false"}, .{"false", "true"}], ""},
 ];
 
 SETTING_VALUES_INDENT :: #run -> int {
@@ -611,9 +633,17 @@ Added_Setting :: struct {
     value:   string;
 }
 
-Removed_Setting :: struct {
-    version: int;
-    name:    string;
+Renamed_Setting :: struct {
+    version:    int;
+    name:       string;
+    new_name:   string;
+    value_map:  [] Value_Map;
+    comment:    string;
+
+    Value_Map :: struct {
+        old_value: string;
+        new_value: string;
+    }
 }
 
 Added_Color :: struct {
@@ -732,7 +762,7 @@ todo.txt : todo
 FOCUS_CONFIG
 
 WORKSPACE_3_EXPECTED :: #string FOCUS_CONFIG
-[5]  # Version number. Do not delete.
+[6]  # Version number. Do not delete.
 
 [[workspace]]
 # These directories and files will be scanned when a workspace is opened so that search etc. works.
@@ -789,7 +819,7 @@ C:/projects/project1
 FOCUS_CONFIG
 
 PROJECT_WORKSPACE_3_EXPECTED :: #string FOCUS_CONFIG
-[5]  # Version number. Do not delete.
+[6]  # Version number. Do not delete.
 
 [[workspace]]
 # These directories and files will be scanned when a workspace is opened so that search etc. works.
@@ -845,7 +875,7 @@ todo.txt : todo
 FOCUS_CONFIG
 
 WORKSPACE_4_EXPECTED :: #string FOCUS_CONFIG
-[5]  # Version number. Do not delete.
+[6]  # Version number. Do not delete.
 
 [[keymap]]
 [common]
@@ -904,6 +934,7 @@ Ctrl-P                      show_open_file_dialog_in_search_mode
 [[settings]]
 
 maximize_on_start:                      false
+disable_that_annoying_paste_effect:     false
 tab_size:                               4
 build_panel_width_percent:              50
 max_entries_in_open_file_dialog:        2000
@@ -911,11 +942,12 @@ insert_spaces_when_pressing_tab:        true
 prefer_system_file_dialogs:             false  # Windows only
 show_cursors_off_screen:                true
 persist_local_search_results:           false
+strip_trailing_whitespace_on_save:      true
 
 FOCUS_CONFIG
 
 SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
-[5]  # Version number. Do not delete.
+[6]  # Version number. Do not delete.
 
 [[workspace]]
 # These directories and files will be scanned when a workspace is opened so that search etc. works.
@@ -931,7 +963,7 @@ SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
 [common]
 Ctrl-P                      open_file_by_name
 
-# Added after migration to version [5]
+# Added after migration to version [6]
 Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
@@ -945,32 +977,36 @@ Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
 [[settings]]
 
 maximize_on_start:                      false
+show_paste_effect:                      true
 tab_size:                               4
 build_panel_width_percent:              50
 insert_spaces_when_pressing_tab:        true
 prefer_system_file_dialogs:             false  # Windows only
 show_cursors_off_screen:                true
 persist_local_search_results:           false
+strip_trailing_whitespace_on_save:      except_lines_with_cursor  # options: all, except_lines_with_cursor, disabled
 
-# Added after migration to version [5]
-build_panel_height_percent:                    50
-build_panel_stays_in_one_place:                false  # if false, the build panel will flip to the inactive pane in two pane layouts
-build_panel_line_wrap_always_on:               true
-highlight_line_with_cursor:                    false
-draw_indent_guides:                            false
-auto_surround_with_brackets_and_quotes:        false
-scroll_beyond_last_line:                       true
-save_current_buffer_on_build:                  false
-save_all_file_backed_buffers_on_build:         false
-disable_viewport_chasing_cursor_near_the_edge: false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts
-show_selected_text_length:                     false
-window_width:                                  -1
-window_height:                                 -1
-insert_final_newline_on_save:                  false
-status_bar_position:                           bottom  # options: top, bottom
-load_most_recent_project_on_start:             false
-color_preview_popup:                           enabled  # options: enabled, minimized, disabled
-highlight_matching_brackets:                   false
+# Added after migration to version [6]
+build_panel_height_percent:                      50
+build_panel_stays_in_one_place:                  false  # if false, the build panel will flip to the inactive pane in two pane layouts
+build_panel_line_wrap_always_on:                 true
+highlight_line_with_cursor:                      false
+draw_indent_guides:                              false
+auto_surround_with_brackets_and_quotes:          false
+scroll_beyond_last_line:                         true
+save_current_buffer_on_build:                    false
+save_all_file_backed_buffers_on_build:           false
+disable_viewport_chasing_cursor_near_the_edge:   false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts
+show_selected_text_length:                       false
+window_width:                                    -1
+window_height:                                   -1
+insert_final_newline_on_save:                    false
+status_bar_position:                             bottom  # options: top, bottom
+load_most_recent_project_on_start:               false
+color_preview_popup:                             enabled  # options: enabled, minimized, disabled
+highlight_matching_brackets:                     false
+search_is_case_sensitive_when_uppercase_present: false
+projects_sorting_order:                          most_recent_first  #options: most_recent_first, alphabetical, alphabetical_no_case
 
 FOCUS_CONFIG
 
@@ -1001,6 +1037,8 @@ insert_spaces_when_pressing_tab:        true
 prefer_system_file_dialogs:             false  # Windows only
 show_cursors_off_screen:                true
 persist_local_search_results:           false
+disable_that_annoying_paste_effect:     true
+strip_trailing_whitespace_on_save:      false
 
 # Added after migration to version [2]
 highlight_line_with_cursor:             false
@@ -1011,7 +1049,7 @@ scroll_beyond_last_line:                true
 FOCUS_CONFIG
 
 SETTINGS_2_EXPECTED :: #string FOCUS_CONFIG
-[5]  # Version number. Do not delete.
+[6]  # Version number. Do not delete.
 
 [[workspace]]
 # These directories and files will be scanned when a workspace is opened so that search etc. works.
@@ -1032,7 +1070,7 @@ Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 
-# Added after migration to version [5]
+# Added after migration to version [6]
 Ctrl-Shift-Alt-N            open_another_editor_instance
 F8                          go_to_next_build_error
 Ctrl-F8                     go_to_next_build_error_on_the_side
@@ -1049,6 +1087,8 @@ insert_spaces_when_pressing_tab:        true
 prefer_system_file_dialogs:             false  # Windows only
 show_cursors_off_screen:                true
 persist_local_search_results:           false
+show_paste_effect:                      false
+strip_trailing_whitespace_on_save:      disabled  # options: all, except_lines_with_cursor, disabled
 
 # Added after migration to version [2]
 highlight_line_with_cursor:             false
@@ -1056,18 +1096,20 @@ draw_indent_guides:                     false
 auto_surround_with_brackets_and_quotes: false
 scroll_beyond_last_line:                true
 
-# Added after migration to version [5]
-save_current_buffer_on_build:                  false
-save_all_file_backed_buffers_on_build:         false
-disable_viewport_chasing_cursor_near_the_edge: false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts
-show_selected_text_length:                     false
-window_width:                                  -1
-window_height:                                 -1
-insert_final_newline_on_save:                  false
-status_bar_position:                           bottom  # options: top, bottom
-load_most_recent_project_on_start:             false
-color_preview_popup:                           enabled  # options: enabled, minimized, disabled
-highlight_matching_brackets:                   false
+# Added after migration to version [6]
+save_current_buffer_on_build:                    false
+save_all_file_backed_buffers_on_build:           false
+disable_viewport_chasing_cursor_near_the_edge:   false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts
+show_selected_text_length:                       false
+window_width:                                    -1
+window_height:                                   -1
+insert_final_newline_on_save:                    false
+status_bar_position:                             bottom  # options: top, bottom
+load_most_recent_project_on_start:               false
+color_preview_popup:                             enabled  # options: enabled, minimized, disabled
+highlight_matching_brackets:                     false
+search_is_case_sensitive_when_uppercase_present: false
+projects_sorting_order:                          most_recent_first  #options: most_recent_first, alphabetical, alphabetical_no_case
 
 FOCUS_CONFIG
 
@@ -1101,7 +1143,7 @@ persist_local_search_results:           false
 FOCUS_CONFIG
 
 PROJECT_SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
-[5]  # Version number. Do not delete.
+[6]  # Version number. Do not delete.
 
 [[workspace]]
 # These directories and files will be scanned when a workspace is opened so that search etc. works.
@@ -1110,7 +1152,7 @@ PROJECT_SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
 [common]
 Ctrl-P                      open_file_by_name
 
-# Added after migration to version [5]
+# Added after migration to version [6]
 Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
@@ -1158,7 +1200,7 @@ scrollbar_background:                   FF191F4C
 FOCUS_CONFIG
 
 COLORS_1_EXPECTED :: #string FOCUS_CONFIG
-[5]   # Version number. Do not delete.
+[6]   # Version number. Do not delete.
 
 [[style]]
 
@@ -1176,7 +1218,7 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
-# Added after migration to version [5]
+# Added after migration to version [6]
 code_warning:                           E4D97DFF
 region_scope_export:                    15212AFF
 region_scope_file:                      15212AFF
@@ -1240,7 +1282,7 @@ scrollbar_background:                   FF191F4C
 FOCUS_CONFIG
 
 COLORS_2_EXPECTED :: #string FOCUS_CONFIG
-[5]   # Version number. Do not delete.
+[6]   # Version number. Do not delete.
 
 [[style]]
 
@@ -1258,7 +1300,7 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
-# Added after migration to version [5]
+# Added after migration to version [6]
 region_heredoc:                         10191FFF
 code_invalid:                           FF0000FF
 code_multiline_string:                  D4BC7DFF
@@ -1330,7 +1372,7 @@ scrollbar_background:                   FF191F4C
 FOCUS_CONFIG
 
 COLORS_AND_SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
-[5]   # Version number. Do not delete.
+[6]   # Version number. Do not delete.
 
 [[workspace]]
 # These directories and files will be scanned when a workspace is opened so that search etc. works.
@@ -1351,26 +1393,28 @@ insert_spaces_when_pressing_tab:        true
 prefer_system_file_dialogs:             false  # Windows only
 show_cursors_off_screen:                true
 
-# Added after migration to version [5]
-build_panel_height_percent:                    50
-build_panel_stays_in_one_place:                false  # if false, the build panel will flip to the inactive pane in two pane layouts
-build_panel_line_wrap_always_on:               true
-highlight_line_with_cursor:                    false
-draw_indent_guides:                            false
-auto_surround_with_brackets_and_quotes:        false
-scroll_beyond_last_line:                       true
-persist_local_search_results:                  false  # if true, search results will stay highlighted and you have to dismiss them using the `escape` action
-save_current_buffer_on_build:                  false
-save_all_file_backed_buffers_on_build:         false
-disable_viewport_chasing_cursor_near_the_edge: false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts
-show_selected_text_length:                     false
-window_width:                                  -1
-window_height:                                 -1
-insert_final_newline_on_save:                  false
-status_bar_position:                           bottom  # options: top, bottom
-load_most_recent_project_on_start:             false
-color_preview_popup:                           enabled  # options: enabled, minimized, disabled
-highlight_matching_brackets:                   false
+# Added after migration to version [6]
+build_panel_height_percent:                      50
+build_panel_stays_in_one_place:                  false  # if false, the build panel will flip to the inactive pane in two pane layouts
+build_panel_line_wrap_always_on:                 true
+highlight_line_with_cursor:                      false
+draw_indent_guides:                              false
+auto_surround_with_brackets_and_quotes:          false
+scroll_beyond_last_line:                         true
+persist_local_search_results:                    false  # if true, search results will stay highlighted and you have to dismiss them using the `escape` action
+save_current_buffer_on_build:                    false
+save_all_file_backed_buffers_on_build:           false
+disable_viewport_chasing_cursor_near_the_edge:   false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts
+show_selected_text_length:                       false
+window_width:                                    -1
+window_height:                                   -1
+insert_final_newline_on_save:                    false
+status_bar_position:                             bottom  # options: top, bottom
+load_most_recent_project_on_start:               false
+color_preview_popup:                             enabled  # options: enabled, minimized, disabled
+highlight_matching_brackets:                     false
+search_is_case_sensitive_when_uppercase_present: false
+projects_sorting_order:                          most_recent_first  #options: most_recent_first, alphabetical, alphabetical_no_case
 
 [[keymap]]
 # ...
@@ -1391,7 +1435,7 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
-# Added after migration to version [5]
+# Added after migration to version [6]
 code_warning:                           E4D97DFF
 region_scope_export:                    15212AFF
 region_scope_file:                      15212AFF
@@ -1482,7 +1526,7 @@ Ctrl-Alt-P                  switch_to_project
 FOCUS_CONFIG
 
 KEYBINDS_1_EXPECTED :: #string FOCUS_CONFIG
-[5]  # Version number. Do not delete.
+[6]  # Version number. Do not delete.
 
 [[style]]
 
@@ -1500,7 +1544,7 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
-# Added after migration to version [5]
+# Added after migration to version [6]
 code_warning:                           E4D97DFF
 region_scope_export:                    15212AFF
 region_scope_file:                      15212AFF
@@ -1552,7 +1596,7 @@ Ctrl-Escape                 remove_additional_cursors
 Ctrl-D                      select_word_or_create_another_cursor
 Ctrl-Shift-A                select_all_occurrences
 
-# Added after migration to version [5]
+# Added after migration to version [6]
 Alt-Shift-I                 add_cursors_to_line_ends
 Alt-Shift-Ctrl-I            add_cursors_to_line_starts
 Alt-A                       align_cursors
@@ -1571,7 +1615,7 @@ Ctrl-Tab                    switch_between_open_files
 
 Ctrl-Alt-P                  switch_to_project
 
-# Added after migration to version [5]
+# Added after migration to version [6]
 Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
@@ -1618,7 +1662,7 @@ Ctrl-Alt-P                  switch_to_project
 FOCUS_CONFIG
 
 KEYBINDS_2_EXPECTED :: #string FOCUS_CONFIG
-[5]  # Version number. Do not delete.
+[6]  # Version number. Do not delete.
 
 [[keymap]]
 
@@ -1647,7 +1691,7 @@ Ctrl-Tab                    switch_between_open_files
 
 Ctrl-Alt-P                  switch_to_project
 
-# Added after migration to version [5]
+# Added after migration to version [6]
 Ctrl-Shift-Alt-N            open_another_editor_instance
 F8                          go_to_next_build_error
 Ctrl-F8                     go_to_next_build_error_on_the_side
@@ -1679,7 +1723,7 @@ scrollbar_background:                   FF191F4C
 FOCUS_CONFIG
 
 THEME_1_EXPECTED :: #string FOCUS_CONFIG
-[5]   # Version number. Do not delete.
+[6]   # Version number. Do not delete.
 
 [fonts]
 font:       default
@@ -1695,7 +1739,7 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
-# Added after migration to version [5]
+# Added after migration to version [6]
 code_warning:                           E4D97DFF
 region_scope_export:                    15212AFF
 region_scope_file:                      15212AFF
@@ -1808,7 +1852,7 @@ build_panel_title_bar:                  121212FF
 FOCUS_CONFIG
 
 THEME_3_EXPECTED :: #string FOCUS_CONFIG
-[5]  # Version number. Do not delete
+[6]  # Version number. Do not delete
 
 [colors]
 
@@ -1875,7 +1919,7 @@ build_panel_scrollbar_hover:            CDAA7D4C
 build_panel_scrollbar_background:       CDAA7D11
 build_panel_title_bar:                  121212FF
 
-# Added after migration to version [5]
+# Added after migration to version [6]
 code_invalid:                           FF0000FF
 code_multiline_string:                  6B8E23FF
 code_raw_string:                        6B8E23FF

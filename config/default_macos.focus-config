@@ -1,4 +1,4 @@
-[5]  # Version number. Do not delete.
+[6]  # Version number. Do not delete.
 
 [[workspace]]
 # These directories and files will be scanned when a workspace is opened so that search etc. works.
@@ -37,11 +37,11 @@ cursor_blink_time_in_seconds:                       5
 highlight_selection_occurrences:                    true
 highlight_line_with_cursor:                         false
 highlight_matching_brackets:                        false
-disable_that_annoying_paste_effect:                 false
+show_paste_effect:                                  true
 disable_file_open_close_animations:                 false
 tab_size:                                           4
 insert_spaces_when_pressing_tab:                    true
-strip_trailing_whitespace_on_save:                  false
+strip_trailing_whitespace_on_save:                  except_lines_with_cursor
 smooth_scrolling:                                   true
 scroll_beyond_last_line:                            true
 double_shift_to_search_in_workspace:                false

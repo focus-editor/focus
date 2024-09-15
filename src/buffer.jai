@@ -715,7 +715,9 @@ save_buffer :: (using buffer: *Buffer, buffer_id: s64) {
 
     assert(has_file, "Trying to save a buffer without an associated file. This is a bug.");
 
-    if config.settings.strip_trailing_whitespace_on_save then strip_trailing_whitespace(buffer, buffer_id, on_save = true);
+    if config.settings.strip_trailing_whitespace_on_save != .disabled {
+        strip_trailing_whitespace(buffer, buffer_id, except_lines_with_cursor = config.settings.strip_trailing_whitespace_on_save == .except_lines_with_cursor);
+    }
     if config.settings.insert_final_newline_on_save      then insert_final_newline(buffer);  // important to do it after stripping
 
     success := write_entire_file(file.full_path, to_string(bytes));
@@ -788,7 +790,7 @@ delete_buffer_from_disk :: (using buffer: *Buffer) -> deleted: bool {
     return true;
 }
 
-strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64, on_save := false) {
+strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64, except_lines_with_cursor := false) {
     auto_release_temp();
 
     // Get active cursor positions if we're saving the active buffer
@@ -811,7 +813,7 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64, on_save := 
         line := string.{ count = line_end - line_start, data = bytes.data + line_start };
 
         pos_of_rightmost_cursor_on_this_line := -1;
-        if on_save {
+        if except_lines_with_cursor {
             // Keep cursors where they are
             c := active_cursors;
             for pos : c {

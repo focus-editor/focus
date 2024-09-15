@@ -1,10 +1,23 @@
 # Main Git Branch
 
 + New features:
+    + ...
++ Bug fixes:
+    + ...
++ Other changes:
+    + ...
+
+
+# RELEASES ==================================================================
+
+# Version 0.3.7
+
++ New features:
     + New command: `move_current_file`. Works as `save_as`, but removes the old file (thanks @simonvallz)
     + New config options:
         + `search_is_case_sensitive_when_uppercase_present`. Set to `true` to automatically make local search case sensitive when there are uppercase chars in the search bar. Currently only works with ASCII.
         + `projects_sorting_order`: `most_recent_first` (default), `alphabetical` or `alphabetical_no_case`. Determines the sorting order for projects in the Switch To Project dialog. (thanks @Roman-Skabin for the fix)
+    + Option `strip_trailing_whitespace_on_save` now accepts the following values: `all` (strip all trailing whitespace), `except_lines_with_cursor` (leave cursors where they are), and `disabled` (don't strip)
     + Pressing the close active editor shortcut in the Open Files dialog will close the selected file
     + When reloading workspace the user will be able to kill any running build command via a confirmation dialog
     + Build commands can be killed and restarted via a confirmation dialog (previously any running commands had to be manually killed before starting another one)
@@ -17,15 +30,12 @@
         + Fixed a bug with typing the letter 'q' when trying to exit the editor via Cmd-Q
 + Other changes:
     + Various highlighting improvements (thanks @simonvallz)
-    + When you strip trailing whitespace on save the cursors will now stay where they are. Use the explicit command `strip_trailing_whitespace` if you want to strip all trailing whitespace even if there is a cursor on it
     + Temporary unsaved buffers will disappear from file lists when closed. If you accidentally closed one, go back in editor history
     + The `delete_to_start_of_line` command will now delete to the indentation level first, not to the very start of the line right away
     + Many internal changes to reduce the memory footprint and improve the cache friendliness of internal data structures
     + Files larger than the limit of 2,147,483,647 bytes will now no longer be loaded with an error message rather than crashing
     + Hitting save when in the color preview editor will save the target config file, instead of attempting to save the color preview sample text somewhere
 
-
-# RELEASES ==================================================================
 
 # Version 0.3.6
 

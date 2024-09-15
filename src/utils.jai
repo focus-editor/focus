@@ -387,6 +387,7 @@ get_visual_indent_in_spaces :: (line: string, spaces := " \t") -> indent: int {
 }
 
 get_tmp_spaces :: (num: int) -> string {
+    if num <= 0 return "";
     spaces := talloc_string(num);
     memset(spaces.data, cast(u8) #char " ", num);
     return spaces;
