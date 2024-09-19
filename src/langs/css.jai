@@ -83,7 +83,7 @@ read_css_identifier_string :: (using tokenizer: *Tokenizer) -> string {
     t += 1;
     if t >= max_t then t = max_t;
 
-    while t < max_t && is_alnum(<<t) || <<t == #char "-" {
+    while t < max_t && (is_alnum(<<t) || <<t == #char "-") {
         t += 1;
     }
     if t >= max_t then t = max_t;
@@ -165,13 +165,23 @@ parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
         case #char "*";
             token.type = .multiline_comment;
             t += 1;
-            while t + 1 < max_t {
-                if << t == #char "*" && << (t + 1) == #char "/" {
-                  t += 2;
+
+            while t < max_t {
+              if <<t == #char "*" {
+                if t + 1 < max_t && <<(t + 1) == #char "/" {
+                  t += 2; // Both the * and /
                   break;
                 }
-                t += 1;
+              }
+
+              t += 1;
             }
+
+        case #char "/";
+            token.type = .comment;
+            t += 1;
+
+            while t < max_t && <<t != #char "\n"  t += 1;
     }
 }
 
