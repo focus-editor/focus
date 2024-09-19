@@ -309,6 +309,7 @@ get_language_sample_text :: (lang: Buffer.Lang) -> string {
         case .Zig;               return SAMPLE_Zig;
         case .Uxntal;            return SAMPLE_Uxntal;
         case .Markdown;          return SAMPLE_Markdown;
+        case .Batch;             return SAMPLE_Batch;
 
         case .Plain_Text;        #through;
         case .Focus_Config;      #through;

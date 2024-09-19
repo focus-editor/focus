@@ -1009,3 +1009,35 @@ This is a footnote reference[^1].
 [^1]: This is the footnote text.
 
 MARKDOWN
+
+
+SAMPLE_Batch :: #string BATCH
+@echo off
+
+rem This is a comment.
+
+set property=first name
+set /p username="Please enter your %property%: "
+echo Hello, %username%! Nice to meet you. & echo.
+
+set counter=5
+echo Counting down from %counter%...
+
+:countdown
+if %counter% LEQ 0 (
+    echo.
+    goto fruits
+)
+echo %counter%
+set /a counter=%counter%-1
+goto countdown
+
+:fruits
+echo Displaying some fruits for you, %username%:
+
+for %%i in (apple, mango, elderberry) do (
+    echo %%i
+)
+
+:end
+BATCH

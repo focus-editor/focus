@@ -270,6 +270,7 @@ get_lang_from_name :: (lang_name: string) -> Buffer.Lang, found: bool {
         case "plain_text";   return .Plain_Text, true;
         case "md";           return .Markdown,   true;
         case "markdown";     return .Markdown,   true;
+        case "batch";        return .Batch,      true;
 
         // case "focus_config"; return .Focus_Config, true;  // disabled for now
         // case "focus_theme";  return .Focus_Theme,  true;
