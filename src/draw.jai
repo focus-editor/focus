@@ -112,7 +112,9 @@ draw_welcome_screen :: (main_area: Rect) {
 
     // Draw the left part
     {
-        draw_rect(left_area, Color.BACKGROUND_3);
+        t := fmod_cycling(xx frame_time64 * 0.05, 2.0);
+        if t > 1.0  t = 2.0 - t;
+        draw_background_rect(left_area, .BACKGROUND_3, t);
 
         Simp.set_shader_for_rects();
 
@@ -156,7 +158,7 @@ draw_welcome_screen :: (main_area: Rect) {
 
     // Draw the right part
     {
-        draw_rect(right_area, Color.BACKGROUND_0);
+        draw_background_rect(right_area, .BACKGROUND_0);
 
         Shortcut :: struct { action: Action_Common; description: string; }
 
@@ -287,7 +289,7 @@ draw_user_messages :: (main_area: Rect, status_bar_height: float) {
             case .warning;  color = Color.UI_WARNING_DIM;
             case .success;  color = Color.UI_SUCCESS;
         }
-        draw_rounded_rect_with_shadow(message_rect, color);
+        draw_rounded_rect_with_shadow(message_rect, color, is_background = true);
 
         text_color := Color.UI_DEFAULT;
         pen_x := cast(s64) (message_rect.x + padding);
@@ -359,7 +361,7 @@ maybe_draw_color_preview_panel :: () -> (drawn: bool = false, editor_rect: Rect 
     color_preview_rect=, color_picker_rect := cut_bottom(color_preview_rect, color_preview_rect.h * color_preview_height);
     if !is_valid(color_preview_rect) return;
 
-    draw_rounded_rect_with_shadow(color_preview_rect, Color.BACKGROUND_0, radius = 0.1, shadow_size = char_size);
+    draw_rounded_rect_with_shadow(color_preview_rect, Color.BACKGROUND_0, radius = 0.1, shadow_size = char_size, is_background = true);
 
     title_bar_height := font_ui_line_height + 2 * margin + 4 * dpi_scale;
     title_bar_rect, panel_body_rect := cut_top(color_preview_rect, title_bar_height);
@@ -382,7 +384,7 @@ maybe_draw_color_preview_panel :: () -> (drawn: bool = false, editor_rect: Rect 
         push_scissor(title_bar_rect);
         defer pop_scissor();
 
-        draw_rect(title_bar_rect, Color.BACKGROUND_4);
+        draw_background_rect(title_bar_rect, Color.BACKGROUND_4);
 
         pen := Vector2.{
             x = title_bar_rect.x + char_x_advance,
@@ -409,7 +411,7 @@ maybe_draw_color_preview_panel :: () -> (drawn: bool = false, editor_rect: Rect 
         }
 
         hr := cut_bottom(title_bar_rect, 1);
-        draw_rect(hr, Color.BACKGROUND_1);
+        draw_background_rect(hr, Color.BACKGROUND_1);
     }
 
     if !is_valid(panel_body_rect) return;
@@ -448,8 +450,8 @@ maybe_draw_color_preview_panel :: () -> (drawn: bool = false, editor_rect: Rect 
         defer pop_scissor();
 
         hr:, langs_rect = cut_left(langs_rect, 1);
-        draw_rect(hr, Color.BACKGROUND_1);
-        draw_rect(langs_rect, Color.BACKGROUND_2);
+        draw_background_rect(hr, Color.BACKGROUND_1);
+        draw_background_rect(langs_rect, Color.BACKGROUND_2);
 
         languages, selected_lang := color_preview_get_languages();
         entry_height := cast(s64) (font_ui_line_height + padding);
@@ -546,7 +548,7 @@ draw_color_picker :: (editor_id: s64, editor: *Editor, buffer: *Buffer, picker_r
 
     Simp.immediate_flush();
 
-    draw_rounded_rect_with_shadow(rect, Color.BACKGROUND_0, radius = 0.1, shadow_size = char_size);
+    draw_rounded_rect_with_shadow(rect, Color.BACKGROUND_0, radius = 0.1, shadow_size = char_size, is_background = true);
     widget_size := line_height;
     bottom, top := cut_bottom(rect, widget_size);
     axis_rect, main_rect  := cut_left(top,    widget_size);
@@ -641,7 +643,7 @@ maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
     build_panel_rect = cut_bottom(build_panel_rect, build_panel_rect.h * build_panel_height);
 
     if !is_valid(build_panel_rect) return;
-    draw_rounded_rect_with_shadow(build_panel_rect, Color.BUILD_PANEL_BACKGROUND, radius = 0.1, shadow_size = char_size);
+    draw_rounded_rect_with_shadow(build_panel_rect, Color.BUILD_PANEL_BACKGROUND, radius = 0.1, shadow_size = char_size, is_background = true);
 
     margin := floor(4 * dpi_scale);
     title_bar_height := font_ui_line_height + 2 * margin + 4 * dpi_scale;
@@ -665,7 +667,7 @@ maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
         push_scissor(title_bar_rect);
         defer pop_scissor();
 
-        draw_rect(title_bar_rect, Color.BUILD_PANEL_TITLE_BAR);
+        draw_background_rect(title_bar_rect, Color.BUILD_PANEL_TITLE_BAR);
 
         pen := Vector2.{
             x = title_bar_rect.x + char_x_advance,
@@ -692,7 +694,7 @@ maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
         }
 
         hr := cut_bottom(title_bar_rect, 1);
-        draw_rect(hr, Color.BACKGROUND_1);
+        draw_background_rect(hr, Color.BACKGROUND_1);
     }
 
     if !is_valid(build_output_rect) return;
@@ -756,8 +758,6 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
     rect, status_bar_rect, line_number_panel := get_editor_subrects(editor_id, main_area, status_bar_height);
 
     if !is_valid(rect) return;
-
-    if !as_build_panel then draw_rect(rect, Color.BACKGROUND_0);
 
     became_active := maybe_set_hot_or_active(ui_id, rect, .TEXT_SELECT);
     if became_active then activate_editors();
@@ -986,6 +986,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
     visible_lines_end:   s32;
     visible_offset_range: Offset_Range;
     cursors_off_screen := 0;
+    background_permutator := 0.0;
 
     // Draw editor
     {
@@ -1023,7 +1024,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             bounds.h += 2;
             bounds.y -= line_height + 2;
             if bounds.w < 0 || bounds.h < 0 then bounds = rect;  // fall back
-            // draw_rect(bounds, Color.BACKGROUND_1);
+            // draw_background_rect(bounds, Color.BACKGROUND_1);
 
             screen_pos := get_cursor_screen_pos(text_origin, cursor_coords[main_cursor].pos);
             if !point_within(screen_pos, bounds) {
@@ -1252,6 +1253,10 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             redraw_requested = true;
         }
 
+        // Finished working out scroll position, so can now draw background
+        background_permutator = cast(float) viewport.scroll_y.target / max_y_scroll;
+        if !as_build_panel then draw_background_rect(rect, Color.BACKGROUND_0, background_permutator);
+
         // Draw buffer regions
         for region : buffer.regions {
             if region.end   < visible_offset_range.start continue;
@@ -1260,7 +1265,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 start = offset_to_coords(editor, buffer, region.start),
                 end   = offset_to_coords(editor, buffer, region.end),
             };
-            draw_range_full_width_lines(range, rect, visible_lines_start, visible_lines_end, text_origin, get_region_color(region.kind));
+            draw_range_full_width_lines(range, rect, visible_lines_start, visible_lines_end, text_origin, get_region_color(region.kind), background_permutator);
         }
 
         // Draw selection highlights
@@ -1319,7 +1324,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                     coords := cursor_coords[it_index];
                     selection := ifx cursor.pos < cursor.sel then Coords_Range.{ start = coords.pos, end = coords.sel } else .{ start = coords.sel, end = coords.pos };
                     color := ifx cursors_active then Color.SELECTION_ACTIVE else Color.SELECTION_INACTIVE;
-                    draw_range(selection, editor, buffer, visible_lines_start, visible_lines_end, text_origin, color);
+                    draw_range(selection, editor, buffer, visible_lines_start, visible_lines_end, text_origin, color, is_background = true, background_permutator = background_permutator);
                 }
                 else if cursors_active && config.settings.highlight_line_with_cursor && !as_build_panel {
                     // Draw current line highlight
@@ -1334,7 +1339,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                         w = rect.w - ifx x_offset == 0 then char_x_advance,   // @Note: text_origin.x is 1 char_x_advance in, so if we can see the beginning of the line, shorten the rect
                         h = line_height,
                     };
-                    draw_rect(line_rect, Color.BACKGROUND_4);
+                    draw_background_rect(line_rect, Color.BACKGROUND_4, background_permutator);
                 }
             }
         }
@@ -1350,7 +1355,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 range.start = offset_to_coords(editor, buffer, it.offset);
                 range.end   = offset_to_coords(editor, buffer, it.offset + it.count);
                 color := ifx search_bar.selected_result == it_index then Color.SEARCH_RESULT_ACTIVE else Color.SEARCH_RESULT_INACTIVE;
-                draw_range(range, editor, buffer, visible_lines_start, visible_lines_end, text_origin, color);
+                draw_range(range, editor, buffer, visible_lines_start, visible_lines_end, text_origin, color, is_background = true);
             }
         }
 
@@ -1367,7 +1372,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 anim.coords_range.end   = offset_to_coords(editor, buffer, anim.range.end);
             }
 
-            draw_range(anim.coords_range, editor, buffer, visible_lines_start, visible_lines_end, text_origin, Color.PASTE_ANIMATION, alpha = xx (1 - t));
+            draw_range(anim.coords_range, editor, buffer, visible_lines_start, visible_lines_end, text_origin, Color.PASTE_ANIMATION, alpha = xx (1 - t), is_background = true, background_permutator = background_permutator);
         }
         if editor_paste_animations.count > 0 then redraw_requested = true;
 
@@ -1530,7 +1535,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         push_scissor(line_number_panel);
         defer pop_scissor();
 
-        draw_rect(line_number_panel, Color.BACKGROUND_0);
+        draw_background_rect(line_number_panel, Color.BACKGROUND_0, background_permutator);
 
         // Get the visible lines which have cursors on them (for highlighting)
         active_lines: [..] s32;
@@ -1607,7 +1612,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
         top_rect, results_rect := cut_top(bar_rect, top_rect_height);
 
-        draw_rounded_rect_with_shadow(bar_rect, Color.BACKGROUND_3);
+        draw_rounded_rect_with_shadow(bar_rect, Color.BACKGROUND_3, is_background = true);
 
         maybe_set_hot_or_active(input_id,   bar_rect, .NORMAL);
         maybe_set_hot_or_active(results_id, bar_rect, .NORMAL);
@@ -1668,7 +1673,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             push_scissor(results_rect);
             defer pop_scissor();
 
-            draw_rect(results_rect, Color.BACKGROUND_0);  // to make contrasting scopes more visible
+            draw_background_rect(results_rect, Color.BACKGROUND_0);  // to make contrasting scopes more visible
 
             {
                 // Scrollbar
@@ -1760,7 +1765,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 for visible_scopes {
                     if entry.offset >= it.start && entry.offset <= it.end {
                         scope_rect := cut_right(entry_rect, entry_rect.x + entry_rect.w - text_x + char_x_advance);
-                        draw_rect(scope_rect, get_region_color(it.kind));
+                        draw_background_rect(scope_rect, get_region_color(it.kind));
                         break;
                     }
                 }
@@ -1773,7 +1778,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                         redraw_requested = true;
                         break;  // don't finish drawing entries because they are reset
                     }
-                    draw_rect(entry_rect, Color.LIST_CURSOR_LITE);
+                    draw_background_rect(entry_rect, Color.LIST_CURSOR_LITE);
                 }
                 if entry_index == selected_result then draw_rect(entry_rect, Color.LIST_CURSOR);
 
@@ -1828,7 +1833,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                     highlight_rect := entry_rect;
                     highlight_rect.x = pen.x + char_x_advance * (cols_until_match_start - col_offset);
                     highlight_rect.w = char_x_advance * (cols_until_match_end - cols_until_match_start);
-                    draw_rect(shrink_y(highlight_rect, padding), Color.SEARCH_RESULT_INACTIVE);
+                    draw_background_rect(shrink_y(highlight_rect, padding), Color.SEARCH_RESULT_INACTIVE);
 
                     // Draw line
                     visible_offset_range = Offset_Range.{
@@ -1863,7 +1868,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
     // Draw status bar
     if !as_build_panel {
         footer_color := Color.BACKGROUND_4;
-        draw_rect(status_bar_rect, footer_color);
+        draw_background_rect(status_bar_rect, footer_color);
         if #complete config.settings.status_bar_position == {
             case .bottom; draw_top_shadow(status_bar_rect);
             case .top; draw_bottom_shadow(status_bar_rect);
@@ -2115,7 +2120,7 @@ draw_open_file_dialog :: () {
         box_rect = make_rect(x, screen.h - height - y, width, height);
         if !is_valid(box_rect) return;
     }
-    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3, radius = rounding_radius_large);
+    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3, radius = rounding_radius_large, is_background = true);
 
     maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
 
@@ -2439,7 +2444,7 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
         box_rect = make_rect(x, screen.h - height - y, width, height);
         if !is_valid(box_rect) return;
     }
-    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3, radius = rounding_radius_large);
+    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3, radius = rounding_radius_large, is_background = true);
 
     maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
 
@@ -2680,7 +2685,7 @@ draw_generic_confirm_dialog :: (dialog: *Generic_Confirm_Dialog, ui_id: Ui_Id, h
 
     maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
 
-    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3);
+    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3, is_background = true);
 
     header_rect, buffers_rect := cut_top(box_rect, header_height);
     buffers_rect = shrink(buffers_rect, margin);
@@ -2690,14 +2695,14 @@ draw_generic_confirm_dialog :: (dialog: *Generic_Confirm_Dialog, ui_id: Ui_Id, h
         push_scissor(header_rect);
         defer pop_scissor();
 
-        draw_rounded_rect_with_corners(header_rect, Color.BACKGROUND_4, tl = .in, tr = .in, br = .none, bl = .none);
+        draw_rounded_rect_with_corners(header_rect, Color.BACKGROUND_4, tl = .in, tr = .in, br = .none, bl = .none, is_background = true);
 
         pen_x := cast(s32) (header_rect.x + 2 * margin);
         pen_y := cast(s32) (header_rect.y + (header_rect.h - font_ui_medium.character_height) / 2 + 2);
         Simp.draw_text(font_ui_medium, pen_x, pen_y, header, xx Color.UI_DEFAULT);
 
         hr := cut_bottom(header_rect, 1);
-        draw_rect(hr, Color.BACKGROUND_1);
+        draw_background_rect(hr, Color.BACKGROUND_1);
     }
 
     // Message + extra
@@ -2805,7 +2810,7 @@ draw_finder :: () {
         box_rect = make_rect(x, screen.h - height - y, width, height);
         if !is_valid(box_rect) return;
     }
-    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3, radius = rounding_radius_large);
+    draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3, radius = rounding_radius_large, is_background = true);
 
     maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
 
@@ -3117,7 +3122,7 @@ draw_go_to_line_dialog :: (active_editor_rect: Rect, status_bar_height: float) {
     input_rect := shrink(bar_rect, margin);
     input_rect = cut_right(input_rect, input_rect.w - (label_width + margin));
 
-    draw_rounded_rect_with_shadow(bar_rect, Color.BACKGROUND_3);
+    draw_rounded_rect_with_shadow(bar_rect, Color.BACKGROUND_3, is_background = true);
 
     pen := Vector2.{
         x = bar_rect.x + margin,
@@ -3134,7 +3139,8 @@ get_cursor_screen_pos :: (text_origin: Vector2, coords: Coords) -> Vector2 {
     };
 }
 
-draw_range :: (range: Coords_Range, editor: Editor, buffer: Buffer, visible_start: s32, visible_end: s32, text_origin: Vector2, color: Color, alpha := 1.0) {
+draw_range :: (range: Coords_Range, editor: Editor, buffer: Buffer, visible_start: s32, visible_end: s32, text_origin: Vector2,
+               color: Color, alpha := 1.0, is_background := false, background_permutator := 0.0) {
     // Scan the visible range and add the number of chars on each line
     range_chars: [..] s32;
     range_chars.allocator = temp;
@@ -3188,11 +3194,11 @@ draw_range :: (range: Coords_Range, editor: Editor, buffer: Buffer, visible_star
             if next_end < last_char then br = .in;
             if next_end > last_char then br = .out;
         }
-        draw_rounded_rect_with_corners(rect, color, tl, tr, br, bl, alpha = alpha);
+        draw_rounded_rect_with_corners(rect, color, tl, tr, br, bl, alpha = alpha, is_background = is_background, background_permutator = background_permutator);
     }
 }
 
-draw_range_full_width_lines :: (range: Coords_Range, editor_rect: Rect, visible_start: s32, visible_end: s32, text_origin: Vector2, color: Color) {
+draw_range_full_width_lines :: (range: Coords_Range, editor_rect: Rect, visible_start: s32, visible_end: s32, text_origin: Vector2, color: Color, background_permutator: float) {
     start := max(range.start.line, visible_start);
     end   := min(range.end.line,   visible_end);
 
@@ -3223,7 +3229,7 @@ draw_range_full_width_lines :: (range: Coords_Range, editor_rect: Rect, visible_
                 rect.w = 0;
             }
         }
-        draw_rounded_rect_with_corners(rect, color, tl, tr, br, bl);
+        draw_rounded_rect_with_corners(rect, color, tl, tr, br, bl, is_background = true, background_permutator = background_permutator);
     }
 }
 
@@ -3381,7 +3387,7 @@ draw_tooltip_bottom_left :: (text: string, pos: Vector2) {
     rect.h = 2 * padding + font_ui_very_small.character_height;
     rect.y -= rect.h;
 
-    draw_rounded_rect_with_shadow(rect, Color.BACKGROUND_3);
+    draw_rounded_rect_with_shadow(rect, Color.BACKGROUND_3, is_background = true);
     Simp.draw_prepared_text(font_ui_very_small, xx (rect.x + padding), xx (rect.y + (rect.h - font_ui_very_small.character_height) / 2) + 1, xx Color.UI_DEFAULT);
 }
 
@@ -3397,9 +3403,9 @@ draw_code :: (font: *Simp.Dynamic_Font, pen: Vector2, code_lines: [] Simp.Code_L
 
 Corner_Rounding :: enum { none; in; out; }
 
-draw_rounded_rect :: (rect: Rect, color: Color, radius := 0.0, softness := 1.0, $set_shader := true) {
+draw_rounded_rect :: (rect: Rect, color: Color, radius := 0.0, softness := 1.0, $set_shader := true, is_background := false, background_permutator := 0.0) {
     if !is_valid(rect) return;
-    #if set_shader then Simp.set_shader_for_rects();
+    #if set_shader then Simp.set_shader_for_rects(is_background, background_permutator);
     if radius <= 0 then radius = rounding_radius;
 
     center := Vector2.{ x = rect.x + rect.w / 2, y = rect.y + rect.h / 2 };
@@ -3426,7 +3432,8 @@ draw_rounded_rect_with_raw_color :: (rect: Rect, color_vec4: Vector4, radius := 
 draw_rounded_rect_with_corners :: (rect: Rect, color: Color,
                                    tl: Corner_Rounding = .in, tr: Corner_Rounding = .in,
                                    br: Corner_Rounding = .in, bl: Corner_Rounding = .in,
-                                   radius := 0.0, softness := 1.0, alpha := 1.0) {
+                                   radius := 0.0, softness := 1.0, alpha := 1.0,
+                                   is_background := false, background_permutator := 0.0) {
     if radius <= 0 then radius = rounding_radius;
 
     center := Vector2.{ x = rect.x + rect.w / 2, y = rect.y + rect.h / 2 };
@@ -3439,7 +3446,7 @@ draw_rounded_rect_with_corners :: (rect: Rect, color: Color,
     color_vec4 := map_color_to_vec4(color);
     color_vec4.w *= alpha;
 
-    Simp.set_shader_for_rects();
+    Simp.set_shader_for_rects(is_background, background_permutator);
 
     // Draw top corners
     if tl == {
@@ -3481,14 +3488,15 @@ draw_rounded_rect_with_corners :: (rect: Rect, color: Color,
             if is_valid(corner) Simp.immediate_rounded_rect(bottom_left(corner), top_right(corner), color_vec4, fake_center, size, radius, -softness);
     }
 
-    // Draw base rects
-    Simp.set_shader_for_color(enable_blend = true);
+    if is_background  Simp.set_shader_for_background(background_permutator);
+    else              Simp.set_shader_for_color(enable_blend = true);
+
     draw_rect_with_raw_color(base, color_vec4);
     draw_rect_with_raw_color(top, color_vec4);
     draw_rect_with_raw_color(bottom, color_vec4);
 }
 
-draw_rounded_rect_with_shadow :: (rect: Rect, color: Color, radius := 0.0, shadow_size := 0.0) {
+draw_rounded_rect_with_shadow :: (rect: Rect, color: Color, radius := 0.0, shadow_size := 0.0, is_background := false, background_permutator := 0.0) {
     if radius <= 0 then radius = rounding_radius;
     if shadow_size <= 0 then shadow_size = char_x_advance * 2;
     shadow_rect := expand(rect, shadow_size);
@@ -3504,14 +3512,14 @@ draw_rounded_rect_with_shadow :: (rect: Rect, color: Color, radius := 0.0, shado
     center := Vector2.{ x = rect.x + rect.w / 2, y = rect.y + rect.h / 2 };
     size   := Vector2.{ x = rect.w / 2, y = rect.h / 2 };
 
-    Simp.set_shader_for_rects();
+    Simp.set_shader_for_rects(is_background, background_permutator);
 
     Simp.immediate_rounded_rect(bottom_left(top),    top_right(top),    shadow_color, center, size, radius, softness = shadow_size);
     Simp.immediate_rounded_rect(bottom_left(bottom), top_right(bottom), shadow_color, center, size, radius, softness = shadow_size);
     Simp.immediate_rounded_rect(bottom_left(left),   top_right(left),   shadow_color, center, size, radius, softness = shadow_size);
     Simp.immediate_rounded_rect(bottom_left(right),  top_right(right),  shadow_color, center, size, radius, softness = shadow_size);
 
-    draw_rounded_rect(rect, color, radius = radius, set_shader = false);
+    draw_rounded_rect(rect, color, radius = radius, set_shader = false, is_background = is_background, background_permutator = background_permutator);
 }
 
 draw_circle :: (center: Vector2, color: Color, radius: float, softness := 1.0) {
@@ -3563,6 +3571,10 @@ draw_gradient_rect :: (rect: Rect, mode: Gradient_Mode, value: float, color_vec4
     Simp.immediate_flush();
 }
 
+draw_background_rect :: (rect: Rect, color: Color, permutator := 0.0) {
+    Simp.set_shader_for_background(permutator);
+    draw_rect_raw(rect, color);
+}
 
 draw_top_shadow :: (using rect: Rect, size: float = 10.0) {
     Simp.set_shader_for_color(enable_blend = true);

@@ -232,6 +232,12 @@ backend_init_shaders :: () {
         s.color_scale_loc        = 1;
         s.alpha_blend = true;
     }
+
+    s = *shader_background;
+    {
+        s.gl_handle   = get_shader_program(SHADER_BACKGROUND);
+        s.alpha_blend = true;
+    }
 }
 
 #scope_file
@@ -455,6 +461,56 @@ void main () {
 GLSL
 
 
+SHADER_BACKGROUND :: #string glsl
+OUT_IN vec4 iterated_color;
+
+#ifdef VERTEX_SHADER
+in vec2 vert_position;
+in vec4 vert_color;
+
+uniform mat4 projection;
+
+void main() {
+    gl_Position = projection * vec4(vert_position, 0.0, 1.0);
+    iterated_color = vert_color;
+}
+#endif // VERTEX_SHADER
+
+#ifdef FRAGMENT_SHADER
+uniform vec2 u_resolution;
+uniform float permutator;
+
+out vec4 color;
+
+float random (in vec2 _st) {
+    return fract(sin(dot(_st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+}
+
+vec4 random4(vec2 co) {
+    vec4 result;
+    result.x = random(co); co *= 2;
+    result.y = random(co); co *= 2;
+    result.z = random(co); co *= 2;
+    result.w = random(co);
+    return result;
+}
+
+void main () {
+    float effect_strength = 0.05;
+    vec2 uv = gl_FragCoord.xy / u_resolution;
+    vec4 perm = vec4(uv.x, uv.x * uv.y, uv.x * (1.0-clamp(permutator, 0.0, 1.0)), 0.0);
+    vec4 mixed = mix(iterated_color, perm, effect_strength);
+
+    // When color is between two displayable values dither it to avoid banding; round it up or down randomly,
+    // proportionate to which it is nearer to.
+    vec4 remainder = fract(mixed * 255.0);
+    color = mixed - (remainder / 255.0) + (1.0 / 255.0) - (step(remainder, random4(uv)) / 255.0);
+    color.a = iterated_color.a;
+}
+#endif // FRAGMENT_SHADER
+glsl
+
+
 // @Cleanup:
 // shader_sprite is 1-v from shader_text. Do we pack the text texture upside down,
 // or what?
@@ -520,16 +576,46 @@ void main() {
 #endif // VERTEX_SHADER
 
 #ifdef FRAGMENT_SHADER
+uniform vec2 u_resolution;
+uniform int is_background;
+uniform float permutator;
+
 out vec4 color;
 
 float rounded_rect_sdf(vec2 frag_pos, vec2 rect_center, vec2 size, float radius) {
     return length(max(abs(frag_pos - rect_center) - size + radius, 0.0)) - radius;
 }
 
+float random (in vec2 _st) {
+    return fract(sin(dot(_st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+}
+
+vec4 random4(vec2 co) {
+    vec4 result;
+    result.x = random(co); co *= 2;
+    result.y = random(co); co *= 2;
+    result.z = random(co); co *= 2;
+    result.w = random(co);
+    return result;
+}
+
 void main () {
     float distance = rounded_rect_sdf(gl_FragCoord.xy, rect_center, rect_size, rect_corner_radius);
-    float smoothed_alpha = 1.0f - smoothstep(0.0f, rect_edge_softness, distance);
-    color = vec4(iterated_color.xyz, iterated_color.a * smoothed_alpha);
+    float smoothed_alpha = 1.0 - smoothstep(0.0, rect_edge_softness, distance);
+    if (is_background != 0) {
+        float effect_strength = 0.05;
+        vec2 uv = gl_FragCoord.xy / u_resolution;
+        vec4 perm = vec4(uv.x, uv.x * uv.y, uv.x * (1.0-clamp(permutator, 0.0, 1.0)), 0.0);
+        vec4 mixed = mix(iterated_color, perm, effect_strength);
+
+        // When color is between two displayable values dither it to avoid banding; round it up or down randomly,
+        // proportionate to which it is nearer to.
+        vec4 remainder = fract(mixed * 255.0);
+        color = mixed - (remainder / 255.0) + (1.0 / 255.0) - (step(remainder, random4(uv)) / 255.0);
+    } else {
+        color.xyz = iterated_color.xyz;
+    }
+    color.a = iterated_color.a * smoothed_alpha;
 }
 
 #endif // FRAGMENT_SHADER
