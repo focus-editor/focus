@@ -82,15 +82,37 @@ main :: () {
                 } else {
                     array_add(*dirs_from_args, dir);
                 }
-            } else if file_exists(path) {
-                editors_open_file(path);
             } else {
                 if path == "-project" {
                     add_user_error("The '-project' command line argument is used incorrectly.\nCorrect usage: focus -project <project name or path>.\nNo other arguments are allowed in this case.");
                 } else if starts_with(path, "-") {
                     add_user_error("Invalid command line parameter '%'.", path);
                 } else {
-                    add_user_error("Invalid command line parameter '%'.\nAttempted to load it as a file or a directory, but it doesn't exist.", path);
+                    file := path;
+                    line := -1;
+
+                    chunks := split(path, ":",, temp);
+                    if chunks.count == 2 {
+                        file = chunks[0];
+
+                        s: string;
+                        s.data = chunks[1].data;
+                        s.count = chunks[1].count;
+
+                        success: bool;
+                        line, success = parse_int(*s);
+
+                        if !success || line < 0 {
+                            add_user_error("Invalid line number '%'.", s);
+                            line = -1;
+                        }
+                    }
+
+                    if file_exists(file) {
+                        editors_open_file(file, line = line);
+                    } else {
+                        add_user_error("Invalid command line parameter '%'.\nAttempted to load it as a file or a directory, but it doesn't exist.", path);
+                    }
                 }
             }
         }
