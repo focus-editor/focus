@@ -471,12 +471,8 @@ editors_open_file :: (path: string, placement: Editor_Placement = .in_place, lin
     editors_open_buffer(buffer_id, placement);
 
     if line != -1 {
-        for open_editors {
-            if it.buffer_id == buffer_id {
-                buffer := open_buffers[buffer_id];
-                go_to_line(*it, *buffer, line, 1);
-            }
-        }
+        editor, buffer := get_active_editor_and_buffer();
+        go_to_line(editor, buffer, line, 1);
     }
 
     return true;
