@@ -88,31 +88,20 @@ main :: () {
                 } else if starts_with(path, "-") {
                     add_user_error("Invalid command line parameter '%'.", path);
                 } else {
-                    file := path;
-                    line := -1;
-
-                    chunks := split(path, ":",, temp);
-                    if chunks.count == 2 {
-                        file = chunks[0];
-
-                        s: string;
-                        s.data = chunks[1].data;
-                        s.count = chunks[1].count;
-
-                        success: bool;
-                        line, success = parse_int(*s);
-
-                        if !success || line < 0 {
-                            add_user_error("Invalid line number '%'.", s);
-                            line = -1;
+                    opened := false;
+                    found, file, line_str := split_from_right(path, ":",, temp);
+                    if found {
+                        line, success := parse_int(*line_str);
+                        if success && line >= 0 && file_exists(file) && !is_directory(file) {
+                            editors_open_file(file, line = line);
+                            opened = true;
                         }
+                    } else {
+                        editors_open_file(file);
+                        opened = true;
                     }
 
-                    if file_exists(file) {
-                        editors_open_file(file, line = line);
-                    } else {
-                        add_user_error("Invalid command line parameter '%'.\nAttempted to load it as a file or a directory, but it doesn't exist.", path);
-                    }
+                    if !opened add_user_error("Invalid command line parameter '%'.\nAttempted to load it as a file or a directory, but it doesn't exist.", path);
                 }
             }
         }
