@@ -82,6 +82,8 @@ main :: () {
                 } else {
                     array_add(*dirs_from_args, dir);
                 }
+            } else if file_exists(path) {
+                editors_open_file(path);
             } else {
                 if path == "-project" {
                     add_user_error("The '-project' command line argument is used incorrectly.\nCorrect usage: focus -project <project name or path>.\nNo other arguments are allowed in this case.");
@@ -96,9 +98,6 @@ main :: () {
                             editors_open_file(file, line = line);
                             opened = true;
                         }
-                    } else {
-                        editors_open_file(file);
-                        opened = true;
                     }
 
                     if !opened add_user_error("Invalid command line parameter '%'.\nAttempted to load it as a file or a directory, but it doesn't exist.", path);
