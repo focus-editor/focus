@@ -90,7 +90,17 @@ main :: () {
                 } else if starts_with(path, "-") {
                     add_user_error("Invalid command line parameter '%'.", path);
                 } else {
-                    add_user_error("Invalid command line parameter '%'.\nAttempted to load it as a file or a directory, but it doesn't exist.", path);
+                    opened := false;
+                    found, file, line_str := split_from_right(path, ":",, temp);
+                    if found {
+                        line, success := parse_int(*line_str);
+                        if success && line >= 0 && file_exists(file) && !is_directory(file) {
+                            editors_open_file(file, line = line);
+                            opened = true;
+                        }
+                    }
+
+                    if !opened add_user_error("Invalid command line parameter '%'.\nAttempted to load it as a file or a directory, but it doesn't exist.", path);
                 }
             }
         }

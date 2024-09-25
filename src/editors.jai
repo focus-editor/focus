@@ -451,7 +451,7 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
     }
 }
 
-editors_open_file :: (path: string, placement: Editor_Placement = .in_place) -> success: bool {
+editors_open_file :: (path: string, placement: Editor_Placement = .in_place, line := -1) -> success: bool {
     full_path, success := get_absolute_path(path,, temp);
     path_overwrite_separators(full_path, separator = #char "/");
     if !file_exists(full_path) || !success {
@@ -469,6 +469,12 @@ editors_open_file :: (path: string, placement: Editor_Placement = .in_place) -> 
     start_watching_file_if_not_already(full_path);
 
     editors_open_buffer(buffer_id, placement);
+
+    if line != -1 {
+        editor, buffer := get_active_editor_and_buffer();
+        go_to_line(editor, buffer, line, 1);
+    }
+
     return true;
 }
 
