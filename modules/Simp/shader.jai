@@ -42,7 +42,7 @@ set_shader_for_images :: (texture: *Texture) {
     immediate_set_texture(texture);
 }
 
-set_shader_for_rects :: (is_background := false, background_permutator := 0.0) {
+set_shader_for_rects :: (is_background := false, background_permutator := 0.0, background_gradient_settings := Vector4.{}) {
     CheckInit();
     if state.current_shader != *shader_rounded_rect {
         immediate_set_shader(*shader_rounded_rect);
@@ -54,6 +54,8 @@ set_shader_for_rects :: (is_background := false, background_permutator := 0.0) {
         glUniform2f(loc, cast(float) c.window_width, cast(float) c.window_height);
         loc = glGetUniformLocation(shader_rounded_rect.gl_handle, "permutator");
         glUniform1f(loc, background_permutator);
+        loc = glGetUniformLocation(shader_rounded_rect.gl_handle, "gradient_settings");
+        glUniform4f(loc, background_gradient_settings.x, background_gradient_settings.y, background_gradient_settings.z, background_gradient_settings.w);
         loc = glGetUniformLocation(shader_rounded_rect.gl_handle, "is_background");
         glUniform1i(loc, 1);
     } else {
@@ -74,8 +76,7 @@ set_shader_for_gradient :: (rect: Vector4, mode: u8, value: float) {
     glUniform1f(loc, value);
 }
 
-
-set_shader_for_background :: (permutator: float) {
+set_shader_for_background :: (permutator: float, background_gradient_settings: Vector4) {
     CheckInit();
     immediate_set_shader(*shader_background);
     set_projection();
@@ -84,6 +85,8 @@ set_shader_for_background :: (permutator: float) {
     glUniform2f(loc, cast(float) c.window_width, cast(float) c.window_height);
     loc = glGetUniformLocation(shader_background.gl_handle, "permutator");
     glUniform1f(loc, permutator);
+    loc = glGetUniformLocation(shader_background.gl_handle, "gradient_settings");
+    glUniform4f(loc, background_gradient_settings.x, background_gradient_settings.y, background_gradient_settings.z, background_gradient_settings.w);
 }
 
 

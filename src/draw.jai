@@ -112,9 +112,7 @@ draw_welcome_screen :: (main_area: Rect) {
 
     // Draw the left part
     {
-        t := fmod_cycling(xx frame_time64 * 0.05, 2.0);
-        if t > 1.0  t = 2.0 - t;
-        draw_background_rect(left_area, .BACKGROUND_3, t);
+        draw_background_rect(left_area, .BACKGROUND_3);
 
         Simp.set_shader_for_rects();
 
@@ -3405,7 +3403,7 @@ Corner_Rounding :: enum { none; in; out; }
 
 draw_rounded_rect :: (rect: Rect, color: Color, radius := 0.0, softness := 1.0, $set_shader := true, is_background := false, background_permutator := 0.0) {
     if !is_valid(rect) return;
-    #if set_shader then Simp.set_shader_for_rects(is_background, background_permutator);
+    #if set_shader then Simp.set_shader_for_rects(is_background, background_permutator, map_color_to_vec4(.GRADIENT_EFFECT));
     if radius <= 0 then radius = rounding_radius;
 
     center := Vector2.{ x = rect.x + rect.w / 2, y = rect.y + rect.h / 2 };
@@ -3446,7 +3444,7 @@ draw_rounded_rect_with_corners :: (rect: Rect, color: Color,
     color_vec4 := map_color_to_vec4(color);
     color_vec4.w *= alpha;
 
-    Simp.set_shader_for_rects(is_background, background_permutator);
+    Simp.set_shader_for_rects(is_background, background_permutator, map_color_to_vec4(.GRADIENT_EFFECT));
 
     // Draw top corners
     if tl == {
@@ -3488,7 +3486,7 @@ draw_rounded_rect_with_corners :: (rect: Rect, color: Color,
             if is_valid(corner) Simp.immediate_rounded_rect(bottom_left(corner), top_right(corner), color_vec4, fake_center, size, radius, -softness);
     }
 
-    if is_background  Simp.set_shader_for_background(background_permutator);
+    if is_background  Simp.set_shader_for_background(background_permutator, map_color_to_vec4(.GRADIENT_EFFECT));
     else              Simp.set_shader_for_color(enable_blend = true);
 
     draw_rect_with_raw_color(base, color_vec4);
@@ -3512,7 +3510,7 @@ draw_rounded_rect_with_shadow :: (rect: Rect, color: Color, radius := 0.0, shado
     center := Vector2.{ x = rect.x + rect.w / 2, y = rect.y + rect.h / 2 };
     size   := Vector2.{ x = rect.w / 2, y = rect.h / 2 };
 
-    Simp.set_shader_for_rects(is_background, background_permutator);
+    Simp.set_shader_for_rects(is_background, background_permutator, map_color_to_vec4(.GRADIENT_EFFECT));
 
     Simp.immediate_rounded_rect(bottom_left(top),    top_right(top),    shadow_color, center, size, radius, softness = shadow_size);
     Simp.immediate_rounded_rect(bottom_left(bottom), top_right(bottom), shadow_color, center, size, radius, softness = shadow_size);
@@ -3572,7 +3570,7 @@ draw_gradient_rect :: (rect: Rect, mode: Gradient_Mode, value: float, color_vec4
 }
 
 draw_background_rect :: (rect: Rect, color: Color, permutator := 0.0) {
-    Simp.set_shader_for_background(permutator);
+    Simp.set_shader_for_background(permutator, map_color_to_vec4(.GRADIENT_EFFECT));
     draw_rect_raw(rect, color);
 }
 

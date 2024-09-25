@@ -327,6 +327,7 @@ background1:                            10191FFF
 background2:                            18262FFF
 background3:                            1A2831FF
 background4:                            21333FFF
+gradient_effect:                        FFFFFF5E
 
 # NOTE: for Jai region_scope colors define background colors for blocks of code that fall into those scopes,
 #       so make sure to override those as well if you change the background.

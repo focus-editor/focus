@@ -479,6 +479,7 @@ void main() {
 #ifdef FRAGMENT_SHADER
 uniform vec2 u_resolution;
 uniform float permutator;
+uniform vec4 gradient_settings;
 
 out vec4 color;
 
@@ -496,15 +497,25 @@ vec4 random4(vec2 co) {
 }
 
 void main () {
-    float effect_strength = 0.05;
+    // This shader is duplicated in SHADER_ROUNDED_RECT, if you change one change the other!
+    float colorfulness = gradient_settings.r;
+    float contrast = gradient_settings.g;
+    float permutator_strength = gradient_settings.b;
+    float effect_strength = gradient_settings.a * gradient_settings.a * gradient_settings.a;
+
     vec2 uv = gl_FragCoord.xy / u_resolution;
-    vec4 perm = vec4(uv.x, uv.x * uv.y, uv.x * (1.0-clamp(permutator, 0.0, 1.0)), 0.0);
-    vec4 mixed = mix(iterated_color, perm, effect_strength);
+    float permutator_effect = mix(0.5, (1.0-clamp(permutator, 0.0, 1.0)), permutator_strength);
+    vec4 gradient_color = vec4(uv.x, uv.x * uv.y, uv.x * permutator_effect, 0.0);
+    gradient_color = mix(vec4(0.5, 0.25, 0.25, 0), gradient_color, contrast);
+    float luminosity = 0.21 * gradient_color.r + 0.71 * gradient_color.g + 0.07 * gradient_color.b; // https://www.johndcook.com/blog/2009/08/24/algorithms-convert-color-grayscale/
+    vec4 grayscale = vec4(luminosity, luminosity, luminosity, 0);
+    vec4 effect_color = mix(grayscale, gradient_color, colorfulness);
+    vec4 output_color = mix(iterated_color, effect_color, effect_strength);
 
     // When color is between two displayable values dither it to avoid banding; round it up or down randomly,
     // proportionate to which it is nearer to.
-    vec4 remainder = fract(mixed * 255.0);
-    color = mixed - (remainder / 255.0) + (1.0 / 255.0) - (step(remainder, random4(uv)) / 255.0);
+    vec4 remainder = fract(output_color * 255.0);
+    color = output_color - (remainder / 255.0) + (1.0 / 255.0) - (step(remainder, random4(uv)) / 255.0);
     color.a = iterated_color.a;
 }
 #endif // FRAGMENT_SHADER
@@ -579,6 +590,7 @@ void main() {
 uniform vec2 u_resolution;
 uniform int is_background;
 uniform float permutator;
+uniform vec4 gradient_settings;
 
 out vec4 color;
 
@@ -603,15 +615,25 @@ void main () {
     float distance = rounded_rect_sdf(gl_FragCoord.xy, rect_center, rect_size, rect_corner_radius);
     float smoothed_alpha = 1.0 - smoothstep(0.0, rect_edge_softness, distance);
     if (is_background != 0) {
-        float effect_strength = 0.05;
+        // This block is duplicated with SHADER_BACKGROUND, if you change one change the other!
+        float colorfulness = gradient_settings.r;
+        float contrast = gradient_settings.g;
+        float permutator_strength = gradient_settings.b;
+        float effect_strength = gradient_settings.a * gradient_settings.a * gradient_settings.a;
+
         vec2 uv = gl_FragCoord.xy / u_resolution;
-        vec4 perm = vec4(uv.x, uv.x * uv.y, uv.x * (1.0-clamp(permutator, 0.0, 1.0)), 0.0);
-        vec4 mixed = mix(iterated_color, perm, effect_strength);
+        float permutator_effect = mix(0.5, (1.0-clamp(permutator, 0.0, 1.0)), permutator_strength);
+        vec4 gradient_color = vec4(uv.x, uv.x * uv.y, uv.x * permutator_effect, 0.0);
+        gradient_color = mix(vec4(0.5, 0.25, 0.25, 0), gradient_color, contrast);
+        float luminosity = 0.21 * gradient_color.r + 0.71 * gradient_color.g + 0.07 * gradient_color.b; // https://www.johndcook.com/blog/2009/08/24/algorithms-convert-color-grayscale/
+        vec4 grayscale = vec4(luminosity, luminosity, luminosity, 0);
+        vec4 effect_color = mix(grayscale, gradient_color, colorfulness);
+        vec4 output_color = mix(iterated_color, effect_color, effect_strength);
 
         // When color is between two displayable values dither it to avoid banding; round it up or down randomly,
         // proportionate to which it is nearer to.
-        vec4 remainder = fract(mixed * 255.0);
-        color = mixed - (remainder / 255.0) + (1.0 / 255.0) - (step(remainder, random4(uv)) / 255.0);
+        vec4 remainder = fract(output_color * 255.0);
+        color = output_color - (remainder / 255.0) + (1.0 / 255.0) - (step(remainder, random4(uv)) / 255.0);
     } else {
         color.xyz = iterated_color.xyz;
     }
