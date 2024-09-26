@@ -539,7 +539,7 @@ update_mouse_state :: () {
     // mousewheel reads 0; only when the mousewheel reads 0 for some amount of time do we treat it as finished.
     // We do not allow the wheel mode to change mid operation: one operation has to finish before another can be
     // started (i.e. you have to hold ctrl before spinning the wheel if you want to resize the font).
-    PERSIST_SCROLLMODE_DURATION :: 0.25;
+    persist_scrollmode_duration :: 0.25;
     if Input.mouse_wheel_delta.vertical {
         mouse.last_wheel_y_time64 = frame_time64;
         if mouse.wheel_y_mode == .none {
@@ -550,7 +550,7 @@ update_mouse_state :: () {
                 mouse.wheel_y_mode = .scrolling;
             }
         }
-    } else if frame_time64 > mouse.last_wheel_y_time64 + PERSIST_SCROLLMODE_DURATION {
+    } else if frame_time64 > mouse.last_wheel_y_time64 + persist_scrollmode_duration {
         mouse.wheel_y_mode = .none;
     }
 
