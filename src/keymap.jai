@@ -359,6 +359,7 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "select_all_occurrences",
     "create_cursor_above",
     "create_cursor_below",
+    "create_cursors_around",
     "align_cursors",
     "add_cursors_to_line_ends",
     "add_cursors_to_line_starts",
