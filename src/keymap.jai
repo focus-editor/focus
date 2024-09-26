@@ -359,6 +359,7 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "select_all_occurrences",
     "create_cursor_above",
     "create_cursor_below",
+    "create_cursors_around",
     "align_cursors",
     "change_case_to_upper",
     "change_case_to_lower",
