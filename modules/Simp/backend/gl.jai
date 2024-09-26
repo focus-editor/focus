@@ -480,6 +480,7 @@ void main() {
 uniform vec2 u_resolution;
 uniform float permutator;
 uniform vec4 gradient_settings;
+uniform vec4 fade_rect;
 
 out vec4 color;
 
@@ -517,6 +518,12 @@ void main () {
     vec4 remainder = fract(output_color * 255.0);
     color = output_color - (remainder / 255.0) + (1.0 / 255.0) - (step(remainder, random4(uv)) / 255.0);
     color.a = iterated_color.a;
+
+    // Below here is *not* duplicated into SHADER_ROUNDED_RECT
+    if (fade_rect.z != 0) {
+        float rx = (gl_FragCoord.x - fade_rect.x) / fade_rect.z;
+        color.a *= (1.0 - rx);
+    }
 }
 #endif // FRAGMENT_SHADER
 glsl

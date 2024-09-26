@@ -1252,7 +1252,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         }
 
         // Finished working out scroll position, so can now draw background
-        background_permutator = cast(float) viewport.scroll_y.target / max_y_scroll;
+        fudged_max_y_scroll := max(max_y_scroll, 400); // Prevent the color jumping too much when very small buffers are scrolled
+        background_permutator = cast(float) viewport.scroll_y.target / fudged_max_y_scroll;
         if !as_build_panel then draw_background_rect(rect, Color.BACKGROUND_0, background_permutator);
 
         // Draw buffer regions
@@ -1950,8 +1951,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             // Make sure the text is cut nicely (only if footer color is not translucent, otherwise it won't work)
             if map_color_to_vec4(footer_color).w >= 1.0 {
                 fadeout_rect := cut_rect;
+                fadeout_rect.x -= 1; // Sliver sometimes visible on left if we don't do this
                 fadeout_rect.w = 4 * padding;
-                draw_rect_translucent_on_the_right(fadeout_rect, footer_color);
+                draw_background_rect(fadeout_rect, footer_color, fade_away_right = true);
             }
         }
     }
@@ -3555,22 +3557,14 @@ draw_rect_raw :: inline (using rect: Rect, c00: Color, c01: Color, c10: Color, c
     Simp.immediate_quad(x, y, x + w, y + h, map_color_to_vec4(c00), map_color_to_vec4(c01), map_color_to_vec4(c10), map_color_to_vec4(c11));
 }
 
-draw_rect_translucent_on_the_right :: (using rect: Rect, color: Color) {
-    c := map_color_to_vec4(color);
-    trans := c;
-    trans.w = 0;
-    Simp.set_shader_for_color(enable_blend = true);
-    Simp.immediate_quad(x, y, x + w, y + h, c, c, trans, trans);
-}
-
 draw_gradient_rect :: (rect: Rect, mode: Gradient_Mode, value: float, color_vec4 := Vector4.{1, 1, 1, 1}) {
     Simp.set_shader_for_gradient(cast,force(Vector4) rect, xx mode, value);
     draw_rect_with_raw_color(rect, color_vec4);
     Simp.immediate_flush();
 }
 
-draw_background_rect :: (rect: Rect, color: Color, permutator := 0.0) {
-    Simp.set_shader_for_background(permutator, map_color_to_vec4(.GRADIENT_EFFECT));
+draw_background_rect :: (rect: Rect, color: Color, permutator := 0.0, fade_away_right := false) {
+    Simp.set_shader_for_background(permutator, map_color_to_vec4(.GRADIENT_EFFECT), ifx fade_away_right then cast,force(Vector4) rect);
     draw_rect_raw(rect, color);
 }
 

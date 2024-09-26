@@ -76,7 +76,7 @@ set_shader_for_gradient :: (rect: Vector4, mode: u8, value: float) {
     glUniform1f(loc, value);
 }
 
-set_shader_for_background :: (permutator: float, background_gradient_settings: Vector4) {
+set_shader_for_background :: (permutator: float, background_gradient_settings: Vector4, rect_for_fade_right := Vector4.{}) {
     CheckInit();
     immediate_set_shader(*shader_background);
     set_projection();
@@ -87,6 +87,8 @@ set_shader_for_background :: (permutator: float, background_gradient_settings: V
     glUniform1f(loc, permutator);
     loc = glGetUniformLocation(shader_background.gl_handle, "gradient_settings");
     glUniform4f(loc, background_gradient_settings.x, background_gradient_settings.y, background_gradient_settings.z, background_gradient_settings.w);
+    loc = glGetUniformLocation(shader_background.gl_handle, "fade_rect");
+    glUniform4f(loc, rect_for_fade_right.x, rect_for_fade_right.y, rect_for_fade_right.z, rect_for_fade_right.w);
 }
 
 
