@@ -214,6 +214,8 @@ Ctrl-Shift-N                create_new_file_on_the_side
 
 Alt-Shift-ArrowUp           create_cursor_above
 Alt-Shift-ArrowDown         create_cursor_below
+Alt-Shift-ArrowLeft         create_cursors_around
+Alt-Shift-ArrowRight        select_word_or_create_another_cursor
 Alt-A                       align_cursors
 
 Alt-Z                       toggle_line_wrap
