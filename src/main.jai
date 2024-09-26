@@ -221,7 +221,6 @@ main :: () {
 
         redraw_requested = false;
         window_resized   = false;
-        dont_scroll_this_frame = false;
         window_has_focus = Input.input_application_has_focus;  // so that we always redraw when the window first loses focus
 
         workspace_update();
@@ -266,20 +265,9 @@ main :: () {
                         if event.key_pressed then last_press = frame_time;
                     }
 
-                case .MOUSE_V_WHEEL;
-                    #if OS != .MACOS {
-                        if ctrl_or_cmd_pressed() {
-                            if event.wheel_delta < 0  {
-                                decrease_font_size();
-                                dont_scroll_this_frame = true;
-                            } else if event.wheel_delta > 0 {
-                                increase_font_size();
-                                dont_scroll_this_frame = true;
-                            }
-                        }
-                    }
                 case .DRAG_AND_DROP_FILES;
                     editors_handle_file_drop(event.files);
+
                 case .TEXT_INPUT;
                     if num_text_input_events_to_ignore {
                         num_text_input_events_to_ignore -= 1;
@@ -543,11 +531,42 @@ update_mouse_state :: () {
     }
     mouse.previous_position = mouse.pointer;
 
-    if shift_pressed() {
-        mouse.scroll_x_delta = cast(s32) (cast(float) Input.mouse_wheel_delta.vertical * WHEEL_SENSITIVITY);
-    } else {
-        mouse.scroll_x_delta = cast(s32) (cast(float) Input.mouse_wheel_delta.horizontal * WHEEL_SENSITIVITY);
-        mouse.scroll_y_delta = cast(s32) (cast(float) Input.mouse_wheel_delta.vertical   * WHEEL_SENSITIVITY);
+    // If the user is spinning a mousewheel the mouse events will not update as fast as the frame rate, so even in
+    // the middle of a spin there will be frames where it is 0.  Additionally, (in Windows 11 at least) when a user
+    // with a laptop swipes with two-fingers on the touchpad, the OS will generate a series of scrollwheel events;
+    // this series decreases over time, but that time extends beyond the point the user is touching the pad.
+    // To take these things into account, we set a wheel mode, and persist it for a short duration even when the
+    // mousewheel reads 0; only when the mousewheel reads 0 for some amount of time do we treat it as finished.
+    // We do not allow the wheel mode to change mid operation: one operation has to finish before another can be
+    // started (i.e. you have to hold ctrl before spinning the wheel if you want to resize the font).
+    PERSIST_SCROLLMODE_DURATION :: 0.25;
+    if Input.mouse_wheel_delta.vertical {
+        mouse.last_wheel_y_time64 = frame_time64;
+        if mouse.wheel_y_mode == .none {
+            #if OS != .MACOS {
+                if ctrl_or_cmd_pressed()  mouse.wheel_y_mode = .sizing_font;
+                else                      mouse.wheel_y_mode = .scrolling;
+            } else {
+                mouse.wheel_y_mode = .scrolling;
+            }
+        }
+    } else if frame_time64 > mouse.last_wheel_y_time64 + PERSIST_SCROLLMODE_DURATION {
+        mouse.wheel_y_mode = .none;
+    }
+
+    if mouse.wheel_y_mode == .sizing_font {
+        if Input.mouse_wheel_delta.vertical < 0 {
+            increase_font_size();
+        } else if Input.mouse_wheel_delta.vertical > 0 {
+            decrease_font_size();
+        }
+    } else if mouse.wheel_y_mode == .scrolling {
+        if shift_pressed() {
+            mouse.scroll_x_delta = cast(s32) (cast(float) Input.mouse_wheel_delta.vertical * WHEEL_SENSITIVITY);
+        } else {
+            mouse.scroll_x_delta = cast(s32) (cast(float) Input.mouse_wheel_delta.horizontal * WHEEL_SENSITIVITY);
+            mouse.scroll_y_delta = cast(s32) (cast(float) Input.mouse_wheel_delta.vertical   * WHEEL_SENSITIVITY);
+        }
     }
     mouse.smooth_scroll = (mouse.scroll_y_delta % 120) == 0;  // @Robustness: hard-coded typical delta, but it really should be ok for now
     if !config.settings.smooth_scrolling then mouse.smooth_scroll = false;
@@ -733,13 +752,20 @@ Mouse_State :: struct {
     pointer: Vector2;
     previous_position: Vector2;
     moved_this_frame: bool;
-    scroll_x_delta: s32;
-    scroll_y_delta: s32;
+    scroll_x_delta: s32; // These values are only set if the mousewheel is being used to scroll:
+    scroll_y_delta: s32; // if it's being used for something else then these will be zero.
     smooth_scroll: bool;
 
     left:   Mouse_Button_State;
     right:  Mouse_Button_State;
     middle: Mouse_Button_State;
+
+    last_wheel_y_time64: float64;
+    wheel_y_mode : enum {
+        none;
+        scrolling;
+        sizing_font;
+    }
 }
 
 Mouse_Button_State :: struct {
@@ -814,8 +840,6 @@ rounding_radius:            float;
 rounding_radius_large:      float;
 rounding_radius_small:      float;
 scrollbar_size:             float;
-
-dont_scroll_this_frame := false;  // because e.g. a mouse wheel event has been handled
 
 // This will be set to `true` in `refresh_config()` to signal that the
 // next window resize event should be handled even if the window doesn't actually
