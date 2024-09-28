@@ -1,11 +1,13 @@
 # Main Git Branch
 
 + New features:
-    + ...
+    + Syntax highlighting:
+        + Batch (thanks @arjenwitteveen)
+    + It is now possible to pass a line number together with the file path to the editor on startup: `focus /path/to/file:69` (thanks @simonvallz)
 + Bug fixes:
-    + ...
+    + Fixed a crash when changing languages in the color preview widget
 + Other changes:
-    + ...
+    + Syntax highlighting improvements for CSS and TypeScript (thanks @simonvallz)
 
 
 # RELEASES ==================================================================
