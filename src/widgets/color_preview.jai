@@ -169,8 +169,11 @@ color_preview_set_language :: (lang_id: int) {
     editor, buffer := *open_editors[panel_editor_id], *open_buffers[panel_buffer_id];
     buffer.lang = languages[lang_id].lang;
 
+    close_search_bar(editor);
+    reset_search_results(*editor.search_bar);
     reset_keeping_memory(*buffer.undos);
     reset_keeping_memory(*buffer.redos);
+    reset_keeping_memory(*editor.highlights);
 
     sample_text := get_language_sample_text(buffer.lang);
     replace_range_raw(buffer, 0, xx buffer.bytes.count, sample_text);
@@ -180,7 +183,9 @@ color_preview_set_language :: (lang_id: int) {
     cursor := leave_only_original_cursor(editor);
     cursor.pos = 0;
     cursor.sel = 0;
-    editor.scroll_to_cursor = .yes;
+
+    snap_viewport_top_to_target(editor, buffer, 0);
+    snap_viewport_left_to_target(editor, 0);
 }
 
 color_preview_get_languages :: () -> [] string /* temp */, selected: int {
