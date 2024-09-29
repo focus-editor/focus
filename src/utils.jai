@@ -286,6 +286,14 @@ is_whitespace_char :: inline (ch: u32) -> bool {
     return is_unicode_space(ch) || is_unicode_linebreak(ch);
 }
 
+is_lower :: inline (char: u8) -> bool {
+    return char >= #char "a" && char <= #char "z";
+}
+
+is_upper :: inline (char: u8) -> bool {
+    return char >= #char "A" && char <= #char "Z";
+}
+
 /*
  * TODO: is_separator_char(), is_balanceable_char(), is_auto_closeable_char(), get_balancing_char()
  *       should be part of the syntax highlighters to allow for language-specific behavior

@@ -140,6 +140,8 @@ Opt-ArrowDown                   move_selected_lines_down
 Cmd-J                           join_lines
 Cmd-Shift-J                     join_lines_no_spaces_in_between
 
+Cmd-U                           change_case_cycle
+
 Tab                             indent_or_go_to_next_tabstop
 Shift-Tab                       unindent
 
