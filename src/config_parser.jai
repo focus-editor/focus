@@ -185,6 +185,7 @@ map_name_to_color :: (name: string) -> Color {
         case "background2";                             return .BACKGROUND_2;
         case "background3";                             return .BACKGROUND_3;
         case "background4";                             return .BACKGROUND_4;
+        case "gradient_effect";                         return .GRADIENT_EFFECT;
         case "selection_active";                        return .SELECTION_ACTIVE;
         case "selection_inactive";                      return .SELECTION_INACTIVE;
         case "selection_highlight";                     return .SELECTION_HIGHLIGHT;

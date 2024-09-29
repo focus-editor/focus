@@ -232,6 +232,12 @@ backend_init_shaders :: () {
         s.color_scale_loc        = 1;
         s.alpha_blend = true;
     }
+
+    s = *shader_background;
+    {
+        s.gl_handle   = get_shader_program(SHADER_BACKGROUND);
+        s.alpha_blend = true;
+    }
 }
 
 #scope_file
@@ -455,6 +461,74 @@ void main () {
 GLSL
 
 
+SHADER_BACKGROUND :: #string glsl
+OUT_IN vec4 iterated_color;
+
+#ifdef VERTEX_SHADER
+in vec2 vert_position;
+in vec4 vert_color;
+
+uniform mat4 projection;
+
+void main() {
+    gl_Position = projection * vec4(vert_position, 0.0, 1.0);
+    iterated_color = vert_color;
+}
+#endif // VERTEX_SHADER
+
+#ifdef FRAGMENT_SHADER
+uniform vec2 u_resolution;
+uniform float permutator;
+uniform vec4 gradient_settings;
+uniform vec4 fade_rect;
+
+out vec4 color;
+
+float random (in vec2 _st) {
+    return fract(sin(dot(_st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+}
+
+vec4 random4(vec2 co) {
+    vec4 result;
+    result.x = random(co); co *= 2;
+    result.y = random(co); co *= 2;
+    result.z = random(co); co *= 2;
+    result.w = random(co);
+    return result;
+}
+
+void main () {
+    // This shader is duplicated in SHADER_ROUNDED_RECT, if you change one change the other!
+    float colorfulness = gradient_settings.r;
+    float contrast = gradient_settings.g;
+    float permutator_strength = gradient_settings.b;
+    float effect_strength = gradient_settings.a * gradient_settings.a * gradient_settings.a;
+
+    vec2 uv = gl_FragCoord.xy / u_resolution;
+    float permutator_effect = mix(0.5, (1.0-clamp(permutator, 0.0, 1.0)), permutator_strength);
+    vec4 gradient_color = vec4(uv.x, uv.x * uv.y, uv.x * permutator_effect, 0.0);
+    gradient_color = mix(vec4(0.5, 0.25, 0.25, 0), gradient_color, contrast);
+    float luminosity = 0.21 * gradient_color.r + 0.71 * gradient_color.g + 0.07 * gradient_color.b; // https://www.johndcook.com/blog/2009/08/24/algorithms-convert-color-grayscale/
+    vec4 grayscale = vec4(luminosity, luminosity, luminosity, 0);
+    vec4 effect_color = mix(grayscale, gradient_color, colorfulness);
+    vec4 output_color = mix(iterated_color, effect_color, effect_strength);
+
+    // When color is between two displayable values dither it to avoid banding; round it up or down randomly,
+    // proportionate to which it is nearer to.
+    vec4 remainder = fract(output_color * 255.0);
+    color = output_color - (remainder / 255.0) + (1.0 / 255.0) - (step(remainder, random4(uv)) / 255.0);
+    color.a = iterated_color.a;
+
+    // Below here is *not* duplicated into SHADER_ROUNDED_RECT
+    if (fade_rect.z != 0) {
+        float rx = (gl_FragCoord.x - fade_rect.x) / fade_rect.z;
+        color.a *= (1.0 - rx);
+    }
+}
+#endif // FRAGMENT_SHADER
+glsl
+
+
 // @Cleanup:
 // shader_sprite is 1-v from shader_text. Do we pack the text texture upside down,
 // or what?
@@ -520,16 +594,57 @@ void main() {
 #endif // VERTEX_SHADER
 
 #ifdef FRAGMENT_SHADER
+uniform vec2 u_resolution;
+uniform int is_background;
+uniform float permutator;
+uniform vec4 gradient_settings;
+
 out vec4 color;
 
 float rounded_rect_sdf(vec2 frag_pos, vec2 rect_center, vec2 size, float radius) {
     return length(max(abs(frag_pos - rect_center) - size + radius, 0.0)) - radius;
 }
 
+float random (in vec2 _st) {
+    return fract(sin(dot(_st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+}
+
+vec4 random4(vec2 co) {
+    vec4 result;
+    result.x = random(co); co *= 2;
+    result.y = random(co); co *= 2;
+    result.z = random(co); co *= 2;
+    result.w = random(co);
+    return result;
+}
+
 void main () {
     float distance = rounded_rect_sdf(gl_FragCoord.xy, rect_center, rect_size, rect_corner_radius);
-    float smoothed_alpha = 1.0f - smoothstep(0.0f, rect_edge_softness, distance);
-    color = vec4(iterated_color.xyz, iterated_color.a * smoothed_alpha);
+    float smoothed_alpha = 1.0 - smoothstep(0.0, rect_edge_softness, distance);
+    if (is_background != 0) {
+        // This block is duplicated with SHADER_BACKGROUND, if you change one change the other!
+        float colorfulness = gradient_settings.r;
+        float contrast = gradient_settings.g;
+        float permutator_strength = gradient_settings.b;
+        float effect_strength = gradient_settings.a * gradient_settings.a * gradient_settings.a;
+
+        vec2 uv = gl_FragCoord.xy / u_resolution;
+        float permutator_effect = mix(0.5, (1.0-clamp(permutator, 0.0, 1.0)), permutator_strength);
+        vec4 gradient_color = vec4(uv.x, uv.x * uv.y, uv.x * permutator_effect, 0.0);
+        gradient_color = mix(vec4(0.5, 0.25, 0.25, 0), gradient_color, contrast);
+        float luminosity = 0.21 * gradient_color.r + 0.71 * gradient_color.g + 0.07 * gradient_color.b; // https://www.johndcook.com/blog/2009/08/24/algorithms-convert-color-grayscale/
+        vec4 grayscale = vec4(luminosity, luminosity, luminosity, 0);
+        vec4 effect_color = mix(grayscale, gradient_color, colorfulness);
+        vec4 output_color = mix(iterated_color, effect_color, effect_strength);
+
+        // When color is between two displayable values dither it to avoid banding; round it up or down randomly,
+        // proportionate to which it is nearer to.
+        vec4 remainder = fract(output_color * 255.0);
+        color = output_color - (remainder / 255.0) + (1.0 / 255.0) - (step(remainder, random4(uv)) / 255.0);
+    } else {
+        color.xyz = iterated_color.xyz;
+    }
+    color.a = iterated_color.a * smoothed_alpha;
 }
 
 #endif // FRAGMENT_SHADER
