@@ -4,6 +4,11 @@ Shader :: struct {
     using platform: Shader_Platform;
 }
 
+Extra_Draw_Info :: struct {
+    is_background := false;  // This doesn't currently have any effect on drawing, but could be extended in future.
+    is_translucent_on_the_right := false;
+}
+
 set_projection :: () {
     t := context.simp.texture_render_target;
     if t {
@@ -14,7 +19,7 @@ set_projection :: () {
     }
 }
 
-set_shader_for_color :: (enable_blend := false) {
+set_shader_for_color :: (enable_blend := false, $extra_draw_info := Extra_Draw_Info.{}) {
     CheckInit();
     shader := ifx enable_blend then *shader_color_with_blend else *shader_color;
     if state.current_shader != shader {
@@ -42,14 +47,13 @@ set_shader_for_images :: (texture: *Texture) {
     immediate_set_texture(texture);
 }
 
-set_shader_for_rects :: () {
+set_shader_for_rects :: ($extra_draw_info := Extra_Draw_Info.{}) {
     CheckInit();
     if state.current_shader != *shader_rounded_rect {
         immediate_set_shader(*shader_rounded_rect);
         set_projection();
     }
 }
-
 
 set_shader_for_gradient :: (rect: Vector4, mode: u8, value: float) {
     CheckInit();
