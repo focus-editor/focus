@@ -73,6 +73,13 @@ to_string :: inline (array: Array($T)) -> string {
     return string.{ count = array.count * size_of(T), data = array.data };
 }
 
+to_debug_string :: (array: Array($T)) -> string {
+    builder: String_Builder;
+    print_to_builder(*builder, "[%]", array.count);
+    for array  print_to_builder(*builder, " %", it);
+    return builder_to_string(*builder);
+}
+
 to_view :: inline (array: Array($T)) -> [] T {
     result: [] T = ---;
     result.count = array.count;
@@ -219,6 +226,27 @@ to_owned_array :: (array: *Array($T), $free_memory := false) -> [] T {
         reset_keeping_memory(array);
     }
     return to_view(new_array);
+}
+
+move_or_add_to_front :: (array: *Array($T), item: T) {
+    if array.count == 0 {
+        add(array, item);
+        return;
+    }
+
+    if array.*[0] == item  return;
+
+    to_move := array.*[0];
+    done := false;
+    for 1 .. array.count - 1 {
+        next_to_move := array.*[it];
+        array.*[it] = to_move;
+        done = next_to_move == item;
+        if done  break;
+        to_move = next_to_move;
+    }
+    if !done  add(array, to_move);
+    array.*[0] = item;
 }
 
 #scope_file

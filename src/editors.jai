@@ -584,6 +584,9 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
     buffer := *open_buffers[buffer_id];
     if buffer.num_times_opened < 255 then buffer.num_times_opened += 1;
 
+    if editors.left >= 0                                move_or_add_to_front(*left_recent_editors, editors.left);
+    if editors.right >= 0 && editors.layout == .Double  move_or_add_to_front(*right_recent_editors, editors.right);
+
     make_editor_active(editors.active);
     maybe_mark_buffer_as_deleted(buffer_id);  // check in case we missed that it's deleted
     session_notify_modified_buffer(buffer_id);
@@ -3667,6 +3670,9 @@ open_buffers_lock: Mutex;  // must hold while adding a new buffer
 open_buffers: Simple_Bucket_Array(Buffer, items_per_bucket = 1024, max_buckets = 1024);  // 8 Kb for pointer array, ~1 million buffers is the maximum
 open_editors: [..] Editor;
 
+left_recent_editors: Array(s64);
+right_recent_editors: Array(s64);
+
 // A map from full buffer path to buffer id (only for the open buffers, obviously)
 buffers_table: Table(string, s64,
                      given_hash_function = x => Hash.get_hash(to_lower_copy_new(x,, temp)),
@@ -3710,6 +3716,8 @@ editor_smooth_scroll: struct {
 
 splitter_pos:  float = 0.5;  // 0.5 means it's in the middle
 splitter_anim: Tween_Animation(float);
+
+switching_recent_editor: enum { .none; .left; .right; }
 
 Editor_History :: struct {
     frames: [..] Editor_History_Frame;

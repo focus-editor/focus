@@ -304,6 +304,20 @@ reload_workspace :: (automatic := false) {
     array_reset(*open_editors);
     open_editors = new_open_editors;
 
+    update_recent_editors :: (recent_editors: Array(s64)) #expand {
+        write_index : s32 = 0;
+        for read_index : 0 .. recent_editors.count - 1 {
+            new_editor_id, found := table_find(*editor_id_map, recent_editors[read_index]);
+            if found {
+                recent_editors[write_index] = new_editor_id;
+                write_index += 1;
+            }
+        }
+        recent_editors.count = write_index;
+    }
+    update_recent_editors(*left_recent_editors);
+    update_recent_editors(*right_recent_editors);
+
     array_reset(*most_recent_buffers);
     most_recent_buffers = new_most_recent_buffers;
 
