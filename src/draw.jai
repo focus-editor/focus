@@ -1978,9 +1978,9 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
 
     if buffer.modified {
         pen.x += width + padding;
-        width = xx Simp.prepare_text(font_icons_tiny, PEN_ICON);
-        y_padding := (font_icons.character_height - font_icons_tiny.character_height) / 4.0;
-        Simp.draw_prepared_text(font_icons_tiny, xx pen.x, xx (pen.y + y_padding), color = xx file_name_color);
+        width = xx Simp.prepare_text(font_icons_very_small, PEN_ICON);
+        y_padding := (font_icons.character_height - font_icons_very_small.character_height) / 4.0;
+        Simp.draw_prepared_text(font_icons_very_small, xx pen.x, xx (pen.y + y_padding), color = xx file_name_color);
     }
 
     // Maybe warnings
