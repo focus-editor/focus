@@ -1001,7 +1001,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
         max_y_scroll := max(cast(s32)(content_height - rect.h), 0);
 
-        if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
+        if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_y_delta != 0 {
             // Mousewheel scrolling - vertical
             // We only handle vertical scrolling here because horizontal scrolling depends on the
             // length of the longest visible line, which we can only determine once we determine
@@ -1220,7 +1220,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         // Now that we can compute max_x_scroll we can handle horizontal scrolling.
         // We handle both scrollwheel and keyboard smooth scrolling below.
         // Mousewheel scrolling - horizontal
-        if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_x_delta != 0 && !dont_scroll_this_frame {
+        if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(rect) && mouse.scroll_x_delta != 0 {
             using editor.viewport;
             new_target := clamp(scroll_x.target - mouse.scroll_x_delta, 0, max_x_scroll);
             if mouse.smooth_scroll {
@@ -1703,7 +1703,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 // Mouse scrolling
                 if (ui.hot_last_frame == results_id || ui.hot_last_frame == search_scrollbar_id) && mouse_pointer_is_within(results_rect) {
                     if is_hovering_over(results_id) then set_pointer_image(.PRESSABLE);
-                    if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
+                    if mouse.scroll_y_delta != 0 {
                         target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, max_y_scroll);
                         if mouse.smooth_scroll {
                             start_animation(*scroll_anim, scroll_y, target);
@@ -2251,7 +2251,7 @@ draw_open_file_dialog :: () {
             // Mouse scrolling
             if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(files_rect) {
                 if is_hovering_over(ui_id) then set_pointer_image(.PRESSABLE);
-                if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
+                if mouse.scroll_y_delta != 0 {
                     target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, max_y_scroll);
                     if mouse.smooth_scroll {
                         start_animation(*scroll_anim, scroll_y, target);
@@ -2495,7 +2495,7 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
             // Mouse scrolling
             if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(entries_rect) {
                 if is_hovering_over(ui_id) then set_pointer_image(.PRESSABLE);
-                if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
+                if mouse.scroll_y_delta != 0 {
                     target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, max_y_scroll);
                     if mouse.smooth_scroll {
                         start_animation(*scroll_anim, scroll_y, target);
@@ -2913,7 +2913,7 @@ draw_finder :: () {
         // Mouse scrolling
         if (ui.hot_last_frame == ui_id || ui.hot_last_frame == scrollbar_id) && mouse_pointer_is_within(files_rect) {
             if is_hovering_over(ui_id) then set_pointer_image(.PRESSABLE);
-            if mouse.scroll_y_delta != 0 && !dont_scroll_this_frame {
+            if mouse.scroll_y_delta != 0 {
                 target := clamp(scroll_anim.target - mouse.scroll_y_delta, 0, max_y_scroll);
                 if mouse.smooth_scroll {
                     start_animation(*scroll_anim, scroll_y, target);

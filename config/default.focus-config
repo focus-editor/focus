@@ -153,6 +153,8 @@ Alt-ArrowDown               move_selected_lines_down
 Ctrl-J                      join_lines
 Ctrl-Shift-J                join_lines_no_spaces_in_between
 
+Ctrl-U                      change_case_cycle
+
 Tab                         indent_or_go_to_next_tabstop
 Shift-Tab                   unindent
 

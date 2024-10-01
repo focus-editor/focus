@@ -269,6 +269,11 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
             case .redo;                             redo                                (editor, buffer); keep_selection = true;
             case .align_cursors;                    align_cursors                       (editor, buffer); keep_selection = true;
 
+            case .change_case_to_upper;             change_case_of_selected_text        (editor, buffer, .upper); keep_selection = true;
+            case .change_case_to_lower;             change_case_of_selected_text        (editor, buffer, .lower); keep_selection = true;
+            case .change_case_to_caps;              change_case_of_selected_text        (editor, buffer, .caps);  keep_selection = true;
+            case .change_case_cycle;                change_case_of_selected_text        (editor, buffer, .cycle); keep_selection = true;
+
             case .delete_left_char;                 delete_left_char                    (editor, buffer);
             case .delete_right_char;                delete_right_char                   (editor, buffer);
             case .delete_word_left;                 delete_word_left                    (editor, buffer);
@@ -2993,6 +2998,67 @@ delete_to_start_of_line :: (editor: *Editor, buffer: *Buffer) {
     }
     organise_cursors(editor);  // resolve overlapping selections
     copy_selection_to_clipboard(editor, buffer, cut = true, cut_lines_without_selection = false);
+}
+
+change_case_of_selected_text :: (editor: *Editor, buffer: *Buffer, mode: enum { upper; lower; caps; cycle; }) {
+    any_selection := false;
+    for editor.cursors { if has_selection(it) { any_selection = true; break; } }
+    if !any_selection {
+        cursor := leave_only_original_cursor(editor);
+        select_word(buffer, cursor);
+    }
+    for * cursor : editor.cursors {
+        if !has_selection(cursor)  continue;
+
+        selection := get_selection(cursor);
+        s := get_selected_string(cursor, buffer);
+
+        if mode == .cycle {
+            found_lower := false;
+            found_upper := false;
+            for 0 .. s.count - 1 {
+                if      is_lower(s[it])  found_lower = true;
+                else if is_upper(s[it])  found_upper = true;
+
+                if found_lower && found_upper  break;
+            }
+            if found_lower && found_upper  mode = .upper;
+            else if found_upper            mode = .lower;
+            else if found_lower            mode = .caps;
+            else                           continue;
+        }
+
+        if mode == {
+            case .upper;
+                for 0 .. s.count - 1 {
+                    s[it] = to_upper(s[it]);
+                }
+
+            case .lower;
+                for 0 .. s.count - 1 {
+                    s[it] = to_lower(s[it]);
+                }
+
+            case .caps;
+                caps_next := true;
+                for 0 .. s.count - 1 {
+                    if is_alpha(s[it]) {
+                        if caps_next {
+                            caps_next = false;
+                            s[it] = to_upper(s[it]);
+                        }
+                        else {
+                            s[it] = to_lower(s[it]);
+                        }
+                    }
+                    else {
+                        caps_next = true;
+                    }
+                }
+        }
+
+        replace_range(buffer, .{selection.start, selection.end}, s);
+    }
 }
 
 delete_to_end_of_line :: (editor: *Editor, buffer: *Buffer) {
