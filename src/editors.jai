@@ -215,6 +215,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .select_all;                       select_all                          (editor, buffer);           keep_selection = true;
         case .create_cursor_above;              create_cursor                       (editor, buffer, .above);   keep_selection = true;
         case .create_cursor_below;              create_cursor                       (editor, buffer, .below);   keep_selection = true;
+        case .create_cursors_around;            create_cursors_around               (editor, buffer);           keep_selection = true;
         case .strip_trailing_whitespace;        strip_trailing_whitespace           (buffer, editor.buffer_id); keep_selection = true;
 
         case .choose_language;                  show_dialog                         (*language_dialog);
@@ -1555,11 +1556,16 @@ create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; be
         cursor := *cursors[cursors.count-1];
 
         pos_coords := offset_to_coords(editor, buffer, cursor.pos);
-        if where == .above then pos_coords.line -= 1; else pos_coords.line += 1;
-        pos_coords.col = original_pos_coords.col;
+        while true {
+            if where == .above then pos_coords.line -= 1; else pos_coords.line += 1;
+            pos_coords.col = original_pos_coords.col;
 
-        cursor.pos = coords_to_offset(editor, buffer, pos_coords);
-        cursor.col_wanted = original_pos_coords.col;
+            cursor.pos = coords_to_offset(editor, buffer, pos_coords);
+            cursor.col_wanted = original_pos_coords.col;
+
+            if cursor.pos <= 0 || cursor.pos >= buffer.bytes.count || original_pos_coords.col == 0 || offset_to_coords(editor, buffer, cursor.pos).col > 0
+                break;
+        }
 
         if has_selection(original) {
             sel_coords := pos_coords;
@@ -1572,6 +1578,65 @@ create_cursor :: (using editor: *Editor, buffer: Buffer, where: enum { above; be
         main_cursor = cursors.count - 1;
     }
 
+    organise_cursors(editor);
+
+    cursor_moved = .refresh_only;
+}
+
+create_cursors_around :: (using editor: *Editor, buffer: Buffer) {
+    // (a) If cursor is mid-line, add cursors above-and-below it on all contiguous lines which are at least as long.
+    // (b) If the cursor is at the start of a line, add cursors above-and-below, bounded by empty lines.
+    // (c) If the cursor is on an empty line, add cursors above-and-below on all contiguous empty lines.
+
+    organise_cursors(editor);
+
+    from_cursors := NewArray(cursors.count, Cursor, initialized = false,, temp);
+    memcpy(from_cursors.data, cursors.data, cursors.count * size_of(Cursor));
+
+    for from_cursor : from_cursors {
+        from_pos_coords := offset_to_coords(editor, buffer, from_cursor.pos);
+        from_sel_coords := offset_to_coords(editor, buffer, from_cursor.sel);
+        from_cursor_is_at_line_end := from_cursor.pos == get_line_end_offset(editor, buffer, from_pos_coords.line);
+        from_line_is_empty := from_pos_coords.col == 0 && from_cursor_is_at_line_end;
+
+        add_cursors :: (position: Coords, direction: s32, terminator_line: int) #expand {
+            while position.line != terminator_line {
+                position.line += direction;
+                start := get_line_start_offset(editor, buffer, position.line);
+                end := get_line_end_offset(editor, buffer, position.line);
+                if !from_line_is_empty {
+                    if from_pos_coords.col > 0 {
+                        if !from_cursor_is_at_line_end then end -= 1;  // Only expand into line-ends if the original cursor was at the line-end.
+                        if end - start < from_pos_coords.col  break;  // (a)
+                    } else {
+                        if end == start  break;  // (b)
+                    }
+                } else {
+                    if end > start  break;  // (c)
+                }
+
+                cursor := add(*cursors);
+                cursor.* = from_cursor;
+                cursor.pos = coords_to_offset(editor, buffer, position);
+                cursor.col_wanted = from_pos_coords.col;
+
+                if has_selection(from_cursor) {
+                    sel_coords := position;
+                    sel_coords.line += from_sel_coords.line - from_pos_coords.line;
+                    sel_coords.col  += from_sel_coords.col  - from_pos_coords.col;
+                    cursor.sel = coords_to_offset(editor, buffer, sel_coords);
+                    cursor.sel = clamp(cursor.sel, start, end);
+                } else {
+                    cursor.sel = cursor.pos;
+                }
+            }
+        }
+
+        add_cursors(offset_to_coords(editor, buffer, from_cursor.pos), -1, 0);
+        add_cursors(offset_to_coords(editor, buffer, from_cursor.pos), +1, buffer.line_starts.count - 1);
+    }
+
+    main_cursor = cursors.count - 1;
     organise_cursors(editor);
 
     cursor_moved = .refresh_only;
