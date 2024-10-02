@@ -590,9 +590,6 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
     buffer := *open_buffers[buffer_id];
     if buffer.num_times_opened < 255 then buffer.num_times_opened += 1;
 
-    if editors.left >= 0                                move_or_add_to_front(*left_recent_editors, editors.left);
-    if editors.right >= 0 && editors.layout == .Double  move_or_add_to_front(*right_recent_editors, editors.right);
-
     make_editor_active(editors.active);
     maybe_mark_buffer_as_deleted(buffer_id);  // check in case we missed that it's deleted
     session_notify_modified_buffer(buffer_id);
@@ -1449,6 +1446,9 @@ make_editor_active :: (editor_id: s64) {
 
     array_ordered_remove_by_value(*most_recent_buffers, buffer_id);
     array_insert_at(*most_recent_buffers, buffer_id, 0);
+
+    if editors.left >= 0                                move_or_add_to_front(*left_recent_editors, editors.left);
+    if editors.right >= 0 && editors.layout == .Double  move_or_add_to_front(*right_recent_editors, editors.right);
 }
 
 update_window_title :: (buffer_id: s64 = -1) {
@@ -3705,8 +3705,8 @@ Cursor_Movement :: enum u8 {
 }
 
 Viewport :: struct {
-    scroll_y := #run Tween_Animation(s32).{ speed = 0.1, func = .lerp };
-    scroll_x := #run Tween_Animation(s32).{ speed = 0.1, func = .lerp };
+    scroll_y := #run Tween_Animation(s32).{ duration = 0.1, func = .lerp };
+    scroll_x := #run Tween_Animation(s32).{ duration = 0.1, func = .lerp };
     top:  s32;
     left: s32;
     glue_point: Glue_Point;
@@ -3722,7 +3722,7 @@ Search_Bar :: struct {
     WIDTH_NORMAL   :: 0.5;
     WIDTH_EXPANDED :: 0.9;
 
-    scroll_anim := #run Tween_Animation(s32).{ speed = 0.1, func = .lerp };
+    scroll_anim := #run Tween_Animation(s32).{ duration = 0.1, func = .lerp };
     scroll_y: s32;
 
     width_percentage: float = WIDTH_NORMAL;  // how much of the screen the popup occupies
@@ -3848,7 +3848,102 @@ editor_smooth_scroll: struct {
 splitter_pos:  float = 0.5;  // 0.5 means it's in the middle
 splitter_anim: Tween_Animation(float);
 
-switching_recent_editor: enum { .none; .left; .right; }
+recent_buffers: struct {
+    switching_editors_for : enum { none; left; right; }
+    recent_editors: *Array(s64);
+    recent_editors_index: int;
+
+    selected_tab_x_offset := #run Tween_Animation(float).{ duration = 0.1, func = .smoothstep };
+    selected_tab_width    := #run Tween_Animation(float).{ duration = 0.1, func = .smoothstep };
+    last_selected_recent_editors_index: int;
+    has_duplicate_filename: Array(bool);
+}
+
+move_to_previous_buffer :: () {
+    using recent_buffers;
+
+    if !switching_editors_for {
+        if editors.active == editors.left        switching_editors_for = .left;
+        else if editors.active == editors.right  switching_editors_for = .right;
+        else return;
+
+        start_move_to_recent_buffer(0);
+    }
+
+    if recent_editors_index < recent_editors.count - 1  recent_editors_index += 1;
+}
+
+move_to_next_buffer :: () {
+    using recent_buffers;
+
+    if !switching_editors_for {
+        if editors.active == editors.left        switching_editors_for = .left;
+        else if editors.active == editors.right  switching_editors_for = .right;
+        else return;
+
+        start_move_to_recent_buffer(recent_editors.count);
+    }
+
+    if recent_editors_index > 0  recent_editors_index -= 1;
+}
+
+get_recent_editors_for_switch :: () -> *Array(s64) {
+    using recent_buffers;
+    assert(switching_editors_for != .none);
+
+    if #complete switching_editors_for == {
+        case .left;   return *left_recent_editors;
+        case .right;  return *right_recent_editors;
+        case .none;   return null;
+    }
+}
+
+start_move_to_recent_buffer :: (initial_editor_index: int) {
+    using recent_buffers;
+
+    recent_editors = get_recent_editors_for_switch();
+    recent_editors_index = initial_editor_index;
+    last_selected_recent_editors_index = -1;
+    reset_animation(*selected_tab_x_offset);
+    reset_animation(*selected_tab_width);
+
+    // Cache which editors have duplicate filenames, so we can draw the full path to disambiguate.
+    if has_duplicate_filename.count < recent_editors.count {
+        resize(*has_duplicate_filename, recent_editors.count, initialize = false);
+    }
+    memset(has_duplicate_filename.data, 0, recent_editors.count);
+    for index_a : 0 .. recent_editors.count - 2 {
+        editor_a := *open_editors[recent_editors.*[index_a]];
+        if editor_a.buffer_id < 0  continue;
+        buffer_a := *open_buffers[editor_a.buffer_id];
+        if !buffer_a.has_file  continue;
+
+        for index_b : index_a + 1 .. recent_editors.count - 1 {
+            editor_b := *open_editors[recent_editors.*[index_b]];
+            if editor_b.buffer_id < 0  continue;
+            buffer_b := *open_buffers[editor_b.buffer_id];
+            if !buffer_b.has_file  continue;
+
+            if buffer_b.file.name == buffer_a.file.name {
+                has_duplicate_filename[index_a] = true;
+                has_duplicate_filename[index_b] = true;
+            }
+        }
+    }
+}
+
+do_recent_buffer_move :: () {
+    using recent_buffers;
+    if !switching_editors_for  return;
+
+    editor_id := recent_editors.*[recent_editors_index];
+    if switching_editors_for == {
+        case .left;   editors.left = editor_id;
+        case .right;  editors.right = editor_id;
+    }
+    make_editor_active(editor_id);
+    switching_editors_for = .none;
+}
 
 Editor_History :: struct {
     frames: [..] Editor_History_Frame;

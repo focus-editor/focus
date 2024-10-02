@@ -265,6 +265,11 @@ main :: () {
                         if event.key_pressed then last_press = frame_time;
                     }
 
+                    // Recent buffer switching
+                    if event.key_code == .CTRL && !event.key_pressed && recent_buffers.switching_editors_for {
+                        do_recent_buffer_move();
+                    }
+
                 case .DRAG_AND_DROP_FILES;
                     editors_handle_file_drop(event.files);
 
@@ -401,8 +406,8 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .move_to_previous_editor_history;                  move_to_previous_editor_history();                  return true;
         case .move_to_next_editor_history;                      move_to_next_editor_history();                      return true;
 
-        case .move_to_previous_buffer;                          move_to_previous_editor_history(by_buffer = true);  return true;
-        case .move_to_next_buffer;                              move_to_next_editor_history    (by_buffer = true);  return true;
+        case .move_to_previous_buffer;                          move_to_previous_buffer();                          return true;
+        case .move_to_next_buffer;                              move_to_next_buffer();                              return true;
 
         case .toggle_build_panel;                               toggle_build_panel();                               return true;
 

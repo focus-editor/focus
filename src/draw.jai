@@ -1861,8 +1861,11 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
     }
 
+    switching_this_editor := recent_buffers.switching_editors_for == .left && editor_id == editors.left
+                          || recent_buffers.switching_editors_for == .right && editor_id == editors.right;
+
     // Draw status bar
-    if !as_build_panel {
+    if !as_build_panel && !switching_this_editor {
         footer_color := Color.BACKGROUND_4;
         draw_rect(status_bar_rect, footer_color, .{is_background = true});
         if #complete config.settings.status_bar_position == {
@@ -1884,7 +1887,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         };
 
         // Draw file name and path
-        width, pen = draw_file_info(buffer, width, padding, pen, draw_crlf_warning = true, draw_config_warning = true);
+        width, pen = draw_file_info(buffer, width, padding, pen, flags = .default | .crlf_warning | .config_warning);
 
         // Draw line, column numbers, and selection length
         {
@@ -1953,30 +1956,102 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 draw_rect(fadeout_rect, footer_color, .{is_background = true, is_translucent_on_the_right = true});
             }
         }
-    }
+    } else if !as_build_panel && switching_this_editor {
+        // Draw the recent buffers bar instead of the status bar.
+        using recent_buffers;
 
+        footer_color := Color.BACKGROUND_4;
+        draw_rect(status_bar_rect, footer_color);
+        if #complete config.settings.status_bar_position == {
+            case .bottom; draw_top_shadow(status_bar_rect);
+            case .top; draw_bottom_shadow(status_bar_rect);
+        }
+
+        push_scissor(status_bar_rect);
+        defer pop_scissor();
+
+        status_bar_rect = shrink_x(status_bar_rect, text_offset.x);
+
+        padding := floor(4 * dpi_scale);
+
+        current_x_offset := get_animation_value(selected_tab_x_offset);
+        pen := Vector2.{
+            status_bar_rect.x + current_x_offset,
+            status_bar_rect.y + (status_bar_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+        };
+
+        divider_rect := shrink_y(status_bar_rect, padding * 2);
+        divider_rect.w = dpi_scale;
+        distance_from_center: float;
+
+        current_tab_width := get_animation_value(selected_tab_width);
+        centered_tab := Rect.{status_bar_rect.x + (status_bar_rect.w - current_tab_width) / 2, status_bar_rect.y, current_tab_width, status_bar_rect.h};
+        draw_rect(centered_tab, Color.LIST_CURSOR);
+
+        for recent_editors {
+            editor := *open_editors[it];
+            buffer := *open_buffers[editor.buffer_id];
+
+            start_x := pen.x;
+            pen.x += padding * 2;
+            draw_flags := File_Info_Draw_Flags.icon | .file_name | .modified;
+            if has_duplicate_filename[it_index]  draw_flags |= .file_folder;
+            _, pen = draw_file_info(buffer, 0, padding, pen, flags = draw_flags);
+            pen.x += padding * 2;
+
+            if it_index == recent_editors_index {
+                if it_index != last_selected_recent_editors_index {
+                    last_selected_recent_editors_index = it_index;
+
+                    width := pen.x - start_x;
+                    offset := (status_bar_rect.w - width) / 2 - (start_x - status_bar_rect.x - current_x_offset);
+                    start_animation(*selected_tab_x_offset, current_x_offset, offset);
+                    start_animation(*selected_tab_width, current_tab_width, width);
+                }
+            }
+        }
+    }
 }
 
-draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, bold := true, draw_crlf_warning := false, draw_config_warning := false) -> new_width: float, new_pen: Vector2 {
+File_Info_Draw_Flags : enum_flags {
+    icon;
+    file_name;
+    modified;
+    deleted_on_disk;
+    modified_on_disk;
+    read_only;
+    error_when_saving;
+    crlf_warning;
+    config_warning;
+    file_folder;
+    key_sequence;
+    default :: icon | file_name | modified | deleted_on_disk | modified_on_disk | read_only | file_folder | key_sequence;
+}
+
+draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, bold := true, flags := File_Info_Draw_Flags.default) -> new_width: float, new_pen: Vector2 {
     file_name_color := Color.UI_DEFAULT;
     if buffer.modified then file_name_color = Color.UI_WARNING;
 
     pen := _pen;
 
     // Icon
-    icon_char := convert_utf32_to_utf8(xx ifx buffer.has_file then buffer.file.icon else Icon.text);
-    icon_width := Simp.prepare_text(font_icons, to_string(*icon_char));
-    icon_x := pen.x - (icon_width - font_icons.em_width) / 2.0;
-    Simp.draw_prepared_text(font_icons, xx icon_x, xx pen.y, color = xx file_name_color);
-    width += font_icons.em_width * 1.2;
+    if flags & .icon {
+        icon_char := convert_utf32_to_utf8(xx ifx buffer.has_file then buffer.file.icon else Icon.text);
+        icon_width := Simp.prepare_text(font_icons, to_string(*icon_char));
+        icon_x := pen.x - (icon_width - font_icons.em_width) / 2.0;
+        Simp.draw_prepared_text(font_icons, xx icon_x, xx pen.y, color = xx file_name_color);
+        width += font_icons.em_width * 1.2;
+    }
 
     // File name
-    pen.x += width + padding;
-    file_name_font := ifx bold then font_ui_bold else font_ui;
-    width = xx Simp.prepare_text(file_name_font, get_buffer_name(buffer));
-    Simp.draw_prepared_text(file_name_font, xx pen.x, xx pen.y, color = xx file_name_color);
+    if flags & .file_name {
+        pen.x += width + padding;
+        file_name_font := ifx bold then font_ui_bold else font_ui;
+        width = xx Simp.prepare_text(file_name_font, get_buffer_name(buffer));
+        Simp.draw_prepared_text(file_name_font, xx pen.x, xx pen.y, color = xx file_name_color);
+    }
 
-    if buffer.modified {
+    if buffer.modified && flags & .modified {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_icons_tiny, PEN_ICON);
         y_padding := (font_icons.character_height - font_icons_tiny.character_height) / 4.0;
@@ -1984,33 +2059,33 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
     }
 
     // Maybe warnings
-    if buffer.deleted && !buffer.readonly {
+    if buffer.deleted && !buffer.readonly && flags & .deleted_on_disk {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_bold, "[deleted on disk]");
         Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_ERROR_BRIGHT);
-    } else if buffer.modified_on_disk {
+    } else if buffer.modified_on_disk && flags * .modified_on_disk {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_bold, "[modified on disk]");
         Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_ERROR_BRIGHT);
     }
-    if buffer.readonly {
+    if buffer.readonly && flags & .read_only {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_bold, "[readonly]");
         Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
     }
-    if buffer.error_when_saving {
+    if buffer.error_when_saving && flags & .error_when_saving {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_bold, "[couldn't save file]");
         Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_ERROR_BRIGHT);
     }
 
-    if buffer.crlf && draw_crlf_warning {
+    if buffer.crlf && flags & .crlf_warning {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui, "[CRLF will be replaced with LF on save]");
         Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
     }
 
-    if draw_config_warning && buffer.has_file {
+    if buffer.has_file && flags & .config_warning {
         label: string;
         if is_current_global_config(buffer.file.full_path) {
             label = "[current global config]";
@@ -2026,7 +2101,7 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
         }
     }
 
-    if buffer.has_file {
+    if buffer.has_file && flags & .file_folder {
         // Draw separator
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_small, BULLET_ICON);
@@ -2038,7 +2113,7 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
         Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = xx Color.UI_DIM);
     }
 
-    if key_sequence_input_in_progress() {
+    if key_sequence_input_in_progress() && flags & .key_sequence {
         // Draw separator
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_small, BULLET_ICON);

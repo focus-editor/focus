@@ -407,10 +407,10 @@ get_tmp_tabs :: (num: int) -> string {
     return tabs;
 }
 
-start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: float = 0.0) {
+start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, duration: float = 0.0) {
     anim.start  = start;
     anim.target = target;
-    if speed > 0 then anim.speed = speed;
+    if duration > 0 then anim.duration = duration;
 
     // Pretend the animation started last frame so we start moving right away.
     // If the current frame was t=0, then the movement would simply be delayed one frame.
@@ -418,12 +418,28 @@ start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: floa
 }
 
 get_animation_value :: (using anim: Tween_Animation($T)) -> T {
-    t := (frame_time64 - started_at) / speed;
+    t := (frame_time64 - started_at) / duration;
     t = clamp(t, 0, 1);
     if #complete func == {
         case .lerp;       return start + cast(T) (cast(float)(target - start) * t);
         case .smoothstep; return start + cast(T) (cast(float)(target - start) * t * t * (3.0 - 2.0 * t));
     }
+}
+
+reset_animation :: (using anim: *Tween_Animation($T)) {
+    anim.start = 0;
+    anim.target = 0;
+}
+
+is_animating :: (using anim: Tween_Animation($T)) -> bool {
+    return started_at + duration > frame_time64;
+}
+
+move_toward :: (current: *$T, target: T, speed: float) {
+    if current.* == target  return;
+
+    if current.* < target  current.* = min(current.* + speed * cast(float32) frame_dt, target);
+    else                   current.* = max(current.* - speed * cast(float32) frame_dt, target);
 }
 
 get_identifier_name :: (name: Code) -> string {
@@ -514,7 +530,7 @@ table_find_or_default :: (table: *Table, key: table.Key_Type) -> table.Value_Typ
 
 Tween_Animation :: struct(T: Type) {
     started_at: float64;
-    speed : float = xx 0.1;  // how many seconds to finish
+    duration : float = xx 0.1;  // how many seconds to finish
     start, target: T;
     func: enum { lerp; smoothstep; } = .smoothstep;
 }
