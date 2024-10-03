@@ -259,28 +259,25 @@ reset_color_map_to_default :: () {
 apply_style :: (parsed: Parsed_Config) {
     // Fonts
     if parsed.font {
-        loaded_data, loaded_name, success := load_font_by_name(parsed.font, .font_main);
+        loaded_font, success := load_font_by_name(parsed.font, .main);
         if success {
-            font_main_data = loaded_data;
-            font_main_name = loaded_name;
+            loaded_fonts.main = loaded_font;
         } else {
             add_user_error("Couldn't load font %", parsed.font);
         }
     }
     if parsed.font_ui {
-        loaded_data, loaded_name, success := load_font_by_name(parsed.font_ui, .font_ui);
+        loaded_font, success := load_font_by_name(parsed.font_ui, .ui);
         if success {
-            font_ui_data = loaded_data;
-            font_ui_name = loaded_name;
+            loaded_fonts.ui = loaded_font;
         } else {
             add_user_error("Couldn't load font %", parsed.font_ui);
         }
     }
     if parsed.font_ui_bold {
-        loaded_data, loaded_name, success := load_font_by_name(parsed.font_ui_bold, .font_ui_bold);
+        loaded_font, success := load_font_by_name(parsed.font_ui_bold, .ui_bold);
         if success {
-            font_ui_bold_data = loaded_data;
-            font_ui_bold_name = loaded_name;
+            loaded_fonts.ui_bold = loaded_font;
         } else {
             add_user_error("Couldn't load font %", parsed.font_ui_bold);
         }
@@ -323,6 +320,7 @@ get_current_project_dir :: () -> string {
 
     return trim_right(path_strip_filename(project_config.path), "/");
 }
+
 
 #scope_file
 
@@ -490,12 +488,12 @@ apply_config :: () {
                                                        //       keep pointers to old keymaps when the config is reloaded
 }
 
-load_font_by_name :: (name: string, kind: enum { font_main; font_ui; font_ui_bold; }) -> font_data: string, font_name: string, success: bool {
+load_font_by_name :: (name: string, kind: enum { main; ui; ui_bold; }) -> Loaded_Font, success: bool {
     if name == "default" {
         if kind == {
-            case .font_main;    return FONT_MAIN.data   , FONT_MAIN.name   , true;
-            case .font_ui;      return FONT_UI.data     , FONT_UI.name     , true;
-            case .font_ui_bold; return FONT_UI_BOLD.data, FONT_UI_BOLD.name, true;
+            case .main;    return FONT_MAIN,    true;
+            case .ui;      return FONT_UI,      true;
+            case .ui_bold; return FONT_UI_BOLD, true;
         }
     }
 
@@ -503,20 +501,21 @@ load_font_by_name :: (name: string, kind: enum { font_main; font_ui; font_ui_bol
 
     font_path := find_font_by_name(name);
     if font_path {
-        cached_data, found := table_find(*font_cache, font_path);
-        if found return cached_data, name, true;
+        cached_font, found := table_find(*font_cache, font_path);
+        if found return cached_font, true;
 
         font_data, success := read_entire_file(font_path);
         if success {
-            table_set(*font_cache, copy_string(font_path), font_data);
-            return font_data, name, true;
+            loaded_font := Loaded_Font.{ copy_string(name), font_data };
+            table_set(*font_cache, copy_string(font_path), loaded_font);
+            return loaded_font, true;
         }
     }
 
-    return "", name, false;
+    return .{}, false;
 }
 
-font_cache: Table(string, string);  // path -> file data
+font_cache: Table(string, Loaded_Font);  // path -> loaded font
 
 #scope_export
 
@@ -540,6 +539,11 @@ Config :: struct {
 Style :: struct {
     theme: string;
     // TODO: add other things in there at some point
+}
+
+Loaded_Font :: struct {
+    name: string;
+    data: string;
 }
 
 Loaded_Config :: struct {

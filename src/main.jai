@@ -454,28 +454,28 @@ init_fonts_and_dependent_things :: () {
     font_icons_small_size      = clamp(DEFAULT_FONT_ICONS_SMALL_SIZE      + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_icons_very_small_size = clamp(DEFAULT_FONT_ICONS_VERY_SMALL_SIZE + delta, MIN_FONT_SIZE, MAX_FONT_SIZE);
 
-    font_main = Simp.get_font_at_size(font_main_name, font_main_data, cast(int) (font_main_size * dpi_scale));
+    font_main = Simp.get_font_at_size(loaded_fonts.main.name, loaded_fonts.main.data, cast(int) (font_main_size * dpi_scale));
     assert(font_main != null, "Couldn't init main text font\n");
 
-    font_ui = Simp.get_font_at_size(font_ui_name, font_ui_data, cast(int) (font_ui_size * dpi_scale));
+    font_ui = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_size * dpi_scale));
     assert(font_ui != null, "Couldn't init main ui font\n");
     font_ui_line_height = cast(float) font_ui.default_line_spacing;
 
-    font_ui_big = Simp.get_font_at_size(font_ui_name, font_ui_data, cast(int) (font_ui_big_size * dpi_scale));
+    font_ui_big = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_big_size * dpi_scale));
     assert(font_ui_big != null, "Couldn't init big ui font\n");
     font_ui_big_line_height = cast(float) font_ui_big.default_line_spacing;
 
-    font_ui_medium = Simp.get_font_at_size(font_ui_name, font_ui_data, cast(int) (font_ui_medium_size * dpi_scale));
+    font_ui_medium = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_medium_size * dpi_scale));
     assert(font_ui_medium != null, "Couldn't init medium ui font\n");
     font_ui_medium_line_height = cast(float) font_ui_medium.default_line_spacing;
 
-    font_ui_bold = Simp.get_font_at_size(font_ui_bold_name, font_ui_bold_data, cast(int) (font_ui_size * dpi_scale));
+    font_ui_bold = Simp.get_font_at_size(loaded_fonts.ui_bold.name, loaded_fonts.ui_bold.data, cast(int) (font_ui_size * dpi_scale));
     assert(font_ui_bold != null, "Couldn't init bold ui font\n");
 
-    font_ui_small = Simp.get_font_at_size(font_ui_name, font_ui_data, cast(int) (font_ui_small_size * dpi_scale));
+    font_ui_small = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_small_size * dpi_scale));
     assert(font_ui_small != null, "Couldn't init small ui font\n");
 
-    font_ui_very_small = Simp.get_font_at_size(font_ui_name, font_ui_data, cast(int) (font_ui_very_small_size * dpi_scale));
+    font_ui_very_small = Simp.get_font_at_size(loaded_fonts.ui.name, loaded_fonts.ui.data, cast(int) (font_ui_very_small_size * dpi_scale));
     assert(font_ui_very_small != null, "Couldn't init very small ui font\n");
 
     font_icons = Simp.get_font_at_size(FONT_ICONS.name, FONT_ICONS.data, cast(int) (font_icons_size * dpi_scale));
@@ -829,14 +829,11 @@ DEFAULT_FONT_ICONS_SIZE            :: 16;
 DEFAULT_FONT_ICONS_SMALL_SIZE      :: 12;
 DEFAULT_FONT_ICONS_VERY_SMALL_SIZE :: 8;
 
-font_main_name    := #run FONT_MAIN.name;
-font_main_data    := #run FONT_MAIN.data;
-
-font_ui_name      := #run FONT_UI.name;
-font_ui_data      := #run FONT_UI.data;
-
-font_ui_bold_name := #run FONT_UI_BOLD.name;
-font_ui_bold_data := #run FONT_UI_BOLD.data;
+loaded_fonts: struct {
+    main:    Loaded_Font = FONT_MAIN;
+    ui:      Loaded_Font = FONT_UI;
+    ui_bold: Loaded_Font = FONT_UI_BOLD;
+};
 
 // can be changed in the config file
 default_font_main_size  := DEFAULT_FONT_MAIN_SIZE;
@@ -1069,22 +1066,22 @@ FONT_UI      :: #run load_font("OpenSans-Regular.ttf");
 FONT_UI_BOLD :: #run load_font("OpenSans-SemiBold.ttf");
 FONT_ICONS   :: #run load_font("font-awesome/Font Awesome 6 Free-Solid-900.otf");
 
-MIN_FONT_SIZE :: 4;
-MAX_FONT_SIZE :: 30;  // setting a larger size has caused freetype to crash - not sure yet why.
-                      // Probably we don't give it enough memory for a glyph bitmap when rendering it?
+#scope_file
 
-load_font :: (name: string) -> Embedded_Font {
+load_font :: (name: string) -> Loaded_Font {
     path := tprint("fonts/%", name);
     data, success := read_entire_file(path);
     assert(success, "Couldn't load font '%'", path);
 
-    return Embedded_Font.{ name = name, data = data};
+    return Loaded_Font.{ name = name, data = data};
 }
 
-Embedded_Font :: struct {
-    name: string;
-    data: string;
-}
+#scope_export
+
+MIN_FONT_SIZE :: 4;
+MAX_FONT_SIZE :: 30;  // setting a larger size has caused freetype to crash - not sure yet why.
+                      // Probably we don't give it enough memory for a glyph bitmap when rendering it?
+
 
 DEBUG_FILE_REFRESH :: false;  // TODO: remove when done debugging
 DEBUG_MEMORY_LEAKS :: false;
