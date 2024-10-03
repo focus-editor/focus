@@ -829,13 +829,13 @@ DEFAULT_FONT_ICONS_SIZE            :: 16;
 DEFAULT_FONT_ICONS_SMALL_SIZE      :: 12;
 DEFAULT_FONT_ICONS_VERY_SMALL_SIZE :: 8;
 
-font_main_name := "default";
-font_main_data := #run FONT_MAIN.data;
+font_main_name    := #run FONT_MAIN.name;
+font_main_data    := #run FONT_MAIN.data;
 
-font_ui_name := "default";
-font_ui_data := #run FONT_UI.data;
+font_ui_name      := #run FONT_UI.name;
+font_ui_data      := #run FONT_UI.data;
 
-font_ui_bold_name := "default";
+font_ui_bold_name := #run FONT_UI_BOLD.name;
 font_ui_bold_data := #run FONT_UI_BOLD.data;
 
 // can be changed in the config file
