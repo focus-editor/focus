@@ -704,7 +704,7 @@ maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
     return build_panel_is_active(), build_output_rect;
 }
 
-get_editor_subrects :: (editor_id: s64, main_area: Rect, status_bar_height: float) -> editor_rect: Rect, status_bar_rect: Rect, line_number_panel: Rect {
+get_editor_subrects :: (editor_id: s64, main_area: Rect, status_bar_height: float) -> editor_rect: Rect, status_bar_rect: Rect, line_number_panel: Rect, except_status_bar: Rect {
     status_bar_rect, rect, line_number_panel: Rect;
 
     if config.settings.status_bar_position == .bottom {
@@ -712,6 +712,7 @@ get_editor_subrects :: (editor_id: s64, main_area: Rect, status_bar_height: floa
     } else {
         status_bar_rect, rect = cut_top(main_area, status_bar_height);
     }
+    except_status_bar := rect;
 
     max_width := cast(float) config.settings.max_editor_width * dpi_scale;
     if max_width > 0 && rect.w > max_width {
@@ -729,7 +730,7 @@ get_editor_subrects :: (editor_id: s64, main_area: Rect, status_bar_height: floa
         if rect.w > panel_width then line_number_panel, rect = cut_left(rect, panel_width);
     }
 
-    return align_to_grid(rect), status_bar_rect, line_number_panel;
+    return align_to_grid(rect), status_bar_rect, line_number_panel, except_status_bar;
 }
 
 get_text_offset :: inline () -> Vector2 {
@@ -753,7 +754,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
     scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
 
-    rect, status_bar_rect, line_number_panel := get_editor_subrects(editor_id, main_area, status_bar_height);
+    rect, status_bar_rect, line_number_panel, except_status_bar := get_editor_subrects(editor_id, main_area, status_bar_height);
 
     if !is_valid(rect) return;
 
@@ -1953,10 +1954,10 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 fadeout_rect := cut_rect;
                 fadeout_rect.x -= 1; // Sliver sometimes visible on left if we don't do this
                 fadeout_rect.w = 4 * padding;
-                draw_rect(fadeout_rect, footer_color, .{is_background = true, is_translucent_on_the_right = true});
+                draw_rect(fadeout_rect, footer_color, .{is_background = true, fade_out = .to_right});
             }
         }
-    } else if !as_build_panel && switching_this_editor {
+    } else if !as_build_panel && switching_this_editor && ui_id != .editor_preview {
         // Draw the recent buffers bar instead of the status bar.
         using recent_buffers;
 
@@ -1968,8 +1969,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         }
 
         push_scissor(status_bar_rect);
-        defer pop_scissor();
 
+        original_status_bar_rect := status_bar_rect;
         status_bar_rect = shrink_x(status_bar_rect, text_offset.x);
 
         padding := floor(4 * dpi_scale);
@@ -1999,16 +2000,40 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             _, pen = draw_file_info(buffer, 0, padding, pen, flags = draw_flags);
             pen.x += padding * 2;
 
-            if it_index == recent_editors_index {
-                if it_index != last_selected_recent_editors_index {
-                    last_selected_recent_editors_index = it_index;
+            if it_index == recent_editors_index && it_index != selected_recent_editors_index {
+                selected_recent_editors_index = it_index;
 
-                    width := pen.x - start_x;
-                    offset := (status_bar_rect.w - width) / 2 - (start_x - status_bar_rect.x - current_x_offset);
-                    start_animation(*selected_tab_x_offset, current_x_offset, offset);
-                    start_animation(*selected_tab_width, current_tab_width, width);
-                }
+                width := pen.x - start_x;
+                offset := (status_bar_rect.w - width) / 2 - (start_x - status_bar_rect.x - current_x_offset);
+                start_animation(*selected_tab_x_offset, current_x_offset, offset);
+                start_animation(*selected_tab_width, current_tab_width, width);
             }
+        }
+
+        // Fade out edges in case we have lots of open buffers and they extend off the sides.
+        // (only if footer color is not translucent, otherwise it won't work)
+        if map_color_to_vec4(footer_color).w >= 1.0 {
+            fadeout_rect := cut_left(original_status_bar_rect, 4 * padding);
+            fadeout_rect.x -= 1; // Sliver sometimes visible on left if we don't do this
+            draw_rect(fadeout_rect, footer_color, .{is_background = true, fade_out = .to_right});
+
+            fadeout_rect = cut_right(original_status_bar_rect, 4 * padding);;
+            fadeout_rect.x += 1; // Same reason as above
+            draw_rect(fadeout_rect, footer_color, .{is_background = true, fade_out = .to_left});
+        }
+
+        pop_scissor();
+
+        // Draw currently selected editor.
+        // @Note We could be fancy and slide editors in/out, but I tested that and it didn't look great.
+        //       YMMV though; adding some animation code in here is easy, give it a whirl.
+        //       - IK 2024.10.03
+        if recent_editors_index != 0 {
+            push_scissor(except_status_bar);
+            defer pop_scissor();
+
+            disable_input_for_scope();
+            draw_editor(recent_editors.*[recent_editors_index], except_status_bar, 0, .editor_preview);
         }
     }
 }
@@ -3611,12 +3636,15 @@ draw_top_down_shadow :: (rect: Rect) {
 
 draw_rect :: (rect: Rect, color: Color, $extra_draw_info := Simp.Extra_Draw_Info.{}) {
     Simp.set_shader_for_color(enable_blend = true);
-    if extra_draw_info.is_translucent_on_the_right {
-        c := map_color_to_vec4(color);
-        trans := c;
-        trans.w = 0;
+    if extra_draw_info.fade_out {
+        opaque := map_color_to_vec4(color);
+        tranparent := opaque;
+        tranparent.w = 0;
         using rect;
-        Simp.immediate_quad(x, y, x + w, y + h, c, c, trans, trans);
+        if extra_draw_info.fade_out == {
+            case .to_left;   Simp.immediate_quad(x, y, x + w, y + h, tranparent, tranparent, opaque, opaque);
+            case .to_right;  Simp.immediate_quad(x, y, x + w, y + h, opaque, opaque, tranparent, tranparent);
+        }
     } else {
         draw_rect_raw(rect, color);
     }
@@ -3884,6 +3912,7 @@ Ui_Id :: enum s64 {
     theme_dialog                :: -17;
     language_dialog             :: -18;
     color_picker_dialog         :: -19;
+    editor_preview              :: -20;
 
     // The rest will be derived from loc
 }

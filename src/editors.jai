@@ -893,27 +893,27 @@ do_things_on_editor_close :: (editor_id: s64) {
         case .Double; buffer_is_still_visible = open_editors[editors.left].buffer_id == editor.buffer_id || open_editors[editors.right].buffer_id == editor.buffer_id;
     }
     if !buffer_is_still_visible {
-        array_ordered_remove_by_value(*most_recent_buffers, editor.buffer_id);
+        ordered_remove_by_value(*most_recent_buffers, editor.buffer_id);
         if !buffer.modified then buffer.num_times_opened = 0;  // deprioritise it in the full file list
         if !buffer.has_file { buffer.deleted = true; buffer.modified = false; }  // get rid of newly created buffers we're closing
     }
 }
 
 close_other_editors :: () {
-    array_reset_keeping_memory(*most_recent_buffers);
+    reset_keeping_memory(*most_recent_buffers);
 
     using editors;
     left_valid  := left  >= 0 && left  < open_editors.count;
     right_valid := right >= 0 && right < open_editors.count;
-    if left_valid  then array_add_if_unique(*most_recent_buffers, open_editors[left].buffer_id);
-    if right_valid then array_add_if_unique(*most_recent_buffers, open_editors[right].buffer_id);
+    if left_valid  then add_if_unique(*most_recent_buffers, open_editors[left].buffer_id);
+    if right_valid then add_if_unique(*most_recent_buffers, open_editors[right].buffer_id);
 
     close_other_editor();
 }
 
 close_all_editors :: () {
     editors.layout = .None;
-    array_reset_keeping_memory(*most_recent_buffers);
+    reset_keeping_memory(*most_recent_buffers);
     update_window_title();
 }
 
@@ -1444,8 +1444,7 @@ make_editor_active :: (editor_id: s64) {
     buffer_id := open_editors[editor_id].buffer_id;
     update_window_title(buffer_id);
 
-    array_ordered_remove_by_value(*most_recent_buffers, buffer_id);
-    array_insert_at(*most_recent_buffers, buffer_id, 0);
+    move_or_add_to_front(*most_recent_buffers, buffer_id);
 
     if editors.left >= 0                                move_or_add_to_front(*left_recent_editors, editors.left);
     if editors.right >= 0 && editors.layout == .Double  move_or_add_to_front(*right_recent_editors, editors.right);
@@ -3809,7 +3808,7 @@ buffers_table: Table(string, s64,
                      given_hash_function = x => Hash.get_hash(to_lower_copy_new(x,, temp)),
                      given_compare_function = platform_path_equals);
 
-most_recent_buffers: [..] s64;  // updated when an editor is activated, used to switch between open files
+most_recent_buffers: Array(s64);  // updated when an editor is activated, used to switch between open files
 
 editors: Editor_State;
 editor_closing_id := -1;  // holds the id of the editor being closed (so that we can change the layout when it's done closing)
@@ -3853,13 +3852,25 @@ recent_buffers: struct {
     recent_editors: *Array(s64);
     recent_editors_index: int;
 
-    selected_tab_x_offset := #run Tween_Animation(float).{ duration = 0.1, func = .smoothstep };
-    selected_tab_width    := #run Tween_Animation(float).{ duration = 0.1, func = .smoothstep };
-    last_selected_recent_editors_index: int;
+    selected_tab_x_offset    := #run Tween_Animation(float).{ duration = 0.1, func = .smoothstep };
+    selected_tab_width       := #run Tween_Animation(float).{ duration = 0.1, func = .smoothstep };
+    selected_recent_editors_index: int;
     has_duplicate_filename: Array(bool);
 }
 
+// @Note :EditorBufferProcNames
+//       Current naming between userland and the codebase is disjointed; in the codebase an editor
+//       is a view into a buffer. To the user, however, an editor is the main|left pane, or the
+//       right pane. i.e. When they `close_editor` they are closing a pane (The codebase doesn't
+//       currently have the concept of a `pane`, really).
+//       So, these procs are named as per the user command, where they are switching/closing buffers
+//       inside a pane, as opposed to what they are actually doing in the codebase which is
+//       switching/closing editors.  As they're working with editors, they're in this file (editors.jai)
+//       but are named so they appear as though they should be in buffers.jai.
+//       - IK 2024.10.03
+
 move_to_previous_buffer :: () {
+    // :EditorBufferProcNames
     using recent_buffers;
 
     if !switching_editors_for {
@@ -3868,12 +3879,17 @@ move_to_previous_buffer :: () {
         else return;
 
         start_move_to_recent_buffer(0);
+        if !recent_editors {
+            switching_editors_for = .none;
+            return;
+        }
     }
 
     if recent_editors_index < recent_editors.count - 1  recent_editors_index += 1;
 }
 
 move_to_next_buffer :: () {
+    // :EditorBufferProcNames
     using recent_buffers;
 
     if !switching_editors_for {
@@ -3882,16 +3898,41 @@ move_to_next_buffer :: () {
         else return;
 
         start_move_to_recent_buffer(recent_editors.count);
+        if !recent_editors {
+            switching_editors_for = .none;
+            return;
+        }
     }
 
     if recent_editors_index > 0  recent_editors_index -= 1;
 }
 
-get_recent_editors_for_switch :: () -> *Array(s64) {
-    using recent_buffers;
-    assert(switching_editors_for != .none);
+close_buffer :: () {
+    // :EditorBufferProcNames
 
-    if #complete switching_editors_for == {
+    recent_editors: *Array(s64) = ---;
+    if editors.active == editors.left        recent_editors = get_recent_editors_for_switch(.left);
+    else if editors.active == editors.right  recent_editors = get_recent_editors_for_switch(.right);
+    else return;
+
+    if recent_editors.count <= 1 {
+        recent_editors.count = 0;
+        close_current_editor();
+        return;
+    }
+
+    ordered_remove_by_index(recent_editors, 0);
+    editor_id := recent_editors.*[0];
+    if recent_editors == *left_recent_editors  editors.left = editor_id;
+    else                                       editors.right = editor_id;
+    make_editor_active(editor_id);
+}
+
+get_recent_editors_for_switch :: (switching_for: type_of(recent_buffers.switching_editors_for)) -> *Array(s64) {
+    using recent_buffers;
+    assert(switching_for != .none);
+
+    if #complete switching_for == {
         case .left;   return *left_recent_editors;
         case .right;  return *right_recent_editors;
         case .none;   return null;
@@ -3901,9 +3942,11 @@ get_recent_editors_for_switch :: () -> *Array(s64) {
 start_move_to_recent_buffer :: (initial_editor_index: int) {
     using recent_buffers;
 
-    recent_editors = get_recent_editors_for_switch();
+    recent_editors = get_recent_editors_for_switch(switching_editors_for);
+    if !recent_editors  return;
+
     recent_editors_index = initial_editor_index;
-    last_selected_recent_editors_index = -1;
+    selected_recent_editors_index = -1;
     reset_animation(*selected_tab_x_offset);
     reset_animation(*selected_tab_width);
 
@@ -3935,6 +3978,7 @@ start_move_to_recent_buffer :: (initial_editor_index: int) {
 do_recent_buffer_move :: () {
     using recent_buffers;
     if !switching_editors_for  return;
+    if recent_editors_index < 0 || recent_editors_index >= recent_editors.count  return;
 
     editor_id := recent_editors.*[recent_editors_index];
     if switching_editors_for == {

@@ -704,8 +704,7 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
         reroute_active_editor(buffer_id, new_id);
         update_window_title(open_editors[editors.active].buffer_id);
 
-        array_ordered_remove_by_value(*most_recent_buffers, new_id);
-        array_insert_at(*most_recent_buffers, new_id, 0);
+        move_or_add_to_front(*most_recent_buffers, new_id);
     }
 
     start_watching_file_if_not_already(file_path);
@@ -1267,7 +1266,7 @@ is_unsaved :: (buffer: Buffer) -> bool {
 }
 
 remove_all_buffers :: () {
-    array_reset_keeping_memory(*most_recent_buffers);
+    reset_keeping_memory(*most_recent_buffers);
     deinit(*buffers_table);
     for * open_buffers free_buffer(it);
     bucket_array_reset(*open_buffers);

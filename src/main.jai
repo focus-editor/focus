@@ -408,6 +408,7 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
 
         case .move_to_previous_buffer;                          move_to_previous_buffer();                          return true;
         case .move_to_next_buffer;                              move_to_next_buffer();                              return true;
+        case .close_buffer;                                     close_buffer();                                     return true;
 
         case .toggle_build_panel;                               toggle_build_panel();                               return true;
 
@@ -661,7 +662,29 @@ unimplemented :: (loc := #caller_location) {
     print("!!!! Unimplemented at %\n", loc);
 }
 
+inputs_disabled := false;
+
+disable_input_for_scope :: () #expand {
+    left := mouse.left;
+    middle := mouse.middle;
+    right := mouse.right;
+    _inputs_disabled := inputs_disabled;
+
+    mouse.left = .{};
+    mouse.middle = .{};
+    mouse.right = .{};
+    inputs_disabled = true;
+
+    `defer {
+        mouse.left = left;
+        mouse.middle = middle;
+        mouse.right = right;
+        inputs_disabled = _inputs_disabled;
+    }
+}
+
 key_state :: inline (key: Input.Key_Code) -> Input.Key_Current_State {
+    if inputs_disabled  return .NONE;
     return Input.input_button_states[key];
 }
 

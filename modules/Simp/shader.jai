@@ -6,7 +6,7 @@ Shader :: struct {
 
 Extra_Draw_Info :: struct {
     is_background := false;  // This doesn't currently have any effect on drawing, but could be extended in future.
-    is_translucent_on_the_right := false;
+    fade_out : enum { none; to_left; to_right; } = .none;
 }
 
 set_projection :: () {

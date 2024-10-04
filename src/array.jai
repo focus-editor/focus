@@ -179,6 +179,27 @@ ordered_remove_by_index :: inline (array: *Array($T), index: s32) {
     array.count -= 1;
 }
 
+ordered_remove_by_value :: inline (array: *Array($T), value: T) -> was_removed: bool {
+    index, found := inline find(array.*, value);
+    if found  ordered_remove_by_index(array, index);
+    return found;
+}
+
+add_if_unique :: inline (array: *Array($T), value: T) -> was_added: bool {
+    index, found := inline find(array.*, value);
+    if !found  add(array, value);
+    return !found;
+}
+
+find :: (array: Array($T), value: T) -> index: s32, found: bool {
+    index : s32 = 0;
+    while index < array.count {
+        if array.data[index] == value  return index, true;
+        index += 1;
+    }
+    return -1, false;
+}
+
 copy :: (array: Array($T)) -> Array(T) {
     dest := NewArray(array.count, T, initialized=false);
     memcpy(dest.data, array.data, array.count * size_of(T));

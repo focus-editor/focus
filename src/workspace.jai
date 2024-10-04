@@ -262,7 +262,7 @@ reload_workspace :: (automatic := false) {
     // Preserve all editors and buffers which belong to the new workspace. Remove the rest.
     new_open_editors: [..] Editor;
     new_open_buffers: Simple_Bucket_Array(Buffer, items_per_bucket = 1024, max_buckets = 1024);
-    new_most_recent_buffers: [..] s64;
+    new_most_recent_buffers: Array(s64);
 
     editor_id_map: Table(s64, s64);
     editor_id_map.allocator = temp;
@@ -280,8 +280,10 @@ reload_workspace :: (automatic := false) {
 
             bucket_array_add(*new_open_buffers, buffer.*);
 
-            if array_unordered_remove_by_value(*most_recent_buffers, old_buffer_id, stop_after_first = true) {
-                array_add(*new_most_recent_buffers, new_buffer_id);
+            index, found := find(most_recent_buffers, old_buffer_id);
+            if found {
+                unordered_remove_by_index(*most_recent_buffers, index);
+                add(*new_most_recent_buffers, new_buffer_id);
             }
 
             // @speed: O(n*m) here. Hopefully OK because people don't create as many editors as there are buffers
@@ -318,7 +320,7 @@ reload_workspace :: (automatic := false) {
     update_recent_editors(*left_recent_editors);
     update_recent_editors(*right_recent_editors);
 
-    array_reset(*most_recent_buffers);
+    reset(*most_recent_buffers);
     most_recent_buffers = new_most_recent_buffers;
 
     bucket_array_reset(*open_buffers);
