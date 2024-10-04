@@ -1862,8 +1862,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
     }
 
-    switching_this_editor := recent_buffers.switching_editors_for == .left && editor_id == editors.left
-                          || recent_buffers.switching_editors_for == .right && editor_id == editors.right;
+    switching_this_editor := buffer_history.switching_buffers_for == .left && editor_id == editors.left
+                          || buffer_history.switching_buffers_for == .right && editor_id == editors.right;
 
     // Draw status bar
     if !as_build_panel && !switching_this_editor {
@@ -1959,7 +1959,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         }
     } else if !as_build_panel && switching_this_editor && ui_id != .editor_preview {
         // Draw the recent buffers bar instead of the status bar.
-        using recent_buffers;
+        using buffer_history;
 
         footer_color := Color.BACKGROUND_4;
         draw_rect(status_bar_rect, footer_color);
@@ -1989,9 +1989,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         centered_tab := Rect.{status_bar_rect.x + (status_bar_rect.w - current_tab_width) / 2, status_bar_rect.y, current_tab_width, status_bar_rect.h};
         draw_rect(centered_tab, Color.LIST_CURSOR);
 
-        for recent_editors {
-            editor := *open_editors[it];
-            buffer := *open_buffers[editor.buffer_id];
+        for recent_buffers {
+            buffer := *open_buffers[it];
 
             start_x := pen.x;
             pen.x += padding * 2;
@@ -2000,8 +1999,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             _, pen = draw_file_info(buffer, 0, padding, pen, flags = draw_flags);
             pen.x += padding * 2;
 
-            if it_index == recent_editors_index && it_index != selected_recent_editors_index {
-                selected_recent_editors_index = it_index;
+            if it_index == recent_buffers_index && it_index != selected_recent_buffers_index {
+                selected_recent_buffers_index = it_index;
 
                 width := pen.x - start_x;
                 offset := (status_bar_rect.w - width) / 2 - (start_x - status_bar_rect.x - current_x_offset);
@@ -2028,12 +2027,14 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         // @Note We could be fancy and slide editors in/out, but I tested that and it didn't look great.
         //       YMMV though; adding some animation code in here is easy, give it a whirl.
         //       - IK 2024.10.03
-        if recent_editors_index != 0 {
+        if recent_buffers_index != 0 {
             push_scissor(except_status_bar);
             defer pop_scissor();
 
+            editor_id, created := find_or_create_editor(recent_buffers.*[recent_buffers_index]);
+            assert(!created, "Editor should already exist when drawing preview while switching buffers");
             disable_input_for_scope();
-            draw_editor(recent_editors.*[recent_editors_index], except_status_bar, 0, .editor_preview);
+            draw_editor(editor_id, except_status_bar, 0, .editor_preview);
         }
     }
 }

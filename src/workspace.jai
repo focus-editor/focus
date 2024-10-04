@@ -306,6 +306,9 @@ reload_workspace :: (automatic := false) {
     array_reset(*open_editors);
     open_editors = new_open_editors;
 
+    reset(*most_recent_buffers);
+    most_recent_buffers = new_most_recent_buffers;
+
     update_recent_editors :: (recent_editors: Array(s64)) #expand {
         write_index : s32 = 0;
         for read_index : 0 .. recent_editors.count - 1 {
@@ -317,11 +320,7 @@ reload_workspace :: (automatic := false) {
         }
         recent_editors.count = write_index;
     }
-    update_recent_editors(*left_recent_editors);
-    update_recent_editors(*right_recent_editors);
-
-    reset(*most_recent_buffers);
-    most_recent_buffers = new_most_recent_buffers;
+    update_recent_editors(*recent_buffers);
 
     bucket_array_reset(*open_buffers);
     open_buffers = new_open_buffers;
