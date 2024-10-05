@@ -1529,7 +1529,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             }
         }
 
-        if grid_navigation.editor_id_should_jump == editor_id {
+        if cursors_active && grid_navigation.editor_id_should_jump == editor_id {
             // Performing a grid jump on the cursor: move it to the cursor position which is nearest to the center of our grid.
             // This depends on the lenghts of the surrounding lines.
             grid_navigation.editor_id_should_jump = -1;
@@ -1567,7 +1567,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             if grid_navigation.size < grid_navigation.finish_when_smaller_than  reset_grid_navigation();
         }
 
-        if frame_time64 < grid_navigation.last_press_time + config.settings.grid_navigation_display_duration {
+        if cursors_active && frame_time64 < grid_navigation.last_press_time + config.settings.grid_navigation_display_duration {
             remaining_duration : float64 = config.settings.grid_navigation_display_duration - (frame_time64 - grid_navigation.last_press_time);
             pulse_rate :: CURSOR_BLINK_SPEED_MS / 1000.0;
             pulse_t := fmod_cycling(cast(float) frame_time64, pulse_rate * 2) / pulse_rate;
