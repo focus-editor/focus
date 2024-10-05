@@ -609,6 +609,7 @@ Settings :: struct {
     search_is_case_sensitive_when_uppercase_present         := false;
     show_selected_text_length                               := false;
     load_most_recent_project_on_start                       := false;
+    grid_navigation_display_duration                        := 2.0;
 
     build_panel_width_percent                               := 50;
     build_panel_height_percent                              := 50;

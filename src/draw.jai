@@ -736,12 +736,16 @@ get_text_offset :: inline () -> Vector2 {
     return Vector2.{char_x_advance, -char_x_advance};
 }
 
-coords_from_mouse_position :: (using editor: Editor, rect: Rect) -> Coords {
-    pointer := snap_to_rect(mouse.pointer, rect);  // when we drag outside the editor we still want to interact
+coords_from_screen_position :: (using editor: Editor, rect: Rect, position: Vector2) -> Coords {
+    pointer := snap_to_rect(position, rect);  // when we drag outside the editor we still want to interact
     mouse_pos := pointer - bottom_left(rect) - get_text_offset();
     mouse_pos.x += viewport.left;
     mouse_pos.y = rect.h - mouse_pos.y + viewport.top - ifx dpi_scale > 1.0 then 1 else 0;
     return .{ line = xx (mouse_pos.y / line_height), col = xx ((mouse_pos.x / char_x_advance) + 0.5) };
+}
+
+coords_from_mouse_position :: (using editor: Editor, rect: Rect) -> Coords {
+    return coords_from_screen_position(editor, rect, mouse.pointer);
 }
 
 draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id: Ui_Id, total_editor_area := Rect.{}) {
@@ -1523,6 +1527,71 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 }
                 draw_rect_raw(cursor_mark_rect, Color.CURSOR);
             }
+        }
+
+        if grid_navigation.editor_id_should_jump == editor_id {
+            // Performing a grid jump on the cursor: move it to the cursor position which is nearest to the center of our grid.
+            // This depends on the lenghts of the surrounding lines.
+            grid_navigation.editor_id_should_jump = -1;
+            position: Vector2;
+            position.x = rect.x + rect.w * (grid_navigation.uv.x + grid_navigation.size / 2);
+            position.y = rect.y + rect.h * (grid_navigation.uv.y + grid_navigation.size / 2);
+            desired_coords := coords_from_screen_position(editor, rect, position);
+
+            // Loop over nearby lines to find the closest possible cursor.
+            cursor := leave_only_original_cursor(editor);
+            cursor.pos = coords_to_offset(editor, buffer, desired_coords);
+            best_pos := cursor.pos;
+            actual_coords := get_cursor_coords(editor, buffer, cursor);
+            cursor_screen_pos := get_cursor_screen_pos(text_origin, actual_coords.pos);
+            cursor_screen_pos.y += line_height / 2; // get_cursor_screen_pos returns the bottom of the cursor.
+            min_distance := distance_squared(position, cursor_screen_pos);
+            for line_offset : -5 .. +5 {
+                if !line_offset  continue;
+                cursor.pos = coords_to_offset(editor, buffer, .{desired_coords.line + cast(s32) line_offset, desired_coords.col});
+                actual_coords := get_cursor_coords(editor, buffer, cursor);
+                cursor_screen_pos := get_cursor_screen_pos(text_origin, actual_coords.pos);
+                cursor_screen_pos.y += line_height / 2;
+                distance := distance_squared(position, cursor_screen_pos);
+                if distance < min_distance {
+                    min_distance = distance;
+                    best_pos = cursor.pos;
+                }
+            }
+            cursor.pos = best_pos;
+            if !grid_navigation.extend_selection  cursor.sel = cursor.pos;
+            cursor.col_wanted = -1;
+            cursor_moved = .jumped;
+            cursors_start_blinking();
+
+            if grid_navigation.size < grid_navigation.finish_when_smaller_than  reset_grid_navigation();
+        }
+
+        if frame_time64 < grid_navigation.last_press_time + config.settings.grid_navigation_display_duration {
+            remaining_duration : float64 = config.settings.grid_navigation_display_duration - (frame_time64 - grid_navigation.last_press_time);
+            pulse_rate :: CURSOR_BLINK_SPEED_MS / 1000.0;
+            pulse_t := fmod_cycling(cast(float) frame_time64, pulse_rate * 2) / pulse_rate;
+            if pulse_t > 1.0  pulse_t = 2.0 - pulse_t;
+            color := lerp(map_color_to_vec4(.CURSOR), .{1, 1, 1, 1}, pulse_t * 0.5);
+            color.w = ifx remaining_duration > grid_navigation.fade_out_duration then 1.0 else cast(float) (remaining_duration / grid_navigation.fade_out_duration);
+
+            Simp.set_shader_for_gradient(cast,force(Vector4) rect, cast(u8) Gradient_Mode.checkered_alpha, char_x_advance / 2);
+
+            grid := Vector2.{rect.w * grid_navigation.size, rect.h * grid_navigation.size};
+            r := Rect.{rect.x + rect.w * grid_navigation.uv.x, rect.y + rect.h * grid_navigation.uv.y, grid.x, grid.y};
+            grid /= 3;
+
+            horizontal := r;
+            horizontal.h = 1;
+            horizontal.y += grid.y;  draw_rect_with_raw_color(horizontal, color);
+            horizontal.y += grid.y;  draw_rect_with_raw_color(horizontal, color);
+
+            vertical := r;
+            vertical.w = 1;
+            vertical.x += grid.x;  draw_rect_with_raw_color(vertical, color);
+            vertical.x += grid.x;  draw_rect_with_raw_color(vertical, color);
+
+            Simp.immediate_flush();
         }
     }
 

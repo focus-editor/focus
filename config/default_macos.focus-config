@@ -61,6 +61,7 @@ show_cursors_off_screen:                            true
 persist_local_search_results:                       false  # if true, search results will stay highlighted and you have to dismiss them using the `escape` action
 load_most_recent_project_on_start:                  false
 projects_sorting_order:                             most_recent_first
+grid_navigation_display_duration:                   2.0
 
 build_panel_stays_in_one_place:                     false  # if true, the build panel will flip to the inactive pane in two pane layouts
 build_panel_line_wrap_always_on:                    true
@@ -180,6 +181,17 @@ Cmd-Shift-Enter                 new_line_above_without_breaking
 NumpadEnter                     break_line
 Cmd-NumpadEnter                 new_line_below_without_breaking
 Cmd-Shift-NumpadEnter           new_line_above_without_breaking
+
+{Shift}-Cmd-Numpad0             grid_navigation_reset
+{Shift}-Cmd-Numpad1             grid_navigation_southwest
+{Shift}-Cmd-Numpad2             grid_navigation_south
+{Shift}-Cmd-Numpad3             grid_navigation_southeast
+{Shift}-Cmd-Numpad4             grid_navigation_west
+{Shift}-Cmd-Numpad5             grid_navigation_center
+{Shift}-Cmd-Numpad6             grid_navigation_east
+{Shift}-Cmd-Numpad7             grid_navigation_northwest
+{Shift}-Cmd-Numpad8             grid_navigation_north
+{Shift}-Cmd-Numpad9             grid_navigation_northeast
 
 Cmd-1                           switch_to_left_editor
 Cmd-2                           switch_to_right_editor
