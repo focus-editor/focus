@@ -62,6 +62,7 @@ persist_local_search_results:                       false  # if true, search res
 load_most_recent_project_on_start:                  false
 projects_sorting_order:                             most_recent_first
 grid_navigation_display_duration:                   2.0
+grid_navigation_quadrant_mode:                      false
 
 build_panel_stays_in_one_place:                     false  # if true, the build panel will flip to the inactive pane in two pane layouts
 build_panel_line_wrap_always_on:                    true

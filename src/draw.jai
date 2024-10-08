@@ -1579,17 +1579,29 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
             grid := Vector2.{rect.w * grid_navigation.size, rect.h * grid_navigation.size};
             r := Rect.{rect.x + rect.w * grid_navigation.uv.x, rect.y + rect.h * grid_navigation.uv.y, grid.x, grid.y};
-            grid /= 3;
+            if !config.settings.grid_navigation_quadrant_mode {
+                grid /= 3;
 
-            horizontal := r;
-            horizontal.h = 1;
-            horizontal.y += grid.y;  draw_rect_with_raw_color(horizontal, color);
-            horizontal.y += grid.y;  draw_rect_with_raw_color(horizontal, color);
+                horizontal := r;
+                horizontal.h = 1;
+                horizontal.y += grid.y;  draw_rect_with_raw_color(horizontal, color);
+                horizontal.y += grid.y;  draw_rect_with_raw_color(horizontal, color);
 
-            vertical := r;
-            vertical.w = 1;
-            vertical.x += grid.x;  draw_rect_with_raw_color(vertical, color);
-            vertical.x += grid.x;  draw_rect_with_raw_color(vertical, color);
+                vertical := r;
+                vertical.w = 1;
+                vertical.x += grid.x;  draw_rect_with_raw_color(vertical, color);
+                vertical.x += grid.x;  draw_rect_with_raw_color(vertical, color);
+            } else {
+                grid /= 2;
+
+                horizontal := r;
+                horizontal.h = 1;
+                horizontal.y += grid.y;  draw_rect_with_raw_color(horizontal, color);
+
+                vertical := r;
+                vertical.w = 1;
+                vertical.x += grid.x;  draw_rect_with_raw_color(vertical, color);
+            }
 
             Simp.immediate_flush();
         }

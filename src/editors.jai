@@ -66,20 +66,32 @@ handle_grid_navigate :: (grid_action : enum { northwest; north; northeast; west;
         reset_grid_navigation();
     }
 
-    if grid_action != .reset  size /= 3;
+    divisor, small_step, big_step: float;
+    if !config.settings.grid_navigation_quadrant_mode {
+        divisor = 3;
+        small_step = 1;
+        big_step = 2;
+    }
+    else {
+        divisor = 2;
+        small_step = 0.5;
+        big_step = 1;
+    }
+
+    if grid_action != .reset  size /= divisor;
 
     u, v: float;
     if grid_action == {
         case .reset; #through;
-        case .southwest;  u = size * 0; v = size * 0;
-        case .south;      u = size * 1; v = size * 0;
-        case .southeast;  u = size * 2; v = size * 0;
-        case .west;       u = size * 0; v = size * 1;
-        case .center;     u = size * 1; v = size * 1;
-        case .east;       u = size * 2; v = size * 1;
-        case .northwest;  u = size * 0; v = size * 2;
-        case .north;      u = size * 1; v = size * 2;
-        case .northeast;  u = size * 2; v = size * 2;
+        case .southwest;  u = size * 0;          v = size * 0;
+        case .south;      u = size * small_step; v = size * 0;
+        case .southeast;  u = size * big_step;   v = size * 0;
+        case .west;       u = size * 0;          v = size * small_step;
+        case .center;     u = size * small_step; v = size * small_step;
+        case .east;       u = size * big_step;   v = size * small_step;
+        case .northwest;  u = size * 0;          v = size * big_step;
+        case .north;      u = size * small_step; v = size * big_step;
+        case .northeast;  u = size * big_step;   v = size * big_step;
     }
 
     uv.x += u;
