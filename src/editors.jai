@@ -48,6 +48,71 @@ editors_handle_event :: (event: Input.Event) -> handled: bool {
     return false;
 }
 
+grid_navigation : struct {
+    last_press_time: float64;
+    editor_id_should_jump: int;
+    extend_selection: bool;
+    uv: Vector2;
+    size: float;
+
+    finish_when_smaller_than :: 1.0 / 3.0 / 3.0;
+    fade_out_duration : float64 : 0.2;
+}
+
+handle_grid_navigate :: (grid_action : enum { northwest; north; northeast; west; center; east; southwest; south; southeast; reset; }, keep_selection: bool) {
+    using grid_navigation;
+
+    if last_press_time + config.settings.grid_navigation_display_duration < frame_time64 || grid_action == .reset {
+        reset_grid_navigation();
+    }
+
+    divisor, small_step, big_step: float;
+    if !config.settings.grid_navigation_quadrant_mode {
+        divisor = 3;
+        small_step = 1;
+        big_step = 2;
+    }
+    else {
+        divisor = 2;
+        small_step = 0.5;
+        big_step = 1;
+    }
+
+    if grid_action != .reset  size /= divisor;
+
+    u, v: float;
+    if grid_action == {
+        case .reset; #through;
+        case .southwest;  u = size * 0;          v = size * 0;
+        case .south;      u = size * small_step; v = size * 0;
+        case .southeast;  u = size * big_step;   v = size * 0;
+        case .west;       u = size * 0;          v = size * small_step;
+        case .center;     u = size * small_step; v = size * small_step;
+        case .east;       u = size * big_step;   v = size * small_step;
+        case .northwest;  u = size * 0;          v = size * big_step;
+        case .north;      u = size * small_step; v = size * big_step;
+        case .northeast;  u = size * big_step;   v = size * big_step;
+    }
+
+    uv.x += u;
+    uv.y += v;
+    editor_id_should_jump = editors.active;
+    extend_selection = keep_selection;
+    last_press_time = frame_time64;
+}
+
+soft_reset_grid_navigation :: () { // Will cause the drawn grid to fade out rather than instantly vanish.
+    using grid_navigation;
+    last_press_time = min(last_press_time, frame_time64 - config.settings.grid_navigation_display_duration + grid_navigation.fade_out_duration);
+}
+
+reset_grid_navigation :: () {
+    using grid_navigation;
+    last_press_time = 0;
+    size = 1.0;
+    uv = .{};
+}
+
 activate_editors :: () {
     active_global_widget = .editors;
     cursors_start_blinking();
@@ -241,6 +306,17 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .jump_to_file_end;                 move_to_file_end                    (editor, buffer);
         case .jump_to_matching_bracket;         move_to_matching_bracket            (editor, buffer, shift_pressed); keep_selection = true;
 
+        case .grid_navigation_northwest;        handle_grid_navigate                (.northwest, shift_pressed);
+        case .grid_navigation_north;            handle_grid_navigate                (.north,     shift_pressed);
+        case .grid_navigation_northeast;        handle_grid_navigate                (.northeast, shift_pressed);
+        case .grid_navigation_west;             handle_grid_navigate                (.west,      shift_pressed);
+        case .grid_navigation_center;           handle_grid_navigate                (.center,    shift_pressed);
+        case .grid_navigation_east;             handle_grid_navigate                (.east,      shift_pressed);
+        case .grid_navigation_southwest;        handle_grid_navigate                (.southwest, shift_pressed);
+        case .grid_navigation_south;            handle_grid_navigate                (.south,     shift_pressed);
+        case .grid_navigation_southeast;        handle_grid_navigate                (.southeast, shift_pressed);
+        case .grid_navigation_reset;            handle_grid_navigate                (.reset,     shift_pressed);
+
         case .select_line;                      select_lines                        (editor, buffer); keep_selection = true;
         case .copy;                             copy_selection_to_clipboard         (editor, buffer);
 
@@ -301,6 +377,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
 
     if new_group then new_edit_group(buffer, editor);  // do it after action
 
+    if !is_a_grid_navigation_action(action)  soft_reset_grid_navigation();
     if is_a_move_action(action) && shift_pressed then keep_selection = true;
 
     if editor.cursor_moved && !keep_selection {
@@ -340,6 +417,8 @@ active_editor_type_char :: (char: u32) {
         editor.search_bar.scroll_to_selected = .snap;
         return;
     }
+
+    soft_reset_grid_navigation();
 
     if buffer.readonly return;
 
@@ -2093,6 +2172,25 @@ is_a_move_action :: (action: Action_Editors) -> bool {
         case .jump_to_line_end;                 return true;
         case .jump_to_file_start;               return true;
         case .jump_to_file_end;                 return true;
+    }
+
+    if is_a_grid_navigation_action(action)      return true;
+
+    return false;
+}
+
+is_a_grid_navigation_action :: (action: Action_Editors) -> bool {
+    if action == {
+        case .grid_navigation_northwest;        return true;
+        case .grid_navigation_north;            return true;
+        case .grid_navigation_northeast;        return true;
+        case .grid_navigation_west;             return true;
+        case .grid_navigation_center;           return true;
+        case .grid_navigation_east;             return true;
+        case .grid_navigation_southwest;        return true;
+        case .grid_navigation_south;            return true;
+        case .grid_navigation_southeast;        return true;
+        case .grid_navigation_reset;            return true;
     }
     return false;
 }
@@ -4053,6 +4151,8 @@ move_to_editor_history_frame :: (frame: Editor_History_Frame, old_frame: Editor_
     put_cursor_in_valid_spot(cursor, open_buffers[editor.buffer_id]);
 }
 
+CURSOR_BLINK_SPEED_MS   :: 500;
+
 #scope_file
 
 cursor_blink_start: Apollo_Time;
@@ -4061,6 +4161,5 @@ cursors_blinking := false;
 global_config_buffer_id := -1;
 global_troubleshooting_buffer_id := -1;
 
-CURSOR_BLINK_SPEED_MS   :: 500;
 
 #import "Clipboard";

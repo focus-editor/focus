@@ -417,6 +417,17 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "toggle_line_wrap",
     "toggle_line_numbers",
     "copy_current_line_info",
+
+    "grid_navigation_northwest",
+    "grid_navigation_north",
+    "grid_navigation_northeast",
+    "grid_navigation_west",
+    "grid_navigation_center",
+    "grid_navigation_east",
+    "grid_navigation_southwest",
+    "grid_navigation_south",
+    "grid_navigation_southeast",
+    "grid_navigation_reset",
 ]);
 
 ACTIONS_OPEN_FILE_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[

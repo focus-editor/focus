@@ -347,8 +347,8 @@ vec3 hsl2rgb( in vec3 c )
 
 void main () {
     vec2 uv = vec2((gl_FragCoord.x - rect.x) / rect.z, (gl_FragCoord.y - rect.y) / rect.w);
-    // This is line 44
-    switch (mode) {
+    float a = iterated_color.a;
+    switch (mode) {  // mode values come from Gradient_Mode in color_picker.jai
         case 0x00:  // 2d controlled by red
         color.r = value;
         color.gb = uv.xy;
@@ -443,13 +443,21 @@ void main () {
         case 0x26: // 1d horizontal displaying alpha
         color.rgb = vec3(uv.x);
         break;
+
+        case 0x30: // Checkboard alpha
+        int i = int((gl_FragCoord.x - rect.x) / value);
+        int j = int((gl_FragCoord.y - rect.y) / value);
+        i = (i ^ j) & 1;
+        a = iterated_color.a * float(i);
+        color = iterated_color;
+        break;
     }
 
     // When color is between two displayable values dither it to avoid banding; round it up or down randomly,
     // proportionate to which it is nearer to.
     vec4 remainder = fract(color * 255.0);
     color = color - (remainder / 255.0) + (1.0 / 255.0) - (step(remainder, random4(uv)) / 255.0);
-    color.a = iterated_color.a;
+    color.a = a;
 }
 #endif // FRAGMENT_SHADER
 GLSL
