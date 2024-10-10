@@ -191,6 +191,11 @@ add_if_unique :: inline (array: *Array($T), value: T) -> was_added: bool {
     return !found;
 }
 
+contains :: (array: Array($T), value: T) -> found: bool {
+    _, found := inline find(array, value);
+    return found;
+}
+
 find :: (array: Array($T), value: T) -> index: s32, found: bool {
     index : s32 = 0;
     while index < array.count {

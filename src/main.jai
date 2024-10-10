@@ -266,7 +266,7 @@ main :: () {
                     }
 
                     // Recent buffer switching
-                    if event.key_code == .CTRL && !event.key_pressed && buffer_history.switching_buffers_for {
+                    if event.key_code == .CTRL && !event.key_pressed && buffer_history.switching_editors_for {
                         do_recent_buffer_move();
                     }
 

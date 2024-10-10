@@ -320,7 +320,8 @@ reload_workspace :: (automatic := false) {
         }
         recent_editors.count = write_index;
     }
-    update_recent_editors(*recent_buffers);
+    update_recent_editors(*left_recent_editors);
+    update_recent_editors(*right_recent_editors);
 
     bucket_array_reset(*open_buffers);
     open_buffers = new_open_buffers;
