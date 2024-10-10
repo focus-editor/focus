@@ -58,6 +58,8 @@ get_key_code :: (wParam: WPARAM, extended := false) -> Key_Code {
         return SHIFT;
     if wParam == VK_CONTROL
         return CTRL;
+    if wParam == VK_APPS
+        return CMD;
     if wParam == VK_BACK
         return BACKSPACE;
     if wParam == VK_DELETE
@@ -458,6 +460,14 @@ update_window_events :: () {
         }
     }
 
+    if cmd_state || (input_button_states[Key_Code.CMD] & .DOWN) { // Checking both just to be paranoid about desync between them.
+        state := GetAsyncKeyState(VK_APPS);  // GetAsyncKeyState actually checks the key, not to be confused with GetKeyState, which does nothing.
+        if !(state & 0x8000) {
+            cmd_state = false;
+            input_button_states[Key_Code.CMD] |= .END;
+        }
+    }
+
     while true {
         msg: MSG;
 
@@ -506,6 +516,7 @@ update_window_events :: () {
 shift_state := false;
 ctrl_state  := false;
 alt_state   := false;
+cmd_state   := false;
 
 
 // Nice tutorial about using raw input for games:
@@ -750,15 +761,17 @@ send_key_event :: (key_code: Key_Code, key_down: bool, repeat := false) {
     if key_code == .ALT     alt_state   = key_down;
     if key_code == .SHIFT   shift_state = key_down;
     if key_code == .CTRL    ctrl_state  = key_down;  // @Cleanup: Look at what I do in the Braid code because this is bananas.
+    if key_code == .CMD     cmd_state   = key_down;
 
     event: Event;
     event.type = .KEYBOARD;
     event.key_pressed = xx key_down;
     event.key_code = key_code;
     event.packed = 0;
-    event.shift_pressed = shift_state;
-    event.ctrl_pressed  = ctrl_state;
-    event.alt_pressed   = alt_state;
+    event.shift_pressed    = shift_state;
+    event.ctrl_pressed     = ctrl_state;
+    event.alt_pressed      = alt_state;
+    event.cmd_meta_pressed = cmd_state;
     event.repeat = repeat;
 
     utf32 := cast(u32) key_code;
