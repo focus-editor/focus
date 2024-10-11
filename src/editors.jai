@@ -72,6 +72,26 @@ editors_handle_file_drop :: (files: [] string) {
     }
 }
 
+revert_select_word_or_create_another_cursor :: (using editor: *Editor, buffer: *Buffer) {
+    if cursors.count == 1 {
+        cursor := *editor.cursors[0];
+        cursor.pos -= cursor.pos - cursor.sel;
+        cursor.sel  = cursor.pos;
+        cursor_moved = .unimportant;
+    } else {
+        organise_cursors(editor);
+        
+        ordered_remove_by_index(*cursors, main_cursor);
+        if main_cursor == 0 {
+            main_cursor = cursors.count - 1;
+        } else {
+            main_cursor -= 1;
+        }
+
+        cursor_moved = .selection;
+    }
+}
+
 active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Event, action: Action_Editors) -> handled: bool {
     context.current_editor_id = editors.active;  // used for edit notifications
     defer context.current_editor_id = -1;
@@ -202,6 +222,11 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .select_word;                      select_word(editor, buffer); keep_selection = true;
         case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
         case .select_all_occurrences;               enabled_whole_words = select_all_occurrences              (editor, buffer); keep_selection = true;
+        
+
+        
+        case .revert_select_word_or_create_another_cursor; revert_select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
+        case .select_next_word_or_create_another_cursor; 
 
         case .toggle_line_wrap;                 toggle_line_wrap                    (editor);
         case .toggle_line_numbers;              toggle_line_numbers                 ();
