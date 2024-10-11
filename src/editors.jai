@@ -3850,13 +3850,13 @@ splitter_anim: Tween_Animation(float);
 buffer_history: struct {
     switching_editors_for : enum { none; left; right; }
     buffer_index_cache: Array(s64);
+    has_duplicate_filename: Array(bool);
     recent_editors: Array(s64);
     recent_editors_index: int;
 
-    selected_tab_x_offset    := #run Tween_Animation(float).{ duration = 0.1, func = .smoothstep };
-    selected_tab_width       := #run Tween_Animation(float).{ duration = 0.1, func = .smoothstep };
+    selected_tab_x_offset    := #run Tween_Animation(float).{ duration = 0.15, func = .smoothstep };
+    selected_tab_width       := #run Tween_Animation(float).{ duration = 0.15, func = .smoothstep };
     selected_recent_editors_index: int;
-    has_duplicate_filename: Array(bool);
 }
 
 // @Note :EditorBufferProcNames
