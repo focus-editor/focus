@@ -431,17 +431,6 @@ reset_animation :: (using anim: *Tween_Animation($T)) {
     anim.target = 0;
 }
 
-is_animating :: (using anim: Tween_Animation($T)) -> bool {
-    return started_at + duration > frame_time64;
-}
-
-move_toward :: (current: *$T, target: T, speed: float) {
-    if current.* == target  return;
-
-    if current.* < target  current.* = min(current.* + speed * cast(float32) frame_dt, target);
-    else                   current.* = max(current.* - speed * cast(float32) frame_dt, target);
-}
-
 get_identifier_name :: (name: Code) -> string {
     node := compiler_get_nodes(name);
     if node.kind != .IDENT {
