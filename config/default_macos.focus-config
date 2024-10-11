@@ -262,6 +262,7 @@ Cmd-A                           select_all
 
 Cmd-W                           close_current_editor
 Cmd-Shift-W                     close_other_editor
+Alt-W                           close_current_buffer
 
 Escape                          escape  # combines close_dialog and remove_additional_cursors
 

@@ -414,7 +414,7 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "move_to_next_editor_history",
     "move_to_previous_buffer",
     "move_to_next_buffer",
-    "close_buffer",
+    "close_current_buffer",
     "toggle_line_wrap",
     "toggle_line_numbers",
     "copy_current_line_info",

@@ -3879,7 +3879,7 @@ move_to_previous_buffer :: () {
         else if editors.active == editors.right  switching_editors_for = .right;
         else return;
 
-        start_move_to_recent_buffer(0);
+        start_move_to_recent_buffer(.start);
         if !recent_editors {
             switching_editors_for = .none;
             return;
@@ -3887,6 +3887,7 @@ move_to_previous_buffer :: () {
     }
 
     if recent_editors_index < recent_editors.count - 1  recent_editors_index += 1;
+    update_window_title(open_editors[recent_editors[recent_editors_index]].buffer_id);
 }
 
 move_to_next_buffer :: () {
@@ -3906,27 +3907,54 @@ move_to_next_buffer :: () {
     }
 
     if recent_editors_index > 0  recent_editors_index -= 1;
+    update_window_title(open_editors[recent_editors[recent_editors_index]].buffer_id);
 }
 
-close_buffer :: () {
+close_current_buffer :: () {
     // :EditorBufferProcNames
 
-    editors: *Array(s64) = ---;
-    if editors.active == editors.left        editors = get_recent_editors_for_switch(.left);
-    else if editors.active == editors.right  editors = get_recent_editors_for_switch(.right);
-    else return;
+    active_editors, other_editors: *Array(s64) = ---;
+    active_pane, other_pane: *s64;
+    if editors.active == editors.left {
+        active_pane = *editors.left;
+        other_pane = *editors.right;
+        active_editors, other_editors = get_recent_editors_for_switch(.left);
+    } else if editors.active == editors.right {
+        active_pane = *editors.right;
+        other_pane = *editors.left;
+        active_editors, other_editors = get_recent_editors_for_switch(.right);
+    } else {
+        return;
+    }
 
-    if editors.count <= 1 {
-        editors.count = 0;
+    if !active_editors || active_editors.count == 0  return;
+
+    if other_editors && other_editors.count > 0 {
+        active_editor_index := active_editors.*[0];
+        buffer_id := open_editors[active_editor_index].buffer_id;
+        for editor_index, i : other_editors.* {
+            if open_editors[editor_index].buffer_id == buffer_id {
+                if other_editors.count == 1 {
+                    other_editors.count = 0;
+                    close_editor_by_id(editor_index);
+                } else {
+                    if i == 0  other_pane.* = other_editors.*[1];
+                    ordered_remove_by_index(other_editors, i);
+                }
+                break;
+            }
+        }
+    }
+
+    if active_editors.count == 1 {
+        active_editors.count = 0;
         close_current_editor();
         return;
     }
 
-    ordered_remove_by_index(editors, 0);
-    editor_id := editors.*[0];
-    if editors == *left_recent_editors  editors.left = editor_id;
-    else                                editors.right = editor_id;
-
+    ordered_remove_by_index(active_editors, 0);
+    editor_id := active_editors.*[0];
+    active_pane.* = editor_id;
     make_editor_active(editor_id);
 }
 
@@ -3969,7 +3997,7 @@ start_move_to_recent_buffer :: (initial_editor : enum { start; end; }) {
         add(*buffer_index_cache, buffer_id);
     }
 
-    recent_editors_index = ifx initial_editor == .start then 0 else recent_editors.count - 1;
+    recent_editors_index = ifx initial_editor == .start then 0 else recent_editors.count;
     selected_recent_editors_index = -1;
     reset_animation(*selected_tab_x_offset);
     reset_animation(*selected_tab_width);

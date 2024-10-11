@@ -408,7 +408,7 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
 
         case .move_to_previous_buffer;                          move_to_previous_buffer();                          return true;
         case .move_to_next_buffer;                              move_to_next_buffer();                              return true;
-        case .close_buffer;                                     close_buffer();                                     return true;
+        case .close_current_buffer;                             close_current_buffer();                             return true;
 
         case .toggle_build_panel;                               toggle_build_panel();                               return true;
 
