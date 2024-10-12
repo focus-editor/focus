@@ -1004,7 +1004,18 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
 
     if found_buffer return buffer_id, false;
 
-    // Create and load file
+    // Fill in buffer data
+    buffer = *open_buffers[buffer_id];
+    buffer.file = get_file_info_from_full_path(path);
+    buffer.has_file = true;
+
+    load_buffer_from_disk(buffer);
+
+    return buffer_id, true;
+}
+
+load_buffer_from_disk :: (buffer: *Buffer) {
+    path := buffer.file.full_path;
     file_data, success := read_entire_file(path);
     load_error := "";
     if !success {
@@ -1025,11 +1036,6 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
         buffer.lang = get_lang_from_path(path);
     }
 
-    // Fill in buffer data
-    buffer.file = get_file_info_from_full_path(path);
-    buffer.has_file = true;
-    remember_last_mod_info(buffer);
-
     lock(*buffer.content_lock);
     buffer.bytes = from_view(to_bytes(file_data));
     bytes_removed := remove_crlf_in_place(*buffer.bytes);
@@ -1037,11 +1043,11 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
 
     buffer.crlf = bytes_removed > 0;
     buffer.meow_hash = calculate_hash(to_view(buffer.bytes));
+    buffer.modified = false;
 
+    remember_last_mod_info(buffer);
     rescan_for_lines(buffer);
     retokenize(buffer);
-
-    return buffer_id, true;
 }
 
 get_buffer_name :: (buffer: Buffer) -> string {

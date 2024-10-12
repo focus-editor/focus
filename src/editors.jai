@@ -3929,9 +3929,14 @@ close_current_buffer :: () {
 
     if !active_editors || active_editors.count == 0  return;
 
+    active_editor_index := active_editors.*[0];
+    buffer_id := open_editors[active_editor_index].buffer_id;
+    if open_buffers[buffer_id].modified {
+        defer_action_close_buffer(buffer_id);
+        return;
+    }
+
     if other_editors && other_editors.count > 0 {
-        active_editor_index := active_editors.*[0];
-        buffer_id := open_editors[active_editor_index].buffer_id;
         for editor_index, i : other_editors.* {
             if open_editors[editor_index].buffer_id == buffer_id {
                 if other_editors.count == 1 {
@@ -4000,7 +4005,6 @@ start_move_to_recent_buffer :: (initial_editor : enum { start; end; }) {
     recent_editors_index = ifx initial_editor == .start then 0 else recent_editors.count;
     selected_recent_editors_index = -1;
     reset_animation(*selected_tab_x_offset);
-    reset_animation(*selected_tab_width);
 
     // Cache which editors have duplicate filenames, so we can draw the full path to disambiguate.
     if has_duplicate_filename.count < recent_editors.count {

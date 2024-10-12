@@ -1986,11 +1986,6 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         distance_from_center: float;
 
         current_tab_width := get_animation_value(selected_tab_width);
-        if current_tab_width == 0 {
-            current_tab_width = status_bar_rect.w;
-            selected_tab_width.start = current_tab_width;
-            selected_tab_width.target = current_tab_width;
-        }
         centered_tab := Rect.{status_bar_rect.x + (status_bar_rect.w - current_tab_width) / 2, status_bar_rect.y, current_tab_width, status_bar_rect.h};
         draw_rect(centered_tab, Color.LIST_CURSOR);
 
