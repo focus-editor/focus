@@ -1818,17 +1818,33 @@ revert_select_word_or_create_another_cursor :: (using editor: *Editor, buffer: *
 move_selection_to_next_word :: (using editor: *Editor, buffer: Buffer) 
 {
     if !get_selected_text_all_cursors(editor, buffer) return;
-
+    
+    organise_cursors(editor);
     old_main_cursor := main_cursor;
     
     select_word_or_create_another_cursor(editor, buffer);
+    if cursors.count == 1 return;
     
-    if old_main_cursor != main_cursor
-    {
-        ordered_remove_by_index(*cursors, old_main_cursor);
-        main_cursor = cursors.count - 1;
-        if old_main_cursor == original_cursor then original_cursor = 0;
+    ordered_remove_by_index(*cursors, old_main_cursor);
+
+    if old_main_cursor == main_cursor {
+        // We have deleted the main_cursor. This happens if the select_word_or_create_another_cursor
+        // call does not change the main_cursor. In this case we select the 'next' cursor as the main_cursor,
+        // wrapping around if needed.
+        main_cursor = ifx main_cursor >= cursors.count then 0 else main_cursor;
+    } else if old_main_cursor < main_cursor {
+        // Due to the deletion we have to decrement the main_cursor index by one.
+        main_cursor -= 1;
     }
+    
+    if old_main_cursor == original_cursor {
+        original_cursor = main_cursor;    
+    } else if old_main_cursor < original_cursor {
+        original_cursor -= 1;
+    }
+    
+    assert(main_cursor     < cursors.count);
+    assert(original_cursor < cursors.count);
 }
 
 select_all_occurrences :: (using editor: *Editor, buffer: Buffer, search_str := "") -> whole_words: bool {
