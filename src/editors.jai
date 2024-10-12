@@ -1803,6 +1803,7 @@ revert_select_word_or_create_another_cursor :: (using editor: *Editor, buffer: *
         }
     } else {
         organise_cursors(editor);
+        old_main_cursor := main_cursor;
         
         ordered_remove_by_index(*cursors, main_cursor);
         if main_cursor == 0 {
@@ -1810,9 +1811,21 @@ revert_select_word_or_create_another_cursor :: (using editor: *Editor, buffer: *
         } else {
             main_cursor -= 1;
         }
+        
+        if original_cursor > old_main_cursor {
+            original_cursor -= 1;
+        } else if original_cursor == old_main_cursor {
+            // This is suboptimal but can happen. If select_word_or_create_another_cursor does not find a new
+            // word to select it will set the main_cursor to the original_cursor. So it is completely possible
+            // that we revert the original_cursor.
+            // Maybe select_word_or_create_another_cursor should do nothing if it can't find a new word to select?
+            original_cursor = main_cursor;
+        }
     }
-    
     cursor_moved = .selection;
+    
+    assert(main_cursor     < cursors.count);
+    assert(original_cursor < cursors.count);
 }
 
 move_selection_to_next_word :: (using editor: *Editor, buffer: Buffer) 
