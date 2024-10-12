@@ -1015,6 +1015,9 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
 }
 
 load_buffer_from_disk :: (buffer: *Buffer) {
+    // This proc is for loading the file directly; the proc you want is more likely to be refresh_buffer_from_disk
+    assert(buffer.has_file, "Trying to load from disk a buffer with no file. This is a bug");
+
     path := buffer.file.full_path;
     file_data, success := read_entire_file(path);
     load_error := "";
