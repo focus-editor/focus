@@ -1822,10 +1822,13 @@ move_selection_to_next_word :: (using editor: *Editor, buffer: Buffer)
     old_main_cursor := main_cursor;
     
     select_word_or_create_another_cursor(editor, buffer);
-    ordered_remove_by_index(*cursors, old_main_cursor);
     
-    main_cursor = cursors.count - 1;
-    if old_main_cursor == original_cursor then original_cursor = 0;
+    if old_main_cursor != main_cursor
+    {
+        ordered_remove_by_index(*cursors, old_main_cursor);
+        main_cursor = cursors.count - 1;
+        if old_main_cursor == original_cursor then original_cursor = 0;
+    }
 }
 
 select_all_occurrences :: (using editor: *Editor, buffer: Buffer, search_str := "") -> whole_words: bool {
