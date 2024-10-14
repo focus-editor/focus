@@ -700,9 +700,12 @@ RUN_TESTS :: false;
     // run_test("Workspace migration from [4]",  "global.focus-config",  WORKSPACE_4,              WORKSPACE_4_EXPECTED);
 }
 
-run_test :: (test_name: string, file_name: string, config_data: string, expected_data: string) {
+run_test :: (test_name: string, file_name: string, config_data: string, expected_template: string) {
     migrated, modified_data := maybe_migrate_config(file_name, config_data);
     assert(migrated, "%: unexpectedly did not migrate successfully", test_name);
+
+    expected_data := replace(expected_template, "[!latest!]", tprint("[%]", CURRENT_CONFIG_VERSION));
+
     if modified_data != expected_data {
         print("EXPECTED DATA ========================\n");
         print("%", cast(string) expected_data);
@@ -762,7 +765,7 @@ todo.txt : todo
 FOCUS_CONFIG
 
 WORKSPACE_3_EXPECTED :: #string FOCUS_CONFIG
-[6]  # Version number. Do not delete.
+[!latest!]  # Version number. Do not delete.
 
 [[workspace]]
 # These directories and files will be scanned when a workspace is opened so that search etc. works.
@@ -819,7 +822,7 @@ C:/projects/project1
 FOCUS_CONFIG
 
 PROJECT_WORKSPACE_3_EXPECTED :: #string FOCUS_CONFIG
-[6]  # Version number. Do not delete.
+[!latest!]  # Version number. Do not delete.
 
 [[workspace]]
 # These directories and files will be scanned when a workspace is opened so that search etc. works.
@@ -875,7 +878,7 @@ todo.txt : todo
 FOCUS_CONFIG
 
 WORKSPACE_4_EXPECTED :: #string FOCUS_CONFIG
-[6]  # Version number. Do not delete.
+[!latest!]  # Version number. Do not delete.
 
 [[keymap]]
 [common]
@@ -947,7 +950,7 @@ strip_trailing_whitespace_on_save:      true
 FOCUS_CONFIG
 
 SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
-[6]  # Version number. Do not delete.
+[!latest!]  # Version number. Do not delete.
 
 [[workspace]]
 # These directories and files will be scanned when a workspace is opened so that search etc. works.
@@ -963,7 +966,7 @@ SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
 [common]
 Ctrl-P                      open_file_by_name
 
-# Added after migration to version [6]
+# Added after migration to version [!latest!]
 Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
@@ -986,7 +989,7 @@ show_cursors_off_screen:                true
 persist_local_search_results:           false
 strip_trailing_whitespace_on_save:      except_lines_with_cursor  # options: all, except_lines_with_cursor, disabled
 
-# Added after migration to version [6]
+# Added after migration to version [!latest!]
 build_panel_height_percent:                      50
 build_panel_stays_in_one_place:                  false  # if false, the build panel will flip to the inactive pane in two pane layouts
 build_panel_line_wrap_always_on:                 true
@@ -1049,7 +1052,7 @@ scroll_beyond_last_line:                true
 FOCUS_CONFIG
 
 SETTINGS_2_EXPECTED :: #string FOCUS_CONFIG
-[6]  # Version number. Do not delete.
+[!latest!]  # Version number. Do not delete.
 
 [[workspace]]
 # These directories and files will be scanned when a workspace is opened so that search etc. works.
@@ -1070,7 +1073,7 @@ Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 
-# Added after migration to version [6]
+# Added after migration to version [!latest!]
 Ctrl-Shift-Alt-N            open_another_editor_instance
 F8                          go_to_next_build_error
 Ctrl-F8                     go_to_next_build_error_on_the_side
@@ -1096,7 +1099,7 @@ draw_indent_guides:                     false
 auto_surround_with_brackets_and_quotes: false
 scroll_beyond_last_line:                true
 
-# Added after migration to version [6]
+# Added after migration to version [!latest!]
 save_current_buffer_on_build:                    false
 save_all_file_backed_buffers_on_build:           false
 disable_viewport_chasing_cursor_near_the_edge:   false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts
@@ -1143,7 +1146,7 @@ persist_local_search_results:           false
 FOCUS_CONFIG
 
 PROJECT_SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
-[6]  # Version number. Do not delete.
+[!latest!]  # Version number. Do not delete.
 
 [[workspace]]
 # These directories and files will be scanned when a workspace is opened so that search etc. works.
@@ -1152,7 +1155,7 @@ PROJECT_SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
 [common]
 Ctrl-P                      open_file_by_name
 
-# Added after migration to version [6]
+# Added after migration to version [!latest!]
 Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
@@ -1200,7 +1203,7 @@ scrollbar_background:                   FF191F4C
 FOCUS_CONFIG
 
 COLORS_1_EXPECTED :: #string FOCUS_CONFIG
-[6]   # Version number. Do not delete.
+[!latest!]   # Version number. Do not delete.
 
 [[style]]
 
@@ -1218,7 +1221,7 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
-# Added after migration to version [6]
+# Added after migration to version [!latest!]
 code_warning:                           E4D97DFF
 region_scope_export:                    15212AFF
 region_scope_file:                      15212AFF
@@ -1282,7 +1285,7 @@ scrollbar_background:                   FF191F4C
 FOCUS_CONFIG
 
 COLORS_2_EXPECTED :: #string FOCUS_CONFIG
-[6]   # Version number. Do not delete.
+[!latest!]   # Version number. Do not delete.
 
 [[style]]
 
@@ -1300,7 +1303,7 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
-# Added after migration to version [6]
+# Added after migration to version [!latest!]
 region_heredoc:                         10191FFF
 code_invalid:                           FF0000FF
 code_multiline_string:                  D4BC7DFF
@@ -1372,7 +1375,7 @@ scrollbar_background:                   FF191F4C
 FOCUS_CONFIG
 
 COLORS_AND_SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
-[6]   # Version number. Do not delete.
+[!latest!]   # Version number. Do not delete.
 
 [[workspace]]
 # These directories and files will be scanned when a workspace is opened so that search etc. works.
@@ -1393,7 +1396,7 @@ insert_spaces_when_pressing_tab:        true
 prefer_system_file_dialogs:             false  # Windows only
 show_cursors_off_screen:                true
 
-# Added after migration to version [6]
+# Added after migration to version [!latest!]
 build_panel_height_percent:                      50
 build_panel_stays_in_one_place:                  false  # if false, the build panel will flip to the inactive pane in two pane layouts
 build_panel_line_wrap_always_on:                 true
@@ -1435,7 +1438,7 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
-# Added after migration to version [6]
+# Added after migration to version [!latest!]
 code_warning:                           E4D97DFF
 region_scope_export:                    15212AFF
 region_scope_file:                      15212AFF
@@ -1526,7 +1529,7 @@ Ctrl-Alt-P                  switch_to_project
 FOCUS_CONFIG
 
 KEYBINDS_1_EXPECTED :: #string FOCUS_CONFIG
-[6]  # Version number. Do not delete.
+[!latest!]  # Version number. Do not delete.
 
 [[style]]
 
@@ -1544,7 +1547,7 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
-# Added after migration to version [6]
+# Added after migration to version [!latest!]
 code_warning:                           E4D97DFF
 region_scope_export:                    15212AFF
 region_scope_file:                      15212AFF
@@ -1596,7 +1599,7 @@ Ctrl-Escape                 remove_additional_cursors
 Ctrl-D                      select_word_or_create_another_cursor
 Ctrl-Shift-A                select_all_occurrences
 
-# Added after migration to version [6]
+# Added after migration to version [!latest!]
 Alt-Shift-I                 add_cursors_to_line_ends
 Alt-Shift-Ctrl-I            add_cursors_to_line_starts
 Alt-A                       align_cursors
@@ -1615,7 +1618,7 @@ Ctrl-Tab                    switch_between_open_files
 
 Ctrl-Alt-P                  switch_to_project
 
-# Added after migration to version [6]
+# Added after migration to version [!latest!]
 Ctrl-B                      toggle_build_panel
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
@@ -1662,7 +1665,7 @@ Ctrl-Alt-P                  switch_to_project
 FOCUS_CONFIG
 
 KEYBINDS_2_EXPECTED :: #string FOCUS_CONFIG
-[6]  # Version number. Do not delete.
+[!latest!]  # Version number. Do not delete.
 
 [[keymap]]
 
@@ -1691,7 +1694,7 @@ Ctrl-Tab                    switch_between_open_files
 
 Ctrl-Alt-P                  switch_to_project
 
-# Added after migration to version [6]
+# Added after migration to version [!latest!]
 Ctrl-Shift-Alt-N            open_another_editor_instance
 F8                          go_to_next_build_error
 Ctrl-F8                     go_to_next_build_error_on_the_side
@@ -1723,7 +1726,7 @@ scrollbar_background:                   FF191F4C
 FOCUS_CONFIG
 
 THEME_1_EXPECTED :: #string FOCUS_CONFIG
-[6]   # Version number. Do not delete.
+[!latest!]   # Version number. Do not delete.
 
 [fonts]
 font:       default
@@ -1739,7 +1742,7 @@ background4:                            21333FFF
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
 
-# Added after migration to version [6]
+# Added after migration to version [!latest!]
 code_warning:                           E4D97DFF
 region_scope_export:                    15212AFF
 region_scope_file:                      15212AFF
@@ -1852,7 +1855,7 @@ build_panel_title_bar:                  121212FF
 FOCUS_CONFIG
 
 THEME_3_EXPECTED :: #string FOCUS_CONFIG
-[6]  # Version number. Do not delete
+[!latest!]  # Version number. Do not delete
 
 [colors]
 
@@ -1919,7 +1922,7 @@ build_panel_scrollbar_hover:            CDAA7D4C
 build_panel_scrollbar_background:       CDAA7D11
 build_panel_title_bar:                  121212FF
 
-# Added after migration to version [6]
+# Added after migration to version [!latest!]
 code_invalid:                           FF0000FF
 code_multiline_string:                  6B8E23FF
 code_raw_string:                        6B8E23FF

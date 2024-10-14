@@ -12,6 +12,7 @@
     + New action `create_cursors_around`. Creates cursors above and below so that they extend up to the surrounding whitespace (thanks @onelivesleft)
     + Added support for F13-F24 in keybindings
     + New font options in the style section - `font_ui`, `font_ui_bold`, `font_ui_size` (thanks @hfr4)
+    + Windows rmenu key can now be used in keybinds as `cmd` (thanks @onelivesleft)
 + Bug fixes:
     + Fixed a crash when changing languages in the color preview widget
     + Fixed font size changing when you press ctrl after scrolling has started (thanks @onelivesleft)
