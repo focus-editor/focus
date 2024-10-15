@@ -945,6 +945,19 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
                     END;
                     print_to_builder(*b, code, setting.name);
 
+                case .FLOAT;
+                    code := #string END
+                        float_val, success := parse_float(*value);
+                        if success {
+                            add_highlight(parser, cast(s64)(setting_value.data - line.data), setting_value.count, .value);
+                            result.config.settings.%1 = float_val;
+                        } else {
+                            add_highlight(parser, cast(s64)(setting_value.data - line.data), setting_value.count, .error);
+                            return true, tprint("Couldn't parse '%1' - expected a valid float, got '%%'", setting_value);
+                        }
+                    END;
+                    print_to_builder(*b, code, setting.name);
+
                 case .ENUM;
                     code := #string END
                         enum_info := type_info(type_of(Settings.%1));

@@ -36,6 +36,8 @@ Gradient_Mode :: enum u8 {
     saturation_horizontal_1d :: 0x24;
     lightness_horizontal_1d  :: 0x25;
     alpha_horizontal_1d      :: 0x26;
+
+    checkered_alpha          :: 0x30;
 }
 
 color_picker_set_mode :: (mode: Gradient_Mode) {
