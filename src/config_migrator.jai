@@ -587,23 +587,24 @@ COLOR_VALUES_INDENT :: #run -> int {
 }
 
 ADDED_KEYBINDS :: Added_Keybind.[
-    .{ 2, "editors", "add_cursors_to_line_ends",                  "Alt-Shift-I",        "Alt-Shift-I"      },
-    .{ 2, "editors", "add_cursors_to_line_starts",                "Alt-Shift-Ctrl-I",   "Alt-Shift-Ctrl-I" },
-    .{ 2, "editors", "align_cursors",                             "Alt-A",              "Alt-Cmd-A"        },
-    .{ 2, "editors", "select_all_occurrences",                    "Ctrl-Shift-A",       "Cmd-Shift-A"      },
-    .{ 2, "common",  "toggle_build_panel",                        "Ctrl-B",             "Cmd-B"            },
-    .{ 2, "common",  "toggle_fullscreen",                         "F11",                "F11"              },
-    .{ 2, "common",  "switch_between_open_files",                 "Ctrl-Tab",           "Ctrl-Tab"         },
+    .{ 2, "editors", "add_cursors_to_line_ends",                  "Alt-Shift-I",         "Alt-Shift-I"      },
+    .{ 2, "editors", "add_cursors_to_line_starts",                "Alt-Shift-Ctrl-I",    "Alt-Shift-Ctrl-I" },
+    .{ 2, "editors", "align_cursors",                             "Alt-A",               "Alt-Cmd-A"        },
+    .{ 2, "editors", "select_all_occurrences",                    "Ctrl-Shift-A",        "Cmd-Shift-A"      },
+    .{ 2, "common",  "toggle_build_panel",                        "Ctrl-B",              "Cmd-B"            },
+    .{ 2, "common",  "toggle_fullscreen",                         "F11",                 "F11"              },
+    .{ 2, "common",  "switch_between_open_files",                 "Ctrl-Tab",            "Ctrl-Tab"         },
 
-    .{ 3, "common",  "open_another_editor_instance",              "Ctrl-Shift-Alt-N",   "Cmd-Shift-Alt-N"  },
-    .{ 3, "common",  "go_to_next_build_error",                    "F8",                 "F8"               },
-    .{ 3, "common",  "go_to_next_build_error_on_the_side",        "Ctrl-F8",            "Cmd-F8"           },
-    .{ 3, "common",  "go_to_previous_build_error",                "Shift-F8",           "Shift-F8"         },
-    .{ 3, "common",  "go_to_previous_build_error_on_the_side",    "Shift-Ctrl-F8",      "Shift-Cmd-F8"     },
+    .{ 3, "common",  "open_another_editor_instance",              "Ctrl-Shift-Alt-N",    "Cmd-Shift-Alt-N"  },
+    .{ 3, "common",  "go_to_next_build_error",                    "F8",                  "F8"               },
+    .{ 3, "common",  "go_to_next_build_error_on_the_side",        "Ctrl-F8",             "Cmd-F8"           },
+    .{ 3, "common",  "go_to_previous_build_error",                "Shift-F8",            "Shift-F8"         },
+    .{ 3, "common",  "go_to_previous_build_error_on_the_side",    "Shift-Ctrl-F8",       "Shift-Cmd-F8"     },
 
-    .{ 5, "common", "jump_to_matching_bracket",                   "{Shift}-Ctrl-M",     "{Shift}-Cmd-M"    },
+    .{ 5, "common", "jump_to_matching_bracket",                   "{Shift}-Ctrl-M",      "{Shift}-Cmd-M"    },
 
-    .{ 7, "editor", "change_case_cycle",                          "Ctrl-U",             "Cmd-U"    },
+    .{ 7, "editor", "create_cursors_around",                      "Alt-Shift-ArrowLeft", "Opt-Shift-ArrowLeft" },
+    .{ 7, "editor", "change_case_cycle",                          "Ctrl-U",              "Cmd-U"    },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
@@ -623,7 +624,6 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
         "copy",
         "create_cursor_above",
         "create_cursor_below",
-        "create_cursors_around",
         "create_new_file",
         "create_new_file_on_the_side",
         "cut",
