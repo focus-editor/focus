@@ -497,6 +497,8 @@ ADDED_SETTINGS :: Added_Setting.[
 
     .{ 6, "search_is_case_sensitive_when_uppercase_present",    "false" },
     .{ 6, "projects_sorting_order",                             "most_recent_first  #options: most_recent_first, alphabetical, alphabetical_no_case" },
+
+    .{ 7, "show_ruler_at_column",                               "0" },
 ];
 
 RENAMED_SETTINGS :: Renamed_Setting.[
@@ -522,6 +524,14 @@ RENAMED_COLORS :: Renamed_Color.[
 
     .{ 4, "code_string",          "code_string_literal" },
 ];
+
+
+#if PERFORM_BUILD_CHECKS {
+    original_color_count :: 45;
+    expected_added_color_count :: cast(int) Color.NONE - original_color_count;
+    #assert expected_added_color_count <= ADDED_COLORS.count  "When you add a new Color you need to add an entry to ADDED_COLORS!";
+    #assert expected_added_color_count >= ADDED_COLORS.count  "One or more Colors have been removed. This should not happen!";
+}
 
 ADDED_COLORS :: Added_Color.[
     .{ 2, "code_warning",                     "",                       "E4D97DFF" },
@@ -563,7 +573,10 @@ ADDED_COLORS :: Added_Color.[
     .{ 4, "code_header4",                     "code_operation",         "E0AD82FF" },
     .{ 4, "code_header5",                     "code_operation",         "E0AD82FF" },
     .{ 4, "code_header6",                     "code_operation",         "E0AD82FF" },
+
+    .{ 7, "ruler",                            "cursor_inactive",        "1966667F" },
 ];
+
 
 COLOR_VALUES_INDENT :: #run -> int {
     length := 0;
@@ -589,6 +602,8 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 3, "common",  "go_to_previous_build_error_on_the_side",    "Shift-Ctrl-F8",      "Shift-Cmd-F8"     },
 
     .{ 5, "common", "jump_to_matching_bracket",                   "{Shift}-Ctrl-M",     "{Shift}-Cmd-M"    },
+
+    .{ 7, "editor", "change_case_cycle",                          "Ctrl-U",             "Cmd-U"    },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
@@ -597,6 +612,132 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
     .{ 2, "",  "show_open_file_dialog_in_navigate_mode_from_root",  "navigate_to_file_from_root" },
     .{ 2, "",  "show_open_file_dialog_in_open_editors_mode",        "switch_between_open_files"  },
 ];
+
+#if PERFORM_BUILD_CHECKS {
+    // These are the keybinds originally present in the default config.
+    // It's unlikely that this should ever be changed!
+    ORIGINAL_KEYBINDS :: string.[
+        "break_line",
+        "close_current_editor",
+        "close_other_editor",
+        "copy",
+        "create_cursor_above",
+        "create_cursor_below",
+        "create_cursors_around",
+        "create_new_file",
+        "create_new_file_on_the_side",
+        "cut",
+        "decrease_font_size",
+        "delete_left_char",
+        "delete_right_char",
+        "delete_to_end_of_line",
+        "delete_to_start_of_line",
+        "delete_word_left",
+        "delete_word_left_no_underscore",
+        "delete_word_right",
+        "delete_word_right_no_underscore",
+        "duplicate_editor",
+        "duplicate_lines",
+        "escape",
+        "go_to_line",
+        "increase_font_size",
+        "indent",
+        "indent_or_go_to_next_tabstop",
+        "join_lines",
+        "join_lines_no_spaces_in_between",
+        "jump_to_file_end",
+        "jump_to_file_start",
+        "jump_to_line_end",
+        "jump_to_line_start",
+        "move_cursor_to_viewport_center",
+        "move_down",
+        "move_down_fast",
+        "move_down_one_page",
+        "move_down_to_empty_line",
+        "move_editor_to_the_left",
+        "move_editor_to_the_right",
+        "move_left",
+        "move_left_by_word",
+        "move_left_by_word_ends",
+        "move_right",
+        "move_right_by_word",
+        "move_right_by_word_ends",
+        "move_selected_lines_down",
+        "move_selected_lines_up",
+        "move_to_next_buffer",
+        "move_to_next_editor_history",
+        "move_to_previous_buffer",
+        "move_to_previous_editor_history",
+        "move_up",
+        "move_up_fast",
+        "move_up_one_page",
+        "move_up_to_empty_line",
+        "new_line_above_without_breaking",
+        "new_line_below_without_breaking",
+        "open_directory",
+        "open_entry_in_explorer",
+        "open_entry_in_place",
+        "open_entry_on_the_left",
+        "open_entry_on_the_right",
+        "open_entry_on_the_side",
+        "paste",
+        "pop_directory",
+        "quit",
+        "redo",
+        "reset_font_size_to_default",
+        "save",
+        "save_as",
+        "scroll_viewport_down",
+        "scroll_viewport_down_fast",
+        "scroll_viewport_left",
+        "scroll_viewport_right",
+        "scroll_viewport_up",
+        "scroll_viewport_up_fast",
+        "search_in_buffer",
+        "search_in_buffer_dropdown_mode",
+        "search_in_project",
+        "select_all",
+        "select_line",
+        "select_word",
+        "select_word_or_create_another_cursor",
+        "show_commands",
+        "switch_to_left_editor",
+        "switch_to_other_editor",
+        "switch_to_project",
+        "switch_to_right_editor",
+        "toggle_case_sensitive",
+        "toggle_comment",
+        "toggle_expand",
+        "toggle_line_numbers",
+        "toggle_line_wrap",
+        "toggle_regex_search",
+        "toggle_whole_word",
+        "undo",
+        "unindent",
+    ];
+}
+
+#scope_export
+check_added_keybinds :: (config: Parsed_Config) {
+    #if PERFORM_BUILD_CHECKS {
+        expected_keybinds : [..] string;
+        for ADDED_KEYBINDS  array_add(*expected_keybinds, it.action);
+        for RENAMED_KEYBINDS  array_add(*expected_keybinds, it.new_name);
+        for ORIGINAL_KEYBINDS  array_add(*expected_keybinds, it);
+        check_keymap :: (keymap: [] Key_Mapping, action_names: [] string) #expand {
+            for keymap {
+                name := action_names[it.action];
+                assert(array_find(expected_keybinds, name), "Keybind \"%\" found in default config which should be added to ADDED_KEYBINDS or RENAMED_KEYBINDS.", name);
+            }
+        }
+        check_keymap(config.keymap_common,           enum_names(Action_Common));
+        check_keymap(config.keymap_editors,          enum_names(Action_Editors));
+        check_keymap(config.keymap_open_file_dialog, enum_names(Action_Open_File_Dialog));
+        check_keymap(config.keymap_search_dialog,    enum_names(Action_Search_Dialog));
+    }
+}
+#scope_file
+
 
 KEYBINDS_INDENT :: 28;
 

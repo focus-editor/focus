@@ -1,4 +1,6 @@
-CURRENT_CONFIG_VERSION :: 6;
+// Only Obiwanus should update these two values!
+CURRENT_CONFIG_VERSION       :: 7;  // Config version currently being worked on. New config settings should be annotated with this version.
+LAST_RELEASED_CONFIG_VERSION :: 6;  // Config version in last public release.
 
 load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
     config_path := tprint("%/global.focus-config", config_dir);
@@ -569,59 +571,59 @@ Workspace :: struct {
 }
 
 Settings :: struct {
-    maximize_on_start                                       := false;
-    open_on_the_biggest_monitor                             := true;
-    window_width                                            := -1;
-    window_height                                           := -1;
-    window_x                                                := -1000;  // using -1000 because -1 could be a valid value someone might want
-    window_y                                                := -1000;
-    cursor_as_block                                         := true;
-    cursor_blink_time_in_seconds                            := 5;
-    highlight_selection_occurrences                         := true;
-    highlight_line_with_cursor                              := false;
-    highlight_matching_brackets                             := false;
-    show_paste_effect                                       := true;
-    disable_file_open_close_animations                      := false;
-    disable_viewport_chasing_cursor_near_the_edge           := false;
-    double_shift_to_search_in_workspace                     := false;
-    tab_size                                                := 4;
-    insert_spaces_when_pressing_tab                         := true;
-    strip_trailing_whitespace_on_save                       := Strip_Trailing_Whitespace.except_lines_with_cursor;
-    insert_final_newline_on_save                            := false;
-    smooth_scrolling                                        := true;
-    scroll_beyond_last_line                                 := true;
-    line_height_scale_percent                               := 120;
-    max_editor_width                                        := -1;
-    can_cancel_go_to_line                                   := true;
-    copy_whole_line_without_selection                       := false;
-    editor_history_size                                     := 128;
-    line_wrap_is_on_by_default                              := false;
-    show_line_numbers                                       := false;
-    show_ruler_at_column                                    := 0;
-    dark_titlebar                                           := false;
-    colored_titlebar                                        := true;
-    hide_mouse_when_typing                                  := true;
-    draw_indent_guides                                      := false;
-    auto_surround_with_brackets_and_quotes                  := false;
-    auto_close_brackets                                     := false;
-    prefer_system_file_dialogs                              := false;
-    show_cursors_off_screen                                 := true;
-    persist_local_search_results                            := false;
-    search_is_case_sensitive_when_uppercase_present         := false;
-    show_selected_text_length                               := false;
-    load_most_recent_project_on_start                       := false;
+    maximize_on_start                                       := false;   @v1
+    open_on_the_biggest_monitor                             := true;    @v1
+    window_width                                            := -1;      @v4
+    window_height                                           := -1;      @v4
+    window_x                                                := -1000;   @v1  // using -1000 because -1 could be a valid value someone might want
+    window_y                                                := -1000;   @v1
+    cursor_as_block                                         := true;    @v1
+    cursor_blink_time_in_seconds                            := 5;       @v1
+    highlight_selection_occurrences                         := true;    @v1
+    highlight_line_with_cursor                              := false;   @v2
+    highlight_matching_brackets                             := false;   @v5
+    show_paste_effect                                       := true;    @v6
+    disable_file_open_close_animations                      := false;   @v1
+    disable_viewport_chasing_cursor_near_the_edge           := false;   @v3
+    double_shift_to_search_in_workspace                     := false;   @v1
+    tab_size                                                := 4;       @v1
+    insert_spaces_when_pressing_tab                         := true;    @v1
+    strip_trailing_whitespace_on_save                       := Strip_Trailing_Whitespace.except_lines_with_cursor;  @v6
+    insert_final_newline_on_save                            := false;   @v4
+    smooth_scrolling                                        := true;    @v1
+    scroll_beyond_last_line                                 := true;    @v2
+    line_height_scale_percent                               := 120;     @v1
+    max_editor_width                                        := -1;      @v1
+    can_cancel_go_to_line                                   := true;    @v1
+    copy_whole_line_without_selection                       := false;   @v1
+    editor_history_size                                     := 128;     @v1
+    line_wrap_is_on_by_default                              := false;   @v1
+    show_line_numbers                                       := false;   @v1
+    show_ruler_at_column                                    := 0;       @v7
+    dark_titlebar                                           := false;   @v1
+    colored_titlebar                                        := true;    @v1
+    hide_mouse_when_typing                                  := true;    @v1
+    draw_indent_guides                                      := false;   @v2
+    auto_surround_with_brackets_and_quotes                  := false;   @v2
+    auto_close_brackets                                     := false;   @v1
+    prefer_system_file_dialogs                              := false;   @v1
+    show_cursors_off_screen                                 := true;    @v1
+    persist_local_search_results                            := false;   @v2
+    search_is_case_sensitive_when_uppercase_present         := false;   @v6
+    show_selected_text_length                               := false;   @v3
+    load_most_recent_project_on_start                       := false;   @v5
 
-    build_panel_width_percent                               := 50;
-    build_panel_height_percent                              := 50;
-    build_panel_stays_in_one_place                          := false;
-    build_panel_line_wrap_always_on                         := true;
+    build_panel_width_percent                               := 50;      @v2
+    build_panel_height_percent                              := 50;      @v2
+    build_panel_stays_in_one_place                          := false;   @v2
+    build_panel_line_wrap_always_on                         := true;    @v2
 
-    save_current_buffer_on_build                            := false;
-    save_all_file_backed_buffers_on_build                   := false;
+    save_current_buffer_on_build                            := false;   @v3
+    save_all_file_backed_buffers_on_build                   := false;   @v3
 
-    status_bar_position                                     := Status_Bar_Position.bottom;
-    color_preview_popup                                     := Color_Preview_Popup.enabled;
-    projects_sorting_order                                  := Projects_Sorting_Order.most_recent_first;
+    status_bar_position                                     := Status_Bar_Position.bottom;                  @v4
+    color_preview_popup                                     := Color_Preview_Popup.enabled;                 @v5
+    projects_sorting_order                                  := Projects_Sorting_Order.most_recent_first;    @v6
 
     // TODO
     // convert_tabs_to_spaces_on_load:     false
@@ -697,9 +699,6 @@ Build_Command :: struct {
     timeout_in_seconds:                 int = -1;
 }
 
-DEFAULT_CONFIG_FILE_DATA  :: #run read_entire_file(tprint("config/%", DEFAULT_CONFIG_NAME));
-EXAMPLE_PROJECT_FILE_DATA :: #run read_entire_file(tprint("config/%", EXAMPLE_PROJECT_CONFIG_NAME));
-
 #scope_file
 
 #if OS == .MACOS {
@@ -712,17 +711,28 @@ EXAMPLE_PROJECT_CONFIG_NAME :: "example-project.focus-config";
 
 #scope_export
 
-DEFAULT_CONFIG :: #run,stallable -> Config {
-    result := parse_config("Default Config", DEFAULT_CONFIG_NAME, DEFAULT_CONFIG_FILE_DATA);
-    assert(result.success, "Couldn't parse the default config file '%'. Error: %", DEFAULT_CONFIG_NAME, result.error_msg);
-    default_config: Config;
-    merge_configs(*default_config, result.config);
-    DEFAULT_COLOR_MAP = COLOR_MAP;  // remember the default color map
-    return default_config;
-};
+#if PERFORM_BUILD_CHECKS {
+    DEFAULT_CONFIG_FILE_DATA  :: #run read_entire_file(tprint("config/%", DEFAULT_CONFIG_NAME));
+    EXAMPLE_PROJECT_FILE_DATA :: #run read_entire_file(tprint("config/%", EXAMPLE_PROJECT_CONFIG_NAME));
 
-// Validate the example project config
-#run,stallable {
-    result := parse_config("Example Project Config", EXAMPLE_PROJECT_CONFIG_NAME, EXAMPLE_PROJECT_FILE_DATA);
-    assert(result.success, "Couldn't parse the example project config file '%'", EXAMPLE_PROJECT_CONFIG_NAME);
+    DEFAULT_CONFIG :: #run,stallable -> Config {
+        result := parse_config("Default Config", DEFAULT_CONFIG_NAME, DEFAULT_CONFIG_FILE_DATA);
+        assert(result.success, "Couldn't parse the default config file '%'. Error: %", DEFAULT_CONFIG_NAME, result.error_msg);
+        check_added_keybinds(result.config);
+        default_config: Config;
+        merge_configs(*default_config, result.config);
+        DEFAULT_COLOR_MAP = COLOR_MAP;  // remember the default color map
+        return default_config;
+    };
+
+    // Validate the example project config
+    #run,stallable {
+        result := parse_config("Example Project Config", EXAMPLE_PROJECT_CONFIG_NAME, EXAMPLE_PROJECT_FILE_DATA);
+        assert(result.success, "Couldn't parse the example project config file '%'", EXAMPLE_PROJECT_CONFIG_NAME);
+    }
+
+} else {
+    DEFAULT_CONFIG_FILE_DATA :: "";
+    EXAMPLE_PROJECT_FILE_DATA :: "";
+    DEFAULT_CONFIG: Config;
 }

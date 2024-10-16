@@ -1,4 +1,4 @@
-[6]  # Version number. Do not delete.
+[7]  # Version number. Do not delete.
 
 [[workspace]]
 # These directories and files will be scanned when a workspace is opened so that search etc. works.
@@ -52,6 +52,7 @@ copy_whole_line_without_selection:                  false
 editor_history_size:                                1024
 line_wrap_is_on_by_default:                         false
 show_line_numbers:                                  false
+show_ruler_at_column:                               0
 show_selected_text_length:                          false
 colored_titlebar:                                   true   # Windows 11+ only
 dark_titlebar:                                      false  # Windows only

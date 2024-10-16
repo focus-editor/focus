@@ -77,15 +77,17 @@ build :: () {
     add_build_file("src/main.jai", w);
 
     build_constants := tprint(#string STRING
-            VERSION      :: "%";
-            RELEASE_DATE :: "%";
-            DEBUG        :: %;
-            WINDOWS7     :: %;
+            VERSION              :: "%";
+            RELEASE_DATE         :: "%";
+            DEBUG                :: %;
+            WINDOWS7             :: %;
+            PERFORM_BUILD_CHECKS :: %;
         STRING,
             VERSION,
             RELEASE_DATE,
             ifx optimized then "false" else "true",
             ifx windows7  then "true"  else "false",
+            options.output_type != .NO_OUTPUT,
     );
     add_build_string(build_constants, w);
 
@@ -93,15 +95,34 @@ build :: () {
     while true {
         message := compiler_wait_for_message();
         if message.workspace != w continue;
-        if message.kind == .PHASE {
-            phase_message := cast(*Message_Phase) message;
-            if phase_message.phase == .ALL_TARGET_CODE_BUILT {
-                if options.output_type == .NO_OUTPUT  exit(0);
-            }
-        } else if message.kind == .COMPLETE {
-            m := cast(*Message_Complete) message;
-            if m.error_code == .COMPILATION_FAILED then failed = true;
-            break;
+        if message.kind == {
+            case .TYPECHECKED;
+                if options.output_type != .NO_OUTPUT {
+                    typechecked := cast(*Message_Typechecked) message;
+                    for typechecked.structs {
+                        s := it.expression.defined_type;
+                        if s.name == "Settings"  register_settings_members(s, it.expression);
+                    }
+                    for typechecked.declarations {
+                        if it.expression.name == "ADDED_SETTINGS" {
+                            register_added_settings(it.expression);
+                        } else if it.expression.name == "RENAMED_SETTINGS" {
+                            register_renamed_settings(it.expression);
+                        }
+                    }
+                }
+
+            case .PHASE;
+                phase_message := cast(*Message_Phase) message;
+                if phase_message.phase == .ALL_TARGET_CODE_BUILT {
+                    if options.output_type == .NO_OUTPUT  exit(0);
+                    check_settings();
+                }
+
+            case .COMPLETE;
+                m := cast(*Message_Complete) message;
+                if m.error_code == .COMPILATION_FAILED then failed = true;
+                break;
         }
     }
 
@@ -148,6 +169,102 @@ build :: () {
 
         #import "MacOS_Bundler";
         #import "File";
+    }
+}
+
+register_settings_members :: (settings: *Type_Info_Struct, code_struct: *Code_Struct) {
+    for settings.members {
+        version := get_member_version_from_notes(it);
+        if !version {
+            compiler_report(tprint("Settings member \"%\" must have a version annotation!\n", it.name), make_location(code_struct));
+        }
+        array_add(*settings_info.setting_members, .{version, it.name});
+    }
+    settings_info.settings_node = code_struct;
+}
+
+get_member_version_from_notes :: (member: Type_Info_Struct_Member) -> int {
+    for member.notes {
+        if it && it[0] == #char "v" {
+            s := it;
+            advance(*s, 1);
+            v, ok := parse_int(*s);
+            if ok  return v;
+        }
+    }
+    return 0;
+}
+
+register_added_settings :: (decl: Code_Declaration) {
+    literal := cast(*Code_Literal) decl.expression;
+    assert(literal.kind == .LITERAL && literal.value_type == .ARRAY);
+    for literal.array_literal_info.array_members {
+        entry := cast(*Code_Literal) it;
+        arguments := entry.struct_literal_info.arguments;
+        // Maybe there's a way to just get the value of ADDED_SETTINGS, which would be easier to use than
+        // what we're doing here, which is parsing the the code nodes of its literal.
+        version := 0;
+        for arguments {
+            literal := cast(*Code_Literal) it;
+            i := it_index % 3; // Number of members for Added_Settings
+            if i == {
+                case 0;  version = literal._s64;
+                case 1;  array_add(*settings_info.present_in_migrator, .{ version, literal._string});
+                case;    // Remainder of struct members which we don't care about.
+            }
+        }
+    }
+}
+
+register_renamed_settings :: (decl: Code_Declaration) {
+    literal := cast(*Code_Literal) decl.expression;
+    assert(literal.kind == .LITERAL && literal.value_type == .ARRAY);
+    for literal.array_literal_info.array_members {
+        entry := cast(*Code_Literal) it;
+        arguments := entry.struct_literal_info.arguments;
+        version := 0;
+        for arguments {
+            literal := cast(*Code_Literal) it;
+            i := it_index % 5; // Number of members for Renamed_Settings
+            if i == {
+                case 0;  version = literal._s64;
+                case 1;  // Old name, which we don't care about.
+                case 2;  array_add(*settings_info.present_in_migrator, .{ version, literal._string});
+                case;    // Remainder of struct members which we don't care about.
+            }
+        }
+    }
+}
+
+check_settings :: () {
+    for member: settings_info.setting_members {
+        if member.version == 1  continue;
+
+        found := false;
+        for settings_info.present_in_migrator {
+            if it.name == member.name {
+                if member.version != it.version {
+                    compiler_report(tprint("Setting member version for \"%\" in config.jai did not match version in config_migrator.jai (% != %)\n", member.name, member.version, it.version), make_location(settings_info.settings_node));
+                }
+                found = true;
+                break;
+            }
+        }
+
+        if !found {
+            compiler_report(tprint("Could not find entry in config_migrator.jai for \"%\".  It should appear in ADDED_SETTINGS or RENAMED_SETTINGS!  Also consider adding it to the default config.\n", member.name), make_location(settings_info.settings_node));
+        }
+    }
+}
+
+settings_info: struct {
+    settings_node: *Code_Node;
+    setting_members: [..] Version_Lookup;
+    present_in_migrator: [..] Version_Lookup;
+
+    Version_Lookup :: struct {
+        version: int;
+        name: string;
     }
 }
 
