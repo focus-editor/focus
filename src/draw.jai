@@ -1340,6 +1340,12 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             }
         }
 
+        if config.settings.show_ruler_at_column > 0 {
+            x := text_origin.x + (config.settings.show_ruler_at_column - 1) * char_x_advance;
+            r := Rect.{x, rect.y, dpi_scale, rect.h};
+            draw_rect(r, Color.RULER);
+        }
+
         // Draw search results
         if !is_empty(search_bar.results) {
             for search_bar.results {
