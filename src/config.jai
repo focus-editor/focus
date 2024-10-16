@@ -597,6 +597,7 @@ Settings :: struct {
     editor_history_size                                     := 128;
     line_wrap_is_on_by_default                              := false;
     show_line_numbers                                       := false;
+    show_ruler_at_column                                    := 0;
     dark_titlebar                                           := false;
     colored_titlebar                                        := true;
     hide_mouse_when_typing                                  := true;

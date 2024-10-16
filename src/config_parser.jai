@@ -198,6 +198,7 @@ map_name_to_color :: (name: string) -> Color {
         case "paste_animation";                         return .PASTE_ANIMATION;
         case "splitter";                                return .SPLITTER;
         case "splitter_hover";                          return .SPLITTER_HOVER;
+        case "ruler";                                   return .RULER;
         case "letter_highlight";                        return .LETTER_HIGHLIGHT;
         case "list_cursor_lite";                        return .LIST_CURSOR_LITE;
         case "list_cursor";                             return .LIST_CURSOR;
