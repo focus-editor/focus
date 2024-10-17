@@ -529,7 +529,7 @@ RENAMED_COLORS :: Renamed_Color.[
 #if PERFORM_BUILD_CHECKS {
     original_color_count :: 45;
     expected_added_color_count :: cast(int) Color.NONE - original_color_count;
-    #assert expected_added_color_count <= ADDED_COLORS.count  "When you add a new Color you need to add an entry to ADDED_COLORS!";
+    #assert expected_added_color_count <= ADDED_COLORS.count  "When you add a new Color you need to add an entry to ADDED_COLORS! Be sure to increment CURRENT_CONFIG_VERSION if you haven't already.";
     #assert expected_added_color_count >= ADDED_COLORS.count  "One or more Colors have been removed. This should not happen!";
 }
 
@@ -727,7 +727,7 @@ check_added_keybinds :: (config: Parsed_Config) {
         check_keymap :: (keymap: [] Key_Mapping, action_names: [] string) #expand {
             for keymap {
                 name := action_names[it.action];
-                assert(array_find(expected_keybinds, name), "Keybind \"%\" found in default config which should be added to ADDED_KEYBINDS or RENAMED_KEYBINDS.", name);
+                assert(array_find(expected_keybinds, name), "Keybind \"%\" found in default config which should be added to ADDED_KEYBINDS or RENAMED_KEYBINDS. Be sure to increment CURRENT_CONFIG_VERSION if you haven't already.", name);
             }
         }
         check_keymap(config.keymap_common,           enum_names(Action_Common));
@@ -818,7 +818,7 @@ Renamed_Keybind :: struct {
 
 // ================================= TESTS ====================================
 
-RUN_TESTS :: false;
+RUN_TESTS :: PERFORM_BUILD_CHECKS && !DEBUG;
 
 // Yes we do unit tests now! Don't you dare submit a PR without tests and a 100% coverage.
 // Also your code must comply with the SOLID principles. Are we real programmers or what?
@@ -836,7 +836,7 @@ RUN_TESTS :: false;
     run_test("Keybinds from [2]",             "global.focus-config",  KEYBINDS_2,               KEYBINDS_2_EXPECTED);
     run_test("Theme from [1]",                "nord.focus-theme",     THEME_1,                  THEME_1_EXPECTED);
     run_test("Theme from [3]",                "handmade.focus-theme", THEME_3,                  THEME_3_EXPECTED);
-
+    print("All unit tests passed!\n");
     // NOTE: commented out because the compiler crashes when trying to execute it together with other tests. Works fine otherwise
     // run_test("Workspace migration from [4]",  "global.focus-config",  WORKSPACE_4,              WORKSPACE_4_EXPECTED);
 }
@@ -848,14 +848,49 @@ run_test :: (test_name: string, file_name: string, config_data: string, expected
     expected_data := replace(expected_template, "[!latest!]", tprint("[%]", CURRENT_CONFIG_VERSION));
 
     if modified_data != expected_data {
-        print("EXPECTED DATA ========================\n");
-        print("%", cast(string) expected_data);
-        print("ACTUAL DATA ==========================\n");
-        print("%", cast(string) modified_data);
-        print("======================================\n");
+        simple_diff(test_name, "EXPECTED DATA", cast(string) expected_data, "GENERATED DATA", cast(string) modified_data);
+        assert(false, "%: expected data mismatch", test_name);
     }
-    assert(modified_data == expected_data, "%: expected data mismatch", test_name);
 }
+
+simple_diff :: (main_header: string, header1: string, data1: string, header2: string, data2: string) {
+    print("Discrepancy in test: %\n\n", main_header);
+    line_number := 1;
+    line_start := 0;
+    prev_line_start := 0;
+    max_output_chars :: 160;
+    for i : 0 .. data1.count - 1 {
+        if i >= data2.count {
+            print("% continues after % runs out:\nLine number: %\n%\n",
+                    header1, header2,
+                    line_number,
+                    slice(data1, line_start, min(data1.count - line_start, max_output_chars)));
+            return;
+        }
+        if data1[i] != data2[i] {
+            print("Line number: %\n============== % ==============\n%\n\n============== % ==============\n%\n\n",
+                    line_number,
+                    header1,
+                    slice(data1, prev_line_start, min(data1.count - prev_line_start, max_output_chars)),
+                    header2,
+                    slice(data2, prev_line_start, min(data2.count - prev_line_start, max_output_chars)));
+            return;
+        }
+        if data1[i] == #char "\n" {
+            line_number += 1;
+            prev_line_start = line_start;
+            line_start = i + 1;
+        }
+    }
+
+    if data2.count > data1.count {
+        print("% continues after % runs out:\nLine number: %\n%\n",
+                header2, header1,
+                line_number,
+                slice(data2, line_start, min(data2.count - line_start, max_output_chars)));
+    }
+}
+
 
 WORKSPACE_3 :: #string FOCUS_CONFIG
 [3]  # Version number. Do not delete.
@@ -1151,6 +1186,7 @@ color_preview_popup:                             enabled  # options: enabled, mi
 highlight_matching_brackets:                     false
 search_is_case_sensitive_when_uppercase_present: false
 projects_sorting_order:                          most_recent_first  #options: most_recent_first, alphabetical, alphabetical_no_case
+show_ruler_at_column:                            0
 
 FOCUS_CONFIG
 
@@ -1254,6 +1290,7 @@ color_preview_popup:                             enabled  # options: enabled, mi
 highlight_matching_brackets:                     false
 search_is_case_sensitive_when_uppercase_present: false
 projects_sorting_order:                          most_recent_first  #options: most_recent_first, alphabetical, alphabetical_no_case
+show_ruler_at_column:                            0
 
 FOCUS_CONFIG
 
@@ -1400,6 +1437,7 @@ code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF
 code_header5:                           E0AD82FF
 code_header6:                           E0AD82FF
+ruler:                                  1966667F
 
 FOCUS_CONFIG
 
@@ -1469,6 +1507,7 @@ code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF
 code_header5:                           E0AD82FF
 code_header6:                           E0AD82FF
+ruler:                                  1966667F
 
 FOCUS_CONFIG
 
@@ -1559,6 +1598,7 @@ color_preview_popup:                             enabled  # options: enabled, mi
 highlight_matching_brackets:                     false
 search_is_case_sensitive_when_uppercase_present: false
 projects_sorting_order:                          most_recent_first  #options: most_recent_first, alphabetical, alphabetical_no_case
+show_ruler_at_column:                            0
 
 [[keymap]]
 # ...
@@ -1617,6 +1657,7 @@ code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF
 code_header5:                           E0AD82FF
 code_header6:                           E0AD82FF
+ruler:                                  1966667F
 
 FOCUS_CONFIG
 
@@ -1726,6 +1767,7 @@ code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF
 code_header5:                           E0AD82FF
 code_header6:                           E0AD82FF
+ruler:                                  1966667F
 
 [[keymap]]
 
@@ -1921,6 +1963,7 @@ code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF
 code_header5:                           E0AD82FF
 code_header6:                           E0AD82FF
+ruler:                                  1966667F
 
 FOCUS_CONFIG
 
@@ -2087,5 +2130,7 @@ code_header3:                           CDAA7DFF
 code_header4:                           CDAA7DFF
 code_header5:                           CDAA7DFF
 code_header6:                           CDAA7DFF
+ruler:                                  40FF4011
 
 FOCUS_CONFIG
+

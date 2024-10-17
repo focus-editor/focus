@@ -1,6 +1,6 @@
-// Only Obiwanus should update these two values!
-CURRENT_CONFIG_VERSION       :: 7;  // Config version currently being worked on. New config settings should be annotated with this version.
-LAST_RELEASED_CONFIG_VERSION :: 6;  // Config version in last public release.
+// Increment this if your PR adds a setting, color or default keybinding (and amend the relevant array
+// in config_migrator.jai).  You don't need to increase it for each such change; once per PR is fine.
+CURRENT_CONFIG_VERSION :: 7;
 
 load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
     config_path := tprint("%/global.focus-config", config_dir);
