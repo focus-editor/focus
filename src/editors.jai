@@ -202,6 +202,9 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .select_word;                      select_word(editor, buffer); keep_selection = true;
         case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
         case .select_all_occurrences;               enabled_whole_words = select_all_occurrences              (editor, buffer); keep_selection = true;
+        
+        case .revert_select_word_or_create_another_cursor; revert_select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
+        case .move_selection_to_next_word;                 move_selection_to_next_word(editor, buffer);                 keep_selection = true;
 
         case .toggle_line_wrap;                 toggle_line_wrap                    (editor);
         case .toggle_line_numbers;              toggle_line_numbers                 ();
@@ -1790,6 +1793,71 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) 
     }
 
     return editor.search_whole_words;
+}
+
+revert_select_word_or_create_another_cursor :: (using editor: *Editor, buffer: *Buffer) {
+    if !get_selected_text_all_cursors(editor, buffer) || cursors.count == 1 {
+        for *cursors {
+            it.pos -= it.pos - it.sel;
+            it.sel  = it.pos;
+        }
+    } else {
+        organise_cursors(editor);
+        old_main_cursor := main_cursor;
+        
+        ordered_remove_by_index(*cursors, main_cursor);
+        if main_cursor == 0 {
+            main_cursor = cursors.count - 1;
+        } else {
+            main_cursor -= 1;
+        }
+        
+        if original_cursor > old_main_cursor {
+            original_cursor -= 1;
+        } else if original_cursor == old_main_cursor {
+            // This is suboptimal but can happen. If select_word_or_create_another_cursor does not find a new
+            // word to select it will set the main_cursor to the original_cursor. So it is completely possible
+            // that we revert the original_cursor.
+            // Maybe select_word_or_create_another_cursor should do nothing if it can't find a new word to select?
+            original_cursor = main_cursor;
+        }
+    }
+    cursor_moved = .selection;
+    
+    assert(main_cursor     < cursors.count);
+    assert(original_cursor < cursors.count);
+}
+
+move_selection_to_next_word :: (using editor: *Editor, buffer: Buffer) 
+{
+    if !get_selected_text_all_cursors(editor, buffer) return;
+    
+    organise_cursors(editor);
+    old_main_cursor := main_cursor;
+    
+    select_word_or_create_another_cursor(editor, buffer);
+    if cursors.count == 1 return;
+    
+    ordered_remove_by_index(*cursors, old_main_cursor);
+
+    if old_main_cursor == main_cursor {
+        // We have deleted the main_cursor. This happens if the select_word_or_create_another_cursor
+        // call does not change the main_cursor. In this case we select the 'next' cursor as the main_cursor,
+        // wrapping around if needed.
+        main_cursor = ifx main_cursor >= cursors.count then 0 else main_cursor;
+    } else if old_main_cursor < main_cursor {
+        // Due to the deletion we have to decrement the main_cursor index by one.
+        main_cursor -= 1;
+    }
+    
+    if old_main_cursor == original_cursor {
+        original_cursor = main_cursor;    
+    } else if old_main_cursor < original_cursor {
+        original_cursor -= 1;
+    }
+    
+    assert(main_cursor     < cursors.count);
+    assert(original_cursor < cursors.count);
 }
 
 select_all_occurrences :: (using editor: *Editor, buffer: Buffer, search_str := "") -> whole_words: bool {
