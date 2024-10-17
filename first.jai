@@ -252,7 +252,7 @@ check_settings :: () {
         }
 
         if !found {
-            compiler_report(tprint("Could not find entry in config_migrator.jai for \"%\".  It should appear in ADDED_SETTINGS or RENAMED_SETTINGS!  Also consider adding it to the default config.\n", member.name), make_location(settings_info.settings_node));
+            compiler_report(tprint("Could not find entry in config_migrator.jai for \"%\".  It should appear in ADDED_SETTINGS or RENAMED_SETTINGS! Be sure to increment CURRENT_CONFIG_VERSION if you haven't already. Also consider adding the setting to the default config.\n", member.name), make_location(settings_info.settings_node));
         }
     }
 }
