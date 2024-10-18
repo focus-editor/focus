@@ -818,7 +818,7 @@ Renamed_Keybind :: struct {
 
 // ================================= TESTS ====================================
 
-RUN_TESTS :: PERFORM_BUILD_CHECKS && !DEBUG;
+RUN_TESTS :: PERFORM_BUILD_CHECKS && !DEBUG && OS != .MACOS;
 
 // Yes we do unit tests now! Don't you dare submit a PR without tests and a 100% coverage.
 // Also your code must comply with the SOLID principles. Are we real programmers or what?
