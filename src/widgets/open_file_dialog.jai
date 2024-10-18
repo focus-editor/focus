@@ -524,11 +524,6 @@ scan_current_folder :: () {
 
     visitor_func :: (file: *File_Visit_Info, userdata: *void) {
         if file.had_error || file.is_symlink return;
-        if file.is_directory {
-            if !should_descend_into_dir(file.full_name) return;
-        } else {
-            if should_ignore_path(file.full_name) return;
-        }
 
         full_path := copy_string(file.full_name);  // one allocation in the pool, the rest are views into it
 
