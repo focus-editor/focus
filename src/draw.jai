@@ -704,7 +704,7 @@ maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
     return build_panel_is_active(), build_output_rect;
 }
 
-get_editor_subrects :: (editor_id: s64, main_area: Rect, status_bar_height: float) -> editor_rect: Rect, status_bar_rect: Rect, line_number_panel: Rect {
+get_editor_subrects :: (editor_id: s64, main_area: Rect, status_bar_height: float) -> editor_rect: Rect, status_bar_rect: Rect, line_number_panel: Rect, except_status_bar: Rect {
     status_bar_rect, rect, line_number_panel: Rect;
 
     if config.settings.status_bar_position == .bottom {
@@ -712,6 +712,7 @@ get_editor_subrects :: (editor_id: s64, main_area: Rect, status_bar_height: floa
     } else {
         status_bar_rect, rect = cut_top(main_area, status_bar_height);
     }
+    except_status_bar := rect;
 
     max_width := cast(float) config.settings.max_editor_width * dpi_scale;
     if max_width > 0 && rect.w > max_width {
@@ -729,7 +730,7 @@ get_editor_subrects :: (editor_id: s64, main_area: Rect, status_bar_height: floa
         if rect.w > panel_width then line_number_panel, rect = cut_left(rect, panel_width);
     }
 
-    return align_to_grid(rect), status_bar_rect, line_number_panel;
+    return align_to_grid(rect), status_bar_rect, line_number_panel, except_status_bar;
 }
 
 get_text_offset :: inline () -> Vector2 {
@@ -753,7 +754,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
     scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
 
-    rect, status_bar_rect, line_number_panel := get_editor_subrects(editor_id, main_area, status_bar_height);
+    rect, status_bar_rect, line_number_panel, except_status_bar := get_editor_subrects(editor_id, main_area, status_bar_height);
 
     if !is_valid(rect) return;
 
@@ -1867,8 +1868,11 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
     }
 
+    switching_this_editor := buffer_history.switching_editors_for == .left && editor_id == editors.left
+                          || buffer_history.switching_editors_for == .right && editor_id == editors.right;
+
     // Draw status bar
-    if !as_build_panel {
+    if !as_build_panel && !switching_this_editor {
         footer_color := Color.BACKGROUND_4;
         draw_rect(status_bar_rect, footer_color, .{is_background = true});
         if #complete config.settings.status_bar_position == {
@@ -1890,7 +1894,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         };
 
         // Draw file name and path
-        width, pen = draw_file_info(buffer, width, padding, pen, draw_crlf_warning = true, draw_config_warning = true);
+        width, pen = draw_file_info(buffer, width, padding, pen, flags = .default | .crlf_warning | .config_warning);
 
         // Draw line, column numbers, and selection length
         {
@@ -1956,33 +1960,129 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 fadeout_rect := cut_rect;
                 fadeout_rect.x -= 1; // Sliver sometimes visible on left if we don't do this
                 fadeout_rect.w = 4 * padding;
-                draw_rect(fadeout_rect, footer_color, .{is_background = true, is_translucent_on_the_right = true});
+                draw_rect(fadeout_rect, footer_color, .{is_background = true, fade_out = .to_right});
             }
         }
-    }
+    } else if !as_build_panel && switching_this_editor && ui_id != .editor_preview {
+        // Draw the recent buffers bar instead of the status bar.
+        using buffer_history;
 
+        footer_color := Color.BACKGROUND_4;
+        draw_rect(status_bar_rect, footer_color);
+        if #complete config.settings.status_bar_position == {
+            case .bottom; draw_top_shadow(status_bar_rect);
+            case .top; draw_bottom_shadow(status_bar_rect);
+        }
+
+        push_scissor(status_bar_rect);
+
+        original_status_bar_rect := status_bar_rect;
+        status_bar_rect = shrink_x(status_bar_rect, text_offset.x);
+
+        padding := floor(4 * dpi_scale);
+
+        current_x_offset := get_animation_value(selected_tab_x_offset);
+        pen := Vector2.{
+            status_bar_rect.x + current_x_offset,
+            status_bar_rect.y + (status_bar_rect.h - font_ui.character_height) / 2 + 2 * dpi_scale,
+        };
+
+        divider_rect := shrink_y(status_bar_rect, padding * 2);
+        divider_rect.w = dpi_scale;
+        distance_from_center: float;
+
+        current_tab_width := get_animation_value(selected_tab_width);
+        centered_tab := Rect.{status_bar_rect.x + (status_bar_rect.w - current_tab_width) / 2, status_bar_rect.y, current_tab_width, status_bar_rect.h};
+        draw_rect(centered_tab, Color.LIST_CURSOR);
+
+        for recent_editors {
+            buffer_id := open_editors[it].buffer_id;
+            buffer := *open_buffers[buffer_id];
+
+            start_x := pen.x;
+            pen.x += padding * 2;
+            draw_flags := File_Info_Draw_Flags.icon | .file_name | .modified;
+            if has_duplicate_filename[it_index]  draw_flags |= .file_folder;
+            _, pen = draw_file_info(buffer, 0, padding, pen, flags = draw_flags);
+            pen.x += padding * 2;
+
+            if it_index == recent_editors_index && it_index != selected_recent_editors_index {
+                selected_recent_editors_index = it_index;
+
+                width := pen.x - start_x;
+                offset := (status_bar_rect.w - width) / 2 - (start_x - status_bar_rect.x - current_x_offset);
+                start_animation(*selected_tab_x_offset, current_x_offset, offset);
+                start_animation(*selected_tab_width, current_tab_width, width);
+            }
+        }
+
+        // Fade out edges in case we have lots of open buffers and they extend off the sides.
+        // (only if footer color is not translucent, otherwise it won't work)
+        if map_color_to_vec4(footer_color).w >= 1.0 {
+            fadeout_rect := cut_left(original_status_bar_rect, 4 * padding);
+            fadeout_rect.x -= 1; // Sliver sometimes visible on left if we don't do this
+            draw_rect(fadeout_rect, footer_color, .{is_background = true, fade_out = .to_right});
+
+            fadeout_rect = cut_right(original_status_bar_rect, 4 * padding);;
+            fadeout_rect.x += 1; // Same reason as above
+            draw_rect(fadeout_rect, footer_color, .{is_background = true, fade_out = .to_left});
+        }
+
+        pop_scissor();
+
+        // Draw currently selected editor.
+        // @Note We could be fancy and slide editors in/out, but I tested that and it didn't look great.
+        //       YMMV though; adding some animation code in here is easy, give it a whirl.
+        //       - IK 2024.10.03
+        if recent_editors_index != 0 {
+            push_scissor(except_status_bar);
+            defer pop_scissor();
+
+            disable_input_for_scope();
+            draw_editor(recent_editors[recent_editors_index], except_status_bar, 0, .editor_preview);
+        }
+    }
 }
 
-draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, bold := true, draw_crlf_warning := false, draw_config_warning := false) -> new_width: float, new_pen: Vector2 {
+File_Info_Draw_Flags : enum_flags {
+    icon;
+    file_name;
+    modified;
+    deleted_on_disk;
+    modified_on_disk;
+    read_only;
+    error_when_saving;
+    crlf_warning;
+    config_warning;
+    file_folder;
+    key_sequence;
+    default :: icon | file_name | modified | deleted_on_disk | modified_on_disk | read_only | file_folder | key_sequence;
+}
+
+draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, bold := true, flags := File_Info_Draw_Flags.default) -> new_width: float, new_pen: Vector2 {
     file_name_color := Color.UI_DEFAULT;
     if buffer.modified then file_name_color = Color.UI_WARNING;
 
     pen := _pen;
 
     // Icon
-    icon_char := convert_utf32_to_utf8(xx ifx buffer.has_file then buffer.file.icon else Icon.text);
-    icon_width := Simp.prepare_text(font_icons, to_string(*icon_char));
-    icon_x := pen.x - (icon_width - font_icons.em_width) / 2.0;
-    Simp.draw_prepared_text(font_icons, xx icon_x, xx pen.y, color = xx file_name_color);
-    width += font_icons.em_width * 1.2;
+    if flags & .icon {
+        icon_char := convert_utf32_to_utf8(xx ifx buffer.has_file then buffer.file.icon else Icon.text);
+        icon_width := Simp.prepare_text(font_icons, to_string(*icon_char));
+        icon_x := pen.x - (icon_width - font_icons.em_width) / 2.0;
+        Simp.draw_prepared_text(font_icons, xx icon_x, xx pen.y, color = xx file_name_color);
+        width += font_icons.em_width * 1.2;
+    }
 
     // File name
-    pen.x += width + padding;
-    file_name_font := ifx bold then font_ui_bold else font_ui;
-    width = xx Simp.prepare_text(file_name_font, get_buffer_name(buffer));
-    Simp.draw_prepared_text(file_name_font, xx pen.x, xx pen.y, color = xx file_name_color);
+    if flags & .file_name {
+        pen.x += width + padding;
+        file_name_font := ifx bold then font_ui_bold else font_ui;
+        width = xx Simp.prepare_text(file_name_font, get_buffer_name(buffer));
+        Simp.draw_prepared_text(file_name_font, xx pen.x, xx pen.y, color = xx file_name_color);
+    }
 
-    if buffer.modified {
+    if buffer.modified && flags & .modified {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_icons_very_small, PEN_ICON);
         y_padding := (font_icons.character_height - font_icons_very_small.character_height) / 4.0;
@@ -1990,33 +2090,33 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
     }
 
     // Maybe warnings
-    if buffer.deleted && !buffer.readonly {
+    if buffer.deleted && !buffer.readonly && flags & .deleted_on_disk {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_bold, "[deleted on disk]");
         Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_ERROR_BRIGHT);
-    } else if buffer.modified_on_disk {
+    } else if buffer.modified_on_disk && flags * .modified_on_disk {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_bold, "[modified on disk]");
         Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_ERROR_BRIGHT);
     }
-    if buffer.readonly {
+    if buffer.readonly && flags & .read_only {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_bold, "[readonly]");
         Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
     }
-    if buffer.error_when_saving {
+    if buffer.error_when_saving && flags & .error_when_saving {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_bold, "[couldn't save file]");
         Simp.draw_prepared_text(font_ui_bold, xx pen.x, xx pen.y, color = xx Color.UI_ERROR_BRIGHT);
     }
 
-    if buffer.crlf && draw_crlf_warning {
+    if buffer.crlf && flags & .crlf_warning {
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui, "[CRLF will be replaced with LF on save]");
         Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = xx Color.UI_WARNING);
     }
 
-    if draw_config_warning && buffer.has_file {
+    if buffer.has_file && flags & .config_warning {
         label: string;
         if is_current_global_config(buffer.file.full_path) {
             label = "[current global config]";
@@ -2032,7 +2132,7 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
         }
     }
 
-    if buffer.has_file {
+    if buffer.has_file && flags & .file_folder {
         // Draw separator
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_small, BULLET_ICON);
@@ -2044,7 +2144,7 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
         Simp.draw_prepared_text(font_ui_small, xx pen.x, xx pen.y, color = xx Color.UI_DIM);
     }
 
-    if key_sequence_input_in_progress() {
+    if key_sequence_input_in_progress() && flags & .key_sequence {
         // Draw separator
         pen.x += width + padding;
         width = xx Simp.prepare_text(font_ui_small, BULLET_ICON);
@@ -3542,12 +3642,15 @@ draw_top_down_shadow :: (rect: Rect) {
 
 draw_rect :: (rect: Rect, color: Color, $extra_draw_info := Simp.Extra_Draw_Info.{}) {
     Simp.set_shader_for_color(enable_blend = true);
-    if extra_draw_info.is_translucent_on_the_right {
-        c := map_color_to_vec4(color);
-        trans := c;
-        trans.w = 0;
+    if extra_draw_info.fade_out {
+        opaque := map_color_to_vec4(color);
+        tranparent := opaque;
+        tranparent.w = 0;
         using rect;
-        Simp.immediate_quad(x, y, x + w, y + h, c, c, trans, trans);
+        if extra_draw_info.fade_out == {
+            case .to_left;   Simp.immediate_quad(x, y, x + w, y + h, tranparent, tranparent, opaque, opaque);
+            case .to_right;  Simp.immediate_quad(x, y, x + w, y + h, opaque, opaque, tranparent, tranparent);
+        }
     } else {
         draw_rect_raw(rect, color);
     }
@@ -3815,6 +3918,7 @@ Ui_Id :: enum s64 {
     theme_dialog                :: -17;
     language_dialog             :: -18;
     color_picker_dialog         :: -19;
+    editor_preview              :: -20;
 
     // The rest will be derived from loc
 }
