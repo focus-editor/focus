@@ -449,7 +449,14 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
             path_overwrite_separators(path, #char "/");
             path = trim_right(path, "/");
             relative_to_config := !is_absolute_path(path) && config_path;
-            abs_path := ifx relative_to_config then tprint("%/%", config_path, path) else path;
+            abs_path := path;
+            if relative_to_config {
+                if path == "." {
+                    abs_path = config_path;
+                } else {
+                    abs_path = tprint("%/%", config_path, path);
+                }
+            }
 
             if file_exists(abs_path) {
                 array_add(*result.config.members, copy_string(abs_path));
@@ -472,13 +479,33 @@ parse_workspace_line :: (using parser: *Config_Parser, line: string) -> success:
             item := copy_string(trim(line, "\t "));
             item = trim_right(item, "/");
             path_overwrite_separators(item, #char "/");
-            array_add(*result.config.ignore, item);
+            if begins_with(item, "./") {
+                advance(*item, 2);
+                // Add an expanded entry for each workspace dir
+                for member : result.config.members {
+                    is_dir, success := is_directory(member);
+                    if !is_dir || !success  continue;
+                    array_add(*result.config.ignore, sprint("%/%", member, item));
+                }
+            } else {
+                array_add(*result.config.ignore, item);
+            }
 
         case .workspace_allow;
             item := copy_string(trim(line, "\t "));
             item = trim_right(item, "/");
             path_overwrite_separators(item, #char "/");
-            array_add(*result.config.allow, trim(item, "\t "));
+            if begins_with(item, "./") {
+                advance(*item, 2);
+                // Add an expanded entry for each workspace dir
+                for member : result.config.members {
+                    is_dir, success := is_directory(member);
+                    if !is_dir || !success  continue;
+                    array_add(*result.config.allow, sprint("%/%", member, item));
+                }
+            } else {
+                array_add(*result.config.allow, item);
+            }
 
         case .workspace_file_associations;
             found, wildcards, lang_name := split_from_left(line, cast(u8) #char ":");
