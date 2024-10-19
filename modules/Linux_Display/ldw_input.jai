@@ -83,9 +83,13 @@ handle_key_event :: (d: *Wayland_Display, serial: u32, key: u32, key_state: u32,
 }
 
 /* These are taken from <linux/input-event-codes.h> */
-BTN_LEFT   : u32 : 0x110;
-BTN_RIGHT  : u32 : 0x111;
-BTN_MIDDLE : u32 : 0x112;
+BTN_LEFT    : u32 : 0x110;
+BTN_RIGHT   : u32 : 0x111;
+BTN_MIDDLE  : u32 : 0x112;
+BTN_SIDE    : u32 : 0x113;
+BTN_EXTRA   : u32 : 0x114;
+BTN_FORWARD : u32 : 0x115;
+BTN_BACK    : u32 : 0x116;
 
 refresh_cursor :: (w: *Wayland_Window) {
     wl_pointer.set_cursor(
@@ -132,9 +136,15 @@ pointer_listener :: wl_pointer_listener.{
         event: Input.Event;
         event.type = .KEYBOARD;
         if button == {
-            case BTN_LEFT;   event.key_code = .MOUSE_BUTTON_LEFT;
-            case BTN_MIDDLE; event.key_code = .MOUSE_BUTTON_MIDDLE;
-            case BTN_RIGHT;  event.key_code = .MOUSE_BUTTON_RIGHT;
+            case BTN_LEFT;    event.key_code = .MOUSE_BUTTON_LEFT;
+            case BTN_MIDDLE;  event.key_code = .MOUSE_BUTTON_MIDDLE;
+            case BTN_RIGHT;   event.key_code = .MOUSE_BUTTON_RIGHT;
+
+            case BTN_SIDE;    #through;
+            case BTN_BACK;    event.key_code = .MOUSE_BUTTON_X1;
+
+            case BTN_EXTRA;   #through;
+            case BTN_FORWARD; event.key_code = .MOUSE_BUTTON_X2;
         }
         if state == wl_pointer.button_state_pressed {
             event.key_pressed = 1;

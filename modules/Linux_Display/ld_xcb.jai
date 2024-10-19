@@ -922,6 +922,9 @@ handle_button_event :: (xd: *XCB_Display, source: Button_Event_Source, button: u
             xd.base.mouse_wheel_delta.horizontal += event.wheel_delta;
             return;
 
+        case 8; event.key_code = Input.Key_Code.MOUSE_BUTTON_X1;
+        case 9; event.key_code = Input.Key_Code.MOUSE_BUTTON_X2;
+
         case; return;
     }
 

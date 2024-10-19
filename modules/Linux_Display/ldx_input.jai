@@ -385,6 +385,9 @@ x11_handle_event :: (x11_display: *X11_Display, xev: *X11.XEvent) -> expect_more
                     array_add(*x11_display.base.events_this_frame, event);
                     x11_display.base.mouse_wheel_delta.horizontal += event.wheel_delta;
                     return;
+
+                case 8; event.key_code = .MOUSE_BUTTON_X1;
+                case 9; event.key_code = .MOUSE_BUTTON_X2;
             }
 
             event.type = .KEYBOARD;
