@@ -1796,31 +1796,31 @@ select_word_or_create_another_cursor :: (using editor: *Editor, buffer: Buffer) 
 }
 
 revert_select_word_or_create_another_cursor :: (using editor: *Editor, buffer: *Buffer) {
-    if !get_selected_text_all_cursors(editor, buffer) || cursors.count == 1 {
-        for *cursors {
-            it.pos -= it.pos - it.sel;
-            it.sel  = it.pos;
-        }
+    if cursors.count == 1 {
+        cursor := *cursors[0];
+        cursor.pos = cursor.sel;
+    } else if !get_selected_text_all_cursors(editor, buffer) {
+        // If we have multiple cursors and their selected text is not the same, we do nothing.
+        // While we could remove the selections of those cursors, this approach seems unintuitive.
     } else {
         organise_cursors(editor);
+        
+        // The main_cursor is the cursor most recently added by select_word_or_create_another_cursor().
+        // When every instance of the word is selected, the selection will wrap back to the original_cursor.
+        // Therefore, this function will delete the main_cursor, except when the original_cursor 
+        // and main_cursor are the same. In that case, we need to delete the cursor positioned
+        // "above" the main_cursor to maintain consistency with the general editor behavior.
+        if original_cursor == main_cursor {
+            main_cursor -= 1;
+            if main_cursor < 0 then main_cursor = cursors.count - 1;
+        }
         old_main_cursor := main_cursor;
         
         ordered_remove_by_index(*cursors, main_cursor);
-        if main_cursor == 0 {
-            main_cursor = cursors.count - 1;
-        } else {
-            main_cursor -= 1;
-        }
         
-        if original_cursor > old_main_cursor {
-            original_cursor -= 1;
-        } else if original_cursor == old_main_cursor {
-            // This is suboptimal but can happen. If select_word_or_create_another_cursor does not find a new
-            // word to select it will set the main_cursor to the original_cursor. So it is completely possible
-            // that we revert the original_cursor.
-            // Maybe select_word_or_create_another_cursor should do nothing if it can't find a new word to select?
-            original_cursor = main_cursor;
-        }
+        main_cursor -= 1;
+        if main_cursor < 0 then main_cursor = cursors.count - 1;
+        if original_cursor > old_main_cursor then original_cursor -= 1;
     }
     cursor_moved = .selection;
     
@@ -1828,8 +1828,7 @@ revert_select_word_or_create_another_cursor :: (using editor: *Editor, buffer: *
     assert(original_cursor < cursors.count);
 }
 
-move_selection_to_next_word :: (using editor: *Editor, buffer: Buffer) 
-{
+move_selection_to_next_word :: (using editor: *Editor, buffer: Buffer) {
     if !get_selected_text_all_cursors(editor, buffer) return;
     
     organise_cursors(editor);
@@ -1846,7 +1845,6 @@ move_selection_to_next_word :: (using editor: *Editor, buffer: Buffer)
         // wrapping around if needed.
         main_cursor = ifx main_cursor >= cursors.count then 0 else main_cursor;
     } else if old_main_cursor < main_cursor {
-        // Due to the deletion we have to decrement the main_cursor index by one.
         main_cursor -= 1;
     }
     
