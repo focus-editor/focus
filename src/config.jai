@@ -1,6 +1,6 @@
 // Increment this if your PR adds a setting, color or default keybinding (and amend the relevant array
 // in config_migrator.jai).  You don't need to increase it for each such change; once per PR is fine.
-CURRENT_CONFIG_VERSION :: 7;
+CURRENT_CONFIG_VERSION :: 8;
 
 load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
     config_path := tprint("%/global.focus-config", config_dir);
@@ -711,9 +711,16 @@ EXAMPLE_PROJECT_CONFIG_NAME :: "example-project.focus-config";
 
 #scope_export
 
-#if PERFORM_BUILD_CHECKS {
-    DEFAULT_CONFIG_FILE_DATA  :: #run read_entire_file(tprint("config/%", DEFAULT_CONFIG_NAME));
-    EXAMPLE_PROJECT_FILE_DATA :: #run read_entire_file(tprint("config/%", EXAMPLE_PROJECT_CONFIG_NAME));
+#if !NO_OUTPUT_BUILD {
+    read_default_config_data :: (name: string) -> string {
+        data := read_entire_file(tprint("config/%", name));
+        data_with_replaced_version, occurrences := replace(data, "[0]  # Version", tprint("[%]  # Version", CURRENT_CONFIG_VERSION));
+        assert(occurrences == 1, "Error when trying to replace the default config version in '%'", name);
+        return data_with_replaced_version;
+    }
+
+    DEFAULT_CONFIG_FILE_DATA  :: #run read_default_config_data(DEFAULT_CONFIG_NAME);
+    EXAMPLE_PROJECT_FILE_DATA :: #run read_default_config_data(EXAMPLE_PROJECT_CONFIG_NAME);
 
     DEFAULT_CONFIG :: #run,stallable -> Config {
         result := parse_config("Default Config", DEFAULT_CONFIG_NAME, DEFAULT_CONFIG_FILE_DATA);

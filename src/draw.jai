@@ -1125,6 +1125,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                         offset = offset,
                         count  = 1,
                         line   = offset_to_real_line(buffer, offset),
+                        type   = .bracket,
                     });
 
                     // Highlight the bracket we're standing on
@@ -1132,6 +1133,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                         offset = pos,
                         count  = 1,
                         line   = offset_to_real_line(buffer, pos),
+                        type   = .bracket,
                     });
                 }
             }
@@ -1264,7 +1266,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             draw_range_full_width_lines(range, rect, visible_lines_start, visible_lines_end, text_origin, get_region_color(region.kind));
         }
 
-        // Draw selection highlights
+        // Draw text highlights
         if !search_bar_is_open(editor) {
             for highlights {
                 start, end := it.offset, it.offset + it.count;
@@ -1274,7 +1276,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 range: Coords_Range = ---;
                 range.start = offset_to_coords(editor, buffer, start);
                 range.end   = offset_to_coords(editor, buffer, end);
-                draw_range(range, editor, buffer, visible_lines_start, visible_lines_end, text_origin, Color.SELECTION_HIGHLIGHT);
+                color := ifx it.type == .text then Color.SELECTION_HIGHLIGHT else Color.BRACKET_HIGHLIGHT;
+                draw_range(range, editor, buffer, visible_lines_start, visible_lines_end, text_origin, color);
             }
         }
 
@@ -1300,7 +1303,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             for level : indent_levels {
                 for 0..level {
                     guide.x = text_origin.x + it * char_x_advance * TAB_SIZE;
-                    draw_rect_raw(guide, Color.SELECTION_HIGHLIGHT);
+                    draw_rect_raw(guide, Color.INDENT_GUIDE);
                 }
                 guide.y -= line_height;
             }

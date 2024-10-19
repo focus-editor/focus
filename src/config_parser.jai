@@ -60,7 +60,7 @@ parse_config :: (name: string, file_path: string, file_data: string, for_highlig
         return result;
     }
 
-    result.config.version = handler.version;
+    result.config.version = ifx handler.version > 0 then handler.version else CURRENT_CONFIG_VERSION;
     if result.config.version != CURRENT_CONFIG_VERSION {
         result.error_msg = tprint("Invalid version [%] in file '%'. The only supported version is [%].", result.config.version, file_path, CURRENT_CONFIG_VERSION);
         return result;
@@ -188,6 +188,7 @@ map_name_to_color :: (name: string) -> Color {
         case "selection_active";                        return .SELECTION_ACTIVE;
         case "selection_inactive";                      return .SELECTION_INACTIVE;
         case "selection_highlight";                     return .SELECTION_HIGHLIGHT;
+        case "bracket_highlight";                       return .BRACKET_HIGHLIGHT;
         case "search_result_active";                    return .SEARCH_RESULT_ACTIVE;
         case "search_result_inactive";                  return .SEARCH_RESULT_INACTIVE;
         case "scrollbar";                               return .SCROLLBAR;
@@ -199,6 +200,7 @@ map_name_to_color :: (name: string) -> Color {
         case "splitter";                                return .SPLITTER;
         case "splitter_hover";                          return .SPLITTER_HOVER;
         case "ruler";                                   return .RULER;
+        case "indent_guide";                            return .INDENT_GUIDE;
         case "letter_highlight";                        return .LETTER_HIGHLIGHT;
         case "list_cursor_lite";                        return .LIST_CURSOR_LITE;
         case "list_cursor";                             return .LIST_CURSOR;

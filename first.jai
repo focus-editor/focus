@@ -77,17 +77,17 @@ build :: () {
     add_build_file("src/main.jai", w);
 
     build_constants := tprint(#string STRING
-            VERSION              :: "%";
-            RELEASE_DATE         :: "%";
-            DEBUG                :: %;
-            WINDOWS7             :: %;
-            PERFORM_BUILD_CHECKS :: %;
+            VERSION         :: "%";
+            RELEASE_DATE    :: "%";
+            DEBUG           :: %;
+            WINDOWS7        :: %;
+            NO_OUTPUT_BUILD :: %;
         STRING,
             VERSION,
             RELEASE_DATE,
             ifx optimized then "false" else "true",
             ifx windows7  then "true"  else "false",
-            options.output_type != .NO_OUTPUT,
+            options.output_type == .NO_OUTPUT,
     );
     add_build_string(build_constants, w);
 

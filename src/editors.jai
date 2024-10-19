@@ -3758,6 +3758,7 @@ Text_Highlight :: struct {
     offset: s32;    // we'll convert this to position range, but only for the visible highlights
     count: s32;
     line: s32;      // useful to know the line number to display in the scrollbar area
+    type: enum u8 { text; bracket; } = .text;
 }
 
 Paste_Animation :: struct {

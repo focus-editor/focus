@@ -526,7 +526,7 @@ RENAMED_COLORS :: Renamed_Color.[
 ];
 
 
-#if PERFORM_BUILD_CHECKS {
+#if !NO_OUTPUT_BUILD {
     original_color_count :: 45;
     expected_added_color_count :: cast(int) Color.NONE - original_color_count;
     #assert expected_added_color_count <= ADDED_COLORS.count  "When you add a new Color you need to add an entry to ADDED_COLORS! Be sure to increment CURRENT_CONFIG_VERSION if you haven't already.";
@@ -575,6 +575,9 @@ ADDED_COLORS :: Added_Color.[
     .{ 4, "code_header6",                     "code_operation",         "E0AD82FF" },
 
     .{ 7, "ruler",                            "cursor_inactive",        "1966667F" },
+
+    .{ 8, "bracket_highlight",                "selection_highlight",    "E8FCFE30" },
+    .{ 8, "indent_guide",                     "selection_highlight",    "FCEDFC26" },
 ];
 
 
@@ -614,7 +617,7 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
     .{ 2, "",  "show_open_file_dialog_in_open_editors_mode",        "switch_between_open_files"  },
 ];
 
-#if PERFORM_BUILD_CHECKS {
+#if !NO_OUTPUT_BUILD {
     // These are the keybinds originally present in the default config.
     // It's unlikely that this should ever be changed!
     ORIGINAL_KEYBINDS :: string.[
@@ -719,7 +722,7 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
 
 #scope_export
 check_added_keybinds :: (config: Parsed_Config) {
-    #if PERFORM_BUILD_CHECKS {
+    #if !NO_OUTPUT_BUILD {
         expected_keybinds : [..] string;
         for ADDED_KEYBINDS  array_add(*expected_keybinds, it.action);
         for RENAMED_KEYBINDS  array_add(*expected_keybinds, it.new_name);
@@ -818,10 +821,10 @@ Renamed_Keybind :: struct {
 
 // ================================= TESTS ====================================
 
-RUN_TESTS :: PERFORM_BUILD_CHECKS && !DEBUG && OS != .MACOS;
-
 // Yes we do unit tests now! Don't you dare submit a PR without tests and a 100% coverage.
 // Also your code must comply with the SOLID principles. Are we real programmers or what?
+RUN_TESTS :: !NO_OUTPUT_BUILD && !DEBUG && OS != .MACOS;
+MIGRATE_BUILTIN_THEMES :: !NO_OUTPUT_BUILD && !DEBUG;
 
 #if RUN_TESTS #run,stallable {
     run_test("Workspace migration from [3]",  "global.focus-config",  WORKSPACE_3,              WORKSPACE_3_EXPECTED);
@@ -836,9 +839,21 @@ RUN_TESTS :: PERFORM_BUILD_CHECKS && !DEBUG && OS != .MACOS;
     run_test("Keybinds from [2]",             "global.focus-config",  KEYBINDS_2,               KEYBINDS_2_EXPECTED);
     run_test("Theme from [1]",                "nord.focus-theme",     THEME_1,                  THEME_1_EXPECTED);
     run_test("Theme from [3]",                "handmade.focus-theme", THEME_3,                  THEME_3_EXPECTED);
-    print("All unit tests passed!\n");
     // NOTE: commented out because the compiler crashes when trying to execute it together with other tests. Works fine otherwise
     // run_test("Workspace migration from [4]",  "global.focus-config",  WORKSPACE_4,              WORKSPACE_4_EXPECTED);
+
+    print("All unit tests passed!\n");
+
+    if MIGRATE_BUILTIN_THEMES #run,stallable {
+        for theme : BUILTIN_THEMES {
+            theme_file := tprint("config/themes/%.focus-theme", theme.name);
+            migrated, modified_data := maybe_migrate_config(theme_file, theme.contents);
+            if migrated {
+                write_entire_file(theme_file, modified_data);
+                print("Migrated builtin theme '%' to version [%]\n", theme.name, CURRENT_CONFIG_VERSION);
+            }
+        }
+    }
 }
 
 run_test :: (test_name: string, file_name: string, config_data: string, expected_template: string) {
@@ -1377,6 +1392,7 @@ background_bright:                      21333FFF
 
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
+selection_highlight:                    FF000026
 
 FOCUS_CONFIG
 
@@ -1398,6 +1414,7 @@ background4:                            21333FFF
 
 scrollbar_hover:                        FFCCCC4C
 scrollbar_background:                   FF191F4C
+selection_highlight:                    FF000026
 
 # Added after migration to version [!latest!]
 code_warning:                           E4D97DFF
@@ -1438,6 +1455,8 @@ code_header4:                           E0AD82FF
 code_header5:                           E0AD82FF
 code_header6:                           E0AD82FF
 ruler:                                  1966667F
+bracket_highlight:                      FF000026
+indent_guide:                           FF000026
 
 FOCUS_CONFIG
 
@@ -1508,6 +1527,8 @@ code_header4:                           E0AD82FF
 code_header5:                           E0AD82FF
 code_header6:                           E0AD82FF
 ruler:                                  1966667F
+bracket_highlight:                      E8FCFE30
+indent_guide:                           FCEDFC26
 
 FOCUS_CONFIG
 
@@ -1658,6 +1679,8 @@ code_header4:                           E0AD82FF
 code_header5:                           E0AD82FF
 code_header6:                           E0AD82FF
 ruler:                                  1966667F
+bracket_highlight:                      E8FCFE30
+indent_guide:                           FCEDFC26
 
 FOCUS_CONFIG
 
@@ -1768,6 +1791,8 @@ code_header4:                           E0AD82FF
 code_header5:                           E0AD82FF
 code_header6:                           E0AD82FF
 ruler:                                  1966667F
+bracket_highlight:                      E8FCFE30
+indent_guide:                           FCEDFC26
 
 [[keymap]]
 
@@ -1964,6 +1989,8 @@ code_header4:                           E0AD82FF
 code_header5:                           E0AD82FF
 code_header6:                           E0AD82FF
 ruler:                                  1966667F
+bracket_highlight:                      E8FCFE30
+indent_guide:                           FCEDFC26
 
 FOCUS_CONFIG
 
@@ -2131,6 +2158,8 @@ code_header4:                           CDAA7DFF
 code_header5:                           CDAA7DFF
 code_header6:                           CDAA7DFF
 ruler:                                  40FF4011
+bracket_highlight:                      FCEDFC26
+indent_guide:                           FCEDFC26
 
 FOCUS_CONFIG
 

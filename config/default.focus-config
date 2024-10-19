@@ -1,4 +1,4 @@
-[7]  # Version number. Do not delete.
+[0]  # Version number. Do not delete.
 
 [[workspace]]
 # These directories and files will be scanned when a workspace is opened so that search etc. works.
@@ -353,12 +353,11 @@ background2:                            18262FFF
 background3:                            1A2831FF
 background4:                            21333FFF
 
-# NOTE: for Jai region_scope colors define background colors for blocks of code that fall into those scopes,
-#       so make sure to override those as well if you change the background.
-#       Those regions are likely to be used for languages other than Jai in the future
+# NOTE: region_scope colors only work for Jai at the moment
 region_scope_export:                    15212AFF
 region_scope_file:                      131C22FF
 region_scope_module:                    1A2831FF
+
 region_header:                          1A5152FF
 region_success:                         226022FF
 region_warning:                         986032FF
@@ -379,6 +378,7 @@ paste_animation:                        1C4449FF
 splitter:                               21333FFF
 splitter_hover:                         1C4449FF
 ruler:                                  1966667F
+indent_guide:                           FCEDFC26
 letter_highlight:                       599999FF
 list_cursor_lite:                       33CCCC19
 list_cursor:                            33CCCC4C
@@ -386,6 +386,7 @@ shadow_dark:                            0E161C7F
 shadow_transparent:                     0E161C00
 text_input_label:                       3B4450FF
 char_under_cursor:                      FFFFFFFF
+bracket_highlight:                      E8FCFE30
 
 ui_default:                             BFC9DBFF
 ui_dim:                                 87919DFF
