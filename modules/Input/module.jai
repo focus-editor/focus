@@ -122,8 +122,8 @@ Key_Code :: enum u32 {
     MOUSE_BUTTON_MIDDLE;
     MOUSE_BUTTON_RIGHT;
 
-    MOUSE_WHEEL_UP;
-    MOUSE_WHEEL_DOWN;
+    MOUSE_BUTTON_X1;
+    MOUSE_BUTTON_X2;
 
     // We reserve button codes for up to 4 gamepads.
     GAMEPAD_0_BEGIN;

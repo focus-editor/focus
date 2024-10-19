@@ -344,6 +344,8 @@ STRING_TO_CODE_MAP :: Str_Code.[
     .{ "MouseLeft",         MOUSE_BUTTON_LEFT },
     .{ "MouseRight",        MOUSE_BUTTON_RIGHT },
     .{ "MouseMiddle",       MOUSE_BUTTON_MIDDLE },
+    .{ "MouseX1",           MOUSE_BUTTON_X1 },
+    .{ "MouseX2",           MOUSE_BUTTON_X2 },
 
     // We don't support mouse wheel events because we'd need to block scrolling
     // if they are handled and we don't want to do it just yet.
