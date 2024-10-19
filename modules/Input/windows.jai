@@ -97,7 +97,7 @@ get_key_code :: (wParam: WPARAM, extended := false) -> Key_Code {
     if wParam == VK_OEM_PERIOD  return xx #char ".";
     if wParam == VK_OEM_COMMA   return xx #char ",";
 
-    if (wParam >= VK_F1) && (wParam <= VK_F16) {
+    if (wParam >= VK_F1) && (wParam <= VK_F24) {
         delta := wParam - VK_F1;
         return xx(F1 + xx delta);
     }
