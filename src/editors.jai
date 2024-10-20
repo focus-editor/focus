@@ -1340,8 +1340,8 @@ scan_through_similar_chars_on_the_left :: (using buffer: Buffer, offset: s32, ch
             while t > bytes.data && is_word_char(char) { t, char = unicode_prev_character(t); }
             if !is_word_char(char) then t = unicode_next_character(t);
         case .non_word;
-            while t > bytes.data && is_non_word_char(char) { t, char = unicode_prev_character(t); }
-            if !is_non_word_char(char) then t = unicode_next_character(t);
+            while t > bytes.data && is_non_word_char(char) && !is_common_punctuation(char) { t, char = unicode_prev_character(t); }
+            if !is_non_word_char(char) || is_common_punctuation(char) then t = unicode_next_character(t);
     }
 
     if t < bytes.data then t = bytes.data;
@@ -1367,7 +1367,7 @@ scan_through_similar_chars_on_the_right :: (using buffer: Buffer, offset: s32, o
 
     if is_space_or_underscore(char) {
         // Only spaces
-        while s && is_space_or_underscore(char)  { char = utf8_next_character(*s); }
+        while s && is_space_or_underscore(char) { char = utf8_next_character(*s); }
         if !is_unicode_space(char) { s.data, char = unicode_prev_character(s.data); }
     } else if is_word_char(char) {
         // Only word chars
@@ -1375,8 +1375,8 @@ scan_through_similar_chars_on_the_right :: (using buffer: Buffer, offset: s32, o
         if !is_word_char(char) { s.data, char = unicode_prev_character(s.data); }
     } else if !is_unicode_linebreak(char) {
         // Only non-word chars
-        while s && is_non_word_char(char) { char = utf8_next_character(*s); }
-        if !is_non_word_char(char) { s.data, char = unicode_prev_character(s.data); }
+        while s && is_non_word_char(char) && !is_common_punctuation(char) { char = utf8_next_character(*s); }
+        if !is_non_word_char(char) || is_common_punctuation(char) { s.data, char = unicode_prev_character(s.data); }
     }
 
     return min(bytes.count, cast(s32)(s.data - bytes.data));

@@ -278,6 +278,21 @@ is_non_word_char :: inline (ch: u32) -> bool {
     return !is_word_char(ch) && ch != #char " " && ch != #char "\n";
 }
 
+is_common_punctuation :: inline (ch: u32) -> bool {
+    if ch == {
+        case #char ","; #through;
+        case #char "."; #through;
+        case #char "("; #through;
+        case #char ")"; #through;
+        case #char "["; #through;
+        case #char "]"; #through;
+        case #char "{"; #through;
+        case #char "}";
+            return true;
+    }
+    return false;
+}
+
 is_space_or_underscore :: inline (ch: u32) -> bool {
     return is_unicode_space(ch) || (!context.underscore_is_part_of_word && ch == #char "_");
 }
