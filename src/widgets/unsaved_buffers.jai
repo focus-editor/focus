@@ -13,7 +13,7 @@ Unsaved_Buffers_Dialog :: struct {
 
 #scope_file
 
-Dialog_Details :: struct { }
+Dialog_Details :: struct { show_single_buffer_only_id := -1; }
 
 dialog_get_buttons :: () -> [] Generic_Confirm_Dialog_Button {
    // Doing some copypasta to return constants so that we don't have to allocate
@@ -35,8 +35,11 @@ dialog_get_buttons :: () -> [] Generic_Confirm_Dialog_Button {
 dialog_on_show :: () {
     array_reset_keeping_memory(*unsaved_buffers_dialog.unsaved_buffer_ids);
 
-    for buffer, buffer_id : open_buffers {
-        if is_unsaved(buffer) then array_add(*unsaved_buffers_dialog.unsaved_buffer_ids, buffer_id);
+    if unsaved_buffers_dialog.details.show_single_buffer_only_id >= 0 {
+        array_add(*unsaved_buffers_dialog.unsaved_buffer_ids, unsaved_buffers_dialog.details.show_single_buffer_only_id);
+    } else {
+        for buffer, buffer_id : open_buffers {
+            if is_unsaved(buffer) then array_add(*unsaved_buffers_dialog.unsaved_buffer_ids, buffer_id);
+        }
     }
 }
-
