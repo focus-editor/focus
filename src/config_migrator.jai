@@ -590,24 +590,27 @@ COLOR_VALUES_INDENT :: #run -> int {
 }
 
 ADDED_KEYBINDS :: Added_Keybind.[
-    .{ 2, "editors", "add_cursors_to_line_ends",                  "Alt-Shift-I",         "Alt-Shift-I"      },
-    .{ 2, "editors", "add_cursors_to_line_starts",                "Alt-Shift-Ctrl-I",    "Alt-Shift-Ctrl-I" },
-    .{ 2, "editors", "align_cursors",                             "Alt-A",               "Alt-Cmd-A"        },
-    .{ 2, "editors", "select_all_occurrences",                    "Ctrl-Shift-A",        "Cmd-Shift-A"      },
-    .{ 2, "common",  "toggle_build_panel",                        "Ctrl-B",              "Cmd-B"            },
-    .{ 2, "common",  "toggle_fullscreen",                         "F11",                 "F11"              },
-    .{ 2, "common",  "switch_between_open_files",                 "Ctrl-Tab",            "Ctrl-Tab"         },
+    .{ 2, "editors", "add_cursors_to_line_ends",                    "Alt-Shift-I",         "Alt-Shift-I"      },
+    .{ 2, "editors", "add_cursors_to_line_starts",                  "Alt-Shift-Ctrl-I",    "Alt-Shift-Ctrl-I" },
+    .{ 2, "editors", "align_cursors",                               "Alt-A",               "Alt-Cmd-A"        },
+    .{ 2, "editors", "select_all_occurrences",                      "Ctrl-Shift-A",        "Cmd-Shift-A"      },
+    .{ 2, "common",  "toggle_build_panel",                          "Ctrl-B",              "Cmd-B"            },
+    .{ 2, "common",  "toggle_fullscreen",                           "F11",                 "F11"              },
+    .{ 2, "common",  "switch_between_open_files",                   "Ctrl-Tab",            "Ctrl-Tab"         },
 
-    .{ 3, "common",  "open_another_editor_instance",              "Ctrl-Shift-Alt-N",    "Cmd-Shift-Alt-N"  },
-    .{ 3, "common",  "go_to_next_build_error",                    "F8",                  "F8"               },
-    .{ 3, "common",  "go_to_next_build_error_on_the_side",        "Ctrl-F8",             "Cmd-F8"           },
-    .{ 3, "common",  "go_to_previous_build_error",                "Shift-F8",            "Shift-F8"         },
-    .{ 3, "common",  "go_to_previous_build_error_on_the_side",    "Shift-Ctrl-F8",       "Shift-Cmd-F8"     },
+    .{ 3, "common",  "open_another_editor_instance",                "Ctrl-Shift-Alt-N",    "Cmd-Shift-Alt-N"  },
+    .{ 3, "common",  "go_to_next_build_error",                      "F8",                  "F8"               },
+    .{ 3, "common",  "go_to_next_build_error_on_the_side",          "Ctrl-F8",             "Cmd-F8"           },
+    .{ 3, "common",  "go_to_previous_build_error",                  "Shift-F8",            "Shift-F8"         },
+    .{ 3, "common",  "go_to_previous_build_error_on_the_side",      "Shift-Ctrl-F8",       "Shift-Cmd-F8"     },
 
-    .{ 5, "common", "jump_to_matching_bracket",                   "{Shift}-Ctrl-M",      "{Shift}-Cmd-M"    },
+    .{ 5, "common", "jump_to_matching_bracket",                     "{Shift}-Ctrl-M",      "{Shift}-Cmd-M"    },
 
-    .{ 7, "editor", "create_cursors_around",                      "Alt-Shift-ArrowLeft", "Opt-Shift-ArrowLeft" },
-    .{ 7, "editor", "change_case_cycle",                          "Ctrl-U",              "Cmd-U"    },
+    .{ 7, "editors", "create_cursors_around",                        "Alt-Shift-ArrowLeft", "Opt-Shift-ArrowLeft" },
+    .{ 7, "editors", "change_case_cycle",                            "Ctrl-U",              "Cmd-U"    },
+
+    .{ 9, "editors", "revert_select_word_or_create_another_cursor",  "Ctrl-R",              "Cmd-R"    },
+    .{ 9, "editors", "move_selection_to_next_word",                  "Ctrl-Y",              "Cmd-R"    },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
@@ -1811,6 +1814,10 @@ Ctrl-Shift-A                select_all_occurrences
 Alt-Shift-I                 add_cursors_to_line_ends
 Alt-Shift-Ctrl-I            add_cursors_to_line_starts
 Alt-A                       align_cursors
+Alt-Shift-ArrowLeft         create_cursors_around
+Ctrl-U                      change_case_cycle
+Ctrl-R                      revert_select_word_or_create_another_cursor
+Ctrl-Y                      move_selection_to_next_word
 
 [open file dialog]
 Tab                         open_directory
@@ -1887,6 +1894,12 @@ Ctrl-Escape                 remove_additional_cursors
 
 Ctrl-D                      select_word_or_create_another_cursor
 Ctrl-Shift-A                select_all_occurrences
+
+# Added after migration to version [!latest!]
+Alt-Shift-ArrowLeft         create_cursors_around
+Ctrl-U                      change_case_cycle
+Ctrl-R                      revert_select_word_or_create_another_cursor
+Ctrl-Y                      move_selection_to_next_word
 
 [open file dialog]
 Tab                         open_directory

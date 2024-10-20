@@ -10,6 +10,9 @@
         + `change_case_to_caps` - will capitalize the first letter, and any letter following a non-letter character (my_foo_type -> My_Foo_Type)
         + `change_case_cycle` - will cycle through the options below. Bound to `Ctrl-U` by default
     + New action `create_cursors_around`. Creates cursors above and below so that they extend up to the surrounding whitespace (thanks @onelivesleft)
+    + New actions for creating, moving and deleting cursors (thanks @BuzzwordChief):
+        + `move_selection_to_next_word` (`Ctrl-Y`) - instead of creating a new cursor at the next occurrence it will move the current cursor, allowing you to skip an occurrence
+        + `revert_select_word_or_create_another_cursor` (`Ctrl-R`) - removes the newly created selection
     + Added support for F13-F24 in keybindings
     + New font options in the style section - `font_ui`, `font_ui_bold`, `font_ui_size` (thanks @hfr4)
     + Windows rmenu key can now be used in keybinds as `cmd` (thanks @onelivesleft)

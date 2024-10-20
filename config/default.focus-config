@@ -136,6 +136,8 @@ search_is_case_sensitive_when_uppercase_present:    true
 Alt-F4                      quit
 
 Ctrl-D                      select_word_or_create_another_cursor
+Ctrl-R                      revert_select_word_or_create_another_cursor
+Ctrl-Y                      move_selection_to_next_word
 Ctrl-Shift-A                select_all_occurrences
 
 Ctrl-Shift-D                duplicate_lines
