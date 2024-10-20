@@ -871,6 +871,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 just_jumped_from_build_panel = true;
             } else if mouse.left.just_double_clicked {
                 select_word(buffer, cursor);
+                editor.search_whole_words = true;
                 selection_mode.type  = .words;
                 selection_mode.range = get_selection(cursor);
             }
