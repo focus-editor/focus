@@ -88,19 +88,19 @@ build :: () {
     );
     add_build_string(build_constants, w);
 
-    exe_path := tprint("%/%.exe", build_dir, options.output_executable_name);
+    // exe_path := tprint("%/%.exe", build_dir, options.output_executable_name);
 
-    ico_data := create_ico_file_from_bitmap_filename("images/focus.png");
-    success := set_icon_by_data(exe_path, ico_data);
-    if !success {
-        log_error("ERROR: Couldn't set icon for '%'\n", exe_path);
-    }
+    // ico_data := create_ico_file_from_bitmap_filename("images/focus.png");
+    // success := set_icon_by_data(exe_path, ico_data);
+    // if !success {
+    //     log_error("ERROR: Couldn't set icon for '%'\n", exe_path);
+    // }
 
-    manifest_options: Manifest_Options;
-    success = add_manifest_to_executable(exe_path, manifest_options);
-    if !success {
-        log_error("ERROR: Couldn't add manifest to executable '%'\n", exe_path);
-    }
+    // manifest_options: Manifest_Options;
+    // success = add_manifest_to_executable(exe_path, manifest_options);
+    // if !success {
+    //     log_error("ERROR: Couldn't add manifest to executable '%'\n", exe_path);
+    // }
 
 }
 
