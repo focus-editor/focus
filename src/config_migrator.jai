@@ -604,9 +604,8 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 3, "common",  "go_to_previous_build_error",                  "Shift-F8",            "Shift-F8"         },
     .{ 3, "common",  "go_to_previous_build_error_on_the_side",      "Shift-Ctrl-F8",       "Shift-Cmd-F8"     },
 
-    .{ 5, "common", "jump_to_matching_bracket",                     "{Shift}-Ctrl-M",      "{Shift}-Cmd-M"    },
+    .{ 5, "common",  "jump_to_matching_bracket",                    "{Shift}-Ctrl-M",      "{Shift}-Cmd-M"    },
 
-    .{ 7, "editors", "create_cursors_around",                        "Alt-Shift-ArrowLeft", "Opt-Shift-ArrowLeft" },
     .{ 7, "editors", "change_case_cycle",                            "Ctrl-U",              "Cmd-U"    },
 
     .{ 9, "editors", "revert_select_word_or_create_another_cursor",  "Ctrl-R",              "Cmd-R"    },
@@ -1814,7 +1813,6 @@ Ctrl-Shift-A                select_all_occurrences
 Alt-Shift-I                 add_cursors_to_line_ends
 Alt-Shift-Ctrl-I            add_cursors_to_line_starts
 Alt-A                       align_cursors
-Alt-Shift-ArrowLeft         create_cursors_around
 Ctrl-U                      change_case_cycle
 Ctrl-R                      revert_select_word_or_create_another_cursor
 Ctrl-Y                      move_selection_to_next_word
@@ -1896,7 +1894,6 @@ Ctrl-D                      select_word_or_create_another_cursor
 Ctrl-Shift-A                select_all_occurrences
 
 # Added after migration to version [!latest!]
-Alt-Shift-ArrowLeft         create_cursors_around
 Ctrl-U                      change_case_cycle
 Ctrl-R                      revert_select_word_or_create_another_cursor
 Ctrl-Y                      move_selection_to_next_word
