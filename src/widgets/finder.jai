@@ -24,7 +24,7 @@ finder_handle_event :: (event: Input.Event) -> handled: bool {
     using finder;
 
     if event.type == .KEYBOARD && event.key_pressed {
-        handled := text_input_handle_event(*input, event);
+        handled := text_input_handle_event(get_active_input(), event);
         if handled { start_new_search(); return true; }
 
         action, mapping := map_event_to_action(event, Action_Search_Dialog);
@@ -43,6 +43,8 @@ finder_handle_event :: (event: Input.Event) -> handled: bool {
 
             case .escape;                   #through;
             case .close_dialog;             finder_close();                                         return true;
+            case .go_to_next_input;         finder_go_to_next_input();                              return true;
+            case .go_to_previous_input;     finder_go_to_previous_input();                          return true;
 
             case .open_entry_in_place;      finder_open_selected_result(selected, .in_place);       return true;
             case .open_entry_on_the_side;   finder_open_selected_result(selected, .on_the_side);    return true;
@@ -52,7 +54,7 @@ finder_handle_event :: (event: Input.Event) -> handled: bool {
         return false;
 
     } else if event.type == .TEXT_INPUT {
-        text_input_type_char(*finder.input, event.utf32);
+        text_input_type_char(get_active_input(), event.utf32);
         start_new_search();
         return true;
     }
@@ -81,6 +83,23 @@ finder_open :: () {
 
 finder_close :: () {
     activate_editors();
+}
+
+finder_activate_input :: inline (input: Finder.Active_Input) {
+    finder.active_input = input;
+}
+
+finder_go_to_next_input :: () {
+    NUM_INPUTS :: #run enum_highest_value(Finder.Active_Input) + 1;
+    next_input := (cast(u32) finder.active_input + 1) % NUM_INPUTS;
+    finder_activate_input(cast(Finder.Active_Input) next_input);
+}
+
+finder_go_to_previous_input :: () {
+    NUM_INPUTS :: #run enum_highest_value(Finder.Active_Input) + 1;
+    current_input := cast(u32) finder.active_input;
+    next_input := ifx current_input == 0 then NUM_INPUTS - 1 else current_input - 1;
+    finder_activate_input(cast(Finder.Active_Input) next_input);
 }
 
 finder_open_from_editor :: () {
@@ -211,6 +230,16 @@ finder_toggle_regex_search :: () {
 }
 
 #scope_file
+
+get_active_input :: () -> *Text_Input {
+    using finder;
+
+    if #complete active_input == {
+        case .input;    return *input;
+        case .include;  return *include;
+        case .exclude;  return *exclude;
+    }
+}
 
 move_cursor :: (delta: s64, wrap := false, snap := true) {
     using finder;
@@ -434,6 +463,9 @@ Finder :: struct {
     initted := false;  // will be initialized when the initial workspace scan completes
 
     input: Text_Input;
+    include: Text_Input;
+    exclude: Text_Input;
+    active_input: Active_Input = .input;
 
     request: Search_Request;
     needle: string;  // to remember what search string the results below correspond to
@@ -460,6 +492,8 @@ Finder :: struct {
 
     need_to_refresh_results: bool;  // when a buffer is modified and we have some search results, we have to search again,
                                     // otherwise the search results may point to an offset which no longer exists or is invalid
+
+    Active_Input :: enum { input; include; exclude; }
 }
 
 #scope_file

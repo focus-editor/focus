@@ -439,6 +439,8 @@ ACTIONS_SEARCH_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[
     "toggle_case_sensitive",
     "toggle_whole_word",
     "toggle_regex_search",
+    "go_to_next_input",
+    "go_to_previous_input",
 ]);
 
 
