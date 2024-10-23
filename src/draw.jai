@@ -1634,8 +1634,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
         Simp.draw_prepared_text(font_ui_small, xx (numbers_rect.x + padding), xx (numbers_rect.y + (numbers_rect.h - font_ui_small.character_height) / 2.0), color = xx Color.UI_DEFAULT);
         input_active := editor_is_active && search_bar.active && active_global_widget == .editors;
-        color := ifx !regex_search || (regex_search && regex_is_valid) then Color.NONE else Color.UI_ERROR_BRIGHT;
-        draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id, label = " Find in buffer", margin_right = input_rect.h * 2, _color = color);
+        color := ifx !regex_search || (regex_search && regex_is_valid) then Color.UI_DEFAULT else Color.UI_ERROR_BRIGHT;
+        draw_text_input(*search_bar.input, input_rect, active = input_active, ui_id = input_id, label = " Find in buffer", margin_right = input_rect.h * 2, color = color);
 
         button_width := input_rect.h;
         pressed, hover_match_case, hover_match_word, hover_regex_search := false, false, false, false;
@@ -2821,61 +2821,86 @@ draw_finder :: () {
 
     maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
 
-    // Draw the filter input
+    // Draw the search inputs
     input_rect, files_rect := cut_top(box_rect, input_rect_height);
     input_rect = shrink(input_rect, margin);
+    input_rect=, filters_rect := cut_left(input_rect, input_rect.w * 0.7);
+
+    splitter1_rect, splitter2_rect, include_rect, exclude_rect: Rect;
+    splitter1_rect, filters_rect = cut_left(filters_rect, 2 * padding);
+    include_rect,   filters_rect = cut_left(filters_rect, (filters_rect.w - 2 * padding) / 2);
+    splitter2_rect, exclude_rect = cut_left(filters_rect, 2 * padding);
+
+    // Main search input
     input_id := get_ui_id_from_loc(parent_id = ui_id);
-    label := ifx initted then "Type to search in workspace" else "Scanning the workspace. Please wait...";
-    color := ifx !regex_search || (regex_search && regex_is_valid) then Color.NONE else Color.UI_ERROR_BRIGHT;
-    draw_text_input(*finder.input, input_rect, ui_id = input_id, active = true, label = label, margin_right = input_rect.h * 2, _color = color);
+    {
+        label := ifx initted then "Type to search in workspace" else "Scanning the workspace. Please wait...";
+        color := ifx !regex_search || (regex_search && regex_is_valid) then Color.UI_DEFAULT else Color.UI_ERROR_BRIGHT;
+        became_active := draw_text_input(*finder.input, input_rect, ui_id = input_id, active = (finder.active_input == .input), label = label, margin_right = input_rect.h * 3, color = color);
+        if became_active then finder_activate_input(.input);
 
-    button_width := input_rect.h;
-    pressed, hover_match_case, hover_match_word, hover_regex_search := false, false, false, false;
+        button_width := input_rect.h;
+        pressed, hover_match_case, hover_match_word, hover_regex_search := false, false, false, false;
 
-    pressed, hover_match_case = draw_text_input_modifier_button(input_id, input_rect, button_width, case_sensitive, CASE_SENSITIVE_ICON);
-    if pressed {
-        finder_toggle_case_sensitive();
-        redraw_requested = true;
+        pressed, hover_match_case = draw_text_input_modifier_button(input_id, input_rect, button_width, case_sensitive, CASE_SENSITIVE_ICON);
+        if pressed {
+            finder_toggle_case_sensitive();
+            redraw_requested = true;
+        }
+
+        input_rect.w -= button_width - 4 * dpi_scale;
+
+        pressed, hover_match_word = draw_text_input_modifier_button(input_id, input_rect, button_width, whole_word, WHOLE_WORD_ICON);
+        if pressed {
+            finder_toggle_whole_word();
+            redraw_requested = true;
+        }
+
+        input_rect.w -= button_width - 4 * dpi_scale;
+
+        pressed, hover_regex_search = draw_text_input_modifier_button(input_id, input_rect, button_width, regex_search, REGEX_SEARCH_ICON);
+        if pressed {
+            finder_toggle_regex_search();
+            redraw_requested = true;
+        }
+
+        // Draw tooltips last
+        tooltip := "";
+        if hover_match_case {
+            tooltip = "Match Case";
+            combo := key_sequence_for_action_as_string(Action_Search_Dialog.toggle_case_sensitive);
+            if combo then tooltip = tprint("% (%)", tooltip, combo);
+        } else if hover_match_word {
+            tooltip = "Match Whole Word";
+            combo := key_sequence_for_action_as_string(Action_Search_Dialog.toggle_whole_word);
+            if combo then tooltip = tprint("% (%)", tooltip, combo);
+        } else if hover_regex_search {
+            tooltip = "Regex Search";
+            combo := key_sequence_for_action_as_string(Action_Search_Dialog.toggle_regex_search);
+            if combo then tooltip = tprint("% (%)", tooltip, combo);
+        }
+        if tooltip then draw_tooltip_bottom_left(tooltip, Vector2.{ x = mouse.pointer.x - input_rect.h / 2, y = input_rect.y + input_rect.h / 3 });
+
+        scan_progress := get_workspace_scan_progress();
+        if scan_progress < 1.0 {
+            progress_bar_rect := shrink(input_rect, 1);
+            progress_bar_rect.w *= scan_progress;;
+            draw_rect(progress_bar_rect, Color.LIST_CURSOR_LITE);
+        }
     }
 
-    input_rect.w -= button_width - 4 * dpi_scale;
-
-    pressed, hover_match_word = draw_text_input_modifier_button(input_id, input_rect, button_width, whole_word, WHOLE_WORD_ICON);
-    if pressed {
-        finder_toggle_whole_word();
-        redraw_requested = true;
+    // Include files input
+    {
+        include_input_id := get_ui_id_from_loc(parent_id = ui_id);
+        became_active := draw_text_input(*finder.include, include_rect, ui_id = include_input_id, active = (finder.active_input == .include), label = " Include files");
+        if became_active then finder_activate_input(.include);
     }
 
-    input_rect.w -= button_width - 4 * dpi_scale;
-
-    pressed, hover_regex_search = draw_text_input_modifier_button(input_id, input_rect, button_width, regex_search, REGEX_SEARCH_ICON);
-    if pressed {
-        finder_toggle_regex_search();
-        redraw_requested = true;
-    }
-
-    // Draw tooltips last
-    tooltip := "";
-    if hover_match_case {
-        tooltip = "Match Case";
-        combo := key_sequence_for_action_as_string(Action_Search_Dialog.toggle_case_sensitive);
-        if combo then tooltip = tprint("% (%)", tooltip, combo);
-    } else if hover_match_word {
-        tooltip = "Match Whole Word";
-        combo := key_sequence_for_action_as_string(Action_Search_Dialog.toggle_whole_word);
-        if combo then tooltip = tprint("% (%)", tooltip, combo);
-    } else if hover_regex_search {
-        tooltip = "Regex Search";
-        combo := key_sequence_for_action_as_string(Action_Search_Dialog.toggle_regex_search);
-        if combo then tooltip = tprint("% (%)", tooltip, combo);
-    }
-    if tooltip then draw_tooltip_bottom_left(tooltip, Vector2.{ x = mouse.pointer.x - input_rect.h / 2, y = input_rect.y + input_rect.h / 3 });
-
-    scan_progress := get_workspace_scan_progress();
-    if scan_progress < 1.0 {
-        progress_bar_rect := shrink(input_rect, 1);
-        progress_bar_rect.w *= scan_progress;;
-        draw_rect(progress_bar_rect, Color.LIST_CURSOR_LITE);
+    // Exclude files input
+    {
+        exclude_input_id := get_ui_id_from_loc(parent_id = ui_id);
+        became_active := draw_text_input(*finder.exclude, exclude_rect, ui_id = exclude_input_id, active = (finder.active_input == .exclude), label = " Exclude files");
+        if became_active then finder_activate_input(.exclude);
     }
 
     _pad: Rect = ---;  // allow some space at the bottom so that we don't cover up the rounded corners with the cursor
@@ -3239,12 +3264,13 @@ draw_range_full_width_lines :: (range: Coords_Range, editor_rect: Rect, visible_
     }
 }
 
-draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active := false, label: string = "", font: *Simp.Dynamic_Font = null, _color := Color.NONE, margin_left := 1.0, margin_right := 1.0) {
+draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active := false, label: string = "", font: *Simp.Dynamic_Font = null, color := Color.UI_DEFAULT, margin_left := 1.0, margin_right := 1.0) -> became_active := false {
     if !is_valid(rect_) return;
 
-    color := ifx _color == Color.NONE then Color.UI_DEFAULT else _color;
-
     rect := align_to_grid(rect_);  // to get a consistent outline
+
+    became_active := maybe_set_hot_or_active(ui_id, rect, .TEXT_SELECT);
+    if became_active then active = true;  // draw as activated right away
 
     if font == null then font = font_ui;
     padding := (rect.h - cast(float) font.default_line_spacing) / 2;
@@ -3252,8 +3278,6 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
     draw_rect(rect, ifx active then Color.CURSOR_INACTIVE else Color.BACKGROUND_1);
     input_rect := shrink(rect, 1);
     draw_rect(input_rect, Color.BACKGROUND_0);
-
-    maybe_set_hot_or_active(ui_id, input_rect, .TEXT_SELECT);
 
     input_rect.w -= (margin_left + margin_right);
     input_rect.x += margin_left;
@@ -3310,14 +3334,16 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
         selection_rect := cursor_rect;
         selection_rect.x = x + left;
         selection_rect.w = xx (right - left);
-        draw_rect(selection_rect, Color.SELECTION_ACTIVE);
+        draw_rect(selection_rect, ifx active then Color.SELECTION_ACTIVE else Color.SELECTION_INACTIVE);
     }
 
     y := input_rect.y + (input_rect.h - font.character_height) / 2 + 2 * dpi_scale;  // I don't know why we need this extra + 2, but without it the text doesn't look in the right place
 
     if !input_text then Simp.draw_text(font, xx x, xx y, label, color = xx Color.TEXT_INPUT_LABEL);
-    draw_rect(cursor_rect, ifx active then Color.CURSOR else Color.CURSOR_INACTIVE);
+    if active then draw_rect(cursor_rect, ifx active then Color.CURSOR else Color.CURSOR_INACTIVE);
     Simp.draw_text(font, xx x, xx y, input_text, color = xx color);
+
+    return became_active;
 }
 
 draw_text_input_modifier_button :: (input_id: Ui_Id, input_rect: Rect, width: float, enabled: bool, icon: string, loc := #caller_location) -> pressed: bool, hover: bool {
