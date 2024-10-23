@@ -202,7 +202,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .select_word;                      select_word(editor, buffer); keep_selection = true;
         case .select_word_or_create_another_cursor; enabled_whole_words = select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
         case .select_all_occurrences;               enabled_whole_words = select_all_occurrences              (editor, buffer); keep_selection = true;
-        
+
         case .revert_select_word_or_create_another_cursor; revert_select_word_or_create_another_cursor(editor, buffer); keep_selection = true;
         case .move_selection_to_next_word;                 move_selection_to_next_word(editor, buffer);                 keep_selection = true;
 
@@ -1325,7 +1325,7 @@ select_line :: (cursor: *Cursor, buffer: Buffer) {
     cursor.pos = get_real_line_start_offset(buffer, end_line+1);
 }
 
-scan_through_similar_chars_on_the_left :: (using buffer: Buffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true) -> offset: s32 {
+scan_through_similar_chars_on_the_left :: (using buffer: Buffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true, stop_at_punctuation := true) -> offset: s32 {
     if !buffer.bytes return 0;
 
     line_start := bytes.data + line_starts[offset_to_real_line(buffer, offset)];
@@ -1343,8 +1343,8 @@ scan_through_similar_chars_on_the_left :: (using buffer: Buffer, offset: s32, ch
             while t > bytes.data && is_word_char(char) { t, char = unicode_prev_character(t); }
             if !is_word_char(char) then t = unicode_next_character(t);
         case .non_word;
-            while t > bytes.data && is_non_word_char(char) && !is_common_punctuation(char) { t, char = unicode_prev_character(t); }
-            if !is_non_word_char(char) || is_common_punctuation(char) then t = unicode_next_character(t);
+            while t > bytes.data && is_non_word_char(char) && !(stop_at_punctuation && is_common_punctuation(char)) { t, char = unicode_prev_character(t); }
+            if !is_non_word_char(char) || (stop_at_punctuation && is_common_punctuation(char)) then t = unicode_next_character(t);
     }
 
     if t < bytes.data then t = bytes.data;
@@ -1352,7 +1352,7 @@ scan_through_similar_chars_on_the_left :: (using buffer: Buffer, offset: s32, ch
     return cast(s32) max(0, t - bytes.data);
 }
 
-scan_through_similar_chars_on_the_right :: (using buffer: Buffer, offset: s32, only: Char_Type = .none, skip_one_space := true) -> offset: s32 {
+scan_through_similar_chars_on_the_right :: (using buffer: Buffer, offset: s32, only: Char_Type = .none, skip_one_space := true, stop_at_punctuation := true) -> offset: s32 {
     if !buffer.bytes return 0;
     if offset >= bytes.count return offset;  // nowhere to go
 
@@ -1378,8 +1378,8 @@ scan_through_similar_chars_on_the_right :: (using buffer: Buffer, offset: s32, o
         if !is_word_char(char) { s.data, char = unicode_prev_character(s.data); }
     } else if !is_unicode_linebreak(char) {
         // Only non-word chars
-        while s && is_non_word_char(char) && !is_common_punctuation(char) { char = utf8_next_character(*s); }
-        if !is_non_word_char(char) || is_common_punctuation(char) { s.data, char = unicode_prev_character(s.data); }
+        while s && is_non_word_char(char) && !(stop_at_punctuation && is_common_punctuation(char)) { char = utf8_next_character(*s); }
+        if !is_non_word_char(char) || (stop_at_punctuation && is_common_punctuation(char)) { s.data, char = unicode_prev_character(s.data); }
     }
 
     return min(bytes.count, cast(s32)(s.data - bytes.data));
@@ -1804,10 +1804,10 @@ revert_select_word_or_create_another_cursor :: (using editor: *Editor, buffer: *
         // While we could remove the selections of those cursors, this approach seems unintuitive.
     } else {
         organise_cursors(editor);
-        
+
         // The main_cursor is the cursor most recently added by select_word_or_create_another_cursor().
         // When every instance of the word is selected, the selection will wrap back to the original_cursor.
-        // Therefore, this function will delete the main_cursor, except when the original_cursor 
+        // Therefore, this function will delete the main_cursor, except when the original_cursor
         // and main_cursor are the same. In that case, we need to delete the cursor positioned
         // "above" the main_cursor to maintain consistency with the general editor behavior.
         if original_cursor == main_cursor {
@@ -1815,28 +1815,28 @@ revert_select_word_or_create_another_cursor :: (using editor: *Editor, buffer: *
             if main_cursor < 0 then main_cursor = cursors.count - 1;
         }
         old_main_cursor := main_cursor;
-        
+
         ordered_remove_by_index(*cursors, main_cursor);
-        
+
         main_cursor -= 1;
         if main_cursor < 0 then main_cursor = cursors.count - 1;
         if original_cursor > old_main_cursor then original_cursor -= 1;
     }
     cursor_moved = .selection;
-    
+
     assert(main_cursor     < cursors.count);
     assert(original_cursor < cursors.count);
 }
 
 move_selection_to_next_word :: (using editor: *Editor, buffer: Buffer) {
     if !get_selected_text_all_cursors(editor, buffer) return;
-    
+
     organise_cursors(editor);
     old_main_cursor := main_cursor;
-    
+
     select_word_or_create_another_cursor(editor, buffer);
     if cursors.count == 1 return;
-    
+
     ordered_remove_by_index(*cursors, old_main_cursor);
 
     if old_main_cursor == main_cursor {
@@ -1847,13 +1847,13 @@ move_selection_to_next_word :: (using editor: *Editor, buffer: Buffer) {
     } else if old_main_cursor < main_cursor {
         main_cursor -= 1;
     }
-    
+
     if old_main_cursor == original_cursor {
-        original_cursor = main_cursor;    
+        original_cursor = main_cursor;
     } else if old_main_cursor < original_cursor {
         original_cursor -= 1;
     }
-    
+
     assert(main_cursor     < cursors.count);
     assert(original_cursor < cursors.count);
 }
@@ -2174,11 +2174,11 @@ move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: enum { char; w
         } else {
             if by == {
                 case .word;
-                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = skip_one_space,, underscore_is_part_of_word = false);
+                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = skip_one_space, stop_at_punctuation = false,, underscore_is_part_of_word = false);
                 case .word_ends;
                     char_type := get_char_type(get_char_at_offset(buffer, cursor.pos));
-                    if char_type != .word then cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, char_type, skip_one_space = false);
-                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = skip_one_space);
+                    if char_type != .word then cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, char_type, skip_one_space = false, stop_at_punctuation = false);
+                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = skip_one_space, stop_at_punctuation = false);
             }
         }
         cursor.col_wanted = -1;
@@ -2199,13 +2199,13 @@ move_cursors_right :: (editor: *Editor, using buffer: *Buffer, by: enum { char; 
         } else {
             if by == {
                 case .word;
-                    cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = skip_one_space,, underscore_is_part_of_word = false);
+                    cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = skip_one_space, stop_at_punctuation = false,, underscore_is_part_of_word = false);
                 case .word_ends;
                     char := get_char_at_offset(buffer, cursor.pos);
                     char_type := get_char_type(char);
-                    if char_type != .word  then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, char_type, skip_one_space = false);
+                    if char_type != .word  then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, char_type, skip_one_space = false, stop_at_punctuation = false);
                     char_type = get_char_type(get_char_at_offset(buffer, cursor.pos));
-                    if char_type != .other && !is_unicode_linebreak(char) then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = skip_one_space);
+                    if char_type != .other && !is_unicode_linebreak(char) then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = skip_one_space, stop_at_punctuation = false);
             }
         }
         cursor.col_wanted = -1;
