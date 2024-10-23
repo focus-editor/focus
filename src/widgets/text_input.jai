@@ -203,59 +203,57 @@ redo :: (using input: *Text_Input) {
     cursor_before_edits = edit_group.cursor;
 }
 
+// @Copypasta from editors.jai
 move_cursor_left :: (using input: *Text_Input, by: enum { char; word; word_ends; }, extend_selection := false) {
     if has_selection(cursor) && !extend_selection {
-        // Jump to selection edge
         cursor.pos = min(cursor.pos, cursor.sel);
         cursor.sel = cursor.pos;
+    } else if cursor.pos == 0 {
+        return;
     } else {
-        // Move normally
         if by == {
             case .char;
-                if cursor.pos > 0 {
-                    cursor.pos = prev_char_offset(text, cursor.pos);
-                    cursor.pos = clamp(cursor.pos, 0, xx text.count);
-                }
+                cursor.pos = prev_char_offset(text, cursor.pos);
+
             case .word;
                 context.underscore_is_part_of_word = false;
                 cursor.pos = scan_through_similar_chars_on_the_left(input, cursor.pos);
                 context.underscore_is_part_of_word = true;
+
             case .word_ends;
-                char := get_char_at_offset(input, cursor.pos);
-                char_type := get_char_type(char);
+                char_type := get_char_type(get_char_at_offset(input, prev_char_offset(text, cursor.pos)));
                 if char_type != .word then cursor.pos = scan_through_similar_chars_on_the_left(input, cursor.pos, char_type, skip_one_space = false);
-                char_type = get_char_type(get_char_at_offset(input, cursor.pos));
-                if char_type != .other && char != #char "\n" then cursor.pos = scan_through_similar_chars_on_the_left(input, cursor.pos);
+                cursor.pos = scan_through_similar_chars_on_the_left(input, cursor.pos);
         }
         if !extend_selection then cursor.sel = cursor.pos;
     }
 }
 
+// @Copypasta from editors.jai
 move_cursor_right :: (using input: *Text_Input, by: enum { char; word; word_ends; }, extend_selection := false) {
     if has_selection(cursor) && !extend_selection {
-        // Jump to selection edge
         cursor.pos = max(cursor.pos, cursor.sel);
         cursor.sel = cursor.pos;
+    } else if cursor.pos >= text.count {
+        return;
     } else {
-        // Move normally
-        if cursor.pos < text.count {
-            if by == {
-                case .char;
-                    cursor.pos = next_char_offset(text, cursor.pos);
-                    cursor.pos = clamp(cursor.pos, 0, xx text.count);
-                case .word;
-                    context.underscore_is_part_of_word = false;
-                    cursor.pos = scan_through_similar_chars_on_the_right(input, cursor.pos);
-                    context.underscore_is_part_of_word = true;
-                case .word_ends;
-                    char := get_char_at_offset(input, cursor.pos);
-                    char_type := get_char_type(char);
-                    if char_type != .word then cursor.pos = scan_through_similar_chars_on_the_right(input, cursor.pos, char_type, skip_one_space = false);
-                    char_type = get_char_type(get_char_at_offset(input, cursor.pos));
-                    if char_type != .other && char != #char "\n" then cursor.pos = scan_through_similar_chars_on_the_right(input, cursor.pos);
-            }
-            if !extend_selection then cursor.sel = cursor.pos;
+        if by == {
+            case .char;
+                cursor.pos = next_char_offset(text, cursor.pos);
+
+            case .word;
+                context.underscore_is_part_of_word = false;
+                cursor.pos = scan_through_similar_chars_on_the_right(input, cursor.pos);
+                context.underscore_is_part_of_word = true;
+
+            case .word_ends;
+                char := get_char_at_offset(input, cursor.pos);
+                char_type := get_char_type(char);
+                if char_type != .word then cursor.pos = scan_through_similar_chars_on_the_right(input, cursor.pos, char_type, skip_one_space = false);
+                char_type = get_char_type(get_char_at_offset(input, cursor.pos));
+                if char_type != .other && !is_unicode_linebreak(char) then cursor.pos = scan_through_similar_chars_on_the_right(input, cursor.pos);
         }
+        if !extend_selection then cursor.sel = cursor.pos;
     }
 }
 
@@ -435,65 +433,14 @@ has_selection :: inline (using cursor: Text_Input.Cursor) -> bool {
     return cursor.pos != cursor.sel;
 }
 
-scan_through_similar_chars_on_the_left :: (using input: Text_Input, offset: s32, char_type: Char_Type = .none, skip_one_space := true) -> offset: s32 {
-    if !text return 0;
-
-    line_start := text.data;
-    char: u32;
-    t := text.data + offset;
-    t, char = unicode_prev_character(t);
-    if char_type != .none && char_type != get_char_type(char) return offset;
-    if skip_one_space && is_unicode_space(char) && t > line_start then t, char = unicode_prev_character(t);
-
-    if get_char_type(char) == {
-        case .space;
-            while t > text.data && is_space_or_underscore(char)  { t, char = unicode_prev_character(t); }
-            if !is_unicode_space(char) then t = unicode_next_character(t);
-        case .word;
-            while t > text.data && is_word_char(char) { t, char = unicode_prev_character(t); }
-            if !is_word_char(char) then t = unicode_next_character(t);
-        case .non_word;
-            while t > text.data && is_non_word_char(char) { t, char = unicode_prev_character(t); }
-            if !is_non_word_char(char) then t = unicode_next_character(t);
-    }
-
-    if t < text.data then t = text.data;
-
-    return cast(s32) max(0, t - text.data);
+scan_through_similar_chars_on_the_left :: inline (input: *Text_Input, offset: s32, char_type: Char_Type = .none, skip_one_space := true) -> offset: s32 {
+    return scan_through_similar_chars_on_the_left(to_view(input.text), 0, offset, char_type, skip_one_space);
 }
 
-scan_through_similar_chars_on_the_right :: (using input: Text_Input, offset: s32, only: Char_Type = .none, skip_one_space := true) -> offset: s32 {
-    if !text return 0;
-    if offset >= text.count return offset;  // nowhere to go
-
-    s: string = ---;
-    s.data  = *text[offset];
-    s.count = (text.data + text.count) - s.data;
-
-    char := utf8_next_character(*s);
-    if only == {
-        case .word;     if !is_word_char(char)     return offset;
-        case .non_word; if !is_non_word_char(char) return offset;
-        case .space;    if !is_unicode_space(char) return offset;
-    }
-    if skip_one_space && is_unicode_space(char) && s then char = utf8_next_character(*s);
-
-    if is_space_or_underscore(char) {
-        // Only spaces
-        while s && is_space_or_underscore(char)  { char = utf8_next_character(*s); }
-        if !is_unicode_space(char) { s.data, char = unicode_prev_character(s.data); }
-    } else if is_word_char(char) {
-        // Only word chars
-        while s && is_word_char(char) { char = utf8_next_character(*s); }
-        if !is_word_char(char) { s.data, char = unicode_prev_character(s.data); }
-    } else if !is_unicode_linebreak(char) {
-        // Only non-word chars
-        while s && is_non_word_char(char) { char = utf8_next_character(*s); }
-        if !is_non_word_char(char) { s.data, char = unicode_prev_character(s.data); }
-    }
-
-    return min(text.count, cast(s32) (s.data - text.data));
+scan_through_similar_chars_on_the_right :: inline (input: *Text_Input, offset: s32, char_type: Char_Type = .none, skip_one_space := true) -> offset: s32 {
+    return scan_through_similar_chars_on_the_right(to_view(input.text), offset, char_type, skip_one_space);
 }
+
 
 get_char_at_offset :: (using input: Text_Input, offset: s32) -> u32 {
     str := get_char_at_offset_as_string(input, offset);
