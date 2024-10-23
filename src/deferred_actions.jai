@@ -51,6 +51,10 @@ defer_action_save_as :: (buffer_id: s64) {
     push_action(.save_as, .{ save_as = .{ buffer_id = buffer_id } });
 }
 
+defer_action_close_buffer :: (buffer_id: s64) {
+    push_action(.close_buffer, .{ close_buffer = .{ buffer_id = buffer_id } });
+}
+
 defer_action_move :: (buffer_id: s64) {
     push_action(.save_as, .{ save_as = .{ buffer_id = buffer_id, is_move = true } });
 }
@@ -81,6 +85,7 @@ execute_top_action :: () -> Action_Result {
         case .quit;                                     return execute_quit(action);
         case .save_as;                                  return execute_save_as(action);
         case .save_all_buffers;                         return execute_save_all_buffers(action);
+        case .close_buffer;                             return execute_close_buffer(action);
         case .delete;                                   return execute_delete(action);
         case .confirm_overwrite;                        return execute_confirm_overwrite(action);
         case .kill_running_command;                     return execute_kill_running_command(action);
@@ -108,6 +113,7 @@ remove_top_action :: () {
         case .quit;
         case .save_as;
         case .save_all_buffers;
+        case .close_buffer;
         case .delete;
         case .kill_running_command;
         case .reload_workspace;
@@ -131,6 +137,7 @@ Deferred_Action :: struct {
 
     Details :: union {
         save_as:                struct { buffer_id: s64; is_move: bool; }
+        close_buffer:           struct { buffer_id: s64; }
         confirm_overwrite:      struct { buffer_id: s64; is_move: bool; file_path: string; }
         delete:                 struct { buffer_id: s64; }
         load_project_config:    struct { path: string; }
@@ -142,6 +149,7 @@ Deferred_Action :: struct {
         quit;
         save_as;
         save_all_buffers;
+        close_buffer;
         delete;
         confirm_overwrite;
         kill_running_command;
@@ -237,6 +245,37 @@ execute_save_as :: (action: Deferred_Action) -> Action_Result {
     }
 
     return .DONE;
+}
+
+execute_close_buffer :: (action: Deferred_Action) -> Action_Result {
+    result := dialog_get_result(*unsaved_buffers_dialog, action.id);
+    buffer_id := action.details.close_buffer.buffer_id;
+    if #complete result == {
+        case .UNINITTED;
+            show_dialog(*unsaved_buffers_dialog, action.id, .{ show_single_buffer_only_id = buffer_id });
+            return .WAIT;
+
+        case .OK_TO_ALL; #through;
+        case .OK;
+            buffer := *open_buffers[buffer_id];
+            save_buffer(buffer, buffer_id);
+            if editors.active >= 0 && open_editors[editors.active].buffer_id == buffer_id {
+                close_current_buffer();
+            }
+            return .DONE;
+
+        case .NO_TO_ALL;
+            buffer := *open_buffers[buffer_id];
+            free(buffer.bytes);
+            load_buffer_from_disk(buffer);
+            if editors.active >= 0 && open_editors[editors.active].buffer_id == buffer_id {
+                close_current_buffer();
+            }
+            return .DONE;
+
+        case .PENDING;   return .WAIT;
+        case .CANCEL;    return .CANCEL;
+    }
 }
 
 execute_delete :: (action: Deferred_Action) -> Action_Result {

@@ -704,8 +704,7 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
         reroute_active_editor(buffer_id, new_id);
         update_window_title(open_editors[editors.active].buffer_id);
 
-        array_ordered_remove_by_value(*most_recent_buffers, new_id);
-        array_insert_at(*most_recent_buffers, new_id, 0);
+        move_or_add_to_front(*most_recent_buffers, new_id);
     }
 
     start_watching_file_if_not_already(file_path);
@@ -1005,7 +1004,21 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
 
     if found_buffer return buffer_id, false;
 
-    // Create and load file
+    // Fill in buffer data
+    buffer = *open_buffers[buffer_id];
+    buffer.file = get_file_info_from_full_path(path);
+    buffer.has_file = true;
+
+    load_buffer_from_disk(buffer);
+
+    return buffer_id, true;
+}
+
+load_buffer_from_disk :: (buffer: *Buffer) {
+    // This proc is for loading the file directly; the proc you want is more likely to be refresh_buffer_from_disk
+    assert(buffer.has_file, "Trying to load from disk a buffer with no file. This is a bug");
+
+    path := buffer.file.full_path;
     file_data, success := read_entire_file(path);
     load_error := "";
     if !success {
@@ -1026,11 +1039,6 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
         buffer.lang = get_lang_from_path(path);
     }
 
-    // Fill in buffer data
-    buffer.file = get_file_info_from_full_path(path);
-    buffer.has_file = true;
-    remember_last_mod_info(buffer);
-
     lock(*buffer.content_lock);
     buffer.bytes = from_view(to_bytes(file_data));
     bytes_removed := remove_crlf_in_place(*buffer.bytes);
@@ -1038,11 +1046,11 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
 
     buffer.crlf = bytes_removed > 0;
     buffer.meow_hash = calculate_hash(to_view(buffer.bytes));
+    buffer.modified = false;
 
+    remember_last_mod_info(buffer);
     rescan_for_lines(buffer);
     retokenize(buffer);
-
-    return buffer_id, true;
 }
 
 get_buffer_name :: (buffer: Buffer) -> string {
@@ -1267,7 +1275,7 @@ is_unsaved :: (buffer: Buffer) -> bool {
 }
 
 remove_all_buffers :: () {
-    array_reset_keeping_memory(*most_recent_buffers);
+    reset_keeping_memory(*most_recent_buffers);
     deinit(*buffers_table);
     for * open_buffers free_buffer(it);
     bucket_array_reset(*open_buffers);
