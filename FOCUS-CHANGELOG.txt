@@ -1,6 +1,7 @@
 # Main Git Branch
 
 + New features:
+    + Global search now allows to additionally filter results by including and excluding files
     + Syntax highlighting:
         + Batch (thanks @arjenwitteveen)
     + It is now possible to pass a line number together with the file path to the editor on startup: `focus /path/to/file:69` (thanks @simonvallz)
