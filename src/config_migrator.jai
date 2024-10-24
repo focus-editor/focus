@@ -1851,9 +1851,6 @@ Ctrl-Shift-A                select_all_occurrences
 Tab                         open_directory
 
 [common]
-Alt-X                       show_commands
-Ctrl-Shift-P                show_commands
-
 Ctrl-P                      show_open_file_dialog_in_search_mode
 Ctrl-O                      show_open_file_dialog_in_navigate_mode
 Ctrl-Shift-O                show_open_file_dialog_in_navigate_mode_from_root
@@ -1891,9 +1888,6 @@ Ctrl-Y                      move_selection_to_next_word
 Tab                         open_directory
 
 [common]
-Alt-X                       show_commands
-Ctrl-Shift-P                show_commands
-
 Ctrl-P                      open_file_by_name
 Ctrl-O                      navigate_to_file
 Ctrl-Shift-O                navigate_to_file_from_root

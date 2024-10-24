@@ -261,14 +261,15 @@ start_new_search :: (force := false) {
 
     if !initted return;
 
-    if !input.text {
-        reset_search_request(*request, new_needle = "");
+    new_needle, new_include, new_exclude := to_string(input.text), to_string(include.text), to_string(exclude.text);
+
+    if !new_needle {
+        reset_search_request(*request, new_needle, new_include, new_exclude);
         reset_results();
         return;
     }
-    new_needle := to_string(input.text);
 
-    if request.needle == new_needle && !force return;  // needle hasn't changed, no need to repeat
+    if !force && request.needle == new_needle && request.include == new_include && request.exclude == new_exclude return;  // nothing has changed, no need to repeat
 
     if config.settings.search_is_case_sensitive_when_uppercase_present && !case_sensitive_toggled_manually {
         case_sensitive = contains_uppercase_ascii(new_needle);
@@ -289,7 +290,7 @@ start_new_search :: (force := false) {
         re.uninit(*regex);
     }
 
-    reset_search_request(*request, new_needle);
+    reset_search_request(*request, new_needle, new_include, new_exclude);
     request.in_progress = true;
 
     num_threads := thread_group.worker_info.count;
@@ -301,7 +302,9 @@ start_new_search :: (force := false) {
     while buffer_start_index < open_buffers.count {
         task := New(Search_Task);
         task.request_id = request.id;
-        task.needle = copy_string(request.needle);  // we have to copy because otherwise we'd have to sync with other threads
+        task.needle  = copy_string(request.needle);  // we have to copy because otherwise we'd have to sync with other threads
+        task.include = copy_string(request.include);
+        task.exclude = copy_string(request.exclude);
         task.skip_table = array_copy(request.skip_table);
         task.buffer_start_index = cast(s32) buffer_start_index;
         task.buffer_end_index   = cast(s32) min(buffer_start_index + buffers_per_thread - 1, open_buffers.count - 1);
@@ -331,10 +334,25 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
     }
     defer if regex_search then re.uninit(*regex);
 
+    // Split wildcards into arrays
+    includes: [..] string;
+    excludes: [..] string;
+    includes.allocator = temp;
+    excludes.allocator = temp;
+    for rule : split(include, cast(u8) #char ",",, temp) {
+        trimmed := trim(rule);
+        if trimmed then array_add(*includes, trimmed);
+    }
+    for rule : split(exclude, cast(u8) #char ",",, temp) {
+        trimmed := trim(rule);
+        if trimmed then array_add(*excludes, trimmed);
+    }
+
     for buffer_id : buffer_start_index .. buffer_end_index {
         // Search in buffer
         buffer := *open_buffers[buffer_id];
-        if (buffer.deleted && !buffer.modified) || buffer.binary || buffer.internal continue;  // do not search
+        if (buffer.deleted && !buffer.modified) || buffer.binary || buffer.internal  continue;  // do not search
+        if !should_include_buffer(buffer, includes) || should_exclude_buffer(buffer, excludes)  continue;
 
         // Make sure the buffer contents doesn't change while we're scanning it
         lock(*buffer.content_lock);
@@ -357,6 +375,36 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
 
     return .CONTINUE;  // we want to reuse this thread for future searches
 }
+
+should_include_buffer :: (buffer: Buffer, includes: [] string) -> bool {
+    if !includes return true;
+    return _buffer_matches_wildcards(buffer, includes);
+}
+
+should_exclude_buffer :: inline (buffer: Buffer, excludes: [] string) -> bool {
+    if !excludes return false;
+    return _buffer_matches_wildcards(buffer, excludes);
+}
+
+_buffer_matches_wildcards :: (buffer: Buffer, wildcards: [] string) -> bool {
+    path := ifx buffer.has_file then buffer.file.full_path else "";  // defaulting to "" in case there's an all-catch wildcard
+    path_chunks := split(path, cast(u8) #char "/",, allocator = temp);
+
+    for wildcards {
+        if contains(it, cast(u8) #char "/") {
+            // Match whole path
+            if platform_path_begins_with(path, it) || path_wildcard_match(path, it) return true;
+        } else {
+            // Match partial path
+            for chunk : path_chunks {
+                if path_wildcard_match(chunk, it) return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 
 find_all_using_regex :: (using task: *Search_Task, regex: re.Regexp, buffer: Buffer, buffer_id: s32, buffer_sort_key: u64) {
     buffer_str := to_string(buffer.bytes);
@@ -421,12 +469,18 @@ find_all :: (using task: *Search_Task, buffer: Buffer, buffer_id: s32, buffer_so
     }
 }
 
-reset_search_request :: (using request: *Search_Request, new_needle: string) {
+reset_search_request :: (using request: *Search_Request, new_needle: string, new_include: string, new_exclude: string) {
     id += 1;
     for completed_tasks free_task(it);
     array_reset_keeping_memory(*completed_tasks);
-    if needle then free(needle);
-    needle = copy_string(new_needle);
+
+    if needle  then free(needle);
+    if include then free(include);
+    if exclude then free(exclude);
+    needle  = copy_string(new_needle);
+    include = copy_string(new_include);
+    exclude = copy_string(new_exclude);
+
     skip_table = bmh_prepare_skip_table(needle, case_sensitive);
     num_tasks_left = 0;
     in_progress = false;
@@ -444,6 +498,8 @@ reset_results :: () {
 
 free_task :: (task: *Search_Task) {
     free(task.needle);
+    free(task.include);
+    free(task.exclude);
     array_free(task.skip_table);
     free(task);
 }
@@ -514,6 +570,8 @@ Search_Request :: struct {
     num_tasks_left: s32;
     completed_tasks: [..] *Search_Task;
     needle: string;
+    include: string;
+    exclude: string;
     skip_table: [256] s32;
     in_progress: bool;
     case_sensitive: bool;
@@ -525,6 +583,8 @@ Search_Request :: struct {
 Search_Task :: struct {
     request_id:  s64;
     needle: string;
+    include: string;
+    exclude: string;
     skip_table: [] s32;
     case_sensitive: bool;
     whole_word: bool;

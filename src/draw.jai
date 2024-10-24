@@ -3098,7 +3098,7 @@ draw_finder :: () {
         draw_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
 
         if !is_empty(finder.input.text) && !results {
-            label := "Searching...";
+            label := "Searching…";
             if !finder.request.in_progress {
                 label = "No results found.";
                 if case_sensitive {
@@ -3112,6 +3112,16 @@ draw_finder :: () {
                 if regex_search {
                     combo := key_sequence_for_action_as_string(Action_Search_Dialog.toggle_regex_search);
                     label = tprint("%   Regex search is active (% to toggle).", label, combo);
+                }
+                if !is_empty(finder.include.text) {
+                    wildcards := take_first_n_chars(to_string(finder.include.text), 20);
+                    if wildcards.count != finder.include.text.count then wildcards = tprint("%…", wildcards);
+                    label = tprint("%  Only files matching \"%\" were searched.", label, wildcards);
+                }
+                if !is_empty(finder.exclude.text) {
+                    wildcards := take_first_n_chars(to_string(finder.exclude.text), 20);
+                    if wildcards.count != finder.exclude.text.count then wildcards = tprint("%…", wildcards);
+                    label = tprint("%  Files matching \"%\" were excluded.", label, wildcards);
                 }
             }
             entry_rect := cut_top(files_rect, entry_height);
