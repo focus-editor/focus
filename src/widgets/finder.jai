@@ -140,6 +140,8 @@ finder_update :: () {
             continue;
         }
 
+        if task.worker_limit_reached then finder.result_limit_reached = true;
+
         array_add(*request.completed_tasks, task);
         request.num_tasks_left -= 1;
         if request.num_tasks_left == 0 {
@@ -370,7 +372,7 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
             find_all(task, buffer, buffer_id, buffer_sort_key);
         }
 
-        if num_results >= MAX_RESULTS_PER_WORKER break;
+        if num_results >= MAX_RESULTS_PER_WORKER { worker_limit_reached = true; break; }
     }
 
     return .CONTINUE;  // we want to reuse this thread for future searches
@@ -436,7 +438,7 @@ find_all_using_regex :: (using task: *Search_Task, regex: re.Regexp, buffer: Buf
         result.sort_key = buffer_sort_key | offset_part;
 
         num_results += 1;
-        if num_results >= MAX_RESULTS_PER_WORKER break;
+        if num_results >= MAX_RESULTS_PER_WORKER { worker_limit_reached = true; break; }
     }
 }
 
@@ -462,7 +464,7 @@ find_all :: (using task: *Search_Task, buffer: Buffer, buffer_id: s32, buffer_so
         result.sort_key = buffer_sort_key | offset_part;
 
         num_results += 1;
-        if num_results >= MAX_RESULTS_PER_WORKER break;
+        if num_results >= MAX_RESULTS_PER_WORKER { worker_limit_reached = true; break; }
 
         offset += needle.count;
     }
@@ -483,12 +485,14 @@ reset_search_request :: (using request: *Search_Request, new_needle: string, new
     skip_table = bmh_prepare_skip_table(needle, case_sensitive);
     num_tasks_left = 0;
     in_progress = false;
+    finder.result_limit_reached = false;
 }
 
 reset_results :: () {
     using finder;
     if needle then free(needle);
     needle = "";
+    result_limit_reached = false;
     array_reset_keeping_memory(*results);
     scroll_y = 0;
     scroll_anim.target = 0;
@@ -526,6 +530,7 @@ Finder :: struct {
     request: Search_Request;
     needle: string;  // to remember what search string the results below correspond to
     results: [..] Search_Result;
+    result_limit_reached: bool;
 
     case_sensitive: bool;
     case_sensitive_toggled_manually: bool;
@@ -598,6 +603,7 @@ Search_Task :: struct {
     // To be filled by the worker thread
     num_results: s64;
     results: [MAX_RESULTS_PER_WORKER] Search_Result;
+    worker_limit_reached: bool;
 }
 
 thread_group: Thread_Group;

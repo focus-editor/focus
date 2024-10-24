@@ -2819,6 +2819,14 @@ draw_finder :: () {
     }
     draw_rounded_rect_with_shadow(box_rect, Color.BACKGROUND_3, radius = rounding_radius_large, extra_draw_info = .{is_background = true});
 
+    if results {
+        template := "% results found";
+        if result_limit_reached then template = "%+ results found";
+        label := tprint(template, results.count);
+        if results.count == 1 then label = "1 result found";
+        draw_tooltip_top_left(label, top_right(box_rect));
+    }
+
     maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
 
     // Draw the search inputs
@@ -3435,6 +3443,18 @@ draw_icon_button :: (ui_id: Ui_Id, rect: Rect, icon: string, style : enum { none
     return hover && mouse.left.just_pressed, hover;
 }
 
+draw_tooltip_top_left :: (text: string, pos: Vector2) {
+    padding := 4 * dpi_scale;
+
+    width := cast(float) Simp.prepare_text(font_ui_very_small, text);
+    rect := Rect.{ x = pos.x, y = pos.y };
+    rect.w = width + 2 * padding;
+    rect.x -= rect.w;
+    rect.h = 2 * padding + font_ui_very_small.character_height;
+
+    draw_rounded_rect_with_shadow(rect, Color.BACKGROUND_3, extra_draw_info = .{is_background = true});
+    Simp.draw_prepared_text(font_ui_very_small, xx (rect.x + padding), xx (rect.y + (rect.h - font_ui_very_small.character_height) / 2) + 1, xx Color.UI_DEFAULT);
+}
 
 draw_tooltip_bottom_left :: (text: string, pos: Vector2) {
     padding := 4 * dpi_scale;
