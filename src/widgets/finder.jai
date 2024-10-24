@@ -405,7 +405,6 @@ _buffer_matches_wildcards :: (buffer: Buffer, wildcards: [] string) -> bool {
     return false;
 }
 
-
 find_all_using_regex :: (using task: *Search_Task, regex: re.Regexp, buffer: Buffer, buffer_id: s32, buffer_sort_key: u64) {
     buffer_str := to_string(buffer.bytes);
 
@@ -522,6 +521,7 @@ Finder :: struct {
     include: Text_Input;
     exclude: Text_Input;
     active_input: Active_Input = .input;
+    Active_Input :: enum { input; include; exclude; }
 
     request: Search_Request;
     needle: string;  // to remember what search string the results below correspond to
@@ -546,10 +546,11 @@ Finder :: struct {
     WIDTH_NORMAL   :: 0.7;
     WIDTH_EXPANDED :: 0.95;
 
+    search_input_width  := 0.7;  // how much of the total width is allocated for the search input
+    include_input_width := 0.5;  // splitter position between the filter inputs
+
     need_to_refresh_results: bool;  // when a buffer is modified and we have some search results, we have to search again,
                                     // otherwise the search results may point to an offset which no longer exists or is invalid
-
-    Active_Input :: enum { input; include; exclude; }
 }
 
 #scope_file

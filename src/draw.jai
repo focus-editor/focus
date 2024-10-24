@@ -2822,14 +2822,31 @@ draw_finder :: () {
     maybe_set_hot_or_active(ui_id, box_rect, .NORMAL);
 
     // Draw the search inputs
+    splitter1_rect, splitter2_rect, include_rect, exclude_rect: Rect;
     input_rect, files_rect := cut_top(box_rect, input_rect_height);
     input_rect = shrink(input_rect, margin);
-    input_rect=, filters_rect := cut_left(input_rect, input_rect.w * 0.7);
 
-    splitter1_rect, splitter2_rect, include_rect, exclude_rect: Rect;
-    splitter1_rect, filters_rect = cut_left(filters_rect, 2 * padding);
-    include_rect,   filters_rect = cut_left(filters_rect, (filters_rect.w - 2 * padding) / 2);
-    splitter2_rect, exclude_rect = cut_left(filters_rect, 2 * padding);
+    // Drag the search input splitters before drawing them
+    splitter1_id := get_ui_id_from_loc(parent_id = ui_id);
+    if ui.active == splitter1_id {
+        splitter_pos := (mouse.pointer.x - input_rect.x) / input_rect.w;
+        search_input_width = clamp(splitter_pos, 0.1, 0.99);
+    }
+    input_rect=, filters_rect := cut_left(input_rect, input_rect.w * search_input_width);
+
+    splitter1_rect, filters_rect = cut_left(filters_rect, padding);
+    maybe_set_hot_or_active(splitter1_id, splitter1_rect, .DRAGGING_HORIZONTAL);
+
+    splitter2_id := get_ui_id_from_loc(parent_id = ui_id);
+    if ui.active == splitter2_id {
+        splitter_pos := (mouse.pointer.x - filters_rect.x) / filters_rect.w;
+        include_input_width = clamp(splitter_pos, 0.1, 0.9);
+    }
+
+    include_rect, filters_rect = cut_left(filters_rect, (filters_rect.w - padding) * include_input_width);
+
+    splitter2_rect, exclude_rect = cut_left(filters_rect, padding);
+    maybe_set_hot_or_active(splitter2_id, splitter2_rect, .DRAGGING_HORIZONTAL);
 
     // Main search input
     input_id := get_ui_id_from_loc(parent_id = ui_id);
@@ -2892,14 +2909,14 @@ draw_finder :: () {
     // Include files input
     {
         include_input_id := get_ui_id_from_loc(parent_id = ui_id);
-        became_active := draw_text_input(*finder.include, include_rect, ui_id = include_input_id, active = (finder.active_input == .include), label = " Include files");
+        became_active := draw_text_input(*finder.include, include_rect, ui_id = include_input_id, active = (finder.active_input == .include), label = " Include files, e.g. *.cpp, *.txt");
         if became_active then finder_activate_input(.include);
     }
 
     // Exclude files input
     {
         exclude_input_id := get_ui_id_from_loc(parent_id = ui_id);
-        became_active := draw_text_input(*finder.exclude, exclude_rect, ui_id = exclude_input_id, active = (finder.active_input == .exclude), label = " Exclude files");
+        became_active := draw_text_input(*finder.exclude, exclude_rect, ui_id = exclude_input_id, active = (finder.active_input == .exclude), label = " Exclude files, e.g. **/node_modules/**/*.js");
         if became_active then finder_activate_input(.exclude);
     }
 
