@@ -254,6 +254,9 @@ Alt-C                       toggle_case_sensitive
 Alt-W                       toggle_whole_word
 Alt-R                       toggle_regex_search
 
+Tab                         go_to_next_input
+Shift-Tab                   go_to_previous_input
+
 
 [common]
 

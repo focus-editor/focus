@@ -24,7 +24,7 @@ finder_handle_event :: (event: Input.Event) -> handled: bool {
     using finder;
 
     if event.type == .KEYBOARD && event.key_pressed {
-        handled := text_input_handle_event(*input, event);
+        handled := text_input_handle_event(get_active_input(), event);
         if handled { start_new_search(); return true; }
 
         action, mapping := map_event_to_action(event, Action_Search_Dialog);
@@ -43,6 +43,8 @@ finder_handle_event :: (event: Input.Event) -> handled: bool {
 
             case .escape;                   #through;
             case .close_dialog;             finder_close();                                         return true;
+            case .go_to_next_input;         finder_go_to_next_input();                              return true;
+            case .go_to_previous_input;     finder_go_to_previous_input();                          return true;
 
             case .open_entry_in_place;      finder_open_selected_result(selected, .in_place);       return true;
             case .open_entry_on_the_side;   finder_open_selected_result(selected, .on_the_side);    return true;
@@ -52,7 +54,7 @@ finder_handle_event :: (event: Input.Event) -> handled: bool {
         return false;
 
     } else if event.type == .TEXT_INPUT {
-        text_input_type_char(*finder.input, event.utf32);
+        text_input_type_char(get_active_input(), event.utf32);
         start_new_search();
         return true;
     }
@@ -81,6 +83,23 @@ finder_open :: () {
 
 finder_close :: () {
     activate_editors();
+}
+
+finder_activate_input :: inline (input: Finder.Active_Input) {
+    finder.active_input = input;
+}
+
+finder_go_to_next_input :: () {
+    NUM_INPUTS :: #run enum_highest_value(Finder.Active_Input) + 1;
+    next_input := (cast(u32) finder.active_input + 1) % NUM_INPUTS;
+    finder_activate_input(cast(Finder.Active_Input) next_input);
+}
+
+finder_go_to_previous_input :: () {
+    NUM_INPUTS :: #run enum_highest_value(Finder.Active_Input) + 1;
+    current_input := cast(u32) finder.active_input;
+    next_input := ifx current_input == 0 then NUM_INPUTS - 1 else current_input - 1;
+    finder_activate_input(cast(Finder.Active_Input) next_input);
 }
 
 finder_open_from_editor :: () {
@@ -120,6 +139,8 @@ finder_update :: () {
             free_task(task);
             continue;
         }
+
+        if task.worker_limit_reached then finder.result_limit_reached = true;
 
         array_add(*request.completed_tasks, task);
         request.num_tasks_left -= 1;
@@ -212,6 +233,16 @@ finder_toggle_regex_search :: () {
 
 #scope_file
 
+get_active_input :: () -> *Text_Input {
+    using finder;
+
+    if #complete active_input == {
+        case .input;    return *input;
+        case .include;  return *include;
+        case .exclude;  return *exclude;
+    }
+}
+
 move_cursor :: (delta: s64, wrap := false, snap := true) {
     using finder;
 
@@ -232,14 +263,15 @@ start_new_search :: (force := false) {
 
     if !initted return;
 
-    if !input.text {
-        reset_search_request(*request, new_needle = "");
+    new_needle, new_include, new_exclude := to_string(input.text), to_string(include.text), to_string(exclude.text);
+
+    if !new_needle {
+        reset_search_request(*request, new_needle, new_include, new_exclude);
         reset_results();
         return;
     }
-    new_needle := to_string(input.text);
 
-    if request.needle == new_needle && !force return;  // needle hasn't changed, no need to repeat
+    if !force && request.needle == new_needle && request.include == new_include && request.exclude == new_exclude return;  // nothing has changed, no need to repeat
 
     if config.settings.search_is_case_sensitive_when_uppercase_present && !case_sensitive_toggled_manually {
         case_sensitive = contains_uppercase_ascii(new_needle);
@@ -260,7 +292,7 @@ start_new_search :: (force := false) {
         re.uninit(*regex);
     }
 
-    reset_search_request(*request, new_needle);
+    reset_search_request(*request, new_needle, new_include, new_exclude);
     request.in_progress = true;
 
     num_threads := thread_group.worker_info.count;
@@ -272,7 +304,9 @@ start_new_search :: (force := false) {
     while buffer_start_index < open_buffers.count {
         task := New(Search_Task);
         task.request_id = request.id;
-        task.needle = copy_string(request.needle);  // we have to copy because otherwise we'd have to sync with other threads
+        task.needle  = copy_string(request.needle);  // we have to copy because otherwise we'd have to sync with other threads
+        task.include = copy_string(request.include);
+        task.exclude = copy_string(request.exclude);
         task.skip_table = array_copy(request.skip_table);
         task.buffer_start_index = cast(s32) buffer_start_index;
         task.buffer_end_index   = cast(s32) min(buffer_start_index + buffers_per_thread - 1, open_buffers.count - 1);
@@ -302,10 +336,25 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
     }
     defer if regex_search then re.uninit(*regex);
 
+    // Split wildcards into arrays
+    includes: [..] string;
+    excludes: [..] string;
+    includes.allocator = temp;
+    excludes.allocator = temp;
+    for rule : split(include, cast(u8) #char ",",, temp) {
+        trimmed := trim(rule);
+        if trimmed then array_add(*includes, trimmed);
+    }
+    for rule : split(exclude, cast(u8) #char ",",, temp) {
+        trimmed := trim(rule);
+        if trimmed then array_add(*excludes, trimmed);
+    }
+
     for buffer_id : buffer_start_index .. buffer_end_index {
         // Search in buffer
         buffer := *open_buffers[buffer_id];
-        if (buffer.deleted && !buffer.modified) || buffer.binary || buffer.internal continue;  // do not search
+        if (buffer.deleted && !buffer.modified) || buffer.binary || buffer.internal  continue;  // do not search
+        if !should_include_buffer(buffer, includes) || should_exclude_buffer(buffer, excludes)  continue;
 
         // Make sure the buffer contents doesn't change while we're scanning it
         lock(*buffer.content_lock);
@@ -323,10 +372,39 @@ search_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thr
             find_all(task, buffer, buffer_id, buffer_sort_key);
         }
 
-        if num_results >= MAX_RESULTS_PER_WORKER break;
+        if num_results >= MAX_RESULTS_PER_WORKER { worker_limit_reached = true; break; }
     }
 
     return .CONTINUE;  // we want to reuse this thread for future searches
+}
+
+should_include_buffer :: (buffer: Buffer, includes: [] string) -> bool {
+    if !includes return true;
+    return _buffer_matches_wildcards(buffer, includes);
+}
+
+should_exclude_buffer :: inline (buffer: Buffer, excludes: [] string) -> bool {
+    if !excludes return false;
+    return _buffer_matches_wildcards(buffer, excludes);
+}
+
+_buffer_matches_wildcards :: (buffer: Buffer, wildcards: [] string) -> bool {
+    path := ifx buffer.has_file then buffer.file.full_path else "";  // defaulting to "" in case there's an all-catch wildcard
+    path_chunks := split(path, cast(u8) #char "/",, allocator = temp);
+
+    for wildcards {
+        if contains(it, cast(u8) #char "/") {
+            // Match whole path
+            if platform_path_begins_with(path, it) || path_wildcard_match(path, it) return true;
+        } else {
+            // Match partial path
+            for chunk : path_chunks {
+                if path_wildcard_match(chunk, it) return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 find_all_using_regex :: (using task: *Search_Task, regex: re.Regexp, buffer: Buffer, buffer_id: s32, buffer_sort_key: u64) {
@@ -360,7 +438,7 @@ find_all_using_regex :: (using task: *Search_Task, regex: re.Regexp, buffer: Buf
         result.sort_key = buffer_sort_key | offset_part;
 
         num_results += 1;
-        if num_results >= MAX_RESULTS_PER_WORKER break;
+        if num_results >= MAX_RESULTS_PER_WORKER { worker_limit_reached = true; break; }
     }
 }
 
@@ -386,27 +464,35 @@ find_all :: (using task: *Search_Task, buffer: Buffer, buffer_id: s32, buffer_so
         result.sort_key = buffer_sort_key | offset_part;
 
         num_results += 1;
-        if num_results >= MAX_RESULTS_PER_WORKER break;
+        if num_results >= MAX_RESULTS_PER_WORKER { worker_limit_reached = true; break; }
 
         offset += needle.count;
     }
 }
 
-reset_search_request :: (using request: *Search_Request, new_needle: string) {
+reset_search_request :: (using request: *Search_Request, new_needle: string, new_include: string, new_exclude: string) {
     id += 1;
     for completed_tasks free_task(it);
     array_reset_keeping_memory(*completed_tasks);
-    if needle then free(needle);
-    needle = copy_string(new_needle);
+
+    if needle  then free(needle);
+    if include then free(include);
+    if exclude then free(exclude);
+    needle  = copy_string(new_needle);
+    include = copy_string(new_include);
+    exclude = copy_string(new_exclude);
+
     skip_table = bmh_prepare_skip_table(needle, case_sensitive);
     num_tasks_left = 0;
     in_progress = false;
+    finder.result_limit_reached = false;
 }
 
 reset_results :: () {
     using finder;
     if needle then free(needle);
     needle = "";
+    result_limit_reached = false;
     array_reset_keeping_memory(*results);
     scroll_y = 0;
     scroll_anim.target = 0;
@@ -415,6 +501,8 @@ reset_results :: () {
 
 free_task :: (task: *Search_Task) {
     free(task.needle);
+    free(task.include);
+    free(task.exclude);
     array_free(task.skip_table);
     free(task);
 }
@@ -434,10 +522,15 @@ Finder :: struct {
     initted := false;  // will be initialized when the initial workspace scan completes
 
     input: Text_Input;
+    include: Text_Input;
+    exclude: Text_Input;
+    active_input: Active_Input = .input;
+    Active_Input :: enum { input; include; exclude; }
 
     request: Search_Request;
     needle: string;  // to remember what search string the results below correspond to
     results: [..] Search_Result;
+    result_limit_reached: bool;
 
     case_sensitive: bool;
     case_sensitive_toggled_manually: bool;
@@ -457,6 +550,9 @@ Finder :: struct {
     width_anim := #run Tween_Animation(float).{ start = WIDTH_NORMAL, target = WIDTH_NORMAL };
     WIDTH_NORMAL   :: 0.7;
     WIDTH_EXPANDED :: 0.95;
+
+    search_input_width  := 0.7;  // how much of the total width is allocated for the search input
+    include_input_width := 0.5;  // splitter position between the filter inputs
 
     need_to_refresh_results: bool;  // when a buffer is modified and we have some search results, we have to search again,
                                     // otherwise the search results may point to an offset which no longer exists or is invalid
@@ -480,6 +576,8 @@ Search_Request :: struct {
     num_tasks_left: s32;
     completed_tasks: [..] *Search_Task;
     needle: string;
+    include: string;
+    exclude: string;
     skip_table: [256] s32;
     in_progress: bool;
     case_sensitive: bool;
@@ -491,6 +589,8 @@ Search_Request :: struct {
 Search_Task :: struct {
     request_id:  s64;
     needle: string;
+    include: string;
+    exclude: string;
     skip_table: [] s32;
     case_sensitive: bool;
     whole_word: bool;
@@ -503,6 +603,7 @@ Search_Task :: struct {
     // To be filled by the worker thread
     num_results: s64;
     results: [MAX_RESULTS_PER_WORKER] Search_Result;
+    worker_limit_reached: bool;
 }
 
 thread_group: Thread_Group;

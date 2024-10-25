@@ -308,7 +308,7 @@ should_descend_into_dir :: (path: string) -> bool {
 }
 
 path_is_explicitly_allowed :: (path: string) -> bool {
-    path_chunks := split(path, "/",, allocator = temp);
+    path_chunks := split(path, cast(u8) #char "/",, allocator = temp);
 
     for config.workspace.allow {
         if contains(it, cast(u8) #char "/") {

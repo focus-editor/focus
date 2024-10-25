@@ -93,8 +93,9 @@ maybe_migrate_config :: (name: string, file_data: string) -> migrated: bool, mod
                         key := tprint("%_%", current_subsection, action_name);
                         table_set(*config_info.keybinds_present, key, true);
                     }
-                    if current_subsection == "common"  then config_info.last_common_keybind_offset  = line_start_offset;
-                    if current_subsection == "editors" then config_info.last_editors_keybind_offset = line_start_offset;
+                    if current_subsection == "common"        then config_info.last_common_keybind_offset  = line_start_offset;
+                    if current_subsection == "editors"       then config_info.last_editors_keybind_offset = line_start_offset;
+                    if current_subsection == "search dialog" then config_info.last_search_keybind_offset  = line_start_offset;
             }
         }
     }
@@ -210,6 +211,7 @@ DONE
             if config_info.last_color_offset           >= workspace_section.end then config_info.last_color_offset           += bytes_delta;
             if config_info.last_common_keybind_offset  >= workspace_section.end then config_info.last_common_keybind_offset  += bytes_delta;
             if config_info.last_editors_keybind_offset >= workspace_section.end then config_info.last_editors_keybind_offset += bytes_delta;
+            if config_info.last_search_keybind_offset  >= workspace_section.end then config_info.last_search_keybind_offset  += bytes_delta;
         }
 
         // Insert new settings
@@ -239,6 +241,7 @@ DONE
             if config_info.last_color_offset           >= config_info.last_setting_offset then config_info.last_color_offset           += inserted_bytes;
             if config_info.last_common_keybind_offset  >= config_info.last_setting_offset then config_info.last_common_keybind_offset  += inserted_bytes;
             if config_info.last_editors_keybind_offset >= config_info.last_setting_offset then config_info.last_editors_keybind_offset += inserted_bytes;
+            if config_info.last_search_keybind_offset  >= config_info.last_setting_offset then config_info.last_search_keybind_offset  += inserted_bytes;
         }
 
         // Insert new colors
@@ -272,18 +275,19 @@ DONE
             // Adjust the offsets we remembered
             if config_info.last_common_keybind_offset  >= config_info.last_color_offset then config_info.last_common_keybind_offset  += inserted_bytes;
             if config_info.last_editors_keybind_offset >= config_info.last_color_offset then config_info.last_editors_keybind_offset += inserted_bytes;
+            if config_info.last_search_keybind_offset  >= config_info.last_color_offset then config_info.last_search_keybind_offset  += inserted_bytes;
         }
 
-        // Insert new keybinds into the editors section
-        if config_info.last_editors_keybind_offset >= 0 {
-            SUBSECTION :: "editors";
-            insert_offset := config_info.last_editors_keybind_offset + get_line_length(modified_data, config_info.last_editors_keybind_offset);
+        insert_new_keybinds :: (last_keybind_offset_for_subsection: int, subsection: string) #expand {
+            if last_keybind_offset_for_subsection <= 0 return;
+
+            insert_offset := last_keybind_offset_for_subsection + get_line_length(modified_data, last_keybind_offset_for_subsection);
             inserted_bytes := 0;
 
             // Maybe print a heading
             for added : ADDED_KEYBINDS {
-                if added.subsection != SUBSECTION continue;
-                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) && valid_version(added.version, config_info.version) {
+                if added.subsection != subsection continue;
+                if !table_contains(*config_info.keybinds_present, tprint("%_%", subsection, added.action)) && valid_version(added.version, config_info.version) {
                     heading := tprint("\n# Added after migration to version [%]\n", CURRENT_CONFIG_VERSION);
                     array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) heading);
                     inserted_bytes += heading.count;
@@ -292,8 +296,8 @@ DONE
             }
 
             for added : ADDED_KEYBINDS {
-                if added.subsection != SUBSECTION continue;
-                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) && valid_version(added.version, config_info.version) {
+                if added.subsection != subsection continue;
+                if !table_contains(*config_info.keybinds_present, tprint("%_%", subsection, added.action)) && valid_version(added.version, config_info.version) {
                     key_combo := added.key_combo;
                     if OS == .MACOS then key_combo = added.key_combo_mac;
                     padding := get_tmp_spaces(KEYBINDS_INDENT - key_combo.count);
@@ -303,44 +307,19 @@ DONE
                 }
             }
 
-            // Adjust the offsets we remembered
-            if config_info.last_common_keybind_offset  >= config_info.last_editors_keybind_offset then config_info.last_common_keybind_offset  += inserted_bytes;
+            if config_info.last_common_keybind_offset  > last_keybind_offset_for_subsection then config_info.last_common_keybind_offset  += inserted_bytes;
+            if config_info.last_editors_keybind_offset > last_keybind_offset_for_subsection then config_info.last_editors_keybind_offset += inserted_bytes;
+            if config_info.last_search_keybind_offset  > last_keybind_offset_for_subsection then config_info.last_search_keybind_offset  += inserted_bytes;
         }
 
-        // Insert new keybinds into the common section
-        if config_info.last_common_keybind_offset >= 0 {
-            SUBSECTION :: "common";
-            insert_offset := config_info.last_common_keybind_offset + get_line_length(modified_data, config_info.last_common_keybind_offset);
-            inserted_bytes := 0;
-
-            // Maybe print a heading
-            for added : ADDED_KEYBINDS {
-                if added.subsection != SUBSECTION continue;
-                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) && valid_version(added.version, config_info.version) {
-                    heading := tprint("\n# Added after migration to version [%]\n", CURRENT_CONFIG_VERSION);
-                    array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) heading);
-                    inserted_bytes += heading.count;
-                    break;
-                }
-            }
-
-            for added : ADDED_KEYBINDS {
-                if added.subsection != SUBSECTION continue;
-                if !table_contains(*config_info.keybinds_present, tprint("%_%", SUBSECTION, added.action)) && valid_version(added.version, config_info.version) {
-                    key_combo := added.key_combo;
-                    if OS == .MACOS then key_combo = added.key_combo_mac;
-                    padding := get_tmp_spaces(KEYBINDS_INDENT - key_combo.count);
-                    key_binding := tprint("%1%2%3\n", key_combo, padding, added.action);
-                    array_insert_bytes_at(*modified_data, insert_offset + inserted_bytes, cast([]u8) key_binding);
-                    inserted_bytes += key_binding.count;
-                }
-            }
-        }
+        insert_new_keybinds(config_info.last_editors_keybind_offset, "editors");
+        insert_new_keybinds(config_info.last_common_keybind_offset,  "common");
+        insert_new_keybinds(config_info.last_search_keybind_offset,  "search dialog");
 
         // Bump version from [whatever] to [current]
         assert(begins_with(cast(string) modified_data, tprint("[%]", config_info.version)));
-        new_version_number := tprint("[%]", CURRENT_CONFIG_VERSION);
-        focus_memcpy(modified_data.data, new_version_number.data, new_version_number.count);
+        new_version_line := tprint("[%]  # Version number. Do not delete.\n", CURRENT_CONFIG_VERSION);
+        replace_line(*modified_data, 0, new_version_line);
 
         current_section := assume_section;
         current_subsection: string;
@@ -610,6 +589,9 @@ ADDED_KEYBINDS :: Added_Keybind.[
 
     .{ 9, "editors", "revert_select_word_or_create_another_cursor",  "Ctrl-R",              "Cmd-R"    },
     .{ 9, "editors", "move_selection_to_next_word",                  "Ctrl-Y",              "Cmd-R"    },
+
+    .{ 10, "search dialog", "go_to_next_input",                      "Tab",                 "Tab"           },
+    .{ 10, "search dialog", "go_to_previous_input",                  "Shift-Tab",           "Shift-Tab"     },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
@@ -759,6 +741,7 @@ Config_Info :: struct {
     last_color_offset   := -1;
     last_common_keybind_offset  := -1;
     last_editors_keybind_offset := -1;
+    last_search_keybind_offset  := -1;
 
     workspace_v5_rewrite: Workspace_V5_Rewrite_Info;  // only for migration to version [5]
 };
@@ -838,10 +821,10 @@ MIGRATE_BUILTIN_THEMES :: !NO_OUTPUT_BUILD && !DEBUG;
     run_test("Сolors from [2]",               "global.focus-config",  COLORS_2,                 COLORS_2_EXPECTED);
     run_test("Colors and settings from [1]",  "global.focus-config",  COLORS_AND_SETTINGS_1,    COLORS_AND_SETTINGS_1_EXPECTED);
     run_test("Keybinds from [1]",             "global.focus-config",  KEYBINDS_1,               KEYBINDS_1_EXPECTED);
-    run_test("Keybinds from [2]",             "global.focus-config",  KEYBINDS_2,               KEYBINDS_2_EXPECTED);
     run_test("Theme from [1]",                "nord.focus-theme",     THEME_1,                  THEME_1_EXPECTED);
     run_test("Theme from [3]",                "handmade.focus-theme", THEME_3,                  THEME_3_EXPECTED);
     // NOTE: commented out because the compiler crashes when trying to execute it together with other tests. Works fine otherwise
+    // run_test("Keybinds from [2]",             "global.focus-config",  KEYBINDS_2,               KEYBINDS_2_EXPECTED);
     // run_test("Workspace migration from [4]",  "global.focus-config",  WORKSPACE_4,              WORKSPACE_4_EXPECTED);
 
     print("All unit tests passed!\n");
@@ -1076,6 +1059,9 @@ WORKSPACE_4_EXPECTED :: #string FOCUS_CONFIG
 [[keymap]]
 [common]
 Ctrl-P                      open_file_by_name
+
+# Added after migration to version [!latest!]
+{Shift}-Ctrl-M              jump_to_matching_bracket
 
 
 [[workspace]]
@@ -1399,7 +1385,7 @@ selection_highlight:                    FF000026
 FOCUS_CONFIG
 
 COLORS_1_EXPECTED :: #string FOCUS_CONFIG
-[!latest!]   # Version number. Do not delete.
+[!latest!]  # Version number. Do not delete.
 
 [[style]]
 
@@ -1485,7 +1471,7 @@ scrollbar_background:                   FF191F4C
 FOCUS_CONFIG
 
 COLORS_2_EXPECTED :: #string FOCUS_CONFIG
-[!latest!]   # Version number. Do not delete.
+[!latest!]  # Version number. Do not delete.
 
 [[style]]
 
@@ -1578,7 +1564,7 @@ scrollbar_background:                   FF191F4C
 FOCUS_CONFIG
 
 COLORS_AND_SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
-[!latest!]   # Version number. Do not delete.
+[!latest!]  # Version number. Do not delete.
 
 [[workspace]]
 # These directories and files will be scanned when a workspace is opened so that search etc. works.
@@ -1865,15 +1851,15 @@ Ctrl-Shift-A                select_all_occurrences
 Tab                         open_directory
 
 [common]
-Alt-X                       show_commands
-Ctrl-Shift-P                show_commands
-
 Ctrl-P                      show_open_file_dialog_in_search_mode
 Ctrl-O                      show_open_file_dialog_in_navigate_mode
 Ctrl-Shift-O                show_open_file_dialog_in_navigate_mode_from_root
 Ctrl-Tab                    show_open_file_dialog_in_open_editors_mode
 
 Ctrl-Alt-P                  switch_to_project
+
+[search dialog]
+Enter                       open_entry_in_place
 
 FOCUS_CONFIG
 
@@ -1902,9 +1888,6 @@ Ctrl-Y                      move_selection_to_next_word
 Tab                         open_directory
 
 [common]
-Alt-X                       show_commands
-Ctrl-Shift-P                show_commands
-
 Ctrl-P                      open_file_by_name
 Ctrl-O                      navigate_to_file
 Ctrl-Shift-O                navigate_to_file_from_root
@@ -1919,6 +1902,13 @@ Ctrl-F8                     go_to_next_build_error_on_the_side
 Shift-F8                    go_to_previous_build_error
 Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
 {Shift}-Ctrl-M              jump_to_matching_bracket
+
+[search dialog]
+Enter                       open_entry_in_place
+
+# Added after migration to version [!latest!]
+Tab                         go_to_next_input
+Shift-Tab                   go_to_previous_input
 
 FOCUS_CONFIG
 
@@ -1944,7 +1934,7 @@ scrollbar_background:                   FF191F4C
 FOCUS_CONFIG
 
 THEME_1_EXPECTED :: #string FOCUS_CONFIG
-[!latest!]   # Version number. Do not delete.
+[!latest!]  # Version number. Do not delete.
 
 [fonts]
 font:       default
@@ -2076,7 +2066,7 @@ build_panel_title_bar:                  121212FF
 FOCUS_CONFIG
 
 THEME_3_EXPECTED :: #string FOCUS_CONFIG
-[!latest!]  # Version number. Do not delete
+[!latest!]  # Version number. Do not delete.
 
 [colors]
 

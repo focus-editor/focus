@@ -231,6 +231,9 @@ Cmd-Opt-C                       toggle_case_sensitive
 Cmd-Opt-W                       toggle_whole_word
 Cmd-Opt-R                       toggle_regex_search
 
+Tab                             go_to_next_input
+Shift-Tab                       go_to_previous_input
+
 [common]
 
 # Common key combos may be used as a fallback if they are not defined in more specific sections.
