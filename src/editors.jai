@@ -1325,64 +1325,13 @@ select_line :: (cursor: *Cursor, buffer: Buffer) {
     cursor.pos = get_real_line_start_offset(buffer, end_line+1);
 }
 
-scan_through_similar_chars_on_the_left :: (using buffer: Buffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true, stop_at_punctuation := true) -> offset: s32 {
-    if !buffer.bytes return 0;
-
-    line_start := bytes.data + line_starts[offset_to_real_line(buffer, offset)];
-    char: u32;
-    t := bytes.data + offset;
-    t, char = unicode_prev_character(t);
-    if char_type != .none && char_type != get_char_type(char) return offset;
-    if skip_one_space && is_unicode_space(char) && t > line_start then t, char = unicode_prev_character(t);
-
-    if get_char_type(char) == {
-        case .space;
-            while t > bytes.data && is_space_or_underscore(char)  { t, char = unicode_prev_character(t); }
-            if !is_unicode_space(char) then t = unicode_next_character(t);
-        case .word;
-            while t > bytes.data && is_word_char(char) { t, char = unicode_prev_character(t); }
-            if !is_word_char(char) then t = unicode_next_character(t);
-        case .non_word;
-            while t > bytes.data && is_non_word_char(char) && !(stop_at_punctuation && is_common_punctuation(char)) { t, char = unicode_prev_character(t); }
-            if !is_non_word_char(char) || (stop_at_punctuation && is_common_punctuation(char)) then t = unicode_next_character(t);
-    }
-
-    if t < bytes.data then t = bytes.data;
-
-    return cast(s32) max(0, t - bytes.data);
+scan_through_similar_chars_on_the_left :: inline (using buffer: Buffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true) -> offset: s32 {
+    line_start_offset := line_starts[offset_to_real_line(buffer, offset)];
+    return scan_through_similar_chars_on_the_left(to_view(buffer.bytes), line_start_offset, offset, char_type, skip_one_space);
 }
 
-scan_through_similar_chars_on_the_right :: (using buffer: Buffer, offset: s32, only: Char_Type = .none, skip_one_space := true, stop_at_punctuation := true) -> offset: s32 {
-    if !buffer.bytes return 0;
-    if offset >= bytes.count return offset;  // nowhere to go
-
-    s: string = ---;
-    s.data  = *bytes[offset];
-    s.count = (bytes.data + bytes.count) - s.data;
-
-    char := utf8_next_character(*s);
-    if only == {
-        case .word;     if !is_word_char(char)     return offset;
-        case .non_word; if !is_non_word_char(char) return offset;
-        case .space;    if !is_unicode_space(char) return offset;
-    }
-    if skip_one_space && is_unicode_space(char) && s then char = utf8_next_character(*s);
-
-    if is_space_or_underscore(char) {
-        // Only spaces
-        while s && is_space_or_underscore(char) { char = utf8_next_character(*s); }
-        if !is_unicode_space(char) { s.data, char = unicode_prev_character(s.data); }
-    } else if is_word_char(char) {
-        // Only word chars
-        while s && is_word_char(char) { char = utf8_next_character(*s); }
-        if !is_word_char(char) { s.data, char = unicode_prev_character(s.data); }
-    } else if !is_unicode_linebreak(char) {
-        // Only non-word chars
-        while s && is_non_word_char(char) && !(stop_at_punctuation && is_common_punctuation(char)) { char = utf8_next_character(*s); }
-        if !is_non_word_char(char) || (stop_at_punctuation && is_common_punctuation(char)) { s.data, char = unicode_prev_character(s.data); }
-    }
-
-    return min(bytes.count, cast(s32)(s.data - bytes.data));
+scan_through_similar_chars_on_the_right :: inline (buffer: Buffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true) -> offset: s32 {
+    return scan_through_similar_chars_on_the_right(to_view(buffer.bytes), offset, char_type, skip_one_space);
 }
 
 cursors_start_blinking :: inline () {
@@ -2163,22 +2112,27 @@ is_a_move_action :: (action: Action_Editors) -> bool {
     return false;
 }
 
+// @Copypasta to text_input.jai - remember to update it if amending this!
 move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
-    skip_one_space := editor.cursors.count == 1;
+    is_single_cursor := editor.cursors.count == 1;
 
     for * cursor : editor.cursors {
         if has_selection(cursor) && !extend_selection {
             cursor.pos = get_selection(cursor).start;
-        } else if by == .char {
-            if cursor.pos > 0 then cursor.pos = prev_char_offset(bytes, cursor.pos);
+        } else if cursor.pos == 0 {
+            continue;
         } else {
             if by == {
+                case .char;
+                    cursor.pos = prev_char_offset(bytes, cursor.pos);
+
                 case .word;
-                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = skip_one_space, stop_at_punctuation = false,, underscore_is_part_of_word = false);
+                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = is_single_cursor,, underscore_is_part_of_word = false);
+
                 case .word_ends;
-                    char_type := get_char_type(get_char_at_offset(buffer, cursor.pos));
-                    if char_type != .word then cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, char_type, skip_one_space = false, stop_at_punctuation = false);
-                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = skip_one_space, stop_at_punctuation = false);
+                    char_type := get_char_type(get_char_at_offset(buffer, prev_char_offset(bytes, cursor.pos)));
+                    if char_type != .word then cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, char_type, skip_one_space = false);
+                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = is_single_cursor);
             }
         }
         cursor.col_wanted = -1;
@@ -2186,26 +2140,29 @@ move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: enum { char; w
     editor.cursor_moved = .unimportant;
 }
 
+// @Copypasta to text_input.jai - remember to update it if amending this!
 move_cursors_right :: (editor: *Editor, using buffer: *Buffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
-    skip_one_space := editor.cursors.count == 1;
+    is_single_cursor := editor.cursors.count == 1;
 
     for * cursor : editor.cursors {
-        if cursor.pos >= bytes.count continue;  // nowhere to go
-
         if has_selection(cursor) && !extend_selection {
             cursor.pos = get_selection(cursor).end;
-        } else if by == .char {
-            cursor.pos = next_char_offset(bytes, cursor.pos);
+        } else if cursor.pos >= bytes.count {
+            continue;
         } else {
             if by == {
+                case .char;
+                    cursor.pos = next_char_offset(bytes, cursor.pos);
+
                 case .word;
-                    cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = skip_one_space, stop_at_punctuation = false,, underscore_is_part_of_word = false);
+                    cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = is_single_cursor,, underscore_is_part_of_word = false);
+
                 case .word_ends;
                     char := get_char_at_offset(buffer, cursor.pos);
                     char_type := get_char_type(char);
-                    if char_type != .word  then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, char_type, skip_one_space = false, stop_at_punctuation = false);
+                    if char_type != .word  then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, char_type, skip_one_space = false);
                     char_type = get_char_type(get_char_at_offset(buffer, cursor.pos));
-                    if char_type != .other && !is_unicode_linebreak(char) then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = skip_one_space, stop_at_punctuation = false);
+                    if char_type != .other && !is_unicode_linebreak(char) then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = is_single_cursor);
             }
         }
         cursor.col_wanted = -1;
