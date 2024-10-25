@@ -282,8 +282,8 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
             case .delete_right_char;                delete_right_char                   (editor, buffer);
             case .delete_word_left;                 delete_word_left                    (editor, buffer);
             case .delete_word_right;                delete_word_right                   (editor, buffer);
-            case .delete_word_left_no_underscore;   delete_word_left                    (editor, buffer,, underscore_is_part_of_word = false);
-            case .delete_word_right_no_underscore;  delete_word_right                   (editor, buffer,, underscore_is_part_of_word = false);
+            case .delete_word_left_no_underscore;   delete_word_left                    (editor, buffer, underscore_is_part_of_word = false);
+            case .delete_word_right_no_underscore;  delete_word_right                   (editor, buffer, underscore_is_part_of_word = false);
 
             case .duplicate_lines;                  duplicate_lines                     (editor, buffer); keep_selection = true;
             case .move_selected_lines_up;           move_lines_up                       (editor, buffer); keep_selection = true;
@@ -752,11 +752,17 @@ select_word :: (buffer: Buffer, cursor: *Cursor) {
         char = char_left;
     }
 
+    if char == #char "\n" return;
+
     char_type := get_char_type(char);
     if char_type == .other return;
 
+    if char_type == .space  set_newline_is_whitespace(false);
+
     cursor.pos = scan_through_similar_chars_on_the_right(buffer, pos, char_type, skip_one_space = false);
     cursor.sel = scan_through_similar_chars_on_the_left (buffer, pos, char_type, skip_one_space = false);
+
+    if char_type == .space  set_newline_is_whitespace(true);
 }
 
 get_selected_text_all_cursors :: (using editor: Editor, buffer: Buffer) -> string {  // returns view into buffer
@@ -2127,12 +2133,18 @@ move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: enum { char; w
                     cursor.pos = prev_char_offset(bytes, cursor.pos);
 
                 case .word;
-                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = is_single_cursor,, underscore_is_part_of_word = false);
+                    set_underscore_is_part_of_word(false);
+                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = is_single_cursor);
+                    set_underscore_is_part_of_word(true);
 
                 case .word_ends;
                     char_type := get_char_type(get_char_at_offset(buffer, prev_char_offset(bytes, cursor.pos)));
-                    if char_type != .word then cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, char_type, skip_one_space = false);
-                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = is_single_cursor);
+                    have_skipped := false;
+                    if char_type != .word {
+                        cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, char_type, skip_one_space = false);
+                        have_skipped = true;
+                    }
+                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = is_single_cursor && !have_skipped);
             }
         }
         cursor.col_wanted = -1;
@@ -2155,14 +2167,20 @@ move_cursors_right :: (editor: *Editor, using buffer: *Buffer, by: enum { char; 
                     cursor.pos = next_char_offset(bytes, cursor.pos);
 
                 case .word;
-                    cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = is_single_cursor,, underscore_is_part_of_word = false);
+                    set_underscore_is_part_of_word(false);
+                    cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = is_single_cursor);
+                    set_underscore_is_part_of_word(true);
 
                 case .word_ends;
                     char := get_char_at_offset(buffer, cursor.pos);
                     char_type := get_char_type(char);
-                    if char_type != .word  then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, char_type, skip_one_space = false);
+                    have_skipped := false;
+                    if char_type != .word  {
+                        cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, char_type, skip_one_space = false);
+                        have_skipped = true;
+                    }
                     char_type = get_char_type(get_char_at_offset(buffer, cursor.pos));
-                    if char_type != .other && !is_unicode_linebreak(char) then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = is_single_cursor);
+                    if char_type != .other && !is_unicode_linebreak(char) then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = is_single_cursor && !have_skipped);
             }
         }
         cursor.col_wanted = -1;
@@ -2403,23 +2421,27 @@ new_line_above :: (editor: *Editor, buffer: *Buffer) {
     editor.cursor_moved = .unimportant;
 }
 
-delete_word_left :: (editor: *Editor, buffer: *Buffer) {
+delete_word_left :: (editor: *Editor, buffer: *Buffer, underscore_is_part_of_word := true) {
     skip_one_space := editor.cursors.count == 1;  // we don't want to skip space when editing with multiple cursors
                                                   // because this may surprise people when they see one result with one
                                                   // cursor and a different result with another based on how many
                                                   // spaces there are to the next word
+    if !underscore_is_part_of_word  set_underscore_is_part_of_word(false);
     for * cursor : editor.cursors {
         if !has_selection(cursor) then cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = skip_one_space);
     }
+    if !underscore_is_part_of_word  set_underscore_is_part_of_word(true);
     organise_cursors(editor);  // resolve overlapping selections
     delete_left_char(editor, buffer);
 }
 
-delete_word_right :: (editor: *Editor, buffer: *Buffer) {
+delete_word_right :: (editor: *Editor, buffer: *Buffer, underscore_is_part_of_word := true) {
     skip_one_space := editor.cursors.count == 1;  // see above
+    if !underscore_is_part_of_word  set_underscore_is_part_of_word(false);
     for * cursor : editor.cursors {
         if !has_selection(cursor) then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = skip_one_space);
     }
+    if !underscore_is_part_of_word  set_underscore_is_part_of_word(true);
     organise_cursors(editor);  // resolve overlapping selections
     delete_right_char(editor, buffer);
 }

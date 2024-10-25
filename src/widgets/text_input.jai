@@ -37,8 +37,8 @@ text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> han
         case .delete_right_char;                delete_right_char                   (input);
         case .delete_word_left;                 delete_word_left                    (input);
         case .delete_word_right;                delete_word_right                   (input);
-        case .delete_word_left_no_underscore;   delete_word_left                    (input,, underscore_is_part_of_word = false);
-        case .delete_word_right_no_underscore;  delete_word_right                   (input,, underscore_is_part_of_word = false);
+        case .delete_word_left_no_underscore;   delete_word_left                    (input, underscore_is_part_of_word = false);
+        case .delete_word_right_no_underscore;  delete_word_right                   (input, underscore_is_part_of_word = false);
 
         case .delete_to_start_of_line;          delete_to_start_of_line             (input);
         case .delete_to_end_of_line;            delete_to_end_of_line               (input);
@@ -216,9 +216,9 @@ move_cursor_left :: (using input: *Text_Input, by: enum { char; word; word_ends;
                 cursor.pos = prev_char_offset(text, cursor.pos);
 
             case .word;
-                context.underscore_is_part_of_word = false;
+                set_underscore_is_part_of_word(false);
                 cursor.pos = scan_through_similar_chars_on_the_left(input, cursor.pos);
-                context.underscore_is_part_of_word = true;
+                set_underscore_is_part_of_word(true);
 
             case .word_ends;
                 char_type := get_char_type(get_char_at_offset(input, prev_char_offset(text, cursor.pos)));
@@ -242,9 +242,9 @@ move_cursor_right :: (using input: *Text_Input, by: enum { char; word; word_ends
                 cursor.pos = next_char_offset(text, cursor.pos);
 
             case .word;
-                context.underscore_is_part_of_word = false;
+                set_underscore_is_part_of_word(false);
                 cursor.pos = scan_through_similar_chars_on_the_right(input, cursor.pos);
-                context.underscore_is_part_of_word = true;
+                set_underscore_is_part_of_word(true);
 
             case .word_ends;
                 char := get_char_at_offset(input, cursor.pos);
@@ -285,14 +285,18 @@ delete_right_char :: inline (using input: *Text_Input) {
     delete_selection(input);
 }
 
-delete_word_left :: inline (using input: *Text_Input) {
+delete_word_left :: inline (using input: *Text_Input, underscore_is_part_of_word := true) {
+    if !underscore_is_part_of_word  set_underscore_is_part_of_word(false);
     if !has_selection(cursor) then cursor.pos = scan_through_similar_chars_on_the_left(input, cursor.pos);
     delete_left_char(input);
+    if !underscore_is_part_of_word  set_underscore_is_part_of_word(true);
 }
 
-delete_word_right :: inline (using input: *Text_Input) {
+delete_word_right :: inline (using input: *Text_Input, underscore_is_part_of_word := true) {
+    if !underscore_is_part_of_word  set_underscore_is_part_of_word(false);
     if !has_selection(cursor) then cursor.pos = scan_through_similar_chars_on_the_right(input, cursor.pos);
     delete_right_char(input);
+    if !underscore_is_part_of_word  set_underscore_is_part_of_word(true);
 }
 
 delete_to_start_of_line :: inline (using input: *Text_Input) {

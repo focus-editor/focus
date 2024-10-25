@@ -268,14 +268,12 @@ match_whole_word :: (s: string, offset: int, count: int) -> bool {
     return word_ends_on_the_left && word_ends_on_the_right;
 }
 
-#add_context underscore_is_part_of_word := true;
-
 is_word_char :: inline (ch: u32) -> bool {
-    return ifx ch == #char "_" then context.underscore_is_part_of_word else (!is_whitespace_char(ch) && !is_separator_char(ch));
+    return get_char_type(ch) & .word != 0;
 }
 
 is_non_word_char :: inline (ch: u32) -> bool {
-    return !is_word_char(ch) && ch != #char " " && ch != #char "\n";
+    return get_char_type(ch) & .non_word != 0;
 }
 
 is_common_punctuation :: inline (ch: u32) -> bool {
@@ -291,10 +289,6 @@ is_common_punctuation :: inline (ch: u32) -> bool {
             return true;
     }
     return false;
-}
-
-is_space_or_underscore :: inline (ch: u32) -> bool {
-    return is_unicode_space(ch) || (!context.underscore_is_part_of_word && ch == #char "_");
 }
 
 is_whitespace_char :: inline (ch: u32) -> bool {
@@ -352,21 +346,27 @@ get_balancing_char :: (ch: u32, include_closing := false) -> u32 {
 get_char_type_raw :: inline (ch: u32) -> Char_Type {
     if #char "0" <= ch && ch <= #char "9"   return .word | .number;
     if ch == #char "."                      return .non_word | .number;
-    if is_word_char(ch)                     return .word;
-    if is_whitespace_char(ch)               return .space;
-    if ch != #char "\n"                     return .non_word;
-    return .other;
+    if is_whitespace_char(ch)               return .space; // includes \n
+    if !is_separator_char(ch)               return .word;
+    return .non_word;
 }
 
 get_char_type :: inline (ch: u32) -> Char_Type {
-    if ch == #char "_"  return ifx context.underscore_is_part_of_word then .word else .non_word;
-    if ch <= 191        return char_type_table[ch];
+    if ch <= 191  return char_type_table[ch];
     return get_char_type_raw(ch);
+}
+
+set_underscore_is_part_of_word :: (it_is: bool) {
+    char_type_table[#char "_"] = ifx it_is then .word else .non_word;
+}
+
+set_newline_is_whitespace :: (it_is: bool) {
+    char_type_table[#char "\n"] = ifx it_is then .space else .other;
 }
 
 #insert -> string {
     builder : String_Builder;
-    append(*builder, "char_type_table :: Char_Type.[");
+    append(*builder, "char_type_table := Char_Type.[");
     for 0 .. cast(u32)191  print_to_builder(*builder, "%,", cast(u8)get_char_type_raw(it));
     append(*builder, "];");
     return builder_to_string(*builder);
