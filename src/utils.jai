@@ -718,3 +718,12 @@ hex_to_color_vec4 :: (src_hex: string) -> Vector4, success: bool {
 
     return c, c.x >= 0 && c.y >= 0 && c.z >= 0 && c.w >= 0;
 }
+
+Option :: struct($T: Type) {
+    value:  T = ---;
+    is_set: bool;
+}
+
+some :: (value: $T) -> Option(T) {
+    return .{ value = value, is_set = true };
+}

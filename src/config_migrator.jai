@@ -449,35 +449,35 @@ get_line_length :: (buffer: [..] u8, line_start_offset: s64) -> length: s64 {
 }
 
 ADDED_SETTINGS :: Added_Setting.[
-    .{ 2, "build_panel_width_percent",                          "50" },
-    .{ 2, "build_panel_height_percent",                         "50" },
-    .{ 2, "build_panel_stays_in_one_place",                     "false  # if false, the build panel will flip to the inactive pane in two pane layouts" },
-    .{ 2, "build_panel_line_wrap_always_on",                    "true" },
-    .{ 2, "highlight_line_with_cursor",                         "false" },
-    .{ 2, "draw_indent_guides",                                 "false" },
-    .{ 2, "auto_surround_with_brackets_and_quotes",             "false" },
-    .{ 2, "scroll_beyond_last_line",                            "true" },
-    .{ 2, "show_cursors_off_screen",                            "true" },
-    .{ 2, "persist_local_search_results",                       "false  # if true, search results will stay highlighted and you have to dismiss them using the `escape` action" },
+    .{  2, "build_panel_width_percent",                          "50" },
+    .{  2, "build_panel_height_percent",                         "50" },
+    .{  2, "build_panel_stays_in_one_place",                     "false  # if false, the build panel will flip to the inactive pane in two pane layouts" },
+    .{  2, "build_panel_line_wrap_always_on",                    "true" },
+    .{  2, "highlight_line_with_cursor",                         "false" },
+    .{  2, "draw_indent_guides",                                 "false" },
+    .{  2, "auto_surround_with_brackets_and_quotes",             "false" },
+    .{  2, "scroll_beyond_last_line",                            "true" },
+    .{  2, "show_cursors_off_screen",                            "true" },
+    .{  2, "persist_local_search_results",                       "false  # if true, search results will stay highlighted and you have to dismiss them using the `escape` action" },
 
-    .{ 3, "save_current_buffer_on_build",                       "false" },
-    .{ 3, "save_all_file_backed_buffers_on_build",              "false" },
-    .{ 3, "disable_viewport_chasing_cursor_near_the_edge",      "false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts" },
-    .{ 3, "show_selected_text_length",                          "false" },
+    .{  3, "save_current_buffer_on_build",                       "false" },
+    .{  3, "save_all_file_backed_buffers_on_build",              "false" },
+    .{  3, "disable_viewport_chasing_cursor_near_the_edge",      "false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts" },
+    .{  3, "show_selected_text_length",                          "false" },
 
-    .{ 4, "window_width",                                       "-1" },
-    .{ 4, "window_height",                                      "-1" },
-    .{ 4, "insert_final_newline_on_save",                       "false" },
-    .{ 4, "status_bar_position",                                "bottom  # options: top, bottom" },
+    .{  4, "window_width",                                       "-1" },
+    .{  4, "window_height",                                      "-1" },
+    .{  4, "insert_final_newline_on_save",                       "false" },
+    .{  4, "status_bar_position",                                "bottom  # options: top, bottom" },
 
-    .{ 5, "load_most_recent_project_on_start",                  "false" },
-    .{ 5, "color_preview_popup",                                "enabled  # options: enabled, minimized, disabled" },
-    .{ 5, "highlight_matching_brackets",                        "false" },
+    .{  5, "load_most_recent_project_on_start",                  "false" },
+    .{  5, "color_preview_popup",                                "enabled  # options: enabled, minimized, disabled" },
+    .{  5, "highlight_matching_brackets",                        "false" },
 
-    .{ 6, "search_is_case_sensitive_when_uppercase_present",    "false" },
-    .{ 6, "projects_sorting_order",                             "most_recent_first  #options: most_recent_first, alphabetical, alphabetical_no_case" },
+    .{  6, "search_is_case_sensitive_when_uppercase_present",    "false" },
+    .{  6, "projects_sorting_order",                             "most_recent_first  #options: most_recent_first, alphabetical, alphabetical_no_case" },
 
-    .{ 7, "show_ruler_at_column",                               "0" },
+    .{  7, "show_ruler_at_column",                               "0" },
 ];
 
 RENAMED_SETTINGS :: Renamed_Setting.[

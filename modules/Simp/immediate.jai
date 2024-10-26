@@ -306,23 +306,15 @@ immediate_set_2d_projection :: (render_target_width: s32, render_target_height: 
 }
 
 immediate_letter_quad :: (using quad: Font_Quad, color: Vector4) {
-    // NOTE(Ivan): not sure why it was here, leaving commented for now
-    // if glyph.page.bitmap_data.width <= 1 || glyph.page.bitmap_data.height <= 1 return;
-
     CheckSpace(6);
 
-    // Shrinking the quad to a third of its width (for subpixel rendering)
-    // Note that we're keeping uv's the same
-    p1_ := p0 + (p1 - p0) / 3;
-    p2_ := p3 + (p2 - p3) / 3;
+    put_vertex(*v[0], p0, color,  u0, v0);
+    put_vertex(*v[1], p1, color,  u1, v0);
+    put_vertex(*v[2], p2, color,  u1, v1);
 
-    put_vertex(*v[0], p0 , color,  u0, v0);
-    put_vertex(*v[1], p1_, color,  u1, v0);
-    put_vertex(*v[2], p2_, color,  u1, v1);
-
-    put_vertex(*v[3], p0 , color,  u0, v0);
-    put_vertex(*v[4], p2_, color,  u1, v1);
-    put_vertex(*v[5], p3 , color,  u0, v1);
+    put_vertex(*v[3], p0, color,  u0, v0);
+    put_vertex(*v[4], p2, color,  u1, v1);
+    put_vertex(*v[5], p3, color,  u0, v1);
 }
 
 

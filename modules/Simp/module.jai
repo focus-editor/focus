@@ -148,6 +148,14 @@ clear_scissor :: () {
     glDisable(GL_SCISSOR_TEST);
 }
 
+set_anti_aliasing :: (value: Font_Anti_Aliasing) {
+    font_anti_aliasing = value;
+}
+
+set_hinting :: (value: bool) {
+    font_hinting = value;
+}
+
 // @Cleanup: This has a lot of overlap with Window_Creation’s "get_dimensions"
 get_render_dimensions :: (window: Window_Type) -> (width: s32, height: s32) {
     #if OS == .WINDOWS {
@@ -187,6 +195,8 @@ find_window_info :: (window: Window_Type) -> *Window_Info {
 }
 
 COLOR_MAP: [] Vector4;
+font_anti_aliasing: Font_Anti_Aliasing = .lcd;
+font_hinting := true;
 
 #scope_file
 

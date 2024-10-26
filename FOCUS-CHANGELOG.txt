@@ -22,6 +22,9 @@
         + `indent_guide` for indent guides, if enabled
         + `bracket_highlight` for highlighting matching brackets
     + In `[ignore]` and `[allow]` sections of the workspace paths starting with `./` can now be used to refer to the project directories. E.g. `./folder/**` will match a `folder` in any project directory.
+    + New options in the [fonts] section which allow to disable hinting and subpixel anti-aliasing:
+        + `anti_aliasing`: `lcd` (default - for subpixel AA), or `normal`
+        + `hinting` (`true` by default)
 + Bug fixes:
     + Fixed a crash when changing languages in the color preview widget
     + Fixed font size changing when you press ctrl after scrolling has started (thanks @onelivesleft)
@@ -30,7 +33,7 @@
     + Creating cursors above and below will now skip empty lines as this is most likely the behaviour users want (thanks @onelivesleft)
     + The Navigate To File (Ctrl-O) dialog will always show all files and folders instead of applying the ignore rules to them, which will allow to selectively open files which are normally ignored
     + Selecting a word using double left click should now behave identically to selecting a word using the `select_word` action, highlighting only whole-word selection occurrences
-    + Selecting a "word" consisting of non-word characters will now stop at common punctuation
+    + More robust cursor move-by-word (thanks @onelivesleft)
 
 
 # RELEASES ==================================================================

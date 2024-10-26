@@ -259,6 +259,9 @@ reset_color_map_to_default :: () {
 }
 
 apply_style :: (parsed: Parsed_Config) {
+    if parsed.font_anti_aliasing.is_set then Simp.set_anti_aliasing(parsed.font_anti_aliasing.value);
+    if parsed.font_hinting.is_set       then Simp.set_hinting(parsed.font_hinting.value);
+
     // Fonts
     if parsed.font {
         loaded_font, success := load_font_by_name(parsed.font, .main);
@@ -652,6 +655,12 @@ Projects_Sorting_Order :: enum {
     alphabetical;
     alphabetical_no_case;
 }
+
+Font_Anti_Aliasing :: enum {
+    lcd;
+    normal;
+}
+#poke_name Simp Font_Anti_Aliasing;
 
 Keymap :: struct {
     common:           [] Key_Mapping;

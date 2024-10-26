@@ -79,7 +79,6 @@ color_preview_popup:                                enabled  # options: enabled,
 search_is_case_sensitive_when_uppercase_present:    true
 
 
-
 # This is an example configuration for build commands
 
 # [[build commands]]
@@ -344,11 +343,13 @@ Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
 [[style]]
 
 [fonts]
-font:         default
-font_ui:      default
-font_ui_bold: default
-font_size:    14
-font_ui_size: 15
+font:          default
+font_ui:       default
+font_ui_bold:  default
+font_size:     14
+font_ui_size:  15
+anti_aliasing: lcd  # options: lcd, normal
+hinting:       true
 
 [colors]
 background0:                            15212AFF
