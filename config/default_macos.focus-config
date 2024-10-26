@@ -196,7 +196,6 @@ Cmd-Shift-N                     create_new_file_on_the_side
 Opt-Shift-ArrowUp               create_cursor_above
 Opt-Shift-ArrowDown             create_cursor_below
 
-Opt-Shift-ArrowRight            select_word_or_create_another_cursor
 Opt-Cmd-A                       align_cursors
 
 Opt-Cmd-Z                       toggle_line_wrap

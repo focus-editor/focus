@@ -14,7 +14,6 @@
     + New actions for creating, moving and deleting cursors (thanks @BuzzwordChief):
         + `move_selection_to_next_word` (`Ctrl-Y`) - instead of creating a new cursor at the next occurrence it will move the current cursor, allowing you to skip an occurrence
         + `revert_select_word_or_create_another_cursor` (`Ctrl-R`) - removes the newly created selection
-    + Added support for F13-F24 in keybindings
     + New font options in the style section - `font_ui`, `font_ui_bold`, `font_ui_size` (thanks @hfr4)
     + Windows rmenu key can now be used in keybinds as `cmd` (thanks @onelivesleft)
     + New bindable keys: `MouseX1` and `MouseX2` (thanks @onelivesleft)
