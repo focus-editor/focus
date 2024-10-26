@@ -259,9 +259,6 @@ reset_color_map_to_default :: () {
 }
 
 apply_style :: (parsed: Parsed_Config) {
-    if parsed.font_anti_aliasing.is_set then Simp.set_anti_aliasing(parsed.font_anti_aliasing.value);
-    if parsed.font_hinting.is_set       then Simp.set_hinting(parsed.font_hinting.value);
-
     // Fonts
     if parsed.font {
         loaded_font, success := load_font_by_name(parsed.font, .main);
@@ -440,6 +437,8 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
 
     // Style
     if parsed.theme then dst.style.theme = copy_string(parsed.theme); /* @leak */  // TODO: rework how themes and styles are applied
+    if parsed.font_anti_aliasing.is_set then dst.style.font_anti_aliasing = parsed.font_anti_aliasing.value;
+    if parsed.font_hinting.is_set       then dst.style.font_hinting       = parsed.font_hinting.value;
     apply_style(parsed);
 
     // Platform config
@@ -543,7 +542,8 @@ Config :: struct {
 
 Style :: struct {
     theme: string;
-    // TODO: add other things in there at some point
+    font_anti_aliasing: Font_Anti_Aliasing = .lcd;
+    font_hinting := true;
 }
 
 Loaded_Font :: struct {
