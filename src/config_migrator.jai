@@ -592,6 +592,9 @@ ADDED_KEYBINDS :: Added_Keybind.[
 
     .{ 10, "search dialog", "go_to_next_input",                      "Tab",                 "Tab"           },
     .{ 10, "search dialog", "go_to_previous_input",                  "Shift-Tab",           "Shift-Tab"     },
+
+    .{ 11, "editors", "move_left_fast",                              "{Shift}-Meta-ArrowLeft",  "{Shift}-Ctrl-ArrowLeft" },
+    .{ 11, "editors", "move_right_fast",                             "{Shift}-Meta-ArrowRight", "{Shift}-Ctrl-ArrowRight" },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
@@ -599,6 +602,11 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
     .{ 2, "",  "show_open_file_dialog_in_navigate_mode",            "navigate_to_file"           },
     .{ 2, "",  "show_open_file_dialog_in_navigate_mode_from_root",  "navigate_to_file_from_root" },
     .{ 2, "",  "show_open_file_dialog_in_open_editors_mode",        "switch_between_open_files"  },
+
+    .{ 11, "editors",  "move_left_by_word",                                "move_left_by_character_type"  },
+    .{ 11, "editors",  "move_left_by_word_ends",                           "move_left_through_word"       },
+    .{ 11, "editors",  "move_right_by_word",                               "move_right_by_character_type"  },
+    .{ 11, "editors",  "move_right_by_word_ends",                          "move_right_through_word"       },
 ];
 
 #if !NO_OUTPUT_BUILD {
@@ -1802,6 +1810,8 @@ Alt-A                       align_cursors
 Ctrl-U                      change_case_cycle
 Ctrl-R                      revert_select_word_or_create_another_cursor
 Ctrl-Y                      move_selection_to_next_word
+{Shift}-Meta-ArrowLeft      move_left_fast
+{Shift}-Meta-ArrowRight     move_right_fast
 
 [open file dialog]
 Tab                         open_directory

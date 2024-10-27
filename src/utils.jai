@@ -372,60 +372,66 @@ set_newline_is_whitespace :: (it_is: bool) {
     return builder_to_string(*builder);
 }
 
-scan_through_similar_chars_on_the_left :: (bytes: [] u8, line_start_offset: s32, offset: s32, char_type := Char_Type.none, skip_one_space := true) -> offset: s32 {
-    if !bytes  return 0;
+scan_through_similar_chars_on_the_left :: (bytes: [] u8, line_start_offset: s32, offset: s32, char_type := Char_Type.none, skip_one_space := true) -> offset: s32, moved_through: Char_Type  {
+    if !bytes  return 0, .none;
 
     ptr := bytes.data + offset;
     char:, ptr = unicode_prev_character_and_position(ptr);
-    if ptr <= bytes.data  return 0;
+    if ptr <= bytes.data  return 0, .none;
 
     skippable_char_type := get_char_type(char);
-    if char_type != .none && !(char_type & skippable_char_type)  return offset;
+    if char_type != .none && !(char_type & skippable_char_type)  return offset, .none;
 
+    moved_through : Char_Type;
     result_ptr := ptr;
     line_start := bytes.data + line_start_offset;
     if skip_one_space && is_whitespace_char(char) && ptr > line_start {
         char, ptr = unicode_prev_character_and_position(ptr);
         skippable_char_type = get_char_type(char);
+        moved_through = .space;
     }
 
     while skippable_char_type {
-        if ptr <= bytes.data  return 0;
+        if ptr <= bytes.data  return 0, moved_through;
 
         result_ptr = ptr;
         char, ptr = unicode_prev_character_and_position(ptr);
+        moved_through = skippable_char_type;
         skippable_char_type &= get_char_type(char);
     }
 
-    return cast(s32) (result_ptr - bytes.data);
+    return cast(s32) (result_ptr - bytes.data), moved_through;
 }
 
-scan_through_similar_chars_on_the_right :: (bytes: [] u8, offset: s32, char_type := Char_Type.none, skip_one_space := true) -> offset: s32 {
-    if !bytes  return 0;
-    if offset >= bytes.count  return cast(s32) bytes.count;
+scan_through_similar_chars_on_the_right :: (bytes: [] u8, offset: s32, char_type := Char_Type.none, skip_one_space := true) -> offset: s32, moved_through: Char_Type {
+    if !bytes  return 0, .none;
+    if offset >= bytes.count  return cast(s32) bytes.count, .none;
 
     end_address := bytes.data + bytes.count;
     ptr := bytes.data + offset;
     char:, ptr = unicode_character_and_next_position(ptr);
     skippable_char_type := get_char_type(char);
-    if char_type != .none && !(char_type & skippable_char_type)  return offset;
-    if ptr >= end_address  return cast(s32) bytes.count;
+    if char_type != .none && !(char_type & skippable_char_type)  return offset, .none;
+    if ptr >= end_address  return cast(s32) bytes.count, 0;
 
+    moved_through : Char_Type;
     result_ptr := ptr;
     if skip_one_space && is_whitespace_char(char) {
         char, ptr = unicode_character_and_next_position(ptr);
         skippable_char_type = get_char_type(char);
+        moved_through = .space;
     }
 
     while skippable_char_type {
-        if ptr >= end_address  return cast(s32) bytes.count;
+        if ptr >= end_address  return cast(s32) bytes.count, moved_through;
 
         result_ptr = ptr;
         char, ptr = unicode_character_and_next_position(ptr);
+        moved_through = skippable_char_type;
         skippable_char_type &= get_char_type(char);
     }
 
-    return cast(s32) (result_ptr - bytes.data);
+    return cast(s32) (result_ptr - bytes.data), moved_through;
 }
 
 is_all_word_chars :: (s: string) -> bool {

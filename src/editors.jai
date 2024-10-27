@@ -224,12 +224,14 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .choose_language;                  show_dialog                         (*language_dialog);
 
         // Actions that do something per cursor
-        case .move_left;                        move_cursors_left                   (editor, buffer, by = .char,      shift_pressed);
-        case .move_left_by_word;                move_cursors_left                   (editor, buffer, by = .word,      shift_pressed);
-        case .move_left_by_word_ends;           move_cursors_left                   (editor, buffer, by = .word_ends, shift_pressed);
-        case .move_right;                       move_cursors_right                  (editor, buffer, by = .char,      shift_pressed);
-        case .move_right_by_word;               move_cursors_right                  (editor, buffer, by = .word,      shift_pressed);
-        case .move_right_by_word_ends;          move_cursors_right                  (editor, buffer, by = .word_ends, shift_pressed);
+        case .move_left;                        move_cursors_left                   (editor, buffer, by = .character,      shift_pressed);
+        case .move_left_by_character_type;      move_cursors_left                   (editor, buffer, by = .character_type, shift_pressed);
+        case .move_left_fast;                   move_cursors_left                   (editor, buffer, by = .fast,           shift_pressed);
+        case .move_left_through_word;           move_cursors_left                   (editor, buffer, by = .through_word,   shift_pressed);
+        case .move_right;                       move_cursors_right                  (editor, buffer, by = .character,      shift_pressed);
+        case .move_right_by_character_type;     move_cursors_right                  (editor, buffer, by = .character_type, shift_pressed);
+        case .move_right_fast;                  move_cursors_right                  (editor, buffer, by = .fast,           shift_pressed);
+        case .move_right_through_word;          move_cursors_right                  (editor, buffer, by = .through_word,   shift_pressed);
         case .move_up;                          move_cursors_vertically             (editor, buffer, -1, shift_pressed);
         case .move_down;                        move_cursors_vertically             (editor, buffer,  1, shift_pressed);
         case .move_up_fast;                     move_cursors_vertically             (editor, buffer, -5, shift_pressed);
@@ -1331,13 +1333,15 @@ select_line :: (cursor: *Cursor, buffer: Buffer) {
     cursor.pos = get_real_line_start_offset(buffer, end_line+1);
 }
 
-scan_through_similar_chars_on_the_left :: inline (using buffer: Buffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true) -> offset: s32 {
+scan_through_similar_chars_on_the_left :: inline (using buffer: Buffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true) -> offset: s32, moved_through: Char_Type {
     line_start_offset := line_starts[offset_to_real_line(buffer, offset)];
-    return scan_through_similar_chars_on_the_left(to_view(buffer.bytes), line_start_offset, offset, char_type, skip_one_space);
+    offset, moved_through := scan_through_similar_chars_on_the_left(to_view(buffer.bytes), line_start_offset, offset, char_type, skip_one_space);
+    return offset, moved_through;
 }
 
-scan_through_similar_chars_on_the_right :: inline (buffer: Buffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true) -> offset: s32 {
-    return scan_through_similar_chars_on_the_right(to_view(buffer.bytes), offset, char_type, skip_one_space);
+scan_through_similar_chars_on_the_right :: inline (buffer: Buffer, offset: s32, char_type: Char_Type = .none, skip_one_space := true) -> offset: s32, moved_through: Char_Type {
+    offset, moved_through := scan_through_similar_chars_on_the_right(to_view(buffer.bytes), offset, char_type, skip_one_space);
+    return offset, moved_through;
 }
 
 cursors_start_blinking :: inline () {
@@ -2097,11 +2101,13 @@ new_edit_group_required_for_action :: (action: Action_Editors, cursor: Cursor) -
 is_a_move_action :: (action: Action_Editors) -> bool {
     if action == {
         case .move_left;                        return true;
-        case .move_left_by_word;                return true;
-        case .move_left_by_word_ends;           return true;
+        case .move_left_by_character_type;      return true;
+        case .move_left_fast;                   return true;
+        case .move_left_through_word;           return true;
         case .move_right;                       return true;
-        case .move_right_by_word;               return true;
-        case .move_right_by_word_ends;          return true;
+        case .move_right_by_character_type;     return true;
+        case .move_right_fast;                  return true;
+        case .move_right_through_word;          return true;
         case .move_up;                          return true;
         case .move_down;                        return true;
         case .move_up_fast;                     return true;
@@ -2119,7 +2125,7 @@ is_a_move_action :: (action: Action_Editors) -> bool {
 }
 
 // @Copypasta to text_input.jai - remember to update it if amending this!
-move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
+move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: enum { character; character_type; fast; through_word; }, extend_selection: bool) {
     is_single_cursor := editor.cursors.count == 1;
 
     for * cursor : editor.cursors {
@@ -2129,22 +2135,25 @@ move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: enum { char; w
             continue;
         } else {
             if by == {
-                case .char;
+                case .character;
                     cursor.pos = prev_char_offset(bytes, cursor.pos);
 
-                case .word;
+                case .character_type;
                     set_underscore_is_part_of_word(false);
                     cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = is_single_cursor);
                     set_underscore_is_part_of_word(true);
 
-                case .word_ends;
-                    char_type := get_char_type(get_char_at_offset(buffer, prev_char_offset(bytes, cursor.pos)));
-                    have_skipped := false;
-                    if char_type != .word {
-                        cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, char_type, skip_one_space = false);
-                        have_skipped = true;
+                case .fast;
+                    moved_through : Char_Type = ---;
+                    cursor.pos, moved_through = scan_through_similar_chars_on_the_left(buffer, cursor.pos);
+                    if moved_through != .word  cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = false);
+
+                case .through_word;
+                    moved_through : Char_Type = ---;
+                    cursor.pos, moved_through = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = false);
+                    while cursor.pos > 0 && moved_through != .word {
+                        cursor.pos, moved_through = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = false);
                     }
-                    cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = is_single_cursor && !have_skipped);
             }
         }
         cursor.col_wanted = -1;
@@ -2153,7 +2162,7 @@ move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: enum { char; w
 }
 
 // @Copypasta to text_input.jai - remember to update it if amending this!
-move_cursors_right :: (editor: *Editor, using buffer: *Buffer, by: enum { char; word; word_ends; }, extend_selection: bool) {
+move_cursors_right :: (editor: *Editor, using buffer: *Buffer, by: enum { character; character_type; fast; through_word; }, extend_selection: bool) {
     is_single_cursor := editor.cursors.count == 1;
 
     for * cursor : editor.cursors {
@@ -2163,24 +2172,25 @@ move_cursors_right :: (editor: *Editor, using buffer: *Buffer, by: enum { char; 
             continue;
         } else {
             if by == {
-                case .char;
+                case .character;
                     cursor.pos = next_char_offset(bytes, cursor.pos);
 
-                case .word;
+                case .character_type;
                     set_underscore_is_part_of_word(false);
                     cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = is_single_cursor);
                     set_underscore_is_part_of_word(true);
 
-                case .word_ends;
-                    char := get_char_at_offset(buffer, cursor.pos);
-                    char_type := get_char_type(char);
-                    have_skipped := false;
-                    if char_type != .word  {
-                        cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, char_type, skip_one_space = false);
-                        have_skipped = true;
+                case .fast;
+                    moved_through : Char_Type = ---;
+                    cursor.pos, moved_through = scan_through_similar_chars_on_the_right(buffer, cursor.pos);
+                    if moved_through != .word  cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = false);
+
+                case .through_word;
+                    moved_through : Char_Type = ---;
+                    cursor.pos, moved_through = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = false);
+                    while cursor.pos < bytes.count && moved_through != .word {
+                        cursor.pos, moved_through = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = false);
                     }
-                    char_type = get_char_type(get_char_at_offset(buffer, cursor.pos));
-                    if char_type != .other && !is_unicode_linebreak(char) then cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = is_single_cursor && !have_skipped);
             }
         }
         cursor.col_wanted = -1;
