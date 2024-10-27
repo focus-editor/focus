@@ -813,8 +813,6 @@ REGEX_SEARCH_ICON   :: #run to_string(*convert_utf32_to_utf8(0xf621));
 BULLET_ICON         :: #run to_string(*convert_utf32_to_utf8(0x2022));
 XMARK_ICON          :: #run to_string(*convert_utf32_to_utf8(0xf057));
 
-TAB_SIZE: s32 = 4;
-
 font_main:             *Simp.Dynamic_Font;
 font_ui:               *Simp.Dynamic_Font;
 font_ui_bold:          *Simp.Dynamic_Font;

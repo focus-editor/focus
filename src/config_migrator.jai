@@ -478,12 +478,18 @@ ADDED_SETTINGS :: Added_Setting.[
     .{  6, "projects_sorting_order",                             "most_recent_first  #options: most_recent_first, alphabetical, alphabetical_no_case" },
 
     .{  7, "show_ruler_at_column",                               "0" },
+
+    .{ 11, "detect_indentation",                                 "true  # if true, existing files will be scanned to detect indentation, new files will use the `indent_using` and `tab_size` settings" },
 ];
 
 RENAMED_SETTINGS :: Renamed_Setting.[
-    .{ 2, "max_entries_in_open_file_dialog", "", .[], "" },  // removed
-    .{ 6, "strip_trailing_whitespace_on_save", "strip_trailing_whitespace_on_save", .[.{"true", "except_lines_with_cursor"}, .{"false", "disabled"}], "options: all, except_lines_with_cursor, disabled"},
-    .{ 6, "disable_that_annoying_paste_effect", "show_paste_effect", .[.{"true", "false"}, .{"false", "true"}], ""},
+    .{  2, "max_entries_in_open_file_dialog", "", .[], "" },  // removed
+
+    .{  6, "strip_trailing_whitespace_on_save",   "strip_trailing_whitespace_on_save",  .[.{"true", "except_lines_with_cursor"}, .{"false", "disabled"}], "options: all, except_lines_with_cursor, disabled"},
+    .{  6, "disable_that_annoying_paste_effect",  "show_paste_effect",                  .[.{"true", "false"}, .{"false", "true"}], ""},
+
+    .{ 11, "insert_spaces_when_pressing_tab",     "indent_using",                       .[.{"true", "spaces"}, .{"false", "tabs"}], "options: spaces, tabs"},
+    .{ 11, "show_cursors_off_screen",             "status_bar_show_cursors_off_screen", .[], ""},
 ];
 
 SETTING_VALUES_INDENT :: #run -> int {

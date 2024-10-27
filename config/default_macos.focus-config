@@ -39,8 +39,6 @@ highlight_line_with_cursor:                         false
 highlight_matching_brackets:                        false
 show_paste_effect:                                  true
 disable_file_open_close_animations:                 false
-tab_size:                                           4
-insert_spaces_when_pressing_tab:                    true
 strip_trailing_whitespace_on_save:                  except_lines_with_cursor
 smooth_scrolling:                                   true
 scroll_beyond_last_line:                            true
@@ -58,7 +56,6 @@ hide_mouse_when_typing:                             false
 draw_indent_guides:                                 false
 auto_surround_with_brackets_and_quotes:             false
 auto_close_brackets:                                false
-show_cursors_off_screen:                            true
 persist_local_search_results:                       false  # if true, search results will stay highlighted and you have to dismiss them using the `escape` action
 load_most_recent_project_on_start:                  false
 projects_sorting_order:                             most_recent_first
@@ -68,10 +65,18 @@ build_panel_line_wrap_always_on:                    true
 build_panel_width_percent:                          50
 build_panel_height_percent:                         50
 
-status_bar_position:                                bottom   # options: top, bottom
 color_preview_popup:                                enabled  # options: enabled, minimized, disabled
 search_is_case_sensitive_when_uppercase_present:    true
 
+detect_indentation:                                 true
+indent_using:                                       spaces
+tab_size:                                           4
+
+status_bar_position:                                bottom   # options: top, bottom
+status_bar_show_cursors_off_screen:                 true
+
+
+# This is an example configuration for build commands (uncomment and modify to use)
 
 # [[build commands]]
 # build_working_dir:      <build working dir for all commands>  # <- paths relative to the workspace working dir (the first one in the list) are allowed

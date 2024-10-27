@@ -750,6 +750,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
     using editor := *open_editors[editor_id];
     buffer := *open_buffers[buffer_id];
     if buffer_needs_tokenizing(buffer) then retokenize(buffer);  // right before drawing
+    tab_size := get_buffer_tab_size(buffer);
 
     scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
 
@@ -1210,7 +1211,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             length     := get_line_start_offset(editor, buffer, line_num+1) - line_start;
             line       := to_view(buffer.bytes, line_start, length);
 
-            line_pixel_width := cast(s32) ((num_cols_in_string(cast(string) line) + min_visible_chars) * char_x_advance);
+            line_pixel_width := cast(s32) ((num_cols_in_string(cast(string) line, tab_size) + min_visible_chars) * char_x_advance);
             max_line_pixel_width = max(max_line_pixel_width, line_pixel_width);
         }
 
@@ -1290,10 +1291,10 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             current_level := -1;
             for line_num : visible_lines_start .. visible_lines_end {
                 line   := get_line_as_string(editor, buffer, line_num);
-                indent := get_visual_indent_in_spaces(line);
+                indent := get_visual_indent_in_spaces(line, tab_size);
 
                 indent_level := -1;
-                if indent > 0 then indent_level = (indent - 1) / TAB_SIZE;
+                if indent > 0 then indent_level = (indent - 1) / tab_size;
                 if !trim_right(line) then indent_level = current_level; else current_level = indent_level;
 
                 array_add(*indent_levels, indent_level);
@@ -1303,7 +1304,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             Simp.set_shader_for_color(enable_blend = true);
             for level : indent_levels {
                 for 0..level {
-                    guide.x = text_origin.x + it * char_x_advance * TAB_SIZE;
+                    guide.x = text_origin.x + it * char_x_advance * tab_size;
                     draw_rect_raw(guide, Color.INDENT_GUIDE);
                 }
                 guide.y -= line_height;
@@ -1409,8 +1410,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             length     := get_line_start_offset(editor, buffer, line_num+1) - line_start;
             line       := cast(string) to_view(buffer.bytes, line_start, length);
             tab_spaces := 0;
-            line, tab_spaces = advance_by_chars(line, hidden_chars_on_the_left);
-            line = take_first_n_chars(line, max_chars_horizontally);
+            line, tab_spaces = advance_by_chars(line, hidden_chars_on_the_left, tab_size);
+            line = take_first_n_chars(line, max_chars_horizontally, tab_size);
             line = trim_right(line, " \r\n");
             tokens := ifx line then to_view(buffer.tokens, line.data - buffer.bytes.data, line.count) else .[];
             code_lines[line_num-visible_lines_start] = .{ line = line, start_offset = line_start, tab_spaces = xx tab_spaces, tokens = xx tokens };
@@ -1425,7 +1426,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             array_add(*selections, selection);
         }
 
-        draw_code(font_main, pen, code_lines, selections, start_col = hidden_chars_on_the_left, is_colored = buffer.tokens.count > 0);
+        draw_code(font_main, pen, code_lines, tab_size, selections, start_col = hidden_chars_on_the_left, is_colored = buffer.tokens.count > 0);
 
         // Draw continuation markers for wrapped lines
         if line_wrap_is_active(editor) && !config.settings.show_line_numbers && !as_build_panel {
@@ -1806,9 +1807,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                     match_start := entry.offset;
                     match_end   := min(entry.offset + entry.count, line_range.end);  // if we have a multi-line match, we will still show only the first line
                     line_start  := ifx text_start <= match_start then text_start else line_range.start;
-                    line_indent := get_visual_indent_in_spaces(cast(string) to_view(buffer.bytes, line_range.start, line_start));
-                    cols_until_match_start := num_cols_in_string(cast(string) to_view(buffer.bytes, line_start, match_start - line_start));
-                    cols_until_match_end   := num_cols_in_string(cast(string) to_view(buffer.bytes, line_start, match_end   - line_start));
+                    line_indent := get_visual_indent_in_spaces(cast(string) to_view(buffer.bytes, line_range.start, line_start), tab_size);
+                    cols_until_match_start := num_cols_in_string(cast(string) to_view(buffer.bytes, line_start, match_start - line_start), tab_size);
+                    cols_until_match_end   := num_cols_in_string(cast(string) to_view(buffer.bytes, line_start, match_end   - line_start), tab_size);
 
                     // Figure out whether we need to cut the line so that the match is visible
                     col_offset  := 0;
@@ -1825,7 +1826,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                     }
                     if col_offset > 0 {
                         line_str := cast(string) to_view(buffer.bytes, line_start, line_range.end);
-                        byte_offset, col_offset = visual_col_to_byte_offset(line_str, col_offset, line_indent);
+                        byte_offset, col_offset = visual_col_to_byte_offset(line_str, col_offset, line_indent, tab_size);
                     }
 
                     pen.x = text_x;
@@ -1851,7 +1852,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                         tokens := to_view(buffer.tokens, visible_offset_range.start, line_str.count);
                         code_lines: [1] Simp.Code_Line;
                         code_lines[0] = .{ line = line_str, tab_spaces = 0, tokens = xx tokens };
-                        draw_code(font_main, pen, code_lines, is_colored = buffer.tokens.count > 0, start_col = line_indent + col_offset);
+                        draw_code(font_main, pen, code_lines, tab_size, is_colored = buffer.tokens.count > 0, start_col = line_indent + col_offset);
                     }
                 }
             }
@@ -1936,7 +1937,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             }
 
             // Maybe draw the number of cursors off screen
-            if editor.cursors.count > 1 && cursors_off_screen && config.settings.show_cursors_off_screen {
+            if editor.cursors.count > 1 && cursors_off_screen && config.settings.status_bar_show_cursors_off_screen {
                 width = xx Simp.prepare_text(font_ui_bold, tprint("%", cursors_off_screen));
                 cursor_indicator_x := line_col_start_x - width - char_x_advance;
                 Simp.draw_prepared_text(font_ui_bold, xx cursor_indicator_x, xx pen.y, color = xx Color.CURSOR);
@@ -3015,6 +3016,7 @@ draw_finder :: () {
             entry_rect.y = files_rect.y + files_rect.h - (entry_index + 1) * entry_height + scroll_y;
 
             buffer := *open_buffers[entry.buffer_id];
+            tab_size := get_buffer_tab_size(buffer);
 
             // Highlight the entry into the scope color the match is in
             for buffer.regions {
@@ -3068,9 +3070,9 @@ draw_finder :: () {
                 match_start := entry.match_offset;
                 match_end   := min(entry.match_offset + entry.match_count, line_range.end);  // if we have a multi-line match, we will still show only the first line
                 line_start  := ifx text_start <= match_start then text_start else line_range.start;
-                line_indent := get_visual_indent_in_spaces(cast(string) to_view(buffer.bytes, line_range.start, line_start));
-                cols_until_match_start := num_cols_in_string(cast(string) to_view(buffer.bytes, line_start, match_start - line_start));
-                cols_until_match_end   := num_cols_in_string(cast(string) to_view(buffer.bytes, line_start, match_end   - line_start));
+                line_indent := get_visual_indent_in_spaces(cast(string) to_view(buffer.bytes, line_range.start, line_start), tab_size);
+                cols_until_match_start := num_cols_in_string(cast(string) to_view(buffer.bytes, line_start, match_start - line_start), tab_size);
+                cols_until_match_end   := num_cols_in_string(cast(string) to_view(buffer.bytes, line_start, match_end   - line_start), tab_size);
 
                 // Figure out whether we need to cut the line so that the match is visible
                 col_offset  := 0;
@@ -3087,7 +3089,7 @@ draw_finder :: () {
                 }
                 if col_offset > 0 {
                     line_str := cast(string) to_view(buffer.bytes, line_start, line_range.end);
-                    byte_offset, col_offset = visual_col_to_byte_offset(line_str, col_offset, line_indent);
+                    byte_offset, col_offset = visual_col_to_byte_offset(line_str, col_offset, line_indent, tab_size);
                 }
 
                 pen.x = text_x;
@@ -3114,7 +3116,7 @@ draw_finder :: () {
                     tokens := to_view(buffer.tokens, visible_range.start, line_str.count);
                     code_lines: [1] Simp.Code_Line;
                     code_lines[0] = .{ line = line_str, tab_spaces = 0, tokens = xx tokens };
-                    draw_code(font_main, pen, code_lines, is_colored = buffer.tokens.count > 0, start_col = line_indent + col_offset);
+                    draw_code(font_main, pen, code_lines, tab_size, is_colored = buffer.tokens.count > 0, start_col = line_indent + col_offset);
                 }
             }
         }
@@ -3139,12 +3141,12 @@ draw_finder :: () {
                     label = tprint("%   Regex search is active (% to toggle).", label, combo);
                 }
                 if !is_empty(finder.include.text) {
-                    wildcards := take_first_n_chars(to_string(finder.include.text), 20);
+                    wildcards := take_first_n_chars(to_string(finder.include.text), 20, tab_size = 4);
                     if wildcards.count != finder.include.text.count then wildcards = tprint("%…", wildcards);
                     label = tprint("%  Only files matching \"%\" were searched.", label, wildcards);
                 }
                 if !is_empty(finder.exclude.text) {
-                    wildcards := take_first_n_chars(to_string(finder.exclude.text), 20);
+                    wildcards := take_first_n_chars(to_string(finder.exclude.text), 20, tab_size = 4);
                     if wildcards.count != finder.exclude.text.count then wildcards = tprint("%…", wildcards);
                     label = tprint("%  Files matching \"%\" were excluded.", label, wildcards);
                 }
@@ -3207,6 +3209,8 @@ get_cursor_screen_pos :: (text_origin: Vector2, coords: Coords) -> Vector2 {
 }
 
 draw_range :: (range: Coords_Range, editor: Editor, buffer: Buffer, visible_start: s32, visible_end: s32, text_origin: Vector2, color: Color, alpha := 1.0) {
+    tab_size := get_buffer_tab_size(buffer);
+
     // Scan the visible range and add the number of chars on each line
     range_chars: [..] s32;
     range_chars.allocator = temp;
@@ -3217,7 +3221,7 @@ draw_range :: (range: Coords_Range, editor: Editor, buffer: Buffer, visible_star
 
     for start..end {
         s := get_line_as_string(editor, buffer, xx it);
-        array_add(*range_chars, num_cols_in_string(s));  // we need to refer to prev/next line, so storing it in an array
+        array_add(*range_chars, num_cols_in_string(s, tab_size));  // we need to refer to prev/next line, so storing it in an array
     }
 
     for line_num : start..end {
@@ -3470,12 +3474,12 @@ draw_tooltip_bottom_left :: (text: string, pos: Vector2) {
     Simp.draw_prepared_text(font_ui_very_small, xx (rect.x + padding), xx (rect.y + (rect.h - font_ui_very_small.character_height) / 2) + 1, xx Color.UI_DEFAULT);
 }
 
-draw_code :: (font: *Simp.Dynamic_Font, pen: Vector2, code_lines: [] Simp.Code_Line, selections: [] Offset_Range = .[], start_col := 0, is_colored := true) {
+draw_code :: (font: *Simp.Dynamic_Font, pen: Vector2, code_lines: [] Simp.Code_Line, tab_size: s32, selections: [] Offset_Range = .[], start_col := 0, is_colored := true) {
     // Use different code paths for colored and uncolored texts to avoid checking if color is present for each letter
     if is_colored {
-        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, xx selections, TAB_SIZE, start_col, is_colored = true);
+        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, xx selections, tab_size, start_col, is_colored = true);
     } else {
-        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, xx selections, TAB_SIZE, start_col, is_colored = false);
+        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, xx selections, tab_size, start_col, is_colored = false);
     }
 }
 

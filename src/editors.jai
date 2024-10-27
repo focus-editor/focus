@@ -1398,6 +1398,8 @@ make_editor_active :: (editor_id: s64) {
 
     array_ordered_remove_by_value(*most_recent_buffers, buffer_id);
     array_insert_at(*most_recent_buffers, buffer_id, 0);
+
+    maybe_detect_indentation(buffer_id);
 }
 
 update_window_title :: (buffer_id: s64 = -1) {
@@ -2425,6 +2427,8 @@ delete_word_right :: (editor: *Editor, buffer: *Buffer) {
 }
 
 delete_left_char :: (editor: *Editor, buffer: *Buffer) {
+    tab_size := get_buffer_tab_size(buffer);
+
     should_delete_closing_bracket := config.settings.auto_close_brackets && all_cursors_can_auto_delete_closing_bracket(editor, buffer);
 
     // NOTE: we don't have to worry about a cursor with no selection being immediately next
@@ -2440,9 +2444,9 @@ delete_left_char :: (editor: *Editor, buffer: *Buffer) {
             range_per_cursor[it_index] = Offset_Range.{};
         } else {
             coords := offset_to_real_coords(buffer, cursor.pos);
-            chars_to_delete := coords.col % TAB_SIZE;
+            chars_to_delete := coords.col % tab_size;
             if coords.col == 0      then chars_to_delete = 1;
-            if chars_to_delete == 0 then chars_to_delete = TAB_SIZE;
+            if chars_to_delete == 0 then chars_to_delete = tab_size;
             if chars_to_delete > 1 {
                 // Don't delete more than one char unless the cursor is between line start and text start
                 whitespace_bytes := count_whitespace(buffer.bytes, get_real_line_start_offset(buffer, coords.line), cursor.pos);
@@ -2517,7 +2521,8 @@ indent_or_tab :: (editor: *Editor, buffer: *Buffer) {
 }
 
 insert_tab_at_each_cursor :: (editor: *Editor, buffer: *Buffer) {
-    spaces := get_tmp_spaces(TAB_SIZE);
+    indentation_type, tab_size := get_buffer_indentation_and_tab_size(buffer);
+    spaces := get_tmp_spaces(tab_size);
 
     offset_delta: s32 = 0;
     buf_len := cast(s32) buffer.bytes.count;
@@ -2538,10 +2543,10 @@ insert_tab_at_each_cursor :: (editor: *Editor, buffer: *Buffer) {
             delete_range(buffer, selection);
         }
 
-        if config.settings.insert_spaces_when_pressing_tab {
+        if indentation_type == .spaces {
             // Insert spaces to the next tabstop
             cursor_col := find_col_by_scanning_left(buffer, cursor.pos);  // @line_wrap: check
-            to_next_tabstop := TAB_SIZE - cursor_col % TAB_SIZE;
+            to_next_tabstop := tab_size - cursor_col % tab_size;
             spaces.count = to_next_tabstop;
             insert_string_at_offset(buffer, cursor.pos, spaces);
             cursor.pos += to_next_tabstop;
@@ -2580,8 +2585,8 @@ get_line_starts_for_lines_with_cursors_tmp :: (editor: *Editor, buffer: *Buffer)
 }
 
 indent_lines :: (editor: *Editor, buffer: *Buffer) {
-    spaces   := ifx config.settings.insert_spaces_when_pressing_tab get_tmp_spaces(TAB_SIZE) else "\t";
-    tab_size := cast(s32) spaces.count;
+    indentation_type, tab_size := get_buffer_indentation_and_tab_size(buffer);
+    spaces   := ifx indentation_type == .spaces get_tmp_spaces(tab_size) else "\t";
 
     // Find lines which will be affected (we don't want to indent the same line more than once if it has more than 1 cursor on it)
     line_starts, last_line_end_offset := get_line_starts_for_lines_with_cursors_tmp(editor, buffer);
@@ -2616,6 +2621,8 @@ indent_lines :: (editor: *Editor, buffer: *Buffer) {
 }
 
 unindent_lines :: (editor: *Editor, buffer: *Buffer) {
+    tab_size := get_buffer_tab_size(buffer);
+
     // Find lines which will be affected (we don't want to unindent the same line more than once if it has more than 1 cursor on it)
     line_starts, last_line_end_offset := get_line_starts_for_lines_with_cursors_tmp(editor, buffer);
     array_add(*line_starts, last_line_end_offset);
@@ -2632,7 +2639,7 @@ unindent_lines :: (editor: *Editor, buffer: *Buffer) {
             // When seeing a tab, just remove it (and do nothing else)
             spaces_at_line_start = 1;
         } else {
-            for start..min(start + TAB_SIZE, end - 1) - 1 {
+            for start..min(start + tab_size, end - 1) - 1 {
                 if buffer.bytes[it] != #char " " break;
                 spaces_at_line_start += 1;
             }
@@ -2671,6 +2678,8 @@ autoindent_region :: (editor: *Editor, buffer: *Buffer) {
         return;
     }
 
+    indentation_type, tab_size := get_buffer_indentation_and_tab_size(buffer);
+
     line_ranges := get_whole_line_ranges_for_cursors(editor, buffer);
 
     replacements: [..] string;
@@ -2691,17 +2700,12 @@ autoindent_region :: (editor: *Editor, buffer: *Buffer) {
                 line_start = get_real_line_start_offset(buffer, line_num);
             }
 
-            level, next_level := get_base_indent_from_line(buffer, line_num, tokens);
+            level, next_level := get_base_indent_from_line(buffer, line_num, tokens, tab_size);
             if line_range.start != line_start {
                 base_level = next_level;  // derived the level from a line above, not the first line of the range
             } else {
                 base_level = level;
             }
-
-            // #if DEBUG {
-            //     print("BASE LINE FOR INDENT:\n%\n", get_real_line_as_string(buffer, line_num));
-            //     print("base_level: %, next_level: %\n", level, next_level);
-            // }
         }
 
         // Build a replacement string for the whole range.
@@ -2732,7 +2736,7 @@ autoindent_region :: (editor: *Editor, buffer: *Buffer) {
 
                 if !offset_is_within_multiline_token(tokens, start) {
                     // Indent the line
-                    whitespace := ifx config.settings.insert_spaces_when_pressing_tab then get_tmp_spaces(level * TAB_SIZE) else get_tmp_tabs(level);
+                    whitespace := ifx indentation_type == .spaces then get_tmp_spaces(level * tab_size) else get_tmp_tabs(level);
                     append(*b, whitespace);
                     append(*b, trim(line));
                     append(*b, "\n");
@@ -3360,6 +3364,8 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
     EMPTY_LINE_BIT  :: (cast(s32) 1) >>> 1;
     LINE_START_MASK :: ~EMPTY_LINE_BIT;
 
+    indentation_type, tab_size := get_buffer_indentation_and_tab_size(buffer);
+
     min_indent  := -1;
     add_comment := false;
     for 0..last_line {
@@ -3378,7 +3384,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
         trimmed_str: string = ---;
         for c : cast([]u8) str {
             if c == {
-                case #char "\t"; indent += TAB_SIZE - (indent % TAB_SIZE); continue c;
+                case #char "\t"; indent += tab_size - (indent % tab_size); continue c;
                 case #char " ";  indent += 1;                              continue c;
 
                 // In this case, this one line is empty, but str contains multiple lines. See the large comment above.
@@ -3419,10 +3425,9 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
     if add_comment {
         assert(min_indent > -1);
 
-        use_spaces := config.settings.insert_spaces_when_pressing_tab;
-        new_whitespace := ifx use_spaces then get_tmp_spaces(min_indent) else {
-            tab_count := min_indent / TAB_SIZE; // Aligns the indentation with tab columns because of integer division.
-            min_indent = tab_count * TAB_SIZE;  // Update min_indent too. If you use tabs, your comments will align with tab columns.
+        new_whitespace := ifx indentation_type == .spaces then get_tmp_spaces(min_indent) else {
+            tab_count := min_indent / tab_size; // Aligns the indentation with tab columns because of integer division.
+            min_indent = tab_count * tab_size;  // Update min_indent too. If you use tabs, your comments will align with tab columns.
             get_tmp_tabs(tab_count);
         }
 
@@ -3438,7 +3443,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
                 c := str[old_whitespace_count];
                 if c == {
                     case #char " ";  indent += 1;
-                    case #char "\t"; indent += TAB_SIZE - (indent % TAB_SIZE);
+                    case #char "\t"; indent += tab_size - (indent % tab_size);
                     case;            assert(false, "Unexpected character 0x%, (expected only tabs/spaces)\n", formatInt(c, base=16));
                 }
                 old_whitespace_count += 1;

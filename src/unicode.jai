@@ -42,7 +42,7 @@ Utf8_Char :: struct {
     count: s32;
 }
 
-advance_by_chars :: (s: string, num_chars: s64) -> string #must, remainder: s64 {
+advance_by_chars :: (s: string, num_chars: s64, tab_size: s32) -> string #must, remainder: s64 {
     result := s;
     col := 0;
     while result && col < num_chars {
@@ -52,20 +52,20 @@ advance_by_chars :: (s: string, num_chars: s64) -> string #must, remainder: s64 
             col += 1;
         } else {
             safe_advance(*result, 1);
-            col += TAB_SIZE - col % TAB_SIZE;
+            col += tab_size - col % tab_size;
         }
     }
     return result, col - num_chars;
 }
 
-take_first_n_chars :: (s: string, num_chars: s64) -> string #must {
+take_first_n_chars :: (s: string, num_chars: s64, tab_size: s32) -> string #must {
     result := s;
-    result.count -= advance_by_chars(result, num_chars).count;
+    result.count -= advance_by_chars(result, num_chars, tab_size).count;
     return result;
 }
 
 // Counts the number of chars, each tab is counted as the number of cols needed for the visual indent
-num_cols_in_string :: (s: string) -> s32 {
+num_cols_in_string :: (s: string, tab_size: s32) -> s32 {
     num_chars: s32 = 0;
 
     while s {
@@ -75,7 +75,7 @@ num_cols_in_string :: (s: string) -> s32 {
             num_chars += 1;
         } else {
             safe_advance(*s, 1);
-            num_chars += TAB_SIZE - num_chars % TAB_SIZE;
+            num_chars += tab_size - num_chars % tab_size;
         }
     }
 
