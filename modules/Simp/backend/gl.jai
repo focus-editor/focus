@@ -195,9 +195,18 @@ backend_init_shaders :: () {
         s.alpha_blend = true;
     }
 
-    s = *shader_text;
+    s = *shader_text_lcd;
     {
-        s.gl_handle       = get_shader_program(SHADER_TEXT);
+        s.gl_handle       = get_shader_program(SHADER_TEXT_LCD);
+        s.position_loc    = 0;
+        s.color_scale_loc = 1;
+        s.uv_0_loc        = 2;
+        s.alpha_blend = true;
+    }
+
+    s = *shader_text_normal;
+    {
+        s.gl_handle       = get_shader_program(SHADER_TEXT_NORMAL);
         s.position_loc    = 0;
         s.color_scale_loc = 1;
         s.uv_0_loc        = 2;
@@ -236,12 +245,8 @@ backend_init_shaders :: () {
 
 #scope_file
 
-//
-//
-// Shaders Here!
-//
-//
-SHADER_TEXT :: #string GLSL
+// LCD (horizontal RGB/BGA subpixel anti-aliasing)
+SHADER_TEXT_LCD :: #string GLSL
 
 OUT_IN vec2 TextureCoords;
 OUT_IN vec4 iterated_color;
@@ -279,6 +284,42 @@ void main () {
 GLSL
 
 
+// Normal anti-aliasing
+SHADER_TEXT_NORMAL :: #string GLSL
+
+OUT_IN vec2 TextureCoords;
+OUT_IN vec4 iterated_color;
+
+#ifdef VERTEX_SHADER
+layout(location = 0) in vec2 vert_position;
+layout(location = 1) in vec4 vert_color;
+layout(location = 2) in vec2 vert_uv0;
+
+uniform mat4 projection;
+
+void main() {
+    gl_Position     = projection * vec4(vert_position, 0.0, 1.0);
+    iterated_color  = vert_color;
+    TextureCoords   = vert_uv0;
+}
+#endif // VERTEX_SHADER
+
+#ifdef FRAGMENT_SHADER
+layout(location = 0, index = 0) out vec4 color;
+layout(location = 0, index = 1) out vec4 colorMask;
+
+uniform sampler2D text_sampler;
+uniform vec4 text_color;
+
+void main () {
+    vec4 texture_sample = texture(text_sampler, TextureCoords);
+    color = vec4(iterated_color.xyz, texture_sample.a * iterated_color.a); // text_color * texture_sample;
+    colorMask = vec4(texture_sample.rrr * color.a, 1.0);
+}
+#endif // FRAGMENT_SHADER
+GLSL
+
+
 SHADER_COLOR :: #string GLSL
 OUT_IN vec4 iterated_color;
 
@@ -290,7 +331,7 @@ uniform mat4 projection;
 
 void main() {
     gl_Position = projection * vec4(vert_position, 0.0, 1.0);
-    iterated_color    = vert_color;
+    iterated_color = vert_color;
 }
 #endif // VERTEX_SHADER
 

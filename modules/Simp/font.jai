@@ -23,7 +23,7 @@ Font_Quad :: struct {
 Dynamic_Font :: struct {
     name: string;
     face: FT_Face;
-    glyph_lookup: Table(int, *Glyph_Data);
+    glyph_lookup: Table(u64, *Glyph_Data);
 
     character_height:       int;
     default_line_spacing:   int;
@@ -211,7 +211,7 @@ draw_code :: (font: *Dynamic_Font, x: s64, y: s64, char_x_advance: float, line_h
             // Draw glyph
             {
                 x1 := sx + cast(float) glyph.offset_x;
-                x2 := x1 + cast(float) glyph.width;
+                x2 := x1 + cast(float) glyph.width / (ifx font_anti_aliasing == .lcd then 3.0 else 1.0);
 
                 y2 := sy + cast(float) glyph.ascent;
                 y1 := y2 - cast(float) glyph.height;
@@ -335,7 +335,7 @@ draw_text_with_highlights :: (font: *Dynamic_Font, x: s64, y: s64, text: string,
             }
 
             x1 := sx + cast(float) glyph.offset_x;
-            x2 := x1 + cast(float) glyph.width;
+            x2 := x1 + cast(float) glyph.width / (ifx font_anti_aliasing == .lcd then 3.0 else 1.0);
 
             y2 := sy + cast(float) glyph.ascent;
             y1 := y2 - cast(float) glyph.height;
@@ -619,7 +619,7 @@ generate_quads_for_prepared_text :: (font: *Dynamic_Font, x: s64, y: s64) {
         }
 
         sx1 := sx  + cast(float) info.offset_x;
-        sx2 := sx1 + cast(float) info.width;
+        sx2 := sx1 + cast(float) info.width / (ifx font_anti_aliasing == .lcd then 3.0 else 1.0);
 
         sy2 := sy  + cast(float) info.ascent;
         sy1 := sy2 - cast(float) info.height;
@@ -765,7 +765,7 @@ copy_glyph_to_bitmap :: (face: FT_Face, data: *Glyph_Data) {
 }
 
 find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32) -> *Glyph_Data {
-    hash_key := utf32;
+    hash_key := (cast(u64) utf32) | ((cast(u64) font_anti_aliasing) << 32) | ((cast(u64) font_hinting) << 36);
 
     data, success := table_find(*font.glyph_lookup, hash_key);
     if success  return data;
@@ -778,10 +778,15 @@ find_or_create_glyph :: (using font: *Dynamic_Font, utf32: u32) -> *Glyph_Data {
         log_error("Unable to find a glyph in font '%' for utf32 character %.\n", name, utf32);
         glyph_index = glyph_index_for_unknown_character;
     }
-    // error := FT_Load_Glyph(face, glyph_index, FT_LOAD_RENDER);
-    error := FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT);
+
+    load_mode := cast(s32) ifx font_hinting then FT_LOAD_DEFAULT else FT_LOAD_NO_HINTING;
+    error := FT_Load_Glyph(face, glyph_index, load_mode);
     assert(!error);
-    FT_Render_Glyph(face.glyph, .FT_RENDER_MODE_LCD);
+
+    if #complete font_anti_aliasing == {
+        case .lcd;      FT_Render_Glyph(face.glyph, .FT_RENDER_MODE_LCD);  // TODO: use LCD_V when monitor is rotated
+        case .normal;   FT_Render_Glyph(face.glyph, .FT_RENDER_MODE_NORMAL);
+    }
 
     data = cast(*Glyph_Data) get(*glyph_and_line_pool, size_of(Glyph_Data));
     data.utf32 = utf32;

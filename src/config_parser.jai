@@ -539,7 +539,7 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
             setting, value := break_by_spaces(line);
             setting = trim_right(setting, ":");
 
-            font_settings := string.[ "font", "font_ui", "font_ui_bold", "font_size", "font_ui_size" ];
+            font_settings := string.[ "font", "font_ui", "font_ui_bold", "font_size", "font_ui_size", "anti_aliasing", "hinting" ];
             if !array_find(font_settings, setting) {
                 add_highlight(parser, 0, setting.count, .error);
                 return true, tprint("Unknown font option '%'. Available options: ", setting, join(..font_settings, ", ",, temp));
@@ -592,6 +592,26 @@ parse_style_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         add_highlight(parser, value.data - line.data, value.count, .error);
                         result.config.font_ui_size = DEFAULT_FONT_UI_SIZE;
                         return false, tprint("Couldn't parse '%' - expected a valid integer, got '%'", setting, value);
+                    }
+                case "anti_aliasing";
+                    enum_info := type_info(Font_Anti_Aliasing);
+                    found, idx := array_find(enum_info.names, value);
+                    if found {
+                        add_highlight(parser, cast(s64)(value.data - line.data), value.count, .value);
+                        result.config.font_anti_aliasing = some(cast(Font_Anti_Aliasing) enum_info.values[idx]);
+                    } else {
+                        add_highlight(parser, cast(s64)(value.data - line.data), value.count, .error);
+                        return true, tprint("Couldn't parse '%' - valid values: %", setting, enum_info.names);
+                    }
+                case "hinting";
+                    value_copy := value;
+                    bool_val, success := parse_bool(*value_copy);
+                    if success {
+                        add_highlight(parser, cast(s64)(value.data - line.data), value.count, .value);
+                        result.config.font_hinting = some(bool_val);
+                    } else {
+                        add_highlight(parser, cast(s64)(value.data - line.data), value.count, .error);
+                        return true, tprint("Couldn't parse '%1' - expected 'true' or 'false', got '%%'", value);
                     }
             }
 
@@ -1269,12 +1289,16 @@ Parsed_Config :: struct {
     set_settings: [..] string;  // so that we know which options were included in the config, and only touch those when merging
 
     // Style
-    theme: string;
-    font: string;
-    font_size: int;
-    font_ui: string;
+    theme:        string;
+    font:         string;
+    font_size:    int;
+    font_ui:      string;
     font_ui_bold: string;
     font_ui_size: int;
+
+    font_hinting:       Option(bool);
+    font_anti_aliasing: Option(Font_Anti_Aliasing);
+
     colors:     [..] Parsed_Color;
     color_refs: [..] Color_Reference;  // @colorref: not finished
 

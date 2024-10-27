@@ -196,7 +196,6 @@ Cmd-Shift-N                     create_new_file_on_the_side
 Opt-Shift-ArrowUp               create_cursor_above
 Opt-Shift-ArrowDown             create_cursor_below
 
-Opt-Shift-ArrowRight            select_word_or_create_another_cursor
 Opt-Cmd-A                       align_cursors
 
 Opt-Cmd-Z                       toggle_line_wrap
@@ -328,11 +327,13 @@ Shift-Cmd-F8                    go_to_previous_build_error_on_the_side
 [[style]]
 
 [fonts]
-font:         default
-font_ui:      default
-font_ui_bold: default
-font_size:    14
-font_ui_size: 15
+font:          default
+font_ui:       default
+font_ui_bold:  default
+font_size:     14
+font_ui_size:  15
+anti_aliasing: lcd  # options: lcd, normal
+hinting:       true
 
 [colors]
 background0:                            15212AFF

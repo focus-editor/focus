@@ -441,6 +441,9 @@ maybe_execute_a_build_command :: (action: Action_Build) -> handled: bool {
 init_fonts_and_dependent_things :: () {
     push_allocator(focus_allocator);  // we sometimes call this from within a temp allocator
 
+    Simp.set_anti_aliasing(config.style.font_anti_aliasing);
+    Simp.set_hinting(config.style.font_hinting);
+
     font_main_size = clamp(font_main_size, MIN_FONT_SIZE, MAX_FONT_SIZE);
     font_ui_size   = clamp(font_ui_size  , MIN_FONT_SIZE, MAX_FONT_SIZE);
 

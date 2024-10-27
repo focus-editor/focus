@@ -30,8 +30,13 @@ set_shader_for_color :: (enable_blend := false, $extra_draw_info := Extra_Draw_I
 
 set_shader_for_text :: () {
     CheckInit();
-    if state.current_shader != *shader_text {
-        immediate_set_shader(*shader_text);
+    target_shader: *Shader = ---;
+    if #complete font_anti_aliasing == {
+        case .lcd;      target_shader = *shader_text_lcd;
+        case .normal;   target_shader = *shader_text_normal;
+    }
+    if state.current_shader != target_shader {
+        immediate_set_shader(target_shader);
         set_projection();
     }
 }
@@ -68,9 +73,10 @@ set_shader_for_gradient :: (rect: Vector4, mode: u8, value: float) {
 }
 
 
-shader_sprite: Shader;
-shader_text:   Shader;
-shader_color:  Shader;
+shader_sprite:            Shader;
+shader_text_lcd:          Shader;
+shader_text_normal:       Shader;
+shader_color:             Shader;
 shader_color_with_blend:  Shader;
 shader_rounded_rect:      Shader;
-shader_gradient: Shader;
+shader_gradient:          Shader;

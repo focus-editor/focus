@@ -437,6 +437,8 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
 
     // Style
     if parsed.theme then dst.style.theme = copy_string(parsed.theme); /* @leak */  // TODO: rework how themes and styles are applied
+    if parsed.font_anti_aliasing.is_set then dst.style.font_anti_aliasing = parsed.font_anti_aliasing.value;
+    if parsed.font_hinting.is_set       then dst.style.font_hinting       = parsed.font_hinting.value;
     apply_style(parsed);
 
     // Platform config
@@ -540,7 +542,8 @@ Config :: struct {
 
 Style :: struct {
     theme: string;
-    // TODO: add other things in there at some point
+    font_anti_aliasing: Font_Anti_Aliasing = .lcd;
+    font_hinting := true;
 }
 
 Loaded_Font :: struct {
@@ -652,6 +655,12 @@ Projects_Sorting_Order :: enum {
     alphabetical;
     alphabetical_no_case;
 }
+
+Font_Anti_Aliasing :: enum {
+    lcd;
+    normal;
+}
+#poke_name Simp Font_Anti_Aliasing;
 
 Keymap :: struct {
     common:           [] Key_Mapping;
