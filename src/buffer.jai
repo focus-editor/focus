@@ -1085,23 +1085,108 @@ get_buffer_tab_size :: inline (buffer: Buffer) -> s32 {
     }
 }
 
-maybe_detect_indentation :: (buffer_id: s64) {
+maybe_detect_and_set_indentation :: (buffer_id: s64) {
     buffer := *open_buffers[buffer_id];
     if buffer.readonly || buffer.deleted || buffer.internal return;
 
     if config.settings.detect_indentation {
         // With this setting on all buffers need to attempt to detect indentation unless already set
-        if buffer.indentation.size <= 0 && !buffer.indentation.was_manually_set then detect_indentation(buffer);
+        if buffer.indentation.size <= 0 && !buffer.indentation.was_manually_set then detect_and_set_indentation(buffer);
     } else {
         // With this setting off all buffers need to forget their indentation and use defaults, unless previously set manually
         if !buffer.indentation.was_manually_set then buffer.indentation.size = 0;
     }
 }
 
-detect_indentation :: (buffer: *Buffer) {
-    // !!!!!!!!!!!!!!!!!!!!!!
-    buffer.indentation.size = 2;
-    buffer.indentation.type = .tabs;
+detect_and_set_indentation :: (using buffer: *Buffer) {
+    if is_empty(bytes) {
+        // Empty files get default indentation
+        indentation.type = config.settings.indent_using;
+        indentation.size = cast(u8) config.settings.tab_size;
+        return;
+    }
+
+    // Collect stats on line indentaion
+    num_lines_with_spaces := 0;
+    num_lines_with_tabs   := 0;
+
+    MAX_INDENT :: 140;  // for the purpose of detecting indentation we don't look at lines indented more than this. Who would even do it?
+    num_lines_per_space_count: [MAX_INDENT] s32;  // the number of lines for each space indent count (e.g. shows how many lines are indented at 4 spaces, 8 spaces etc)
+    line_differences:          [MAX_INDENT] s32;  // the numbers of differences between lines with different indents
+
+    last_indent     := 0;
+    last_difference := 0;
+
+    b    := bytes.data;
+    last := bytes.data + bytes.count - 1;
+    while b <= last {
+        num_spaces := 0;
+        num_tabs   := 0;
+        while b <= last {
+            if b.* == {
+                case #char " ";     num_spaces += 1;
+                case #char "\t";    num_tabs   += 1;
+                case;               break;  // end of indentation
+            }
+            b += 1;
+        }
+
+        if num_spaces > 0 && num_tabs > 0 {
+            // Mixed spaces and tabs on the same line, ignore
+        } else if num_tabs {
+            num_lines_with_tabs += 1;
+        } else if num_spaces < MAX_INDENT {
+            num_lines_with_spaces += 1;
+            num_lines_per_space_count[num_spaces] += 1;
+
+            difference_from_prev_line := abs(last_indent - num_spaces);
+            if difference_from_prev_line > 0 && difference_from_prev_line < MAX_INDENT {
+                line_differences[difference_from_prev_line] += 1;
+                last_difference = difference_from_prev_line;
+            } else if difference_from_prev_line == 0 && last_difference > 0 {
+                line_differences[last_difference] += 1;
+                // This is to count lines like this:
+                // int foo() {
+                //     foobar();  // <- diff = 4, remember
+                //     bazfoo();  // <- diff = 0, but count it towards the 4 still!
+                //     ...
+                //
+            }
+        }
+
+        // Skip the rest of the line
+        while b <= last && b.* != #char "\n"  b += 1;
+        b += 1;
+    }
+
+    if num_lines_with_tabs < 2 && num_lines_with_spaces < 2 {
+        // Not enough information, use defaults
+        indentation.type = config.settings.indent_using;
+        indentation.size = cast(u8) config.settings.tab_size;
+        return;
+    }
+
+    if num_lines_with_tabs > num_lines_with_spaces {
+        // Assuming tabs
+        indentation.type = .tabs;
+        indentation.size = cast(u8) config.settings.tab_size;
+        return;
+    }
+
+    // Assuming spaces
+    indentation.type = .spaces;
+    indentation.size = cast(u8) config.settings.tab_size;  // fallback
+
+    // Find the most common line difference
+    {
+        max_lines := 0;
+        for num_lines, difference : line_differences {
+            if num_lines > max_lines {
+                indentation.size = cast(u8) difference;
+                max_lines = num_lines;
+            }
+        }
+    }
 }
 
 refresh_buffer_from_disk :: (path: string) {

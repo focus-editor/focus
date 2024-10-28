@@ -1143,7 +1143,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             quick_sort(to_view(editor.highlights), (a, b) => (a.offset - b.offset));
         }
 
-        if config.settings.show_selected_text_length && editor.refresh_selection then calculate_selected_text_length(editor, buffer);
+        if config.settings.status_bar_show_selected_text_length && editor.refresh_selection then calculate_selected_text_length(editor, buffer);
 
         editor.refresh_selection = false;  // should probably move this to some central place where we reset stuff
 
@@ -1905,41 +1905,54 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             push_scissor(cut_rect);
             defer pop_scissor();
 
-            // Get line/col.
-            line := offset_to_real_line(buffer, editor.cursors[main_cursor].pos);
-            col  := 0;
-            {
-                // Do not count indented tabs here, only count each tab as one character.
-                start, end := buffer.line_starts[line], editor.cursors[main_cursor].pos;
-                s := cast(string) to_view(buffer.bytes, start, end - start);
-                while s {
-                    byte := s[0];
-                    advance(*s, 1 + trailingBytesForUTF8[byte]);
-                    col += 1;
+            pen_x := status_bar_rect.x + status_bar_rect.w;
+
+            // Draw line col
+            if config.settings.status_bar_show_line_col {
+                line := offset_to_real_line(buffer, editor.cursors[main_cursor].pos);
+                col  := 0;
+                {
+                    // Do not count indented tabs here, only count each tab as one character.
+                    start, end := buffer.line_starts[line], editor.cursors[main_cursor].pos;
+                    s := cast(string) to_view(buffer.bytes, start, end - start);
+                    while s {
+                        byte := s[0];
+                        advance(*s, 1 + trailingBytesForUTF8[byte]);
+                        col += 1;
+                    }
                 }
+
+                #if DEBUG {
+                    width = xx Simp.prepare_text(font_ui_bold, tprint("  Offset: %  Line: %  Col: %", editor.cursors[main_cursor].pos, line + 1, col + 1));
+                } else {
+                    width = xx Simp.prepare_text(font_ui_bold, tprint("  Line: %  Col: %", line + 1, col + 1));
+                }
+                pen_x -= width;
+                Simp.draw_prepared_text(font_ui_bold, xx pen_x, xx pen.y, color = xx Color.UI_DIM);
             }
 
-            #if DEBUG {
-                width = xx Simp.prepare_text(font_ui_bold, tprint("Offset: %  Line: %  Col: %", editor.cursors[main_cursor].pos, line + 1, col + 1));
-            } else {
-                width = xx Simp.prepare_text(font_ui_bold, tprint("Line: %  Col: %", line + 1, col + 1));
+            // Draw indentation type
+            if config.settings.status_bar_show_indentation {
+                indentation_type, tab_size := get_buffer_indentation_and_tab_size(buffer);
+                label := tprint("  %: %", ifx indentation_type == .spaces then "Spaces" else "Tabs", tab_size);
+                width = xx Simp.prepare_text(font_ui_bold, label);
+                pen_x -= width;
+                Simp.draw_prepared_text(font_ui_bold, xx pen_x, xx pen.y, color = xx Color.UI_DIM);
             }
-            line_col_start_x := status_bar_rect.x + status_bar_rect.w - width;
-            Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = xx Color.UI_DIM);
 
             // Draw length of selected text if any text is currently selected
-            if config.settings.show_selected_text_length && num_selected_bytes > 0 {
-                label := tprint("Selected: % chars  ", num_selected_chars);
+            if config.settings.status_bar_show_selected_text_length && num_selected_bytes > 0 {
+                label := tprint("  Selected: % chars", num_selected_chars);
                 if num_selected_bytes != num_selected_chars then label = tprint("Selected: % chars, % bytes  ", num_selected_chars, num_selected_bytes);
-                width += xx Simp.prepare_text(font_ui_bold, label);
-                line_col_start_x = status_bar_rect.x + status_bar_rect.w - width;
-                Simp.draw_prepared_text(font_ui_bold, xx line_col_start_x, xx pen.y, color = xx Color.UI_DIM);
+                width = xx Simp.prepare_text(font_ui_bold, label);
+                pen_x -= width;
+                Simp.draw_prepared_text(font_ui_bold, xx pen_x, xx pen.y, color = xx Color.UI_DIM);
             }
 
             // Maybe draw the number of cursors off screen
             if editor.cursors.count > 1 && cursors_off_screen && config.settings.status_bar_show_cursors_off_screen {
                 width = xx Simp.prepare_text(font_ui_bold, tprint("%", cursors_off_screen));
-                cursor_indicator_x := line_col_start_x - width - char_x_advance;
+                cursor_indicator_x := pen_x - width - char_x_advance;
                 Simp.draw_prepared_text(font_ui_bold, xx cursor_indicator_x, xx pen.y, color = xx Color.CURSOR);
 
                 cursor_width := ifx config.settings.cursor_as_block then char_x_advance else 2 * dpi_scale;

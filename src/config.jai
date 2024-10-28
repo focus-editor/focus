@@ -614,7 +614,6 @@ Settings :: struct {
     prefer_system_file_dialogs                              := false;   @v1
     persist_local_search_results                            := false;   @v2
     search_is_case_sensitive_when_uppercase_present         := false;   @v6
-    show_selected_text_length                               := false;   @v3
     load_most_recent_project_on_start                       := false;   @v5
 
     build_panel_width_percent                               := 50;      @v2
@@ -633,9 +632,10 @@ Settings :: struct {
     tab_size                                                := 4;                   @v1
 
     status_bar_position                                     := Status_Bar_Position.bottom;                  @v4
-    // status_bar_show_indentation                             := true;    @v11
-    // status_bar_show_line_col                                := true;    @v11
-    status_bar_show_cursors_off_screen                      := true;    @v1
+    status_bar_show_indentation                             := true;    @v11
+    status_bar_show_line_col                                := true;    @v11
+    status_bar_show_cursors_off_screen                      := true;    @v11
+    status_bar_show_selected_text_length                    := false;   @v11
 
     // TODO
     // load_last_session_on_start:         true

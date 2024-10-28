@@ -1399,7 +1399,7 @@ make_editor_active :: (editor_id: s64) {
     array_ordered_remove_by_value(*most_recent_buffers, buffer_id);
     array_insert_at(*most_recent_buffers, buffer_id, 0);
 
-    maybe_detect_indentation(buffer_id);
+    maybe_detect_and_set_indentation(buffer_id);
 }
 
 update_window_title :: (buffer_id: s64 = -1) {

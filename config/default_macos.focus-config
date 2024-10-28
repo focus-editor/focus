@@ -51,7 +51,6 @@ editor_history_size:                                1024
 line_wrap_is_on_by_default:                         false
 show_line_numbers:                                  false
 show_ruler_at_column:                               0
-show_selected_text_length:                          false
 hide_mouse_when_typing:                             false
 draw_indent_guides:                                 false
 auto_surround_with_brackets_and_quotes:             false
@@ -74,6 +73,9 @@ tab_size:                                           4
 
 status_bar_position:                                bottom   # options: top, bottom
 status_bar_show_cursors_off_screen:                 true
+status_bar_show_line_col:                           true
+status_bar_show_indentation:                        true
+status_bar_show_selected_text_length:               false
 
 
 # This is an example configuration for build commands (uncomment and modify to use)
