@@ -896,27 +896,27 @@ do_things_on_editor_close :: (editor_id: s64) {
         case .Double; buffer_is_still_visible = open_editors[editors.left].buffer_id == editor.buffer_id || open_editors[editors.right].buffer_id == editor.buffer_id;
     }
     if !buffer_is_still_visible {
-        array_ordered_remove_by_value(*most_recent_buffers, editor.buffer_id);
+        ordered_remove_by_value(*most_recent_buffers, editor.buffer_id);
         if !buffer.modified then buffer.num_times_opened = 0;  // deprioritise it in the full file list
         if !buffer.has_file { buffer.deleted = true; buffer.modified = false; }  // get rid of newly created buffers we're closing
     }
 }
 
 close_other_editors :: () {
-    array_reset_keeping_memory(*most_recent_buffers);
+    reset_keeping_memory(*most_recent_buffers);
 
     using editors;
     left_valid  := left  >= 0 && left  < open_editors.count;
     right_valid := right >= 0 && right < open_editors.count;
-    if left_valid  then array_add_if_unique(*most_recent_buffers, open_editors[left].buffer_id);
-    if right_valid then array_add_if_unique(*most_recent_buffers, open_editors[right].buffer_id);
+    if left_valid  then add_if_unique(*most_recent_buffers, open_editors[left].buffer_id);
+    if right_valid then add_if_unique(*most_recent_buffers, open_editors[right].buffer_id);
 
     close_other_editor();
 }
 
 close_all_editors :: () {
     editors.layout = .None;
-    array_reset_keeping_memory(*most_recent_buffers);
+    reset_keeping_memory(*most_recent_buffers);
     update_window_title();
 }
 
@@ -1389,15 +1389,17 @@ viewport_glue_to_point :: (editor: *Editor, buffer: Buffer) -> changed: bool {
 
 make_editor_active :: (editor_id: s64) {
     assert(editor_id < open_editors.count, "Trying to activate editor %, but the last available one is %", editor_id, open_editors.count - 1);
-    if is_build_panel(editor_id)         then build_panel_on_activate();
+    if is_build_panel(editor_id)  build_panel_on_activate();
 
     editors.active = editor_id;
 
     buffer_id := open_editors[editor_id].buffer_id;
     update_window_title(buffer_id);
 
-    array_ordered_remove_by_value(*most_recent_buffers, buffer_id);
-    array_insert_at(*most_recent_buffers, buffer_id, 0);
+    move_or_add_to_front(*most_recent_buffers, buffer_id);
+
+    if editors.left >= 0                                move_or_add_to_front(*left_recent_editors, editors.left);
+    if editors.right >= 0 && editors.layout == .Double  move_or_add_to_front(*right_recent_editors, editors.right);
 }
 
 update_window_title :: (buffer_id: s64 = -1) {
@@ -3725,8 +3727,8 @@ Cursor_Movement :: enum u8 {
 }
 
 Viewport :: struct {
-    scroll_y := #run Tween_Animation(s32).{ speed = 0.1, func = .lerp };
-    scroll_x := #run Tween_Animation(s32).{ speed = 0.1, func = .lerp };
+    scroll_y := #run Tween_Animation(s32).{ duration = 0.1, func = .lerp };
+    scroll_x := #run Tween_Animation(s32).{ duration = 0.1, func = .lerp };
     top:  s32;
     left: s32;
     glue_point: Glue_Point;
@@ -3742,7 +3744,7 @@ Search_Bar :: struct {
     WIDTH_NORMAL   :: 0.5;
     WIDTH_EXPANDED :: 0.9;
 
-    scroll_anim := #run Tween_Animation(s32).{ speed = 0.1, func = .lerp };
+    scroll_anim := #run Tween_Animation(s32).{ duration = 0.1, func = .lerp };
     scroll_y: s32;
 
     width_percentage: float = WIDTH_NORMAL;  // how much of the screen the popup occupies
@@ -3822,12 +3824,15 @@ open_buffers_lock: Mutex;  // must hold while adding a new buffer
 open_buffers: Simple_Bucket_Array(Buffer, items_per_bucket = 1024, max_buckets = 1024);  // 8 Kb for pointer array, ~1 million buffers is the maximum
 open_editors: [..] Editor;
 
+left_recent_editors: Array(s64);
+right_recent_editors: Array(s64);
+
 // A map from full buffer path to buffer id (only for the open buffers, obviously)
 buffers_table: Table(string, s64,
                      given_hash_function = x => Hash.get_hash(to_lower_copy_new(x,, temp)),
                      given_compare_function = platform_path_equals);
 
-most_recent_buffers: [..] s64;  // updated when an editor is activated, used to switch between open files
+most_recent_buffers: Array(s64);  // updated when an editor is activated, used to switch between open files
 
 editors: Editor_State;
 editor_closing_id := -1;  // holds the id of the editor being closed (so that we can change the layout when it's done closing)
@@ -3865,6 +3870,204 @@ editor_smooth_scroll: struct {
 
 splitter_pos:  float = 0.5;  // 0.5 means it's in the middle
 splitter_anim: Tween_Animation(float);
+
+buffer_history: struct {
+    switching_editors_for : enum { none; left; right; }
+    buffer_index_cache: Array(s64);
+    has_duplicate_filename: Array(bool);
+    recent_editors: Array(s64);
+    recent_editors_index: int;
+
+    selected_tab_x_offset    := #run Tween_Animation(float).{ duration = 0.15, func = .smoothstep };
+    selected_tab_width       := #run Tween_Animation(float).{ duration = 0.15, func = .smoothstep };
+    selected_recent_editors_index: int;
+}
+
+// @Note :EditorBufferProcNames
+//       Current naming between userland and the codebase is disjointed; in the codebase an editor
+//       is a view into a buffer. To the user, however, an editor is the main/left pane, or the
+//       right pane. i.e. When they `close_editor` they are closing a pane (The codebase doesn't
+//       currently have the concept of a `pane`, really).
+//       So, these procs are named as per the user command, where they are switching/closing buffers
+//       inside a pane, as opposed to what they are actually doing in the codebase which is
+//       switching/closing editors.  As they're working with editors, they're in this file (editors.jai)
+//       but are named so they appear as though they should be in buffers.jai.
+//       - IK 2024.10.03
+
+move_to_previous_buffer :: () {
+    // :EditorBufferProcNames
+    using buffer_history;
+
+    if !switching_editors_for {
+        if editors.active == editors.left        switching_editors_for = .left;
+        else if editors.active == editors.right  switching_editors_for = .right;
+        else return;
+
+        start_move_to_recent_buffer(.start);
+        if !recent_editors {
+            switching_editors_for = .none;
+            return;
+        }
+    }
+
+    if recent_editors_index < recent_editors.count - 1  recent_editors_index += 1;
+    update_window_title(open_editors[recent_editors[recent_editors_index]].buffer_id);
+}
+
+move_to_next_buffer :: () {
+    // :EditorBufferProcNames
+    using buffer_history;
+
+    if !switching_editors_for {
+        if editors.active == editors.left        switching_editors_for = .left;
+        else if editors.active == editors.right  switching_editors_for = .right;
+        else return;
+
+        start_move_to_recent_buffer(.end);
+        if !recent_editors {
+            switching_editors_for = .none;
+            return;
+        }
+    }
+
+    if recent_editors_index > 0  recent_editors_index -= 1;
+    update_window_title(open_editors[recent_editors[recent_editors_index]].buffer_id);
+}
+
+close_current_buffer :: () {
+    // :EditorBufferProcNames
+
+    active_editors, other_editors: *Array(s64) = ---;
+    active_pane, other_pane: *s64;
+    if editors.active == editors.left {
+        active_pane = *editors.left;
+        other_pane = *editors.right;
+        active_editors, other_editors = get_recent_editors_for_switch(.left);
+    } else if editors.active == editors.right {
+        active_pane = *editors.right;
+        other_pane = *editors.left;
+        active_editors, other_editors = get_recent_editors_for_switch(.right);
+    } else {
+        return;
+    }
+
+    if !active_editors || active_editors.count == 0  return;
+
+    active_editor_index := active_editors.*[0];
+    buffer_id := open_editors[active_editor_index].buffer_id;
+    if open_buffers[buffer_id].modified {
+        defer_action_close_buffer(buffer_id);
+        return;
+    }
+
+    if other_editors && other_editors.count > 0 {
+        for editor_index, i : other_editors.* {
+            if open_editors[editor_index].buffer_id == buffer_id {
+                if other_editors.count == 1 {
+                    other_editors.count = 0;
+                    close_editor_by_id(editor_index);
+                } else {
+                    if i == 0  other_pane.* = other_editors.*[1];
+                    ordered_remove_by_index(other_editors, i);
+                }
+                break;
+            }
+        }
+    }
+
+    if active_editors.count == 1 {
+        active_editors.count = 0;
+        close_current_editor();
+        return;
+    }
+
+    ordered_remove_by_index(active_editors, 0);
+    editor_id := active_editors.*[0];
+    active_pane.* = editor_id;
+    make_editor_active(editor_id);
+}
+
+get_recent_editors_for_switch :: (switching_for: type_of(buffer_history.switching_editors_for)) -> active: *Array(s64), other: *Array(s64) {
+    using buffer_history;
+    assert(switching_for != .none);
+
+    if #complete switching_for == {
+        case .left;   return *left_recent_editors, *right_recent_editors;
+        case .right;  return *right_recent_editors, *left_recent_editors;
+        case .none;   return null, null;
+    }
+}
+
+start_move_to_recent_buffer :: (initial_editor : enum { start; end; }) {
+    using buffer_history;
+
+    // We keep track of recent buffers separately for the left and right panes.
+    // When the user starts switching through the history on a given pane it will
+    // populate the list with the most recent editors for that pane, and then after
+    // those will place any other open buffers. So, the same files will appear in
+    // both panes (all open buffers), but the order will be different, localised to
+    // the pane in question.
+
+    active_editors, other_editors := get_recent_editors_for_switch(switching_editors_for);
+    if !active_editors  return;
+
+    reset_keeping_memory(*recent_editors);
+    reset_keeping_memory(*buffer_index_cache);
+    for active_editors.* {
+        add(*recent_editors, it);
+        add(*buffer_index_cache, open_editors[it].buffer_id);
+    }
+    for other_editors.* {
+        buffer_id := open_editors[it].buffer_id;
+        if buffer_id < 0  continue;
+        if contains(buffer_index_cache, buffer_id) continue;
+
+        add(*recent_editors, find_or_create_editor(buffer_id, unwanted_existing_editor = it));
+        add(*buffer_index_cache, buffer_id);
+    }
+
+    recent_editors_index = ifx initial_editor == .start then 0 else recent_editors.count;
+    selected_recent_editors_index = -1;
+    reset_animation(*selected_tab_x_offset);
+
+    // Cache which editors have duplicate filenames, so we can draw the full path to disambiguate.
+    if has_duplicate_filename.count < recent_editors.count {
+        resize(*has_duplicate_filename, recent_editors.count, initialize = false);
+    }
+    memset(has_duplicate_filename.data, 0, recent_editors.count);
+    for index_a : 0 .. recent_editors.count - 2 {
+        editor_a := *open_editors[recent_editors[index_a]];
+        if editor_a.buffer_id < 0  continue;
+        buffer_a := *open_buffers[editor_a.buffer_id];
+        if !buffer_a.has_file  continue;
+
+        for index_b : index_a + 1 .. recent_editors.count - 1 {
+            editor_b := *open_editors[recent_editors[index_b]];
+            if editor_b.buffer_id < 0  continue;
+            buffer_b := *open_buffers[editor_b.buffer_id];
+            if !buffer_b.has_file  continue;
+
+            if buffer_b.file.name == buffer_a.file.name {
+                has_duplicate_filename[index_a] = true;
+                has_duplicate_filename[index_b] = true;
+            }
+        }
+    }
+}
+
+do_recent_buffer_move :: () {
+    using buffer_history;
+    if !switching_editors_for  return;
+    if recent_editors_index < 0 || recent_editors_index >= recent_editors.count  return;
+
+    editor_id := recent_editors[recent_editors_index];
+    if switching_editors_for == {
+        case .left;   editors.left = editor_id;
+        case .right;  editors.right = editor_id;
+    }
+    make_editor_active(editor_id);
+    switching_editors_for = .none;
+}
 
 Editor_History :: struct {
     frames: [..] Editor_History_Frame;

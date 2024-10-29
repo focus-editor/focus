@@ -543,7 +543,7 @@ Finder :: struct {
     per_page := 10;
 
     scroll_y: s32;
-    scroll_anim := #run Tween_Animation(s32).{ speed = 0.1, func = .lerp };
+    scroll_anim := #run Tween_Animation(s32).{ duration = 0.1, func = .lerp };
     scroll_to_cursor: Scroll_Mode = .no;
 
     width_percentage := WIDTH_NORMAL;  // how much of the screen the popup occupies
