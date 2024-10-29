@@ -419,6 +419,11 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "toggle_line_wrap",
     "toggle_line_numbers",
     "copy_current_line_info",
+    "indentation_detect_from_contents",
+    "indentation_use_defaults_for_buffer",
+    "indentation_set_tab_size_for_buffer",
+    "indentation_convert_to_tabs_for_buffer",
+    "indentation_convert_to_spaces_for_buffer",
 ]);
 
 ACTIONS_OPEN_FILE_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[

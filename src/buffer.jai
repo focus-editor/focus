@@ -901,6 +901,41 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64, except_line
     }
 }
 
+indentation_detect_from_contents :: (buffer: *Buffer) {
+    result := detect_and_set_indentation(buffer);
+
+    if #complete result == {
+        case .success;
+            if buffer.indentation.type == .tabs {
+                add_success_message("Tabs detected for indentation.\nTab size is set to % (based on config).", buffer.indentation.size, dismiss_in_seconds = 5);
+            } else {
+                add_success_message("Spaces detected for indentation.\nIndentation width is set to %", buffer.indentation.size, dismiss_in_seconds = 5);
+            }
+            buffer.indentation.was_manually_set = true;
+
+        case .not_enough_data;  add_user_warning("Not enough data to determine file indentation. Using defaults (%: %)", ifx buffer.indentation.type == .spaces then "Spaces" else "Tabs", buffer.indentation.size);
+        case .error;            add_user_error("Could not determine file indentation.");
+    }
+}
+
+indentation_use_defaults_for_buffer :: (using buffer: *Buffer) {
+    indentation.type = config.settings.indent_using;
+    indentation.size = cast(u8) config.settings.tab_size;
+    add_success_message("Using defaults (%: %) for this file", ifx indentation.type == .spaces then "Spaces" else "Tabs", indentation.size, dismiss_in_seconds = 5);
+}
+
+indentation_set_tab_size_for_buffer :: (buffer: *Buffer) {
+    // TODO
+}
+
+indentation_convert_to_tabs_for_buffer :: (buffer: *Buffer) {
+    // TODO
+}
+
+indentation_convert_to_spaces_for_buffer :: (buffer: *Buffer) {
+    // TODO
+}
+
 insert_final_newline :: (using buffer: *Buffer) {
     if !bytes return;
     if bytes[bytes.count - 1] == #char "\n" return;  // already there
@@ -1098,12 +1133,12 @@ maybe_detect_and_set_indentation :: (buffer_id: s64) {
     }
 }
 
-detect_and_set_indentation :: (using buffer: *Buffer) {
+detect_and_set_indentation :: (using buffer: *Buffer) -> enum { success; error; not_enough_data; } {
     if is_empty(bytes) {
         // Empty files get default indentation
         indentation.type = config.settings.indent_using;
         indentation.size = cast(u8) config.settings.tab_size;
-        return;
+        return .not_enough_data;
     }
 
     // Collect stats on line indentaion
@@ -1163,14 +1198,14 @@ detect_and_set_indentation :: (using buffer: *Buffer) {
         // Not enough information, use defaults
         indentation.type = config.settings.indent_using;
         indentation.size = cast(u8) config.settings.tab_size;
-        return;
+        return .not_enough_data;
     }
 
     if num_lines_with_tabs > num_lines_with_spaces {
         // Assuming tabs
         indentation.type = .tabs;
         indentation.size = cast(u8) config.settings.tab_size;
-        return;
+        return .success;
     }
 
     // Assuming spaces
@@ -1178,14 +1213,18 @@ detect_and_set_indentation :: (using buffer: *Buffer) {
     indentation.size = cast(u8) config.settings.tab_size;  // fallback
 
     // Find the most common line difference
-    {
-        max_lines := 0;
-        for num_lines, difference : line_differences {
-            if num_lines > max_lines {
-                indentation.size = cast(u8) difference;
-                max_lines = num_lines;
-            }
+    max_lines := 0;
+    for num_lines, difference : line_differences {
+        if num_lines > max_lines {
+            indentation.size = cast(u8) difference;
+            max_lines = num_lines;
         }
+    }
+
+    if indentation.size > 0 && indentation.size < MAX_INDENT {
+        return .success;
+    } else {
+        return .error;  // shouldn't happen
     }
 }
 

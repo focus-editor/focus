@@ -88,12 +88,6 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
             return true;
         }
 
-        // Handle editor actions which make sense while the search bar is open
-        editor_action := map_event_to_action(event, Action_Editors);
-        if editor_action == {
-            case .select_all_occurrences;           select_all_occurrences(editor, buffer, to_string(input.text)); close_search_bar(editor); return true;
-        }
-
         // Handle search dialog actions
         action := map_event_to_action(event, Action_Search_Dialog);
         if action == {
@@ -109,15 +103,6 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
             case .move_down;                        search_bar_move_cursor(editor, buffer,  1, wrap = true);                            return true;
             case .move_up_fast;                     search_bar_move_cursor(editor, buffer, -5);                                         return true;
             case .move_down_fast;                   search_bar_move_cursor(editor, buffer,  5);                                         return true;
-
-            case .close_all_editors;                close_search_bar(editor); close_all_editors();                                      return true;
-            case .close_other_editors;              close_search_bar(editor); close_other_editors();                                    return true;
-            case .close_current_editor;             close_search_bar(editor); close_editor(.current);                                   return true;
-            case .close_other_editor;               close_editor(.other);                                                               return true;
-            case .close_left_editor;                if editors.active == editors.left  close_search_bar(editor); close_editor(.left);   return true;
-            case .close_right_editor;               if editors.active == editors.right close_search_bar(editor); close_editor(.right);  return true;
-
-            case .choose_language;                  close_search_bar(editor); show_dialog(*language_dialog);                            return true;
         }
 
         if mode == .classic {
@@ -140,7 +125,32 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
                 case .open_entry_on_the_right;      search_bar_open_selected_result(editor, buffer, .right);        return true;
             }
         }
-        return false;
+
+        // Handle editor actions which make sense while the search bar is open
+        editor_action := map_event_to_action(event, Action_Editors);
+        if editor_action == {
+            // Actions which act differently in this context
+            case .select_all_occurrences;           select_all_occurrences(editor, buffer, to_string(input.text)); close_search_bar(editor); return true;
+            case .close_left_editor;                if editors.active == editors.left  close_search_bar(editor); close_editor(.left);  return true;
+            case .close_right_editor;               if editors.active == editors.right close_search_bar(editor); close_editor(.right); return true;
+
+            // Actions which close the search bar and can
+            case .close_all_editors;                close_search_bar(editor);
+            case .close_other_editors;              close_search_bar(editor);
+            case .close_current_editor;             close_search_bar(editor);
+            case .choose_language;                  close_search_bar(editor);
+
+            // Actions which don't close the search bar
+            case .close_other_editor;
+            case .indentation_detect_from_contents;
+            case .indentation_use_defaults_for_buffer;
+            case .indentation_set_tab_size_for_buffer;
+            case .indentation_convert_to_tabs_for_buffer;
+            case .indentation_convert_to_spaces_for_buffer;
+
+            // If none of these actions match, don't propagate
+            case;                                   return false;
+        }
     }
 
     // We always want to put some actions in a separate edit group (e.g. block indent)
@@ -222,6 +232,12 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .strip_trailing_whitespace;        strip_trailing_whitespace           (buffer, editor.buffer_id); keep_selection = true;
 
         case .choose_language;                  show_dialog                         (*language_dialog);
+
+        case .indentation_detect_from_contents;         indentation_detect_from_contents        (buffer);
+        case .indentation_use_defaults_for_buffer;      indentation_use_defaults_for_buffer     (buffer);
+        case .indentation_set_tab_size_for_buffer;      indentation_set_tab_size_for_buffer     (buffer);
+        case .indentation_convert_to_tabs_for_buffer;   indentation_convert_to_tabs_for_buffer  (buffer);
+        case .indentation_convert_to_spaces_for_buffer; indentation_convert_to_spaces_for_buffer(buffer);
 
         // Actions that do something per cursor
         case .move_left;                        move_cursors_left                   (editor, buffer, by = .char,      shift_pressed);

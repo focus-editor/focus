@@ -190,6 +190,12 @@ base_commands := #run -> [] Command {
         cmd( "Copy Current Line Info",            .copy_current_line_info,           .Single ),
 
         cmd( "Choose Language Syntax",            .choose_language,                  .Single ),
+
+        cmd("Indentation: Detect From Contents",       .indentation_detect_from_contents,         .Single),
+        cmd("Indentation: Use Defaults For File",      .indentation_use_defaults_for_buffer,      .Single),
+        cmd("Indentation: Set Tab Size For File",      .indentation_set_tab_size_for_buffer,      .Single),
+        cmd("Indentation: Convert To Tabs For File",   .indentation_convert_to_tabs_for_buffer,   .Single),
+        cmd("Indentation: Convert To Spaces For File", .indentation_convert_to_spaces_for_buffer, .Single),
     ];
 
     linux_commands := Command.[
