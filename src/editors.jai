@@ -142,7 +142,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
 
             // Actions which don't close the search bar
             case .close_other_editor;
-            case .indentation_detect_from_contents;
+            case .indentation_detect_from_buffer_contents;
             case .indentation_use_defaults_for_buffer;
             case .indentation_set_tab_size_for_buffer;
             case .indentation_convert_to_tabs_for_buffer;
@@ -233,7 +233,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
 
         case .choose_language;                  show_dialog                         (*language_dialog);
 
-        case .indentation_detect_from_contents;         indentation_detect_from_contents        (buffer);
+        case .indentation_detect_from_buffer_contents;  indentation_detect_from_buffer_contents (buffer);
         case .indentation_use_defaults_for_buffer;      indentation_use_defaults_for_buffer     (buffer);
         case .indentation_set_tab_size_for_buffer;      indentation_set_tab_size_for_buffer     (buffer);
         case .indentation_convert_to_tabs_for_buffer;   indentation_convert_to_tabs_for_buffer  (buffer);

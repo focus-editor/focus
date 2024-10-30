@@ -464,16 +464,17 @@ count_bytes_knowing_number_of_chars :: (bytes: Array(u8), start_offset: s32, max
     return count;
 }
 
-get_visual_indent_in_spaces :: (line: string, tab_size: s32, spaces := " \t") -> indent: int {
-    indent := 0;
+get_visual_indent_in_spaces :: (line: string, tab_size: s32) -> indent: int, bytes: int {
+    indent, bytes: int;
     for byte : to_bytes(trim_right(line)) {
         if byte == {
             case #char " ";     indent += 1;
             case #char "\t";    indent += tab_size - (indent % tab_size);
             case;               break;
         }
+        bytes += 1;
     }
-    return indent;
+    return indent, bytes;
 }
 
 get_tmp_spaces :: (num: int) -> string {

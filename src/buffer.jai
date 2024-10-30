@@ -901,20 +901,20 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64, except_line
     }
 }
 
-indentation_detect_from_contents :: (buffer: *Buffer) {
+indentation_detect_from_buffer_contents :: (buffer: *Buffer) {
     result := detect_and_set_indentation(buffer);
 
     if #complete result == {
         case .success;
             if buffer.indentation.type == .tabs {
-                add_success_message("Tabs detected for indentation.\nTab size is set to % (based on config).", buffer.indentation.size, dismiss_in_seconds = 5);
+                add_success_message("Tabs detected for indentation\nTab size is set to % (based on config)", buffer.indentation.size, dismiss_in_seconds = 5);
             } else {
-                add_success_message("Spaces detected for indentation.\nIndentation width is set to %", buffer.indentation.size, dismiss_in_seconds = 5);
+                add_success_message("Spaces detected for indentation\nIndentation width is set to %", buffer.indentation.size, dismiss_in_seconds = 5);
             }
             buffer.indentation.was_manually_set = true;
 
         case .not_enough_data;  add_user_warning("Not enough data to determine file indentation. Using defaults (%: %)", ifx buffer.indentation.type == .spaces then "Spaces" else "Tabs", buffer.indentation.size);
-        case .error;            add_user_error("Could not determine file indentation.");
+        case .error;            add_user_error("Could not determine file indentation");
     }
 }
 
@@ -933,7 +933,25 @@ indentation_convert_to_tabs_for_buffer :: (buffer: *Buffer) {
 }
 
 indentation_convert_to_spaces_for_buffer :: (buffer: *Buffer) {
-    // TODO
+    tab_size := get_buffer_tab_size(buffer);
+
+    b: String_Builder;
+
+    for line : split(to_string(buffer.bytes), cast(u8) #char "\n") {
+        indent, bytes := get_visual_indent_in_spaces(line, tab_size);
+        append(*b, get_tmp_spaces(indent));
+        safe_advance(*line, bytes);
+        append(*b, line);
+        append(*b, "\n");
+    }
+
+    new_contents := builder_to_string(*b);
+    defer free(new_contents);
+
+    replace_range(buffer, .{ 0, buffer.bytes.count }, new_contents);
+
+    buffer.indentation.type = .spaces;
+    buffer.indentation.size = cast(u8) config.settings.tab_size;
 }
 
 insert_final_newline :: (using buffer: *Buffer) {
