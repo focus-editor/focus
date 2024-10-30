@@ -929,7 +929,29 @@ indentation_set_tab_size_for_buffer :: (buffer: *Buffer) {
 }
 
 indentation_convert_to_tabs_for_buffer :: (buffer: *Buffer) {
-    // TODO
+    tab_size := get_buffer_tab_size(buffer);
+
+    b: String_Builder;
+
+    for line : split(to_string(buffer.bytes), cast(u8) #char "\n") {
+        visual_indent, bytes := get_visual_indent_in_spaces(line, tab_size);
+        num_tabs_to_indent  := visual_indent / tab_size;
+        num_spaces_to_align := visual_indent % tab_size;  // it's not always possible to get the same indentation without using spaces
+        append(*b, get_tmp_tabs(num_tabs_to_indent));
+        append(*b, get_tmp_spaces(num_spaces_to_align));
+        safe_advance(*line, bytes);
+        append(*b, line);
+        append(*b, "\n");
+    }
+
+    new_contents := builder_to_string(*b);
+    defer free(new_contents);
+    if ends_with(new_contents, "\n") then new_contents.count -= 1;
+
+    replace_range(buffer, .{ 0, buffer.bytes.count }, new_contents);
+
+    buffer.indentation.type = .tabs;
+    // Not setting the size because tabs use defaults unless explicitly set
 }
 
 indentation_convert_to_spaces_for_buffer :: (buffer: *Buffer) {
@@ -947,6 +969,7 @@ indentation_convert_to_spaces_for_buffer :: (buffer: *Buffer) {
 
     new_contents := builder_to_string(*b);
     defer free(new_contents);
+    if ends_with(new_contents, "\n") then new_contents.count -= 1;
 
     replace_range(buffer, .{ 0, buffer.bytes.count }, new_contents);
 
