@@ -1145,17 +1145,17 @@ get_buffer_name :: (buffer: Buffer) -> string {
     return "<new file>";
 }
 
-get_buffer_indentation_and_tab_size :: inline (buffer: Buffer) -> Indentation, tab_size: s32 {
-    if buffer.indentation.size > 0 {
-        return buffer.indentation.type, buffer.indentation.size;
+get_buffer_indentation_and_tab_size :: inline (using buffer: Buffer) -> Indentation, tab_size: s32 {
+    if indentation.size > 0 {
+        return indentation.type, ifx indentation.type == .spaces then indentation.size else cast(s32) config.settings.tab_size;
     } else {
         return config.settings.indent_using, cast(s32) config.settings.tab_size;
     }
 }
 
-get_buffer_tab_size :: inline (buffer: Buffer) -> s32 {
-    if buffer.indentation.size > 0 {
-        return buffer.indentation.size;
+get_buffer_tab_size :: inline (using buffer: Buffer) -> s32 {
+    if indentation.size > 0 {
+        return ifx indentation.type == .spaces then indentation.size else cast(s32) config.settings.tab_size;
     } else {
         return cast(s32) config.settings.tab_size;
     }
