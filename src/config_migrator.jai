@@ -608,8 +608,8 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 10, "search dialog", "go_to_next_input",                      "Tab",                 "Tab"           },
     .{ 10, "search dialog", "go_to_previous_input",                  "Shift-Tab",           "Shift-Tab"     },
 
-    .{ 11, "editors", "move_left_fast",                              "{Shift}-Meta-ArrowLeft",  "{Shift}-Ctrl-ArrowLeft" },
-    .{ 11, "editors", "move_right_fast",                             "{Shift}-Meta-ArrowRight", "{Shift}-Ctrl-ArrowRight" },
+    .{ 11, "editors", "move_left_through_word_throttled",            "{Shift}-Meta-ArrowLeft",  "{Shift}-Ctrl-ArrowLeft" },
+    .{ 11, "editors", "move_right_through_word_throttled",           "{Shift}-Meta-ArrowRight", "{Shift}-Ctrl-ArrowRight" },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
@@ -1836,8 +1836,8 @@ Alt-A                       align_cursors
 Ctrl-U                      change_case_cycle
 Ctrl-R                      revert_select_word_or_create_another_cursor
 Ctrl-Y                      move_selection_to_next_word
-{Shift}-Meta-ArrowLeft      move_left_fast
-{Shift}-Meta-ArrowRight     move_right_fast
+{Shift}-Meta-ArrowLeft      move_left_through_word_throttled
+{Shift}-Meta-ArrowRight     move_right_through_word_throttled
 
 [open file dialog]
 Tab                         open_directory

@@ -238,27 +238,27 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .indentation_convert_to_spaces_for_buffer; indentation_convert_to_spaces_for_buffer(buffer);
 
         // Actions that do something per cursor
-        case .move_left;                        move_cursors_left                   (editor, buffer, by = .character,      shift_pressed);
-        case .move_left_by_character_type;      move_cursors_left                   (editor, buffer, by = .character_type, shift_pressed);
-        case .move_left_fast;                   move_cursors_left                   (editor, buffer, by = .fast,           shift_pressed);
-        case .move_left_through_word;           move_cursors_left                   (editor, buffer, by = .through_word,   shift_pressed);
-        case .move_right;                       move_cursors_right                  (editor, buffer, by = .character,      shift_pressed);
-        case .move_right_by_character_type;     move_cursors_right                  (editor, buffer, by = .character_type, shift_pressed);
-        case .move_right_fast;                  move_cursors_right                  (editor, buffer, by = .fast,           shift_pressed);
-        case .move_right_through_word;          move_cursors_right                  (editor, buffer, by = .through_word,   shift_pressed);
-        case .move_up;                          move_cursors_vertically             (editor, buffer, -1, shift_pressed);
-        case .move_down;                        move_cursors_vertically             (editor, buffer,  1, shift_pressed);
-        case .move_up_fast;                     move_cursors_vertically             (editor, buffer, -5, shift_pressed);
-        case .move_down_fast;                   move_cursors_vertically             (editor, buffer,  5, shift_pressed);
-        case .move_up_to_empty_line;            move_cursors_to_empty_line          (editor, buffer, .up);
-        case .move_down_to_empty_line;          move_cursors_to_empty_line          (editor, buffer, .down);
-        case .move_up_one_page;                 move_cursors_by_page                (editor, buffer, .up);
-        case .move_down_one_page;               move_cursors_by_page                (editor, buffer, .down);
-        case .jump_to_line_start;               move_cursors_home                   (editor, buffer);
-        case .jump_to_line_end;                 move_cursors_end                    (editor, buffer);
-        case .jump_to_file_start;               move_to_file_start                  (editor, buffer);
-        case .jump_to_file_end;                 move_to_file_end                    (editor, buffer);
-        case .jump_to_matching_bracket;         move_to_matching_bracket            (editor, buffer, shift_pressed); keep_selection = true;
+        case .move_left;                         move_cursors_left                   (editor, buffer, by = .by_character,           shift_pressed);
+        case .move_left_by_character_type;       move_cursors_left                   (editor, buffer, by = .by_character_type,      shift_pressed);
+        case .move_left_through_word_throttled;  move_cursors_left                   (editor, buffer, by = .through_word_throttled, shift_pressed);
+        case .move_left_through_word;            move_cursors_left                   (editor, buffer, by = .through_word,           shift_pressed);
+        case .move_right;                        move_cursors_right                  (editor, buffer, by = .by_character,           shift_pressed);
+        case .move_right_by_character_type;      move_cursors_right                  (editor, buffer, by = .by_character_type,      shift_pressed);
+        case .move_right_through_word_throttled; move_cursors_right                  (editor, buffer, by = .through_word_throttled, shift_pressed);
+        case .move_right_through_word;           move_cursors_right                  (editor, buffer, by = .through_word,           shift_pressed);
+        case .move_up;                           move_cursors_vertically             (editor, buffer, -1, shift_pressed);
+        case .move_down;                         move_cursors_vertically             (editor, buffer,  1, shift_pressed);
+        case .move_up_fast;                      move_cursors_vertically             (editor, buffer, -5, shift_pressed);
+        case .move_down_fast;                    move_cursors_vertically             (editor, buffer,  5, shift_pressed);
+        case .move_up_to_empty_line;             move_cursors_to_empty_line          (editor, buffer, .up);
+        case .move_down_to_empty_line;           move_cursors_to_empty_line          (editor, buffer, .down);
+        case .move_up_one_page;                  move_cursors_by_page                (editor, buffer, .up);
+        case .move_down_one_page;                move_cursors_by_page                (editor, buffer, .down);
+        case .jump_to_line_start;                move_cursors_home                   (editor, buffer);
+        case .jump_to_line_end;                  move_cursors_end                    (editor, buffer);
+        case .jump_to_file_start;                move_to_file_start                  (editor, buffer);
+        case .jump_to_file_end;                  move_to_file_end                    (editor, buffer);
+        case .jump_to_matching_bracket;          move_to_matching_bracket            (editor, buffer, shift_pressed); keep_selection = true;
 
         case .select_line;                      select_lines                        (editor, buffer); keep_selection = true;
         case .copy;                             copy_selection_to_clipboard         (editor, buffer);
@@ -2116,32 +2116,32 @@ new_edit_group_required_for_action :: (action: Action_Editors, cursor: Cursor) -
 
 is_a_move_action :: (action: Action_Editors) -> bool {
     if action == {
-        case .move_left;                        return true;
-        case .move_left_by_character_type;      return true;
-        case .move_left_fast;                   return true;
-        case .move_left_through_word;           return true;
-        case .move_right;                       return true;
-        case .move_right_by_character_type;     return true;
-        case .move_right_fast;                  return true;
-        case .move_right_through_word;          return true;
-        case .move_up;                          return true;
-        case .move_down;                        return true;
-        case .move_up_fast;                     return true;
-        case .move_down_fast;                   return true;
-        case .move_up_to_empty_line;            return true;
-        case .move_down_to_empty_line;          return true;
-        case .move_up_one_page;                 return true;
-        case .move_down_one_page;               return true;
-        case .jump_to_line_start;               return true;
-        case .jump_to_line_end;                 return true;
-        case .jump_to_file_start;               return true;
-        case .jump_to_file_end;                 return true;
+        case .move_left;                         return true;
+        case .move_left_by_character_type;       return true;
+        case .move_left_through_word_throttled;  return true;
+        case .move_left_through_word;            return true;
+        case .move_right;                        return true;
+        case .move_right_by_character_type;      return true;
+        case .move_right_through_word_throttled; return true;
+        case .move_right_through_word;           return true;
+        case .move_up;                           return true;
+        case .move_down;                         return true;
+        case .move_up_fast;                      return true;
+        case .move_down_fast;                    return true;
+        case .move_up_to_empty_line;             return true;
+        case .move_down_to_empty_line;           return true;
+        case .move_up_one_page;                  return true;
+        case .move_down_one_page;                return true;
+        case .jump_to_line_start;                return true;
+        case .jump_to_line_end;                  return true;
+        case .jump_to_file_start;                return true;
+        case .jump_to_file_end;                  return true;
     }
     return false;
 }
 
 // @Copypasta to text_input.jai - remember to update it if amending this!
-move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: enum { character; character_type; fast; through_word; }, extend_selection: bool) {
+move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: Movement_Type, extend_selection: bool) {
     is_single_cursor := editor.cursors.count == 1;
 
     for * cursor : editor.cursors {
@@ -2150,19 +2150,19 @@ move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: enum { charact
         } else if cursor.pos == 0 {
             continue;
         } else {
-            if by == {
-                case .character;
+            if #complete by == {
+                case .by_character;
                     cursor.pos = prev_char_offset(bytes, cursor.pos);
 
-                case .character_type;
+                case .by_character_type;
                     set_underscore_is_part_of_word(false);
                     cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = is_single_cursor);
                     set_underscore_is_part_of_word(true);
 
-                case .fast;
+                case .through_word_throttled;
                     moved_through : Char_Type = ---;
                     cursor.pos, moved_through = scan_through_similar_chars_on_the_left(buffer, cursor.pos);
-                    if moved_through != .word  cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = false);
+                    if !(moved_through & .word | .number)  cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = false);
 
                 case .through_word;
                     moved_through : Char_Type = ---;
@@ -2178,7 +2178,7 @@ move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: enum { charact
 }
 
 // @Copypasta to text_input.jai - remember to update it if amending this!
-move_cursors_right :: (editor: *Editor, using buffer: *Buffer, by: enum { character; character_type; fast; through_word; }, extend_selection: bool) {
+move_cursors_right :: (editor: *Editor, using buffer: *Buffer, by: Movement_Type, extend_selection: bool) {
     is_single_cursor := editor.cursors.count == 1;
 
     for * cursor : editor.cursors {
@@ -2187,19 +2187,19 @@ move_cursors_right :: (editor: *Editor, using buffer: *Buffer, by: enum { charac
         } else if cursor.pos >= bytes.count {
             continue;
         } else {
-            if by == {
-                case .character;
+            if #complete by == {
+                case .by_character;
                     cursor.pos = next_char_offset(bytes, cursor.pos);
 
-                case .character_type;
+                case .by_character_type;
                     set_underscore_is_part_of_word(false);
                     cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = is_single_cursor);
                     set_underscore_is_part_of_word(true);
 
-                case .fast;
+                case .through_word_throttled;
                     moved_through : Char_Type = ---;
                     cursor.pos, moved_through = scan_through_similar_chars_on_the_right(buffer, cursor.pos);
-                    if moved_through != .word  cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = false);
+                    if !(moved_through & .word | .number)  cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = false);
 
                 case .through_word;
                     moved_through : Char_Type = ---;

@@ -316,12 +316,12 @@ F11                         toggle_fullscreen
 {Shift}-ArrowLeft           move_left
 {Shift}-Alt-ArrowLeft       move_left_by_character_type
 {Shift}-Ctrl-ArrowLeft      move_left_through_word
-{Shift}-Meta-ArrowLeft      move_left_fast
+{Shift}-Meta-ArrowLeft      move_left_through_word_throttled
 
 {Shift}-ArrowRight          move_right
 {Shift}-Alt-ArrowRight      move_right_by_character_type
 {Shift}-Ctrl-ArrowRight     move_right_through_word
-{Shift}-Meta-ArrowRight     move_right_fast
+{Shift}-Meta-ArrowRight     move_right_through_word_throttled
 
 {Shift}-Home                jump_to_line_start
 {Shift}-End                 jump_to_line_end

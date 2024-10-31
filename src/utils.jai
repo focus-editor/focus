@@ -617,6 +617,13 @@ Char_Type :: enum_flags {
     other;
 }
 
+Movement_Type :: enum {
+    by_character;
+    by_character_type;
+    through_word;
+    through_word_throttled;
+}
+
 Fuzzy_Filter :: struct {
     full_string: string;
     chunks: [] Chunk;

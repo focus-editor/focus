@@ -295,13 +295,13 @@ Cmd-B                           toggle_build_panel
 {Shift}-ArrowLeft               move_left
 {Shift}-Opt-ArrowLeft           move_left_by_character_type
 {Shift}-Opt-Cmd-ArrowLeft       move_left_through_word
-{Shift}-Ctrl-ArrowLeft          move_left_fast
+{Shift}-Ctrl-ArrowLeft          move_left_through_word_throttled
 {Shift}-Cmd-ArrowLeft           jump_to_line_start
 
 {Shift}-ArrowRight              move_right
 {Shift}-Opt-ArrowRight          move_right_by_character_type
 {Shift}-Opt-Cmd-ArrowRight      move_right_through_word
-{Shift}-Ctrl-ArrowRight         move_right_fast
+{Shift}-Ctrl-ArrowRight         move_right_through_word_throttled
 {Shift}-Cmd-ArrowRight          jump_to_line_end
 
 {Shift}-Cmd-ArrowUp             jump_to_file_start

@@ -11,41 +11,41 @@ text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> han
     extend_selection := event.shift_pressed;
 
     if action == {
-        case .copy;                             copy                                (input);
-        case .cut;                              delete_selection                    (input, copy_to_clipboard = true);
-        case .paste;                            paste                               (input);
+        case .copy;                              copy                                (input);
+        case .cut;                               delete_selection                    (input, copy_to_clipboard = true);
+        case .paste;                             paste                               (input);
 
-        case .undo;                             undo                                (input);
-        case .redo;                             redo                                (input);
+        case .undo;                              undo                                (input);
+        case .redo;                              redo                                (input);
 
-        case .select_word;                      select_word                         (input);
-        case .select_all;                       select_all                          (input);
+        case .select_word;                       select_word                         (input);
+        case .select_all;                        select_all                          (input);
 
-        case .move_left;                        move_cursor_left                    (input, by = .character,       extend_selection);
-        case .move_left_by_character_type;      move_cursor_left                    (input, by = .character_type,  extend_selection);
-        case .move_left_fast;                   move_cursor_left                    (input, by = .fast,            extend_selection);
-        case .move_left_through_word;           move_cursor_left                    (input, by = .through_word,    extend_selection);
-        case .move_right;                       move_cursor_right                   (input, by = .character,       extend_selection);
-        case .move_right_by_character_type;     move_cursor_right                   (input, by = .character_type,  extend_selection);
-        case .move_right_fast;                  move_cursor_right                   (input, by = .fast,            extend_selection);
-        case .move_right_through_word;          move_cursor_right                   (input, by = .through_word,    extend_selection);
+        case .move_left;                         move_cursor_left                    (input, by = .by_character,           extend_selection);
+        case .move_left_by_character_type;       move_cursor_left                    (input, by = .by_character_type,      extend_selection);
+        case .move_left_through_word_throttled;  move_cursor_left                    (input, by = .through_word_throttled, extend_selection);
+        case .move_left_through_word;            move_cursor_left                    (input, by = .through_word,           extend_selection);
+        case .move_right;                        move_cursor_right                   (input, by = .by_character,           extend_selection);
+        case .move_right_by_character_type;      move_cursor_right                   (input, by = .by_character_type,      extend_selection);
+        case .move_right_through_word_throttled; move_cursor_right                   (input, by = .through_word_throttled, extend_selection);
+        case .move_right_through_word;           move_cursor_right                   (input, by = .through_word,           extend_selection);
 
-        case .jump_to_line_start;               #through;
-        case .jump_to_file_start;               move_home                           (input, extend_selection);
-        case .jump_to_line_end;                 #through;
-        case .jump_to_file_end;                 move_end                            (input, extend_selection);
+        case .jump_to_line_start;                #through;
+        case .jump_to_file_start;                move_home                           (input, extend_selection);
+        case .jump_to_line_end;                  #through;
+        case .jump_to_file_end;                  move_end                            (input, extend_selection);
 
-        case .delete_left_char;                 delete_left_char                    (input);
-        case .delete_right_char;                delete_right_char                   (input);
-        case .delete_word_left;                 delete_word_left                    (input);
-        case .delete_word_right;                delete_word_right                   (input);
-        case .delete_word_left_no_underscore;   delete_word_left                    (input, underscore_is_part_of_word = false);
-        case .delete_word_right_no_underscore;  delete_word_right                   (input, underscore_is_part_of_word = false);
+        case .delete_left_char;                  delete_left_char                    (input);
+        case .delete_right_char;                 delete_right_char                   (input);
+        case .delete_word_left;                  delete_word_left                    (input);
+        case .delete_word_right;                 delete_word_right                   (input);
+        case .delete_word_left_no_underscore;    delete_word_left                    (input, underscore_is_part_of_word = false);
+        case .delete_word_right_no_underscore;   delete_word_right                   (input, underscore_is_part_of_word = false);
 
-        case .delete_to_start_of_line;          delete_to_start_of_line             (input);
-        case .delete_to_end_of_line;            delete_to_end_of_line               (input);
+        case .delete_to_start_of_line;           delete_to_start_of_line             (input);
+        case .delete_to_end_of_line;             delete_to_end_of_line               (input);
 
-        case;                                   return false;
+        case;                                    return false;
     }
 
     if old_text != to_string(text) then last_edit_time = cast(float) frame_time64;
@@ -206,26 +206,26 @@ redo :: (using input: *Text_Input) {
 }
 
 // @Copypasta from editors.jai
-move_cursor_left :: (using input: *Text_Input, by: enum { character; character_type; fast; through_word; }, extend_selection := false) {
+move_cursor_left :: (using input: *Text_Input, by: Movement_Type, extend_selection := false) {
     if has_selection(cursor) && !extend_selection {
         cursor.pos = min(cursor.pos, cursor.sel);
         cursor.sel = cursor.pos;
     } else if cursor.pos == 0 {
         return;
     } else {
-        if by == {
-            case .character;
+        if #complete by == {
+            case .by_character;
                 cursor.pos = prev_char_offset(text, cursor.pos);
 
-            case .character_type;
+            case .by_character_type;
                 set_underscore_is_part_of_word(false);
                 cursor.pos = scan_through_similar_chars_on_the_left(input, cursor.pos);
                 set_underscore_is_part_of_word(true);
 
-            case .fast;
+            case .through_word_throttled;
                 moved_through : Char_Type = ---;
                 cursor.pos, moved_through = scan_through_similar_chars_on_the_left(input, cursor.pos);
-                if moved_through != .word  cursor.pos = scan_through_similar_chars_on_the_left(input, cursor.pos, skip_one_space = false);
+                if !(moved_through & .word | .number)  cursor.pos = scan_through_similar_chars_on_the_left(input, cursor.pos, skip_one_space = false);
 
             case .through_word;
                 moved_through : Char_Type = ---;
@@ -239,26 +239,26 @@ move_cursor_left :: (using input: *Text_Input, by: enum { character; character_t
 }
 
 // @Copypasta from editors.jai
-move_cursor_right :: (using input: *Text_Input, by: enum { character; character_type; fast; through_word; }, extend_selection := false) {
+move_cursor_right :: (using input: *Text_Input, by: Movement_Type, extend_selection := false) {
     if has_selection(cursor) && !extend_selection {
         cursor.pos = max(cursor.pos, cursor.sel);
         cursor.sel = cursor.pos;
     } else if cursor.pos >= text.count {
         return;
     } else {
-        if by == {
-            case .character;
+        if #complete by == {
+            case .by_character;
                 cursor.pos = next_char_offset(text, cursor.pos);
 
-            case .character_type;
+            case .by_character_type;
                 set_underscore_is_part_of_word(false);
                 cursor.pos = scan_through_similar_chars_on_the_right(input, cursor.pos);
                 set_underscore_is_part_of_word(true);
 
-            case .fast;
+            case .through_word_throttled;
                 moved_through : Char_Type = ---;
                 cursor.pos, moved_through = scan_through_similar_chars_on_the_right(input, cursor.pos);
-                if moved_through != .word  cursor.pos = scan_through_similar_chars_on_the_right(input, cursor.pos, skip_one_space = false);
+                if !(moved_through & .word | .number)  cursor.pos = scan_through_similar_chars_on_the_right(input, cursor.pos, skip_one_space = false);
 
             case .through_word;
                 moved_through : Char_Type = ---;
