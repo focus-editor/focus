@@ -156,8 +156,8 @@ base_commands := #run -> [] Command {
         cmd( "Add Cursors To Line Starts",        .add_cursors_to_line_starts,       .Single ),
         cmd( "Align Cursors",                     .align_cursors,                    .Single ),
 
-        cmd( "Move To Previous Cursor Position",  .move_to_previous_editor_history,  .None   ),
-        cmd( "Move To Next Cursor Position",      .move_to_next_editor_history,      .None   ),
+        cmd( "Cursor: Go Back",                   .move_to_previous_editor_history,  .None   ),
+        cmd( "Cursor: Go Forward",                .move_to_next_editor_history,      .None   ),
 
         cmd( "New Line Below Without Breaking",   .new_line_below_without_breaking,  .Single ),
         cmd( "New Line Above Without Breaking",   .new_line_above_without_breaking,  .Single ),
@@ -190,6 +190,11 @@ base_commands := #run -> [] Command {
         cmd( "Copy Current Line Info",            .copy_current_line_info,           .Single ),
 
         cmd( "Choose Language Syntax",            .choose_language,                  .Single ),
+
+        cmd("Indentation: Detect From File Contents",          .indentation_detect_from_buffer_contents,  .Single),
+        cmd("Indentation: Use Defaults For File",              .indentation_use_defaults_for_buffer,      .Single),
+        cmd("Indentation: Convert File Indentation To Tabs",   .indentation_convert_to_tabs_for_buffer,   .Single),
+        cmd("Indentation: Convert File Indentation To Spaces", .indentation_convert_to_spaces_for_buffer, .Single),
     ];
 
     linux_commands := Command.[

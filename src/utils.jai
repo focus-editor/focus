@@ -47,7 +47,7 @@ arrays_concat :: (array1: [] $T, array2: [] T) -> [] T {
     return result;
 }
 
-visual_col_to_byte_offset :: (str: string, target_col: s64, line_indent: s64) -> offset: s64, new_col: s64 {
+visual_col_to_byte_offset :: (str: string, target_col: s64, line_indent: s64, tab_size: s32) -> offset: s64, new_col: s64 {
     s := str;
     col := 0;
 
@@ -58,7 +58,7 @@ visual_col_to_byte_offset :: (str: string, target_col: s64, line_indent: s64) ->
             col += 1;
         } else {
             safe_advance(*s, 1);
-            col += TAB_SIZE - (col + line_indent) % TAB_SIZE;
+            col += tab_size - (col + line_indent) % tab_size;
         }
     }
 
@@ -470,16 +470,17 @@ count_bytes_knowing_number_of_chars :: (bytes: Array(u8), start_offset: s32, max
     return count;
 }
 
-get_visual_indent_in_spaces :: (line: string, spaces := " \t") -> indent: int {
-    indent := 0;
+get_visual_indent_in_spaces :: (line: string, tab_size: s32) -> indent: int, bytes: int {
+    indent, bytes: int;
     for byte : to_bytes(trim_right(line)) {
         if byte == {
             case #char " ";     indent += 1;
-            case #char "\t";    indent += TAB_SIZE - (indent % TAB_SIZE);
+            case #char "\t";    indent += tab_size - (indent % tab_size);
             case;               break;
         }
+        bytes += 1;
     }
-    return indent;
+    return indent, bytes;
 }
 
 get_tmp_spaces :: (num: int) -> string {

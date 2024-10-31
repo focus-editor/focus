@@ -264,7 +264,7 @@ Key_Combo :: struct {
 Action_Build :: #type,distinct u32;  // holds the index of the build command in the list
 
 ACTIONS_COMMON :: string.[
-    "do_nothing",   // to disable key combinations (DEPRECATED). TODO: auto-remove when we have a config migration system
+    "do_nothing",   // to disable key combinations (DEPRECATED)
 
     "quit",
 
@@ -421,6 +421,10 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "toggle_line_wrap",
     "toggle_line_numbers",
     "copy_current_line_info",
+    "indentation_detect_from_buffer_contents",
+    "indentation_use_defaults_for_buffer",
+    "indentation_convert_to_tabs_for_buffer",
+    "indentation_convert_to_spaces_for_buffer",
 ]);
 
 ACTIONS_OPEN_FILE_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[

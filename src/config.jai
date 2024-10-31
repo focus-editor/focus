@@ -447,17 +447,18 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
 
 apply_config :: () {
     // Make sure the values are within the acceptable range
-    old_tab_size := TAB_SIZE;
-    TAB_SIZE = clamp(cast(s32) config.settings.tab_size, 1, 100);  // be reasonable mkay (though even 100 is unreasonable)
-    if config.settings.tab_size != TAB_SIZE then add_user_warning("Tab size clamped to %", TAB_SIZE);
+    unclamped_tab_size := config.settings.tab_size;
+    config.settings.tab_size = clamp(cast(s32) unclamped_tab_size, 1, 100);  // be reasonable mkay (though even 100 is unreasonable)
+    if config.settings.tab_size != unclamped_tab_size then add_user_warning("Tab size clamped to %", config.settings.tab_size);
 
-    if old_tab_size != TAB_SIZE {
+    if old_tab_size != config.settings.tab_size {
         // Refresh all editors which have line wrap on
         for * editor : open_editors {
             buffer := *open_buffers[editor.buffer_id];
             if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
         }
     }
+    old_tab_size = config.settings.tab_size;
 
     clamp_and_warn :: (setting: *$T, min: T, max: T, message: string) {
         old := setting.*;
@@ -491,6 +492,9 @@ apply_config :: () {
     array_reset_keeping_memory(*active_hold_actions);  // NOTE: this doesn't actually stop the actions, it's just here so that we don't
                                                        //       keep pointers to old keymaps when the config is reloaded
 }
+
+old_tab_size := 0;  // used to detect when tab size is changed in the config
+
 
 load_font_by_name :: (name: string, kind: enum { main; ui; ui_bold; }) -> Loaded_Font, success: bool {
     if name == "default" {
@@ -589,8 +593,6 @@ Settings :: struct {
     disable_file_open_close_animations                      := false;   @v1
     disable_viewport_chasing_cursor_near_the_edge           := false;   @v3
     double_shift_to_search_in_workspace                     := false;   @v1
-    tab_size                                                := 4;       @v1
-    insert_spaces_when_pressing_tab                         := true;    @v1
     strip_trailing_whitespace_on_save                       := Strip_Trailing_Whitespace.except_lines_with_cursor;  @v6
     insert_final_newline_on_save                            := false;   @v4
     smooth_scrolling                                        := true;    @v1
@@ -610,10 +612,8 @@ Settings :: struct {
     auto_surround_with_brackets_and_quotes                  := false;   @v2
     auto_close_brackets                                     := false;   @v1
     prefer_system_file_dialogs                              := false;   @v1
-    show_cursors_off_screen                                 := true;    @v1
     persist_local_search_results                            := false;   @v2
     search_is_case_sensitive_when_uppercase_present         := false;   @v6
-    show_selected_text_length                               := false;   @v3
     load_most_recent_project_on_start                       := false;   @v5
 
     build_panel_width_percent                               := 50;      @v2
@@ -624,42 +624,30 @@ Settings :: struct {
     save_current_buffer_on_build                            := false;   @v3
     save_all_file_backed_buffers_on_build                   := false;   @v3
 
-    status_bar_position                                     := Status_Bar_Position.bottom;                  @v4
     color_preview_popup                                     := Color_Preview_Popup.enabled;                 @v5
     projects_sorting_order                                  := Projects_Sorting_Order.most_recent_first;    @v6
 
+    detect_indentation                                      := true;                @v11
+    indent_using                                            := Indentation.spaces;  @v11
+    tab_size                                                := 4;                   @v1
+
+    status_bar_position                                     := Status_Bar_Position.bottom;                  @v4
+    status_bar_show_indentation                             := true;    @v11
+    status_bar_show_line_col                                := true;    @v11
+    status_bar_show_cursors_off_screen                      := true;    @v11
+    status_bar_show_selected_text_length                    := false;   @v3
+
     // TODO
-    // convert_tabs_to_spaces_on_load:     false
     // load_last_session_on_start:         true
 }
 
-Status_Bar_Position :: enum {
-    bottom;
-    top;
-}
+Indentation               :: enum { spaces; tabs; }
+Status_Bar_Position       :: enum { bottom; top; }
+Strip_Trailing_Whitespace :: enum { except_lines_with_cursor; all; disabled; }
+Color_Preview_Popup       :: enum { enabled; minimized; disabled; }
+Projects_Sorting_Order    :: enum { most_recent_first; alphabetical; alphabetical_no_case; }
 
-Strip_Trailing_Whitespace :: enum {
-    except_lines_with_cursor;
-    all;
-    disabled;
-}
-
-Color_Preview_Popup :: enum {
-    enabled;
-    minimized;
-    disabled;
-}
-
-Projects_Sorting_Order :: enum {
-    most_recent_first;
-    alphabetical;
-    alphabetical_no_case;
-}
-
-Font_Anti_Aliasing :: enum {
-    lcd;
-    normal;
-}
+Font_Anti_Aliasing        :: enum { lcd; normal; }
 #poke_name Simp Font_Anti_Aliasing;
 
 Keymap :: struct {

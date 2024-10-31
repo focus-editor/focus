@@ -142,7 +142,8 @@ offset_to_real_coords :: (buffer: Buffer, offset: s32) -> Coords {
 
 // This function counts visual indent, taking tab size into account
 _get_visual_col_by_scanning_line :: (buffer: Buffer, line_num: s32, offset: s32, line_starts: [] s32) -> col: s32 {
-    return num_cols_in_string(xx to_view(buffer.bytes, line_starts[line_num], offset - line_starts[line_num]));
+    tab_size := get_buffer_tab_size(buffer);
+    return num_cols_in_string(xx to_view(buffer.bytes, line_starts[line_num], offset - line_starts[line_num]), tab_size);
 }
 
 get_cursor_coords :: (editor: Editor, buffer: Buffer, using cursor: Cursor) -> Cursor_Coords {
@@ -210,6 +211,8 @@ real_coords_to_offset :: (using buffer: Buffer, coords: Coords) -> s32 {
 }
 
 _get_offset_by_coords :: (buffer: Buffer, line_starts: [] s32, coords: Coords) -> offset: s32 {
+    tab_size := get_buffer_tab_size(buffer);
+
     line := clamp(coords.line, 0, cast(s32)line_starts.count - 2);
     offset := line_starts[line];
     if offset >= buffer.bytes.count return xx buffer.bytes.count;
@@ -220,7 +223,7 @@ _get_offset_by_coords :: (buffer: Buffer, line_starts: [] s32, coords: Coords) -
     col := 0;
     while true {
         byte := buffer.bytes[offset];
-        if byte != #char "\t" then col += 1; else col += TAB_SIZE - col % TAB_SIZE;
+        if byte != #char "\t" then col += 1; else col += tab_size - col % tab_size;
         if col > coords.col break;
         next_offset := offset + 1 + trailingBytesForUTF8[byte];
         if next_offset >= max_offset {
@@ -392,6 +395,8 @@ rescan_for_wrapped_lines :: (editor: *Editor, buffer: Buffer) {
     reset_keeping_memory(*editor.wrapped_line_starts);
     reserve(*editor.wrapped_line_starts, buffer.line_starts.count);  // can't be less than that
 
+    tab_size := get_buffer_tab_size(buffer);
+
     add(*editor.wrapped_line_starts, 0);  // first line
 
     max_width_in_chars := ifx editor.last_width_in_chars > 0 then editor.last_width_in_chars else S32_MAX;
@@ -405,7 +410,7 @@ rescan_for_wrapped_lines :: (editor: *Editor, buffer: Buffer) {
         this_char_index := i;
 
         if byte == #char "\t" {  // I hate tabs
-            current_line_width += TAB_SIZE - current_line_width % TAB_SIZE;
+            current_line_width += tab_size - current_line_width % tab_size;
             i += 1;
         } else {
             if byte != #char "\n" current_line_width += 1;  // don't count newlines towards the width to avoid wrapping them
@@ -494,7 +499,7 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
     return .[];
 }
 
-get_base_indent_from_line :: (buffer: Buffer, line_num: s32, tokens: [] Indentation_Token) -> level: int, next_level: int {
+get_base_indent_from_line :: (buffer: Buffer, line_num: s32, tokens: [] Indentation_Token, tab_size: s32) -> level: int, next_level: int {
     line := get_real_line_as_string(buffer, line_num);
     if !line return 0, 0;
 
@@ -504,14 +509,14 @@ get_base_indent_from_line :: (buffer: Buffer, line_num: s32, tokens: [] Indentat
         if byte == #char " " {
             col += 1;
         } else if byte == #char "\t" {
-            col += TAB_SIZE - col % TAB_SIZE;  // tabs are evil
+            col += tab_size - col % tab_size;  // tabs are evil
         } else {
             advance(*line, i);
             break;
         }
     }
 
-    base_level := (col + TAB_SIZE - 1) / TAB_SIZE;
+    base_level := (col + tab_size - 1) / tab_size;
 
     // Get the next level
     start := get_real_line_start_offset(buffer, line_num);
@@ -794,6 +799,8 @@ delete_buffer_from_disk :: (using buffer: *Buffer) -> deleted: bool {
 strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64, except_lines_with_cursor := false) {
     auto_release_temp();
 
+    tab_size := get_buffer_tab_size(buffer);
+
     // Get active cursor positions if we're saving the active buffer
     active_cursors: [] s32;
     {
@@ -884,14 +891,86 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64, except_line
 
         pos, sel := coords.pos, coords.sel;
         pos.line = clamp(pos.line, 0, max_line);
-        pos.col  = clamp(pos.col,  0, num_cols_in_string(get_real_line_as_string(buffer, pos.line)));
+        pos.col  = clamp(pos.col,  0, num_cols_in_string(get_real_line_as_string(buffer, pos.line), tab_size));
         sel.line = clamp(sel.line, 0, max_line);
-        sel.col  = clamp(sel.col,  0, num_cols_in_string(get_real_line_as_string(buffer, sel.line)));
+        sel.col  = clamp(sel.col,  0, num_cols_in_string(get_real_line_as_string(buffer, sel.line), tab_size));
 
         cursor := *editor.cursors[cursor_id];
         cursor.pos = real_coords_to_offset(buffer, pos);
         cursor.sel = real_coords_to_offset(buffer, sel);
     }
+}
+
+indentation_detect_from_buffer_contents :: (buffer: *Buffer) {
+    result := detect_and_set_indentation(buffer);
+
+    if #complete result == {
+        case .success;
+            if buffer.indentation.type == .tabs {
+                add_success_message("Tabs detected for indentation\nTab size is set to % (based on config)", buffer.indentation.size, dismiss_in_seconds = 5);
+            } else {
+                add_success_message("Spaces detected for indentation\nIndentation width is set to %", buffer.indentation.size, dismiss_in_seconds = 5);
+            }
+            buffer.indentation.was_manually_set = true;
+
+        case .not_enough_data;  add_user_warning("Not enough data to determine file indentation. Using defaults (%: %)", ifx buffer.indentation.type == .spaces then "Spaces" else "Tabs", buffer.indentation.size);
+        case .error;            add_user_error("Could not determine file indentation");
+    }
+}
+
+indentation_use_defaults_for_buffer :: (using buffer: *Buffer) {
+    indentation.type = config.settings.indent_using;
+    indentation.size = cast(u8) config.settings.tab_size;
+    add_success_message("Using defaults (%: %) for this file", ifx indentation.type == .spaces then "Spaces" else "Tabs", indentation.size, dismiss_in_seconds = 5);
+}
+
+indentation_convert_to_tabs_for_buffer :: (buffer: *Buffer) {
+    tab_size := get_buffer_tab_size(buffer);
+
+    b: String_Builder;
+
+    for line : split(to_string(buffer.bytes), cast(u8) #char "\n") {
+        visual_indent, bytes := get_visual_indent_in_spaces(line, tab_size);
+        num_tabs_to_indent  := visual_indent / tab_size;
+        num_spaces_to_align := visual_indent % tab_size;  // it's not always possible to get the same indentation without using spaces
+        append(*b, get_tmp_tabs(num_tabs_to_indent));
+        append(*b, get_tmp_spaces(num_spaces_to_align));
+        safe_advance(*line, bytes);
+        append(*b, line);
+        append(*b, "\n");
+    }
+
+    new_contents := builder_to_string(*b);
+    defer free(new_contents);
+    if ends_with(new_contents, "\n") then new_contents.count -= 1;
+
+    replace_range(buffer, .{ 0, buffer.bytes.count }, new_contents);
+
+    buffer.indentation.type = .tabs;
+    // Not setting the size because tabs use defaults unless explicitly set
+}
+
+indentation_convert_to_spaces_for_buffer :: (buffer: *Buffer) {
+    tab_size := get_buffer_tab_size(buffer);
+
+    b: String_Builder;
+
+    for line : split(to_string(buffer.bytes), cast(u8) #char "\n") {
+        indent, bytes := get_visual_indent_in_spaces(line, tab_size);
+        append(*b, get_tmp_spaces(indent));
+        safe_advance(*line, bytes);
+        append(*b, line);
+        append(*b, "\n");
+    }
+
+    new_contents := builder_to_string(*b);
+    defer free(new_contents);
+    if ends_with(new_contents, "\n") then new_contents.count -= 1;
+
+    replace_range(buffer, .{ 0, buffer.bytes.count }, new_contents);
+
+    buffer.indentation.type = .spaces;
+    buffer.indentation.size = cast(u8) config.settings.tab_size;
 }
 
 insert_final_newline :: (using buffer: *Buffer) {
@@ -1050,14 +1129,140 @@ get_buffer_name :: (buffer: Buffer) -> string {
     //       So if we fail the `has_file` check, check the `file.full_path` as well to see if there is still a valid name that the buffer can draw.
     if buffer.has_file || buffer.file.full_path || buffer.readonly return buffer.file.name;
 
+    tab_size := get_buffer_tab_size(buffer);
+
     for 0..buffer.line_starts.count-2 {
         line := trim(get_real_line_as_string(buffer, xx it), "\t \r\n");
         name := copy_temporary_string(line);
         replace_chars(name, "\t", xx #char " ");  // remove tabs from the middle
-        if name return take_first_n_chars(name, min(50, name.count));
+        if name return take_first_n_chars(name, min(50, name.count), tab_size);
     }
 
     return "<new file>";
+}
+
+get_buffer_indentation_and_tab_size :: inline (using buffer: Buffer) -> Indentation, tab_size: s32 {
+    if indentation.size > 0 {
+        return indentation.type, ifx indentation.type == .spaces then indentation.size else cast(s32) config.settings.tab_size;
+    } else {
+        return config.settings.indent_using, cast(s32) config.settings.tab_size;
+    }
+}
+
+get_buffer_tab_size :: inline (using buffer: Buffer) -> s32 {
+    if indentation.size > 0 {
+        return ifx indentation.type == .spaces then indentation.size else cast(s32) config.settings.tab_size;
+    } else {
+        return cast(s32) config.settings.tab_size;
+    }
+}
+
+maybe_detect_and_set_indentation :: (buffer_id: s64) {
+    buffer := *open_buffers[buffer_id];
+    if buffer.readonly || buffer.deleted || buffer.internal return;
+
+    if config.settings.detect_indentation {
+        // With this setting on all buffers need to attempt to detect indentation unless already set
+        if buffer.indentation.size <= 0 && !buffer.indentation.was_manually_set then detect_and_set_indentation(buffer);
+    } else {
+        // With this setting off all buffers need to forget their indentation and use defaults, unless previously set manually
+        if !buffer.indentation.was_manually_set then buffer.indentation.size = 0;
+    }
+}
+
+detect_and_set_indentation :: (using buffer: *Buffer) -> enum { success; error; not_enough_data; } {
+    if is_empty(bytes) {
+        // Empty files get default indentation
+        indentation.type = config.settings.indent_using;
+        indentation.size = cast(u8) config.settings.tab_size;
+        return .not_enough_data;
+    }
+
+    // Collect stats on line indentaion
+    num_lines_with_spaces := 0;
+    num_lines_with_tabs   := 0;
+
+    MAX_INDENT :: 140;  // for the purpose of detecting indentation we don't look at lines indented more than this. Who would even do it?
+    num_lines_per_space_count: [MAX_INDENT] s32;  // the number of lines for each space indent count (e.g. shows how many lines are indented at 4 spaces, 8 spaces etc)
+    line_differences:          [MAX_INDENT] s32;  // the numbers of differences between lines with different indents
+
+    last_indent     := 0;
+    last_difference := 0;
+
+    b    := bytes.data;
+    last := bytes.data + bytes.count - 1;
+    while b <= last {
+        num_spaces := 0;
+        num_tabs   := 0;
+        while b <= last {
+            if b.* == {
+                case #char " ";     num_spaces += 1;
+                case #char "\t";    num_tabs   += 1;
+                case;               break;  // end of indentation
+            }
+            b += 1;
+        }
+
+        if num_spaces > 0 && num_tabs > 0 {
+            // Mixed spaces and tabs on the same line, ignore
+        } else if num_tabs {
+            num_lines_with_tabs += 1;
+        } else if num_spaces < MAX_INDENT {
+            num_lines_with_spaces += 1;
+            num_lines_per_space_count[num_spaces] += 1;
+
+            difference_from_prev_line := abs(last_indent - num_spaces);
+            if difference_from_prev_line > 0 && difference_from_prev_line < MAX_INDENT {
+                line_differences[difference_from_prev_line] += 1;
+                last_difference = difference_from_prev_line;
+            } else if difference_from_prev_line == 0 && last_difference > 0 {
+                line_differences[last_difference] += 1;
+                // This is to count lines like this:
+                // int foo() {
+                //     foobar();  // <- diff = 4, remember
+                //     bazfoo();  // <- diff = 0, but count it towards the 4 still!
+                //     ...
+                //
+            }
+        }
+
+        // Skip the rest of the line
+        while b <= last && b.* != #char "\n"  b += 1;
+        b += 1;
+    }
+
+    if num_lines_with_tabs < 2 && num_lines_with_spaces < 2 {
+        // Not enough information, use defaults
+        indentation.type = config.settings.indent_using;
+        indentation.size = cast(u8) config.settings.tab_size;
+        return .not_enough_data;
+    }
+
+    if num_lines_with_tabs > num_lines_with_spaces {
+        // Assuming tabs
+        indentation.type = .tabs;
+        indentation.size = cast(u8) config.settings.tab_size;
+        return .success;
+    }
+
+    // Assuming spaces
+    indentation.type = .spaces;
+    indentation.size = cast(u8) config.settings.tab_size;  // fallback
+
+    // Find the most common line difference
+    max_lines := 0;
+    for num_lines, difference : line_differences {
+        if num_lines > max_lines {
+            indentation.size = cast(u8) difference;
+            max_lines = num_lines;
+        }
+    }
+
+    if indentation.size > 0 && indentation.size < MAX_INDENT {
+        return .success;
+    } else {
+        return .error;  // shouldn't happen
+    }
 }
 
 refresh_buffer_from_disk :: (path: string) {
@@ -1237,8 +1442,12 @@ get_range_as_string :: (buffer: Buffer, range: Offset_Range) -> string {
     return result;
 }
 
-init_buffer :: (buffer: *Buffer) {
-    init(*buffer.content_lock);
+init_buffer :: (using buffer: *Buffer) {
+    init(*content_lock);
+
+    // These values will be overwritten later if `detect_intentation` is true
+    indentation.type = config.settings.indent_using;
+    indentation.size = 0;
 }
 
 get_unsaved_buffer_ids :: () -> [] s64 /* temp */ {
@@ -1448,6 +1657,12 @@ Buffer :: struct {
     crlf                   := false;
 
     lang: Lang = .Plain_Text;
+
+    indentation: struct {
+        type: Indentation = .spaces;
+        size: u8 = 0;  // 0 means not initted, use global config values
+        was_manually_set := false;
+    }
 
     num_times_opened: u8;
     num_editors_open: u8;

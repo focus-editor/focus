@@ -40,8 +40,6 @@ highlight_matching_brackets:                        false
 show_paste_effect:                                  true
 disable_file_open_close_animations:                 false
 double_shift_to_search_in_workspace:                false
-tab_size:                                           4
-insert_spaces_when_pressing_tab:                    true
 strip_trailing_whitespace_on_save:                  except_lines_with_cursor
 smooth_scrolling:                                   true
 scroll_beyond_last_line:                            true
@@ -53,7 +51,6 @@ editor_history_size:                                1024
 line_wrap_is_on_by_default:                         false
 show_line_numbers:                                  false
 show_ruler_at_column:                               0
-show_selected_text_length:                          false
 colored_titlebar:                                   true   # Windows 11+ only
 dark_titlebar:                                      false  # Windows only
 hide_mouse_when_typing:                             false
@@ -61,7 +58,6 @@ draw_indent_guides:                                 false
 auto_surround_with_brackets_and_quotes:             false
 auto_close_brackets:                                false
 prefer_system_file_dialogs:                         false  # Windows only
-show_cursors_off_screen:                            true
 persist_local_search_results:                       false  # if true, search results will stay highlighted and you have to dismiss them using the `escape` action
 load_most_recent_project_on_start:                  false
 projects_sorting_order:                             most_recent_first
@@ -74,12 +70,21 @@ build_panel_height_percent:                         50
 save_all_file_backed_buffers_on_build:              false
 save_current_buffer_on_build:                       false
 
-status_bar_position:                                bottom   # options: top, bottom
 color_preview_popup:                                enabled  # options: enabled, minimized, disabled
 search_is_case_sensitive_when_uppercase_present:    true
 
+detect_indentation:                                 true
+indent_using:                                       spaces
+tab_size:                                           4
 
-# This is an example configuration for build commands
+status_bar_position:                                bottom   # options: top, bottom
+status_bar_show_cursors_off_screen:                 true
+status_bar_show_line_col:                           true
+status_bar_show_indentation:                        true
+status_bar_show_selected_text_length:               false
+
+
+# This is an example configuration for build commands (uncomment and modify to use)
 
 # [[build commands]]
 # build_working_dir:      <build working dir for all commands>  # <- paths relative to the workspace working dir (the first one in the list) are allowed
