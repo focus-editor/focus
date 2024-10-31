@@ -193,7 +193,6 @@ base_commands := #run -> [] Command {
 
         cmd("Indentation: Detect From File Contents",          .indentation_detect_from_buffer_contents,  .Single),
         cmd("Indentation: Use Defaults For File",              .indentation_use_defaults_for_buffer,      .Single),
-        cmd("Indentation: Set Tab Size For File",              .indentation_set_tab_size_for_buffer,      .Single),
         cmd("Indentation: Convert File Indentation To Tabs",   .indentation_convert_to_tabs_for_buffer,   .Single),
         cmd("Indentation: Convert File Indentation To Spaces", .indentation_convert_to_spaces_for_buffer, .Single),
     ];

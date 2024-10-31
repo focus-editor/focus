@@ -924,10 +924,6 @@ indentation_use_defaults_for_buffer :: (using buffer: *Buffer) {
     add_success_message("Using defaults (%: %) for this file", ifx indentation.type == .spaces then "Spaces" else "Tabs", indentation.size, dismiss_in_seconds = 5);
 }
 
-indentation_set_tab_size_for_buffer :: (buffer: *Buffer) {
-    // TODO
-}
-
 indentation_convert_to_tabs_for_buffer :: (buffer: *Buffer) {
     tab_size := get_buffer_tab_size(buffer);
 
