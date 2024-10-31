@@ -414,8 +414,14 @@ DONE
                         }
                         for RENAMED_KEYBINDS {
                             if action_name == it.old_name && (!it.subsection || it.subsection == current_subsection) {
-                                action_offset := action_name.data - data_with_insertions.data + offset_difference;
-                                offset_difference += replace_line(*modified_data, action_offset, tprint("%\n", it.new_name));
+                                if it.new_name {
+                                    // Renamed
+                                    action_offset := action_name.data - data_with_insertions.data + offset_difference;
+                                    offset_difference += replace_line(*modified_data, action_offset, tprint("%\n", it.new_name));
+                                } else {
+                                    // Removed
+                                    offset_difference += replace_line(*modified_data, line_start_offset, "");
+                                }
                             }
                         }
                     }
@@ -463,7 +469,7 @@ ADDED_SETTINGS :: Added_Setting.[
     .{  3, "save_current_buffer_on_build",                       "false" },
     .{  3, "save_all_file_backed_buffers_on_build",              "false" },
     .{  3, "disable_viewport_chasing_cursor_near_the_edge",      "false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts" },
-    .{  3, "show_selected_text_length",                          "false" },
+    .{  3, "status_bar_show_selected_text_length",               "false" },
 
     .{  4, "window_width",                                       "-1" },
     .{  4, "window_height",                                      "-1" },
@@ -604,10 +610,12 @@ ADDED_KEYBINDS :: Added_Keybind.[
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
-    .{ 2, "",  "show_open_file_dialog_in_search_mode",              "open_file_by_name"          },
-    .{ 2, "",  "show_open_file_dialog_in_navigate_mode",            "navigate_to_file"           },
-    .{ 2, "",  "show_open_file_dialog_in_navigate_mode_from_root",  "navigate_to_file_from_root" },
-    .{ 2, "",  "show_open_file_dialog_in_open_editors_mode",        "switch_between_open_files"  },
+    .{  2, "",  "show_open_file_dialog_in_search_mode",              "open_file_by_name"          },
+    .{  2, "",  "show_open_file_dialog_in_navigate_mode",            "navigate_to_file"           },
+    .{  2, "",  "show_open_file_dialog_in_navigate_mode_from_root",  "navigate_to_file_from_root" },
+    .{  2, "",  "show_open_file_dialog_in_open_editors_mode",        "switch_between_open_files"  },
+
+    .{ 11, "",  "do_nothing",                                        ""  },  // removed
 ];
 
 #if !NO_OUTPUT_BUILD {
@@ -867,7 +875,7 @@ simple_diff :: (main_header: string, header1: string, data1: string, header2: st
     line_number := 1;
     line_start := 0;
     prev_line_start := 0;
-    max_output_chars :: 160;
+    max_output_chars :: 360;
     for i : 0 .. data1.count - 1 {
         if i >= data2.count {
             print("% continues after % runs out:\nLine number: %\n%\n",
@@ -1171,9 +1179,9 @@ maximize_on_start:                      false
 show_paste_effect:                      true
 tab_size:                               4
 build_panel_width_percent:              50
-insert_spaces_when_pressing_tab:        true
+indent_using:                           spaces  # options: spaces, tabs
 prefer_system_file_dialogs:             false  # Windows only
-show_cursors_off_screen:                true
+status_bar_show_cursors_off_screen:     true
 persist_local_search_results:           false
 strip_trailing_whitespace_on_save:      except_lines_with_cursor  # options: all, except_lines_with_cursor, disabled
 
@@ -1188,7 +1196,7 @@ scroll_beyond_last_line:                         true
 save_current_buffer_on_build:                    false
 save_all_file_backed_buffers_on_build:           false
 disable_viewport_chasing_cursor_near_the_edge:   false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts
-show_selected_text_length:                       false
+status_bar_show_selected_text_length:            false
 window_width:                                    -1
 window_height:                                   -1
 insert_final_newline_on_save:                    false
@@ -1199,6 +1207,9 @@ highlight_matching_brackets:                     false
 search_is_case_sensitive_when_uppercase_present: false
 projects_sorting_order:                          most_recent_first  #options: most_recent_first, alphabetical, alphabetical_no_case
 show_ruler_at_column:                            0
+detect_indentation:                              true  # if true, existing files will be scanned to detect indentation, new files will use the `indent_using` and `tab_size` settings
+status_bar_show_indentation:                     true
+status_bar_show_line_col:                        true
 
 FOCUS_CONFIG
 
@@ -1275,9 +1286,9 @@ Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
 maximize_on_start:                      false
 tab_size:                               4
 build_panel_width_percent:              50
-insert_spaces_when_pressing_tab:        true
+indent_using:                           spaces  # options: spaces, tabs
 prefer_system_file_dialogs:             false  # Windows only
-show_cursors_off_screen:                true
+status_bar_show_cursors_off_screen:     true
 persist_local_search_results:           false
 show_paste_effect:                      false
 strip_trailing_whitespace_on_save:      disabled  # options: all, except_lines_with_cursor, disabled
@@ -1292,7 +1303,7 @@ scroll_beyond_last_line:                true
 save_current_buffer_on_build:                    false
 save_all_file_backed_buffers_on_build:           false
 disable_viewport_chasing_cursor_near_the_edge:   false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts
-show_selected_text_length:                       false
+status_bar_show_selected_text_length:            false
 window_width:                                    -1
 window_height:                                   -1
 insert_final_newline_on_save:                    false
@@ -1303,6 +1314,9 @@ highlight_matching_brackets:                     false
 search_is_case_sensitive_when_uppercase_present: false
 projects_sorting_order:                          most_recent_first  #options: most_recent_first, alphabetical, alphabetical_no_case
 show_ruler_at_column:                            0
+detect_indentation:                              true  # if true, existing files will be scanned to detect indentation, new files will use the `indent_using` and `tab_size` settings
+status_bar_show_indentation:                     true
+status_bar_show_line_col:                        true
 
 FOCUS_CONFIG
 
@@ -1361,9 +1375,9 @@ Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
 maximize_on_start:                      false
 tab_size:                               4
 build_panel_width_percent:              50
-insert_spaces_when_pressing_tab:        true
+indent_using:                           spaces  # options: spaces, tabs
 prefer_system_file_dialogs:             false  # Windows only
-show_cursors_off_screen:                true
+status_bar_show_cursors_off_screen:     true
 persist_local_search_results:           false
 
 FOCUS_CONFIG
@@ -1590,9 +1604,9 @@ COLORS_AND_SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
 maximize_on_start:                      false
 tab_size:                               4
 build_panel_width_percent:              50
-insert_spaces_when_pressing_tab:        true
+indent_using:                           spaces  # options: spaces, tabs
 prefer_system_file_dialogs:             false  # Windows only
-show_cursors_off_screen:                true
+status_bar_show_cursors_off_screen:     true
 
 # Added after migration to version [!latest!]
 build_panel_height_percent:                      50
@@ -1606,7 +1620,7 @@ persist_local_search_results:                    false  # if true, search result
 save_current_buffer_on_build:                    false
 save_all_file_backed_buffers_on_build:           false
 disable_viewport_chasing_cursor_near_the_edge:   false  # if true, the viewport will not scroll smoothly to cursor when you move the cursor outside it by small amounts
-show_selected_text_length:                       false
+status_bar_show_selected_text_length:            false
 window_width:                                    -1
 window_height:                                   -1
 insert_final_newline_on_save:                    false
@@ -1617,6 +1631,9 @@ highlight_matching_brackets:                     false
 search_is_case_sensitive_when_uppercase_present: false
 projects_sorting_order:                          most_recent_first  #options: most_recent_first, alphabetical, alphabetical_no_case
 show_ruler_at_column:                            0
+detect_indentation:                              true  # if true, existing files will be scanned to detect indentation, new files will use the `indent_using` and `tab_size` settings
+status_bar_show_indentation:                     true
+status_bar_show_line_col:                        true
 
 [[keymap]]
 # ...
@@ -1710,6 +1727,7 @@ scrollbar_background:                   FF191F4C
 Alt-F4                      quit
 Escape                      remove_additional_cursors
 Ctrl-Escape                 remove_additional_cursors
+Alt-F1                      do_nothing
 
 Ctrl-D                      select_word_or_create_another_cursor
 Ctrl-Shift-A                select_all_occurrences

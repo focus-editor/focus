@@ -264,7 +264,7 @@ Key_Combo :: struct {
 Action_Build :: #type,distinct u32;  // holds the index of the build command in the list
 
 ACTIONS_COMMON :: string.[
-    "do_nothing",   // to disable key combinations (DEPRECATED). TODO: auto-remove when we have a config migration system
+    "do_nothing",   // to disable key combinations (DEPRECATED)
 
     "quit",
 

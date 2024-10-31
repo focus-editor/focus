@@ -635,7 +635,7 @@ Settings :: struct {
     status_bar_show_indentation                             := true;    @v11
     status_bar_show_line_col                                := true;    @v11
     status_bar_show_cursors_off_screen                      := true;    @v11
-    status_bar_show_selected_text_length                    := false;   @v11
+    status_bar_show_selected_text_length                    := false;   @v3
 
     // TODO
     // load_last_session_on_start:         true
