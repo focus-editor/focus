@@ -608,8 +608,10 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 10, "search dialog", "go_to_next_input",                      "Tab",                 "Tab"           },
     .{ 10, "search dialog", "go_to_previous_input",                  "Shift-Tab",           "Shift-Tab"     },
 
-    .{ 11, "editors", "move_left_through_word_throttled",            "{Shift}-Meta-ArrowLeft",  "{Shift}-Ctrl-ArrowLeft" },
-    .{ 11, "editors", "move_right_through_word_throttled",           "{Shift}-Meta-ArrowRight", "{Shift}-Ctrl-ArrowRight" },
+    .{ 11, "editors", "move_left_through_word",                      "{Shift}-Meta-ArrowLeft",  "{Shift}-Ctrl-ArrowLeft" },
+    .{ 11, "editors", "move_right_through_word",                     "{Shift}-Meta-ArrowRight", "{Shift}-Ctrl-ArrowRight" },
+    .{ 11, "editors", "delete_left_through_word",                    "{Shift}-Meta-Backspace",  "{Shift}-Ctrl-Backspace" },
+    .{ 11, "editors", "delete_right_through_word",                   "{Shift}-Meta-Delete",     "{Shift}-Ctrl-Delete" },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
@@ -618,11 +620,15 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
     .{ 2, "",  "show_open_file_dialog_in_navigate_mode_from_root",  "navigate_to_file_from_root" },
     .{ 2, "",  "show_open_file_dialog_in_open_editors_mode",        "switch_between_open_files"  },
 
-    .{ 11, "editors",  "move_left_by_word",                                "move_left_by_character_type"  },
-    .{ 11, "editors",  "move_left_by_word_ends",                           "move_left_through_word"       },
-    .{ 11, "editors",  "move_right_by_word",                               "move_right_by_character_type"  },
-    .{ 11, "editors",  "move_right_by_word_ends",                          "move_right_through_word"       },
-    .{ 11, "",  "do_nothing",                                        ""  },  // removed
+    .{ 11, "editors",  "move_left_by_word",                                "move_left_by_character_type"         },
+    .{ 11, "editors",  "move_left_by_word_ends",                           "move_left_through_word_throttled"    },
+    .{ 11, "editors",  "move_right_by_word",                               "move_right_by_character_type"        },
+    .{ 11, "editors",  "move_right_by_word_ends",                          "move_right_through_word_throttled"   },
+    .{ 11, "editors",  "delete_word_left_no_underscore",                   "delete_left_by_character_type"       },
+    .{ 11, "editors",  "delete_word_left",                                 "delete_left_through_word_throttled"  },
+    .{ 11, "editors",  "delete_word_right",                                "delete_right_by_character_type"      },
+    .{ 11, "editors",  "delete_word_right_no_underscore",                  "delete_right_through_word_throttled" },
+    .{ 11, "",         "do_nothing",                                       ""  },  // removed
 ];
 
 #if !NO_OUTPUT_BUILD {
@@ -1836,8 +1842,10 @@ Alt-A                       align_cursors
 Ctrl-U                      change_case_cycle
 Ctrl-R                      revert_select_word_or_create_another_cursor
 Ctrl-Y                      move_selection_to_next_word
-{Shift}-Meta-ArrowLeft      move_left_through_word_throttled
-{Shift}-Meta-ArrowRight     move_right_through_word_throttled
+{Shift}-Meta-ArrowLeft      move_left_through_word
+{Shift}-Meta-ArrowRight     move_right_through_word
+{Shift}-Meta-Backspace      delete_left_through_word
+{Shift}-Meta-Delete         delete_right_through_word
 
 [open file dialog]
 Tab                         open_directory
