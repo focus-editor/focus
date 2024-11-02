@@ -622,14 +622,14 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
 
     .{ 11, "",         "do_nothing",                                ""  },  // removed
 
-    .{ 12, "editors",  "move_left_by_word",                         "move_left_by_character_type"         },
-    .{ 12, "editors",  "move_left_by_word_ends",                    "move_left_through_word_throttled"    },
-    .{ 12, "editors",  "move_right_by_word",                        "move_right_by_character_type"        },
-    .{ 12, "editors",  "move_right_by_word_ends",                   "move_right_through_word_throttled"   },
-    .{ 12, "editors",  "delete_word_left_no_underscore",            "delete_left_by_character_type"       },
-    .{ 12, "editors",  "delete_word_left",                          "delete_left_by_character_type_fast"  },
-    .{ 12, "editors",  "delete_word_right",                         "delete_right_by_character_type"      },
-    .{ 12, "editors",  "delete_word_right_no_underscore",           "delete_right_by_character_type_fast" },
+    .{ 12, "common",   "move_left_by_word",                         "move_left_by_character_type"         },
+    .{ 12, "common",   "move_left_by_word_ends",                    "move_left_through_word_throttled"    },
+    .{ 12, "common",   "move_right_by_word",                        "move_right_by_character_type"        },
+    .{ 12, "common",   "move_right_by_word_ends",                   "move_right_through_word_throttled"   },
+    .{ 12, "common",   "delete_word_left_no_underscore",            "delete_left_by_character_type"       },
+    .{ 12, "common",   "delete_word_left",                          "delete_left_by_character_type_fast"  },
+    .{ 12, "common",   "delete_word_right",                         "delete_right_by_character_type"      },
+    .{ 12, "common",   "delete_word_right_no_underscore",           "delete_right_by_character_type_fast" },
 ];
 
 #if !NO_OUTPUT_BUILD {
