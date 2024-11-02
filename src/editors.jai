@@ -2149,6 +2149,7 @@ is_a_move_action :: (action: Action_Editors) -> bool {
 move_cursor_left :: (cursor: *Cursor, editor: *Editor, using buffer: *Buffer, by: Movement_Type, extend_selection: bool, is_single_cursor: bool) {
     if has_selection(cursor) && !extend_selection {
         cursor.pos = get_selection(cursor).start;
+        cursor.sel = cursor.pos;
         return;
     }
 
@@ -2192,6 +2193,7 @@ move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: Movement_Type,
 move_cursor_right :: (cursor: *Cursor, editor: *Editor, using buffer: *Buffer, by: Movement_Type, extend_selection: bool, is_single_cursor: bool) {
     if has_selection(cursor) && !extend_selection {
         cursor.pos = get_selection(cursor).end;
+        cursor.sel = cursor.pos;
         return;
     }
 
