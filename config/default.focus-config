@@ -314,12 +314,14 @@ F11                         toggle_fullscreen
 {Shift}-PageDown            move_down_one_page
 
 {Shift}-ArrowLeft           move_left
-{Shift}-Alt-ArrowLeft       move_left_by_word
-{Shift}-Ctrl-ArrowLeft      move_left_by_word_ends
+{Shift}-Alt-ArrowLeft       move_left_by_character_type
+{Shift}-Ctrl-ArrowLeft      move_left_through_word_throttled
+{Shift}-Meta-ArrowLeft      move_left_through_word
 
 {Shift}-ArrowRight          move_right
-{Shift}-Alt-ArrowRight      move_right_by_word
-{Shift}-Ctrl-ArrowRight     move_right_by_word_ends
+{Shift}-Alt-ArrowRight      move_right_by_character_type
+{Shift}-Ctrl-ArrowRight     move_right_through_word_throttled
+{Shift}-Meta-ArrowRight     move_right_through_word
 
 {Shift}-Home                jump_to_line_start
 {Shift}-End                 jump_to_line_end
@@ -329,10 +331,12 @@ F11                         toggle_fullscreen
 
 {Shift}-Backspace           delete_left_char
 {Shift}-Delete              delete_right_char
-{Shift}-Alt-Backspace       delete_word_left_no_underscore
-{Shift}-Alt-Delete          delete_word_right_no_underscore
-{Shift}-Ctrl-Backspace      delete_word_left
-{Shift}-Ctrl-Delete         delete_word_right
+{Shift}-Alt-Backspace       delete_left_by_character_type
+{Shift}-Alt-Delete          delete_right_by_character_type
+{Shift}-Ctrl-Backspace      delete_left_by_character_type_fast
+{Shift}-Ctrl-Delete         delete_right_by_character_type_fast
+{Shift}-Meta-Backspace      delete_left_through_word
+{Shift}-Meta-Delete         delete_right_through_word
 
 Ctrl-Plus                   increase_font_size
 Ctrl-Minus                  decrease_font_size

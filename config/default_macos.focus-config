@@ -293,13 +293,15 @@ Cmd-B                           toggle_build_panel
 {Shift}-PageDown                move_down_one_page
 
 {Shift}-ArrowLeft               move_left
-{Shift}-Opt-ArrowLeft           move_left_by_word
-{Shift}-Opt-Cmd-ArrowLeft       move_left_by_word_ends
+{Shift}-Opt-ArrowLeft           move_left_by_character_type
+{Shift}-Opt-Cmd-ArrowLeft       move_left_through_word_throttled
+{Shift}-Ctrl-ArrowLeft          move_left_through_word
 {Shift}-Cmd-ArrowLeft           jump_to_line_start
 
 {Shift}-ArrowRight              move_right
-{Shift}-Opt-ArrowRight          move_right_by_word
-{Shift}-Opt-Cmd-ArrowRight      move_right_by_word_ends
+{Shift}-Opt-ArrowRight          move_right_by_character_type
+{Shift}-Opt-Cmd-ArrowRight      move_right_through_word_throttled
+{Shift}-Ctrl-ArrowRight         move_right_through_word
 {Shift}-Cmd-ArrowRight          jump_to_line_end
 
 {Shift}-Cmd-ArrowUp             jump_to_file_start
@@ -313,10 +315,12 @@ Cmd-B                           toggle_build_panel
 
 {Shift}-Backspace               delete_left_char
 {Shift}-Delete                  delete_right_char
-{Shift}-Opt-Backspace           delete_word_left_no_underscore
-{Shift}-Opt-Delete              delete_word_right_no_underscore
-{Shift}-Opt-Cmd-Backspace       delete_word_left
-{Shift}-Opt-Cmd-Delete          delete_word_right
+{Shift}-Opt-Backspace           delete_left_by_character_type
+{Shift}-Opt-Delete              delete_right_by_character_type
+{Shift}-Opt-Cmd-Backspace       delete_left_by_character_type_fast
+{Shift}-Opt-Cmd-Delete          delete_right_by_character_type_fast
+{Shift}-Ctrl-Backspace          delete_left_through_word
+{Shift}-Ctrl-Delete             delete_right_through_word
 
 Cmd-Plus                        increase_font_size
 Cmd-Minus                       decrease_font_size

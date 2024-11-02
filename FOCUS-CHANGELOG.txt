@@ -25,6 +25,21 @@
     + New options in the [fonts] section which allow to disable hinting and subpixel anti-aliasing:
         + `anti_aliasing`: `lcd` (default - for subpixel AA), or `normal`
         + `hinting` (`true` by default)
+    + Cursor movements have been reworked (thanks @onelivesleft).
+        + Focus now supports the following cursor movement types:
+            + `by_character`           - goes through 1 character at a time
+            + `by_character_type`      - goes through blocks of characters of the same type (e.g. word, non-word, whitespace, etc)
+            + `by_character_type_fast` - like above, but treats underscores as part of word and skips 1 space (unless multiple cursors are used)
+            + `through_word`           - goes through anything to reach the end of the next word block
+            + `through_word_throttled` - like above, but goes through at most 2 blocks of characters at a time
+        + Each movement type has a corresponding move and delete action, e.g.
+            + `move_{left|right}_by_character_type` will move cursors by groups of characters
+            + `delete_{left|right}_through_word` will delete the characters in between the current cursor position and the next cursor position after the move through word
+        + By default:
+            + `Alt -Arrow{Left|Right}`  are bound to move by character type
+            + `Ctrl-Arrow{Left|Right}`  are bound to move through word throttled
+            + `Alt -{Delete|Backspace}` are bound to delete by character type
+            + `Ctrl-{Delete|Backspace}` are bound to delete by character type (fast)
 + Bug fixes:
     + Fixed a crash when changing languages in the color preview widget
     + Fixed font size changing when you press ctrl after scrolling has started (thanks @onelivesleft)
@@ -33,7 +48,6 @@
     + Creating cursors above and below will now skip empty lines as this is most likely the behaviour users want (thanks @onelivesleft)
     + The Navigate To File (Ctrl-O) dialog will always show all files and folders instead of applying the ignore rules to them, which will allow to selectively open files which are normally ignored
     + Selecting a word using double left click should now behave identically to selecting a word using the `select_word` action, highlighting only whole-word selection occurrences
-    + More robust cursor move-by-word (thanks @onelivesleft)
 
 
 # RELEASES ==================================================================
