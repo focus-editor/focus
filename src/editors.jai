@@ -2166,7 +2166,7 @@ move_cursor_left :: (cursor: *Cursor, editor: *Editor, using buffer: *Buffer, by
         case .through_word_throttled;
             moved_through : Char_Type = ---;
             cursor.pos, moved_through = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = is_single_cursor);
-            if !(moved_through & .word | .number)  cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = false);
+            if !(moved_through & (.word | .number))  cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = false);
 
         case .through_word;
             moved_through : Char_Type = ---;
@@ -2209,7 +2209,7 @@ move_cursor_right :: (cursor: *Cursor, editor: *Editor, using buffer: *Buffer, b
         case .through_word_throttled;
             moved_through : Char_Type = ---;
             cursor.pos, moved_through = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = is_single_cursor);
-            if !(moved_through & .word | .number)  cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = false);
+            if !(moved_through & (.word | .number))  cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = false);
 
         case .through_word;
             moved_through : Char_Type = ---;

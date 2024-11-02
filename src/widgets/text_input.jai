@@ -227,7 +227,7 @@ move_cursor_left :: (using input: *Text_Input, by: Movement_Type, extend_selecti
             case .through_word_throttled;
                 moved_through : Char_Type = ---;
                 cursor.pos, moved_through = scan_through_similar_chars_on_the_left(input, cursor.pos);
-                if !(moved_through & .word | .number)  cursor.pos = scan_through_similar_chars_on_the_left(input, cursor.pos, skip_one_space = false);
+                if !(moved_through & (.word | .number))  cursor.pos = scan_through_similar_chars_on_the_left(input, cursor.pos, skip_one_space = false);
 
             case .through_word;
                 moved_through : Char_Type = ---;
@@ -260,7 +260,7 @@ move_cursor_right :: (using input: *Text_Input, by: Movement_Type, extend_select
             case .through_word_throttled;
                 moved_through : Char_Type = ---;
                 cursor.pos, moved_through = scan_through_similar_chars_on_the_right(input, cursor.pos);
-                if !(moved_through & .word | .number)  cursor.pos = scan_through_similar_chars_on_the_right(input, cursor.pos, skip_one_space = false);
+                if !(moved_through & (.word | .number))  cursor.pos = scan_through_similar_chars_on_the_right(input, cursor.pos, skip_one_space = false);
 
             case .through_word;
                 moved_through : Char_Type = ---;
