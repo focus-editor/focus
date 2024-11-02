@@ -23,10 +23,12 @@ text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> han
 
         case .move_left;                           move_cursor_left                    (input, by = .by_character,           extend_selection);
         case .move_left_by_character_type;         move_cursor_left                    (input, by = .by_character_type,      extend_selection);
+        case .move_left_by_character_type_fast;    move_cursor_left                    (input, by = .by_character_type_fast, extend_selection);
         case .move_left_through_word_throttled;    move_cursor_left                    (input, by = .through_word_throttled, extend_selection);
         case .move_left_through_word;              move_cursor_left                    (input, by = .through_word,           extend_selection);
         case .move_right;                          move_cursor_right                   (input, by = .by_character,           extend_selection);
         case .move_right_by_character_type;        move_cursor_right                   (input, by = .by_character_type,      extend_selection);
+        case .move_right_by_character_type_fast;   move_cursor_right                   (input, by = .by_character_type_fast, extend_selection);
         case .move_right_through_word_throttled;   move_cursor_right                   (input, by = .through_word_throttled, extend_selection);
         case .move_right_through_word;             move_cursor_right                   (input, by = .through_word,           extend_selection);
 
@@ -39,10 +41,12 @@ text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> han
         case .delete_left_by_character_type;       delete_left                         (input, by = .by_character_type);
         case .delete_left_by_character_type_fast;  delete_left                         (input, by = .by_character_type_fast);
         case .delete_left_through_word;            delete_left                         (input, by = .through_word);
+        case .delete_left_through_word_throttled;  delete_left                         (input, by = .through_word_throttled);
         case .delete_right_char;                   delete_right                        (input, by = .by_character);
         case .delete_right_by_character_type;      delete_right                        (input, by = .by_character_type);
         case .delete_right_by_character_type_fast; delete_right                        (input, by = .by_character_type_fast);
         case .delete_right_through_word;           delete_right                        (input, by = .through_word);
+        case .delete_right_through_word_throttled; delete_right                        (input, by = .through_word_throttled);
 
         case .delete_to_start_of_line;             delete_to_start_of_line             (input);
         case .delete_to_end_of_line;               delete_to_end_of_line               (input);

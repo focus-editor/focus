@@ -240,10 +240,12 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         // Actions that do something per cursor
         case .move_left;                         move_cursors_left                   (editor, buffer, by = .by_character,           shift_pressed);
         case .move_left_by_character_type;       move_cursors_left                   (editor, buffer, by = .by_character_type,      shift_pressed);
+        case .move_left_by_character_type_fast;  move_cursors_left                   (editor, buffer, by = .by_character_type_fast, shift_pressed);
         case .move_left_through_word_throttled;  move_cursors_left                   (editor, buffer, by = .through_word_throttled, shift_pressed);
         case .move_left_through_word;            move_cursors_left                   (editor, buffer, by = .through_word,           shift_pressed);
         case .move_right;                        move_cursors_right                  (editor, buffer, by = .by_character,           shift_pressed);
         case .move_right_by_character_type;      move_cursors_right                  (editor, buffer, by = .by_character_type,      shift_pressed);
+        case .move_right_by_character_type_fast; move_cursors_right                  (editor, buffer, by = .by_character_type_fast, shift_pressed);
         case .move_right_through_word_throttled; move_cursors_right                  (editor, buffer, by = .through_word_throttled, shift_pressed);
         case .move_right_through_word;           move_cursors_right                  (editor, buffer, by = .through_word,           shift_pressed);
         case .move_up;                           move_cursors_vertically             (editor, buffer, -1, shift_pressed);
@@ -260,8 +262,8 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .jump_to_file_end;                  move_to_file_end                    (editor, buffer);
         case .jump_to_matching_bracket;          move_to_matching_bracket            (editor, buffer, shift_pressed); keep_selection = true;
 
-        case .select_line;                      select_lines                        (editor, buffer); keep_selection = true;
-        case .copy;                             copy_selection_to_clipboard         (editor, buffer);
+        case .select_line;                       select_lines                        (editor, buffer); keep_selection = true;
+        case .copy;                              copy_selection_to_clipboard         (editor, buffer);
 
         case;                                   handled = false;
     }
@@ -300,9 +302,11 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
             case .delete_left_by_character_type;       delete_left                      (editor, buffer, by = .by_character_type);
             case .delete_left_by_character_type_fast;  delete_left                      (editor, buffer, by = .by_character_type_fast);
             case .delete_left_through_word;            delete_left                      (editor, buffer, by = .through_word);
+            case .delete_left_through_word_throttled;  delete_left                      (editor, buffer, by = .through_word_throttled);
             case .delete_right_by_character_type;      delete_right                     (editor, buffer, by = .by_character_type);
             case .delete_right_by_character_type_fast; delete_right                     (editor, buffer, by = .by_character_type_fast);
             case .delete_right_through_word;           delete_right                     (editor, buffer, by = .through_word);
+            case .delete_right_through_word_throttled; delete_right                     (editor, buffer, by = .through_word_throttled);
 
             case .duplicate_lines;                     duplicate_lines                  (editor, buffer); keep_selection = true;
             case .move_selected_lines_up;              move_lines_up                    (editor, buffer); keep_selection = true;
