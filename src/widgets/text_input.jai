@@ -37,11 +37,11 @@ text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> han
 
         case .delete_left_char;                    delete_left                         (input, by = .by_character);
         case .delete_left_by_character_type;       delete_left                         (input, by = .by_character_type);
-        case .delete_left_through_word_throttled;  delete_left                         (input, by = .through_word_throttled);
+        case .delete_left_by_character_type_fast;  delete_left                         (input, by = .by_character_type_fast);
         case .delete_left_through_word;            delete_left                         (input, by = .through_word);
         case .delete_right_char;                   delete_right                        (input, by = .by_character);
         case .delete_right_by_character_type;      delete_right                        (input, by = .by_character_type);
-        case .delete_right_through_word_throttled; delete_right                        (input, by = .through_word_throttled);
+        case .delete_right_by_character_type_fast; delete_right                        (input, by = .by_character_type_fast);
         case .delete_right_through_word;           delete_right                        (input, by = .through_word);
 
         case .delete_to_start_of_line;             delete_to_start_of_line             (input);
@@ -224,6 +224,9 @@ move_cursor_left :: (using input: *Text_Input, by: Movement_Type, extend_selecti
                 cursor.pos = scan_through_similar_chars_on_the_left(input, cursor.pos, skip_one_space = false);
                 set_underscore_is_part_of_word(true);
 
+            case .by_character_type_fast;
+                cursor.pos = scan_through_similar_chars_on_the_left(input, cursor.pos, skip_one_space = true);
+
             case .through_word_throttled;
                 moved_through : Char_Type = ---;
                 cursor.pos, moved_through = scan_through_similar_chars_on_the_left(input, cursor.pos);
@@ -256,6 +259,9 @@ move_cursor_right :: (using input: *Text_Input, by: Movement_Type, extend_select
                 set_underscore_is_part_of_word(false);
                 cursor.pos = scan_through_similar_chars_on_the_right(input, cursor.pos, skip_one_space = false);
                 set_underscore_is_part_of_word(true);
+
+            case .by_character_type_fast;
+                cursor.pos = scan_through_similar_chars_on_the_right(input, cursor.pos, skip_one_space = true);
 
             case .through_word_throttled;
                 moved_through : Char_Type = ---;

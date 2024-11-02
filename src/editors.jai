@@ -298,10 +298,10 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
             case .delete_right_char;                   delete_right_char                (editor, buffer);
 
             case .delete_left_by_character_type;       delete_left                      (editor, buffer, by = .by_character_type);
-            case .delete_left_through_word_throttled;  delete_left                      (editor, buffer, by = .through_word_throttled);
+            case .delete_left_by_character_type_fast;  delete_left                      (editor, buffer, by = .by_character_type_fast);
             case .delete_left_through_word;            delete_left                      (editor, buffer, by = .through_word);
             case .delete_right_by_character_type;      delete_right                     (editor, buffer, by = .by_character_type);
-            case .delete_right_through_word_throttled; delete_right                     (editor, buffer, by = .through_word_throttled);
+            case .delete_right_by_character_type_fast; delete_right                     (editor, buffer, by = .by_character_type_fast);
             case .delete_right_through_word;           delete_right                     (editor, buffer, by = .through_word);
 
             case .duplicate_lines;                     duplicate_lines                  (editor, buffer); keep_selection = true;
@@ -2110,8 +2110,8 @@ new_edit_group_required_for_action :: (action: Action_Editors, cursor: Cursor) -
         case .delete_right_by_character_type;       return true;
         case .delete_left_through_word;             return true;
         case .delete_right_through_word;            return true;
-        case .delete_left_through_word_throttled;   return true;
-        case .delete_right_through_word_throttled;  return true;
+        case .delete_left_by_character_type_fast;   return true;
+        case .delete_right_by_character_type_fast;  return true;
         case .join_lines;                           return true;
         case .join_lines_no_spaces_in_between;      return true;
     }
@@ -2164,6 +2164,9 @@ move_cursor_left :: (cursor: *Cursor, editor: *Editor, using buffer: *Buffer, by
             cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = false);
             set_underscore_is_part_of_word(true);
 
+        case .by_character_type_fast;
+            cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = is_single_cursor);
+
         case .through_word_throttled;
             moved_through : Char_Type = ---;
             cursor.pos, moved_through = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = is_single_cursor);
@@ -2207,6 +2210,9 @@ move_cursor_right :: (cursor: *Cursor, editor: *Editor, using buffer: *Buffer, b
             set_underscore_is_part_of_word(false);
             cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = false);
             set_underscore_is_part_of_word(true);
+
+        case .by_character_type_fast;
+            cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = is_single_cursor);
 
         case .through_word_throttled;
             moved_through : Char_Type = ---;

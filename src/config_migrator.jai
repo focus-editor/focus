@@ -620,15 +620,16 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
     .{ 2, "",  "show_open_file_dialog_in_navigate_mode_from_root",  "navigate_to_file_from_root" },
     .{ 2, "",  "show_open_file_dialog_in_open_editors_mode",        "switch_between_open_files"  },
 
-    .{ 11, "editors",  "move_left_by_word",                                "move_left_by_character_type"         },
-    .{ 11, "editors",  "move_left_by_word_ends",                           "move_left_through_word_throttled"    },
-    .{ 11, "editors",  "move_right_by_word",                               "move_right_by_character_type"        },
-    .{ 11, "editors",  "move_right_by_word_ends",                          "move_right_through_word_throttled"   },
-    .{ 11, "editors",  "delete_word_left_no_underscore",                   "delete_left_by_character_type"       },
-    .{ 11, "editors",  "delete_word_left",                                 "delete_left_through_word_throttled"  },
-    .{ 11, "editors",  "delete_word_right",                                "delete_right_by_character_type"      },
-    .{ 11, "editors",  "delete_word_right_no_underscore",                  "delete_right_through_word_throttled" },
-    .{ 11, "",         "do_nothing",                                       ""  },  // removed
+    .{ 11, "",         "do_nothing",                                ""  },  // removed
+
+    .{ 11, "editors",  "move_left_by_word",                         "move_left_by_character_type"         },
+    .{ 11, "editors",  "move_left_by_word_ends",                    "move_left_through_word_throttled"    },
+    .{ 11, "editors",  "move_right_by_word",                        "move_right_by_character_type"        },
+    .{ 11, "editors",  "move_right_by_word_ends",                   "move_right_through_word_throttled"   },
+    .{ 11, "editors",  "delete_word_left_no_underscore",            "delete_left_by_character_type"       },
+    .{ 11, "editors",  "delete_word_left",                          "delete_left_by_character_type_fast"  },
+    .{ 11, "editors",  "delete_word_right",                         "delete_right_by_character_type"      },
+    .{ 11, "editors",  "delete_word_right_no_underscore",           "delete_right_by_character_type_fast" },
 ];
 
 #if !NO_OUTPUT_BUILD {

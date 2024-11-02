@@ -618,10 +618,11 @@ Char_Type :: enum_flags {
 }
 
 Movement_Type :: enum {
-    by_character;
-    by_character_type;
-    through_word;
-    through_word_throttled;
+    by_character;            // goes through 1 character at a time
+    by_character_type;       // goes through blocks of characters of the same type (see Char_Type)
+    by_character_type_fast;  // like above, but treats underscores as part of word and skips 1 space
+    through_word;            // goes through anything to reach the end of the next word block
+    through_word_throttled;  // like above, but goes through at most 2 blocks of characters at a time
 }
 
 Fuzzy_Filter :: struct {

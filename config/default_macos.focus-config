@@ -317,8 +317,8 @@ Cmd-B                           toggle_build_panel
 {Shift}-Delete                  delete_right_char
 {Shift}-Opt-Backspace           delete_left_by_character_type
 {Shift}-Opt-Delete              delete_right_by_character_type
-{Shift}-Opt-Cmd-Backspace       delete_left_through_word_throttled
-{Shift}-Opt-Cmd-Delete          delete_right_through_word_throttled
+{Shift}-Opt-Cmd-Backspace       delete_left_by_character_type_fast
+{Shift}-Opt-Cmd-Delete          delete_right_by_character_type_fast
 {Shift}-Ctrl-Backspace          delete_left_through_word
 {Shift}-Ctrl-Delete             delete_right_through_word
 

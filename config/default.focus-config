@@ -333,8 +333,8 @@ F11                         toggle_fullscreen
 {Shift}-Delete              delete_right_char
 {Shift}-Alt-Backspace       delete_left_by_character_type
 {Shift}-Alt-Delete          delete_right_by_character_type
-{Shift}-Ctrl-Backspace      delete_left_through_word_throttled
-{Shift}-Ctrl-Delete         delete_right_through_word_throttled
+{Shift}-Ctrl-Backspace      delete_left_by_character_type_fast
+{Shift}-Ctrl-Delete         delete_right_by_character_type_fast
 {Shift}-Meta-Backspace      delete_left_through_word
 {Shift}-Meta-Delete         delete_right_through_word
 
