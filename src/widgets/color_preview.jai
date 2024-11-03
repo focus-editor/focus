@@ -241,6 +241,9 @@ color_preview_draw_color_picker :: (rect: Rect) {
     }
 
     offset += 1;
+
+    if offset >= buffer.bytes.count return;
+
     while is_unicode_space(buffer.bytes[offset]) {
         offset += 1;
         if offset >= buffer.bytes.count || buffer.bytes[offset] == #char "\n" return;
