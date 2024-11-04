@@ -75,7 +75,7 @@ main :: () {
         for path : array_view(args, 1, args.count - 1) {
             if is_directory(path) {
                 dir := trim_right(path, "\\/");
-                project_config_path := tprint("%.focus-config", dir);
+                project_config_path := tprint("%/.focus-config", dir);
                 if !project_config.loaded && file_exists(project_config_path) {
                     success := load_project_config(project_config_path);
                     if !success then add_user_error("Tried to load project config from % but couldn't due to errors", project_config_path);
