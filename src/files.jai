@@ -170,6 +170,7 @@ is_known_text_file_extension :: (extension: string) -> bool {
         case "hpp";     #through;
         case "cc";      #through;
         case "cs";      #through;
+        case "d";       #through;
         case "txt";     #through;
         case "md";      #through;
         case "ini";     #through;

@@ -1269,6 +1269,7 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
     if lowercase_extension == {
         case "jai";             lang = .Jai;
         case "cs";              lang = .CSharp;
+        case "d";               lang = .D;
         case "focus-config";    lang = .Focus_Config;
         case "focus-theme";     lang = .Focus_Theme;
         case "go";              lang = .Golang;
@@ -3376,6 +3377,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
         case .C;      #through;
         case .Cpp;    #through;
         case .CSharp; #through;
+        case .D;      #through;
         case .Glsl;   #through;
         case .Hlsl;   #through;
         case .Golang; #through;
@@ -3593,6 +3595,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
         case .Cpp;    #through;
         case .Css;    #through;
         case .CSharp; #through;
+        case .D;      #through;
         case .Glsl;   #through;
         case .Hlsl;   #through;
         case .Golang; #through;
