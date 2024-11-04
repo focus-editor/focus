@@ -298,6 +298,38 @@ a:hover {
 LANG_CSS
 
 
+SAMPLE_D :: #string LANG_D
+#!rdmd
+
+// Comment
+/* Multi-line comment */
+/+ /+ Nested +/ multi-line comment +/
+
+import std.stdio : writeln;
+
+struct Structure
+{
+    bool isTrue;
+    char[20] text;
+}
+
+void main()
+{
+    writeln("Hello World!");
+    uint[4] someArray = [4, 3, 2, 1];
+
+    foreach (i; 0..someArray.length)
+    {
+        someArray[i] += i + someArray.sizeof;
+    }
+
+    Structure some_struct = { true, "string" };
+    char some_char = 'c';
+}
+
+LANG_D
+
+
 SAMPLE_Glsl :: #string GLSL
 // Comment
 /* Multiline Comment */
