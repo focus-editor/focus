@@ -42,6 +42,7 @@
             + `Ctrl-{Delete|Backspace}` are bound to delete by character type (fast)
 + Bug fixes:
     + Fixed a crash when changing languages in the color preview widget
+    + Fixed a crash when editing colors near the end of file with color preview open (thanks @darkgiggs)
     + Fixed font size changing when you press ctrl after scrolling has started (thanks @onelivesleft)
 + Other changes:
     + Syntax highlighting improvements for CSS and TypeScript (thanks @simonvallz)
