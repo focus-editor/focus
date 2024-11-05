@@ -4,6 +4,7 @@
     + Global search now allows to additionally filter results by including and excluding files
     + Syntax highlighting:
         + Batch (thanks @arjenwitteveen)
+        + D (thanks @dawsonfrakes)
     + It is now possible to pass a line number together with the file path to the editor on startup: `focus /path/to/file:69` (thanks @simonvallz)
     + New actions to change case of selected text (thanks @onelivesleft):
         + `change_case_to_upper`
