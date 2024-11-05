@@ -1208,7 +1208,7 @@ detect_and_set_indentation :: (using buffer: *Buffer) -> enum { success; error; 
             // Mixed spaces and tabs on the same line, ignore
         } else if num_tabs {
             num_lines_with_tabs += 1;
-        } else if num_spaces < MAX_INDENT {
+        } else if num_spaces > 0 && num_spaces < MAX_INDENT {
             num_lines_with_spaces += 1;
             num_lines_per_space_count[num_spaces] += 1;
 
