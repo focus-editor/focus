@@ -2664,7 +2664,7 @@ get_line_starts_for_lines_with_cursors_tmp :: (editor: *Editor, buffer: *Buffer)
 
 indent_lines :: (editor: *Editor, buffer: *Buffer) {
     indentation_type, tab_size := get_buffer_indentation_and_tab_size(buffer);
-    spaces   := ifx indentation_type == .spaces get_tmp_spaces(tab_size) else "\t";
+    spaces := ifx indentation_type == .spaces then get_tmp_spaces(tab_size) else "\t";
 
     // Find lines which will be affected (we don't want to indent the same line more than once if it has more than 1 cursor on it)
     line_starts, last_line_end_offset := get_line_starts_for_lines_with_cursors_tmp(editor, buffer);
@@ -2674,8 +2674,8 @@ indent_lines :: (editor: *Editor, buffer: *Buffer) {
         pos := cursor.pos;
         sel := cursor.sel;
         for line_start : line_starts {
-            if line_start <= pos then cursor.pos += tab_size;
-            if line_start <= sel then cursor.sel += tab_size;
+            if line_start <= pos then cursor.pos += cast(s32) spaces.count;
+            if line_start <= sel then cursor.sel += cast(s32) spaces.count;
             if line_start > pos && line_start > sel break;
         }
         cursor.col_wanted += tab_size;
