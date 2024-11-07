@@ -7,7 +7,7 @@ tokenize_xml :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] B
         memset(tokens.data + token.start, xx TOKEN_MAP[token.type], token.len);
     }
 
-    return .[];
+    return tokenizer.regions;
 }
 
 tokenize_xml_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
@@ -421,12 +421,22 @@ parse_tag_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
 
         auto_release_temp();
 
+        t_start := t;
+
         end_tag := tprint("</%", active_tag_name);
         while t < max_t {
             eat_until(tokenizer, "</");
             if at_string(tokenizer, end_tag, false)  break;
             t += 1;
         }
+
+        if html_mode && active_tag_name == "script" {
+            start := cast(s32) (t_start - buf.data);
+            end   := cast(s32) (t - 1 - buf.data);
+
+            array_add(*regions, Buffer_Region.{ start = start, end = end, kind = .heredoc, lang = .Js });
+        }
+
         return;
     }
 
@@ -511,6 +521,9 @@ Xml_Tokenizer :: struct {
     max_t:   *u8;
     start_t: *u8;  // cursor when starting parsing new token
     t:       *u8;  // cursor
+
+    regions: [..] Buffer_Region;
+    regions.allocator = temp;
 
     state: Xml_Tokenizer_State;
     current_token: Xml_Token;
