@@ -887,29 +887,29 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64, except_line
     line_start := line_starts[0];
     for line_end : to_view(line_starts, 1, line_starts.count - 1) {
         line := string.{ count = line_end - 1 - line_start, data = bytes.data + line_start };
-        if line.count < 1 continue;
+        if line.count >= 1 {
+            trim_after := trim_right(line).count;
 
-        trim_after := trim_right(line).count;
-
-        pos_of_rightmost_cursor_on_this_line := -1;
-        if except_lines_with_cursor {
-            // Keep cursors where they are
-            c := active_cursors;
-            for pos : c {
-                if pos < line_start {
-                    // Don't check this cursor for subsequent lines
-                    active_cursors.count -= 1;
-                    active_cursors.data  += 1;
-                } else if pos < line_end {
-                    pos_of_rightmost_cursor_on_this_line = pos - line_start;
-                } else {
-                    break;  // no need to check any other cursors for this line
+            pos_of_rightmost_cursor_on_this_line := -1;
+            if except_lines_with_cursor {
+                // Keep cursors where they are
+                c := active_cursors;
+                for pos : c {
+                    if pos < line_start {
+                        // Don't check this cursor for subsequent lines
+                        active_cursors.count -= 1;
+                        active_cursors.data  += 1;
+                    } else if pos < line_end {
+                        pos_of_rightmost_cursor_on_this_line = pos - line_start;
+                    } else {
+                        break;  // no need to check any other cursors for this line
+                    }
                 }
+                if pos_of_rightmost_cursor_on_this_line >= trim_after then trim_after = pos_of_rightmost_cursor_on_this_line;
             }
-            if pos_of_rightmost_cursor_on_this_line >= trim_after then trim_after = pos_of_rightmost_cursor_on_this_line;
-        }
-        if trim_after < line.count {
-            array_add(*delete_edits, Offset_Range.{ xx (line_start + trim_after), line_end - 1 });
+            if trim_after < line.count {
+                array_add(*delete_edits, Offset_Range.{ xx (line_start + trim_after), line_end - 1 });
+            }
         }
 
         line_start = line_end;
