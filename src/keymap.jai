@@ -343,6 +343,8 @@ ACTIONS_COMMON :: string.[
     "delete_right_through_word_throttled",
     "delete_to_start_of_line",
     "delete_to_end_of_line",
+    "cut_to_start_of_line",
+    "cut_to_end_of_line",
     "increase_font_size",
     "decrease_font_size",
     "reset_font_size_to_default",

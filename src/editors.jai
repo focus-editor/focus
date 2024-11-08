@@ -320,6 +320,8 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
 
             case .delete_to_start_of_line;             delete_to_start_of_line          (editor, buffer);
             case .delete_to_end_of_line;               delete_to_end_of_line            (editor, buffer);
+            case .cut_to_start_of_line;                delete_to_start_of_line          (editor, buffer, copy_to_clipboard = true);
+            case .cut_to_end_of_line;                  delete_to_end_of_line            (editor, buffer, copy_to_clipboard = true);
 
             case;                                   return false;
         }
@@ -3145,7 +3147,7 @@ delete_line :: (editor: *Editor, buffer: *Buffer, go_up := false) {
     editor.cursor_moved = .unimportant;
 }
 
-delete_to_start_of_line :: (editor: *Editor, buffer: *Buffer) {
+delete_to_start_of_line :: (editor: *Editor, buffer: *Buffer, copy_to_clipboard := false) {
     for * cursor : editor.cursors {
         if has_selection(cursor) continue;
 
@@ -3164,7 +3166,10 @@ delete_to_start_of_line :: (editor: *Editor, buffer: *Buffer) {
         cursor.col_wanted = -1;
     }
     organise_cursors(editor);  // resolve overlapping selections
-    copy_selection_to_clipboard(editor, buffer, cut = true, cut_lines_without_selection = false);
+
+    if copy_to_clipboard  copy_selection_to_clipboard(editor, buffer, cut_lines_without_selection = false);
+
+    delete_left_char(editor, buffer);
 }
 
 change_case_of_selected_text :: (editor: *Editor, buffer: *Buffer, mode: enum { upper; lower; caps; cycle; }) {
@@ -3228,13 +3233,16 @@ change_case_of_selected_text :: (editor: *Editor, buffer: *Buffer, mode: enum { 
     }
 }
 
-delete_to_end_of_line :: (editor: *Editor, buffer: *Buffer) {
+delete_to_end_of_line :: (editor: *Editor, buffer: *Buffer, copy_to_clipboard := false) {
     for * cursor : editor.cursors {
         if has_selection(cursor) continue;
         cursor.pos = get_real_line_end_offset(buffer, offset_to_real_line(buffer, cursor.pos));
     }
     organise_cursors(editor);  // resolve overlapping selections
-    copy_selection_to_clipboard(editor, buffer, cut = true, cut_lines_without_selection = false);
+
+    if copy_to_clipboard  copy_selection_to_clipboard(editor, buffer, cut_lines_without_selection = false);
+
+    delete_right_char(editor, buffer);
 }
 
 copy_selection_to_clipboard :: (editor: *Editor, buffer: *Buffer, cut := false, cut_lines_without_selection := true) {
