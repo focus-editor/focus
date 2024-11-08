@@ -234,8 +234,8 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
 
         case .indentation_detect_from_buffer_contents;  indentation_detect_from_buffer_contents (buffer);
         case .indentation_use_defaults_for_buffer;      indentation_use_defaults_for_buffer     (buffer);
-        case .indentation_convert_to_tabs_for_buffer;   indentation_convert_to_tabs_for_buffer  (buffer);
-        case .indentation_convert_to_spaces_for_buffer; indentation_convert_to_spaces_for_buffer(buffer);
+        case .indentation_convert_to_tabs_for_buffer;   indentation_convert_to_tabs_for_buffer  (buffer, editor.buffer_id);
+        case .indentation_convert_to_spaces_for_buffer; indentation_convert_to_spaces_for_buffer(buffer, editor.buffer_id);
 
         // Actions that do something per cursor
         case .move_left;                         move_cursors_left                   (editor, buffer, by = .by_character,           shift_pressed);

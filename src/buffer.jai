@@ -173,6 +173,71 @@ offset_to_real_line :: (using buffer: Buffer, offset: s64) -> line_num: s32 {
     return search_line_num_by_offset(to_view(line_starts), offset);
 }
 
+Editor_Cursor_Position :: struct { editor_id: s64; cursor_id: s64; coords: Cursor_Coords; }
+
+remember_cursor_positions :: (buffer_id: s64, in: enum { all_editors; active_editor; }) -> [] Editor_Cursor_Position /* temp */ {
+    buffer := *open_buffers[buffer_id];
+
+    cursor_positions: [..] Editor_Cursor_Position;
+    cursor_positions.allocator = temp;
+
+    for * editor, editor_id : open_editors {
+        if editor.buffer_id != buffer_id continue;
+        if in == .active_editor && editor_id != editors.active continue;
+        editor.refresh_selection = true;
+
+        new_edit_group(buffer, editor);
+
+        for cursor, cursor_id : editor.cursors {
+            array_add(*cursor_positions, Editor_Cursor_Position.{ editor_id, cursor_id, get_real_cursor_coords(buffer, cursor) });
+        }
+    }
+
+    // We also want to remember cursors in the buffer itself for the subsequent undos, preferably from the active editor
+    editor_cursors: [] Cursor;
+    active_editor, _ := get_active_editor_and_buffer();
+    if active_editor && active_editor.buffer_id == buffer_id {
+        editor_cursors = to_view(active_editor.cursors);
+    } else {
+        // Just take any editor
+        for editor : open_editors {
+            if editor.buffer_id == buffer_id {
+                editor_cursors = to_view(editor.cursors);
+                break;
+            }
+        }
+    }
+    if editor_cursors {
+        resize(*buffer.cursors, editor_cursors.count);
+        for * cursor, i : buffer.cursors { cursor.* = editor_cursors[i]; }
+    }
+
+    return cursor_positions;
+}
+
+restore_cursor_positions :: (buffer_id: s64, cursor_positions: [] Editor_Cursor_Position) {
+    buffer := *open_buffers[buffer_id];
+    if buffer.dirty then rescan_for_lines(buffer);
+
+    tab_size := get_buffer_tab_size(buffer);
+
+    max_line := cast(s32) buffer.line_starts.count - 2;
+    for position : cursor_positions {
+        using position;
+        editor := *open_editors[editor_id];
+
+        pos, sel := coords.pos, coords.sel;
+        pos.line = clamp(pos.line, 0, max_line);
+        pos.col  = clamp(pos.col,  0, num_cols_in_string(get_real_line_as_string(buffer, pos.line), tab_size));
+        sel.line = clamp(sel.line, 0, max_line);
+        sel.col  = clamp(sel.col,  0, num_cols_in_string(get_real_line_as_string(buffer, sel.line), tab_size));
+
+        cursor := *editor.cursors[cursor_id];
+        cursor.pos = real_coords_to_offset(buffer, pos);
+        cursor.sel = real_coords_to_offset(buffer, sel);
+    }
+}
+
 search_line_num_by_offset :: (line_starts: [] s32, offset: s64) -> line_num: s32 {
     if line_starts.count < 2 return 0;
 
@@ -802,7 +867,8 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64, except_line
 
     tab_size := get_buffer_tab_size(buffer);
 
-    // Get active cursor positions if we're saving the active buffer
+    // Get active cursor offsets if we're saving the active buffer
+    // so that we can keep them where they are if the corresponding option is enabled
     active_cursors: [] s32;
     {
         editor, _ := get_active_editor_and_buffer();
@@ -812,14 +878,18 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64, except_line
         }
     }
 
-    // Prepare the stripped buffer contents
-    b: String_Builder;
-    b.allocator = temp;
-    init_string_builder(*b, buffer_size = bytes.count + size_of(String_Builder.Buffer));
+    // Record a list of edits we need to make in order to strip the whitespace,
+    // one edit per line. The reason for this is to leverage the edit notification system
+    // to properly adjust cursors in other editors, including on undo/redo.
+    delete_edits: [..] Offset_Range;
+    delete_edits.allocator = temp;
 
     line_start := line_starts[0];
     for line_end : to_view(line_starts, 1, line_starts.count - 1) {
-        line := string.{ count = line_end - line_start, data = bytes.data + line_start };
+        line := string.{ count = line_end - 1 - line_start, data = bytes.data + line_start };
+        if line.count < 1 continue;
+
+        trim_after := trim_right(line).count;
 
         pos_of_rightmost_cursor_on_this_line := -1;
         if except_lines_with_cursor {
@@ -831,75 +901,38 @@ strip_trailing_whitespace :: (using buffer: *Buffer, buffer_id: s64, except_line
                     active_cursors.count -= 1;
                     active_cursors.data  += 1;
                 } else if pos < line_end {
-                    pos_of_rightmost_cursor_on_this_line = pos;
+                    pos_of_rightmost_cursor_on_this_line = pos - line_start;
                 } else {
                     break;  // no need to check any other cursors for this line
                 }
             }
-            if pos_of_rightmost_cursor_on_this_line >= 0 {
-                length := pos_of_rightmost_cursor_on_this_line - line_start;
-                line_until_cursor := slice(line, 0, length);
-                append(*b, line_until_cursor);  // preserve the line up to the rightmost cursor even if it's all whitespace
-                safe_advance(*line, length);
-            }
+            if pos_of_rightmost_cursor_on_this_line >= trim_after then trim_after = pos_of_rightmost_cursor_on_this_line;
         }
-
-        append(*b, trim_right(line));
-        append(*b, "\n");
+        if trim_after < line.count {
+            array_add(*delete_edits, Offset_Range.{ xx (line_start + trim_after), line_end - 1 });
+        }
 
         line_start = line_end;
     }
 
-    stripped := builder_to_string(*b,, allocator = temp);
-    if stripped then stripped.count -= 1;  // remove the trailing newline we've added
+    if !delete_edits return;  // nothing to do
 
-    if stripped.count == bytes.count return;  // nothing stripped
+    // Only remember and restore cursor positions in the active editor.
+    // Any other editors will be handled by the edit notifications
+    cursor_positions := remember_cursor_positions(buffer_id, in = .active_editor);
 
-    // Remember all cursor positions in all editors for the buffer
-    Editor_Cursor_State :: struct { editor_id: s64; cursor_id: s64; coords: Cursor_Coords; }
-    cursor_states: [..] Editor_Cursor_State;
-    cursor_states.allocator = temp;
-    for * editor, editor_id : open_editors {
-        if editor.buffer_id != buffer_id continue;
-        editor.refresh_selection = true;
-
-        for cursor, cursor_id : editor.cursors {
-            array_add(*cursor_states, Editor_Cursor_State.{ editor_id, cursor_id, get_real_cursor_coords(buffer, cursor) });
-        }
+    // Apply the delete edits
+    offset_difference: s32 = 0;
+    for delete_edits {
+        range := it;
+        range.start -= offset_difference;
+        range.end   -= offset_difference;
+        delete_range(buffer, range);
+        offset_difference += range.end - range.start;
     }
 
-    // Replace buffer contents
-    new_replace_edit(buffer, 0, bytes.count, to_string(bytes), stripped);
-
-    lock(*content_lock);
-    focus_memcpy(bytes.data, stripped.data, stripped.count);
-    bytes.count = cast(s32) stripped.count;
-    unlock(*content_lock);
-
-    dirty = true;
-    rescan_for_lines(buffer);
-
-    for * editor, editor_id : open_editors {
-        if editor.buffer_id != buffer_id continue;
-        if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
-    }
-
-    // Put cursors into valid places
-    max_line := cast(s32) buffer.line_starts.count - 2;
-    for state : cursor_states {
-        using state;
-        editor := *open_editors[editor_id];
-
-        pos, sel := coords.pos, coords.sel;
-        pos.line = clamp(pos.line, 0, max_line);
-        pos.col  = clamp(pos.col,  0, num_cols_in_string(get_real_line_as_string(buffer, pos.line), tab_size));
-        sel.line = clamp(sel.line, 0, max_line);
-        sel.col  = clamp(sel.col,  0, num_cols_in_string(get_real_line_as_string(buffer, sel.line), tab_size));
-
-        cursor := *editor.cursors[cursor_id];
-        cursor.pos = real_coords_to_offset(buffer, pos);
-        cursor.sel = real_coords_to_offset(buffer, sel);
-    }
+    restore_cursor_positions(buffer_id, cursor_positions);
+    refresh_all_editors_for_buffer(buffer_id);
 }
 
 indentation_detect_from_buffer_contents :: (buffer: *Buffer) {
@@ -925,50 +958,84 @@ indentation_use_defaults_for_buffer :: (using buffer: *Buffer) {
     add_success_message("Using defaults (%: %) for this file", ifx indentation.type == .spaces then "Spaces" else "Tabs", indentation.size, dismiss_in_seconds = 5);
 }
 
-indentation_convert_to_tabs_for_buffer :: (buffer: *Buffer) {
+Replace_Edit :: struct { range: Offset_Range; new_string: string; }
+
+indentation_convert_to_tabs_for_buffer :: (buffer: *Buffer, buffer_id: s64) {
+    auto_release_temp();
+
     tab_size := get_buffer_tab_size(buffer);
 
-    b: String_Builder;
+    // Add an edit for each replaced line, to make sure cursors are adjusted properly everywhere
+    replace_edits: [..] Replace_Edit;
+    replace_edits.allocator = temp;
 
     for line : split(to_string(buffer.bytes), cast(u8) #char "\n") {
-        visual_indent, bytes := get_visual_indent_in_spaces(line, tab_size);
-        num_tabs_to_indent  := visual_indent / tab_size;
-        num_spaces_to_align := visual_indent % tab_size;  // it's not always possible to get the same indentation without using spaces
-        append(*b, get_tmp_tabs(num_tabs_to_indent));
-        append(*b, get_tmp_spaces(num_spaces_to_align));
-        safe_advance(*line, bytes);
-        append(*b, line);
-        append(*b, "\n");
+        indent, num_bytes := get_visual_indent_in_spaces(line, tab_size);
+        if !indent continue;
+
+        num_tabs_to_indent  := indent / tab_size;
+        num_spaces_to_align := indent % tab_size;  // it's not always possible to get the same indentation without using spaces
+
+        line_start := cast(s32) (line.data - buffer.bytes.data);
+        array_add(*replace_edits, Replace_Edit.{
+            range = .{ line_start , line_start + cast(s32) num_bytes },
+            new_string = tprint("%1%2", get_tmp_tabs(num_tabs_to_indent), get_tmp_spaces(num_spaces_to_align)),
+        });
     }
 
-    new_contents := builder_to_string(*b);
-    defer free(new_contents);
-    if ends_with(new_contents, "\n") then new_contents.count -= 1;
+    // Apply the edits
+    cursor_positions := remember_cursor_positions(buffer_id, in = .active_editor);
 
-    replace_range(buffer, .{ 0, buffer.bytes.count }, new_contents);
+    offset_difference: s32 = 0;
+    for edit : replace_edits {
+        range := edit.range;
+        range.start += offset_difference;
+        range.end   += offset_difference;
+        replace_range(buffer, range, edit.new_string);
+        offset_difference += cast(s32) edit.new_string.count - (range.end - range.start);
+    }
+
+    restore_cursor_positions(buffer_id, cursor_positions);
+    refresh_all_editors_for_buffer(buffer_id);
 
     buffer.indentation.type = .tabs;
     // Not setting the size because tabs use defaults unless explicitly set
 }
 
-indentation_convert_to_spaces_for_buffer :: (buffer: *Buffer) {
+indentation_convert_to_spaces_for_buffer :: (buffer: *Buffer, buffer_id: s64) {
+    auto_release_temp();
+
     tab_size := get_buffer_tab_size(buffer);
 
-    b: String_Builder;
+    // Add an edit for each replaced line, to make sure cursors are adjusted properly everywhere
+    replace_edits: [..] Replace_Edit;
+    replace_edits.allocator = temp;
 
     for line : split(to_string(buffer.bytes), cast(u8) #char "\n") {
-        indent, bytes := get_visual_indent_in_spaces(line, tab_size);
-        append(*b, get_tmp_spaces(indent));
-        safe_advance(*line, bytes);
-        append(*b, line);
-        append(*b, "\n");
+        indent, num_bytes := get_visual_indent_in_spaces(line, tab_size);
+        if !indent continue;
+
+        line_start := cast(s32) (line.data - buffer.bytes.data);
+        array_add(*replace_edits, Replace_Edit.{
+            range = .{ line_start , line_start + cast(s32) num_bytes },
+            new_string = get_tmp_spaces(indent),
+        });
     }
 
-    new_contents := builder_to_string(*b);
-    defer free(new_contents);
-    if ends_with(new_contents, "\n") then new_contents.count -= 1;
+    // Apply the edits
+    cursor_positions := remember_cursor_positions(buffer_id, in = .active_editor);
 
-    replace_range(buffer, .{ 0, buffer.bytes.count }, new_contents);
+    offset_difference: s32 = 0;
+    for edit : replace_edits {
+        range := edit.range;
+        range.start += offset_difference;
+        range.end   += offset_difference;
+        replace_range(buffer, range, edit.new_string);
+        offset_difference += cast(s32) edit.new_string.count - (range.end - range.start);
+    }
+
+    restore_cursor_positions(buffer_id, cursor_positions);
+    refresh_all_editors_for_buffer(buffer_id);
 
     buffer.indentation.type = .spaces;
     buffer.indentation.size = cast(u8) config.settings.tab_size;
@@ -1342,29 +1409,11 @@ refresh_buffer_from_disk :: (path: string) {
     } else {
         remember_last_mod_info(buffer);
 
-        // Remember cursor state - if we have 2 editors then the last editor's state will be remembered
-        for * editor : open_editors {
-            if editor.buffer_id != buffer_id continue;
+        cursor_positions := remember_cursor_positions(buffer_id, in = .all_editors);
 
-            new_edit_group(buffer, editor);
-            resize(*buffer.cursors, editor.cursors.count);
-            for * cursor, i : buffer.cursors { cursor.* = editor.cursors[i]; }
-        }
+        replace_range(buffer, .{ 0, buffer.bytes.count }, file_contents_str);
 
-        // Reload its contents
-        new_replace_edit (buffer, 0, buffer.bytes.count, to_string(buffer.bytes), file_contents_str);
-        replace_range_raw(buffer, 0, buffer.bytes.count, file_contents_str);
-        rescan_for_lines(buffer);
-        retokenize(buffer);
-
-        // Save edits and put cursors in correct places
-        for * editor : open_editors {
-            if editor.buffer_id != buffer_id continue;
-            new_edit_group(buffer, editor);
-            for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
-            organise_cursors(editor);
-            if editor.line_wrap == .on then rescan_for_wrapped_lines(editor, buffer);
-        }
+        restore_cursor_positions(buffer_id, cursor_positions);
     }
 
     refresh_all_editors_for_buffer(buffer_id);
