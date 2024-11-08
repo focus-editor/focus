@@ -50,6 +50,8 @@ text_input_handle_event :: (using input: *Text_Input, event: Input.Event) -> han
 
         case .delete_to_start_of_line;             delete_to_start_of_line             (input);
         case .delete_to_end_of_line;               delete_to_end_of_line               (input);
+        case .cut_to_start_of_line;                delete_to_start_of_line             (input, copy_to_clipboard = true);
+        case .cut_to_end_of_line;                  delete_to_end_of_line               (input, copy_to_clipboard = true);
 
         case;                                    return false;
     }
@@ -311,14 +313,14 @@ delete_right :: (using input: *Text_Input, by: Movement_Type) {
     delete_selection(input);
 }
 
-delete_to_start_of_line :: inline (using input: *Text_Input) {
+delete_to_start_of_line :: inline (using input: *Text_Input, copy_to_clipboard := false) {
     cursor.sel = 0;
-    delete_selection(input, copy_to_clipboard = true);
+    delete_selection(input, copy_to_clipboard = copy_to_clipboard);
 }
 
-delete_to_end_of_line :: inline (using input: *Text_Input) {
+delete_to_end_of_line :: inline (using input: *Text_Input, copy_to_clipboard := false) {
     cursor.sel = xx text.count;
-    delete_selection(input, copy_to_clipboard = true);
+    delete_selection(input, copy_to_clipboard = copy_to_clipboard);
 }
 
 delete_selection :: inline (using input: *Text_Input, copy_to_clipboard := false) {

@@ -52,6 +52,8 @@
     + Creating cursors above and below will now skip empty lines as this is most likely the behaviour users want (thanks @onelivesleft)
     + The Navigate To File (Ctrl-O) dialog will always show all files and folders instead of applying the ignore rules to them, which will allow to selectively open files which are normally ignored
     + Selecting a word using double left click should now behave identically to selecting a word using the `select_word` action, highlighting only whole-word selection occurrences
+    + The `delete_to_{start,end}_of_line` actions no longer copies the text to the clipboard.
+        + Added two new actions `cut_to_{start,end}_of_line` that deletes the text and copies it to the clipboard.
 
 
 # RELEASES ==================================================================

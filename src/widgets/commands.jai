@@ -143,6 +143,8 @@ base_commands := #run -> [] Command {
         cmd( "Delete Line And Go Up",             .delete_line_and_go_up,            .Single ),
         cmd( "Delete To Start Of Line",           .delete_to_start_of_line,          .Single ),
         cmd( "Delete To End Of Line",             .delete_to_end_of_line,            .Single ),
+        cmd( "Cut To Start Of Line",              .cut_to_start_of_line,             .Single ),
+        cmd( "Cut To End Of Line",                .cut_to_end_of_line,               .Single ),
         cmd( "Move Selected Lines Up",            .move_selected_lines_up,           .Single ),
         cmd( "Move Selected Lines Down",          .move_selected_lines_down,         .Single ),
         cmd( "Move Up To Empty Line",             .move_up_to_empty_line,            .Single ),
