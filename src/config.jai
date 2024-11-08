@@ -180,6 +180,9 @@ refresh_config :: (path: string) {
         add_success_message("File associations have been refreshed", dismiss_in_seconds = 3);
     }
 
+    // If indentation rules changed, refresh them for all open editors
+    for editor : open_editors  maybe_detect_and_set_indentation(editor.buffer_id);
+
     commands_refresh_after_config_change();
 
     dont_ignore_next_window_resize = true;
