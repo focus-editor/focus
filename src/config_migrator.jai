@@ -628,8 +628,8 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
     .{ 12, "common",   "move_right_by_word_ends",                   "move_right_through_word_throttled"   },
     .{ 12, "common",   "delete_word_left_no_underscore",            "delete_left_by_character_type"       },
     .{ 12, "common",   "delete_word_left",                          "delete_left_by_character_type_fast"  },
-    .{ 12, "common",   "delete_word_right",                         "delete_right_by_character_type"      },
-    .{ 12, "common",   "delete_word_right_no_underscore",           "delete_right_by_character_type_fast" },
+    .{ 12, "common",   "delete_word_right_no_underscore",           "delete_right_by_character_type" },
+    .{ 12, "common",   "delete_word_right",                         "delete_right_by_character_type_fast" },
 ];
 
 #if !NO_OUTPUT_BUILD {
@@ -648,7 +648,9 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
         "decrease_font_size",
         "delete_left_char",
         "delete_right_char",
+        "cut_to_end_of_line",
         "delete_to_end_of_line",
+        "cut_to_start_of_line",
         "delete_to_start_of_line",
         "delete_word_left",
         "delete_word_left_no_underscore",

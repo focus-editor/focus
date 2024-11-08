@@ -138,7 +138,7 @@ Cmd-Shift-D                     duplicate_lines
 # Shift-Backspace                 delete_line_and_go_up
 # Shift-Delete                    delete_line
 
-Cmd-K                           delete_to_end_of_line
+Cmd-K                           cut_to_end_of_line
 Cmd-Delete                      delete_to_end_of_line
 Cmd-Backspace                   delete_to_start_of_line
 
