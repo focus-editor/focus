@@ -96,7 +96,9 @@ num_chars_in_string :: (s: string) -> s32 {
 
 safe_advance :: inline (s: *string, amount: s64 = 1) {
     // Doesn't crash if amount is incorrect for any reason
-    amount = clamp(amount, 0, s.count);
+    if amount < 0 return;
+    if amount > s.count then amount = s.count;
+
     s.count -= amount;
     s.data  += amount;
 }
