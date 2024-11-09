@@ -1251,7 +1251,6 @@ detect_and_set_indentation :: (using buffer: *Buffer) -> enum { success; error; 
     num_lines_with_tabs   := 0;
 
     MAX_INDENT :: 140;  // for the purpose of detecting indentation we don't look at lines indented more than this. Who would even do it?
-    num_lines_per_space_count: [MAX_INDENT] s32;  // the number of lines for each space indent count (e.g. shows how many lines are indented at 4 spaces, 8 spaces etc)
     line_differences:          [MAX_INDENT] s32;  // the numbers of differences between lines with different indents
 
     last_indent     := 0;
@@ -1277,7 +1276,6 @@ detect_and_set_indentation :: (using buffer: *Buffer) -> enum { success; error; 
             num_lines_with_tabs += 1;
         } else if num_spaces > 0 && num_spaces < MAX_INDENT {
             num_lines_with_spaces += 1;
-            num_lines_per_space_count[num_spaces] += 1;
 
             difference_from_prev_line := abs(last_indent - num_spaces);
             if difference_from_prev_line > 0 && difference_from_prev_line < MAX_INDENT {
@@ -1292,6 +1290,7 @@ detect_and_set_indentation :: (using buffer: *Buffer) -> enum { success; error; 
                 //     ...
                 //
             }
+            last_indent = num_spaces;
         }
 
         // Skip the rest of the line
