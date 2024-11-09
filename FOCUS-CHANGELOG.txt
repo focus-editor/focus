@@ -42,6 +42,15 @@
             + `Ctrl-Arrow{Left|Right}`  are bound to move through word throttled
             + `Alt -{Delete|Backspace}` are bound to delete by character type
             + `Ctrl-{Delete|Backspace}` are bound to delete by character type (fast)
+    + Variable indentation is now supported:
+        + New setting `detect_indentation` is added and is set to `true` by default (because presumably this is what people would most likely want)
+        + The old setting `insert_spaces_when_pressing_tab` has been renamed to `indent_using: spaces / tabs`
+        + If you disable `detect_indentation` you should get the old behaviour (all files use the same indentation settings based on `indent_using` and `tab_size`).
+        + New commands have been added (search for "Indentation" in the command palette):
+            + To force detect indentation from file (it will be remembered for the duration of the session, but there's no persistence)
+            + To convert indentation from spaces to tabs and vice versa - this will change the file contents itself! Note that any tabs or spaces within the lines are not touched
+            + To revert indentation to defaults as specified in the config
+        + When tab indentation is used, the `tab_size` from the config is always used
 + Bug fixes:
     + Fixed a crash when changing languages in the color preview widget
     + Fixed a crash when editing colors near the end of file with color preview open (thanks @darkgiggs)
