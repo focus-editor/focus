@@ -2130,10 +2130,12 @@ is_a_move_action :: (action: Action_Editors) -> bool {
     if action == {
         case .move_left;                         return true;
         case .move_left_by_character_type;       return true;
+        case .move_left_by_character_type_fast;  return true;
         case .move_left_through_word_throttled;  return true;
         case .move_left_through_word;            return true;
         case .move_right;                        return true;
         case .move_right_by_character_type;      return true;
+        case .move_right_by_character_type_fast; return true;
         case .move_right_through_word_throttled; return true;
         case .move_right_through_word;           return true;
         case .move_up;                           return true;
