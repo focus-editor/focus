@@ -187,11 +187,11 @@ workspace_update :: () {
         // NOTE: these count comparisons are intentional because count can be -1
         if watchers.project_file_modified.count > 0 && (!should_ignore_file(watchers.project_file_modified) || is_our_config_file(watchers.project_file_modified)) {
             #if DEBUG_FILE_REFRESH log("Attempting to refresh based on project_file_modified: %\n", watchers.project_file_modified);
-            refresh_buffer_from_disk(path = watchers.project_file_modified);
+            refresh_buffer_from_disk_by_path(path = watchers.project_file_modified);
         }
         if watchers.external_file_modified.count > 0 && (!should_ignore_file(watchers.external_file_modified) || is_our_config_file(watchers.external_file_modified)) {
             #if DEBUG_FILE_REFRESH log("Attempting to refresh based on external_file_modified: %\n", watchers.external_file_modified);
-            refresh_buffer_from_disk(path = watchers.external_file_modified);
+            refresh_buffer_from_disk_by_path(path = watchers.external_file_modified);
         }
 
         visitor_func :: (file: *File_Visit_Info, userdata: *void) {
@@ -215,7 +215,7 @@ workspace_update :: () {
             }
 
             #if DEBUG_FILE_REFRESH log("% - attempting to refresh", file.full_name);
-            refresh_buffer_from_disk(path = file.full_name);
+            refresh_buffer_from_disk_by_path(path = file.full_name);
         }
 
         // @Speed: it should be ok to rescan everything recursively, because

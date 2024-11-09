@@ -191,6 +191,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .save_as;                          defer_action_save_as(editor.buffer_id);
         case .move_current_file;                defer_action_move   (editor.buffer_id);
         case .delete_current_file;              defer_action_delete (editor.buffer_id);
+        case .reload_from_disk;                 reload_from_disk    (editor.buffer_id);
 
         case .switch_to_left_editor;            switch_to_editor(.left);
         case .switch_to_right_editor;           switch_to_editor(.right);

@@ -932,6 +932,7 @@ focus_allocator: Allocator;
 
 
 #load "array.jai";
+#load "actions.jai";
 #load "layout.jai";
 #load "editors.jai";
 #load "buffer.jai";

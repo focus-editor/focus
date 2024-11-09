@@ -767,7 +767,7 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
             log_error("Couldn't write to file %", file_path);
             return;
         }
-        refresh_buffer_from_disk(file_path);
+        refresh_buffer_from_disk_by_path(file_path);
         new_id, created := find_or_create_buffer(file_path);
         assert(!created, "Buffer is unexpectedly created when it was supposed to already exist");
         if new_id < 0 return;  // logged elsewhere
@@ -1160,7 +1160,7 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     } else if file_data.count > MAX_BUFFER_SIZE {
         load_error = sprint("Couldn't load file '%' because it exceeds the maximum buffer size of 2,147,483,647 bytes", path);
     } else if is_file_binary(file_data) {
-        load_error = sprint("Couldn't display file '%' because it's either binary or non-UTF8.", path);
+        load_error = sprint("Couldn't display file '%' because it's either binary or contains non-UTF8 characters.", path);
         buffer.binary = true;
     }
 
@@ -1332,7 +1332,7 @@ detect_and_set_indentation :: (using buffer: *Buffer) -> enum { success; error; 
     }
 }
 
-refresh_buffer_from_disk :: (path: string) {
+refresh_buffer_from_disk_by_path :: (path: string) {
     is_dir, is_dir_success := is_directory(path);
     if is_dir || !is_dir_success || !file_exists(path) {
         // Either this is a dir, or a deleted dir, or a deleted file.
@@ -1346,7 +1346,6 @@ refresh_buffer_from_disk :: (path: string) {
         if found_buffer {
             open_buffers[buffer_id].deleted = true;
             finder.need_to_refresh_results = true;
-            #if DEBUG_FILE_REFRESH log("File % doesn't exist", path);
         }
         unlock(*open_buffers_lock);
 
@@ -1359,17 +1358,13 @@ refresh_buffer_from_disk :: (path: string) {
     buffer_id, created := find_or_create_buffer(path);
     if created return;
     if buffer_id < 0 {
-        #if DEBUG_FILE_REFRESH log("ERROR: can't open file - path too long");
         log_error("Couldn't open file because path is too long for Windows: %\n", path);
         return;
     }
 
     buffer := *open_buffers[buffer_id];
 
-    if !buffer_file_has_changed_on_disk(buffer) {
-        #if DEBUG_FILE_REFRESH log("File % supposedly hasn't changed on disk", path);
-        return;
-    }
+    if !buffer_file_has_changed_on_disk(buffer) return;
 
     finder.need_to_refresh_results = true;
 
@@ -1380,11 +1375,11 @@ refresh_buffer_from_disk :: (path: string) {
     file_contents_str, success := read_entire_file(path);
     if is_file_binary(file_contents_str) {
         free(file_contents_str);
-        file_contents_str = sprint("Couldn't display file '%' because it's either binary or non-UTF8.", path);
+        file_contents_str = sprint("Couldn't display file '%' because it's either binary or contains non-UTF8 characters.", path);
         buffer.readonly = true;
     }
 
-    if !success { log_error("Couldn't read file '%'\n", path); #if DEBUG_FILE_REFRESH log("Couldn't read file"); return; }
+    if !success { log_error("Couldn't read file '%'\n", path); return; }
     defer free(file_contents_str);
 
     lock(*buffer.content_lock);
@@ -1392,10 +1387,7 @@ refresh_buffer_from_disk :: (path: string) {
     unlock(*buffer.content_lock);
 
     file_hash := calculate_hash(cast([] u8) file_contents_str);
-    if buffer.meow_hash == file_hash {
-        #if DEBUG_FILE_REFRESH log("Meow hash hasn't changed for %", path);
-        return;  // file hasn't actually changed
-    }
+    if buffer.meow_hash == file_hash  return;  // file hasn't actually changed
 
     buffer.crlf = bytes_removed > 0;
     buffer.meow_hash = file_hash;
@@ -1416,7 +1408,51 @@ refresh_buffer_from_disk :: (path: string) {
     }
 
     refresh_all_editors_for_buffer(buffer_id);
-    #if DEBUG_FILE_REFRESH log("Refreshed %", path);
+}
+
+reload_from_disk :: (buffer_id: s64) {
+    // The difference between this function and `refresh_buffer_from_disk_by_path` is that
+    // this function is invoked by user and it will force reload and will produce user messages,
+    // whereas the other one is automatic and is silent
+
+    buffer := *open_buffers[buffer_id];
+    if !buffer.has_file || !buffer.file.full_path {
+        add_user_warning("Buffer has no associated file", dismiss_in_seconds = 5);
+        return;
+    }
+    path := buffer.file.full_path;
+
+    // Force reload buffer from disk, even if unchanged, and clear the flags
+    file_contents_str, success := read_entire_file(path);
+    if is_file_binary(file_contents_str) {
+        free(file_contents_str);
+        file_contents_str = sprint("Couldn't display file '%' because it's either binary or contains non-UTF8 characters.", path);
+        buffer.readonly = true;
+    }
+
+    if !success { add_user_error("Couldn't read file:\n%", path); return; }
+    defer free(file_contents_str);
+
+    bytes_removed := remove_crlf_in_place(*file_contents_str);
+
+    buffer.crlf = bytes_removed > 0;
+    buffer.meow_hash = calculate_hash(cast([] u8) file_contents_str);
+    buffer.deleted = false;
+    buffer.modified = false;  // if the user had unsaved changes and needs them again, undo should help
+
+    remember_last_mod_info(buffer);
+
+    cursor_positions := remember_cursor_positions(buffer_id, in = .all_editors);
+
+    replace_range(buffer, .{ 0, buffer.bytes.count }, file_contents_str);
+
+    restore_cursor_positions(buffer_id, cursor_positions);
+
+    refresh_all_editors_for_buffer(buffer_id);
+
+    add_success_message("File contents has been reloaded from\n%", path);
+
+    finder.need_to_refresh_results = true;
 }
 
 maybe_mark_buffer_as_deleted :: (path: string) {

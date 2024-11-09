@@ -181,10 +181,10 @@ base_commands := #run -> [] Command {
         cmd( "Toggle Line Wrap",                  .toggle_line_wrap,                 .Single ),
         cmd( "Toggle Line Numbers",               .toggle_line_numbers,              .Single ),
         cmd( "Toggle Fullscreen",                 .toggle_fullscreen,                .None   ),
-        cmd( "Toggle Build Panel",                .toggle_build_panel,               .None   ),
 
         cmd( "Build: Kill Running Command",       .build_kill_running_command,       .None   ),
         cmd( "Build: Clear Build Output",         .build_clear_output,               .None   ),
+        cmd( "Build: Toggle Build Panel",         .toggle_build_panel,               .None   ),
 
         cmd( "Autoindent Region",                 .autoindent_region,                .Single ),
 
@@ -192,6 +192,7 @@ base_commands := #run -> [] Command {
         cmd( "Copy Current Line Info",            .copy_current_line_info,           .Single ),
 
         cmd( "Choose Language Syntax",            .choose_language,                  .Single ),
+        cmd( "Reload File From Disk",             .reload_from_disk,                 .Single ),
 
         cmd("Indentation: Detect From File Contents",          .indentation_detect_from_buffer_contents,  .Single),
         cmd("Indentation: Use Defaults For File",              .indentation_use_defaults_for_buffer,      .Single),
