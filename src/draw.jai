@@ -1906,9 +1906,25 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             defer pop_scissor();
 
             pen_x := status_bar_rect.x + status_bar_rect.w;
+            should_draw_separator := false;
+
+            _maybe_draw_separator :: () #expand {
+                if !should_draw_separator {
+                    should_draw_separator = true;
+                    return;
+                }
+
+                `pen_x -= 3 * padding;
+                rect := cut_right(status_bar_rect, 1);
+                rect.x = `pen_x;
+                draw_rect(rect, Color.BACKGROUND_0);
+                `pen_x -= 3 * padding;
+            }
 
             // Draw line col
             if config.settings.status_bar_show_line_col {
+                _maybe_draw_separator();
+
                 line := offset_to_real_line(buffer, editor.cursors[main_cursor].pos);
                 col  := 0;
                 {
@@ -1923,9 +1939,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 }
 
                 #if DEBUG {
-                    width = xx Simp.prepare_text(font_ui_bold, tprint("  Offset: %  Line: %  Col: %", editor.cursors[main_cursor].pos, line + 1, col + 1));
+                    width = xx Simp.prepare_text(font_ui_bold, tprint("Offset: %  Line: %  Col: %", editor.cursors[main_cursor].pos, line + 1, col + 1));
                 } else {
-                    width = xx Simp.prepare_text(font_ui_bold, tprint("  Line: %  Col: %", line + 1, col + 1));
+                    width = xx Simp.prepare_text(font_ui_bold, tprint("Line: %  Col: %", line + 1, col + 1));
                 }
                 pen_x -= width;
                 Simp.draw_prepared_text(font_ui_bold, xx pen_x, xx pen.y, color = xx Color.UI_DIM);
@@ -1933,8 +1949,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
             // Draw indentation type
             if config.settings.status_bar_show_indentation {
+                _maybe_draw_separator();
                 indentation_type, tab_size := get_buffer_indentation_and_tab_size(buffer);
-                label := tprint("  %: %", ifx indentation_type == .spaces then "Spaces" else "Tabs", tab_size);
+                label := tprint("%: %", ifx indentation_type == .spaces then "Spaces" else "Tabs", tab_size);
                 width = xx Simp.prepare_text(font_ui_bold, label);
                 pen_x -= width;
                 Simp.draw_prepared_text(font_ui_bold, xx pen_x, xx pen.y, color = xx Color.UI_DIM);
@@ -1942,12 +1959,15 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
             // Draw length of selected text if any text is currently selected
             if config.settings.status_bar_show_selected_text_length && num_selected_bytes > 0 {
-                label := tprint("  Selected: % chars", num_selected_chars);
-                if num_selected_bytes != num_selected_chars then label = tprint("Selected: % chars, % bytes  ", num_selected_chars, num_selected_bytes);
+                _maybe_draw_separator();
+                label := tprint("Selected: % chars", num_selected_chars);
+                if num_selected_bytes != num_selected_chars then label = tprint("Selected: % chars, % bytes", num_selected_chars, num_selected_bytes);
                 width = xx Simp.prepare_text(font_ui_bold, label);
                 pen_x -= width;
                 Simp.draw_prepared_text(font_ui_bold, xx pen_x, xx pen.y, color = xx Color.UI_DIM);
             }
+
+            _maybe_draw_separator();
 
             // Maybe draw the number of cursors off screen
             if editor.cursors.count > 1 && cursors_off_screen && config.settings.status_bar_show_cursors_off_screen {
