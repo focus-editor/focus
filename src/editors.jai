@@ -1923,6 +1923,8 @@ save :: (buffer_id: s64) {
 }
 
 switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := false) {
+    if build_panel_is_active() then build_panel_lose_focus();
+
     if editors.layout == {
         case .None; return;
 
