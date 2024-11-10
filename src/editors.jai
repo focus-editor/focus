@@ -851,7 +851,7 @@ close_editor :: (position: enum { current; other; left; right; }) {
 }
 
 close_current_editor :: () {
-    if build_panel_is_active() { toggle_build_panel(); return; }
+    if build_panel_is_active() { build_panel_toggle(); return; }
     close_editor_by_id(editors.active);
 }
 
@@ -1425,6 +1425,8 @@ viewport_glue_to_point :: (editor: *Editor, buffer: Buffer) -> changed: bool {
 make_editor_active :: (editor_id: s64) {
     assert(editor_id < open_editors.count, "Trying to activate editor %, but the last available one is %", editor_id, open_editors.count - 1);
     if is_build_panel(editor_id)         then build_panel_on_activate();
+
+    if editors.active != editor_id then cursors_start_blinking();
 
     editors.active = editor_id;
 
@@ -2000,7 +2002,7 @@ swap_panes :: () {
 
 toggle_expand :: () {
     if build_panel_is_active() {
-        toggle_build_panel_height();
+        build_panel_toggle_height();
     } else {
         toggle_editor_expand(!editors.expanded);
     }

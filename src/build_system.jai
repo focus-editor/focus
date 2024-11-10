@@ -226,7 +226,7 @@ build_system_update :: () {
     }
 }
 
-toggle_build_panel :: () {
+build_panel_toggle :: () {
     if build_panel_is_shown {
         hide_build_panel();
     } else {
@@ -280,7 +280,20 @@ build_panel_lose_focus :: () {
     }
 }
 
-toggle_build_panel_height :: () {
+build_panel_grab_focus :: () {
+    if !build_panel_is_shown then show_build_panel();
+    make_editor_active(build_editor_id);
+}
+
+build_panel_toggle_focus :: () {
+    if editors.active == build_editor_id {
+        build_panel_lose_focus();
+    } else {
+        build_panel_grab_focus();
+    }
+}
+
+build_panel_toggle_height :: () {
     target := ifx build_panel_is_expanded then config.settings.build_panel_height_percent / 100.0 else 1.0;
     target = clamp(target, 0.1, 1.0);
 

@@ -371,6 +371,7 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .open_project;                                     print("UNIMPLEMENTED\n");  /* !!!!!!!!!!!! */       return true;
         case .switch_to_project;                                show_dialog(*switch_to_project_dialog);             return true;
         case .close_project;                                    close_project();                                    return true;
+        case .reload_workspace;                                 defer_action_reload_workspace(automatic = false);   return true;
 
         case .choose_theme;                                     show_dialog(*theme_dialog);                         return true;
         case .edit_current_theme;                               edit_current_theme(placement);                      return true;
@@ -404,7 +405,8 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .move_to_previous_buffer;                          move_to_previous_editor_history(by_buffer = true);  return true;
         case .move_to_next_buffer;                              move_to_next_editor_history    (by_buffer = true);  return true;
 
-        case .toggle_build_panel;                               toggle_build_panel();                               return true;
+        case .build_panel_toggle;                               build_panel_toggle();                               return true;
+        case .build_panel_toggle_focus;                         build_panel_toggle_focus();                         return true;
 
         case .build_kill_running_command;                       build_kill_running_command();                       return true;
         case .build_clear_output;                               build_clear_output();                               return true;

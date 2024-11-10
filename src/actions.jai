@@ -29,6 +29,7 @@ ACTIONS_COMMON :: string.[
     "open_project",
     "switch_to_project",
     "close_project",
+    "reload_workspace",
 
     "choose_theme",
     "edit_current_theme",
@@ -41,7 +42,8 @@ ACTIONS_COMMON :: string.[
     "show_default_config",
 
     "toggle_fullscreen",
-    "toggle_build_panel",
+    "build_panel_toggle",
+    "build_panel_toggle_focus",
     "build_kill_running_command",
     "build_clear_output",
     "show_troubleshooting_info",

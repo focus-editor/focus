@@ -588,7 +588,7 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 2, "editors", "add_cursors_to_line_starts",                  "Alt-Shift-Ctrl-I",    "Alt-Shift-Ctrl-I" },
     .{ 2, "editors", "align_cursors",                               "Alt-A",               "Alt-Cmd-A"        },
     .{ 2, "editors", "select_all_occurrences",                      "Ctrl-Shift-A",        "Cmd-Shift-A"      },
-    .{ 2, "common",  "toggle_build_panel",                          "Ctrl-B",              "Cmd-B"            },
+    .{ 2, "common",  "build_panel_toggle",                          "Ctrl-B",              "Cmd-B"            },
     .{ 2, "common",  "toggle_fullscreen",                           "F11",                 "F11"              },
     .{ 2, "common",  "switch_between_open_files",                   "Ctrl-Tab",            "Ctrl-Tab"         },
 
@@ -630,6 +630,8 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
     .{ 12, "common",   "delete_word_left",                          "delete_left_by_character_type_fast"  },
     .{ 12, "common",   "delete_word_right_no_underscore",           "delete_right_by_character_type" },
     .{ 12, "common",   "delete_word_right",                         "delete_right_by_character_type_fast" },
+
+    .{ 13, "common",   "toggle_build_panel",                        "build_panel_toggle" },
 ];
 
 #if !NO_OUTPUT_BUILD {
@@ -1179,7 +1181,7 @@ SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
 Ctrl-P                      open_file_by_name
 
 # Added after migration to version [!latest!]
-Ctrl-B                      toggle_build_panel
+Ctrl-B                      build_panel_toggle
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 Ctrl-Shift-Alt-N            open_another_editor_instance
@@ -1243,7 +1245,7 @@ SETTINGS_2 :: #string FOCUS_CONFIG
 Ctrl-P                      open_file_by_name
 
 # Added after migration to version [2]
-Ctrl-B                      toggle_build_panel
+Ctrl-B                      build_panel_toggle
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 
@@ -1285,7 +1287,7 @@ SETTINGS_2_EXPECTED :: #string FOCUS_CONFIG
 Ctrl-P                      open_file_by_name
 
 # Added after migration to version [2]
-Ctrl-B                      toggle_build_panel
+Ctrl-B                      build_panel_toggle
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 
@@ -1376,7 +1378,7 @@ PROJECT_SETTINGS_1_EXPECTED :: #string FOCUS_CONFIG
 Ctrl-P                      open_file_by_name
 
 # Added after migration to version [!latest!]
-Ctrl-B                      toggle_build_panel
+Ctrl-B                      build_panel_toggle
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 Ctrl-Shift-Alt-N            open_another_editor_instance
@@ -1865,7 +1867,7 @@ Ctrl-Tab                    switch_between_open_files
 Ctrl-Alt-P                  switch_to_project
 
 # Added after migration to version [!latest!]
-Ctrl-B                      toggle_build_panel
+Ctrl-B                      build_panel_toggle
 F11                         toggle_fullscreen
 Ctrl-Tab                    switch_between_open_files
 Ctrl-Shift-Alt-N            open_another_editor_instance

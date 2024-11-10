@@ -101,6 +101,7 @@ base_commands := #run -> [] Command {
 
         cmd( "Switch To Project",                 .switch_to_project,                .None   ),
         cmd( "Close Project",                     .close_project,                    .None   ),
+        cmd( "Reload Workspace",                  .reload_workspace,                 .None   ),
         cmd( "Open Directory With Project Files", .open_projects_directory,          .None   ),
         cmd( "Open Project Config",               .open_project_config,              .None   ),
         cmd( "Open Global Config",                .open_global_config,               .None   ),
@@ -184,7 +185,8 @@ base_commands := #run -> [] Command {
 
         cmd( "Build: Kill Running Command",       .build_kill_running_command,       .None   ),
         cmd( "Build: Clear Build Output",         .build_clear_output,               .None   ),
-        cmd( "Build: Toggle Build Panel",         .toggle_build_panel,               .None   ),
+        cmd( "Build: Toggle Build Panel",         .build_panel_toggle,               .None   ),
+        cmd( "Build: Toggle Build Panel Focus",   .build_panel_toggle_focus,         .None   ),
 
         cmd( "Autoindent Region",                 .autoindent_region,                .Single ),
 
@@ -194,10 +196,10 @@ base_commands := #run -> [] Command {
         cmd( "Choose Language Syntax",            .choose_language,                  .Single ),
         cmd( "Reload File From Disk",             .reload_from_disk,                 .Single ),
 
-        cmd("Indentation: Detect From File Contents",          .indentation_detect_from_buffer_contents,  .Single),
-        cmd("Indentation: Use Defaults For File",              .indentation_use_defaults_for_buffer,      .Single),
-        cmd("Indentation: Convert File Indentation To Tabs",   .indentation_convert_to_tabs_for_buffer,   .Single),
-        cmd("Indentation: Convert File Indentation To Spaces", .indentation_convert_to_spaces_for_buffer, .Single),
+        cmd( "Indentation: Detect From File Contents",          .indentation_detect_from_buffer_contents,  .Single),
+        cmd( "Indentation: Use Defaults For File",              .indentation_use_defaults_for_buffer,      .Single),
+        cmd( "Indentation: Convert File Indentation To Tabs",   .indentation_convert_to_tabs_for_buffer,   .Single),
+        cmd( "Indentation: Convert File Indentation To Spaces", .indentation_convert_to_spaces_for_buffer, .Single),
     ];
 
     linux_commands := Command.[

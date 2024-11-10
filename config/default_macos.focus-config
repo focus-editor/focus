@@ -277,7 +277,7 @@ Escape                          escape  # combines close_dialog and remove_addit
 
 Cmd-Shift-L                     toggle_expand
 
-Cmd-B                           toggle_build_panel
+Cmd-B                           build_panel_toggle
 
 # Ctrl-Cmd-F will always toggle fullscreen on macOS (like most other apps), but you can uncomment this to use something else.
 # F11                             toggle_fullscreen
