@@ -296,7 +296,6 @@ move_end :: inline (using input: *Text_Input, extend_selection := false) {
 }
 
 delete_left :: (using input: *Text_Input, by: Movement_Type) {
-    if cursor.pos <= 0  return;
     if !has_selection(cursor) {
         cursor.sel = cursor.pos;
         move_cursor_left(input, by, true);
@@ -305,7 +304,6 @@ delete_left :: (using input: *Text_Input, by: Movement_Type) {
 }
 
 delete_right :: (using input: *Text_Input, by: Movement_Type) {
-    if cursor.pos >= text.count  return;
     if !has_selection(cursor) {
         cursor.sel = cursor.pos;
         move_cursor_right(input, by, true);
