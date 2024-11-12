@@ -150,10 +150,6 @@ Ctrl-Shift-D                duplicate_lines
 # Shift-Backspace             delete_line_and_go_up
 # Shift-Delete                delete_line
 
-Ctrl-K                      cut_to_end_of_line
-Ctrl-Shift-Delete           delete_to_end_of_line
-Ctrl-Shift-Backspace        delete_to_start_of_line
-
 Alt-ArrowUp                 move_selected_lines_up
 Alt-ArrowDown               move_selected_lines_down
 
@@ -291,6 +287,10 @@ Ctrl-Shift-Z                redo
 
 Ctrl-D                      select_word
 Ctrl-A                      select_all
+
+Ctrl-K                      cut_to_end_of_line
+Ctrl-Shift-Delete           delete_to_end_of_line
+Ctrl-Shift-Backspace        delete_to_start_of_line
 
 Ctrl-W                      close_current_editor
 Ctrl-Shift-W                close_other_editor
