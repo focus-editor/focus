@@ -67,6 +67,7 @@
     + Selecting a word using double left click should now behave identically to selecting a word using the `select_word` action, highlighting only whole-word selection occurrences
     + The `delete_to_{start,end}_of_line` actions no longer copies the text to the clipboard.
         + Added two new actions `cut_to_{start,end}_of_line` that deletes the text and copies it to the clipboard.
+    + When choosing a location to save a file, the option to "save as" in the dialog will appear after the directories but before files (previously it was at the bottom), so that it's still easy to navigate directories, but also the most likely needed option of saving as a new file is at the top.
 
 
 # RELEASES ==================================================================

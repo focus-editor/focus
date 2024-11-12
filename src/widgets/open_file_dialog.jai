@@ -451,17 +451,6 @@ refresh_entries :: (clear_input := true) {
             }
     }
 
-    if !(mode == .open_editors && !input.text) {  // don't sort most recent buffers if no filters are used
-
-        compare_entries :: (e1: Entry, e2: Entry) -> s64 {
-            key_diff := cast,no_check(s64) e2.sort_key - cast,no_check(s64) e1.sort_key;
-            if key_diff != 0 return key_diff;
-            return memcmp(e1.name.data, e2.name.data, min(e1.name.count, e2.name.count));
-        }
-
-        quick_sort(entries.filtered, compare_entries);
-    }
-
     if (mode == .save || mode == .move) && !is_empty(input.text) && path_chunks {
         entry_name: string;
         if mode == .save {
@@ -475,7 +464,19 @@ refresh_entries :: (clear_input := true) {
             type = .save,
             name_highlights = .[],
             path_highlights = .[],
+            sort_key = (1 << 55),  // show after directories but before files (so that people can easily descend into dirs but save as a new file by default)
         });
+    }
+
+    if !(mode == .open_editors && !input.text) {  // don't sort most recent buffers if no filters are used
+
+        compare_entries :: (e1: Entry, e2: Entry) -> s64 {
+            key_diff := cast,no_check(s64) e2.sort_key - cast,no_check(s64) e1.sort_key;
+            if key_diff != 0 return key_diff;
+            return memcmp(e1.name.data, e2.name.data, min(e1.name.count, e2.name.count));
+        }
+
+        quick_sort(entries.filtered, compare_entries);
     }
 
     if !entries.filtered {
