@@ -2937,6 +2937,8 @@ select_all :: (editor: *Editor, buffer: Buffer) {
     cursor.sel = 0;
     cursor.pos = cast(s32) buffer.bytes.count;
     editor.refresh_selection = true;
+
+    cursors_start_blinking();  // we don't record this as a cursor movement but we do need to start blinking
 }
 
 Line_Range :: struct {
