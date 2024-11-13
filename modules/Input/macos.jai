@@ -655,6 +655,7 @@ create_window_delegate :: () -> *Window_Delegate {
         objc_add_instance_method(wd_class, Window_Delegate.windowWillClose,   "windowWillClose:");
         // objc_add_instance_method(wd_class, Window_Delegate.windowWillResize, "windowWillResize:toSize:");
         objc_add_instance_method(wd_class, Window_Delegate.windowDidResize, "windowDidResize:");
+        objc_add_instance_method(wd_class, Window_Delegate.windowDidChangeScreen, "windowDidChangeScreen:");
         objc_add_instance_method(wd_class, Window_Delegate.windowDidMiniaturize, "windowDidMiniaturize:");
         objc_add_instance_method(wd_class, Window_Delegate.windowDidDeminiaturize, "windowDidDeminiaturize:");
 
@@ -801,6 +802,14 @@ Window_Delegate :: struct {
             view.drawRect(view, frame);
         }
     } @selector(windowDidResize:)
+
+    windowDidChangeScreen :: (self: *Window_Delegate, _sel: Selector, notification: *NSNotification) #c_call {
+        // The backing scale factor might change when the window changes screen so we need to re-compute the width and height of the window. :MacHighResDisplays
+        jai_context: Context;
+        push_context jai_context {
+            objc_msgSend(self, selector("windowDidResize:"), notification);
+        }
+    } @selector(windowDidChangeScreen:)
 
     draggingEntered :: (using self: *Window_Delegate, _sel: Selector, sender: id /*id<NSDraggingInfo>*/) -> NSDragOperation #c_call {
         mask := NSDraggingInfo.draggingSourceOperationMask(sender);
