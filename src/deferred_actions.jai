@@ -51,6 +51,13 @@ defer_action_save_as :: (buffer_id: s64) {
     push_action(.save_as, .{ save_as = .{ buffer_id = buffer_id } });
 }
 
+defer_action_overwrite_buffer :: (buffer_id: s64) {
+    clear_action_queue();
+    buffer := *open_buffers[buffer_id];
+    assert(buffer.has_file && buffer.file.full_path != "");
+    push_action(.confirm_overwrite, .{ confirm_overwrite = .{ buffer_id = buffer_id, is_move = false, file_path = copy_string(buffer.file.full_path) } });
+}
+
 defer_action_move :: (buffer_id: s64) {
     push_action(.save_as, .{ save_as = .{ buffer_id = buffer_id, is_move = true } });
 }
@@ -280,7 +287,7 @@ execute_confirm_overwrite :: (action: Deferred_Action) -> Action_Result {
 
         case .OK_TO_ALL; #through;
         case .OK;        #through;
-        case .NO_TO_ALL;
+        case .NO_TO_ALL;  // there's no button "No" in the dialog, just listing here because of the #complete
             buffer := *open_buffers[buffer_id];
 
             if buffer.has_file && platform_path_equals(buffer.file.full_path, file_path) {

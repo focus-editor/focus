@@ -1915,7 +1915,10 @@ save :: (buffer_id: s64) {
     buffer := *open_buffers[buffer_id];
     if buffer.readonly || buffer.internal return;
 
-    if buffer.has_file {
+    if buffer.modified_on_disk {
+        // Don't save without showing a confirmation dialog
+        defer_action_overwrite_buffer(buffer_id);
+    } else if buffer.has_file {
         save_buffer(buffer, buffer_id);
     } else {
         defer_action_save_as(buffer_id);
