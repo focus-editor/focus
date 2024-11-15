@@ -97,7 +97,8 @@ DONE;
     active_backend := LD.active_backend();
     assert(active_backend != .UNINITIALIZED);
 
-    timer = LD.timer_create();
+    cursor_timer = LD.timer_create();
+    refresh_timer = LD.timer_create();
     xdg_reap_timer = LD.timer_create(cb = (tid: LD.Timer, data: *void) {
         XDG.reap_child_processes();
     });
@@ -193,11 +194,15 @@ platform_wake_up_main_thread :: () {
 }
 
 platform_set_refresh_timer :: (window: Window_Type) {
-    LD.timer_start(timer, 0, 50);
+    LD.timer_start(refresh_timer, 0, 200);
 }
 
-platform_kill_refresh_timer :: (window: Window_Type) {
-    LD.timer_stop(timer);
+platform_set_cursor_timer :: (window: Window_Type) {
+    LD.timer_start(cursor_timer, 0, 50);
+}
+
+platform_kill_cursor_timer :: (window: Window_Type) {
+    LD.timer_stop(cursor_timer);
 }
 
 platform_enumerate_logical_drives :: () -> [] string {
@@ -477,7 +482,8 @@ Linux_Icon :: struct {
     png_data: string;
 }
 
-timer: LD.Timer;
+cursor_timer: LD.Timer;
+refresh_timer: LD.Timer;
 xdg_reap_timer: LD.Timer;
 
 Linux_System_Info :: struct {

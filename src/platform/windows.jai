@@ -87,11 +87,15 @@ platform_wake_up_main_thread :: () {
 }
 
 platform_set_refresh_timer :: (window: Window_Type) {
-    SetTimer(window, REFRESH_TIMER_ID, 50, cast(*void) 0);  // refresh every 50ms
+    SetTimer(window, REFRESH_TIMER_ID, 200, cast(*void) 0);  // refresh every 200ms
 }
 
-platform_kill_refresh_timer :: (window: Window_Type) {
-    KillTimer(window, REFRESH_TIMER_ID);
+platform_set_cursor_timer :: (window: Window_Type) {
+    SetTimer(window, CURSOR_TIMER_ID, 50, cast(*void) 0);  // refresh every 50ms
+}
+
+platform_kill_cursor_timer :: (window: Window_Type) {
+    KillTimer(window, CURSOR_TIMER_ID);
 }
 
 platform_enumerate_logical_drives :: () -> [] string {
@@ -302,6 +306,7 @@ Monitor :: struct {
 monitors : [..] Monitor;
 
 REFRESH_TIMER_ID :: 0;
+CURSOR_TIMER_ID  :: 1;
 
 WM_USER :: 0x0400;
 

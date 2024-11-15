@@ -74,13 +74,18 @@ platform_wake_up_main_thread :: () {
 }
 
 platform_set_refresh_timer :: inline (window: Window_Type) {
-    destroy_timer(platform_timer);
-    platform_timer = create_timer(50, true);
+    destroy_timer(refresh_timer);
+    refresh_timer = create_timer(200, true);
 }
 
-platform_kill_refresh_timer :: inline (window: Window_Type) {
-    destroy_timer(platform_timer);
-    platform_timer = null;
+platform_set_cursor_timer :: inline (window: Window_Type) {
+    destroy_timer(cursor_timer);
+    cursor_timer = create_timer(50, true);
+}
+
+platform_kill_cursor_timer :: inline (window: Window_Type) {
+    destroy_timer(cursor_timer);
+    cursor_timer = null;
 }
 
 platform_enumerate_logical_drives :: inline () -> [] string {
@@ -179,7 +184,8 @@ monitors : [..] Monitor;
 //  - @ileonte 23.01.2024
 //
 native_timers: Table(*Focus_Timer, *NSTimer);
-platform_timer: *Focus_Timer;
+refresh_timer: *Focus_Timer;
+cursor_timer:  *Focus_Timer;
 
 timer_class_registered := false;
 Focus_Timer :: struct {

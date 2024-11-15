@@ -1373,13 +1373,13 @@ cursors_start_blinking :: inline () {
     if config.settings.cursor_blink_time_in_seconds <= 0 return;
 
     cursor_blink_start = frame_time;
-    platform_set_refresh_timer(window);
+    platform_set_cursor_timer(window);
     cursors_blinking = true;
 }
 
 cursors_stop_blinking :: inline () {
     cursors_blinking = false;
-    platform_kill_refresh_timer(window);
+    platform_kill_cursor_timer(window);
 }
 
 should_draw_cursors :: inline () -> bool {

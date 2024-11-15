@@ -186,6 +186,10 @@ main :: () {
         press_count := 0;
     };
 
+    // Start a timer to redraw regularly so that we don't wait for input to display something that's changed externally.
+    // This timer is fired less often than the cursor timer.
+    platform_set_refresh_timer(window);
+
     while true {
         if !redraw_requested platform_wait_message();
 
