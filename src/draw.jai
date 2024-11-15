@@ -832,6 +832,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 case .words;
                     char_type := get_char_type(get_char_at_offset(buffer, cursor.pos));
 
+                    set_newline_is_whitespace(false);
                     if cursor.pos < selection_mode.range.start {
                         cursor.sel = selection_mode.range.end;
                         cursor.pos = scan_through_similar_chars_on_the_left(buffer, cursor.pos, char_type, skip_one_space = false);
@@ -839,6 +840,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                         cursor.sel = selection_mode.range.start;
                         cursor.pos = scan_through_similar_chars_on_the_right(buffer, cursor.pos, char_type, skip_one_space = false);
                     }
+                    set_newline_is_whitespace(true);
 
                 case .lines;
                     cursor.sel = selection_mode.range.start;
