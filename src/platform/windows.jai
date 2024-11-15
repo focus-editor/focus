@@ -87,7 +87,7 @@ platform_wake_up_main_thread :: () {
 }
 
 platform_set_refresh_timer :: (window: Window_Type) {
-    SetTimer(window, REFRESH_TIMER_ID, 200, cast(*void) 0);  // refresh every 200ms
+    SetTimer(window, REFRESH_TIMER_ID, 1000, cast(*void) 0);  // refresh every second
 }
 
 platform_set_cursor_timer :: (window: Window_Type) {

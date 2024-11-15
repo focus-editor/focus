@@ -75,7 +75,7 @@ platform_wake_up_main_thread :: () {
 
 platform_set_refresh_timer :: inline (window: Window_Type) {
     destroy_timer(refresh_timer);
-    refresh_timer = create_timer(200, true);
+    refresh_timer = create_timer(1000, true);
 }
 
 platform_set_cursor_timer :: inline (window: Window_Type) {

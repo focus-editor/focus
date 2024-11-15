@@ -194,7 +194,7 @@ platform_wake_up_main_thread :: () {
 }
 
 platform_set_refresh_timer :: (window: Window_Type) {
-    LD.timer_start(refresh_timer, 0, 200);
+    LD.timer_start(refresh_timer, 0, 1000);
 }
 
 platform_set_cursor_timer :: (window: Window_Type) {
