@@ -1092,7 +1092,6 @@ MAX_FONT_SIZE :: 30;  // setting a larger size has caused freetype to crash - no
                       // Probably we don't give it enough memory for a glyph bitmap when rendering it?
 
 
-DEBUG_FILE_REFRESH :: false;  // TODO: remove when done debugging
 DEBUG_MEMORY_LEAKS :: false;
 
 

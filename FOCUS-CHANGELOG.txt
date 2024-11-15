@@ -69,6 +69,7 @@
         + Added two new actions `cut_to_{start,end}_of_line` that deletes the text and copies it to the clipboard.
     + When choosing a location to save a file, the option to "save as" in the dialog will appear after the directories but before files (previously it was at the bottom), so that it's still easy to navigate directories, but also the most likely needed option of saving as a new file is at the top.
     + When attempting to save a buffer which is modified on disk, a confirmation dialog will be shown
+    + When a file gets deleted but is then created again (e.g. when switching branches in source control), the editor will notice that and "undelete" the buffer
 
 
 # RELEASES ==================================================================

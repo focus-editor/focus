@@ -1365,6 +1365,11 @@ refresh_buffer_from_disk_by_path :: (path: string) {
 
     buffer := *open_buffers[buffer_id];
 
+    // If we got to this point, the file definitely exists. Mark it as not deleted.
+    // This will "undelete" previously deleted files, which is helpful when e.g. a user
+    // switches branches in version control
+    buffer.deleted = false;
+
     if !buffer_file_has_changed_on_disk(buffer) return;
 
     finder.need_to_refresh_results = true;
