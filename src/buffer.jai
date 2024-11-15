@@ -24,6 +24,7 @@ refresh_open_buffers :: () {
         if !buffer.modified then buffer.modified_on_disk = false;  // we've verified that the contents matches that on disk
 
         finder.need_to_refresh_results = true;
+        open_file_dialog.should_refresh_entries = true;
     }
 }
 
@@ -845,18 +846,11 @@ delete_buffer_from_disk :: (using buffer: *Buffer) -> deleted: bool {
     if !success then return false;
 
     deleted          = true;
-    has_file         = false;
     modified         = false;
     modified_on_disk = false;
 
-    lock(*open_buffers_lock);
-    {
-        removed := table_remove(*buffers_table, file_path);
-        assert(removed, "For some reason table_remove failed. This is a very unexpected bug.");
-    }
-    unlock(*open_buffers_lock);
-
     finder.need_to_refresh_results = true;
+    open_file_dialog.should_refresh_entries = true;
 
     if file_is_watched(file_path) then stop_watching_file(file_path);
     return true;
@@ -1193,6 +1187,16 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     return buffer_id, true;
 }
 
+find_buffer_id_by_path :: (path: string) -> buffer_id: s64 {
+    lock(*open_buffers_lock);
+    defer unlock(*open_buffers_lock);
+
+    buffer_id, found_buffer := table_find(*buffers_table, path);
+    if found_buffer return buffer_id;
+
+    return -1;
+}
+
 get_buffer_name :: (buffer: Buffer) -> string {
     // NOTE: After deleting using "Delete Current File", `has_file` could be false while buffer.file still exists (because we don't override it).
     //       So if we fail the `has_file` check, check the `file.full_path` as well to see if there is still a valid name that the buffer can draw.
@@ -1347,6 +1351,7 @@ refresh_buffer_from_disk_by_path :: (path: string) {
         if found_buffer {
             open_buffers[buffer_id].deleted = true;
             finder.need_to_refresh_results = true;
+            open_file_dialog.should_refresh_entries = true;
         }
         unlock(*open_buffers_lock);
 
@@ -1369,6 +1374,7 @@ refresh_buffer_from_disk_by_path :: (path: string) {
     // This will "undelete" previously deleted files, which is helpful when e.g. a user
     // switches branches in version control
     buffer.deleted = false;
+    open_file_dialog.should_refresh_entries = true;
 
     if !buffer_file_has_changed_on_disk(buffer) return;
 
@@ -1477,6 +1483,7 @@ maybe_mark_buffer_as_deleted :: (buffer_id: s64) {
 
     buffer.deleted = true;
     finder.need_to_refresh_results = true;
+    open_file_dialog.should_refresh_entries = true;
 }
 
 free_buffer :: (using buffer: *Buffer) {

@@ -2144,6 +2144,8 @@ draw_open_file_dialog :: () {
         return;
     }
 
+    open_file_dialog_maybe_refresh_entries();
+
     margin  := floor(12 * dpi_scale);
     padding := floor( 4 * dpi_scale);
     input_rect_height := font_ui_line_height + 2 * padding + 2 * margin + 2;
@@ -2385,6 +2387,13 @@ draw_open_file_dialog :: () {
                 width = xx Simp.draw_text_with_highlights(font_ui, xx pen.x, xx pen.y, entry.entry_name, entry.name_highlights, color = xx name_color, highlight_color = xx Color.LETTER_HIGHLIGHT);
             } else {
                 width = xx Simp.draw_text(font_ui, xx pen.x, xx pen.y, entry.entry_name, color = xx name_color);
+            }
+
+            if entry.flags & .MODIFIED {
+                pen.x += width + padding;
+                width = xx Simp.prepare_text(font_icons_very_small, PEN_ICON);
+                y_padding := (font_icons.character_height - font_icons_very_small.character_height) / 4.0;
+                Simp.draw_prepared_text(font_icons_very_small, xx pen.x, xx (pen.y + y_padding), color = xx name_color);
             }
 
             if entry.flags & .MODIFIED_ON_DISK {

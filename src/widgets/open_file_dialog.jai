@@ -62,6 +62,12 @@ deinit_open_file_dialog :: () {
     array_reset(*entries.filtered,, allocator = Allocator.{ proc = flat_pool_allocator_proc, data = *memory_pool });
 }
 
+open_file_dialog_maybe_refresh_entries :: inline () {
+    if !open_file_dialog.should_refresh_entries return;
+    refresh_entries(clear_input = false);
+    open_file_dialog.should_refresh_entries = false;
+}
+
 show_open_file_dialog :: (mode: Open_File_Dialog.Mode, buffer_id_to_save: s64 = -1, triggered_by: Deferred_Action_Id = -1, from_root := false) {
     if !from_root {
         // Derive the path chunks from the current open file
@@ -433,6 +439,14 @@ refresh_entries :: (clear_input := true) {
                     entry.name_highlights = name_highlights;
                     entry.path_highlights = .[];
 
+                    // If we have a buffer for this file we want to show if it's modified or modified on disk
+                    buffer_id := find_buffer_id_by_path(entry.full_path);
+                    if buffer_id >= 0 {
+                        buffer := *open_buffers[buffer_id];
+                        if buffer.modified         then entry.flags |= .MODIFIED;
+                        if buffer.modified_on_disk then entry.flags |= .MODIFIED_ON_DISK;
+                    }
+
                     is_dir_part: u64 = (cast,trunc(u64) (entry.type == .folder)) << 56;  // directories come first
                     score_part:  u64 = (cast,trunc(u64) score)                   << 16;
                     entry.sort_key = is_dir_part | score_part;
@@ -565,6 +579,7 @@ open_file_dialog: Open_File_Dialog;
 
 Open_File_Dialog :: struct {
     initted := false;
+    should_refresh_entries := false;
 
     mode: Mode;
     triggered_by_action: Deferred_Action_Id = -1;
