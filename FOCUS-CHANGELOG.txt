@@ -64,6 +64,7 @@
     + Fixed a crash when editing colors near the end of file with color preview open (thanks @darkgiggs)
     + Fixed font size changing when you press ctrl after scrolling has started (thanks @onelivesleft)
     + Cursors in all editors should now be preserved after stripping trailing whitespace. Undo/redo behaviour is fixed as well.
+    + Current line highlights will no longer cover indent guides and text highlights
 + Other changes:
     + Syntax highlighting improvements for CSS and TypeScript (thanks @simonvallz)
     + Creating cursors above and below will now skip empty lines as this is most likely the behaviour users want (thanks @onelivesleft)

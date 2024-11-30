@@ -1273,6 +1273,40 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             draw_range_full_width_lines(range, rect, visible_lines_start, visible_lines_end, text_origin, get_region_color(region.kind));
         }
 
+        cursors_active := editor_is_active && active_global_widget == .editors;
+
+        if !search_bar_is_open(editor) {
+            Simp.set_shader_for_rects();
+            for cursor : cursors {
+                if has_selection(cursor) {
+                    // Draw selections
+                    range := get_selection(cursor);
+                    if range.end   < visible_offset_range.start continue;
+                    if range.start > visible_offset_range.end   break;
+
+                    coords := cursor_coords[it_index];
+                    selection := ifx cursor.pos < cursor.sel then Coords_Range.{ start = coords.pos, end = coords.sel } else .{ start = coords.sel, end = coords.pos };
+                    color := ifx cursors_active then Color.SELECTION_ACTIVE else Color.SELECTION_INACTIVE;
+                    draw_range(selection, editor, buffer, visible_lines_start, visible_lines_end, text_origin, color);
+                }
+                else if cursors_active && buffer_settings.highlight_line_with_cursor && !as_build_panel {
+                    // Draw current line highlight
+                    coords := cursor_coords[it_index];
+
+                    // @Note: modified from hidden_chars_on_the_left below, get the x offset if we are scrolled horizontally
+                    x_offset := max((viewport.left / char_x_advance) - 1, 0);
+
+                    line_rect := Rect.{
+                        x = text_origin.x + (x_offset * char_x_advance),
+                        y = text_origin.y - coords.pos.line * line_height,
+                        w = rect.w - ifx x_offset == 0 then char_x_advance,   // @Note: text_origin.x is 1 char_x_advance in, so if we can see the beginning of the line, shorten the rect
+                        h = line_height,
+                    };
+                    draw_rect(line_rect, Color.BACKGROUND_4, .{is_background = true});
+                }
+            }
+        }
+
         // Draw text highlights
         if !search_bar_is_open(editor) {
             for highlights {
@@ -1316,40 +1350,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             }
         }
 
-        cursors_active := editor_is_active && active_global_widget == .editors;
-
-        if !search_bar_is_open(editor) {
-            Simp.set_shader_for_rects();
-            for cursor : cursors {
-                if has_selection(cursor) {
-                    // Draw selections
-                    range := get_selection(cursor);
-                    if range.end   < visible_offset_range.start continue;
-                    if range.start > visible_offset_range.end   break;
-
-                    coords := cursor_coords[it_index];
-                    selection := ifx cursor.pos < cursor.sel then Coords_Range.{ start = coords.pos, end = coords.sel } else .{ start = coords.sel, end = coords.pos };
-                    color := ifx cursors_active then Color.SELECTION_ACTIVE else Color.SELECTION_INACTIVE;
-                    draw_range(selection, editor, buffer, visible_lines_start, visible_lines_end, text_origin, color);
-                }
-                else if cursors_active && buffer_settings.highlight_line_with_cursor && !as_build_panel {
-                    // Draw current line highlight
-                    coords := cursor_coords[it_index];
-
-                    // @Note: modified from hidden_chars_on_the_left below, get the x offset if we are scrolled horizontally
-                    x_offset := max((viewport.left / char_x_advance) - 1, 0);
-
-                    line_rect := Rect.{
-                        x = text_origin.x + (x_offset * char_x_advance),
-                        y = text_origin.y - coords.pos.line * line_height,
-                        w = rect.w - ifx x_offset == 0 then char_x_advance,   // @Note: text_origin.x is 1 char_x_advance in, so if we can see the beginning of the line, shorten the rect
-                        h = line_height,
-                    };
-                    draw_rect(line_rect, Color.BACKGROUND_4, .{is_background = true});
-                }
-            }
-        }
-
+        // Draw ruler
         if buffer_settings.show_ruler_at_column > 0 {
             x := text_origin.x + (buffer_settings.show_ruler_at_column - 1) * char_x_advance;
             r := Rect.{x, rect.y, dpi_scale, rect.h};
