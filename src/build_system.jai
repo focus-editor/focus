@@ -26,6 +26,7 @@ deinit_build_system :: () {
     build_buffer_id = -1;
     build_editor_id = -1;
     running_command = "";
+    last_command_result = .{};
 }
 
 execute_build_command :: (command: *Build_Command) {
