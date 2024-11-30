@@ -55,6 +55,10 @@
             + To convert indentation from spaces to tabs and vice versa - this will change the file contents itself! Note that any tabs or spaces within the lines are not touched
             + To revert indentation to defaults as specified in the config
         + When tab indentation is used, the `tab_size` from the config is always used
+    + File-specific settings are now supported:
+        + Some settings can be specified for a subset of files, based on their language or a wildcard, for example:
+            + `[file: <wildcard1>, <wildcard2>, ...]`
+            + `[lang: golang, cpp, c, ...]`
 + Bug fixes:
     + Fixed a crash when changing languages in the color preview widget
     + Fixed a crash when editing colors near the end of file with color preview open (thanks @darkgiggs)
