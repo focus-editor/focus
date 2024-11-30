@@ -736,6 +736,7 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
         buffer.has_file = true;
         buffer.file = get_file_info_from_full_path(file_path);
         buffer.lang = get_lang_from_path(file_path);
+        recalculate_settings(buffer);
         buffer.needs_tokenizing = true;
 
         lock(*open_buffers_lock);
@@ -788,10 +789,12 @@ save_buffer :: (using buffer: *Buffer, buffer_id: s64) {
 
     assert(has_file, "Trying to save a buffer without an associated file. This is a bug.");
 
-    if config.settings.strip_trailing_whitespace_on_save != .disabled {
-        strip_trailing_whitespace(buffer, buffer_id, except_lines_with_cursor = config.settings.strip_trailing_whitespace_on_save == .except_lines_with_cursor);
+    buffer_settings := get_settings(buffer);
+
+    if buffer_settings.strip_trailing_whitespace_on_save != .disabled {
+        strip_trailing_whitespace(buffer, buffer_id, except_lines_with_cursor = buffer_settings.strip_trailing_whitespace_on_save == .except_lines_with_cursor);
     }
-    if config.settings.insert_final_newline_on_save      then insert_final_newline(buffer);  // important to do it after stripping
+    if buffer_settings.insert_final_newline_on_save then insert_final_newline(buffer);  // important to do it after stripping
 
     success := write_entire_file(file.full_path, to_string(bytes));
     if success {
@@ -948,8 +951,9 @@ indentation_detect_from_buffer_contents :: (buffer: *Buffer) {
 }
 
 indentation_use_defaults_for_buffer :: (using buffer: *Buffer) {
-    indentation.type = config.settings.indent_using;
-    indentation.size = cast(u8) config.settings.tab_size;
+    buffer_settings := get_settings(buffer);
+    indentation.type = buffer_settings.indent_using;
+    indentation.size = cast(u8) buffer_settings.tab_size;
     add_success_message("Using defaults (%: %) for this file", ifx indentation.type == .spaces then "Spaces" else "Tabs", indentation.size, dismiss_in_seconds = 5);
 }
 
@@ -1032,8 +1036,9 @@ indentation_convert_to_spaces_for_buffer :: (buffer: *Buffer, buffer_id: s64) {
     restore_cursor_positions(buffer_id, cursor_positions);
     refresh_all_editors_for_buffer(buffer_id);
 
+    buffer_settings := get_settings(buffer);
     buffer.indentation.type = .spaces;
-    buffer.indentation.size = cast(u8) config.settings.tab_size;
+    buffer.indentation.size = cast(u8) buffer_settings.tab_size;
 }
 
 insert_final_newline :: (using buffer: *Buffer) {
@@ -1121,6 +1126,10 @@ find_or_create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
     init_buffer(buffer);
     buffer.has_file = false;
 
+    // These values will be overwritten later if `detect_intentation` is true
+    buffer.indentation.type = config.settings.indent_using;
+    buffer.indentation.size = 0;
+
     rescan_for_lines(buffer);
     retokenize(buffer);
 
@@ -1184,6 +1193,13 @@ find_or_create_buffer :: (path: string) -> buffer_id: s64, created: bool {
     rescan_for_lines(buffer);
     retokenize(buffer);
 
+    recalculate_settings(buffer);
+
+    // These values will be overwritten later if `detect_intentation` is true
+    buffer_settings := get_settings(buffer);
+    buffer.indentation.type = buffer_settings.indent_using;
+    buffer.indentation.size = 0;
+
     return buffer_id, true;
 }
 
@@ -1215,26 +1231,28 @@ get_buffer_name :: (buffer: Buffer) -> string {
 }
 
 get_buffer_indentation_and_tab_size :: inline (using buffer: Buffer) -> Indentation, tab_size: s32 {
+    buffer_settings := get_settings(buffer);
     if indentation.size > 0 {
-        return indentation.type, ifx indentation.type == .spaces then indentation.size else cast(s32) config.settings.tab_size;
+        return indentation.type, ifx indentation.type == .spaces then indentation.size else cast(s32) buffer_settings.tab_size;
     } else {
-        return config.settings.indent_using, cast(s32) config.settings.tab_size;
+        return buffer_settings.indent_using, cast(s32) buffer_settings.tab_size;
     }
 }
 
 get_buffer_tab_size :: inline (using buffer: Buffer) -> s32 {
+    buffer_settings := get_settings(buffer);
     if indentation.size > 0 {
-        return ifx indentation.type == .spaces then indentation.size else cast(s32) config.settings.tab_size;
+        return ifx indentation.type == .spaces then indentation.size else cast(s32) buffer_settings.tab_size;
     } else {
-        return cast(s32) config.settings.tab_size;
+        return cast(s32) buffer_settings.tab_size;
     }
 }
 
-maybe_detect_and_set_indentation :: (buffer_id: s64) {
-    buffer := *open_buffers[buffer_id];
+maybe_detect_and_set_indentation :: (buffer: *Buffer) {
     if buffer.readonly || buffer.deleted || buffer.internal return;
 
-    if config.settings.detect_indentation {
+    buffer_settings := get_settings(buffer);
+    if buffer_settings.detect_indentation {
         // With this setting on all buffers need to attempt to detect indentation unless already set
         if buffer.indentation.size <= 0 && !buffer.indentation.was_manually_set then detect_and_set_indentation(buffer);
     } else {
@@ -1244,10 +1262,12 @@ maybe_detect_and_set_indentation :: (buffer_id: s64) {
 }
 
 detect_and_set_indentation :: (using buffer: *Buffer) -> enum { success; error; not_enough_data; } {
+    buffer_settings := get_settings(buffer);
+
     if is_empty(bytes) {
         // Empty files get default indentation
-        indentation.type = config.settings.indent_using;
-        indentation.size = cast(u8) config.settings.tab_size;
+        indentation.type = buffer_settings.indent_using;
+        indentation.size = cast(u8) buffer_settings.tab_size;
         return .not_enough_data;
     }
 
@@ -1305,21 +1325,21 @@ detect_and_set_indentation :: (using buffer: *Buffer) -> enum { success; error; 
 
     if num_lines_with_tabs < 2 && num_lines_with_spaces < 2 {
         // Not enough information, use defaults
-        indentation.type = config.settings.indent_using;
-        indentation.size = cast(u8) config.settings.tab_size;
+        indentation.type = buffer_settings.indent_using;
+        indentation.size = cast(u8) buffer_settings.tab_size;
         return .not_enough_data;
     }
 
     if num_lines_with_tabs > num_lines_with_spaces {
         // Assuming tabs
         indentation.type = .tabs;
-        indentation.size = cast(u8) config.settings.tab_size;
+        indentation.size = cast(u8) buffer_settings.tab_size;
         return .success;
     }
 
     // Assuming spaces
     indentation.type = .spaces;
-    indentation.size = cast(u8) config.settings.tab_size;  // fallback
+    indentation.size = cast(u8) buffer_settings.tab_size;  // fallback
 
     // Find the most common line difference
     max_lines := 0;
@@ -1498,6 +1518,7 @@ free_buffer :: (using buffer: *Buffer) {
     free(redos);
     free(edits);
     free(cursors);
+    free(settings);
 
     if has_file && file.full_path then free(file.full_path);
 
@@ -1542,10 +1563,6 @@ get_range_as_string :: (buffer: Buffer, range: Offset_Range) -> string {
 
 init_buffer :: (using buffer: *Buffer) {
     init(*content_lock);
-
-    // These values will be overwritten later if `detect_intentation` is true
-    indentation.type = config.settings.indent_using;
-    indentation.size = 0;
 }
 
 get_unsaved_buffer_ids :: () -> [] s64 /* temp */ {
@@ -1731,6 +1748,8 @@ Buffer :: struct {
     edits: Array(Edit);  // current edits, not in a group yet
 
     cursors: Array(Cursor);  // cursor state before any current edits were made
+
+    settings: *Settings;  // a pointer to buffer-specific settings. Null means use global settings
 
     content_lock: Mutex;  // must hold while modifying content (or reading in a non-main thread)
 

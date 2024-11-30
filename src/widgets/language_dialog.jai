@@ -29,6 +29,7 @@ apply_selected_language :: () {
     buffer.lang = result.details.value;
 
     retokenize(buffer);
+    recalculate_settings(buffer);
 }
 
 language_dialog_on_show :: () {

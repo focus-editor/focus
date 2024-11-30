@@ -39,7 +39,6 @@ to_bytes :: (src: string) -> [] u8 {
     return result;
 }
 
-// Intended for compile-time
 arrays_concat :: (array1: [] $T, array2: [] T) -> [] T {
     result: [..] T;
     array_add(*result, ..array1);

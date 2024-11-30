@@ -255,6 +255,7 @@ reload_workspace :: (automatic := false) {
                 start_watching_file_if_not_already(buffer.file.full_path);
                 buffer.file = get_file_info_from_full_path(buffer.file.full_path);  // refresh file info to reflect new project dirs
             }
+            recalculate_settings(buffer);
 
             bucket_array_add(*new_open_buffers, buffer.*);
 

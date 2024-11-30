@@ -568,7 +568,7 @@ ADDED_COLORS :: Added_Color.[
     .{ 4, "code_header5",                     "code_operation",         "E0AD82FF" },
     .{ 4, "code_header6",                     "code_operation",         "E0AD82FF" },
 
-    .{ 7, "ruler",                            "cursor_inactive",        "1966667F" },
+    .{ 7, "ruler",                            "cursor_inactive",        "FCEDFC26" },
 
     .{ 8, "bracket_highlight",                "selection_highlight",    "E8FCFE30" },
     .{ 8, "indent_guide",                     "selection_highlight",    "FCEDFC26" },
@@ -858,9 +858,8 @@ MIGRATE_BUILTIN_THEMES :: !NO_OUTPUT_BUILD && !DEBUG;
     run_test("Keybinds from [1]",             "global.focus-config",  KEYBINDS_1,               KEYBINDS_1_EXPECTED);
     run_test("Theme from [1]",                "nord.focus-theme",     THEME_1,                  THEME_1_EXPECTED);
     run_test("Theme from [3]",                "handmade.focus-theme", THEME_3,                  THEME_3_EXPECTED);
-    // NOTE: commented out because the compiler crashes when trying to execute it together with other tests. Works fine otherwise
-    // run_test("Keybinds from [2]",             "global.focus-config",  KEYBINDS_2,               KEYBINDS_2_EXPECTED);
-    // run_test("Workspace migration from [4]",  "global.focus-config",  WORKSPACE_4,              WORKSPACE_4_EXPECTED);
+    run_test("Keybinds from [2]",             "global.focus-config",  KEYBINDS_2,               KEYBINDS_2_EXPECTED);
+    run_test("Workspace migration from [4]",  "global.focus-config",  WORKSPACE_4,              WORKSPACE_4_EXPECTED);
 
     print("All unit tests passed!\n");
 
@@ -1483,7 +1482,7 @@ code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF
 code_header5:                           E0AD82FF
 code_header6:                           E0AD82FF
-ruler:                                  1966667F
+ruler:                                  FCEDFC26
 bracket_highlight:                      FF000026
 indent_guide:                           FF000026
 
@@ -1555,7 +1554,7 @@ code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF
 code_header5:                           E0AD82FF
 code_header6:                           E0AD82FF
-ruler:                                  1966667F
+ruler:                                  FCEDFC26
 bracket_highlight:                      E8FCFE30
 indent_guide:                           FCEDFC26
 
@@ -1710,7 +1709,7 @@ code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF
 code_header5:                           E0AD82FF
 code_header6:                           E0AD82FF
-ruler:                                  1966667F
+ruler:                                  FCEDFC26
 bracket_highlight:                      E8FCFE30
 indent_guide:                           FCEDFC26
 
@@ -1823,7 +1822,7 @@ code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF
 code_header5:                           E0AD82FF
 code_header6:                           E0AD82FF
-ruler:                                  1966667F
+ruler:                                  FCEDFC26
 bracket_highlight:                      E8FCFE30
 indent_guide:                           FCEDFC26
 
@@ -1932,6 +1931,10 @@ Ctrl-Shift-A                select_all_occurrences
 Ctrl-U                      change_case_cycle
 Ctrl-R                      revert_select_word_or_create_another_cursor
 Ctrl-Y                      move_selection_to_next_word
+{Shift}-Meta-ArrowLeft      move_left_through_word
+{Shift}-Meta-ArrowRight     move_right_through_word
+{Shift}-Meta-Backspace      delete_left_through_word
+{Shift}-Meta-Delete         delete_right_through_word
 
 [open file dialog]
 Tab                         open_directory
@@ -2037,7 +2040,7 @@ code_header3:                           E0AD82FF
 code_header4:                           E0AD82FF
 code_header5:                           E0AD82FF
 code_header6:                           E0AD82FF
-ruler:                                  1966667F
+ruler:                                  FCEDFC26
 bracket_highlight:                      E8FCFE30
 indent_guide:                           FCEDFC26
 

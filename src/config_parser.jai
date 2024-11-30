@@ -13,6 +13,7 @@ CONFIG_SECTIONS :: Config_Section.[
     .{
         name = "settings",
         parse_function = "parse_settings_line",
+        allow_arbitrary_subsections = true,
     },
     .{
         name = "keymap",
@@ -116,7 +117,7 @@ parse_config :: (name: string, file_path: string, file_data: string, for_highlig
                         result.error_msg = log_parser_error(parser, "Expected a top-level section definition, got '%%'", line);
                         return result;
                     }
-            JAI;
+            JAI
             print_to_builder(*b, code);
             append(*b, "}\n");
 
@@ -139,6 +140,12 @@ parse_config :: (name: string, file_path: string, file_data: string, for_highlig
     array_add(*result.config.keymap_editors,          ..result.config.keymap_common);
     array_add(*result.config.keymap_open_file_dialog, ..result.config.keymap_common);
     array_add(*result.config.keymap_search_dialog,    ..result.config.keymap_common);
+
+    // Clamp overridden values
+    // TODO: maybe combine with the clamping code in apply_config somehow
+    for * result.config.file_specific_settings {
+        if it.overrides.tab_size.is_set then Clamp(*it.overrides.tab_size.value, 1, 100);
+    }
 
     result.success   = true;
     result.error_msg = "";
@@ -372,13 +379,13 @@ maybe_switch_section :: (using parser: *Config_Parser, line: string, fix_section
                         section_offset = line_start_offset;
                         if seen_sections & .%2 return true, tprint("Section [[%1]] is defined twice. This is an error.");
                         seen_sections |= .%2;
-                JAI;
+                JAI
                 print_to_builder(*b, code, section.name, replace(section.name, " ", "_"));
             }
             code := #string JAI
                 case;
                     return true, tprint("Unknown top-level section %%", line);
-            JAI;
+            JAI
             print_to_builder(*b, code);
             append(*b, "}\n");
             return builder_to_string(*b);
@@ -417,7 +424,7 @@ maybe_switch_section :: (using parser: *Config_Parser, line: string, fix_section
                             section_offset = line_start_offset;
                             if seen_subsections & .%2 return true, tprint("Subsection [%1] is defined twice. This is an error.");
                             seen_subsections |= .%2;
-                    JAI;
+                    JAI
                     print_to_builder(*b, code, subsection, replace(tprint("%_%", section.name, subsection), " ", "_"));
                 }
             }
@@ -790,7 +797,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                             add_highlight(parser, setting_value.data - line.data, setting_value.count, .error);
                             return true, tprint("Couldn't parse '%1' - expected 'true' or 'false', got '%%'", setting_value);
                         }
-                    JAI;
+                    JAI
                     print_to_builder(*b, code, option.name);
 
                 case .INTEGER;
@@ -803,7 +810,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                             add_highlight(parser, setting_value.data - line.data, setting_value.count, .error);
                             return true, tprint("Couldn't parse '%1' - a valid integer, got '%%'", setting_value);
                         }
-                    JAI;
+                    JAI
                     print_to_builder(*b, code, option.name);
 
                 case .STRING;
@@ -813,7 +820,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                         } else {
                             return true, tprint("Build command option '%%' can't be empty", setting_name);
                         }
-                    JAI;
+                    JAI
                     print_to_builder(*b, code, option.name);
 
                     // Process working directories
@@ -835,7 +842,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                                 }
                             }
                             if vars_used return true, "";  // we're unable to validate it at this point
-                        JAI;
+                        JAI
                         append(*b, code);
 
                         code = #string JAI
@@ -864,7 +871,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                                 }
                                 return true, tprint("Tried to use '%%' as a working dir in a build command, but it doesn't exist.", abs_path);
                             }
-                        JAI;
+                        JAI
                         print_to_builder(*b, code, option.name);
                     }
 
@@ -884,7 +891,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
                                     add_highlight(parser, setting_value.data - line.data + index, var.count, .value);
                                 }
                             }
-                        JAI;
+                        JAI
                         append(*b, code);
                     }
             }
@@ -902,7 +909,7 @@ parse_build_line :: (using parser: *Config_Parser, line: string) -> success: boo
             case;
                 add_highlight(parser, 0, line.count, .error);
                 return true, tprint("Unrecognized build command option '%'.", setting_name);
-        JAI;
+        JAI
         append(*b, code);
 
         append(*b, "}\n");
@@ -956,15 +963,98 @@ add_keymap_for_build_command :: (build_config: *Build_Config, key_sequence: [] K
 }
 
 parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: bool, error_msg: string /* temp */ {
+    if begins_with(line, "[") && ends_with(line, "]") {
+        add_highlight(parser, 0, line.count, .header2);
+
+        // Start a new file-specific section
+        match_rule := trim(line, "[] ");
+
+        wildcards: [..] string;
+        langs: [..] Buffer.Lang;
+
+        if begins_with_nocase(match_rule, "file:") {
+            advance(*match_rule, 5);
+            for wildcard : split(match_rule, cast(u8) #char ",") {
+                array_add(*wildcards, copy_string(trim(wildcard)));
+            }
+        } else if begins_with_nocase(match_rule, "lang:") {
+            advance(*match_rule, 5);
+            available_langs :: #run get_supported_buffer_langs_lowercase();
+            for lang_name : split(match_rule, cast(u8) #char ",",, temp) {
+                lang, matched := get_lang_from_name(trim(lang_name));
+                if matched {
+                    array_add(*langs, lang);
+                } else if lang_name {
+                    add_highlight(parser, lang_name.data - line.data, lang_name.count, .error);
+                    return true, tprint("Unknown language name: '%'\nAvailable languages:\n%", lang_name, join(..available_langs, ", ",, temp));
+                } else {
+                    return true, tprint("Expected language name. Available languages:\n%", join(..available_langs, ", ",, temp));
+                }
+            }
+        } else {
+            add_highlight(parser, 0, line.count, .error);
+            return true, tprint("Expected a file-specific settings subsection of the form [file: <wildcard1>, <wildcard2>, ...], or [lang: <lang1>, <lang2>, ...], got:\n%", line);
+        }
+
+        new_setting_section := array_add(*result.config.file_specific_settings);
+        new_setting_section.match_rules = .{ wildcards = wildcards, langs = langs };
+
+        array_reset_keeping_memory(*seen_settings);  // avoid highlighting duplicates across sections
+
+        section_offset = line_start_offset;
+
+        return true, "";
+    }
+
+    add_highlight(parser, 0, line.count, .default);
+
     setting_name, setting_value := break_by_spaces(line);
     setting_name = trim_right(setting_name, ":");
 
     value := setting_value;  // will be destroyed by parsing
 
-    add_highlight(parser, 0, line.count, .default);
-
     #insert -> string {
         b: String_Builder;
+
+        construct_parse_code :: (setting_name: string, get_value_code: string, error_message_code: string) -> string {
+            template := #string JAI
+                // Get value
+                %1
+
+                if success {
+                    add_highlight(parser, cast(s64) (setting_value.data - line.data), setting_value.count, .value);
+                    // Override
+                    %2
+                } else {
+                    add_highlight(parser, cast(s64) (setting_value.data - line.data), setting_value.count, .error);
+
+                    error_msg := %3;
+                    return true, error_msg;
+                }
+            JAI
+
+            override_code := #string JAI
+                result.config.settings.%1 = val;
+            JAI
+            if is_overridable_setting(setting_name) {
+                override_code = #string JAI
+                    if result.config.file_specific_settings {
+                        result.config.file_specific_settings[result.config.file_specific_settings.count-1].overrides.%1 = some(val);
+                    } else {
+                        result.config.settings.%1 = val;
+                    }
+                JAI
+            }
+
+            code := sprint(
+                template,
+                get_value_code,
+                override_code,
+                error_message_code,
+            );
+
+            return sprint(code, setting_name);
+        }
 
         append(*b, "if setting_name == {\n");
 
@@ -972,52 +1062,42 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
             print_to_builder(*b, "    case \"%\";\n", setting.name);
             if setting.type.type == {
                 case .BOOL;
-                    code := #string END
-                        bool_val, success := parse_bool(*value);
-                        if success {
-                            add_highlight(parser, cast(s64)(setting_value.data - line.data), setting_value.count, .value);
-                            result.config.settings.%1 = bool_val;
-                        } else {
-                            add_highlight(parser, cast(s64)(setting_value.data - line.data), setting_value.count, .error);
-                            return true, tprint("Couldn't parse '%1' - expected 'true' or 'false', got '%%'", setting_value);
-                        }
-                    END;
-                    print_to_builder(*b, code, setting.name);
+                    code := construct_parse_code(
+                        setting.name,
+                        "val, success := parse_bool(*value);",
+                        "tprint(\"Couldn't parse '%1' - expected 'true' or 'false', got '%%'\", setting_value)",
+                    );
+                    append(*b, code);
 
                 case .INTEGER;
-                    code := #string END
-                        int_val, success := parse_int(*value);
-                        if success {
-                            add_highlight(parser, cast(s64)(setting_value.data - line.data), setting_value.count, .value);
-                            result.config.settings.%1 = int_val;
-                        } else {
-                            add_highlight(parser, cast(s64)(setting_value.data - line.data), setting_value.count, .error);
-                            return true, tprint("Couldn't parse '%1' - expected a valid integer, got '%%'", setting_value);
-                        }
-                    END;
-                    print_to_builder(*b, code, setting.name);
+                    code := construct_parse_code(
+                        setting.name,
+                        "val, success := parse_int(*value);",
+                        "tprint(\"Couldn't parse '%1' - expected a valid integer, got '%%'\", setting_value)",
+                    );
+                    append(*b, code);
 
                 case .ENUM;
-                    code := #string END
-                        enum_info := type_info(type_of(Settings.%1));
-                        found, idx := array_find(enum_info.names, value);
-                        if found {
-                            add_highlight(parser, cast(s64)(setting_value.data - line.data), setting_value.count, .value);
-                            result.config.settings.%1 = xx enum_info.values[idx];
-                        } else {
-                            add_highlight(parser, cast(s64)(setting_value.data - line.data), setting_value.count, .error);
-                            return true, tprint("Couldn't parse '%1' - valid values: %%", enum_info.names);
-                        }
-                    END;
-                    print_to_builder(*b, code, setting.name);
+                    code := construct_parse_code(
+                        setting.name,
+                        #string JAI
+                            enum_type :: type_of(Settings.%1);
+                            enum_info := type_info(enum_type);
+                            success, idx := array_find(enum_info.names, value);
+                            val := cast(enum_type) 0;
+                            if success then val = xx enum_info.values[idx];
+                        JAI,
+                        "tprint(\"Couldn't parse '%1' - valid values: %%\", join(..enum_info.names, \", \"))",
+                    );
+                    append(*b, code);
             }
         }
 
-        code := #string END
+        code := #string JAI
             case;
                 add_highlight(parser, 0, line.count, .error);
                 return true, tprint("Unrecognized setting '%'.", setting_name);
-        END;
+        JAI
         append(*b, code);
 
         append(*b, "}\n");
@@ -1025,16 +1105,23 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
         return builder_to_string(*b);
     }
 
-    added := array_add_if_unique(*result.config.set_settings, setting_name);
-    if !added {
-        // Duplicate setting, highlight all of them
-        add_highlight(parser, 0, setting_name.count, .warning);
-        for seen_settings {
-            if setting_name != it.setting_name continue;
-            add_highlight(parser, 0, it.line_length,        .comment, line_start_offset = it.line_start_offset);
-            add_highlight(parser, 0, it.setting_name.count, .warning, line_start_offset = it.line_start_offset);
-        }
+    if !result.config.file_specific_settings {
+        // Non-file-specific section
+        array_add_if_unique(*result.config.set_settings, setting_name);
+    } else if !is_overridable_setting(setting_name) {
+        add_highlight(parser, 0, line.count, .error);
+        return true, tprint("Setting '%' cannot be used in a file-specific section.\nAvailable options are:%", setting_name, join(..get_overridable_setting_names(), "\n - ", before_first = true));
     }
+
+    // Detect duplicates and highlight them
+    is_duplicate := false;
+    for seen_settings {
+        if setting_name != it.setting_name continue;
+        add_highlight(parser, 0, it.line_length,        .comment, line_start_offset = it.line_start_offset);
+        add_highlight(parser, 0, it.setting_name.count, .warning, line_start_offset = it.line_start_offset);
+        is_duplicate = true;
+    }
+    if is_duplicate then add_highlight(parser, 0, setting_name.count, .warning);
 
     array_add(*seen_settings, Seen_Setting.{ line_start_offset = line_start_offset, line_length = xx line.count, setting_name = setting_name });
 
@@ -1287,6 +1374,7 @@ Parsed_Config :: struct {
     // Settings
     settings: Settings;
     set_settings: [..] string;  // so that we know which options were included in the config, and only touch those when merging
+    file_specific_settings: [..] File_Specific_Settings;
 
     // Style
     theme:        string;

@@ -56,8 +56,7 @@ draw_frame :: () {
 
             active_editor_rect = ifx editors.active == editors.left then left_rect else right_rect;
 
-            splitter_y := ifx config.settings.status_bar_position == .bottom then left_rect.y + status_bar_height else 0;
-            splitter_rect := make_rect(left_rect.x + left_rect.w, splitter_y, 2, left_rect.h - status_bar_height);
+            splitter_rect := make_rect(left_rect.x + left_rect.w, 0, 2, left_rect.h);
             draw_splitter(splitter_rect, split_x, .editor_splitter);
     }
 
@@ -707,22 +706,23 @@ maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
 get_editor_subrects :: (editor_id: s64, main_area: Rect, status_bar_height: float) -> editor_rect: Rect, status_bar_rect: Rect, line_number_panel: Rect {
     status_bar_rect, rect, line_number_panel: Rect;
 
-    if config.settings.status_bar_position == .bottom {
+    editor := *open_editors[editor_id];
+    buffer := *open_buffers[editor.buffer_id];
+    buffer_settings := get_settings(buffer);
+
+    if buffer_settings.status_bar_position == .bottom {
         status_bar_rect, rect = cut_bottom(main_area, status_bar_height);
     } else {
         status_bar_rect, rect = cut_top(main_area, status_bar_height);
     }
 
-    max_width := cast(float) config.settings.max_editor_width * dpi_scale;
+    max_width := cast(float) buffer_settings.max_editor_width * dpi_scale;
     if max_width > 0 && rect.w > max_width {
         rect.x += (rect.w - max_width) / 2;
         rect.w = max_width;
     }
 
-    if config.settings.show_line_numbers && !is_build_panel(editor_id) {
-        editor := *open_editors[editor_id];
-        buffer := *open_buffers[editor.buffer_id];
-
+    if buffer_settings.show_line_numbers && !is_build_panel(editor_id) {
         max_lines  := get_max_line_num(editor, buffer) + 1;
         num_digits := tprint("%", max_lines).count;
         panel_width := (num_digits + 2) * char_x_advance;
@@ -749,6 +749,9 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
     using editor := *open_editors[editor_id];
     buffer := *open_buffers[buffer_id];
+
+    buffer_settings := get_settings(buffer);
+
     if buffer_needs_tokenizing(buffer) then retokenize(buffer);  // right before drawing
     tab_size := get_buffer_tab_size(buffer);
 
@@ -999,7 +1002,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         // Handle editor scrolling here because we only know the layout at this point.
         num_editor_lines := get_max_line_num(editor, buffer);
         content_height := (num_editor_lines + 2) * line_height;
-        if config.settings.scroll_beyond_last_line && !as_build_panel && !is_color_preview_panel(editor_id) then content_height += (rect.h - 3 * line_height);
+        if buffer_settings.scroll_beyond_last_line && !as_build_panel && !is_color_preview_panel(editor_id) then content_height += (rect.h - 3 * line_height);
 
         max_y_scroll := max(cast(s32)(content_height - rect.h), 0);
 
@@ -1040,14 +1043,14 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 top_target  := clamp(viewport.top - cast(s32) offset.y, 0, max_y_scroll);
 
                 if left_target != viewport.scroll_x.target {
-                    if config.settings.disable_viewport_chasing_cursor_near_the_edge && abs(left_target - viewport.scroll_x.target) < cast(s32) (2 * char_x_advance) {
+                    if buffer_settings.disable_viewport_chasing_cursor_near_the_edge && abs(left_target - viewport.scroll_x.target) < cast(s32) (2 * char_x_advance) {
                         snap_viewport_left_to_target(editor, left_target);
                     } else {
                         start_animation(*viewport.scroll_x, viewport.left, left_target);
                     }
                 }
                 if top_target != viewport.scroll_y.target {
-                    if config.settings.disable_viewport_chasing_cursor_near_the_edge && abs(top_target - viewport.scroll_y.target) < cast(s32) (2 * line_height) {
+                    if buffer_settings.disable_viewport_chasing_cursor_near_the_edge && abs(top_target - viewport.scroll_y.target) < cast(s32) (2 * line_height) {
                         snap_viewport_top_to_target(editor, buffer, top_target);
                     } else {
                         start_animation(*viewport.scroll_y, viewport.top, top_target);
@@ -1082,7 +1085,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             reset_keeping_memory(*editor.highlights);
 
             // Maybe update selection highlights
-            if config.settings.highlight_selection_occurrences {
+            if buffer_settings.highlight_selection_occurrences {
                 selected_text := get_selected_text_all_cursors(editor, buffer);
                 if selected_text.count > 2 && !is_all_whitespace(selected_text) {
                     search_func: (s: string, substring: string, start_index := 0) -> s64;
@@ -1111,7 +1114,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             }
 
             // Maybe find matching brackets
-            if config.settings.highlight_matching_brackets {
+            if buffer_settings.highlight_matching_brackets {
                 for cursor : cursors {
                     pos: s32 = -1;
                     if is_bracket(buffer, cursor.pos - 1) {
@@ -1145,7 +1148,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             quick_sort(to_view(editor.highlights), (a, b) => (a.offset - b.offset));
         }
 
-        if config.settings.status_bar_show_selected_text_length && editor.refresh_selection then calculate_selected_text_length(editor, buffer);
+        if buffer_settings.status_bar_show_selected_text_length && editor.refresh_selection then calculate_selected_text_length(editor, buffer);
 
         editor.refresh_selection = false;  // should probably move this to some central place where we reset stuff
 
@@ -1286,7 +1289,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         }
 
         // Draw indent guides
-        if config.settings.draw_indent_guides && !as_build_panel {
+        if buffer_settings.draw_indent_guides && !as_build_panel {
             indent_levels: [..] int;
             indent_levels.allocator = temp;
 
@@ -1329,7 +1332,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                     color := ifx cursors_active then Color.SELECTION_ACTIVE else Color.SELECTION_INACTIVE;
                     draw_range(selection, editor, buffer, visible_lines_start, visible_lines_end, text_origin, color);
                 }
-                else if cursors_active && config.settings.highlight_line_with_cursor && !as_build_panel {
+                else if cursors_active && buffer_settings.highlight_line_with_cursor && !as_build_panel {
                     // Draw current line highlight
                     coords := cursor_coords[it_index];
 
@@ -1347,8 +1350,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             }
         }
 
-        if config.settings.show_ruler_at_column > 0 {
-            x := text_origin.x + (config.settings.show_ruler_at_column - 1) * char_x_advance;
+        if buffer_settings.show_ruler_at_column > 0 {
+            x := text_origin.x + (buffer_settings.show_ruler_at_column - 1) * char_x_advance;
             r := Rect.{x, rect.y, dpi_scale, rect.h};
             draw_rect(r, Color.RULER);
         }
@@ -1386,7 +1389,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         if editor_paste_animations.count > 0 then redraw_requested = true;
 
         // Draw inactive cursors before text
-        if !cursors_active && !search_bar_is_open(editor) && config.settings.cursor_as_block && !as_build_panel {
+        if !cursors_active && !search_bar_is_open(editor) && buffer_settings.cursor_as_block && !as_build_panel {
             Simp.set_shader_for_rects();
             for cursor : cursors {
                 if cursor.pos < visible_offset_range.start || cursor.pos > visible_offset_range.end continue;
@@ -1431,7 +1434,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         draw_code(font_main, pen, code_lines, tab_size, selections, start_col = hidden_chars_on_the_left, is_colored = buffer.tokens.count > 0);
 
         // Draw continuation markers for wrapped lines
-        if line_wrap_is_active(editor) && !config.settings.show_line_numbers && !as_build_panel {
+        if line_wrap_is_active(editor) && !buffer_settings.show_line_numbers && !as_build_panel {
             Simp.set_shader_for_rects();
 
             radius   := char_x_advance / 4;
@@ -1450,7 +1453,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         }
 
         // Draw cursors when they are active
-        cursor_as_block := config.settings.cursor_as_block && !as_build_panel;
+        cursor_as_block := buffer_settings.cursor_as_block && !as_build_panel;
         cursor_width := ifx cursor_as_block then char_x_advance else 2 * dpi_scale;
         cursors_are_visible := should_draw_cursors() && !search_bar_is_open(editor);
 
@@ -1617,7 +1620,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         bar_rect := cut_top(main_area, bar_rect_height);
         bar_rect = cut_right(bar_rect, bar_rect.w * width_percentage);
         bar_rect.x -= 2 * char_x_advance;
-        if config.settings.status_bar_position == .top bar_rect.y -= status_bar_height;
+        if buffer_settings.status_bar_position == .top bar_rect.y -= status_bar_height;
 
         top_rect, results_rect := cut_top(bar_rect, top_rect_height);
 
@@ -1878,7 +1881,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
     if !as_build_panel {
         footer_color := Color.BACKGROUND_4;
         draw_rect(status_bar_rect, footer_color, .{is_background = true});
-        if #complete config.settings.status_bar_position == {
+        if #complete buffer_settings.status_bar_position == {
             case .bottom; draw_top_shadow(status_bar_rect);
             case .top; draw_bottom_shadow(status_bar_rect);
         }
@@ -1924,7 +1927,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             }
 
             // Draw line col
-            if config.settings.status_bar_show_line_col {
+            if buffer_settings.status_bar_show_line_col {
                 _maybe_draw_separator();
 
                 line := offset_to_real_line(buffer, editor.cursors[main_cursor].pos);
@@ -1950,7 +1953,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             }
 
             // Draw indentation type
-            if config.settings.status_bar_show_indentation {
+            if buffer_settings.status_bar_show_indentation {
                 _maybe_draw_separator();
                 indentation_type, tab_size := get_buffer_indentation_and_tab_size(buffer);
                 label := tprint("%: %", ifx indentation_type == .spaces then "Spaces" else "Tabs", tab_size);
@@ -1960,7 +1963,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             }
 
             // Draw length of selected text if any text is currently selected
-            if config.settings.status_bar_show_selected_text_length && num_selected_bytes > 0 {
+            if buffer_settings.status_bar_show_selected_text_length && num_selected_bytes > 0 {
                 _maybe_draw_separator();
                 label := tprint("Selected: % chars", num_selected_chars);
                 if num_selected_bytes != num_selected_chars then label = tprint("Selected: % chars, % bytes", num_selected_chars, num_selected_bytes);
@@ -1972,12 +1975,12 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             _maybe_draw_separator();
 
             // Maybe draw the number of cursors off screen
-            if editor.cursors.count > 1 && cursors_off_screen && config.settings.status_bar_show_cursors_off_screen {
+            if editor.cursors.count > 1 && cursors_off_screen && buffer_settings.status_bar_show_cursors_off_screen {
                 width = xx Simp.prepare_text(font_ui_bold, tprint("%", cursors_off_screen));
                 cursor_indicator_x := pen_x - width - char_x_advance;
                 Simp.draw_prepared_text(font_ui_bold, xx cursor_indicator_x, xx pen.y, color = xx Color.CURSOR);
 
-                cursor_width := ifx config.settings.cursor_as_block then char_x_advance else 2 * dpi_scale;
+                cursor_width := ifx buffer_settings.cursor_as_block then char_x_advance else 2 * dpi_scale;
                 cursor_y := status_bar_rect.y + (status_bar_rect.h - line_height) / 2;
                 cursor_rect := align_to_grid(make_rect(cursor_indicator_x - cursor_width - padding, cursor_y, cursor_width, line_height));
 
@@ -2120,7 +2123,7 @@ draw_splitter :: (splitter_rect: Rect, split_x: float, ui_id: Ui_Id) {
     color := Color.SPLITTER;
 
     rect := splitter_rect;
-    rect_fat := expand(splitter_rect, 3 * dpi_scale);
+    rect_fat := expand(splitter_rect, 2 * dpi_scale);
 
     maybe_set_hot_or_active(ui_id, rect_fat, .DRAGGING_HORIZONTAL);
 
@@ -3228,7 +3231,9 @@ draw_go_to_line_dialog :: (active_editor_rect: Rect, status_bar_height: float) {
     bar_rect := cut_top(active_editor_rect, height);
     bar_rect = cut_right(bar_rect, width);
     bar_rect.x -= 2 * char_x_advance;
-    if config.settings.status_bar_position == .top bar_rect.y -= status_bar_height;
+
+    _, buffer := get_active_editor_and_buffer();
+    if buffer && get_settings(buffer).status_bar_position == .top bar_rect.y -= status_bar_height;
 
     maybe_set_hot_or_active(input_id, bar_rect, .NORMAL);
 

@@ -11,11 +11,9 @@ Simple_Bucket_Array :: struct (type: Type, items_per_bucket: int, max_buckets: i
     Bucket :: Bucket_Type(type, items_per_bucket);
 
     allocator: Allocator;
-
-    buckets: [max_buckets] *Bucket;
-    last_bucket_index := -1;
-
     count: s64;
+    last_bucket_index := -1;
+    buckets: [max_buckets] *Bucket;
 }
 
 Bucket_Type :: struct (type: Type, items_per_bucket: int) {
