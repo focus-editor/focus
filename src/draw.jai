@@ -1474,6 +1474,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 if !cursors_are_visible continue;  // check it within the loop so that we always calculate how many cursors are off screen
 
                 cursor_rect := make_rect(screen_pos.x, screen_pos.y, cursor_width, line_height);
+                cursor_rect = align_to_grid(cursor_rect);
                 draw_rounded_rect(cursor_rect, Color.CURSOR, radius = rounding_radius_small, set_shader = true);
 
                 // Draw the letter on top for better visibility
