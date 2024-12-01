@@ -17,6 +17,7 @@ dialog_handle_event :: (dialog: *Generic_Confirm_Dialog, event: Input.Event) -> 
 
 dialog_get_result :: (dialog: *Generic_Confirm_Dialog($Details), action_id: Deferred_Action_Id) -> Generic_Confirm_Dialog_Result {
     if action_id != dialog.triggered_by_action  return .UNINITTED;
+    if active_global_widget != dialog.global_widget_id && dialog.result == .PENDING then close_dialog(dialog, .CANCEL);
     return dialog.result;
 }
 

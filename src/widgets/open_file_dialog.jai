@@ -112,6 +112,7 @@ close_open_file_dialog :: (result: Open_File_Dialog.Result, selected_path := "")
 
 open_file_dialog_get_result :: (action_id: Deferred_Action_Id) -> Open_File_Dialog.Result, string {
     if action_id != open_file_dialog.triggered_by_action  return .UNINITTED, "";
+    if active_global_widget != .open_file_dialog && open_file_dialog.result == .PENDING then close_open_file_dialog(.CANCEL);
     return open_file_dialog.result, open_file_dialog.selected_path;
 }
 
