@@ -687,7 +687,7 @@ find_matching_bracket :: (using buffer: Buffer, pos: s32) -> index: s32 {
 
     balance := 0;
     if direction < 0 {
-        for < i : pos .. 0 {
+        for #v2 < i : 0 .. pos {
             if tokens[i] != .punctuation continue;
 
             byte := bytes[i];

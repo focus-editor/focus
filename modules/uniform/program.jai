@@ -973,7 +973,7 @@ compute_hints :: (using prog: *Prog, flat: *[..] Inst, begin: int, end: int) {
 	colors: [256] int;
 
 	dirty := false;
-	for < id: end..begin {
+	for #v2 < id: begin..end {
 		if (id == end || get_opcode((<<flat)[id]) != .kInstByteRange) {
 			if (dirty) {
 				dirty = false;

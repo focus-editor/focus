@@ -32,7 +32,9 @@ https://discord.gg/eSXquAzTmW
 
 `$ jai first.jai - release`
 
-Minimum Jai version: `0.1.090` (the language is currently in closed beta, but it will hopefully go into open beta soon)
+(NOTE: it's `- release`, not `-release`)
+
+Minimum Jai version: `0.1.096` (the language is currently in closed beta, but it will hopefully go into open beta soon)
 
 **On macOS:**
 

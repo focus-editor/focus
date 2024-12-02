@@ -1420,7 +1420,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             line = take_first_n_chars(line, max_chars_horizontally, tab_size);
             line = trim_right(line, " \r\n");
             tokens := ifx line then to_view(buffer.tokens, line.data - buffer.bytes.data, line.count) else .[];
-            code_lines[line_num-visible_lines_start] = .{ line = line, start_offset = line_start, tab_spaces = xx tab_spaces, tokens = xx tokens };
+            code_lines[line_num-visible_lines_start] = .{ line = line, start_offset = line_start, tab_spaces = xx tab_spaces, tokens = xx,force tokens };
         }
 
         selections: [..] Offset_Range;
@@ -1858,7 +1858,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                     if line_str.count > 0 {
                         tokens := to_view(buffer.tokens, visible_offset_range.start, line_str.count);
                         code_lines: [1] Simp.Code_Line;
-                        code_lines[0] = .{ line = line_str, tab_spaces = 0, tokens = xx tokens };
+                        code_lines[0] = .{ line = line_str, tab_spaces = 0, tokens = xx,force tokens };
                         draw_code(font_main, pen, code_lines, tab_size, is_colored = buffer.tokens.count > 0, start_col = line_indent + col_offset);
                     }
                 }
@@ -3164,7 +3164,7 @@ draw_finder :: () {
                 if line_str.count > 0 {
                     tokens := to_view(buffer.tokens, visible_range.start, line_str.count);
                     code_lines: [1] Simp.Code_Line;
-                    code_lines[0] = .{ line = line_str, tab_spaces = 0, tokens = xx tokens };
+                    code_lines[0] = .{ line = line_str, tab_spaces = 0, tokens = xx,force tokens };
                     draw_code(font_main, pen, code_lines, tab_size, is_colored = buffer.tokens.count > 0, start_col = line_indent + col_offset);
                 }
             }
@@ -3528,9 +3528,9 @@ draw_tooltip_bottom_left :: (text: string, pos: Vector2) {
 draw_code :: (font: *Simp.Dynamic_Font, pen: Vector2, code_lines: [] Simp.Code_Line, tab_size: s32, selections: [] Offset_Range = .[], start_col := 0, is_colored := true) {
     // Use different code paths for colored and uncolored texts to avoid checking if color is present for each letter
     if is_colored {
-        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, xx selections, tab_size, start_col, is_colored = true);
+        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, xx,force selections, tab_size, start_col, is_colored = true);
     } else {
-        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, xx selections, tab_size, start_col, is_colored = false);
+        Simp.draw_code(font, xx pen.x, xx pen.y, char_x_advance, line_height, code_lines, xx,force selections, tab_size, start_col, is_colored = false);
     }
 }
 

@@ -710,7 +710,7 @@ add_rune_range :: (using comp: *Compiler, lo: Rune, hi: Rune, foldcase: bool) {
 			}
 		}
 	} else {
-		for < i: n-1..0 {
+		for #v2 < i: 0 .. n-1 {
 			// In forward UTF-8 mode: don't cache the leading byte; cache the last
 			// continuation byte; cache anything else iff it's a byte range (XX-YY).
 			if (i == n-1 || (ulo[i] < uhi[i] && i != 0)) {
