@@ -129,6 +129,8 @@ platform_set_border_color :: inline () {
     dark_string  :: "NSAppearanceNameDarkAqua";
     light_string :: "NSAppearanceNameAqua";
 
+    appearance_name : string;
+
     if config.settings.colored_titlebar {
         bg := map_color_to_vec4(.BACKGROUND_0);
 
@@ -147,14 +149,14 @@ platform_set_border_color :: inline () {
         //      the result of the classification from step 1, which indirectly set a (hopefully)
         //      appropriate titlebar text color.
         hsp := sqrt(bg.x * bg.x * .299 + bg.y * bg.y * .587 + bg.z * bg.z * .114) * 256.0;
-        appearance_name := ifx hsp < 130 then dark_string else light_string;
-        NSWindow.setAppearance(window, NSAppearance.appearanceNamed(NSString.getTempString(appearance_name)));
+        appearance_name = ifx hsp < 130 then dark_string else light_string;
     } else {
-        appearance_name := ifx config.settings.dark_titlebar then dark_string else light_string;
+        appearance_name = ifx config.settings.dark_titlebar then dark_string else light_string;
 
         NSWindow.setTitlebarAppearsTransparent(window, NO);
-        NSWindow.setAppearance(window, NSAppearance.appearanceNamed(NSString.getTempString(appearance_name)));
     }
+
+    NSWindow.setAppearance(window, NSAppearance.appearanceNamed(NSString.getTempString(appearance_name)));
 }
 
 platform_show_cursor :: (show: bool) {
