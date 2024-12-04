@@ -51,6 +51,8 @@ editor_history_size:                                1024
 line_wrap_is_on_by_default:                         false
 show_line_numbers:                                  false
 show_ruler_at_column:                               0
+colored_titlebar:                                   true
+dark_titlebar:                                      false
 hide_mouse_when_typing:                             false
 draw_indent_guides:                                 false
 auto_surround_with_brackets_and_quotes:             false
