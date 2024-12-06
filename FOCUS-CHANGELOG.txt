@@ -64,6 +64,7 @@
     + Fixed a crash when changing languages in the color preview widget
     + Fixed a crash when editing colors near the end of file with color preview open (thanks @darkgiggs)
     + Fixed a crash when trying to jump to build error after reloading workspace
+    + Fixed a crash when trying to duplicate an editor in some cases
     + Fixed font size changing when you press ctrl after scrolling has started (thanks @onelivesleft)
     + Cursors in all editors should now be preserved after stripping trailing whitespace. Undo/redo behaviour is fixed as well.
     + Current line highlights will no longer cover indent guides and text highlights
@@ -80,6 +81,8 @@
     + When a file gets deleted but is then created again (e.g. when switching branches in source control), the editor will notice that and "undelete" the buffer
     + The Navigate To File dialog will now show whether a file is modified and/or modified on disk
     + The editor will now refresh at regular intervals, so that it shows any changes happened externally without waiting for user input
+    + The Basic Light theme has been improved (thanks @maxamundsen)
+    + macOS: the `dark_titlebar` and `colored_titlebar` settings are now respected (thanks @maxamundsen)
 
 
 # RELEASES ==================================================================

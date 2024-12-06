@@ -961,7 +961,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 if mouse_coords.line >= editor_initial_middle_mouse_coords.line {
                     for   editor_initial_middle_mouse_coords.line..mouse_coords.line  maybe_create_cursor_or_move_main_cursor_to_this_line();
                 } else {
-                    for < editor_initial_middle_mouse_coords.line..mouse_coords.line  maybe_create_cursor_or_move_main_cursor_to_this_line();
+                    for #v2 < mouse_coords.line..editor_initial_middle_mouse_coords.line  maybe_create_cursor_or_move_main_cursor_to_this_line();
                 }
             }
 
