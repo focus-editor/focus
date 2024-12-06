@@ -83,6 +83,7 @@
     + The editor will now refresh at regular intervals, so that it shows any changes happened externally without waiting for user input
     + The Basic Light theme has been improved (thanks @maxamundsen)
     + macOS: the `dark_titlebar` and `colored_titlebar` settings are now respected (thanks @maxamundsen)
+    + Made horizontal scrolling with a horizontal mouse wheel more smooth
 
 
 # RELEASES ==================================================================

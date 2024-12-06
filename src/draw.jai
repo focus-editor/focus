@@ -1237,6 +1237,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 left = new_target;
                 viewport_remember_glue_point(editor, buffer);
             }
+            redraw_requested = true;
         }
         // Keyboard smooth scrolling - horizontal
         if (editor_smooth_scroll.direction == .left || editor_smooth_scroll.direction == .right) && editor_id == editors.active {
