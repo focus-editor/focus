@@ -1983,6 +1983,7 @@ switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := fa
 duplicate_active_editor :: () -> s64 {
     current_editor       := *open_editors[editors.active];
     duplicated_editor_id := find_or_create_editor(current_editor.buffer_id, editors.active);
+    current_editor        = *open_editors[editors.active];  // take the pointer again because it could've become invalid
     duplicated_editor    := *open_editors[duplicated_editor_id];
 
     // Duplicate cursors
