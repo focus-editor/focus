@@ -1398,12 +1398,20 @@ refresh_buffer_from_disk_by_path :: (path: string) {
 
     if !buffer_file_has_changed_on_disk(buffer) return;
 
-    finder.need_to_refresh_results = true;
-
     // Buffer may have changed on disk - reload and compare hashes to be sure
     assert(platform_path_equals(path, buffer.file.full_path));
 
-    // Reload buffer from disk
+    reload_from_disk(buffer_id);
+
+    finder.need_to_refresh_results = true;
+}
+
+reload_from_disk :: (buffer_id: s64, force := false, show_user_messages := false) {
+    buffer := *open_buffers[buffer_id];
+    assert(buffer.has_file && buffer.file.full_path);
+
+    path := buffer.file.full_path;
+
     file_contents_str, success := read_entire_file(path);
     if is_file_binary(file_contents_str) {
         free(file_contents_str);
@@ -1411,38 +1419,40 @@ refresh_buffer_from_disk_by_path :: (path: string) {
         buffer.readonly = true;
     }
 
-    if !success { log_error("Couldn't read file '%'\n", path); return; }
+    if !success {
+        if show_user_messages {
+            add_user_error("Couldn't read file:\n%", path);
+        } else {
+            log_error("Couldn't read file:\n%", path);
+        }
+        return;
+    }
     defer free(file_contents_str);
 
-    lock(*buffer.content_lock);
     bytes_removed := remove_crlf_in_place(*file_contents_str);
-    unlock(*buffer.content_lock);
-
     file_hash := calculate_hash(cast([] u8) file_contents_str);
-    if buffer.meow_hash == file_hash  return;  // file hasn't actually changed
+    if buffer.meow_hash == file_hash && !force return;
 
     buffer.crlf = bytes_removed > 0;
     buffer.meow_hash = file_hash;
     buffer.deleted = false;
 
-    if buffer.modified {
+    if buffer.modified && !force {
         // Mark conflict
         // TODO: display a dialog prompting to reload
         buffer.modified_on_disk = true;
     } else {
+        buffer.modified_on_disk = false;
         remember_last_mod_info(buffer);
-
         cursor_positions := remember_cursor_positions(buffer_id, in = .all_editors);
-
         replace_range(buffer, .{ 0, buffer.bytes.count }, file_contents_str);
-
         restore_cursor_positions(buffer_id, cursor_positions);
     }
 
     refresh_all_editors_for_buffer(buffer_id);
 }
 
-reload_from_disk :: (buffer_id: s64) {
+user_reload_from_disk :: (buffer_id: s64) {
     // The difference between this function and `refresh_buffer_from_disk_by_path` is that
     // this function is invoked by user and it will force reload and will produce user messages,
     // whereas the other one is automatic and is silent
@@ -1452,37 +1462,10 @@ reload_from_disk :: (buffer_id: s64) {
         add_user_warning("Buffer has no associated file", dismiss_in_seconds = 5);
         return;
     }
-    path := buffer.file.full_path;
 
-    // Force reload buffer from disk, even if unchanged, and clear the flags
-    file_contents_str, success := read_entire_file(path);
-    if is_file_binary(file_contents_str) {
-        free(file_contents_str);
-        file_contents_str = sprint("Couldn't display file '%' because it's either binary or contains non-UTF8 characters.", path);
-        buffer.readonly = true;
-    }
+    reload_from_disk(buffer_id, force = true, show_user_messages = true);
 
-    if !success { add_user_error("Couldn't read file:\n%", path); return; }
-    defer free(file_contents_str);
-
-    bytes_removed := remove_crlf_in_place(*file_contents_str);
-
-    buffer.crlf = bytes_removed > 0;
-    buffer.meow_hash = calculate_hash(cast([] u8) file_contents_str);
-    buffer.deleted = false;
-    buffer.modified = false;  // if the user had unsaved changes and needs them again, undo should help
-
-    remember_last_mod_info(buffer);
-
-    cursor_positions := remember_cursor_positions(buffer_id, in = .all_editors);
-
-    replace_range(buffer, .{ 0, buffer.bytes.count }, file_contents_str);
-
-    restore_cursor_positions(buffer_id, cursor_positions);
-
-    refresh_all_editors_for_buffer(buffer_id);
-
-    add_success_message("File contents has been reloaded from\n%", path);
+    add_success_message("File contents has been reloaded from\n%", buffer.file.full_path);
 
     finder.need_to_refresh_results = true;
 }

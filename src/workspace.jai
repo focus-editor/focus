@@ -245,6 +245,9 @@ reload_workspace :: (automatic := false) {
     editor_id_map: Table(s64, s64);
     editor_id_map.allocator = temp;
 
+    buffers_to_refresh_from_disk: [..] s64;
+    buffers_to_refresh_from_disk.allocator = temp;
+
     for * buffer, old_buffer_id : open_buffers {
         buffer := *open_buffers[old_buffer_id];
         if should_keep_buffer_when_reloading_workspace(buffer) {
@@ -254,6 +257,7 @@ reload_workspace :: (automatic := false) {
                 table_add(*buffers_table, copy_string(buffer.file.full_path), new_buffer_id);
                 start_watching_file_if_not_already(buffer.file.full_path);
                 buffer.file = get_file_info_from_full_path(buffer.file.full_path);  // refresh file info to reflect new project dirs
+                array_add(*buffers_to_refresh_from_disk, new_buffer_id);
             }
             recalculate_settings(buffer);
 
@@ -320,6 +324,10 @@ reload_workspace :: (automatic := false) {
         }
     }
 
+    // Refresh file-backed buffers from disk.
+    // At this point the user either saved all buffers or told us to discard unsaved changes
+    for buffer_id : buffers_to_refresh_from_disk  reload_from_disk(buffer_id, force = true);
+
     if !automatic then show_open_file_dialog(.search);
 
     init_build_system();  // must do after we've cleared editors and buffers
@@ -337,7 +345,9 @@ reload_workspace :: (automatic := false) {
 }
 
 should_keep_buffer_when_reloading_workspace :: (using buffer: Buffer) -> bool {
-    if !has_file return false;  // if this is a special buffer we can recreate it later. If the buffer is unsaved, we're throwing it away (because the user decided not to save it)
+    // If this is a special buffer we can recreate it later.
+    // If the buffer is unsaved, we're throwing it away (because the user decided not to save it)
+    if !has_file || deleted return false;
 
     if is_our_config_file(file.full_path) return true;
     if should_ignore_file(file.full_path) return false;
