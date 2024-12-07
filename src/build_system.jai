@@ -523,7 +523,7 @@ substitute_variables :: (using work: *Build_Thread_Work) {
         if is_build_panel(current_editor_id) then current_editor_id = editors.left;
         if is_build_panel(current_editor_id) then current_editor_id = editors.right;
 
-        if current_editor_id >= 0 {
+        if current_editor_id >= 0 && current_editor_id < open_editors.count {
             buffer := open_buffers[open_editors[current_editor_id].buffer_id];
             if buffer.has_file then file = copy_string(buffer.file.full_path);
         }
