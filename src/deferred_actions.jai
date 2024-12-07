@@ -326,7 +326,7 @@ execute_kill_running_command :: (action: Deferred_Action) -> Action_Result {
             build_kill_running_command();
             kill_running_command_dialog.result = .PENDING;
             redraw_requested = true;
-            return .WAIT;
+            return .DONE;
 
         case .PENDING;   return .WAIT;
         case .CANCEL;    return .CANCEL;
