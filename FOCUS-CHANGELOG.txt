@@ -65,10 +65,12 @@
     + Fixed a crash when editing colors near the end of file with color preview open (thanks @darkgiggs)
     + Fixed a crash when trying to jump to build error after reloading workspace
     + Fixed a crash when trying to duplicate an editor in some cases
+    + Fixed a crash when printing too much into the build output window
     + Fixed font size changing when you press ctrl after scrolling has started (thanks @onelivesleft)
     + Cursors in all editors should now be preserved after stripping trailing whitespace. Undo/redo behaviour is fixed as well.
     + Current line highlights will no longer cover indent guides and text highlights
     + Fixed double save dialogs which could appear in some cases
+    + Fixed a memory leak in the build system
 + Other changes:
     + Syntax highlighting improvements for CSS and TypeScript (thanks @simonvallz)
     + Creating cursors above and below will now skip empty lines as this is most likely the behaviour users want (thanks @onelivesleft)
