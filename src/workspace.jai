@@ -459,6 +459,7 @@ directory_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void
     file_range := cast(*[] string) work;
 
     for path : << file_range {
+        auto_release_temp();
         if !should_ignore_file(path) then find_or_create_buffer(path);
     }
 

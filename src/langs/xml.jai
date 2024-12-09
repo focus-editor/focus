@@ -419,8 +419,6 @@ parse_tag_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     if state == .Parsing_Implicit_Cdata_Tag_Content && active_tag_name {
         state = .None;
 
-        auto_release_temp();
-
         t_start := t;
 
         end_tag := tprint("</%", active_tag_name);
