@@ -14,6 +14,7 @@ defer_action_switch_to_project :: (path: string) {
     clear_action_queue();
     push_action(.reload_workspace, .{ reload_workspace = .{ automatic = false } });
     push_action(.load_project_config, .{ load_project_config = .{ path = copy_string(path) } });
+    push_action(.wait_for_killed_command_to_stop);
     push_action(.kill_running_command);
     push_action(.save_all_buffers);
 }
@@ -21,6 +22,7 @@ defer_action_switch_to_project :: (path: string) {
 defer_action_reload_workspace :: (automatic: bool) {
     clear_action_queue();
     push_action(.reload_workspace, .{ reload_workspace = .{ automatic = automatic } });
+    push_action(.wait_for_killed_command_to_stop);
     push_action(.kill_running_command);
     push_action(.save_all_buffers);
 }
@@ -29,6 +31,7 @@ defer_action_close_project :: () {
     clear_action_queue();
     push_action(.reload_workspace, .{ reload_workspace = .{ automatic = false } });
     push_action(.close_project);
+    push_action(.wait_for_killed_command_to_stop);
     push_action(.kill_running_command);
     push_action(.save_all_buffers);
 }
@@ -36,6 +39,7 @@ defer_action_close_project :: () {
 defer_action_quit :: () {
     clear_action_queue();
     push_action(.quit);
+    push_action(.wait_for_killed_command_to_stop);
     push_action(.kill_running_command);
     push_action(.save_all_buffers);
 }
@@ -43,6 +47,7 @@ defer_action_quit :: () {
 defer_action_build_command :: (command_id: s64) {
     clear_action_queue();
     push_action(.build_command, .{ build_command = .{ command_id = command_id } });
+    push_action(.wait_for_killed_command_to_stop);
     push_action(.kill_running_command);
     push_action(.wait_for_workspace_scanning_to_finish);
 }
@@ -96,6 +101,7 @@ execute_top_action :: () -> Action_Result {
         case .reload_workspace;                         return execute_reload_workspace(action);
         case .build_command;                            return execute_build_command(action);
         case .wait_for_workspace_scanning_to_finish;    return execute_wait_for_scanning(action);
+        case .wait_for_killed_command_to_stop;          return execute_wait_for_killed_command_to_stop(action);
     }
 }
 
@@ -121,6 +127,7 @@ remove_top_action :: () {
         case .close_project;
         case .build_command;
         case .wait_for_workspace_scanning_to_finish;
+        case .wait_for_killed_command_to_stop;
     }
 }
 
@@ -157,6 +164,7 @@ Deferred_Action :: struct {
         close_project;
         reload_workspace;
         wait_for_workspace_scanning_to_finish;
+        wait_for_killed_command_to_stop;
     }
 }
 
@@ -371,6 +379,11 @@ execute_wait_for_scanning :: (action: Deferred_Action) -> Action_Result {
         add_user_warning("Waiting for the workspace scan to finish...", tag = .build);
         return .WAIT;
     }
+    return .DONE;
+}
+
+execute_wait_for_killed_command_to_stop :: (action: Deferred_Action) -> Action_Result {
+    if build_get_running_command_name() return .WAIT;
     return .DONE;
 }
 
