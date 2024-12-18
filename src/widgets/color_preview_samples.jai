@@ -1073,3 +1073,48 @@ for %%i in (apple, mango, elderberry) do (
 
 :end
 BATCH
+
+SAMPLE_Swift :: #string SWIFT
+import Foundation
+
+class Car {
+    var make: String
+    var model: String
+    var year: Int
+    var isEngineOn: Bool = false
+
+    init(make: String, model: String, year: Int) {
+        self.make = make
+        self.model = model
+        self.year = year
+    }
+
+    func startEngine() {
+        if !isEngineOn {
+            isEngineOn = true
+            print("The engine is now on.")
+        } else {
+            print("The engine is already running.")
+        }
+    }
+
+    func stopEngine() {
+        if isEngineOn {
+            isEngineOn = false
+            print("The engine is now off.")
+        } else {
+            print("The engine is already off.")
+        }
+    }
+
+    func displayDetails() {
+        print("\(year) \(make) \(model)")
+    }
+}
+
+let myCar = Car(make: "Toyota", model: "Corolla", year: 2020)
+myCar.displayDetails()
+myCar.startEngine()
+myCar.stopEngine()
+
+SWIFT
