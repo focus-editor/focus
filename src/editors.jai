@@ -1288,6 +1288,7 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
         case "md";              lang = .Markdown;
         case "bat";             lang = .Batch;
         case "cmd";             lang = .Batch;
+        case "swift";           lang = .Swift;
 
         case "ts";              lang = .Js;
         case "tsx";             lang = .Js;
@@ -3410,7 +3411,8 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
         case .Odin;   #through;
         case .Rust;   #through;
         case .Yang;   #through;
-        case .Zig;
+        case .Zig;    #through;
+        case .Swift;
             comment = "//";
 
         case .Lua;
@@ -3627,7 +3629,8 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
         case .Json;   #through;
         case .Odin;   #through;
         case .Rust;   #through;
-        case .Yang;
+        case .Yang;   #through;
+        case .Swift;
             comment_start = "/*";
             comment_end   = "*/";
 
