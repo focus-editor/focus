@@ -320,12 +320,12 @@ parse_comment :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
         state = .None;
         token.type = .comment_end;
         t += 3;
-    } else if at_string(tokenizer, "--") { // The string '--' is not allowed within a comment.
+    } else if at_string(tokenizer, "--") { // The string '--' is not allowed within an xml comment.
         token.type = .error;
         t += 2;
     } else {
         token.type = .comment_content;
-        eat_until(tokenizer, "--");
+        eat_until(tokenizer, ifx html_mode then "-->" else "--"); // In html mode the string '--' is allowed in a comment so just find the end of the comment.
     }
 }
 
