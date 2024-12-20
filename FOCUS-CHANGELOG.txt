@@ -6,6 +6,7 @@
         + Batch (thanks @arjenwitteveen)
         + D (thanks @dawsonfrakes)
         + JS embedded in HTML <script> tags will now be highlighted (@thanks @simonvallz)
+        + Swift (thanks @simonvallz)
         + Jai 0.1.96+
     + It is now possible to pass a line number together with the file path to the editor on startup: `focus /path/to/file:69` (thanks @simonvallz)
     + New actions to change case of selected text (thanks @onelivesleft):
