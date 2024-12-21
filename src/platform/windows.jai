@@ -287,7 +287,7 @@ monitor_enum_proc :: (hMonitor: HMONITOR, hdc: HDC, rect: *RECT, data: LPARAM) -
     GetMonitorInfoW(hMonitor, *monitorInfo);
     monitor.primary = !!(monitorInfo.dwFlags & 0x1);
 
-    new_context : Context;
+    new_context : #Context;
     push_context new_context {
         array_add(*monitors, monitor);
     }

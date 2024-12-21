@@ -385,13 +385,13 @@ __panic_due_to_runtime_call_of_compile_time_procedure :: (line_number: s64, file
 #if DEFINE_INITIALIZATION {
     // TEMPORARY_STORAGE_SIZE is defined by the compiler based on Build_Options.
 
-    first_thread_context: Context;
+    first_thread_context: #Context;
     first_thread_temporary_storage: Temporary_Storage;
     first_thread_temporary_storage_data: [TEMPORARY_STORAGE_SIZE] u8 #align 64;
 
     #scope_export
     #program_export
-    __jai_runtime_init :: (argc: s32, argv: **u8) -> *Context #c_call {
+    __jai_runtime_init :: (argc: s32, argv: **u8) -> *#Context #c_call {
         __command_line_arguments.count = argc;
         __command_line_arguments.data  = argv;
 
@@ -402,7 +402,7 @@ __panic_due_to_runtime_call_of_compile_time_procedure :: (line_number: s64, file
 
         first_thread_context.base.context_info = type_info(Context);
 
-        dummy_context: Context;
+        dummy_context: #Context;
         dummy_context.base.context_info = type_info(Context);
         push_context dummy_context {
             // Allocator should not rely on a good context for STARTUP. For other modes, it's fine.
@@ -792,7 +792,7 @@ report_failed_assertion_more_visibly :: (loc: Source_Code_Location, msg: string)
 }
 
 report_error_in_yer_face_no_ctx :: (message: string, args: .. Any) #no_context {
-    ctx: Context;
+    ctx: #Context;
     push_context ctx { report_error_in_yer_face(message, ..args, from_no_context = true); }
 }
 
