@@ -1,5 +1,5 @@
 tokenize_swift :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] Buffer_Region {
-    tokenizer := get_tokenizer(buffer, start_offset, count);
+    tokenizer := get_swift_tokenizer(buffer, start_offset, count);
 
     last_token: Token; // to retroactively highlight functions
 
@@ -21,14 +21,73 @@ tokenize_swift :: (using buffer: *Buffer, start_offset := -1, count := -1) -> []
         memset(tokens.data + token.start, xx token.type, token.len);
     }
 
-    return .[];
+    return tokenizer.regions;
 }
 
-get_next_swift_token :: get_next_token;  // export for indent tokenization
+tokenize_swift_for_indentation :: (buffer: Buffer) -> [] Indentation_Token /* temp */ {
+    tokens: [..] Indentation_Token;
+    tokens.allocator = temp;
+
+    tokenizer := get_swift_tokenizer(buffer);
+
+    // Allocate temporary space for tracking one previous token
+    tokenizer.prev_tokens[0] = New(Token,, temp);
+
+    while true {
+        src := get_next_token(*tokenizer);
+
+        token: Indentation_Token = ---;
+        token.start = src.start;
+        token.len   = src.len;
+
+        if src.type == {
+            case .punctuation;
+                if src.punctuation == {
+                    case .l_paren;      token.type = .open;  token.kind = .paren;
+                    case .l_bracket;    token.type = .open;  token.kind = .bracket;
+                    case .l_brace;      token.type = .open;  token.kind = .brace;
+
+                    case .r_paren;      token.type = .close; token.kind = .paren;
+                    case .r_bracket;    token.type = .close; token.kind = .bracket;
+                    case .r_brace;      token.type = .close; token.kind = .brace;
+
+                    case;               continue;
+                }
+
+            case .multiline_comment;    token.type = .maybe_multiline;
+            case .eof;                  token.type = .eof;  // to guarantee we always have indentation tokens
+            case;                       token.type = .unimportant;
+        }
+
+        array_add(*tokens, token);
+
+        if src.type == .eof break;
+    }
+
+    return tokens;
+}
 
 #scope_file
 
-get_next_token :: (using tokenizer: *Tokenizer) -> Token {
+get_swift_tokenizer :: (using buffer: Buffer, start_offset := -1, count := -1) -> Swift_Tokenizer {
+    tokenizer: Swift_Tokenizer;
+
+    tokenizer.buf   = to_string(bytes);
+    tokenizer.max_t = bytes.data + bytes.count;
+    tokenizer.t     = bytes.data;
+
+    if start_offset >= 0 {
+        start_offset = clamp(start_offset, 0, bytes.count - 1);
+        count        = clamp(count,        0, bytes.count - 1);
+        tokenizer.t += start_offset;
+        tokenizer.max_t = tokenizer.t + count;
+    }
+
+    return tokenizer;
+}
+
+
+get_next_token :: (using tokenizer: *Swift_Tokenizer) -> Token {
     eat_white_space(tokenizer);
 
     token: Token;
@@ -85,14 +144,14 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
     return token;
 }
 
-peek_next_token :: (using tokenizer: *Tokenizer, $skip_characters := 0) -> Token {
+peek_next_token :: (using tokenizer: *Swift_Tokenizer, $skip_characters := 0) -> Token {
     tokenizer_copy := tokenizer.*;
     tokenizer_copy.t += skip_characters;
     token := get_next_token(*tokenizer_copy);
     return token;
 }
 
-parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_identifier :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     token.type = .identifier;
 
     identifier_str := read_utf8_identifier_string(tokenizer);
@@ -108,7 +167,7 @@ parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_number :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     token.type = .number;
 
     start_char := t.*;
@@ -156,7 +215,7 @@ parse_number :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_question :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_question :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .question;
 
@@ -169,7 +228,7 @@ parse_question :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_equal :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_equal :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .equal;
 
@@ -182,7 +241,7 @@ parse_equal :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_minus :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .minus;
 
@@ -195,7 +254,7 @@ parse_minus :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_plus :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_plus :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .plus;
 
@@ -208,7 +267,7 @@ parse_plus :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_asterisk :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_asterisk :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .asterisk;
 
@@ -221,7 +280,7 @@ parse_asterisk :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_less_than :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_less_than :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .less_than;
 
@@ -238,7 +297,7 @@ parse_less_than :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_greater_than :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_greater_than :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .greater_than;
 
@@ -255,7 +314,7 @@ parse_greater_than :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_bang :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_bang :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .bang;
 
@@ -268,7 +327,7 @@ parse_bang :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_string_literal :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     token.type = .string_literal;
 
     t += 1;
@@ -299,15 +358,39 @@ parse_string_literal :: (using tokenizer: *Tokenizer, token: *Token) {
 
     escape_seen := false;
     while t < max_t && t.* != #char "\n" {
-        if t.* == #char "\"" && !escape_seen  break;
-        escape_seen = !escape_seen && t.* == #char "\\";
+        if at_string(tokenizer, "\\(") {
+            l_parens_found := 0;
+            t += 2;
+
+            t_start := t;
+
+            while t < max_t {
+                if t.* == #char "(" {
+                    l_parens_found += 1;
+                } else if t.* == #char ")" {
+                    if l_parens_found == 0  break;
+                    l_parens_found -= 1;
+                }
+
+                t += 1;
+            }
+
+            start := cast(s32) (t_start - buf.data);
+            end   := cast(s32) (t - buf.data);
+
+            array_add(*regions, Buffer_Region.{ start = start, end = end, kind = .heredoc, lang = .Swift });
+        } else {
+            if t.* == #char "\"" && !escape_seen  break;
+            escape_seen = !escape_seen && t.* == #char "\\";
+        }
+
         t += 1;
     }
 
     t += 1;
 }
 
-parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_slash_or_comment :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .slash;
 
@@ -339,7 +422,7 @@ parse_slash_or_comment :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_ampersand :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_ampersand :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .ampersand;
 
@@ -356,7 +439,7 @@ parse_ampersand :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_pipe :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_pipe :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .pipe;
 
@@ -373,7 +456,7 @@ parse_pipe :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_percent :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_percent :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .percent;
 
@@ -386,7 +469,7 @@ parse_percent :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_caret :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_caret :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .caret;
 
@@ -399,7 +482,7 @@ parse_caret :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_freestanding_macro :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_freestanding_macro :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     token.type = .macro;
 
     t += 1;
@@ -411,7 +494,7 @@ parse_freestanding_macro :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_attached_macro :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_attached_macro :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     token.type = .macro;
 
     t += 1;
@@ -423,7 +506,7 @@ parse_attached_macro :: (using tokenizer: *Tokenizer, token: *Token) {
     }
 }
 
-parse_dollar :: (using tokenizer: *Tokenizer, token: *Token) {
+parse_dollar :: (using tokenizer: *Swift_Tokenizer, token: *Token) {
     token.type = .operation;
     token.operation = .dollar;
 
@@ -431,6 +514,13 @@ parse_dollar :: (using tokenizer: *Tokenizer, token: *Token) {
     if t >= max_t  return;
 
     while t < max_t && is_digit(t.*)  t += 1;
+}
+
+Swift_Tokenizer :: struct {
+    #as using base: Tokenizer;
+
+    regions: [..] Buffer_Region;
+    regions.allocator = temp;
 }
 
 Token :: struct {

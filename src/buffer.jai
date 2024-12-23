@@ -554,7 +554,7 @@ tokenize_for_indentation :: (buffer: *Buffer) -> [] Indentation_Token /* temp */
         case .Json;         return tokenize_c_like_lang_for_indentation(buffer, get_next_json_token);
         case .Glsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_glsl_token);
         case .Hlsl;         return tokenize_c_like_lang_for_indentation(buffer, get_next_hlsl_token);
-        case .Swift;        return tokenize_c_like_lang_for_indentation(buffer, get_next_swift_token);
+        case .Swift;        return tokenize_swift_for_indentation(buffer);
         case .Zig;          return tokenize_c_like_lang_for_indentation(buffer, get_next_zig_token);
         case .Html;         return tokenize_xml_for_indentation(buffer);
         case .Xml;          return tokenize_xml_for_indentation(buffer);
