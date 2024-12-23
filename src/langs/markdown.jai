@@ -198,6 +198,8 @@ parse_backtick :: (using tokenizer: *Markdown_Tokenizer, token: *Token) {
 }
 
 parse_task_list :: (using tokenizer: *Markdown_Tokenizer, token: *Token) {
+    auto_release_temp();
+
     token.type = .default;
     maybe_do_task_list = false;
 
@@ -250,6 +252,8 @@ parse_exclamation_mark :: (using tokenizer: *Markdown_Tokenizer, token: *Token) 
 }
 
 parse_link :: (using tokenizer: *Markdown_Tokenizer, token: *Token) {
+    auto_release_temp();
+
     identifier_str := read_identifier_string_tmp(tokenizer);
 
     if begins_with(identifier_str, "https://") || begins_with(identifier_str, "http://") {
@@ -263,6 +267,8 @@ parse_link :: (using tokenizer: *Markdown_Tokenizer, token: *Token) {
 }
 
 parse_less_than :: (using tokenizer: *Markdown_Tokenizer, token: *Token) {
+    auto_release_temp();
+
     found_tag := false;
     identifier_str := read_identifier_string_tmp(tokenizer);
     closing_tag: string;

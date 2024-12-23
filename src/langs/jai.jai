@@ -190,6 +190,11 @@ get_next_token :: (using tokenizer: *Jai_Tokenizer) -> Token {
 parse_identifier :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
     token.type = .identifier;
 
+    // A hack to be able to safely release temp after this point
+    // (because we do need to keep any regions this function might add in the temporary storage)
+    array_reserve(*regions, regions.count + 1);
+
+    auto_release_temp();
     identifier_str := read_identifier_string_tmp(tokenizer);
 
     // Maybe it's a keyword
@@ -307,6 +312,11 @@ parse_directive :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
 
     start_offset := cast(s32) (start_t - buf.data);
 
+    // A hack to be able to safely release temp after this point
+    // (because we do need to keep any regions this function might add in the temporary storage)
+    array_reserve(*regions, regions.count + 1);
+
+    auto_release_temp();
     directive_str := read_identifier_string_tmp(tokenizer);
 
     // Check if it's one of the existing directives
