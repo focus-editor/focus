@@ -188,7 +188,7 @@ delete_dir_recursively :: (dir_path: string) -> deleted: bool {
 
 delete_empty_dir :: (dir_path: string) -> deleted: bool {
     #if OS == .WINDOWS {
-        deleted := RemoveDirectoryW(utf8_to_wide_new(dir_path,, temp));
+        deleted := RemoveDirectoryW(utf8_to_wide(dir_path,, temp));
         return cast(bool) deleted;
     } else {
         POSIX :: #import "POSIX";

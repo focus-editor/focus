@@ -1625,7 +1625,7 @@ get_supported_buffer_langs_lowercase :: () -> [] string /* intended to be run at
     lang_names: [..] string;
     for enum_names(Buffer.Lang) {
         if equal_nocase(it, "focus_build_panel") continue;  // filter out "internal" languages
-        array_add(*lang_names, to_lower_copy_new(it));
+        array_add(*lang_names, to_lower_copy(it));
     }
     quick_sort(lang_names, compare_strings);
     return lang_names;

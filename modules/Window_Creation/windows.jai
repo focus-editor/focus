@@ -32,8 +32,8 @@ create_window :: (width: int, height: int, window_name: string, window_x := -1, 
     // CW_USEDEFAULT :: 0x8000_0000;
 
     hwnd := CreateWindowExW(0,
-                            utf8_to_wide_new(WINDOW_CLASS_NAME,, allocator = temp),
-                            utf8_to_wide_new(window_name,, allocator = temp),
+                            utf8_to_wide(WINDOW_CLASS_NAME,, allocator = temp),
+                            utf8_to_wide(window_name,, allocator = temp),
                             style,
                             xx window_x, xx window_y,
                             xx client_width,
@@ -172,7 +172,7 @@ init_window_class :: (background_color_rgb: [3] float) {
     //        -jblow, 14 November 2021.
     //
     #if #run windows_windowproc_exists() {
-        WindowProc :: Context._windows_windowproc;
+        WindowProc :: #Context._windows_windowproc;
     } else {
         WindowProc :: DefWindowProcW;
     }
@@ -189,7 +189,7 @@ init_window_class :: (background_color_rgb: [3] float) {
     wc.hbrBackground        = brush;  // cast(HBRUSH) GetStockObject(WHITE_BRUSH);
 
     wc.lpszMenuName         = null;
-    wc.lpszClassName        = utf8_to_wide_new(WINDOW_CLASS_NAME,, allocator = temp);
+    wc.lpszClassName        = utf8_to_wide(WINDOW_CLASS_NAME,, allocator = temp);
 
     // Register the window class.
     if RegisterClassExW(*wc) == 0 {
@@ -201,7 +201,7 @@ init_window_class :: (background_color_rgb: [3] float) {
 }
 
 windows_windowproc_exists :: () -> bool {
-    info := type_info(Context);
+    info := type_info(#Context);
     for info.members {
         if it.name == "_windows_windowproc" {
             return true;

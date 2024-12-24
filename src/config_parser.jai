@@ -170,7 +170,7 @@ keymap_map_key_code_to_string :: (key_code: u32) -> string /* temp */ {
 }
 
 get_theme_file_from_name :: (name: string) -> string /* temp */ {
-    theme_name := to_lower_copy_new(name,, temp);
+    theme_name := to_lower_copy(name,, temp);
     return tprint("%/%.focus-theme", themes_dir, theme_name);
 }
 
@@ -1236,7 +1236,7 @@ parse_key_combo :: (using parser: *Config_Parser, combo_str: string, line: strin
 
         valid_mod_key := true;
 
-        if to_lower_copy_new(mod_key,, temp) == {
+        if to_lower_copy(mod_key,, temp) == {
             case "ctrl";    combo.mods.ctrl_pressed       = true;
             case "shift";   combo.mods.shift_pressed      = true;
             case "alt";     combo.mods.alt_pressed        = true;

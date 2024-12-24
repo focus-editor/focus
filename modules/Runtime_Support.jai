@@ -105,8 +105,6 @@ runtime_support_assertion_failed :: (loc: Source_Code_Location, message: string)
         write_string("Exiting.\n", to_standard_error = true);
     }
 
-    report_failed_assertion_more_visibly(loc, message);
-
     __runtime_support_disable_stack_trace = true;
 
     return true;
@@ -126,7 +124,7 @@ runtime_support_default_logger :: (message: string, data: *void, info: Log_Info)
 
 c_style_strlen :: (str: *u8) -> s64 #no_context {
     p := str;
-    while << p  { p += 1; }
+    while p.*  { p += 1; }
     return p - str;
 }
 
@@ -161,8 +159,6 @@ __array_bounds_check_fail :: (index: s64, limit: s64, line_number: s64, filename
     write_string(":", to_standard_error = true);
     write_number(line_number, to_standard_error = true);
     write_string(".\n", to_standard_error = true);
-
-    report_bounds_check_error_more_visibly(index, limit, line_number, filename);
 
     my_panic();
 }
@@ -238,8 +234,6 @@ __null_pointer_check_fail :: (index: s64, line_number: s64, filename: *u8) #no_c
     write_number(line_number, to_standard_error = true);
     write_string(".\n", to_standard_error = true);
 
-    report_null_pointer_error_more_visibly(index, line_number, filename);
-
     my_panic();
 }
 
@@ -270,8 +264,6 @@ __arithmetic_overflow :: (left: s64, right: s64, type_code: u16, line_number: s6
     write_strings("\nThe operand type is ", signed_string, to_standard_error = true);
     write_nonnegative_number(size, to_standard_error = true);
     write_string(", but the result does not fit into this type.\n", to_standard_error = true);
-
-    if fatal report_arithmetic_overflow_more_visibly(line_number, filename);
 
     if fatal my_panic();
 }
@@ -395,19 +387,15 @@ __panic_due_to_runtime_call_of_compile_time_procedure :: (line_number: s64, file
         __command_line_arguments.count = argc;
         __command_line_arguments.data  = argv;
 
+        // We don't need this initializer_of call, but we're leaving it in a comment, in case there are
+        // compiler bugs in Context init and you want to work around them by re-enabling it.
+        // @Temporary: Putting it back for a bit since there is a bug exhibiting on Mac that might
+        // also cause first_thread_context not to be fully filled out...
+        initializer_of(#Context)(*first_thread_context); 
+        
         ts := *first_thread_temporary_storage;
         set_initial_data(ts, TEMPORARY_STORAGE_SIZE, first_thread_temporary_storage_data.data);
-
         first_thread_context.temporary_storage = ts;
-
-        first_thread_context.base.context_info = type_info(Context);
-
-        dummy_context: #Context;
-        dummy_context.base.context_info = type_info(Context);
-        push_context dummy_context {
-            // Allocator should not rely on a good context for STARTUP. For other modes, it's fine.
-            first_thread_context.allocator.data = runtime_support_default_allocator_proc(.STARTUP, 0, 0, null, null);
-        }
 
         return *first_thread_context;
     }
@@ -427,7 +415,7 @@ __instrumentation_first  :: () {
 __instrumentation_second :: () {
 }
 
-#scope_module
+#scope_module;
 
 #if DEFINE_SYSTEM_ENTRY_POINT {
     #program_export "main"
@@ -472,6 +460,8 @@ debug_break :: () #no_context {
             #asm { int 0x41; }
         } else #if CPU == .X64 {
             #asm { int3; }
+        } else #if CPU == .ARM64 {
+            #bytes .[0x20, 0x00, 0b001_0_0000, 0b1101_0100]; // BRK 0x01: 11 bit instruction, 16 bit immediate, 5 bit unused.
         } else #if OS == .WASM {
             wasm_debug_break :: () #foreign; // You will need to provide this function as JS code in your WASM environment. :JaiWasm:
             wasm_debug_break();
@@ -522,9 +512,7 @@ one_time_init :: (synch_value: *s32, to_insert: Code) #expand {
 // if you make an error of some kind, even a simple one like an undeclared identifier,
 // you won't get a helpful error message.
 Context_Base :: struct {
-    // @Incomplete: Initialize this to type_of(Context) to make sure it is not null when someone creates a default context!
-    // :InitContextInfo
-    context_info:  *Type_Info_Struct; // Allow libs or DLLs to see what context we are passing them.
+    context_info:  *Type_Info_Struct; // Allow libs or DLLs to see what context we are passing them. Will always be initialized to type_of(Context).
 
     thread_index   : u32;
 
@@ -537,17 +525,14 @@ Context_Base :: struct {
 
     temporary_storage: *Temporary_Storage;
 
-    // Currently, for simplicity we don't #if this out right now when _STACK_TRACE is false;
-    // initially an implementation detail prevented us from doing this, but now that's gone,
-    // but to be conservative we aren't changing this yet (but may later). It is probably
-    // convenient to let runtime code be able to check context.stack_trace to see if it is
-    // null in some cases, rather than needing all that to be #iffed as well. We will see.
+    // Currently, for simplicity we don't #if this out right now when _STACK_TRACE is false
+    // (but may later). It is probably convenient to let runtime code be able
+    // to check context.stack_trace to see if it is null in some cases,
+    // rather than needing all that to be #iffed as well. We will see.
     stack_trace: *Stack_Trace_Node;
 
     assertion_failed := runtime_support_assertion_failed;
     handling_assertion_failure := false;  // Used to avoid assert() infinite loops. Do not mess with this value.
-
-    program_print_plugin: *void;  // This is a dumb field that will go away when we have a better alternative.
 
     default_allocator :: Allocator.{runtime_support_default_allocator_proc, null};
 }
@@ -580,9 +565,6 @@ set_initial_data :: (ts: *Temporary_Storage, count: s64, data: *u8) #no_context 
     ts.original_data = data;
     ts.original_size = count;
 }
-
-#add_context using base: Context_Base;
-
 
 #scope_module
 
@@ -692,11 +674,11 @@ init_synchronization :: () #no_context {
             #if CPU == .X64 {
                 SYS_futex :: 202;
                 #asm SYSCALL_SYSRET {
-                    mov.q call: gpr === a, SYS_futex;
-                    mov.q uaddr: gpr === di, futex_lock;
+                    mov.q call:     gpr === a, SYS_futex;
+                    mov.q uaddr:    gpr === di, futex_lock;
                     mov.q futex_op: gpr === si, op;
-                    mov.q value: gpr === d, val;
-                    mov.q timeout: gpr === 10, 0;
+                    mov.q value:    gpr === d, val;
+                    mov.q timeout:  gpr === 10, 0;
 
                     syscall t1:, t2:, call;
                 }
@@ -761,94 +743,3 @@ init_synchronization :: () #no_context {
 
 synch_initted: s32 = 0;
 
-
-
-// ==========================================================================================================================================
-// Below are the functions we've added.
-
-#scope_file
-
-
-report_bounds_check_error_more_visibly :: (index: s64, limit: s64, line_number: s64, filename: *u8) #no_context {
-    report_error_in_yer_face_no_ctx("Array bounds check failed in file % at line number %: \nProvided index: %, maximum index: %", to_string(filename), line_number, index, limit-1);
-}
-
-report_null_pointer_error_more_visibly :: (index: s64, line_number: s64, filename: *u8) #no_context {
-    if index {
-        // This is a procedure argument.
-        report_error_in_yer_face_no_ctx("Null pointer check failed in file % at line number %: \nArgument % is undergoing an automatic dereference, but the pointer is null.", to_string(filename), line_number, index);
-    } else {
-        // It was a dereference that happened in some other way.
-        report_error_in_yer_face_no_ctx("Null pointer check failed in file % at line number %: \nA pointer is undergoing an automatic dereference, but the pointer is null.", to_string(filename), line_number);
-    }
-}
-
-report_arithmetic_overflow_more_visibly :: (line_number: s64, filename: *u8) #no_context {
-    report_error_in_yer_face_no_ctx("Arithmetic overflow in file % at line number %: \nCheck the logs for more information.", to_string(filename), line_number);
-}
-
-report_failed_assertion_more_visibly :: (loc: Source_Code_Location, msg: string) {
-    report_error_in_yer_face("Assertion failed in file % at line %, char %: \n%", loc.fully_pathed_filename, loc.line_number, loc.character_number, msg);
-}
-
-report_error_in_yer_face_no_ctx :: (message: string, args: .. Any) #no_context {
-    ctx: #Context;
-    push_context ctx { report_error_in_yer_face(message, ..args, from_no_context = true); }
-}
-
-report_error_in_yer_face :: (message: string, args: .. Any, from_no_context := false) {
-    using _ :: #import "System"; // 'using' ensures the imports stay within this scope. (Raw imports do not respect scopes)
-    using _ :: #import "String";
-    using _ :: #import "Basic";
-    using _ :: #import "File";
-
-    formatted_message := tprint(message, ..args);
-
-    builder: String_Builder;
-    append(*builder, formatted_message);
-    append(*builder, "\n\n");
-    if from_no_context || !context.stack_trace {
-        print_to_builder(*builder, "Stack trace not available%.\n", ifx from_no_context " (it was lost due to a #no_context call)");
-    } else {
-        append(*builder, "Stack trace:\n");
-        node := context.stack_trace;
-        while node {
-            if node.info print_to_builder(*builder, "%:%: %\n", node.info.location.fully_pathed_filename, node.line_number, node.info.name);
-            node = node.next;
-        }
-    }
-    crash_report := builder_to_string(*builder);
-
-    // Create a crash report file
-    data_dir := path_strip_filename(get_path_of_running_executable());
-
-    #if OS == .LINUX {
-        XDG :: #import "XDG";
-        data_dir = sprint("%/focus-editor", XDG.get_path(.DATA_HOME));
-    }
-    #if OS == .MACOS {
-        using _ :: #import "Objective_C";
-        application_support := to_string(NSURL.path(NSFileManager.URLForDirectory(NSFileManager.defaultManager(), NSApplicationSupportDirectory, NSUserDomainMask, null, YES, null)));
-        data_dir = sprint("%/dev.focus-editor", application_support);
-    }
-
-    data_dir = trim_right(data_dir, "/");
-    make_directory_if_it_does_not_exist(data_dir);
-    crash_report_file_path := tprint("%/focus-crash-report.txt", data_dir);
-    write_entire_file(crash_report_file_path, crash_report);
-
-    // The crash report is overwritten every new crash, so we also print it to the session log for safekeeping.
-    // Unfortunately #no_context also strips us of the correct logger, so we can't always do that.
-    if !from_no_context then log_error(crash_report, flags = .TO_FILE_ONLY);
-
-    // Show a Windows message box
-    #if OS == .WINDOWS {
-        W :: #import "Windows";
-        W_Utf8 :: #import "Windows_Utf8";
-        W.ShowCursor(1);
-        W.MessageBoxW(null, W_Utf8.utf8_to_wide_new(formatted_message,, allocator = temp), W_Utf8.utf8_to_wide_new("Fatal Error",, allocator = temp), W.MB_OK);
-    }
-}
-
-// END of the functions we've added
-// ==========================================================================================================================================
