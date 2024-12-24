@@ -1268,7 +1268,7 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
     }
 
     // Get lang from the builtin mapping
-    lowercase_extension := to_lower_copy_new(extension,, temp);
+    lowercase_extension := to_lower_copy(extension,, temp);
     if lowercase_extension == {
         case "jai";             lang = .Jai;
         case "cs";              lang = .CSharp;
@@ -3946,7 +3946,7 @@ open_editors: [..] Editor;
 
 // A map from full buffer path to buffer id (only for the open buffers, obviously)
 buffers_table: Table(string, s64,
-                     given_hash_function = x => Hash.get_hash(to_lower_copy_new(x,, temp)),
+                     given_hash_function = x => Hash.get_hash(to_lower_copy(x,, temp)),
                      given_compare_function = platform_path_equals);
 
 most_recent_buffers: [..] s64;  // updated when an editor is activated, used to switch between open files

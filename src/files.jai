@@ -104,7 +104,7 @@ get_lowercase_extension :: (path: string, greedy := true) -> string /* temp */, 
     extension := advance(basename_with_extension, index + 1);
     if !extension return "", false;
 
-    return to_lower_copy_new(extension,, allocator = temp), true;
+    return to_lower_copy(extension,, allocator = temp), true;
 }
 
 is_file_binary :: (file_data: string) -> bool {
@@ -336,7 +336,7 @@ path_wildcard_match :: (path: string, pattern: string) -> bool {
 
     #if OS == .WINDOWS {
         // TODO: support case-insensitive Unicode paths
-        return _wildcard_match(to_lower_copy_new(path,, temp), to_lower_copy_new(pattern,, temp));
+        return _wildcard_match(to_lower_copy(path,, temp), to_lower_copy(pattern,, temp));
     }
     return _wildcard_match(path, pattern);
 }

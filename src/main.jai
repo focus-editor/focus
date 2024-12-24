@@ -676,7 +676,7 @@ panic :: (format_string: string, args: .. Any, exit_code : s32 = 1) {
 panic_messagebox :: (format_string: string, args: .. Any) {
     #if OS == .WINDOWS {
         message := tprint(format_string, ..args);
-        MessageBoxW(null, utf8_to_wide_new(message,, allocator = temp), utf8_to_wide_new("Fatal Error",, allocator = temp), MB_OK);
+        MessageBoxW(null, utf8_to_wide(message,, allocator = temp), utf8_to_wide("Fatal Error",, allocator = temp), MB_OK);
         exit(1);
     } else {
         panic(format_string, ..args);
