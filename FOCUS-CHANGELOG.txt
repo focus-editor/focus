@@ -1,7 +1,7 @@
 # Main Git Branch
 
 + New features:
-    + Global search now allows to additionally filter results by including and excluding files
+    + Global search now allows to additionally filter results by specifying file include/exclude wildcards
     + Syntax highlighting:
         + Batch (thanks @arjenwitteveen)
         + D (thanks @dawsonfrakes)

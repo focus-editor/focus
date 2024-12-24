@@ -40,7 +40,7 @@ highlight_matching_brackets:                        false
 show_paste_effect:                                  true
 disable_file_open_close_animations:                 false
 double_shift_to_search_in_workspace:                false
-strip_trailing_whitespace_on_save:                  except_lines_with_cursor
+strip_trailing_whitespace_on_save:                  except_lines_with_cursor  # options: all, except_lines_with_cursor, disabled
 smooth_scrolling:                                   true
 scroll_beyond_last_line:                            true
 line_height_scale_percent:                          120

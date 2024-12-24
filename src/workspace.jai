@@ -324,10 +324,6 @@ reload_workspace :: (automatic := false) {
         }
     }
 
-    // Refresh file-backed buffers from disk.
-    // At this point the user either saved all buffers or told us to discard unsaved changes
-    for buffer_id : buffers_to_refresh_from_disk  reload_from_disk(buffer_id, force = true);
-
     if !automatic then show_open_file_dialog(.search);
 
     init_build_system();  // must do after we've cleared editors and buffers
@@ -460,7 +456,10 @@ directory_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void
 
     for path : << file_range {
         auto_release_temp();
-        if !should_ignore_file(path) then find_or_create_buffer(path);
+        if !should_ignore_file(path) {
+            buffer_id, created := find_or_create_buffer(path);
+            if !created then reload_from_disk(buffer_id, force = true);  // when refreshing workspace we want up to date data from disk
+        }
     }
 
     return .CONTINUE;

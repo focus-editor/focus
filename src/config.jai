@@ -761,8 +761,6 @@ recalculate_settings :: (buffer: *Buffer) {
         }
     }
     unlock(*buffer.content_lock);
-
-    maybe_detect_and_set_indentation(buffer);
 }
 
 
