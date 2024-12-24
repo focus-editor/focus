@@ -122,6 +122,13 @@ is_white_space :: inline (char : u8) -> bool #no_aoc {
     return cast,no_check(bool) result;
 }
 
+at_string :: (using tokenizer: *Tokenizer, a: string, $case_sensitive := true) -> bool {
+    if t + a.count > max_t  return false;
+    b := string.{ count = a.count, data = t };
+    #if case_sensitive  return equal(a, b);
+    else                return equal_nocase(a, b);
+}
+
 tokenize_c_like_lang_for_indentation :: (buffer: Buffer, $get_next_token: (*Tokenizer) -> $Token) -> [] Indentation_Token /* temp */ {
     tokens: [..] Indentation_Token;
     tokens.allocator = temp;

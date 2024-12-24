@@ -667,15 +667,6 @@ parse_rest_of_line_as_comment :: (using tokenizer: *Batch_Tokenizer, token: *Bat
     token.type = .comment;
 }
 
-at_string :: (using tokenizer: *Batch_Tokenizer, a: string, $case_sensitive := true) -> bool {
-    if t + a.count > max_t  return false;
-    b: string = ---;
-    b.data = t;
-    b.count = a.count;
-    #if case_sensitive  return equal(a, b);
-    else                return equal_nocase(a, b);
-}
-
 at_char :: inline (using tokenizer: *Batch_Tokenizer, c: u8) -> bool {
     return t < max_t && t.* == c;
 }
