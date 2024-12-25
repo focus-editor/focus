@@ -1040,8 +1040,9 @@ using Basic :: #import "Basic"()(MEMORY_DEBUGGER = DEBUG, TEMP_ALLOCATOR_POISON_
 #import "Window_Creation";
 #import "Hash_Table";
 
-re   :: #import "uniform";
-Hash :: #import "Hash";
+re     :: #import "uniform";
+Hash   :: #import "Hash";
+System :: #import "System";
 
 // NOTE to future self: remove `.NeverCapture` from `BASE_REGEX_FLAGS` if we ever want to have
 //                      find-and-replace with regex capture support
