@@ -419,8 +419,6 @@ parse_tag_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     if state == .Parsing_Implicit_Cdata_Tag_Content && active_tag_name {
         state = .None;
 
-        t_start := t;
-
         end_tag := tprint("</%", active_tag_name);
         while t < max_t {
             eat_until(tokenizer, "</");
@@ -429,8 +427,21 @@ parse_tag_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
         }
 
         if html_mode && active_tag_name == "script" {
-            start := cast(s32) (t_start - buf.data);
-            end   := cast(s32) (t - 1 - buf.data);
+            start := last_token.start + 1;
+            end   := cast(s32) (t - buf.data);
+
+            if t >= max_t  end = cast(s32) (t - 1 - buf.data);
+
+            t_start := buf.data + start;
+            script  := string.{ data = t_start, count = xx (t - t_start - 1) };
+
+            found, first_line := split_from_left(script, "\n");
+            if found && is_all_whitespace(first_line)  start += xx (first_line.count + 1); // + 1 for the newline itself
+
+            if t < max_t {
+                found, _, last_line := split_from_right(script, "\n");
+                if found && is_all_whitespace(last_line)  end -= xx (last_line.count + 1); // + 1 for the newline itself
+            }
 
             array_add(*regions, Buffer_Region.{ start = start, end = end, kind = .heredoc, lang = .Js });
         }
