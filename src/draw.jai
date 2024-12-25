@@ -3340,6 +3340,8 @@ draw_range_full_width_lines :: (range: Coords_Range, editor_rect: Rect, visible_
     start := max(range.start.line, visible_start);
     end   := min(range.end.line,   visible_end);
 
+    if start == end && range.start.col == range.end.col  return;
+
     full_width_rect := Rect.{ editor_rect.x, text_origin.y - start * line_height, editor_rect.w, line_height };
     text_gap_x := text_origin.x - editor_rect.x;
 
