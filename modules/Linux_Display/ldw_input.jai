@@ -39,8 +39,10 @@ keyboard_listenter :: wl_keyboard_listener.{
 
             if state == wl_keyboard.key_state_pressed {
                 d.key_to_repeat = key;
-                rate := 1000 / d.key_repeat_rate;
-                timer_start(d.key_repeat_timer, d.key_repeat_delay, rate);
+                if (d.key_repeat_rate) {
+                    rate := 1000 / d.key_repeat_rate;
+                    timer_start(d.key_repeat_timer, d.key_repeat_delay, rate);
+                }
             } else {
                 d.key_to_repeat = 0;
                 timer_stop(d.key_repeat_timer);
@@ -59,8 +61,8 @@ keyboard_listenter :: wl_keyboard_listener.{
 
     repeat_info = (data: *void, self: *wl_keyboard, rate: s32, delay: s32) -> void #c_call {
         d: *Wayland_Display = wl_proxy_get_user_data(self);
-        d.key_repeat_delay = xx delay;
-        d.key_repeat_rate  = xx rate;
+        d.key_repeat_delay = xx ifx delay > 0 then delay else 0;
+        d.key_repeat_rate  = xx ifx rate > 0 then rate else 0;
     }
 };
 
