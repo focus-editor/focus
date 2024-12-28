@@ -1,4 +1,20 @@
 draw_frame :: () {
+    #if OS == .WINDOWS {
+        /*
+         * On Windows, drawing to an OpenGL window while the window is minimized seems to be causing
+         * DCs to be created continously until the window is restored (at a rate of ~3/second from my
+         * observations). I'm not sure *WHY* this happens, I don't see any code in either Focus or
+         * any of the modules it uses that would cause this. I suspect "driver magic" to be at play
+         * here.
+         *
+         * We can work-around this by simply not drawing while the window is minimized.
+         *
+         * - ileonte, 2024.12.28
+         */
+
+        if Input.window_minimized return;
+    }
+
     {
         c := map_color_to_vec4(Color.BACKGROUND_1);
         Simp.clear_render_target(c.x, c.y, c.z, c.w);
