@@ -829,7 +829,7 @@ all_cursors_can_auto_delete_closing_bracket :: (using editor: Editor, buffer: Bu
     for editor.cursors {
         if it.pos - 1 < 0 || has_selection(it) return false;
 
-        ch_prev := get_char_at_offset(buffer, it.pos - 1);
+        _, ch_prev := prev_char_offset(buffer.bytes, it.pos);
         ch_curr := get_char_at_offset(buffer, it.pos);
 
         if !is_auto_closeable_char(ch_prev) return false;
