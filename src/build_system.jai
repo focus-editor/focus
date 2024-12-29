@@ -934,7 +934,7 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
                 timeout_reached = true;
                 success := kill_process(process);
                 if !success {
-                    error_code, error_string := System.get_error_value_and_string();
+                    error_code, error_string := get_error_value_and_string();
                     log_error("Could not kill child for command \"%\": % %", get_quoted_command_string(args), error_code, error_string);
                 }
                 break;
@@ -948,7 +948,7 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
 
     success, process_result := get_process_result(process);
     if !success {
-        error_code, error_string := System.get_error_value_and_string();
+        error_code, error_string := get_error_value_and_string();
         log_error("Could not get process result for command \"%\": % %", get_quoted_command_string(args), error_code, error_string);
         kill_process(process);
         process_result = .{type = .EXITED, exit_code = 1};
@@ -967,5 +967,5 @@ write_output_from_build_thread :: (builder: *String_Builder, s: string) {
 #if OS == .WINDOWS {
     #load "build_system_windows.jai";
 } else #if OS_IS_UNIX {
-    #load "build_system_unix.jai";
+    #import,file "build_system_unix.jai";
 }
