@@ -68,7 +68,7 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
         // If we don't do this, the child might live on.
         process.job_handle = CreateJobObjectA(null, null);
         if !process.job_handle {
-            error_value, error_string := System.get_error_value_and_string();
+            error_value, error_string := get_error_value_and_string();
             log_error("Could not create Windows Job Object: % %", error_value, error_string);
             process.job_handle = INVALID_HANDLE_VALUE;
             deinit(process);
@@ -79,7 +79,7 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
         job_info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
         success := SetInformationJobObject(process.job_handle, .ExtendedLimitInformation, *job_info, size_of(type_of(job_info)));
         if !success {
-            error_value, error_string := System.get_error_value_and_string();
+            error_value, error_string := get_error_value_and_string();
             log_error("Could not configure Windows Job Object: % %", error_value, error_string);
             deinit(process);
             return false;
@@ -96,7 +96,7 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
 
     success := CreateProcessW(null, utf8_to_wide_new(args_string,, temp), null, null, cast(BOOL) 1, CREATE_NO_WINDOW, null, utf8_to_wide_new(working_directory,, temp), *startup_info, *process.info);
     if !success {
-        error_value, error_string := System.get_error_value_and_string();
+        error_value, error_string := get_error_value_and_string();
         log_error("While running the command: '%', we were unable to create the process. Error code: %, description: %\n",
                   get_quoted_command_string(args), error_value, error_string);
         deinit(process);
@@ -116,7 +116,7 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
             }
 
             if !already_done {
-                error_string := System.get_error_string(error_value);
+                error_string := get_error_string(error_value);
                 log_error("Could not assign process % to Windows Job Object %: % %", process.info.hProcess, process.job_handle, error_value, error_string);
                 // We could decide to not fail in this case, but this might leave dangling processes around.
                 // The Right Thing(tm) depends on the exact error, so we will make these decisions whenever we discover a new error condition.
@@ -129,7 +129,7 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
 
     read_success := issue_read(*process.output);
     if !read_success {
-        error_code, error_string := System.get_error_value_and_string();
+        error_code, error_string := get_error_value_and_string();
         log_error("Couldn't start overlapped IO for standard output: % %", error_code, error_string);
         deinit(process);
         return false;
