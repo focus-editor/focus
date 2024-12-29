@@ -17,8 +17,8 @@ read_from_process :: (process: *Process, output_buffer: [] u8, timeout_ms := -1)
         num_events := poll(poll_fds.data, cast(nfds_t) num_fds, poll_timeout_ms);
         if num_events == -1 {
             error_code := System.get_error_value();
-            if error_code == EINTR {
-                return true, 0, 0; // Got interrupted, try again.
+            if error_code == POSIX.EINTR {
+                return true, 0; // Got interrupted, try again.
             }
 
             error_string := System.get_error_string(error_code);
@@ -51,8 +51,8 @@ read_from_process :: (process: *Process, output_buffer: [] u8, timeout_ms := -1)
     } else {
         #assert(OS == .MACOS);
 
-        timeout_spec_pointer: *timespec = null;
-        timeout_spec: timespec;
+        timeout_spec_pointer: *POSIX.timespec = null;
+        timeout_spec: POSIX.timespec;
         if timeout_ms >= 0 {
             timeout_spec.tv_sec = timeout_ms / 1000;
             timeout_spec.tv_nsec = (timeout_ms % 1000) * 1000 * 1000;
@@ -63,7 +63,7 @@ read_from_process :: (process: *Process, output_buffer: [] u8, timeout_ms := -1)
         num_events := kevent64(process.kevent_queue, null, 0, events.data, events.count, 0, timeout_spec_pointer);
         if num_events == -1 {
             error_code := System.get_error_value();
-            if error_code == EINTR {
+            if error_code == POSIX.EINTR {
                 return true, 0; // Got interrupted, try again.
             }
 
@@ -114,12 +114,13 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
     // Utility functions to deal with posix silliness:
     //
 
+
     repeat_if_interrupted :: (call: Code) -> s64 #expand {
         while true {
             result := #insert call;
             if result < 0 {
-                error_code := errno();
-                if error_code == EINTR continue; // Got interrupted, try again
+                error_code := POSIX.errno();
+                if error_code == POSIX.EINTR continue; // Got interrupted, try again
             }
 
             return result;
@@ -127,13 +128,12 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
     }
 
     add_fd_flags :: (handle: s32, flags: s32) -> s32 {
-        return fcntl(handle, F_SETFD, fcntl(handle, F_GETFD) | flags);
+        return POSIX.fcntl(handle, POSIX.F_SETFD, POSIX.fcntl(handle, POSIX.F_GETFD) | flags);
     }
 
     add_fl_flags :: (handle: s32, flags: s32) -> s32 {
-        return fcntl(handle, F_SETFL, fcntl(handle, F_GETFL) | flags);
+        return POSIX.fcntl(handle, POSIX.F_SETFL, POSIX.fcntl(handle, POSIX.F_GETFL) | flags);
     }
-
 
     if !kill_process_if_parent_exits {
         // @Incomplete
@@ -184,14 +184,14 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
     }
     #assert(size_of(Pipes_Control_Message) == CMSG_SIZE(2 * size_of(s32)));
 
-    pid := fork();
+    pid := POSIX.fork();
 
     if pid < 0 {
-        log_error("Couldn’t fork: %\n", errno());
+        log_error("Couldn’t fork: %\n", POSIX.errno());
         close_and_reset(*sockets[1]); // sockets[0] will be closed by deinit() because we copied it to process.input.handle above
         deinit(process);
-
         return false;
+
     } else if pid == 0 {
         // We're in the child process
         //
@@ -209,15 +209,18 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
         context.temporary_storage = *temp;
 
         report_and_exit :: (message: string) #expand {
-            error := errno();
-            write(sockets[1], *error, size_of(type_of(error)));
+            error := POSIX.errno();
+            POSIX.write(sockets[1], *error, size_of(type_of(error)));
             size := message.count;
-            write(sockets[1], *size, size_of(type_of(size)));
-            write(sockets[1], message.data, message.count);
+            POSIX.write(sockets[1], *size, size_of(type_of(size)));
+            POSIX.write(sockets[1], message.data, message.count);
             shutdown(sockets[1], .WR);
-            close(sockets[1]);
+            POSIX.close(sockets[1]);
+
+            print("ERROR: %\n", message);
+
             // Write a dummy value into the status pipe to signal there’s an error report in the IPC socket. (We write the error code, but it doesn’t matter.)
-            repeat_if_interrupted(write(status_pipe[1], *error, size_of(type_of(error))));
+            repeat_if_interrupted(POSIX.write(status_pipe[1], *error, size_of(type_of(error))));
             exit(-1);
         }
 
@@ -230,26 +233,33 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
         // We need a separate status pipe so we can signal that exec was successful by closing it.
         // We can’t use sockets[1] for that because since it’s remapped to STDIN below
         // closing the socket will not send EOF because there’s still a copy in the file handle table (as STDIN).
-        result = pipe(*status_pipe);
+        result = POSIX.pipe(*status_pipe);
         if result != 0 report_and_exit("Could not create status pipe");
 
-        result = add_fd_flags(status_pipe[1], FD_CLOEXEC);
+        result = add_fd_flags(status_pipe[1], POSIX.FD_CLOEXEC);
         if result != 0 report_and_exit("Could not set FD_CLOEXEC on the status pipe");
 
         // Map the the socket to this process' stdin
-        if dup2(sockets[1], STDIN_FILENO) == -1 report_and_exit("Could not remap stdin");
+        if POSIX.dup2(sockets[1], POSIX.STDIN_FILENO) == -1 report_and_exit("Could not remap stdin");
 
 
         // Create the pipes in the child instead of the parent to guarantee that no other process
         // clones the write end of the pipes by accident. :PipeForkRace:
 
-        result = pipe(*output_pipe);
+        result = POSIX.pipe(*output_pipe);
         if result != 0 report_and_exit("Could not create output pipe");
 
+        print("!!!!!! 1 sockets[1]: % !!!!!!!\n", sockets[1]);
+
         // Map the file descriptors from pipe() to this process' stdout and stderr handles
-        if dup2(output_pipe[1], STDOUT_FILENO) == -1 report_and_exit("Could not remap stdout");
-        if dup2(output_pipe[1], STDERR_FILENO) == -1 report_and_exit("Could not remap stderr");
+        if POSIX.dup2(output_pipe[1], POSIX.STDOUT_FILENO) == -1 report_and_exit("Could not remap stdout");
+
+        print("!!!!!! 2 sockets[1]: % !!!!!!!\n", sockets[1]);
+
+        if POSIX.dup2(output_pipe[1], POSIX.STDERR_FILENO) == -1 report_and_exit("Could not remap stderr");
         close_and_reset(*output_pipe[1]);
+
+        print("!!!!!! 3 sockets[1]: % !!!!!!!\n", sockets[1]);
 
         // Send the parent the read handles of the pipes :PipeForkRace:
         control_message: Pipes_Control_Message;
@@ -257,13 +267,14 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
         control_message.header.cmsg_type = cast(s32) SCM.RIGHTS;
         control_message.header.cmsg_len = CMSG_LEN(size_of(s32));
         control_message.fds[0] = status_pipe[0];
-        if capture_and_return_output {
+
+        {
             control_message.header.cmsg_len = CMSG_LEN(3 * size_of(s32));
             control_message.fds[1] = output_pipe[0];
         }
 
         dummy: s32 = 12345;
-        iov: iovec;
+        iov: POSIX.iovec;
         iov.iov_base = *dummy;
         iov.iov_len = 1;
 
@@ -273,11 +284,12 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
         message_header.msg_control = *control_message;
         message_header.msg_controllen = control_message.header.cmsg_len;
 
+
         size := repeat_if_interrupted(sendmsg(sockets[1], *message_header, 0));
         if size != 1 report_and_exit("Could not send pipe handles to parent");
 
         // Wait for the parent to ACK so we know that it has cloned the handles before we close them in the child process:
-        size = repeat_if_interrupted(read(sockets[1], *dummy, 1));
+        size = repeat_if_interrupted(POSIX.read(sockets[1], *dummy, 1));
         if size != 1 report_and_exit("Could not read sync byte from parent");
 
         // Close our copy of the parent's pipe handles
@@ -296,7 +308,7 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
         }
 
         // exec* functions don't automatically pass argv[0]
-        execvp(output_args[0], output_args.data);
+        POSIX.execvp(output_args[0], output_args.data);
 
         report_and_exit("execvp() failed");
 
@@ -312,6 +324,7 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
         report_and_cleanup :: (message: string) #expand {
             error_code, error_string := System.get_error_value_and_string();
             log_error("%: % %", message, error_code, error_string);
+            print("=================\n%: % %\n", message, error_code, error_string);
             kill_process(process);
             get_process_result(process);
             deinit(process);
@@ -319,8 +332,8 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
 
         control_message: Pipes_Control_Message;
 
-        read_value: OS_Error_Code;
-        iov: iovec;
+        read_value: POSIX.OS_Error_Code;
+        iov: POSIX.iovec;
         iov.iov_base = *read_value;
         iov.iov_len = size_of(type_of(read_value));
 
@@ -339,7 +352,8 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
             return false;
         }
 
-        error_code: OS_Error_Code;
+
+        error_code: POSIX.OS_Error_Code;
         error_bytes_read: s64;
 
         status_read_handle: s32 = -1;
@@ -359,7 +373,8 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
 
             received_message := cast(*Pipes_Control_Message) received;
             status_read_handle = received_message.fds[0];
-            if capture_and_return_output {
+
+            {
                 if received.cmsg_len < CMSG_LEN(3 * size_of(s32)) {
                     report_and_cleanup("Pipe message from the child is too small");
                     return false;
@@ -367,14 +382,14 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
 
                 process.output.handle = received_message.fds[1];
 
-                if add_fl_flags(process.output.handle, O_NONBLOCK) == -1 {
+                if add_fl_flags(process.output.handle, POSIX.O_NONBLOCK) == -1 {
                     report_and_cleanup("Could not set the child process' stdout pipe to non-blocking");
                     return false;
                 }
-                if add_fl_flags(process.error. handle, O_NONBLOCK) == -1 {;
-                    report_and_cleanup("Could not set the child process' stderr pipe to non-blocking");
-                    return false;
-                }
+                // if add_fl_flags(process.error. handle, POSIX.O_NONBLOCK) == -1 {;
+                //     report_and_cleanup("Could not set the child process' stderr pipe to non-blocking");
+                //     return false;
+                // }
 
                 #if OS == .MACOS {
                     process.kevent_queue = kqueue();
@@ -398,7 +413,7 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
             }
 
             // Doesn’t matter what we write, it’s just to tell the child that we’ve received the handles, so it can close them in its process and proceed.
-            size = repeat_if_interrupted(write(sockets[0], *read_value, 1));
+            size = repeat_if_interrupted(POSIX.write(sockets[0], *read_value, 1));
             if size != 1 report_and_cleanup("Could not write sync byte to child");
         } else {
             // No ancillary data, so this must be an error code:
@@ -419,7 +434,7 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
             // the status pipe after a certain point just adds complexity. And we already have enough of that.
             //  -rluba, 2023-02-23
             dummy: s32;
-            status_bytes_read := repeat_if_interrupted(read(status_read_handle, *dummy, size_of(type_of(dummy))));
+            status_bytes_read := repeat_if_interrupted(POSIX.read(status_read_handle, *dummy, size_of(type_of(dummy))));
             if status_bytes_read < 0 {
                 report_and_cleanup("Couldn’t read process status pipe");
                 return false;
@@ -427,7 +442,7 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
 
             if status_bytes_read {
                 // Read the error code from the IPC socket.
-                error_bytes_read = repeat_if_interrupted(read(sockets[0], *error_code, size_of(type_of(error_code))));
+                error_bytes_read = repeat_if_interrupted(POSIX.read(sockets[0], *error_code, size_of(type_of(error_code))));
                 if error_bytes_read < 0 {
                     report_and_cleanup("Couldn’t read error code from IPC socket");
                     return false;
@@ -435,12 +450,13 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
             }
         }
 
+
         assert(error_bytes_read == 0 || error_bytes_read == size_of(type_of(error_code)));
 
         if error_bytes_read > 0 {
             // Something went wrong. Read the error message
             message_size: s64;
-            bytes_read := repeat_if_interrupted(read(sockets[0], *message_size, size_of(type_of(message_size))));
+            bytes_read := repeat_if_interrupted(POSIX.read(sockets[0], *message_size, size_of(type_of(message_size))));
             if bytes_read != size_of(type_of(message_size)) {
                 report_and_cleanup("Couldn’t read error message length from IPC socket");
                 return false;
@@ -452,7 +468,7 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
             message_bytes_read := 0;
             while message_bytes_read < message_size {
                 buffer := ensure_contiguous_space_and_return_available_range(*builder);
-                bytes_read := repeat_if_interrupted(read(sockets[0], buffer.data, xx buffer.count));
+                bytes_read := repeat_if_interrupted(POSIX.read(sockets[0], buffer.data, xx buffer.count));
                 if bytes_read < 0 {
                     report_and_cleanup("Couldn’t read error message from IPC socket");
                     return false;
@@ -475,7 +491,7 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
         // set it up for use as stdin. :PipeForkRace:
         // @Cleanup: Do we really want to force non-blocking I/O on the process’ STDIN pipe?
         // We don’t know for sure what our callee wants to do with it!
-        if add_fl_flags(process.input.handle, O_NONBLOCK) == -1 {
+        if add_fl_flags(process.input.handle, POSIX.O_NONBLOCK) == -1 {
             report_and_cleanup("Could not set the child process' stdin pipe to non-blocking");
             return false;
         }
@@ -483,3 +499,17 @@ create_process_with_single_output_pipe :: (process: *Process, args: .. string, w
         return true;
     }
 }
+
+
+#import "Socket";
+
+Default_Allocator :: #import "Default_Allocator";
+
+#if OS == .MACOS {
+    #import "macos";
+}
+
+#scope_file
+
+POSIX :: #import "POSIX";
+
