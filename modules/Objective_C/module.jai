@@ -612,7 +612,7 @@ type_check_objc_method_type :: (ty: *Type_Info_Procedure) {
 // This is an exerpt from the Gamepad module on how one might setup a block:
 /*
 game_controller_pause_handler_block_func :: (block: *Objective_C_Block_Basic, controller: *GCController) #c_call {
-    ctx: Context;
+    ctx: #Context;
     push_context ctx {
         if controller == game_controller {
             _game_controller_paused_pressed = true;

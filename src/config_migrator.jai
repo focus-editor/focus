@@ -406,7 +406,7 @@ DONE
                     success, key_sequence_str, action_name := split_from_right_by_any(line, " \t");
                     if success {
                          if current_subsection == "editors" {
-                            if action_name == "remove_additional_cursors" && to_lower_copy_new(trim(key_sequence_str),, allocator = temp) == "escape" {
+                            if action_name == "remove_additional_cursors" && to_lower_copy(trim(key_sequence_str),, allocator = temp) == "escape" {
                                 // Rebind action to "escape"
                                 new_binding := tprint("Escape                      escape\n");
                                 offset_difference += replace_line(*modified_data, line_start_offset, new_binding);

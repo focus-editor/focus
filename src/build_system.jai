@@ -1052,7 +1052,7 @@ write_output_from_build_thread :: (builder: *String_Builder, s: string) {
         // the documentation is contradictory and confusing. Okay, well, if you dig into Process Creation Flags
         // on some other page, it tells you this is not a good idea. Yeah well. Okay.
 
-        success := CreateProcessW(null, utf8_to_wide_new(args_string,, temp), null, null, cast(BOOL) 1, CREATE_NO_WINDOW, null, utf8_to_wide_new(working_directory,, temp), *startup_info, *process.info);
+        success := CreateProcessW(null, utf8_to_wide(args_string,, temp), null, null, cast(BOOL) 1, CREATE_NO_WINDOW, null, utf8_to_wide(working_directory,, temp), *startup_info, *process.info);
         if !success {
             error_value, error_string := System.get_error_value_and_string();
             log_error("While running the command: '%', we were unable to create the process. Error code: %, description: %\n",
