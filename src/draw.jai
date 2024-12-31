@@ -3364,7 +3364,14 @@ draw_range_full_width_lines :: (range: Coords_Range, editor_rect: Rect, visible_
         if line_num == end {
             if range.end.col > 0 {
                 br = .in;
-                cols := ifx start == end then range.end.col - range.start.col - 1 else range.end.col;
+                cols: int = ---;
+                if start == end {
+                    cols = range.end.col - range.start.col - 1;
+                    tr = .in;
+                    bl = .in;
+                } else {
+                    cols = range.end.col;
+                }
                 rect = cut_left(rect, text_gap_x + cols * char_x_advance);
             } else {
                 rect.w = 0;
