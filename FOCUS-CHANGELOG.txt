@@ -7,6 +7,7 @@
         + D (thanks @dawsonfrakes)
         + JS embedded in HTML <script> tags will now be highlighted (@thanks @simonvallz)
         + Swift (thanks @simonvallz)
+        + Shell (thanks @SentientCoffee)
         + Jai 0.1.96+
     + It is now possible to pass a line number together with the file path to the editor on startup: `focus /path/to/file:69` (thanks @simonvallz)
     + New actions to change case of selected text (thanks @onelivesleft):
@@ -72,6 +73,7 @@
     + Current line highlights will no longer cover indent guides and text highlights
     + Fixed double save dialogs which could appear in some cases
     + Fixed a memory leak in the build system
+    + Fixed a crash in the build system when letting commands print for too long
     + Fixed a bug with auto-closing brackets (thanks @darkgiggs)
 + Other changes:
     + When executing build/run commands Focus will now redirect the standard output/error streams of the child process to the same pipe. This should fix cases where the output from the underlying tool would be "reordered" due to the timing of reads from separate output/error pipes.
@@ -89,6 +91,7 @@
     + The Basic Light theme has been improved (thanks @maxamundsen)
     + macOS: the `dark_titlebar` and `colored_titlebar` settings are now respected (thanks @maxamundsen)
     + Made horizontal scrolling with a horizontal mouse wheel more smooth
+    + Errors in failed "run commands" output will also be detected (previously only "build commands" would have their output checked for errors)
 
 
 # RELEASES ==================================================================

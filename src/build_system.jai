@@ -61,7 +61,7 @@ execute_build_command :: (command: *Build_Command) {
 
     if command.clear_build_output_before_running then build_clear_output();
 
-    last_command_result = .{};
+    last_command_result = .{};  // this will clear build_errors among other things
 
     print_to_output_panel_from_main_thread(tprint("%\n", command.name), mark_as = .header);
 
@@ -196,7 +196,7 @@ build_system_update :: () {
                     }
             }
 
-            if last_command_result.build.finished then parse_build_errors(finished_command.error_regex);
+            if result.finished then parse_errors_in_failed_command_output(finished_command.error_regex, result);
         }
 
         // Print elapsed time
@@ -422,6 +422,7 @@ build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thre
             timeout_ms = command.timeout_in_seconds * 1000,
         );
 
+        if num_bytes_printed >= MAX_BUILD_OUTPUT_BUFFER_SIZE then output_range.start = 0;
         output_range.end = output_range.start + num_bytes_printed;
 
         last_command_result.build_working_dir = copy_string(command.build_working_dir);
@@ -452,6 +453,7 @@ build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thre
             working_directory = command.run_working_dir,
         );
 
+        if num_bytes_printed >= MAX_BUILD_OUTPUT_BUFFER_SIZE then output_range.start = 0;
         output_range.end = output_range.start + num_bytes_printed;
 
         last_command_result.run = .{
@@ -501,6 +503,7 @@ print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kin
         for * last_command_result.build_errors {
             it.file_output_range.start -= bytes_to_forget;
             it.file_output_range.end   -= bytes_to_forget;
+            if it.file_output_range.start < 0 || it.file_output_range.end < 0 then remove it;  // don't bother sorting afterwards because this should almost never happen
         }
 
         for * region : buffer.regions {
@@ -607,29 +610,27 @@ check_working_dirs :: (using work: *Build_Thread_Work) {
     }
 }
 
-parse_build_errors :: (error_regex: string) {
-    using last_command_result;
+parse_errors_in_failed_command_output :: (error_regex: string, command: Command_Result) {
+    if !error_regex { last_command_result.error_regex_status = .missing; return; }
 
-    if !error_regex { error_regex_status = .missing; return; }
-
-    assert(build.finished);
-    assert(!build_errors);  // we should've cleared it by now
+    assert(command.finished);
+    assert(!last_command_result.build_errors);  // we should've cleared it by now
 
     push_allocator(get_pool_allocator());
 
     editor, buffer := get_build_editor_and_buffer();
-    output_range := build.output_range;
+    output_range := command.output_range;
     if output_range.start < 0 || output_range.end <= output_range.start || output_range.end > buffer.bytes.count return;
     build_output := cast(string) to_view(buffer.bytes, output_range.start, output_range.end - output_range.start);
 
     compiled_regex, valid := re.compile(error_regex, .LikePerl & ~.OneLine);
     if !valid {
         log_error("Unable to parse build errors because error_regex is invalid: %\n", error_regex);
-        error_regex_status = .failed_to_compile;
+        last_command_result.error_regex_status = .failed_to_compile;
         return;
     }
 
-    error_regex_status = .ok;
+    last_command_result.error_regex_status = .ok;
 
     while true {
         matched, captures := re.match(build_output, compiled_regex);
@@ -698,17 +699,17 @@ parse_build_errors :: (error_regex: string) {
             build_error.error_info_end_offset   = xx (max_s64_in_array(ends)   - cast(s64) buffer.bytes.data);
         }
 
-        array_add(*build_errors, build_error);
+        array_add(*last_command_result.build_errors, build_error);
     }
 
     // Maybe highlight code samples.
-    for error : build_errors {
+    for error : last_command_result.build_errors {
         lang := get_lang_from_path(error.file);
 
         // Assume that code samples might be somewhere in between the error data we've parsed
         start := error.error_info_end_offset;
         end   := buffer.bytes.count;
-        if it_index < build_errors.count - 1 then end = build_errors[it_index + 1].error_info_start_offset;
+        if it_index < last_command_result.build_errors.count - 1 then end = last_command_result.build_errors[it_index + 1].error_info_start_offset;
 
         if end < start continue;  // TODO: investigate why this might be happening before we implement other languages. See https://github.com/focus-editor/focus/issues/379
 
@@ -953,6 +954,8 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
         kill_process(process);
         process_result = .{type = .EXITED, exit_code = 1};
     }
+
+    if num_bytes_printed < 0 || num_bytes_printed > MAX_BUILD_OUTPUT_BUFFER_SIZE then num_bytes_printed = MAX_BUILD_OUTPUT_BUFFER_SIZE;
 
     return process_result, timeout_reached, cast(s32) num_bytes_printed, elapsed_seconds;
 }
