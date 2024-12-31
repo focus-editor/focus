@@ -433,14 +433,15 @@ parse_tag_content :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
             if t >= max_t  end = cast(s32) (t - 1 - buf.data);
 
             t_start := buf.data + start;
-            script  := string.{ data = t_start, count = xx (t - t_start - 1) };
+            count   := ifx t >= max_t then t - t_start - 1 else t - t_start;
+            script  := string.{ data = t_start, count = count };
 
             found, first_line := split_from_left(script, "\n");
             if found && is_all_whitespace(first_line)  start += xx (first_line.count + 1); // + 1 for the newline itself
 
             if t < max_t {
                 found, _, last_line := split_from_right(script, "\n");
-                if found && is_all_whitespace(last_line)  end -= xx (last_line.count + 1); // + 1 for the newline itself
+                if found && is_all_whitespace(last_line)  end -= xx last_line.count;
             }
 
             array_add(*regions, Buffer_Region.{ start = start, end = end, kind = .heredoc, lang = .Js });
