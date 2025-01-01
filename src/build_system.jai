@@ -92,8 +92,6 @@ execute_build_command :: (command: *Build_Command) {
         add_success_message("Running [%]…", work.name, dismiss_in_seconds = 3,, allocator = focus_allocator);
     }
 
-    work.current_build_buffer_offset = open_buffers[build_buffer_id].bytes.count;
-
     add_work(*thread_group, work);
     running_command = work.name;  // work.name should live until a new command is kicked off
 }
@@ -139,11 +137,11 @@ build_system_update :: () {
     // Print to build output panel, if we have anything to print
     {
         lock(*build_mutex);
-        defer unlock(*build_mutex);
-
         output := builder_to_string(*stdout);
-        defer free(output);
+        unlock(*build_mutex);
+
         print_to_output_panel_from_main_thread(output);
+        free(output);
     }
 
     // Check if a command has finished executing
@@ -199,7 +197,7 @@ build_system_update :: () {
             if result.finished then parse_errors_in_failed_command_output(finished_command.error_regex, result);
         }
 
-        // Print elapsed time
+        // Print the end message and elapsed time
         if last_command_result.build.finished && last_command_result.run.finished {
             message = tprint("%  [Build took %s]", message, formatFloat(last_command_result.build.elapsed_seconds, trailing_width = 3, zero_removal = .NO));
             message = tprint("%  [Run took %s]",   message, formatFloat(last_command_result.run.elapsed_seconds,   trailing_width = 3, zero_removal = .NO));
@@ -209,7 +207,6 @@ build_system_update :: () {
                 message = tprint("%  [Elapsed: %s]", message, formatFloat(command.elapsed_seconds, trailing_width = 3, zero_removal = .NO));
             }
         }
-
         print_to_output_panel_from_main_thread(tprint("%\n", message), mark_as = kind, add_newline_if_missing = true);
 
         if kind == .success {
@@ -346,7 +343,7 @@ go_to_build_error_under_cursor :: (cursor: Cursor, placement: Editor_Placement =
 
 get_error_id_under_cursor :: (cursor: Cursor) -> error_id: s64 {
     for last_command_result.build_errors {
-        if it.file_output_range.start <= cursor.pos && cursor.pos <= it.file_output_range.end return it_index;
+        if it.file_path_location.start <= cursor.pos && cursor.pos <= it.file_path_location.end return it_index;
     }
     return -1;
 }
@@ -414,23 +411,17 @@ build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thre
         header := tprint("> %\n", command.build_command);
         write_output_from_build_thread(*stdout, header);
 
-        output_range := Offset_Range.{ start = xx (command.current_build_buffer_offset + header.count) };
-
-        result, timeout_reached, num_bytes_printed, elapsed_seconds := run_command_while_monitoring_output(
+        result, timeout_reached, elapsed_seconds := run_command_while_monitoring_output(
             ..break_command_into_strings(command.build_command),
             working_directory = command.build_working_dir,
             timeout_ms = command.timeout_in_seconds * 1000,
         );
-
-        if num_bytes_printed >= MAX_BUILD_OUTPUT_BUFFER_SIZE then output_range.start = 0;
-        output_range.end = output_range.start + num_bytes_printed;
 
         last_command_result.build_working_dir = copy_string(command.build_working_dir);
         last_command_result.build = .{
             finished = true,
             timeout_reached = timeout_reached,
             process_result = result,
-            output_range = output_range,
             elapsed_seconds = elapsed_seconds,
         };
 
@@ -444,23 +435,15 @@ build_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void) -> Thre
         if command.build_command then header = tprint("\n%", header);
         write_output_from_build_thread(*stdout, header);
 
-        current_buffer_offset := command.current_build_buffer_offset;
-        if last_command_result.build.finished then current_buffer_offset = last_command_result.build.output_range.end;
-        output_range := Offset_Range.{ start = xx (current_buffer_offset + header.count) };
-
-        result, timeout_reached, num_bytes_printed, elapsed_seconds := run_command_while_monitoring_output(
+        result, timeout_reached, elapsed_seconds := run_command_while_monitoring_output(
             ..break_command_into_strings(command.run_command),
             working_directory = command.run_working_dir,
         );
-
-        if num_bytes_printed >= MAX_BUILD_OUTPUT_BUFFER_SIZE then output_range.start = 0;
-        output_range.end = output_range.start + num_bytes_printed;
 
         last_command_result.run = .{
             finished = true,
             timeout_reached = timeout_reached,
             process_result = result,
-            output_range = output_range,
             elapsed_seconds = elapsed_seconds,
         };
     }
@@ -501,9 +484,9 @@ print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kin
         unlock(*buffer.content_lock);
 
         for * last_command_result.build_errors {
-            it.file_output_range.start -= bytes_to_forget;
-            it.file_output_range.end   -= bytes_to_forget;
-            if it.file_output_range.start < 0 || it.file_output_range.end < 0 then remove it;  // don't bother sorting afterwards because this should almost never happen
+            it.file_path_location.start -= bytes_to_forget;
+            it.file_path_location.end   -= bytes_to_forget;
+            if it.file_path_location.start < 0 || it.file_path_location.end < 0 then remove it;  // don't bother sorting afterwards because this should almost never happen
         }
 
         for * region : buffer.regions {
@@ -619,8 +602,18 @@ parse_errors_in_failed_command_output :: (error_regex: string, command: Command_
     push_allocator(get_pool_allocator());
 
     editor, buffer := get_build_editor_and_buffer();
-    output_range := command.output_range;
-    if output_range.start < 0 || output_range.end <= output_range.start || output_range.end > buffer.bytes.count return;
+
+    // Get the output range of the last command:
+    // - first by checking the last header region,
+    // - but if it's missing because it's shifted away by printing too much, fall back to 0
+    // NOTE: we used to save output ranges of every command, but that wasn't very robust when the build output limit was reached
+    output_range := Offset_Range.{ start = 0, end = buffer.bytes.count };
+    for #v2 < buffer.regions {
+        if it.kind == .header {
+            output_range.start = it.range.end;
+            break;
+        }
+    }
     build_output := cast(string) to_view(buffer.bytes, output_range.start, output_range.end - output_range.start);
 
     compiled_regex, valid := re.compile(error_regex, .LikePerl & ~.OneLine);
@@ -653,13 +646,13 @@ parse_errors_in_failed_command_output :: (error_regex: string, command: Command_
         build_error := Build_Error.{ file = copy_string(file), message = copy_string(msg) };
         path_overwrite_separators(build_error.file, #char "/");
 
-        build_error.file_output_range = .{
+        build_error.file_path_location = .{
             start = cast(s32)(file.data - buffer.bytes.data),
             end   = cast(s32)(file.data - buffer.bytes.data + file.count),
         };
 
         // Highlight file paths for easier recognition that an error has been detected
-        manually_mark_range_as_token(buffer, build_error.file_output_range, xx Token_Type.highlight);
+        manually_mark_range_as_token(buffer, build_error.file_path_location, xx Token_Type.highlight);
 
         type := table_find_or_default(*named_captures, "type");
         if type {
@@ -768,8 +761,8 @@ go_to_current_build_error :: (placement: Editor_Placement = .in_place, show_erro
     {
         editor, buffer := get_build_editor_and_buffer();
         cursor := leave_only_original_cursor(editor);
-        cursor.sel = build_error.file_output_range.start;
-        cursor.pos = build_error.file_output_range.end;
+        cursor.sel = build_error.file_path_location.start;
+        cursor.pos = build_error.file_path_location.end;
         if buffer.dirty then rescan_for_lines(buffer);
         select_line(cursor, buffer);
         editor.cursor_moved = .jumped;
@@ -832,6 +825,7 @@ last_command_result: struct {
 
     build_working_dir: string;  // for prepending to relative error paths
     build_errors: [..] Build_Error;  // allocated from pool
+    output_range: Offset_Range;  // will contain the output range of the last command (either build or run), to be used in error parsing
     error_regex_status: enum { ok; failed_to_compile; missing; } = .ok;  // for better error messages
     current_build_error_id := -1;
 };
@@ -849,14 +843,13 @@ Build_Panel_Position :: enum { left; right; }
 
 Build_Thread_Work :: struct {
     using command: Build_Command;
-    current_build_buffer_offset: s64;  // the size of the build buffer at the time the command is submitted
+    // NOTE: there used to be more work data here which was later removed. Keeping it like this in case we need to add more data later
 }
 
 Command_Result :: struct {
     finished:        bool;
     timeout_reached: bool;
     process_result:  Process_Result;
-    output_range:    Offset_Range;
     elapsed_seconds: float64;
 }
 
@@ -866,7 +859,7 @@ Build_Error :: struct {
     line: s32 = -1;
     col:  s32 = -1;
     type: enum { error; warning; info; } = .error;
-    file_output_range: Offset_Range;  // where in the build output the file path is (for double-click support)
+    file_path_location: Offset_Range;  // where in the build output the file path is (for double-click support)
 
     error_info_start_offset: s32;  // for code highlighting. We assume code might be in between the error info we've parsed
     error_info_end_offset:   s32;
@@ -880,7 +873,7 @@ DEBUG_BUILD_ERRORS :: false;
 
 // Adapted the run_command function from the Process module to allow for monitoring output
 
-run_command_while_monitoring_output :: (args: .. string, working_directory := "", timeout_ms := -1, arg_quoting := Process_Argument_Quoting.QUOTE_IF_NEEDED) -> (process_result: Process_Result, timeout_reached := false, num_bytes_printed: s32 = 0, elapsed_seconds: float64 = 0) {
+run_command_while_monitoring_output :: (args: .. string, working_directory := "", timeout_ms := -1, arg_quoting := Process_Argument_Quoting.QUOTE_IF_NEEDED) -> (process_result: Process_Result, timeout_reached := false, elapsed_seconds: float64 = 0) {
     process  := *running_process;  // accessing a global! NOTE: this is assuming we only ever have one running command
     lock(*build_mutex);
     process.* = Process.{};
@@ -903,8 +896,6 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
 
     timeout_reached := false;
 
-    num_bytes_printed := 0;
-
     start_time := current_time_monotonic();
     remaining_timeout_ms := timeout_ms;
 
@@ -917,7 +908,6 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
             remove_crlf_in_place(*output_str);
             write_output_from_build_thread(*stdout, output_str);
             platform_wake_up_main_thread();
-            num_bytes_printed += output_str.count;
         }
 
         if !success {
@@ -955,9 +945,7 @@ run_command_while_monitoring_output :: (args: .. string, working_directory := ""
         process_result = .{type = .EXITED, exit_code = 1};
     }
 
-    if num_bytes_printed < 0 || num_bytes_printed > MAX_BUILD_OUTPUT_BUFFER_SIZE then num_bytes_printed = MAX_BUILD_OUTPUT_BUFFER_SIZE;
-
-    return process_result, timeout_reached, cast(s32) num_bytes_printed, elapsed_seconds;
+    return process_result, timeout_reached, elapsed_seconds;
 }
 
 write_output_from_build_thread :: (builder: *String_Builder, s: string) {
