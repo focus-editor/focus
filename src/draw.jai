@@ -3340,10 +3340,21 @@ draw_range_full_width_lines :: (range: Coords_Range, editor_rect: Rect, visible_
     start := max(range.start.line, visible_start);
     end   := min(range.end.line,   visible_end);
 
-    if start == end && range.start.col == range.end.col  return;
-
     full_width_rect := Rect.{ editor_rect.x, text_origin.y - start * line_height, editor_rect.w, line_height };
     text_gap_x := text_origin.x - editor_rect.x;
+
+    if start == end {
+        if range.start.col == range.end.col  return;
+        rect := Rect.{
+            editor_rect.x,
+            text_origin.y - start * line_height,
+            text_gap_x + range.end.col * char_x_advance,
+            line_height,
+        };
+        if range.start.col != 0  rect = cut_right(rect, (range.end.col - range.start.col) * char_x_advance);
+        draw_rounded_rect_with_corners(rect, color, .in, .in, .in, .in, extra_draw_info = .{is_background = true});
+        return;
+    }
 
     for line_num : start..end {
         rect := Rect.{
@@ -3364,15 +3375,7 @@ draw_range_full_width_lines :: (range: Coords_Range, editor_rect: Rect, visible_
         if line_num == end {
             if range.end.col > 0 {
                 br = .in;
-                cols: int = ---;
-                if start == end {
-                    cols = range.end.col - range.start.col - 1;
-                    tr = .in;
-                    bl = .in;
-                } else {
-                    cols = range.end.col;
-                }
-                rect = cut_left(rect, text_gap_x + cols * char_x_advance);
+                rect = cut_left(rect, text_gap_x + range.end.col * char_x_advance);
             } else {
                 rect.w = 0;
             }
