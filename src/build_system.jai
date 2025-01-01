@@ -476,6 +476,8 @@ print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kin
     // Maybe forget some bytes at the beginning
     if buffer.bytes.count > MAX_BUILD_OUTPUT_BUFFER_SIZE {
         bytes_to_forget := cast(s32) (buffer.bytes.count - MAX_BUILD_OUTPUT_BUFFER_SIZE);
+        bytes_to_forget = to_valid_utf8_char_offset(buffer.bytes, bytes_to_forget);  // don't cut utf8 chars in the middle
+        assert(bytes_to_forget >= 0, "Error when trying to forget bytes in the build output. This is a bug.");
 
         lock(*buffer.content_lock);
         resize(*buffer.tokens, buffer.bytes.count);  // resize first before we delete
