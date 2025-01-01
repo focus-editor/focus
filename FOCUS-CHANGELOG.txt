@@ -92,6 +92,7 @@
     + macOS: the `dark_titlebar` and `colored_titlebar` settings are now respected (thanks @maxamundsen)
     + Made horizontal scrolling with a horizontal mouse wheel more smooth
     + Errors in failed "run commands" output will also be detected (previously only "build commands" would have their output checked for errors)
+    + Build output panel is no longer limited by max_editor_width (because you can already control its width easily by dragging)
 
 
 # RELEASES ==================================================================

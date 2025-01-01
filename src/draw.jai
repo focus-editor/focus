@@ -733,7 +733,7 @@ get_editor_subrects :: (editor_id: s64, main_area: Rect, status_bar_height: floa
     }
 
     max_width := cast(float) buffer_settings.max_editor_width * dpi_scale;
-    if max_width > 0 && rect.w > max_width {
+    if max_width > 0 && rect.w > max_width && !is_build_panel(editor_id) {
         rect.x += (rect.w - max_width) / 2;
         rect.w = max_width;
     }
