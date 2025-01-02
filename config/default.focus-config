@@ -313,6 +313,9 @@ Ctrl-B                      build_panel_toggle
 
 F11                         toggle_fullscreen
 
+Tab                         tab_next
+Shift-Tab                   tab_previous
+
 # {Shift}- means shift is optional, the key combination will still be matched.
 # NOTE: in this editor the Shift key is hard-coded to extend selection when held
 {Shift}-ArrowUp             move_up
