@@ -612,6 +612,10 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 12, "editors", "move_right_through_word",                     "{Shift}-Meta-ArrowRight", "{Shift}-Ctrl-ArrowRight" },
     .{ 12, "editors", "delete_left_through_word",                    "{Shift}-Meta-Backspace",  "{Shift}-Ctrl-Backspace" },
     .{ 12, "editors", "delete_right_through_word",                   "{Shift}-Meta-Delete",     "{Shift}-Ctrl-Delete" },
+
+    .{ 14, "common", "open_entry_in_place",                         "Enter",                "Enter"     },
+    .{ 14, "common", "focus_next_ui_element",                       "Tab",                  "Tab"       },
+    .{ 14, "common", "focus_previous_ui_element",                   "Shift-Tab",            "Shift-Tab" },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
@@ -632,6 +636,9 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
     .{ 12, "common",   "delete_word_right",                         "delete_right_by_character_type_fast" },
 
     .{ 13, "common",   "toggle_build_panel",                        "build_panel_toggle" },
+
+    .{ 14, "search dialog", "go_to_next_input",                     "focus_next_ui_element"     },
+    .{ 14, "search dialog", "go_to_previous_input",                 "focus_previous_ui_element" },
 ];
 
 #if !NO_OUTPUT_BUILD {
