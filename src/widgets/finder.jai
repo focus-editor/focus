@@ -41,10 +41,10 @@ finder_handle_event :: (event: Input.Event) -> handled: bool {
             case .move_up_one_page;         move_cursor(-per_page);                                 return true;
             case .move_down_one_page;       move_cursor( per_page);                                 return true;
 
-            case .escape;                   #through;
-            case .close_dialog;             finder_close();                                         return true;
-            case .go_to_next_input;         finder_go_to_next_input();                              return true;
-            case .go_to_previous_input;     finder_go_to_previous_input();                          return true;
+            case .escape;                     #through;
+            case .close_dialog;               finder_close();                                       return true;
+            case .focus_next_ui_element;      finder_go_to_next_input();                            return true;
+            case .focus_previous_ui_element;  finder_go_to_previous_input();                        return true;
 
             case .open_entry_in_place;      finder_open_selected_result(selected, .in_place);       return true;
             case .open_entry_on_the_side;   finder_open_selected_result(selected, .on_the_side);    return true;

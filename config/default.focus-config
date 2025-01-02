@@ -239,7 +239,6 @@ Ctrl-Shift-Alt-N            open_another_editor_instance
 
 [open file dialog]
 
-Enter                       open_entry_in_place
 Ctrl-Enter                  open_entry_on_the_side
 Ctrl-1                      open_entry_on_the_left
 Ctrl-2                      open_entry_on_the_right
@@ -252,7 +251,6 @@ Backspace                   pop_directory
 
 [search dialog]
 
-Enter                       open_entry_in_place
 Ctrl-Enter                  open_entry_on_the_side
 Ctrl-1                      open_entry_on_the_left
 Ctrl-2                      open_entry_on_the_right
@@ -262,9 +260,6 @@ Shift-Enter                 move_up  # an alternative way to move
 Alt-C                       toggle_case_sensitive
 Alt-W                       toggle_whole_word
 Alt-R                       toggle_regex_search
-
-Tab                         go_to_next_input
-Shift-Tab                   go_to_previous_input
 
 
 [common]
@@ -312,6 +307,11 @@ Ctrl-Shift-L                toggle_expand
 Ctrl-B                      build_panel_toggle
 
 F11                         toggle_fullscreen
+
+Enter                       open_entry_in_place
+
+Tab                         focus_next_ui_element
+Shift-Tab                   focus_previous_ui_element
 
 # {Shift}- means shift is optional, the key combination will still be matched.
 # NOTE: in this editor the Shift key is hard-coded to extend selection when held

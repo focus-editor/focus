@@ -2,6 +2,15 @@ dialog_handle_event :: (dialog: *Generic_Confirm_Dialog, event: Input.Event) -> 
     assert(dialog.get_buttons != null, "Dialog struct is missing the get_buttons function");
 
     if event.type == .KEYBOARD && event.key_pressed {
+        action, mapping := map_event_to_action(event, Action_Common);
+        if action == {
+            case .focus_next_ui_element;      dialog_focus_next(dialog);      return true;
+            case .focus_previous_ui_element;  dialog_focus_previous(dialog);  return true;
+            case .open_entry_in_place;
+                success := dialog_select_focused(dialog);
+                if success  return true;
+        }
+
         for button : dialog.get_buttons() {
             for key_code : button.key_codes {
                 if event.key_code == key_code {
@@ -37,10 +46,30 @@ close_dialog :: (dialog: *Generic_Confirm_Dialog($Details), result: Generic_Conf
     dialog.result = result;
     activate_editors();
     redraw_requested = true;
+    dialog.focused_button_index = -1;
 }
 
 dialog_get_details :: (dialog: *Generic_Confirm_Dialog) -> Generic_Confirm_Dialog.Details {
     return dialog.details;
+}
+
+dialog_focus_next :: (dialog: *Generic_Confirm_Dialog($Details)) {
+    dialog.focused_button_index += 1;
+    buttons := dialog.get_buttons();
+    if dialog.focused_button_index >= buttons.count  dialog.focused_button_index = 0;
+}
+
+dialog_focus_previous :: (dialog: *Generic_Confirm_Dialog($Details)) {
+    dialog.focused_button_index -= 1;
+    buttons := dialog.get_buttons();
+    if dialog.focused_button_index <= -1  dialog.focused_button_index = buttons.count - 1;
+}
+
+dialog_select_focused :: (dialog: *Generic_Confirm_Dialog($Details)) -> success: bool {
+    buttons := dialog.get_buttons();
+    if dialog.focused_button_index < 0 || dialog.focused_button_index >= buttons.count  return false;
+    close_dialog(dialog, buttons[dialog.focused_button_index].result);
+    return true;
 }
 
 Generic_Confirm_Dialog :: struct(Details: Type) {
@@ -53,6 +82,8 @@ Generic_Confirm_Dialog :: struct(Details: Type) {
     set_details: (details: Details) -> ();
     get_buttons: () -> [] Generic_Confirm_Dialog_Button;  // this could've been a constant on the struct itself, but the compiler won't allow setting it for some reason, looks like a bug
     on_show:     () -> ();
+
+    focused_button_index := -1;
 }
 
 Generic_Confirm_Dialog_Button :: struct {
