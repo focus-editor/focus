@@ -280,7 +280,7 @@ wl_wait_for_events :: (display: *Display) {
 
 wl_update_window_events :: (display: *Display) {
     wl_check_usage(display);
-    wl_event_loop_step(display, 0);
+    wl_event_loop_step(display, -1);
 }
 
 wl_get_mouse_pointer_position :: (window: *Window, right_handed: bool) -> x: int, y: int, success: bool {

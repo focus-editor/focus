@@ -146,10 +146,16 @@ X11_GLX_Ops :: GL_Ops.{
 
         dpy     := window.x11.display.handle;
         glx_cnf := window.base.display.base.gl.glx.cnf;
+        glx_ctx := window.base.display.base.gl.ctx;
 
         gl := *window.base.gl;
         gl.type = .GLX;
         gl.glx.win = GLX.CreateWindow(dpy, glx_cnf, window.x11.handle, null);
+
+        if GLX.SwapIntervalEXT {
+            GLX.MakeCurrent(dpy, gl.glx.win, glx_ctx);
+            GLX.SwapIntervalEXT(dpy, gl.glx.win, 0);
+        }
     },
 
     make_current = (window: *Window) {
@@ -211,6 +217,10 @@ X11_EGL_Ops :: GL_Ops.{
         wgl.type = .EGL;
         wgl.egl.native = xx window.x11.handle;
         wgl.egl.surface = EGL.CreateWindowSurface(dgl.egl.dpy, dgl.egl.cnf, wgl.egl.native, null);
+
+        EGL.MakeCurrent(dgl.egl.dpy, wgl.egl.surface, wgl.egl.surface, dgl.egl.ctx);
+        ok := EGL.SwapInterval(dgl.egl.dpy, 0);
+        log("EGL.SwapInterval(%, 0): %", cast(*void) dgl.egl.dpy, ok);
     },
 
     make_current = (window: *Window) {
@@ -266,10 +276,16 @@ XCB_GLX_Ops :: GL_Ops.{
 
         dpy     := window.xcb.display.xlib_dpy;
         glx_cnf := window.base.display.base.gl.glx.cnf;
+        glx_ctx := window.base.display.base.gl.ctx;
 
         gl := *window.base.gl;
         gl.type = .GLX;
         gl.glx.win = GLX.CreateWindow(dpy, glx_cnf, window.xcb.handle, null);
+
+        if GLX.SwapIntervalEXT {
+            GLX.MakeCurrent(dpy, gl.glx.win, glx_ctx);
+            GLX.SwapIntervalEXT(dpy, gl.glx.win, 0);
+        }
     },
 
     make_current = (window: *Window) {
@@ -304,7 +320,7 @@ XCB_EGL_Ops :: GL_Ops.{
             attrs := s32.[EGL.PLATFORM_XCB_SCREEN_EXT, 0, EGL.NONE];
             gl.egl.dpy, gl.egl.ctx, gl.egl.cnf = EGL.create_context(
                 *EGL,
-                display.xcb.handle, EGL.PLATFORM_XCB_EXT, null,
+                display.xcb.handle, EGL.PLATFORM_XCB_EXT, attrs.data,
                 major_version, minor_version,
                 compatibility, debug);
         } else {
@@ -338,6 +354,10 @@ XCB_EGL_Ops :: GL_Ops.{
         wgl.egl.native = xx window.xcb.handle;
         wgl.egl.surface = EGL.CreateWindowSurface(dgl.egl.dpy, dgl.egl.cnf, wgl.egl.native, null);
         assert(wgl.egl.surface != null);
+
+        EGL.MakeCurrent(dgl.egl.dpy, wgl.egl.surface, wgl.egl.surface, dgl.egl.ctx);
+        ok := EGL.SwapInterval(dgl.egl.dpy, 0);
+        log("EGL.SwapInterval(%, 0): %", cast(*void) dgl.egl.dpy, ok);
     },
 
     make_current = (window: *Window) {
@@ -402,6 +422,9 @@ Wayland_EGL_Ops :: GL_Ops.{
         wl_window_resize_viewport(ww);
         wl_surface.damage(ww.handle, 0, 0, ww.window_width, ww.window_height);
         wl_surface.commit(ww.handle);
+
+        ok := EGL.SwapInterval(dgl.egl.dpy, 0);
+        log("EGL.SwapInterval(%, 0): %", cast(*void) dgl.egl.dpy, ok);
     },
 
     make_current = (window: *Window) {

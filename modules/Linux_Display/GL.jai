@@ -179,6 +179,7 @@ EGL_Lib :: struct {
         CreateContext       : (dpy: *void, config: *void, share_context: *void, attrib_list: *s32) -> *void #c_call;
         DestroyContext      : (dpy: *void, ctx: *void) -> s32 #c_call;
         DestroySurface      : (dpy: *void, surface: *void) -> s32 #c_call;
+        SwapInterval        : (dpy: *void, interval: s32) -> s32 #c_call;
     }
     using _procs: Procs;
 
@@ -323,6 +324,7 @@ GLX_Lib :: struct {
         ChooseFBConfig: (display: *void, screen: s32, attrib_list: *s32, nelements: *s32) -> **void #c_call;
         CreateWindow: (display: *void, config: *void, window: u64, attrib_list: *s32 = null) -> u64 #c_call;
         DestroyWindow: (display: *void, win: u64) #c_call;
+        SwapIntervalEXT: (display: *void, drawable: u64, interval: s32) #c_call;  @GLX_EXT
     }
     using _procs: Procs;
 }
@@ -381,6 +383,7 @@ wsi_load :: (intf: *GLX_Lib) -> bool {
                 log("Failed to resolve extension function '%'", info.name);
                 continue soname;
             }
+            log("GLX EXT: % :: %", info.call.*, info.name);
         }
 
         intf._meta.loaded = true;
