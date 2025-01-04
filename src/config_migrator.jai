@@ -612,6 +612,9 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 12, "editors", "move_right_through_word",                     "{Shift}-Meta-ArrowRight", "{Shift}-Ctrl-ArrowRight" },
     .{ 12, "editors", "delete_left_through_word",                    "{Shift}-Meta-Backspace",  "{Shift}-Ctrl-Backspace" },
     .{ 12, "editors", "delete_right_through_word",                   "{Shift}-Meta-Delete",     "{Shift}-Ctrl-Delete" },
+
+    .{ 14, "common", "tab_next",                                    "Tab",                  "Tab"       },
+    .{ 14, "common", "tab_previous",                                "Shift-Tab",            "Shift-Tab" },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[

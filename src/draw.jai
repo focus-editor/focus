@@ -2806,7 +2806,8 @@ draw_generic_confirm_dialog :: (dialog: *Generic_Confirm_Dialog, ui_id: Ui_Id, h
 
         for < button : dialog.get_buttons() {
             button_id := cast(s64) get_ui_id_from_loc(parent_id = ui_id) + it_index;  // could theoretically clash with something right below so don't get any ui ids close to here!
-            activated, width := draw_button(font_ui, button.label, button.color, button.text_color, ui_id, buttons_row_rect, .right, margin / 2, margin, button_id = cast(Ui_Id) button_id);
+            focused := dialog.focused_button_index == it_index;
+            activated, width := draw_button(font_ui, button.label, button.color, button.text_color, ui_id, buttons_row_rect, .right, margin / 2, margin, button_id = cast(Ui_Id) button_id, outline = focused, outline_background_color = Color.BACKGROUND_3);
             if activated close_dialog(dialog, button.result);
             buttons_row_rect.w -= width + margin;
         }
@@ -3808,7 +3809,7 @@ draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll:
     return clamp(scroll_target, 0, max_scroll);
 }
 
-draw_button :: (font: *Simp.Dynamic_Font, label: string, color: Color, text_color: Color, parent_id: Ui_Id, row_rect: Rect, align: Button_Alignment = .right, padding_v: float, padding_h: float, shadow_size := 0.0, button_id := Ui_Id.none, loc := #caller_location) -> pressed: bool, width: float {
+draw_button :: (font: *Simp.Dynamic_Font, label: string, color: Color, text_color: Color, parent_id: Ui_Id, row_rect: Rect, align: Button_Alignment = .right, padding_v: float, padding_h: float, shadow_size := 0.0, button_id := Ui_Id.none, outline := false, outline_color := Color.UI_DEFAULT, outline_background_color := Color.BACKGROUND_0, loc := #caller_location) -> pressed: bool, width: float {
     label_width := cast(float) Simp.prepare_text(font, label);
 
     button := row_rect;
@@ -3828,6 +3829,12 @@ draw_button :: (font: *Simp.Dynamic_Font, label: string, color: Color, text_colo
     }
 
     if shadow_size > 0.0 then draw_rounded_rect_with_shadow(button, Color.BACKGROUND_0, shadow_size = shadow_size);
+    if outline {
+        outline_rect := expand(button, 4);
+        draw_rounded_rect(outline_rect, outline_color);
+        inside_outline_rect := expand(button, 3);
+        draw_rounded_rect(inside_outline_rect, outline_background_color);
+    }
     draw_rounded_rect_with_raw_color(button, rect_color);
 
     pen := Vector2.{ x = button.x + padding_h, y = button.y + (button.h - font.character_height) / 2 + 3 * dpi_scale };
