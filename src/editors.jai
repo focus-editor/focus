@@ -2536,6 +2536,9 @@ delete_left_char :: (editor: *Editor, buffer: *Buffer) {
 
     should_delete_closing_bracket := config.settings.auto_close_brackets && all_cursors_can_auto_delete_closing_bracket(editor, buffer);
 
+    any_cursor_has_selection := false;
+    for editor.cursors { if has_selection(it) { any_cursor_has_selection = true; break; } }
+
     // NOTE: we don't have to worry about a cursor with no selection being immediately next
     //       to the non-cursor end of another cursor's selection (thanks to organise_cursors),
     //       so it should be safe to delete at least one character to the left of every cursor if there is one
@@ -2543,10 +2546,8 @@ delete_left_char :: (editor: *Editor, buffer: *Buffer) {
     for cursor : editor.cursors {
         if should_delete_closing_bracket {
             range_per_cursor[it_index] = .{ start = cursor.pos - 1, end = cursor.pos + 1 };
-        } else if has_selection(cursor) {
+        } else if has_selection(cursor) || any_cursor_has_selection || cursor.pos == 0 {
             range_per_cursor[it_index] = get_selection(cursor);
-        } else if cursor.pos == 0 {
-            range_per_cursor[it_index] = Offset_Range.{};
         } else {
             coords := offset_to_real_coords(buffer, cursor.pos);
             chars_to_delete := coords.col % tab_size;
@@ -2589,6 +2590,9 @@ delete_right_char :: (editor: *Editor, buffer: *Buffer) {
     //       to the non-cursor end of another cursor's selection (thanks to organise_cursors),
     //       so it should be safe to delete at least one character to the right of every cursor if there is one
 
+    any_cursor_has_selection := false;
+    for editor.cursors { if has_selection(it) { any_cursor_has_selection = true; break; } }
+
     offset_delta := 0;
     for * cursor : editor.cursors {
         cursor.pos -= xx offset_delta;
@@ -2596,7 +2600,7 @@ delete_right_char :: (editor: *Editor, buffer: *Buffer) {
 
         range: Offset_Range;
 
-        if has_selection(cursor) {
+        if has_selection(cursor) || any_cursor_has_selection {
             range = get_selection(cursor);
         } else if cursor.pos < buffer.bytes.count {
             end := cursor.pos + 1 + trailingBytesForUTF8[buffer.bytes[cursor.pos]];
