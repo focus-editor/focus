@@ -831,7 +831,6 @@ reroute_active_editor :: (old_buffer_id: s64, new_buffer_id: s64) {
     if editor.buffer_id == old_buffer_id {
         editor.buffer_id = new_buffer_id;
         editor.scroll_to_cursor = .yes;
-        for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, new_buffer); }
         organise_cursors(editor);
 
         assert(old_buffer.num_editors_open >= 1, "Buffer doesn't have the right number of open editors. This is a bug");

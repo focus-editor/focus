@@ -344,8 +344,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         if line_wrap_is_active(editor) then rescan_for_wrapped_lines(editor, buffer);
         if !is_empty(editor.search_bar.results) then search_and_update_results(editor, buffer, jump = false);
     }
-    for * editor.cursors put_cursor_in_valid_spot(it, buffer);
-    if editor.cursors.count > 1 then organise_cursors(editor);  // sort and maybe merge overlapping cursors
+    organise_cursors(editor);  // sort and maybe merge overlapping cursors
 
     if editor.cursor_moved != .has_not_moved {
         if !enabled_whole_words then editor.search_whole_words = false;
@@ -474,8 +473,7 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
                 if cursor.sel >= edit.offset then cursor.sel = max(cursor.sel + edit.delta, edit.offset);
             }
         }
-        for * cursor : editor.cursors { put_cursor_in_valid_spot(cursor, buffer); }
-        if editor.cursors.count > 1 then organise_cursors(editor);
+        organise_cursors(editor);
 
         editor.refresh_selection = true;
         if !is_empty(editor.search_bar.results) then search_and_update_results(editor, buffer);
@@ -704,6 +702,10 @@ organise_cursors :: (using editor: *Editor, selection_mode: *Selection_Mode = nu
 
         return true;
     }
+
+    // Put cursors in valid spots
+    buffer := *open_buffers[buffer_id];
+    for * cursor : cursors { put_cursor_in_valid_spot(cursor, buffer); }
 
     if original_cursor >= cursors.count then original_cursor = main_cursor;  // we don't remember original cursor on edits (maybe we should)
 
@@ -1494,6 +1496,9 @@ find_or_create_editor :: (buffer_id: s64, unwanted_existing_editor: s64 = -1) ->
 
 new_edit_group :: (buffer: *Buffer, editor: *Editor) {
     if buffer.edits.count == 0 return;
+
+    // Sometimes edits can leave cursors in an inconsistent state, which would prevent undos if we tried to save them in the undo group later
+    organise_cursors(editor);
 
     new_group := add(*buffer.undos);
     new_group.edits = to_owned_array(*buffer.edits);  // @Speed: could group all char inserts into one if needed
@@ -2601,6 +2606,7 @@ delete_right_char :: (editor: *Editor, buffer: *Buffer) {
         if range.start != range.end {
             delete_range(buffer, range);
             cursor.pos = range.start;
+            cursor.sel = range.start;
             cursor.col_wanted = -1;
             offset_delta += (range.end - range.start);
         }
