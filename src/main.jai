@@ -572,9 +572,9 @@ update_mouse_state :: () {
 
     if mouse.wheel_y_mode == .sizing_font {
         if Input.mouse_wheel_delta.vertical < 0 {
-            increase_font_size();
-        } else if Input.mouse_wheel_delta.vertical > 0 {
             decrease_font_size();
+        } else if Input.mouse_wheel_delta.vertical > 0 {
+            increase_font_size();
         }
     } else if mouse.wheel_y_mode == .scrolling {
         if shift_pressed() {
