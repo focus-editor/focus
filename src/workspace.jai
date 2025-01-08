@@ -458,6 +458,10 @@ directory_scan_threadproc :: (group: *Thread_Group, thread: *Thread, work: *void
         auto_release_temp();
         if !should_ignore_file(path) {
             buffer_id, created := find_or_create_buffer(path);
+            if buffer_id < 0 {
+                log_error("Couldn't open file because path is too long for %: \"%\"\n", OS, path);
+                continue;
+            }
             if !created then reload_from_disk(buffer_id, force = true);  // when refreshing workspace we want up to date data from disk
         }
     }
