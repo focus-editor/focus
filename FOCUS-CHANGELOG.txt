@@ -5,11 +5,11 @@
     + Syntax highlighting:
         + Batch (thanks @arjenwitteveen)
         + D (thanks @dawsonfrakes)
-        + JS embedded in HTML <script> tags will now be highlighted (@thanks @simonvallz)
-        + Swift (thanks @simonvallz)
+        + JS embedded in HTML <script> tags will now be highlighted (@thanks @caztanj)
+        + Swift (thanks @caztanj)
         + Shell (thanks @SentientCoffee)
         + Jai 0.1.96+
-    + It is now possible to pass a line number together with the file path to the editor on startup: `focus /path/to/file:69` (thanks @simonvallz)
+    + It is now possible to pass a line number together with the file path to the editor on startup: `focus /path/to/file:69` (thanks @caztanj)
     + New actions to change case of selected text (thanks @onelivesleft):
         + `change_case_to_upper`
         + `change_case_to_lower`
@@ -62,7 +62,7 @@
         + Some settings can be specified for a subset of files, based on their language or a wildcard, for example:
             + `[file: <wildcard1>, <wildcard2>, ...]`
             + `[lang: golang, cpp, c, ...]`
-    + It's now possible to focus buttons in dialogs using only keyboard (thanks @simonvallz):
+    + It's now possible to focus buttons in dialogs using only keyboard (thanks @caztanj):
         + New actions are added - `focus_next_ui_element`, `focus_previous_ui_element` (`Tab` and `Shift-Tab` by default)
         + Confirm selection by using action `open_entry_in_place` (`Enter` by default)
 + Bug fixes:
@@ -81,7 +81,7 @@
     + Fixed a bug with it being impossible to undo after certain multi-cursor manipulations
 + Other changes:
     + When executing build/run commands Focus will now redirect the standard output/error streams of the child process to the same pipe. This should fix cases where the output from the underlying tool would be "reordered" due to the timing of reads from separate output/error pipes.
-    + Syntax highlighting improvements for CSS, HTML and TypeScript (thanks @simonvallz)
+    + Syntax highlighting improvements for CSS, HTML and TypeScript (thanks @caztanj)
     + Creating cursors above and below will now skip empty lines as this is most likely the behaviour users want (thanks @onelivesleft)
     + The Navigate To File (Ctrl-O) dialog will always show all files and folders instead of applying the ignore rules to them, which will allow to selectively open files which are normally ignored
     + Selecting a word using double left click should now behave identically to selecting a word using the `select_word` action, highlighting only whole-word selection occurrences
@@ -104,7 +104,7 @@
 # Version 0.3.7
 
 + New features:
-    + New command: `move_current_file`. Works as `save_as`, but removes the old file (thanks @simonvallz)
+    + New command: `move_current_file`. Works as `save_as`, but removes the old file (thanks @caztanj)
     + New config options:
         + `search_is_case_sensitive_when_uppercase_present`. Set to `true` to automatically make local search case sensitive when there are uppercase chars in the search bar. Currently only works with ASCII.
         + `projects_sorting_order`: `most_recent_first` (default), `alphabetical` or `alphabetical_no_case`. Determines the sorting order for projects in the Switch To Project dialog. (thanks @Roman-Skabin for the fix)
@@ -120,7 +120,7 @@
         + Fixed an issue with not being able to exit the editor if there are unsaved buffers
         + Fixed a bug with typing the letter 'q' when trying to exit the editor via Cmd-Q
 + Other changes:
-    + Various highlighting improvements (thanks @simonvallz)
+    + Various highlighting improvements (thanks @caztanj)
     + Temporary unsaved buffers will disappear from file lists when closed. If you accidentally closed one, go back in editor history
     + The `delete_to_start_of_line` command will now delete to the indentation level first, not to the very start of the line right away
     + Many internal changes to reduce the memory footprint and improve the cache friendliness of internal data structures
@@ -145,7 +145,7 @@
     + New command: `build_clear_output`. Use to manually clear the build output panel. Note that there is already a build option to clear it on every run, which may be preferable.
     + New config subsection under `[[workspace]]`: `[file associations]`. Can be used to assign syntax to buffers using wildcards. See the default config for examples
     + Basic highlighting for Markdown (thanks @jakwolf) - however it's not complete and not always correct
-    + Basic CSS highlighting (thanks @simonvallz)
+    + Basic CSS highlighting (thanks @caztanj)
     + C and C++ highlighters are now separate from each other
     + Workspace changes:
         + Workspace will now reload in a non-destructive way. Whenever possible it will try to preserve open editors unless they don't belong to the workspace any more
@@ -181,7 +181,7 @@
     + New option: `insert_final_newline_on_save`. Set to `true` to auto-add missing final newlines to saved files.
     + New command: `copy_current_line_info`. Copies a string `<current-file-path>:<line>` to clipboard. Useful for setting breakpoints.
     + Basic HLSL highlighting (thanks @Roman-Skabin for many improvements)
-    + Basic JSON highlighting (thanks @simonvallz)
+    + Basic JSON highlighting (thanks @caztanj)
     + Rust highlighting
 + Bug fixes:
     + Fixed the Jai code samples highlighting in build output in some cases
@@ -205,7 +205,7 @@
         + You can add Ctrl to your key combo or double-click to open on the side, as usual (when the default keybinds are used)
     + Closing an editor will now remove the corresponding file from the open files list (only if it's not modified)
     + New Handmade Hero theme (thanks @Sokus)
-    + Basic JS highlighting (thanks @simonvallz)
+    + Basic JS highlighting (thanks @caztanj)
     + It is now possible to use variables in build and run commands: %FILE%, %FILE_DIR%, %FILE_NAME%, %FILE_NAME_NO_EXTENSION%, %BUILD_WORKING_DIR%, %RUN_WORKING_DIR% (see more information in the default config)
     + New options: `window_width`, `window_height`, `window_x`, `window_y`. Can be used to configure the initial size of the editor window.
     + Focus now allows auto loading projects at startup in one of the following ways:

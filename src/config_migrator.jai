@@ -1196,6 +1196,9 @@ Ctrl-F8                     go_to_next_build_error_on_the_side
 Shift-F8                    go_to_previous_build_error
 Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
 {Shift}-Ctrl-M              jump_to_matching_bracket
+Enter                       open_entry_in_place
+Tab                         focus_next_ui_element
+Shift-Tab                   focus_previous_ui_element
 
 [[settings]]
 
@@ -1304,6 +1307,9 @@ Ctrl-F8                     go_to_next_build_error_on_the_side
 Shift-F8                    go_to_previous_build_error
 Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
 {Shift}-Ctrl-M              jump_to_matching_bracket
+Enter                       open_entry_in_place
+Tab                         focus_next_ui_element
+Shift-Tab                   focus_previous_ui_element
 
 [[settings]]
 
@@ -1393,6 +1399,9 @@ Ctrl-F8                     go_to_next_build_error_on_the_side
 Shift-F8                    go_to_previous_build_error
 Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
 {Shift}-Ctrl-M              jump_to_matching_bracket
+Enter                       open_entry_in_place
+Tab                         focus_next_ui_element
+Shift-Tab                   focus_previous_ui_element
 
 [[settings]]
 
@@ -1882,6 +1891,9 @@ Ctrl-F8                     go_to_next_build_error_on_the_side
 Shift-F8                    go_to_previous_build_error
 Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
 {Shift}-Ctrl-M              jump_to_matching_bracket
+Enter                       open_entry_in_place
+Tab                         focus_next_ui_element
+Shift-Tab                   focus_previous_ui_element
 
 FOCUS_CONFIG
 
@@ -1961,6 +1973,9 @@ Ctrl-F8                     go_to_next_build_error_on_the_side
 Shift-F8                    go_to_previous_build_error
 Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
 {Shift}-Ctrl-M              jump_to_matching_bracket
+Enter                       open_entry_in_place
+Tab                         focus_next_ui_element
+Shift-Tab                   focus_previous_ui_element
 
 [search dialog]
 Enter                       open_entry_in_place
