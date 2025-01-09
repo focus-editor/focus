@@ -62,6 +62,9 @@
         + Some settings can be specified for a subset of files, based on their language or a wildcard, for example:
             + `[file: <wildcard1>, <wildcard2>, ...]`
             + `[lang: golang, cpp, c, ...]`
+    + It's now possible to focus buttons in dialogs using only keyboard (thanks @simonvallz):
+        + New actions are added - `focus_next_ui_element`, `focus_previous_ui_element` (`Tab` and `Shift-Tab` by default)
+        + Confirm selection by using action `open_entry_in_place` (`Enter` by default)
 + Bug fixes:
     + Fixed a crash when changing languages in the color preview widget
     + Fixed a crash when editing colors near the end of file with color preview open (thanks @darkgiggs)
