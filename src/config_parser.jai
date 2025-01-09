@@ -61,10 +61,13 @@ parse_config :: (name: string, file_path: string, file_data: string, for_highlig
         return result;
     }
 
+    result.error_msg = "";
     result.config.version = ifx handler.version > 0 then handler.version else CURRENT_CONFIG_VERSION;
+
     if result.config.version != CURRENT_CONFIG_VERSION {
-        result.error_msg = tprint("Invalid version [%] in file '%'. The only supported version is [%].", result.config.version, file_path, CURRENT_CONFIG_VERSION);
-        return result;
+        // We will still attempt to parse the config, but it's expected that it can fail when there's a version mismatch
+        error_msg := tprint("Invalid version [%] in file '%'. The only supported version is [%].", result.config.version, file_path, CURRENT_CONFIG_VERSION);
+        array_add(*result.warnings, error_msg);
     }
 
     if as_theme then active_section = .style;
@@ -148,7 +151,6 @@ parse_config :: (name: string, file_path: string, file_data: string, for_highlig
     }
 
     result.success   = true;
-    result.error_msg = "";
 
     return result;
 }

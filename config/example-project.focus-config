@@ -48,6 +48,7 @@
 # %FILE_NAME_NO_EXTENSION% - current file name, without extension
 # %BUILD_WORKING_DIR% - working dir of the build command
 # %RUN_WORKING_DIR%   - working dir of the run command
+# %PROJECT_CONFIG_DIR% - path of the directory containing the active project config file
 
 
 
