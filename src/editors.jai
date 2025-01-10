@@ -2179,6 +2179,9 @@ is_a_move_action :: (action: Action_Editors) -> bool {
 
 // @Copypasta to text_input.jai - remember to update it if amending this!
 move_cursor_left :: (cursor: *Cursor, editor: *Editor, using buffer: *Buffer, by: Movement_Type, extend_selection: bool, is_single_cursor: bool) {
+    cursor.col_wanted = -1;
+    editor.cursor_moved = .unimportant;
+
     if has_selection(cursor) && !extend_selection {
         cursor.pos = get_selection(cursor).start;
         cursor.sel = cursor.pos;
@@ -2211,9 +2214,6 @@ move_cursor_left :: (cursor: *Cursor, editor: *Editor, using buffer: *Buffer, by
                 cursor.pos, moved_through = scan_through_similar_chars_on_the_left(buffer, cursor.pos, skip_one_space = false);
             }
     }
-
-    cursor.col_wanted = -1;
-    editor.cursor_moved = .unimportant;
 }
 
 move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: Movement_Type, extend_selection: bool) {
@@ -2226,6 +2226,9 @@ move_cursors_left :: (editor: *Editor, using buffer: *Buffer, by: Movement_Type,
 
 // @Copypasta to text_input.jai - remember to update it if amending this!
 move_cursor_right :: (cursor: *Cursor, editor: *Editor, using buffer: *Buffer, by: Movement_Type, extend_selection: bool, is_single_cursor: bool) {
+    editor.cursor_moved = .unimportant;
+    cursor.col_wanted = -1;
+
     if has_selection(cursor) && !extend_selection {
         cursor.pos = get_selection(cursor).end;
         cursor.sel = cursor.pos;
@@ -2258,9 +2261,6 @@ move_cursor_right :: (cursor: *Cursor, editor: *Editor, using buffer: *Buffer, b
                 cursor.pos, moved_through = scan_through_similar_chars_on_the_right(buffer, cursor.pos, skip_one_space = false);
             }
     }
-
-    cursor.col_wanted = -1;
-    editor.cursor_moved = .unimportant;
 }
 
 move_cursors_right :: (editor: *Editor, using buffer: *Buffer, by: Movement_Type, extend_selection: bool) {
