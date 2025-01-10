@@ -243,9 +243,10 @@ parse_identifier :: (using tokenizer: *Jai_Tokenizer, token: *Token) {
                 }
             case .keyword;
                 if before_prev.keyword == {
-                    case .kw_using;   is_modifier = array_find(string.["only", "except", "map"], identifier_str);
-                    case .kw_cast;    is_modifier = array_find(string.["no_check", "trunc", "force"], identifier_str);
-                    case .kw_xx;      is_modifier = array_find(string.["no_check", "trunc", "force"], identifier_str);
+                    case .kw_using;         is_modifier = array_find(string.["only", "except", "map"], identifier_str);
+                    case .kw_cast;          is_modifier = array_find(string.["no_check", "trunc", "force"], identifier_str);
+                    case .kw_xx;            is_modifier = array_find(string.["no_check", "trunc", "force"], identifier_str);
+                    case .kw_push_context;  is_modifier = array_find(string.["defer_pop"], identifier_str);
                 }
         }
         if is_modifier then token.type = .directive_modifier;
