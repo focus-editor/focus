@@ -1226,6 +1226,21 @@ X11_Lib :: struct #type_info_no_size_complaint {
 
     XEvent :: _XEvent;
 
+    XSizeHints :: struct {
+        flags: s64;     /* marks which fields in this structure are defined */
+        x, y: s32;               /* obsolete for new window mgrs, but clients */
+        width, height: s32;      /* should set so old wm's don't mess up */
+        min_width, min_height: s32;
+        max_width, max_height: s32;
+        width_inc, height_inc: s32;
+        min_aspect, max_aspect: struct {
+            x: s32;  /* numerator */
+            y: s32;  /* denominator */
+        };
+        base_width, base_height: s32;            /* added by ICCCM version 1 */
+        win_gravity: s32;                        /* added by ICCCM version 1 */
+    }
+
     XEventQueueOwner :: enum {
         Xlib :: 0;
         XCB  :: 1;
@@ -1398,6 +1413,7 @@ X11_Lib :: struct #type_info_no_size_complaint {
         XwcLookupString: (unk0: XIC, unk1: *XKeyPressedEvent, unk2: *u32, unk3: s32, unk4: *KeySym, unk5: *s32) -> s32 #c_call;
         XWidthMMOfScreen: (unk0: *Screen) -> s32 #c_call;
         XWidthOfScreen: (unk0: *Screen) -> s32 #c_call;
+        XSetWMNormalHints: (dpy: *Display, w: Window, hints: *XSizeHints) #c_call;
     }
     using _procs: Procs;
 

@@ -367,6 +367,13 @@ x11_create_window :: (display: *Display, window: *Window, width: int, height: in
 
     X11.XSetWMProtocols(d, x11_win.handle, *x11_display.global_atoms.WM_DELETE_WINDOW, 1);
 
+    hints: X11.XSizeHints = .{
+        flags = X11.PMinSize,
+        min_width = 100,
+        min_height = 100,
+    };
+    X11.XSetWMNormalHints(d, x11_win.handle, *hints);
+
     x11_win.ic = X11.XCreateIC(x11_display.im,
         X11.XNClientWindow, x11_win.handle,
         X11.XNFocusWindow, x11_win.handle,

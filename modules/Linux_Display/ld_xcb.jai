@@ -63,6 +63,8 @@ xcb_init_display :: (display: *Display) -> bool {
     if !load_procs(*xcb,        .["libxcb.so.1",        "libxcb.so"       ], "xcb_",        *xcb_loaded)        return false;
     if !load_procs(*xcb_xkb,    .["libxcb-xkb.so.1",    "libxcb-xkb.so"   ], "xcb_xkb_",    *xcb_xkb_loaded)    return false;
     if !load_procs(*xcb_cursor, .["libxcb-cursor.so.0", "libxcb-cursor.so"], "xcb_cursor_", *xcb_cursor_loaded) return false;
+    if !load_procs(*xcb_icccm,  .["libxcb-icccm.so.4",  "libxcb-icccm.so" ], "xcb_icccm_",  *xcb_icccm_loaded)  return false;
+
     if !xkbcommon_load(init_xcb_compat=true) return false;
 
     xd := XCB_Display.{ base = display.base };
@@ -299,6 +301,10 @@ xcb_create_window :: (display: *Display, window: *Window, width: int, height: in
         xcb_err = xcb.request_check(xd.handle, xi_cookie);
         if xcb_err  log_error("Failed to select input events on root WID %: %", xd.screen.root, xcb_err.*);
     }
+
+    hints: xcb_size_hints_t;
+    xcb_icccm.size_hints_set_min_size(*hints, 100, 100);
+    xcb_icccm.set_wm_size_hints(xd.handle, xw.handle, xx xcb_atom_enum_t.WM_NORMAL_HINTS, *hints);
 
     xcb.map_window(xd.handle, xw.handle);
     xcb.flush(xd.handle);
@@ -770,6 +776,7 @@ xcb_get_dpi_scaling_factor :: (window: *Window) -> float {
 #load "xcb_xinput_fp.jai";
 #load "xcb_xkb_fp.jai";
 #load "xcb_cursor_fp.jai";
+#load "xcb_icccm_fp.jai";
 
 
 /* we need this to free some stuff that the xcb libraries return */
@@ -782,6 +789,7 @@ xcb_loaded := false;
 xcb_xinput_loaded := false;
 xcb_xkb_loaded := false;
 xcb_cursor_loaded := false;
+xcb_icccm_loaded := false;
 
 load_procs :: (procs: *$T, libnames: []string, prefix: $string, loaded: *bool) -> success := false {
     if loaded.* return true;
@@ -1163,3 +1171,4 @@ xcb: XCB_Symbols;
 xcb_input: XCB_XInput_Symbols;
 xcb_xkb: XCB_XKB_Symbols;
 xcb_cursor: XCB_Cursor_Symbols;
+xcb_icccm: XCB_ICCCM_Symbols;
