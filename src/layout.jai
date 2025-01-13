@@ -123,7 +123,7 @@ cut_bottom :: (rect: Rect, amount: float) -> (bottom: Rect, remainder: Rect) {
     return bottom, remainder;
 }
 
-cut_top :: (rect: Rect, amount: float) -> (top: Rect, remainder: Rect) {
+cut_top :: (rect: Rect, amount: float, $margin := 0) -> (top: Rect, remainder: Rect) {
     amount = floor(amount);
 
     remainder := rect;
@@ -133,6 +133,14 @@ cut_top :: (rect: Rect, amount: float) -> (top: Rect, remainder: Rect) {
     top := rect;
     top.h = amount;
     top.y = remainder.y + remainder.h;
+
+    #if margin > 0 {
+        #assert margin % 2 == 0;
+        half_margin := margin / 2;
+        remainder.h -= half_margin;
+        top.h -= half_margin;
+        top.y += half_margin;
+    }
 
     return top, remainder;
 }

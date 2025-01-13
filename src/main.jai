@@ -496,6 +496,8 @@ init_fonts_and_dependent_things :: () {
     font_icons_very_small = Simp.get_font_at_size(FONT_ICONS.name, FONT_ICONS.data, cast(int) (font_icons_very_small_size * dpi_scale));
     assert(font_icons_very_small != null, "Couldn't init very small icon font\n");
 
+    status_bar_height = font_ui_line_height * 1.6;
+
     // WORKAROUND:
     // Make a dummy call with most common chars for each font so that
     // we have all the font atlases loaded in the GPU memory once
@@ -877,6 +879,7 @@ rounding_radius:            float;
 rounding_radius_large:      float;
 rounding_radius_small:      float;
 scrollbar_width:            float;
+status_bar_height:          float;
 
 // This will be set to `true` in `refresh_config()` to signal that the
 // next window resize event should be handled even if the window doesn't actually
