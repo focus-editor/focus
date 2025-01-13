@@ -26,55 +26,62 @@ draw_frame :: () {
     // Check whether we need to deactivate elements before drawing
     if (!mouse.left.is_down || mouse.left.just_released) && (!mouse.middle.is_down || mouse.middle.just_released) then ui.active = .none;
 
-    status_bar_height := font_ui_line_height * 1.6;
-
     active_editor_rect: Rect = ---;
 
     // Draw editors
-    if #complete editors.layout == {
-        case .None;
-            editors_snap_splitter(0.5);
-            draw_welcome_screen(screen);
-
-        case .Single;
-            editors_snap_splitter(0.5);
-            draw_editor(editors.left, screen, status_bar_height, .editor_single);
-            active_editor_rect = screen;
-
-        case .Double;
-            // Drag splitter
-            if ui.active == .editor_splitter {
-                editors_snap_splitter((mouse.pointer.x - screen.x) / screen.w);
-                editors.expanded = false;
-            }
-            if !values_are_close(splitter_pos, splitter_anim.target) {
-                redraw_requested = true;
-                splitter_pos = get_animation_value(splitter_anim);  // removed the clamp because we want to close smoothly. Will this cause problems? Not sure
-            } else if editor_closing_id >= 0 {
-                finish_closing_editor();
-            }
-            if editors.expanded {
-                if editors.active == editors.left  && !values_are_close(splitter_anim.target, 0.9) then editors_start_moving_splitter(0.9);
-                if editors.active == editors.right && !values_are_close(splitter_anim.target, 0.1) then editors_start_moving_splitter(0.1);
-            }
-
-            split_x := screen.w * splitter_pos;
-            left_rect, right_rect := cut_left(screen, split_x, margin = 2);
-
-            if just_dropped_file {
-                if mouse_pointer_is_within(left_rect)  then editors_open_file(just_dropped_file, .left);
-                if mouse_pointer_is_within(right_rect) then editors_open_file(just_dropped_file, .right);
-                just_dropped_file = "";
-            }
-
-            draw_editor(editors.left,  left_rect,  status_bar_height, .editor_left,  screen);
-            draw_editor(editors.right, right_rect, status_bar_height, .editor_right, screen);
-
-            active_editor_rect = ifx editors.active == editors.left then left_rect else right_rect;
-
-            splitter_rect := make_rect(left_rect.x + left_rect.w, 0, 2, left_rect.h);
-            draw_splitter(splitter_rect, split_x, .editor_splitter);
+    if editors.root == null {
+        draw_welcome_screen(screen);
+    } else {
+        draw_editor_node(editors.root, screen, get_ui_id_from_loc());
     }
+
+    // if #complete editors.layout == {
+    //     case .None;
+    //         editors_snap_splitter(0.5);
+    //         draw_welcome_screen(screen);
+
+    //     case .Single;
+    //         editors_snap_splitter(0.5);
+    //         draw_editor(editors.left, screen, status_bar_height, .editor_single);
+    //         active_editor_rect = screen;
+
+    //     case .Double;
+    //         // Drag splitter
+    //         if ui.active == .editor_splitter {
+    //             editors_snap_splitter((mouse.pointer.x - screen.x) / screen.w);
+    //             editors.expanded = false;
+    //         }
+    //         if !values_are_close(splitter_pos, splitter_anim.target) {
+    //             redraw_requested = true;
+    //             splitter_pos = get_animation_value(splitter_anim);  // removed the clamp because we want to close smoothly. Will this cause problems? Not sure
+    //         } else if editor_closing_id >= 0 {
+    //             finish_closing_editor();
+    //         }
+    //         if editors.expanded {
+    //             if editors.active == editors.left  && !values_are_close(splitter_anim.target, 0.9) then editors_start_moving_splitter(0.9);
+    //             if editors.active == editors.right && !values_are_close(splitter_anim.target, 0.1) then editors_start_moving_splitter(0.1);
+    //         }
+
+    //         split_x := screen.w * splitter_pos;
+    //         left_rect, right_rect := cut_left(screen, split_x, margin = 2);
+
+    //         if just_dropped_file {
+    //             if mouse_pointer_is_within(left_rect)  then editors_open_file(just_dropped_file, .left);
+    //             if mouse_pointer_is_within(right_rect) then editors_open_file(just_dropped_file, .right);
+    //             just_dropped_file = "";
+    //         }
+
+    //         draw_editor(editors.left,  left_rect,  status_bar_height, .editor_left,  screen);
+    //         draw_editor(editors.right, right_rect, status_bar_height, .editor_right, screen);
+
+    //         active_editor_rect = ifx editors.active == editors.left then left_rect else right_rect;
+
+    //         splitter_rect := make_rect(left_rect.x + left_rect.w, 0, 2, left_rect.h);
+    //         draw_splitter(splitter_rect, split_x, .editor_splitter);
+
+    //     case .Multi;
+    //         // @split
+    // }
 
     panel_is_active, panel_editor_rect := maybe_draw_color_preview_panel(status_bar_height);
     if panel_is_active then active_editor_rect = panel_editor_rect;
@@ -87,7 +94,7 @@ draw_frame :: () {
         case .open_file_dialog;                 draw_open_file_dialog();
         case .delete_file_dialog;               draw_delete_file_dialog();
         case .finder;                           draw_finder();
-        case .go_to_line_dialog;                draw_go_to_line_dialog(active_editor_rect, status_bar_height);
+        case .go_to_line_dialog;                draw_go_to_line_dialog(active_editor_rect);
         case .switch_to_project_dialog;         draw_switch_to_project_dialog();
         case .unsaved_buffers_dialog;           draw_unsaved_buffers_dialog();
         case .confirm_overwrite_dialog;         draw_confirm_overwrite_dialog();
@@ -97,7 +104,7 @@ draw_frame :: () {
         case .kill_running_command_dialog;      draw_kill_running_command_dialog();
     }
 
-    draw_user_messages(screen, status_bar_height);
+    draw_user_messages(screen);
 
     // Reset UI state after drawing
     if (!mouse.left.is_down || mouse.left.just_released) && (!mouse.middle.is_down || mouse.middle.just_released) {
@@ -109,6 +116,25 @@ draw_frame :: () {
     ui.active_last_frame = ui.active;
 
     Simp.swap_buffers(window);
+}
+
+draw_editor_node :: (using node: *Editor_Node, rect: Rect, ui_id: Ui_Id) {
+    assert(node != null);
+    if !is_valid(rect) return;
+
+    if layout == .single {
+        if editor_id < 0 || editor_id >= open_editors.count return;
+        draw_editor(editor_id, rect, ui_id);
+    } else {
+        rect1, rect2: Rect;
+        if layout == .horizontal {
+            rect1, rect2 = cut_left(rect, splitter_pos, margin = 2);
+        } else {
+            rect1, rect2 = cut_top(rect, splitter_pos, margin = 2);
+        }
+        draw_editor_node(child1, rect1, get_ui_id_from_loc(parent_id = ui_id));
+        draw_editor_node(child2, rect2, get_ui_id_from_loc(parent_id = ui_id));
+    }
 }
 
 draw_welcome_screen :: (main_area: Rect) {
@@ -258,7 +284,7 @@ draw_welcome_screen :: (main_area: Rect) {
 
 }
 
-draw_user_messages :: (main_area: Rect, status_bar_height: float) {
+draw_user_messages :: (main_area: Rect) {
     user_messages := get_user_messages(frame_time);
     if !user_messages return;
 
@@ -490,13 +516,13 @@ maybe_draw_color_preview_panel :: (status_bar_height: float) -> (drawn: bool = f
         }
     }
 
-    draw_editor(editor_id, editor_rect, 0, color_preview_ui_id);
+    draw_editor(editor_id, editor_rect, color_preview_ui_id, has_status_bar = false);
 
     if ui.hot_last_frame == color_preview_ui_id {
         // Draw a tooltip with the correct color name
         editor := *open_editors[editor_id];
         buffer := *open_buffers[editor.buffer_id];
-        text_rect := get_editor_subrects(editor_id, editor_rect, 0);
+        text_rect := get_editor_subrects(editor_id, editor_rect, has_status_bar = false);
         mouse_coords := coords_from_mouse_position(editor, text_rect);
         buffer_pos   := coords_to_offset(editor, buffer, mouse_coords);
         if buffer_pos >= 0 && buffer_pos < buffer.tokens.count {
@@ -721,12 +747,12 @@ maybe_draw_build_panel :: (status_bar_height: float) -> (drawn: bool = false, ed
 
     // Draw text
     editor_id := build_panel_get_editor_id();
-    draw_editor(editor_id, build_output_rect, 0, get_ui_id_from_loc());
+    draw_editor(editor_id, build_output_rect, get_ui_id_from_loc(), has_status_bar = false);
 
     return build_panel_is_active(), build_output_rect;
 }
 
-get_editor_subrects :: (editor_id: s64, main_area: Rect, status_bar_height: float) -> editor_rect: Rect, status_bar_rect: Rect, line_number_panel: Rect {
+get_editor_subrects :: (editor_id: s64, main_area: Rect, has_status_bar: bool) -> editor_rect: Rect, status_bar_rect: Rect, line_number_panel: Rect {
     status_bar_rect, rect, line_number_panel: Rect;
 
     editor := *open_editors[editor_id];
@@ -734,9 +760,9 @@ get_editor_subrects :: (editor_id: s64, main_area: Rect, status_bar_height: floa
     buffer_settings := get_settings(buffer);
 
     if buffer_settings.status_bar_position == .bottom {
-        status_bar_rect, rect = cut_bottom(main_area, status_bar_height);
+        status_bar_rect, rect = cut_bottom(main_area, ifx has_status_bar then status_bar_height else 0);
     } else {
-        status_bar_rect, rect = cut_top(main_area, status_bar_height);
+        status_bar_rect, rect = cut_top(main_area, ifx has_status_bar then status_bar_height else 0);
     }
 
     max_width := cast(float) buffer_settings.max_editor_width * dpi_scale;
@@ -767,7 +793,7 @@ coords_from_mouse_position :: (using editor: Editor, rect: Rect) -> Coords {
     return .{ line = xx (mouse_pos.y / line_height), col = xx ((mouse_pos.x / char_x_advance) + 0.5) };
 }
 
-draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id: Ui_Id, total_editor_area := Rect.{}) {
+draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, has_status_bar := true, total_editor_area := Rect.{}) {
     as_build_panel := is_build_panel(editor_id);
 
     using editor := *open_editors[editor_id];
@@ -780,7 +806,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
     scrollbar_id := get_ui_id_from_loc(parent_id = ui_id);
 
-    rect, status_bar_rect, line_number_panel := get_editor_subrects(editor_id, main_area, status_bar_height);
+    rect, status_bar_rect, line_number_panel := get_editor_subrects(editor_id, main_area, has_status_bar);
 
     if !is_valid(rect) return;
 
@@ -3249,7 +3275,7 @@ draw_finder :: () {
     }
 }
 
-draw_go_to_line_dialog :: (active_editor_rect: Rect, status_bar_height: float) {
+draw_go_to_line_dialog :: (active_editor_rect: Rect) {
     input_id := get_ui_id_from_loc();
 
     margin  := floor(8 * dpi_scale);

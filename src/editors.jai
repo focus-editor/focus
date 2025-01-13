@@ -571,51 +571,98 @@ editors_create_new_file :: (placement: Editor_Placement = .in_place) {
 editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place) {
     if build_panel_is_active() then build_panel_lose_focus();
 
-    if #complete editors.layout == {
-        case .None;
-            editors.active = find_or_create_editor(buffer_id);
-            editors.left  = editors.active;  // we don't use it but editor history needs it
-            editors.right = editors.active;
-            editors.layout = .Single;
-
-        case .Single;
-            if placement == .in_place {
-                // Open in place
-                editors.left  = find_or_create_editor(buffer_id);
-                editors.active = editors.left;
-            } else if placement == .on_the_side || placement == .right {
-                // Open on the right
-                editors.right  = find_or_create_editor(buffer_id, editors.active);
-                editors.left   = editors.active;
-                editors.active = editors.right;
-                editors.layout = .Double;
-                editors_start_moving_splitter(0.5, start = 1.0);
-            } else {
-                // Open on the left
-                editors.left   = find_or_create_editor(buffer_id, editors.active);
-                editors.right  = editors.active;
-                editors.active = editors.left;
-                editors.layout = .Double;
-                editors_start_moving_splitter(0.5, start = 0.0);
-            }
-
-        case .Double;
-            on_the_right := (
-                placement == .right ||
-                (placement == .in_place    && editors.active == editors.right) ||
-                (placement == .on_the_side && editors.active == editors.left)
-            );
-
-            if on_the_right {
-                // Open on the right (obviously)
-                editors.right  = find_or_create_editor(buffer_id, editors.left);
-                editors.active = editors.right;
-            } else {
-                // Open on the left
-                editors.left   = find_or_create_editor(buffer_id, editors.right);
-                editors.active = editors.left;
-            }
+    if editors.active_node == null {
+        assert(editors.root == null);  // if we don't have anything active it must be because there's nothing open, otherwise it's a bug
+        editors.root = New(Editor_Node);  // TODO: don't allocate here, instead allocate once at startup
+        editors.active_node = editors.root;
     }
+    active_node := editors.active_node;
+
+    assert(active_node.layout == .single);  // only leaf nodes can be active
+    assert(active_node.child1 == null);
+    assert(active_node.child2 == null);
+
+    // @incomplete
+    editor_id := find_or_create_editor(buffer_id);  // TODO: must not use the same editor!!!!!
+
+    existing_target_node := get_relative_editor_node_by_placement(active_node, placement);
+    if existing_target_node {
+        // We already have a pane which matches the placement
+    } else {
+        // We need to split an active node
+    }
+
+    // if #complete placement == {
+    //     case .in_place;
+    //         active_node.editor_id = editor_id;
+
+    //     case .on_the_side;
+    //         // TODO !!!!!!
+
+    //     case .left;  // @cleanup
+    //         active_node.child1 = New(Editor_Node);
+    //         active_node.child2 = New(Editor_Node);
+    //         active_node.child1.parent = active_node;
+    //         active_node.child2.parent = active_node;
+    //         active_node.child1.editor_id = editor_id;
+    //         active_node.child2.editor_id = active_node.editor_id;
+    //         active_node.editor_id = -1;
+    //         active_node.layout = .horizontal;
+
+    //     case .right;
+    //     case .top;
+    //     case .bottom;
+    // }
+
+    // if #complete editors.layout == {
+    //     case .None;
+    //         editors.active = find_or_create_editor(buffer_id);
+    //         editors.left  = editors.active;  // we don't use it but editor history needs it
+    //         editors.right = editors.active;
+    //         editors.layout = .Single;
+
+    //     case .Single;
+    //         if placement == .in_place {
+    //             // Open in place
+    //             editors.left  = find_or_create_editor(buffer_id);
+    //             editors.active = editors.left;
+    //         } else if placement == .on_the_side || placement == .right {
+    //             // Open on the right
+    //             editors.right  = find_or_create_editor(buffer_id, editors.active);
+    //             editors.left   = editors.active;
+    //             editors.active = editors.right;
+    //             editors.layout = .Double;
+    //             editors_start_moving_splitter(0.5, start = 1.0);
+    //         } else {
+    //             // Open on the left
+    //             editors.left   = find_or_create_editor(buffer_id, editors.active);
+    //             editors.right  = editors.active;
+    //             editors.active = editors.left;
+    //             editors.layout = .Double;
+    //             editors_start_moving_splitter(0.5, start = 0.0);
+    //         }
+
+    //     case .Double;
+    //         on_the_right := (
+    //             placement == .right ||
+    //             (placement == .in_place    && editors.active == editors.right) ||
+    //             (placement == .on_the_side && editors.active == editors.left)
+    //         );
+
+    //         if on_the_right {
+    //             // Open on the right (obviously)
+    //             editors.right  = find_or_create_editor(buffer_id, editors.left);
+    //             editors.active = editors.right;
+    //         } else {
+    //             // Open on the left
+    //             editors.left   = find_or_create_editor(buffer_id, editors.right);
+    //             editors.active = editors.left;
+    //         }
+
+    //     case .Multi;
+    //         // @split
+    // }
+
     buffer := *open_buffers[buffer_id];
     if buffer.num_times_opened < 255 then buffer.num_times_opened += 1;
 
@@ -930,6 +977,7 @@ do_things_on_editor_close :: (editor_id: s64) {
         case .None;
         case .Single; buffer_is_still_visible = open_editors[editors.active].buffer_id == editor.buffer_id;
         case .Double; buffer_is_still_visible = open_editors[editors.left].buffer_id == editor.buffer_id || open_editors[editors.right].buffer_id == editor.buffer_id;
+        case .Multi;  // @split
     }
     if !buffer_is_still_visible {
         array_ordered_remove_by_value(*most_recent_buffers, editor.buffer_id);
@@ -1197,6 +1245,20 @@ find_all :: (using search_bar: *Search_Bar, needle: string, buffer: Buffer) {
         result.line   = offset_to_real_line(buffer, offset);
 
         offset += needle.count;
+    }
+}
+
+get_relative_editor_node_by_placement :: (node: *Editor_Node, placement: Editor_Placement) -> *Editor_Node {
+    assert(node != null);
+
+    if placement == .in_place return node;
+
+    if parent == null return null;
+
+    if #complete placement == {
+        case .in_place;  // should never get here
+        case .left;
+            // if parent.layout == .horizontal && 
     }
 }
 
@@ -1475,6 +1537,7 @@ line_wrap_is_active :: inline (editor: Editor) -> bool {
     return editor.line_wrap == .on || editor.line_wrap == .to_disable;
 }
 
+// @split: support more than 2 editors here
 find_or_create_editor :: (buffer_id: s64, unwanted_existing_editor: s64 = -1) -> editor_id: s64, created: bool {
     assert(buffer_id >= 0 && buffer_id < open_buffers.count, "Attempt to create editor for nonexistent buffer");
     for open_editors {
@@ -3964,6 +4027,9 @@ Paste_Animation :: struct {
 }
 
 Editor_State :: struct {
+    root: *Editor_Node;
+    active_node: *Editor_Node;
+
     layout: Layout = .None;
 
     active: s64 = -1;
@@ -3976,6 +4042,24 @@ Editor_State :: struct {
         None    :: 0;
         Single  :: 1;
         Double  :: 2;
+        Multi   :: 3;
+    }
+}
+
+Editor_Node :: struct {
+    editor_id: s64 = -1;
+
+    layout: Layout = .single;
+    splitter_pos: float;
+
+    parent: *Editor_Node;
+    child1: *Editor_Node;
+    child2: *Editor_Node;
+
+    Layout :: enum u8 {
+        single      :: 0;
+        horizontal  :: 1;
+        vertical    :: 2;
     }
 }
 
@@ -3985,6 +4069,8 @@ Editor_Placement :: enum {
     on_the_side;
     left;
     right;
+    top;
+    bottom;
 }
 
 open_buffers_lock: Mutex;  // must hold while adding a new buffer
