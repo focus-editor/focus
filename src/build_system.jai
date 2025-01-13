@@ -322,6 +322,7 @@ build_panel_get_position :: () -> Build_Panel_Position {
         case .Double;   if editor_closing_id >= 0 then saved_position = .right;
                         else if editors.active == editors.left  then saved_position = .right;
                         else if editors.active == editors.right then saved_position = .left;
+        case .Multi;    saved_position = .right;  // @split
     }
     return saved_position;
 }
