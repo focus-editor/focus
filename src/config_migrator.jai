@@ -488,6 +488,8 @@ ADDED_SETTINGS :: Added_Setting.[
     .{ 11, "detect_indentation",                                 "true  # if true, existing files will be scanned to detect indentation, new files will use the `indent_using` and `tab_size` settings" },
     .{ 11, "status_bar_show_indentation",                        "true" },
     .{ 11, "status_bar_show_line_col",                           "true" },
+
+    .{ 15, "show_scrollbar_marks"    ,                           "true" },
 ];
 
 RENAMED_SETTINGS :: Renamed_Setting.[
@@ -1237,6 +1239,7 @@ show_ruler_at_column:                            0
 detect_indentation:                              true  # if true, existing files will be scanned to detect indentation, new files will use the `indent_using` and `tab_size` settings
 status_bar_show_indentation:                     true
 status_bar_show_line_col:                        true
+show_scrollbar_marks:                            true
 
 FOCUS_CONFIG
 
@@ -1347,6 +1350,7 @@ show_ruler_at_column:                            0
 detect_indentation:                              true  # if true, existing files will be scanned to detect indentation, new files will use the `indent_using` and `tab_size` settings
 status_bar_show_indentation:                     true
 status_bar_show_line_col:                        true
+show_scrollbar_marks:                            true
 
 FOCUS_CONFIG
 
@@ -1667,6 +1671,7 @@ show_ruler_at_column:                            0
 detect_indentation:                              true  # if true, existing files will be scanned to detect indentation, new files will use the `indent_using` and `tab_size` settings
 status_bar_show_indentation:                     true
 status_bar_show_line_col:                        true
+show_scrollbar_marks:                            true
 
 [[keymap]]
 # ...

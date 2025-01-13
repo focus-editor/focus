@@ -1508,7 +1508,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         // Draw scrollbar and scrollbar marks
         draw_scrollbar(rect, scrollbar_size, content_height, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id, as_build_panel);
 
-        if !line_wrap_is_active(editor) {
+        if !line_wrap_is_active(editor) && buffer_settings.show_scrollbar_marks {
             Simp.set_shader_for_color(enable_blend = true);
 
             marks_rect := cut_right(rect, scrollbar_size);
