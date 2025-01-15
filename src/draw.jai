@@ -127,7 +127,7 @@ draw_welcome_screen :: (main_area: Rect) {
 
     // Draw the left part
     {
-        draw_rect(left_area, .BACKGROUND_3, .{is_background = true});
+        draw_rect(left_area, .BACKGROUND_3, extra_draw_info = .{is_background = true});
 
         Simp.set_shader_for_rects();
 
@@ -171,7 +171,7 @@ draw_welcome_screen :: (main_area: Rect) {
 
     // Draw the right part
     {
-        draw_rect(right_area, .BACKGROUND_0, .{is_background = true});
+        draw_rect(right_area, .BACKGROUND_0, extra_draw_info = .{is_background = true});
 
         Shortcut :: struct { action: Action_Common; description: string; }
 
@@ -397,7 +397,7 @@ maybe_draw_color_preview_panel :: () -> (drawn: bool = false, editor_rect: Rect 
         push_scissor(title_bar_rect);
         defer pop_scissor();
 
-        draw_rect(title_bar_rect, Color.BACKGROUND_4, .{is_background = true});
+        draw_rect(title_bar_rect, Color.BACKGROUND_4, extra_draw_info = .{is_background = true});
 
         pen := Vector2.{
             x = title_bar_rect.x + char_x_advance,
@@ -424,7 +424,7 @@ maybe_draw_color_preview_panel :: () -> (drawn: bool = false, editor_rect: Rect 
         }
 
         hr := cut_bottom(title_bar_rect, 1);
-        draw_rect(hr, Color.BACKGROUND_1, .{is_background = true});
+        draw_rect(hr, Color.BACKGROUND_1, extra_draw_info = .{is_background = true});
     }
 
     if !is_valid(panel_body_rect) return;
@@ -463,8 +463,8 @@ maybe_draw_color_preview_panel :: () -> (drawn: bool = false, editor_rect: Rect 
         defer pop_scissor();
 
         hr:, langs_rect = cut_left(langs_rect, 1);
-        draw_rect(hr, Color.BACKGROUND_1, .{is_background = true});
-        draw_rect(langs_rect, Color.BACKGROUND_2, .{is_background = true});
+        draw_rect(hr, Color.BACKGROUND_1, extra_draw_info = .{is_background = true});
+        draw_rect(langs_rect, Color.BACKGROUND_2, extra_draw_info = .{is_background = true});
 
         languages, selected_lang := color_preview_get_languages();
         entry_height := cast(s64) (font_ui_line_height + padding);
@@ -561,7 +561,7 @@ draw_color_picker :: (editor_id: s64, editor: *Editor, buffer: *Buffer, picker_r
 
     Simp.immediate_flush();
 
-    draw_rounded_rect_with_shadow(rect, Color.BACKGROUND_0, radius = 0.1, shadow_size = char_size, .{is_background = true});
+    draw_rounded_rect_with_shadow(rect, Color.BACKGROUND_0, radius = 0.1, shadow_size = char_size, extra_draw_info = .{is_background = true});
     widget_size := line_height;
     bottom, top := cut_bottom(rect, widget_size);
     axis_rect, main_rect  := cut_left(top,    widget_size);
@@ -680,7 +680,7 @@ maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
         push_scissor(title_bar_rect);
         defer pop_scissor();
 
-        draw_rect(title_bar_rect, Color.BUILD_PANEL_TITLE_BAR, .{is_background = true});
+        draw_rect(title_bar_rect, Color.BUILD_PANEL_TITLE_BAR, extra_draw_info = .{is_background = true});
 
         pen := Vector2.{
             x = title_bar_rect.x + char_x_advance,
@@ -707,7 +707,7 @@ maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
         }
 
         hr := cut_bottom(title_bar_rect, 1);
-        draw_rect(hr, Color.BACKGROUND_1, .{is_background = true});
+        draw_rect(hr, Color.BACKGROUND_1, extra_draw_info = .{is_background = true});
     }
 
     if !is_valid(build_output_rect) return;
@@ -1201,7 +1201,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
         // Update scrollbar without drawing to get the new scrolling position (scrollbar will be drawn later)
         // Do it after we've handled cursor_moved AND after calculating the next scroll_y animation value, because it uses viewport.top
-        new_scroll_target := get_new_scroll_target_from_scrollbar(rect, scrollbar_size, content_height, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
+        new_scroll_target := get_new_scroll_target_from_scrollbar(rect, content_height, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id);
         if new_scroll_target != viewport.scroll_y.target {
             // Jump immediately to the scroll point when dragging or clicking scrollbar
             snap_viewport_top_to_target(editor, buffer, new_scroll_target);
@@ -1277,7 +1277,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         }
 
         // Finished working out scroll position, so can now draw background
-        if !as_build_panel then draw_rect(rect, Color.BACKGROUND_0, .{is_background = true});
+        if !as_build_panel then draw_rect(rect, Color.BACKGROUND_0, extra_draw_info = .{is_background = true});
 
         // Draw buffer regions
         for region : buffer.regions {
@@ -1319,7 +1319,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                         w = rect.w - ifx x_offset == 0 then char_x_advance,   // @Note: text_origin.x is 1 char_x_advance in, so if we can see the beginning of the line, shorten the rect
                         h = line_height,
                     };
-                    draw_rect(line_rect, Color.BACKGROUND_4, .{is_background = true});
+                    draw_rect(line_rect, Color.BACKGROUND_4, extra_draw_info = .{is_background = true});
                 }
             }
         }
@@ -1506,12 +1506,12 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
 
         // Draw scrollbar and scrollbar marks
-        draw_scrollbar(rect, scrollbar_size, content_height, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id, as_build_panel);
+        draw_scrollbar(rect, content_height, viewport.top, viewport.scroll_y.target, max_y_scroll, scrollbar_id, as_build_panel);
 
         if !line_wrap_is_active(editor) && buffer_settings.show_scrollbar_marks {
             Simp.set_shader_for_color(enable_blend = true);
 
-            marks_rect := cut_right(rect, scrollbar_size);
+            marks_rect := cut_right(rect, scrollbar_width);
             marks_rect =  cut_top(marks_rect, rect.h * max_y_scroll / content_height);
             marks_rect_top := marks_rect.y + marks_rect.h;
             assert(buffer.line_starts.count > 0);
@@ -1566,7 +1566,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
         push_scissor(line_number_panel);
         defer pop_scissor();
 
-        draw_rect(line_number_panel, Color.BACKGROUND_0, .{is_background = true});
+        draw_rect(line_number_panel, Color.BACKGROUND_0, extra_draw_info = .{is_background = true});
 
         // Get the visible lines which have cursors on them (for highlighting)
         active_lines: [..] s32;
@@ -1704,13 +1704,13 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
             push_scissor(results_rect);
             defer pop_scissor();
 
-            draw_rect(results_rect, Color.BACKGROUND_0, .{is_background = true});  // to make contrasting scopes more visible
+            draw_rect(results_rect, Color.BACKGROUND_0, extra_draw_info = .{is_background = true});  // to make contrasting scopes more visible
 
             {
                 // Scrollbar
                 content_height := results.count * entry_height;
                 max_y_scroll := max(cast(s32)(content_height - results_rect.h), 0);
-                new_scroll_target := get_new_scroll_target_from_scrollbar(results_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, max_y_scroll, search_scrollbar_id);
+                new_scroll_target := get_new_scroll_target_from_scrollbar(results_rect, content_height, scroll_y, scroll_anim.target, max_y_scroll, search_scrollbar_id);
                 if new_scroll_target != scroll_anim.target {
                     scroll_y = new_scroll_target;
                     scroll_anim.target = new_scroll_target;
@@ -1756,7 +1756,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 }
 
                 // The above operations could've updated scrollbar position, so drawing it here
-                draw_scrollbar(results_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, max_y_scroll, search_scrollbar_id);
+                draw_scrollbar(results_rect, content_height, scroll_y, scroll_anim.target, max_y_scroll, search_scrollbar_id);
             }
 
             visible_start := clamp(cast(s32) (scroll_y / entry_height), 0, results.count);
@@ -1796,7 +1796,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 for visible_scopes {
                     if entry.offset >= it.start && entry.offset <= it.end {
                         scope_rect := cut_right(entry_rect, entry_rect.x + entry_rect.w - text_x + char_x_advance);
-                        draw_rect(scope_rect, get_region_color(it.kind), .{is_background = true});
+                        draw_rect(scope_rect, get_region_color(it.kind), extra_draw_info = .{is_background = true});
                         break;
                     }
                 }
@@ -1809,7 +1809,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                         redraw_requested = true;
                         break;  // don't finish drawing entries because they are reset
                     }
-                    draw_rect(entry_rect, Color.LIST_CURSOR_LITE, .{is_background = true});
+                    draw_rect(entry_rect, Color.LIST_CURSOR_LITE, extra_draw_info = .{is_background = true});
                 }
                 if entry_index == selected_result then draw_rect(entry_rect, Color.LIST_CURSOR);
 
@@ -1864,7 +1864,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                     highlight_rect := entry_rect;
                     highlight_rect.x = pen.x + char_x_advance * (cols_until_match_start - col_offset);
                     highlight_rect.w = char_x_advance * (cols_until_match_end - cols_until_match_start);
-                    draw_rect(shrink_y(highlight_rect, padding), Color.SEARCH_RESULT_INACTIVE, .{is_background = true});
+                    draw_rect(shrink_y(highlight_rect, padding), Color.SEARCH_RESULT_INACTIVE, extra_draw_info = .{is_background = true});
 
                     // Draw line
                     visible_offset_range = Offset_Range.{
@@ -1899,7 +1899,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
     // Draw status bar
     if !as_build_panel {
         footer_color := Color.BACKGROUND_4;
-        draw_rect(status_bar_rect, footer_color, .{is_background = true});
+        draw_rect(status_bar_rect, footer_color, extra_draw_info = .{is_background = true});
         if #complete buffer_settings.status_bar_position == {
             case .bottom; draw_top_shadow(status_bar_rect);
             case .top; draw_bottom_shadow(status_bar_rect);
@@ -2018,7 +2018,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
                 fadeout_rect := cut_rect;
                 fadeout_rect.x -= 1; // Sliver sometimes visible on left if we don't do this
                 fadeout_rect.w = 4 * padding;
-                draw_rect(fadeout_rect, footer_color, .{is_background = true, is_translucent_on_the_right = true});
+                draw_rect(fadeout_rect, footer_color, extra_draw_info = .{is_background = true, is_translucent_on_the_right = true});
             }
         }
     }
@@ -2294,7 +2294,7 @@ draw_open_file_dialog :: () {
             // Scrollbar
             content_height := filtered.count * entry_height;
             max_y_scroll := max(cast(s32)(content_height - files_rect.h), 0);
-            new_scroll_target := get_new_scroll_target_from_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
+            new_scroll_target := get_new_scroll_target_from_scrollbar(files_rect, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
             if new_scroll_target != scroll_anim.target {
                 scroll_y = new_scroll_target;
                 scroll_anim.target = new_scroll_target;
@@ -2340,7 +2340,7 @@ draw_open_file_dialog :: () {
             }
 
             // The above operations could've updated scrollbar position, so drawing it here
-            draw_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
+            draw_scrollbar(files_rect, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
         }
 
         visible_start := clamp(cast(s64) (scroll_y / entry_height), 0, filtered.count);
@@ -2545,7 +2545,7 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
             // Scrollbar
             content_height := filtered.count * entry_height;
             max_y_scroll := max(cast(s32)(content_height - entries_rect.h), 0);
-            new_scroll_target := get_new_scroll_target_from_scrollbar(entries_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
+            new_scroll_target := get_new_scroll_target_from_scrollbar(entries_rect, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
             if new_scroll_target != scroll_anim.target {
                 scroll_y = new_scroll_target;
                 scroll_anim.target = new_scroll_target;
@@ -2591,7 +2591,7 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
             }
 
             // The above operations could've updated scrollbar position, so drawing it here
-            draw_scrollbar(entries_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
+            draw_scrollbar(entries_rect, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
         }
 
         visible_start := clamp(cast(s64) (scroll_y / entry_height), 0, filtered.count);
@@ -2776,7 +2776,7 @@ draw_generic_confirm_dialog :: (dialog: *Generic_Confirm_Dialog, ui_id: Ui_Id, h
         Simp.draw_text(font_ui_medium, pen_x, pen_y, header, xx Color.UI_DEFAULT);
 
         hr := cut_bottom(header_rect, 1);
-        draw_rect(hr, Color.BACKGROUND_1, .{is_background = true});
+        draw_rect(hr, Color.BACKGROUND_1, extra_draw_info = .{is_background = true});
     }
 
     // Message + extra
@@ -3013,7 +3013,7 @@ draw_finder :: () {
         // Scrollbar
         content_height := results.count * entry_height;
         max_y_scroll := max(cast(s32)(content_height - files_rect.h), 0);
-        new_scroll_target := get_new_scroll_target_from_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
+        new_scroll_target := get_new_scroll_target_from_scrollbar(files_rect, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
         if new_scroll_target != scroll_anim.target {
             scroll_y = new_scroll_target;
             scroll_anim.target = new_scroll_target;
@@ -3189,7 +3189,7 @@ draw_finder :: () {
         }
 
         // Drawing the scrollbar here so that scopes don't cover it
-        draw_scrollbar(files_rect, scrollbar_size, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
+        draw_scrollbar(files_rect, content_height, scroll_y, scroll_anim.target, max_y_scroll, scrollbar_id);
 
         if !is_empty(finder.input.text) && !results {
             label := "Searching…";
@@ -3391,7 +3391,7 @@ draw_text_input :: (using input: *Text_Input, rect_: Rect, ui_id: Ui_Id, active 
     rect := align_to_grid(rect_);  // to get a consistent outline
 
     became_active := maybe_set_hot_or_active(ui_id, rect, .TEXT_SELECT);
-    if became_active then active = true;  // draw as activated right away
+    if became_active { active = true; redraw_requested = true; }  // draw as activated right away and schedule a redraw to deactivate other things
 
     if font == null then font = font_ui;
     padding := (rect.h - cast(float) font.default_line_spacing) / 2;
@@ -3568,7 +3568,7 @@ draw_code :: (font: *Simp.Dynamic_Font, pen: Vector2, code_lines: [] Simp.Code_L
 
 Corner_Rounding :: enum { none; in; out; }
 
-draw_rounded_rect :: (rect: Rect, color: Color, radius := 0.0, softness := 1.0, $set_shader := true, $extra_draw_info := Simp.Extra_Draw_Info.{}) {
+draw_rounded_rect :: (rect: Rect, color: Color, radius := 0.0, softness := 1.0, opacity := 1.0, $set_shader := true, $extra_draw_info := Simp.Extra_Draw_Info.{}) {
     if !is_valid(rect) return;
     #if set_shader then Simp.set_shader_for_rects(extra_draw_info);
     if radius <= 0 then radius = rounding_radius;
@@ -3578,7 +3578,10 @@ draw_rounded_rect :: (rect: Rect, color: Color, radius := 0.0, softness := 1.0, 
     p0 := bottom_left(rect);
     p2 := top_right(rect);
 
-    Simp.immediate_rounded_rect(p0, p2, map_color_to_vec4(color), center, size, radius, softness);
+    color_vec4 := map_color_to_vec4(color);
+    color_vec4.w *= opacity;
+
+    Simp.immediate_rounded_rect(p0, p2, color_vec4, center, size, radius, softness);
 }
 
 draw_rounded_rect_with_raw_color :: (rect: Rect, color_vec4: Vector4, radius := 0.0, softness := 1.0, $set_shader := true) {
@@ -3682,7 +3685,7 @@ draw_rounded_rect_with_shadow :: (rect: Rect, color: Color, radius := 0.0, shado
     Simp.immediate_rounded_rect(bottom_left(left),   top_right(left),   shadow_color, center, size, radius, softness = shadow_size);
     Simp.immediate_rounded_rect(bottom_left(right),  top_right(right),  shadow_color, center, size, radius, softness = shadow_size);
 
-    draw_rounded_rect(rect, color, radius = radius, set_shader = false, .{is_background = true});
+    draw_rounded_rect(rect, color, radius = radius, set_shader = false, extra_draw_info = .{is_background = true});
 }
 
 draw_circle :: (center: Vector2, color: Color, radius: float, softness := 1.0) {
@@ -3703,16 +3706,19 @@ draw_top_down_shadow :: (rect: Rect) {
     draw_rect_raw(rect, c00 = t, c10 = t, c01 = s, c11 = s);
 }
 
-draw_rect :: (rect: Rect, color: Color, $extra_draw_info := Simp.Extra_Draw_Info.{}) {
+draw_rect :: (rect: Rect, color: Color, opacity := 1.0, $extra_draw_info := Simp.Extra_Draw_Info.{}) {
     Simp.set_shader_for_color(enable_blend = true);
+
+    color_vec4 := map_color_to_vec4(color);
+    color_vec4.w *= opacity;
+
     if extra_draw_info.is_translucent_on_the_right {
-        c := map_color_to_vec4(color);
-        trans := c;
+        trans := color_vec4;
         trans.w = 0;
         using rect;
-        Simp.immediate_quad(x, y, x + w, y + h, c, c, trans, trans);
+        Simp.immediate_quad(x, y, x + w, y + h, color_vec4, color_vec4, trans, trans);
     } else {
-        draw_rect_raw(rect, color);
+        draw_rect_with_raw_color(rect, color_vec4);
     }
 }
 
@@ -3748,23 +3754,45 @@ draw_bottom_shadow :: (using rect: Rect, size: float = 10.0) {
     Simp.immediate_quad(x, y, x + w, y - size * dpi_scale, c00 = s, c01 = t, c10 = s, c11 = t);
 }
 
-get_new_scroll_target_from_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id) -> new_scroll_target: s32 {
-    return draw_scrollbar(main_rect, width, content_height, scroll, scroll_target, max_scroll, ui_id, draw = false);
+get_new_scroll_target_from_scrollbar :: (main_rect: Rect, content_height: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id) -> new_scroll_target: s32 {
+    return draw_scrollbar(main_rect, content_height, scroll, scroll_target, max_scroll, ui_id, draw = false);
 }
 
-draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id, for_build_panel := false, $draw := true) -> new_scroll_target: s32 {
+draw_scrollbar :: (main_rect: Rect, content_height: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id, for_build_panel := false, $draw := true) -> new_scroll_target: s32 {
     scroll_target = clamp(scroll_target, 0, max_scroll);
+
+    if scroll != scroll_target then start_scrollbar_fade_out_animation(ui_id, initial_value = config.settings.scrollbar_max_opacity);
 
     if max_scroll <= 0 return scroll_target;
 
-    area := cut_right(main_rect, width);  // the scrollbar area of the main rect
+    area := cut_right(main_rect, scrollbar_width);  // the scrollbar area of the main rect
     scrollbar := area;  // handle
     scrollbar.h = floor(area.h * (area.h / content_height));
     scroll_zone_size := area.h - scrollbar.h;  // the room for y to move
 
     if scroll_zone_size <= 0 return scroll_target;  // don't draw
 
+    // Get the opacity from the fadeout animations
+    fadeout_opacity := 0.0;
+    for * scrollbar_fade_out_animations {
+        if it.ui_id != ui_id continue;
+        delayed := maybe_wait_for_delay(*it.anim);
+        fadeout_opacity = get_animation_value(it.anim);
+        if fadeout_opacity <= 0 remove it;
+        if fadeout_opacity > 0 && !delayed then redraw_requested = true;  // only redraw when not delayed to avoid spinning while waiting
+        fadeout_opacity = clamp(fadeout_opacity, config.settings.scrollbar_min_opacity, config.settings.scrollbar_max_opacity);
+    }
+
+    // Get another opacity value based on distance to mouse pointer
+    distance_to_mouse := max(abs(mouse.pointer.x - (scrollbar.x + scrollbar.w / 2)) - scrollbar.w / 2, 0.0);
+    fade_in_threshold := char_size * config.settings.scrollbar_fade_in_sensitivity;
+    t := clamp((fade_in_threshold - distance_to_mouse) / fade_in_threshold, 0.0, 1.0);
+    opacity := lerp(config.settings.scrollbar_min_opacity, config.settings.scrollbar_max_opacity, t);
+    opacity = max(opacity, fadeout_opacity);
+
     maybe_set_hot_or_active(ui_id, area, .NORMAL);
+
+    if ui.active == ui_id then opacity = config.settings.scrollbar_max_opacity;  // we're actively dragging
 
     color       := Color.SCROLLBAR;
     color_bg    := Color.SCROLLBAR_BACKGROUND;
@@ -3778,17 +3806,15 @@ draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll:
     }
 
     // Draw
-    if is_hovering_over(ui_id) {
-        #if draw draw_rounded_rect(area, color_bg, radius = rounding_radius_small);
-        color = color_hover;
-    }
+    #if draw draw_rounded_rect(area, color_bg, radius = rounding_radius_small, opacity = opacity);
+    color = color_hover;
     separator_rect := shrink_y(cut_left(area, 1), rounding_radius_small);
-    #if draw draw_rect(separator_rect, color_bg);
+    #if draw draw_rect(separator_rect, color_bg, opacity = opacity);
     scrollbar.y += (cast(float) (max_scroll - scroll) / max_scroll) * scroll_zone_size;
     scrollbar.y = floor(scrollbar.y);
     scrollbar = shrink(scrollbar, 1);
     if scrollbar.h < 5 then scrollbar.h = 5;  // don't make it too tiny
-    #if draw draw_rounded_rect(scrollbar, color, radius = rounding_radius_small);
+    #if draw draw_rounded_rect(scrollbar, color, radius = rounding_radius_small, opacity = opacity);
 
     // Maybe drag the slider
     if ui.active == ui_id {
@@ -3804,6 +3830,7 @@ draw_scrollbar :: (main_rect: Rect, width: float, content_height: float, scroll:
         new_scrollbar_pos_from_top := (area.h - (mouse.pointer.y - scrollbar_grab_point - area.y)) - scrollbar.h / 2;
         new_scroll_percentage := new_scrollbar_pos_from_top / (area.h - scrollbar.h);
         scroll_target = cast(s32) (max_scroll * new_scroll_percentage);
+        start_scrollbar_fade_out_animation(ui_id, initial_value = opacity);
     }
 
     return clamp(scroll_target, 0, max_scroll);
@@ -3928,6 +3955,18 @@ is_hovering_over :: (ui_id: Ui_Id) -> bool {
     return (ui.hot_last_frame == ui_id && ui.active == .none) || ui.active == ui_id;
 }
 
+start_scrollbar_fade_out_animation :: (ui_id: Ui_Id, initial_value := 1.0) {
+    animation: *Scrollbar_Fade_Out_Animation;
+    for * scrollbar_fade_out_animations {
+        if it.ui_id == ui_id { animation = it; break; }
+    }
+    if !animation {
+        animation = array_add(*scrollbar_fade_out_animations);
+        animation.ui_id = ui_id;
+    }
+    start_animation(*animation.anim, initial_value, 0.0, delay = config.settings.scrollbar_fade_out_delay_seconds);
+}
+
 #scope_export
 
 Icon :: enum u16 {
@@ -3994,6 +4033,14 @@ Ui_Id :: enum s64 {
 // clean way this should probably be stored in widget storage?
 // Problem is, we don't have much else to store for scrollbars...
 scrollbar_grab_point: float;
+
+// Super simple, we don't expect there to be more than a couple elements at any one time
+scrollbar_fade_out_animations: [..] Scrollbar_Fade_Out_Animation;
+
+Scrollbar_Fade_Out_Animation :: struct {
+    ui_id: Ui_Id;
+    anim := #run Tween_Animation(float).{ speed = 0.5, func = .smoothstep };
+}
 
 // Same as the scrollbar grab point above
 panel_grab_point: Vector2;

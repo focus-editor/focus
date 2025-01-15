@@ -495,18 +495,35 @@ get_tmp_tabs :: (num: int) -> string {
     return tabs;
 }
 
-start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: float = 0.0) {
+start_animation :: (anim: *Tween_Animation(T), start: $T, target: T, speed: float = 0.0, delay: float64 = 0.0) {
     anim.start  = start;
     anim.target = target;
     if speed > 0 then anim.speed = speed;
 
-    // Pretend the animation started last frame so we start moving right away.
-    // If the current frame was t=0, then the movement would simply be delayed one frame.
-    anim.started_at = frame_time64 - frame_dt;
+    if delay {
+        anim.delay = delay;
+        anim.started_at = frame_time64;
+    } else {
+        // Pretend the animation started last frame so we start moving right away.
+        // If the current frame was t=0, then the movement would simply be delayed one frame.
+        anim.started_at = frame_time64 - frame_dt;
+    }
+}
+
+maybe_wait_for_delay :: (using anim: *Tween_Animation($T)) -> bool {
+    if delay <= 0 return false;  // nothing to wait on
+    if frame_time64 < started_at + delay return true;
+
+    // Start an animation again as the delay has just ended.
+    // We have to do it this way because we want to sleep on the delay and we don't want a jerky animation
+    // because of the sleep precision, so we're starting it from the beginning now
+    started_at = frame_time64 - frame_dt;
+    delay = 0;
+    return false;
 }
 
 get_animation_value :: (using anim: Tween_Animation($T)) -> T {
-    t := (frame_time64 - started_at) / speed;
+    t := (frame_time64 - (started_at + delay)) / speed;
     t = clamp(t, 0, 1);
     if #complete func == {
         case .lerp;       return start + cast(T) (cast(float)(target - start) * t);
@@ -602,7 +619,8 @@ table_find_or_default :: (table: *Table, key: table.Key_Type) -> table.Value_Typ
 
 Tween_Animation :: struct(T: Type) {
     started_at: float64;
-    speed : float = xx 0.1;  // how many seconds to finish
+    delay: float64;
+    speed: float = xx 0.1;  // how many seconds to finish
     start, target: T;
     func: enum { lerp; smoothstep; } = .smoothstep;
 }
@@ -731,6 +749,21 @@ hex_to_color_vec4 :: (src_hex: string) -> Vector4, success: bool {
     c := Vector4.{ to_float(r), to_float(g), to_float(b), to_float(a) };
 
     return c, c.x >= 0 && c.y >= 0 && c.z >= 0 && c.w >= 0;
+}
+
+move_toward :: (a_pointer: *float, target: float, dt: float, rate_up: float, rate_down: float = -1.0) {  // lifted from GetRect
+    a := a_pointer.*;
+
+    if a > target {
+        if rate_down == -1 rate_down = rate_up;
+        a -= dt * rate_down;
+        if a < target  a = target;
+        a_pointer.* = a;
+    } else if a < target {
+        a += dt * rate_up;
+        if a > target  a = target;
+        a_pointer.* = a;
+    }
 }
 
 Option :: struct($T: Type) {

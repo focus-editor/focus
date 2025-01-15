@@ -83,6 +83,13 @@ status_bar_show_line_col:                           true
 status_bar_show_indentation:                        true
 status_bar_show_selected_text_length:               false
 
+show_scrollbar_marks:                               true
+scrollbar_width_scale:                              1.0
+scrollbar_min_opacity:                              0.0   # if you want the scrollbar to be always visible, set this to 1.0
+scrollbar_max_opacity:                              1.0
+scrollbar_fade_in_sensitivity:                      10.0  # controls when the scrollbar appears as the mouse pointer gets close
+scrollbar_fade_out_delay_seconds:                   2.0   # how long the scrollbar stays visible after scrolling
+
 # NOTE: some settings can be specified for a subset of files, based on their language or a wildcard,
 # for example:
 # [file: <wildcard1>, <wildcard2>, ...]

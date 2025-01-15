@@ -1,6 +1,6 @@
 // Increment this if your PR adds a setting, color or default keybinding (and amend the relevant array
 // in config_migrator.jai).  You don't need to increase it for each such change; once per PR is fine.
-CURRENT_CONFIG_VERSION :: 15;
+CURRENT_CONFIG_VERSION :: 16;
 
 load_global_config :: (fallback_to_default_on_failure := false, force := false) -> success: bool, changed: bool, there_were_warnings: bool {
     config_path := tprint("%/global.focus-config", config_dir);
@@ -467,11 +467,11 @@ merge_configs :: (dst: *Config, parsed: Parsed_Config) {
 }
 
 apply_config :: () {
-    clamp_and_warn :: (setting: *$T, min: T, max: T, message: string) {
+    clamp_and_warn :: (setting: *$T, min: T, max: T, message: string = "") {
         old := setting.*;
         clamped := clamp(old, min, max);
         if clamped != old {
-            add_user_warning(message, clamped);
+            if message then add_user_warning(message, clamped);
             setting.* = clamped;
         }
     }
@@ -491,6 +491,13 @@ apply_config :: () {
     clamp_and_warn(*config.settings.editor_history_size,        4,   1024 * 1024, "Editor history size clamped to %");
     clamp_and_warn(*config.settings.build_panel_height_percent, 10,  100,         "Build panel height clamped to % percent");
     clamp_and_warn(*config.settings.build_panel_width_percent,  10,  100,         "Build panel width clamped to % percent");
+
+    Clamp(*config.settings.scrollbar_width_scale,     0.0, 10.0);
+    Clamp(*config.settings.scrollbar_min_opacity,     0.0,  1.0);
+    Clamp(*config.settings.scrollbar_max_opacity,     config.settings.scrollbar_min_opacity,  1.0);
+
+    Clamp(*config.settings.scrollbar_fade_in_sensitivity,       0.0, 100.0);
+    Clamp(*config.settings.scrollbar_fade_out_delay_seconds,    0.0, 1000.0);
 
     if config.settings.window_width  != -1    clamp_and_warn(*config.settings.window_width,  100, 10000, "Window width clamped to %");
     if config.settings.window_height != -1    clamp_and_warn(*config.settings.window_height, 100, 3000,  "Window height clamped to %");
@@ -635,6 +642,11 @@ Settings :: struct {
     save_all_file_backed_buffers_on_build                   := false;   @v3
     double_shift_to_search_in_workspace                     := false;   @v1
     editor_history_size                                     := 1024;    @v1
+    scrollbar_width_scale                                   := 1.0;     @v16
+    scrollbar_min_opacity                                   := 0.0;     @v16
+    scrollbar_max_opacity                                   := 1.0;     @v16
+    scrollbar_fade_in_sensitivity                           := 10.0;    @v16
+    scrollbar_fade_out_delay_seconds                        := 2.0;     @v16
 
     // TODO
     // load_last_session_on_start:         true
@@ -676,6 +688,7 @@ Settings :: struct {
         type_name: string;
         if setting.type.type == {
             case .INTEGER;  type_name = "int";
+            case .FLOAT;    type_name = "float";
             case .BOOL;     type_name = "bool";
             case .ENUM;     type_name = (cast(*Type_Info_Enum) setting.type).name;
             case;           compiler_report(tprint("Found an overridable setting '%' of an unsupported type", setting.name));

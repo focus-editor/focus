@@ -33,6 +33,7 @@ maybe_migrate_config :: (name: string, file_data: string) -> migrated: bool, mod
             if begins_with(line, "[[") && ends_with(line, "]]") {
                 previous_section = current_section;
                 current_section = trim(line, " \t[]");
+                current_subsection = "";
                 just_entered_section = true;
 
                 if config_info.version < 5 {
@@ -68,7 +69,7 @@ maybe_migrate_config :: (name: string, file_data: string) -> migrated: bool, mod
                     setting_name, setting_value := break_by_spaces(line);
                     setting_name = trim_right(setting_name, ":");
 
-                    config_info.last_setting_offset = line_start_offset;
+                    if !current_subsection then config_info.last_setting_offset = line_start_offset;
                     table_set(*config_info.settings_present, setting_name, true);
 
                 case "style";
@@ -489,7 +490,13 @@ ADDED_SETTINGS :: Added_Setting.[
     .{ 11, "status_bar_show_indentation",                        "true" },
     .{ 11, "status_bar_show_line_col",                           "true" },
 
-    .{ 15, "show_scrollbar_marks"    ,                           "true" },
+    .{ 15, "show_scrollbar_marks",                               "true" },
+
+    .{ 16, "scrollbar_width_scale",                              "1.0" },
+    .{ 16, "scrollbar_min_opacity",                              "0.0   # if you want the scrollbar to be always visible, set this to 1.0" },
+    .{ 16, "scrollbar_max_opacity",                              "1.0" },
+    .{ 16, "scrollbar_fade_in_sensitivity",                      "10.0  # controls when the scrollbar appears as the mouse pointer gets close" },
+    .{ 16, "scrollbar_fade_out_delay_seconds",                   "2.0   # how long the scrollbar stays visible after scrolling" },
 ];
 
 RENAMED_SETTINGS :: Renamed_Setting.[
@@ -1240,6 +1247,11 @@ detect_indentation:                              true  # if true, existing files
 status_bar_show_indentation:                     true
 status_bar_show_line_col:                        true
 show_scrollbar_marks:                            true
+scrollbar_width_scale:                           1.0
+scrollbar_min_opacity:                           0.0   # if you want the scrollbar to be always visible, set this to 1.0
+scrollbar_max_opacity:                           1.0
+scrollbar_fade_in_sensitivity:                   10.0  # controls when the scrollbar appears as the mouse pointer gets close
+scrollbar_fade_out_delay_seconds:                2.0   # how long the scrollbar stays visible after scrolling
 
 FOCUS_CONFIG
 
@@ -1351,6 +1363,11 @@ detect_indentation:                              true  # if true, existing files
 status_bar_show_indentation:                     true
 status_bar_show_line_col:                        true
 show_scrollbar_marks:                            true
+scrollbar_width_scale:                           1.0
+scrollbar_min_opacity:                           0.0   # if you want the scrollbar to be always visible, set this to 1.0
+scrollbar_max_opacity:                           1.0
+scrollbar_fade_in_sensitivity:                   10.0  # controls when the scrollbar appears as the mouse pointer gets close
+scrollbar_fade_out_delay_seconds:                2.0   # how long the scrollbar stays visible after scrolling
 
 FOCUS_CONFIG
 
@@ -1672,6 +1689,11 @@ detect_indentation:                              true  # if true, existing files
 status_bar_show_indentation:                     true
 status_bar_show_line_col:                        true
 show_scrollbar_marks:                            true
+scrollbar_width_scale:                           1.0
+scrollbar_min_opacity:                           0.0   # if you want the scrollbar to be always visible, set this to 1.0
+scrollbar_max_opacity:                           1.0
+scrollbar_fade_in_sensitivity:                   10.0  # controls when the scrollbar appears as the mouse pointer gets close
+scrollbar_fade_out_delay_seconds:                2.0   # how long the scrollbar stays visible after scrolling
 
 [[keymap]]
 # ...

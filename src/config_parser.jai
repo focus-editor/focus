@@ -1079,6 +1079,14 @@ parse_settings_line :: (using parser: *Config_Parser, line: string) -> success: 
                     );
                     append(*b, code);
 
+                case .FLOAT;
+                    code := construct_parse_code(
+                        setting.name,
+                        "val, success := parse_float(*value);",
+                        "tprint(\"Couldn't parse '%1' - expected a valid float, got '%%'\", setting_value)",
+                    );
+                    append(*b, code);
+
                 case .ENUM;
                     code := construct_parse_code(
                         setting.name,

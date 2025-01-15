@@ -527,7 +527,7 @@ init_fonts_and_dependent_things :: () {
     char_x_advance        = cast(float) font_main.x_advance;
     old_line_height       = line_height;
     line_height           = floor(cast(float) font_main.default_line_spacing * cast(float) config.settings.line_height_scale_percent / 100.0);
-    scrollbar_size        = floor(1.5 * char_size);
+    scrollbar_width       = floor(1.5 * char_size) * config.settings.scrollbar_width_scale;
     rounding_radius       = floor(char_size / 2);
     rounding_radius_large = floor(char_size / 1.5);
     rounding_radius_small = floor(char_size / 3);
@@ -876,7 +876,7 @@ font_ui_medium_line_height: float;
 rounding_radius:            float;
 rounding_radius_large:      float;
 rounding_radius_small:      float;
-scrollbar_size:             float;
+scrollbar_width:            float;
 
 // This will be set to `true` in `refresh_config()` to signal that the
 // next window resize event should be handled even if the window doesn't actually
