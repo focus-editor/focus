@@ -115,7 +115,7 @@ is_file_binary :: (file_data: string) -> bool {
     return has_zeroes;
 }
 
-should_ignore_file :: (path: string) -> bool {
+should_ignore_file :: (path: string, check_for_zeroes_if_needed := true) -> bool {
     should_ignore, explicitly_allowed := should_ignore_path(path);
     if should_ignore return true;
     if explicitly_allowed return false;
@@ -151,6 +151,8 @@ should_ignore_file :: (path: string) -> bool {
         if POSIX.stat(temp_c_string(path), *stats) < 0 return true;
         if !POSIX.S_ISREG(stats.st_mode) return true;
     }
+
+    if !check_for_zeroes_if_needed return false;
 
     // Ignore binary files - it's not a 100% guarantee but a good heuristic.
     // We're not using read_entire_file here because this function is used when scanning workspace
