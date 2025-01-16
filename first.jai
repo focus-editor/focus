@@ -59,6 +59,10 @@ build :: () {
     options.output_path = build_dir;
     make_directory_if_it_does_not_exist(build_dir);
 
+    #if OS == .WINDOWS {
+        options.use_custom_link_command = true;
+    }
+
     w := compiler_create_workspace(options.output_executable_name);
     set_build_options(options, w);
     #if OS == .WINDOWS {
@@ -115,9 +119,15 @@ build :: () {
 
             case .PHASE;
                 phase_message := cast(*Message_Phase) message;
-                if phase_message.phase == .ALL_TARGET_CODE_BUILT {
-                    if options.output_type == .NO_OUTPUT  exit(0);
-                    check_settings();
+                if phase_message.phase == {
+                    case .ALL_TARGET_CODE_BUILT;
+                        if options.output_type == .NO_OUTPUT  exit(0);
+                        check_settings();
+
+                    case .READY_FOR_CUSTOM_LINK_COMMAND;
+                        failed = !run_custom_link(message.workspace, phase_message);
+                        compiler_custom_link_command_is_complete(message.workspace);
+                        if failed break;
                 }
 
             case .COMPLETE;
@@ -276,9 +286,86 @@ settings_info: struct {
 #import "String";
 
 #if OS == .WINDOWS {
+    /*
+     * Generate a link command that uses static CRT libraries only.
+     *
+     * We do this by iterating over the extra linker arguments/system library list and translating
+     * any non-static CRT .lib to the static version (see `crt_lib_to_static()`).
+     *
+     * Ideally we would like to simply modify the original linker command that the compiler generates
+     * however there is currently no way to retrieve it. We simply emulate the linker command here.
+     *
+     * - ileonte, 2025.01.16
+     */
+    run_custom_link :: (w: Workspace, m: *Message_Phase) -> bool {
+        build_opts := get_build_options(w);
+        vs_library_path, vs_linker_path := find_visual_studio_in_a_ridiculous_garbage_way();
+        win_kit_path, win_kit_ver := find_windows_kit_root();
+        compiler_obj_path := path_decomp(m.compiler_generated_object_files[0]);
+        link_exe := tprint("%\\link.exe", vs_linker_path);
+
+        link_command: [..] string;
+
+        array_add(*link_command, link_exe);
+        array_add(*link_command, "/nologo");
+        for m.compiler_generated_object_files
+            array_add(*link_command, it);
+        array_add(*link_command, tprint("/OUT:%/%.exe", build_opts.output_path, build_opts.output_executable_name));
+        array_add(*link_command, "/MACHINE:AMD64", "/INCREMENTAL:NO", "/DEBUG");
+        array_add(*link_command, tprint("/IMPLIB:%/%.lib", compiler_obj_path, build_opts.output_executable_name));
+        array_add(*link_command, tprint("/LIBPATH:%", vs_library_path));
+        array_add(*link_command, tprint("/LIBPATH:%/um/x64", win_kit_path));
+        array_add(*link_command, tprint("/LIBPATH:%/ucrt/x64", win_kit_path));
+        array_add(*link_command, "/NODEFAULTLIB");
+        for build_opts.additional_linker_arguments
+            array_add(*link_command, crt_lib_to_static(it));
+        for m.system_libraries
+            array_add(*link_command, crt_lib_to_static(it));
+        for m.user_libraries
+            array_add(*link_command, it);
+
+        print("Running custom link command: %\n", get_quoted_command_string(link_command));
+        result := run_command(..link_command);
+        if result.exit_code != 0 {
+            compiler_report(tprint("Error: Link step failed! (Exit code: %)", result.exit_code));
+            return false;
+        }
+
+        return true;
+    }
+
+    // https://learn.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160
+    crt_lib_to_static :: (original: string) -> string {
+        original_lower := to_lower_copy_new(original);
+        translated := original;
+        if original_lower == {
+            // UCRT
+            case "ucrt.lib";       translated = "libucrt.lib";
+            case "ucrtd.lib";      translated = "libucrtd.lib";
+
+            // VCRUNTIME
+            case "vcruntime.lib";  translated = "libvcruntime.lib";
+            case "vcruntimed.lib"; translated = "libvcruntimed.lib";
+
+            // CRT
+            case "msvcrt.lib";     translated = "libcmt.lib";
+            case "msvcrtd.lib";    translated = "libcmtd.lib";
+
+            // C++ standard lib
+            case "msvcprt.lib";    translated = "libcpmt.lib";
+            case "msvcprtd.lib";   translated = "libcpmtd.lib";
+        }
+        return translated;
+    }
+
     #import "Ico_File";
     #import "Windows_Resources";
 } else #if OS == .MACOS {
+    run_custom_link :: (w: Workspace, m: *Message_Phase) -> bool {
+        compiler_report("You should not be here!");
+        return false;
+    }
+
     INFO_PLIST_CONTENTS :: #string STRING
 <?xml version="1.0" ?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -362,4 +449,9 @@ settings_info: struct {
     </dict>
 </plist>
 STRING
+} else #if OS == .LINUX {
+    run_custom_link :: (w: Workspace, m: *Message_Phase) -> bool {
+        compiler_report("You should not be here!");
+        return false;
+    }
 }
