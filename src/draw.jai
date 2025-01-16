@@ -3761,7 +3761,7 @@ get_new_scroll_target_from_scrollbar :: (main_rect: Rect, content_height: float,
 draw_scrollbar :: (main_rect: Rect, content_height: float, scroll: s32, scroll_target: s32, max_scroll: s32, ui_id: Ui_Id, for_build_panel := false, $draw := true) -> new_scroll_target: s32 {
     scroll_target = clamp(scroll_target, 0, max_scroll);
 
-    if scroll != scroll_target then start_scrollbar_fade_out_animation(ui_id, initial_value = config.settings.scrollbar_max_opacity);
+    if scroll != scroll_target then start_scrollbar_fade_out_animation(ui_id);
 
     if max_scroll <= 0 return scroll_target;
 
@@ -3955,7 +3955,9 @@ is_hovering_over :: (ui_id: Ui_Id) -> bool {
     return (ui.hot_last_frame == ui_id && ui.active == .none) || ui.active == ui_id;
 }
 
-start_scrollbar_fade_out_animation :: (ui_id: Ui_Id, initial_value := 1.0) {
+start_scrollbar_fade_out_animation :: (ui_id: Ui_Id, initial_value := -1.0) {
+    if initial_value < 0 then initial_value = config.settings.scrollbar_max_opacity;
+
     animation: *Scrollbar_Fade_Out_Animation;
     for * scrollbar_fade_out_animations {
         if it.ui_id == ui_id { animation = it; break; }
@@ -3966,6 +3968,7 @@ start_scrollbar_fade_out_animation :: (ui_id: Ui_Id, initial_value := 1.0) {
     }
     start_animation(*animation.anim, initial_value, 0.0, delay = config.settings.scrollbar_fade_out_delay_seconds);
 }
+
 
 #scope_export
 

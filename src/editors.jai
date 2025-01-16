@@ -2320,13 +2320,15 @@ move_cursors_by_page :: (editor: *Editor, buffer: Buffer, dir: enum { up; down; 
     page_size := cast(s32) (window_height / line_height);
 
     for * cursor : editor.cursors {
-        line := offset_to_line(editor, buffer, cursor.pos);
+        coords := offset_to_coords(editor, buffer, cursor.pos);
         if dir == .up {
-            line -= page_size;
+            coords.line -= page_size;
         } else {
-            line += page_size;
+            coords.line += page_size;
         }
-        cursor.pos = coords_to_offset(editor, buffer, Coords.{ line = line, col = cursor.col_wanted });
+        if cursor.col_wanted < 0 then cursor.col_wanted = coords.col;
+        coords.col = cursor.col_wanted;
+        cursor.pos = coords_to_offset(editor, buffer, coords);
     }
 
     if dir == .up  editor.cursor_moved = .moved_up;
