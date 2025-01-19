@@ -156,6 +156,7 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "save",
     "save_as",
     "save_all",
+    "open_file_directory",
     "move_current_file",
     "delete_current_file",
     "toggle_comment",
