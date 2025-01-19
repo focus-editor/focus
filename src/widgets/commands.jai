@@ -133,6 +133,8 @@ base_commands := #run -> [] Command {
         cmd( "Save As",                           .save_as,                          .Single ),
         cmd( "Save All",                          .save_all,                         .Single ),
 
+        cmd( "Open File Directory",               .open_file_directory,              .Single ),
+
         cmd( "Move Current File",                 .move_current_file,                .Single ),
         cmd( "Delete Current File",               .delete_current_file,              .Single ),
 

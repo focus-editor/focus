@@ -189,6 +189,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .save;                             save(editor, editors.active);
         case .save_all;                         save_all();
         case .save_as;                          defer_action_save_as(editor.buffer_id);
+        case .open_file_directory;              open_file_directory (editor.buffer_id);
         case .move_current_file;                defer_action_move   (editor.buffer_id);
         case .delete_current_file;              defer_action_delete (editor.buffer_id);
         case .reload_from_disk;                 user_reload_from_disk(editor.buffer_id);
@@ -1937,6 +1938,23 @@ save :: (buffer_id: s64) {
     } else {
         defer_action_save_as(buffer_id);
     }
+}
+
+open_file_directory :: (buffer_id: s64) {
+    buffer := *open_buffers[buffer_id];
+
+    if !buffer.has_file || !buffer.file.full_path {
+        add_user_warning("Buffer has no associated file", dismiss_in_seconds = 5);
+        return;
+    }
+
+    path := get_parent_dir_path(buffer.file.full_path);
+    if !file_exists(path) {
+        add_user_error("Couldn't open file directory %", path);
+        return;
+    }
+
+    platform_open_in_explorer(path);
 }
 
 switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := false) {
