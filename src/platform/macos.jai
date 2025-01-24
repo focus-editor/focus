@@ -88,6 +88,16 @@ platform_kill_cursor_timer :: inline (window: Window_Type) {
     cursor_timer = null;
 }
 
+platform_set_autosave_timer :: inline (window: Window_Type) {
+    destroy_timer(autosave_timer);
+    autosave_timer = create_timer(50, true);
+}
+
+platform_kill_autosave_timer :: inline (window: Window_Type) {
+    destroy_timer(autosave_timer);
+    autosave_timer = null;
+}
+
 platform_enumerate_logical_drives :: inline () -> [] string {
     return .["/"];
 }
@@ -198,6 +208,7 @@ monitors : [..] Monitor;
 native_timers: Table(*Focus_Timer, *NSTimer);
 refresh_timer: *Focus_Timer;
 cursor_timer:  *Focus_Timer;
+autosave_timer: *Focus_Timer;
 
 timer_class_registered := false;
 Focus_Timer :: struct {
