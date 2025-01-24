@@ -93,7 +93,35 @@ platform_enumerate_logical_drives :: inline () -> [] string {
 }
 
 platform_get_save_file_name :: inline (name := "") -> string, bool {
-    return "", false;
+    save_panel := NSSavePanel.savePanel();
+
+    if name != ""  NSSavePanel.setNameFieldStringValue(save_panel, NSString.getTempString(name));
+
+    // We calculate if the theme is dark or light in the same way as in platform_set_border_color.
+    bg  := map_color_to_vec4(.BACKGROUND_0);
+    hsp := sqrt(bg.x * bg.x * .299 + bg.y * bg.y * .587 + bg.z * bg.z * .114) * 256.0;
+
+    appearance_name := ifx hsp < 130 then dark_string else light_string;
+    NSWindow.setAppearance(xx save_panel, NSAppearance.appearanceNamed(NSString.getTempString(appearance_name)));
+
+    result := save_panel.runModal(save_panel);
+
+    // When the save panel is closed our window is not focused. This call focuses our window.
+    NSWindow.makeKeyAndOrderFront(window, null);
+
+    // When a NSSavePanel is opened we will not get the next NSEventTypeFlagsChanged for when the user released the modifier keys. It is probably safe to assume the user released all modifier keys when opening the NSSavePanel. If we don't do this our program still thinks the modifier keys are pressed until the user presses them again.
+    Input.input_button_states[Input.Key_Code.SHIFT] = Input.Key_Current_State.END;
+    Input.input_button_states[Input.Key_Code.ALT]   = Input.Key_Current_State.END;
+    Input.input_button_states[Input.Key_Code.CTRL]  = Input.Key_Current_State.END;
+    Input.input_button_states[Input.Key_Code.CMD]   = Input.Key_Current_State.END;
+
+    if result != NSModalResponseOK  return "", false;
+
+    url       := save_panel.URL(save_panel);
+    path      := url.path(url);
+    file_path := string.{ data = NSString.UTF8String(path), count = xx NSString.length(path) };
+
+    return file_path, true;
 }
 
 platform_find_font_by_name :: (name: string, allocator := temp) -> bool, string {
@@ -125,9 +153,6 @@ platform_set_border_color :: inline () {
     // NOTE: this gets called during compile-time parsing of the default config file which
     //       causes the meta-program to crash.
     if #compile_time return;
-
-    dark_string  :: "NSAppearanceNameDarkAqua";
-    light_string :: "NSAppearanceNameAqua";
 
     appearance_name : string;
 
@@ -171,6 +196,9 @@ platform_get_troubleshooting_info :: () -> string {
 }
 
 #scope_file
+
+dark_string  :: "NSAppearanceNameDarkAqua";
+light_string :: "NSAppearanceNameAqua";
 
 Monitor :: struct {
     left   : int;
