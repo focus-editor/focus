@@ -32,7 +32,8 @@ draw_frame :: () {
     if editors.root == null {
         draw_welcome_screen(screen);
     } else {
-        draw_editor_node(editors.root, screen, get_ui_id_from_loc());
+        root_editor_pane_id := get_ui_id_from_loc();
+        draw_editor_pane(editors.root, screen, root_editor_pane_id, 1);
     }
 
     // if #complete editors.layout == {
@@ -118,22 +119,45 @@ draw_frame :: () {
     Simp.swap_buffers(window);
 }
 
-draw_editor_node :: (using node: *Editor_Node, rect: Rect, ui_id: Ui_Id) {
-    assert(node != null);
+draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, unique_pane_id: int) {
+    assert(pane != null);
     if !is_valid(rect) return;
+
+    pane_ui_id := get_ui_id_for_pane(root_pane_id, unique_pane_id);
 
     if layout == .single {
         if editor_id < 0 || editor_id >= open_editors.count return;
-        draw_editor(editor_id, rect, ui_id);
+        draw_editor(editor_id, rect, pane_ui_id);
     } else {
-        rect1, rect2: Rect;
-        if layout == .horizontal {
-            rect1, rect2 = cut_left(rect, splitter_pos, margin = 2);
-        } else {
-            rect1, rect2 = cut_top(rect, splitter_pos, margin = 2);
+        splitter_ui_id := get_ui_id_from_loc(parent_id = pane_ui_id);
+        if ui.active == splitter_ui_id {
+            // Dragging splitter
+            if layout == .horizontal {
+                splitter_pos = (mouse.pointer.x - rect.x) / rect.w;
+            } else {
+                splitter_pos = (mouse.pointer.y - rect.y) / rect.h;
+            }
+            splitter_pos = clamp(splitter_pos, 0.1, 0.9);
         }
-        draw_editor_node(child1, rect1, get_ui_id_from_loc(parent_id = ui_id));
-        draw_editor_node(child2, rect2, get_ui_id_from_loc(parent_id = ui_id));
+
+        rect1, rect2, splitter_rect: Rect;
+        if layout == .horizontal {
+            rect1, rect2 = cut_left(rect, rect.w * splitter_pos, margin = 2);
+            splitter_rect = make_rect(rect1.x + rect1.w, rect1.y, 2, rect1.h);
+        } else {
+            rect1, rect2 = cut_bottom(rect, rect.h * splitter_pos, margin = 2);
+            splitter_rect = make_rect(rect1.x, rect1.y + rect1.h, rect1.w, 2);
+        }
+
+        // We cannot use the normal mechanism for specifying parent-child relationship between panes
+        // because we're going to run out of id space very soon, so we have to use a special way
+        // of identifying panes:
+        left_unique_id  :=  unique_pane_id << 1;
+        right_unique_id := (unique_pane_id << 1) | 1;
+        draw_editor_pane(child1, rect1, root_pane_id, left_unique_id);
+        draw_editor_pane(child2, rect2, root_pane_id, right_unique_id);
+
+        draw_splitter(splitter_rect, splitter_ui_id, layout == .horizontal);
     }
 }
 
@@ -2175,17 +2199,22 @@ draw_file_info :: (buffer: Buffer, width: float, padding: float, _pen: Vector2, 
     return width, pen;
 }
 
-draw_splitter :: (splitter_rect: Rect, split_x: float, ui_id: Ui_Id) {
+draw_splitter :: (splitter_rect: Rect, ui_id: Ui_Id, horizontal := true) {
     color := Color.SPLITTER;
 
     rect := splitter_rect;
-    rect_fat := expand(splitter_rect, 2 * dpi_scale);
 
-    maybe_set_hot_or_active(ui_id, rect_fat, .DRAGGING_HORIZONTAL);
+    if horizontal {
+        rect_fat := expand_x(rect, 2 * dpi_scale);
+        maybe_set_hot_or_active(ui_id, rect_fat, .DRAGGING_HORIZONTAL);
+    } else {
+        rect_fat := expand_y(rect, 2 * dpi_scale);
+        maybe_set_hot_or_active(ui_id, rect_fat, .DRAGGING_VERTICAL);
+    }
 
     if is_hovering_over(ui_id) {
         if ui.active == ui_id then color = Color.SPLITTER_HOVER;
-        rect = expand(rect, 2);
+        rect = ifx horizontal then expand_x(rect, 2) else expand_y(rect, 2);
     }
 
     draw_rect(rect, color);
@@ -3963,6 +3992,11 @@ get_ui_id_from_loc :: inline (loc := #caller_location, parent_id: Ui_Id = .none)
         return cast(Ui_Id) (loc.line_number + NUM_LINES_OF_CODE * cast(s64) parent_id);
     }
     return cast(Ui_Id) loc.line_number;
+}
+
+get_ui_id_for_pane :: inline (root_pane_id: Ui_Id, unique_pane_id: int) -> Ui_Id {
+    assert(unique_pane_id < NUM_LINES_OF_CODE);
+    return cast(Ui_Id) (unique_pane_id + NUM_LINES_OF_CODE * cast(s64) root_pane_id);
 }
 
 is_child :: (ui_id: Ui_Id, parent_id: Ui_Id) -> bool {

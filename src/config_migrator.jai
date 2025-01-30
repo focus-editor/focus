@@ -626,6 +626,11 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 14, "common", "open_entry_in_place",                         "Enter",                "Enter"     },
     .{ 14, "common", "focus_next_ui_element",                       "Tab",                  "Tab"       },
     .{ 14, "common", "focus_previous_ui_element",                   "Shift-Tab",            "Shift-Tab" },
+
+    .{ 17, "common", "open_entry_left",                             "Ctrl-1",               "Cmd-1" },
+    .{ 17, "common", "open_entry_right",                            "Ctrl-2",               "Cmd-2" },
+    .{ 17, "common", "open_entry_top",                              "Ctrl-Shift-1",         "Cmd-Shift-1" },
+    .{ 17, "common", "open_entry_bottom",                           "Ctrl-Shift-2",         "Cmd-Shift-2" },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
@@ -649,6 +654,11 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
 
     .{ 14, "search dialog", "go_to_next_input",                     "focus_next_ui_element"     },
     .{ 14, "search dialog", "go_to_previous_input",                 "focus_previous_ui_element" },
+
+    .{ 17, "search dialog",     "open_entry_on_the_left",           "open_entry_left" },
+    .{ 17, "search dialog",     "open_entry_on_the_right",          "open_entry_right" },
+    .{ 17, "open file dialog",  "open_entry_on_the_left",           "open_entry_left" },
+    .{ 17, "open file dialog",  "open_entry_on_the_right",          "open_entry_right" },
 ];
 
 #if !NO_OUTPUT_BUILD {
@@ -716,8 +726,6 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
         "open_directory",
         "open_entry_in_explorer",
         "open_entry_in_place",
-        "open_entry_on_the_left",
-        "open_entry_on_the_right",
         "open_entry_on_the_side",
         "paste",
         "pop_directory",
