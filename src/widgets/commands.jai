@@ -55,10 +55,12 @@ Commands_Dialog :: struct {
     using #as generic_dialog: Generic_Choice_Dialog(Command);
     generic_dialog.global_widget_id = .commands_dialog;
     generic_dialog.refresh_entries  = commands_refresh_entries;
-    generic_dialog.open_entry_in_place     = #bake_arguments commands_execute_selected(placement = .in_place);
-    generic_dialog.open_entry_on_the_side  = #bake_arguments commands_execute_selected(placement = .on_the_side);
-    generic_dialog.open_entry_on_the_left  = #bake_arguments commands_execute_selected(placement = .left);
-    generic_dialog.open_entry_on_the_right = #bake_arguments commands_execute_selected(placement = .right);
+    generic_dialog.open_entry_in_place    = #bake_arguments commands_execute_selected(placement = .in_place);
+    generic_dialog.open_entry_on_the_side = #bake_arguments commands_execute_selected(placement = .on_the_side);
+    generic_dialog.open_entry_left        = #bake_arguments commands_execute_selected(placement = .left);
+    generic_dialog.open_entry_right       = #bake_arguments commands_execute_selected(placement = .right);
+    generic_dialog.open_entry_top         = #bake_arguments commands_execute_selected(placement = .top);
+    generic_dialog.open_entry_bottom      = #bake_arguments commands_execute_selected(placement = .bottom);
 };
 
 #scope_file
@@ -122,12 +124,14 @@ base_commands := #run -> [] Command {
 
         cmd( "Go To Line",                        .go_to_line,                       .Single ),
 
-        cmd( "Close All Files",                   .close_all_editors,                .Single ),
-        cmd( "Close Other Files",                 .close_other_editors,              .Single ),
-        cmd( "Close File",                        .close_current_editor,             .Single ),
-        cmd( "Close Other File",                  .close_other_editor,               .Double ),
-        cmd( "Close Left File",                   .close_left_editor,                .Double ),
-        cmd( "Close Right File",                  .close_right_editor,               .Double ),
+        cmd( "Close All Editors",                 .close_all_editors,                .Single ),
+        cmd( "Close Other Editors",               .close_other_editors,              .Single ),
+        cmd( "Close Editor",                      .close_current_editor,             .Single ),
+
+        // TODO: panes
+        // cmd( "Close Other File",                  .close_other_editor,               .Double ),
+        // cmd( "Close Left File",                   .close_left_editor,                .Double ),
+        // cmd( "Close Right File",                  .close_right_editor,               .Double ),
 
         cmd( "Save",                              .save,                             .Single ),
         cmd( "Save As",                           .save_as,                          .Single ),

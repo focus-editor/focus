@@ -80,7 +80,7 @@ cut_left :: (rect: Rect, amount: float, $margin := 0) -> (left: Rect,  remainder
         #assert margin % 2 == 0;
         half_margin := margin / 2;
         remainder.x += margin;
-        remainder.w -= half_margin;
+        remainder.w -= margin;
         left.w      -= half_margin;
     }
 
@@ -102,14 +102,14 @@ cut_right :: (rect: Rect, amount: float, $margin := 0) -> (right: Rect, remainde
         #assert margin % 2 == 0;
         half_margin := margin / 2;
         remainder.x -= margin;
-        remainder.w += half_margin;
+        remainder.w += margin;
         right.w     -= half_margin;
     }
 
     return right, remainder;
 }
 
-cut_bottom :: (rect: Rect, amount: float) -> (bottom: Rect, remainder: Rect) {
+cut_bottom :: (rect: Rect, amount: float, $margin := 0) -> (bottom: Rect, remainder: Rect) {
     amount = floor(amount);
 
     remainder := rect;
@@ -119,6 +119,14 @@ cut_bottom :: (rect: Rect, amount: float) -> (bottom: Rect, remainder: Rect) {
 
     bottom := rect;
     bottom.h = amount;
+
+    #if margin > 0 {
+        #assert margin % 2 == 0;
+        half_margin := margin / 2;
+        remainder.h += margin;
+        bottom.h += half_margin;
+        bottom.y -= half_margin;
+    }
 
     return bottom, remainder;
 }
@@ -137,7 +145,7 @@ cut_top :: (rect: Rect, amount: float, $margin := 0) -> (top: Rect, remainder: R
     #if margin > 0 {
         #assert margin % 2 == 0;
         half_margin := margin / 2;
-        remainder.h -= half_margin;
+        remainder.h -= margin;
         top.h -= half_margin;
         top.y += half_margin;
     }

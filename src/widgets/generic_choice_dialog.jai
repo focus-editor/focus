@@ -7,8 +7,10 @@ dialog_handle_event :: (using dialog: *Generic_Choice_Dialog, event: Input.Event
 
             case .open_entry_in_place;      dialog.open_entry_in_place(); return true;
             case .open_entry_on_the_side;   if dialog.open_entry_on_the_side  then dialog.open_entry_on_the_side();  else dialog.open_entry_in_place(); return true;
-            case .open_entry_on_the_left;   if dialog.open_entry_on_the_left  then dialog.open_entry_on_the_left();  else dialog.open_entry_in_place(); return true;
-            case .open_entry_on_the_right;  if dialog.open_entry_on_the_right then dialog.open_entry_on_the_right(); else dialog.open_entry_in_place(); return true;
+            case .open_entry_left;          if dialog.open_entry_left         then dialog.open_entry_left();         else dialog.open_entry_in_place(); return true;
+            case .open_entry_right;         if dialog.open_entry_right        then dialog.open_entry_right();        else dialog.open_entry_in_place(); return true;
+            case .open_entry_top;           if dialog.open_entry_top          then dialog.open_entry_top();          else dialog.open_entry_in_place(); return true;
+            case .open_entry_bottom;        if dialog.open_entry_bottom       then dialog.open_entry_bottom();       else dialog.open_entry_in_place(); return true;
 
             case .move_up;                  move_dialog_cursor(dialog, -1, wrap = true);    return true;
             case .move_down;                move_dialog_cursor(dialog,  1, wrap = true);    return true;
@@ -127,6 +129,8 @@ Generic_Choice_Dialog :: struct(Entry_Details: Type) {
     on_hide: () -> ();
     open_entry_in_place:     () -> ();
     open_entry_on_the_side:  () -> ();
-    open_entry_on_the_left:  () -> ();
-    open_entry_on_the_right: () -> ();
+    open_entry_left:         () -> ();
+    open_entry_right:        () -> ();
+    open_entry_top:          () -> ();
+    open_entry_bottom:       () -> ();
 }

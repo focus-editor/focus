@@ -121,8 +121,10 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
 
                 case .open_entry_in_place;          close_search_bar(editor, jump_to_selected_result = true);       return true;
                 case .open_entry_on_the_side;       search_bar_open_selected_result(editor, buffer, .on_the_side);  return true;
-                case .open_entry_on_the_left;       search_bar_open_selected_result(editor, buffer, .left);         return true;
-                case .open_entry_on_the_right;      search_bar_open_selected_result(editor, buffer, .right);        return true;
+                case .open_entry_left;              search_bar_open_selected_result(editor, buffer, .left);         return true;
+                case .open_entry_right;             search_bar_open_selected_result(editor, buffer, .right);        return true;
+                case .open_entry_top;               search_bar_open_selected_result(editor, buffer, .top);          return true;
+                case .open_entry_bottom;            search_bar_open_selected_result(editor, buffer, .bottom);       return true;
             }
         }
 
@@ -131,10 +133,11 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         if editor_action == {
             // Actions which act differently in this context
             case .select_all_occurrences;           select_all_occurrences(editor, buffer, to_string(input.text)); close_search_bar(editor); return true;
-            case .close_left_editor;                if editors.active == editors.left  close_search_bar(editor); close_editor(.left);  return true;
-            case .close_right_editor;               if editors.active == editors.right close_search_bar(editor); close_editor(.right); return true;
+            // TODO:
+            // case .close_left_editor;                if editors.active == editors.left  close_search_bar(editor); close_editor(.left);  return true;
+            // case .close_right_editor;               if editors.active == editors.right close_search_bar(editor); close_editor(.right); return true;
 
-            // Actions which close the search bar and can
+            // Actions which close the search bar
             case .close_all_editors;                close_search_bar(editor);
             case .close_other_editors;              close_search_bar(editor);
             case .close_current_editor;             close_search_bar(editor);
@@ -177,8 +180,9 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .close_other_editors;              close_other_editors();
         case .close_current_editor;             close_editor(.current);
         case .close_other_editor;               close_editor(.other);
-        case .close_left_editor;                close_editor(.left);
-        case .close_right_editor;               close_editor(.right);
+        // TODO:
+        // case .close_left_editor;                close_editor(.left);
+        // case .close_right_editor;               close_editor(.right);
 
         case .close_dialog;                     hide_build_panel();
         case .escape;                           if editor.cursors.count == 1 hide_build_panel();
@@ -571,102 +575,49 @@ editors_create_new_file :: (placement: Editor_Placement = .in_place) {
 editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place) {
     if build_panel_is_active() then build_panel_lose_focus();
 
-    if editors.active_node == null {
+    if editors.active_pane == null {
         assert(editors.root == null);  // if we don't have anything active it must be because there's nothing open, otherwise it's a bug
-        editors.root = New(Editor_Node);  // TODO: don't allocate here, instead allocate once at startup
-        editors.active_node = editors.root;
+        editors.root = New(Editor_Pane);  // TODO: don't allocate here, instead allocate once at startup
+        editors.active_pane = editors.root;
     }
-    active_node := editors.active_node;
+    active_pane := editors.active_pane;
 
-    assert(active_node.layout == .single);  // only leaf nodes can be active
-    assert(active_node.child1 == null);
-    assert(active_node.child2 == null);
+    assert(active_pane.layout == .single);  // only leaf panes can be active
+    assert(active_pane.left  == null);
+    assert(active_pane.right == null);
+
+    target_pane := get_relative_editor_pane_by_placement(active_pane, placement);
+    if !target_pane {
+        // We need to split the active pane
+        active_pane.child1 = New(Editor_Pane);
+        active_pane.child2 = New(Editor_Pane);
+        active_pane.child1.parent = active_pane;
+        active_pane.child2.parent = active_pane;
+        if placement == .left || placement == .right || placement == .on_the_side {
+            active_pane.layout = .horizontal;
+        } else {
+            active_pane.layout = .vertical;
+        }
+        if placement == .left || placement == .top {
+            target_pane = active_pane.child1;
+            active_pane.child2.editor_id = active_pane.editor_id;
+        } else {
+            target_pane = active_pane.child2;
+            active_pane.child1.editor_id = active_pane.editor_id;
+        }
+        active_pane.editor_id = -1;
+    }
 
     // @incomplete
-    editor_id := find_or_create_editor(buffer_id);  // TODO: must not use the same editor!!!!!
-
-    existing_target_node := get_relative_editor_node_by_placement(active_node, placement);
-    if existing_target_node {
-        // We already have a pane which matches the placement
-    } else {
-        // We need to split an active node
-    }
-
-    // if #complete placement == {
-    //     case .in_place;
-    //         active_node.editor_id = editor_id;
-
-    //     case .on_the_side;
-    //         // TODO !!!!!!
-
-    //     case .left;  // @cleanup
-    //         active_node.child1 = New(Editor_Node);
-    //         active_node.child2 = New(Editor_Node);
-    //         active_node.child1.parent = active_node;
-    //         active_node.child2.parent = active_node;
-    //         active_node.child1.editor_id = editor_id;
-    //         active_node.child2.editor_id = active_node.editor_id;
-    //         active_node.editor_id = -1;
-    //         active_node.layout = .horizontal;
-
-    //     case .right;
-    //     case .top;
-    //     case .bottom;
-    // }
-
-    // if #complete editors.layout == {
-    //     case .None;
-    //         editors.active = find_or_create_editor(buffer_id);
-    //         editors.left  = editors.active;  // we don't use it but editor history needs it
-    //         editors.right = editors.active;
-    //         editors.layout = .Single;
-
-    //     case .Single;
-    //         if placement == .in_place {
-    //             // Open in place
-    //             editors.left  = find_or_create_editor(buffer_id);
-    //             editors.active = editors.left;
-    //         } else if placement == .on_the_side || placement == .right {
-    //             // Open on the right
-    //             editors.right  = find_or_create_editor(buffer_id, editors.active);
-    //             editors.left   = editors.active;
-    //             editors.active = editors.right;
-    //             editors.layout = .Double;
-    //             editors_start_moving_splitter(0.5, start = 1.0);
-    //         } else {
-    //             // Open on the left
-    //             editors.left   = find_or_create_editor(buffer_id, editors.active);
-    //             editors.right  = editors.active;
-    //             editors.active = editors.left;
-    //             editors.layout = .Double;
-    //             editors_start_moving_splitter(0.5, start = 0.0);
-    //         }
-
-    //     case .Double;
-    //         on_the_right := (
-    //             placement == .right ||
-    //             (placement == .in_place    && editors.active == editors.right) ||
-    //             (placement == .on_the_side && editors.active == editors.left)
-    //         );
-
-    //         if on_the_right {
-    //             // Open on the right (obviously)
-    //             editors.right  = find_or_create_editor(buffer_id, editors.left);
-    //             editors.active = editors.right;
-    //         } else {
-    //             // Open on the left
-    //             editors.left   = find_or_create_editor(buffer_id, editors.right);
-    //             editors.active = editors.left;
-    //         }
-
-    //     case .Multi;
-    //         // @split
-    // }
+    new_editor_id := find_or_create_editor(buffer_id);  // TODO: must not use editors that are already in the tree!!!!!
+    target_pane.editor_id = new_editor_id;
+    editors.active_pane = target_pane;
 
     buffer := *open_buffers[buffer_id];
     if buffer.num_times_opened < 255 then buffer.num_times_opened += 1;
 
-    make_editor_active(editors.active);
+    editors.active = new_editor_id;
+    make_editor_active(editors.active);  // !!!!!!!!!!
     maybe_mark_buffer_as_deleted(buffer_id);  // check in case we missed that it's deleted
     session_notify_modified_buffer(buffer_id);
     cursors_start_blinking();
@@ -1248,18 +1199,58 @@ find_all :: (using search_bar: *Search_Bar, needle: string, buffer: Buffer) {
     }
 }
 
-get_relative_editor_node_by_placement :: (node: *Editor_Node, placement: Editor_Placement) -> *Editor_Node {
-    assert(node != null);
+get_relative_editor_pane_by_placement :: (using pane: *Editor_Pane, placement: Editor_Placement) -> *Editor_Pane {
+    // Checks if there's any pane on the `placement` side of the current pane and returns it
+    assert(pane != null);
 
-    if placement == .in_place return node;
-
+    if placement == .in_place return pane;
     if parent == null return null;
 
+    assert(parent.layout == .horizontal || parent.layout == .vertical);
+
     if #complete placement == {
-        case .in_place;  // should never get here
-        case .left;
-            // if parent.layout == .horizontal && 
+        case .in_place;  // should never get here, just listing for the #complete
+        case .left;   if parent.layout == .horizontal && pane != parent.left   return get_leaf_pane_by_placement(parent.left,   .right);
+        case .right;  if parent.layout == .horizontal && pane != parent.right  return get_leaf_pane_by_placement(parent.right,  .left);
+        case .top;    if parent.layout == .vertical   && pane != parent.top    return get_leaf_pane_by_placement(parent.top,    .bottom);
+        case .bottom; if parent.layout == .vertical   && pane != parent.bottom return get_leaf_pane_by_placement(parent.bottom, .top);
+        case .on_the_side;
+            if pane == parent.child1 {
+                return get_leaf_pane_by_placement(parent.child2, ifx parent.layout == .horizontal then .left else .top);
+            } else {
+                return get_leaf_pane_by_placement(parent.child1, ifx parent.layout == .horizontal then .right else .bottom);
+            }
     }
+
+    return get_relative_editor_pane_by_placement(pane.parent, placement);
+}
+
+get_leaf_pane_by_placement :: (pane: *Editor_Pane, placement: Editor_Placement) -> *Editor_Pane {
+    // Once we've identified a pane on the correct side of the active pane,
+    // we need to get to a leaf pane from there.
+    // Placement here specifies priority. For example, suppose we have an editor pane tree like this:
+    //       1
+    //     /   \    <- vertical split
+    //  *2       3
+    //         /   \    <- vertical split
+    //       4       5
+    // where 2 is the active pane on the left, and the right pane is also split vertically into 2 panes.
+    // In this case if we want to find a pane to the right of 2, we first identify 3 as being on the target side of 2,
+    // and then need to traverse the tree to get to 4 as our target pane, since it's the closest pane on the right to
+    // our active pane.
+    //
+    // In case where 3 would be split horizontally and not vertically, we would also choose 4 because we prefer the child on the left
+    // unless specified otherwise.
+    //
+    // In cases where the user actually wanted to open another pane by splitting 2 vertically, they'd need to split it explicitly first,
+    // because if they just said they wanted to open a file on the right of 2, it would be ambiguous where they actually want to open the
+    // file, so we default to not creating new panes if there's actually something to the right of 2.
+
+    if pane.layout == .single return pane;
+
+    prefer_child2 := (pane.layout == .horizontal && placement == .right) || (pane.layout == .vertical && placement == .bottom);  // in all other cases default to child1
+
+    return get_leaf_pane_by_placement(ifx prefer_child2 then pane.child2 else pane.child1, placement);
 }
 
 #scope_export
@@ -1288,6 +1279,7 @@ reset_search_results :: (using search_bar: *Search_Bar) {
     selected_result = -1;
 }
 
+// TODO: remove
 editors_snap_splitter :: (pos: float) {
     pos = clamp(pos, 0.1, 0.9);
     splitter_pos = pos;
@@ -4027,8 +4019,8 @@ Paste_Animation :: struct {
 }
 
 Editor_State :: struct {
-    root: *Editor_Node;
-    active_node: *Editor_Node;
+    root: *Editor_Pane;
+    active_pane: *Editor_Pane;
 
     layout: Layout = .None;
 
@@ -4038,6 +4030,7 @@ Editor_State :: struct {
 
     expanded := false;  // whether the active editor should be larger
 
+    // !!!!!!!!!!!!! remove !!!!!!!!!!!!!!!!!!
     Layout :: enum u8 {
         None    :: 0;
         Single  :: 1;
@@ -4046,15 +4039,20 @@ Editor_State :: struct {
     }
 }
 
-Editor_Node :: struct {
+Editor_Pane :: struct {
     editor_id: s64 = -1;
 
     layout: Layout = .single;
-    splitter_pos: float;
+    splitter_pos: float = 0.5;
 
-    parent: *Editor_Node;
-    child1: *Editor_Node;
-    child2: *Editor_Node;
+    parent: *Editor_Pane;
+    child1: *Editor_Pane;
+    child2: *Editor_Pane;
+
+    #place child1; left:   *Editor_Pane;
+    #place child2; right:  *Editor_Pane;
+    #place child1; top:    *Editor_Pane;
+    #place child2; bottom: *Editor_Pane;
 
     Layout :: enum u8 {
         single      :: 0;
