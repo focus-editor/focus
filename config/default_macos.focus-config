@@ -228,22 +228,12 @@ Opt-Cmd-Shift-N                 open_another_editor_instance
 
 [open file dialog]
 
-Cmd-1                           open_entry_on_the_left
-Cmd-Enter                       open_entry_on_the_side
-Cmd-2                           open_entry_on_the_right
 Shift-Enter                     open_entry_in_explorer
-
 Tab                             open_directory
-
 Backspace                       pop_directory
 
 
 [search dialog]
-
-Cmd-Enter                       open_entry_on_the_side
-Cmd-1                           open_entry_on_the_left
-Cmd-2                           open_entry_on_the_right
-
 Shift-Enter                     move_up  # an alternative way to move
 
 Cmd-Opt-C                       toggle_case_sensitive
@@ -294,6 +284,11 @@ Cmd-Shift-L                     toggle_expand
 Cmd-B                           build_panel_toggle
 
 Enter                           open_entry_in_place
+Cmd-Enter                       open_entry_on_the_side
+Cmd-1                           open_entry_left
+Cmd-2                           open_entry_right
+Cmd-Shift-1                     open_entry_top
+Cmd-Shift-2                     open_entry_bottom
 
 Tab                             focus_next_ui_element
 Shift-Tab                       focus_previous_ui_element
