@@ -246,9 +246,6 @@ Ctrl-Shift-Alt-N            open_another_editor_instance
 
 [open file dialog]
 
-Ctrl-Enter                  open_entry_on_the_side
-Ctrl-1                      open_entry_on_the_left
-Ctrl-2                      open_entry_on_the_right
 Shift-Enter                 open_entry_in_explorer
 
 Tab                         open_directory
@@ -257,10 +254,6 @@ Backspace                   pop_directory
 
 
 [search dialog]
-
-Ctrl-Enter                  open_entry_on_the_side
-Ctrl-1                      open_entry_on_the_left
-Ctrl-2                      open_entry_on_the_right
 
 Shift-Enter                 move_up  # an alternative way to move
 
@@ -316,6 +309,11 @@ Ctrl-B                      build_panel_toggle
 F11                         toggle_fullscreen
 
 Enter                       open_entry_in_place
+Ctrl-Enter                  open_entry_on_the_side
+Ctrl-1                      open_entry_left
+Ctrl-2                      open_entry_right
+Ctrl-Shift-1                open_entry_top
+Ctrl-Shift-2                open_entry_bottom
 
 Tab                         focus_next_ui_element
 Shift-Tab                   focus_previous_ui_element
