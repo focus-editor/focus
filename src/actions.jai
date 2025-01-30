@@ -111,8 +111,6 @@ ACTIONS_COMMON :: string.[
     "close_current_editor",
     "close_other_editors",
     "close_other_editor",
-    "close_left_editor",
-    "close_right_editor",
     "close_dialog",
     "escape",
 
@@ -125,6 +123,11 @@ ACTIONS_COMMON :: string.[
     "focus_previous_ui_element",
 
     "open_entry_in_place",
+    "open_entry_on_the_side",
+    "open_entry_left",
+    "open_entry_right",
+    "open_entry_top",
+    "open_entry_bottom",
 ];
 
 ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
@@ -201,18 +204,12 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
 ]);
 
 ACTIONS_OPEN_FILE_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[
-    "open_entry_on_the_side",
-    "open_entry_on_the_left",
-    "open_entry_on_the_right",
     "open_entry_in_explorer",
     "open_directory",
     "pop_directory",
 ]);
 
 ACTIONS_SEARCH_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[
-    "open_entry_on_the_side",
-    "open_entry_on_the_left",
-    "open_entry_on_the_right",
     "toggle_case_sensitive",
     "toggle_whole_word",
     "toggle_regex_search",
