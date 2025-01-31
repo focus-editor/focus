@@ -124,8 +124,8 @@ cut_bottom :: (rect: Rect, amount: float, $margin := 0) -> (bottom: Rect, remain
         #assert margin % 2 == 0;
         half_margin := margin / 2;
         remainder.h += margin;
-        bottom.h += half_margin;
-        bottom.y -= half_margin;
+        remainder.y -= half_margin;
+        bottom.h    += half_margin;
     }
 
     return bottom, remainder;
