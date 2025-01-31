@@ -146,7 +146,7 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
             splitter_rect = make_rect(rect1.x + rect1.w, rect1.y, 2, rect1.h);
         } else {
             rect1, rect2 = cut_bottom(rect, rect.h * splitter_pos, margin = 2);
-            splitter_rect = make_rect(rect1.x, rect1.y + rect1.h, rect1.w, 2);
+            splitter_rect = make_rect(rect1.x, rect1.y + rect1.h - 2, rect1.w, 2);
         }
 
         // We cannot use the normal mechanism for specifying parent-child relationship between panes
@@ -2213,11 +2213,12 @@ draw_splitter :: (splitter_rect: Rect, ui_id: Ui_Id, horizontal := true) {
     }
 
     if is_hovering_over(ui_id) {
-        if ui.active == ui_id then color = Color.SPLITTER_HOVER;
-        rect = ifx horizontal then expand_x(rect, 2) else expand_y(rect, 2);
+        color = Color.SPLITTER_HOVER;
+        rect = ifx horizontal then expand_x(rect, 1) else expand_y(rect, 1);
     }
 
-    draw_rect(rect, color);
+    // Don't draw splitters for vertical layouts unless hovering or dragging (because there's already a status bar)
+    if horizontal || is_hovering_over(ui_id) then draw_rect(rect, color);
 }
 
 draw_open_file_dialog :: () {
