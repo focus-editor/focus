@@ -1025,7 +1025,7 @@ focus_allocator: Allocator;
     #assert false, "Unsupported OS";
 }
 
-using Basic :: #import "Basic"()(MEMORY_DEBUGGER = DEBUG, TEMP_ALLOCATOR_POISON_FREED_MEMORY = DEBUG);
+using Basic :: #import "Basic"()(MEMORY_DEBUGGER = DEBUG, TEMP_ALLOCATOR_POISON_FREED_MEMORY = false);
 #import "Atomics";
 #import "Compiler";
 #import "File";
