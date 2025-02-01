@@ -145,8 +145,8 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
             rect1, rect2 = cut_left(rect, rect.w * splitter_pos, margin = 2);
             splitter_rect = make_rect(rect1.x + rect1.w, rect1.y, 2, rect1.h);
         } else {
-            rect1, rect2 = cut_bottom(rect, rect.h * splitter_pos, margin = 2);
-            splitter_rect = make_rect(rect1.x, rect1.y + rect1.h - 2, rect1.w, 2);
+            rect2, rect1 = cut_bottom(rect, rect.h * splitter_pos, margin = 2);
+            splitter_rect = make_rect(rect2.x, rect2.y + rect2.h - 2, rect2.w, 2);
         }
 
         // We cannot use the normal mechanism for specifying parent-child relationship between panes
