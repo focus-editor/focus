@@ -448,7 +448,7 @@ active_editor_type_char :: (char: u32) {
 }
 
 get_active_editor_and_buffer :: () -> *Editor, *Buffer {
-    if editors.layout == .None && !build_panel_is_active() return null, null;
+    if editors.active < 0 || editors.active >= open_editors.count return null, null;
     editor := *open_editors[editors.active];
     buffer := *open_buffers[editor.buffer_id];
     return editor, buffer;
@@ -575,12 +575,13 @@ editors_create_new_file :: (placement: Editor_Placement = .in_place) {
 editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place) {
     if build_panel_is_active() then build_panel_lose_focus();
 
-    if editors.active_pane == null {
+    active_pane := editors_get_active_pane(editors.root);
+
+    if active_pane == null {
         assert(editors.root == null);  // if we don't have anything active it must be because there's nothing open, otherwise it's a bug
-        editors.root = New(Editor_Pane);  // TODO: don't allocate here, instead allocate once at startup
-        editors.active_pane = editors.root;
+        editors.root = New(Editor_Pane);
+        active_pane = editors.root;
     }
-    active_pane := editors.active_pane;
 
     assert(active_pane.layout == .single);  // only leaf panes can be active
     assert(active_pane.left  == null);
@@ -611,16 +612,22 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
     // @incomplete
     new_editor_id := find_or_create_editor(buffer_id);  // TODO: must not use editors that are already in the tree!!!!!
     target_pane.editor_id = new_editor_id;
-    editors.active_pane = target_pane;
 
     buffer := *open_buffers[buffer_id];
     if buffer.num_times_opened < 255 then buffer.num_times_opened += 1;
 
-    editors.active = new_editor_id;
-    make_editor_active(editors.active);  // !!!!!!!!!!
+    make_editor_active(new_editor_id);
     maybe_mark_buffer_as_deleted(buffer_id);  // check in case we missed that it's deleted
     session_notify_modified_buffer(buffer_id);
     cursors_start_blinking();
+}
+
+editors_get_active_pane :: (current_pane: *Editor_Pane) -> *Editor_Pane {
+    if !current_pane return null;
+    if current_pane.editor_id == editors.active return current_pane;
+    result := editors_get_active_pane(current_pane.child1);
+    if !result then result = editors_get_active_pane(current_pane.child2);
+    return result;
 }
 
 center_viewport_on_cursor :: (using editor: *Editor, buffer: Buffer) {
@@ -1491,8 +1498,8 @@ viewport_glue_to_point :: (editor: *Editor, buffer: Buffer) -> changed: bool {
 }
 
 make_editor_active :: (editor_id: s64) {
-    assert(editor_id < open_editors.count, "Trying to activate editor %, but the last available one is %", editor_id, open_editors.count - 1);
-    if is_build_panel(editor_id)         then build_panel_on_activate();
+    assert(editor_id < open_editors.count, "Trying to activate editor using an invalid editor id: % (max is %)", editor_id, open_editors.count - 1);
+    if is_build_panel(editor_id) then build_panel_on_activate();
 
     if editors.active != editor_id then cursors_start_blinking();
 
