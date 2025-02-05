@@ -173,16 +173,16 @@ base_commands := #run -> [] Command {
 
         cmd( "Strip Trailing Whitespace",         .strip_trailing_whitespace,        .Single ),
 
-        cmd( "Switch To Left Pane",               .switch_to_left_editor,            .Double ),
-        cmd( "Switch To Right Pane",              .switch_to_right_editor,           .Double ),
-        cmd( "Switch To Other Pane",              .switch_to_other_editor,           .Double ),
+        cmd( "Switch To Left Pane",               .switch_to_left_pane,              .Double ),
+        cmd( "Switch To Right Pane",              .switch_to_right_pane,             .Double ),
+        cmd( "Switch To Other Pane",              .switch_to_other_pane,             .Double ),
 
         cmd( "Duplicate File On The Side",        .duplicate_editor,                 .Single ),
-        cmd( "Duplicate File To The Left",        .duplicate_editor_to_the_left,     .Single ),
-        cmd( "Duplicate File To The Right",       .duplicate_editor_to_the_right,    .Single ),
+        cmd( "Duplicate File Left",               .duplicate_editor_left,            .Single ),
+        cmd( "Duplicate File Right",              .duplicate_editor_right,           .Single ),
 
-        cmd( "Move Pane To The Left",             .move_editor_to_the_left,          .Double ),
-        cmd( "Move Pane To The Right",            .move_editor_to_the_right,         .Double ),
+        cmd( "Move Editor Left",                  .move_editor_left,                 .Double ),
+        cmd( "Move Editor Right",                 .move_editor_right,                .Double ),
 
         cmd( "Toggle Block Comment",              .toggle_block_comment,             .Single ),
         cmd( "Toggle Line Wrap",                  .toggle_line_wrap,                 .Single ),

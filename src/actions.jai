@@ -107,10 +107,18 @@ ACTIONS_COMMON :: string.[
     "decrease_font_size",
     "reset_font_size_to_default",
     "strip_trailing_whitespace",
+
     "close_all_editors",
     "close_current_editor",
     "close_other_editors",
-    "close_other_editor",
+
+    "close_current_pane",
+    "close_other_pane",
+    "close_left_pane",
+    "close_right_pane",
+    "close_top_pane",
+    "close_bottom_pane",
+
     "close_dialog",
     "escape",
 
@@ -128,6 +136,13 @@ ACTIONS_COMMON :: string.[
     "open_entry_right",
     "open_entry_top",
     "open_entry_bottom",
+
+    "switch_to_other_pane",
+    "switch_to_left_pane",
+    "switch_to_right_pane",
+    "switch_to_top_pane",
+    "switch_to_bottom_pane",
+    "switch_to_pane_by_number",
 ];
 
 ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
@@ -179,14 +194,13 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "break_line",
     "new_line_below_without_breaking",
     "new_line_above_without_breaking",
-    "switch_to_left_editor",
-    "switch_to_right_editor",
-    "switch_to_other_editor",
     "duplicate_editor",
-    "duplicate_editor_to_the_left",
-    "duplicate_editor_to_the_right",
-    "move_editor_to_the_left",
-    "move_editor_to_the_right",
+    "duplicate_editor_left",
+    "duplicate_editor_right",
+    "move_editor_left",
+    "move_editor_right",
+    "move_editor_top",
+    "move_editor_bottom",
     "create_new_file",
     "create_new_file_on_the_side",
     "move_to_previous_editor_history",

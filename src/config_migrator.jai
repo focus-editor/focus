@@ -610,18 +610,18 @@ ADDED_KEYBINDS :: Added_Keybind.[
 
     .{ 5, "common",  "jump_to_matching_bracket",                    "{Shift}-Ctrl-M",      "{Shift}-Cmd-M"    },
 
-    .{ 7, "editors", "change_case_cycle",                            "Ctrl-U",              "Cmd-U"    },
+    .{ 7, "editors", "change_case_cycle",                           "Ctrl-U",              "Cmd-U"    },
 
-    .{ 9, "editors", "revert_select_word_or_create_another_cursor",  "Ctrl-R",              "Cmd-R"    },
-    .{ 9, "editors", "move_selection_to_next_word",                  "Ctrl-Y",              "Cmd-R"    },
+    .{ 9, "editors", "revert_select_word_or_create_another_cursor", "Ctrl-R",              "Cmd-R"    },
+    .{ 9, "editors", "move_selection_to_next_word",                 "Ctrl-Y",              "Cmd-R"    },
 
-    .{ 10, "search dialog", "go_to_next_input",                      "Tab",                 "Tab"           },
-    .{ 10, "search dialog", "go_to_previous_input",                  "Shift-Tab",           "Shift-Tab"     },
+    .{ 10, "search dialog", "go_to_next_input",                     "Tab",                 "Tab"           },
+    .{ 10, "search dialog", "go_to_previous_input",                 "Shift-Tab",           "Shift-Tab"     },
 
-    .{ 12, "editors", "move_left_through_word",                      "{Shift}-Meta-ArrowLeft",  "{Shift}-Ctrl-ArrowLeft" },
-    .{ 12, "editors", "move_right_through_word",                     "{Shift}-Meta-ArrowRight", "{Shift}-Ctrl-ArrowRight" },
-    .{ 12, "editors", "delete_left_through_word",                    "{Shift}-Meta-Backspace",  "{Shift}-Ctrl-Backspace" },
-    .{ 12, "editors", "delete_right_through_word",                   "{Shift}-Meta-Delete",     "{Shift}-Ctrl-Delete" },
+    .{ 12, "editors", "move_left_through_word",                     "{Shift}-Meta-ArrowLeft",  "{Shift}-Ctrl-ArrowLeft" },
+    .{ 12, "editors", "move_right_through_word",                    "{Shift}-Meta-ArrowRight", "{Shift}-Ctrl-ArrowRight" },
+    .{ 12, "editors", "delete_left_through_word",                   "{Shift}-Meta-Backspace",  "{Shift}-Ctrl-Backspace" },
+    .{ 12, "editors", "delete_right_through_word",                  "{Shift}-Meta-Delete",     "{Shift}-Ctrl-Delete" },
 
     .{ 14, "common", "open_entry_in_place",                         "Enter",                "Enter"     },
     .{ 14, "common", "focus_next_ui_element",                       "Tab",                  "Tab"       },
@@ -631,6 +631,34 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 17, "common", "open_entry_right",                            "Ctrl-2",               "Cmd-2" },
     .{ 17, "common", "open_entry_top",                              "Ctrl-Shift-1",         "Cmd-Shift-1" },
     .{ 17, "common", "open_entry_bottom",                           "Ctrl-Shift-2",         "Cmd-Shift-2" },
+
+    .{ 17, "common", "open_entry_left",                             "Ctrl-Alt-O ArrowLeft",   "Cmd-Opt-O ArrowLeft"  },
+    .{ 17, "common", "open_entry_right",                            "Ctrl-Alt-O ArrowRight",  "Cmd-Opt-O ArrowRight" },
+    .{ 17, "common", "open_entry_top",                              "Ctrl-Alt-O ArrowUp",     "Cmd-Opt-O ArrowUp"    },
+    .{ 17, "common", "open_entry_bottom",                           "Ctrl-Alt-O ArrowDown",   "Cmd-Opt-O ArrowDown"  },
+
+    .{ 17, "common", "close_current_pane",                          "Ctrl-Shift-W",           "Cmd-Shift-W"          },
+    .{ 17, "common", "close_other_pane",                            "Ctrl-Shift-Alt-W",       "Cmd-Shift-Opt-W"      },
+    .{ 17, "common", "close_left_pane",                             "Ctrl-Alt-W ArrowLeft",   "Cmd-Opt-W ArrowLeft"  },
+    .{ 17, "common", "close_right_pane",                            "Ctrl-Alt-W ArrowRight",  "Cmd-Opt-W ArrowRight" },
+    .{ 17, "common", "close_top_pane",                              "Ctrl-Alt-W ArrowUp",     "Cmd-Opt-W ArrowUp"    },
+    .{ 17, "common", "close_bottom_pane",                           "Ctrl-Alt-W ArrowDown",   "Cmd-Opt-W ArrowDown"  },
+
+    .{ 17, "common", "open_entry_left",                             "Ctrl-1",                 "Cmd-1" },
+    .{ 17, "common", "open_entry_right",                            "Ctrl-2",                 "Cmd-2" },
+    .{ 17, "common", "open_entry_top",                              "Ctrl-Shift-1",           "Cmd-Shift-1" },
+    .{ 17, "common", "open_entry_bottom",                           "Ctrl-Shift-2",           "Cmd-Shift-2" },
+
+    .{ 17, "editors", "move_editor_top",                            "Ctrl-Alt-Shift-ArrowUp",   "Ctrl-Cmd-Shift-ArrowUp"   },
+    .{ 17, "editors", "move_editor_bottom",                         "Ctrl-Alt-Shift-ArrowDown", "Ctrl-Cmd-Shift-ArrowDown" },
+
+    .{ 17, "editors", "switch_to_top_pane",                         "Ctrl-Shift-1",           "Cmd-Shift-1" },
+    .{ 17, "editors", "switch_to_bottom_pane",                      "Ctrl-Shift-2",           "Cmd-Shift-2" },
+    .{ 17, "editors", "switch_to_left_pane",                        "Ctrl-Alt-K ArrowLeft",   "Cmd-Opt-K ArrowLeft"  },
+    .{ 17, "editors", "switch_to_right_pane",                       "Ctrl-Alt-K ArrowRight",  "Cmd-Opt-K ArrowRight" },
+    .{ 17, "editors", "switch_to_top_pane",                         "Ctrl-Alt-K ArrowUp",     "Cmd-Opt-K ArrowUp"    },
+    .{ 17, "editors", "switch_to_bottom_pane",                      "Ctrl-Alt-K ArrowDown",   "Cmd-Opt-K ArrowDown"  },
+    .{ 17, "editors", "switch_to_pane_by_number",                   "Ctrl-Alt-Shift-K",       "Cmd-Opt-Shift-K"  },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
@@ -647,7 +675,7 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
     .{ 12, "common",   "move_right_by_word_ends",                   "move_right_through_word_throttled"   },
     .{ 12, "common",   "delete_word_left_no_underscore",            "delete_left_by_character_type"       },
     .{ 12, "common",   "delete_word_left",                          "delete_left_by_character_type_fast"  },
-    .{ 12, "common",   "delete_word_right_no_underscore",           "delete_right_by_character_type" },
+    .{ 12, "common",   "delete_word_right_no_underscore",           "delete_right_by_character_type"      },
     .{ 12, "common",   "delete_word_right",                         "delete_right_by_character_type_fast" },
 
     .{ 13, "common",   "toggle_build_panel",                        "build_panel_toggle" },
@@ -659,6 +687,16 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
     .{ 17, "search dialog",     "open_entry_on_the_right",          "open_entry_right" },
     .{ 17, "open file dialog",  "open_entry_on_the_left",           "open_entry_left" },
     .{ 17, "open file dialog",  "open_entry_on_the_right",          "open_entry_right" },
+
+    .{ 17, "",                  "close_other_editor",               "" },  // removed
+    .{ 17, "",                  "close_left_editor",                "" },  // removed
+    .{ 17, "",                  "close_right_editor",               "" },  // removed
+
+    .{ 17, "editors",           "move_editor_to_the_left",          "move_editor_left"     },
+    .{ 17, "editors",           "move_editor_to_the_right",         "move_editor_right"    },
+    .{ 17, "editors",           "switch_to_left_editor",            "switch_to_left_pane"  },
+    .{ 17, "editors",           "switch_to_right_editor",           "switch_to_right_pane" },
+    .{ 17, "editors",           "switch_to_other_editor",           "switch_to_other_pane" },
 ];
 
 #if !NO_OUTPUT_BUILD {
