@@ -204,13 +204,27 @@ NumpadEnter                     break_line
 Cmd-NumpadEnter                 new_line_below_without_breaking
 Cmd-Shift-NumpadEnter           new_line_above_without_breaking
 
-Cmd-1                           switch_to_left_editor
-Cmd-2                           switch_to_right_editor
-Cmd-,                           switch_to_other_editor
-Cmd-Shift-,                     duplicate_editor
+Ctrl-Cmd-Shift-ArrowLeft        move_editor_left
+Ctrl-Cmd-Shift-ArrowRight       move_editor_right
+Ctrl-Cmd-Shift-ArrowUp          move_editor_top
+Ctrl-Cmd-Shift-ArrowDown        move_editor_bottom
 
-Ctrl-Cmd-Shift-ArrowLeft        move_editor_to_the_left
-Ctrl-Cmd-Shift-ArrowRight       move_editor_to_the_right
+Cmd-1                           switch_to_left_pane
+Cmd-2                           switch_to_right_pane
+Cmd-Shift-1                     switch_to_top_pane
+Cmd-Shift-2                     switch_to_bottom_pane
+Cmd-,                           switch_to_other_pane
+
+# Alternative bindings for the above which use chords
+
+Cmd-Opt-K ArrowLeft             switch_to_left_pane
+Cmd-Opt-K ArrowRight            switch_to_right_pane
+Cmd-Opt-K ArrowUp               switch_to_top_pane
+Cmd-Opt-K ArrowDown             switch_to_bottom_pane
+
+Cmd-Opt-Shift-K                 switch_to_pane_by_number
+
+Cmd-Shift-,                     duplicate_editor
 
 Cmd-N                           create_new_file
 Cmd-Shift-N                     create_new_file_on_the_side
@@ -275,7 +289,13 @@ Cmd-Delete                      delete_to_end_of_line
 Cmd-Backspace                   delete_to_start_of_line
 
 Cmd-W                           close_current_editor
-Cmd-Shift-W                     close_other_editor
+
+Cmd-Shift-W                     close_current_pane
+Cmd-Shift-Opt-W                 close_other_pane
+Cmd-Opt-W ArrowLeft             close_left_pane
+Cmd-Opt-W ArrowRight            close_right_pane
+Cmd-Opt-W ArrowUp               close_top_pane
+Cmd-Opt-W ArrowDown             close_bottom_pane
 
 Escape                          escape  # combines close_dialog and remove_additional_cursors
 
@@ -285,10 +305,18 @@ Cmd-B                           build_panel_toggle
 
 Enter                           open_entry_in_place
 Cmd-Enter                       open_entry_on_the_side
+
 Cmd-1                           open_entry_left
 Cmd-2                           open_entry_right
 Cmd-Shift-1                     open_entry_top
 Cmd-Shift-2                     open_entry_bottom
+
+# Alternative bindings for the above
+Cmd-Opt-K ArrowLeft             open_entry_left
+Cmd-Opt-K ArrowRight            open_entry_right
+Cmd-Opt-K ArrowUp               open_entry_top
+Cmd-Opt-K ArrowDown             open_entry_bottom
+
 
 Tab                             focus_next_ui_element
 Shift-Tab                       focus_previous_ui_element
