@@ -133,9 +133,14 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         if editor_action == {
             // Actions which act differently in this context
             case .select_all_occurrences;           select_all_occurrences(editor, buffer, to_string(input.text)); close_search_bar(editor); return true;
-            // TODO:
+            // TODO !!!!!!!!!!!!!:
             // case .close_left_editor;                if editors.active == editors.left  close_search_bar(editor); close_editor(.left);  return true;
             // case .close_right_editor;               if editors.active == editors.right close_search_bar(editor); close_editor(.right); return true;
+            // !!!!!!!!!!
+            // case .close_left_pane;
+            // case .close_right_pane;
+            // case .close_top_pane;
+            // case .close_bottom_pane;
 
             // Actions which close the search bar
             case .close_all_editors;                close_search_bar(editor);
@@ -144,7 +149,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
             case .choose_language;                  close_search_bar(editor);
 
             // Actions which don't close the search bar
-            case .close_other_editor;
+            case .close_other_pane;
             case .indentation_detect_from_buffer_contents;
             case .indentation_use_defaults_for_buffer;
             case .indentation_convert_to_tabs_for_buffer;
@@ -179,8 +184,8 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .close_all_editors;                close_all_editors();
         case .close_other_editors;              close_other_editors();
         case .close_current_editor;             close_editor(.current);
-        case .close_other_editor;               close_editor(.other);
         // TODO:
+        // case .close_other_editor;               close_editor(.other);
         // case .close_left_editor;                close_editor(.left);
         // case .close_right_editor;               close_editor(.right);
 
@@ -198,15 +203,18 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .delete_current_file;              defer_action_delete (editor.buffer_id);
         case .reload_from_disk;                 user_reload_from_disk(editor.buffer_id);
 
-        case .switch_to_left_editor;            switch_to_editor(.left);
-        case .switch_to_right_editor;           switch_to_editor(.right);
-        case .switch_to_other_editor;           switch_to_editor(.other);
-        case .duplicate_editor;                 switch_to_editor(.other, duplicate_current = true);
-        case .duplicate_editor_to_the_left;     switch_to_editor(.left, duplicate_current = true);
-        case .duplicate_editor_to_the_right;    switch_to_editor(.right, duplicate_current = true);
+        case .switch_to_left_pane;              switch_to_editor(.left);
+        case .switch_to_right_pane;             switch_to_editor(.right);
+        case .switch_to_top_pane;               switch_to_editor(.top);
+        case .switch_to_bottom_pane;            switch_to_editor(.bottom);
+        case .switch_to_other_pane;             switch_to_editor(.on_the_side);
+        case .duplicate_editor;                 switch_to_editor(.on_the_side, duplicate_current = true);
+        case .duplicate_editor_left;            switch_to_editor(.left,        duplicate_current = true);
+        case .duplicate_editor_right;           switch_to_editor(.right,       duplicate_current = true);
 
-        case .move_editor_to_the_left;          if editors.active == editors.right then swap_panes();
-        case .move_editor_to_the_right;         if editors.active == editors.left  then swap_panes();
+        // !!!!!!!!!
+        case .move_editor_left;                 // if editors.active == editors.right then swap_panes();
+        case .move_editor_right;                // if editors.active == editors.left  then swap_panes();
 
         case .scroll_viewport_up;               smooth_scroll(editor, direction = .up);                 activate_hold_action(action, event);
         case .scroll_viewport_up_fast;          smooth_scroll(editor, direction = .up, fast = true);    activate_hold_action(action, event);
@@ -575,13 +583,7 @@ editors_create_new_file :: (placement: Editor_Placement = .in_place) {
 editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place) {
     if build_panel_is_active() then build_panel_lose_focus();
 
-    active_pane := editors_get_active_pane(editors.root);
-
-    if active_pane == null {
-        assert(editors.root == null);  // if we don't have anything active it must be because there's nothing open, otherwise it's a bug
-        editors.root = New(Editor_Pane);
-        active_pane = editors.root;
-    }
+    active_pane := editors_get_active_pane();
 
     assert(active_pane.layout == .single);  // only leaf panes can be active
     assert(active_pane.left  == null);
@@ -622,13 +624,27 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
     cursors_start_blinking();
 }
 
-editors_get_active_pane :: (current_pane: *Editor_Pane) -> *Editor_Pane {
+editors_get_active_pane :: () -> *Editor_Pane {
+    active_pane := _get_active_pane(editors.root);
+    if active_pane == null {
+        assert(editors.root == null);  // if we don't have anything active it must be because there's nothing open, otherwise it's a bug
+        editors.root = New(Editor_Pane);
+        active_pane = editors.root;
+    }
+    return active_pane;
+}
+
+#scope_file
+
+_get_active_pane :: (current_pane: *Editor_Pane) -> *Editor_Pane {
     if !current_pane return null;
     if current_pane.editor_id == editors.active return current_pane;
-    result := editors_get_active_pane(current_pane.child1);
-    if !result then result = editors_get_active_pane(current_pane.child2);
+    result := _get_active_pane(current_pane.child1);
+    if !result then result = _get_active_pane(current_pane.child2);
     return result;
 }
+
+#scope_export
 
 center_viewport_on_cursor :: (using editor: *Editor, buffer: Buffer) {
     editor.scroll_to_cursor = .yes;
@@ -860,7 +876,7 @@ close_editor :: (position: enum { current; other; left; right; }) {
 }
 
 close_current_editor :: () {
-    if build_panel_is_active() { build_panel_toggle(); return; }
+    if build_panel_is_active() { hide_build_panel(); return; }
     close_editor_by_id(editors.active);
 }
 
@@ -2024,50 +2040,52 @@ open_file_directory :: (buffer_id: s64) {
     platform_open_in_explorer(path);
 }
 
-switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := false) {
+switch_to_editor :: (placement: Editor_Placement, duplicate_current := false) {
     if build_panel_is_active() then build_panel_lose_focus();
 
-    if editors.layout == {
-        case .None; return;
+    active_pane := editors_get_active_pane();
 
-        case .Single;
-            duplicated_editor := duplicate_active_editor();
+    // if editors.layout == {
+    //     case .None; return;
 
-            if side == {
-                case .left;
-                    editors.left   = duplicated_editor;
-                    editors.right  = editors.active;
-                    editors.active = editors.left;
-                    editors_start_moving_splitter(0.5, start = 0.0);
-                case .right; #through;
-                case .other;
-                    editors.left   = editors.active;
-                    editors.right  = duplicated_editor;
-                    editors.active = editors.right;
-                    editors_start_moving_splitter(0.5, start = 1.0);
-            }
-            editors.layout = .Double;
+    //     case .Single;
+    //         duplicated_editor := duplicate_active_editor();
 
-        case .Double;
-            if side == {
-                case .left;  if editors.active == editors.left  then return;
-                case .right; if editors.active == editors.right then return;
-                case .other; if editors.active == editors.left  then side = .right; else side = .left;
-            }
-            if duplicate_current {
-                duplicated_editor := duplicate_active_editor();
+    //         if side == {
+    //             case .left;
+    //                 editors.left   = duplicated_editor;
+    //                 editors.right  = editors.active;
+    //                 editors.active = editors.left;
+    //                 editors_start_moving_splitter(0.5, start = 0.0);
+    //             case .right; #through;
+    //             case .other;
+    //                 editors.left   = editors.active;
+    //                 editors.right  = duplicated_editor;
+    //                 editors.active = editors.right;
+    //                 editors_start_moving_splitter(0.5, start = 1.0);
+    //         }
+    //         editors.layout = .Double;
 
-                if side == .left {
-                    editors.left   = duplicated_editor;
-                    editors.right  = editors.active;
-                } else {
-                    editors.right  = duplicated_editor;
-                    editors.left   = editors.active;
-                }
-                editors.active = duplicated_editor;
-            }
-            editors.active = ifx side == .left then editors.left else editors.right;
-    }
+    //     case .Double;
+    //         if side == {
+    //             case .left;  if editors.active == editors.left  then return;
+    //             case .right; if editors.active == editors.right then return;
+    //             case .other; if editors.active == editors.left  then side = .right; else side = .left;
+    //         }
+    //         if duplicate_current {
+    //             duplicated_editor := duplicate_active_editor();
+
+    //             if side == .left {
+    //                 editors.left   = duplicated_editor;
+    //                 editors.right  = editors.active;
+    //             } else {
+    //                 editors.right  = duplicated_editor;
+    //                 editors.left   = editors.active;
+    //             }
+    //             editors.active = duplicated_editor;
+    //         }
+    //         editors.active = ifx side == .left then editors.left else editors.right;
+    // }
 
     editor := *open_editors[editors.active];
     maybe_mark_buffer_as_deleted(editor.buffer_id);  // check in case we missed that it's deleted
@@ -4027,17 +4045,15 @@ Paste_Animation :: struct {
 
 Editor_State :: struct {
     root: *Editor_Pane;
-    active_pane: *Editor_Pane;
-
-    layout: Layout = .None;
+    // active_pane: *Editor_Pane;  // ??
 
     active: s64 = -1;
-    left:   s64 = -1;
-    right:  s64 = -1;
-
     expanded := false;  // whether the active editor should be larger
 
     // !!!!!!!!!!!!! remove !!!!!!!!!!!!!!!!!!
+    layout: Layout = .None;
+    left:   s64 = -1;
+    right:  s64 = -1;
     Layout :: enum u8 {
         None    :: 0;
         Single  :: 1;

@@ -223,13 +223,26 @@ NumpadEnter                 break_line
 Ctrl-NumpadEnter            new_line_below_without_breaking
 Ctrl-Shift-NumpadEnter      new_line_above_without_breaking
 
-Ctrl-1                      switch_to_left_editor
-Ctrl-2                      switch_to_right_editor
-Ctrl-,                      switch_to_other_editor
-Ctrl-Shift-,                duplicate_editor
+Ctrl-Alt-Shift-ArrowLeft    move_editor_left
+Ctrl-Alt-Shift-ArrowRight   move_editor_right
+Ctrl-Alt-Shift-ArrowUp      move_editor_top
+Ctrl-Alt-Shift-ArrowDown    move_editor_bottom
 
-Ctrl-Alt-Shift-ArrowLeft    move_editor_to_the_left
-Ctrl-Alt-Shift-ArrowRight   move_editor_to_the_right
+Ctrl-1                      switch_to_left_pane
+Ctrl-2                      switch_to_right_pane
+Ctrl-Shift-1                switch_to_top_pane
+Ctrl-Shift-2                switch_to_bottom_pane
+Ctrl-,                      switch_to_other_pane
+
+# Alternative bindings for the above which use chords
+Ctrl-Alt-K ArrowLeft        switch_to_left_pane
+Ctrl-Alt-K ArrowRight       switch_to_right_pane
+Ctrl-Alt-K ArrowUp          switch_to_top_pane
+Ctrl-Alt-K ArrowDown        switch_to_bottom_pane
+
+Ctrl-Alt-Shift-K            switch_to_pane_by_number
+
+Ctrl-Shift-,                duplicate_editor
 
 Ctrl-N                      create_new_file
 Ctrl-Shift-N                create_new_file_on_the_side
@@ -298,7 +311,13 @@ Ctrl-Shift-Delete           delete_to_end_of_line
 Ctrl-Shift-Backspace        delete_to_start_of_line
 
 Ctrl-W                      close_current_editor
-Ctrl-Shift-W                close_other_editor
+
+Ctrl-Shift-W                close_current_pane
+Ctrl-Shift-Alt-W            close_other_pane
+Ctrl-Alt-W ArrowLeft        close_left_pane
+Ctrl-Alt-W ArrowRight       close_right_pane
+Ctrl-Alt-W ArrowUp          close_top_pane
+Ctrl-Alt-W ArrowDown        close_bottom_pane
 
 Escape                      escape  # combines close_dialog and remove_additional_cursors
 
@@ -310,10 +329,17 @@ F11                         toggle_fullscreen
 
 Enter                       open_entry_in_place
 Ctrl-Enter                  open_entry_on_the_side
+
 Ctrl-1                      open_entry_left
 Ctrl-2                      open_entry_right
 Ctrl-Shift-1                open_entry_top
 Ctrl-Shift-2                open_entry_bottom
+
+# Alternative bindings for the above
+Ctrl-Alt-K ArrowLeft        open_entry_left
+Ctrl-Alt-K ArrowRight       open_entry_right
+Ctrl-Alt-K ArrowUp          open_entry_top
+Ctrl-Alt-K ArrowDown        open_entry_bottom
 
 Tab                         focus_next_ui_element
 Shift-Tab                   focus_previous_ui_element
