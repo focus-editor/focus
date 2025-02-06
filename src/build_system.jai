@@ -234,6 +234,7 @@ show_build_panel :: () {
     // Maybe hide other popups
     if #complete active_global_widget == {
         case .editors;                  // nothing to do
+        case .build_panel;              // nothing to do
 
         case .unsaved_buffers_dialog;   // do nothing, we still want to see them
         case .confirm_overwrite_dialog; // do nothing, we still want to see them
@@ -246,10 +247,7 @@ show_build_panel :: () {
         case .switch_to_project_dialog;         #through;
         case .theme_dialog;                     #through;
         case .language_dialog;                  #through;
-        case .commands_dialog;                  active_global_widget = .editors;
-    }
-    if !build_panel_is_shown {
-        previously_active_editor = editors.active;
+        case .commands_dialog;                  active_global_widget = .editors;  // NOTE: build panel will be shown but not focused
     }
     build_panel_is_shown = true;
 }
@@ -263,22 +261,14 @@ is_build_panel :: inline (editor_id: s64) -> bool {
     return editor_id == build_editor_id;
 }
 
-build_panel_on_activate :: () {
-    previously_active_editor = editors.active;
-}
-
 build_panel_lose_focus :: () {
-    // Sometimes we might want to make the previously active editor active, e.g. when deciding on new buffer placement
-    if editors.active != editors.left && editors.active != editors.right && editors.left >= 0 && editors.right >= 0 {
-        // If we still have the same editors open when the panel was opened, go back to the previously active one,
-        // otherwise default to left.
-        make_editor_active(ifx previously_active_editor == editors.right then editors.right else editors.left);
-    }
+    if active_global_widget == .build_panel then active_global_widget = .editors;
 }
 
 build_panel_grab_focus :: () {
     if !build_panel_is_shown then show_build_panel();
-    make_editor_active(build_editor_id);
+    active_global_widget = .build_panel;
+    cursors_start_blinking();
 }
 
 build_panel_toggle_focus :: () {
@@ -504,16 +494,10 @@ print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kin
 substitute_variables :: (using work: *Build_Thread_Work) {
     // Figure out the current file
     file := "";
-    {
-        current_editor_id := editors.active;
-        if is_build_panel(current_editor_id) then current_editor_id = previously_active_editor;
-        if is_build_panel(current_editor_id) then current_editor_id = editors.left;
-        if is_build_panel(current_editor_id) then current_editor_id = editors.right;
-
-        if current_editor_id >= 0 && current_editor_id < open_editors.count {
-            buffer := open_buffers[open_editors[current_editor_id].buffer_id];
-            if buffer.has_file then file = copy_string(buffer.file.full_path);
-        }
+    active_pane_editor_id := get_active_pane_editor_id();
+    if active_pane_editor_id > 0 {
+        buffer := open_buffers[open_editors[active_pane_editor_id].buffer_id];
+        if buffer.has_file then file = copy_string(buffer.file.full_path);
     }
 
     file_vars_are_used := false;
@@ -813,7 +797,6 @@ thread_group: Thread_Group;
 build_buffer_id := -1;
 build_editor_id := -1;
 
-previously_active_editor := -1;
 saved_position := Build_Panel_Position.right;
 
 build_panel_is_expanded := false;
