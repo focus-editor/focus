@@ -2085,10 +2085,11 @@ switch_to_pane :: (placement: Editor_Placement, duplicate_current := false) {
     if build_panel_is_active() then build_panel_lose_focus();
     if placement == .in_place return;
 
-    // !!!!!!!!!!!!!!
-    // active_pane := editors_get_active_pane();
+    target_pane := get_relative_editor_pane_by_placement(editors.active_pane, placement);
+    if !target_pane return;
 
-    // target_pane := get_relative_editor_pane_by_placement(active_pane, placement);
+    if target_pane.editor_id >= 0 then make_editor_active(target_pane.editor_id);
+    editors.active_pane = target_pane;
 
     // if editors.layout == {
     //     case .None; return;
@@ -2134,6 +2135,8 @@ switch_to_pane :: (placement: Editor_Placement, duplicate_current := false) {
 
     // make_editor_active(editors.active);
 }
+
+// TODO: duplicate editor
 
 duplicate_active_editor :: () -> s64 {
     current_editor       := *open_editors[editors.active];
