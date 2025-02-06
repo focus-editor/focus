@@ -54,6 +54,7 @@ activate_editors :: () {
 }
 
 editors_handle_file_drop :: (files: [] string) {
+    // !!!!!!!!!! TODO !!!!!!!!!!!!!
     if editors.layout == .Double && files.count == 1 {
         // Open file in the closest editor - will be handled by the drawing code because we only know the layout then
         just_dropped_file = files[0];
@@ -195,7 +196,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
                                                 reset_search_results(*editor.search_bar);
                                                 editor.refresh_selection = true;
 
-        case .save;                             save(editor, editors.active);
+        case .save;                             save_active_buffer();
         case .save_all;                         save_all();
         case .save_as;                          defer_action_save_as(editor.buffer_id);
         case .open_file_directory;              open_file_directory (editor.buffer_id);
@@ -203,14 +204,15 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .delete_current_file;              defer_action_delete (editor.buffer_id);
         case .reload_from_disk;                 user_reload_from_disk(editor.buffer_id);
 
-        case .switch_to_left_pane;              switch_to_editor(.left);
-        case .switch_to_right_pane;             switch_to_editor(.right);
-        case .switch_to_top_pane;               switch_to_editor(.top);
-        case .switch_to_bottom_pane;            switch_to_editor(.bottom);
-        case .switch_to_other_pane;             switch_to_editor(.on_the_side);
-        case .duplicate_editor;                 switch_to_editor(.on_the_side, duplicate_current = true);
-        case .duplicate_editor_left;            switch_to_editor(.left,        duplicate_current = true);
-        case .duplicate_editor_right;           switch_to_editor(.right,       duplicate_current = true);
+        case .switch_to_left_pane;              switch_to_pane(.left);
+        case .switch_to_right_pane;             switch_to_pane(.right);
+        case .switch_to_top_pane;               switch_to_pane(.top);
+        case .switch_to_bottom_pane;            switch_to_pane(.bottom);
+        case .switch_to_other_pane;             switch_to_pane(.on_the_side);
+
+        case .duplicate_editor;                 switch_to_pane(.on_the_side, duplicate_current = true);
+        case .duplicate_editor_left;            switch_to_pane(.left,        duplicate_current = true);
+        case .duplicate_editor_right;           switch_to_pane(.right,       duplicate_current = true);
 
         // !!!!!!!!!
         case .move_editor_left;                 // if editors.active == editors.right then swap_panes();
@@ -455,12 +457,28 @@ active_editor_type_char :: (char: u32) {
     if !is_empty(editor.search_bar.results) then search_and_update_results(editor, buffer, jump = false);
 }
 
+get_active_editor_id :: () -> s64 {
+    if active_global_widget == {
+        case .editors;      return get_active_pane_editor_id();
+        case .build_panel;  return build_panel_get_editor_id();
+    }
+    return -1;
+}
+
+get_active_pane_editor_id :: () -> s64 {
+    if editors.active_pane return editors.active_pane.editor_id;  // !!!!!!! TODO: should we use editor index instead?
+    return -1;
+}
+
 get_active_editor_and_buffer :: () -> *Editor, *Buffer {
-    if editors.active < 0 || editors.active >= open_editors.count return null, null;
-    editor := *open_editors[editors.active];
+    editor_id := get_active_editor_id();
+    if editor_id < 0 return null, null;
+
+    editor := *open_editors[editor_id];
     buffer := *open_buffers[editor.buffer_id];
     return editor, buffer;
 }
+
 
 refresh_all_editors_for_buffer :: (buffer_id: s64) {
     buffer := *open_buffers[buffer_id];
@@ -583,7 +601,7 @@ editors_create_new_file :: (placement: Editor_Placement = .in_place) {
 editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place) {
     if build_panel_is_active() then build_panel_lose_focus();
 
-    active_pane := editors_get_active_pane();
+    active_pane := editors.active_pane;
 
     assert(active_pane.layout == .single);  // only leaf panes can be active
     assert(active_pane.left  == null);
@@ -611,7 +629,7 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
         active_pane.editor_id = -1;
     }
 
-    // @incomplete
+    // @incomplete !!!!!!
     new_editor_id := find_or_create_editor(buffer_id);  // TODO: must not use editors that are already in the tree!!!!!
     target_pane.editor_id = new_editor_id;
 
@@ -624,27 +642,37 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
     cursors_start_blinking();
 }
 
-editors_get_active_pane :: () -> *Editor_Pane {
-    active_pane := _get_active_pane(editors.root);
-    if active_pane == null {
-        assert(editors.root == null);  // if we don't have anything active it must be because there's nothing open, otherwise it's a bug
-        editors.root = New(Editor_Pane);
-        active_pane = editors.root;
-    }
-    return active_pane;
-}
-
-#scope_file
-
-_get_active_pane :: (current_pane: *Editor_Pane) -> *Editor_Pane {
+editors_find_pane_by_editor_id :: (editor_id: s64, current_pane: *Editor_Pane) -> pane: *Editor_Pane {
     if !current_pane return null;
-    if current_pane.editor_id == editors.active return current_pane;
-    result := _get_active_pane(current_pane.child1);
-    if !result then result = _get_active_pane(current_pane.child2);
-    return result;
+    if current_pane.editor_id == editor_id return current_pane;
+    pane := editors_find_pane_by_editor_id(editor_id, current_pane.child1);
+    if !pane then pane = editors_find_pane_by_editor_id(editor_id, current_pane.child2);
+    assert(pane == null || pane.layout == .single, "Only leaf panes can have editors. This is a bug");
+    return pane;
 }
 
-#scope_export
+// // TODO: get pane by editor id instead?
+// editors_get_active_pane :: () -> *Editor_Pane {
+//     active_pane := _get_active_pane(editors.root);
+//     if active_pane == null {
+//         assert(editors.root == null);  // if we don't have anything active it must be because there's nothing open, otherwise it's a bug
+//         editors.root = New(Editor_Pane);
+//         active_pane = editors.root;
+//     }
+//     return active_pane;
+// }
+
+// #scope_file
+
+// _get_active_pane :: (current_pane: *Editor_Pane) -> *Editor_Pane {
+//     if !current_pane return null;
+//     if current_pane.editor_id == editors.active return current_pane;
+//     result := _get_active_pane(current_pane.child1);
+//     if !result then result = _get_active_pane(current_pane.child2);
+//     return result;
+// }
+
+// #scope_export
 
 center_viewport_on_cursor :: (using editor: *Editor, buffer: Buffer) {
     editor.scroll_to_cursor = .yes;
@@ -1302,7 +1330,7 @@ reset_search_results :: (using search_bar: *Search_Bar) {
     selected_result = -1;
 }
 
-// TODO: remove
+// TODO: remove !!!!!!!!!!
 editors_snap_splitter :: (pos: float) {
     pos = clamp(pos, 0.1, 0.9);
     splitter_pos = pos;
@@ -1318,6 +1346,16 @@ editors_start_moving_splitter :: (target: float, start := -1.0) {
         splitter_pos = target;
     }
     redraw_requested = true;
+}
+
+init_editors :: () {
+    assert(editors.root == null);
+    editors.root = New(Editor_Pane);
+    editors.active_pane = editors.root;
+}
+
+deinit_editors :: () {
+    // !!!!!!!!!!! TODO: do on workspace reload?
 }
 
 init_buffers :: () {
@@ -1515,11 +1553,15 @@ viewport_glue_to_point :: (editor: *Editor, buffer: Buffer) -> changed: bool {
 
 make_editor_active :: (editor_id: s64) {
     assert(editor_id < open_editors.count, "Trying to activate editor using an invalid editor id: % (max is %)", editor_id, open_editors.count - 1);
-    if is_build_panel(editor_id) then build_panel_on_activate();
+    if editors.last_active_editor_id != editor_id then cursors_start_blinking();
+    editors.last_active_editor_id = editor_id;
 
-    if editors.active != editor_id then cursors_start_blinking();
-
-    editors.active = editor_id;
+    if is_build_panel(editor_id) {
+        build_panel_grab_focus();
+    } else {
+        pane := editors_find_pane_by_editor_id(editor_id, editors.root);
+        if pane then editors.active_pane = pane;
+    }
 
     buffer_id := open_editors[editor_id].buffer_id;
     buffer := *open_buffers[buffer_id];
@@ -1529,6 +1571,7 @@ make_editor_active :: (editor_id: s64) {
     array_insert_at(*most_recent_buffers, buffer_id, 0);
 
     maybe_detect_and_set_indentation(buffer);
+    maybe_mark_buffer_as_deleted(buffer_id);  // check in case we missed that it's deleted
 }
 
 update_window_title :: (buffer_id: s64 = -1) {
@@ -2000,13 +2043,11 @@ select_all_occurrences :: (using editor: *Editor, buffer: Buffer, search_str := 
     return editor.search_whole_words;
 }
 
-save :: (editor: Editor, editor_id: s64) {
-    buffer_id := editor.buffer_id;
+save_active_buffer :: () {
+    editor_id := get_active_pane_editor_id();
+    if editor_id < 0 return;
 
-    // When hitting save while in the color preview panel, save the target config file instead
-    if is_color_preview_panel(editor_id) then buffer_id = color_preview_get_target_buffer_id();
-
-    save(buffer_id);
+    save(open_editors[editor_id].buffer_id);
 }
 
 save :: (buffer_id: s64) {
@@ -2040,10 +2081,14 @@ open_file_directory :: (buffer_id: s64) {
     platform_open_in_explorer(path);
 }
 
-switch_to_editor :: (placement: Editor_Placement, duplicate_current := false) {
+switch_to_pane :: (placement: Editor_Placement, duplicate_current := false) {
     if build_panel_is_active() then build_panel_lose_focus();
+    if placement == .in_place return;
 
-    active_pane := editors_get_active_pane();
+    // !!!!!!!!!!!!!!
+    // active_pane := editors_get_active_pane();
+
+    // target_pane := get_relative_editor_pane_by_placement(active_pane, placement);
 
     // if editors.layout == {
     //     case .None; return;
@@ -2087,11 +2132,7 @@ switch_to_editor :: (placement: Editor_Placement, duplicate_current := false) {
     //         editors.active = ifx side == .left then editors.left else editors.right;
     // }
 
-    editor := *open_editors[editors.active];
-    maybe_mark_buffer_as_deleted(editor.buffer_id);  // check in case we missed that it's deleted
-
-    make_editor_active(editors.active);
-    cursors_start_blinking();
+    // make_editor_active(editors.active);
 }
 
 duplicate_active_editor :: () -> s64 {
@@ -4045,9 +4086,10 @@ Paste_Animation :: struct {
 
 Editor_State :: struct {
     root: *Editor_Pane;
-    // active_pane: *Editor_Pane;  // ??
+    active_pane: *Editor_Pane;
 
-    active: s64 = -1;
+    active: s64 = -1;  // TODO: remove!!!!
+    last_active_editor_id: s64 = -1;
     expanded := false;  // whether the active editor should be larger
 
     // !!!!!!!!!!!!! remove !!!!!!!!!!!!!!!!!!

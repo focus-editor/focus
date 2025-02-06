@@ -38,6 +38,7 @@ main :: () {
     init_file_watcher();
     defer deinit_file_watcher();
 
+    init_editors();
     init_buffers();
     load_global_config(fallback_to_default_on_failure = true);
 
@@ -287,6 +288,7 @@ main :: () {
             // will be sent to the new widget, that's why we check global widget for each event.
             if #complete active_global_widget == {
                 case .editors;                      handled = editors_handle_event(event);
+                case .build_panel;                  handled = editors_handle_event(event);
                 case .finder;                       handled = finder_handle_event(event);
                 case .open_file_dialog;             handled = open_file_dialog_handle_event(event);
                 case .delete_file_dialog;           handled = dialog_handle_event(*delete_file_dialog, event);
@@ -897,6 +899,7 @@ active_global_widget: Active_Global_Widget = .editors;
 Active_Global_Widget :: enum {
     editors;
     finder;
+    build_panel;
     open_file_dialog;
     delete_file_dialog;
     go_to_line_dialog;

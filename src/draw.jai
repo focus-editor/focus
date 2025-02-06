@@ -29,7 +29,7 @@ draw_frame :: () {
     active_editor_rect: Rect = ---;
 
     // Draw editors
-    if editors.root == null {
+    if editors.root.layout == .single && editors.root.editor_id < 0 {
         draw_welcome_screen(screen);
     } else {
         root_editor_pane_id := get_ui_id_from_loc();
@@ -59,8 +59,8 @@ draw_frame :: () {
     //             finish_closing_editor();
     //         }
     //         if editors.expanded {
-    //             if editors.active == editors.left  && !values_are_close(splitter_anim.target, 0.9) then editors_start_moving_splitter(0.9);
-    //             if editors.active == editors.right && !values_are_close(splitter_anim.target, 0.1) then editors_start_moving_splitter(0.1);
+    //             if active_editor_id == editors.left  && !values_are_close(splitter_anim.target, 0.9) then editors_start_moving_splitter(0.9);
+    //             if active_editor_id == editors.right && !values_are_close(splitter_anim.target, 0.1) then editors_start_moving_splitter(0.1);
     //         }
 
     //         split_x := screen.w * splitter_pos;
@@ -75,7 +75,7 @@ draw_frame :: () {
     //         draw_editor(editors.left,  left_rect,  status_bar_height, .editor_left,  screen);
     //         draw_editor(editors.right, right_rect, status_bar_height, .editor_right, screen);
 
-    //         active_editor_rect = ifx editors.active == editors.left then left_rect else right_rect;
+    //         active_editor_rect = ifx active_editor_id == editors.left then left_rect else right_rect;
 
     //         splitter_rect := make_rect(left_rect.x + left_rect.w, 0, 2, left_rect.h);
     //         draw_splitter(splitter_rect, split_x, .editor_splitter);
@@ -92,6 +92,7 @@ draw_frame :: () {
 
     if #complete active_global_widget == {
         case .editors;                          // already done
+        case .build_panel;                      // already done
         case .open_file_dialog;                 draw_open_file_dialog();
         case .delete_file_dialog;               draw_delete_file_dialog();
         case .finder;                           draw_finder();
@@ -126,8 +127,15 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
     pane_ui_id := get_ui_id_for_pane(root_pane_id, unique_pane_id);
 
     if layout == .single {
-        if editor_id < 0 || editor_id >= open_editors.count return;
-        draw_editor(editor_id, rect, pane_ui_id);
+        if editor_id >= 0 then draw_editor(editor_id, rect, pane_ui_id);
+        if pane == editors.active_pane {
+            // Highlight active pane TODO !!!!!!!!!!!!!!
+            left, right, top, bottom := cut_left(rect, 4), cut_right(rect, 4), cut_top(rect, 4), cut_bottom(rect, 4);
+            draw_rect(left,   Color.LIST_CURSOR_LITE);
+            draw_rect(right,  Color.LIST_CURSOR_LITE);
+            draw_rect(top,    Color.LIST_CURSOR_LITE);
+            draw_rect(bottom, Color.LIST_CURSOR_LITE);
+        }
     } else {
         splitter_ui_id := get_ui_id_from_loc(parent_id = pane_ui_id);
         if ui.active == splitter_ui_id {
@@ -373,12 +381,13 @@ maybe_draw_color_preview_panel :: (status_bar_height: float) -> (drawn: bool = f
     if config.settings.color_preview_popup == .disabled return;
     if !workspace_scan_complete return;  // don't init the popup until all buffers are ready, otherwise we won't know the usage stats
 
+    active_editor_id := get_active_editor_id();
     active_editor, active_buffer := get_active_editor_and_buffer();
     if !active_editor return;
-    if active_buffer.lang != .Focus_Config && active_buffer.lang != .Focus_Theme && !is_color_preview_panel(editors.active) return;
+    if active_buffer.lang != .Focus_Config && active_buffer.lang != .Focus_Theme && !is_color_preview_panel(active_editor_id) return;
     if active_buffer.readonly return;
 
-    if !is_color_preview_panel(editors.active) {
+    if !is_color_preview_panel(active_editor_id) {
         // Only show the panel if the cursor is within the [colors] section of the config
         using config_extra := cast(*Focus_Config_Extra) active_buffer.extra;
         pos := active_editor.cursors[active_editor.main_cursor].pos;
@@ -400,7 +409,7 @@ maybe_draw_color_preview_panel :: (status_bar_height: float) -> (drawn: bool = f
     }
 
     // Switch the color map temporarily and then revert
-    color_preview_begin_draw(editors.active);
+    color_preview_begin_draw(active_editor_id);
     defer color_preview_end_draw();
 
     // Drag panel title bar first before drawing
@@ -568,7 +577,7 @@ maybe_draw_color_preview_panel :: (status_bar_height: float) -> (drawn: bool = f
     color_picker_rect = shrink_y(color_picker_rect, font_ui_line_height / 2);
     color_preview_draw_color_picker(color_picker_rect);
 
-    return is_color_preview_panel(editors.active), editor_rect;
+    return is_color_preview_panel(active_editor_id), editor_rect;
 }
 
 draw_color_picker :: (editor_id: s64, editor: *Editor, buffer: *Buffer, picker_rect: Rect, range: Offset_Range, on_left: bool) {
@@ -837,7 +846,8 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, has_status_bar :=
     became_active := maybe_set_hot_or_active(ui_id, rect, .TEXT_SELECT);
     if became_active then activate_editors();
 
-    editor_is_active := editor_id == editors.active && Input.input_application_has_focus;
+    active_editor_id := get_active_editor_id();
+    editor_is_active := editor_id == active_editor_id && Input.input_application_has_focus;
 
     // Calculate text origin in screen coordinates
     text_offset := get_text_offset();
@@ -1232,7 +1242,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, has_status_bar :=
         // Keyboard smooth scrolling - vertical
         // As mentioned above, we can properly perform horizontal scrolling only once vertical
         // scrolling is done, allowing us to determine the longest visible line.
-        if (editor_smooth_scroll.direction == .up || editor_smooth_scroll.direction == .down) && editor_id == editors.active {
+        if (editor_smooth_scroll.direction == .up || editor_smooth_scroll.direction == .down) && editor_id == active_editor_id {
             speed := 60 * line_height;  // pixels per second
             if editor_smooth_scroll.fast then speed *= 2;
             time_elapsed := cast(float) to_float64_seconds(frame_time - editor_smooth_scroll.started_at);
@@ -1317,7 +1327,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, ui_id: Ui_Id, has_status_bar :=
             redraw_requested = true;
         }
         // Keyboard smooth scrolling - horizontal
-        if (editor_smooth_scroll.direction == .left || editor_smooth_scroll.direction == .right) && editor_id == editors.active {
+        if (editor_smooth_scroll.direction == .left || editor_smooth_scroll.direction == .right) && editor_id == active_editor_id {
             speed := 60 * char_x_advance;
             if editor_smooth_scroll.fast then speed *= 2;
             time_elapsed := cast(float) to_float64_seconds(frame_time - editor_smooth_scroll.started_at);
