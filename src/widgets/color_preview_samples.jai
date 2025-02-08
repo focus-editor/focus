@@ -206,6 +206,68 @@ class Program
 
 CSHARP
 
+SAMPLE_Java :: #string JAVA
+package org.example.java;
+
+import java.util.Date;
+import java.util.ArrayList;
+import org.apache.commons.*;
+import static SomeClass.STATIC_FIELD;
+
+/**
+ * Documentation for <code>SomeClass</code> --- @see Math#sin(double)
+ * @param T a type that extends Runnable
+ */
+@Annotation(param1 = "value1", param2 = "value2")
+@SuppressWarnings({"ALL"})
+public class SomeClass<T extends Runnable> implements SomeInterface, SomeOtherInterface {
+    @JsonElement
+    private T field                     = null;
+    private double doubleField          = 12345.67890;         // inline comment
+    @Value("${system.someString}")
+    private String someString           = "\nSome String \n";
+
+    /*
+        Multiline comment
+    */
+    final int packagePrivateField       = 2;
+    protected final int protectedField  = 3;
+    public final int instanceFinalField = 2;
+    public static int STATIC_FIELD      = 3;
+
+    /**
+     * Method documentation
+     * @param param
+     */
+    public SomeClass(int[] param) {
+        int intValue = this.STATIC_FIELD + param[0] + 5;
+        long data    = (long) doubleField;
+        int[] f      = new int[]{1, 1, 2, 3, 5, 8, 13, 21};
+
+        ArrayList history      = new ArrayList<List<? extends SomeOtherClass>>(); // nested generic types
+        ArrayList<String> list = new ArrayList<>();                               // implicit generic type
+        list                   = new ArrayList<String>().toArray(new int[23]);    // explicit generic type
+
+        for (String stringValue: list) {
+            for (int i = 0; i < 4; i++) {
+                System.out.println(String.format("%d [string: %s (%d)]", i, stringValue, intValue));
+                intValue++;
+            }
+        }
+    }
+
+    @Override
+    public <E extends T> E addAll(Collection<T> collection) {
+        // ...
+    }
+
+    @Deprecated
+    public static <T> void merge(List<T> dest, List<? extends T> src) {
+        // ...
+    }
+}
+
+JAVA
 
 SAMPLE_Odin :: #string ODIN
 // Comment
