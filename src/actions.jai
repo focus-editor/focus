@@ -136,13 +136,6 @@ ACTIONS_COMMON :: string.[
     "open_entry_right",
     "open_entry_top",
     "open_entry_bottom",
-
-    "switch_to_other_pane",
-    "switch_to_left_pane",
-    "switch_to_right_pane",
-    "switch_to_top_pane",
-    "switch_to_bottom_pane",
-    "switch_to_pane_by_number",
 ];
 
 ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
@@ -194,13 +187,7 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "break_line",
     "new_line_below_without_breaking",
     "new_line_above_without_breaking",
-    "duplicate_editor",
-    "duplicate_editor_left",
-    "duplicate_editor_right",
-    "move_editor_left",
-    "move_editor_right",
-    "move_editor_top",
-    "move_editor_bottom",
+
     "create_new_file",
     "create_new_file_on_the_side",
     "move_to_previous_editor_history",
@@ -210,11 +197,43 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "toggle_line_wrap",
     "toggle_line_numbers",
     "copy_current_line_info",
+
     "indentation_detect_from_buffer_contents",
     "indentation_use_defaults_for_buffer",
     "indentation_convert_to_tabs_for_buffer",
     "indentation_convert_to_spaces_for_buffer",
     "reload_from_disk",
+
+    "switch_to_opposite_pane",
+    "switch_to_left_pane",
+    "switch_to_right_pane",
+    "switch_to_top_pane",
+    "switch_to_bottom_pane",
+    "switch_to_pane_by_number",
+    "switch_to_pane_1",
+    "switch_to_pane_2",
+    "switch_to_pane_3",
+    "switch_to_pane_4",
+    "switch_to_pane_5",
+    "switch_to_pane_6",
+    "switch_to_pane_7",
+    "switch_to_pane_8",
+    "switch_to_pane_9",
+    "switch_to_pane_10",
+
+    "split_left",
+    "split_right",
+    "split_top",
+    "split_bottom",
+
+    "duplicate_editor",
+    "duplicate_editor_left",
+    "duplicate_editor_right",
+
+    "move_editor_left",
+    "move_editor_right",
+    "move_editor_top",
+    "move_editor_bottom",
 ]);
 
 ACTIONS_OPEN_FILE_DIALOG :: #run arrays_concat(ACTIONS_COMMON, string.[
