@@ -659,6 +659,21 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 17, "editors", "switch_to_top_pane",                         "Ctrl-Alt-K ArrowUp",     "Cmd-Opt-K ArrowUp"    },
     .{ 17, "editors", "switch_to_bottom_pane",                      "Ctrl-Alt-K ArrowDown",   "Cmd-Opt-K ArrowDown"  },
     .{ 17, "editors", "switch_to_pane_by_number",                   "Ctrl-Alt-Shift-K",       "Cmd-Opt-Shift-K"  },
+    .{ 17, "editors", "switch_to_pane_1",                           "Ctrl-Alt-1",             "Cmd-Opt-1"  },
+    .{ 17, "editors", "switch_to_pane_2",                           "Ctrl-Alt-2",             "Cmd-Opt-2"  },
+    .{ 17, "editors", "switch_to_pane_3",                           "Ctrl-Alt-3",             "Cmd-Opt-3"  },
+    .{ 17, "editors", "switch_to_pane_4",                           "Ctrl-Alt-4",             "Cmd-Opt-4"  },
+    .{ 17, "editors", "switch_to_pane_5",                           "Ctrl-Alt-5",             "Cmd-Opt-5"  },
+    .{ 17, "editors", "switch_to_pane_6",                           "Ctrl-Alt-6",             "Cmd-Opt-6"  },
+    .{ 17, "editors", "switch_to_pane_7",                           "Ctrl-Alt-7",             "Cmd-Opt-7"  },
+    .{ 17, "editors", "switch_to_pane_8",                           "Ctrl-Alt-8",             "Cmd-Opt-8"  },
+    .{ 17, "editors", "switch_to_pane_9",                           "Ctrl-Alt-9",             "Cmd-Opt-9"  },
+    .{ 17, "editors", "switch_to_pane_10",                          "Ctrl-Alt-0",             "Cmd-Opt-0"  },
+
+    .{ 17, "editors", "split_left",                                 "Ctrl-Alt-S ArrowLeft",   "Cmd-Opt-S ArrowLeft"   },
+    .{ 17, "editors", "split_right",                                "Ctrl-Alt-S ArrowRight",  "Cmd-Opt-S ArrowRight"  },
+    .{ 17, "editors", "split_top",                                  "Ctrl-Alt-S ArrowUp",     "Cmd-Opt-S ArrowUp"     },
+    .{ 17, "editors", "split_bottom",                               "Ctrl-Alt-S ArrowDown",   "Cmd-Opt-S ArrowDown"   },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
@@ -696,7 +711,7 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
     .{ 17, "editors",           "move_editor_to_the_right",         "move_editor_right"    },
     .{ 17, "editors",           "switch_to_left_editor",            "switch_to_left_pane"  },
     .{ 17, "editors",           "switch_to_right_editor",           "switch_to_right_pane" },
-    .{ 17, "editors",           "switch_to_other_editor",           "switch_to_other_pane" },
+    .{ 17, "editors",           "switch_to_other_editor",           "switch_to_opposite_pane" },
 ];
 
 #if !NO_OUTPUT_BUILD {

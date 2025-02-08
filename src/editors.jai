@@ -204,12 +204,6 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .delete_current_file;              defer_action_delete (editor.buffer_id);
         case .reload_from_disk;                 user_reload_from_disk(editor.buffer_id);
 
-        case .switch_to_left_pane;              switch_to_pane(.left);
-        case .switch_to_right_pane;             switch_to_pane(.right);
-        case .switch_to_top_pane;               switch_to_pane(.top);
-        case .switch_to_bottom_pane;            switch_to_pane(.bottom);
-        case .switch_to_other_pane;             switch_to_pane(.on_the_side);
-
         case .duplicate_editor;                 switch_to_pane(.on_the_side, duplicate_current = true);
         case .duplicate_editor_left;            switch_to_pane(.left,        duplicate_current = true);
         case .duplicate_editor_right;           switch_to_pane(.right,       duplicate_current = true);
@@ -608,26 +602,7 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
     assert(active_pane.right == null);
 
     target_pane := get_relative_editor_pane_by_placement(active_pane, placement);
-    if !target_pane {
-        // We need to split the active pane
-        active_pane.child1 = New(Editor_Pane);
-        active_pane.child2 = New(Editor_Pane);
-        active_pane.child1.parent = active_pane;
-        active_pane.child2.parent = active_pane;
-        if placement == .left || placement == .right || placement == .on_the_side {
-            active_pane.layout = .horizontal;
-        } else {
-            active_pane.layout = .vertical;
-        }
-        if placement == .left || placement == .top {
-            target_pane = active_pane.child1;
-            active_pane.child2.editor_id = active_pane.editor_id;
-        } else {
-            target_pane = active_pane.child2;
-            active_pane.child1.editor_id = active_pane.editor_id;
-        }
-        active_pane.editor_id = -1;
-    }
+    if !target_pane then target_pane = split_active_pane(placement);
 
     // @incomplete !!!!!!
     new_editor_id := find_or_create_editor(buffer_id);  // TODO: must not use editors that are already in the tree!!!!!
@@ -1179,6 +1154,95 @@ free_editor :: (using editor: *Editor) {
     reset(*highlights);
     reset(*search_bar.results);
     reset(*wrapped_line_starts);
+}
+
+switch_to_pane :: (placement: Editor_Placement, duplicate_current := false) {
+    if build_panel_is_active() then build_panel_lose_focus();
+    if placement == .in_place return;
+
+    target_pane := get_relative_editor_pane_by_placement(editors.active_pane, placement);
+    if !target_pane return;
+
+    if target_pane.editor_id >= 0 then make_editor_active(target_pane.editor_id);
+    editors.active_pane = target_pane;
+
+    // if editors.layout == {
+    //     case .None; return;
+
+    //     case .Single;
+    //         duplicated_editor := duplicate_active_editor();
+
+    //         if side == {
+    //             case .left;
+    //                 editors.left   = duplicated_editor;
+    //                 editors.right  = editors.active;
+    //                 editors.active = editors.left;
+    //                 editors_start_moving_splitter(0.5, start = 0.0);
+    //             case .right; #through;
+    //             case .other;
+    //                 editors.left   = editors.active;
+    //                 editors.right  = duplicated_editor;
+    //                 editors.active = editors.right;
+    //                 editors_start_moving_splitter(0.5, start = 1.0);
+    //         }
+    //         editors.layout = .Double;
+
+    //     case .Double;
+    //         if side == {
+    //             case .left;  if editors.active == editors.left  then return;
+    //             case .right; if editors.active == editors.right then return;
+    //             case .other; if editors.active == editors.left  then side = .right; else side = .left;
+    //         }
+    //         if duplicate_current {
+    //             duplicated_editor := duplicate_active_editor();
+
+    //             if side == .left {
+    //                 editors.left   = duplicated_editor;
+    //                 editors.right  = editors.active;
+    //             } else {
+    //                 editors.right  = duplicated_editor;
+    //                 editors.left   = editors.active;
+    //             }
+    //             editors.active = duplicated_editor;
+    //         }
+    //         editors.active = ifx side == .left then editors.left else editors.right;
+    // }
+
+    // make_editor_active(editors.active);
+}
+
+split_active_pane :: (placement: Editor_Placement) -> *Editor_Pane {
+    active_pane := editors.active_pane;
+
+    assert(active_pane.layout == .single);  // only leaf panes can be active
+    assert(active_pane.left  == null);
+    assert(active_pane.right == null);
+
+    new_pane: *Editor_Pane;
+
+    active_pane.child1 = New(Editor_Pane);
+    active_pane.child2 = New(Editor_Pane);
+    active_pane.child1.parent = active_pane;
+    active_pane.child2.parent = active_pane;
+
+    if placement == .left || placement == .right || placement == .on_the_side {
+        active_pane.layout = .horizontal;
+    } else {
+        active_pane.layout = .vertical;
+    }
+    if placement == .left || placement == .top {
+        new_pane = active_pane.child1;
+        active_pane.child2.editor_id = active_pane.editor_id;
+    } else {
+        new_pane = active_pane.child2;
+        active_pane.child1.editor_id = active_pane.editor_id;
+    }
+
+    active_pane.editor_id = -1;
+
+    editors.active_pane = new_pane;
+
+    return new_pane;
 }
 
 #scope_file
@@ -2081,64 +2145,7 @@ open_file_directory :: (buffer_id: s64) {
     platform_open_in_explorer(path);
 }
 
-switch_to_pane :: (placement: Editor_Placement, duplicate_current := false) {
-    if build_panel_is_active() then build_panel_lose_focus();
-    if placement == .in_place return;
-
-    target_pane := get_relative_editor_pane_by_placement(editors.active_pane, placement);
-    if !target_pane return;
-
-    if target_pane.editor_id >= 0 then make_editor_active(target_pane.editor_id);
-    editors.active_pane = target_pane;
-
-    // if editors.layout == {
-    //     case .None; return;
-
-    //     case .Single;
-    //         duplicated_editor := duplicate_active_editor();
-
-    //         if side == {
-    //             case .left;
-    //                 editors.left   = duplicated_editor;
-    //                 editors.right  = editors.active;
-    //                 editors.active = editors.left;
-    //                 editors_start_moving_splitter(0.5, start = 0.0);
-    //             case .right; #through;
-    //             case .other;
-    //                 editors.left   = editors.active;
-    //                 editors.right  = duplicated_editor;
-    //                 editors.active = editors.right;
-    //                 editors_start_moving_splitter(0.5, start = 1.0);
-    //         }
-    //         editors.layout = .Double;
-
-    //     case .Double;
-    //         if side == {
-    //             case .left;  if editors.active == editors.left  then return;
-    //             case .right; if editors.active == editors.right then return;
-    //             case .other; if editors.active == editors.left  then side = .right; else side = .left;
-    //         }
-    //         if duplicate_current {
-    //             duplicated_editor := duplicate_active_editor();
-
-    //             if side == .left {
-    //                 editors.left   = duplicated_editor;
-    //                 editors.right  = editors.active;
-    //             } else {
-    //                 editors.right  = duplicated_editor;
-    //                 editors.left   = editors.active;
-    //             }
-    //             editors.active = duplicated_editor;
-    //         }
-    //         editors.active = ifx side == .left then editors.left else editors.right;
-    // }
-
-    // make_editor_active(editors.active);
-}
-
-// TODO: duplicate editor
-
-duplicate_active_editor :: () -> s64 {
+duplicate_active_editor :: () -> editor_id: s64 {
     current_editor       := *open_editors[editors.active];
     duplicated_editor_id := find_or_create_editor(current_editor.buffer_id, editors.active);
     current_editor        = *open_editors[editors.active];  // take the pointer again because it could've become invalid
