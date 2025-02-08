@@ -36,6 +36,7 @@ draw_frame :: () {
         draw_editor_pane(editors.root, screen, root_editor_pane_id, 1);
     }
 
+    // !!!!!!!!!!!!!
     // if #complete editors.layout == {
     //     case .None;
     //         editors_snap_splitter(0.5);
@@ -127,10 +128,23 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
     pane_ui_id := get_ui_id_for_pane(root_pane_id, unique_pane_id);
 
     if layout == .single {
-        if editor_id >= 0 then draw_editor(editor_id, rect, pane_ui_id);
+        if editor_id >= 0 {
+            draw_editor(editor_id, rect, pane_ui_id);
+        } else {
+            clicked := maybe_set_hot_or_active(pane_ui_id, rect, .NORMAL);
+            if clicked {
+                activate_editors();
+                editors.active_pane = pane;
+                redraw_requested = true;
+            }
+        }
         if pane == editors.active_pane {
-            // Highlight active pane TODO !!!!!!!!!!!!!!
+            // Highlight active pane
             left, right, top, bottom := cut_left(rect, 4), cut_right(rect, 4), cut_top(rect, 4), cut_bottom(rect, 4);
+            // TODO:
+            // - don't overlap
+            // - add settings for fadeout
+            // - add new color
             draw_rect(left,   Color.LIST_CURSOR_LITE);
             draw_rect(right,  Color.LIST_CURSOR_LITE);
             draw_rect(top,    Color.LIST_CURSOR_LITE);

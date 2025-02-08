@@ -213,16 +213,32 @@ Cmd-1                           switch_to_left_pane
 Cmd-2                           switch_to_right_pane
 Cmd-Shift-1                     switch_to_top_pane
 Cmd-Shift-2                     switch_to_bottom_pane
-Cmd-,                           switch_to_other_pane
+Cmd-,                           switch_to_opposite_pane
 
 # Alternative bindings for the above which use chords
 
-Cmd-Opt-K ArrowLeft             switch_to_left_pane
-Cmd-Opt-K ArrowRight            switch_to_right_pane
-Cmd-Opt-K ArrowUp               switch_to_top_pane
-Cmd-Opt-K ArrowDown             switch_to_bottom_pane
+Cmd-Opt-S ArrowLeft             switch_to_left_pane
+Cmd-Opt-S ArrowRight            switch_to_right_pane
+Cmd-Opt-S ArrowUp               switch_to_top_pane
+Cmd-Opt-S ArrowDown             switch_to_bottom_pane
 
-Cmd-Opt-Shift-K                 switch_to_pane_by_number
+Cmd-Opt-Shift-S                 switch_to_pane_by_number
+
+Cmd-Opt-1                       switch_to_pane_1
+Cmd-Opt-2                       switch_to_pane_2
+Cmd-Opt-3                       switch_to_pane_3
+Cmd-Opt-4                       switch_to_pane_4
+Cmd-Opt-5                       switch_to_pane_5
+Cmd-Opt-6                       switch_to_pane_6
+Cmd-Opt-7                       switch_to_pane_7
+Cmd-Opt-8                       switch_to_pane_8
+Cmd-Opt-9                       switch_to_pane_9
+Cmd-Opt-0                       switch_to_pane_10
+
+Cmd-Opt-X ArrowLeft             split_left
+Cmd-Opt-X ArrowRight            split_right
+Cmd-Opt-X ArrowUp               split_top
+Cmd-Opt-X ArrowDown             split_bottom
 
 Cmd-Shift-,                     duplicate_editor
 
@@ -312,10 +328,10 @@ Cmd-Shift-1                     open_entry_top
 Cmd-Shift-2                     open_entry_bottom
 
 # Alternative bindings for the above
-Cmd-Opt-K ArrowLeft             open_entry_left
-Cmd-Opt-K ArrowRight            open_entry_right
-Cmd-Opt-K ArrowUp               open_entry_top
-Cmd-Opt-K ArrowDown             open_entry_bottom
+Cmd-Opt-S ArrowLeft             open_entry_left
+Cmd-Opt-S ArrowRight            open_entry_right
+Cmd-Opt-S ArrowUp               open_entry_top
+Cmd-Opt-S ArrowDown             open_entry_bottom
 
 
 Tab                             focus_next_ui_element
