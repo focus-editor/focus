@@ -175,7 +175,7 @@ base_commands := #run -> [] Command {
 
         cmd( "Switch To Left Pane",               .switch_to_left_pane,              .Double ),
         cmd( "Switch To Right Pane",              .switch_to_right_pane,             .Double ),
-        cmd( "Switch To Other Pane",              .switch_to_other_pane,             .Double ),
+        cmd( "Switch To Opposite Pane",           .switch_to_opposite_pane,          .Double ),
 
         cmd( "Duplicate File On The Side",        .duplicate_editor,                 .Single ),
         cmd( "Duplicate File Left",               .duplicate_editor_left,            .Single ),

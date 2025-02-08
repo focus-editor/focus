@@ -417,6 +417,17 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .build_kill_running_command;                       build_kill_running_command();                       return true;
         case .build_clear_output;                               build_clear_output();                               return true;
 
+        case .switch_to_left_pane;                              switch_to_pane(.left);                              return true;
+        case .switch_to_right_pane;                             switch_to_pane(.right);                             return true;
+        case .switch_to_top_pane;                               switch_to_pane(.top);                               return true;
+        case .switch_to_bottom_pane;                            switch_to_pane(.bottom);                            return true;
+        case .switch_to_opposite_pane;                          switch_to_pane(.on_the_side);                       return true;
+
+        case .split_left;                                       split_active_pane(.left);                           return true;
+        case .split_right;                                      split_active_pane(.right);                          return true;
+        case .split_top;                                        split_active_pane(.top);                            return true;
+        case .split_bottom;                                     split_active_pane(.bottom);                         return true;
+
         // TODO: search_in_buffer
         case .search_in_project;
             if active_global_widget == .editors then finder_open_from_editor(); else finder_open();                 return true;

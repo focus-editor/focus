@@ -232,15 +232,31 @@ Ctrl-1                      switch_to_left_pane
 Ctrl-2                      switch_to_right_pane
 Ctrl-Shift-1                switch_to_top_pane
 Ctrl-Shift-2                switch_to_bottom_pane
-Ctrl-,                      switch_to_other_pane
+Ctrl-,                      switch_to_opposite_pane
 
 # Alternative bindings for the above which use chords
-Ctrl-Alt-K ArrowLeft        switch_to_left_pane
-Ctrl-Alt-K ArrowRight       switch_to_right_pane
-Ctrl-Alt-K ArrowUp          switch_to_top_pane
-Ctrl-Alt-K ArrowDown        switch_to_bottom_pane
+Ctrl-Alt-S ArrowLeft        switch_to_left_pane
+Ctrl-Alt-S ArrowRight       switch_to_right_pane
+Ctrl-Alt-S ArrowUp          switch_to_top_pane
+Ctrl-Alt-S ArrowDown        switch_to_bottom_pane
 
-Ctrl-Alt-Shift-K            switch_to_pane_by_number
+Ctrl-Alt-Shift-S            switch_to_pane_by_number
+
+Ctrl-Alt-1                  switch_to_pane_1
+Ctrl-Alt-2                  switch_to_pane_2
+Ctrl-Alt-3                  switch_to_pane_3
+Ctrl-Alt-4                  switch_to_pane_4
+Ctrl-Alt-5                  switch_to_pane_5
+Ctrl-Alt-6                  switch_to_pane_6
+Ctrl-Alt-7                  switch_to_pane_7
+Ctrl-Alt-8                  switch_to_pane_8
+Ctrl-Alt-9                  switch_to_pane_9
+Ctrl-Alt-0                  switch_to_pane_10
+
+Ctrl-Alt-X ArrowLeft        split_left
+Ctrl-Alt-X ArrowRight       split_right
+Ctrl-Alt-X ArrowUp          split_top
+Ctrl-Alt-X ArrowDown        split_bottom
 
 Ctrl-Shift-,                duplicate_editor
 
@@ -336,10 +352,10 @@ Ctrl-Shift-1                open_entry_top
 Ctrl-Shift-2                open_entry_bottom
 
 # Alternative bindings for the above
-Ctrl-Alt-K ArrowLeft        open_entry_left
-Ctrl-Alt-K ArrowRight       open_entry_right
-Ctrl-Alt-K ArrowUp          open_entry_top
-Ctrl-Alt-K ArrowDown        open_entry_bottom
+Ctrl-Alt-S ArrowLeft        open_entry_left
+Ctrl-Alt-S ArrowRight       open_entry_right
+Ctrl-Alt-S ArrowUp          open_entry_top
+Ctrl-Alt-S ArrowDown        open_entry_bottom
 
 Tab                         focus_next_ui_element
 Shift-Tab                   focus_previous_ui_element
