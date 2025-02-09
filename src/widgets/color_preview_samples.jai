@@ -1169,3 +1169,23 @@ Isn't it neat?
 DONE
 
 LANG_SHELL
+
+
+SAMPLE_Ini :: #string LANG_INI
+; INI Parse sample.
+
+[Section 1]
+SomeInt = 123 ; that is indeed some int
+SomeString = "This is a string"
+
+[Section 2]
+SomeOtherInt = 1234
+CombinedValue = "This is " a different 'string'   ; fancy
+
+[Section 3]
+MultiLineString = "This string
+extends to multiple
+lines"
+StillOk = true
+
+LANG_INI

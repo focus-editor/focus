@@ -1344,6 +1344,8 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
         case "bash";            lang = .Shell;
         case "zsh";             lang = .Shell;
 
+        case "ini";             lang = .Ini;
+
         case;
             // Files named `.focus_config` are assumed to have no extension
             if equal_nocase(basename_with_extension, ".focus-config") then lang = .Focus_Config;
@@ -3463,6 +3465,9 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
         case .Batch;
             comment = "rem";
 
+        case .Ini;
+            comment = ";";
+
         // Single-line comments are not supported, fallback to multi-line comment
         case .Css;      #through;
         case .Xml;      #through;
@@ -3694,6 +3699,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
         case .RenPy;        #through; // Yeah, there is a trick but meh (https://lemmasoft.renai.us/forums/viewtopic.php?p=299664#p299664 in case someone would like to implement it)
         case .Shell;        #through; // You could with herestrings but it runs into having to use specific identifiers like #string in Jai so let's not
         case .Zig;          #through;
+        case .Ini;          #through;
         case .Focus_Config; #through;
         case .Focus_Theme;
             assert(!is_fallback, "Infinite recursion");
