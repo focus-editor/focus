@@ -8,6 +8,7 @@
         + JS embedded in HTML <script> tags will now be highlighted (@thanks @caztanj)
         + Swift (thanks @caztanj)
         + Shell (thanks @SentientCoffee)
+        + Java (thanks @patrickbard)
         + .ini files
         + Jai 0.1.96+
     + It is now possible to pass a line number together with the file path to the editor on startup: `focus /path/to/file:69` (thanks @caztanj)
@@ -90,6 +91,7 @@
     + Fixed a crash in the build system when letting commands print for too long
     + Fixed a bug with auto-closing brackets (thanks @darkgiggs)
     + Fixed a bug with it being impossible to undo after certain multi-cursor manipulations
+    + Fixed `auto_close_brackets` not working and EOF
 + Other changes:
     + When executing build/run commands Focus will now redirect the standard output/error streams of the child process to the same pipe. This should fix cases where the output from the underlying tool would be "reordered" due to the timing of reads from separate output/error pipes.
     + Syntax highlighting improvements for CSS, HTML and TypeScript (thanks @caztanj)
