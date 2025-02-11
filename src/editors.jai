@@ -1280,6 +1280,7 @@ get_lang_from_path :: (full_path: string) -> Buffer.Lang {
         case "focus-theme";     lang = .Focus_Theme;
         case "go";              lang = .Golang;
         case "lua";             lang = .Lua;
+        case "java";            lang = .Java;
         case "odin";            lang = .Odin;
         case "py";              lang = .Python;
         case "rpy";             lang = .RenPy;
@@ -3443,6 +3444,7 @@ toggle_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false) {
         case .Glsl;   #through;
         case .Hlsl;   #through;
         case .Golang; #through;
+        case .Java;   #through;
         case .Js;     #through;
         case .Json;   #through;
         case .Odin;   #through;
@@ -3666,6 +3668,7 @@ toggle_block_comment :: (editor: *Editor, buffer: *Buffer, is_fallback := false)
         case .Glsl;   #through;
         case .Hlsl;   #through;
         case .Golang; #through;
+        case .Java;   #through;
         case .Js;     #through;
         case .Json;   #through;
         case .Odin;   #through;
