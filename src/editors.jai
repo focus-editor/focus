@@ -819,7 +819,7 @@ all_cursors_can_auto_insert_closing_bracket :: (using editor: Editor, buffer: Bu
         if has_selection(it) return false;
         ch := get_char_at_offset(buffer, it.pos);
 
-        if !is_whitespace_char(xx ch) && !(is_non_word_char(ch) && !is_auto_closeable_char(ch)) {
+        if ch && !is_whitespace_char(xx ch) && !(is_non_word_char(ch) && !is_auto_closeable_char(ch)) {
             return false;
         }
     }
