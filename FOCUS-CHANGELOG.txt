@@ -91,7 +91,7 @@
     + Fixed a crash in the build system when letting commands print for too long
     + Fixed a bug with auto-closing brackets (thanks @darkgiggs)
     + Fixed a bug with it being impossible to undo after certain multi-cursor manipulations
-    + Fixed `auto_close_brackets` not working and EOF
+    + Fixed `auto_close_brackets` not working at EOF
 + Other changes:
     + When executing build/run commands Focus will now redirect the standard output/error streams of the child process to the same pipe. This should fix cases where the output from the underlying tool would be "reordered" due to the timing of reads from separate output/error pipes.
     + Syntax highlighting improvements for CSS, HTML and TypeScript (thanks @caztanj)
