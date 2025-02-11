@@ -28,7 +28,7 @@ tokenize_java :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] 
     return .[];
 }
 
-get_next_c_token :: get_next_token;  // export for indent tokenization
+get_next_java_token :: get_next_token;  // export for indent tokenization
 
 #scope_file
 
@@ -101,8 +101,27 @@ get_next_token :: (using tokenizer: *Tokenizer) -> Token {
 }
 
 parse_identifier :: (using tokenizer: *Tokenizer, token: *Token) {
-    token.type = .identifier;
+    {
+        // HACK: special-case for "non-sealed"
+        tok_non_sealed :: "non-sealed";
+        remaining := max_t - t;
+        possible_match := (remaining == tok_non_sealed.count);
+        if remaining > tok_non_sealed.count {
+            next_ch := (t + tok_non_sealed.count).*;
+            possible_match = possible_match || !(is_alpha(next_ch) || next_ch == #char "_");
+        }
+        if possible_match {
+            match_str := string.{data = t, count = tok_non_sealed.count};
+            if equal(tok_non_sealed, match_str) {
+                t += tok_non_sealed.count;
+                token.type = .modifier;
+                token.keyword = .kw_non_sealed;
+                return;
+            }
+        }
+    }
 
+    token.type = .identifier;
     identifier_str := read_utf8_identifier_string(tokenizer);
 
     // Maybe it's a keyword
@@ -415,7 +434,7 @@ KEYWORDS :: string.[
     "assert", "break", "case", "catch", "class", "continue", "default", "do", "else", "enum", "exports", "extends",
     "finally", "for", "if", "implements", "import", "instanceof", "interface", "module", "new", "open", "opens",
     "package", "permits", "provides", "record", "requires", "return", "super", "switch", "this", "throw", "throws",
-    "to", "transitive", "try", "uses", "var", "when", "while", "with", "yield"
+    "to", "transitive", "try", "uses", "var", "when", "while", "with", "yield",
 
     // The keywords const and goto are reserved, even though they are not currently used.
     // See: https://docs.oracle.com/javase/specs/jls/se23/html/jls-3.html#jls-3.9-110
@@ -457,6 +476,14 @@ MODIFIER_KEYWORDS :: string.[
     "strictfp",
 ];
 
+replace_dashes :: (s: string) -> string {
+    ret := copy_temporary_string(s);
+    for 0..ret.count - 1 {
+        if ret[it] == #char "-" then ret[it] = #char "_";
+    }
+    return ret;
+}
+
 #insert -> string {
     b: String_Builder;
     init_string_builder(*b);
@@ -464,7 +491,7 @@ MODIFIER_KEYWORDS :: string.[
     define_enum :: (b: *String_Builder, enum_name: string, prefix: string, value_lists: [][] string) {
         print_to_builder(b, "% :: enum u16 {\n", enum_name);
         for values : value_lists {
-            for v : values print_to_builder(b, "    %0%;\n", prefix, v);
+            for v : values print_to_builder(b, "    %0%;\n", prefix, replace_dashes(v));
         }
         print_to_builder(b, "}\n");
     }
@@ -491,7 +518,7 @@ KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
         for KEYWORDS           append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword,  keyword = .kw_%1 });\n", it));
         for TYPE_KEYWORDS      append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .type,     keyword = .kw_%1 });\n", it));
         for VALUE_KEYWORDS     append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value,    keyword = .kw_%1 });\n", it));
-        for MODIFIER_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .modifier, keyword = .kw_%1 });\n", it));
+        for MODIFIER_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .modifier, keyword = .kw_%1 });\n", replace_dashes(it)));
         return builder_to_string(*b);
     }
 
