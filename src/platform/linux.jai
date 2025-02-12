@@ -205,6 +205,14 @@ platform_kill_cursor_timer :: (window: Window_Type) {
     LD.timer_stop(cursor_timer);
 }
 
+platform_set_autosave_timer :: (window: Window_Type) {
+    LD.timer_start(autosave_timer, 0, 50);
+}
+
+platform_kill_autosave_timer :: (window: Window_Type) {
+    LD.timer_stop(autosave_timer);
+}
+
 platform_enumerate_logical_drives :: () -> [] string {
     logical_drives: [..]string;
 
@@ -483,6 +491,7 @@ Linux_Icon :: struct {
 }
 
 cursor_timer: LD.Timer;
+autosave_timer: LD.Timer;
 refresh_timer: LD.Timer;
 xdg_reap_timer: LD.Timer;
 

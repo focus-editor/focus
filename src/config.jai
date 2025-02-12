@@ -647,6 +647,7 @@ Settings :: struct {
     scrollbar_max_opacity                                   := 1.0;     @v16
     scrollbar_fade_in_sensitivity                           := 10.0;    @v16
     scrollbar_fade_out_delay_seconds                        := 2.0;     @v16
+    autosave_in_x_seconds                                   := 0;       @v16
 
     // TODO
     // load_last_session_on_start:         true

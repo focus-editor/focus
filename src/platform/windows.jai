@@ -98,6 +98,14 @@ platform_kill_cursor_timer :: (window: Window_Type) {
     KillTimer(window, CURSOR_TIMER_ID);
 }
 
+platform_set_autosave_timer :: (window: Window_Type) {
+    SetTimer(window, AUTOSAVE_TIMER_ID, 50, cast(*void) 0);
+}
+
+platform_kill_autosave_timer :: (window: Window_Type) {
+    KillTimer(window, AUTOSAVE_TIMER_ID);
+}
+
 platform_enumerate_logical_drives :: () -> [] string {
     drives: [..] string;
 
@@ -307,6 +315,7 @@ monitors : [..] Monitor;
 
 REFRESH_TIMER_ID :: 0;
 CURSOR_TIMER_ID  :: 1;
+AUTOSAVE_TIMER_ID :: 2;
 
 WM_USER :: 0x0400;
 

@@ -3,7 +3,7 @@
 editors_handle_event :: (event: Input.Event) -> handled: bool {
     mods := event.modifier_flags;
 
-    if event.type == {
+    if event.type ==  {
         case .KEYBOARD;
             if event.key_pressed {
                 action, mapping := map_event_to_action(event, Action_Editors);
@@ -440,6 +440,7 @@ active_editor_type_char :: (char: u32) {
     buffer.last_edit_time = frame_time64;
     editor.cursor_moved = .unimportant;
     cursors_start_blinking();
+    autosave_start_timer();
     if !is_empty(editor.search_bar.results) then search_and_update_results(editor, buffer, jump = false);
 }
 
@@ -1927,6 +1928,7 @@ save :: (editor: Editor, editor_id: s64) {
     if is_color_preview_panel(editor_id) then buffer_id = color_preview_get_target_buffer_id();
 
     save(buffer_id);
+    autosave_stop_timer();
 }
 
 save :: (buffer_id: s64) {
@@ -1959,6 +1961,47 @@ open_file_directory :: (buffer_id: s64) {
 
     platform_open_in_explorer(path);
 }
+
+autosave_start_timer :: inline () {
+    if config.settings.autosave_in_x_seconds <= 0 return;
+
+    autosave_timer_start = frame_time;
+    platform_set_autosave_timer(window);
+    autosave_active = true;
+}
+
+autosave_stop_timer :: inline () {
+    platform_kill_autosave_timer(window);
+    autosave_active = false;
+}
+
+#scope_export
+
+check_if_autosave_timer_should_start :: () {
+    has_unsaved_buffer := false;
+    for buffer, buffer_id : open_buffers {
+        if is_unsaved(buffer) && !buffer.modified_on_disk has_unsaved_buffer = true;
+    }
+    if !autosave_active && has_unsaved_buffer autosave_start_timer();
+    if autosave_active && !has_unsaved_buffer autosave_stop_timer();
+}
+
+check_for_autosave_timer :: () {
+    if !autosave_active || config.settings.autosave_in_x_seconds <= 0 return;
+
+    ms_since_start := cast(s64) (to_float64_seconds(frame_time - autosave_timer_start) * 1000);
+    
+    if ms_since_start > config.settings.autosave_in_x_seconds * 1000 {
+        for buffer, buffer_id : open_buffers {
+            if is_unsaved(buffer) && !buffer.modified_on_disk {
+                    save(buffer_id);
+                }
+        }
+        autosave_stop_timer();
+    }
+}
+
+#scope_file
 
 switch_to_editor :: (side: enum { left; right; other; }, duplicate_current := false) {
     if build_panel_is_active() then build_panel_lose_focus();
@@ -4249,6 +4292,8 @@ move_to_editor_history_frame :: (frame: Editor_History_Frame, old_frame: Editor_
 
 cursor_blink_start: Apollo_Time;
 cursors_blinking := false;
+autosave_timer_start : Apollo_Time;
+autosave_active := false;
 
 global_config_buffer_id := -1;
 global_troubleshooting_buffer_id := -1;

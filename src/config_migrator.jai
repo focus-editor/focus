@@ -483,6 +483,7 @@ ADDED_SETTINGS :: Added_Setting.[
 
     .{  6, "search_is_case_sensitive_when_uppercase_present",    "false" },
     .{  6, "projects_sorting_order",                             "most_recent_first  #options: most_recent_first, alphabetical, alphabetical_no_case" },
+    
 
     .{  7, "show_ruler_at_column",                               "0" },
 
@@ -497,6 +498,7 @@ ADDED_SETTINGS :: Added_Setting.[
     .{ 16, "scrollbar_max_opacity",                              "1.0" },
     .{ 16, "scrollbar_fade_in_sensitivity",                      "10.0  # controls when the scrollbar appears as the mouse pointer gets close" },
     .{ 16, "scrollbar_fade_out_delay_seconds",                   "2.0   # how long the scrollbar stays visible after scrolling" },
+    .{ 16, "autosave_in_x_seconds",                              "0"},
 ];
 
 RENAMED_SETTINGS :: Renamed_Setting.[
@@ -1242,6 +1244,7 @@ color_preview_popup:                             enabled  # options: enabled, mi
 highlight_matching_brackets:                     false
 search_is_case_sensitive_when_uppercase_present: false
 projects_sorting_order:                          most_recent_first  #options: most_recent_first, alphabetical, alphabetical_no_case
+autosave_in_x_seconds:                           0
 show_ruler_at_column:                            0
 detect_indentation:                              true  # if true, existing files will be scanned to detect indentation, new files will use the `indent_using` and `tab_size` settings
 status_bar_show_indentation:                     true
@@ -1358,6 +1361,7 @@ color_preview_popup:                             enabled  # options: enabled, mi
 highlight_matching_brackets:                     false
 search_is_case_sensitive_when_uppercase_present: false
 projects_sorting_order:                          most_recent_first  #options: most_recent_first, alphabetical, alphabetical_no_case
+autosave_in_x_seconds:                           0
 show_ruler_at_column:                            0
 detect_indentation:                              true  # if true, existing files will be scanned to detect indentation, new files will use the `indent_using` and `tab_size` settings
 status_bar_show_indentation:                     true
@@ -1684,6 +1688,7 @@ color_preview_popup:                             enabled  # options: enabled, mi
 highlight_matching_brackets:                     false
 search_is_case_sensitive_when_uppercase_present: false
 projects_sorting_order:                          most_recent_first  #options: most_recent_first, alphabetical, alphabetical_no_case
+autosave_in_x_seconds:                           0
 show_ruler_at_column:                            0
 detect_indentation:                              true  # if true, existing files will be scanned to detect indentation, new files will use the `indent_using` and `tab_size` settings
 status_bar_show_indentation:                     true

@@ -325,6 +325,9 @@ main :: () {
 
         execute_deferred_actions();
 
+        check_if_autosave_timer_should_start();
+        check_for_autosave_timer();
+
         build_system_update();
         maybe_revert_temporary_theme();
         refresh_open_buffers();
