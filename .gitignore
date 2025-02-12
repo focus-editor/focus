@@ -12,6 +12,11 @@ temp/
 build_release/
 build_debug/
 
+.vscode/
+
+.focus-config
+.focus-config.bak
+
 focus
 focus_debug
 focus-trace.json
