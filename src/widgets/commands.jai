@@ -157,16 +157,19 @@ base_commands := #run -> [] Command {
         cmd( "Move Up To Empty Line",             .move_up_to_empty_line,            .Single ),
         cmd( "Move Down To Empty Line",           .move_down_to_empty_line,          .Single ),
 
-        cmd( "Center View On Cursor",             .center_viewport_on_cursor,        .Single ),
-        cmd( "Move Cursor To Screen Center",      .move_cursor_to_viewport_center,   .Single ),
+        cmd( "Center Viewport On Cursor",         .center_viewport_on_cursor,        .Single ),
+        cmd( "Move Cursor To Viewport Center",    .move_cursor_to_viewport_center,   .Single ),
         cmd( "Remove Additional Cursors",         .remove_additional_cursors,        .Single ),
 
         cmd( "Add Cursors To Line Ends",          .add_cursors_to_line_ends,         .Single ),
         cmd( "Add Cursors To Line Starts",        .add_cursors_to_line_starts,       .Single ),
         cmd( "Align Cursors",                     .align_cursors,                    .Single ),
 
-        cmd( "Cursor: Go Back",                   .move_to_previous_editor_history,  .None   ),
-        cmd( "Cursor: Go Forward",                .move_to_next_editor_history,      .None   ),
+        cmd( "Cursor: Go Back",                   .cursor_go_back,                   .None   ),
+        cmd( "Cursor: Go Forward",                .cursor_go_forward,                .None   ),
+
+        cmd( "Go To Previous Buffer",             .go_to_previous_buffer,            .Single ),
+        cmd( "Go To Next Buffer",                 .go_to_next_buffer,                .Single ),
 
         cmd( "New Line Below Without Breaking",   .new_line_below_without_breaking,  .Single ),
         cmd( "New Line Above Without Breaking",   .new_line_above_without_breaking,  .Single ),

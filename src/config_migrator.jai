@@ -712,6 +712,11 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
     .{ 17, "editors",           "switch_to_left_editor",            "switch_to_left_pane"  },
     .{ 17, "editors",           "switch_to_right_editor",           "switch_to_right_pane" },
     .{ 17, "editors",           "switch_to_other_editor",           "switch_to_opposite_pane" },
+
+    .{ 17, "editors",           "move_to_next_buffer",              "go_to_next_buffer" },
+    .{ 17, "editors",           "move_to_previous_buffer",          "go_to_previous_buffer" },
+    .{ 17, "editors",           "move_to_next_editor_history",      "cursor_go_forward" },
+    .{ 17, "editors",           "move_to_previous_editor_history",  "cursor_go_back" },
 ];
 
 #if !NO_OUTPUT_BUILD {
@@ -766,10 +771,6 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
         "move_right_by_word_ends",
         "move_selected_lines_down",
         "move_selected_lines_up",
-        "move_to_next_buffer",
-        "move_to_next_editor_history",
-        "move_to_previous_buffer",
-        "move_to_previous_editor_history",
         "move_up",
         "move_up_fast",
         "move_up_one_page",

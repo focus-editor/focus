@@ -174,11 +174,11 @@ Cmd-[                           unindent
 Cmd-S                           save
 Cmd-Shift-S                     save_as
 
-Cmd-Opt-Minus                   move_to_previous_editor_history
-Cmd-Opt-Plus                    move_to_next_editor_history
+Cmd-Opt-Minus                   cursor_go_back
+Cmd-Opt-Plus                    cursor_go_forward
 
-Cmd-Shift-Minus                 move_to_previous_buffer
-Cmd-Shift-Plus                  move_to_next_buffer
+Cmd-Shift-Minus                 go_to_previous_buffer
+Cmd-Shift-Plus                  go_to_next_buffer
 
 Cmd-/                           toggle_comment
 Cmd-L                           select_line
