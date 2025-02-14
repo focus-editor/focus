@@ -69,7 +69,6 @@ cut_left :: (rect: Rect, amount: float, $margin := 0) -> (left: Rect,  remainder
     amount = floor(amount);
 
     remainder := rect;
-
     remainder.w -= amount;
     remainder.x += amount;
 
@@ -79,8 +78,8 @@ cut_left :: (rect: Rect, amount: float, $margin := 0) -> (left: Rect,  remainder
     #if margin > 0 {
         #assert margin % 2 == 0;
         half_margin := margin / 2;
-        remainder.x += margin;
-        remainder.w -= margin;
+        remainder.x += half_margin;
+        remainder.w -= half_margin;
         left.w      -= half_margin;
     }
 
@@ -91,7 +90,6 @@ cut_right :: (rect: Rect, amount: float, $margin := 0) -> (right: Rect, remainde
     amount = floor(amount);
 
     remainder := rect;
-
     remainder.w -= amount;
 
     right := rect;
@@ -101,8 +99,8 @@ cut_right :: (rect: Rect, amount: float, $margin := 0) -> (right: Rect, remainde
     #if margin > 0 {
         #assert margin % 2 == 0;
         half_margin := margin / 2;
-        remainder.x -= margin;
-        remainder.w += margin;
+        remainder.w -= half_margin;
+        right.x     += half_margin;
         right.w     -= half_margin;
     }
 
@@ -113,7 +111,6 @@ cut_bottom :: (rect: Rect, amount: float, $margin := 0) -> (bottom: Rect, remain
     amount = floor(amount);
 
     remainder := rect;
-
     remainder.h -= amount;
     remainder.y += amount;
 
@@ -123,9 +120,9 @@ cut_bottom :: (rect: Rect, amount: float, $margin := 0) -> (bottom: Rect, remain
     #if margin > 0 {
         #assert margin % 2 == 0;
         half_margin := margin / 2;
-        remainder.h += margin;
-        remainder.y -= half_margin;
-        bottom.h    += half_margin;
+        remainder.h -= half_margin;
+        remainder.y += half_margin;
+        bottom.h    -= half_margin;
     }
 
     return bottom, remainder;
@@ -135,7 +132,6 @@ cut_top :: (rect: Rect, amount: float, $margin := 0) -> (top: Rect, remainder: R
     amount = floor(amount);
 
     remainder := rect;
-
     remainder.h -= amount;
 
     top := rect;
@@ -145,9 +141,9 @@ cut_top :: (rect: Rect, amount: float, $margin := 0) -> (top: Rect, remainder: R
     #if margin > 0 {
         #assert margin % 2 == 0;
         half_margin := margin / 2;
-        remainder.h -= margin;
-        top.h -= half_margin;
-        top.y += half_margin;
+        remainder.h -= half_margin;
+        top.h       -= half_margin;
+        top.y       += half_margin;
     }
 
     return top, remainder;
