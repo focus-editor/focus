@@ -29,7 +29,7 @@ draw_frame :: () {
     active_editor_rect: Rect = ---;
 
     // Draw editors
-    if editors.root.layout == .single && editors.root.editor_id < 0 {
+    if editors.root.layout == .single && editors.root.editor_index < 0 {
         draw_welcome_screen(screen);
     } else {
         root_editor_pane_id := get_ui_id_from_loc();
@@ -128,8 +128,8 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
     pane_ui_id := get_ui_id_for_pane(root_pane_id, unique_pane_id);
 
     if layout == .single {
-        if editor_id >= 0 {
-            draw_editor(editor_id, rect, pane_ui_id);
+        if editor_index >= 0 {
+            draw_editor(editor_ids[editor_index], rect, pane_ui_id);
         } else {
             clicked := maybe_set_hot_or_active(pane_ui_id, rect, .NORMAL);
             if clicked {
