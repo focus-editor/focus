@@ -446,7 +446,7 @@ scrollbar_background:                   10191F4C
 cursor:                                 26B2B2FF
 cursor_inactive:                        196666FF
 paste_animation:                        1C4449FF
-splitter:                               21333FFF
+splitter:                               10191FFF
 splitter_hover:                         1C4449FF
 ruler:                                  FCEDFC26
 indent_guide:                           FCEDFC26

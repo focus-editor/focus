@@ -140,15 +140,16 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
         }
         if pane == editors.active_pane {
             // Highlight active pane
-            left, right, top, bottom := cut_left(rect, 4), cut_right(rect, 4), cut_top(rect, 4), cut_bottom(rect, 4);
+            border := floor(3 * dpi_scale);
+            left, right, top, bottom := cut_left(rect, border), cut_right(rect, border), cut_top(rect, border), cut_bottom(rect, border);
             // TODO:
             // - don't overlap
             // - add settings for fadeout
             // - add new color
-            draw_rect(left,   Color.LIST_CURSOR_LITE);
-            draw_rect(right,  Color.LIST_CURSOR_LITE);
-            draw_rect(top,    Color.LIST_CURSOR_LITE);
-            draw_rect(bottom, Color.LIST_CURSOR_LITE);
+            draw_rect(left,   Color.CURSOR_INACTIVE);
+            draw_rect(right,  Color.CURSOR_INACTIVE);
+            draw_rect(top,    Color.CURSOR_INACTIVE);
+            draw_rect(bottom, Color.CURSOR_INACTIVE);
         }
     } else {
         splitter_ui_id := get_ui_id_from_loc(parent_id = pane_ui_id);
@@ -162,13 +163,15 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
             splitter_pos = clamp(splitter_pos, 0.1, 0.9);
         }
 
+        SPLITTER_WIDTH :: 2;
+
         rect1, rect2, splitter_rect: Rect;
         if layout == .horizontal {
-            rect1, rect2 = cut_left(rect, rect.w * splitter_pos, margin = 2);
-            splitter_rect = make_rect(rect1.x + rect1.w, rect1.y, 2, rect1.h);
+            rect1, rect2 = cut_left(rect, rect.w * splitter_pos, margin = SPLITTER_WIDTH);
+            splitter_rect = make_rect(rect1.x + rect1.w, rect1.y, SPLITTER_WIDTH, rect1.h);
         } else {
-            rect2, rect1 = cut_bottom(rect, rect.h * splitter_pos, margin = 2);
-            splitter_rect = make_rect(rect2.x, rect2.y + rect2.h - 2, rect2.w, 2);
+            rect2, rect1 = cut_bottom(rect, rect.h * splitter_pos, margin = SPLITTER_WIDTH);
+            splitter_rect = make_rect(rect2.x, rect2.y + rect2.h, rect2.w, SPLITTER_WIDTH);
         }
 
         // We cannot use the normal mechanism for specifying parent-child relationship between panes
@@ -2242,7 +2245,7 @@ draw_splitter :: (splitter_rect: Rect, ui_id: Ui_Id, horizontal := true) {
     }
 
     // Don't draw splitters for vertical layouts unless hovering or dragging (because there's already a status bar)
-    if horizontal || is_hovering_over(ui_id) then draw_rect(rect, color);
+    draw_rect(rect, color);
 }
 
 draw_open_file_dialog :: () {
