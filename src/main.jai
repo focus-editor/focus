@@ -1010,6 +1010,7 @@ focus_allocator: Allocator;
 #load "langs/batch.jai";
 #load "langs/swift.jai";
 #load "langs/ini.jai";
+#load "langs/diff.jai";
 
 #if OS == .WINDOWS {
     #load "platform/windows.jai";

@@ -1598,6 +1598,7 @@ get_tokenize_function :: (lang: Buffer.Lang) -> Tokenize_Function {
         case .Css;                  return tokenize_css;
         case .CSharp;               return tokenize_csharp;
         case .D;                    return tokenize_d;
+        case .Diff;                 return tokenize_diff;
         case .Glsl;                 return tokenize_glsl;
         case .Hlsl;                 return tokenize_hlsl;
         case .Golang;               return tokenize_golang;
@@ -1839,6 +1840,7 @@ Buffer :: struct {
         Css;
         CSharp;
         D;
+        Diff;
         Glsl;
         Hlsl;
         Golang;
@@ -1914,6 +1916,9 @@ Buffer_Region :: struct {
         scope_module;
 
         heredoc;
+
+        addition;
+        deletion;
     }
 }
 

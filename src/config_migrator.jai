@@ -581,6 +581,11 @@ ADDED_COLORS :: Added_Color.[
 
     .{ 8, "bracket_highlight",                "selection_highlight",    "E8FCFE30" },
     .{ 8, "indent_guide",                     "selection_highlight",    "FCEDFC26" },
+
+    .{ 17, "code_addition",                   "",                       "33B333FF" },
+    .{ 17, "region_addition",                 "",                       "2260224C" },
+    .{ 17, "code_deletion"  ,                 "",                       "E64D4DFF" },
+    .{ 17, "region_deletion",                 "",                       "7722224C" },
 ];
 
 
