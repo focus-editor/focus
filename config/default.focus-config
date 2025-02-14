@@ -184,11 +184,11 @@ Ctrl-[                      unindent
 Ctrl-S                      save
 Ctrl-Shift-S                save_as
 
-Alt-Minus                   move_to_previous_editor_history
-Alt-Plus                    move_to_next_editor_history
+Alt-Minus                   cursor_go_back
+Alt-Plus                    cursor_go_forward
 
-Ctrl-PageUp                 move_to_previous_buffer
-Ctrl-PageDown               move_to_next_buffer
+Ctrl-PageUp                 go_to_previous_buffer
+Ctrl-PageDown               go_to_next_buffer
 
 Ctrl-/                      toggle_comment
 Ctrl-L                      select_line
