@@ -4312,7 +4312,8 @@ frames_are_mergeable :: (a: Editor_History_Frame, b: Editor_History_Frame) -> bo
         && a.editor_state == b.editor_state;
 }
 
-move_to_previous_editor_history :: (by_buffer := false) {
+// !!! TODO:
+cursor_go_back :: (by_buffer := false) {
     using editor_history;
     // print("BACK: current: %, start: %, end: %\n", current, start, end);
     if current == start return;
@@ -4328,7 +4329,8 @@ move_to_previous_editor_history :: (by_buffer := false) {
     // print("   -> current: %, start: %, end: %. RESTORE: %\n", current, start, end, frames[current]);
 }
 
-move_to_next_editor_history :: (by_buffer := false) {
+// !!! TODO:
+cursor_go_forward :: (by_buffer := false) {
     using editor_history;
     // print("FORW: current: %, start: %, end: %\n", current, start, end);
     if current == end return;

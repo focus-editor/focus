@@ -405,11 +405,11 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .show_commands;                                    show_dialog(*commands_dialog);                      return true;
         case .toggle_fullscreen;                                editor_toggle_fullscreen();                         return true;
 
-        case .move_to_previous_editor_history;                  move_to_previous_editor_history();                  return true;
-        case .move_to_next_editor_history;                      move_to_next_editor_history();                      return true;
+        case .cursor_go_back;                                   cursor_go_back();                                   return true;
+        case .cursor_go_forward;                                cursor_go_forward();                                return true;
 
-        case .move_to_previous_buffer;                          move_to_previous_editor_history(by_buffer = true);  return true;
-        case .move_to_next_buffer;                              move_to_next_editor_history    (by_buffer = true);  return true;
+        case .go_to_previous_buffer;                            // !!!! move_to_previous_editor_history(by_buffer = true);  return true;
+        case .go_to_next_buffer;                                // !!!! move_to_next_editor_history    (by_buffer = true);  return true;
 
         case .build_panel_toggle;                               build_panel_toggle();                               return true;
         case .build_panel_toggle_focus;                         build_panel_toggle_focus();                         return true;
