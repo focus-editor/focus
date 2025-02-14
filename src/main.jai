@@ -408,8 +408,8 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .cursor_go_back;                                   cursor_go_back();                                   return true;
         case .cursor_go_forward;                                cursor_go_forward();                                return true;
 
-        case .go_to_previous_buffer;                            // !!!! move_to_previous_editor_history(by_buffer = true);  return true;
-        case .go_to_next_buffer;                                // !!!! move_to_next_editor_history    (by_buffer = true);  return true;
+        case .go_to_previous_buffer;                            go_to_previous_buffer();                            return true;
+        case .go_to_next_buffer;                                go_to_next_buffer();                                return true;
 
         case .build_panel_toggle;                               build_panel_toggle();                               return true;
         case .build_panel_toggle_focus;                         build_panel_toggle_focus();                         return true;
