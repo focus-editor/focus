@@ -209,8 +209,10 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .duplicate_editor_right;           switch_to_pane(.right,       duplicate_current = true);
 
         // !!!!!!!!!
-        case .move_editor_left;                 // if editors.active == editors.right then swap_panes();
-        case .move_editor_right;                // if editors.active == editors.left  then swap_panes();
+        case .move_editor_left;                 move_editor(.left);
+        case .move_editor_right;                move_editor(.right);
+        case .move_editor_top;                  move_editor(.top);
+        case .move_editor_bottom;               move_editor(.bottom);
 
         case .scroll_viewport_up;               smooth_scroll(editor, direction = .up);                 activate_hold_action(action, event);
         case .scroll_viewport_up_fast;          smooth_scroll(editor, direction = .up, fast = true);    activate_hold_action(action, event);
@@ -453,7 +455,7 @@ active_editor_type_char :: (char: u32) {
 
 get_active_editor_id :: () -> s64 {
     if active_global_widget == {
-        case .editors;      return get_active_editor_id(editors.active_pane);
+        case .editors;      return get_visible_editor_id(editors.active_pane);
         case .build_panel;  return build_panel_get_editor_id();
     }
     return -1;
@@ -617,14 +619,14 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
 
 editors_find_pane_by_editor_id :: (editor_id: s64, current_pane: *Editor_Pane) -> pane: *Editor_Pane {
     if !current_pane return null;
-    if get_active_editor_id(current_pane) == editor_id return current_pane;
+    if get_visible_editor_id(current_pane) == editor_id return current_pane;
     pane := editors_find_pane_by_editor_id(editor_id, current_pane.child1);
     if !pane then pane = editors_find_pane_by_editor_id(editor_id, current_pane.child2);
     if pane then assert_leaf_pane(pane, "Only leaf panes can have editors. This is a bug.");
     return pane;
 }
 
-get_active_editor_id :: inline (pane: *Editor_Pane) -> s64 {
+get_visible_editor_id :: inline (pane: *Editor_Pane) -> s64 {
     if !pane || !pane.editor_ids return -1;
     return pane.editor_ids[pane.editor_index];
 }
@@ -1167,6 +1169,41 @@ free_editor :: (using editor: *Editor) {
     reset(*wrapped_line_starts);
 }
 
+move_editor :: (placement: Editor_Placement) {
+    if build_panel_is_active() then build_panel_lose_focus();
+    if placement == .in_place return;
+
+    active_pane := editors.active_pane;
+    editor_id := get_active_editor_id();
+    if editor_id < 0 return;  // nothing to move
+    buffer_id := open_editors[editor_id].buffer_id;
+
+    array_ordered_remove_by_index(*active_pane.editor_ids, active_pane.editor_index);
+    if !active_pane.editor_ids || active_pane.editor_index > 0 then active_pane.editor_index -= 1;  // focus previous editor
+
+    target_pane := get_relative_editor_pane_by_placement(active_pane, placement);
+    if !target_pane then target_pane = split_active_pane(placement);
+
+    replaced_existing := false;
+    for target_pane.editor_ids {
+        editor := *open_editors[it];
+        if editor.buffer_id == buffer_id {
+            target_pane.editor_ids[it_index] = editor_id;
+            target_pane.editor_index = it_index;
+            replaced_existing = true;
+            break;
+        }
+    }
+
+    if !replaced_existing {
+        // Insert next to the visible editor
+        array_insert_at(*target_pane.editor_ids, editor_id, target_pane.editor_index + 1);
+        target_pane.editor_index += 1;
+    }
+
+    make_editor_active(editor_id);
+}
+
 switch_to_pane :: (placement: Editor_Placement, duplicate_current := false) {
     if build_panel_is_active() then build_panel_lose_focus();
     if placement == .in_place return;
@@ -1174,7 +1211,7 @@ switch_to_pane :: (placement: Editor_Placement, duplicate_current := false) {
     target_pane := get_relative_editor_pane_by_placement(editors.active_pane, placement);
     if !target_pane return;
 
-    target_editor_id := get_active_editor_id(target_pane);
+    target_editor_id := get_visible_editor_id(target_pane);
     if target_editor_id >= 0 then make_editor_active(target_editor_id);
     editors.active_pane = target_pane;
 
@@ -2178,7 +2215,7 @@ select_all_occurrences :: (using editor: *Editor, buffer: Buffer, search_str := 
 }
 
 save_active_buffer :: () {
-    editor_id := get_active_editor_id(editors.active_pane);
+    editor_id := get_visible_editor_id(editors.active_pane);
     if editor_id < 0 return;
 
     save(open_editors[editor_id].buffer_id);

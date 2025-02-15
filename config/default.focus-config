@@ -223,10 +223,10 @@ NumpadEnter                 break_line
 Ctrl-NumpadEnter            new_line_below_without_breaking
 Ctrl-Shift-NumpadEnter      new_line_above_without_breaking
 
-Ctrl-Alt-Shift-ArrowLeft    move_editor_left
-Ctrl-Alt-Shift-ArrowRight   move_editor_right
-Ctrl-Alt-Shift-ArrowUp      move_editor_top
-Ctrl-Alt-Shift-ArrowDown    move_editor_bottom
+Ctrl-Alt-S ArrowLeft        move_editor_left
+Ctrl-Alt-S ArrowRight       move_editor_right
+Ctrl-Alt-S ArrowUp          move_editor_top
+Ctrl-Alt-S ArrowDown        move_editor_bottom
 
 Ctrl-1                      switch_to_left_pane
 Ctrl-2                      switch_to_right_pane
@@ -235,12 +235,10 @@ Ctrl-Shift-2                switch_to_bottom_pane
 Ctrl-,                      switch_to_opposite_pane
 
 # Alternative bindings for the above which use chords
-Ctrl-Alt-S ArrowLeft        switch_to_left_pane
-Ctrl-Alt-S ArrowRight       switch_to_right_pane
-Ctrl-Alt-S ArrowUp          switch_to_top_pane
-Ctrl-Alt-S ArrowDown        switch_to_bottom_pane
-
-Ctrl-Alt-Shift-S            switch_to_pane_by_number
+Ctrl-Alt-Shift-ArrowLeft    switch_to_left_pane
+Ctrl-Alt-Shift-ArrowRight   switch_to_right_pane
+Ctrl-Alt-Shift-ArrowUp      switch_to_top_pane
+Ctrl-Alt-Shift-ArrowDown    switch_to_bottom_pane
 
 Ctrl-Alt-1                  switch_to_pane_1
 Ctrl-Alt-2                  switch_to_pane_2
