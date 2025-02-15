@@ -627,27 +627,17 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 14, "common", "focus_next_ui_element",                       "Tab",                  "Tab"       },
     .{ 14, "common", "focus_previous_ui_element",                   "Shift-Tab",            "Shift-Tab" },
 
-    .{ 17, "common", "open_entry_left",                             "Ctrl-1",                       "Cmd-1" },
-    .{ 17, "common", "open_entry_right",                            "Ctrl-2",                       "Cmd-2" },
-    .{ 17, "common", "open_entry_top",                              "Ctrl-Shift-1",                 "Cmd-Shift-1" },
-    .{ 17, "common", "open_entry_bottom",                           "Ctrl-Shift-2",                 "Cmd-Shift-2" },
+    .{ 17, "common", "open_entry_left",                             "Ctrl-Alt-Shift-ArrowLeft",     "Cmd-Opt-Shift-ArrowLeft"  },
+    .{ 17, "common", "open_entry_right",                            "Ctrl-Alt-Shift-ArrowRight",    "Cmd-Opt-Shift-ArrowRight" },
+    .{ 17, "common", "open_entry_top",                              "Ctrl-Alt-Shift-ArrowUp",       "Cmd-Opt-Shift-ArrowUp"    },
+    .{ 17, "common", "open_entry_bottom",                           "Ctrl-Alt-Shift-ArrowDown",     "Cmd-Opt-Shift-ArrowDown"  },
 
-    .{ 17, "common", "open_entry_left",                             "Ctrl-Alt-O ArrowLeft",         "Cmd-Opt-O ArrowLeft"  },
-    .{ 17, "common", "open_entry_right",                            "Ctrl-Alt-O ArrowRight",        "Cmd-Opt-O ArrowRight" },
-    .{ 17, "common", "open_entry_top",                              "Ctrl-Alt-O ArrowUp",           "Cmd-Opt-O ArrowUp"    },
-    .{ 17, "common", "open_entry_bottom",                           "Ctrl-Alt-O ArrowDown",         "Cmd-Opt-O ArrowDown"  },
-
-    .{ 17, "common", "close_current_pane",                          "Ctrl-Shift-W",                 "Cmd-Shift-W"          },
-    .{ 17, "common", "close_other_pane",                            "Ctrl-Shift-Alt-W",             "Cmd-Shift-Opt-W"      },
+    .{ 17, "common", "close_pane",                                  "Ctrl-Shift-W",                 "Cmd-Shift-W"          },
     .{ 17, "common", "close_left_pane",                             "Ctrl-Alt-W ArrowLeft",         "Cmd-Opt-W ArrowLeft"  },
     .{ 17, "common", "close_right_pane",                            "Ctrl-Alt-W ArrowRight",        "Cmd-Opt-W ArrowRight" },
     .{ 17, "common", "close_top_pane",                              "Ctrl-Alt-W ArrowUp",           "Cmd-Opt-W ArrowUp"    },
     .{ 17, "common", "close_bottom_pane",                           "Ctrl-Alt-W ArrowDown",         "Cmd-Opt-W ArrowDown"  },
-
-    .{ 17, "common", "open_entry_left",                             "Ctrl-1",                       "Cmd-1" },
-    .{ 17, "common", "open_entry_right",                            "Ctrl-2",                       "Cmd-2" },
-    .{ 17, "common", "open_entry_top",                              "Ctrl-Shift-1",                 "Cmd-Shift-1" },
-    .{ 17, "common", "open_entry_bottom",                           "Ctrl-Shift-2",                 "Cmd-Shift-2" },
+    .{ 17, "common", "close_other_panes",                           "Ctrl-Shift-Alt-W",             "Cmd-Shift-Opt-W"      },
 
     .{ 17, "editors", "move_editor_left",                           "Ctrl-Alt-S ArrowLeft",         "Ctrl-Cmd-S ArrowLeft" },
     .{ 17, "editors", "move_editor_right",                          "Ctrl-Alt-S ArrowRight",        "Ctrl-Cmd-S ArrowRight" },
@@ -660,21 +650,21 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 17, "editors", "switch_to_right_pane",                       "Ctrl-Alt-Shift-ArrowRight",    "Cmd-Opt-Shift-ArrowRight" },
     .{ 17, "editors", "switch_to_top_pane",                         "Ctrl-Alt-Shift-ArrowUp",       "Cmd-Opt-Shift-ArrowUp"    },
     .{ 17, "editors", "switch_to_bottom_pane",                      "Ctrl-Alt-Shift-ArrowDown",     "Cmd-Opt-Shift-ArrowDown"  },
-    .{ 17, "editors", "switch_to_pane_1",                           "Ctrl-Alt-1",                   "Cmd-Opt-1"  },
-    .{ 17, "editors", "switch_to_pane_2",                           "Ctrl-Alt-2",                   "Cmd-Opt-2"  },
-    .{ 17, "editors", "switch_to_pane_3",                           "Ctrl-Alt-3",                   "Cmd-Opt-3"  },
-    .{ 17, "editors", "switch_to_pane_4",                           "Ctrl-Alt-4",                   "Cmd-Opt-4"  },
-    .{ 17, "editors", "switch_to_pane_5",                           "Ctrl-Alt-5",                   "Cmd-Opt-5"  },
-    .{ 17, "editors", "switch_to_pane_6",                           "Ctrl-Alt-6",                   "Cmd-Opt-6"  },
-    .{ 17, "editors", "switch_to_pane_7",                           "Ctrl-Alt-7",                   "Cmd-Opt-7"  },
-    .{ 17, "editors", "switch_to_pane_8",                           "Ctrl-Alt-8",                   "Cmd-Opt-8"  },
-    .{ 17, "editors", "switch_to_pane_9",                           "Ctrl-Alt-9",                   "Cmd-Opt-9"  },
-    .{ 17, "editors", "switch_to_pane_10",                          "Ctrl-Alt-0",                   "Cmd-Opt-0"  },
+    .{ 17, "editors", "switch_to_pane_1",                           "Ctrl-1",                       "Cmd-1" },
+    .{ 17, "editors", "switch_to_pane_2",                           "Ctrl-2",                       "Cmd-2" },
+    .{ 17, "editors", "switch_to_pane_3",                           "Ctrl-3",                       "Cmd-3" },
+    .{ 17, "editors", "switch_to_pane_4",                           "Ctrl-4",                       "Cmd-4" },
+    .{ 17, "editors", "switch_to_pane_5",                           "Ctrl-5",                       "Cmd-5" },
+    .{ 17, "editors", "switch_to_pane_6",                           "Ctrl-6",                       "Cmd-6" },
+    .{ 17, "editors", "switch_to_pane_7",                           "Ctrl-7",                       "Cmd-7" },
+    .{ 17, "editors", "switch_to_pane_8",                           "Ctrl-8",                       "Cmd-8" },
+    .{ 17, "editors", "switch_to_pane_9",                           "Ctrl-9",                       "Cmd-9" },
+    .{ 17, "editors", "switch_to_pane_10",                          "Ctrl-0",                       "Cmd-0" },
 
-    .{ 17, "editors", "split_left",                                 "Ctrl-Alt-X ArrowLeft",         "Cmd-Opt-X ArrowLeft"   },
-    .{ 17, "editors", "split_right",                                "Ctrl-Alt-X ArrowRight",        "Cmd-Opt-X ArrowRight"  },
-    .{ 17, "editors", "split_top",                                  "Ctrl-Alt-X ArrowUp",           "Cmd-Opt-X ArrowUp"     },
-    .{ 17, "editors", "split_bottom",                               "Ctrl-Alt-X ArrowDown",         "Cmd-Opt-X ArrowDown"   },
+    .{ 17, "editors", "split_left",                                 "Ctrl-Alt-X ArrowLeft",         "Cmd-Opt-X ArrowLeft"  },
+    .{ 17, "editors", "split_right",                                "Ctrl-Alt-X ArrowRight",        "Cmd-Opt-X ArrowRight" },
+    .{ 17, "editors", "split_top",                                  "Ctrl-Alt-X ArrowUp",           "Cmd-Opt-X ArrowUp"    },
+    .{ 17, "editors", "split_bottom",                               "Ctrl-Alt-X ArrowDown",         "Cmd-Opt-X ArrowDown"  },
 ];
 
 RENAMED_KEYBINDS :: Renamed_Keybind.[
@@ -708,6 +698,8 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
     .{ 17, "",                  "close_left_editor",                "" },  // removed
     .{ 17, "",                  "close_right_editor",               "" },  // removed
 
+    .{ 17, "",                  "close_current_editor",             "close_editor" },
+
     .{ 17, "editors",           "move_editor_to_the_left",          "" },  // removed
     .{ 17, "editors",           "move_editor_to_the_right",         "" },  // removed
     .{ 17, "editors",           "switch_to_left_editor",            "switch_to_left_pane"  },
@@ -725,7 +717,6 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
     // It's unlikely that this should ever be changed!
     ORIGINAL_KEYBINDS :: string.[
         "break_line",
-        "close_current_editor",
         "close_other_editor",
         "copy",
         "create_cursor_above",

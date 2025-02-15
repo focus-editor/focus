@@ -228,28 +228,22 @@ Ctrl-Alt-S ArrowRight       move_editor_right
 Ctrl-Alt-S ArrowUp          move_editor_top
 Ctrl-Alt-S ArrowDown        move_editor_bottom
 
-Ctrl-1                      switch_to_left_pane
-Ctrl-2                      switch_to_right_pane
-Ctrl-Shift-1                switch_to_top_pane
-Ctrl-Shift-2                switch_to_bottom_pane
-Ctrl-,                      switch_to_opposite_pane
-
-# Alternative bindings for the above which use chords
 Ctrl-Alt-Shift-ArrowLeft    switch_to_left_pane
 Ctrl-Alt-Shift-ArrowRight   switch_to_right_pane
 Ctrl-Alt-Shift-ArrowUp      switch_to_top_pane
 Ctrl-Alt-Shift-ArrowDown    switch_to_bottom_pane
+Ctrl-,                      switch_to_opposite_pane
 
-Ctrl-Alt-1                  switch_to_pane_1
-Ctrl-Alt-2                  switch_to_pane_2
-Ctrl-Alt-3                  switch_to_pane_3
-Ctrl-Alt-4                  switch_to_pane_4
-Ctrl-Alt-5                  switch_to_pane_5
-Ctrl-Alt-6                  switch_to_pane_6
-Ctrl-Alt-7                  switch_to_pane_7
-Ctrl-Alt-8                  switch_to_pane_8
-Ctrl-Alt-9                  switch_to_pane_9
-Ctrl-Alt-0                  switch_to_pane_10
+Ctrl-1                      switch_to_pane_1
+Ctrl-2                      switch_to_pane_2
+Ctrl-3                      switch_to_pane_3
+Ctrl-4                      switch_to_pane_4
+Ctrl-5                      switch_to_pane_5
+Ctrl-6                      switch_to_pane_6
+Ctrl-7                      switch_to_pane_7
+Ctrl-8                      switch_to_pane_8
+Ctrl-9                      switch_to_pane_9
+Ctrl-0                      switch_to_pane_10
 
 Ctrl-Alt-X ArrowLeft        split_left
 Ctrl-Alt-X ArrowRight       split_right
@@ -324,10 +318,10 @@ Ctrl-K                      cut_to_end_of_line
 Ctrl-Shift-Delete           delete_to_end_of_line
 Ctrl-Shift-Backspace        delete_to_start_of_line
 
-Ctrl-W                      close_current_editor
+Ctrl-W                      close_editor
 
-Ctrl-Shift-W                close_current_pane
-Ctrl-Shift-Alt-W            close_other_pane
+Ctrl-Shift-W                close_pane
+Ctrl-Shift-Alt-W            close_other_panes
 Ctrl-Alt-W ArrowLeft        close_left_pane
 Ctrl-Alt-W ArrowRight       close_right_pane
 Ctrl-Alt-W ArrowUp          close_top_pane
@@ -344,16 +338,10 @@ F11                         toggle_fullscreen
 Enter                       open_entry_in_place
 Ctrl-Enter                  open_entry_on_the_side
 
-Ctrl-1                      open_entry_left
-Ctrl-2                      open_entry_right
-Ctrl-Shift-1                open_entry_top
-Ctrl-Shift-2                open_entry_bottom
-
-# Alternative bindings for the above
-Ctrl-Alt-S ArrowLeft        open_entry_left
-Ctrl-Alt-S ArrowRight       open_entry_right
-Ctrl-Alt-S ArrowUp          open_entry_top
-Ctrl-Alt-S ArrowDown        open_entry_bottom
+Ctrl-Alt-Shift-ArrowLeft    open_entry_left
+Ctrl-Alt-Shift-ArrowRight   open_entry_right
+Ctrl-Alt-Shift-ArrowUp      open_entry_top
+Ctrl-Alt-Shift-ArrowDown    open_entry_bottom
 
 Tab                         focus_next_ui_element
 Shift-Tab                   focus_previous_ui_element

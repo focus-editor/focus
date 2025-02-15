@@ -6,7 +6,7 @@ open_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
         if action == {
             case .escape;                   #through;
             case .close_dialog;             close_open_file_dialog(.CANCEL);                                               return true;
-            case .close_current_editor;     maybe_close_file_under_cursor();                                               return true;
+            case .close_editor;             maybe_close_file_under_cursor();                                               return true;
 
             case .open_entry_in_place;      open_file_dialog_open_entry(entries.selected, .in_place);                      return true;
             case .open_entry_on_the_side;   if mode != .save  open_file_dialog_open_entry(entries.selected, .on_the_side); return true;

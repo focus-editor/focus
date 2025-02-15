@@ -209,29 +209,22 @@ Cmd-Opt-S ArrowRight            move_editor_right
 Cmd-Opt-S ArrowUp               move_editor_top
 Cmd-Opt-S ArrowDown             move_editor_bottom
 
-Cmd-1                           switch_to_left_pane
-Cmd-2                           switch_to_right_pane
-Cmd-Shift-1                     switch_to_top_pane
-Cmd-Shift-2                     switch_to_bottom_pane
-Cmd-,                           switch_to_opposite_pane
-
-# Alternative bindings for the above which use chords
-
 Ctrl-Cmd-Shift-ArrowLeft        switch_to_left_pane
 Ctrl-Cmd-Shift-ArrowRight       switch_to_right_pane
 Ctrl-Cmd-Shift-ArrowUp          switch_to_top_pane
 Ctrl-Cmd-Shift-ArrowDown        switch_to_bottom_pane
+Cmd-,                           switch_to_opposite_pane
 
-Cmd-Opt-1                       switch_to_pane_1
-Cmd-Opt-2                       switch_to_pane_2
-Cmd-Opt-3                       switch_to_pane_3
-Cmd-Opt-4                       switch_to_pane_4
-Cmd-Opt-5                       switch_to_pane_5
-Cmd-Opt-6                       switch_to_pane_6
-Cmd-Opt-7                       switch_to_pane_7
-Cmd-Opt-8                       switch_to_pane_8
-Cmd-Opt-9                       switch_to_pane_9
-Cmd-Opt-0                       switch_to_pane_10
+Cmd-1                           switch_to_pane_1
+Cmd-2                           switch_to_pane_2
+Cmd-3                           switch_to_pane_3
+Cmd-4                           switch_to_pane_4
+Cmd-5                           switch_to_pane_5
+Cmd-6                           switch_to_pane_6
+Cmd-7                           switch_to_pane_7
+Cmd-8                           switch_to_pane_8
+Cmd-9                           switch_to_pane_9
+Cmd-0                           switch_to_pane_10
 
 Cmd-Opt-X ArrowLeft             split_left
 Cmd-Opt-X ArrowRight            split_right
@@ -302,14 +295,14 @@ Cmd-K                           cut_to_end_of_line
 Cmd-Delete                      delete_to_end_of_line
 Cmd-Backspace                   delete_to_start_of_line
 
-Cmd-W                           close_current_editor
+Cmd-W                           close_editor
 
-Cmd-Shift-W                     close_current_pane
-Cmd-Shift-Opt-W                 close_other_pane
+Cmd-Shift-W                     close_pane
 Cmd-Opt-W ArrowLeft             close_left_pane
 Cmd-Opt-W ArrowRight            close_right_pane
 Cmd-Opt-W ArrowUp               close_top_pane
 Cmd-Opt-W ArrowDown             close_bottom_pane
+Cmd-Shift-Opt-W                 close_other_panes
 
 Escape                          escape  # combines close_dialog and remove_additional_cursors
 
@@ -320,16 +313,10 @@ Cmd-B                           build_panel_toggle
 Enter                           open_entry_in_place
 Cmd-Enter                       open_entry_on_the_side
 
-Cmd-1                           open_entry_left
-Cmd-2                           open_entry_right
-Cmd-Shift-1                     open_entry_top
-Cmd-Shift-2                     open_entry_bottom
-
-# Alternative bindings for the above
-Cmd-Opt-S ArrowLeft             open_entry_left
-Cmd-Opt-S ArrowRight            open_entry_right
-Cmd-Opt-S ArrowUp               open_entry_top
-Cmd-Opt-S ArrowDown             open_entry_bottom
+Cmd-Opt-Shift-ArrowLeft         open_entry_left
+Cmd-Opt-Shift-ArrowRight        open_entry_right
+Cmd-Opt-Shift-ArrowUp           open_entry_top
+Cmd-Opt-Shift-ArrowDown         open_entry_bottom
 
 
 Tab                             focus_next_ui_element
