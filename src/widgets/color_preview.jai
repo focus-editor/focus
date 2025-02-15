@@ -65,12 +65,13 @@ is_color_preview_panel :: inline (editor_id: s64) -> bool {
 }
 
 color_preview_lose_focus :: () {
-    // Sometimes we might want to make the previously active editor active, e.g. when deciding on new buffer placement
-    if editors.active != editors.left && editors.active != editors.right && editors.left >= 0 && editors.right >= 0 {
-        // If we still have the same editors open when the panel was opened, go back to the previously active one,
-        // otherwise default to left.
-        make_editor_active(ifx target_editor_id == editors.right then editors.right else editors.left);
-    }
+    // TODO: use active global widget instead !!!
+    // // Sometimes we might want to make the previously active editor active, e.g. when deciding on new buffer placement
+    // if editors.active != editors.left && editors.active != editors.right && editors.left >= 0 && editors.right >= 0 {
+    //     // If we still have the same editors open when the panel was opened, go back to the previously active one,
+    //     // otherwise default to left.
+    //     make_editor_active(ifx target_editor_id == editors.right then editors.right else editors.left);
+    // }
 }
 
 color_preview_set_height :: (height: float) {
@@ -83,14 +84,15 @@ color_preview_set_width :: (width: float) {
 }
 
 color_preview_get_position :: () -> Panel_Position {
-    if #complete editors.layout == {
-        case .None;     saved_position = .right;
-        case .Single;   saved_position = .right;
-        case .Double;   if editor_closing_id >= 0 then saved_position = .right;
-                        else if editors.active == editors.left  then saved_position = .right;
-                        else if editors.active == editors.right then saved_position = .left;
-        case .Multi;    saved_position = .right;  // @split
-    }
+    // TODO: rewrite !!!!!
+    // if #complete editors.layout == {
+    //     case .None;     saved_position = .right;
+    //     case .Single;   saved_position = .right;
+    //     case .Double;   if editor_closing_id >= 0 then saved_position = .right;
+    //                     else if editors.active == editors.left  then saved_position = .right;
+    //                     else if editors.active == editors.right then saved_position = .left;
+    //     case .Multi;    saved_position = .right;  // @split
+    // }
     return saved_position;
 }
 
