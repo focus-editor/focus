@@ -458,14 +458,16 @@ get_session_file_path_tmp :: (subpath: string, args: .. Any) -> string /* temp *
 }
 
 editor_state_changed :: () -> bool {
-    return (
-        editors.active   != session.editors.active   ||
-        editors.left     != session.editors.left     ||
-        editors.right    != session.editors.right    ||
-        editors.layout   != session.editors.layout   ||
-        editors.expanded != session.editors.expanded
-        // NOTE: we ignore .closing because we don't care
-    );
+    return false;
+    // TODO: 
+    // return (
+    //     editors.active   != session.editors.active   ||
+    //     editors.left     != session.editors.left     ||
+    //     editors.right    != session.editors.right    ||
+    //     editors.layout   != session.editors.layout   ||
+    //     editors.expanded != session.editors.expanded
+    //     // NOTE: we ignore .closing because we don't care
+    // );
 }
 
 #scope_export
