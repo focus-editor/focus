@@ -182,9 +182,11 @@ remember_cursor_positions :: (buffer_id: s64, in: enum { all_editors; active_edi
     cursor_positions: [..] Editor_Cursor_Position;
     cursor_positions.allocator = temp;
 
+    active_editor_id := get_active_editor_id();
+
     for * editor, editor_id : open_editors {
         if editor.buffer_id != buffer_id continue;
-        if in == .active_editor && editor_id != editors.active continue;
+        if in == .active_editor && editor_id != active_editor_id continue;
         editor.refresh_selection = true;
 
         new_edit_group(buffer, editor);
@@ -778,10 +780,8 @@ save_buffer_to_file :: (buffer: *Buffer, buffer_id: s64, file_path: string) {
         if new_id < 0 return;  // logged elsewhere
 
         reroute_active_editor(buffer_id, new_id);
-        update_window_title(open_editors[editors.active].buffer_id);
-
-        array_ordered_remove_by_value(*most_recent_buffers, new_id);
-        array_insert_at(*most_recent_buffers, new_id, 0);
+        update_window_title(open_editors[get_active_editor_id()].buffer_id);
+        update_most_recent_buffers(new_id);
     }
 
     start_watching_file_if_not_already(file_path);
@@ -813,7 +813,8 @@ save_buffer :: (using buffer: *Buffer, buffer_id: s64) {
         error_when_saving = true;
     }
     remember_last_mod_info(buffer);
-    if editors.active >= 0 && editors.active < open_editors.count then update_window_title(open_editors[editors.active].buffer_id);
+    active_editor_id := get_active_editor_id();
+    if active_editor_id >= 0 && active_editor_id < open_editors.count then update_window_title(open_editors[active_editor_id].buffer_id);
 
     // The config will attempt to refresh again on a file watcher message, but it should exit early because it will be unchanged.
     // We're doing it here because this way we always refresh right away, without waiting for a message to wake us up
@@ -827,7 +828,7 @@ reroute_active_editor :: (old_buffer_id: s64, new_buffer_id: s64) {
     old_buffer := *open_buffers[old_buffer_id];
     new_buffer := *open_buffers[new_buffer_id];
 
-    editor := *open_editors[editors.active];
+    editor := *open_editors[get_active_editor_id()];
 
     if editor.buffer_id == old_buffer_id {
         editor.buffer_id = new_buffer_id;

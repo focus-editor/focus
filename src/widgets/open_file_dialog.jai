@@ -89,15 +89,11 @@ show_open_file_dialog :: (mode: Open_File_Dialog.Mode, buffer_id_to_save: s64 = 
     open_file_dialog.mode = mode;
     open_file_dialog.buffer_id_to_save = buffer_id_to_save;
 
-    if mode == .open_editors && most_recent_buffers.count >= 2 && editors.active >= 0 {
-        active_buffer_id := open_editors[editors.active].buffer_id;
-        if active_buffer_id == most_recent_buffers[0] {
-            // Swap the first 2 buffers so that we don't show the current buffer first
-            Swap(*most_recent_buffers[0], *most_recent_buffers[1]);
-        }
-    }
-
     refresh_entries();
+
+    if open_file_dialog.mode == .open_editors && open_file_dialog.entries.filtered.count >= 2 {
+        open_file_dialog.entries.selected = 1;
+    }
 }
 
 close_open_file_dialog :: (result: Open_File_Dialog.Result, selected_path := "") {

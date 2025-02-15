@@ -272,7 +272,7 @@ build_panel_grab_focus :: () {
 }
 
 build_panel_toggle_focus :: () {
-    if editors.active == build_editor_id {
+    if active_global_widget == .build_panel {
         build_panel_lose_focus();
     } else {
         build_panel_grab_focus();
@@ -306,19 +306,20 @@ build_panel_set_width :: (width: float) {
 build_panel_get_position :: () -> Build_Panel_Position {
     if config.settings.build_panel_stays_in_one_place return .right;
 
-    if #complete editors.layout == {
-        case .None;     saved_position = .right;
-        case .Single;   saved_position = .right;
-        case .Double;   if editor_closing_id >= 0 then saved_position = .right;
-                        else if editors.active == editors.left  then saved_position = .right;
-                        else if editors.active == editors.right then saved_position = .left;
-        case .Multi;    saved_position = .right;  // @split
-    }
+    // !!! @incomplete - should be based on the visual position of the active pane
+    // if #complete editors.layout == {
+    //     case .None;     saved_position = .right;
+    //     case .Single;   saved_position = .right;
+    //     case .Double;   if editor_closing_id >= 0 then saved_position = .right;
+    //                     else if editors.active == editors.left  then saved_position = .right;
+    //                     else if editors.active == editors.right then saved_position = .left;
+    //     case .Multi;    saved_position = .right;  // @split
+    // }
     return saved_position;
 }
 
 build_panel_is_active :: inline () -> bool {
-    return build_panel_is_shown && build_editor_id >= 0 && editors.active == build_editor_id;
+    return build_panel_is_shown && active_global_widget == .build_panel;
 }
 
 cursor_is_on_build_error :: (cursor: Cursor) -> bool {
