@@ -871,6 +871,8 @@ all_cursors_can_auto_delete_closing_bracket :: (using editor: Editor, buffer: Bu
 }
 
 close_editor :: () {
+    if build_panel_is_active() { hide_build_panel(); return; }
+
     active_pane := editors.active_pane;
     if active_pane.editor_ids {
         close_editor_by_id(active_pane.editor_ids[active_pane.editor_index]);
@@ -924,20 +926,27 @@ close_editors_for_buffer :: (buffer_id: s64) {
 }
 
 close_other_editors :: () {
-    // TODO: rewrite
-    // array_reset_keeping_memory(*most_recent_buffers);
+    if build_panel_is_active() return;
 
-    // using editors;
-    // left_valid  := left  >= 0 && left  < open_editors.count;
-    // right_valid := right >= 0 && right < open_editors.count;
-    // if left_valid  then array_add_if_unique(*most_recent_buffers, open_editors[left].buffer_id);
-    // if right_valid then array_add_if_unique(*most_recent_buffers, open_editors[right].buffer_id);
+    active_editor_id := get_active_editor_id();
+    editors_to_close: [..] s64;
+    editors_to_close.allocator = temp;
+    for editors.active_pane.editor_ids {
+        if it == active_editor_id continue;
+        array_add(*editors_to_close, it);
+    }
 
-    // close_other_editor();
+    num_closed := 0;
+    for editors_to_close {
+        close_editor_by_id(it);
+        num_closed += 1;
+    }
+
+    add_success_message("Closed % editor%", num_closed, ifx num_closed != 1 then "s" else "", dismiss_in_seconds = 3);
 }
 
 close_all_editors :: () {
-    // TODO: 
+    // TODO:
     editors.layout = .None;
     array_reset_keeping_memory(*most_recent_buffers);
     update_window_title();
@@ -1438,6 +1447,18 @@ jump_to_search_result :: (using editor: *Editor, buffer: Buffer, move_search_poi
 reset_search_results :: (using search_bar: *Search_Bar) {
     reset(*results);
     selected_result = -1;
+}
+
+editors_get_layout :: () -> Editor_State.Layout {
+    if editors.root.layout == .single {
+        if editors.root.editor_ids {
+            return .Single;
+        } else {
+            return .None;
+        }
+    } else {
+        return .Multi;
+    }
 }
 
 // TODO: remove !!!!!!!!!!
