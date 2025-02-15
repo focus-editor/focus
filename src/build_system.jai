@@ -495,7 +495,7 @@ print_to_output_panel_from_main_thread :: (s: string, mark_as: Buffer_Region.Kin
 substitute_variables :: (using work: *Build_Thread_Work) {
     // Figure out the current file
     file := "";
-    active_pane_editor_id := get_active_editor_id(editors.active_pane);
+    active_pane_editor_id := get_active_editor_id();
     if active_pane_editor_id > 0 {
         buffer := open_buffers[open_editors[active_pane_editor_id].buffer_id];
         if buffer.has_file then file = copy_string(buffer.file.full_path);
