@@ -70,7 +70,7 @@ commands_refresh_entries :: (filter: Fuzzy_Filter) {
 
     for command : commands {
         if command.requires_layout == .Single && editors.layout == .None   continue;
-        if command.requires_layout == .Double && editors.layout != .Double continue;
+        if command.requires_layout == .Multi && editors.layout != .Multi continue;
         if !project_config.loaded && (command.action == xx Action_Editors.open_project_config || command.action == xx Action_Editors.close_project) continue;
 
         score, highlights := fuzzy_match(command.name, filter);
@@ -124,14 +124,16 @@ base_commands := #run -> [] Command {
 
         cmd( "Go To Line",                        .go_to_line,                       .Single ),
 
-        cmd( "Close All Editors",                 .close_all_editors,                .Single ),
+        cmd( "Close Editor",                      .close_editor,                     .Single ),
         cmd( "Close Other Editors",               .close_other_editors,              .Single ),
-        cmd( "Close Editor",                      .close_current_editor,             .Single ),
+        cmd( "Close All Editors",                 .close_all_editors,                .Single ),
 
-        // TODO: panes
-        // cmd( "Close Other File",                  .close_other_editor,               .Double ),
-        // cmd( "Close Left File",                   .close_left_editor,                .Double ),
-        // cmd( "Close Right File",                  .close_right_editor,               .Double ),
+        cmd( "Close Pane",                        .close_pane,                       .Single ),
+        cmd( "Close Other Panes",                 .close_other_panes,                .Single ),
+        cmd( "Close Left Pane",                   .close_left_pane,                  .Single ),
+        cmd( "Close Right Pane",                  .close_right_pane,                 .Single ),
+        cmd( "Close Top Pane",                    .close_top_pane,                   .Single ),
+        cmd( "Close Bottom Pane",                 .close_bottom_pane,                .Single ),
 
         cmd( "Save",                              .save,                             .Single ),
         cmd( "Save As",                           .save_as,                          .Single ),
@@ -176,16 +178,18 @@ base_commands := #run -> [] Command {
 
         cmd( "Strip Trailing Whitespace",         .strip_trailing_whitespace,        .Single ),
 
-        cmd( "Switch To Left Pane",               .switch_to_left_pane,              .Double ),
-        cmd( "Switch To Right Pane",              .switch_to_right_pane,             .Double ),
-        cmd( "Switch To Opposite Pane",           .switch_to_opposite_pane,          .Double ),
+        cmd( "Switch To Left Pane",               .switch_to_left_pane,              .Multi  ),
+        cmd( "Switch To Right Pane",              .switch_to_right_pane,             .Multi  ),
+        cmd( "Switch To Top Pane",                .switch_to_top_pane,               .Multi  ),
+        cmd( "Switch To Bottom Pane",             .switch_to_bottom_pane,            .Multi  ),
+        cmd( "Switch To Opposite Pane",           .switch_to_opposite_pane,          .Multi  ),
 
         cmd( "Duplicate File On The Side",        .duplicate_editor,                 .Single ),
         cmd( "Duplicate File Left",               .duplicate_editor_left,            .Single ),
         cmd( "Duplicate File Right",              .duplicate_editor_right,           .Single ),
 
-        cmd( "Move Editor Left",                  .move_editor_left,                 .Double ),
-        cmd( "Move Editor Right",                 .move_editor_right,                .Double ),
+        cmd( "Move Editor Left",                  .move_editor_left,                 .Multi  ),
+        cmd( "Move Editor Right",                 .move_editor_right,                .Multi  ),
 
         cmd( "Toggle Block Comment",              .toggle_block_comment,             .Single ),
         cmd( "Toggle Line Wrap",                  .toggle_line_wrap,                 .Single ),

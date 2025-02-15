@@ -108,16 +108,16 @@ ACTIONS_COMMON :: string.[
     "reset_font_size_to_default",
     "strip_trailing_whitespace",
 
-    "close_all_editors",
-    "close_current_editor",
+    "close_editor",
     "close_other_editors",
+    "close_all_editors",
 
-    "close_current_pane",
-    "close_other_pane",
+    "close_pane",
     "close_left_pane",
     "close_right_pane",
     "close_top_pane",
     "close_bottom_pane",
+    "close_other_panes",
 
     "close_dialog",
     "escape",
