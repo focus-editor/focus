@@ -184,7 +184,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .search_in_buffer_dropdown_mode;   open_search_bar(editor, buffer, .dropdown);
         case .close_all_editors;                close_all_editors();
         case .close_other_editors;              close_other_editors();
-        case .close_editor;                     // !!!!!!!!!! close_editor(.current);
+        case .close_editor;                     close_editor();
 
         case .close_dialog;                     hide_build_panel();
         case .escape;                           if editor.cursors.count == 1 hide_build_panel();
@@ -870,105 +870,57 @@ all_cursors_can_auto_delete_closing_bracket :: (using editor: Editor, buffer: Bu
     return true;
 }
 
-close_editor :: (position: enum { current; other; left; right; }) {
-    // TODO: rewrite
-    // using editors;
-    // if position == {
-    //     case .current; close_current_editor();
-    //     case .other;   close_other_editor();
-    //     case .left;    if layout == .Double { if active == left  close_current_editor(); else if active == right close_other_editor(); }
-    //     case .right;   if layout == .Double { if active == right close_current_editor(); else if active == left  close_other_editor(); }
-    // }
+close_editor :: () {
+    active_pane := editors.active_pane;
+    if active_pane.editor_ids {
+        close_editor_by_id(active_pane.editor_ids[active_pane.editor_index]);
+    } else {
+        close_pane();
+    }
 }
 
-close_current_editor :: () {
-    if build_panel_is_active() { hide_build_panel(); return; }
-    // !!!  TODO:
-    // close_editor_by_id(editors.active);
-}
+close_editor_by_id :: (editor_id: s64) {
+    pane := get_pane_by_editor_id(editor_id);
+    if !pane return;
 
-close_other_editor :: () {
-    if build_panel_is_active() return;  // what exactly do you want to close?
+    active_editor_id := get_active_editor_id();
 
-    // TODO:
-    // if editors.layout == {
-    //     case .None;     return;
-    //     case .Single;   return;  // don't do anything
-    //     case .Double;   close_editor_by_id(ifx editors.active == editors.left then editors.right else editors.left);
-    // }
-}
+    remove_editor_from_pane(pane, editor_id);
 
-close_editor_by_id :: (editor_id: s64, skip_animation := false) {
-    // TODO: do we really need this any more?
-    // if editors.layout == {
-    //     case .None;
-    //         do_things_on_editor_close(editor_id);
+    if editor_id == active_editor_id {
+        // We just closed the active editor
+        new_editor_id := get_visible_editor_id(pane);
+        make_editor_active(new_editor_id);
+    }
 
-    //     case .Single;
-    //         if editor_id == editors.active {
-    //             editors.layout = .None;
-    //             update_window_title();
-    //         }
-    //         do_things_on_editor_close(editor_id);
+    _buffer_is_still_open :: (pane: *Editor_Pane, buffer_id: s64) -> bool {
+        if !pane return false;
+        if pane.layout == .single {
+            for pane.editor_ids {
+                editor := *open_editors[it];
+                if editor.buffer_id == buffer_id return true;
+            }
+            return false;
+        } else {
+            result := _buffer_is_still_open(pane.child1, buffer_id);
+            if !result then result = _buffer_is_still_open(pane.child2, buffer_id);
+            return result;
+        }
+    }
 
-    //     case .Double;
-    //         if editor_id == editors.left || editor_id == editors.right {
-    //             editor_closing_id = editor_id;
-    //             if !config.settings.disable_file_open_close_animations && !skip_animation {
-    //                 // Start the animation (the layout will change when the animation is finished)
-    //                 editors_start_moving_splitter(ifx editor_id == editors.left then 0.0 else 1.0);
-    //                 make_editor_active(ifx editor_id == editors.left then editors.right else editors.left);
-    //             } else {
-    //                 make_editor_active(ifx editor_id == editors.left then editors.right else editors.left);
-    //                 finish_closing_editor();
-    //             }
-    //         } else {
-    //             do_things_on_editor_close(editor_id);
-    //         }
-    // }
+    buffer_id := open_editors[editor_id].buffer_id;
+    if !_buffer_is_still_open(editors.root, buffer_id) {
+        buffer := *open_buffers[buffer_id];
+        array_ordered_remove_by_value(*most_recent_buffers, buffer_id);
+        if !buffer.modified then buffer.num_times_opened = 0;  // deprioritise it in the full file list
+        if !buffer.has_file { buffer.deleted = true; buffer.modified = false; }  // don't show any <new file>'s in the list if we closed them
+    }
 }
 
 close_editors_for_buffer :: (buffer_id: s64) {
-    should_skip_animation := false;
-    if editors.layout == .Double {
-        left_editor  := *open_editors[editors.left];
-        right_editor := *open_editors[editors.right];
-        should_skip_animation = left_editor.buffer_id == buffer_id && right_editor.buffer_id == buffer_id;
-    }
     for editor, editor_id : open_editors {
-        if editor.buffer_id == buffer_id then close_editor_by_id(editor_id, skip_animation = should_skip_animation);
+        if editor.buffer_id == buffer_id then close_editor_by_id(editor_id);
     }
-}
-
-finish_closing_editor :: () {
-    // TODO: maybe get rid of it if possible?
-    // if editors.layout == .Double {
-    //     editors.layout = .Single;
-    //     editors.left  = editors.active;  // editor history needs it for comparison
-    //     editors.right = editors.active;
-    // }
-    do_things_on_editor_close(editor_closing_id);
-    editor_closing_id = -1;
-}
-
-do_things_on_editor_close :: (editor_id: s64) {
-    if editor_id < 0 return;
-    editor := *open_editors[editor_id];
-    buffer := *open_buffers[editor.buffer_id];
-
-    // TODO: rewrite
-    // buffer_is_still_visible := false;
-    // if #complete editors.layout == {
-    //     case .None;
-    //     case .Single; buffer_is_still_visible = open_editors[editors.active].buffer_id == editor.buffer_id;
-    //     case .Double; buffer_is_still_visible = open_editors[editors.left].buffer_id == editor.buffer_id || open_editors[editors.right].buffer_id == editor.buffer_id;
-    //     case .Multi;  // @split
-    // }
-    // if !buffer_is_still_visible {
-    //     array_ordered_remove_by_value(*most_recent_buffers, editor.buffer_id);
-    //     if !buffer.modified then buffer.num_times_opened = 0;  // deprioritise it in the full file list
-    //     if !buffer.has_file { buffer.deleted = true; buffer.modified = false; }  // get rid of newly created buffers we're closing
-    // }
 }
 
 close_other_editors :: () {
@@ -985,9 +937,22 @@ close_other_editors :: () {
 }
 
 close_all_editors :: () {
+    // TODO: 
     editors.layout = .None;
     array_reset_keeping_memory(*most_recent_buffers);
     update_window_title();
+}
+
+remove_editor_from_pane :: (pane: *Editor_Pane, editor_id: s64) {
+    found, index := array_find(pane.editor_ids, editor_id);
+    if !found return;
+    array_ordered_remove_by_index(*pane.editor_ids, index);
+    if pane.editor_index >= index then pane.editor_index -= 1;
+    if pane.editor_ids && pane.editor_index < 0 then pane.editor_index = 0;
+}
+
+close_pane :: () {
+    // !!! TODO:
 }
 
 search_bar_is_open :: inline (using editor: *Editor) -> bool {
@@ -1174,8 +1139,7 @@ move_editor :: (placement: Editor_Placement) {
     if editor_id < 0 return;  // nothing to move
     buffer_id := open_editors[editor_id].buffer_id;
 
-    array_ordered_remove_by_index(*active_pane.editor_ids, active_pane.editor_index);
-    if !active_pane.editor_ids || active_pane.editor_index > 0 then active_pane.editor_index -= 1;  // focus previous editor
+    remove_editor_from_pane(active_pane, editor_id);
 
     target_pane := get_relative_editor_pane_by_placement(active_pane, placement);
     if !target_pane then target_pane = split_active_pane(placement);
@@ -1382,6 +1346,18 @@ find_all :: (using search_bar: *Search_Bar, needle: string, buffer: Buffer) {
 
         offset += needle.count;
     }
+}
+
+get_pane_by_editor_id :: (editor_id: s64) -> *Editor_Pane {
+    _find_pane :: (pane: *Editor_Pane, editor_id: s64) -> *Editor_Pane {
+        if !pane return null;
+        if pane.layout == .single && array_find(pane.editor_ids, editor_id) return pane;
+        result := _find_pane(pane.child1, editor_id);
+        if !result then result = _find_pane(pane.child2, editor_id);
+        return result;
+    }
+
+    return _find_pane(editors.root, editor_id);
 }
 
 get_relative_editor_pane_by_placement :: (using pane: *Editor_Pane, placement: Editor_Placement) -> *Editor_Pane {
@@ -1686,6 +1662,11 @@ viewport_glue_to_point :: (editor: *Editor, buffer: Buffer) -> changed: bool {
 }
 
 make_editor_active :: (editor_id: s64) {
+    if editor_id < 0 {
+        update_window_title(-1);
+        return;
+    }
+
     assert(editor_id < open_editors.count, "Trying to activate editor using an invalid editor id: % (max is %)", editor_id, open_editors.count - 1);
     if editors.last_active_editor_id != editor_id then cursors_start_blinking();
     editors.last_active_editor_id = editor_id;
