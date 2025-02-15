@@ -146,11 +146,11 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
             // Actions which close the search bar
             case .close_all_editors;                close_search_bar(editor);
             case .close_other_editors;              close_search_bar(editor);
-            case .close_current_editor;             close_search_bar(editor);
+            case .close_editor;                     close_search_bar(editor);
             case .choose_language;                  close_search_bar(editor);
 
             // Actions which don't close the search bar
-            case .close_other_pane;
+            case .close_other_panes;
             case .indentation_detect_from_buffer_contents;
             case .indentation_use_defaults_for_buffer;
             case .indentation_convert_to_tabs_for_buffer;
@@ -184,11 +184,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .search_in_buffer_dropdown_mode;   open_search_bar(editor, buffer, .dropdown);
         case .close_all_editors;                close_all_editors();
         case .close_other_editors;              close_other_editors();
-        case .close_current_editor;             close_editor(.current);
-        // TODO:
-        // case .close_other_editor;               close_editor(.other);
-        // case .close_left_editor;                close_editor(.left);
-        // case .close_right_editor;               close_editor(.right);
+        case .close_editor;                     // !!!!!!!!!! close_editor(.current);
 
         case .close_dialog;                     hide_build_panel();
         case .escape;                           if editor.cursors.count == 1 hide_build_panel();
