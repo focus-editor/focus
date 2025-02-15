@@ -235,7 +235,7 @@ maybe_close_file_under_cursor :: () {
 
     for editor, editor_id : open_editors {
         if editor.buffer_id != buffer_id continue;
-        close_editor_by_id(editor_id, skip_animation = true);
+        close_editor_by_id(editor_id);
     }
 
     refresh_entries(clear_input = false);
