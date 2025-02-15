@@ -29,7 +29,7 @@ draw_frame :: () {
     active_editor_rect: Rect = ---;
 
     // Draw editors
-    if editors.root.layout == .single && editors.root.editor_index < 0 {
+    if editors_get_layout() == .None {
         draw_welcome_screen(screen);
     } else {
         root_editor_pane_id := get_ui_id_from_loc();
