@@ -68,9 +68,11 @@ Commands_Dialog :: struct {
 commands_refresh_entries :: (filter: Fuzzy_Filter) {
     using commands_dialog;
 
+    editor_layout := editors_get_layout();
+
     for command : commands {
-        if command.requires_layout == .Single && editors.layout == .None   continue;
-        if command.requires_layout == .Multi && editors.layout != .Multi continue;
+        if command.requires_layout == .Single && editor_layout == .None   continue;
+        if command.requires_layout == .Multi && editor_layout != .Multi continue;
         if !project_config.loaded && (command.action == xx Action_Editors.open_project_config || command.action == xx Action_Editors.close_project) continue;
 
         score, highlights := fuzzy_match(command.name, filter);
