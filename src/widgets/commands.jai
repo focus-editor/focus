@@ -22,7 +22,7 @@ commands_execute_selected :: (placement: Editor_Placement = .in_place) {
         handled := handle_common_editor_action(action, placement);
         if !handled {
             editor, buffer := get_active_editor_and_buffer();
-            if editor then active_editor_handle_event(editor, buffer, Input.Event.{}, action);
+            active_editor_handle_event(editor, buffer, Input.Event.{}, action);
         }
     }
 }
