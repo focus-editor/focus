@@ -10,15 +10,8 @@ editors_handle_event :: (event: Input.Event) -> handled: bool {
                 if active_hold_actions && !is_hold_action(action) return true;  // don't execute any non-hold actions while hold actions are active
 
                 editor, buffer := get_active_editor_and_buffer();
-                if editor {
-                    return active_editor_handle_event(editor, buffer, event, action);
-                } else {
-                    if action == {
-                        case .escape;           #through;
-                        case .close_dialog;     hide_build_panel();     return true;
-                    }
-                    return false;
-                }
+                return active_editor_handle_event(editor, buffer, event, action);
+
             } else {
                 hold_actions_to_be_stopped := map_key_release_to_hold_actions(event, Action_Editors);
                 for hold_actions_to_be_stopped {
@@ -74,6 +67,32 @@ editors_handle_file_drop :: (files: [] string) {
 }
 
 active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Event, action: Action_Editors) -> handled: bool {
+    // Handle actions which work without an active editor first
+    handled := true;
+    if action == {
+        case .close_all_editors;                close_all_editors();
+        case .close_other_editors;              close_other_editors();
+        case .close_editor;                     close_editor();
+
+        case .close_pane;                       close_pane(.in_place);
+        case .close_left_pane;                  close_pane(.left);
+        case .close_right_pane;                 close_pane(.right);
+        case .close_top_pane;                   close_pane(.top);
+        case .close_bottom_pane;                close_pane(.bottom);
+        case .close_other_panes;                //close_other_panes();  !!! TODO
+
+        case;                                   handled = false;
+    }
+    if handled return true;
+
+    if !editor {
+        if action == {
+            case .escape;                           hide_build_panel();         return true;
+            case .close_dialog;                     hide_build_panel();         return true;
+        }
+        return false;
+    }
+
     context.current_editor_id = get_active_editor_id();  // used for edit notifications
     defer context.current_editor_id = -1;
 
@@ -134,23 +153,12 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         if editor_action == {
             // Actions which act differently in this context
             case .select_all_occurrences;           select_all_occurrences(editor, buffer, to_string(input.text)); close_search_bar(editor); return true;
-            // TODO !!!!!!!!!!!!!:
-            // case .close_left_editor;                if editors.active == editors.left  close_search_bar(editor); close_editor(.left);  return true;
-            // case .close_right_editor;               if editors.active == editors.right close_search_bar(editor); close_editor(.right); return true;
-            // !!!!!!!!!!
-            // case .close_left_pane;
-            // case .close_right_pane;
-            // case .close_top_pane;
-            // case .close_bottom_pane;
+
 
             // Actions which close the search bar
-            case .close_all_editors;                close_search_bar(editor);
-            case .close_other_editors;              close_search_bar(editor);
-            case .close_editor;                     close_search_bar(editor);
             case .choose_language;                  close_search_bar(editor);
 
             // Actions which don't close the search bar
-            case .close_other_panes;
             case .indentation_detect_from_buffer_contents;
             case .indentation_use_defaults_for_buffer;
             case .indentation_convert_to_tabs_for_buffer;
@@ -175,16 +183,13 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
     keep_selection := false;
     enabled_whole_words := false;
 
-    handled := true;
+    handled = true;
 
     if action == {
         // General actions (which are not associated with any cursor)
         case .toggle_expand;                    toggle_expand();
         case .search_in_buffer;                 open_search_bar(editor, buffer);
         case .search_in_buffer_dropdown_mode;   open_search_bar(editor, buffer, .dropdown);
-        case .close_all_editors;                close_all_editors();
-        case .close_other_editors;              close_other_editors();
-        case .close_editor;                     close_editor();
 
         case .close_dialog;                     hide_build_panel();
         case .escape;                           if editor.cursors.count == 1 hide_build_panel();
@@ -204,7 +209,6 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .duplicate_editor_left;            switch_to_pane(.left,        duplicate_current = true);
         case .duplicate_editor_right;           switch_to_pane(.right,       duplicate_current = true);
 
-        // !!!!!!!!!
         case .move_editor_left;                 move_editor(.left);
         case .move_editor_right;                move_editor(.right);
         case .move_editor_top;                  move_editor(.top);
@@ -873,11 +877,11 @@ all_cursors_can_auto_delete_closing_bracket :: (using editor: Editor, buffer: Bu
 close_editor :: () {
     if build_panel_is_active() { hide_build_panel(); return; }
 
-    active_pane := editors.active_pane;
-    if active_pane.editor_ids {
-        close_editor_by_id(active_pane.editor_ids[active_pane.editor_index]);
+    active_editor_id := get_active_editor_id();
+    if active_editor_id >= 0 {
+        close_editor_by_id(active_editor_id);
     } else {
-        close_pane();
+        close_pane(.in_place);
     }
 }
 
@@ -910,13 +914,16 @@ close_editor_by_id :: (editor_id: s64) {
         }
     }
 
-    buffer_id := open_editors[editor_id].buffer_id;
+    editor := *open_editors[editor_id];
+    buffer_id := editor.buffer_id;
     if !_buffer_is_still_open(editors.root, buffer_id) {
         buffer := *open_buffers[buffer_id];
         array_ordered_remove_by_value(*most_recent_buffers, buffer_id);
         if !buffer.modified then buffer.num_times_opened = 0;  // deprioritise it in the full file list
         if !buffer.has_file { buffer.deleted = true; buffer.modified = false; }  // don't show any <new file>'s in the list if we closed them
     }
+
+    close_search_bar(editor);
 }
 
 close_editors_for_buffer :: (buffer_id: s64) {
@@ -925,14 +932,11 @@ close_editors_for_buffer :: (buffer_id: s64) {
     }
 }
 
-close_other_editors :: () {
-    if build_panel_is_active() return;
-
-    active_editor_id := get_active_editor_id();
+close_editors_for_pane :: (pane: *Editor_Pane, except := -1) -> num_closed: int {
     editors_to_close: [..] s64;
     editors_to_close.allocator = temp;
-    for editors.active_pane.editor_ids {
-        if it == active_editor_id continue;
+    for pane.editor_ids {
+        if it == except continue;
         array_add(*editors_to_close, it);
     }
 
@@ -941,6 +945,14 @@ close_other_editors :: () {
         close_editor_by_id(it);
         num_closed += 1;
     }
+
+    return num_closed;
+}
+
+close_other_editors :: () {
+    if build_panel_is_active() return;
+
+    num_closed := close_editors_for_pane(editors.active_pane, except = get_active_editor_id());
 
     add_success_message("Closed % editor%", num_closed, ifx num_closed != 1 then "s" else "", dismiss_in_seconds = 3);
 }
@@ -960,8 +972,31 @@ remove_editor_from_pane :: (pane: *Editor_Pane, editor_id: s64) {
     if pane.editor_ids && pane.editor_index < 0 then pane.editor_index = 0;
 }
 
-close_pane :: () {
-    // !!! TODO:
+close_pane :: (placement: Editor_Placement) {
+    // TODO: check behaviour while the build panel is open
+    target_pane := get_relative_editor_pane_by_placement(editors.active_pane, placement);
+    if !target_pane return;
+    assert_leaf_pane(target_pane, "Attempting to close a non-leaf pane. This is a bug.");
+
+    close_editors_for_pane(target_pane);
+
+    using target_pane;
+
+    if parent != null {
+        assert(!parent.editor_ids);
+        sibling := ifx parent.child1 == target_pane then parent.child2 else parent.child1;
+
+        parents_parent := parent.parent;
+        parent.* = sibling.*;
+        parent.parent = parents_parent;  // we only need to preserve the original parent
+
+        if target_pane == editors.active_pane then activate_pane(parent);
+        if sibling     == editors.active_pane then editors.active_pane = parent;
+
+        array_reset(*target_pane.editor_ids);
+        free(target_pane);
+        free(sibling);
+    }
 }
 
 search_bar_is_open :: inline (using editor: *Editor) -> bool {
@@ -1173,60 +1208,19 @@ move_editor :: (placement: Editor_Placement) {
     make_editor_active(editor_id);
 }
 
+activate_pane :: (pane: *Editor_Pane) {
+    if !pane return;
+    editor_id := get_visible_editor_id(pane);
+    if editor_id >= 0 then make_editor_active(editor_id);
+    editors.active_pane = pane;
+}
+
 switch_to_pane :: (placement: Editor_Placement, duplicate_current := false) {
     if build_panel_is_active() then build_panel_lose_focus();
     if placement == .in_place return;
 
     target_pane := get_relative_editor_pane_by_placement(editors.active_pane, placement);
-    if !target_pane return;
-
-    target_editor_id := get_visible_editor_id(target_pane);
-    if target_editor_id >= 0 then make_editor_active(target_editor_id);
-    editors.active_pane = target_pane;
-
-    // if editors.layout == {
-    //     case .None; return;
-
-    //     case .Single;
-    //         duplicated_editor := duplicate_active_editor();
-
-    //         if side == {
-    //             case .left;
-    //                 editors.left   = duplicated_editor;
-    //                 editors.right  = editors.active;
-    //                 editors.active = editors.left;
-    //                 editors_start_moving_splitter(0.5, start = 0.0);
-    //             case .right; #through;
-    //             case .other;
-    //                 editors.left   = editors.active;
-    //                 editors.right  = duplicated_editor;
-    //                 editors.active = editors.right;
-    //                 editors_start_moving_splitter(0.5, start = 1.0);
-    //         }
-    //         editors.layout = .Double;
-
-    //     case .Double;
-    //         if side == {
-    //             case .left;  if editors.active == editors.left  then return;
-    //             case .right; if editors.active == editors.right then return;
-    //             case .other; if editors.active == editors.left  then side = .right; else side = .left;
-    //         }
-    //         if duplicate_current {
-    //             duplicated_editor := duplicate_active_editor();
-
-    //             if side == .left {
-    //                 editors.left   = duplicated_editor;
-    //                 editors.right  = editors.active;
-    //             } else {
-    //                 editors.right  = duplicated_editor;
-    //                 editors.left   = editors.active;
-    //             }
-    //             editors.active = duplicated_editor;
-    //         }
-    //         editors.active = ifx side == .left then editors.left else editors.right;
-    // }
-
-    // make_editor_active(editors.active);
+    activate_pane(target_pane);
 }
 
 split_active_pane :: (placement: Editor_Placement) -> *Editor_Pane {
