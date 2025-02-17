@@ -2809,7 +2809,7 @@ draw_unsaved_buffers_dialog :: () {
     }
 
     num_unsaved_buffers := unsaved_buffers_dialog.unsaved_buffer_ids.count;
-    header  := "Unsaved files exist. Continue?";
+    header  := "Unsaved files. Continue?";
     message := "Please decide what to do with the following files:";
     if num_unsaved_buffers == 1 {
         header  = "Unsaved file. Continue?";
