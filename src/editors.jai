@@ -973,22 +973,27 @@ remove_editor_from_pane :: (pane: *Editor_Pane, editor_id: s64) {
 }
 
 close_pane :: (placement: Editor_Placement) {
-    // TODO: check behaviour while the build panel is open
+    if build_panel_is_active() { hide_build_panel(); return; }
+
     target_pane := get_relative_editor_pane_by_placement(editors.active_pane, placement);
     if !target_pane return;
     assert_leaf_pane(target_pane, "Attempting to close a non-leaf pane. This is a bug.");
 
     close_editors_for_pane(target_pane);
 
-    using target_pane;
-
+    parent := target_pane.parent;
     if parent != null {
+        // We will replace the target pane's parent with its sibling
         assert(!parent.editor_ids);
         sibling := ifx parent.child1 == target_pane then parent.child2 else parent.child1;
 
         parents_parent := parent.parent;
         parent.* = sibling.*;
-        parent.parent = parents_parent;  // we only need to preserve the original parent
+        parent.parent = parents_parent;  // preserve the original parent
+        if sibling.layout != .single {
+            sibling.child1.parent = parent;
+            sibling.child2.parent = parent;
+        }
 
         if target_pane == editors.active_pane then activate_pane(parent);
         if sibling     == editors.active_pane then editors.active_pane = parent;
