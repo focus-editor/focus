@@ -8,6 +8,7 @@ tokenize_lua :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] B
         if token.type == .eof then break;
 
         prev := tokenizer.last_token;
+
         if (token.type == .punctuation && token.punctuation == .l_paren) && prev.type == .identifier {
             memset(tokens.data + prev.start, xx Token_Type.function, prev.len);
         }
@@ -434,6 +435,7 @@ KEYWORDS :: string.[
     "and", "break", "do", "else", "elseif", "end", "for",
     "function", "goto", "if", "in", "local", "not", "or",
     "repeat", "return", "then", "until", "while",
+    "require",
 ];
 
 VALUE_KEYWORDS :: string.[
@@ -456,6 +458,14 @@ PUNCTUATION :: string.[
     "l_bracket", "r_bracket",
 ];
 
+// https://www.lua.org/manual/5.4/manual.html#6.1
+BUILTIN_FUNCTIONS :: string.[
+    "assert", "collectgarbage", "dofile", "error", "getglobal", "getmetatable", "ipairs",
+    "load", "loadfile", "next", "pcall", "pairs", "print", "rawequal", "rawget", "rawset",
+    "select", "setfallback", "setglobal", "setmetatable", "tostring", "tonumber", "type",
+    "warn", "xpcall",
+];
+
 #insert -> string {
     b: String_Builder;
     init_string_builder(*b);
@@ -470,7 +480,7 @@ PUNCTUATION :: string.[
 
     define_enum(*b, "Punctuation", "",           .[PUNCTUATION]);
     define_enum(*b, "Operation",   "",           .[OPERATIONS]);
-    define_enum(*b, "Keyword",     "kw_",        .[KEYWORDS, VALUE_KEYWORDS]);
+    define_enum(*b, "Keyword",     "kw_",        .[KEYWORDS, VALUE_KEYWORDS, BUILTIN_FUNCTIONS]);
 
     return builder_to_string(*b);
 }
@@ -487,8 +497,9 @@ KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
 
     #insert -> string {
         b: String_Builder;
-        for KEYWORDS        append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword, keyword = .kw_%1 });\n", it));
-        for VALUE_KEYWORDS  append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value,   keyword = .kw_%1 });\n", it));
+        for KEYWORDS          append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .keyword,          keyword = .kw_%1 });\n", it));
+        for VALUE_KEYWORDS    append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .value,            keyword = .kw_%1 });\n", it));
+        for BUILTIN_FUNCTIONS append(*b, sprint("table_add(*table, \"%1\", Keyword_Token.{ type = .builtin_function, keyword = .kw_%1 });\n", it));
         return builder_to_string(*b);
     }
 
@@ -497,7 +508,8 @@ KEYWORD_MAP :: #run -> Table(string, Keyword_Token) {
 
 MAX_KEYWORD_LENGTH :: #run -> s32 {
     result: s64;
-    for KEYWORDS       { if result < it.count then result = it.count; }
-    for VALUE_KEYWORDS { if result < it.count then result = it.count; }
+    for KEYWORDS          { if result < it.count then result = it.count; }
+    for VALUE_KEYWORDS    { if result < it.count then result = it.count; }
+    for BUILTIN_FUNCTIONS { if result < it.count then result = it.count; }
     return xx result;
 }
