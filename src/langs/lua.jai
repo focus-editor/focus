@@ -12,8 +12,18 @@ tokenize_lua :: (using buffer: *Buffer, start_offset := -1, count := -1) -> [] B
             memset(tokens.data + prev.start, xx Token_Type.function, prev.len);
         }
 
-        if token.type == .identifier && (prev.type == .keyword && prev.keyword == .kw_function) {
-            memset(tokens.data + token.start, xx Token_Type.function, token.len);
+        if token.type == .identifier {
+            if prev.type == .keyword && prev.keyword == .kw_function {
+                memset(tokens.data + token.start, xx Token_Type.function, token.len);
+            } else {
+                // Read the identifier to see if it's one of the built-in functions
+                ident := string.{token.len, tokenizer.buf.data + token.start};
+                if array_find(BUILTIN_FUNCTIONS, ident) {
+                    memset(tokens.data + token.start, xx Token_Type.function, token.len);
+                } else {
+                    memset(tokens.data + token.start, xx token.type, token.len);
+                }
+            }
         } else {
             memset(tokens.data + token.start, xx token.type, token.len);
         }
@@ -434,6 +444,7 @@ KEYWORDS :: string.[
     "and", "break", "do", "else", "elseif", "end", "for",
     "function", "goto", "if", "in", "local", "not", "or",
     "repeat", "return", "then", "until", "while",
+    "require",
 ];
 
 VALUE_KEYWORDS :: string.[
@@ -454,6 +465,19 @@ PUNCTUATION :: string.[
     "l_paren", "r_paren",
     "l_brace", "r_brace",
     "l_bracket", "r_bracket",
+];
+
+// https://www.lua.org/manual/5.4/manual.html#6.1
+BUILTIN_FUNCTIONS :: string.[
+    "dofile", "load", "loadfile",
+    "type", "tostring", "tonumber", "print",
+    "assert", "error", "warn", "pcall", "xpcall",
+    "setglobal", "getglobal",
+    "setmetatable", "getmetatable",
+    "rawget", "rawset", "next", "select",
+    "setfallback", "collectgarbage",
+    "pairs", "ipairs",
+    "rawequal",
 ];
 
 #insert -> string {
