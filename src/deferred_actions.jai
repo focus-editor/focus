@@ -219,6 +219,8 @@ execute_save_as :: (action: Deferred_Action) -> Action_Result {
             push_action(.confirm_overwrite, .{ confirm_overwrite = .{ buffer_id = buffer_id, is_move = is_move, file_path = copy_string(file_path) } });
             return .NEXT;
         } else {
+            found, directory, file := split_from_right(file_path, #char "/");
+            if found && directory.count > 0  make_directory_if_it_does_not_exist(directory, recursive=true);
             save_buffer_to_file(buffer, buffer_id, file_path);
             if buffer.error_when_saving {
                 add_user_error("Unable to save file into '%'", file_path);
