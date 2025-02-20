@@ -958,10 +958,22 @@ close_other_editors :: () {
 }
 
 close_all_editors :: () {
-    // TODO:
-    editors.layout = .None;
     array_reset_keeping_memory(*most_recent_buffers);
-    update_window_title();
+
+    _free_pane_tree :: (pane: *Editor_Pane) {
+        if !pane return;
+
+        _free_pane_tree(pane.child1);
+        _free_pane_tree(pane.child2);
+
+        array_reset(*pane.editor_ids);
+        free(pane);
+    }
+
+    _free_pane_tree(editors.root);
+
+    editors.root = New(Editor_Pane);
+    activate_pane(editors.root);
 }
 
 remove_editor_from_pane :: (pane: *Editor_Pane, editor_id: s64) {
@@ -975,17 +987,17 @@ remove_editor_from_pane :: (pane: *Editor_Pane, editor_id: s64) {
 close_pane :: (placement: Editor_Placement) {
     if build_panel_is_active() { hide_build_panel(); return; }
 
-    target_pane := get_relative_editor_pane_by_placement(editors.active_pane, placement);
-    if !target_pane return;
-    assert_leaf_pane(target_pane, "Attempting to close a non-leaf pane. This is a bug.");
+    pane := get_relative_editor_pane_by_placement(editors.active_pane, placement);
+    if !pane return;
+    assert_leaf_pane(pane, "Attempting to close a non-leaf pane. This is a bug.");
 
-    close_editors_for_pane(target_pane);
+    close_editors_for_pane(pane);
 
-    parent := target_pane.parent;
+    parent := pane.parent;
     if parent != null {
         // We will replace the target pane's parent with its sibling
         assert(!parent.editor_ids);
-        sibling := ifx parent.child1 == target_pane then parent.child2 else parent.child1;
+        sibling := ifx parent.child1 == pane then parent.child2 else parent.child1;
 
         parents_parent := parent.parent;
         parent.* = sibling.*;
@@ -995,11 +1007,11 @@ close_pane :: (placement: Editor_Placement) {
             sibling.child2.parent = parent;
         }
 
-        if target_pane == editors.active_pane then activate_pane(parent);
-        if sibling     == editors.active_pane then editors.active_pane = parent;
+        if pane == editors.active_pane then activate_pane(parent);
+        if sibling == editors.active_pane then editors.active_pane = parent;
 
-        array_reset(*target_pane.editor_ids);
-        free(target_pane);
+        array_reset(*pane.editor_ids);
+        free(pane);
         free(sibling);
     }
 }
