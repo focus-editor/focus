@@ -186,9 +186,11 @@ base_commands := #run -> [] Command {
         cmd( "Switch To Bottom Pane",             .switch_to_bottom_pane,            .Multi  ),
         cmd( "Switch To Opposite Pane",           .switch_to_opposite_pane,          .Multi  ),
 
-        cmd( "Duplicate File On The Side",        .duplicate_editor,                 .Single ),
-        cmd( "Duplicate File Left",               .duplicate_editor_left,            .Single ),
-        cmd( "Duplicate File Right",              .duplicate_editor_right,           .Single ),
+        cmd( "Duplicate Editor",                  .duplicate_editor,                 .Single ),
+        cmd( "Duplicate Editor Left",             .duplicate_editor_left,            .Single ),
+        cmd( "Duplicate Editor Right",            .duplicate_editor_right,           .Single ),
+        cmd( "Duplicate Editor Top",              .duplicate_editor_top,             .Single ),
+        cmd( "Duplicate Editor Bottom",           .duplicate_editor_bottom,          .Single ),
 
         cmd( "Move Editor Left",                  .move_editor_left,                 .Multi  ),
         cmd( "Move Editor Right",                 .move_editor_right,                .Multi  ),
