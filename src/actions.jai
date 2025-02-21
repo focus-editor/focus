@@ -229,6 +229,8 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "duplicate_editor",
     "duplicate_editor_left",
     "duplicate_editor_right",
+    "duplicate_editor_top",
+    "duplicate_editor_bottom",
 
     "move_editor_left",
     "move_editor_right",
