@@ -205,9 +205,11 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .delete_current_file;              defer_action_delete (editor.buffer_id);
         case .reload_from_disk;                 user_reload_from_disk(editor.buffer_id);
 
-        case .duplicate_editor;                 switch_to_pane(.on_the_side, duplicate_current = true);
-        case .duplicate_editor_left;            switch_to_pane(.left,        duplicate_current = true);
-        case .duplicate_editor_right;           switch_to_pane(.right,       duplicate_current = true);
+        case .duplicate_editor;                 duplicate_editor(.on_the_side);
+        case .duplicate_editor_left;            duplicate_editor(.left);
+        case .duplicate_editor_right;           duplicate_editor(.right);
+        case .duplicate_editor_top;             duplicate_editor(.top);
+        case .duplicate_editor_bottom;          duplicate_editor(.bottom);
 
         case .move_editor_left;                 move_editor(.left);
         case .move_editor_right;                move_editor(.right);
@@ -598,15 +600,7 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
     target_pane := get_relative_editor_pane_by_placement(active_pane, placement);
     if !target_pane then target_pane = split_active_pane(placement);
 
-    new_editor_id, is_new_for_this_pane := find_or_create_editor_for_pane(buffer_id, target_pane);
-    if is_new_for_this_pane {
-        new_index := target_pane.editor_index + 1;
-        array_insert_at(*target_pane.editor_ids, new_editor_id, new_index);
-        target_pane.editor_index = new_index;
-    } else {
-        _, target_pane.editor_index = array_find(target_pane.editor_ids, new_editor_id);
-        assert(target_pane.editor_index >= 0);
-    }
+    new_editor_id := editors_open_buffer_in_pane(buffer_id, target_pane);
 
     buffer := *open_buffers[buffer_id];
     if buffer.num_times_opened < 255 then buffer.num_times_opened += 1;
@@ -615,6 +609,46 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
     maybe_mark_buffer_as_deleted(buffer_id);  // check in case we missed that it's deleted
     session_notify_modified_buffer(buffer_id);
     cursors_start_blinking();
+}
+
+editors_open_buffer_in_pane :: (buffer_id: s64, target_pane: *Editor_Pane) -> editor_id: s64 {
+    assert(buffer_id >= 0 && buffer_id < open_buffers.count, "Attempt to create editor for nonexistent buffer");
+    assert_leaf_pane(target_pane, "Can't open an editor in a non-leaf pane. This is a bug.");
+
+    // Is there an editor for this buffer already in this pane?
+    for target_pane.editor_ids {
+        editor := *open_editors[it];
+        if editor.buffer_id == buffer_id {
+            _, target_pane.editor_index = array_find(target_pane.editor_ids, it);  // select the editor
+            assert(target_pane.editor_index >= 0);
+            return it;
+        }
+    }
+
+    // Build a list of editors which are already open in other panes which we don't want to touch
+    _find_existing_editors_for_buffer :: (buffer_id: s64, current_pane: *Editor_Pane, results: *[..] s64) {
+        if current_pane == null return;
+        if current_pane.layout == .single {
+            for current_pane.editor_ids {
+                editor := *open_editors[it];
+                if editor.buffer_id == buffer_id { array_add(results, it); continue; }
+            }
+        } else {
+            _find_existing_editors_for_buffer(buffer_id, current_pane.child1, results);
+            _find_existing_editors_for_buffer(buffer_id, current_pane.child2, results);
+        }
+    }
+
+    unwanted_existing_editors: [..] s64;
+    unwanted_existing_editors.allocator = temp;
+    _find_existing_editors_for_buffer(buffer_id, editors.root, *unwanted_existing_editors);
+
+    editor_id := find_or_create_editor(buffer_id, unwanted_existing_editors);
+    new_index := target_pane.editor_index + 1;
+    array_insert_at(*target_pane.editor_ids, editor_id, new_index);
+    target_pane.editor_index = new_index;
+
+    return editor_id;
 }
 
 editors_find_pane_by_editor_id :: (editor_id: s64, current_pane: *Editor_Pane) -> pane: *Editor_Pane {
@@ -630,30 +664,6 @@ get_visible_editor_id :: inline (pane: *Editor_Pane) -> s64 {
     if !pane || !pane.editor_ids return -1;
     return pane.editor_ids[pane.editor_index];
 }
-
-// !!!
-// // TODO: get pane by editor id instead?
-// editors_get_active_pane :: () -> *Editor_Pane {
-//     active_pane := _get_active_pane(editors.root);
-//     if active_pane == null {
-//         assert(editors.root == null);  // if we don't have anything active it must be because there's nothing open, otherwise it's a bug
-//         editors.root = New(Editor_Pane);
-//         active_pane = editors.root;
-//     }
-//     return active_pane;
-// }
-
-// #scope_file
-
-// _get_active_pane :: (current_pane: *Editor_Pane) -> *Editor_Pane {
-//     if !current_pane return null;
-//     if current_pane.editor_id == editors.active return current_pane;
-//     result := _get_active_pane(current_pane.child1);
-//     if !result then result = _get_active_pane(current_pane.child2);
-//     return result;
-// }
-
-// #scope_export
 
 center_viewport_on_cursor :: (using editor: *Editor, buffer: Buffer) {
     editor.scroll_to_cursor = .yes;
@@ -1232,11 +1242,39 @@ activate_pane :: (pane: *Editor_Pane) {
     editors.active_pane = pane;
 }
 
-switch_to_pane :: (placement: Editor_Placement, duplicate_current := false) {
+switch_to_pane :: (placement: Editor_Placement) {
     if build_panel_is_active() then build_panel_lose_focus();
     if placement == .in_place return;
 
     target_pane := get_relative_editor_pane_by_placement(editors.active_pane, placement);
+
+    activate_pane(target_pane);
+}
+
+duplicate_editor :: (placement: Editor_Placement) {
+    if build_panel_is_active() then build_panel_lose_focus();
+    if placement == .in_place return;
+
+    active_editor_id := get_active_editor_id();
+    if active_editor_id < 0 return;  // nothing to duplicate
+
+    target_pane := get_relative_editor_pane_by_placement(editors.active_pane, placement);
+    if !target_pane then target_pane = split_active_pane(placement);
+
+    duplicated_editor_id := editors_open_buffer_in_pane(open_editors[active_editor_id].buffer_id, target_pane);
+    duplicated_editor := *open_editors[duplicated_editor_id];
+    current_editor    := *open_editors[active_editor_id];  // get the pointer again because it could've become invalid
+
+    // Duplicate cursors
+    if !is_empty(duplicated_editor.cursors) then reset(*duplicated_editor.cursors);
+    for current_editor.cursors { add(*duplicated_editor.cursors, it); }
+    duplicated_editor.main_cursor     = current_editor.main_cursor;
+    duplicated_editor.original_cursor = current_editor.original_cursor;
+
+    // Move viewport
+    duplicated_editor.viewport.scroll_x = current_editor.viewport.scroll_x;
+    duplicated_editor.viewport.scroll_y = current_editor.viewport.scroll_y;
+
     activate_pane(target_pane);
 }
 
@@ -1744,38 +1782,6 @@ line_wrap_is_active :: inline (editor: Editor) -> bool {
     return editor.line_wrap == .on || editor.line_wrap == .to_disable;
 }
 
-find_or_create_editor_for_pane :: (buffer_id: s64, pane: *Editor_Pane) -> editor_id: s64, is_new_for_this_pane: bool {
-    assert(buffer_id >= 0 && buffer_id < open_buffers.count, "Attempt to create editor for nonexistent buffer");
-    assert_leaf_pane(pane, "Can't open an editor in a non-leaf pane. This is a bug.");
-
-    // Is there an editor for this buffer already in this pane?
-    for pane.editor_ids {
-        editor := *open_editors[it];
-        if editor.buffer_id == buffer_id return it, false;
-    }
-
-    // Build a list of editors which are already open in other panes which we don't want to touch
-    _find_existing_editors_for_buffer :: (buffer_id: s64, current_pane: *Editor_Pane, results: *[..] s64) {
-        if current_pane == null return;
-        if current_pane.layout == .single {
-            for current_pane.editor_ids {
-                editor := *open_editors[it];
-                if editor.buffer_id == buffer_id { array_add(results, it); continue; }
-            }
-        } else {
-            _find_existing_editors_for_buffer(buffer_id, current_pane.child1, results);
-            _find_existing_editors_for_buffer(buffer_id, current_pane.child2, results);
-        }
-    }
-
-    unwanted_existing_editors: [..] s64;
-    unwanted_existing_editors.allocator = temp;
-    _find_existing_editors_for_buffer(buffer_id, editors.root, *unwanted_existing_editors);
-
-    editor_id := find_or_create_editor(buffer_id, unwanted_existing_editors);
-    return editor_id, true;
-}
-
 find_or_create_editor :: (buffer_id: s64, unwanted_existing_editors: [] s64 = .[]) -> editor_id: s64, created: bool {
     assert(buffer_id >= 0 && buffer_id < open_buffers.count, "Attempt to create editor for nonexistent buffer");
     for open_editors {
@@ -2259,35 +2265,6 @@ open_file_directory :: (buffer_id: s64) {
     }
 
     platform_open_in_explorer(path);
-}
-
-// duplicate_active_editor :: () -> editor_id: s64 {
-//     current_editor       := *open_editors[editors.active];
-//     duplicated_editor_id := find_or_create_editor(current_editor.buffer_id, editors.active);
-//     current_editor        = *open_editors[editors.active];  // take the pointer again because it could've become invalid
-//     duplicated_editor    := *open_editors[duplicated_editor_id];
-
-//     // Duplicate cursors
-//     if !is_empty(duplicated_editor.cursors) then reset(*duplicated_editor.cursors);
-//     for current_editor.cursors { add(*duplicated_editor.cursors, it); }
-//     duplicated_editor.main_cursor     = current_editor.main_cursor;
-//     duplicated_editor.original_cursor = current_editor.original_cursor;
-
-//     // Move viewport
-//     duplicated_editor.viewport.scroll_x = current_editor.viewport.scroll_x;
-//     duplicated_editor.viewport.scroll_y = current_editor.viewport.scroll_y;
-
-//     return duplicated_editor_id;
-// }
-
-swap_panes :: () {
-    if editors.layout != .Double return;
-    tmp := editors.left;
-    editors.left  = editors.right;
-    editors.right = tmp;
-
-    // NOTE: this line started crashing with an access violation - @compilerbug?
-    // editors.left, editors.right = swap(editors.left, editors.right);
 }
 
 toggle_expand :: () {
