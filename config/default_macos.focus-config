@@ -209,23 +209,6 @@ Cmd-Opt-S ArrowRight            move_editor_right
 Cmd-Opt-S ArrowUp               move_editor_top
 Cmd-Opt-S ArrowDown             move_editor_bottom
 
-Ctrl-Cmd-Shift-ArrowLeft        switch_to_left_pane
-Ctrl-Cmd-Shift-ArrowRight       switch_to_right_pane
-Ctrl-Cmd-Shift-ArrowUp          switch_to_top_pane
-Ctrl-Cmd-Shift-ArrowDown        switch_to_bottom_pane
-Cmd-,                           switch_to_opposite_pane
-
-Cmd-1                           switch_to_pane_1
-Cmd-2                           switch_to_pane_2
-Cmd-3                           switch_to_pane_3
-Cmd-4                           switch_to_pane_4
-Cmd-5                           switch_to_pane_5
-Cmd-6                           switch_to_pane_6
-Cmd-7                           switch_to_pane_7
-Cmd-8                           switch_to_pane_8
-Cmd-9                           switch_to_pane_9
-Cmd-0                           switch_to_pane_10
-
 Cmd-Opt-X ArrowLeft             split_left
 Cmd-Opt-X ArrowRight            split_right
 Cmd-Opt-X ArrowUp               split_top
@@ -313,11 +296,22 @@ Cmd-B                           build_panel_toggle
 Enter                           open_entry_in_place
 Cmd-Enter                       open_entry_on_the_side
 
-Cmd-Opt-Shift-ArrowLeft         open_entry_left
-Cmd-Opt-Shift-ArrowRight        open_entry_right
-Cmd-Opt-Shift-ArrowUp           open_entry_top
-Cmd-Opt-Shift-ArrowDown         open_entry_bottom
+Ctrl-Cmd-Shift-ArrowLeft        switch_to_left_pane
+Ctrl-Cmd-Shift-ArrowRight       switch_to_right_pane
+Ctrl-Cmd-Shift-ArrowUp          switch_to_top_pane
+Ctrl-Cmd-Shift-ArrowDown        switch_to_bottom_pane
+Cmd-,                           switch_to_opposite_pane
 
+Cmd-1                           switch_to_pane_1
+Cmd-2                           switch_to_pane_2
+Cmd-3                           switch_to_pane_3
+Cmd-4                           switch_to_pane_4
+Cmd-5                           switch_to_pane_5
+Cmd-6                           switch_to_pane_6
+Cmd-7                           switch_to_pane_7
+Cmd-8                           switch_to_pane_8
+Cmd-9                           switch_to_pane_9
+Cmd-0                           switch_to_pane_10
 
 Tab                             focus_next_ui_element
 Shift-Tab                       focus_previous_ui_element

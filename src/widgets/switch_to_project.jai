@@ -6,15 +6,15 @@ switch_to_project_dialog: Switch_To_Project_Dialog;
 
 Switch_To_Project_Dialog :: struct {
     using #as generic_dialog: Generic_Choice_Dialog(Project_Config);
-    generic_dialog.global_widget_id    = .switch_to_project_dialog;
-    generic_dialog.refresh_entries     = switch_to_project_refresh_entries;
-    generic_dialog.open_entry_in_place = open_selected_project;
+    generic_dialog.global_widget_id = .switch_to_project_dialog;
+    generic_dialog.refresh_entries  = switch_to_project_refresh_entries;
+    generic_dialog.open_entry       = open_selected_project;
 };
 
 
 #scope_file
 
-open_selected_project :: () {
+open_selected_project :: (_: Editor_Placement) {
     hide_dialog(*switch_to_project_dialog);
 
     using switch_to_project_dialog;

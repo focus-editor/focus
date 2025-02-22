@@ -10,10 +10,12 @@ open_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
 
             case .open_entry_in_place;      open_file_dialog_open_entry(entries.selected, .in_place);                      return true;
             case .open_entry_on_the_side;   if mode != .save  open_file_dialog_open_entry(entries.selected, .on_the_side); return true;
-            case .open_entry_left;          if mode != .save  open_file_dialog_open_entry(entries.selected, .left);        return true;
-            case .open_entry_right;         if mode != .save  open_file_dialog_open_entry(entries.selected, .right);       return true;
-            case .open_entry_top;           if mode != .save  open_file_dialog_open_entry(entries.selected, .top);         return true;
-            case .open_entry_bottom;        if mode != .save  open_file_dialog_open_entry(entries.selected, .bottom);      return true;
+
+            case .switch_to_left_pane;      if mode != .save  open_file_dialog_open_entry(entries.selected, .left);        return true;
+            case .switch_to_right_pane;     if mode != .save  open_file_dialog_open_entry(entries.selected, .right);       return true;
+            case .switch_to_top_pane;       if mode != .save  open_file_dialog_open_entry(entries.selected, .top);         return true;
+            case .switch_to_bottom_pane;    if mode != .save  open_file_dialog_open_entry(entries.selected, .bottom);      return true;
+
             case .open_entry_in_explorer;   open_file_dialog_open_entry_in_explorer(entries.selected);                     return true;
 
             case .open_directory;           handled := open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true, slash_key_pressed = (event.key_code == #char "/"));

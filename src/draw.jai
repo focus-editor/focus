@@ -2710,9 +2710,9 @@ draw_generic_choice_dialog :: (using dialog: *Generic_Choice_Dialog, ui_id: Ui_I
                 if selected_by_mouse == entry_index && mouse.left.just_released {
                     selected = entry_index;
                     if ctrl_or_cmd_pressed() {
-                        dialog.open_entry_on_the_side();
+                        dialog.open_entry(.on_the_side);
                     } else {
-                        dialog.open_entry_in_place();
+                        dialog.open_entry(.in_place);
                     }
                     redraw_requested = true;
                     break;
