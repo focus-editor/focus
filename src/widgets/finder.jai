@@ -48,10 +48,11 @@ finder_handle_event :: (event: Input.Event) -> handled: bool {
 
             case .open_entry_in_place;      finder_open_selected_result(selected, .in_place);       return true;
             case .open_entry_on_the_side;   finder_open_selected_result(selected, .on_the_side);    return true;
-            case .open_entry_left;          finder_open_selected_result(selected, .left);           return true;
-            case .open_entry_right;         finder_open_selected_result(selected, .right);          return true;
-            case .open_entry_top;           finder_open_selected_result(selected, .top);            return true;
-            case .open_entry_bottom;        finder_open_selected_result(selected, .bottom);         return true;
+
+            case .switch_to_left_pane;      finder_open_selected_result(selected, .left);           return true;
+            case .switch_to_right_pane;     finder_open_selected_result(selected, .right);          return true;
+            case .switch_to_top_pane;       finder_open_selected_result(selected, .top);            return true;
+            case .switch_to_bottom_pane;    finder_open_selected_result(selected, .bottom);         return true;
         }
         return false;
 
