@@ -132,10 +132,23 @@ ACTIONS_COMMON :: string.[
 
     "open_entry_in_place",
     "open_entry_on_the_side",
-    "open_entry_left",
-    "open_entry_right",
-    "open_entry_top",
-    "open_entry_bottom",
+
+    "switch_to_opposite_pane",
+    "switch_to_left_pane",
+    "switch_to_right_pane",
+    "switch_to_top_pane",
+    "switch_to_bottom_pane",
+
+    "switch_to_pane_1",
+    "switch_to_pane_2",
+    "switch_to_pane_3",
+    "switch_to_pane_4",
+    "switch_to_pane_5",
+    "switch_to_pane_6",
+    "switch_to_pane_7",
+    "switch_to_pane_8",
+    "switch_to_pane_9",
+    "switch_to_pane_10",
 ];
 
 ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
@@ -203,23 +216,6 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "indentation_convert_to_tabs_for_buffer",
     "indentation_convert_to_spaces_for_buffer",
     "reload_from_disk",
-
-    "switch_to_opposite_pane",
-    "switch_to_left_pane",
-    "switch_to_right_pane",
-    "switch_to_top_pane",
-    "switch_to_bottom_pane",
-    "switch_to_pane_by_number",
-    "switch_to_pane_1",
-    "switch_to_pane_2",
-    "switch_to_pane_3",
-    "switch_to_pane_4",
-    "switch_to_pane_5",
-    "switch_to_pane_6",
-    "switch_to_pane_7",
-    "switch_to_pane_8",
-    "switch_to_pane_9",
-    "switch_to_pane_10",
 
     "split_left",
     "split_right",

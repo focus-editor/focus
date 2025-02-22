@@ -55,12 +55,7 @@ Commands_Dialog :: struct {
     using #as generic_dialog: Generic_Choice_Dialog(Command);
     generic_dialog.global_widget_id = .commands_dialog;
     generic_dialog.refresh_entries  = commands_refresh_entries;
-    generic_dialog.open_entry_in_place    = #bake_arguments commands_execute_selected(placement = .in_place);
-    generic_dialog.open_entry_on_the_side = #bake_arguments commands_execute_selected(placement = .on_the_side);
-    generic_dialog.open_entry_left        = #bake_arguments commands_execute_selected(placement = .left);
-    generic_dialog.open_entry_right       = #bake_arguments commands_execute_selected(placement = .right);
-    generic_dialog.open_entry_top         = #bake_arguments commands_execute_selected(placement = .top);
-    generic_dialog.open_entry_bottom      = #bake_arguments commands_execute_selected(placement = .bottom);
+    generic_dialog.open_entry = commands_execute_selected;
 };
 
 #scope_file
