@@ -756,8 +756,6 @@ go_to_current_build_error :: (placement: Editor_Placement = .in_place, show_erro
         editor.cursor_moved = .jumped;
     }
 
-    old_layout := editors.layout;
-
     // Try to open the file, maybe by prepending the build dir and removing the "./" at the start
     tried_paths: [..] string;
     tried_paths.allocator = temp;
@@ -782,7 +780,8 @@ go_to_current_build_error :: (placement: Editor_Placement = .in_place, show_erro
     editor, buffer := get_active_editor_and_buffer();
     go_to_line(editor, buffer, build_error.line, build_error.col);
 
-    if old_layout == .Single && editors.layout == .Double then editor.scroll_to_cursor = .yes_new_editor;
+    // TODO: !!!!!!!!!!!!
+    // if old_layout == .Single && editors.layout == .Double then editor.scroll_to_cursor = .yes_new_editor;
 
     if show_error {
         if #complete build_error.type == {

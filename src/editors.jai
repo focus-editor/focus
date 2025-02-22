@@ -47,23 +47,23 @@ activate_editors :: () {
 }
 
 editors_handle_file_drop :: (files: [] string) {
-    // !!!!!!!!!! TODO !!!!!!!!!!!!!
-    if editors.layout == .Double && files.count == 1 {
-        // Open file in the closest editor - will be handled by the drawing code because we only know the layout then
-        just_dropped_file = files[0];
-    } else {
-        if files.count == 1 {
-            // When one file, open in a single editor
-            editors_open_file(files[0]);
-        } else {
-            // When more than 2 files, open all of them, but put the first 2 side by side
-            for 1..files.count-1 {
-                editors_open_file(files[it]);  // create a buffer and an editor
-            }
-            editors_open_file(files[0], .left);
-            editors_open_file(files[1], .right);
-        }
-    }
+    // // !!!!!!!!!! TODO !!!!!!!!!!!!!
+    // if editors.layout == .Double && files.count == 1 {
+    //     // Open file in the closest editor - will be handled by the drawing code because we only know the layout then
+    //     just_dropped_file = files[0];
+    // } else {
+    //     if files.count == 1 {
+    //         // When one file, open in a single editor
+    //         editors_open_file(files[0]);
+    //     } else {
+    //         // When more than 2 files, open all of them, but put the first 2 side by side
+    //         for 1..files.count-1 {
+    //             editors_open_file(files[it]);  // create a buffer and an editor
+    //         }
+    //         editors_open_file(files[0], .left);
+    //         editors_open_file(files[1], .right);
+    //     }
+    // }
 }
 
 active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Event, action: Action_Editors) -> handled: bool {
@@ -1152,7 +1152,6 @@ search_bar_open_selected_result :: (editor: Editor, buffer: Buffer, placement: E
 
     result := results[selected_result];
 
-    old_layout := editors.layout;
     editors_open_buffer(editor.buffer_id, placement);
 
     // Select the search result
@@ -1164,12 +1163,6 @@ search_bar_open_selected_result :: (editor: Editor, buffer: Buffer, placement: E
     cursor.pos = xx match_end;
 
     active_editor.scroll_to_cursor = .yes;
-    if old_layout == .Single && editors.layout == .Double {
-        // We've just opened a new editor, so need to let it know it's being opened,
-        // so that it can use the target rect width for its scroll calculations
-        // (otherwise it'll be too small and the scroll will not animate where expected)
-        active_editor.scroll_to_cursor = .yes_new_editor;
-    }
 }
 
 search_and_update_results :: (using editor: *Editor, buffer: Buffer, jump := false) {
@@ -4201,16 +4194,10 @@ Editor_State :: struct {
     last_active_editor_id: s64 = -1;
     expanded := false;  // whether the active editor should be larger
 
-    layout: Layout = .None; // ?? keep?
-
-    // !!!!!!!!!!!!! remove !!!!!!!!!!!!!!!!!!
-    left:   s64 = -1;
-    right:  s64 = -1;
     Layout :: enum u8 {
         None    :: 0;
         Single  :: 1;
-        Double  :: 2;
-        Multi   :: 3;
+        Multi   :: 2;
     }
 }
 
@@ -4316,10 +4303,11 @@ operator== :: (a: Editor_History_Frame, b: Editor_History_Frame) -> bool {
 
 operator== :: (a: Editor_State, b: Editor_State) -> bool {
     // TODO: remove or rewrite !!!
-    return a.left   == b.left
-        && a.right  == b.right
-        && a.layout == b.layout
-        && a.expanded == b.expanded;
+    // return a.left   == b.left
+    //     && a.right  == b.right
+    //     && a.layout == b.layout
+    //     && a.expanded == b.expanded;
+    return false;
 }
 
 next_history_index :: (f: s64) -> s64 {
@@ -4372,18 +4360,20 @@ maybe_save_editor_history :: () {
         if frames_are_mergeable(previous_previous_frame, previous_frame) then should_merge_frame = true;
     }
 
-    // When a pane closes it may result in two updates: the cursor moving over to the
-    // other pane and then the pane being closed.  In these cases we should overwrite the
-    // former with the latter so it is stored as a single step.
-    should_merge_frame |=
-           previous_frame.layout == .Double && frame.layout == .Single
-        && previous_frame.left   == frame.left
-        && previous_frame.right  == frame.right;
+    // !!!!!!!
+    // // When a pane closes it may result in two updates: the cursor moving over to the
+    // // other pane and then the pane being closed.  In these cases we should overwrite the
+    // // former with the latter so it is stored as a single step.
+    // should_merge_frame |=
+    //        previous_frame.layout == .Double && frame.layout == .Single
+    //     && previous_frame.left   == frame.left
+    //     && previous_frame.right  == frame.right;
 
-    // If all editors are closed, we remember this state, but later override it
-    // (if we just didn't write anything to history when layout is None, we wouldn't be able
-    // to reopen the previous editor by going back in history without additional handling)
-    should_merge_frame |= previous_frame.layout == .None;
+    // !!!!!!!!
+    // // If all editors are closed, we remember this state, but later override it
+    // // (if we just didn't write anything to history when layout is None, we wouldn't be able
+    // // to reopen the previous editor by going back in history without additional handling)
+    // should_merge_frame |= previous_frame.layout == .None;
 
     if should_merge_frame {
         current = previous_index;
