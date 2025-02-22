@@ -141,10 +141,11 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
 
                 case .open_entry_in_place;          close_search_bar(editor, jump_to_selected_result = true);       return true;
                 case .open_entry_on_the_side;       search_bar_open_selected_result(editor, buffer, .on_the_side);  return true;
-                case .open_entry_left;              search_bar_open_selected_result(editor, buffer, .left);         return true;
-                case .open_entry_right;             search_bar_open_selected_result(editor, buffer, .right);        return true;
-                case .open_entry_top;               search_bar_open_selected_result(editor, buffer, .top);          return true;
-                case .open_entry_bottom;            search_bar_open_selected_result(editor, buffer, .bottom);       return true;
+
+                case .switch_to_left_pane;          search_bar_open_selected_result(editor, buffer, .left);         return true;
+                case .switch_to_right_pane;         search_bar_open_selected_result(editor, buffer, .right);        return true;
+                case .switch_to_top_pane;           search_bar_open_selected_result(editor, buffer, .top);          return true;
+                case .switch_to_bottom_pane;        search_bar_open_selected_result(editor, buffer, .bottom);       return true;
             }
         }
 
@@ -1191,7 +1192,7 @@ search_bar_move_cursor :: (using editor: *Editor, buffer: Buffer, delta: s32, wr
     scroll_to_selected = ifx snap then Scroll_Mode.snap else .yes;
 }
 
-search_bar_open_selected_result :: (editor: Editor, buffer: Buffer, placement: Editor_Placement) {
+search_bar_open_selected_result :: (editor: *Editor, buffer: Buffer, placement: Editor_Placement) {
     using editor.search_bar;
     if results.count <= 0 {
         // Don't do anything because there aren't even any results to open
@@ -1202,6 +1203,13 @@ search_bar_open_selected_result :: (editor: Editor, buffer: Buffer, placement: E
     active = false;  // close it immediately
 
     result := results[selected_result];
+
+    if placement != .in_place {
+        // Jump to original cursor in the current editor
+        cursor := leave_only_original_cursor(editor);
+        cursor.* = original_cursor_position;
+        editor.scroll_to_cursor = .yes;
+    }
 
     editors_open_buffer(editor.buffer_id, placement);
 
