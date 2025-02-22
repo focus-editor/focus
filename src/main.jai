@@ -423,6 +423,17 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .switch_to_bottom_pane;                            switch_to_pane(.bottom);                            return true;
         case .switch_to_opposite_pane;                          switch_to_pane(.on_the_side);                       return true;
 
+        case .switch_to_pane_1;                                 switch_to_pane_by_number(1);                        return true;
+        case .switch_to_pane_2;                                 switch_to_pane_by_number(2);                        return true;
+        case .switch_to_pane_3;                                 switch_to_pane_by_number(3);                        return true;
+        case .switch_to_pane_4;                                 switch_to_pane_by_number(4);                        return true;
+        case .switch_to_pane_5;                                 switch_to_pane_by_number(5);                        return true;
+        case .switch_to_pane_6;                                 switch_to_pane_by_number(6);                        return true;
+        case .switch_to_pane_7;                                 switch_to_pane_by_number(7);                        return true;
+        case .switch_to_pane_8;                                 switch_to_pane_by_number(8);                        return true;
+        case .switch_to_pane_9;                                 switch_to_pane_by_number(9);                        return true;
+        case .switch_to_pane_10;                                switch_to_pane_by_number(10);                       return true;
+
         case .split_left;                                       split_active_pane(.left);                           return true;
         case .split_right;                                      split_active_pane(.right);                          return true;
         case .split_top;                                        split_active_pane(.top);                            return true;

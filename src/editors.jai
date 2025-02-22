@@ -651,6 +651,42 @@ editors_open_buffer_in_pane :: (buffer_id: s64, target_pane: *Editor_Pane) -> ed
     return editor_id;
 }
 
+editors_get_next_pane_number :: () -> s64 {
+    _find_max_number :: (pane: *Editor_Pane) -> s64 {
+        if !pane return -1;
+
+        result := pane.number;
+
+        child1 := _find_max_number(pane.child1);
+        if child1 > result then result = child1;
+
+        child2 := _find_max_number(pane.child2);
+        if child2 > result then result = child2;
+
+        return result;
+    }
+
+    return _find_max_number(editors.root) + 1;
+}
+
+editors_find_pane_by_number :: (number: s64) -> *Editor_Pane {
+    _find_by_number :: (pane: *Editor_Pane, number: s64) -> *Editor_Pane {
+        if !pane return null;
+
+        if pane.number == number return pane;
+
+        child1 := _find_by_number(pane.child1, number);
+        if child1 return child1;
+
+        child2 := _find_by_number(pane.child2, number);
+        if child2 return child2;
+
+        return null;
+    }
+
+    return _find_by_number(editors.root, number);
+}
+
 editors_find_pane_by_editor_id :: (editor_id: s64, current_pane: *Editor_Pane) -> pane: *Editor_Pane {
     if !current_pane return null;
     if get_visible_editor_id(current_pane) == editor_id return current_pane;
@@ -983,6 +1019,7 @@ close_all_editors :: () {
     _free_pane_tree(editors.root);
 
     editors.root = New(Editor_Pane);
+    editors.root.number = 1;
     activate_pane(editors.root);
 }
 
@@ -1017,6 +1054,9 @@ close_pane :: (placement: Editor_Placement) {
             sibling.child2.parent = parent;
         }
 
+        // Any pane numbers after the one we're closing need to be decremented
+        shift_pane_numbers(pane.number);
+
         if pane == editors.active_pane then activate_pane(parent);
         if sibling == editors.active_pane then editors.active_pane = parent;
 
@@ -1024,6 +1064,17 @@ close_pane :: (placement: Editor_Placement) {
         free(pane);
         free(sibling);
     }
+}
+
+shift_pane_numbers :: (number: s64) {
+    _shift_numbers :: (pane: *Editor_Pane, number: s64) {
+        if !pane return;
+        if pane.number > number then pane.number -= 1;
+        _shift_numbers(pane.child1, number);
+        _shift_numbers(pane.child2, number);
+    }
+
+    _shift_numbers(editors.root, number);
 }
 
 search_bar_is_open :: inline (using editor: *Editor) -> bool {
@@ -1244,6 +1295,14 @@ switch_to_pane :: (placement: Editor_Placement) {
     activate_pane(target_pane);
 }
 
+switch_to_pane_by_number :: (number: s64) {
+    if build_panel_is_active() then build_panel_lose_focus();
+
+    target_pane := editors_find_pane_by_number(number);
+
+    activate_pane(target_pane);
+}
+
 duplicate_editor :: (placement: Editor_Placement) {
     if build_panel_is_active() then build_panel_lose_focus();
     if placement == .in_place return;
@@ -1295,6 +1354,10 @@ split_active_pane :: (placement: Editor_Placement) -> *Editor_Pane {
 
     other_pane.editor_index = active_pane.editor_index;
     other_pane.editor_ids   = active_pane.editor_ids;
+
+    other_pane.number  = active_pane.number;
+    active_pane.number = -1;
+    new_pane.number    = editors_get_next_pane_number();
 
     empty_ids: [..] s64;
     active_pane.editor_ids   = empty_ids;
@@ -1524,6 +1587,7 @@ editors_start_moving_splitter :: (target: float, start := -1.0) {
 init_editors :: () {
     assert(editors.root == null);
     editors.root = New(Editor_Pane);
+    editors.root.number = 1;
     editors.active_pane = editors.root;
 }
 
@@ -4202,6 +4266,8 @@ Editor_State :: struct {
 }
 
 Editor_Pane :: struct {
+    number := -1;  // for navigation - gets assigned at the time of splitting
+
     editor_index: s64 = -1;
     editor_ids: [..] s64;
 
