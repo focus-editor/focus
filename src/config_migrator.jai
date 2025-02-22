@@ -627,11 +627,6 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 14, "common", "focus_next_ui_element",                       "Tab",                  "Tab"       },
     .{ 14, "common", "focus_previous_ui_element",                   "Shift-Tab",            "Shift-Tab" },
 
-    .{ 17, "common", "open_entry_left",                             "Ctrl-Alt-Shift-ArrowLeft",     "Cmd-Opt-Shift-ArrowLeft"  },
-    .{ 17, "common", "open_entry_right",                            "Ctrl-Alt-Shift-ArrowRight",    "Cmd-Opt-Shift-ArrowRight" },
-    .{ 17, "common", "open_entry_top",                              "Ctrl-Alt-Shift-ArrowUp",       "Cmd-Opt-Shift-ArrowUp"    },
-    .{ 17, "common", "open_entry_bottom",                           "Ctrl-Alt-Shift-ArrowDown",     "Cmd-Opt-Shift-ArrowDown"  },
-
     .{ 17, "common", "close_pane",                                  "Ctrl-Shift-W",                 "Cmd-Shift-W"          },
     .{ 17, "common", "close_left_pane",                             "Ctrl-Alt-W ArrowLeft",         "Cmd-Opt-W ArrowLeft"  },
     .{ 17, "common", "close_right_pane",                            "Ctrl-Alt-W ArrowRight",        "Cmd-Opt-W ArrowRight" },
@@ -689,27 +684,25 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
     .{ 14, "search dialog", "go_to_next_input",                     "focus_next_ui_element"     },
     .{ 14, "search dialog", "go_to_previous_input",                 "focus_previous_ui_element" },
 
-    .{ 17, "search dialog",     "open_entry_on_the_left",           "open_entry_left" },
-    .{ 17, "search dialog",     "open_entry_on_the_right",          "open_entry_right" },
-    .{ 17, "open file dialog",  "open_entry_on_the_left",           "open_entry_left" },
-    .{ 17, "open file dialog",  "open_entry_on_the_right",          "open_entry_right" },
+    .{ 17, "",          "open_entry_on_the_left",           "" },  // removed - replaced with switch_to_*_pane
+    .{ 17, "",          "open_entry_on_the_right",          "" },  // removed - replaced with switch_to_*_pane
 
-    .{ 17, "",                  "close_other_editor",               "" },  // removed
-    .{ 17, "",                  "close_left_editor",                "" },  // removed
-    .{ 17, "",                  "close_right_editor",               "" },  // removed
+    .{ 17, "",          "close_other_editor",               "" },  // removed
+    .{ 17, "",          "close_left_editor",                "" },  // removed
+    .{ 17, "",          "close_right_editor",               "" },  // removed
 
-    .{ 17, "",                  "close_current_editor",             "close_editor" },
+    .{ 17, "",          "close_current_editor",             "close_editor" },
 
-    .{ 17, "editors",           "move_editor_to_the_left",          "" },  // removed
-    .{ 17, "editors",           "move_editor_to_the_right",         "" },  // removed
-    .{ 17, "editors",           "switch_to_left_editor",            "switch_to_left_pane"  },
-    .{ 17, "editors",           "switch_to_right_editor",           "switch_to_right_pane" },
-    .{ 17, "editors",           "switch_to_other_editor",           "switch_to_opposite_pane" },
+    .{ 17, "editors",   "move_editor_to_the_left",          "" },  // removed
+    .{ 17, "editors",   "move_editor_to_the_right",         "" },  // removed
+    .{ 17, "editors",   "switch_to_left_editor",            "switch_to_left_pane"  },
+    .{ 17, "editors",   "switch_to_right_editor",           "switch_to_right_pane" },
+    .{ 17, "editors",   "switch_to_other_editor",           "switch_to_opposite_pane" },
 
-    .{ 17, "editors",           "move_to_next_buffer",              "go_to_next_buffer" },
-    .{ 17, "editors",           "move_to_previous_buffer",          "go_to_previous_buffer" },
-    .{ 17, "editors",           "move_to_next_editor_history",      "cursor_go_forward" },
-    .{ 17, "editors",           "move_to_previous_editor_history",  "cursor_go_back" },
+    .{ 17, "editors",   "move_to_next_buffer",              "go_to_next_buffer" },
+    .{ 17, "editors",   "move_to_previous_buffer",          "go_to_previous_buffer" },
+    .{ 17, "editors",   "move_to_next_editor_history",      "cursor_go_forward" },
+    .{ 17, "editors",   "move_to_previous_editor_history",  "cursor_go_back" },
 ];
 
 #if !NO_OUTPUT_BUILD {

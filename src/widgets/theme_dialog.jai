@@ -6,11 +6,11 @@ theme_dialog: Theme_Dialog;
 
 Theme_Dialog :: struct {
     using #as generic_dialog: Generic_Choice_Dialog(Theme);
-    generic_dialog.global_widget_id    = .theme_dialog;
-    generic_dialog.refresh_entries     = theme_dialog_refresh_entries;
-    generic_dialog.after_refresh       = preview_selected_theme;
-    generic_dialog.open_entry_in_place = apply_selected_theme;
-    generic_dialog.on_move             = preview_selected_theme;
+    generic_dialog.global_widget_id = .theme_dialog;
+    generic_dialog.refresh_entries  = theme_dialog_refresh_entries;
+    generic_dialog.after_refresh    = preview_selected_theme;
+    generic_dialog.open_entry       = apply_selected_theme;
+    generic_dialog.on_move          = preview_selected_theme;
 };
 
 edit_current_theme :: (placement: Editor_Placement) {
@@ -44,7 +44,7 @@ set_temporary_theme :: (theme_name: string) {
     temporary_theme = copy_string(theme_name,, allocator = focus_allocator);
 }
 
-apply_selected_theme :: () {
+apply_selected_theme :: (_: Editor_Placement) {
     using theme_dialog;
     if selected >= filtered.count return;
 
