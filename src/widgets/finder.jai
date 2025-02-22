@@ -190,7 +190,6 @@ finder_open_selected_result :: (selected_num := -1, placement: Editor_Placement)
 
     result := results[selected];
 
-    old_layout := editors.layout;
     editors_open_buffer(result.buffer_id, placement);
 
     // Select the search result
@@ -202,12 +201,6 @@ finder_open_selected_result :: (selected_num := -1, placement: Editor_Placement)
     cursor.pos = xx match_end;
 
     editor.scroll_to_cursor = .yes;
-    if old_layout == .Single && editors.layout == .Double {
-        // We've just opened a new editor, so need to let it know it's being opened,
-        // so that it can use the target rect width for its scroll calculations
-        // (otherwise it'll be too small and the scroll will not animate where expected)
-        editor.scroll_to_cursor = .yes_new_editor;
-    }
 }
 
 finder_toggle_whole_word :: () {
