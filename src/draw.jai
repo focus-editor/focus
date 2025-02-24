@@ -3267,7 +3267,9 @@ draw_go_to_line_dialog :: (active_editor_rect: Rect, status_bar_height: float) {
         y = bar_rect.y + (bar_rect.h - cast(s32)font_ui.character_height) / 2 + 2,  // sigh
     };
     Simp.draw_prepared_text(font_ui, xx pen.x, xx pen.y, color = xx Color.UI_DEFAULT);
-    draw_text_input(*go_to_line_dialog.input, input_rect, ui_id = input_id, active = true, label = " line number");
+
+    color := ifx go_to_line_dialog.input_is_valid then Color.UI_DEFAULT else Color.UI_ERROR;
+    draw_text_input(*go_to_line_dialog.input, input_rect, ui_id = input_id, active = true, label = " line number", color = color);
 }
 
 get_cursor_screen_pos :: (text_origin: Vector2, coords: Coords) -> Vector2 {

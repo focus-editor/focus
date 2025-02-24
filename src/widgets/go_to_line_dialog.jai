@@ -14,20 +14,6 @@ go_to_line_dialog_handle_event :: (event: Input.Event) -> handled: bool {
         old_text := copy_temporary_string(to_string(input.text));
 
         handled := maybe_handle_text_input_event(*input, event);
-        if handled {
-            // Remove any non-digit bytes in case they were pasted
-            new_text := to_bytes(copy_temporary_string(to_string(input.text)));
-            i := 0;
-            for byte : new_text {
-                if #char "0" <= byte && byte <= #char "9" {
-                    input.text[i] = byte;
-                    i += 1;
-                }
-            }
-            input.text.count = cast(s32) i;
-            input.cursor.pos = clamp(input.cursor.pos, 0, xx i);
-            input.cursor.sel = clamp(input.cursor.sel, 0, xx i);
-        }
 
         if old_text != to_string(input.text) then jump_to_line();
 
@@ -94,6 +80,15 @@ jump_to_line :: () {
 
     if !input.text return;
 
+    // Check for any non-digit characters
+    for byte : input.text {
+        if byte < #char "0" || #char "9" < byte {
+            input_is_valid = false;
+            return;
+        }
+    }
+
+    input_is_valid = true;
     jumped = true;
 
     line_num := 0;
@@ -128,6 +123,7 @@ Go_To_Line_Dialog :: struct {
     scroll_to_cursor: Scroll_Mode = .no;
     original_cursor_position: Cursor;
     jumped := false;
+    input_is_valid := true;
 
     input: Text_Input;
 }
