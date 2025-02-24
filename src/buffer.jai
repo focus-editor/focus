@@ -1110,16 +1110,7 @@ _get_line_as_string :: (buffer: Buffer, line_starts: [] s32, line_num: s32) -> s
     return result;
 }
 
-find_or_create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
-    if workspace_scan_complete {
-        // Return the first empty standalone buffer to avoid creating a million new buffers.
-        // We have to only do this if the workspace scan is complete, otherwise we'll be in for
-        // many surprising thread-related bugs
-        for * buffer, buffer_id : open_buffers {
-            if !buffer.has_file && !buffer.deleted && !buffer.readonly && !trim(to_string(buffer.bytes)) return buffer_id, false;
-        }
-    }
-
+create_an_empty_buffer :: () -> buffer_id: s64, created: bool {
     // Create a new buffer
     lock(*open_buffers_lock);
     defer unlock(*open_buffers_lock);

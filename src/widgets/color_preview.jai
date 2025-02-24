@@ -1,7 +1,7 @@
 init_color_preview :: () {
     // Init the panel buffer
     assert(panel_buffer_id < 0, "Code helper panel already has a buffer. This is a bug");
-    panel_buffer_id = find_or_create_an_empty_buffer();
+    panel_buffer_id = create_an_empty_buffer();
     panel_editor_id = find_or_create_editor(panel_buffer_id);
     buffer := *open_buffers[panel_buffer_id];
     buffer.internal = true;

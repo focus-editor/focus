@@ -27,6 +27,22 @@ edit_current_theme :: (placement: Editor_Placement) {
     editors_open_file(theme_path, placement);
 }
 
+edit_current_theme :: (pane: *Editor_Pane) {
+    if !pane return;
+
+    if !config.style.theme {
+        add_user_warning("No theme is currently active");
+        return;
+    }
+    if config.style.theme == "default" {
+        add_user_warning("Default theme is active. It's immutable.\nIf you want to edit it, copy [colors] from the default config and adjust them.");
+        editors_show_default_config(pane);
+        return;
+    }
+    theme_path := tprint("%/%.focus-theme", themes_dir, config.style.theme);
+    editors_open_file_in_pane(theme_path, pane);
+}
+
 maybe_revert_temporary_theme :: () {
     if !temporary_theme || active_global_widget == .theme_dialog return;
 
