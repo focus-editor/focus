@@ -293,7 +293,8 @@ parse_tag :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
             }
 
         case;
-            parse_attribute_name(tokenizer, token);
+            if html_mode  parse_html_attribute_name(tokenizer, token);
+            else          parse_attribute_name(tokenizer, token);
     }
 }
 
@@ -355,12 +356,13 @@ parse_tag_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) -> string
 parse_attribute_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
     token.type = .attribute_name;
 
-    if !html_mode && t.* == #char "%" { // Handle parameter entity reference.
+    if t.* == #char "%" { // Handle parameter entity reference.
         t += 1;
         token.type = .dtd_parameter_entity;
         if !eat_entity(tokenizer, token)  token.type = .error;
         return;
     }
+
 
     if !VALID_NAME_TABLE[t.*] {
         t += 1;
@@ -376,6 +378,27 @@ parse_attribute_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
             continue;
         }
         break;
+    }
+}
+
+// https://html.spec.whatwg.org/multipage/syntax.html#attributes-2
+parse_html_attribute_name :: (using tokenizer: *Xml_Tokenizer, token: *Xml_Token) {
+    token.type = .attribute_name;
+
+    if INVALID_HTML_ATTRIBUTE_NAME_TABLE[t.*] {
+        token.type = .error;
+        t += 1;
+        return;
+    }
+
+    t += 1;
+
+    while t < max_t {
+        if INVALID_HTML_ATTRIBUTE_NAME_TABLE[t.*] {
+            break;
+        }
+
+        t += 1;
     }
 }
 
@@ -710,6 +733,24 @@ VALID_NAME_TABLE :: #run generate_lookup_table(Character_Range.[
 
     // '#' is not allowed for regular names, but this makes us parse DTD keywords like #PCDATA, #IMPLIED, etcetera.
     make_range(#char "#"),
+]);
+
+INVALID_HTML_ATTRIBUTE_NAME_TABLE :: #run generate_lookup_table(Character_Range.[
+    make_range(#char " "),
+    make_range(#char "\t"),
+    make_range(#char "\n"),
+    make_range(#char "\r"),
+    make_range(0x0c),
+
+    make_range(0,    0x1f),
+    make_range(0x7f, 0x9f),
+    make_range(#char "\""),
+    make_range(#char "'"),
+    make_range(#char ">"),
+    make_range(#char "/"),
+    make_range(#char "="),
+
+    // There are some multi byte characters that are omitted here (see https://html.spec.whatwg.org/multipage/syntax.html#attributes-2).
 ]);
 
 Character_Range :: struct { start: u8; end: u8; }
