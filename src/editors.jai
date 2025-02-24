@@ -511,21 +511,8 @@ refresh_all_editors_for_buffer :: (buffer_id: s64) {
 }
 
 editors_open_file :: (path: string, placement: Editor_Placement = .in_place, line := -1) -> success: bool {
-    full_path, success := get_absolute_path(path,, temp);
-    path_overwrite_separators(full_path, separator = #char "/");
-    if !file_exists(full_path) || !success {
-        log_error("Couldn't open file %", path);
-        add_user_error("Couldn't open file %", path, dismiss_in_seconds = 60);
-        return false;
-    }
-    buffer_id := find_or_create_buffer(full_path);
-    if buffer_id < 0 && full_path.count > 248 {
-        log_error("Couldn't open file because path is too long for Windows: %\n", full_path);
-        add_user_error("Couldn't open file. Path is too long.");  // not including full path for obvious reasons
-        return false;
-    }
-
-    start_watching_file_if_not_already(full_path);
+    buffer_id := _open_buffer_from_relative_path(path);
+    if buffer_id < 0 return false;
 
     editors_open_buffer(buffer_id, placement);
 
@@ -537,8 +524,53 @@ editors_open_file :: (path: string, placement: Editor_Placement = .in_place, lin
     return true;
 }
 
+editors_open_file_in_pane :: (path: string, pane: *Editor_Pane, line := -1) -> success: bool {
+    buffer_id := _open_buffer_from_relative_path(path);
+    if buffer_id < 0 return false;
+
+    assert(pane != null);
+    editors_open_buffer_in_pane(buffer_id, pane);
+
+    if line != -1 {
+        editor, buffer := get_active_editor_and_buffer();
+        go_to_line(editor, buffer, line, 1);
+    }
+
+    return true;
+}
+
+#scope_file
+
+_open_buffer_from_relative_path :: (path: string) -> buffer_id: s64 {
+    full_path, success := get_absolute_path(path,, temp);
+    path_overwrite_separators(full_path, separator = #char "/");
+    if !file_exists(full_path) || !success {
+        log_error("Couldn't open file %", path);
+        add_user_error("Couldn't open file %", path, dismiss_in_seconds = 60);
+        return -1;
+    }
+
+    buffer_id := find_or_create_buffer(full_path);
+    if buffer_id < 0 && full_path.count > 248 {
+        log_error("Couldn't open file because path is too long for Windows: %\n", full_path);
+        add_user_error("Couldn't open file. Path is too long.");  // not including full path for obvious reasons
+        return -1;
+    }
+
+    if buffer_id >= 0 then start_watching_file_if_not_already(full_path);
+
+    return buffer_id;
+}
+
+
+#scope_export
+
 editors_open_global_config :: (placement: Editor_Placement) {
     editors_open_file(global_config.path, placement);
+}
+
+editors_open_global_config :: (pane: *Editor_Pane) {
+    editors_open_file_in_pane(global_config.path, pane);
 }
 
 editors_open_project_config :: (placement: Editor_Placement) {
@@ -549,26 +581,58 @@ editors_open_project_config :: (placement: Editor_Placement) {
     }
 }
 
-editors_show_default_config :: (placement: Editor_Placement) {
-    if global_config_buffer_id < 0 {
-        global_config_buffer_id = find_or_create_an_empty_buffer();
-        buffer := *open_buffers[global_config_buffer_id];
-        replace_range_raw(buffer, 0, xx buffer.bytes.count, DEFAULT_CONFIG_FILE_DATA);
-        buffer.meow_hash = calculate_hash(to_view(buffer.bytes));
-        buffer.readonly = true;
-        buffer.internal = true;
-        buffer.lang = .Focus_Config;
-        buffer.file.name = "Default Focus Config";
-        buffer.file.icon = .gear;
-        rescan_for_lines(buffer);
+editors_open_project_config :: (pane: *Editor_Pane) {
+    if project_config.loaded {
+        editors_open_file_in_pane(project_config.path, pane);
+    } else {
+        add_user_warning("No project is active. Please open a project first.", dismiss_in_seconds = 5);
     }
+}
+
+editors_show_default_config :: (placement: Editor_Placement) {
+    _maybe_create_global_config_buffer();
 
     editors_open_buffer(global_config_buffer_id, placement);
 }
 
+editors_show_default_config :: (pane: *Editor_Pane) {
+    _maybe_create_global_config_buffer();
+
+    editors_open_buffer_in_pane(global_config_buffer_id, pane);
+}
+
 editors_show_troubleshooting_info :: (placement: Editor_Placement) {
+    _create_or_update_global_troubleshooting_buffer();
+
+    editors_open_buffer(global_troubleshooting_buffer_id, placement);
+}
+
+editors_show_troubleshooting_info :: (pane: *Editor_Pane) {
+    _create_or_update_global_troubleshooting_buffer();
+
+    editors_open_buffer_in_pane(global_troubleshooting_buffer_id, pane);
+}
+
+#scope_file
+
+_maybe_create_global_config_buffer :: () {
+    if global_config_buffer_id >= 0 return;
+
+    global_config_buffer_id = create_an_empty_buffer();
+    buffer := *open_buffers[global_config_buffer_id];
+    replace_range_raw(buffer, 0, xx buffer.bytes.count, DEFAULT_CONFIG_FILE_DATA);
+    buffer.meow_hash = calculate_hash(to_view(buffer.bytes));
+    buffer.readonly = true;
+    buffer.internal = true;
+    buffer.lang = .Focus_Config;
+    buffer.file.name = "Default Focus Config";
+    buffer.file.icon = .gear;
+    rescan_for_lines(buffer);
+}
+
+_create_or_update_global_troubleshooting_buffer :: () {
     if global_troubleshooting_buffer_id < 0 {
-        global_troubleshooting_buffer_id = find_or_create_an_empty_buffer();
+        global_troubleshooting_buffer_id = create_an_empty_buffer();
         buffer := *open_buffers[global_troubleshooting_buffer_id];
         buffer.readonly = true;
         buffer.internal = true;
@@ -577,19 +641,26 @@ editors_show_troubleshooting_info :: (placement: Editor_Placement) {
         buffer.file.icon = .debug;
         buffer.has_file = true;
     }
-
     buffer := *open_buffers[global_troubleshooting_buffer_id];
     replace_range_raw(buffer, 0, xx buffer.bytes.count, platform_get_troubleshooting_info());
     buffer.meow_hash = calculate_hash(to_view(buffer.bytes));
     rescan_for_lines(buffer);
-
-    editors_open_buffer(global_troubleshooting_buffer_id, placement);
 }
 
+#scope_export
+
 editors_create_new_file :: (placement: Editor_Placement = .in_place) {
-    buffer_id := find_or_create_an_empty_buffer();
+    buffer_id := create_an_empty_buffer();
 
     editors_open_buffer(buffer_id, placement);
+}
+
+editors_create_new_file :: (pane: *Editor_Pane) {
+    if !pane return;
+
+    buffer_id := create_an_empty_buffer();
+
+    editors_open_buffer_in_pane(buffer_id, pane);
 }
 
 editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place) {
@@ -601,12 +672,11 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
     target_pane := get_relative_editor_pane_by_placement(active_pane, placement);
     if !target_pane then target_pane = split_active_pane(placement);
 
-    new_editor_id := editors_open_buffer_in_pane(buffer_id, target_pane);
+    editors_open_buffer_in_pane(buffer_id, target_pane);
 
     buffer := *open_buffers[buffer_id];
     if buffer.num_times_opened < 255 then buffer.num_times_opened += 1;
 
-    make_editor_active(new_editor_id);
     maybe_mark_buffer_as_deleted(buffer_id);  // check in case we missed that it's deleted
     session_notify_modified_buffer(buffer_id);
     cursors_start_blinking();
@@ -648,6 +718,8 @@ editors_open_buffer_in_pane :: (buffer_id: s64, target_pane: *Editor_Pane) -> ed
     new_index := target_pane.editor_index + 1;
     array_insert_at(*target_pane.editor_ids, editor_id, new_index);
     target_pane.editor_index = new_index;
+
+    activate_pane(target_pane);
 
     return editor_id;
 }
@@ -1334,8 +1406,6 @@ duplicate_editor :: (placement: Editor_Placement) {
     // Move viewport
     duplicated_editor.viewport.scroll_x = current_editor.viewport.scroll_x;
     duplicated_editor.viewport.scroll_y = current_editor.viewport.scroll_y;
-
-    activate_pane(target_pane);
 }
 
 split_active_pane :: (placement: Editor_Placement) -> *Editor_Pane {

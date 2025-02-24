@@ -432,7 +432,6 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .switch_to_pane_7;                                 switch_to_pane_by_number(7);                        return true;
         case .switch_to_pane_8;                                 switch_to_pane_by_number(8);                        return true;
         case .switch_to_pane_9;                                 switch_to_pane_by_number(9);                        return true;
-        case .switch_to_pane_10;                                switch_to_pane_by_number(10);                       return true;
 
         case .split_left;                                       split_active_pane(.left);                           return true;
         case .split_right;                                      split_active_pane(.right);                          return true;

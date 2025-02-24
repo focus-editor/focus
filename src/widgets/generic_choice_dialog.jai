@@ -13,6 +13,16 @@ dialog_handle_event :: (using dialog: *Generic_Choice_Dialog, event: Input.Event
             case .switch_to_top_pane;       dialog.open_entry(.top);            return true;
             case .switch_to_bottom_pane;    dialog.open_entry(.bottom);         return true;
 
+            case .switch_to_pane_1;         if dialog.open_entry_in_pane then dialog.open_entry_in_pane(1);       return true;
+            case .switch_to_pane_2;         if dialog.open_entry_in_pane then dialog.open_entry_in_pane(2);       return true;
+            case .switch_to_pane_3;         if dialog.open_entry_in_pane then dialog.open_entry_in_pane(3);       return true;
+            case .switch_to_pane_4;         if dialog.open_entry_in_pane then dialog.open_entry_in_pane(4);       return true;
+            case .switch_to_pane_5;         if dialog.open_entry_in_pane then dialog.open_entry_in_pane(5);       return true;
+            case .switch_to_pane_6;         if dialog.open_entry_in_pane then dialog.open_entry_in_pane(6);       return true;
+            case .switch_to_pane_7;         if dialog.open_entry_in_pane then dialog.open_entry_in_pane(7);       return true;
+            case .switch_to_pane_8;         if dialog.open_entry_in_pane then dialog.open_entry_in_pane(8);       return true;
+            case .switch_to_pane_9;         if dialog.open_entry_in_pane then dialog.open_entry_in_pane(9);       return true;
+
             case .move_up;                  move_dialog_cursor(dialog, -1, wrap = true);    return true;
             case .move_down;                move_dialog_cursor(dialog,  1, wrap = true);    return true;
             case .move_up_fast;             move_dialog_cursor(dialog, -5);                 return true;
@@ -129,4 +139,5 @@ Generic_Choice_Dialog :: struct(Entry_Details: Type) {
     on_show: () -> ();
     on_hide: () -> ();
     open_entry: (placement: Editor_Placement) -> ();
+    open_entry_in_pane: (number: s64) -> ();
 }
