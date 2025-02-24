@@ -79,7 +79,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .close_right_pane;                 close_pane(.right);
         case .close_top_pane;                   close_pane(.top);
         case .close_bottom_pane;                close_pane(.bottom);
-        case .close_other_panes;                //close_other_panes();  !!! TODO
+        case .close_other_panes;                close_other_panes();
 
         case;                                   handled = false;
     }
@@ -1079,22 +1079,56 @@ close_other_editors_in_pane :: () {
 close_all_editors :: () {
     array_reset_keeping_memory(*most_recent_buffers);
 
-    _free_pane_tree :: (pane: *Editor_Pane) {
-        if !pane return;
-
-        _free_pane_tree(pane.child1);
-        _free_pane_tree(pane.child2);
-
-        array_reset(*pane.editor_ids);
-        free(pane);
-    }
-
     _free_pane_tree(editors.root);
 
     editors.root = New(Editor_Pane);
     editors.root.number = 1;
     activate_pane(editors.root);
 }
+
+close_other_panes :: () {
+    active_pane := editors.active_pane;
+
+    assert_leaf_pane(active_pane);
+    if active_pane == editors.root return;
+
+    // Take the active pane out of the tree
+    if active_pane.parent.child1 == active_pane then active_pane.parent.child1 = null;
+    if active_pane.parent.child2 == active_pane then active_pane.parent.child2 = null;
+
+    // Destroy everything else
+    _free_pane_tree(editors.root);
+
+    // Insert active pane as root
+    active_pane.parent = null;
+    editors.root = active_pane;
+    editors.root.number = 1;
+
+    // Preserve remaining open buffers
+    active_pane_buffer_ids: [..] s64;
+    active_pane_buffer_ids.allocator = temp;
+    for active_pane.editor_ids {
+        editor := *open_editors[it];
+        array_add(*active_pane_buffer_ids, editor.buffer_id);
+    }
+    for most_recent_buffers {
+        if !array_find(active_pane_buffer_ids, it) then remove it;
+    }
+}
+
+#scope_file
+
+_free_pane_tree :: (pane: *Editor_Pane) {
+    if !pane return;
+
+    _free_pane_tree(pane.child1);
+    _free_pane_tree(pane.child2);
+
+    array_reset(*pane.editor_ids);
+    free(pane);
+}
+
+#scope_export
 
 remove_editor_from_pane :: (pane: *Editor_Pane, editor_id: s64) {
     found, index := array_find(pane.editor_ids, editor_id);
