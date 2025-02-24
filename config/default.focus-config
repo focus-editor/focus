@@ -336,7 +336,6 @@ Ctrl-6                      switch_to_pane_6
 Ctrl-7                      switch_to_pane_7
 Ctrl-8                      switch_to_pane_8
 Ctrl-9                      switch_to_pane_9
-Ctrl-0                      switch_to_pane_10
 
 Tab                         focus_next_ui_element
 Shift-Tab                   focus_previous_ui_element

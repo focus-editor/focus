@@ -311,7 +311,6 @@ Cmd-6                           switch_to_pane_6
 Cmd-7                           switch_to_pane_7
 Cmd-8                           switch_to_pane_8
 Cmd-9                           switch_to_pane_9
-Cmd-0                           switch_to_pane_10
 
 Tab                             focus_next_ui_element
 Shift-Tab                       focus_previous_ui_element

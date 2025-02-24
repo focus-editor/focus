@@ -654,7 +654,6 @@ ADDED_KEYBINDS :: Added_Keybind.[
     .{ 17, "editors", "switch_to_pane_7",                           "Ctrl-7",                       "Cmd-7" },
     .{ 17, "editors", "switch_to_pane_8",                           "Ctrl-8",                       "Cmd-8" },
     .{ 17, "editors", "switch_to_pane_9",                           "Ctrl-9",                       "Cmd-9" },
-    .{ 17, "editors", "switch_to_pane_10",                          "Ctrl-0",                       "Cmd-0" },
 
     .{ 17, "editors", "split_left",                                 "Ctrl-Alt-X ArrowLeft",         "Cmd-Opt-X ArrowLeft"  },
     .{ 17, "editors", "split_right",                                "Ctrl-Alt-X ArrowRight",        "Cmd-Opt-X ArrowRight" },

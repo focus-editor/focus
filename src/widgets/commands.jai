@@ -27,6 +27,32 @@ commands_execute_selected :: (placement: Editor_Placement = .in_place) {
     }
 }
 
+// Some commands open a new editor, for those we want to be able to select a specific pane
+commands_open_in_pane :: (number: s64) {
+    using commands_dialog;
+    if selected >= filtered.count return;
+
+    command := filtered[selected].details;
+    if command.is_build_command return;
+
+    pane := editors_find_pane_by_number(number);
+    if !pane return;
+
+    handled := true;
+    action := cast(Action_Editors) command.action;
+    if action == {
+        case .edit_current_theme;                               edit_current_theme(pane);
+        case .open_global_config;                               editors_open_global_config(pane);
+        case .open_project_config;                              editors_open_project_config(pane);
+        case .show_default_config;                              editors_show_default_config(pane);
+        case .show_troubleshooting_info;                        editors_show_troubleshooting_info(pane);
+        case .create_new_file;                                  editors_create_new_file(pane);
+        case;                                                   handled = false;
+    }
+
+    hide_dialog(*commands_dialog);
+}
+
 commands_refresh_after_config_change :: () {
     // Add base commands first (should only do it once)
     if !commands then array_add(*commands, ..base_commands);
@@ -55,7 +81,8 @@ Commands_Dialog :: struct {
     using #as generic_dialog: Generic_Choice_Dialog(Command);
     generic_dialog.global_widget_id = .commands_dialog;
     generic_dialog.refresh_entries  = commands_refresh_entries;
-    generic_dialog.open_entry = commands_execute_selected;
+    generic_dialog.open_entry         = commands_execute_selected;
+    generic_dialog.open_entry_in_pane = commands_open_in_pane;
 };
 
 #scope_file
