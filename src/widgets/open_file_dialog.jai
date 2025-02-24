@@ -16,6 +16,16 @@ open_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
             case .switch_to_top_pane;       if mode != .save  open_file_dialog_open_entry(entries.selected, .top);         return true;
             case .switch_to_bottom_pane;    if mode != .save  open_file_dialog_open_entry(entries.selected, .bottom);      return true;
 
+            case .switch_to_pane_1;         open_file_dialog_open_entry_in_pane(entries.selected, 1);                      return true;
+            case .switch_to_pane_2;         open_file_dialog_open_entry_in_pane(entries.selected, 2);                      return true;
+            case .switch_to_pane_3;         open_file_dialog_open_entry_in_pane(entries.selected, 3);                      return true;
+            case .switch_to_pane_4;         open_file_dialog_open_entry_in_pane(entries.selected, 4);                      return true;
+            case .switch_to_pane_5;         open_file_dialog_open_entry_in_pane(entries.selected, 5);                      return true;
+            case .switch_to_pane_6;         open_file_dialog_open_entry_in_pane(entries.selected, 6);                      return true;
+            case .switch_to_pane_7;         open_file_dialog_open_entry_in_pane(entries.selected, 7);                      return true;
+            case .switch_to_pane_8;         open_file_dialog_open_entry_in_pane(entries.selected, 8);                      return true;
+            case .switch_to_pane_9;         open_file_dialog_open_entry_in_pane(entries.selected, 9);                      return true;
+
             case .open_entry_in_explorer;   open_file_dialog_open_entry_in_explorer(entries.selected);                     return true;
 
             case .open_directory;           handled := open_file_dialog_open_entry(entries.selected, .in_place, folder_only = true, slash_key_pressed = (event.key_code == #char "/"));
@@ -175,6 +185,23 @@ open_file_dialog_open_entry :: (selected: s64, placement: Editor_Placement, fold
     }
 
     return true;
+}
+
+open_file_dialog_open_entry_in_pane :: (selected: s64, number: s64) {
+    using open_file_dialog;
+    if mode == .save || mode == .move return;
+
+    target_pane := editors_find_pane_by_number(number);
+    if !target_pane return;
+
+    if selected >= entries.filtered.count  return;
+    entry := entries.filtered[selected];
+
+    if entry.type == .file {
+        editors_open_buffer_in_pane(entry.buffer_id , target_pane);
+        activate_pane(target_pane);
+        close_open_file_dialog(.SELECTED_PATH, entry.full_path);
+    }
 }
 
 open_file_dialog_open_entry_in_explorer :: (selected: s64) {
