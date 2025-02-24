@@ -1,7 +1,7 @@
 init_build_system :: () {
     assert(build_buffer_id < 0 && build_editor_id < 0, "Build system already initialised");
 
-    build_buffer_id = find_or_create_an_empty_buffer();
+    build_buffer_id = create_an_empty_buffer();
     build_editor_id = find_or_create_editor(build_buffer_id);
     editor, buffer := *open_editors[build_editor_id], *open_buffers[build_buffer_id];
     buffer.readonly = true;
