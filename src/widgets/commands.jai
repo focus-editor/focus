@@ -149,7 +149,7 @@ base_commands := #run -> [] Command {
         cmd( "Go To Line",                        .go_to_line,                       .Single ),
 
         cmd( "Close Editor",                      .close_editor,                     .Single ),
-        cmd( "Close Other Editors",               .close_other_editors,              .Single ),
+        cmd( "Close Other Editors In Pane",       .close_other_editors_in_pane,      .Single ),
         cmd( "Close All Editors",                 .close_all_editors,                .Single ),
 
         cmd( "Close Pane",                        .close_pane,                       .Single ),
