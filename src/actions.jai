@@ -109,7 +109,7 @@ ACTIONS_COMMON :: string.[
     "strip_trailing_whitespace",
 
     "close_editor",
-    "close_other_editors",
+    "close_other_editors_in_pane",
     "close_all_editors",
 
     "close_pane",

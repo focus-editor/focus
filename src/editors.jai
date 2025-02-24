@@ -71,7 +71,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
     handled := true;
     if action == {
         case .close_all_editors;                close_all_editors();
-        case .close_other_editors;              close_other_editors();
+        case .close_other_editors_in_pane;      close_other_editors_in_pane();
         case .close_editor;                     close_editor();
 
         case .close_pane;                       close_pane(.in_place);
@@ -1068,7 +1068,7 @@ close_editors_for_pane :: (pane: *Editor_Pane, except := -1) -> num_closed: int 
     return num_closed;
 }
 
-close_other_editors :: () {
+close_other_editors_in_pane :: () {
     if build_panel_is_active() return;
 
     num_closed := close_editors_for_pane(editors.active_pane, except = get_active_editor_id());

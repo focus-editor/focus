@@ -705,11 +705,9 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
 ];
 
 #if !NO_OUTPUT_BUILD {
-    // These are the keybinds originally present in the default config.
-    // It's unlikely that this should ever be changed!
+    // These are the keybinds originally present in the default config - we don't want to complain about them not being in the renamed/added lists
     ORIGINAL_KEYBINDS :: string.[
         "break_line",
-        "close_other_editor",
         "copy",
         "create_cursor_above",
         "create_cursor_below",
