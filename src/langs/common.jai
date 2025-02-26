@@ -28,13 +28,13 @@ read_identifier_string :: (using tokenizer: *Tokenizer) -> string {
     return identifier;
 }
 
-read_utf8_identifier_string :: (using tokenizer: *Tokenizer) -> string {
+read_utf8_identifier_string :: (using tokenizer: *Tokenizer, $identifier_chars := "_") -> string {
     identifier: string;
     identifier.data = t;
 
     while t < max_t {
         c := t.*;
-        if c == #char "_" || is_alpha(c) || (t > identifier.data && is_digit(c)) { t += 1; continue; }
+        if is_alpha(c) || array_find(cast([] u8) identifier_chars, c) || (t > identifier.data && is_digit(c)) { t += 1; continue; }
 
         // Only check for unicode chars after the most common case is out of the way.
         // We don't do comprehensive checks because Unicode docs are cryptic and we might not need every possible character anyway
