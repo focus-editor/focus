@@ -138,18 +138,8 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
                 redraw_requested = true;
             }
         }
-        if pane == editors.active_pane {
-            // Highlight active pane
-            border := floor(3 * dpi_scale);
-            left, right, top, bottom := cut_left(rect, border), cut_right(rect, border), cut_top(rect, border), cut_bottom(rect, border);
-            // TODO:
-            // - don't overlap
-            // - add settings for fadeout
-            // - add new color
-            draw_rect(left,   Color.CURSOR_INACTIVE);
-            draw_rect(right,  Color.CURSOR_INACTIVE);
-            draw_rect(top,    Color.CURSOR_INACTIVE);
-            draw_rect(bottom, Color.CURSOR_INACTIVE);
+        if pane == editors.active_pane && active_global_widget == .editors {
+            draw_rect_border(rect, size = floor(3 * dpi_scale), color = Color.CURSOR_INACTIVE);
         }
     } else {
         splitter_ui_id := get_ui_id_from_loc(parent_id = pane_ui_id);
@@ -184,6 +174,18 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
 
         draw_splitter(splitter_rect, splitter_ui_id, layout == .horizontal);
     }
+}
+
+draw_rect_border :: (rect: Rect, size: float, color: Color) {
+    left, right, top, bottom := cut_left(rect, size), cut_right(rect, size), cut_top(rect, size), cut_bottom(rect, size);
+    // TODO:
+    // - don't overlap
+    // - add settings for fadeout
+    // - add new color
+    draw_rect(left,   color);
+    draw_rect(right,  color);
+    draw_rect(top,    color);
+    draw_rect(bottom, color);
 }
 
 draw_welcome_screen :: (main_area: Rect) {
@@ -799,7 +801,10 @@ maybe_draw_build_panel :: (status_bar_height: float) -> (drawn: bool = false, ed
     editor_id := build_panel_get_editor_id();
     draw_editor(editor_id, build_output_rect, get_ui_id_from_loc(), has_status_bar = false);
 
-    return build_panel_is_active(), build_output_rect;
+    is_active := build_panel_is_active();
+    if is_active then draw_rect_border(build_output_rect, size = floor(3 * dpi_scale), color = Color.CURSOR_INACTIVE);
+
+    return is_active, build_output_rect;
 }
 
 get_editor_subrects :: (editor_id: s64, main_area: Rect, has_status_bar: bool) -> editor_rect: Rect, status_bar_rect: Rect, line_number_panel: Rect {
