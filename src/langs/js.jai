@@ -123,6 +123,7 @@ get_next_token :: (using tokenizer: *Js_Tokenizer) -> Token {
         case #char "^";  parse_caret                       (tokenizer, *token);
         case #char "#";  parse_private_identifier          (tokenizer, *token);
         case #char "@";  parse_decorator                   (tokenizer, *token);
+        case #char "$";  parse_identifier                  (tokenizer, *token);
 
         case #char ";";  token.type = .punctuation; token.punctuation = .semicolon; t += 1;
         case #char "\\"; token.type = .punctuation; token.punctuation = .backslash; t += 1;
@@ -149,7 +150,7 @@ get_next_token :: (using tokenizer: *Js_Tokenizer) -> Token {
 parse_identifier :: (using tokenizer: *Js_Tokenizer, token: *Token) {
     token.type = .identifier;
 
-    identifier_str := read_utf8_identifier_string(tokenizer);
+    identifier_str := read_utf8_identifier_string(tokenizer, "_$");
 
     // Maybe it's a keyword
     if identifier_str.count <= MAX_KEYWORD_LENGTH {
