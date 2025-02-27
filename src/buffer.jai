@@ -1278,10 +1278,7 @@ detect_and_set_indentation :: (using buffer: *Buffer) -> enum { success; error; 
     num_lines_with_tabs   := 0;
 
     MAX_INDENT :: 140;  // for the purpose of detecting indentation we don't look at lines indented more than this. Who would even do it?
-    line_differences:          [MAX_INDENT] s32;  // the numbers of differences between lines with different indents
-
-    last_indent     := 0;
-    last_difference := 0;
+    indents: [MAX_INDENT] int;  // the number of lines for each indent level
 
     b    := bytes.data;
     last := bytes.data + bytes.count - 1;
@@ -1303,23 +1300,7 @@ detect_and_set_indentation :: (using buffer: *Buffer) -> enum { success; error; 
             num_lines_with_tabs += 1;
         } else if num_spaces > 0 && num_spaces < MAX_INDENT {
             num_lines_with_spaces += 1;
-
-            difference_from_prev_line := abs(last_indent - num_spaces);
-            if difference_from_prev_line > 0 && difference_from_prev_line < MAX_INDENT {
-                line_differences[difference_from_prev_line] += 1;
-                last_difference = difference_from_prev_line;
-            } else if difference_from_prev_line == 0 && last_difference > 0 {
-                line_differences[last_difference] += 1;
-                // This is to count lines like this:
-                // int foo() {
-                //     foobar();  // <- diff = 4, remember
-                //     bazfoo();  // <- diff = 0, but count it towards the 4 still!
-                //     ...
-                //
-            }
-            last_indent = num_spaces;
-        } else {
-            last_indent = num_spaces;
+            indents[num_spaces] += 1;
         }
 
         // Skip the rest of the line
@@ -1345,12 +1326,39 @@ detect_and_set_indentation :: (using buffer: *Buffer) -> enum { success; error; 
     indentation.type = .spaces;
     indentation.size = cast(u8) buffer_settings.tab_size;  // fallback
 
-    // Find the most common line difference
-    max_lines := 0;
-    for num_lines, difference : line_differences {
-        if num_lines > max_lines {
-            indentation.size = cast(u8) difference;
-            max_lines = num_lines;
+    // Get all non-zero indents
+    Indent_Lines :: struct { level: int; num_lines: int; }
+    non_zero_indents: [..] Indent_Lines;
+    non_zero_indents.allocator = temp;
+    for num_lines, level : indents {
+        if num_lines > 0 then array_add(*non_zero_indents, Indent_Lines.{ level = level, num_lines = num_lines });
+    }
+
+    // Compress indents.
+    // E.g. if we have some 2-space indents and some 4-space indents, we might want to count those 4-space indents in favour of 2 because 2 is the common denominator.
+    // However, we don't want to do this if there's one 2-space indent and two hundred 4-space indents because it's likely that the 2 space indent is just an exception.
+    DIVISOR_RATIO :: 0.1;  // example: if the number of 2-space indents divided by the number of 4 space indents is greater than this ratio, we compress to 2 spaces
+    for #v2 < * smaller_indent, i : non_zero_indents {
+        // if smaller_indent.level <= 1 continue;  // if we allowed 1 here it would compress everything
+
+        for j : i+1 .. non_zero_indents.count-1 {
+            larger_indent := *non_zero_indents[j];
+            if larger_indent.level % smaller_indent.level != 0 continue;
+
+            ratio := cast(float) smaller_indent.num_lines / cast(float) larger_indent.num_lines;
+            if ratio >= DIVISOR_RATIO {
+                smaller_indent.num_lines += larger_indent.num_lines;
+                larger_indent.num_lines = 0;
+            }
+        }
+    }
+
+    // Choose the indent with the most lines
+    max_lines := -1;
+    for indent : non_zero_indents {
+        if indent.num_lines > max_lines {
+            indentation.size = cast(u8) indent.level;
+            max_lines = indent.num_lines;
         }
     }
 
