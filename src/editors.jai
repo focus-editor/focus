@@ -3893,8 +3893,8 @@ Cursor_Movement :: enum u8 {
 }
 
 Viewport :: struct {
-    scroll_y := #run Tween_Animation(s32).{ speed = 0.1, func = .lerp };
-    scroll_x := #run Tween_Animation(s32).{ speed = 0.1, func = .lerp };
+    scroll_y := #run Tween_Animation(s32).{ duration = 0.1, func = .lerp };
+    scroll_x := #run Tween_Animation(s32).{ duration = 0.1, func = .lerp };
     top:  s32;
     left: s32;
     glue_point: Glue_Point;
@@ -3910,7 +3910,7 @@ Search_Bar :: struct {
     WIDTH_NORMAL   :: 0.5;
     WIDTH_EXPANDED :: 0.9;
 
-    scroll_anim := #run Tween_Animation(s32).{ speed = 0.1, func = .lerp };
+    scroll_anim := #run Tween_Animation(s32).{ duration = 0.1, func = .lerp };
     scroll_y: s32;
 
     width_percentage: float = WIDTH_NORMAL;  // how much of the screen the popup occupies
@@ -3958,7 +3958,7 @@ Paste_Animation :: struct {
     coords_range: Coords_Range;
     initted := false;
     started_at: Apollo_Time;
-    SPEED :: 0.3;
+    DURATION :: 0.3;
 }
 
 Editor_State :: struct {

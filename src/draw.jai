@@ -1398,7 +1398,7 @@ draw_editor :: (editor_id: s64, main_area: Rect, status_bar_height: float, ui_id
 
         // Draw paste animations
         for * anim : editor_paste_animations {
-            t := to_float64_seconds(frame_time - anim.started_at) / Paste_Animation.SPEED;
+            t := to_float64_seconds(frame_time - anim.started_at) / Paste_Animation.DURATION;
             if t >= 1 { remove anim; continue; }
             if anim.editor_id != editor_id continue;
 
@@ -4051,7 +4051,7 @@ scrollbar_fade_out_animations: [..] Scrollbar_Fade_Out_Animation;
 
 Scrollbar_Fade_Out_Animation :: struct {
     ui_id: Ui_Id;
-    anim := #run Tween_Animation(float).{ speed = 0.5, func = .smoothstep };
+    anim := #run Tween_Animation(float).{ duration = 0.5, func = .smoothstep };
 }
 
 // Same as the scrollbar grab point above
