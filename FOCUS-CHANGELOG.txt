@@ -25,6 +25,7 @@
         + `reload_from_disk` to force reload a buffer from disk (`Reload File From Disk` in the command palette)
         + `reload_workspace` to force reload the workspace (`Reload Workspace` in the command palette)
         + `build_panel_toggle_focus` - for those who want to be able to focus the build panel using only the keyboard
+        + `open_file_directory` - (`Open File Directory` in the command palette) (thanks @jejikeh)
     + New font options in the style section - `font_ui`, `font_ui_bold`, `font_ui_size` (thanks @hfr4)
     + Windows rmenu key can now be used in keybinds as `cmd` (thanks @onelivesleft)
     + New bindable keys: `MouseX1` and `MouseX2` (thanks @onelivesleft)
@@ -93,6 +94,7 @@
     + Fixed a bug with it being impossible to undo after certain multi-cursor manipulations
     + Fixed `auto_close_brackets` not working at EOF
     + Fixed a crash after pasting an invalid text into the go-to-line dialog and trying to undo
+    + Fixed a slowdown of the whole system which sometimes happened if Focus was kept minimized
 + Other changes:
     + When executing build/run commands Focus will now redirect the standard output/error streams of the child process to the same pipe. This should fix cases where the output from the underlying tool would be "reordered" due to the timing of reads from separate output/error pipes.
     + Syntax highlighting improvements for CSS, HTML and TypeScript (thanks @caztanj)
