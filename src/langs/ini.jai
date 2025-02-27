@@ -237,7 +237,7 @@ eat_section_header :: (tokenizer: *Ini_Tokenizer) -> header: Ini_Range, dangling
             case; {
                 prev := tokenizer.s_it;
                 advance(tokenizer);
-                if !is_white_space(prev.*) extend(*dangling, tokenizer.s_it - dangling.text.data);
+                extend(*dangling);
             }
         }
     }
