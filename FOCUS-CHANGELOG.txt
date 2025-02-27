@@ -1,6 +1,18 @@
 # Main Git Branch
 
 + New features:
+    + ...
++ Bug fixes:
+    + ...
++ Other changes:
+    + ...
+
+
+# RELEASES ==================================================================
+
+# Version 0.3.8
+
++ New features:
     + Global search now allows to additionally filter results by specifying file include/exclude wildcards
     + Syntax highlighting:
         + Batch (thanks @arjenwitteveen)
@@ -115,8 +127,6 @@
     + Build output panel is no longer limited by max_editor_width (because you can already control its width easily by dragging)
     + Built output panel will no longer cover the status bar
 
-
-# RELEASES ==================================================================
 
 # Version 0.3.7
 
