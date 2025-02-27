@@ -647,6 +647,7 @@ Settings :: struct {
     scrollbar_max_opacity                                   := 1.0;     @v16
     scrollbar_fade_in_sensitivity                           := 10.0;    @v16
     scrollbar_fade_out_delay_seconds                        := 2.0;     @v16
+    status_bar_position                                     := Status_Bar_Position.bottom;                  @v4
 
     // TODO
     // load_last_session_on_start:         true
@@ -669,7 +670,6 @@ Settings :: struct {
     detect_indentation                                      := true;                                                @v11 @overridable
     indent_using                                            := Indentation.spaces;                                  @v11 @overridable
     tab_size                                                := 4;                                                   @v1  @overridable
-    status_bar_position                                     := Status_Bar_Position.bottom;                          @v4  @overridable
     status_bar_show_indentation                             := true;                                                @v11 @overridable
     status_bar_show_line_col                                := true;                                                @v11 @overridable
     status_bar_show_cursors_off_screen                      := true;                                                @v11 @overridable

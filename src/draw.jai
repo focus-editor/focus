@@ -76,10 +76,10 @@ draw_frame :: () {
             draw_splitter(splitter_rect, split_x, .editor_splitter);
     }
 
-    panel_is_active, panel_editor_rect := maybe_draw_color_preview_panel();
+    panel_is_active, panel_editor_rect := maybe_draw_color_preview_panel(status_bar_height);
     if panel_is_active then active_editor_rect = panel_editor_rect;
 
-    panel_is_active, panel_editor_rect  = maybe_draw_build_panel();
+    panel_is_active, panel_editor_rect  = maybe_draw_build_panel(status_bar_height);
     if panel_is_active then active_editor_rect = panel_editor_rect;
 
     if #complete active_global_widget == {
@@ -319,7 +319,7 @@ draw_user_messages :: (main_area: Rect, status_bar_height: float) {
     }
 }
 
-maybe_draw_color_preview_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
+maybe_draw_color_preview_panel :: (status_bar_height: float) -> (drawn: bool = false, editor_rect: Rect = .{}) {
     if config.settings.color_preview_popup == .disabled return;
     if !workspace_scan_complete return;  // don't init the popup until all buffers are ready, otherwise we won't know the usage stats
 
@@ -372,6 +372,9 @@ maybe_draw_color_preview_panel :: () -> (drawn: bool = false, editor_rect: Rect 
         color_preview_rect = cut_right(screen, screen.w * color_preview_width, margin = 2);
     }
     color_preview_rect=, color_picker_rect := cut_bottom(color_preview_rect, color_preview_rect.h * color_preview_height);
+    if config.settings.status_bar_position == .bottom {
+        _, color_preview_rect = cut_bottom(color_preview_rect, status_bar_height);
+    }
     if !is_valid(color_preview_rect) return;
 
     draw_rounded_rect_with_shadow(color_preview_rect, Color.BACKGROUND_0, radius = 0.1, shadow_size = char_size, extra_draw_info = .{is_background = true});
@@ -630,7 +633,7 @@ draw_color_picker :: (editor_id: s64, editor: *Editor, buffer: *Buffer, picker_r
     Simp.immediate_flush();
 }
 
-maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
+maybe_draw_build_panel :: (status_bar_height: float) -> (drawn: bool = false, editor_rect: Rect = .{}) {
     if !build_panel_is_shown return;
 
     // Drag build panel title bar first before drawing
@@ -654,6 +657,10 @@ maybe_draw_build_panel :: () -> (drawn: bool = false, editor_rect: Rect = .{}) {
         build_panel_height = get_animation_value(build_panel_height_anim);
     }
     build_panel_rect = cut_bottom(build_panel_rect, build_panel_rect.h * build_panel_height);
+
+    if config.settings.status_bar_position == .bottom && editors.layout != .None {
+        _, build_panel_rect = cut_bottom(build_panel_rect, status_bar_height);
+    }
 
     if !is_valid(build_panel_rect) return;
     draw_rounded_rect_with_shadow(build_panel_rect, Color.BUILD_PANEL_BACKGROUND, radius = 0.1, shadow_size = char_size, extra_draw_info = .{is_background = true});
