@@ -669,7 +669,7 @@ editors_open_buffer :: (buffer_id: s64, placement: Editor_Placement = .in_place)
     active_pane := editors.active_pane;
     assert_leaf_pane(active_pane, "Can't open buffer in a non-leaf pane. This is a bug.");
 
-    target_pane := get_relative_editor_pane_by_placement(active_pane, placement);
+    target_pane := get_adjacent_editor_pane(active_pane, placement);
     if !target_pane then target_pane = split_active_pane(placement);
 
     editors_open_buffer_in_pane(buffer_id, target_pane);
@@ -1141,7 +1141,7 @@ remove_editor_from_pane :: (pane: *Editor_Pane, editor_id: s64) {
 close_pane :: (placement: Editor_Placement) {
     if build_panel_is_active() { hide_build_panel(); return; }
 
-    pane := get_relative_editor_pane_by_placement(editors.active_pane, placement);
+    pane := get_adjacent_editor_pane(editors.active_pane, placement);
     if !pane return;
     assert_leaf_pane(pane, "Attempting to close a non-leaf pane. This is a bug.");
 
@@ -1370,7 +1370,7 @@ move_editor :: (placement: Editor_Placement) {
 
     remove_editor_from_pane(active_pane, editor_id);
 
-    target_pane := get_relative_editor_pane_by_placement(active_pane, placement);
+    target_pane := get_adjacent_editor_pane(active_pane, placement);
     if !target_pane then target_pane = split_active_pane(placement);
 
     replaced_existing := false;
@@ -1404,7 +1404,7 @@ switch_to_pane :: (placement: Editor_Placement) {
     if build_panel_is_active() then build_panel_lose_focus();
     if placement == .in_place return;
 
-    target_pane := get_relative_editor_pane_by_placement(editors.active_pane, placement);
+    target_pane := get_adjacent_editor_pane(editors.active_pane, placement);
 
     activate_pane(target_pane);
 }
@@ -1424,7 +1424,7 @@ duplicate_editor :: (placement: Editor_Placement) {
     active_editor_id := get_active_editor_id();
     if active_editor_id < 0 return;  // nothing to duplicate
 
-    target_pane := get_relative_editor_pane_by_placement(editors.active_pane, placement);
+    target_pane := get_adjacent_editor_pane(editors.active_pane, placement);
     if !target_pane then target_pane = split_active_pane(placement);
 
     duplicated_editor_id := editors_open_buffer_in_pane(open_editors[active_editor_id].buffer_id, target_pane);
@@ -1586,59 +1586,76 @@ get_pane_by_editor_id :: (editor_id: s64) -> *Editor_Pane {
     return _find_pane(editors.root, editor_id);
 }
 
-get_relative_editor_pane_by_placement :: (using pane: *Editor_Pane, placement: Editor_Placement) -> *Editor_Pane {
-    // Checks if there's any pane on the `placement` side of the current pane and returns it
+get_adjacent_editor_pane :: (pane: *Editor_Pane, placement: Editor_Placement) -> *Editor_Pane {
     assert(pane != null);
-
     if placement == .in_place return pane;
-    if parent == null return null;
-
-    assert(parent.layout == .horizontal || parent.layout == .vertical);
-
-    if #complete placement == {
-        case .in_place;  // should never get here, just listing for the #complete
-        case .left;   if parent.layout == .horizontal && pane != parent.left   return get_leaf_pane_by_placement(parent.left,   .right);
-        case .right;  if parent.layout == .horizontal && pane != parent.right  return get_leaf_pane_by_placement(parent.right,  .left);
-        case .top;    if parent.layout == .vertical   && pane != parent.top    return get_leaf_pane_by_placement(parent.top,    .bottom);
-        case .bottom; if parent.layout == .vertical   && pane != parent.bottom return get_leaf_pane_by_placement(parent.bottom, .top);
-        case .on_the_side;
-            if pane == parent.child1 {
-                return get_leaf_pane_by_placement(parent.child2, ifx parent.layout == .horizontal then .left else .top);
-            } else {
-                return get_leaf_pane_by_placement(parent.child1, ifx parent.layout == .horizontal then .right else .bottom);
-            }
+    if pane.parent == null return null;
+    assert(pane.parent.layout == .horizontal || pane.parent.layout == .vertical);
+    if placement == .on_the_side {
+        //  !!! TODO: return last pane?
+        return null;
     }
 
-    return get_relative_editor_pane_by_placement(pane.parent, placement);
+    // Gather leaf pane rects
+    leaf_pane_rects: [..] Leaf_Pane_Rect;
+    leaf_pane_rects.allocator = temp;
+    gather_leaf_pane_rects(editors.root, screen, *leaf_pane_rects);
+
+    // Get the center of the current pane
+    center := Vector2.{ -1, -1 };
+    for leaf_pane_rects {
+        if it.pane == pane { center = center_of(it.rect); break; }
+    }
+    assert(center.x >= 0 && center.y >= 0, "Couldn't find the current pane in the leaf pane list. This is a bug.");
+
+    // Find the closest pane in the desired direction
+    closest_pane: *Editor_Pane;
+    min_t := FLOAT32_MAX;
+
+    for leaf_pane_rects {
+        if it.pane == pane continue;
+        r := it.rect;
+        t := FLOAT32_MAX;
+
+        if placement == {
+            case .left;     if r.x + r.w <= center.x && r.y <= center.y && center.y <= r.y + r.h then t = center.x - (r.x + r.w);
+            case .right;    if r.x       >= center.x && r.y <= center.y && center.y <= r.y + r.h then t = r.x - center.x;
+            case .top;      if r.y       >= center.y && r.x <= center.x && center.x <= r.x + r.w then t = r.y - center.y;
+            case .bottom;   if r.y + r.h <= center.y && r.x <= center.x && center.x <= r.x + r.w then t = center.y - (r.y + r.h);
+        }
+        if t < min_t {
+            closest_pane = it.pane;
+            min_t = t;
+        }
+    }
+
+    return closest_pane;
 }
 
-get_leaf_pane_by_placement :: (pane: *Editor_Pane, placement: Editor_Placement) -> *Editor_Pane {
-    // Once we've identified a pane on the correct side of the active pane,
-    // we need to get to a leaf pane from there.
-    // Placement here specifies priority. For example, suppose we have an editor pane tree like this:
-    //       1
-    //     /   \    <- vertical split
-    //  *2       3
-    //         /   \    <- vertical split
-    //       4       5
-    // where 2 is the active pane on the left, and the right pane is also split vertically into 2 panes.
-    // In this case if we want to find a pane to the right of 2, we first identify 3 as being on the target side of 2,
-    // and then need to traverse the tree to get to 4 as our target pane, since it's the closest pane on the right to
-    // our active pane.
-    //
-    // In case where 3 would be split horizontally and not vertically, we would also choose 4 because we prefer the child on the left
-    // unless specified otherwise.
-    //
-    // In cases where the user actually wanted to open another pane by splitting 2 vertically, they'd need to split it explicitly first,
-    // because if they just said they wanted to open a file on the right of 2, it would be ambiguous where they actually want to open the
-    // file, so we default to not creating new panes if there's actually something to the right of 2.
-
-    if pane.layout == .single return pane;
-
-    prefer_child2 := (pane.layout == .horizontal && placement == .right) || (pane.layout == .vertical && placement == .bottom);  // in all other cases default to child1
-
-    return get_leaf_pane_by_placement(ifx prefer_child2 then pane.child2 else pane.child1, placement);
+Leaf_Pane_Rect :: struct {
+    pane: *Editor_Pane;
+    rect: Rect;
 }
+
+gather_leaf_pane_rects :: (pane: *Editor_Pane, rect: Rect, result: *[..] Leaf_Pane_Rect) {
+    if !pane return;
+    if pane.layout == .single {
+        array_add(result, .{ pane, rect });
+        return;
+    }
+
+    // NOTE: this logic is duplicated in draw_editor_pane
+    rect1, rect2: Rect;
+    if pane.layout == .horizontal {
+        rect1, rect2 = cut_left(rect, rect.w * pane.splitter_pos + PANE_SPLITTER_WIDTH);
+    } else {
+        rect2, rect1 = cut_bottom(rect, rect.h * pane.splitter_pos - PANE_SPLITTER_WIDTH);
+    }
+
+    gather_leaf_pane_rects(pane.child1, rect1, result);
+    gather_leaf_pane_rects(pane.child2, rect2, result);
+}
+
 
 #scope_export
 
@@ -1676,24 +1693,6 @@ editors_get_layout :: () -> Editor_State.Layout {
     } else {
         return .Multi;
     }
-}
-
-// TODO: remove !!!!!!!!!!
-editors_snap_splitter :: (pos: float) {
-    pos = clamp(pos, 0.1, 0.9);
-    splitter_pos = pos;
-    splitter_anim.target = pos;
-}
-
-editors_start_moving_splitter :: (target: float, start := -1.0) {
-    if start >= 0 then splitter_pos = start;
-    if !config.settings.disable_file_open_close_animations {
-        start_animation(*splitter_anim, splitter_pos, target);
-    } else {
-        splitter_anim.target = target;
-        splitter_pos = target;
-    }
-    redraw_requested = true;
 }
 
 init_editors :: () {
@@ -4457,9 +4456,6 @@ editor_smooth_scroll: struct {
     start_x: s32;
     start_y: s32;
 };
-
-splitter_pos:  float = 0.5;  // 0.5 means it's in the middle
-splitter_anim: Tween_Animation(float);
 
 Editor_History :: struct {
     frames: [..] Editor_History_Frame;
