@@ -153,15 +153,14 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
             splitter_pos = clamp(splitter_pos, 0.1, 0.9);
         }
 
-        SPLITTER_WIDTH :: 2;
-
+        // NOTE: this logic is duplicated in gather_leaf_pane_rects
         rect1, rect2, splitter_rect: Rect;
         if layout == .horizontal {
-            rect1, rect2 = cut_left(rect, rect.w * splitter_pos, margin = SPLITTER_WIDTH);
-            splitter_rect = make_rect(rect1.x + rect1.w, rect1.y, SPLITTER_WIDTH, rect1.h);
+            rect1, rect2 = cut_left(rect, rect.w * splitter_pos, margin = PANE_SPLITTER_WIDTH);
+            splitter_rect = make_rect(rect1.x + rect1.w, rect1.y, PANE_SPLITTER_WIDTH, rect1.h);
         } else {
-            rect2, rect1 = cut_bottom(rect, rect.h * splitter_pos, margin = SPLITTER_WIDTH);
-            splitter_rect = make_rect(rect2.x, rect2.y + rect2.h, rect2.w, SPLITTER_WIDTH);
+            rect2, rect1 = cut_bottom(rect, rect.h * splitter_pos, margin = PANE_SPLITTER_WIDTH);
+            splitter_rect = make_rect(rect2.x, rect2.y + rect2.h, rect2.w, PANE_SPLITTER_WIDTH);
         }
 
         // We cannot use the normal mechanism for specifying parent-child relationship between panes
@@ -736,7 +735,7 @@ maybe_draw_build_panel :: (status_bar_height: float) -> (drawn: bool = false, ed
     }
     build_panel_rect = cut_bottom(build_panel_rect, build_panel_rect.h * build_panel_height);
 
-    if config.settings.status_bar_position == .bottom && editors.layout != .None {
+    if config.settings.status_bar_position == .bottom && editors_get_layout() != .None {
         _, build_panel_rect = cut_bottom(build_panel_rect, status_bar_height);
     }
 
@@ -4103,6 +4102,9 @@ Icon :: enum u16 {
 
     debug        :: 0xf7d9;
 }
+
+PANE_SPLITTER_WIDTH :: 2;
+
 
 #scope_file
 
