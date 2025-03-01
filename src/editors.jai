@@ -1480,6 +1480,31 @@ split_active_pane :: (placement: Editor_Placement) -> *Editor_Pane {
     return new_pane;
 }
 
+rotate_panes :: (pane: *Editor_Pane, direction: enum { clockwise; counterclockwise; }) {
+    if !pane return;
+
+    if direction == .clockwise {
+        if pane.layout == {
+            case .horizontal;
+                pane.layout = .vertical;
+            case .vertical;
+                pane.layout = .horizontal;
+                pane.child1, pane.child2 = pane.child2, pane.child1;
+        }
+    } else {
+        if pane.layout == {
+            case .horizontal;
+                pane.layout = .vertical;
+                pane.child1, pane.child2 = pane.child2, pane.child1;
+            case .vertical;
+                pane.layout = .horizontal;
+        }
+    }
+
+    rotate_panes(pane.child1, direction);
+    rotate_panes(pane.child2, direction);
+}
+
 assert_leaf_pane :: (pane: *Editor_Pane, msg := "Expected a leaf pane but got something else. This is a bug.") {
     assert(pane.layout == .single, msg);
     assert(pane.left  == null, msg);

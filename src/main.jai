@@ -438,6 +438,9 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .split_top;                                        split_active_pane(.top);                            return true;
         case .split_bottom;                                     split_active_pane(.bottom);                         return true;
 
+        case .rotate_panes_clockwise;                           rotate_panes(editors.root, .clockwise);             return true;
+        case .rotate_panes_counterclockwise;                    rotate_panes(editors.root, .counterclockwise);      return true;
+
         // TODO: search_in_buffer
         case .search_in_project;
             if active_global_widget == .editors then finder_open_from_editor(); else finder_open();                 return true;
