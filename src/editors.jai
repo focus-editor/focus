@@ -1611,10 +1611,7 @@ get_adjacent_editor_pane :: (pane: *Editor_Pane, placement: Editor_Placement) ->
         return null;
     }
 
-    // Gather leaf pane rects
-    leaf_pane_rects: [..] Leaf_Pane_Rect;
-    leaf_pane_rects.allocator = temp;
-    gather_leaf_pane_rects(editors.root, screen, *leaf_pane_rects);
+    leaf_pane_rects := gather_leaf_pane_rects();
 
     // Get the center of the current pane
     center := Vector2.{ -1, -1 };
@@ -1652,27 +1649,35 @@ Leaf_Pane_Rect :: struct {
     rect: Rect;
 }
 
-gather_leaf_pane_rects :: (pane: *Editor_Pane, rect: Rect, result: *[..] Leaf_Pane_Rect) {
-    if !pane return;
-    if pane.layout == .single {
-        array_add(result, .{ pane, rect });
-        return;
-    }
-
-    // NOTE: this logic is duplicated in draw_editor_pane
-    rect1, rect2: Rect;
-    if pane.layout == .horizontal {
-        rect1, rect2 = cut_left(rect, rect.w * pane.splitter_pos + PANE_SPLITTER_WIDTH);
-    } else {
-        rect2, rect1 = cut_bottom(rect, rect.h * pane.splitter_pos - PANE_SPLITTER_WIDTH);
-    }
-
-    gather_leaf_pane_rects(pane.child1, rect1, result);
-    gather_leaf_pane_rects(pane.child2, rect2, result);
-}
-
 
 #scope_export
+
+gather_leaf_pane_rects :: () -> [] Leaf_Pane_Rect /* temp */ {
+    _gather_rects :: (pane: *Editor_Pane, rect: Rect, result: *[..] Leaf_Pane_Rect) {
+        if !pane return;
+        if pane.layout == .single {
+            array_add(result, .{ pane, rect });
+            return;
+        }
+
+        // NOTE: this logic is duplicated in draw_editor_pane, but here we're not using splitter width as a margin
+        rect1, rect2: Rect;
+        if pane.layout == .horizontal {
+            rect1, rect2 = cut_left(rect, rect.w * pane.splitter_pos + PANE_SPLITTER_WIDTH);
+        } else {
+            rect2, rect1 = cut_bottom(rect, rect.h * pane.splitter_pos - PANE_SPLITTER_WIDTH);
+        }
+
+        _gather_rects(pane.child1, rect1, result);
+        _gather_rects(pane.child2, rect2, result);
+    }
+
+    result: [..] Leaf_Pane_Rect;
+    result.allocator = temp;
+    _gather_rects(editors.root, screen, *result);
+
+    return result;
+}
 
 jump_to_search_result :: (using editor: *Editor, buffer: Buffer, move_search_point := false) {
     using search_bar;
