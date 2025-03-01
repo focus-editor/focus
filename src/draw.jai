@@ -26,14 +26,20 @@ draw_frame :: () {
     // Check whether we need to deactivate elements before drawing
     if (!mouse.left.is_down || mouse.left.just_released) && (!mouse.middle.is_down || mouse.middle.just_released) then ui.active = .none;
 
-    active_editor_rect: Rect = ---;
-
     // Draw editors
     if editors_get_layout() == .None {
         draw_welcome_screen(screen);
     } else {
         root_editor_pane_id := get_ui_id_from_loc();
         draw_editor_pane(editors.root, screen, root_editor_pane_id, 1);
+    }
+
+    active_editor_rect: Rect = ---;
+    {
+        leaf_pane_rects := gather_leaf_pane_rects();
+        for leaf_pane_rects {
+            if it.pane == editors.active_pane { active_editor_rect = it.rect; break; }
+        }
     }
 
     // !!!!!!!!!!!!! TODO: handle toggle_expand, then delete
@@ -79,7 +85,7 @@ draw_frame :: () {
     //         // @split
     // }
 
-    panel_is_active, panel_editor_rect := maybe_draw_color_preview_panel(status_bar_height);
+    panel_is_active, panel_editor_rect := maybe_draw_color_preview_panel(active_editor_rect, status_bar_height);
     if panel_is_active then active_editor_rect = panel_editor_rect;
 
     panel_is_active, panel_editor_rect  = maybe_draw_build_panel(status_bar_height);
@@ -394,33 +400,35 @@ draw_user_messages :: (main_area: Rect) {
     }
 }
 
-maybe_draw_color_preview_panel :: (status_bar_height: float) -> (drawn: bool = false, editor_rect: Rect = .{}) {
-    if config.settings.color_preview_popup == .disabled return;
-    if !workspace_scan_complete return;  // don't init the popup until all buffers are ready, otherwise we won't know the usage stats
-
-    active_editor_id := get_active_editor_id();
+should_draw_color_preview_panel :: (active_editor_id: s64) -> bool {
     active_editor, active_buffer := get_active_editor_and_buffer();
-    if !active_editor return;
-    if active_buffer.lang != .Focus_Config && active_buffer.lang != .Focus_Theme && !is_color_preview_panel(active_editor_id) return;
-    if active_buffer.readonly return;
+    if !active_editor return false;
+    if active_buffer.lang != .Focus_Config && active_buffer.lang != .Focus_Theme && !is_color_preview_panel(active_editor_id) return false;
+    if active_buffer.readonly return false;
 
     if !is_color_preview_panel(active_editor_id) {
         // Only show the panel if the cursor is within the [colors] section of the config
         using config_extra := cast(*Focus_Config_Extra) active_buffer.extra;
         pos := active_editor.cursors[active_editor.main_cursor].pos;
-        if !config_extra || (colors_section_start < 0) || (pos < colors_section_start) || (colors_section_end >= 0 && pos > colors_section_end) return;
+        if !config_extra || (colors_section_start < 0) || (pos < colors_section_start) || (colors_section_end >= 0 && pos > colors_section_end) return false;
     }
+
+    return true;
+}
+
+maybe_draw_color_preview_panel :: (active_editor_rect: Rect, status_bar_height: float) -> (drawn: bool = false, editor_rect: Rect = .{}) {
+    if config.settings.color_preview_popup == .disabled return;
+    if !workspace_scan_complete return;  // don't init the popup until all buffers are ready, otherwise we won't know the usage stats
+
+    active_editor_id := get_active_editor_id();
+    if !should_draw_color_preview_panel(active_editor_id) return;
 
     if !color_preview_is_shown {
         // Draw a "minimised" button instead of the popup
         padding := floor(12 * dpi_scale);
-        shrinked_screen  := shrink_x(shrink_y(screen, font_ui_line_height + 2 * padding), 2 * padding);
+        shrinked_screen  := shrink_x(shrink_y(active_editor_rect, font_ui_line_height + 2 * padding), 2 * padding);
         buttons_row_rect := cut_bottom(shrinked_screen, font_ui_line_height + 2 * padding);
-
-        button_alignment := Button_Alignment.right;
-        if color_preview_get_position() == .left then button_alignment = .left;
-
-        activated := draw_button(font_ui, "Show Color Preview", Color.BACKGROUND_4, Color.UI_DEFAULT, get_ui_id_from_loc(), buttons_row_rect, button_alignment, padding / 2, padding, shadow_size = char_x_advance);
+        activated := draw_button(font_ui, "Show Color Preview", Color.BACKGROUND_4, Color.UI_DEFAULT, get_ui_id_from_loc(), buttons_row_rect, .right, padding / 2, padding, shadow_size = char_x_advance);
         if activated then show_color_preview();
         if !color_preview_is_shown return;  // if we just activated it, draw it right this frame. John Carmack would be happy
     }
@@ -429,24 +437,15 @@ maybe_draw_color_preview_panel :: (status_bar_height: float) -> (drawn: bool = f
     color_preview_begin_draw(active_editor_id);
     defer color_preview_end_draw();
 
-    // Drag panel title bar first before drawing
+    // Drag the panel title bar first before drawing
     if ui.active == .color_preview_title_bar {
-        if color_preview_get_position() == .left {
-            color_preview_set_width(((mouse.pointer.x - screen.x) - panel_grab_point.x) / screen.w);
-        } else {
-            color_preview_set_width((screen.x + screen.w - (mouse.pointer.x - panel_grab_point.x)) / screen.w);
-        }
-        color_preview_set_height((mouse.pointer.y - panel_grab_point.y - screen.y) / screen.h);
+        color_preview_set_width((active_editor_rect.x + active_editor_rect.w - (mouse.pointer.x - panel_grab_point.x)) / active_editor_rect.w);
+        color_preview_set_height((mouse.pointer.y - panel_grab_point.y - active_editor_rect.y) / active_editor_rect.h);
     }
 
     margin := floor(4 * dpi_scale);
 
-    color_preview_rect: Rect;
-    if color_preview_get_position() == .left {
-        color_preview_rect = cut_left(screen, screen.w * color_preview_width, margin = 2);
-    } else {
-        color_preview_rect = cut_right(screen, screen.w * color_preview_width, margin = 2);
-    }
+    color_preview_rect := cut_right(active_editor_rect, active_editor_rect.w * color_preview_width, margin = 2);
     color_preview_rect=, color_picker_rect := cut_bottom(color_preview_rect, color_preview_rect.h * color_preview_height);
     if config.settings.status_bar_position == .bottom {
         _, color_preview_rect = cut_bottom(color_preview_rect, status_bar_height);
@@ -463,13 +462,7 @@ maybe_draw_color_preview_panel :: (status_bar_height: float) -> (drawn: bool = f
     // Draw title bar
     {
         started_dragging := maybe_set_hot_or_active(.color_preview_title_bar, title_bar_rect, .NORMAL, .left);
-        if started_dragging {
-            if color_preview_get_position() == .left {
-                panel_grab_point = mouse.pointer - top_right(title_bar_rect);
-            } else {
-                panel_grab_point = mouse.pointer - top_left(title_bar_rect);
-            }
-        }
+        if started_dragging then panel_grab_point = mouse.pointer - top_left(title_bar_rect);
         if ui.active == .color_preview_title_bar then set_pointer_image(.DRAGGING_FREE);
         if ui.hot_last_frame == .color_preview_title_bar && ui.active == .none && mouse.middle.just_pressed then hide_color_preview();
 
@@ -488,8 +481,8 @@ maybe_draw_color_preview_panel :: (status_bar_height: float) -> (drawn: bool = f
         {
             button_rect := cut_right(title_bar_rect, title_bar_rect.h);
             button_id := get_ui_id_from_loc();
-            maybe_set_hot_or_active(button_id, button_rect, .PRESSABLE);
-            if ui.hot_last_frame == button_id && mouse.left.just_released && mouse_pointer_is_within(button_rect) {
+            clicked := maybe_set_hot_or_active(button_id, button_rect, .PRESSABLE);
+            if clicked {
                 hide_color_preview();
                 redraw_requested = true;
             }
@@ -597,7 +590,7 @@ maybe_draw_color_preview_panel :: (status_bar_height: float) -> (drawn: bool = f
     return is_color_preview_panel(active_editor_id), editor_rect;
 }
 
-draw_color_picker :: (editor_id: s64, editor: *Editor, buffer: *Buffer, picker_rect: Rect, range: Offset_Range, on_left: bool) {
+draw_color_picker :: (editor_id: s64, editor: *Editor, buffer: *Buffer, picker_rect: Rect, range: Offset_Range) {
     if !is_valid(picker_rect)  return;
 
     color_change_callback :: (rgba: Vector4, hsl: Vector3, finalize: bool) {
@@ -630,13 +623,8 @@ draw_color_picker :: (editor_id: s64, editor: *Editor, buffer: *Buffer, picker_r
     if ui.active != axis_id && ui.active != alpha_id && ui.active != main_id then color_picker_set_color(buffer, range);
 
     rect := picker_rect;
-    if rect.w > rect.h {
-        if on_left  rect = cut_left (rect, rect.h);
-        else        rect = cut_right(rect, rect.h);
-    }
-    if rect.h > rect.w {
-        rect = cut_bottom(rect, rect.w);
-    }
+    if rect.w > rect.h then rect = cut_right(rect, rect.h);
+    if rect.h > rect.w then rect = cut_bottom(rect, rect.w);
 
     Simp.immediate_flush();
 
@@ -777,8 +765,8 @@ maybe_draw_build_panel :: (status_bar_height: float) -> (drawn: bool = false, ed
         {
             button_rect := cut_right(title_bar_rect, title_bar_rect.h);
             button_id := get_ui_id_from_loc();
-            maybe_set_hot_or_active(button_id, button_rect, .PRESSABLE);
-            if ui.hot_last_frame == button_id && mouse.left.just_released && mouse_pointer_is_within(button_rect) {
+            clicked := maybe_set_hot_or_active(button_id, button_rect, .PRESSABLE);
+            if clicked {
                 hide_build_panel();
                 redraw_requested = true;
             }
