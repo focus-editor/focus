@@ -65,13 +65,7 @@ is_color_preview_panel :: inline (editor_id: s64) -> bool {
 }
 
 color_preview_lose_focus :: () {
-    // TODO: use active global widget instead !!!
-    // // Sometimes we might want to make the previously active editor active, e.g. when deciding on new buffer placement
-    // if editors.active != editors.left && editors.active != editors.right && editors.left >= 0 && editors.right >= 0 {
-    //     // If we still have the same editors open when the panel was opened, go back to the previously active one,
-    //     // otherwise default to left.
-    //     make_editor_active(ifx target_editor_id == editors.right then editors.right else editors.left);
-    // }
+    activate_editors();
 }
 
 color_preview_set_height :: (height: float) {
@@ -81,19 +75,6 @@ color_preview_set_height :: (height: float) {
 
 color_preview_set_width :: (width: float) {
     color_preview_width = clamp(width, 0.1, 1.0);
-}
-
-color_preview_get_position :: () -> Panel_Position {
-    // TODO: rewrite !!!!!
-    // if #complete editors.layout == {
-    //     case .None;     saved_position = .right;
-    //     case .Single;   saved_position = .right;
-    //     case .Double;   if editor_closing_id >= 0 then saved_position = .right;
-    //                     else if editors.active == editors.left  then saved_position = .right;
-    //                     else if editors.active == editors.right then saved_position = .left;
-    //     case .Multi;    saved_position = .right;  // @split
-    // }
-    return saved_position;
 }
 
 color_preview_begin_draw :: (editor_id: s64) {
@@ -260,8 +241,7 @@ color_preview_draw_color_picker :: (rect: Rect) {
     count := color_end - color_start;
     if count != 6 && count != 8 return;
 
-    on_left := saved_position == .left;
-    draw_color_picker(target_editor_id, editor, buffer, rect, .{color_start, color_end}, on_left);
+    draw_color_picker(target_editor_id, editor, buffer, rect, .{color_start, color_end});
 }
 
 color_preview_jump_to_color_name :: (color_name: string) {
@@ -384,11 +364,7 @@ Color_Preview_Language :: struct {
 panel_buffer_id := -1;
 panel_editor_id := -1;
 
-saved_position := Panel_Position.right;
-
 color_preview_warning: string;
-
-Panel_Position :: enum { left; right; }
 
 OLD_COLOR_MAP: [COLOR_MAP_SIZE] Vector4;
 

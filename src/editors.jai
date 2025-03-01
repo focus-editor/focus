@@ -183,10 +183,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
         case .search_in_buffer_dropdown_mode;   open_search_bar(editor, buffer, .dropdown);
 
         case .close_dialog;                     hide_build_panel();
-        case .escape;                           if editor.cursors.count == 1 hide_build_panel();
-                                                remove_additional_cursors(editor);
-                                                reset_search_results(*editor.search_bar);
-                                                editor.refresh_selection = true;
+        case .escape;                           handle_escape(editor);
 
         case .save;                             save_active_buffer();
         case .save_all;                         save_all();
@@ -1207,6 +1204,27 @@ open_search_bar :: (using editor: *Editor, buffer: Buffer, requested_mode: Searc
     search_and_update_results(editor, buffer);
     scroll_y = 0;
     scroll_to_selected = .snap;
+}
+
+handle_escape :: (editor: *Editor) {
+    if build_panel_is_shown {
+        hide_build_panel();
+        return;
+    }
+
+    active_editor_id := get_active_editor_id();
+    if should_draw_color_preview_panel(active_editor_id) && color_preview_is_shown {
+        hide_color_preview();
+        return;
+    }
+
+    if editor.cursors.count > 1 {
+        remove_additional_cursors(editor);
+        return;
+    }
+
+    reset_search_results(*editor.search_bar);
+    editor.refresh_selection = true;
 }
 
 close_search_bar :: inline (editor: *Editor, jump_to_original_cursor := false, jump_to_selected_result := false) {
