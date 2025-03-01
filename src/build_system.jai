@@ -306,16 +306,18 @@ build_panel_set_width :: (width: float) {
 build_panel_get_position :: () -> Build_Panel_Position {
     if config.settings.build_panel_stays_in_one_place return .right;
 
-    // !!! @incomplete - should be based on the visual position of the active pane
-    // if #complete editors.layout == {
-    //     case .None;     saved_position = .right;
-    //     case .Single;   saved_position = .right;
-    //     case .Double;   if editor_closing_id >= 0 then saved_position = .right;
-    //                     else if editors.active == editors.left  then saved_position = .right;
-    //                     else if editors.active == editors.right then saved_position = .left;
-    //     case .Multi;    saved_position = .right;  // @split
-    // }
-    return saved_position;
+    // Get the center of the active pane
+    leaf_pane_rects := gather_leaf_pane_rects();
+    center := Vector2.{ -1, -1 };
+    for leaf_pane_rects {
+        if it.pane == editors.active_pane { center = center_of(it.rect); break; }
+    }
+
+    if center.x <= screen.x + screen.w / 2 {
+        return .right;
+    } else {
+        return .left;
+    }
 }
 
 build_panel_is_active :: inline () -> bool {
@@ -796,8 +798,6 @@ thread_group: Thread_Group;
 
 build_buffer_id := -1;
 build_editor_id := -1;
-
-saved_position := Build_Panel_Position.right;
 
 build_panel_is_expanded := false;
 

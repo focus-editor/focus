@@ -36,7 +36,7 @@ draw_frame :: () {
         draw_editor_pane(editors.root, screen, root_editor_pane_id, 1);
     }
 
-    // !!!!!!!!!!!!!
+    // !!!!!!!!!!!!! TODO: handle toggle_expand, then delete
     // if #complete editors.layout == {
     //     case .None;
     //         editors_snap_splitter(0.5);
@@ -712,9 +712,11 @@ draw_color_picker :: (editor_id: s64, editor: *Editor, buffer: *Buffer, picker_r
 maybe_draw_build_panel :: (status_bar_height: float) -> (drawn: bool = false, editor_rect: Rect = .{}) {
     if !build_panel_is_shown return;
 
+    position := build_panel_get_position();
+
     // Drag build panel title bar first before drawing
     if ui.active == .build_panel_title_bar {
-        if build_panel_get_position() == .left {
+        if position == .left {
             build_panel_set_width(((mouse.pointer.x - screen.x) - panel_grab_point.x) / screen.w);
         } else {
             build_panel_set_width((screen.x + screen.w - (mouse.pointer.x - panel_grab_point.x)) / screen.w);
@@ -723,7 +725,7 @@ maybe_draw_build_panel :: (status_bar_height: float) -> (drawn: bool = false, ed
     }
 
     build_panel_rect: Rect;
-    if build_panel_get_position() == .left {
+    if position == .left {
         build_panel_rect = cut_left(screen, screen.w * build_panel_width, margin = 2);
     } else {
         build_panel_rect = cut_right(screen, screen.w * build_panel_width, margin = 2);
@@ -751,7 +753,7 @@ maybe_draw_build_panel :: (status_bar_height: float) -> (drawn: bool = false, ed
     {
         started_dragging := maybe_set_hot_or_active(.build_panel_title_bar, title_bar_rect, .NORMAL, .left);
         if started_dragging {
-            if build_panel_get_position() == .left {
+            if position == .left {
                 panel_grab_point = mouse.pointer - top_right(title_bar_rect);
             } else {
                 panel_grab_point = mouse.pointer - top_left(title_bar_rect);
