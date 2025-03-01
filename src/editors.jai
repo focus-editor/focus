@@ -47,23 +47,13 @@ activate_editors :: () {
 }
 
 editors_handle_file_drop :: (files: [] string) {
-    // // !!!!!!!!!! TODO !!!!!!!!!!!!!
-    // if editors.layout == .Double && files.count == 1 {
-    //     // Open file in the closest editor - will be handled by the drawing code because we only know the layout then
-    //     just_dropped_file = files[0];
-    // } else {
-    //     if files.count == 1 {
-    //         // When one file, open in a single editor
-    //         editors_open_file(files[0]);
-    //     } else {
-    //         // When more than 2 files, open all of them, but put the first 2 side by side
-    //         for 1..files.count-1 {
-    //             editors_open_file(files[it]);  // create a buffer and an editor
-    //         }
-    //         editors_open_file(files[0], .left);
-    //         editors_open_file(files[1], .right);
-    //     }
-    // }
+    if editors_get_layout() == .Multi {
+        // Defer handling to the drawing code because we only know the layout then
+        just_dropped_files = files;
+    } else {
+        // Open everything in a single pane
+        for path : files  editors_open_file(path);
+    }
 }
 
 active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Event, action: Action_Editors) -> handled: bool {
