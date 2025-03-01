@@ -67,12 +67,6 @@ draw_frame :: () {
     //         split_x := screen.w * splitter_pos;
     //         left_rect, right_rect := cut_left(screen, split_x, margin = 2);
 
-    //         if just_dropped_file {
-    //             if mouse_pointer_is_within(left_rect)  then editors_open_file(just_dropped_file, .left);
-    //             if mouse_pointer_is_within(right_rect) then editors_open_file(just_dropped_file, .right);
-    //             just_dropped_file = "";
-    //         }
-
     //         draw_editor(editors.left,  left_rect,  status_bar_height, .editor_left,  screen);
     //         draw_editor(editors.right, right_rect, status_bar_height, .editor_right, screen);
 
@@ -140,6 +134,11 @@ draw_editor_pane :: (using pane: *Editor_Pane, rect: Rect, root_pane_id: Ui_Id, 
         }
         if pane == editors.active_pane && active_global_widget == .editors {
             draw_rect_border(rect, size = floor(3 * dpi_scale), color = Color.CURSOR_INACTIVE);
+        }
+        if just_dropped_files && is_hovering_over(pane_ui_id) {
+            for path : just_dropped_files  editors_open_file_in_pane(path, pane);
+            just_dropped_files = .[];
+            redraw_requested = true;
         }
     } else {
         splitter_ui_id := get_ui_id_from_loc(parent_id = pane_ui_id);

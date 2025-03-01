@@ -963,8 +963,8 @@ BUILTIN_THEMES :: #run -> [] Builtin_Theme {
     return themes;
 }
 
-// A string which contains the path to a file which was just drag-and-dropped into the editor (for the draw code to use)
-just_dropped_file := "";
+// A list of files drag-and-dropped into the editor (for the drawing code to use)
+just_dropped_files: [] string;
 
 cpu_info: Cpu_X86;
 
