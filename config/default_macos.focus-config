@@ -217,7 +217,7 @@ Cmd-Opt-X ArrowDown             split_bottom
 Cmd-Shift-,                     duplicate_editor
 
 Cmd-N                           create_new_file
-Cmd-Shift-N                     create_new_file_on_the_side
+Cmd-Shift-N                     create_new_file_in_side_pane
 
 Opt-Shift-ArrowUp               create_cursor_above
 Opt-Shift-ArrowDown             create_cursor_below
@@ -293,14 +293,14 @@ Cmd-Shift-L                     toggle_expand
 
 Cmd-B                           build_panel_toggle
 
-Enter                           open_entry_in_place
-Cmd-Enter                       open_entry_on_the_side
+Enter                           open_entry
+Cmd-Enter                       open_entry_in_side_pane
 
 Ctrl-Cmd-Shift-ArrowLeft        switch_to_left_pane
 Ctrl-Cmd-Shift-ArrowRight       switch_to_right_pane
 Ctrl-Cmd-Shift-ArrowUp          switch_to_top_pane
 Ctrl-Cmd-Shift-ArrowDown        switch_to_bottom_pane
-Cmd-,                           switch_to_opposite_pane
+Cmd-,                           switch_to_side_pane
 
 Cmd-1                           switch_to_pane_1
 Cmd-2                           switch_to_pane_2
@@ -364,9 +364,9 @@ Cmd-0                           reset_font_size_to_default
 Cmd-MouseMiddle                 reset_font_size_to_default
 
 F8                              go_to_next_build_error
-Cmd-F8                          go_to_next_build_error_on_the_side
+Cmd-F8                          go_to_next_build_error_in_side_pane
 Shift-F8                        go_to_previous_build_error
-Shift-Cmd-F8                    go_to_previous_build_error_on_the_side
+Shift-Cmd-F8                    go_to_previous_build_error_in_side_pane
 
 
 [[style]]

@@ -236,7 +236,7 @@ Ctrl-Alt-X ArrowDown        split_bottom
 Ctrl-Shift-,                duplicate_editor
 
 Ctrl-N                      create_new_file
-Ctrl-Shift-N                create_new_file_on_the_side
+Ctrl-Shift-N                create_new_file_in_side_pane
 
 Alt-Shift-ArrowUp           create_cursor_above
 Alt-Shift-ArrowDown         create_cursor_below
@@ -318,14 +318,14 @@ Ctrl-B                      build_panel_toggle
 
 F11                         toggle_fullscreen
 
-Enter                       open_entry_in_place
-Ctrl-Enter                  open_entry_on_the_side
+Enter                       open_entry
+Ctrl-Enter                  open_entry_in_side_pane
 
 Ctrl-Alt-Shift-ArrowLeft    switch_to_left_pane
 Ctrl-Alt-Shift-ArrowRight   switch_to_right_pane
 Ctrl-Alt-Shift-ArrowUp      switch_to_top_pane
 Ctrl-Alt-Shift-ArrowDown    switch_to_bottom_pane
-Ctrl-,                      switch_to_opposite_pane
+Ctrl-,                      switch_to_side_pane
 
 Ctrl-1                      switch_to_pane_1
 Ctrl-2                      switch_to_pane_2
@@ -381,9 +381,9 @@ Ctrl-0                      reset_font_size_to_default
 Ctrl-MouseMiddle            reset_font_size_to_default
 
 F8                          go_to_next_build_error
-Ctrl-F8                     go_to_next_build_error_on_the_side
+Ctrl-F8                     go_to_next_build_error_in_side_pane
 Shift-F8                    go_to_previous_build_error
-Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
+Shift-Ctrl-F8               go_to_previous_build_error_in_side_pane
 
 
 [[style]]

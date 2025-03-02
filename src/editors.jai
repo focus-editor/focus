@@ -119,7 +119,7 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
             if action == {
                 case .escape;                       #through;
                 case .close_dialog;                 close_search_bar(editor);                                       return true;
-                case .open_entry_in_place;          search_bar_move_cursor(editor, buffer,  1, wrap = true);        return true;
+                case .open_entry;                   search_bar_move_cursor(editor, buffer,  1, wrap = true);        return true;
             }
         } else {
             if action == {
@@ -129,8 +129,8 @@ active_editor_handle_event :: (editor: *Editor, buffer: *Buffer, event: Input.Ev
                 case .move_up_one_page;             search_bar_move_cursor(editor, buffer, -per_page);              return true;
                 case .move_down_one_page;           search_bar_move_cursor(editor, buffer,  per_page);              return true;
 
-                case .open_entry_in_place;          close_search_bar(editor, jump_to_selected_result = true);       return true;
-                case .open_entry_on_the_side;       search_bar_open_selected_result(editor, buffer, .on_the_side);  return true;
+                case .open_entry;                   close_search_bar(editor, jump_to_selected_result = true);       return true;
+                case .open_entry_in_side_pane;      search_bar_open_selected_result(editor, buffer, .on_the_side);  return true;
 
                 case .switch_to_left_pane;          search_bar_open_selected_result(editor, buffer, .left);         return true;
                 case .switch_to_right_pane;         search_bar_open_selected_result(editor, buffer, .right);        return true;
@@ -1624,10 +1624,6 @@ get_adjacent_editor_pane :: (pane: *Editor_Pane, placement: Editor_Placement) ->
     if placement == .in_place return pane;
     if pane.parent == null return null;
     assert(pane.parent.layout == .horizontal || pane.parent.layout == .vertical);
-    if placement == .on_the_side {
-        //  !!! TODO: return last pane?
-        return null;
-    }
 
     leaf_pane_rects := gather_leaf_pane_rects();
 
@@ -1637,6 +1633,11 @@ get_adjacent_editor_pane :: (pane: *Editor_Pane, placement: Editor_Placement) ->
         if it.pane == pane { center = center_of(it.rect); break; }
     }
     assert(center.x >= 0 && center.y >= 0, "Couldn't find the current pane in the leaf pane list. This is a bug.");
+
+    // A side pane is a pane which is on the opposite side horizontally
+    if placement == .on_the_side {
+        placement = ifx center.x <= screen.x + screen.w / 2 then .right else .left;
+    }
 
     // Find the closest pane in the desired direction
     closest_pane: *Editor_Pane;
