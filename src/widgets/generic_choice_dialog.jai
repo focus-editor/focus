@@ -5,8 +5,8 @@ dialog_handle_event :: (using dialog: *Generic_Choice_Dialog, event: Input.Event
             case .escape;                   #through;
             case .close_dialog;             hide_dialog(dialog)   ;                         return true;
 
-            case .open_entry_in_place;      dialog.open_entry(.in_place);       return true;
-            case .open_entry_on_the_side;   dialog.open_entry(.on_the_side);    return true;
+            case .open_entry;               dialog.open_entry(.in_place);       return true;
+            case .open_entry_in_side_pane;  dialog.open_entry(.on_the_side);    return true;
 
             case .switch_to_left_pane;      dialog.open_entry(.left);           return true;
             case .switch_to_right_pane;     dialog.open_entry(.right);          return true;

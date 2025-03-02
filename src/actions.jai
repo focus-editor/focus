@@ -123,21 +123,21 @@ ACTIONS_COMMON :: string.[
     "escape",
 
     "go_to_next_build_error",
-    "go_to_next_build_error_on_the_side",
+    "go_to_next_build_error_in_side_pane",
     "go_to_previous_build_error",
-    "go_to_previous_build_error_on_the_side",
+    "go_to_previous_build_error_in_side_pane",
 
     "focus_next_ui_element",
     "focus_previous_ui_element",
 
-    "open_entry_in_place",
-    "open_entry_on_the_side",
+    "open_entry",
+    "open_entry_in_side_pane",
 
-    "switch_to_opposite_pane",
     "switch_to_left_pane",
     "switch_to_right_pane",
     "switch_to_top_pane",
     "switch_to_bottom_pane",
+    "switch_to_side_pane",
 
     "switch_to_pane_1",
     "switch_to_pane_2",
@@ -202,7 +202,7 @@ ACTIONS_EDITORS :: #run arrays_concat(ACTIONS_COMMON, string.[
     "new_line_above_without_breaking",
 
     "create_new_file",
-    "create_new_file_on_the_side",
+    "create_new_file_in_side_pane",
     "cursor_go_back",
     "cursor_go_forward",
     "go_to_previous_buffer",

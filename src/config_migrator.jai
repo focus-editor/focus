@@ -696,12 +696,20 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
     .{ 17, "editors",   "move_editor_to_the_right",         "" },  // removed
     .{ 17, "editors",   "switch_to_left_editor",            "switch_to_left_pane"  },
     .{ 17, "editors",   "switch_to_right_editor",           "switch_to_right_pane" },
-    .{ 17, "editors",   "switch_to_other_editor",           "switch_to_opposite_pane" },
+    .{ 17, "editors",   "switch_to_other_editor",           "switch_to_side_pane" },
 
     .{ 17, "editors",   "move_to_next_buffer",              "go_to_next_buffer" },
     .{ 17, "editors",   "move_to_previous_buffer",          "go_to_previous_buffer" },
     .{ 17, "editors",   "move_to_next_editor_history",      "cursor_go_forward" },
     .{ 17, "editors",   "move_to_previous_editor_history",  "cursor_go_back" },
+
+    .{ 17, "editors",   "create_new_file_on_the_side",      "create_new_file_in_side_pane" },
+    .{ 17, "editors",   "open_entry_in_place",              "open_entry" },
+    .{ 17, "editors",   "open_entry_on_the_side",           "open_entry_in_side_pane" },
+
+    .{ 17, "common",    "go_to_next_build_error_on_the_side",       "go_to_next_build_error_in_side_pane" },
+    .{ 17, "common",    "go_to_previous_build_error_on_the_side",   "go_to_previous_build_error_in_side_pane" },
+    .{ 17, "common",    "go_to_previous_build_error_on_the_side",   "go_to_previous_build_error_in_side_pane" },
 ];
 
 #if !NO_OUTPUT_BUILD {
@@ -761,8 +769,6 @@ RENAMED_KEYBINDS :: Renamed_Keybind.[
         "new_line_below_without_breaking",
         "open_directory",
         "open_entry_in_explorer",
-        "open_entry_in_place",
-        "open_entry_on_the_side",
         "paste",
         "pop_directory",
         "quit",
@@ -1250,7 +1256,7 @@ Ctrl-F8                     go_to_next_build_error_on_the_side
 Shift-F8                    go_to_previous_build_error
 Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
 {Shift}-Ctrl-M              jump_to_matching_bracket
-Enter                       open_entry_in_place
+Enter                       open_entry
 Tab                         focus_next_ui_element
 Shift-Tab                   focus_previous_ui_element
 
@@ -1368,7 +1374,7 @@ Ctrl-F8                     go_to_next_build_error_on_the_side
 Shift-F8                    go_to_previous_build_error
 Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
 {Shift}-Ctrl-M              jump_to_matching_bracket
-Enter                       open_entry_in_place
+Enter                       open_entry
 Tab                         focus_next_ui_element
 Shift-Tab                   focus_previous_ui_element
 
@@ -1467,7 +1473,7 @@ Ctrl-F8                     go_to_next_build_error_on_the_side
 Shift-F8                    go_to_previous_build_error
 Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
 {Shift}-Ctrl-M              jump_to_matching_bracket
-Enter                       open_entry_in_place
+Enter                       open_entry
 Tab                         focus_next_ui_element
 Shift-Tab                   focus_previous_ui_element
 
@@ -1966,7 +1972,7 @@ Ctrl-F8                     go_to_next_build_error_on_the_side
 Shift-F8                    go_to_previous_build_error
 Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
 {Shift}-Ctrl-M              jump_to_matching_bracket
-Enter                       open_entry_in_place
+Enter                       open_entry
 Tab                         focus_next_ui_element
 Shift-Tab                   focus_previous_ui_element
 
@@ -2001,7 +2007,7 @@ Ctrl-Tab                    show_open_file_dialog_in_open_editors_mode
 Ctrl-Alt-P                  switch_to_project
 
 [search dialog]
-Enter                       open_entry_in_place
+Enter                       open_entry
 
 FOCUS_CONFIG
 
@@ -2048,12 +2054,12 @@ Ctrl-F8                     go_to_next_build_error_on_the_side
 Shift-F8                    go_to_previous_build_error
 Shift-Ctrl-F8               go_to_previous_build_error_on_the_side
 {Shift}-Ctrl-M              jump_to_matching_bracket
-Enter                       open_entry_in_place
+Enter                       open_entry
 Tab                         focus_next_ui_element
 Shift-Tab                   focus_previous_ui_element
 
 [search dialog]
-Enter                       open_entry_in_place
+Enter                       open_entry
 
 # Added after migration to version [!latest!]
 Tab                         go_to_next_input
