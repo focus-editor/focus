@@ -3873,7 +3873,9 @@ draw_scrollbar :: (main_rect: Rect, content_height: float, scroll: s32, scroll_t
     }
 
     // Get another opacity value based on distance to mouse pointer
-    distance_to_mouse := max(abs(mouse.pointer.x - (scrollbar.x + scrollbar.w / 2)) - scrollbar.w / 2, 0.0);
+    distance_to_mouse_x := max(abs(mouse.pointer.x - (area.x + area.w / 2)) - area.w / 2, 0.0);
+    distance_to_mouse_y := max(abs(mouse.pointer.y - (area.y + area.h / 2)) - area.h / 2, 0.0);
+    distance_to_mouse := max(distance_to_mouse_x, distance_to_mouse_y);
     fade_in_threshold := char_size * config.settings.scrollbar_fade_in_sensitivity;
     t := clamp((fade_in_threshold - distance_to_mouse) / fade_in_threshold, 0.0, 1.0);
     opacity := lerp(config.settings.scrollbar_min_opacity, config.settings.scrollbar_max_opacity, t);
