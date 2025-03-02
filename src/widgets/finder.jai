@@ -46,8 +46,8 @@ finder_handle_event :: (event: Input.Event) -> handled: bool {
             case .focus_next_ui_element;      finder_go_to_next_input();                            return true;
             case .focus_previous_ui_element;  finder_go_to_previous_input();                        return true;
 
-            case .open_entry_in_place;      finder_open_selected_result(selected, .in_place);       return true;
-            case .open_entry_on_the_side;   finder_open_selected_result(selected, .on_the_side);    return true;
+            case .open_entry;               finder_open_selected_result(selected, .in_place);       return true;
+            case .open_entry_in_side_pane;  finder_open_selected_result(selected, .on_the_side);    return true;
 
             case .switch_to_left_pane;      finder_open_selected_result(selected, .left);           return true;
             case .switch_to_right_pane;     finder_open_selected_result(selected, .right);          return true;

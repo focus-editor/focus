@@ -6,7 +6,7 @@ dialog_handle_event :: (dialog: *Generic_Confirm_Dialog, event: Input.Event) -> 
         if action == {
             case .focus_next_ui_element;      dialog_focus_next(dialog);      return true;
             case .focus_previous_ui_element;  dialog_focus_previous(dialog);  return true;
-            case .open_entry_in_place;
+            case .open_entry;
                 success := dialog_select_focused(dialog);
                 if success  return true;
         }

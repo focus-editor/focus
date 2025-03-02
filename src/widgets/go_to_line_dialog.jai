@@ -7,8 +7,8 @@ go_to_line_dialog_handle_event :: (event: Input.Event) -> handled: bool {
             case .escape;                   #through;
             case .close_dialog;             close_go_to_line_dialog(jump_to_original_cursor = config.settings.can_cancel_go_to_line);
                                             return true;
-            case .open_entry_in_place;      jump_to_line(); close_go_to_line_dialog(); return true;
-            case .open_entry_on_the_side;   jump_to_line(); close_go_to_line_dialog(); return true;
+            case .open_entry;               jump_to_line(); close_go_to_line_dialog(); return true;
+            case .open_entry_in_side_pane;  jump_to_line(); close_go_to_line_dialog(); return true;
         }
 
         old_text := copy_temporary_string(to_string(input.text));

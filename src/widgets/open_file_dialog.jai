@@ -8,8 +8,8 @@ open_file_dialog_handle_event :: (event: Input.Event) -> handled: bool {
             case .close_dialog;             close_open_file_dialog(.CANCEL);                                               return true;
             case .close_editor;             maybe_close_file_under_cursor();                                               return true;
 
-            case .open_entry_in_place;      open_file_dialog_open_entry(entries.selected, .in_place);                      return true;
-            case .open_entry_on_the_side;   if mode != .save  open_file_dialog_open_entry(entries.selected, .on_the_side); return true;
+            case .open_entry;               open_file_dialog_open_entry(entries.selected, .in_place);                      return true;
+            case .open_entry_in_side_pane;  if mode != .save  open_file_dialog_open_entry(entries.selected, .on_the_side); return true;
 
             case .switch_to_left_pane;      if mode != .save  open_file_dialog_open_entry(entries.selected, .left);        return true;
             case .switch_to_right_pane;     if mode != .save  open_file_dialog_open_entry(entries.selected, .right);       return true;

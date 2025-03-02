@@ -137,7 +137,7 @@ base_commands := #run -> [] Command {
         cmd( "Edit Current Theme",                .edit_current_theme,               .None   ),
 
         cmd( "Create New File",                   .create_new_file,                  .None   ),
-        cmd( "Create New File On The Side",       .create_new_file_on_the_side,      .Single ),
+        cmd( "Create New File In Side Pane",      .create_new_file_in_side_pane,     .Single ),
 
         cmd( "Search In Workspace",               .search_in_project,                .None   ),
 
@@ -206,7 +206,7 @@ base_commands := #run -> [] Command {
         cmd( "Switch To Right Pane",              .switch_to_right_pane,             .Multi  ),
         cmd( "Switch To Top Pane",                .switch_to_top_pane,               .Multi  ),
         cmd( "Switch To Bottom Pane",             .switch_to_bottom_pane,            .Multi  ),
-        cmd( "Switch To Opposite Pane",           .switch_to_opposite_pane,          .Multi  ),
+        cmd( "Switch To Side Pane",               .switch_to_side_pane,              .Multi  ),
 
         cmd( "Duplicate Editor",                  .duplicate_editor,                 .Single ),
         cmd( "Duplicate Editor Left",             .duplicate_editor_left,            .Single ),
