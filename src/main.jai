@@ -390,12 +390,12 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
 
         case .go_to_line;                                       show_go_to_line_dialog();                           return true;
         case .create_new_file;                                  editors_create_new_file(placement);                 return true;
-        case .create_new_file_on_the_side;                      editors_create_new_file(.on_the_side);              return true;
+        case .create_new_file_in_side_pane;                     editors_create_new_file(.on_the_side);              return true;
 
         case .go_to_next_build_error;                           go_to_next_build_error(.in_place);                  return true;
-        case .go_to_next_build_error_on_the_side;               go_to_next_build_error(.on_the_side);               return true;
+        case .go_to_next_build_error_in_side_pane;              go_to_next_build_error(.on_the_side);               return true;
         case .go_to_previous_build_error;                       go_to_previous_build_error(.in_place);              return true;
-        case .go_to_previous_build_error_on_the_side;           go_to_previous_build_error(.on_the_side);           return true;
+        case .go_to_previous_build_error_in_side_pane;          go_to_previous_build_error(.on_the_side);           return true;
 
         case .open_file_by_name;                                show_open_file_dialog(.search);                     return true;
         case .navigate_to_file;                                 show_open_file_dialog(.navigate);                   return true;
@@ -421,7 +421,7 @@ handle_common_editor_action :: (action: Action_Editors, placement: Editor_Placem
         case .switch_to_right_pane;                             switch_to_pane(.right);                             return true;
         case .switch_to_top_pane;                               switch_to_pane(.top);                               return true;
         case .switch_to_bottom_pane;                            switch_to_pane(.bottom);                            return true;
-        case .switch_to_opposite_pane;                          switch_to_pane(.on_the_side);                       return true;
+        case .switch_to_side_pane;                              switch_to_pane(.on_the_side);                       return true;
 
         case .switch_to_pane_1;                                 switch_to_pane_by_number(1);                        return true;
         case .switch_to_pane_2;                                 switch_to_pane_by_number(2);                        return true;
