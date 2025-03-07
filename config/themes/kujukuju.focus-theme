@@ -1,0 +1,103 @@
+[13]  # Version number. Do not delete.
+
+[colors]
+background0:                            141824FF
+background1:                            080B14FF
+background2:                            12182BFF
+background3:                            151B2EFF
+background4:                            1C2748FF
+
+# NOTE: region_scope colors only work for Jai at the moment
+region_scope_export:                    141824FF
+region_scope_file:                      0F131FFF
+region_scope_module:                    121422FF
+
+region_header:                          183952FF
+region_success:                         226022FF
+region_warning:                         986032FF
+region_error:                           772222FF
+region_heredoc:                         040F18FF
+
+selection_active:                       1A3C49FF
+selection_inactive:                     1A3B497F
+selection_highlight:                    FCEDFC26
+search_result_active:                   8E772EFF
+search_result_inactive:                 FCEDFC26
+scrollbar:                              3093CB19
+scrollbar_hover:                        309ECB4C
+scrollbar_background:                   10161F4C
+cursor:                                 26B2B2FF
+cursor_inactive:                        196666FF
+paste_animation:                        1C4449FF
+splitter:                               21333FFF
+splitter_hover:                         1C4449FF
+ruler:                                  1966667F
+indent_guide:                           FCEDFC26
+letter_highlight:                       599999FF
+list_cursor_lite:                       33CCCC19
+list_cursor:                            33CCCC4C
+shadow_dark:                            0E161C7F
+shadow_transparent:                     0E161C00
+text_input_label:                       3B4450FF
+char_under_cursor:                      FFFFFFFF
+bracket_highlight:                      E8FCFE30
+
+ui_default:                             CBCEBCFF
+ui_dim:                                 87919DFF
+ui_neutral:                             4C4C4CFF
+ui_warning:                             F8AD34FF
+ui_warning_dim:                         986032FF
+ui_error:                               772222FF
+ui_error_bright:                        FF0000FF
+ui_success:                             227722FF
+
+build_panel_background:                 1A2431FF
+build_panel_scrollbar:                  309ECB19
+build_panel_scrollbar_hover:            3294CB4C
+build_panel_scrollbar_background:       10141F4C
+build_panel_title_bar:                  1C2C3AFF
+
+code_default:                           CBCEBCFF
+code_invalid:                           FF0000FF
+
+code_string_literal:                    BAE67EFF
+code_multiline_string:                  BAE67EFF
+code_raw_string:                        bae67eFF
+code_char_literal:                      BAE67EFF
+
+code_identifier:                        CBCEBCFF
+code_note:                              E0AD82FF
+code_number:                            9DD2BBFF
+
+code_error:                             FF0000FF
+code_warning:                           E4D97DFF
+code_highlight:                         E4D97DFF
+
+code_comment:                           87919DFF
+code_multiline_comment:                 87919DFF
+
+code_operation:                         F07178FF
+code_punctuation:                       CBCEBCFF
+
+code_keyword:                           F07178FF
+code_type:                              FFA759FF
+code_value:                             FF6A27FF
+code_modifier:                          FFA759FF
+code_attribute:                         FFA759FF
+code_enum_variant:                      CBCEBCFF
+code_macro:                             E0AD82FF
+code_function:                          FFCC66FF
+
+code_builtin_variable:                  9DD2BBFF
+code_builtin_function:                  E0AD82FF
+code_builtin_exception:                 E0AD82FF
+
+code_directive:                         FFA759FF
+code_directive_modifier:                FFA759FF
+
+code_header:                            FFA759FF
+code_header2:                           E0AD82FF
+code_header3:                           E0AD82FF
+code_header4:                           E0AD82FF
+code_header5:                           E0AD82FF
+code_header6:                           E0AD82FF
