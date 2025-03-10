@@ -1,0 +1,93 @@
+[16]  # Version number. Do not delete.
+      # (https://github.com/catppuccin/catppuccin)
+
+[colors]
+background0:                            303446FF
+background1:                            292C3CFF
+background2:                            232634FF
+background3:                            292C3CFF
+background4:                            414559FF
+selection_active:                       51576DFF
+selection_inactive:                     414559FF
+selection_highlight:                    51576DFF
+search_result_active:                   E7827975
+search_result_inactive:                 99D1DBFF
+scrollbar:                              949CBBFF
+scrollbar_hover:                        949CBBFF
+scrollbar_background:                   414559FF
+cursor:                                 626880FF
+cursor_inactive:                        626880FF
+paste_animation:                        626880FF
+splitter:                               292C3CFF
+splitter_hover:                         51576DFF
+letter_highlight:                       8CAAEEFF
+list_cursor_lite:                       414559FF
+list_cursor:                            414559FF
+shadow_dark:                            11111B50
+shadow_transparent:                     11111B10
+text_input_label:                       C6D0F5FF
+char_under_cursor:                      000000FF
+
+ui_default:                             C6D0F5FF
+ui_dim:                                 A5ADCEFF
+ui_neutral:                             A5ADCEFF
+ui_warning:                             E5C890FF
+ui_warning_dim:                         E5C890FF
+ui_error:                               E78284FF
+ui_error_bright:                        E78284FF
+ui_success:                             A6D189FF
+
+region_scope_export:                    303446FF
+region_scope_file:                      292C3C75
+region_scope_module:                    292C3C75
+region_header:                          414559FF
+region_success:                         626880FF
+region_warning:                         E5C890FF
+region_error:                           E78284FF
+region_heredoc:                         292C3CFF
+
+build_panel_background:                 292C3CFF
+build_panel_scrollbar:                  949CBBFF
+build_panel_scrollbar_hover:            949CBBFF
+build_panel_scrollbar_background:       414559FF
+build_panel_title_bar:                  232634FF
+
+code_default:                           C6D0F5FF
+code_comment:                           838BA7FF
+code_type:                              E5C890FF
+code_function:                          8CAAEEFD
+code_punctuation:                       838BA7FF
+code_operation:                         99D1DBFF
+code_string_literal:                    A6D189FF
+code_value:                             EF9F76FF
+code_highlight:                         51576DFF
+code_error:                             E78284FF
+code_warning:                           E5C890FF
+code_keyword:                           CA9EE6FF
+code_invalid:                           E78284FF
+code_multiline_string:                  A6D189FF
+code_raw_string:                        A6D189FF
+code_char_literal:                      81C8BEFF
+code_identifier:                        C6D0F5FF
+code_note:                              626880FF
+code_number:                            EF9F76FF
+code_multiline_comment:                 838BA7FF
+code_modifier:                          CA9EE6FF
+code_attribute:                         E5C890FF
+code_enum_variant:                      81C8BEFF
+code_macro:                             CA9EE6FF
+code_builtin_variable:                  E78284FF
+code_builtin_function:                  E78284FF
+code_builtin_exception:                 E78284FF
+code_directive:                         E5C890FF
+code_directive_modifier:                E5C890FF
+code_header:                            E78284FF
+code_header2:                           EF9F76FF
+code_header3:                           E5C890FF
+code_header4:                           A6D189FF
+code_header5:                           8CAAEEFD
+code_header6:                           BABBF1FF
+
+ruler:                                  626880FF
+bracket_highlight:                      51576DFF
+indent_guide:                           414559FF
